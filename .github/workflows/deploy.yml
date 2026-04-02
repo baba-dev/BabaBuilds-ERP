@@ -24,7 +24,7 @@ jobs:
             
             # 2. Pull code and install
             git pull origin main
-            npm install
+            npm install --legacy-peer-deps
             
             # 3. Database schema and Build
             npx prisma generate
