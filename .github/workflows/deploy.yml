@@ -16,21 +16,48 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            # 1. Go to the project folder
+            source ~/.bashrc
+            export PATH=$PATH:/usr/bin:/usr/local/bin
+            
+            # 1. Go to project folder
             cd /var/www/bababuilds-erp
             
-            # 2. Pull the latest code we just pushed
+            # 2. Pull code and install
             git pull origin main
-            
-            # 3. Install any new packages
             npm install
             
-            # 4. Apply any database changes (Prisma)
+            # 3. Database schema and Build
             npx prisma generate
             npx prisma db push
-            
-            # 5. Rebuild the Next.js application
             npm run build
             
-            # 6. Restart the live server seamlessly
+            # ==========================================
+            # 4. PERMISSIONS LOCKDOWN
+            # ==========================================
+            
+            # A. Set Ownership
+            # NOTE: If PM2 was started by 'root', change 'www-data:www-data' to 'root:root'
+            chown -R root:root .
+            
+            # B. Standard Folder & File Permissions (Optimized to skip node_modules to save time)
+            find . -path ./node_modules -prune -o -type d -exec chmod 755 {} +
+            find . -path ./node_modules -prune -o -type f -exec chmod 644 {} +
+            
+            # C. Lockdown Sensitive Files (Using || true so it doesn't crash if file doesn't exist yet)
+            chmod 600 .env* 2>/dev/null || true
+            chmod 700 deploy.sh 2>/dev/null || true
+            
+            # D. Special Handling for SQLite
+            chmod 775 prisma
+            chmod 664 prisma/*.db 2>/dev/null || true
+            
+            # E. Access for Uploads (Ensure folders exist first, then permission them)
+            mkdir -p public/logos public/receipts public/invoices
+            chmod -R 775 public/logos
+            chmod -R 775 public/receipts
+            chmod -R 775 public/invoices
+            
+            # ==========================================
+            
+            # 5. Restart PM2
             pm2 restart erp
