@@ -17,7 +17,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             # 1. Go to the project folder
-            cd /var/www/bababuilds
+            cd /var/www/bababuilds-erp
             
             # 2. Pull the latest code we just pushed
             git pull origin main
