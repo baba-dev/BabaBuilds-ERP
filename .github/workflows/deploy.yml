@@ -23,7 +23,7 @@ jobs:
             git pull origin main
             
             # 3. Install any new packages
-            npm install --production
+            npm install
             
             # 4. Apply any database changes (Prisma)
             npx prisma generate
