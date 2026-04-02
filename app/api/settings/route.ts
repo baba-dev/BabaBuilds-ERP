@@ -27,7 +27,10 @@ export async function GET() {
     if (profile) {
       // ── SECRETS SCRUB: Never send raw values to the frontend ──────────────
       profile.smtpPassword  = "";
-      profile.groqApiKey    = "";
+      
+      if (profile.groqApiKey) {
+        (profile as any).groqApiKey = "SET";
+      }
 
       // Return a boolean-like masked string so the UI knows a secret is set
       if (profile.razorpayKeySecret) {
@@ -139,7 +142,14 @@ export async function POST(request: Request) {
 
     // Append SMTP / Groq secrets only if user typed a new value or deleted them
     if (rawSmtpPassword) updateData.smtpPassword = parsedSmtpPassword;
-    if (rawGroqApiKey)   updateData.groqApiKey   = parsedGroqApiKey;
+    
+    if (rawGroqApiKey && rawGroqApiKey !== "SET") {
+      if (rawGroqApiKey === "DELETE_KEY") {
+        updateData.groqApiKey = null;
+      } else {
+        updateData.groqApiKey = encrypt(rawGroqApiKey);
+      }
+    }
 
     // ── Razorpay secrets ──────────────────────────────────────────────────────
     // Key ID is publishable — store plain (or null if cleared)
@@ -188,7 +198,8 @@ export async function POST(request: Request) {
         bankName, accountName, accountNumber, ifscCode,
         smtpHost, smtpPort, smtpUser, smtpFromEmail, 
         smtpPassword:        parsedSmtpPassword || null,
-        groqApiKey:          parsedGroqApiKey   || null,
+        groqApiKey:          (rawGroqApiKey && rawGroqApiKey !== "SET" && rawGroqApiKey !== "DELETE_KEY")
+                               ? encrypt(rawGroqApiKey) : (parsedGroqApiKey || null),
         razorpayKeyId:       rawRzpKeyId        || null,
         razorpayKeySecret:   (rawRzpSecret && rawRzpSecret !== "SET" && rawRzpSecret !== "DELETE_KEY")
                                ? encrypt(rawRzpSecret) : null,
@@ -203,7 +214,7 @@ export async function POST(request: Request) {
     if (profile) {
       // Re-scrub before returning to frontend
       profile.smtpPassword               = "";
-      profile.groqApiKey                 = "";
+      (profile as any).groqApiKey        = profile.groqApiKey ? "SET" : "";
       (profile as any).razorpayKeySecret = profile.razorpayKeySecret ? "SET" : "";
       (profile as any).stripeSecretKey   = (profile as any).stripeSecretKey ? "SET" : "";
     }

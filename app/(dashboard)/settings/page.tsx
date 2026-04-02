@@ -273,6 +273,53 @@ export default function SettingsWizard() {
     );
   };
 
+  // ── Groq API Key UI component ─────────────────────────────────────────────
+  const GroqSecretInput = () => {
+    if (formData.groqApiKey === "SET") {
+      return (
+        <div className="flex gap-2">
+          <div className="flex-1 flex items-center gap-2 h-10 rounded-md border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 px-3">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">Secret Configured</span>
+          </div>
+          <Button
+            type="button" variant="outline"
+            onClick={() => setFormData({ ...formData, groqApiKey: "" })}
+            className="border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400"
+          >Change</Button>
+          <Button
+            type="button" variant="outline"
+            onClick={() => setFormData({ ...formData, groqApiKey: "DELETE_KEY" })}
+            className="border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-900/50 dark:hover:bg-rose-900/20"
+          ><Trash2 className="w-4 h-4" /></Button>
+        </div>
+      );
+    }
+    return (
+      <div className="flex gap-2">
+        <Input
+          id="groq-api-key"
+          type={formData.groqApiKey === "DELETE_KEY" ? "text" : "password"}
+          value={formData.groqApiKey}
+          onChange={e => setFormData({ ...formData, groqApiKey: e.target.value })}
+          placeholder="gsk_••••••••••••••••••••"
+          className={`dark:bg-zinc-950 dark:border-zinc-800 font-mono text-sm ${
+            formData.groqApiKey === "DELETE_KEY"
+              ? "text-rose-600 font-bold bg-rose-50 dark:bg-rose-900/20"
+              : "dark:text-zinc-100"
+          }`}
+        />
+        {formData.groqApiKey !== "" && (
+          <Button
+            type="button" variant="outline"
+            onClick={() => setFormData({ ...formData, groqApiKey: "DELETE_KEY" })}
+            className="border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-900/50 dark:hover:bg-rose-900/20"
+          ><Trash2 className="w-4 h-4" /></Button>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8 transition-colors duration-300">
       <div className="max-w-4xl mx-auto space-y-8">
@@ -555,23 +602,7 @@ export default function SettingsWizard() {
             <CardContent className="pt-6">
               <div className="space-y-2">
                 <Label className="dark:text-zinc-300">{t('groq_api_key')}</Label>
-                <div className="flex gap-2">
-                  <Input 
-                    type={formData.groqApiKey === "DELETE_KEY" ? "text" : "password"} 
-                    value={formData.groqApiKey} 
-                    onChange={e => setFormData({...formData, groqApiKey: e.target.value})} 
-                    placeholder="gsk_..." 
-                    className={`dark:bg-zinc-950 dark:border-zinc-800 ${formData.groqApiKey === "DELETE_KEY" ? "text-rose-600 font-bold bg-rose-50 dark:bg-rose-900/20" : "dark:text-zinc-100"}`}
-                  />
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setFormData({...formData, groqApiKey: "DELETE_KEY"})}
-                    className="border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-900/50 dark:hover:bg-rose-900/20"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
+                <GroqSecretInput />
               </div>
             </CardContent>
           </Card>

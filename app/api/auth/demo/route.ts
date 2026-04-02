@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
+import { encrypt } from "@/lib/encryption";
 
 // --- HELPERS ---
 
@@ -103,7 +104,7 @@ export async function POST(request: Request) {
           accountName: "Nexus Digital Agency",
           accountNumber: "50200012345678",
           ifscCode: "HDFC0001234",
-          groqApiKey: "gsk_demo_bypass_key_placeholder",
+          groqApiKey: encrypt("gsk_demo_bypass_key_placeholder"),
         }
       });
 

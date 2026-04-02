@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import Groq from 'groq-sdk';
 import Papa from 'papaparse'; 
 import { scanBuffer } from '@/lib/security/clamav';
+import { decrypt } from '@/lib/encryption';
 
 // HELPER: Sanitize PII from bank descriptions before sending to LLM
 const sanitizeDescription = (desc: string) => {
@@ -57,7 +58,19 @@ export async function POST(request: Request) {
       where: { workspaceId } 
     });
 
-    if (!profile?.groqApiKey) {
+    const userApiKeyEncrypted = profile?.groqApiKey;
+    let userApiKey = "";
+
+    if (userApiKeyEncrypted) {
+      try {
+        userApiKey = decrypt(userApiKeyEncrypted);
+      } catch (e) {
+        console.error("Failed to decrypt Groq API key:", e);
+        userApiKey = userApiKeyEncrypted;
+      }
+    }
+
+    if (!userApiKey) {
       return NextResponse.json({ 
         error: "Please configure your Groq API Key in Business Settings to use AI Reconciliation." 
       }, { status: 400 });
@@ -138,7 +151,7 @@ export async function POST(request: Request) {
     let aiSuggestions: any[] = [];
 
     if (unresolvedTransactions.length > 0) {
-      const groq = new Groq({ apiKey: profile.groqApiKey });
+      const groq = new Groq({ apiKey: userApiKey });
 
       // Optimized System Prompt with 3-Shot example to allow usage of smaller/faster model
       const systemPrompt = `You are an elite forensic accountant for an Indian business.

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import Groq from 'groq-sdk';
+import { decrypt } from '@/lib/encryption';
 
 // --- THE TOOLBOX (Database Functions - Workspace Aware) ---
 
@@ -561,7 +562,18 @@ export async function POST(request: Request) {
       select: { groqApiKey: true, companyName: true } 
     });
     
-    const userApiKey = profile?.groqApiKey;
+    const userApiKeyEncrypted = profile?.groqApiKey;
+    let userApiKey = "";
+
+    if (userApiKeyEncrypted) {
+      try {
+        userApiKey = decrypt(userApiKeyEncrypted);
+      } catch (e) {
+        console.error("Failed to decrypt Groq API key:", e);
+        // Fallback for legacy plain-text keys if decryption fails
+        userApiKey = userApiKeyEncrypted;
+      }
+    }
 
     if (!userApiKey) {
       return NextResponse.json({ 

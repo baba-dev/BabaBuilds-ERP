@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import Groq from 'groq-sdk';
 import { scanBuffer } from '@/lib/security/clamav';
+import { decrypt } from '@/lib/encryption';
 
 export async function POST(request: Request) {
   try {
@@ -18,7 +19,19 @@ export async function POST(request: Request) {
       where: { workspaceId } 
     });
 
-    if (!profile?.groqApiKey) {
+    const userApiKeyEncrypted = profile?.groqApiKey;
+    let userApiKey = "";
+
+    if (userApiKeyEncrypted) {
+      try {
+        userApiKey = decrypt(userApiKeyEncrypted);
+      } catch (e) {
+        console.error("Failed to decrypt Groq API key:", e);
+        userApiKey = userApiKeyEncrypted;
+      }
+    }
+
+    if (!userApiKey) {
       return NextResponse.json({ 
         error: "AI Scanner requires a Groq API Key. Please configure it in Business Settings." 
       }, { status: 400 });
@@ -54,7 +67,7 @@ export async function POST(request: Request) {
     const imageUrl = `data:${file.type};base64,${base64Image}`;
 
     // 4. CALL GROQ VISION AI
-    const groq = new Groq({ apiKey: profile.groqApiKey });
+    const groq = new Groq({ apiKey: userApiKey });
 
     const systemPrompt = `You are an elite data extraction AI for an Indian accounting firm.
     Analyze the provided receipt/invoice image and extract the key financial data.
