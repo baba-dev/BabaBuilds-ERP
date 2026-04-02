@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
-  Check, 
-  X, 
-  Edit2, 
+import {
+  Check,
+  X,
+  Edit2,
   Sparkles,
   Building2,
   Tags,
@@ -28,7 +28,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Transaction } from "@/app/reconciliation/page";
+import { Transaction } from "@/app/(dashboard)/reconciliation/page";
 import { useTranslations } from "next-intl";
 
 // --- 1. STANDARD ACCOUNTING CATEGORIES ---
@@ -60,11 +60,11 @@ interface ReconciliationRowProps {
 
 export function ReconciliationRow({ transaction, onApprove, onIgnore }: ReconciliationRowProps) {
   const t = useTranslations('Reconciliation');
-  
+
   // UI States
   const [isEditing, setIsEditing] = useState(false);
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
-  
+
   // Data States
   const [vendor, setVendor] = useState(transaction.aiVendor || "Unknown Vendor");
   const [category, setCategory] = useState(transaction.aiCategory || "Uncategorized");
@@ -90,14 +90,14 @@ export function ReconciliationRow({ transaction, onApprove, onIgnore }: Reconcil
     if (!trimmed) return;
 
     setCategory(trimmed);
-    
+
     if (!availableCategories.includes(trimmed)) {
       const updatedCategories = [...availableCategories, trimmed].sort();
       setAvailableCategories(updatedCategories);
       const customOnly = updatedCategories.filter(c => !STANDARD_CATEGORIES.includes(c));
       localStorage.setItem('baba_erp_custom_categories', JSON.stringify(customOnly));
     }
-    
+
     setIsCategoryDropdownOpen(false);
     setSearchQuery("");
   };
@@ -118,7 +118,7 @@ export function ReconciliationRow({ transaction, onApprove, onIgnore }: Reconcil
 
   return (
     <TableRow className="group transition-colors duration-200 hover:bg-purple-50/30 dark:hover:bg-purple-900/10 dark:border-zinc-800">
-      
+
       {/* COLUMN 1: RAW DATA */}
       <TableCell className="align-top pt-4">
         <div className="space-y-1">
@@ -139,22 +139,22 @@ export function ReconciliationRow({ transaction, onApprove, onIgnore }: Reconcil
           <div className="bg-white dark:bg-zinc-900 border border-purple-200 dark:border-purple-900/50 rounded-lg p-3 space-y-3 shadow-sm animate-in zoom-in-95 duration-200">
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                <Building2 className="w-3 h-3"/> Vendor Name
+                <Building2 className="w-3 h-3" /> Vendor Name
               </label>
-              <Input 
-                value={vendor} 
-                onChange={(e) => setVendor(e.target.value)} 
-                className="h-8 text-sm focus-visible:ring-purple-500 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" 
+              <Input
+                value={vendor}
+                onChange={(e) => setVendor(e.target.value)}
+                className="h-8 text-sm focus-visible:ring-purple-500 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100"
                 placeholder={t('row_vendor_ph')}
                 autoFocus
               />
             </div>
-            
+
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                <Tags className="w-3 h-3"/> Category
+                <Tags className="w-3 h-3" /> Category
               </label>
-              
+
               <Popover open={isCategoryDropdownOpen} onOpenChange={setIsCategoryDropdownOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -169,8 +169,8 @@ export function ReconciliationRow({ transaction, onApprove, onIgnore }: Reconcil
                 </PopoverTrigger>
                 <PopoverContent className="w-[300px] p-0 dark:bg-zinc-900 dark:border-zinc-800" align="start">
                   <Command className="dark:bg-zinc-900">
-                    <CommandInput 
-                      placeholder="Search or create category..." 
+                    <CommandInput
+                      placeholder="Search or create category..."
                       value={searchQuery}
                       onValueChange={setSearchQuery}
                       className="dark:text-zinc-100"
@@ -180,9 +180,9 @@ export function ReconciliationRow({ transaction, onApprove, onIgnore }: Reconcil
                         {searchQuery && !isExactMatch ? (
                           <div className="px-4 py-2">
                             <p className="mb-2">No category found.</p>
-                            <Button 
-                              size="sm" 
-                              variant="secondary" 
+                            <Button
+                              size="sm"
+                              variant="secondary"
                               className="w-full bg-purple-100 dark:bg-purple-900/40 hover:bg-purple-200 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300"
                               onClick={() => handleSaveCategory(searchQuery)}
                             >
@@ -213,7 +213,7 @@ export function ReconciliationRow({ transaction, onApprove, onIgnore }: Reconcil
                 </PopoverContent>
               </Popover>
             </div>
-            
+
             <div className="flex gap-2 pt-1">
               <Button size="sm" variant="ghost" className="h-7 text-xs flex-1 dark:hover:bg-zinc-800 dark:text-zinc-400" onClick={() => setIsEditing(false)}>Cancel</Button>
               <Button size="sm" className="h-7 text-xs flex-1 bg-purple-600 hover:bg-purple-700 text-white" onClick={handleCommitApprove}>
@@ -223,7 +223,7 @@ export function ReconciliationRow({ transaction, onApprove, onIgnore }: Reconcil
           </div>
         ) : (
           // --- VIEW MODE ---
-          <div 
+          <div
             className="bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800 hover:border-purple-200 dark:hover:border-purple-900/50 rounded-lg p-3 space-y-2 cursor-text transition-all duration-200 group/edit"
             onClick={() => setIsEditing(true)}
             title="Click to edit Vendor or Category"
@@ -234,7 +234,7 @@ export function ReconciliationRow({ transaction, onApprove, onIgnore }: Reconcil
               </Badge>
               <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Vendor:</span>
               <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{vendor}</span>
-              
+
               <div className="ml-auto opacity-0 group-hover/edit:opacity-100 transition-opacity">
                 <Edit2 className="w-3 h-3 text-zinc-400 dark:text-zinc-500" />
               </div>
@@ -252,17 +252,17 @@ export function ReconciliationRow({ transaction, onApprove, onIgnore }: Reconcil
       <TableCell className="align-top pt-4 text-right w-24">
         {!isEditing && (
           <div className="flex items-center justify-end gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity duration-300">
-            <Button 
-              size="icon" 
-              variant="outline" 
+            <Button
+              size="icon"
+              variant="outline"
               className="h-8 w-8 text-rose-500 border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-600 transition-colors"
               onClick={() => onIgnore(transaction)}
               title={t('row_ignore')}
             >
               <X className="w-4 h-4" />
             </Button>
-            <Button 
-              size="icon" 
+            <Button
+              size="icon"
               className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm transition-transform hover:scale-105 active:scale-95"
               onClick={handleCommitApprove}
               title={t('row_approve')}
@@ -272,7 +272,7 @@ export function ReconciliationRow({ transaction, onApprove, onIgnore }: Reconcil
           </div>
         )}
       </TableCell>
-      
+
     </TableRow>
   );
 }
