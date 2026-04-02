@@ -60,4 +60,4 @@ jobs:
             # ==========================================
             
             # 5. Restart PM2
-            pm2 restart erp
+            npx pm2 restart erp || npx pm2 start npm --name "erp" -- start
