@@ -1,0 +1,427 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db" // Or "file:../dev.db" depending on your folder structure
+}
+
+// ==========================================
+// 1. AUTHENTICATION (NextAuth Standard)
+// ==========================================
+model User {
+  id                 String          @id @default(cuid())
+  name               String?
+  email              String?         @unique
+  emailVerified      DateTime?
+  image              String?         // This acts as the Avatar URL
+  role               String          @default("USER") // "USER", "ADMIN"
+  
+  // --- NEW: PERSONAL PREFERENCES ---
+  theme              String          @default("system") // "light", "dark", "system"
+  dateFormat         String          @default("DD/MM/YYYY")
+  timeZone           String          @default("Asia/Kolkata") 
+  locale             String          @default("en-IN")  // Formatting rules (e.g., en-IN, en-US)
+  currencyFormat     String          @default("INR")    // Currency symbol/math (e.g., INR, USD)
+  defaultLandingPage String          @default("/")      // e.g., "/", "/invoice", "/clients"
+
+  // --- NEW: NOTIFICATION SETTINGS ---
+  transactionalAlerts Boolean        @default(true)     // E.g., "Invoice Paid" alerts
+  marketingEmails     Boolean        @default(false)    // Product updates/news
+  weeklyReport        Boolean        @default(true)     // AI Financial Summary emails
+  
+  // --- RELATIONS ---
+  accounts           Account[]
+  sessions           Session[]
+  workspaces         WorkspaceUser[] 
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? 
+  access_token      String? 
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? 
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+}
+
+// ==========================================
+// 2. MULTI-TENANCY & BILLING (The "Workspace")
+// ==========================================
+model Workspace {
+  id                    String      @id @default(cuid())
+  name                  String
+  createdAt             DateTime    @default(now())
+  
+  // --- NEW: GLOBALIZATION STATE ---
+  isSetupComplete       Boolean     @default(false) // Triggers the Popup Wizard
+  countryCode           String      @default("IN")  // ISO 2-letter code (US, AE, GB, IN)
+  baseCurrency          String      @default("INR") // Functional currency for reports
+  
+  // --- EXISTING BILLING ---
+  subscriptionStatus String    @default("FREE") // "TRIALING", "PRO", "FREE", "SUSPENDED"
+  subscriptionEndsAt DateTime?
+  planTier           String    @default("FREE") // "FREE", "PRO"
+  currentMonthInvoices  Int         @default(0)
+
+  planInterval       String?   // "MONTHLY", "QUARTERLY", "YEARLY"
+  paymentMethodMask  String?   // e.g., "•••• 4242" or "user@upi"
+  billingProviderId  String?   // Stripe/Razorpay Customer ID
+
+  updatedAt          DateTime  @default(now()) @updatedAt
+
+  // RELATIONS
+  users                 WorkspaceUser[]
+  businessProfile       BusinessProfile?
+  clients               Client[]
+  invoices              Invoice[]
+  expenses              Expense[]
+  bankTransactions      BankTransaction[]
+  investments           Investment[]
+  serviceTemplates      ServiceTemplate[]
+  proposals             Proposal[]
+  retainers             Retainer[]
+}
+
+model WorkspaceUser {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        String    @default("OWNER") // "OWNER", "MEMBER"
+  
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+}
+
+// ==========================================
+// 3. SECURED BUSINESS DATA
+// ==========================================
+
+model BusinessProfile {
+  id              String    @id @default(cuid())
+  workspaceId     String    @unique
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  companyName     String
+  proprietorName  String
+  address         String
+  email           String
+  phone           String?
+  website         String?
+  
+  invoiceTheme  String  @default("DESIGN_1") // "DESIGN_1" or "DESIGN_2"
+
+  // --- DYNAMIC TAX LABELS ---
+  // In the UI, instead of "Enter GST", we show "Enter {taxLabel}"
+  taxLabel        String    @default("GST")       // "VAT", "Sales Tax", "GST"
+  taxIdLabel      String    @default("GSTIN")     // "TRN", "EIN", "GSTIN"
+  routingLabel    String    @default("IFSC Code") // "SWIFT", "Sort Code", "ABA"
+
+  // Compliance (Keeping legacy names for no-break compatibility)
+  panNumber       String    // Acts as Primary Tax ID
+  udyamNumber     String?   // Acts as Secondary Business ID
+  gstin           String?   // Acts as the Regional Tax ID
+  
+  // Banking
+  bankName        String
+  accountName     String
+  accountNumber   String
+  ifscCode        String    // General routing code
+  
+  // Branding & AI
+  logoUrl         String?
+  groqApiKey      String?
+  defaultSacCode  String?   @default("998313") // Default IT Consulting if not specified
+
+  // PAYMENT GATEWAY (Per-Tenant Razorpay Keys — PRO users only)
+  razorpayKeyId     String?   // Plain text (publishable key, e.g. rzp_live_xxx)
+  razorpayKeySecret String?   // AES-256-GCM encrypted blob (NEVER stored plain)
+
+  // PAYMENT GATEWAY — Stripe (PRO users only, global)
+  stripePublishableKey String? // Plain text (pk_live_xxx)
+  stripeSecretKey      String? // AES-256-GCM encrypted blob (NEVER stored plain)
+  defaultGateway       String? @default("RAZORPAY") // "RAZORPAY" | "STRIPE"
+
+  
+  // EMAIL SERVER (SMTP)
+  smtpHost        String?
+  smtpPort        Int?
+  smtpUser        String?
+  smtpPassword    String?
+  smtpFromEmail   String?
+  
+  updatedAt       DateTime  @updatedAt  
+}
+
+model Client {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  name        String    
+  address     String
+  country     String
+  taxId       String?   
+  email       String?   
+  phone       String?   
+  logoUrl     String?   
+  
+  status      String    @default("ACTIVE") // "ACTIVE", "INACTIVE", "VIP"
+  
+  // "isExport" becomes "isTaxExempt" in global context
+  isExport    Boolean   @default(true) 
+  
+  createdAt   DateTime  @default(now())
+  invoices    Invoice[]
+  proposals   Proposal[]
+  retainers   Retainer[]
+
+  @@unique([name, workspaceId]) 
+  @@index([workspaceId])
+}
+
+model Invoice {
+  id                 String    @id @default(cuid())
+  workspaceId        String
+  workspace          Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  invoiceNumber      String    
+  financialYear      String
+  billingMonth       String    @default("Unknown")
+  invoiceDate        DateTime
+  clientName         String
+  sacCode            String?     // Removed the hardcoded @default("998313")
+  serviceDescription String
+
+  totalAmount        Float
+  pdfPath            String
+  createdAt          DateTime  @default(now())
+
+  status             String    @default("Pending") 
+  amountReceived     Float?    
+  dateReceived       DateTime? 
+
+  clientId           String?
+  client             Client?   @relation(fields: [clientId], references: [id])
+
+  // Security: Two different workspaces can use invoice number "001"
+  @@unique([invoiceNumber, workspaceId])
+  @@index([financialYear])
+  @@index([workspaceId])
+}
+
+model Expense {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  date        DateTime
+  category    String    
+  vendor      String    
+  amount      Float
+  description String?  
+  receiptUrl  String?  
+  createdAt   DateTime  @default(now())
+
+  @@index([date])
+  @@index([category])
+  @@index([workspaceId])
+}
+
+model BankTransaction {
+  id               String    @id @default(cuid())
+  workspaceId      String
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  date             DateTime
+  description      String
+  amount           Float     // Positive for deposits, negative for withdrawals
+  referenceId      String?   
+
+  // Reconciliation state
+  isReconciled     Boolean   @default(false)
+  matchedInvoiceId String?
+  matchedExpenseId String?
+
+  createdAt        DateTime  @default(now())
+
+  @@index([workspaceId])
+  @@index([date])
+}
+
+model Investment {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  date        DateTime
+  category    String    
+  assetName   String    
+  amount      Float
+  createdAt   DateTime  @default(now())
+
+  @@index([date])
+  @@index([category])
+  @@index([workspaceId])
+}
+
+// ==========================================
+// 4. GLOBAL COMPLIANCE DICTIONARIES (Read-Only)
+// ==========================================
+
+model NICCode {
+  id          String   @id @default(cuid())
+  code        String   @unique // e.g., "62012"
+  description String   // e.g., "Web-page designing"
+  countryCode String   @default("IN") // "IN" for India, "US", "GB", etc.
+  isCustom    Boolean  @default(false)
+  
+  services    ServiceTemplate[]
+}
+
+model SACCode {
+  id          String   @id @default(cuid())
+  code        String   @unique // e.g., "998313"
+  description String   // e.g., "IT Consulting Services"
+  igstRate    Float    @default(18.0) // Default GST rate
+  countryCode String   @default("IN") 
+  isCustom    Boolean  @default(false)
+  
+  services    ServiceTemplate[]
+}
+
+// ==========================================
+// 5. PROPOSALS & SERVICE CATALOG (Workspace-Scoped)
+// ==========================================
+
+// The user's saved list of services (e.g., "Monthly SEO Retainer")
+model ServiceTemplate {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  name          String
+  description   String?
+  defaultPrice  Float    @default(0.0)
+  
+  // Relational Links to the Global Dictionaries
+  nicCodeId     String?
+  nicCode       NICCode?  @relation(fields: [nicCodeId], references: [id])
+  
+  sacCodeId     String?
+  sacCode       SACCode?  @relation(fields: [sacCodeId], references: [id])
+
+  proposalItems ProposalItem[]
+
+  @@index([workspaceId])
+}
+
+model Proposal {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  clientId      String
+  client        Client    @relation(fields: [clientId], references: [id])
+  
+  proposalNo    String    // e.g., "EST-2024-001"
+  title         String    // e.g., "Q3 Marketing Campaign"
+  status        String    @default("DRAFT") // DRAFT, SENT, VIEWED, ACCEPTED, DECLINED, INVOICED
+  
+  dateCreated   DateTime  @default(now())
+  validUntil    DateTime
+  
+  // The Public Link token (e.g., bababuilds.com/p/abc123xyz)
+  publicToken   String    @unique @default(cuid())
+  
+  // E-Signature Data
+  acceptedAt    DateTime?
+  clientIp      String?
+  
+  items         ProposalItem[]
+  
+  subtotal      Float
+  estimatedTax  Float     @default(0.0)
+  totalAmount   Float
+
+  @@unique([proposalNo, workspaceId])
+  @@index([workspaceId])
+  @@index([publicToken])
+}
+
+model ProposalItem {
+  id                String   @id @default(cuid())
+  proposalId        String
+  proposal          Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  
+  serviceTemplateId String?
+  serviceTemplate   ServiceTemplate? @relation(fields: [serviceTemplateId], references: [id])
+  
+  title             String   // Copied from template so it can be edited per-proposal
+  description       String?
+  quantity          Int      @default(1)
+  unitPrice         Float
+  total             Float
+}
+
+model Retainer {
+  id              String   @id @default(uuid())
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id])
+  
+  clientId        String
+  client          Client   @relation(fields: [clientId], references: [id])
+  
+  // The Billing Details
+  amount          Float
+  frequency       String   @default("MONTHLY") // "MONTHLY", "QUARTERLY", "ANNUALLY"
+  status          String   @default("ACTIVE")  // "ACTIVE", "PAUSED", "CANCELLED"
+  
+  // The Automation Engine
+  nextBillingDate DateTime
+  autoAppendMonth Boolean  @default(true) // The "Zero-Effort" Toggle
+  
+  // What exactly are we billing them for?
+  serviceName     String
+  sacCode         String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  dueDate     DateTime?
+  status      String    @default("PENDING")
+  workspaceId String
+  createdAt   DateTime  @default(now())
+}
