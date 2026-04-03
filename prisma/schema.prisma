@@ -155,8 +155,8 @@ model BusinessProfile {
   accountNumber   String
   ifscCode        String    // General routing code
   
-  // Branding & AI
   logoUrl         String?
+  signatureUrl    String?
   groqApiKey      String?
   defaultSacCode  String?   @default("998313") // Default IT Consulting if not specified
 

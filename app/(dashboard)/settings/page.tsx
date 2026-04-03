@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import {
   Building2, Landmark, ShieldCheck, Image as ImageIcon, CheckCircle2,
   Save, Mailbox, Bot, Trash2, CreditCard, Lock, Globe, AlertTriangle,
-  Loader2
+  Loader2, Info
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function SettingsWizard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,7 +29,7 @@ export default function SettingsWizard() {
     bankName: "", accountName: "", accountNumber: "", ifscCode: "",
     smtpHost: "", smtpPort: "", smtpUser: "", smtpPassword: "", smtpFromEmail: "", 
     groqApiKey: "", invoiceTheme: "DESIGN_1", locale: "en-IN", 
-    existingLogoUrl: "", defaultSacCode: "998313",
+    existingLogoUrl: "", existingSignatureUrl: "", defaultSacCode: "998313",
     // Razorpay (PRO only — INR / Indian users)
     razorpayKeyId: "", razorpayKeySecret: "",
     // Stripe (PRO only — global)
@@ -41,6 +42,7 @@ export default function SettingsWizard() {
   
   const t = useTranslations('Settings');
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [signatureFile, setSignatureFile] = useState<File | null>(null);
 
   const isIndian = countryCode === "IN";
 
@@ -71,6 +73,7 @@ export default function SettingsWizard() {
             invoiceTheme: data.invoiceTheme || "DESIGN_1",
             locale: data.locale || "en-IN",
             existingLogoUrl: data.logoUrl || "",
+            existingSignatureUrl: data.signatureUrl || "",
             defaultSacCode: data.defaultSacCode || "998313",
             // Razorpay: server returns "SET" if secret is configured
             razorpayKeyId:     data.razorpayKeyId     || "",
@@ -142,6 +145,7 @@ export default function SettingsWizard() {
     });
     
     if (logoFile) body.append('logo', logoFile);
+    if (signatureFile) body.append('signature', signatureFile);
 
     try {
       const res = await fetch('/api/settings', { method: 'POST', body });
@@ -409,6 +413,9 @@ export default function SettingsWizard() {
                     </div>
                     <h3 className="font-bold text-zinc-900 dark:text-zinc-100">{t('design1_title')}</h3>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{t('design1_desc')}</p>
+                    <div className="flex items-center gap-1 mt-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="w-3 h-3" /> Supports Digital Signatures
+                    </div>
                   </div>
 
                   {/* DESIGN 2: Modern Agency */}
@@ -435,6 +442,9 @@ export default function SettingsWizard() {
                     </div>
                     <h3 className="font-bold text-zinc-900 dark:text-zinc-100">{t('design2_title')}</h3>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{t('design2_desc')}</p>
+                    <div className="flex items-center gap-1 mt-2 text-xs font-medium text-rose-500/80 dark:text-rose-400/80">
+                      Does not support signatures
+                    </div>
                   </div>
                 </div>
               </div>
@@ -463,15 +473,49 @@ export default function SettingsWizard() {
               
               <Separator className="dark:bg-zinc-800" />
 
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2 dark:text-zinc-300"><ImageIcon className="w-4 h-4" /> {t('master_logo')}</Label>
-                <div className="flex items-center gap-6">
-                  {formData.existingLogoUrl && !logoFile && (
-                    <img src={formData.existingLogoUrl} alt="Current Logo" className="h-12 object-contain bg-white dark:bg-zinc-200 border rounded p-1" />
-                  )}
-                  <div className="flex-1">
-                    <Input type="file" accept="image/*" onChange={e => setLogoFile(e.target.files?.[0] || null)} className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{t('logo_hint')}</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 dark:text-zinc-300"><ImageIcon className="w-4 h-4" /> {t('master_logo')}</Label>
+                  <div className="flex items-center gap-4">
+                    {formData.existingLogoUrl && !logoFile && (
+                      <img src={formData.existingLogoUrl} alt="Current Logo" className="h-12 object-contain bg-white dark:bg-zinc-200 border rounded p-1" />
+                    )}
+                    <div className="flex-1">
+                      <Input type="file" accept="image/*" onChange={e => setLogoFile(e.target.files?.[0] || null)} className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{t('logo_hint')}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Label className="flex items-center gap-2 dark:text-zinc-300">
+                      Digital Signature
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="w-4 h-4 text-zinc-400 cursor-help hover:text-indigo-500 transition-colors" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-[200px] text-xs">
+                            <p className="font-bold text-indigo-200 mb-1">Strict Guidelines:</p>
+                            <ul className="list-disc pl-4 space-y-1">
+                              <li>Must have a transparent background</li>
+                              <li>Max size 2MB</li>
+                              <li>Width/Height ratio should be horizontal (e.g. 300x100)</li>
+                            </ul>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    {formData.existingSignatureUrl && !signatureFile && (
+                      <img src={formData.existingSignatureUrl} alt="Current Signature" className="h-12 object-contain bg-white dark:bg-zinc-200 border rounded p-1" />
+                    )}
+                    <div className="flex-1">
+                      <Input type="file" accept="image/png,image/webp" onChange={e => setSignatureFile(e.target.files?.[0] || null)} className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Transparent PNG/WEBP max 2MB.</p>
+                    </div>
                   </div>
                 </div>
               </div>

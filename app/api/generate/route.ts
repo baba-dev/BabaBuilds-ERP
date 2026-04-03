@@ -480,8 +480,14 @@ export async function POST(request: Request) {
           drawText('To:', 320, 110, 9, true, 'left', textMuted);
           if (client.logoUrl) await loadLogo(client.logoUrl, 320, 118, 140, 35); 
           drawText(client.name,     320, 165, 11, true,  'left', black);
-          drawText(client.address,  320, 180, 9,  false, 'left', textMuted);
-          drawText(client.country,  320, 195, 10, true,  'left', textDark);
+          
+          const clientAddrParts = client.address.split(', ');
+          const clientLine1 = clientAddrParts.slice(0, Math.ceil(clientAddrParts.length / 2)).join(', ');
+          const clientLine2 = clientAddrParts.slice(Math.ceil(clientAddrParts.length / 2)).join(', ');
+          drawText(clientLine1,  320, 180, 9,  false, 'left', textMuted);
+          if (clientLine2) drawText(clientLine2,  320, 195, 9,  false, 'left', textMuted);
+          
+          drawText(client.country,  320, clientLine2 ? 210 : 195, 10, true,  'left', textDark);
 
           drawRect(40, 220, width - 80, 50, bgLight, borderGray); 
           drawText('Invoice No:',     55,  240, 9,  true,  'left', textMuted);
@@ -498,15 +504,22 @@ export async function POST(request: Request) {
 
           drawRect(40, 290, width - 80, 25, black);
           drawText('Classification',          50,       307, 9, true, 'left',  white);
-          drawText('Description of Services', 140,      307, 9, true, 'left',  white);
+          drawText('Description of Services', 180,      307, 9, true, 'left',  white);
           drawText(`Amount (${currencyCode})`, width - 50, 307, 9, true, 'right', white);
           
           let currentY = 335; 
+          
+          let displaySac = sacCode;
+          if (typeof sacCode === 'object' && sacCode !== null) {
+            displaySac = (sacCode as any).code || (sacCode as any).value || (sacCode as any).label || JSON.stringify(sacCode);
+          }
+          const safeSac = displaySac && displaySac.length > 25 ? displaySac.substring(0, 23) + '...' : (displaySac || 'N/A');
+
           sanitizedServices.forEach((service: any) => {
             const lineAmt = service.amount.toLocaleString(userLocale, { minimumFractionDigits: 2 });
-            drawText(sacCode,       50,        currentY,      10, false, 'left',  textDark);
-            drawText(service.title, 140,       currentY,      10, true,  'left',  black);
-            drawText(`(${service.nicDetails} for ${billingMonth})`, 140, currentY + 15, 8, false, 'left', textMuted);
+            drawText(safeSac,       50,        currentY,      10, false, 'left',  textDark);
+            drawText(service.title, 180,       currentY,      10, true,  'left',  black);
+            drawText(`(${service.nicDetails} for ${billingMonth})`, 180, currentY + 15, 8, false, 'left', textMuted);
             drawText(lineAmt,       width - 50, currentY,     10, false, 'right', textDark);
             currentY += 40; 
           });
@@ -521,9 +534,9 @@ export async function POST(request: Request) {
           drawText(client.isExport ? 'IGST - Export (0%)' : 'IGST - Domestic (0%)', width - 150, currentY + 40, 9, false, 'right', textMuted);
           drawText('0.00',       width - 50,  currentY + 40, 10, false, 'right', textDark);
 
-          drawRect(width - 220, currentY + 70, 180, 35, black);
-          drawText('Total Amount',            width - 150, currentY + 92, 11, true, 'right', white);
-          drawText(`${currencyCode} ${formattedTotal}`, width - 50, currentY + 92, 11, true, 'right', white);
+          drawRect(width - 230, currentY + 70, 190, 35, black);
+          drawText('Total Amount',            width - 165, currentY + 92, 11, true, 'right', white);
+          drawText(`${currencyCode} ${formattedTotal}`, width - 55, currentY + 92, 11, true, 'right', white);
 
           const bankY = currentY + 130;
           drawText('Bank Details for Remittance', 40, bankY,      10, true,  'left', black);
@@ -533,6 +546,9 @@ export async function POST(request: Request) {
           drawText(`${safeRoutingLabel}: ${profile.ifscCode}`, 40, bankY + 65, 9, false, 'left', textDark);
 
           drawText(`For ${profile.companyName}`, width - 40, bankY + 20, 10, true, 'right', black);
+          if ((profile as any).signatureUrl) {
+            await loadLogo((profile as any).signatureUrl, width - 40, bankY + 30, 140, 35, 'right');
+          }
           page.drawLine({ start: { x: width - 180, y: height - (bankY + 70) }, end: { x: width - 40, y: height - (bankY + 70) }, thickness: 1, color: black });
           drawText('Authorized Signatory', width - 40, bankY + 85, 9, false, 'right', textMuted);
 

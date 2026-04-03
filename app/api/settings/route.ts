@@ -98,14 +98,23 @@ export async function POST(request: Request) {
     const parsedSmtpPassword = rawSmtpPassword === "DELETE_KEY" ? null : rawSmtpPassword;
     const parsedGroqApiKey   = rawGroqApiKey   === "DELETE_KEY" ? null : rawGroqApiKey;
 
-    // ── Logo Upload ───────────────────────────────────────────────────────────
+    // ── Logo & Signature Upload ───────────────────────────────────────────────
     const file = formData.get('logo') as File | null;
     let logoUrl = formData.get('existingLogoUrl') as string | null;
     
+    const signatureFile = formData.get('signature') as File | null;
+    let signatureUrl = formData.get('existingSignatureUrl') as string | null;
+
     if (logoUrl) {
       const isValidPrefix    = logoUrl.startsWith(`/logos/${workspaceId}/`);
       const containsTraversal = logoUrl.includes('..') || logoUrl.includes('%2e');
       if (!isValidPrefix || containsTraversal) logoUrl = null; 
+    }
+
+    if (signatureUrl) {
+      const isValidPrefix    = signatureUrl.startsWith(`/signatures/${workspaceId}/`);
+      const containsTraversal = signatureUrl.includes('..') || signatureUrl.includes('%2e');
+      if (!isValidPrefix || containsTraversal) signatureUrl = null; 
     }
 
     if (file && file.size > 0) {
@@ -130,6 +139,29 @@ export async function POST(request: Request) {
       logoUrl = `/logos/${workspaceId}/${filename}`;
     }
 
+    if (signatureFile && signatureFile.size > 0) {
+      const ext = path.extname(signatureFile.name).toLowerCase();
+      // Enforce transparent-friendly formats
+      const allowedExtensions = ['.png', '.webp']; 
+      if (!allowedExtensions.includes(ext)) {
+        return NextResponse.json({ error: "Invalid signature type. Only transparent PNG or WEBP allowed." }, { status: 400 });
+      }
+      const bytes  = await signatureFile.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      
+      const isSafe = await scanBuffer(buffer);
+      if (!isSafe) {
+        return NextResponse.json({ error: "Malware detected in uploaded signature." }, { status: 400 });
+      }
+
+      const dir      = path.join(process.cwd(), 'public', 'signatures', workspaceId);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      const filename = `signature-${Date.now()}-${uuidv4()}${ext}`;
+      const filepath = path.join(dir, filename);
+      fs.writeFileSync(filepath, buffer);
+      signatureUrl = `/signatures/${workspaceId}/${filename}`;
+    }
+
     // ── Build update payload (no secrets yet) ─────────────────────────────────
     const updateData: any = {
       companyName, proprietorName, address, email, phone, website,
@@ -138,6 +170,7 @@ export async function POST(request: Request) {
       smtpHost, smtpPort, smtpUser, smtpFromEmail,
       invoiceTheme, defaultSacCode,
       ...(logoUrl && { logoUrl }),
+      ...(signatureUrl !== undefined && { signatureUrl }),
     };
 
     // Append SMTP / Groq secrets only if user typed a new value or deleted them
@@ -207,7 +240,7 @@ export async function POST(request: Request) {
         stripeSecretKey:      (rawStripeSecretKey && rawStripeSecretKey !== "SET" && rawStripeSecretKey !== "DELETE_KEY")
                                ? encrypt(rawStripeSecretKey) : null,
         defaultGateway:       defaultGateway || "RAZORPAY",
-        invoiceTheme, defaultSacCode, logoUrl,
+        invoiceTheme, defaultSacCode, logoUrl, signatureUrl,
       },
     });
 
