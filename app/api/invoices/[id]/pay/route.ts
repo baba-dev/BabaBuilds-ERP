@@ -58,13 +58,34 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     // 5. APPLY "PAID" WATERMARK TO PDF (ONLY IF FULLY PAID)
     if (newStatus === 'Paid') {
       // Robust path resolution for VPS/Windows
-      const relativePath = updatedInvoice.pdfPath.startsWith('/') 
+      let relativePath = updatedInvoice.pdfPath.startsWith('/') 
         ? updatedInvoice.pdfPath.substring(1) 
         : updatedInvoice.pdfPath;
-      const pdfPath = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', relativePath);
+      let fullPdfPath = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', relativePath);
       
-      if (fs.existsSync(pdfPath)) {
-        const existingPdfBytes = fs.readFileSync(pdfPath);
+      let fileExists = fs.existsSync(fullPdfPath);
+
+      // --- 🔍 FUZZY PATH FINDER (For cross-platform / historical paths) ---
+      if (!fileExists) {
+        const sanitizedFilename = (updatedInvoice.invoiceNumber || "").replace(/\//g, '_') + ".pdf";
+        const sanitizedRelative = `invoices/${updatedInvoice.workspaceId}/${sanitizedFilename}`;
+        const sanitizedFull     = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', sanitizedRelative);
+        
+        if (fs.existsSync(sanitizedFull)) {
+            fullPdfPath = sanitizedFull;
+            relativePath = sanitizedRelative;
+            fileExists = true;
+            
+            // Auto-heal the database path while we're here
+            await prisma.invoice.update({
+              where: { id: updatedInvoice.id },
+              data: { pdfPath: `/${sanitizedRelative}` }
+            });
+        }
+      }
+
+      if (fileExists) {
+        const existingPdfBytes = fs.readFileSync(fullPdfPath);
         const pdfDoc = await PDFDocument.load(existingPdfBytes);
         
         // 🚨 CRITICAL FIX: Embed font explicitly for existing documents
@@ -89,7 +110,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
             size: 130,
             font: fontBold,
             color: rgb(0.85, 0.15, 0.15), 
-            opacity: 0.25, // Increased from 0.15 for visibility
+            opacity: 0.25, 
             rotate: degrees(45),
           });
 
@@ -106,7 +127,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         });
 
         const pdfBytes = await pdfDoc.save();
-        fs.writeFileSync(pdfPath, pdfBytes); // Overwrite the file
+        fs.writeFileSync(fullPdfPath, pdfBytes); // Overwrite the file
       }
     }
 

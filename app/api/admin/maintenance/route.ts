@@ -120,19 +120,46 @@ export async function POST(req: Request) {
       case "STAMP_PAID_INVOICES":
         const { PDFDocument, rgb, degrees, StandardFonts } = await import('pdf-lib');
         let stampedCount = 0;
+        let notFoundCount = 0;
+        let failedCount = 0;
+        let dbUpdatedCount = 0;
+        let missingFiles: string[] = [];
         
         // 1. Fetch all invoices marked as Paid (System-wide for Super Admin)
         const paidInvoices = await prisma.invoice.findMany({
-          where: { 
-            status: { in: ['Paid', 'PAID'] }
-          }
+          orderBy: { createdAt: 'desc' }
         });
 
-        for (const inv of paidInvoices) {
-          const relativePath = inv.pdfPath.startsWith('/') ? inv.pdfPath.substring(1) : inv.pdfPath;
-          const fullPdfPath = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', relativePath);
+        const targets = paidInvoices.filter(i => ['Paid', 'PAID'].includes(i.status as string));
+
+        for (const inv of targets) {
+          // --- 🔍 ROBUST PATH DISCOVERY (Fuzzy Matcher) ---
+          let relativePath = inv.pdfPath.startsWith('/') ? inv.pdfPath.substring(1) : inv.pdfPath;
+          let fullPdfPath  = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', relativePath);
           
-          if (fs.existsSync(fullPdfPath)) {
+          let fileExists = fs.existsSync(fullPdfPath);
+          let foundViaSanitized = false;
+
+          // Attempt Fuzzy Matching if original path fails (Essential for Linux/VPS vs Windows sync)
+          if (!fileExists) {
+             const pathParts = inv.pdfPath.split('/');
+             const filename  = pathParts[pathParts.length - 1]; // e.g. 013.pdf
+             const parent    = pathParts.slice(0, -1).join('/'); // e.g. /invoices/workspaceId/INV/25-26
+             
+             // The system now uses underscores for the entire invoice number in the filename
+             const sanitizedFilename = (inv.invoiceNumber || "").replace(/\//g, '_') + ".pdf";
+             const sanitizedRelative = `invoices/${inv.workspaceId}/${sanitizedFilename}`;
+             const sanitizedFull     = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', sanitizedRelative);
+             
+             if (fs.existsSync(sanitizedFull)) {
+                 fullPdfPath = sanitizedFull;
+                 relativePath = sanitizedRelative;
+                 fileExists = true;
+                 foundViaSanitized = true;
+             }
+          }
+
+          if (fileExists) {
             try {
               const existingPdfBytes = fs.readFileSync(fullPdfPath);
               const pdfDoc = await PDFDocument.load(existingPdfBytes);
@@ -141,7 +168,6 @@ export async function POST(req: Request) {
               const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
               const pages = pdfDoc.getPages();
               
-              // Use receipt date if available, else invoice date, else now
               const stampDate = inv.dateReceived || inv.invoiceDate || new Date();
               const formattedDate = new Date(stampDate).toLocaleDateString('en-GB', {
                 day: '2-digit', month: 'short', year: 'numeric'
@@ -166,12 +192,37 @@ export async function POST(req: Request) {
               const pdfBytes = await pdfDoc.save();
               fs.writeFileSync(fullPdfPath, pdfBytes);
               stampedCount++;
+
+              // --- 🛠️ SELF-HEALING DATABASE ---
+              // If we found the file via the underscored path but the DB still has slashes, fix the DB.
+              if (foundViaSanitized) {
+                await prisma.invoice.update({
+                  where: { id: inv.id },
+                  data: { pdfPath: `/${relativePath}` }
+                });
+                dbUpdatedCount++;
+              }
             } catch (err) {
               console.error(`Failed to stamp invoice ${inv.invoiceNumber}:`, err);
+              failedCount++;
             }
+          } else {
+            notFoundCount++;
+            missingFiles.push(`${inv.invoiceNumber} -> ${inv.pdfPath}`);
           }
         }
-        return NextResponse.json({ success: true, message: `Successfully retro-stamped ${stampedCount} paid invoices.` });
+        return NextResponse.json({ 
+          success: true, 
+          message: `Process Complete.`,
+          report: {
+              totalFoundInDb: targets.length,
+              stampedSuccessfully: stampedCount,
+              dbPathsHealed: dbUpdatedCount,
+              filesMissingOnDisk: notFoundCount,
+              processingFailures: failedCount,
+              missingSample: missingFiles.slice(0, 5)
+          }
+        });
 
       case "REBOOT":
         // In Edge/Serverless this does nothing, but on a VPS with PM2/Docker,
