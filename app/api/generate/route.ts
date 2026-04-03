@@ -295,7 +295,8 @@ export async function POST(request: Request) {
         const loadLogo = async (logoUrl: string | null, x: number, y: number, maxWidth: number, maxHeight: number, align = 'left') => {
           if (!logoUrl) return;
           try {
-            const fullPath = path.join(process.cwd(), 'public', logoUrl);
+            const relativeLogoPath = logoUrl.startsWith('/') ? logoUrl.substring(1) : logoUrl;
+            const fullPath = path.join(process.cwd(), 'public', relativeLogoPath);
             if (fs.existsSync(fullPath)) {
               const image = await pdfDoc.embedPng(fs.readFileSync(fullPath));
               const dims  = image.scaleToFit(maxWidth, maxHeight);

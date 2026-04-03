@@ -13,14 +13,19 @@ export async function GET() {
     const workspaceId = (session as any).workspaceId;
 
     // 2. FINANCIAL YEAR MATH (April - March)
-    const today = new Date();
-    const currentMonth = today.getMonth() + 1; 
-    const currentYear = today.getFullYear();
-    const shortYear = currentYear.toString().slice(-2);
-    const fy = currentMonth <= 3 ? `${parseInt(shortYear) - 1}-${shortYear}` : `${shortYear}-${parseInt(shortYear) + 1}`;
+    const { searchParams } = new URL(request.url);
+    let fy = searchParams.get('fy');
+    
+    if (!fy) {
+      const today = new Date();
+      const currentMonth = today.getMonth() + 1; 
+      const currentYear = today.getFullYear();
+      const shortYear = currentYear.toString().slice(-2);
+      fy = currentMonth <= 3 ? `${parseInt(shortYear) - 1}-${shortYear}` : `${shortYear}-${parseInt(shortYear) + 1}`;
+    }
 
     // 3. CONCURRENT DATA FETCHING (Massive speed boost vs sequential fetching)
-    const [invoices, investments, activeClientCount, retainers] = await Promise.all([
+    const [invoices, investments, activeClientCount, retainers, recentInvoices] = await Promise.all([
       prisma.invoice.findMany({ 
         where: { financialYear: fy, workspaceId },
         include: { client: true },
@@ -34,6 +39,13 @@ export async function GET() {
       }),
       prisma.retainer.findMany({
         where: { workspaceId, status: "ACTIVE" },
+        include: { client: true }
+      }),
+      // Fetch the last 5 invoices GLOBALLY for the ledger table
+      prisma.invoice.findMany({
+        where: { workspaceId },
+        orderBy: { invoiceDate: 'desc' },
+        take: 5,
         include: { client: true }
       })
     ]);
@@ -58,7 +70,6 @@ export async function GET() {
     }
 
     // 5. MRR & AI HEALTH RADAR CALCULATION
-// 5. MRR & AI HEALTH RADAR CALCULATION
     let mrrTotal = 0;
 
     // --- N+1 FIX START: Fetch all invoices in ONE query ---
@@ -83,9 +94,10 @@ export async function GET() {
       mrrTotal += ret.amount;
 
       // Get this specific client's invoices from the in-memory map (limit to top 3)
-      const recentClientInvoices = (invoicesByClient[ret.clientId] || []).slice(0, 3);
+      const recentClientInvoices = (invoicesByClient[ret.clientId as string] || []).slice(0, 3);
 
       let health = "good"; 
+      const today = new Date();
       
       if (recentClientInvoices.length === 0) {
         health = "pending"; // It's brand new, we don't have payment data yet
@@ -162,7 +174,7 @@ export async function GET() {
         revenue: revenueChartData,
         wealth: wealthChartData
       },
-      recentInvoices: invoices.slice(-5).reverse() // Last 5
+      recentInvoices: recentInvoices
     });
 
   } catch (error) {

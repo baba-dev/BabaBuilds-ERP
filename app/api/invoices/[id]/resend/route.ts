@@ -72,7 +72,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     // 4. LOCATE THE EXISTING PDF
-    const absolutePdfPath = path.join(process.cwd(), 'public', invoice.pdfPath);
+    const relativePdfPath = invoice.pdfPath.startsWith('/') 
+      ? invoice.pdfPath.substring(1) 
+      : invoice.pdfPath;
+    const absolutePdfPath = path.join(process.cwd(), 'public', relativePdfPath);
     if (!fs.existsSync(absolutePdfPath)) {
       return NextResponse.json({ error: 'The original PDF file could not be found on the server.' }, { status: 404 });
     }

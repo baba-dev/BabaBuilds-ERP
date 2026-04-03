@@ -55,7 +55,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     // 5. APPLY "PAID" WATERMARK TO PDF (ONLY IF FULLY PAID)
     if (newStatus === 'Paid') {
-      const pdfPath = path.join(process.cwd(), 'public', updatedInvoice.pdfPath);
+      // Robust path resolution for VPS/Windows
+      const relativePath = updatedInvoice.pdfPath.startsWith('/') 
+        ? updatedInvoice.pdfPath.substring(1) 
+        : updatedInvoice.pdfPath;
+      const pdfPath = path.join(process.cwd(), 'public', relativePath);
       
       if (fs.existsSync(pdfPath)) {
         const existingPdfBytes = fs.readFileSync(pdfPath);
@@ -69,6 +73,23 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
           x: width / 2 - 140, 
           y: height / 2 - 50, 
           size: 130,
+          color: rgb(0.85, 0.15, 0.15), 
+          opacity: 0.15, 
+          rotate: degrees(45),
+        });
+
+        // Add the Date Received below PAID
+        const paymentDateObj = new Date(dateReceived);
+        const formattedDate = paymentDateObj.toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        }).toUpperCase();
+
+        firstPage.drawText(`RECEIVED: ${formattedDate}`, {
+          x: width / 2 - 110, 
+          y: height / 2 - 130, 
+          size: 24,
           color: rgb(0.85, 0.15, 0.15), 
           opacity: 0.15, 
           rotate: degrees(45),

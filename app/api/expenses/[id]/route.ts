@@ -88,7 +88,10 @@ export async function DELETE(
 
     // 3. Cleanup Orphaned Receipt File
     if (expense.receiptUrl) {
-      const filePath = path.join(process.cwd(), 'public', expense.receiptUrl);
+      const relativeReceiptPath = expense.receiptUrl.startsWith('/') 
+        ? expense.receiptUrl.substring(1) 
+        : expense.receiptUrl;
+      const filePath = path.join(process.cwd(), 'public', relativeReceiptPath);
       if (fs.existsSync(filePath)) {
         try {
           fs.unlinkSync(filePath);

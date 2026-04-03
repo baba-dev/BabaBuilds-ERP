@@ -17,9 +17,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-
-// MISSION CRITICAL: Globalization Imports
 import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
@@ -28,6 +27,31 @@ export default function Dashboard() {
   const t = useTranslations('Dashboard');
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // --- FINANCIAL YEAR LOGIC ---
+  const getCurrentFY = () => {
+    const today = new Date();
+    const month = today.getMonth() + 1;
+    const year = today.getFullYear();
+    const shortYear = year.toString().slice(-2);
+    return month <= 3 
+      ? `${parseInt(shortYear) - 1}-${shortYear}` 
+      : `${shortYear}-${parseInt(shortYear) + 1}`;
+  };
+  const [selectedFy, setSelectedFy] = useState(getCurrentFY());
+
+  // Generate FY Options for the last 3 years
+  const getFyOptions = () => {
+    const currentYear = new Date().getFullYear();
+    const options = [];
+    for (let i = -2; i <= 1; i++) {
+      const year = currentYear + i;
+      const shortYear = year.toString().slice(-2);
+      const nextShortYear = (year + 1).toString().slice(-2);
+      options.push(`${shortYear}-${nextShortYear}`);
+    }
+    return options;
+  };
 
   // --- GLOBALIZATION ENGINE ---
   const {
@@ -50,12 +74,12 @@ export default function Dashboard() {
   const [resendingId, setResendingId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    fetchDashboardData(selectedFy);
+  }, [selectedFy]);
 
-  const fetchDashboardData = () => {
+  const fetchDashboardData = (fy: string) => {
     setIsLoading(true);
-    fetch('/api/dashboard')
+    fetch(`/api/dashboard?fy=${fy}`)
       .then(res => res.json())
       .then(json => {
         if (json.error) {
@@ -91,7 +115,7 @@ export default function Dashboard() {
       if (res.ok) {
         setPayModalOpen(false);
         toast.success("Payment logged successfully.");
-        fetchDashboardData(); // Refresh the dashboard data
+        fetchDashboardData(selectedFy); // Refresh the dashboard data
       } else {
         const errorData = await res.json();
         toast.error(errorData.error || "Failed to log payment.");
@@ -163,9 +187,22 @@ export default function Dashboard() {
                 {t('global_command_center', { countryCode })}
               </p>
             </div>
-            <Badge variant="outline" className="w-fit h-fit border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 bg-white/50 dark:bg-zinc-900/50 px-3 py-1 shadow-sm backdrop-blur-sm">
-              {t('financial_year', { year: new Date().getFullYear() })}
-            </Badge>
+            
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest hidden sm:inline">FY:</span>
+              <Select value={selectedFy} onValueChange={setSelectedFy}>
+                <SelectTrigger className="w-[120px] h-9 bg-white/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 shadow-sm backdrop-blur-sm font-bold text-xs ring-offset-zinc-50 dark:ring-offset-zinc-950">
+                  <SelectValue placeholder="Select FY" />
+                </SelectTrigger>
+                <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
+                  {getFyOptions().map(fy => (
+                    <SelectItem key={fy} value={fy} className="text-xs font-medium">
+                      FY 20{fy}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
