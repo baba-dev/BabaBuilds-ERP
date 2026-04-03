@@ -53,6 +53,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       }
     });
 
+    const { PDFDocument, rgb, degrees, StandardFonts } = await import('pdf-lib');
+    
     // 5. APPLY "PAID" WATERMARK TO PDF (ONLY IF FULLY PAID)
     if (newStatus === 'Paid') {
       // Robust path resolution for VPS/Windows
@@ -64,21 +66,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       if (fs.existsSync(pdfPath)) {
         const existingPdfBytes = fs.readFileSync(pdfPath);
         const pdfDoc = await PDFDocument.load(existingPdfBytes);
+        
+        // 🚨 CRITICAL FIX: Embed font explicitly for existing documents
+        const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        
         const pages = pdfDoc.getPages();
-        const firstPage = pages[0];
-        const { width, height } = firstPage.getSize();
-
-        // Draw the massive, translucent red stamp
-        firstPage.drawText('PAID', {
-          x: width / 2 - 140, 
-          y: height / 2 - 50, 
-          size: 130,
-          color: rgb(0.85, 0.15, 0.15), 
-          opacity: 0.15, 
-          rotate: degrees(45),
-        });
-
-        // Add the Date Received below PAID
         const paymentDateObj = new Date(dateReceived);
         const formattedDate = paymentDateObj.toLocaleDateString('en-GB', {
           day: '2-digit',
@@ -86,13 +78,31 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
           year: 'numeric'
         }).toUpperCase();
 
-        firstPage.drawText(`RECEIVED: ${formattedDate}`, {
-          x: width / 2 - 110, 
-          y: height / 2 - 130, 
-          size: 24,
-          color: rgb(0.85, 0.15, 0.15), 
-          opacity: 0.15, 
-          rotate: degrees(45),
+        // Apply to ALL pages in case of multi-page invoices
+        pages.forEach(page => {
+          const { width, height } = page.getSize();
+
+          // Draw the massive, translucent red stamp
+          page.drawText('PAID', {
+            x: width / 2 - 140, 
+            y: height / 2 - 50, 
+            size: 130,
+            font: fontBold,
+            color: rgb(0.85, 0.15, 0.15), 
+            opacity: 0.25, // Increased from 0.15 for visibility
+            rotate: degrees(45),
+          });
+
+          // Add the Date Received below PAID
+          page.drawText(`RECEIVED: ${formattedDate}`, {
+            x: width / 2 - 110, 
+            y: height / 2 - 130, 
+            size: 24,
+            font: fontBold,
+            color: rgb(0.85, 0.15, 0.15), 
+            opacity: 0.25, 
+            rotate: degrees(45),
+          });
         });
 
         const pdfBytes = await pdfDoc.save();

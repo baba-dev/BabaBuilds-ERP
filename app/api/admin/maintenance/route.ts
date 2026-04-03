@@ -117,6 +117,62 @@ export async function POST(req: Request) {
           return NextResponse.json({ success: true, message: "No cache found to clear." });
         }
 
+      case "STAMP_PAID_INVOICES":
+        const { PDFDocument, rgb, degrees, StandardFonts } = await import('pdf-lib');
+        let stampedCount = 0;
+        
+        // 1. Fetch all invoices marked as Paid (System-wide for Super Admin)
+        const paidInvoices = await prisma.invoice.findMany({
+          where: { 
+            status: { in: ['Paid', 'PAID'] }
+          }
+        });
+
+        for (const inv of paidInvoices) {
+          const relativePath = inv.pdfPath.startsWith('/') ? inv.pdfPath.substring(1) : inv.pdfPath;
+          const fullPdfPath = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', relativePath);
+          
+          if (fs.existsSync(fullPdfPath)) {
+            try {
+              const existingPdfBytes = fs.readFileSync(fullPdfPath);
+              const pdfDoc = await PDFDocument.load(existingPdfBytes);
+              
+              // Embed font
+              const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+              const pages = pdfDoc.getPages();
+              
+              // Use receipt date if available, else invoice date, else now
+              const stampDate = inv.dateReceived || inv.invoiceDate || new Date();
+              const formattedDate = new Date(stampDate).toLocaleDateString('en-GB', {
+                day: '2-digit', month: 'short', year: 'numeric'
+              }).toUpperCase();
+
+              pages.forEach(page => {
+                const { width, height } = page.getSize();
+                page.drawText('PAID', {
+                  x: width / 2 - 140, y: height / 2 - 50,
+                  size: 130, font: fontBold,
+                  color: rgb(0.85, 0.15, 0.15), opacity: 0.25,
+                  rotate: degrees(45),
+                });
+                page.drawText(`RECEIVED: ${formattedDate}`, {
+                  x: width / 2 - 110, y: height / 2 - 130,
+                  size: 24, font: fontBold,
+                  color: rgb(0.85, 0.15, 0.15), opacity: 0.25,
+                  rotate: degrees(45),
+                });
+              });
+
+              const pdfBytes = await pdfDoc.save();
+              fs.writeFileSync(fullPdfPath, pdfBytes);
+              stampedCount++;
+            } catch (err) {
+              console.error(`Failed to stamp invoice ${inv.invoiceNumber}:`, err);
+            }
+          }
+        }
+        return NextResponse.json({ success: true, message: `Successfully retro-stamped ${stampedCount} paid invoices.` });
+
       case "REBOOT":
         // In Edge/Serverless this does nothing, but on a VPS with PM2/Docker,
         // exiting the process forces the process manager to reboot the app.

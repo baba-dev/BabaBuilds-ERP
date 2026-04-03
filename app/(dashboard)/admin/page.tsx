@@ -532,6 +532,16 @@ export default function SuperAdminPortal() {
                 </CardHeader>
               </Card>
 
+              <Card className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-sm hover:border-emerald-500 transition-colors cursor-pointer" onClick={() => handleMaintenanceAction('STAMP_PAID_INVOICES')}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Retro-Stamp Paid Invoices</CardTitle>
+                    <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                  </div>
+                  <CardDescription className="text-xs">Applies missing 'PAID' watermarks and receipt dates to historical invoices.</CardDescription>
+                </CardHeader>
+              </Card>
+
               <Card className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-sm hover:border-blue-500 transition-colors cursor-pointer" onClick={() => handleMaintenanceAction('CLEAR_CACHE')}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
