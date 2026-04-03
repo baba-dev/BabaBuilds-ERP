@@ -189,12 +189,12 @@ export async function POST(request: Request) {
         currentInvoiceNumber = invoiceNumber;
         
         // 5. NAMESPACED PDF STORAGE
-        const invoicesDir = path.join(process.cwd(), 'public', 'invoices', workspaceId);
+        const invoicesDir = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'invoices', workspaceId);
         if (!fs.existsSync(invoicesDir)) fs.mkdirSync(invoicesDir, { recursive: true });
         
         const pdfFilename  = `${invoiceNumber.replace(/\//g, '_')}.pdf`;
         finalPdfFilename   = pdfFilename;
-        const pdfPath      = path.join(invoicesDir, pdfFilename);
+        const pdfPath      = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'invoices', workspaceId, pdfFilename);
         finalPdfPath       = pdfPath;
         generatedPdfPath   = pdfPath;
         const relativePdfPath = `/invoices/${workspaceId}/${pdfFilename}`; 
@@ -296,7 +296,7 @@ export async function POST(request: Request) {
           if (!logoUrl) return;
           try {
             const relativeLogoPath = logoUrl.startsWith('/') ? logoUrl.substring(1) : logoUrl;
-            const fullPath = path.join(process.cwd(), 'public', relativeLogoPath);
+            const fullPath = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', relativeLogoPath);
             if (fs.existsSync(fullPath)) {
               const image = await pdfDoc.embedPng(fs.readFileSync(fullPath));
               const dims  = image.scaleToFit(maxWidth, maxHeight);

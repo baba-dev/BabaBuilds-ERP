@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     // 1. SECURITY LOCK & MULTI-TENANT ISOLATION
     const session = await getServerSession(authOptions);

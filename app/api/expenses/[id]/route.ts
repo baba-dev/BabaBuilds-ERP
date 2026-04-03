@@ -91,7 +91,7 @@ export async function DELETE(
       const relativeReceiptPath = expense.receiptUrl.startsWith('/') 
         ? expense.receiptUrl.substring(1) 
         : expense.receiptUrl;
-      const filePath = path.join(process.cwd(), 'public', relativeReceiptPath);
+      const filePath = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', relativeReceiptPath);
       if (fs.existsSync(filePath)) {
         try {
           fs.unlinkSync(filePath);

@@ -97,10 +97,10 @@ export async function POST(req: Request) {
         // Clear .log files in the root dir
         let logsCleared = 0;
         const rootDir = process.cwd();
-        const rootFiles = await fs.promises.readdir(rootDir);
+        const rootFiles = await fs.promises.readdir(/*turbopackIgnore: true*/ rootDir);
         for (const file of rootFiles) {
           if (file.endsWith(".log")) {
-            await fs.promises.writeFile(path.join(rootDir, file), "");
+            await fs.promises.writeFile(path.join(/*turbopackIgnore: true*/ rootDir, file), "");
             logsCleared++;
           }
         }
@@ -108,7 +108,7 @@ export async function POST(req: Request) {
 
       case "CLEAR_CACHE":
         // Clear Next.js cache directory (.next/cache)
-        const cacheDir = path.join(process.cwd(), ".next", "cache");
+        const cacheDir = path.join(/*turbopackIgnore: true*/ process.cwd(), ".next", "cache");
         try {
           await fs.promises.access(cacheDir);
           await fs.promises.rm(cacheDir, { recursive: true, force: true });

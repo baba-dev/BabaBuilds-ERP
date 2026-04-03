@@ -59,7 +59,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       const relativePath = updatedInvoice.pdfPath.startsWith('/') 
         ? updatedInvoice.pdfPath.substring(1) 
         : updatedInvoice.pdfPath;
-      const pdfPath = path.join(process.cwd(), 'public', relativePath);
+      const pdfPath = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', relativePath);
       
       if (fs.existsSync(pdfPath)) {
         const existingPdfBytes = fs.readFileSync(pdfPath);
