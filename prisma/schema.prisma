@@ -106,6 +106,7 @@ model Workspace {
   serviceTemplates      ServiceTemplate[]
   proposals             Proposal[]
   retainers             Retainer[]
+  tasks                 Task[]
 }
 
 model WorkspaceUser {
@@ -423,5 +424,8 @@ model Task {
   dueDate     DateTime?
   status      String    @default("PENDING")
   workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
+
+  @@index([workspaceId])
 }

@@ -4,6 +4,32 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import Groq from 'groq-sdk';
 import { decrypt } from '@/lib/encryption';
+import nodemailer from 'nodemailer';
+import dns from 'dns';
+import { promisify } from 'util';
+
+const lookupAsync = promisify(dns.lookup);
+
+async function resolveSafeIp(host: string): Promise<string | null> {
+  try {
+    if (host.toLowerCase() === 'localhost') return null;
+    const { address } = await lookupAsync(host);
+    if (address.startsWith('127.')) return null;
+    if (address.startsWith('10.')) return null;
+    if (address.startsWith('192.168.')) return null;
+    if (address.startsWith('169.254.')) return null;
+    if (address === '0.0.0.0') return null;
+    if (address.startsWith('172.')) {
+      const secondOctet = parseInt(address.split('.')[1], 10);
+      if (secondOctet >= 16 && secondOctet <= 31) return null;
+    }
+    if (address === '::1') return null;
+    if (address.toLowerCase().startsWith('fe80:')) return null;
+    return address;
+  } catch (e) {
+    return null;
+  }
+}
 
 // --- THE TOOLBOX (Database Functions - Workspace Aware) ---
 
@@ -186,17 +212,48 @@ async function sendInvoiceReminder(invoiceNumber: string, workspaceId: string) {
       where: { invoiceNumber, workspaceId },
       include: { client: true }
     });
-    
+
     if (!invoice) return JSON.stringify({ error: `Invoice ${invoiceNumber} not found.` });
     const email = invoice.client?.email;
     if (!email) return JSON.stringify({ error: `No email address found for client ${invoice.clientName}. Cannot send reminder.` });
 
-    // MOCK: In production, import nodemailer and trigger it using BusinessProfile SMTP.
-    return JSON.stringify({ 
-      success: true, 
-      message: `[MOCK SUCCESS]: An email reminder was successfully queued for ${invoice.clientName} (${email}) regarding Invoice ${invoiceNumber}.` 
+    // Fetch SMTP settings from the workspace's BusinessProfile
+    const profile = await prisma.businessProfile.findUnique({ where: { workspaceId } });
+    if (!profile || !profile.smtpHost || !profile.smtpUser || !profile.smtpPassword) {
+      return JSON.stringify({ error: 'SMTP server is not configured. Please add SMTP settings in Business Settings to send reminders.' });
+    }
+
+    // SSRF protection: resolve host to a safe public IP before connecting
+    const safeIp = await resolveSafeIp(profile.smtpHost);
+    if (!safeIp) {
+      console.error(`[AI Reminder] Blocked SSRF attempt on SMTP host: ${profile.smtpHost}`);
+      return JSON.stringify({ error: 'Invalid or internal SMTP host blocked by security policy.' });
+    }
+
+    const transporter = nodemailer.createTransport({
+      host:   safeIp,
+      port:   profile.smtpPort || 587,
+      secure: profile.smtpPort === 465,
+      tls:    { servername: profile.smtpHost },
+      auth:   { user: profile.smtpUser, pass: profile.smtpPassword },
     });
-  } catch (e) { return JSON.stringify({ error: "Failed to verify client email and trigger reminder." }); }
+
+    const formattedAmount = invoice.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    await transporter.sendMail({
+      from:    `"${profile.companyName}" <${profile.smtpFromEmail || profile.smtpUser}>`,
+      to:      email,
+      subject: `Payment Reminder: Invoice ${invoiceNumber} from ${profile.companyName}`,
+      text: `Dear ${invoice.client?.name || invoice.clientName},\n\nThis is a friendly reminder that Invoice ${invoiceNumber} for INR ${formattedAmount} is currently outstanding.\n\nPlease arrange payment at your earliest convenience.\n\nBest Regards,\n${profile.companyName}`,
+    });
+
+    return JSON.stringify({
+      success: true,
+      message: `Payment reminder email successfully sent to ${invoice.clientName} (${email}) for Invoice ${invoiceNumber}.`
+    });
+  } catch (e: any) {
+    console.error('[AI Reminder] Send failed:', e);
+    return JSON.stringify({ error: `Failed to send reminder email: ${e?.message || 'Unknown error'}` });
+  }
 }
 
 // +++ NEW CRM AUTOMATION TOOLS +++
@@ -217,11 +274,17 @@ async function updateClientStatus(clientName: string, status: string, workspaceI
     const client = await prisma.client.findFirst({ where: { name: { contains: clientName }, workspaceId } });
     if (!client) return JSON.stringify({ error: `Could not find a client matching ${clientName}.` });
 
-    await (prisma as any).client.update({
+    const validStatuses = ['ACTIVE', 'INACTIVE', 'VIP'];
+    const normalizedStatus = status.toUpperCase();
+    if (!validStatuses.includes(normalizedStatus)) {
+      return JSON.stringify({ error: `Invalid status '${status}'. Must be one of: ACTIVE, INACTIVE, VIP.` });
+    }
+
+    await prisma.client.update({
       where: { id: client.id },
-      data: { status: status.toUpperCase() }
+      data: { status: normalizedStatus }
     });
-    return JSON.stringify({ success: true, message: `Updated ${client.name} status to ${status.toUpperCase()}.` });
+    return JSON.stringify({ success: true, message: `Updated ${client.name} status to ${normalizedStatus}.` });
   } catch (e) { return JSON.stringify({ error: "Failed to update client status." }); }
 }
 
@@ -361,15 +424,15 @@ async function convertProposalToInvoice(proposalNo: string, workspaceId: string)
       data: { status: "INVOICED", acceptedAt: new Date() }
     });
 
-    // Auto-increment logic for next invoice number
+    // Bug 5 fix: sort by createdAt (not invoiceNumber string) to get true last invoice
     const latestInvoice = await prisma.invoice.findFirst({
       where: { workspaceId },
-      orderBy: { invoiceNumber: 'desc' }
+      orderBy: { createdAt: 'desc' }
     });
     
     let nextInvNum = "INV-001";
     if (latestInvoice && latestInvoice.invoiceNumber.startsWith("INV-")) {
-      const numPart = parseInt(latestInvoice.invoiceNumber.split("-")[1]);
+      const numPart = parseInt(latestInvoice.invoiceNumber.split("-")[1], 10);
       if (!isNaN(numPart)) {
         nextInvNum = `INV-${(numPart + 1).toString().padStart(3, "0")}`;
       } else {
@@ -684,7 +747,7 @@ export async function POST(request: Request) {
       {
         type: "function", function: {
           name: "get_overdue_invoices",
-          description: "Find all pending invoices that are older than 30 days and owe you money.",
+          description: "Find all pending invoices where the invoice date is more than 30 days ago (approximation — no due date field exists). Use to identify long-outstanding unpaid invoices.",
           parameters: { type: "object", properties: {} }
         }
       },
@@ -1007,8 +1070,10 @@ export async function POST(request: Request) {
         if (toolHandlers[toolCall.function.name]) {
           dbResult = await toolHandlers[toolCall.function.name](args, workspaceId);
         } else if (toolCall.function.name === "draft_proposal") {
-          action = { type: 'NAVIGATE', path: '/proposals/new', payload: { clientName: args.client_name, title: args.title, totalAmount: args.total_amount } };
-          dbResult = JSON.stringify({ status: `Success. Redirecting user to proposal drafted form.` });
+          // Bug 6 fix: /proposals/new does not exist — the proposals page is a single-page
+          // component with internal state (view: 'list' | 'builder'). Route to /proposals.
+          action = { type: 'NAVIGATE', path: '/proposals', payload: { clientName: args.client_name, title: args.title, totalAmount: args.total_amount } };
+          dbResult = JSON.stringify({ status: `Success. Redirecting user to proposal form.` });
         } else if (toolCall.function.name === "draft_invoice") {
           action = { type: 'NAVIGATE', path: '/', payload: { clientName: args.client_name, totalAmount: args.amount, serviceDescription: args.description } };
           dbResult = JSON.stringify({ status: `Success. Pushed actionPayload to UI to load invoice form for ${args.client_name}.` });

@@ -9,7 +9,7 @@ import {
   isWeekend, 
   previousFriday 
 } from "date-fns";
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, PDFArray, PDFName, PDFString, rgb, StandardFonts } from 'pdf-lib';
 import fs from 'fs';
 import path from 'path';
 
@@ -21,6 +21,41 @@ const getFY = (date: Date) => {
   return `${year.toString().slice(-2)}-${(year + 1).toString().slice(-2)}`;
 };
 
+/**
+ * Adds a real, clickable URI annotation (PDF /Annot /Subtype /Link) to a page.
+ * Standardizes parity with the manual invoice generator.
+ */
+function addLinkAnnotation(
+  pdfDoc: PDFDocument,
+  page: any,
+  x: number,
+  absoluteY: number,
+  rectWidth: number,
+  rectHeight: number,
+  url: string
+): void {
+  const linkAnnotation = pdfDoc.context.obj({
+    Type:    'Annot',
+    Subtype: 'Link',
+    Rect:    [x, absoluteY, x + rectWidth, absoluteY + rectHeight],
+    Border:  [0, 0, 0], 
+    A: {
+      Type: 'Action',
+      S:    'URI',
+      URI:  PDFString.of(url),
+    },
+  });
+
+  const ref = pdfDoc.context.register(linkAnnotation);
+
+  const annots = page.node.get(PDFName.of('Annots'));
+  if (annots instanceof PDFArray) {
+    annots.push(ref);
+  } else {
+    page.node.set(PDFName.of('Annots'), pdfDoc.context.obj([ref]));
+  }
+}
+
 // --- PDF GENERATION ENGINE FOR CRON ---
 async function generateRetainerPDF(
   workspaceId: string, 
@@ -28,7 +63,8 @@ async function generateRetainerPDF(
   profile: any, 
   invoiceNumber: string, 
   billingMonth: string, 
-  finalDescription: string
+  finalDescription: string,
+  paymentLink: string | null = null
 ) {
   const client = retainer.client;
   const userLocale = profile.workspace?.countryCode === "IN" ? "en-IN" : "en-US";
@@ -198,6 +234,16 @@ async function generateRetainerPDF(
     drawBankDetail(safeRoutingLabel, profile.ifscCode);
     drawBankDetail("Reference", invoiceNumber);
 
+    // --- DESIGN_2: Payment link rendering ---
+    if (paymentLink) {
+      footerY += 8; 
+      const linkText  = `Pay securely online: ${paymentLink}`;
+      const linkTextWidth = font.widthOfTextAtSize(linkText, 9);
+      drawText(linkText, leftMargin, footerY, 9, false, 'left', cfLinkBlue);
+      addLinkAnnotation(pdfDoc, page, leftMargin, height - footerY - 1, linkTextWidth, 10, paymentLink);
+      footerY += 16;
+    }
+
     page.drawLine({ start: { x: leftMargin, y: 45 }, end: { x: rightMargin, y: 45 }, thickness: 0.5, color: borderGray });
     drawText("Page 1 of 1", rightMargin, height - 30, 8, false, 'right', textMuted);
 
@@ -279,7 +325,16 @@ async function generateRetainerPDF(
     page.drawLine({ start: { x: width - 180, y: height - (bankY + 70) }, end: { x: width - 40, y: height - (bankY + 70) }, thickness: 1, color: black });
     drawText('Authorized Signatory', width - 40, bankY + 85, 9, false, 'right', textMuted);
 
-    const decY = bankY + 115;
+    // --- DESIGN_1: Payment link rendering ---
+    if (paymentLink) {
+      const linkText  = `Pay securely online: ${paymentLink}`;
+      const linkTextWidth = font.widthOfTextAtSize(linkText, 9);
+      const linkDisplayY = bankY + 100;
+      drawText(linkText, 40, linkDisplayY, 9, false, 'left', cfLinkBlue);
+      addLinkAnnotation(pdfDoc, page, 40, height - linkDisplayY - 1, linkTextWidth, 10, paymentLink);
+    }
+
+    const decY = bankY + 115 + (paymentLink ? 16 : 0);
     drawRect(40, decY, width - 80, 105, bgLight, borderGray);
     drawText('Statutory Declarations:', 55, decY + 20, 9, true, 'left', black);
     drawText("1. GST Exemption: We hereby declare that our aggregate turnover is below the statutory registration threshold", 55, decY + 35, 8, false, 'left', textDark);
@@ -394,6 +449,65 @@ export async function GET(request: Request) {
           finalDescription = `${retainer.serviceName} (${billingMonth})`;
         }
 
+        // --- PAYMENT LINK GENERATION (PRO ONLY) ---
+        let paymentLink: string | null = null;
+        const isProPlan = profile.workspace?.planTier === "PRO";
+        const baseCurrency = profile.workspace?.baseCurrency || 'INR';
+        const dueDate = new Date(today);
+        dueDate.setDate(dueDate.getDate() + 7);
+
+        if (isProPlan) {
+          const defaultGateway = (profile as any).defaultGateway || 'RAZORPAY';
+
+          if (
+            defaultGateway === 'RAZORPAY' &&
+            baseCurrency === 'INR' &&
+            (profile as any).razorpayKeyId &&
+            (profile as any).razorpayKeySecret
+          ) {
+            try {
+              const { decrypt }                   = await import('@/lib/encryption');
+              const { generateTenantPaymentLink } = await import('@/lib/razorpay-links');
+              const decryptedSecret = decrypt((profile as any).razorpayKeySecret);
+
+              paymentLink = await generateTenantPaymentLink({
+                amount:          retainer.amount,
+                currency:        baseCurrency,
+                description:     `Invoice ${invoiceNumber}`,
+                invoiceDueDate:  dueDate,
+                customerDetails: {
+                  name:  retainer.client.name,
+                  email: retainer.client.email ?? undefined,
+                },
+                tenantKeyId:     (profile as any).razorpayKeyId,
+                tenantKeySecret: decryptedSecret,
+              });
+            } catch (rzpErr) {
+              console.error('[cron] Razorpay link failed:', rzpErr);
+            }
+          } else if (
+            defaultGateway === 'STRIPE' &&
+            (profile as any).stripePublishableKey &&
+            (profile as any).stripeSecretKey
+          ) {
+            try {
+              const { decrypt }                   = await import('@/lib/encryption');
+              const { generateStripePaymentLink } = await import('@/lib/stripe-links');
+              const decryptedSecret = decrypt((profile as any).stripeSecretKey);
+
+              paymentLink = await generateStripePaymentLink({
+                amount:          retainer.amount,
+                currency:        baseCurrency,
+                description:     `Invoice ${invoiceNumber}`,
+                invoiceNumber,
+                tenantSecretKey: decryptedSecret,
+              });
+            } catch (stripeErr) {
+              console.error('[cron] Stripe link failed:', stripeErr);
+            }
+          }
+        }
+
         // C. GENERATE PHYSICAL PDF (Fixes Ghost PDF Issue)
         const relativePdfPath = await generateRetainerPDF(
           workspaceId, 
@@ -401,7 +515,8 @@ export async function GET(request: Request) {
           profile, 
           invoiceNumber, 
           billingMonth, 
-          finalDescription
+          finalDescription,
+          paymentLink
         );
 
         // D. EXECUTE DATABASE TRANSACTION

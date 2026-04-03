@@ -554,26 +554,30 @@ export async function POST(request: Request) {
 
           // ── DESIGN_1: Razorpay payment link (PRO only) ───────────────────────
           if (paymentLink) {
-            const linkText  = `Pay securely online: ${paymentLink}`;
-            const linkTextWidth = font.widthOfTextAtSize(linkText, 9);
+            const linkTitle = "Pay securely online:";
+            const linkText  = paymentLink;
+            const titleWidth = fontBold.widthOfTextAtSize(linkTitle, 9);
+            const linkWidth  = font.widthOfTextAtSize(linkText, 9);
 
-            // Inserted between Authorized Signatory (bankY+85) and the Declaration box
-            const linkDisplayY = bankY + 100;
-            drawText(linkText, 40, linkDisplayY, 9, false, 'left', cfLinkBlue);
+            // Shifted down slightly for better legibility
+            const linkDisplayY = bankY + 105;
+            
+            drawText(linkTitle, 40, linkDisplayY, 9, true, 'left', black);
+            drawText(linkText, 40 + titleWidth + 5, linkDisplayY, 9, false, 'left', cfLinkBlue);
 
             addLinkAnnotation(
               pdfDoc,
               page,
-              40,
-              height - linkDisplayY - 1,  // absoluteY: PDF-space Y (origin at bottom)
-              linkTextWidth,
+              40 + titleWidth + 5,
+              height - linkDisplayY - 1,
+              linkWidth,
               10,
               paymentLink
             );
           }
           // ─────────────────────────────────────────────────────────────────────
 
-          const decY = bankY + 115 + (paymentLink ? 16 : 0); // shift declaration box down if link was added
+          const decY = bankY + 125 + (paymentLink ? 20 : 0); // increased shift
           drawRect(40, decY, width - 80, 105, bgLight, borderGray);
           drawText('Statutory Declarations:', 55, decY + 20, 9, true, 'left', black);
           drawText("1. GST Exemption: We hereby declare that our aggregate turnover is below the statutory registration threshold", 55, decY + 35, 8, false, 'left', textDark);

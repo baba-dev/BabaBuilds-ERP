@@ -68,10 +68,16 @@ export default function ProposalsEngine() {
   const fetchData = async () => {
     try {
       if (view === 'list') {
-        const propRes = await fetch('/api/proposals');
+        const [propRes, clientRes] = await Promise.all([
+          fetch('/api/proposals'),
+          fetch('/api/clients')
+        ]);
         if (!propRes.ok) throw new Error(`Proposals API failed with status: ${propRes.status}`);
         const propData = await propRes.json();
         setProposals(Array.isArray(propData) ? propData : []);
+        // Always load clients so the AI payload consumer can fuzzy-match on initial load
+        const clientData = await clientRes.json();
+        setClients(clientData.data && Array.isArray(clientData.data) ? clientData.data : []);
       } else {
         const clientRes = await fetch('/api/clients');
         if (!clientRes.ok) throw new Error(`Clients API failed with status: ${clientRes.status}`);
@@ -92,6 +98,36 @@ export default function ProposalsEngine() {
       setIsLoading(false);
     }
   };
+
+  // --- Bug 7 Fix: SMART AI AUTO-FILL for Proposals ---
+  // The AI's draft_proposal tool stores a payload in sessionStorage then navigates here.
+  // This effect reads it, switches to the builder, and pre-fills the form.
+  useEffect(() => {
+    if (clients.length === 0) return;
+
+    const raw = sessionStorage.getItem('erp_ai_payload');
+    if (!raw) return;
+
+    try {
+      const { path, data, timestamp } = JSON.parse(raw);
+      const isFresh = (Date.now() - timestamp) < 10000;
+
+      if (isFresh && data && path === '/proposals') {
+        setView('builder');
+        if (data.title) setTitle(data.title);
+        if (data.clientName) {
+          const matched = clients.find((c: any) =>
+            c.name.toLowerCase().includes(data.clientName.toLowerCase())
+          );
+          if (matched) setClientId(matched.id);
+        }
+      }
+      sessionStorage.removeItem('erp_ai_payload');
+    } catch (e) {
+      console.error("Failed to parse AI payload for Proposals:", e);
+      sessionStorage.removeItem('erp_ai_payload');
+    }
+  }, [clients]);
 
   // --- OPTIMISTIC DELETE LOGIC ---
   const confirmDelete = async () => {

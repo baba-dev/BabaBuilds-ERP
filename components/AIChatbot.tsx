@@ -103,10 +103,13 @@ export default function AIChatbot() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           message: text, 
-          history: messages.slice(1),
+          // Bug 8 fix: filter by content instead of slicing by position (slice(1) silently
+          // drops the first real message if localStorage didn't start with the greeting).
+          history: messages.filter(
+            m => !(m.role === 'assistant' && m.content === DEFAULT_GREETING.content)
+          ).slice(-10),
           context: {
             currentRoute: pathname,
-            // Grab the page title so the AI knows exactly what entity the user is looking at
             pageTitle: typeof document !== 'undefined' ? document.title : 'Unknown'
           }
         })
@@ -287,7 +290,9 @@ export default function AIChatbot() {
       </div>
 
       {/* FLOATING ACTION BUTTON */}
-      <div className={`fixed bottom-6 right-6 z-[100] transition-all duration-300 ${isExpanded ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}`}>
+      {/* Bug 9 fix: hide FAB whenever chat is open (isOpen) so it doesn't overlap page
+          content as a floating X. The header close button handles dismissal instead. */}
+      <div className={`fixed bottom-6 right-6 z-[100] transition-all duration-300 ${isOpen || isExpanded ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}`}>
         <button 
           onClick={() => setIsOpen(!isOpen)}
           className={`h-14 w-14 rounded-full flex items-center justify-center text-white shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 ${isOpen ? 'bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 rotate-90 shadow-zinc-400/50' : 'bg-purple-900 dark:bg-purple-600 hover:bg-purple-800 dark:hover:bg-purple-500 hover:shadow-purple-900/40 rotate-0'}`}
