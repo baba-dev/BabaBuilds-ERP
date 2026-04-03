@@ -14,10 +14,16 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 const QUICK_PROMPTS = [
-  "💰 Executive summary of my finances",
+  "📈 What's my estimated tax liability?",
   "📊 How close am I to the ₹20L GST limit?",
-  "🏢 Who are my active clients right now?",
-  "📝 Draft an invoice for Acme Corp for ₹50,000"
+  "💸 Log a ₹10,000 expense for 'Office Rent'",
+  "🤝 Onboard Global Tech (contact@global.com)",
+  "📧 Send a reminder for overdue invoices",
+  "📝 Draft an invoice for Acme Corp for ₹50,000",
+  "🔄 Which monthly retainers are due?",
+  "🎯 Convert my last proposal to an invoice",
+  "🏦 Find unreconciled bank transactions",
+  "📅 Remind me to call client X tomorrow"
 ];
 
 const DEFAULT_GREETING = { 
