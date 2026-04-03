@@ -22,8 +22,10 @@ jobs:
             # 1. Go to project folder
             cd /var/www/bababuilds-erp
             
-            # 2. Pull code and install
-            git pull origin main
+            # 2. Pull code and install (Fetch and Hard Reset to clear manual conflicts)
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd components/ui/ 2>/dev/null || true
             npm install --legacy-peer-deps
             
             # 3. Database schema and Build
