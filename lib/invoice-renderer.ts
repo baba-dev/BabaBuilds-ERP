@@ -68,12 +68,16 @@ export async function renderInvoiceToBytes(options: RenderInvoiceOptions): Promi
       const relativeLogoPath = logoUrl.startsWith('/') ? logoUrl.substring(1) : logoUrl;
       const fullPath = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', relativeLogoPath);
       if (fs.existsSync(fullPath)) {
-        const image = await pdfDoc.embedPng(fs.readFileSync(fullPath));
+        const fileBytes = fs.readFileSync(fullPath);
+        const isJpg = relativeLogoPath.toLowerCase().endsWith('.jpg') || relativeLogoPath.toLowerCase().endsWith('.jpeg');
+        const image = isJpg ? await pdfDoc.embedJpg(fileBytes) : await pdfDoc.embedPng(fileBytes);
         const dims  = image.scaleToFit(maxWidth, maxHeight);
         const drawX = align === 'right' ? x - dims.width : x;
         page.drawImage(image, { x: drawX, y: height - y - dims.height, width: dims.width, height: dims.height });
+        return dims.height; // Return height for dynamic spacing
       }
-    } catch (e) { console.log(`Logo load failed: ${logoUrl}`); }
+    } catch (e) { console.log(`Logo load failed: ${logoUrl}`, e); }
+    return 0;
   };
 
   const addLinkAnnotation = (x: number, absoluteY: number, rectWidth: number, rectHeight: number, url: string) => {
@@ -221,6 +225,24 @@ export async function renderInvoiceToBytes(options: RenderInvoiceOptions): Promi
 
   } else {
     // --- DESIGN_1 Logic ---
+    const wrapText = (text: string, maxWidth: number, size: number, currentFont: any) => {
+      const words = text.split(' ');
+      const lines = [];
+      let currentLine = '';
+      
+      for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        if (currentFont.widthOfTextAtSize(testLine, size) <= maxWidth) {
+          currentLine = testLine;
+        } else {
+          lines.push(currentLine);
+          currentLine = word;
+        }
+      }
+      lines.push(currentLine);
+      return lines;
+    };
+
     if (profile.logoUrl) await loadLogo(profile.logoUrl, 40, 30, 180, 45); 
     else drawText(profile.companyName, 40, 50, 18, true, 'left', black);
 
@@ -239,17 +261,24 @@ export async function renderInvoiceToBytes(options: RenderInvoiceOptions): Promi
     drawText(line1, 40, 155, 10, false, 'left', textDark);
     if (line2) drawText(line2, 40, 170, 10, false, 'left', textDark);
 
-    drawText('To:', 320, 110, 9, true, 'left', textMuted);
-    if (client.logoUrl) await loadLogo(client.logoUrl, 320, 118, 140, 35); 
-    drawText(client.name,     320, 165, 11, true,  'left', black);
+    // Dynamic "To:" centering logic
+    let currentToY = 110;
+    drawText('To:', 320, currentToY, 9, true, 'left', textMuted);
+    currentToY += 15;
+
+    if (client.logoUrl) {
+      await loadLogo(client.logoUrl, 320, currentToY - 5, 140, 35); 
+      currentToY += 45; // Shift name down if logo exists
+    }
+    
+    drawText(client.name,     320, currentToY, 11, true,  'left', black);
     
     const clientAddrParts = client.address.split(', ');
-    const splitPoint = Math.ceil(clientAddrParts.length * 0.4); 
-    const clientLine1 = clientAddrParts.slice(0, splitPoint).join(', ');
-    const clientLine2 = clientAddrParts.slice(splitPoint).join(', ');
-    drawText(clientLine1,  320, 180, 9,  false, 'left', textMuted);
-    if (clientLine2) drawText(clientLine2,  320, 195, 9,  false, 'left', textMuted);
-    drawText(client.country,  320, clientLine2 ? 210 : 195, 10, true,  'left', textDark);
+    const clientLine1 = clientAddrParts.slice(0, Math.ceil(clientAddrParts.length / 2)).join(', ');
+    const clientLine2 = clientAddrParts.slice(Math.ceil(clientAddrParts.length / 2)).join(', ');
+    drawText(clientLine1,  320, currentToY + 15, 9,  false, 'left', textMuted);
+    if (clientLine2) drawText(clientLine2,  320, currentToY + 30, 9,  false, 'left', textMuted);
+    drawText(client.country,  320, currentToY + (clientLine2 ? 45 : 30), 10, true,  'left', textDark);
 
     drawRect(40, 215, width - 80, 60, bgLight, borderGray); 
     drawText('Invoice No:',     55,  235, 9,  true,  'left', textMuted);
@@ -269,17 +298,27 @@ export async function renderInvoiceToBytes(options: RenderInvoiceOptions): Promi
     drawText('Description of Services', 180,      307, 9, true, 'left',  white);
     drawText(`Amount (${baseCurrency})`, width - 50, 307, 9, true, 'right', white);
     
-    let currentY = 335; 
+    let currentY = 330; // Original Y instead of 335
     services.forEach((service: any) => {
       const lineAmt = service.amount.toLocaleString(userLocale, { minimumFractionDigits: 2 });
-      drawText(sacCode || 'N/A', 50,        currentY,      10, false, 'left',  textDark);
-      drawText(service.title, 180,       currentY,      10, true,  'left',  black);
-      drawText(`(${service.nicDetails} for ${invoice.billingMonth})`, 180, currentY + 18, 8, false, 'left', textMuted);
-      drawText(lineAmt,       width - 50, currentY,     10, false, 'right', textDark);
-      currentY += 45; 
+      // Wrap the service title if it's too long
+      const titleLines = wrapText(service.title, 350, 10, fontBold);
+      
+      titleLines.forEach((tLine, i) => {
+        if (i === 0) {
+           drawText(sacCode || 'N/A', 50,  currentY, 10, false, 'left',  textDark);
+        }
+        drawText(tLine, 180, currentY + (i * 12), 10, true, 'left', black);
+      });
+
+      const subDescY = currentY + (titleLines.length * 12);
+      drawText(`(${service.nicDetails} for ${invoice.billingMonth})`, 180, subDescY, 8, false, 'left', textMuted);
+      drawText(lineAmt, width - 50, currentY, 10, false, 'right', textDark);
+      
+      currentY = subDescY + 25; // Original spacing (~40 instead of 45)
     });
 
-    const dividerY = currentY - 10;
+    const dividerY = currentY - 5;
     page.drawLine({ start: { x: 40, y: height - dividerY }, end: { x: width - 40, y: height - dividerY }, thickness: 1, color: borderGray });
 
     drawText('CGST (0%)',  width - 150, currentY + 10, 9, false, 'right', textMuted);
@@ -315,15 +354,31 @@ export async function renderInvoiceToBytes(options: RenderInvoiceOptions): Promi
     }
 
     const decY = bankY + 120 + (paymentLink ? 15 : 0);
-    drawRect(40, decY, width - 80, 105, bgLight, borderGray);
+    
+    // Wrapped Statutory Declarations Calculations first for box height
+    const decWrapWidth = width - 150;
+    const pt1Lines = wrapText("1. GST Exemption: We hereby declare that our aggregate turnover is below the statutory registration threshold prescribed under Section 22 of the CGST Act, 2017. Hence, GST is not applicable on this invoice.", decWrapWidth, 8, font);
+    const pt2Text = client.isExport 
+      ? "2. Export of Service: This supply qualifies as an 'Export of Services' as defined under Section 2(6) of the IGST Act, 2017. The recipient and place of supply are located outside India."
+      : "2. Nature of Supply: This invoice represents a domestic supply of services within the territory of India.";
+    const pt2Lines = wrapText(pt2Text, decWrapWidth, 8, font);
+    const pt3Lines = wrapText("3. MSME Status: The service provider is a registered Micro Enterprise under the MSMED Act, 2006.", decWrapWidth, 8, font);
+
+    const dynamicBoxHeight = Math.max(105, (pt1Lines.length + pt2Lines.length + pt3Lines.length) * 11 + 45);
+    drawRect(40, decY, width - 80, dynamicBoxHeight, bgLight, borderGray);
     drawText('Statutory Declarations:', 55, decY + 20, 9, true, 'left', black);
-    drawText("1. GST Exemption: We hereby declare that our aggregate turnover is below the statutory registration threshold prescribed under Section 22 of the CGST Act, 2017. Hence, GST is not applicable on this invoice.", 55, decY + 35, 8, false, 'left', textDark);
-    if (client.isExport) {
-        drawText("2. Export of Service: This supply qualifies as an 'Export of Services' as defined under Section 2(6) of the IGST Act, 2017. The recipient and place of supply are located outside India.", 55, decY + 62, 8, false, 'left', textDark);
-    } else {
-        drawText("2. Nature of Supply: This invoice represents a domestic supply of services within the territory of India.", 55, decY + 62, 8, false, 'left', textDark);
-    }
-    drawText("3. MSME Status: The service provider is a registered Micro Enterprise under the MSMED Act, 2006.", 55, decY + 89, 8, false, 'left', textDark);
+    
+    pt1Lines.forEach((line, i) => drawText(line, 55, decY + 35 + (i * 10), 8, false, 'left', textDark));
+
+    const pt2YOffset = decY + 35 + (pt1Lines.length * 10) + 5;
+    pt2Lines.forEach((line, i) => drawText(line, 55, pt2YOffset + (i * 10), 8, false, 'left', textDark));
+
+    const pt3YOffset = pt2YOffset + (pt2Lines.length * 10) + 5;
+    pt3Lines.forEach((line, i) => drawText(line, 55, pt3YOffset + (i * 10), 8, false, 'left', textDark));
+
+    drawRect(0, height - 60, width, 60, black);
+    drawText(`${profile.companyName} | PAN: ${profile.panNumber}${profile.udyamNumber ? ` | MSME: ${profile.udyamNumber}` : ''}${profile.gstin ? ` | ${safeTaxIdLabel}: ${profile.gstin}` : ''}`, width / 2, height - 35, 9, false, 'center', white);
+    drawText(`${profile.website ? `${profile.website} | ` : ''}${profile.email}${profile.phone ? ` | ${profile.phone}` : ''}`, width / 2, height - 20, 9, false, 'center', white);
 
     drawRect(0, height - 60, width, 60, black);
     drawText(`${profile.companyName} | PAN: ${profile.panNumber}${profile.udyamNumber ? ` | MSME: ${profile.udyamNumber}` : ''}${profile.gstin ? ` | ${safeTaxIdLabel}: ${profile.gstin}` : ''}`, width / 2, height - 35, 9, false, 'center', white);
