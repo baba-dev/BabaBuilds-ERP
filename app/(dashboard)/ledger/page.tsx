@@ -19,6 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
 import { useTranslations } from "next-intl";
+import { getBustedUrl } from "@/lib/cache-buster";
 
 export default function AuditDashboard() {
   const t = useTranslations('Ledger');
@@ -319,7 +320,7 @@ export default function AuditDashboard() {
                               <Send className={`w-3.5 h-3.5 ${resendingId === inv.id ? 'animate-pulse text-indigo-400' : ''}`} />
                             </Button>
                             <Button variant="secondary" size="sm" asChild title="Download PDF" className="dark:bg-zinc-800 dark:hover:bg-zinc-700 w-9 px-0 flex justify-center">
-                              <a href={inv.pdfPath} target="_blank" rel="noopener noreferrer">
+                              <a href={getBustedUrl(inv.pdfPath, inv.updatedAt)} target="_blank" rel="noopener noreferrer">
                                 <Download className="h-3.5 w-3.5 dark:text-zinc-200" />
                               </a>
                             </Button>

@@ -12,10 +12,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 
-// MISSION CRITICAL: Globalization Imports
+// MISSION CRITICAL: Globalization & Caching Imports
 import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
 import { useTranslations } from "next-intl";
+import { getBustedUrl } from "@/lib/cache-buster";
 
 export default function InvoiceGenerator() {
   const t = useTranslations('Invoice');
@@ -422,7 +423,7 @@ export default function InvoiceGenerator() {
                       <CheckCircle2 className="w-5 h-5 text-emerald-500" /> {t('generated_success', { invoiceNumber: successData.invoiceNumber })}
                     </p>
                     <Button className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 text-xs font-bold uppercase tracking-widest shadow-sm active:scale-95 transition-all" asChild>
-                      <a href={successData.pdfPath} target="_blank">{t('download_pdf')}</a>
+                      <a href={getBustedUrl(successData.pdfPath)} target="_blank">{t('download_pdf')}</a>
                     </Button>
                   </div>
 

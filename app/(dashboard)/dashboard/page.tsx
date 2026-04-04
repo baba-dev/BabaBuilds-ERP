@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
+import { getBustedUrl } from "@/lib/cache-buster";
 
 export default function Dashboard() {
   const t = useTranslations('Dashboard');
@@ -583,7 +584,7 @@ export default function Dashboard() {
                             <Send className={`w-3.5 h-3.5 ${resendingId === inv.id ? 'animate-pulse text-indigo-400' : ''}`} />
                           </Button>
                           <Button variant="secondary" size="sm" asChild title="Download PDF" className="bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 w-8 h-8 p-0 flex justify-center active:scale-95 transition-colors">
-                            <a href={inv.pdfPath} target="_blank" rel="noopener noreferrer" aria-label={`Download PDF for ${inv.invoiceNumber}`}>
+                            <a href={getBustedUrl(inv.pdfPath, inv.updatedAt)} target="_blank" rel="noopener noreferrer" aria-label={`Download PDF for ${inv.invoiceNumber}`}>
                               <Download className="h-3.5 w-3.5" />
                             </a>
                           </Button>

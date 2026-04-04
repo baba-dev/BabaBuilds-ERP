@@ -23,6 +23,7 @@ import {
 // MISSION CRITICAL: Globalization Imports
 import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
+import { getBustedUrl } from "@/lib/cache-buster";
 
 export default function ClientCRM() {
   const t = useTranslations('Clients');
@@ -395,7 +396,7 @@ export default function ClientCRM() {
 
                   <CardHeader className="flex flex-row items-center gap-4 pb-5 pt-6 px-6 border-b border-zinc-100 dark:border-zinc-800/80">
                     <Avatar className="h-12 w-12 border border-zinc-200 dark:border-zinc-800 shadow-sm">
-                      <AvatarImage src={client.logoUrl} alt={client.name} />
+                      <AvatarImage src={getBustedUrl(client.logoUrl, client.updatedAt)} alt={client.name} />
                       <AvatarFallback className="bg-zinc-100 dark:bg-zinc-900 text-zinc-400 dark:text-zinc-500 text-xs font-bold">
                         <Building2 className="w-5 h-5" />
                       </AvatarFallback>

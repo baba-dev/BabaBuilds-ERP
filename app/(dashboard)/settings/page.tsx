@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getBustedUrl } from "@/lib/cache-buster";
 
 export default function SettingsWizard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -478,7 +479,7 @@ export default function SettingsWizard() {
                   <Label className="flex items-center gap-2 dark:text-zinc-300"><ImageIcon className="w-4 h-4" /> {t('master_logo')}</Label>
                   <div className="flex items-center gap-4">
                     {formData.existingLogoUrl && !logoFile && (
-                      <img src={formData.existingLogoUrl} alt="Current Logo" className="h-12 object-contain bg-white dark:bg-zinc-200 border rounded p-1" />
+                      <img src={getBustedUrl(formData.existingLogoUrl)} alt="Current Logo" className="h-12 object-contain bg-white dark:bg-zinc-200 border rounded p-1" />
                     )}
                     <div className="flex-1">
                       <Input type="file" accept="image/*" onChange={e => setLogoFile(e.target.files?.[0] || null)} className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
@@ -510,7 +511,7 @@ export default function SettingsWizard() {
                   </div>
                   <div className="flex items-center gap-4">
                     {formData.existingSignatureUrl && !signatureFile && (
-                      <img src={formData.existingSignatureUrl} alt="Current Signature" className="h-12 object-contain bg-white dark:bg-zinc-200 border rounded p-1" />
+                      <img src={getBustedUrl(formData.existingSignatureUrl)} alt="Current Signature" className="h-12 object-contain bg-white dark:bg-zinc-200 border rounded p-1" />
                     )}
                     <div className="flex-1">
                       <Input type="file" accept="image/png,image/webp" onChange={e => setSignatureFile(e.target.files?.[0] || null)} className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
