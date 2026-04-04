@@ -118,13 +118,14 @@ export async function POST(req: Request) {
         }
 
       case "STAMP_PAID_INVOICES":
-        const { PDFDocument: PDFDoc, rgb: RGB, degrees: DEGREES, StandardFonts: Fonts, PDFName: Name, PDFArray: Arr } = await import('pdf-lib');
+        const { PDFDocument, rgb, degrees, StandardFonts } = await import('pdf-lib');
         let stampedCount = 0;
         let notFoundCount = 0;
         let failedCount = 0;
         let dbUpdatedCount = 0;
         let missingFiles: string[] = [];
         
+        // 1. Fetch all invoices marked as Paid (System-wide for Super Admin)
         const paidInvoices = await prisma.invoice.findMany({
           orderBy: { createdAt: 'desc' }
         });
@@ -132,26 +133,39 @@ export async function POST(req: Request) {
         const targets = paidInvoices.filter(i => ['Paid', 'PAID'].includes(i.status as string));
 
         for (const inv of targets) {
+          // --- 🔍 ROBUST PATH DISCOVERY (Fuzzy Matcher) ---
           let relativePath = inv.pdfPath.startsWith('/') ? inv.pdfPath.substring(1) : inv.pdfPath;
           let fullPdfPath  = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', relativePath);
+          
           let fileExists = fs.existsSync(fullPdfPath);
+          let foundViaSanitized = false;
 
+          // Attempt Fuzzy Matching if original path fails (Essential for Linux/VPS vs Windows sync)
           if (!fileExists) {
+             const pathParts = inv.pdfPath.split('/');
+             const filename  = pathParts[pathParts.length - 1]; // e.g. 013.pdf
+             const parent    = pathParts.slice(0, -1).join('/'); // e.g. /invoices/workspaceId/INV/25-26
+             
+             // The system now uses underscores for the entire invoice number in the filename
              const sanitizedFilename = (inv.invoiceNumber || "").replace(/\//g, '_') + ".pdf";
              const sanitizedRelative = `invoices/${inv.workspaceId}/${sanitizedFilename}`;
              const sanitizedFull     = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', sanitizedRelative);
+             
              if (fs.existsSync(sanitizedFull)) {
                  fullPdfPath = sanitizedFull;
                  relativePath = sanitizedRelative;
                  fileExists = true;
+                 foundViaSanitized = true;
              }
           }
 
           if (fileExists) {
             try {
               const existingPdfBytes = fs.readFileSync(fullPdfPath);
-              const pdfDoc = await PDFDoc.load(existingPdfBytes);
-              const fontBold = await pdfDoc.embedFont(Fonts.HelveticaBold);
+              const pdfDoc = await PDFDocument.load(existingPdfBytes);
+              
+              // Embed font
+              const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
               const pages = pdfDoc.getPages();
               
               const stampDate = inv.dateReceived || inv.invoiceDate || new Date();
@@ -159,43 +173,33 @@ export async function POST(req: Request) {
                 day: '2-digit', month: 'short', year: 'numeric'
               }).toUpperCase();
 
-              const cos45 = Math.cos(Math.PI / 4);
-              const sin45 = Math.sin(Math.PI / 4);
-
               pages.forEach(page => {
                 const { width, height } = page.getSize();
-                const existingContents = page.node.get(Name.of('Contents'));
-                page.node.delete(Name.of('Contents'));
-
-                // PAID Watermark
-                const xPaid = (width / 2) - (fontBold.widthOfTextAtSize('PAID', 130) / 2) * cos45 + (130 * 0.7 / 2) * sin45;
-                const yPaid = (height / 2) - (fontBold.widthOfTextAtSize('PAID', 130) / 2) * sin45 - (130 * 0.7 / 2) * cos45;
-                page.drawText('PAID', { x: xPaid, y: yPaid, size: 130, font: fontBold, color: RGB(0.85, 0.15, 0.15), opacity: 0.10, rotate: DEGREES(45) });
-
-                // RECEIVED date
-                const centerRecX = (width / 2) + 80 * sin45;
-                const centerRecY = (height / 2) - 80 * cos45;
-                const xRec = centerRecX - (fontBold.widthOfTextAtSize(`RECEIVED: ${formattedDate}`, 24) / 2) * cos45 + (24 * 0.7 / 2) * sin45;
-                const yRec = centerRecY - (fontBold.widthOfTextAtSize(`RECEIVED: ${formattedDate}`, 24) / 2) * sin45 - (24 * 0.7 / 2) * cos45;
-                page.drawText(`RECEIVED: ${formattedDate}`, { x: xRec, y: yRec, size: 24, font: fontBold, color: RGB(0.85, 0.15, 0.15), opacity: 0.10, rotate: DEGREES(45) });
-
-                const watermarkContents = page.node.get(Name.of('Contents'));
-                const finalContents = pdfDoc.context.obj([]);
-                const append = (item: any) => {
-                  if (item instanceof Arr) item.asArray().forEach(s => (finalContents as any).push(s));
-                  else if (item) (finalContents as any).push(item);
-                };
-                append(watermarkContents);
-                append(existingContents);
-                page.node.set(Name.of('Contents'), finalContents);
+                page.drawText('PAID', {
+                  x: width / 2 - 140, y: height / 2 - 50,
+                  size: 130, font: fontBold,
+                  color: rgb(0.85, 0.15, 0.15), opacity: 0.25,
+                  rotate: degrees(45),
+                });
+                page.drawText(`RECEIVED: ${formattedDate}`, {
+                  x: width / 2 - 110, y: height / 2 - 130,
+                  size: 24, font: fontBold,
+                  color: rgb(0.85, 0.15, 0.15), opacity: 0.25,
+                  rotate: degrees(45),
+                });
               });
 
               const pdfBytes = await pdfDoc.save();
               fs.writeFileSync(fullPdfPath, pdfBytes);
               stampedCount++;
 
-              if (relativePath !== inv.pdfPath.substring(1)) {
-                await prisma.invoice.update({ where: { id: inv.id }, data: { pdfPath: `/${relativePath}` } });
+              // --- 🛠️ SELF-HEALING DATABASE ---
+              // If we found the file via the underscored path but the DB still has slashes, fix the DB.
+              if (foundViaSanitized) {
+                await prisma.invoice.update({
+                  where: { id: inv.id },
+                  data: { pdfPath: `/${relativePath}` }
+                });
                 dbUpdatedCount++;
               }
             } catch (err) {
@@ -209,71 +213,16 @@ export async function POST(req: Request) {
         }
         return NextResponse.json({ 
           success: true, 
-          message: `Stamping Complete.`,
-          report: { targets: targets.length, stamped: stampedCount, healed: dbUpdatedCount, missing: notFoundCount, failed: failedCount }
-        });
-
-      case "REGENERATE_INVOICES":
-        const { renderInvoiceToBytes } = await import('@/lib/invoice-renderer');
-        let regTotal = 0;
-        let regSuccess = 0;
-        let regFail = 0;
-
-        const invoicesToRegen = await prisma.invoice.findMany({
-          orderBy: { createdAt: 'desc' },
-          include: { workspace: { include: { businessProfile: true } } }
-        });
-
-        for (const inv of invoicesToRegen) {
-          regTotal++;
-          try {
-            const profile = inv.workspace.businessProfile;
-            if (!profile) { regFail++; continue; }
-            
-            const client = await prisma.client.findUnique({ where: { id: inv.clientId || undefined } });
-            if (!client) { regFail++; continue; }
-
-            const userLocale = inv.workspace.countryCode === "IN" ? "en-IN" : "en-US";
-            const baseCurrency = inv.workspace.baseCurrency || 'INR';
-            const invoiceTheme = (profile as any).invoiceTheme || "DESIGN_1";
-            const isFreePlan = inv.workspace.planTier === "FREE";
-
-            let services = [];
-            try { services = JSON.parse(inv.serviceDescription); }
-            catch { services = [{ title: inv.serviceDescription, amount: inv.totalAmount, nicDetails: "Services" }]; }
-
-            const pdfBytes = await renderInvoiceToBytes({
-              profile,
-              client,
-              invoice: {
-                invoiceNumber: inv.invoiceNumber,
-                invoiceDate: inv.invoiceDate,
-                billingMonth: inv.billingMonth,
-                totalAmount: inv.totalAmount,
-                status: inv.status,
-                dateReceived: inv.dateReceived
-              },
-              services,
-              sacCode: inv.sacCode,
-              theme: invoiceTheme as 'DESIGN_1' | 'DESIGN_2',
-              isFreePlan,
-              baseCurrency,
-              userLocale
-            });
-
-            // Save using existing path
-            let relativePath = inv.pdfPath.startsWith('/') ? inv.pdfPath.substring(1) : inv.pdfPath;
-            const fullPath = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', relativePath);
-            
-            fs.mkdirSync(path.dirname(fullPath), { recursive: true });
-            fs.writeFileSync(fullPath, pdfBytes);
-            regSuccess++;
-          } catch (e) {
-            console.error(`Regen failed for ${inv.invoiceNumber}:`, e);
-            regFail++;
+          message: `Process Complete.`,
+          report: {
+              totalFoundInDb: targets.length,
+              stampedSuccessfully: stampedCount,
+              dbPathsHealed: dbUpdatedCount,
+              filesMissingOnDisk: notFoundCount,
+              processingFailures: failedCount,
+              missingSample: missingFiles.slice(0, 5)
           }
-        }
-        return NextResponse.json({ success: true, message: `Re-rendered ${regSuccess}/${regTotal} invoices with latest styles.` });
+        });
 
       case "REBOOT":
         // In Edge/Serverless this does nothing, but on a VPS with PM2/Docker,
