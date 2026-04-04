@@ -11,7 +11,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ path
     return new NextResponse('Forbidden', { status: 403 });
   }
 
-  const filePath = path.join(process.cwd(), 'public', 'receipts', ...filePathArray);
+  const filePath = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'receipts', ...filePathArray);
 
   if (!fs.existsSync(filePath)) {
     return new NextResponse('Not Found', { status: 404 });
@@ -31,7 +31,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ path
   return new NextResponse(fileBuffer, {
     headers: {
       'Content-Type': contentType,
-      'Cache-Control': 'public, max-age=31536000, immutable',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
     },
   });
 }
