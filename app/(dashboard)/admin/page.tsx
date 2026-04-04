@@ -522,6 +522,16 @@ export default function SuperAdminPortal() {
                 </CardHeader>
               </Card>
 
+              <Card className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-sm hover:border-blue-500 transition-colors cursor-pointer" onClick={() => handleMaintenanceAction('REGENERATE_INVOICES')}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Regenerate All Invoices</CardTitle>
+                    <RefreshCcw className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <CardDescription className="text-xs">Re-generates all PDFs with the latest design fixes and layout updates.</CardDescription>
+                </CardHeader>
+              </Card>
+
               <Card className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-sm hover:border-indigo-500 transition-colors cursor-pointer" onClick={() => handleMaintenanceAction('CLEAR_LOGS')}>
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">

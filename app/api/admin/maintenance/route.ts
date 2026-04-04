@@ -224,6 +224,62 @@ export async function POST(req: Request) {
           }
         });
 
+      case "REGENERATE_INVOICES":
+        const { generateInvoicePDF } = await import('@/lib/pdf/generator');
+        let successCount = 0;
+        let failCount = 0;
+
+        const allInvoices = await prisma.invoice.findMany();
+        
+        for (const inv of allInvoices) {
+            try {
+                const profile = await prisma.businessProfile.findUnique({
+                    where: { workspaceId: inv.workspaceId },
+                    include: { workspace: true }
+                });
+                const client = await prisma.client.findUnique({
+                  where: { id: inv.clientId as string }
+                });
+
+                if (!profile || !client) continue;
+
+                const userLocale = profile.workspace?.countryCode === 'IN' ? 'en-IN' : 'en-US';
+                const formattedTotal = inv.totalAmount.toLocaleString(userLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const dueDate = new Date(inv.invoiceDate);
+                dueDate.setDate(dueDate.getDate() + 7);
+
+                const pdfBytes = await generateInvoicePDF({
+                    profile,
+                    client,
+                    invoiceNumber: inv.invoiceNumber as string,
+                    date: inv.invoiceDate,
+                    dueDate,
+                    billingMonth: inv.billingMonth,
+                    sacCode: inv.sacCode,
+                    services: [{ title: inv.serviceDescription as string, amount: inv.totalAmount, nicDetails: 'Service' }],
+                    totalAmount: inv.totalAmount,
+                    formattedTotal,
+                    baseCurrency: profile.workspace?.baseCurrency || 'INR',
+                    userLocale,
+                    status: inv.status ?? undefined,
+                    paymentLink: null
+                });
+
+                let relativePath = inv.pdfPath.startsWith('/') ? inv.pdfPath.substring(1) : inv.pdfPath;
+                const fullPath = path.join(process.cwd(), 'public', relativePath);
+                
+                if (!fs.existsSync(path.dirname(fullPath))) {
+                  fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+                }
+                fs.writeFileSync(fullPath, pdfBytes);
+                successCount++;
+            } catch (err) {
+                console.error(`Failed to regenerate ${inv.invoiceNumber}:`, err);
+                failCount++;
+            }
+        }
+        return NextResponse.json({ success: true, message: `Task complete. Regenerated ${successCount} invoices. ${failCount} failed.` });
+
       case "REBOOT":
         // In Edge/Serverless this does nothing, but on a VPS with PM2/Docker,
         // exiting the process forces the process manager to reboot the app.

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { PDFDocument, PDFPage, PDFArray, PDFName, PDFString, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, PDFPage, PDFArray, PDFName, PDFString, rgb, StandardFonts, degrees } from 'pdf-lib';
 import fs from 'fs';
 import path from 'path';
 import nodemailer from 'nodemailer';
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
     const workspaceId = (session as any).workspaceId;
 
     const body = await request.json();
-    const { clientId, billingMonth, sacCode, services, customDate, sendEmail } = body;
+    const { clientId, billingMonth, sacCode, services, customDate, sendEmail, status } = body;
 
     if (!clientId) return NextResponse.json({ error: "No client selected." }, { status: 400 });
     if (!Array.isArray(services) || services.length === 0) {
@@ -278,7 +278,23 @@ export async function POST(request: Request) {
         const bgLight    = rgb(0.96, 0.96, 0.96); 
         const borderGray = rgb(0.85, 0.85, 0.85);
         const cfOrange   = rgb(0.95, 0.50, 0.12); 
-        const cfLinkBlue = rgb(0, 0.33, 0.70);  
+        const cfLinkBlue = rgb(0.33, 0.70, 0);  
+
+        const drawWatermark = (text: string, opacity = 0.1) => {
+          const pages = pdfDoc.getPages();
+          pages.forEach(p => {
+            const { width, height } = p.getSize();
+            p.drawText(text, {
+              x: width / 2 - 140,
+              y: height / 2 - 50,
+              size: 130,
+              font: fontBold,
+              color: rgb(0.85, 0.15, 0.15),
+              opacity: opacity,
+              rotate: degrees(45),
+            });
+          });
+        };
 
         const drawText = (text: string, x: number, y: number, size: number, isBold = false, align = 'left', color = textDark, isItalic = false) => {
           let currentFont = isBold ? fontBold : (isItalic ? fontOblique : font);
@@ -510,6 +526,10 @@ export async function POST(request: Request) {
           
           let currentY = 335; 
           
+          if (status === 'Paid' || (newInvoice && (newInvoice as any).status === 'Paid')) {
+            drawWatermark('PAID');
+          }
+          
           let displaySac = sacCode;
           if (typeof sacCode === 'object' && sacCode !== null) {
             displaySac = (sacCode as any).code || (sacCode as any).value || (sacCode as any).label || JSON.stringify(sacCode);
@@ -535,8 +555,8 @@ export async function POST(request: Request) {
           drawText(client.isExport ? 'IGST - Export (0%)' : 'IGST - Domestic (0%)', width - 150, currentY + 40, 9, false, 'right', textMuted);
           drawText('0.00',       width - 50,  currentY + 40, 10, false, 'right', textDark);
 
-          drawRect(width - 230, currentY + 70, 190, 35, black);
-          drawText('Total Amount',            width - 165, currentY + 92, 11, true, 'right', white);
+          drawRect(width - 250, currentY + 70, 210, 35, black);
+          drawText('Total Amount',            width - 175, currentY + 92, 11, true, 'right', white);
           drawText(`${currencyCode} ${formattedTotal}`, width - 55, currentY + 92, 11, true, 'right', white);
 
           const bankY = currentY + 130;
@@ -578,7 +598,7 @@ export async function POST(request: Request) {
           }
           // ─────────────────────────────────────────────────────────────────────
 
-          const decY = bankY + 125 + (paymentLink ? 20 : 0); // increased shift
+          const decY = bankY + 95 + (paymentLink ? 15 : 0); // reduced shift to prevent cropping
           drawRect(40, decY, width - 80, 105, bgLight, borderGray);
           drawText('Statutory Declarations:', 55, decY + 20, 9, true, 'left', black);
           drawText("1. GST Exemption: We hereby declare that our aggregate turnover is below the statutory registration threshold", 55, decY + 35, 8, false, 'left', textDark);

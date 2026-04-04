@@ -110,7 +110,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
             size: 130,
             font: fontBold,
             color: rgb(0.85, 0.15, 0.15), 
-            opacity: 0.25, 
+            opacity: 0.10, 
             rotate: degrees(45),
           });
 
@@ -121,7 +121,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
             size: 24,
             font: fontBold,
             color: rgb(0.85, 0.15, 0.15), 
-            opacity: 0.25, 
+            opacity: 0.10, 
             rotate: degrees(45),
           });
         });
