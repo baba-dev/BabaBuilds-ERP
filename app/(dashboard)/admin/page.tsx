@@ -109,6 +109,11 @@ export default function SuperAdminPortal() {
   };
 
   const handleMaintenanceAction = async (action: string) => {
+    if (action === "REGENERATE_INVOICES") {
+      if (!confirm("CRITICAL: This will RE-RENDER ALL existing PDF documents across the entire platform using the latest design templates. Physical files will be overwritten. This cannot be undone. Proceed?")) {
+        return;
+      }
+    }
     const toastId = toast.loading(`Executing maintenance task...`);
     try {
       const res = await fetch('/api/admin/maintenance', {
@@ -539,6 +544,16 @@ export default function SuperAdminPortal() {
                     <ShieldCheck className="w-4 h-4 text-emerald-500" />
                   </div>
                   <CardDescription className="text-xs">Applies missing 'PAID' watermarks and receipt dates to historical invoices.</CardDescription>
+                </CardHeader>
+              </Card>
+
+              <Card className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-sm hover:border-indigo-600 transition-colors cursor-pointer" onClick={() => handleMaintenanceAction('REGENERATE_INVOICES')}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Bulk Design Refresh</CardTitle>
+                    <RefreshCcw className="w-4 h-4 text-indigo-600" />
+                  </div>
+                  <CardDescription className="text-xs">Re-generates every physical PDF file in the system with the latest layout, padding, and contrast improvements.</CardDescription>
                 </CardHeader>
               </Card>
 

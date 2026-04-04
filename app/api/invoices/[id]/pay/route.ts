@@ -100,31 +100,90 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         }).toUpperCase();
 
         // Apply to ALL pages in case of multi-page invoices
-        pages.forEach(page => {
+        for (const page of pages) {
           const { width, height } = page.getSize();
+          
+          // 🚨 WATERMARK LAYERING TRICK: 
+          // We capture existing contents, draw the watermark, then swap order to put watermark BEHIND.
+          const { PDFName, PDFArray } = await import('pdf-lib');
+          const existingContents = page.node.get(PDFName.of('Contents'));
+          page.node.delete(PDFName.of('Contents'));
 
-          // Draw the massive, translucent red stamp
-          page.drawText('PAID', {
-            x: width / 2 - 140, 
-            y: height / 2 - 50, 
-            size: 130,
+          const paymentDateObj = new Date(dateReceived);
+          const formattedDate = paymentDateObj.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+          }).toUpperCase();
+
+          const cos45 = Math.cos(Math.PI / 4);
+          const sin45 = Math.sin(Math.PI / 4);
+          const centerX = width / 2;
+          const centerY = height / 2;
+
+          // --- 1. Draw "PAID" Stamp ---
+          const textPaid = 'PAID';
+          const sizePaid = 130;
+          const wPaid = fontBold.widthOfTextAtSize(textPaid, sizePaid);
+          const hPaid = sizePaid * 0.7; // Approximate ascent height
+
+          // Center calculation for rotated text: 
+          // We want the midpoint of the text baseline to be at page center, minus some offsets for visual balance.
+          const xPaid = centerX - (wPaid / 2) * cos45 + (hPaid / 2) * sin45;
+          const yPaid = centerY - (wPaid / 2) * sin45 - (hPaid / 2) * cos45;
+
+          page.drawText(textPaid, {
+            x: xPaid,
+            y: yPaid,
+            size: sizePaid,
             font: fontBold,
             color: rgb(0.85, 0.15, 0.15), 
-            opacity: 0.25, 
+            opacity: 0.10, 
             rotate: degrees(45),
           });
 
-          // Add the Date Received below PAID
-          page.drawText(`RECEIVED: ${formattedDate}`, {
-            x: width / 2 - 110, 
-            y: height / 2 - 130, 
-            size: 24,
+          // --- 2. Draw "RECEIVED: [DATE]" Stamp ---
+          const textRec = `RECEIVED: ${formattedDate}`;
+          const sizeRec = 24;
+          const wRec = fontBold.widthOfTextAtSize(textRec, sizeRec);
+          const hRec = sizeRec * 0.7;
+
+          // Positioned below "PAID" in the rotated coordinate system (approx 80 units down)
+          const verticalShift = 80;
+          const centerRecX = centerX + verticalShift * sin45;
+          const centerRecY = centerY - verticalShift * cos45;
+
+          const xRec = centerRecX - (wRec / 2) * cos45 + (hRec / 2) * sin45;
+          const yRec = centerRecY - (wRec / 2) * sin45 - (hRec / 2) * cos45;
+
+          page.drawText(textRec, {
+            x: xRec,
+            y: yRec,
+            size: sizeRec,
             font: fontBold,
             color: rgb(0.85, 0.15, 0.15), 
-            opacity: 0.25, 
+            opacity: 0.10, 
             rotate: degrees(45),
           });
-        });
+
+          // --- 3. RE-APPLY ORIGINAL CONTENT ON TOP ---
+          const watermarkContents = page.node.get(PDFName.of('Contents'));
+          const finalContents = pdfDoc.context.obj([]);
+          
+          // Helper to merge content streams accurately
+          const appendToFinal = (item: any) => {
+            if (item instanceof PDFArray) {
+              item.asArray().forEach(s => (finalContents as any).push(s));
+            } else if (item) {
+              (finalContents as any).push(item);
+            }
+          };
+
+          appendToFinal(watermarkContents);
+          appendToFinal(existingContents);
+          
+          page.node.set(PDFName.of('Contents'), finalContents);
+        }
 
         const pdfBytes = await pdfDoc.save();
         fs.writeFileSync(fullPdfPath, pdfBytes); // Overwrite the file
