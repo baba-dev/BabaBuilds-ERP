@@ -38,48 +38,6 @@ async function resolveSafeIp(host: string): Promise<string | null> {
   }
 }
 
-/**
- * Adds a real, clickable URI annotation (PDF /Annot /Subtype /Link) to a page.
- * This is NOT just coloured text — PDF viewers will treat it as a hyperlink.
- *
- * @param pdfDoc       The PDFDocument instance
- * @param page         The PDFPage to annotate
- * @param x            Left edge of the clickable rect (PDF coordinate, origin = bottom-left)
- * @param absoluteY    Bottom edge of the clickable rect (PDF coord — height - displayY)
- * @param rectWidth    Width of the clickable zone in points
- * @param rectHeight   Height of the clickable zone in points
- * @param url          The destination URL
- */
-function addLinkAnnotation(
-  pdfDoc: PDFDocument,
-  page: PDFPage,
-  x: number,
-  absoluteY: number,
-  rectWidth: number,
-  rectHeight: number,
-  url: string
-): void {
-  const linkAnnotation = pdfDoc.context.obj({
-    Type:    'Annot',
-    Subtype: 'Link',
-    Rect:    [x, absoluteY, x + rectWidth, absoluteY + rectHeight],
-    Border:  [0, 0, 0], // Invisible border — the coloured text itself is the visual cue
-    A: {
-      Type: 'Action',
-      S:    'URI',
-      URI:  PDFString.of(url),
-    },
-  });
-
-  const ref = pdfDoc.context.register(linkAnnotation);
-
-  const annots = page.node.get(PDFName.of('Annots'));
-  if (annots instanceof PDFArray) {
-    annots.push(ref);
-  } else {
-    page.node.set(PDFName.of('Annots'), pdfDoc.context.obj([ref]));
-  }
-}
 
 export async function POST(request: Request) {
   let generatedPdfPath = ""; 
