@@ -1,4 +1,4 @@
-import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
+import { PDFDocument, PDFPage, PDFArray, PDFName, PDFString, rgb, StandardFonts, degrees } from 'pdf-lib';
 import fs from 'fs';
 import path from 'path';
 
@@ -74,6 +74,36 @@ export async function generateInvoicePDF({
 
   const drawRect = (x: number, y: number, w: number, h: number, color: any, borderColor?: any) => {
     page.drawRectangle({ x, y: height - y - h, width: w, height: h, color, borderColor: borderColor || undefined, borderWidth: borderColor ? 1 : 0 });
+  };
+
+  const addLinkAnnotation = (
+    doc: PDFDocument,
+    p: PDFPage,
+    linkX: number,
+    absY: number,
+    w: number,
+    h: number,
+    url: string
+  ): void => {
+    const linkAnnotation = doc.context.obj({
+      Type:    'Annot',
+      Subtype: 'Link',
+      Rect:    [linkX, absY, linkX + w, absY + h],
+      Border:  [0, 0, 0],
+      A: {
+        Type: 'Action',
+        S:    'URI',
+        URI:  PDFString.of(url),
+      },
+    });
+
+    const ref = doc.context.register(linkAnnotation);
+    const annots = p.node.get(PDFName.of('Annots'));
+    if (annots instanceof PDFArray) {
+      annots.push(ref);
+    } else {
+      p.node.set(PDFName.of('Annots'), doc.context.obj([ref]));
+    }
   };
 
   const loadLogo = async (logoUrl: string | null, x: number, y: number, maxWidth: number, maxHeight: number, align = 'left') => {
@@ -227,6 +257,17 @@ export async function generateInvoicePDF({
       const linkText  = `Pay securely online: ${paymentLink}`;
       const linkTextWidth = font.widthOfTextAtSize(linkText, 9);
       drawText(linkText, leftMargin, footerY, 9, false, 'left', cfLinkBlue);
+      
+      addLinkAnnotation(
+        pdfDoc,
+        page,
+        leftMargin,
+        height - footerY - 1,
+        linkTextWidth,
+        10,
+        paymentLink
+      );
+
       footerY += 16;
     }
 
@@ -321,6 +362,27 @@ export async function generateInvoicePDF({
     drawText(`${currencyCode} ${formattedTotal}`, width - 55, currentY + 92, 11, true, 'right', white);
 
     const bankY = currentY + 130;
+
+    if (paymentLink) {
+      const linkLabel = "Pay Online via UPI / Card / Net Banking / Apple Pay: ";
+      const linkLabelWidth = font.widthOfTextAtSize(linkLabel, 9);
+      const linkUrlWidth = font.widthOfTextAtSize(paymentLink, 9);
+      
+      const linkY = bankY - 20;
+      drawText(linkLabel, 40, linkY, 9, true, 'left', black);
+      drawText(paymentLink, 40 + linkLabelWidth, linkY, 9, false, 'left', cfLinkBlue);
+
+      addLinkAnnotation(
+        pdfDoc,
+        page,
+        40 + linkLabelWidth,
+        height - linkY - 1,
+        linkUrlWidth,
+        10,
+        paymentLink
+      );
+    }
+
     drawText('Bank Details for Remittance', 40, bankY,      10, true,  'left', black);
     drawText(`Bank Name: ${profile.bankName}`,       40, bankY + 20, 9,  false, 'left', textDark);
     drawText(`Account Name: ${profile.accountName}`, 40, bankY + 35, 9,  false, 'left', textDark);
@@ -328,13 +390,11 @@ export async function generateInvoicePDF({
     drawText(`${safeRoutingLabel}: ${profile.ifscCode}`, 40, bankY + 65, 9, false, 'left', textDark);
 
     drawText(`For ${profile.companyName}`, width - 40, bankY + 20, 10, true, 'right', black);
+    if (profile.signatureUrl) {
+      await loadLogo(profile.signatureUrl, width - 40, bankY + 30, 140, 35, 'right');
+    }
     page.drawLine({ start: { x: width - 180, y: height - (bankY + 70) }, end: { x: width - 40, y: height - (bankY + 70) }, thickness: 1, color: black });
     drawText('Authorized Signatory', width - 40, bankY + 85, 9, false, 'right', textMuted);
-
-    if (paymentLink) {
-      const linkDisplayY = bankY + 105;
-      drawText(`Pay online: ${paymentLink}`, 40, linkDisplayY, 9, false, 'left', cfLinkBlue);
-    }
 
     const decY = bankY + 95 + (paymentLink ? 15 : 0);
     drawRect(40, decY, width - 80, 105, bgLight, borderGray);
@@ -356,6 +416,19 @@ export async function generateInvoicePDF({
     
     drawRect(0, height - 60, width, 60, black);
     drawText(metaStringValue, width / 2, height - 35, 9, false, 'center', white);
+
+    if (profile.workspace?.planTier === "FREE") {
+      drawText(
+        "This Receipt was prepared on erp.bababuilds.com | Make yours.", 
+        width / 2,           
+        height - 15,         
+        7,                   
+        false,               
+        'center',            
+        rgb(0.5, 0.5, 0.5),  
+        true                 
+      );
+    }
   }
 
   return await pdfDoc.save();
