@@ -79,12 +79,13 @@ export async function generateInvoicePDF({
   const loadLogo = async (logoUrl: string | null, x: number, y: number, maxWidth: number, maxHeight: number, align = 'left') => {
     if (!logoUrl) return;
     try {
-      const relativeLogoPath = logoUrl.startsWith('/') ? logoUrl.substring(1) : logoUrl;
+      const cleanUrl = logoUrl.split('?')[0];
+      const relativeLogoPath = cleanUrl.startsWith('/') ? cleanUrl.substring(1) : cleanUrl;
       const fullPath = path.join(process.cwd(), 'public', relativeLogoPath);
       if (fs.existsSync(fullPath)) {
         const imageData = fs.readFileSync(fullPath);
         let image;
-        if (logoUrl.toLowerCase().endsWith('.png')) {
+        if (cleanUrl.toLowerCase().endsWith('.png')) {
           image = await pdfDoc.embedPng(imageData);
         } else {
           image = await pdfDoc.embedJpg(imageData);

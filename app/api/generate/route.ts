@@ -311,10 +311,18 @@ export async function POST(request: Request) {
         const loadLogo = async (logoUrl: string | null, x: number, y: number, maxWidth: number, maxHeight: number, align = 'left') => {
           if (!logoUrl) return;
           try {
-            const relativeLogoPath = logoUrl.startsWith('/') ? logoUrl.substring(1) : logoUrl;
+            const cleanUrl = logoUrl.split('?')[0];
+            const relativeLogoPath = cleanUrl.startsWith('/') ? cleanUrl.substring(1) : cleanUrl;
             const fullPath = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', relativeLogoPath);
             if (fs.existsSync(fullPath)) {
-              const image = await pdfDoc.embedPng(fs.readFileSync(fullPath));
+              // Be robust with MIME type detect on cleanUrl
+              let image;
+              const imageData = fs.readFileSync(fullPath);
+              if (cleanUrl.toLowerCase().endsWith('.png')) {
+                image = await pdfDoc.embedPng(imageData);
+              } else {
+                image = await pdfDoc.embedJpg(imageData);
+              }
               const dims  = image.scaleToFit(maxWidth, maxHeight);
               const drawX = align === 'right' ? x - dims.width : x;
               page.drawImage(image, { x: drawX, y: height - y - dims.height, width: dims.width, height: dims.height });
