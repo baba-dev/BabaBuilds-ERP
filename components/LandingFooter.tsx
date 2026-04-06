@@ -28,8 +28,8 @@ export default function LandingFooter() {
       links: [
         { name: "About Us", href: "#" },
         { name: "Careers", href: "#" },
-        { name: "Privacy Policy", href: "#" },
-        { name: "Terms of Service", href: "#" },
+        { name: "Privacy Policy", href: "/help/privacy" },
+        { name: "Terms of Service", href: "/help/terms" },
       ],
     },
   ];
@@ -90,6 +90,15 @@ export default function LandingFooter() {
           <div className="space-y-4 text-center md:text-left">
             <p className="text-sm text-zinc-500 font-medium">
               © {new Date().getFullYear()} BabaBuilds ERP. All rights reserved. Built with ❤️ for Global Agencies.
+            </p>
+            <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">
+              Legal & policy center:{" "}
+              <a
+                href="https://erp.bababuilds.com/help/privacy"
+                className="text-indigo-600 dark:text-indigo-400 hover:underline"
+              >
+                erp.bababuilds.com
+              </a>
             </p>
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-600">
                <span className="flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
