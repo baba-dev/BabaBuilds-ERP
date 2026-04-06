@@ -34,6 +34,7 @@ import { ChartLegend } from "@/components/charts/ChartLegend";
 import { withChartTokenColors } from "@/components/charts/chart-colors";
 import type { MapPoint } from "@/components/maps";
 import { MapCardSkeleton } from "@/components/maps";
+import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 
 const GeographyInsightCard = dynamic(
   () => import("@/components/maps").then((mod) => mod.GeographyInsightCard),
@@ -66,6 +67,18 @@ function AnimatedValue({
 
   return <span className={className}>{formatter(displayValue)}</span>;
 }
+
+type RecentInvoiceRow = {
+  id: string;
+  invoiceDate: string | Date;
+  invoiceNumber: string;
+  clientName: string;
+  billingMonth?: string | null;
+  status: string;
+  totalAmount: number;
+  pdfPath: string;
+  updatedAt?: string | Date | null;
+};
 
 export default function Dashboard() {
   const t = useTranslations('Dashboard');
@@ -237,8 +250,8 @@ export default function Dashboard() {
   const mrrTotal = data?.mrr?.total || 0;
   const arrTotal = mrrTotal * 12;
   const activeRetainers = data?.mrr?.retainers || [];
-  const recentInvoices = data?.recentInvoices || [];
-  const recentInvoiceColumns: DataTableColumnDef<any>[] = [
+  const recentInvoices: RecentInvoiceRow[] = data?.recentInvoices || [];
+  const recentInvoiceColumns: DataTableColumnDef<RecentInvoiceRow>[] = [
     {
       id: "date",
       header: t('table_date'),
