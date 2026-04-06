@@ -6,3 +6,4 @@ export * from "./DataTablePagination";
 export * from "./BulkSelectionActions";
 export * from "./RowActionsMenu";
 export * from "./useUrlTableState";
+export * from "./useDataTableState";
