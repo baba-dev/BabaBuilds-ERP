@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Check, Gift, Sparkles, ShieldCheck } from "lucide-react";
+import { Check, Gift, Sparkles, ShieldCheck, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +10,21 @@ type Currency = {
   code: string;
   symbol: string;
   rate: number;
+};
+
+type PricingTier = {
+  name: string;
+  id: string;
+  href: string;
+  priceMonthly: number;
+  priceINR?: number;
+  isOneTime?: boolean;
+  description: string;
+  features: string[];
+  featured: boolean;
+  cta: string;
+  icon: LucideIcon;
+  cue: string;
 };
 
 const currencies: Currency[] = [
@@ -58,7 +73,7 @@ const tiers = [
     icon: ShieldCheck,
     cue: "Tailored onboarding included",
   },
-] as const;
+] as const satisfies readonly PricingTier[];
 
 export default function PricingSection() {
   const [currency, setCurrency] = useState<Currency>(currencies[0]);
