@@ -101,7 +101,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       },
     });
 
-    const formattedTotal = invoice.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const billedAmount = (invoice as any).grandTotal || invoice.totalAmount;
+    const formattedTotal = billedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const pdfFilename = invoice.pdfPath.split('/').pop() || `${invoice.invoiceNumber.replace(/\//g, '_')}.pdf`;
 
     const mailOptions = {

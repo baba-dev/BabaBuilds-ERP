@@ -29,6 +29,7 @@ import {
 import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
 import { useTranslations } from "next-intl";
+import { TaxRateModal } from "@/components/invoice/tax-rate-modal";
 
 export default function RetainersHub() {
   const t = useTranslations('Retainers');
@@ -68,6 +69,9 @@ export default function RetainersHub() {
   const [editAmount, setEditAmount] = useState("");
   const [editFrequency, setEditFrequency] = useState("MONTHLY");
   const [isEditing, setIsEditing] = useState(false);
+  const [taxRateModalOpen, setTaxRateModalOpen] = useState(false);
+  const [taxRateInput, setTaxRateInput] = useState("");
+  const [taxRateMeta, setTaxRateMeta] = useState<{ taxLabel?: string; countryCode?: string; candidates?: number[] }>({});
 
   // Default to the 1st of the *next* month
   const [nextBillingDate, setNextBillingDate] = useState(() => {
@@ -245,14 +249,59 @@ export default function RetainersHub() {
           nextBillingDate: new Date(nextBillingDate).toISOString()
         })
       });
-
-      if (!res.ok) throw new Error("Failed to create retainer");
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 422 && payload?.code === "TAX_RATE_REQUIRED") {
+          setTaxRateMeta({
+            taxLabel: payload.taxLabel,
+            countryCode: payload.countryCode,
+            candidates: payload.candidates || [],
+          });
+          setTaxRateModalOpen(true);
+          toast.dismiss(toastId);
+          return;
+        }
+        throw new Error(payload?.error || "Failed to create retainer");
+      }
 
       toast.success("Retainer engine activated!", { id: toastId });
       setView('list');
       setClientId(""); setServiceTemplateId(""); setAmount(""); setAutoAppendMonth(true);
     } catch (err: any) {
       toast.error(err.message, { id: toastId });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleTaxRateConfirm = async () => {
+    if (!taxRateInput || !clientId || !serviceTemplateId || !amount) return;
+    setIsSubmitting(true);
+    const toastId = toast.loading("Configuring retainer...");
+    try {
+      const res = await fetch('/api/retainers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId,
+          serviceTemplateId,
+          serviceName: selectedService?.name,
+          amount: parseFloat(amount),
+          frequency,
+          autoAppendMonth,
+          nextBillingDate: new Date(nextBillingDate).toISOString(),
+          taxRateOverride: Number(taxRateInput),
+        })
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || "Failed to create retainer");
+      toast.success("Retainer engine activated!", { id: toastId });
+      setTaxRateModalOpen(false);
+      setTaxRateInput("");
+      setView('list');
+      setClientId(""); setServiceTemplateId(""); setAmount(""); setAutoAppendMonth(true);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create retainer", { id: toastId });
     } finally {
       setIsSubmitting(false);
     }
@@ -680,6 +729,19 @@ export default function RetainersHub() {
             </div>
           </AlertDialogContent>
         </AlertDialog>
+        <TaxRateModal
+          open={taxRateModalOpen}
+          onOpenChange={setTaxRateModalOpen}
+          taxLabel={taxRateMeta.taxLabel}
+          countryCode={taxRateMeta.countryCode}
+          candidates={taxRateMeta.candidates}
+          value={taxRateInput}
+          onValueChange={setTaxRateInput}
+          onConfirm={handleTaxRateConfirm}
+          isSubmitting={isSubmitting}
+          title="Set tax rate for this retainer"
+          description="We could not infer a tax rate from country + service code. Add it once and we will remember it for future billing."
+        />
 
       </div>
     </div>

@@ -42,13 +42,13 @@ export async function GET(request: Request) {
     ]);
     
     // 4. SERVER-SIDE KPI CALCULATION
-    const totalRevenue = allInvoicesForKpis.reduce((sum, inv) => sum + inv.totalAmount, 0);
+    const totalRevenue = allInvoicesForKpis.reduce((sum, inv) => sum + ((inv as any).grandTotal || inv.totalAmount), 0);
     const outstanding = allInvoicesForKpis
       .filter(inv => inv.status !== 'Paid' && inv.status !== 'PAID')
-      .reduce((sum, inv) => sum + (inv.totalAmount - (inv.amountReceived || 0)), 0);
+      .reduce((sum, inv) => sum + ((((inv as any).grandTotal || inv.totalAmount)) - (inv.amountReceived || 0)), 0);
     const realizedRevenue = allInvoicesForKpis
       .filter(inv => inv.status === 'Paid' || inv.status === 'PAID')
-      .reduce((sum, inv) => sum + (inv.amountReceived || inv.totalAmount), 0);
+      .reduce((sum, inv) => sum + (inv.amountReceived || (inv as any).grandTotal || inv.totalAmount), 0);
     const presumptiveIncome = realizedRevenue * 0.5;
 
     // 5. CONSTRUCT PAGINATED RESPONSE

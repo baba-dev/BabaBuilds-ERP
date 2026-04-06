@@ -217,6 +217,7 @@ export async function POST(req: Request) {
 
       case "REGENERATE_INVOICES":
         const { generateInvoicePDF } = await import('@/lib/pdf/generator');
+        const { calculateInvoiceTotals } = await import('@/lib/invoice/totals');
         let successCount = 0;
         let failCount = 0;
 
@@ -235,7 +236,19 @@ export async function POST(req: Request) {
                 if (!profile || !client) continue;
 
                 const userLocale = profile.workspace?.countryCode === 'IN' ? 'en-IN' : 'en-US';
-                const formattedTotal = inv.totalAmount.toLocaleString(userLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const fallbackTotals = calculateInvoiceTotals({
+                  services: [{ amount: inv.totalAmount }],
+                  isTaxExempt: Boolean(client.isExport),
+                });
+                const invoiceWithTotals = inv as any;
+                const totals = {
+                  subtotal: invoiceWithTotals.subtotal ?? fallbackTotals.subtotal,
+                  taxRate: invoiceWithTotals.taxRate ?? fallbackTotals.taxRate,
+                  taxAmount: invoiceWithTotals.taxAmount ?? fallbackTotals.taxAmount,
+                  total: invoiceWithTotals.grandTotal ?? inv.totalAmount ?? fallbackTotals.total,
+                  taxMode: (invoiceWithTotals.taxMode as 'taxable' | 'exempt') ?? fallbackTotals.taxMode,
+                };
+                const formattedTotal = totals.total.toLocaleString(userLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 const dueDate = new Date(inv.invoiceDate);
                 dueDate.setDate(dueDate.getDate() + 7);
 
@@ -247,8 +260,8 @@ export async function POST(req: Request) {
                     dueDate,
                     billingMonth: inv.billingMonth,
                     sacCode: inv.sacCode,
-                    services: [{ title: inv.serviceDescription as string, amount: inv.totalAmount, nicDetails: 'Service' }],
-                    totalAmount: inv.totalAmount,
+                    services: [{ title: inv.serviceDescription as string, amount: totals.subtotal, nicDetails: 'Service' }],
+                    totals,
                     formattedTotal,
                     baseCurrency: profile.workspace?.baseCurrency || 'INR',
                     userLocale,
