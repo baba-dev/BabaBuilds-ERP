@@ -23,6 +23,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
+import { TaxRateModal } from "@/components/invoice/tax-rate-modal";
 
 export default function ProposalsEngine() {
   const t = useTranslations('Proposals');
@@ -60,6 +61,9 @@ export default function ProposalsEngine() {
   const [proposalToConvert, setProposalToConvert] = useState<any | null>(null);
   const [conversionMonth, setConversionMonth] = useState("");
   const [conversionDate, setConversionDate] = useState("");
+  const [taxRateModalOpen, setTaxRateModalOpen] = useState(false);
+  const [taxRateInput, setTaxRateInput] = useState("");
+  const [taxRateMeta, setTaxRateMeta] = useState<{ taxLabel?: string; countryCode?: string; candidates?: number[] }>({});
 
   useEffect(() => {
     fetchData();
@@ -206,16 +210,48 @@ export default function ProposalsEngine() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ clientId, title, validUntil, items })
       });
-      
+      const payload = await res.json().catch(() => ({}));
       if (res.ok) {
         toast.success("Proposal created successfully!", { id: toastId });
         setView('list');
         setTitle(""); setClientId(""); setItems([]);
+      } else if (res.status === 422 && payload?.code === "TAX_RATE_REQUIRED") {
+        setTaxRateMeta({
+          taxLabel: payload.taxLabel,
+          countryCode: payload.countryCode,
+          candidates: payload.candidates || [],
+        });
+        setTaxRateModalOpen(true);
+        toast.dismiss(toastId);
       } else {
-        toast.error("Failed to save proposal.", { id: toastId });
+        toast.error(payload?.error || "Failed to save proposal.", { id: toastId });
       }
     } catch (err) {
       toast.error("A network error occurred.", { id: toastId });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleTaxRateConfirm = async () => {
+    if (!taxRateInput) return;
+    setIsSubmitting(true);
+    const toastId = toast.loading("Saving proposal...");
+    try {
+      const res = await fetch('/api/proposals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId, title, validUntil, items, taxRateOverride: Number(taxRateInput) })
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || "Failed to save proposal.");
+      toast.success("Proposal created successfully!", { id: toastId });
+      setTaxRateModalOpen(false);
+      setTaxRateInput("");
+      setView('list');
+      setTitle(""); setClientId(""); setItems([]);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save proposal.", { id: toastId });
     } finally {
       setIsSubmitting(false);
     }
@@ -757,6 +793,19 @@ export default function ProposalsEngine() {
             </div>
           </AlertDialogContent>
         </AlertDialog>
+        <TaxRateModal
+          open={taxRateModalOpen}
+          onOpenChange={setTaxRateModalOpen}
+          taxLabel={taxRateMeta.taxLabel}
+          countryCode={taxRateMeta.countryCode}
+          candidates={taxRateMeta.candidates}
+          value={taxRateInput}
+          onValueChange={setTaxRateInput}
+          onConfirm={handleTaxRateConfirm}
+          isSubmitting={isSubmitting}
+          title="Tax rate needed for this proposal"
+          description="We could not infer a unique tax rate from your service codes. Enter your rate once and we'll remember it."
+        />
 
       </div>
     </div>
