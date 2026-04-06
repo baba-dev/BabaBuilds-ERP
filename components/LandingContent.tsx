@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { LazyMotion, domAnimation, m, motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import {
   ArrowRight,
   ShieldCheck,
@@ -43,6 +43,12 @@ export default function LandingContent() {
     t("trust.cities.singapore"),
     t("trust.cities.newYork"),
     t("trust.cities.newDelhi"),
+  ];
+  const trustMetrics = [
+    { label: "Automations enabled", value: "120+" },
+    { label: "Invoice success rate", value: "99.9%" },
+    { label: "Supported currencies", value: "25+" },
+    { label: "Avg. setup time", value: "< 15 min" },
   ];
 
   const features = [
@@ -210,19 +216,34 @@ export default function LandingContent() {
       <section className="overflow-hidden border-y border-border py-12">
         <div className="mx-auto max-w-7xl px-6">
           <p className="mb-8 text-center text-sm font-bold uppercase tracking-[0.2em] text-muted-body">{t("trust.title")}</p>
-          <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-surface-base to-transparent" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-surface-base to-transparent" />
-            <div className="motion-marquee flex w-max items-center gap-4">
-              {[...trustCities, ...trustCities].map((city, idx) => (
-                <span
-                  key={`${city}-${idx}`}
-                  className="rounded-full border border-border/80 bg-surface-elevated px-5 py-2 text-sm font-bold tracking-wide text-foreground/85 shadow-sm md:text-base"
-                >
-                  {city}
-                </span>
-              ))}
-            </div>
+          <div className="grid gap-4 md:grid-cols-5">
+            {trustCities.map((city, idx) => (
+              <motion.div
+                key={city}
+                initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.35 }}
+                transition={{ duration: 0.24, delay: reduceMotion ? 0 : idx * 0.05 }}
+                className="rounded-2xl border border-border/80 bg-surface-elevated px-5 py-3 text-center text-sm font-bold tracking-wide text-foreground/85 shadow-sm md:text-base"
+              >
+                {city}
+              </motion.div>
+            ))}
+          </div>
+          <div className="mt-6 grid gap-4 md:grid-cols-4">
+            {trustMetrics.map((metric, idx) => (
+              <motion.div
+                key={metric.label}
+                initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.28, delay: reduceMotion ? 0 : idx * 0.06 }}
+                className="rounded-2xl border border-border/80 bg-surface-elevated px-5 py-4 shadow-sm"
+              >
+                <p className="text-2xl font-black text-foreground">{metric.value}</p>
+                <p className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-muted-body">{metric.label}</p>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
@@ -236,32 +257,34 @@ export default function LandingContent() {
             <p className="text-lg font-medium leading-relaxed text-muted-body">{t("features.description")}</p>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 lg:auto-rows-[minmax(190px,auto)]">
-            {features.map((feature, idx) => (
-              <motion.div
-                key={feature.title}
-                initial={reduceMotion ? false : { opacity: 0, y: 18 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
-                transition={{ delay: reduceMotion ? 0 : idx * 0.06, duration: 0.32 }}
-                className={cn(
-                  "card-elevated group relative overflow-hidden rounded-3xl p-7 transition-all duration-300 hover:-translate-y-1 hover:border-accent-strong/45 hover:shadow-2xl",
-                  feature.span,
-                )}
-              >
-                <div className="mb-6 flex items-center justify-between gap-4">
-                  <div className={cn("flex h-14 w-14 items-center justify-center rounded-2xl", feature.bg)}>
-                    <feature.icon className={cn("h-7 w-7", feature.color)} />
+          <LazyMotion features={domAnimation}>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 lg:auto-rows-[minmax(190px,auto)]">
+              {features.map((feature, idx) => (
+                <m.div
+                  key={feature.title}
+                  initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{ delay: reduceMotion ? 0 : idx * 0.06, duration: 0.32 }}
+                  className={cn(
+                    "card-elevated group relative overflow-hidden rounded-3xl p-7 transition-all duration-300 hover:-translate-y-1 hover:border-accent-strong/45 hover:shadow-2xl",
+                    feature.span,
+                  )}
+                >
+                  <div className="mb-6 flex items-center justify-between gap-4">
+                    <div className={cn("flex h-14 w-14 items-center justify-center rounded-2xl", feature.bg)}>
+                      <feature.icon className={cn("h-7 w-7", feature.color)} />
+                    </div>
+                    <span className="rounded-full border border-border/80 bg-surface-base px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-body">
+                      {feature.priority}
+                    </span>
                   </div>
-                  <span className="rounded-full border border-border/80 bg-surface-base px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-body">
-                    {feature.priority}
-                  </span>
-                </div>
-                <h3 className="mb-3 text-xl font-bold text-foreground">{feature.title}</h3>
-                <p className="font-medium leading-relaxed text-muted-body">{feature.description}</p>
-              </motion.div>
-            ))}
-          </div>
+                  <h3 className="mb-3 text-xl font-bold text-foreground">{feature.title}</h3>
+                  <p className="font-medium leading-relaxed text-muted-body">{feature.description}</p>
+                </m.div>
+              ))}
+            </div>
+          </LazyMotion>
         </div>
       </section>
 
