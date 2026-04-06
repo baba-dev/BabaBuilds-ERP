@@ -212,7 +212,7 @@ export default function PricingSection() {
                     </AnimatePresence>
                     {tier.priceMonthly > 0 && (
                       <span className={cn("text-sm font-medium", tier.featured ? "text-zinc-300" : "text-zinc-500 dark:text-zinc-400")}>
-                        {tier.isOneTime ? "/ one-time" : `/ per ${billingCycle === "monthly" ? "month" : "year"}`}
+                        {"isOneTime" in tier && tier.isOneTime ? "/ one-time" : `/ per ${billingCycle === "monthly" ? "month" : "year"}`}
                       </span>
                     )}
                   </div>
