@@ -29,37 +29,7 @@ import { toast } from "sonner";
 import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 import type { MapPoint } from "@/components/maps";
 import { MapCardSkeleton } from "@/components/maps";
-interface CAInvoiceRow {
-  id: string;
-  invoiceDate: string;
-  invoiceNumber: string;
-  clientName: string;
-  sacCode: string;
-  totalAmount: number;
-  amountReceived: number | null;
-  status: string;
-  pdfPath: string | null;
-}
-
-interface CAExpenseRow {
-  id: string;
-  date: string;
-  category: string;
-  vendor: string;
-  description: string | null;
-  amount: number;
-  receiptUrl: string | null;
-}
-
-interface CAPortalSummary {
-  grossReceipts: number;
-  presumptiveIncome: number;
-  deductions80C: number;
-  deductions80D: number;
-  totalExpenses: number;
-}
-
-
+import type { CAPortalPayload, CAPortalSummary, CAInvoiceRow, CAExpenseRow } from "@/lib/ca-portal/types";
 const defaultSummary: CAPortalSummary = {
   grossReceipts: 0,
   presumptiveIncome: 0,
@@ -138,48 +108,12 @@ const GeographyInsightCard = dynamic(
   }
 );
 
-type CAInvoiceRow = {
-  id: string;
-  invoiceDate: string;
-  invoiceNumber: string;
-  clientName: string;
-  sacCode: string;
-  totalAmount: number;
-  amountReceived: number | null;
-  status: string;
-  pdfPath?: string | null;
-};
-
-type CAExpenseRow = {
-  id: string;
-  date: string;
-  category: string;
-  vendor: string;
-  description: string | null;
-  amount: number;
-  receiptUrl?: string | null;
-};
-
 const formatINRCurrency = (amount: number) => `₹${amount.toLocaleString("en-IN")}`;
 
 export default function CAPortal() {
   const t = useTranslations('CAPortal');
 
-  type AuditSummary = {
-    grossReceipts: number;
-    presumptiveIncome: number;
-    deductions80C: number;
-    deductions80D: number;
-    totalExpenses: number;
-  };
-
-  type AuditDataPayload = {
-    summary: AuditSummary;
-    invoices: CAInvoiceRow[];
-    expenses: CAExpenseRow[];
-  };
-
-  const EMPTY_SUMMARY: AuditSummary = {
+  const EMPTY_SUMMARY: CAPortalSummary = {
     grossReceipts: 0,
     presumptiveIncome: 0,
     deductions80C: 0,
@@ -189,7 +123,7 @@ export default function CAPortal() {
   
   // --- STATE ---
   const [fy, setFy] = useState("25-26"); 
-  const [data, setData] = useState<AuditDataPayload>({
+  const [data, setData] = useState<CAPortalPayload>({
     summary: EMPTY_SUMMARY,
     invoices: [],
     expenses: [],
@@ -209,20 +143,9 @@ export default function CAPortal() {
       const res = await fetch(`/api/ca-portal?fy=${fy}`);
       const json = await res.json();
 
-      const hasValidSchema =
-        json &&
-        typeof json === "object" &&
-        json.summary &&
-        typeof json.summary === "object" &&
-        typeof json.summary.grossReceipts === "number" &&
-        typeof json.summary.presumptiveIncome === "number" &&
-        typeof json.summary.deductions80C === "number" &&
-        typeof json.summary.deductions80D === "number" &&
-        typeof json.summary.totalExpenses === "number" &&
-        Array.isArray(json.invoices) &&
-        Array.isArray(json.expenses);
+      const payload = parseCAPortalResponse(json);
 
-      if (!res.ok || json.error || !hasValidSchema) {
+      if (!res.ok || !payload) {
         toast.error("Audit data format mismatch. Showing empty dataset.");
         setData({
           summary: EMPTY_SUMMARY,
@@ -232,7 +155,7 @@ export default function CAPortal() {
         return;
       }
 
-      setData(json as AuditDataPayload);
+      setData(payload);
     } catch (err) {
       console.error("Failed to fetch audit data", err);
       toast.error("Failed to fetch audit data for this financial year.");
