@@ -51,3 +51,10 @@ Use this checklist before promoting to staging/production:
    - `X-Forwarded-Host`
 4. Validate login flow end-to-end:
    - `/login` → Google consent → callback success → dashboard load.
+
+## Frontend polish rollout
+
+Use these artifacts to coordinate phased UI delivery and design QA gates:
+
+- [Component adoption matrix](docs/frontend/component-adoption-matrix.md)
+- [Visual QA checklist](docs/frontend/visual-qa-checklist.md)
