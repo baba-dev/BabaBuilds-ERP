@@ -21,7 +21,6 @@ function inferProviderFromMetadata(metadata: Record<string, any> | undefined) {
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
-  trustHost: true,
   logger: {
     error(code, metadata) {
       const provider = inferProviderFromMetadata(metadata as Record<string, any> | undefined);
