@@ -14,7 +14,7 @@ function SidebarBrand() {
 
   return (
     <div className="flex h-16 items-center justify-between border-b border-zinc-800/30 px-4 shrink-0">
-      <Link href="/" className="flex items-center gap-3 font-bold text-zinc-50 group min-w-0">
+      <Link href="/dashboard" className="flex items-center gap-3 font-bold text-zinc-50 group min-w-0">
         <div className="rounded-xl bg-indigo-600 p-1.5 shadow-lg shadow-indigo-500/20 transition-transform duration-300 group-hover:scale-110">
           <Box className="h-5 w-5 text-white" />
         </div>

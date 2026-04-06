@@ -52,6 +52,11 @@ Use this checklist before promoting to staging/production:
 4. Validate login flow end-to-end:
    - `/login` → Google consent → callback success → dashboard load.
 
+### Auth/login route note
+
+- Canonical authenticated entry route is `/dashboard` (served by `app/(dashboard)/dashboard/page.tsx`).
+- Keep login and post-auth redirects pointing to `/dashboard` rather than `/` or an implicit `app/(dashboard)/page.tsx`.
+
 ## Frontend polish rollout
 
 Use these artifacts to coordinate phased UI delivery and design QA gates:

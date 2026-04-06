@@ -80,7 +80,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
         if (isModal && onComplete) {
           onComplete(); // This triggers update() in the Gatekeeper
         } else {
-          router.push("/"); // Standard redirect for standalone use
+          router.push("/dashboard"); // Redirect to canonical dashboard entry path
         }
       } else {
         toast.error("Setup failed. Please check your fields.", { id: toastId });
