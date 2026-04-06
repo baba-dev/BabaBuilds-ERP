@@ -18,6 +18,9 @@ import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
+import { PageLoadingState } from "@/components/states/PageLoadingState";
+import { PageErrorState } from "@/components/states/PageErrorState";
+import { PageEmptyState } from "@/components/states/PageEmptyState";
 
 export default function ExpenseTracker() {
   const t = useTranslations('Expenses');
@@ -28,6 +31,7 @@ export default function ExpenseTracker() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // --- NEW: PAGINATION STATE ---
   const [isLoading, setIsLoading] = useState(true);
@@ -55,6 +59,7 @@ export default function ExpenseTracker() {
   // Fetches paginated expenses but still gets all invoices for the KPI cards
   const fetchData = async (page = 1) => {
     setIsLoading(true);
+    setFetchError(null);
     try {
       // Fetch paginated expenses
       const expRes = await fetch(`/api/expenses?page=${page}&limit=15`);
@@ -73,6 +78,7 @@ export default function ExpenseTracker() {
       }
     } catch (err) {
       console.error("Failed to load financial data");
+      setFetchError("Failed to load financial data.");
       toast.error("Failed to load financial data.");
     } finally {
       setIsLoading(false);
@@ -339,9 +345,14 @@ export default function ExpenseTracker() {
               </CardHeader>
               <CardContent className="p-0 sm:p-6 sm:pt-0 flex-1">
                 {isLoading ? (
-                  <div className="flex h-full items-center justify-center">
-                    <p className="animate-pulse text-zinc-400 dark:text-zinc-500 font-bold text-xs uppercase tracking-widest">{t('loading')}</p>
-                  </div>
+                  <PageLoadingState title={t('loading')} description="Refreshing your expense ledger…" className="min-h-[320px]" />
+                ) : fetchError && expenses.length === 0 ? (
+                  <PageErrorState
+                    title="Expense feed unavailable"
+                    description={fetchError}
+                    onRetry={() => fetchData(currentPage)}
+                    className="min-h-[320px]"
+                  />
                 ) : (
                   <Table>
                     <TableHeader className="bg-zinc-50 dark:bg-zinc-900/80">
@@ -387,8 +398,12 @@ export default function ExpenseTracker() {
                       ))}
                       {expenses.length === 0 && (
                         <TableRow className="hover:bg-transparent">
-                          <TableCell colSpan={5} className="text-center py-12 text-zinc-400 dark:text-zinc-500 border-b-0">
-                            {t('no_expenses')}
+                          <TableCell colSpan={5} className="border-b-0 p-0">
+                            <PageEmptyState
+                              title={t('no_expenses')}
+                              description="Capture your first expense to start tracking burn and tax efficiency."
+                              className="min-h-[220px]"
+                            />
                           </TableCell>
                         </TableRow>
                       )}
