@@ -16,6 +16,7 @@ import { toast } from "sonner";
 // MISSION CRITICAL: Globalization Imports
 import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
+import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 
 export default function WealthAndTaxPlanner() {
   const t = useTranslations('Tax');
@@ -160,15 +161,11 @@ export default function WealthAndTaxPlanner() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto space-y-8">
-        
-        <div className="sticky top-0 z-20 -mx-4 px-4 py-4 md:-mx-8 md:px-8 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200/50 dark:border-zinc-800/50 transition-all duration-300">
-          <div className="max-w-7xl mx-auto w-full">
-            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{t('title')}</h1>
-            <p className="text-zinc-500 dark:text-zinc-400 mt-2 font-medium text-sm">{t('description', { taxLabel })}</p>
-          </div>
-        </div>
+    <DashboardPageShell
+      title={t('title')}
+      description={t('description', { taxLabel })}
+      animated={false}
+    >
 
         {/* TOP ROW: WEALTH & DEDUCTIONS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -373,7 +370,6 @@ export default function WealthAndTaxPlanner() {
           </div>
         </div>
 
-      </div>
-    </div>
+    </DashboardPageShell>
   );
 }

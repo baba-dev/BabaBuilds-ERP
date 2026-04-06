@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
+import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 
 export default function ExpenseTracker() {
   const t = useTranslations('Expenses');
@@ -183,16 +184,11 @@ export default function ExpenseTracker() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto space-y-8">
-        
-        {/* Header Section */}
-        <div className="sticky top-0 z-20 -mx-4 px-4 py-4 md:-mx-8 md:px-8 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200/50 dark:border-zinc-800/50 transition-all duration-300">
-          <div className="max-w-7xl mx-auto w-full">
-            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{t('title')}</h1>
-            <p className="text-zinc-500 dark:text-zinc-400 mt-1.5 font-medium text-sm">{t('description')}</p>
-          </div>
-        </div>
+    <DashboardPageShell
+      title={t('title')}
+      description={t('description')}
+      animated={false}
+    >
 
         {/* 44ADA Intelligence Ribbon */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -418,8 +414,6 @@ export default function ExpenseTracker() {
           </div>
 
         </div>
-      </div>
-
       {/* EDIT EXPENSE MODAL */}
       <Dialog open={!!expenseToEdit} onOpenChange={(open) => !open && setExpenseToEdit(null)}>
         <DialogContent className="dark:bg-zinc-900 dark:border-zinc-800">
@@ -494,6 +488,6 @@ export default function ExpenseTracker() {
         </AlertDialogContent>
       </AlertDialog>
 
-    </div>
+    </DashboardPageShell>
   );
 }
