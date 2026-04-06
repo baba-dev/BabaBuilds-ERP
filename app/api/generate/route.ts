@@ -11,6 +11,17 @@ import { promisify } from 'util';
 import { Prisma } from "@prisma/client";
 
 const lookupAsync = promisify(dns.lookup);
+const ALLOWED_STATUSES = ["Pending", "Partially Paid", "Paid"] as const;
+type AllowedStatus = (typeof ALLOWED_STATUSES)[number];
+
+function normalizeInvoiceStatus(status: unknown): AllowedStatus {
+  if (typeof status !== "string") return "Pending";
+  const normalizedStatus = status.trim().toLowerCase();
+  const matchedStatus = ALLOWED_STATUSES.find(
+    (allowedStatus) => allowedStatus.toLowerCase() === normalizedStatus
+  );
+  return matchedStatus ?? "Pending";
+}
 
 async function resolveSafeIp(host: string): Promise<string | null> {
   try {
@@ -51,7 +62,8 @@ export async function POST(request: Request) {
     const workspaceId = (session as any).workspaceId;
 
     const body = await request.json();
-    const { clientId, billingMonth, sacCode, services, customDate, sendEmail, status } = body;
+    const { clientId, billingMonth, sacCode, services, customDate, sendEmail, status: rawStatus } = body;
+    const normalizedStatus = normalizeInvoiceStatus(rawStatus);
 
     if (!clientId) return NextResponse.json({ error: "No client selected." }, { status: 400 });
     if (!Array.isArray(services) || services.length === 0) {
@@ -235,7 +247,7 @@ export async function POST(request: Request) {
           baseCurrency,
           userLocale,
           paymentLink,
-          status: status ?? 'Pending'
+          status: normalizedStatus
         });
 
         fs.writeFileSync(pdfPath, pdfBytes);
@@ -248,7 +260,9 @@ export async function POST(request: Request) {
             clientName: client.name, clientId: client.id,
             sacCode: typeof sacCode === 'string' ? sacCode : JSON.stringify(sacCode), 
             serviceDescription: serviceDesc, 
-            totalAmount, pdfPath: relativePdfPath,
+            totalAmount,
+            pdfPath: relativePdfPath,
+            status: normalizedStatus,
           },
         });
 
@@ -313,7 +327,12 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, invoice: newInvoice, emailStatus });
+    return NextResponse.json({
+      success: true,
+      invoice: newInvoice,
+      status: newInvoice.status,
+      emailStatus
+    });
 
   } catch (error: any) {
     console.error("Invoice Generation Error:", error);
