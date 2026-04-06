@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import {
   Building2, Landmark, ShieldCheck, Image as ImageIcon, CheckCircle2,
-  Save, Mailbox, Bot, Trash2, CreditCard, Lock, Globe, AlertTriangle,
+  Mailbox, Bot, Trash2, CreditCard, Lock, Globe, AlertTriangle,
   Loader2, Info
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -15,6 +15,8 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getBustedUrl } from "@/lib/cache-buster";
+import { FileUploadField } from "@/components/forms/file-upload-field";
+import { FormFieldMessages, FormSection, FormSubmitBar } from "@/components/forms/form-primitives";
 
 export default function SettingsWizard() {
   /**
@@ -500,7 +502,7 @@ export default function SettingsWizard() {
               
               <Separator className="dark:bg-zinc-800" />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <FormSection className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-transparent p-0 border-0">
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2 dark:text-zinc-300"><ImageIcon className="w-4 h-4" /> {t('master_logo')}</Label>
                   <div className="flex items-center gap-4">
@@ -508,8 +510,12 @@ export default function SettingsWizard() {
                       <img src={getBustedUrl(formData.existingLogoUrl)} alt={t("alt.currentLogo")} className="h-12 object-contain bg-white dark:bg-zinc-200 border rounded p-1" />
                     )}
                     <div className="flex-1">
-                      <Input type="file" accept="image/*" onChange={e => setLogoFile(e.target.files?.[0] || null)} className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{t('logo_hint')}</p>
+                      <FileUploadField
+                        accept="image/*"
+                        onFileSelect={setLogoFile}
+                        helpText={t('logo_hint')}
+                        inputClassName="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100"
+                      />
                     </div>
                   </div>
                 </div>
@@ -540,12 +546,16 @@ export default function SettingsWizard() {
                       <img src={getBustedUrl(formData.existingSignatureUrl)} alt={t("alt.currentSignature")} className="h-12 object-contain bg-white dark:bg-zinc-200 border rounded p-1" />
                     )}
                     <div className="flex-1">
-                      <Input type="file" accept="image/png,image/webp" onChange={e => setSignatureFile(e.target.files?.[0] || null)} className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{t("signature.hint")}</p>
+                      <FileUploadField
+                        accept="image/png,image/webp"
+                        onFileSelect={setSignatureFile}
+                        helpText={t("signature.hint")}
+                        inputClassName="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100"
+                      />
                     </div>
                   </div>
                 </div>
-              </div>
+              </FormSection>
             </CardContent>
           </Card>
 
@@ -850,19 +860,19 @@ export default function SettingsWizard() {
           </Card>
 
           {/* STICKY SAVE FOOTER */}
-          <div className="sticky bottom-6 flex items-center justify-end gap-4 p-4 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-30 transition-all duration-300 group hover:border-indigo-500/30">
-            {successMsg && (
-              <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 animate-in fade-in slide-in-from-right-2">
-                <CheckCircle2 className="w-4 h-4" /> {t("profile_saved")}
-              </span>
-            )}
-            <Button type="submit" size="lg" className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[200px] font-bold uppercase tracking-widest text-xs h-12 shadow-lg shadow-indigo-500/20 transition-all active:scale-95 border-none" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> {t("actions.saving")}</span>
-              ) : (
-                <><Save className="w-4 h-4 mr-2" /> {t('save_button')}</>
-              )}
-            </Button>
+          <div className="sticky bottom-6 z-30">
+            <FormSubmitBar
+              isSubmitting={isSubmitting}
+              submitText={t('save_button')}
+              submittingText={t("actions.saving")}
+              helperText={successMsg ? (
+                <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 animate-in fade-in slide-in-from-right-2">
+                  <CheckCircle2 className="w-4 h-4" /> {t("profile_saved")}
+                </span>
+              ) : t("description")}
+              className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl rounded-2xl shadow-2xl transition-all duration-300 hover:border-indigo-500/30"
+            />
+            <FormFieldMessages helpText={isSubmitting ? t("actions.saving") : undefined} className="px-2 pt-2" />
           </div>
 
         </form>
