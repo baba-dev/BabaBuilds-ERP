@@ -1,68 +1,90 @@
 ---
 title: "Motion Design Guidelines"
-description: "Animation standards for landing and pricing surfaces with accessibility-first defaults."
+description: "Approved product UI motion patterns with accessibility-first defaults for dashboard experiences."
 order: 8
 ---
 
 # Motion Design Guidelines
 
-This document defines the approved motion system for BabaBuilds ERP marketing surfaces.
+This document defines the approved motion system for BabaBuilds ERP product UI surfaces, especially dashboard workflows.
 
-## 1) Allowed animation types
+## 1) Motion token system (source of truth)
 
-Use motion only to improve orientation, hierarchy, and perceived quality:
+Use global motion tokens from `app/globals.css`:
 
-- **Entrance / reveal**: fade + translateY (small, 8–24px)
-- **Micro-interactions**: hover scale, button press feedback, focus halo transitions
-- **Progress indicators**: width/value transitions for comparison cues
-- **Decorative ambient loops**: low-amplitude floating glows or gradient drift
-- **Marquee/logo cloud movement**: continuous horizontal movement for trust/social proof rows
+- **Durations**
+  - `--motion-duration-fast` (`150ms`) for hover/focus/row-feedback
+  - `--motion-duration-base` (`220ms`) for button/card/modal transitions
+  - `--motion-duration-slow` (`320ms`) for larger, non-blocking transitions
+- **Easing**
+  - `--motion-ease-standard` for most interaction changes
+  - `--motion-ease-emphasized` for modal/card emphasis
+  - `--motion-ease-linear` for continuous movement only
+- **Interaction constants**
+  - `--motion-hover-lift-y` for subtle card elevation
+  - `--motion-press-scale` for press feedback
 
-Avoid:
+Do not hardcode ad-hoc timings/easing in feature pages when a token exists.
 
-- large parallax shifts tied to scroll velocity
-- aggressive bounce/elastic effects on primary content
-- motion that blocks reading flow or causes layout jumps
+## 2) Approved interaction patterns
 
-## 2) Durations and easing
+### Buttons
 
-### Standard durations
+- Use shared button primitives (they include standardized feedback timing).
+- Keep press feedback subtle and fast.
+- Focus-visible state must remain obvious and never be removed.
 
-- **Fast (micro state)**: `120ms – 180ms`
-- **Default UI transitions**: `200ms – 280ms`
-- **Section reveal**: `320ms – 450ms`
-- **Ambient decorative loops**: `8s – 16s` (infinite, subtle)
+### Row hover (tables/lists)
 
-### Approved easing curves
+- Use low-contrast background shifts for row hover.
+- Prefer color/background transitions; avoid movement on dense rows.
 
-- **Standard exit/enter**: `easeOut`
-- **Ambient loops**: `easeInOut`
-- **Linear only** for continuous marquee movement
+### Card hover
 
-### Stagger rules
+- Use light lift (`translateY`) + soft shadow/background response.
+- Motion should suggest interactivity, not feel like draggable movement.
 
-- card/list stagger delay: `40ms – 90ms`
-- never exceed `400ms` total reveal delay for above-the-fold content
+### Modal open/close
 
-## 3) Reduced-motion fallback rules
+- Keep overlays quick and unobtrusive.
+- Content transitions should be slightly emphasized but short enough to avoid blocking user flow.
+
+## 3) Utility classes to reuse
+
+Use these shared classes instead of custom one-off animation stacks:
+
+- `motion-feedback`
+- `motion-feedback-fast`
+- `motion-hover-lift`
+- `motion-press`
+- `motion-row-hover`
+- `motion-modal-overlay`
+- `motion-modal-content`
+- `dashboard-motion-surface` (scope-level normalization for dashboard UI primitives)
+
+## 4) Reduced-motion requirements (app-wide)
 
 When `prefers-reduced-motion: reduce` is active:
 
-1. **Disable looping ambient animations** (glows, decorative orbiting, marquee).
-2. **Keep content readable without animation** (no hidden initial states).
-3. **Use instant or near-instant state changes** (`0ms – 80ms`) for non-essential transitions.
-4. **Preserve semantic feedback** with color, border, and text changes instead of movement.
-5. **Never rely on animation only** to convey pricing or plan differences.
+1. Reduce all animation/transition durations to near-instant values.
+2. Remove transform-based hover/press/lift motion.
+3. Disable looping decorative animation.
+4. Preserve state communication via color, border, iconography, and copy.
+5. Ensure no flow depends on motion to be understandable.
 
-## 4) Contrast and readability guardrails
+## 5) Anti-patterns (do not ship)
 
-- Maintain legible text contrast in both light and dark themes while animating backgrounds.
-- Avoid placing critical copy over moving high-contrast textures.
-- Decorative layers must remain behind content and use low opacity.
+- Mixed, arbitrary durations/easing across similar controls in the same view.
+- Large movement for routine hover states (cards, rows, form controls).
+- Long modal animations that delay form/input readiness.
+- Relying on motion alone for validation, status, or financial state changes.
+- Ignoring reduced-motion support on newly added components.
 
-## 5) Performance guardrails
+## 6) Review checklist
 
-- Lazy-load heavy decorative animation modules.
-- Prefer `transform` and `opacity` animations over layout properties.
-- Keep animated node count small above the fold.
-- Pause or remove non-essential motion for reduced-motion users.
+Before merge:
+
+- [ ] Uses motion tokens/utilities (not bespoke timings) for product UI interactions.
+- [ ] Buttons, rows, cards, and modals feel consistent across dashboard pages.
+- [ ] Reduced-motion behavior verified at app level.
+- [ ] Interaction feedback remains clear without movement.
