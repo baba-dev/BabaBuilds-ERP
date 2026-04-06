@@ -12,6 +12,21 @@ type Currency = {
   rate: number;
 };
 
+type PricingTier = {
+  name: string;
+  id: string;
+  href: string;
+  priceMonthly: number;
+  priceINR?: number;
+  isOneTime?: boolean;
+  description: string;
+  features: string[];
+  featured: boolean;
+  cta: string;
+  icon: typeof Gift;
+  cue: string;
+};
+
 const currencies: Currency[] = [
   { code: "USD", symbol: "$", rate: 1 },
   { code: "INR", symbol: "₹", rate: 80 },
@@ -19,7 +34,7 @@ const currencies: Currency[] = [
   { code: "GBP", symbol: "£", rate: 0.79 },
 ];
 
-const tiers = [
+const tiers: PricingTier[] = [
   {
     name: "Starter",
     id: "tier-starter",
@@ -58,7 +73,7 @@ const tiers = [
     icon: ShieldCheck,
     cue: "Tailored onboarding included",
   },
-] as const;
+];
 
 export default function PricingSection() {
   const [currency, setCurrency] = useState<Currency>(currencies[0]);
