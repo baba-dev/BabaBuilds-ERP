@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Check, Gift, Sparkles, ShieldCheck } from "lucide-react";
+import { Check, Gift, Sparkles, ShieldCheck, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -212,7 +212,7 @@ export default function PricingSection() {
                     </AnimatePresence>
                     {tier.priceMonthly > 0 && (
                       <span className={cn("text-sm font-medium", tier.featured ? "text-zinc-300" : "text-zinc-500 dark:text-zinc-400")}>
-                        {tier.isOneTime ? "/ one-time" : `/ per ${billingCycle === "monthly" ? "month" : "year"}`}
+                        {"isOneTime" in tier && tier.isOneTime ? "/ one-time" : `/ per ${billingCycle === "monthly" ? "month" : "year"}`}
                       </span>
                     )}
                   </div>
