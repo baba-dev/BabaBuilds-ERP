@@ -54,10 +54,10 @@ export function AppSidebar() {
         const isActive = pathname === route.path;
 
         return (route as any).disabled ? (
-          <div key={route.key} className="flex items-center gap-3 rounded-lg px-3 py-2 text-zinc-400 opacity-70 cursor-not-allowed">
+          <div key={route.key} className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-body opacity-70 cursor-not-allowed">
             <Icon className="h-4 w-4" />
             {t(route.key)}
-            <Badge variant="outline" className="ml-auto text-[10px] uppercase tracking-wider font-bold border-zinc-700 px-1.5 py-0.5 rounded-sm text-zinc-400 bg-transparent h-auto">
+            <Badge variant="outline" className="ml-auto text-[10px] uppercase tracking-wider font-bold border-border px-1.5 py-0.5 rounded-sm text-muted-body bg-transparent h-auto">
               {t('soon')}
             </Badge>
           </div>
@@ -65,10 +65,10 @@ export function AppSidebar() {
           <Link
             key={route.key}
             href={route.path}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 ${
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
               isActive
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/20"
-                : "text-white hover:bg-white/10"
+                ? "bg-accent-strong text-white shadow-md"
+                : "text-foreground hover:bg-surface-glass"
             }`}
           >
             <Icon className="h-4 w-4" />
@@ -83,11 +83,11 @@ export function AppSidebar() {
   const AuthSection = () => {
     if (status === "loading") {
       return (
-        <div className="flex items-center gap-3 rounded-xl bg-zinc-900/50 p-3 border border-zinc-800/50 animate-pulse">
-          <div className="h-9 w-9 rounded-full bg-zinc-800"></div>
+        <div className="flex items-center gap-3 rounded-xl bg-surface-base p-3 border border-border animate-pulse">
+          <div className="h-9 w-9 rounded-full bg-muted"></div>
           <div className="flex flex-col gap-2 w-full">
-            <div className="h-3 w-24 bg-zinc-800 rounded"></div>
-            <div className="h-2 w-16 bg-zinc-800 rounded"></div>
+            <div className="h-3 w-24 bg-muted rounded"></div>
+            <div className="h-2 w-16 bg-muted rounded"></div>
           </div>
         </div>
       );
@@ -101,7 +101,7 @@ export function AppSidebar() {
     return (
       <Button
         onClick={() => signIn("google")}
-        className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-3 py-6 text-sm font-bold text-white shadow-md shadow-indigo-900/20 hover:bg-indigo-700 transition-all border-none focus-visible:ring-offset-zinc-950"
+        className="btn-primary w-full py-6 text-sm border-none focus-visible:ring-offset-background"
       >
         <LogIn className="h-4 w-4" />
         {t('sign_in_google')}
@@ -112,16 +112,16 @@ export function AppSidebar() {
   return (
     <>
       {/* --- DESKTOP SIDEBAR --- */}
-      <div className="hidden border-r border-white/5 bg-black/90 backdrop-blur-2xl md:block md:w-64 md:fixed md:inset-y-0 z-50 shadow-[rgba(0,0,0,0.5)_4px_0px_20px]">
-        <div className="flex h-full max-h-screen flex-col gap-2 bg-gradient-to-b from-white/[0.03] to-transparent">
+      <div className="hidden border-r border-border bg-surface-glass backdrop-blur-2xl md:block md:w-64 md:fixed md:inset-y-0 z-50 shadow-[rgba(0,0,0,0.25)_4px_0px_20px]">
+        <div className="flex h-full max-h-screen flex-col gap-2 bg-gradient-to-b from-white/[0.03] to-transparent dark:from-white/[0.02]">
           
           {/* Brand Logo Area */}
-          <div className="flex h-16 items-center border-b border-zinc-800/30 px-6 shrink-0">
-            <Link href="/" className="flex items-center gap-3 font-bold text-zinc-50 group">
-              <div className="bg-indigo-600 p-1.5 rounded-xl shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform duration-300">
+          <div className="flex h-16 items-center border-b border-border px-6 shrink-0">
+            <Link href="/" className="flex items-center gap-3 font-bold text-foreground group">
+              <div className="bg-accent-strong p-1.5 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
                 <Box className="h-5 w-5 text-white" />
               </div>
-              <span className="text-lg tracking-tight text-white hover:text-indigo-400 transition-colors">{t('bababuilds_erp')}</span>
+              <span className="text-lg tracking-tight text-foreground hover:text-accent-strong transition-colors">{t('bababuilds_erp')}</span>
             </Link>
           </div>
           
@@ -131,7 +131,7 @@ export function AppSidebar() {
           </div>
           
           {/* Bottom User Profile */}
-          <div className="mt-auto p-4 border-t border-zinc-800/30 shrink-0">
+          <div className="mt-auto p-4 border-t border-border shrink-0">
             <AuthSection />
           </div>
 
@@ -139,24 +139,24 @@ export function AppSidebar() {
       </div>
 
       {/* --- MOBILE TOP NAVBAR & DRAWER --- */}
-      <header className="flex h-16 items-center gap-4 border-b border-white/5 bg-black/90 backdrop-blur-2xl px-4 md:hidden sticky top-0 z-50 shadow-lg shadow-black/40">
+      <header className="flex h-16 items-center gap-4 border-b border-border bg-surface-glass backdrop-blur-2xl px-4 md:hidden sticky top-0 z-50 shadow-lg shadow-black/20">
         <Sheet>
           <SheetTrigger asChild>
-            <Button size="icon" variant="ghost" className="text-white hover:bg-white/10">
+            <Button size="icon" variant="ghost" className="text-foreground hover:bg-surface-glass">
               <Menu className="h-6 w-6" />
               <span className="sr-only">Toggle Menu</span>
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[280px] bg-black/95 border-r border-white/5 p-0 text-zinc-50 flex flex-col h-full backdrop-blur-3xl shadow-2xl">
+          <SheetContent side="left" className="w-[280px] bg-surface-glass border-r border-border p-0 text-foreground flex flex-col h-full backdrop-blur-3xl shadow-2xl">
             <div className="absolute inset-0 bg-gradient-to-b from-white/[0.05] to-transparent pointer-events-none" />
             <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
             
-            <div className="flex h-16 items-center border-b border-zinc-800/50 px-6 shrink-0">
-              <Link href="/" className="flex items-center gap-3 font-bold text-zinc-50">
-                <div className="bg-indigo-600 p-1.5 rounded-lg">
+            <div className="flex h-16 items-center border-b border-border px-6 shrink-0">
+              <Link href="/" className="flex items-center gap-3 font-bold text-foreground">
+                <div className="bg-accent-strong p-1.5 rounded-lg">
                   <Box className="h-5 w-5 text-white" />
                 </div>
-                <span className="text-lg tracking-tight text-white">{t('bababuilds_erp')}</span>
+                <span className="text-lg tracking-tight text-foreground">{t('bababuilds_erp')}</span>
               </Link>
             </div>
             
@@ -165,13 +165,13 @@ export function AppSidebar() {
             </div>
 
             {/* Mobile Bottom Profile */}
-            <div className="p-4 border-t border-zinc-800/50 shrink-0">
+            <div className="p-4 border-t border-border shrink-0">
               <AuthSection />
             </div>
           </SheetContent>
         </Sheet>
         <div className="w-full flex-1 flex items-center gap-2">
-           <span className="font-bold text-white text-lg tracking-tight">{t('bababuilds')}</span>
+           <span className="font-bold text-foreground text-lg tracking-tight">{t('bababuilds')}</span>
         </div>
       </header>
     </>
