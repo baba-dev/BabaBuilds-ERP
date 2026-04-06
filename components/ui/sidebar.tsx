@@ -59,7 +59,7 @@ export function SidebarProvider({
       <div
         data-slot="sidebar-wrapper"
         data-state={open ? "expanded" : "collapsed"}
-        className="flex min-h-screen w-full bg-zinc-950"
+        className="flex min-h-screen w-full"
       >
         {children}
       </div>
@@ -104,7 +104,7 @@ export function Sidebar({ children, className }: { children: React.ReactNode; cl
 
 export function SidebarInset({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div data-slot="sidebar-inset" className={cn("flex min-w-0 flex-1 flex-col", className)}>
+    <div data-slot="sidebar-inset" className={cn("flex min-w-0 flex-1 flex-col bg-background", className)}>
       {children}
     </div>
   );
@@ -119,7 +119,7 @@ export function SidebarTrigger({ className }: { className?: string }) {
       size="icon"
       variant="ghost"
       onClick={toggleSidebar}
-      className={cn("h-9 w-9 text-zinc-200 hover:bg-white/10 hover:text-white", className)}
+      className={cn("h-9 w-9 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-200 dark:hover:bg-white/10 dark:hover:text-white", className)}
     >
       <PanelLeft className="h-5 w-5" />
       <span className="sr-only">Toggle sidebar</span>

@@ -1,4 +1,7 @@
+"use client";
+
 import { ReactNode } from "react";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 type DashboardPageShellProps = {
@@ -30,11 +33,12 @@ export function DashboardPageShell({
   return (
     <div className="min-h-full bg-zinc-50/50 p-4 transition-colors duration-300 dark:bg-zinc-950 md:p-8">
       <div className={cn("mx-auto max-w-7xl space-y-8", animated && animationClassName)}>
-        <header className="sticky top-16 z-20 -mx-4 border-b border-zinc-200/50 bg-zinc-50/80 px-4 py-4 backdrop-blur-md transition-all duration-300 dark:border-zinc-800/50 dark:bg-zinc-950/70 md:-mx-8 md:px-8">
+        <header className="sticky top-0 z-20 -mx-4 border-b border-zinc-200/50 bg-zinc-50/80 px-4 py-4 backdrop-blur-md transition-all duration-300 dark:border-zinc-800/50 dark:bg-zinc-950/70 md:-mx-8 md:px-8">
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
             <div className="flex items-center justify-between gap-3">
-              <div className="min-h-5 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                {breadcrumb}
+              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                <SidebarTrigger className="md:hidden" />
+                <span className="min-h-5">{breadcrumb}</span>
               </div>
               {resolvedActions ? <div className="shrink-0">{resolvedActions}</div> : null}
             </div>

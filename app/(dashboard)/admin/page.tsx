@@ -2,20 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { 
-  ShieldAlert, Users, Activity, CreditCard, Search, 
-  MoreVertical, ArrowUpCircle, Ban, RefreshCcw, Trash2,
+  ShieldAlert, Users, Activity, CreditCard,
+  ArrowUpCircle, Ban, RefreshCcw, Trash2,
   Server, HardDrive, Cpu, Clock, DollarSign, FileText, Database, ShieldCheck, Download,
   Wrench, Zap, FileWarning, RotateCcw
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { 
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, 
-  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
@@ -24,6 +18,7 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
 import { Banknote } from "lucide-react";
+import { ColumnVisibilityToggle, DataTable, DataTableToolbar, RowActionsMenu, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
 
 export default function SuperAdminPortal() {
   const t = useTranslations('Admin');
@@ -35,8 +30,11 @@ export default function SuperAdminPortal() {
   const [diagnostics, setDiagnostics] = useState<any>(null);
   const [metrics, setMetrics] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [userVisibleColumns, setUserVisibleColumns] = useState<string[]>(["user", "workspace", "status", "data", "actions"]);
+  const [backupVisibleColumns, setBackupVisibleColumns] = useState<string[]>(["timestamp", "filename", "size", "actions"]);
   const [userToDelete, setUserToDelete] = useState<{ id: string; name: string; email: string } | null>(null);
+  const userTableState = useUrlTableState("admin_users");
+  const backupTableState = useUrlTableState("admin_backups");
 
   useEffect(() => {
     fetchAdminData();
@@ -155,9 +153,65 @@ export default function SuperAdminPortal() {
   };
 
   const filteredUsers = users.filter((u: any) => 
-    u.email?.toLowerCase().includes(search.toLowerCase()) || 
-    u.name?.toLowerCase().includes(search.toLowerCase())
+    u.email?.toLowerCase().includes(userTableState.search.toLowerCase()) || 
+    u.name?.toLowerCase().includes(userTableState.search.toLowerCase())
   );
+  const filteredBackups = backups.filter((b) => b.filename.toLowerCase().includes(backupTableState.search.toLowerCase()));
+  const userColumns: DataTableColumnDef<any>[] = [
+    {
+      id: "user",
+      header: t("col_user") || "User",
+      accessor: (row) => row.name ?? row.email,
+      sortable: true,
+      cell: (user) => (
+        <div>
+          <div className="font-bold text-zinc-900 dark:text-zinc-100">{user.name || t("unnamed") || "Unnamed"}</div>
+          <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{user.email}</div>
+        </div>
+      ),
+      hideable: true,
+    },
+    { id: "workspace", header: t("col_ws") || "Workspace", accessor: (row) => row.workspaceName ?? "", sortable: true, cell: (user) => <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{user.workspaceName || t("no_ws") || "No Workspace"}</span>, hideable: true },
+    {
+      id: "status",
+      header: t("col_status") || "Status",
+      accessor: (row) => row.subscriptionStatus,
+      cell: (user) => user.subscriptionStatus === "PRO" ? (
+        <Badge className="bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-none text-xs font-bold uppercase tracking-widest">{t("status_pro") || "PRO"}</Badge>
+      ) : user.subscriptionStatus === "SUSPENDED" ? (
+        <Badge className="bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 border-none text-xs font-bold uppercase tracking-widest">{t("status_suspended") || "SUSPENDED"}</Badge>
+      ) : (
+        <Badge className="bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-none text-xs font-bold uppercase tracking-widest">{t("status_free") || "FREE"}</Badge>
+      ),
+      hideable: true,
+    },
+    { id: "data", header: <div className="text-right">{t("col_invoices") || "Data"}</div>, accessor: (row) => row.invoiceCount, sortable: true, className: "text-right text-zinc-600 dark:text-zinc-400 font-mono font-bold", cell: (user) => user.invoiceCount, hideable: true },
+    {
+      id: "actions",
+      header: <div className="text-right">{t("col_actions") || "Actions"}</div>,
+      className: "text-right",
+      cell: (user) => (
+        <div className="flex justify-end">
+          <RowActionsMenu
+            row={user}
+            actions={[
+              { label: "Force Pro", onClick: (u) => handleAction(u.id, "UPGRADE"), icon: <ArrowUpCircle className="mr-2 h-4 w-4" /> },
+              user.subscriptionStatus === "SUSPENDED"
+                ? { label: "Reactivate", onClick: (u) => handleAction(u.id, "REACTIVATE"), icon: <RefreshCcw className="mr-2 h-4 w-4" /> }
+                : { label: "Suspend", onClick: (u) => handleAction(u.id, "SUSPEND"), icon: <Ban className="mr-2 h-4 w-4" /> },
+              { label: "Delete", onClick: (u) => setUserToDelete({ id: u.id, name: u.name || "Unnamed", email: u.email }), variant: "danger", icon: <Trash2 className="mr-2 h-4 w-4" /> },
+            ]}
+          />
+        </div>
+      ),
+    },
+  ];
+  const backupColumns: DataTableColumnDef<any>[] = [
+    { id: "timestamp", header: "Timestamp", sortable: true, sortAccessor: (row) => new Date(row.createdAt).getTime(), cell: (row) => <span className="text-xs font-medium text-zinc-500">{new Date(row.createdAt).toLocaleString()}</span>, hideable: true },
+    { id: "filename", header: "File Name", accessor: (row) => row.filename, sortable: true, cell: (row) => <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">{row.filename}</span>, hideable: true },
+    { id: "size", header: "Size", sortable: true, sortAccessor: (row) => row.size, cell: (row) => <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">{(row.size / 1024 / 1024).toFixed(2)} MB</span>, hideable: true },
+    { id: "actions", header: <div className="text-right">Actions</div>, className: "text-right", cell: (row) => <div className="flex items-center justify-end gap-2"><Button variant="outline" size="sm" className="h-7 px-2 text-xs font-bold uppercase border-zinc-200 dark:border-zinc-800" onClick={() => handleDownloadBackup(row.filename)}><Download className="w-3 h-3 mr-1" /> Download</Button><Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30" onClick={() => handleDeleteBackup(row.filename)}><Trash2 className="w-3 h-3" /></Button></div> },
+  ];
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
@@ -346,85 +400,32 @@ export default function SuperAdminPortal() {
                   <CardTitle className="text-zinc-900 dark:text-zinc-50">{t('panel_title') || 'Platform Accounts'}</CardTitle>
                   <CardDescription className="text-zinc-500 dark:text-zinc-400 font-medium mt-1">{t('panel_desc') || 'Manage and monitor all accounts.'}</CardDescription>
                 </div>
-                <div className="relative w-full md:w-72">
-                  <Search className="absolute left-3 top-2.5 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-                  <Input 
-                    placeholder={t('search_placeholder') || 'Search users...'} 
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9 bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100"
-                  />
-                </div>
               </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader className="bg-zinc-50 dark:bg-zinc-950/50">
-                      <TableRow className="border-zinc-200 dark:border-zinc-800 hover:bg-transparent">
-                        <TableHead className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{t('col_user') || 'User'}</TableHead>
-                        <TableHead className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{t('col_ws') || 'Workspace'}</TableHead>
-                        <TableHead className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{t('col_status') || 'Status'}</TableHead>
-                        <TableHead className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 text-right">{t('col_invoices') || 'Data'}</TableHead>
-                        <TableHead className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 text-right">{t('col_actions') || 'Actions'}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {isLoading ? (
-                        <TableRow><TableCell colSpan={5} className="text-center py-8 text-zinc-400 dark:text-zinc-500 animate-pulse text-xs font-bold uppercase tracking-widest">{t('loading') || 'Loading...'}</TableCell></TableRow>
-                      ) : filteredUsers.length === 0 ? (
-                        <TableRow><TableCell colSpan={5} className="text-center py-8 text-zinc-400 dark:text-zinc-500 text-xs font-bold uppercase tracking-widest">{t('no_users') || 'No users found.'}</TableCell></TableRow>
-                      ) : filteredUsers.map((user: any) => (
-                        <TableRow key={user.id} className="border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
-                          <TableCell>
-                            <div className="font-bold text-zinc-900 dark:text-zinc-100">{user.name || t('unnamed') || 'Unnamed'}</div>
-                            <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{user.email}</div>
-                          </TableCell>
-                          <TableCell className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{user.workspaceName || t('no_ws') || 'No Workspace'}</TableCell>
-                          <TableCell>
-                            {user.subscriptionStatus === 'PRO' ? (
-                              <Badge className="bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-none text-xs font-bold uppercase tracking-widest">{t('status_pro') || 'PRO'}</Badge>
-                            ) : user.subscriptionStatus === 'SUSPENDED' ? (
-                              <Badge className="bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 border-none text-xs font-bold uppercase tracking-widest">{t('status_suspended') || 'SUSPENDED'}</Badge>
-                            ) : (
-                              <Badge className="bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-none text-xs font-bold uppercase tracking-widest">{t('status_free') || 'FREE'}</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right text-zinc-600 dark:text-zinc-400 font-mono font-bold">{user.invoiceCount}</TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                                  <MoreVertical className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-xl">
-                                <DropdownMenuItem onClick={() => handleAction(user.id, 'UPGRADE')} className="cursor-pointer font-medium">
-                                  <ArrowUpCircle className="w-4 h-4 mr-2" /> Force Pro
-                                </DropdownMenuItem>
-                                {user.subscriptionStatus === 'SUSPENDED' ? (
-                                  <DropdownMenuItem onClick={() => handleAction(user.id, 'REACTIVATE')} className="cursor-pointer font-medium text-blue-600">
-                                    <RefreshCcw className="w-4 h-4 mr-2" /> Reactivate
-                                  </DropdownMenuItem>
-                                ) : (
-                                  <DropdownMenuItem onClick={() => handleAction(user.id, 'SUSPEND')} className="cursor-pointer font-medium text-amber-600">
-                                    <Ban className="w-4 h-4 mr-2" /> Suspend
-                                  </DropdownMenuItem>
-                                )}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => setUserToDelete({ id: user.id, name: user.name || 'Unnamed', email: user.email })}
-                                  className="cursor-pointer text-rose-600 font-bold"
-                                >
-                                  <Trash2 className="w-4 h-4 mr-2" /> Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+              <CardContent className="p-4">
+                <DataTableToolbar
+                  searchValue={userTableState.search}
+                  onSearchChange={userTableState.setSearch}
+                  searchPlaceholder={t("search_placeholder") || "Search users..."}
+                  rightSlot={
+                    <ColumnVisibilityToggle
+                      options={userColumns.filter((col) => col.hideable).map((col) => ({
+                        id: col.id,
+                        label: typeof col.header === "string" ? col.header : col.id,
+                        visible: userVisibleColumns.includes(col.id),
+                        onToggle: () => setUserVisibleColumns((prev) => prev.includes(col.id) ? prev.filter((id) => id !== col.id) : [...prev, col.id]),
+                      }))}
+                    />
+                  }
+                />
+                <DataTable
+                  columns={userColumns}
+                  data={filteredUsers}
+                  rowId={(row) => row.id}
+                  loading={isLoading}
+                  emptyTitle={t("no_users") || "No users found."}
+                  emptyDescription="Try a different query or refresh admin data."
+                  visibleColumnIds={userVisibleColumns}
+                />
               </CardContent>
             </Card>
           </div>
@@ -609,56 +610,30 @@ export default function SuperAdminPortal() {
                   <CardTitle className="text-sm font-bold text-zinc-900 dark:text-zinc-50 uppercase tracking-tight">Active Backups Archive (Last 5)</CardTitle>
                   <CardDescription className="text-xs">Database and volatile files (.pdf, .png, .jpg) snapshot</CardDescription>
                </CardHeader>
-               <CardContent className="p-0">
-                  <Table>
-                    <TableHeader className="bg-zinc-50/30 dark:bg-zinc-950/30">
-                      <TableRow className="border-zinc-200 dark:border-zinc-800">
-                        <TableHead className="text-xs font-bold uppercase tracking-widest text-zinc-500">Timestamp</TableHead>
-                        <TableHead className="text-xs font-bold uppercase tracking-widest text-zinc-500">File Name</TableHead>
-                        <TableHead className="text-xs font-bold uppercase tracking-widest text-zinc-500">Size</TableHead>
-                        <TableHead className="text-xs font-bold uppercase tracking-widest text-zinc-500 text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {backups.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center py-12 text-zinc-400 text-xs font-bold uppercase tracking-widest bg-zinc-50/10 dark:bg-zinc-900/10">
-                            No backups found in the archive.
-                          </TableCell>
-                        </TableRow>
-                      ) : backups.map((b) => (
-                        <TableRow key={b.filename} className="border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors">
-                          <TableCell className="text-xs font-medium text-zinc-500">
-                            {new Date(b.createdAt).toLocaleString()}
-                          </TableCell>
-                          <TableCell className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">
-                            {b.filename}
-                          </TableCell>
-                          <TableCell className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                            {(b.size / 1024 / 1024).toFixed(2)} MB
-                          </TableCell>
-                          <TableCell className="text-right flex items-center justify-end gap-2">
-                             <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-7 px-2 text-xs font-bold uppercase border-zinc-200 dark:border-zinc-800"
-                              onClick={() => handleDownloadBackup(b.filename)}
-                             >
-                                <Download className="w-3 h-3 mr-1" /> Download
-                             </Button>
-                             <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-7 w-7 p-0 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                              onClick={() => handleDeleteBackup(b.filename)}
-                             >
-                                <Trash2 className="w-3 h-3" />
-                             </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+               <CardContent className="p-4">
+                <DataTableToolbar
+                  searchValue={backupTableState.search}
+                  onSearchChange={backupTableState.setSearch}
+                  searchPlaceholder="Search backups..."
+                  rightSlot={
+                    <ColumnVisibilityToggle
+                      options={backupColumns.filter((col) => col.hideable).map((col) => ({
+                        id: col.id,
+                        label: typeof col.header === "string" ? col.header : col.id,
+                        visible: backupVisibleColumns.includes(col.id),
+                        onToggle: () => setBackupVisibleColumns((prev) => prev.includes(col.id) ? prev.filter((id) => id !== col.id) : [...prev, col.id]),
+                      }))}
+                    />
+                  }
+                />
+                <DataTable
+                  columns={backupColumns}
+                  data={filteredBackups}
+                  rowId={(row) => row.filename}
+                  emptyTitle="No backups found in the archive."
+                  emptyDescription="Trigger a smart backup to populate this table."
+                  visibleColumnIds={backupVisibleColumns}
+                />
                </CardContent>
             </Card>
 
