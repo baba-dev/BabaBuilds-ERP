@@ -59,11 +59,6 @@ interface CAPortalSummary {
   totalExpenses: number;
 }
 
-interface CAPortalResponse {
-  summary: CAPortalSummary;
-  invoices: CAInvoiceRow[];
-  expenses: CAExpenseRow[];
-}
 
 const defaultSummary: CAPortalSummary = {
   grossReceipts: 0,
@@ -121,7 +116,7 @@ const isCAPortalSummary = (value: unknown): value is CAPortalSummary => {
   );
 };
 
-const parseCAPortalResponse = (value: unknown): CAPortalResponse | null => {
+const parseCAPortalResponse = (value: unknown): CAPortalPayload | null => {
   if (!isRecord(value) || "error" in value) return null;
 
   const summary = isCAPortalSummary(value.summary) ? value.summary : defaultSummary;
