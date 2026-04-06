@@ -29,7 +29,27 @@ import { toast } from "sonner";
 import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 import type { MapPoint } from "@/components/maps";
 import { MapCardSkeleton } from "@/components/maps";
-import type { CAExpenseRow, CAInvoiceRow, CAPortalPayload } from "@/lib/ca-portal/types";
+interface CAInvoiceRow {
+  id: string;
+  invoiceDate: string;
+  invoiceNumber: string;
+  clientName: string;
+  sacCode: string;
+  totalAmount: number;
+  amountReceived: number | null;
+  status: string;
+  pdfPath: string | null;
+}
+
+interface CAExpenseRow {
+  id: string;
+  date: string;
+  category: string;
+  vendor: string;
+  description: string | null;
+  amount: number;
+  receiptUrl: string | null;
+}
 
 interface CAPortalSummary {
   grossReceipts: number;
@@ -59,7 +79,7 @@ const isCAInvoiceRow = (value: unknown): value is CAInvoiceRow => {
 
   return (
     typeof value.id === "string" &&
-    (typeof value.invoiceDate === "string" || value.invoiceDate instanceof Date) &&
+    typeof value.invoiceDate === "string" &&
     typeof value.invoiceNumber === "string" &&
     typeof value.clientName === "string" &&
     typeof value.sacCode === "string" &&
@@ -75,7 +95,7 @@ const isCAExpenseRow = (value: unknown): value is CAExpenseRow => {
 
   return (
     typeof value.id === "string" &&
-    (typeof value.date === "string" || value.date instanceof Date) &&
+    typeof value.date === "string" &&
     typeof value.category === "string" &&
     typeof value.vendor === "string" &&
     (value.description === null || typeof value.description === "string") &&
@@ -117,6 +137,28 @@ const GeographyInsightCard = dynamic(
     ssr: false,
   }
 );
+
+type CAInvoiceRow = {
+  id: string;
+  invoiceDate: string;
+  invoiceNumber: string;
+  clientName: string;
+  sacCode: string;
+  totalAmount: number;
+  amountReceived: number | null;
+  status: string;
+  pdfPath?: string | null;
+};
+
+type CAExpenseRow = {
+  id: string;
+  date: string;
+  category: string;
+  vendor: string;
+  description: string | null;
+  amount: number;
+  receiptUrl?: string | null;
+};
 
 const formatINRCurrency = (amount: number) => `₹${amount.toLocaleString("en-IN")}`;
 
