@@ -209,6 +209,31 @@ export default function Dashboard() {
     setPayModalOpen(true);
   };
 
+  const wealthSeries = useMemo(
+    () => withChartTokenColors(data?.charts?.wealth || []),
+    [data?.charts?.wealth]
+  );
+  const [isCompactCharts, setIsCompactCharts] = useState(false);
+  const geographyPoints: MapPoint[] = useMemo(
+    () => [
+      { id: "sf", label: "San Francisco, US", subtitle: "SaaS retainers", value: "12 clients · 31 invoices", x: 16, y: 36, weight: 31 },
+      { id: "nyc", label: "New York, US", subtitle: "Agency contracts", value: "9 clients · 27 invoices", x: 24, y: 34, weight: 27 },
+      { id: "lon", label: "London, UK", subtitle: "Cross-border billing", value: "6 clients · 18 invoices", x: 47, y: 30, weight: 18 },
+      { id: "blr", label: "Bengaluru, IN", subtitle: "Core delivery hub", value: "14 clients · 43 invoices", x: 66, y: 49, weight: 43 },
+      { id: "sin", label: "Singapore, SG", subtitle: "APAC expansion", value: "5 clients · 12 invoices", x: 75, y: 56, weight: 12 },
+      { id: "syd", label: "Sydney, AU", subtitle: "Recurring retainers", value: "4 clients · 10 invoices", x: 84, y: 74, weight: 10 },
+    ],
+    []
+  );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 768px)");
+    const onChange = (event: MediaQueryListEvent) => setIsCompactCharts(event.matches);
+    setIsCompactCharts(mediaQuery.matches);
+    mediaQuery.addEventListener("change", onChange);
+    return () => mediaQuery.removeEventListener("change", onChange);
+  }, []);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 transition-colors duration-200">
@@ -338,30 +363,6 @@ export default function Dashboard() {
     },
   ];
   const revenueSeries = data?.charts?.revenue || [];
-  const wealthSeries = useMemo(
-    () => withChartTokenColors(data?.charts?.wealth || []),
-    [data?.charts?.wealth]
-  );
-  const [isCompactCharts, setIsCompactCharts] = useState(false);
-  const geographyPoints: MapPoint[] = useMemo(
-    () => [
-      { id: "sf", label: "San Francisco, US", subtitle: "SaaS retainers", value: "12 clients · 31 invoices", x: 16, y: 36, weight: 31 },
-      { id: "nyc", label: "New York, US", subtitle: "Agency contracts", value: "9 clients · 27 invoices", x: 24, y: 34, weight: 27 },
-      { id: "lon", label: "London, UK", subtitle: "Cross-border billing", value: "6 clients · 18 invoices", x: 47, y: 30, weight: 18 },
-      { id: "blr", label: "Bengaluru, IN", subtitle: "Core delivery hub", value: "14 clients · 43 invoices", x: 66, y: 49, weight: 43 },
-      { id: "sin", label: "Singapore, SG", subtitle: "APAC expansion", value: "5 clients · 12 invoices", x: 75, y: 56, weight: 12 },
-      { id: "syd", label: "Sydney, AU", subtitle: "Recurring retainers", value: "4 clients · 10 invoices", x: 84, y: 74, weight: 10 },
-    ],
-    []
-  );
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 768px)");
-    const onChange = (event: MediaQueryListEvent) => setIsCompactCharts(event.matches);
-    setIsCompactCharts(mediaQuery.matches);
-    mediaQuery.addEventListener("change", onChange);
-    return () => mediaQuery.removeEventListener("change", onChange);
-  }, []);
 
   return (
     <DashboardPageShell
