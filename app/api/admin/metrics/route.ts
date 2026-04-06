@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { handleAdminApiError, verifySuperAdmin } from "@/app/api/admin/authz";
+import { handleAdminApiError, verifySuperAdmin } from "@/api/admin/authz";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
