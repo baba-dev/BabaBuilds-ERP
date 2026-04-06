@@ -6,15 +6,15 @@ import { Box } from "lucide-react";
 import { NavMain } from "@/components/navigation/nav-main";
 import { NavSecondary } from "@/components/navigation/nav-secondary";
 import { NavUser } from "@/components/navigation/nav-user";
-import { Sidebar, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { Sidebar, useSidebar } from "@/components/ui/sidebar";
 
 function SidebarBrand() {
   const t = useTranslations("Sidebar");
   const { open, isMobile } = useSidebar();
 
   return (
-    <div className="flex h-16 items-center justify-between border-b border-zinc-800/30 px-4 shrink-0">
-      <Link href="/" className="flex items-center gap-3 font-bold text-zinc-50 group min-w-0">
+    <div className="flex h-16 items-center border-b border-zinc-800/30 px-4 shrink-0">
+      <Link href="/" className="flex items-center gap-3 font-bold text-zinc-50 group w-full">
         <div className="rounded-xl bg-indigo-600 p-1.5 shadow-lg shadow-indigo-500/20 transition-transform duration-300 group-hover:scale-110">
           <Box className="h-5 w-5 text-white" />
         </div>
@@ -24,7 +24,6 @@ function SidebarBrand() {
           </span>
         )}
       </Link>
-      <SidebarTrigger className="hidden md:inline-flex" />
     </div>
   );
 }

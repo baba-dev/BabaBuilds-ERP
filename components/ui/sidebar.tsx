@@ -59,7 +59,7 @@ export function SidebarProvider({
       <div
         data-slot="sidebar-wrapper"
         data-state={open ? "expanded" : "collapsed"}
-        className="flex min-h-screen w-full"
+        className="flex min-h-screen w-full bg-zinc-950"
       >
         {children}
       </div>
@@ -104,7 +104,7 @@ export function Sidebar({ children, className }: { children: React.ReactNode; cl
 
 export function SidebarInset({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div data-slot="sidebar-inset" className={cn("flex min-w-0 flex-1 flex-col bg-background", className)}>
+    <div data-slot="sidebar-inset" className={cn("flex min-w-0 flex-1 flex-col", className)}>
       {children}
     </div>
   );
