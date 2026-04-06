@@ -1,16 +1,7 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { handleAdminApiError, verifySuperAdmin } from "@/api/admin/authz";
 import fs from "fs";
 import path from "path";
-
-// Security gate
-async function verifySuperAdmin() {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user?.email?.toLowerCase() !== "admin@bababuilds.com") {
-    throw new Error("Unauthorized");
-  }
-}
 
 const BACKUP_DIR = path.join(process.cwd(), "backups");
 
@@ -34,8 +25,8 @@ export async function GET(
             "Content-Disposition": `attachment; filename="${filename}"`,
         },
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 401 });
+  } catch (error) {
+    return handleAdminApiError(error, "Failed to download backup");
   }
 }
 
@@ -54,7 +45,7 @@ export async function DELETE(
     } else {
       return NextResponse.json({ error: "Backup file not found" }, { status: 404 });
     }
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 401 });
+  } catch (error) {
+    return handleAdminApiError(error, "Failed to delete backup");
   }
 }
