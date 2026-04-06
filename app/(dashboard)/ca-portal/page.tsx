@@ -30,6 +30,28 @@ import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 import type { MapPoint } from "@/components/maps";
 import { MapCardSkeleton } from "@/components/maps";
 
+type CAInvoiceRow = {
+  id: string;
+  invoiceDate: string | Date;
+  invoiceNumber: string;
+  clientName: string;
+  sacCode?: string | null;
+  totalAmount: number;
+  amountReceived?: number | null;
+  status: string;
+  pdfPath: string;
+};
+
+type CAExpenseRow = {
+  id: string;
+  date: string | Date;
+  category: string;
+  vendor: string;
+  description?: string | null;
+  amount: number;
+  receiptUrl?: string | null;
+};
+
 const GeographyInsightCard = dynamic(
   () => import("@/components/maps").then((mod) => mod.GeographyInsightCard),
   {
@@ -109,8 +131,8 @@ export default function CAPortal() {
   };
 
   const summary = data?.summary || { grossReceipts: 0, presumptiveIncome: 0, deductions80C: 0, deductions80D: 0, totalExpenses: 0 };
-  const invoices = Array.isArray(data?.invoices) ? data.invoices : [];
-  const expenses = Array.isArray(data?.expenses) ? data.expenses : [];
+  const invoices: CAInvoiceRow[] = Array.isArray(data?.invoices) ? data.invoices : [];
+  const expenses: CAExpenseRow[] = Array.isArray(data?.expenses) ? data.expenses : [];
   const isGstLiable = summary.grossReceipts >= 2000000;
   const jurisdictionPoints: MapPoint[] = [
     { id: "mh", label: "Maharashtra", subtitle: "GST filings + invoice validations", value: "48 compliance events", x: 65, y: 48, weight: 48 },
@@ -119,6 +141,120 @@ export default function CAPortal() {
     { id: "tn", label: "Tamil Nadu", subtitle: "Expense audits", value: "24 compliance events", x: 66, y: 60, weight: 24 },
     { id: "gj", label: "Gujarat", subtitle: "Export invoices", value: "19 compliance events", x: 59, y: 47, weight: 19 },
     { id: "wb", label: "West Bengal", subtitle: "Documentation checks", value: "16 compliance events", x: 69, y: 46, weight: 16 },
+  ];
+  const invoiceColumns: DataTableColumnDef<CAInvoiceRow>[] = [
+    {
+      id: "invoiceDate",
+      header: t("col_date"),
+      accessor: (row) => new Date(row.invoiceDate).getTime(),
+      cell: (row) => format(new Date(row.invoiceDate), "dd MMM yyyy"),
+      sortable: true,
+    },
+    {
+      id: "invoiceNumber",
+      header: t("col_voucher"),
+      accessor: (row) => row.invoiceNumber,
+      cell: (row) => <span className="font-mono">{row.invoiceNumber}</span>,
+      sortable: true,
+    },
+    {
+      id: "clientName",
+      header: t("col_party"),
+      accessor: (row) => row.clientName,
+      cell: (row) => <span className="font-bold">{row.clientName}</span>,
+      sortable: true,
+    },
+    {
+      id: "sacCode",
+      header: t("col_sac"),
+      accessor: (row) => row.sacCode || "",
+      cell: (row) => row.sacCode || "N/A",
+    },
+    {
+      id: "billed",
+      header: <span className="block text-right">{t("col_billed")}</span>,
+      accessor: (row) => row.totalAmount,
+      cell: (row) => <div className="text-right">{row.totalAmount.toLocaleString("en-IN")}</div>,
+      className: "text-right",
+      sortable: true,
+    },
+    {
+      id: "received",
+      header: <span className="block text-right">{t("col_received")}</span>,
+      accessor: (row) => row.amountReceived || 0,
+      cell: (row) => <div className="text-right font-bold text-emerald-600">{row.amountReceived?.toLocaleString("en-IN") || "-"}</div>,
+      className: "text-right",
+      sortable: true,
+    },
+    {
+      id: "status",
+      header: t("col_status"),
+      accessor: (row) => row.status,
+      cell: (row) => (
+        <Badge variant="outline" className={row.status === "Paid" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}>
+          {row.status === "Paid" ? t("status_received") : t("status_pending")}
+        </Badge>
+      ),
+      sortable: true,
+    },
+    {
+      id: "evidence",
+      header: t("col_evidence"),
+      cell: (row) => (
+        <a href={row.pdfPath} target="_blank" rel="noreferrer">
+          <ExternalLink className="w-4 h-4" />
+        </a>
+      ),
+    },
+  ];
+  const expenseColumns: DataTableColumnDef<CAExpenseRow>[] = [
+    {
+      id: "date",
+      header: t("col_date"),
+      accessor: (row) => new Date(row.date).getTime(),
+      cell: (row) => format(new Date(row.date), "dd MMM yyyy"),
+      sortable: true,
+    },
+    {
+      id: "category",
+      header: t("col_category"),
+      accessor: (row) => row.category,
+      cell: (row) => <Badge variant="secondary">{row.category}</Badge>,
+      sortable: true,
+    },
+    {
+      id: "vendor",
+      header: t("col_vendor"),
+      accessor: (row) => row.vendor,
+      cell: (row) => <span className="font-bold">{row.vendor}</span>,
+      sortable: true,
+    },
+    {
+      id: "description",
+      header: t("col_desc"),
+      accessor: (row) => row.description || "",
+      cell: (row) => row.description || "-",
+    },
+    {
+      id: "amount",
+      header: <span className="block text-right">{t("col_amount")}</span>,
+      accessor: (row) => row.amount,
+      cell: (row) => <div className="text-right font-bold text-rose-600">{row.amount.toLocaleString("en-IN")}</div>,
+      className: "text-right",
+      sortable: true,
+    },
+    {
+      id: "evidence",
+      header: t("col_evidence"),
+      cell: (row) =>
+        row.receiptUrl ? (
+          <a href={row.receiptUrl} target="_blank" rel="noreferrer">
+            <FileText className="w-4 h-4" />
+          </a>
+        ) : (
+          <span className="text-xs text-zinc-400">{t("no_file")}</span>
+        ),
+    },
   ];
 
   return (
@@ -239,8 +375,9 @@ export default function CAPortal() {
                   data={invoices}
                   rowId={(row) => row.id}
                   loading={isLoading}
-                  emptyTitle={t('tab_ar')}
-                  emptyDescription={t('fetching')}
+                  emptyTitle="No receivables logged"
+                  emptyDescription="Invoices for this financial year will appear here."
+                  className="p-0"
                 />
               </TabsContent>
               <TabsContent value="ap" className="m-0">
@@ -249,8 +386,9 @@ export default function CAPortal() {
                   data={expenses}
                   rowId={(row) => row.id}
                   loading={isLoading}
-                  emptyTitle={t('tab_ap')}
-                  emptyDescription={t('fetching')}
+                  emptyTitle="No expense vouchers logged"
+                  emptyDescription="Expense evidence and vendor entries will appear here."
+                  className="p-0"
                 />
               </TabsContent>
             </CardContent>
