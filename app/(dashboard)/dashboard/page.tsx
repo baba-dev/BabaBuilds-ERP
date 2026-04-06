@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { format } from "date-fns";
 import { animate, useMotionValue } from "framer-motion";
 import {
   TrendingUp, Landmark, FileText, Users, Calculator, AlertTriangle,
   ArrowUpRight, Sparkles, Activity, CheckCircle2, AlertCircle, ShieldAlert,
-  ArrowRight, Settings2, Building2, Mail, Banknote, Send, Download, Receipt
+  ArrowRight, Settings2, Building2, Mail, Banknote, Send, Download
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,16 @@ import { ChartCard } from "@/components/charts/ChartCard";
 import { ChartTooltip } from "@/components/charts/ChartTooltip";
 import { ChartLegend } from "@/components/charts/ChartLegend";
 import { withChartTokenColors } from "@/components/charts/chart-colors";
+import type { MapPoint } from "@/components/maps";
+import { MapCardSkeleton } from "@/components/maps";
+
+const GeographyInsightCard = dynamic(
+  () => import("@/components/maps").then((mod) => mod.GeographyInsightCard),
+  {
+    loading: () => <MapCardSkeleton />,
+    ssr: false,
+  }
+);
 
 function AnimatedValue({
   value,
@@ -228,12 +238,109 @@ export default function Dashboard() {
   const arrTotal = mrrTotal * 12;
   const activeRetainers = data?.mrr?.retainers || [];
   const recentInvoices = data?.recentInvoices || [];
+  const recentInvoiceColumns: DataTableColumnDef<any>[] = [
+    {
+      id: "date",
+      header: t('table_date'),
+      sortable: true,
+      sortAccessor: (inv) => new Date(inv.invoiceDate || new Date()).getTime(),
+      className: "text-zinc-600 dark:text-zinc-400 text-xs font-medium py-5 px-6",
+      cell: (inv) => format(new Date(inv.invoiceDate || new Date()), safeDateFormat),
+    },
+    {
+      id: "invoice",
+      header: t('table_invoice'),
+      accessor: (inv) => inv.invoiceNumber,
+      className: "font-bold text-zinc-900 dark:text-zinc-200 text-sm py-5 px-6",
+      cell: (inv) => inv.invoiceNumber,
+    },
+    {
+      id: "client",
+      header: t('table_client'),
+      accessor: (inv) => inv.clientName,
+      className: "py-5 px-6",
+      cell: (inv) => (
+        <>
+          <span className="font-bold text-zinc-900 dark:text-zinc-100 text-sm block">{inv.clientName}</span>
+          <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wide mt-0.5 block">{inv.billingMonth}</span>
+        </>
+      ),
+    },
+    {
+      id: "status",
+      header: t('table_status'),
+      accessor: (inv) => inv.status,
+      className: "py-5 px-6",
+      cell: (inv) => inv.status === 'Paid' || inv.status === 'PAID' ? (
+        <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 uppercase text-xs font-bold tracking-widest px-2 py-0.5 shadow-none">{t('status_paid')}</Badge>
+      ) : inv.status === 'Partially Paid' || inv.status === 'PARTIALLY_PAID' ? (
+        <Badge className="bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 hover:bg-blue-100 uppercase text-xs font-bold tracking-widest px-2 py-0.5 shadow-none">{t('status_partial')}</Badge>
+      ) : (
+        <Badge className="bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 uppercase text-xs font-bold tracking-widest px-2 py-0.5 shadow-none">{t('status_pending')}</Badge>
+      ),
+    },
+    {
+      id: "amount",
+      header: <div className="text-right">{t('table_billed', { currency })}</div>,
+      sortable: true,
+      sortAccessor: (inv) => inv.totalAmount,
+      className: "text-zinc-900 dark:text-zinc-200 font-bold text-sm text-right py-5 px-6",
+      cell: (inv) => fCurrency(inv.totalAmount),
+    },
+    {
+      id: "actions",
+      header: <div className="text-right">{t('table_actions')}</div>,
+      className: "text-right py-5 px-6",
+      cell: (inv) => (
+        <div className="flex items-center justify-end gap-2 opactiy-100 sm:opacity-70 sm:group-hover:opacity-100 transition-opacity">
+          {inv.status !== 'Paid' && inv.status !== 'PAID' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => openPayModal(inv)}
+              className="bg-white dark:bg-zinc-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-700 dark:hover:text-emerald-400 border-zinc-200 dark:border-zinc-700 transition-colors text-xs font-bold uppercase tracking-wider h-8 active:scale-95"
+              aria-label={`Log payment for ${inv.invoiceNumber}`}
+            >
+              <Banknote className="w-3.5 h-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{t('log_pay')}</span>
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleResendEmail(inv)}
+            disabled={resendingId === inv.id}
+            className="bg-white dark:bg-zinc-900 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 hover:text-indigo-700 dark:hover:text-indigo-400 border-zinc-200 dark:border-zinc-700 transition-colors w-8 h-8 p-0 flex justify-center active:scale-95"
+            title="Resend Invoice to Client via Email"
+            aria-label={`Resend email for ${inv.invoiceNumber}`}
+          >
+            <Send className={`w-3.5 h-3.5 ${resendingId === inv.id ? 'animate-pulse text-indigo-400' : ''}`} />
+          </Button>
+          <Button variant="secondary" size="sm" asChild title="Download PDF" className="bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 w-8 h-8 p-0 flex justify-center active:scale-95 transition-colors">
+            <a href={getBustedUrl(inv.pdfPath, inv.updatedAt)} target="_blank" rel="noopener noreferrer" aria-label={`Download PDF for ${inv.invoiceNumber}`}>
+              <Download className="h-3.5 w-3.5" />
+            </a>
+          </Button>
+        </div>
+      ),
+    },
+  ];
   const revenueSeries = data?.charts?.revenue || [];
   const wealthSeries = useMemo(
     () => withChartTokenColors(data?.charts?.wealth || []),
     [data?.charts?.wealth]
   );
   const [isCompactCharts, setIsCompactCharts] = useState(false);
+  const geographyPoints: MapPoint[] = useMemo(
+    () => [
+      { id: "sf", label: "San Francisco, US", subtitle: "SaaS retainers", value: "12 clients · 31 invoices", x: 16, y: 36, weight: 31 },
+      { id: "nyc", label: "New York, US", subtitle: "Agency contracts", value: "9 clients · 27 invoices", x: 24, y: 34, weight: 27 },
+      { id: "lon", label: "London, UK", subtitle: "Cross-border billing", value: "6 clients · 18 invoices", x: 47, y: 30, weight: 18 },
+      { id: "blr", label: "Bengaluru, IN", subtitle: "Core delivery hub", value: "14 clients · 43 invoices", x: 66, y: 49, weight: 43 },
+      { id: "sin", label: "Singapore, SG", subtitle: "APAC expansion", value: "5 clients · 12 invoices", x: 75, y: 56, weight: 12 },
+      { id: "syd", label: "Sydney, AU", subtitle: "Recurring retainers", value: "4 clients · 10 invoices", x: 84, y: 74, weight: 10 },
+    ],
+    []
+  );
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 768px)");
@@ -265,6 +372,12 @@ export default function Dashboard() {
         </div>
       }
     >
+
+        <GeographyInsightCard
+          title="Client & invoice geography snapshot"
+          subtitle="Live distribution of active clients and invoice throughput by region."
+          points={geographyPoints}
+        />
 
         {/* --- MRR COMMAND CENTER --- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -579,95 +692,13 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table className="min-w-[600px]">
-                <TableHeader className="bg-white dark:bg-zinc-900">
-                  <TableRow className="border-b border-zinc-100 dark:border-zinc-800 hover:bg-transparent">
-                    <TableHead className="text-zinc-500 dark:text-zinc-400 text-xs font-extrabold uppercase tracking-widest py-5 px-6 whitespace-nowrap">{t('table_date')}</TableHead>
-                    <TableHead className="text-zinc-500 dark:text-zinc-400 text-xs font-extrabold uppercase tracking-widest py-5 px-6 whitespace-nowrap">{t('table_invoice')}</TableHead>
-                    <TableHead className="text-zinc-500 dark:text-zinc-400 text-xs font-extrabold uppercase tracking-widest py-5 px-6 whitespace-nowrap">{t('table_client')}</TableHead>
-                    <TableHead className="text-zinc-500 dark:text-zinc-400 text-xs font-extrabold uppercase tracking-widest py-5 px-6 whitespace-nowrap">{t('table_status')}</TableHead>
-                    <TableHead className="text-zinc-500 dark:text-zinc-400 text-xs font-extrabold uppercase tracking-widest py-5 px-6 text-right whitespace-nowrap">{t('table_billed', { currency })}</TableHead>
-                    <TableHead className="text-zinc-500 dark:text-zinc-400 text-xs font-extrabold uppercase tracking-widest py-5 px-6 text-right whitespace-nowrap">{t('table_actions')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentInvoices.map((inv: any) => (
-                    <TableRow key={inv.id} className="border-b border-zinc-50 dark:border-zinc-800/50 transition-colors hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 group">
-                      <TableCell className="text-zinc-600 dark:text-zinc-400 text-xs font-medium py-5 px-6">
-                        {format(new Date(inv.invoiceDate || new Date()), safeDateFormat)}
-                      </TableCell>
-                      <TableCell className="font-bold text-zinc-900 dark:text-zinc-200 text-sm py-5 px-6">
-                        {inv.invoiceNumber}
-                      </TableCell>
-                      <TableCell className="py-5 px-6">
-                        <span className="font-bold text-zinc-900 dark:text-zinc-100 text-sm block">
-                          {inv.clientName}
-                        </span>
-                        <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wide mt-0.5 block">
-                          {inv.billingMonth}
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-5 px-6">
-                        {inv.status === 'Paid' || inv.status === 'PAID' ? (
-                          <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 uppercase text-xs font-bold tracking-widest px-2 py-0.5 shadow-none">{t('status_paid')}</Badge>
-                        ) : inv.status === 'Partially Paid' || inv.status === 'PARTIALLY_PAID' ? (
-                          <Badge className="bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 hover:bg-blue-100 uppercase text-xs font-bold tracking-widest px-2 py-0.5 shadow-none">{t('status_partial')}</Badge>
-                        ) : (
-                          <Badge className="bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 uppercase text-xs font-bold tracking-widest px-2 py-0.5 shadow-none">{t('status_pending')}</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-zinc-900 dark:text-zinc-200 font-bold text-sm text-right py-5 px-6">
-                        {fCurrency(inv.totalAmount)}
-                      </TableCell>
-                      <TableCell className="text-right py-5 px-6">
-                        <div className="flex items-center justify-end gap-2 opactiy-100 sm:opacity-70 sm:group-hover:opacity-100 transition-opacity">
-                          {inv.status !== 'Paid' && inv.status !== 'PAID' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openPayModal(inv)}
-                              className="bg-white dark:bg-zinc-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-700 dark:hover:text-emerald-400 border-zinc-200 dark:border-zinc-700 transition-colors text-xs font-bold uppercase tracking-wider h-8 active:scale-95"
-                              aria-label={`Log payment for ${inv.invoiceNumber}`}
-                            >
-                              <Banknote className="w-3.5 h-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{t('log_pay')}</span>
-                            </Button>
-                          )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleResendEmail(inv)}
-                            disabled={resendingId === inv.id}
-                            className="bg-white dark:bg-zinc-900 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 hover:text-indigo-700 dark:hover:text-indigo-400 border-zinc-200 dark:border-zinc-700 transition-colors w-8 h-8 p-0 flex justify-center active:scale-95"
-                            title="Resend Invoice to Client via Email"
-                            aria-label={`Resend email for ${inv.invoiceNumber}`}
-                          >
-                            <Send className={`w-3.5 h-3.5 ${resendingId === inv.id ? 'animate-pulse text-indigo-400' : ''}`} />
-                          </Button>
-                          <Button variant="secondary" size="sm" asChild title="Download PDF" className="bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 w-8 h-8 p-0 flex justify-center active:scale-95 transition-colors">
-                            <a href={getBustedUrl(inv.pdfPath, inv.updatedAt)} target="_blank" rel="noopener noreferrer" aria-label={`Download PDF for ${inv.invoiceNumber}`}>
-                              <Download className="h-3.5 w-3.5" />
-                            </a>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {recentInvoices.length === 0 && (
-                    <TableRow className="hover:bg-transparent">
-                      <TableCell colSpan={6} className="h-48 text-center align-middle border-none">
-                        <div className="flex flex-col items-center justify-center space-y-3">
-                          <div className="w-12 h-12 rounded-full bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-center">
-                            <Receipt className="w-6 h-6 text-zinc-400 dark:text-zinc-500" />
-                          </div>
-                          <p className="text-zinc-600 dark:text-zinc-400 text-xs font-bold uppercase tracking-widest">{t('no_recent_ledger')}</p>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            <DataTable
+              columns={recentInvoiceColumns}
+              data={recentInvoices}
+              rowId={(row) => row.id}
+              emptyTitle={t('no_recent_ledger')}
+              emptyDescription={t('recent_ledger_desc')}
+            />
           </CardContent>
         </Card>
 
