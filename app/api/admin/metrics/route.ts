@@ -1,14 +1,6 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { handleAdminApiError, verifySuperAdmin } from "@/app/api/admin/authz";
 import { prisma } from "@/lib/prisma";
-
-async function verifySuperAdmin() {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user?.email?.toLowerCase() !== "admin@bababuilds.com") {
-    throw new Error("Unauthorized");
-  }
-}
 
 export async function GET() {
   try {
@@ -45,7 +37,6 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error("Metrics API Error:", error);
-    return NextResponse.json({ error: "Server Error" }, { status: 500 });
+    return handleAdminApiError(error, "Server Error");
   }
 }
