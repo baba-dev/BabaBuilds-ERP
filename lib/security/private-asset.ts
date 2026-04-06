@@ -22,8 +22,8 @@ export function logDeniedAssetAccess(args: {
   workspaceId?: string;
 }) {
   const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
+    args.request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    args.request.headers.get('x-real-ip') ||
     'unknown';
 
   console.warn(
