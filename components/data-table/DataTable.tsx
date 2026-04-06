@@ -101,7 +101,7 @@ export function DataTable<T>({
     data,
     columns: activeColumns.map((column) => ({
       id: column.id,
-      accessorFn: column.accessor,
+      accessorFn: column.accessor ?? (() => undefined),
       header: () => column.header,
       cell: ({ row }) => column.cell(row.original),
       enableSorting: column.sortable,
@@ -111,7 +111,7 @@ export function DataTable<T>({
         headerClassName: column.headerClassName,
       },
       sortingFn: column.sortAccessor
-        ? (rowA, rowB, id) => {
+        ? (rowA, rowB) => {
             const aValue = column.sortAccessor?.(rowA.original);
             const bValue = column.sortAccessor?.(rowB.original);
             if (aValue === bValue) return 0;
