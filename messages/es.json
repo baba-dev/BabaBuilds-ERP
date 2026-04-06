@@ -161,7 +161,10 @@
     "ph_address": "Edificio, Calle, Área...",
     "ph_country": "p. ej. Omán",
     "ph_email": "billing@client.com",
-    "ph_phone": "Opcional"
+    "ph_phone": "Opcional",
+    "update_client": "Actualizar cliente",
+    "edit_registration_title": "Editar perfil del cliente",
+    "edit_registration_desc": "Actualiza los detalles de la entidad legal y la información de contacto."
   },
   "Services": {
     "title": "Catálogo Maestro de Servicios",
