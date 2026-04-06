@@ -17,11 +17,16 @@ import { toast } from "sonner";
 import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
+import { PageLoadingState } from "@/components/states/PageLoadingState";
+import { PageErrorState } from "@/components/states/PageErrorState";
+import { PageEmptyState } from "@/components/states/PageEmptyState";
 
 export default function WealthAndTaxPlanner() {
   const t = useTranslations('Tax');
   const [investments, setInvestments] = useState<any[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // --- GLOBALIZATION ENGINE ---
@@ -73,25 +78,27 @@ export default function WealthAndTaxPlanner() {
   }, []);
 
   const fetchData = async () => {
+    setIsLoading(true);
+    setFetchError(null);
     try {
       const invRes = await fetch('/api/investments');
       const invData = await invRes.json();
-      setInvestments(Array.isArray(invData) ? invData : []);
+      const nextInvestments = Array.isArray(invData) ? invData : [];
 
       const revRes = await fetch('/api/invoices');
       const revData = await revRes.json();
+      let nextRevenue = 0;
       if (Array.isArray(revData)) {
-        const revenue = revData.reduce((sum: number, inv: any) => sum + inv.totalAmount, 0);
-        setTotalRevenue(revenue);
-      } else {
-        setTotalRevenue(0);
+        nextRevenue = revData.reduce((sum: number, inv: any) => sum + inv.totalAmount, 0);
       }
+      setInvestments(nextInvestments);
+      setTotalRevenue(nextRevenue);
     } catch (err) {
       console.error("Failed to load data");
+      setFetchError("Failed to load tax planner data. Please refresh.");
       toast.error("Failed to load tax planner data. Please refresh.");
     } finally {
-      setInvestments([]);
-      setTotalRevenue(0);
+      setIsLoading(false);
     }
   };
 
@@ -134,6 +141,26 @@ export default function WealthAndTaxPlanner() {
   const oldTax = calculateOldRegime(presumptiveIncome);
   const newTax = calculateNewRegime(presumptiveIncome);
   const isOldBetter = oldTax < newTax;
+
+  if (isLoading) {
+    return (
+      <DashboardPageShell title={t('title')} description={t('description', { taxLabel })} animated={false}>
+        <PageLoadingState title={t('loading')} description="Crunching your wealth and tax signals…" />
+      </DashboardPageShell>
+    );
+  }
+
+  if (fetchError && investments.length === 0 && totalRevenue === 0) {
+    return (
+      <DashboardPageShell title={t('title')} description={t('description', { taxLabel })} animated={false}>
+        <PageErrorState
+          title="Tax planner sync issue"
+          description={fetchError}
+          onRetry={fetchData}
+        />
+      </DashboardPageShell>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -357,8 +384,12 @@ export default function WealthAndTaxPlanner() {
                       ))}
                       {investments.length === 0 && (
                         <TableRow className="hover:bg-transparent">
-                          <TableCell colSpan={4} className="text-center py-12 text-zinc-400 dark:text-zinc-500 border-b-0 text-xs font-bold uppercase tracking-widest">
-                            {t('no_assets')}
+                          <TableCell colSpan={4} className="border-b-0 p-0">
+                            <PageEmptyState
+                              title={t('no_assets')}
+                              description="Log your first investment to unlock deduction insights."
+                              className="min-h-[220px]"
+                            />
                           </TableCell>
                         </TableRow>
                       )}

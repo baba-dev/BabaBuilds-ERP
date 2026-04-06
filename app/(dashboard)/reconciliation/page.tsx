@@ -24,6 +24,9 @@ import {
 // We will build this in the next step!
 import { ReconciliationRow } from "@/components/ReconciliationRow";
 import { useFormat } from "@/hooks/use-format";
+import { PageLoadingState } from "@/components/states/PageLoadingState";
+import { PageErrorState } from "@/components/states/PageErrorState";
+import { PageEmptyState } from "@/components/states/PageEmptyState";
 
 
 // --- STATE MACHINE TYPES ---
@@ -118,11 +121,13 @@ export default function ReconciliationWizard() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // --- UPLOAD HANDLER ---
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setIsProcessing(true);
+      setUploadError(null);
       const file = e.target.files[0];
       const formData = new FormData();
       formData.append('file', file);
@@ -147,6 +152,7 @@ export default function ReconciliationWizard() {
         if (data.aiSuggestions?.length > 0) setActiveTab('ai');
 
       } catch (err: any) {
+        setUploadError(err.message || t('upload_error'));
         toast.error(err.message || t('upload_error'));
       } finally {
         setIsProcessing(false);
@@ -262,15 +268,7 @@ export default function ReconciliationWizard() {
           <Card className="border-2 border-dashed border-zinc-300 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all duration-300 hover:border-purple-300 dark:hover:border-purple-900 shadow-none relative overflow-hidden">
             <CardContent className="flex flex-col items-center justify-center py-20 px-4 text-center">
               {isProcessing ? (
-                <div className="space-y-4 flex flex-col items-center animate-in zoom-in-95 duration-300">
-                  <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-full flex items-center justify-center shadow-inner">
-                    <Sparkles className="w-8 h-8 animate-spin-slow" />
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="font-bold text-zinc-900 dark:text-zinc-50 text-lg">{t('ai_classifying')}</h3>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">{t('matching_desc')}</p>
-                  </div>
-                </div>
+                <PageLoadingState title={t('ai_classifying')} description={t('matching_desc')} className="min-h-[260px]" />
               ) : (
                 <div className="space-y-4 flex flex-col items-center group">
                   <div className="w-16 h-16 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 group-hover:border-purple-200 dark:group-hover:border-purple-800 rounded-full flex items-center justify-center shadow-sm transition-all duration-300">
@@ -290,6 +288,13 @@ export default function ReconciliationWizard() {
               )}
             </CardContent>
           </Card>
+          {uploadError && (
+            <PageErrorState
+              title="File processing issue"
+              description={uploadError}
+              className="min-h-[160px]"
+            />
+          )}
         </div>
       </div>
     );
@@ -372,11 +377,7 @@ export default function ReconciliationWizard() {
             {activeTab === 'ai' && (
               <div className="overflow-x-auto min-h-[400px]">
                 {state.pendingAi.length === 0 ? (
-                  <div className="text-center py-20 animate-in fade-in duration-500">
-                    <CheckCircle2 className="w-16 h-16 text-emerald-200 dark:text-emerald-900/50 mx-auto mb-4" />
-                    <h3 className="text-xl font-black text-zinc-900 dark:text-zinc-50">{t('empty_queue_title')}</h3>
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">{t('empty_queue_desc')}</p>
-                  </div>
+                  <PageEmptyState title={t('empty_queue_title')} description={t('empty_queue_desc')} className="min-h-[400px]" />
                 ) : (
                   <Table>
                     <TableHeader className="bg-purple-50/30 dark:bg-purple-900/10">
@@ -447,7 +448,7 @@ export default function ReconciliationWizard() {
                        </TableRow>
                     ))}
                     {totalReadyToCommit === 0 && (
-                      <TableRow className="hover:bg-transparent"><TableCell colSpan={4} className="text-center py-12 text-zinc-400 dark:text-zinc-500 border-none">{t('no_approved')}</TableCell></TableRow>
+                      <TableRow className="hover:bg-transparent"><TableCell colSpan={4} className="p-0 border-none"><PageEmptyState title={t('no_approved')} description="Approve matches to build your ready-to-commit queue." className="min-h-[300px]" /></TableCell></TableRow>
                     )}
                   </TableBody>
                 </Table>
@@ -460,7 +461,7 @@ export default function ReconciliationWizard() {
                 <Table>
                   <TableBody>
                     {state.ignored.length === 0 ? (
-                      <TableRow className="hover:bg-transparent"><TableCell colSpan={4} className="text-center py-12 text-zinc-400 dark:text-zinc-500 border-none">{t('no_excluded')}</TableCell></TableRow>
+                      <TableRow className="hover:bg-transparent"><TableCell colSpan={4} className="p-0 border-none"><PageEmptyState title={t('no_excluded')} description="Ignored lines will appear here for quick restore." className="min-h-[300px]" /></TableCell></TableRow>
                     ) : (
                       state.ignored.map((row) => (
                         <TableRow key={row.id} className="opacity-60 dark:opacity-40 grayscale transition-all hover:opacity-100 hover:grayscale-0 dark:border-zinc-800">

@@ -24,11 +24,15 @@ import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
 import { getBustedUrl } from "@/lib/cache-buster";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
+import { PageLoadingState } from "@/components/states/PageLoadingState";
+import { PageErrorState } from "@/components/states/PageErrorState";
+import { PageEmptyState } from "@/components/states/PageEmptyState";
 
 export default function Dashboard() {
   const t = useTranslations('Dashboard');
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // --- FINANCIAL YEAR LOGIC ---
   const getCurrentFY = () => {
@@ -79,26 +83,24 @@ export default function Dashboard() {
     fetchDashboardData(selectedFy);
   }, [selectedFy]);
 
-  const fetchDashboardData = (fy: string) => {
+  const fetchDashboardData = async (fy: string) => {
     setIsLoading(true);
-    fetch(`/api/dashboard?fy=${fy}`)
-      .then(res => res.json())
-      .then(json => {
-        if (json.error) {
-          console.error("Dashboard error:", json.error);
-          toast.error("Failed to load dashboard data. Please refresh.");
-          setData(null);
-        } else {
-          setData(json);
-        }
-        setIsLoading(false);
-      })
-      .catch(err => {
-        console.error("Failed to fetch dashboard", err);
-        toast.error("Failed to load dashboard data. Please refresh.");
-        setData(null);
-        setIsLoading(false);
-      });
+    setFetchError(null);
+    try {
+      const res = await fetch(`/api/dashboard?fy=${fy}`);
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || "Failed to load dashboard data.");
+      }
+      setData(json);
+    } catch (err: any) {
+      console.error("Failed to fetch dashboard", err);
+      const message = err?.message || "Failed to load dashboard data. Please refresh.";
+      setFetchError(message);
+      toast.error("Failed to load dashboard data. Please refresh.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // --- LEDGER ACTIONS ---
@@ -157,9 +159,33 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col items-center justify-center text-zinc-500 font-medium transition-colors duration-200">
-        <Activity className="w-8 h-8 text-indigo-500 animate-bounce mb-4" />
-        <span className="animate-pulse tracking-widest text-sm uppercase">{t('loading')}</span>
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 transition-colors duration-200">
+        <PageLoadingState title={t('loading')} description="Building your command center…" className="min-h-screen" />
+      </div>
+    );
+  }
+
+  if (fetchError && !data) {
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 transition-colors duration-200">
+        <PageErrorState
+          title="Dashboard sync issue"
+          description={fetchError}
+          onRetry={() => fetchDashboardData(selectedFy)}
+          className="min-h-screen"
+        />
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 transition-colors duration-200">
+        <PageEmptyState
+          title="No dashboard signal yet"
+          description="Create invoices, expenses, and retainers to activate this view."
+          className="min-h-screen"
+        />
       </div>
     );
   }
