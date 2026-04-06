@@ -416,28 +416,30 @@ export async function generateInvoicePDF({
     const bankY = currentY + 130;
 
     if (paymentLink) {
-      const linkLabel = "Pay Online via UPI / Card / Net Banking / Apple Pay:";
-      const leftStartX = 40;
-      const maxUrlWidth = width - 40 - 220;
-      const urlFontSize = 9;
-      const lineHeight = 12;
-      const wrappedUrlLines = wrapTextByWidth(paymentLink, maxUrlWidth, urlFontSize);
-      const urlBottomY = bankY - 10;
+      const normalizedPaymentLink = String(paymentLink).trim();
+      if (normalizedPaymentLink) {
+        const linkLabel = "Pay Online via UPI / Card / Net Banking / Apple Pay:";
+        const leftStartX = 40;
+        const maxUrlWidth = width - 40 - 220;
+        const urlFontSize = 9;
+        const lineHeight = 12;
+        const wrappedUrlLines = wrapTextByWidth(normalizedPaymentLink, maxUrlWidth, urlFontSize);
+        const urlBottomY = bankY - 10;
+        const urlLinesToDraw = wrappedUrlLines.length > 0 ? wrappedUrlLines : [normalizedPaymentLink];
 
-      const urlLineYs: number[] = [];
-      wrappedUrlLines.forEach((line, index) => {
-        const lineY = urlBottomY - ((wrappedUrlLines.length - 1 - index) * lineHeight);
-        urlLineYs.push(lineY);
-        drawText(line, leftStartX, lineY, urlFontSize, false, 'left', cfLinkBlue);
-      });
+        const urlLineYs: number[] = [];
+        urlLinesToDraw.forEach((line, index) => {
+          const lineY = urlBottomY - ((urlLinesToDraw.length - 1 - index) * lineHeight);
+          urlLineYs.push(lineY);
+          drawText(line, leftStartX, lineY, urlFontSize, false, 'left', cfLinkBlue);
+        });
 
-      if (wrappedUrlLines.length > 0) {
         const topUrlLineY = Math.min(...urlLineYs);
         const labelY = topUrlLineY - lineHeight;
         drawText(linkLabel, leftStartX, labelY, 9, true, 'left', black);
 
-        const maxRenderedLineWidth = Math.max(...wrappedUrlLines.map((line) => font.widthOfTextAtSize(line, urlFontSize)));
-        const urlBlockHeight = lineHeight * wrappedUrlLines.length;
+        const maxRenderedLineWidth = Math.max(...urlLinesToDraw.map((line) => font.widthOfTextAtSize(line, urlFontSize)));
+        const urlBlockHeight = lineHeight * urlLinesToDraw.length;
 
         addLinkAnnotation(
           pdfDoc,
@@ -446,7 +448,7 @@ export async function generateInvoicePDF({
           height - (topUrlLineY + urlBlockHeight),
           maxRenderedLineWidth,
           urlBlockHeight,
-          paymentLink
+          normalizedPaymentLink
         );
       }
     }
