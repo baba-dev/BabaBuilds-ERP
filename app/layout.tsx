@@ -6,8 +6,9 @@ import SetupGatekeeper from "@/components/SetupGatekeeper";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { NextIntlClientProvider } from "next-intl";
-import { getMessages } from "next-intl/server";
+import { getLocale, getMessages } from "next-intl/server";
 import { validateAuthEnvOrThrow } from "@/lib/auth-observability";
+import { getLocaleDirection } from "@/lib/i18n";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,12 +23,14 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   validateAuthEnvOrThrow();
+  const locale = await getLocale();
   const messages = await getMessages();
+  const dir = getLocaleDirection(locale);
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} dir={dir} suppressHydrationWarning>
       <body className={inter.className} suppressHydrationWarning>
-        <NextIntlClientProvider messages={messages}>
+        <NextIntlClientProvider locale={locale} messages={messages}>
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
