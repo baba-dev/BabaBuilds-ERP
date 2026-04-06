@@ -40,10 +40,36 @@ const GeographyInsightCard = dynamic(
 
 export default function CAPortal() {
   const t = useTranslations('CAPortal');
+
+  type AuditSummary = {
+    grossReceipts: number;
+    presumptiveIncome: number;
+    deductions80C: number;
+    deductions80D: number;
+    totalExpenses: number;
+  };
+
+  type AuditDataPayload = {
+    summary: AuditSummary;
+    invoices: CAInvoiceRow[];
+    expenses: CAExpenseRow[];
+  };
+
+  const EMPTY_SUMMARY: AuditSummary = {
+    grossReceipts: 0,
+    presumptiveIncome: 0,
+    deductions80C: 0,
+    deductions80D: 0,
+    totalExpenses: 0,
+  };
   
   // --- STATE ---
   const [fy, setFy] = useState("25-26"); 
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<AuditDataPayload>({
+    summary: EMPTY_SUMMARY,
+    invoices: [],
+    expenses: [],
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [isExportingCSV, setIsExportingCSV] = useState(false);
   const [isExportingZIP, setIsExportingZIP] = useState(false);
@@ -58,11 +84,39 @@ export default function CAPortal() {
     try {
       const res = await fetch(`/api/ca-portal?fy=${fy}`);
       const json = await res.json();
-      setData(json.error ? null : json);
+
+      const hasValidSchema =
+        json &&
+        typeof json === "object" &&
+        json.summary &&
+        typeof json.summary === "object" &&
+        typeof json.summary.grossReceipts === "number" &&
+        typeof json.summary.presumptiveIncome === "number" &&
+        typeof json.summary.deductions80C === "number" &&
+        typeof json.summary.deductions80D === "number" &&
+        typeof json.summary.totalExpenses === "number" &&
+        Array.isArray(json.invoices) &&
+        Array.isArray(json.expenses);
+
+      if (!res.ok || json.error || !hasValidSchema) {
+        toast.error("Audit data format mismatch. Showing empty dataset.");
+        setData({
+          summary: EMPTY_SUMMARY,
+          invoices: [],
+          expenses: [],
+        });
+        return;
+      }
+
+      setData(json as AuditDataPayload);
     } catch (err) {
       console.error("Failed to fetch audit data", err);
       toast.error("Failed to fetch audit data for this financial year.");
-      setData(null);
+      setData({
+        summary: EMPTY_SUMMARY,
+        invoices: [],
+        expenses: [],
+      });
     } finally {
       setIsLoading(false);
     }
@@ -108,9 +162,9 @@ export default function CAPortal() {
     }
   };
 
-  const summary = data?.summary || { grossReceipts: 0, presumptiveIncome: 0, deductions80C: 0, deductions80D: 0, totalExpenses: 0 };
-  const invoices: CAInvoiceRow[] = Array.isArray(data?.invoices) ? data.invoices : [];
-  const expenses: CAExpenseRow[] = Array.isArray(data?.expenses) ? data.expenses : [];
+  const summary = data.summary;
+  const invoices: CAInvoiceRow[] = data.invoices;
+  const expenses: CAExpenseRow[] = data.expenses;
   const isGstLiable = summary.grossReceipts >= 2000000;
   const jurisdictionPoints: MapPoint[] = [
     { id: "mh", label: "Maharashtra", subtitle: "GST filings + invoice validations", value: "48 compliance events", x: 65, y: 48, weight: 48 },
