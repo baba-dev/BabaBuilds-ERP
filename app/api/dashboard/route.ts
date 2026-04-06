@@ -138,7 +138,15 @@ export async function GET(request: Request) {
     // 6. CHART DATA (Revenue Trend)
     const monthlyRevenue: Record<string, number> = {};
     invoices.forEach(inv => {
-      const month = inv.billingMonth.split(' ')[0]; // e.g., "March"
+      const billingMonth = inv.billingMonth ? String(inv.billingMonth).trim() : '';
+      const billingMonthToken = billingMonth ? billingMonth.split(' ')[0] : '';
+
+      const invoiceDate = inv.invoiceDate ? new Date(inv.invoiceDate) : null;
+      const invoiceDateMonth = invoiceDate && !Number.isNaN(invoiceDate.getTime())
+        ? invoiceDate.toLocaleString('en-US', { month: 'long' })
+        : '';
+
+      const month = billingMonthToken || invoiceDateMonth || 'Unknown'; // e.g., "March"
       monthlyRevenue[month] = (monthlyRevenue[month] || 0) + inv.totalAmount;
     });
     const revenueChartData = Object.keys(monthlyRevenue).map(month => ({
