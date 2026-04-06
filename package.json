@@ -6,8 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "check:locales": "node scripts/check-locales.js"
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "validate": "npm run lint && npm run typecheck && npm run build",
+    "check:locales": "node scripts/check-locales.js",
+    "codex:quick": "bash scripts/codex-quick-check.sh"
   },
   "dependencies": {
     "@tanstack/react-table": "^8.21.3",
