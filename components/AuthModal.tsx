@@ -24,7 +24,7 @@ export default function AuthModal() {
     if (!email) return;
     
     setIsLoading(true);
-    const res = await signIn("email", { email, redirect: false });
+    const res = await signIn("email", { email, redirect: false, callbackUrl: "/dashboard" });
     
     setIsLoading(false);
     if (res?.error) {
@@ -56,7 +56,7 @@ const handleDemoSignIn = async () => {
         await signIn("demo-login", { 
           email: data.email, 
           password: data.password, // Inject the secure token here
-          callbackUrl: "/" 
+          callbackUrl: "/dashboard" 
         });
       } else {
         throw new Error(data.error || t("alerts.demoCreationFailed"));
@@ -124,7 +124,7 @@ const handleDemoSignIn = async () => {
           </div>
 
           <button 
-            onClick={() => signIn("google")} 
+            onClick={() => signIn("google", { callbackUrl: "/dashboard" })} 
             disabled={isLoading || isDemoLoading}
             className="w-full flex items-center justify-center gap-3 bg-white hover:bg-zinc-100 text-zinc-900 px-4 py-2.5 rounded-xl font-bold transition-colors shadow-sm active:scale-95 disabled:opacity-50"
           >
