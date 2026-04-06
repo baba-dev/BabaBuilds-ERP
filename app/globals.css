@@ -154,6 +154,13 @@
   --success-soft: oklch(0.31 0.08 155);
   --danger-soft: oklch(0.31 0.08 24);
   --focus-ring: oklch(0.7 0.17 279);
+  --map-surface: oklch(0.22 0.015 256);
+  --map-land: oklch(0.34 0.03 255 / 88%);
+  --map-glow: oklch(0.5 0.1 255 / 28%);
+  --map-fade: oklch(0.2 0.01 260 / 70%);
+  --map-marker: oklch(0.66 0.19 279);
+  --map-marker-strong: oklch(0.72 0.17 279);
+  --map-marker-border: oklch(0.32 0.02 260 / 90%);
 }
 
 @layer base {

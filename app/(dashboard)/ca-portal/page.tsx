@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { format } from "date-fns";
 import { useTranslations } from "next-intl";
-import { 
+import {
   DownloadCloud, 
   FolderArchive, 
   Calculator, 
@@ -20,12 +21,22 @@ import {
   ArrowRight
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { DataTable, type DataTableColumnDef } from "@/components/data-table";
+import type { MapPoint } from "@/components/maps";
+import { MapCardSkeleton } from "@/components/maps";
+
+const GeographyInsightCard = dynamic(
+  () => import("@/components/maps").then((mod) => mod.GeographyInsightCard),
+  {
+    loading: () => <MapCardSkeleton />,
+    ssr: false,
+  }
+);
 
 export default function CAPortal() {
   const t = useTranslations('CAPortal');
@@ -98,9 +109,17 @@ export default function CAPortal() {
   };
 
   const summary = data?.summary || { grossReceipts: 0, presumptiveIncome: 0, deductions80C: 0, deductions80D: 0, totalExpenses: 0 };
-  const invoices = Array.isArray(data?.invoices) ? data.invoices : [];
-  const expenses = Array.isArray(data?.expenses) ? data.expenses : [];
+  const invoices: CAInvoiceRow[] = Array.isArray(data?.invoices) ? data.invoices : [];
+  const expenses: CAExpenseRow[] = Array.isArray(data?.expenses) ? data.expenses : [];
   const isGstLiable = summary.grossReceipts >= 2000000;
+  const jurisdictionPoints: MapPoint[] = [
+    { id: "mh", label: "Maharashtra", subtitle: "GST filings + invoice validations", value: "48 compliance events", x: 65, y: 48, weight: 48 },
+    { id: "ka", label: "Karnataka", subtitle: "Vendor reconciliations", value: "37 compliance events", x: 63, y: 54, weight: 37 },
+    { id: "dl", label: "Delhi NCR", subtitle: "TDS and receivables", value: "29 compliance events", x: 61, y: 39, weight: 29 },
+    { id: "tn", label: "Tamil Nadu", subtitle: "Expense audits", value: "24 compliance events", x: 66, y: 60, weight: 24 },
+    { id: "gj", label: "Gujarat", subtitle: "Export invoices", value: "19 compliance events", x: 59, y: 47, weight: 19 },
+    { id: "wb", label: "West Bengal", subtitle: "Documentation checks", value: "16 compliance events", x: 69, y: 46, weight: 16 },
+  ];
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8 transition-colors duration-300">
@@ -195,6 +214,12 @@ export default function CAPortal() {
           </Card>
         </div>
 
+        <GeographyInsightCard
+          title="Compliance activity & jurisdiction distribution"
+          subtitle="Relative concentration of audits, filings, and evidence collection across active jurisdictions."
+          points={jurisdictionPoints}
+        />
+
         <Card className="border-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 shadow-sm overflow-hidden">
           <Tabs defaultValue="ar" className="w-full">
             <CardHeader className="bg-zinc-50/50 dark:bg-zinc-950/50 border-b dark:border-zinc-800 p-0">
@@ -208,74 +233,28 @@ export default function CAPortal() {
               </TabsList>
             </CardHeader>
             <CardContent className="p-0">
-              {isLoading ? <div className="py-20 text-center text-zinc-400 animate-pulse">{t('fetching')}</div> : (
-                <>
-                  <TabsContent value="ar" className="m-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="dark:border-zinc-800">
-                          <TableHead>{t('col_date')}</TableHead>
-                          <TableHead>{t('col_voucher')}</TableHead>
-                          <TableHead>{t('col_party')}</TableHead>
-                          <TableHead>{t('col_sac')}</TableHead>
-                          <TableHead className="text-right">{t('col_billed')}</TableHead>
-                          <TableHead className="text-right">{t('col_received')}</TableHead>
-                          <TableHead>{t('col_status')}</TableHead>
-                          <TableHead>{t('col_evidence')}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {invoices.map((inv: any) => (
-                          <TableRow key={inv.id} className="dark:border-zinc-800">
-                            <TableCell>{format(new Date(inv.invoiceDate), 'dd MMM yyyy')}</TableCell>
-                            <TableCell className="font-mono">{inv.invoiceNumber}</TableCell>
-                            <TableCell className="font-bold">{inv.clientName}</TableCell>
-                            <TableCell>{inv.sacCode || "N/A"}</TableCell>
-                            <TableCell className="text-right">{inv.totalAmount.toLocaleString('en-IN')}</TableCell>
-                            <TableCell className="text-right font-bold text-emerald-600">{inv.amountReceived?.toLocaleString('en-IN') || "-"}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={inv.status === 'Paid' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}>
-                                {inv.status === 'Paid' ? t('status_received') : t('status_pending')}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <a href={inv.pdfPath} target="_blank" rel="noreferrer"><ExternalLink className="w-4 h-4" /></a>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TabsContent>
-                  <TabsContent value="ap" className="m-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="dark:border-zinc-800">
-                          <TableHead>{t('col_date')}</TableHead>
-                          <TableHead>{t('col_category')}</TableHead>
-                          <TableHead>{t('col_vendor')}</TableHead>
-                          <TableHead>{t('col_desc')}</TableHead>
-                          <TableHead className="text-right">{t('col_amount')}</TableHead>
-                          <TableHead>{t('col_evidence')}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {expenses.map((exp: any) => (
-                          <TableRow key={exp.id} className="dark:border-zinc-800">
-                            <TableCell>{format(new Date(exp.date), 'dd MMM yyyy')}</TableCell>
-                            <TableCell><Badge variant="secondary">{exp.category}</Badge></TableCell>
-                            <TableCell className="font-bold">{exp.vendor}</TableCell>
-                            <TableCell>{exp.description || "-"}</TableCell>
-                            <TableCell className="text-right font-bold text-rose-600">{exp.amount.toLocaleString('en-IN')}</TableCell>
-                            <TableCell>
-                              {exp.receiptUrl ? <a href={exp.receiptUrl} target="_blank" rel="noreferrer"><FileText className="w-4 h-4" /></a> : <span className="text-xs text-zinc-400">{t('no_file')}</span>}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TabsContent>
-                </>
-              )}
+              <TabsContent value="ar" className="m-0">
+                <DataTable
+                  columns={invoiceColumns}
+                  data={invoices}
+                  rowId={(row) => row.id}
+                  loading={isLoading}
+                  emptyTitle="No receivables logged"
+                  emptyDescription="Invoices for this financial year will appear here."
+                  className="p-0"
+                />
+              </TabsContent>
+              <TabsContent value="ap" className="m-0">
+                <DataTable
+                  columns={expenseColumns}
+                  data={expenses}
+                  rowId={(row) => row.id}
+                  loading={isLoading}
+                  emptyTitle="No expense vouchers logged"
+                  emptyDescription="Expense evidence and vendor entries will appear here."
+                  className="p-0"
+                />
+              </TabsContent>
             </CardContent>
           </Tabs>
         </Card>
