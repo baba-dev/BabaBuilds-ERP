@@ -30,6 +30,113 @@ import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 import type { MapPoint } from "@/components/maps";
 import { MapCardSkeleton } from "@/components/maps";
 
+
+interface CAInvoiceRow {
+  id: string;
+  invoiceDate: string | Date;
+  invoiceNumber: string;
+  clientName: string;
+  sacCode: string;
+  totalAmount: number;
+  amountReceived: number | null;
+  status: string;
+  pdfPath: string | null;
+}
+
+interface CAExpenseRow {
+  id: string;
+  date: string | Date;
+  category: string;
+  vendor: string;
+  description: string | null;
+  amount: number;
+  receiptUrl: string | null;
+}
+
+interface CAPortalSummary {
+  grossReceipts: number;
+  presumptiveIncome: number;
+  deductions80C: number;
+  deductions80D: number;
+  totalExpenses: number;
+}
+
+interface CAPortalResponse {
+  summary: CAPortalSummary;
+  invoices: CAInvoiceRow[];
+  expenses: CAExpenseRow[];
+}
+
+const defaultSummary: CAPortalSummary = {
+  grossReceipts: 0,
+  presumptiveIncome: 0,
+  deductions80C: 0,
+  deductions80D: 0,
+  totalExpenses: 0,
+};
+
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value);
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const isCAInvoiceRow = (value: unknown): value is CAInvoiceRow => {
+  if (!isRecord(value)) return false;
+
+  return (
+    typeof value.id === "string" &&
+    (typeof value.invoiceDate === "string" || value.invoiceDate instanceof Date) &&
+    typeof value.invoiceNumber === "string" &&
+    typeof value.clientName === "string" &&
+    typeof value.sacCode === "string" &&
+    isFiniteNumber(value.totalAmount) &&
+    (value.amountReceived === null || isFiniteNumber(value.amountReceived)) &&
+    typeof value.status === "string" &&
+    (value.pdfPath === null || typeof value.pdfPath === "string")
+  );
+};
+
+const isCAExpenseRow = (value: unknown): value is CAExpenseRow => {
+  if (!isRecord(value)) return false;
+
+  return (
+    typeof value.id === "string" &&
+    (typeof value.date === "string" || value.date instanceof Date) &&
+    typeof value.category === "string" &&
+    typeof value.vendor === "string" &&
+    (value.description === null || typeof value.description === "string") &&
+    isFiniteNumber(value.amount) &&
+    (value.receiptUrl === null || typeof value.receiptUrl === "string")
+  );
+};
+
+const isCAPortalSummary = (value: unknown): value is CAPortalSummary => {
+  if (!isRecord(value)) return false;
+
+  return (
+    isFiniteNumber(value.grossReceipts) &&
+    isFiniteNumber(value.presumptiveIncome) &&
+    isFiniteNumber(value.deductions80C) &&
+    isFiniteNumber(value.deductions80D) &&
+    isFiniteNumber(value.totalExpenses)
+  );
+};
+
+const parseCAPortalResponse = (value: unknown): CAPortalResponse | null => {
+  if (!isRecord(value) || "error" in value) return null;
+
+  const summary = isCAPortalSummary(value.summary) ? value.summary : defaultSummary;
+  const invoices = Array.isArray(value.invoices)
+    ? value.invoices.filter(isCAInvoiceRow)
+    : [];
+  const expenses = Array.isArray(value.expenses)
+    ? value.expenses.filter(isCAExpenseRow)
+    : [];
+
+  return { summary, invoices, expenses };
+};
+
 const GeographyInsightCard = dynamic(
   () => import("@/components/maps").then((mod) => mod.GeographyInsightCard),
   {
@@ -43,7 +150,7 @@ export default function CAPortal() {
   
   // --- STATE ---
   const [fy, setFy] = useState("25-26"); 
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<CAPortalResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isExportingCSV, setIsExportingCSV] = useState(false);
   const [isExportingZIP, setIsExportingZIP] = useState(false);
@@ -57,8 +164,8 @@ export default function CAPortal() {
     setIsLoading(true);
     try {
       const res = await fetch(`/api/ca-portal?fy=${fy}`);
-      const json = await res.json();
-      setData(json.error ? null : json);
+      const json: unknown = await res.json();
+      setData(parseCAPortalResponse(json));
     } catch (err) {
       console.error("Failed to fetch audit data", err);
       toast.error("Failed to fetch audit data for this financial year.");
@@ -108,9 +215,9 @@ export default function CAPortal() {
     }
   };
 
-  const summary = data?.summary || { grossReceipts: 0, presumptiveIncome: 0, deductions80C: 0, deductions80D: 0, totalExpenses: 0 };
-  const invoices: CAInvoiceRow[] = Array.isArray(data?.invoices) ? data.invoices : [];
-  const expenses: CAExpenseRow[] = Array.isArray(data?.expenses) ? data.expenses : [];
+  const summary = data?.summary ?? defaultSummary;
+  const invoices = data?.invoices ?? [];
+  const expenses = data?.expenses ?? [];
   const isGstLiable = summary.grossReceipts >= 2000000;
   const jurisdictionPoints: MapPoint[] = [
     { id: "mh", label: "Maharashtra", subtitle: "GST filings + invoice validations", value: "48 compliance events", x: 65, y: 48, weight: 48 },
