@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useTranslations } from "next-intl";
-import { 
+import {
   DownloadCloud, 
   FolderArchive, 
   Calculator, 
@@ -20,12 +20,12 @@ import {
   ArrowRight
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 
 export default function CAPortal() {
   const t = useTranslations('CAPortal');
@@ -101,6 +101,33 @@ export default function CAPortal() {
   const invoices = Array.isArray(data?.invoices) ? data.invoices : [];
   const expenses = Array.isArray(data?.expenses) ? data.expenses : [];
   const isGstLiable = summary.grossReceipts >= 2000000;
+  const invoiceColumns: DataTableColumnDef<any>[] = [
+    { id: "date", header: t('col_date'), sortable: true, sortAccessor: (inv) => new Date(inv.invoiceDate).getTime(), cell: (inv) => format(new Date(inv.invoiceDate), 'dd MMM yyyy') },
+    { id: "voucher", header: t('col_voucher'), accessor: (inv) => inv.invoiceNumber, cell: (inv) => <span className="font-mono">{inv.invoiceNumber}</span> },
+    { id: "party", header: t('col_party'), accessor: (inv) => inv.clientName, cell: (inv) => <span className="font-bold">{inv.clientName}</span> },
+    { id: "sac", header: t('col_sac'), accessor: (inv) => inv.sacCode, cell: (inv) => inv.sacCode || "N/A" },
+    { id: "billed", header: <div className="text-right">{t('col_billed')}</div>, className: "text-right", sortable: true, sortAccessor: (inv) => inv.totalAmount, cell: (inv) => inv.totalAmount.toLocaleString('en-IN') },
+    { id: "received", header: <div className="text-right">{t('col_received')}</div>, className: "text-right font-bold text-emerald-600", sortable: true, sortAccessor: (inv) => inv.amountReceived ?? 0, cell: (inv) => inv.amountReceived?.toLocaleString('en-IN') || "-" },
+    {
+      id: "status",
+      header: t('col_status'),
+      accessor: (inv) => inv.status,
+      cell: (inv) => (
+        <Badge variant="outline" className={inv.status === 'Paid' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}>
+          {inv.status === 'Paid' ? t('status_received') : t('status_pending')}
+        </Badge>
+      ),
+    },
+    { id: "evidence", header: t('col_evidence'), cell: (inv) => <a href={inv.pdfPath} target="_blank" rel="noreferrer"><ExternalLink className="w-4 h-4" /></a> },
+  ];
+  const expenseColumns: DataTableColumnDef<any>[] = [
+    { id: "date", header: t('col_date'), sortable: true, sortAccessor: (exp) => new Date(exp.date).getTime(), cell: (exp) => format(new Date(exp.date), 'dd MMM yyyy') },
+    { id: "category", header: t('col_category'), accessor: (exp) => exp.category, cell: (exp) => <Badge variant="secondary">{exp.category}</Badge> },
+    { id: "vendor", header: t('col_vendor'), accessor: (exp) => exp.vendor, cell: (exp) => <span className="font-bold">{exp.vendor}</span> },
+    { id: "desc", header: t('col_desc'), accessor: (exp) => exp.description, cell: (exp) => exp.description || "-" },
+    { id: "amount", header: <div className="text-right">{t('col_amount')}</div>, className: "text-right font-bold text-rose-600", sortable: true, sortAccessor: (exp) => exp.amount, cell: (exp) => exp.amount.toLocaleString('en-IN') },
+    { id: "evidence", header: t('col_evidence'), cell: (exp) => exp.receiptUrl ? <a href={exp.receiptUrl} target="_blank" rel="noreferrer"><FileText className="w-4 h-4" /></a> : <span className="text-xs text-zinc-400">{t('no_file')}</span> },
+  ];
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8 transition-colors duration-300">
@@ -208,74 +235,26 @@ export default function CAPortal() {
               </TabsList>
             </CardHeader>
             <CardContent className="p-0">
-              {isLoading ? <div className="py-20 text-center text-zinc-400 animate-pulse">{t('fetching')}</div> : (
-                <>
-                  <TabsContent value="ar" className="m-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="dark:border-zinc-800">
-                          <TableHead>{t('col_date')}</TableHead>
-                          <TableHead>{t('col_voucher')}</TableHead>
-                          <TableHead>{t('col_party')}</TableHead>
-                          <TableHead>{t('col_sac')}</TableHead>
-                          <TableHead className="text-right">{t('col_billed')}</TableHead>
-                          <TableHead className="text-right">{t('col_received')}</TableHead>
-                          <TableHead>{t('col_status')}</TableHead>
-                          <TableHead>{t('col_evidence')}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {invoices.map((inv: any) => (
-                          <TableRow key={inv.id} className="dark:border-zinc-800">
-                            <TableCell>{format(new Date(inv.invoiceDate), 'dd MMM yyyy')}</TableCell>
-                            <TableCell className="font-mono">{inv.invoiceNumber}</TableCell>
-                            <TableCell className="font-bold">{inv.clientName}</TableCell>
-                            <TableCell>{inv.sacCode || "N/A"}</TableCell>
-                            <TableCell className="text-right">{inv.totalAmount.toLocaleString('en-IN')}</TableCell>
-                            <TableCell className="text-right font-bold text-emerald-600">{inv.amountReceived?.toLocaleString('en-IN') || "-"}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={inv.status === 'Paid' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}>
-                                {inv.status === 'Paid' ? t('status_received') : t('status_pending')}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <a href={inv.pdfPath} target="_blank" rel="noreferrer"><ExternalLink className="w-4 h-4" /></a>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TabsContent>
-                  <TabsContent value="ap" className="m-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="dark:border-zinc-800">
-                          <TableHead>{t('col_date')}</TableHead>
-                          <TableHead>{t('col_category')}</TableHead>
-                          <TableHead>{t('col_vendor')}</TableHead>
-                          <TableHead>{t('col_desc')}</TableHead>
-                          <TableHead className="text-right">{t('col_amount')}</TableHead>
-                          <TableHead>{t('col_evidence')}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {expenses.map((exp: any) => (
-                          <TableRow key={exp.id} className="dark:border-zinc-800">
-                            <TableCell>{format(new Date(exp.date), 'dd MMM yyyy')}</TableCell>
-                            <TableCell><Badge variant="secondary">{exp.category}</Badge></TableCell>
-                            <TableCell className="font-bold">{exp.vendor}</TableCell>
-                            <TableCell>{exp.description || "-"}</TableCell>
-                            <TableCell className="text-right font-bold text-rose-600">{exp.amount.toLocaleString('en-IN')}</TableCell>
-                            <TableCell>
-                              {exp.receiptUrl ? <a href={exp.receiptUrl} target="_blank" rel="noreferrer"><FileText className="w-4 h-4" /></a> : <span className="text-xs text-zinc-400">{t('no_file')}</span>}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TabsContent>
-                </>
-              )}
+              <TabsContent value="ar" className="m-0">
+                <DataTable
+                  columns={invoiceColumns}
+                  data={invoices}
+                  rowId={(row) => row.id}
+                  loading={isLoading}
+                  emptyTitle={t('tab_ar')}
+                  emptyDescription={t('fetching')}
+                />
+              </TabsContent>
+              <TabsContent value="ap" className="m-0">
+                <DataTable
+                  columns={expenseColumns}
+                  data={expenses}
+                  rowId={(row) => row.id}
+                  loading={isLoading}
+                  emptyTitle={t('tab_ap')}
+                  emptyDescription={t('fetching')}
+                />
+              </TabsContent>
             </CardContent>
           </Tabs>
         </Card>

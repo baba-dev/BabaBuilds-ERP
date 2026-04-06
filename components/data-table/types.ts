@@ -1,4 +1,12 @@
 import type { ReactNode } from "react";
+import type {
+  ColumnFiltersState,
+  ColumnPinningState,
+  PaginationState,
+  RowSelectionState,
+  SortingState,
+  VisibilityState,
+} from "@tanstack/react-table";
 
 export type SortDirection = "asc" | "desc";
 
@@ -27,4 +35,26 @@ export type DataTableRowAction<T> = {
   variant?: "default" | "danger";
   icon?: ReactNode;
   disabled?: boolean;
+};
+
+export type DataTableFacetedFilterOption = {
+  label: string;
+  value: string;
+};
+
+export type DataTableFacetedFilter = {
+  id: string;
+  label: string;
+  options: DataTableFacetedFilterOption[];
+  selectedValues: string[];
+  onToggle: (value: string) => void;
+};
+
+export type DataTableStateModel = {
+  sorting: SortingState;
+  columnFilters: ColumnFiltersState;
+  columnVisibility: VisibilityState;
+  pagination: PaginationState;
+  rowSelection: RowSelectionState;
+  columnPinning: ColumnPinningState;
 };
