@@ -1,40 +1,56 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import { prisma } from '@/lib/prisma';
+import {
+  getSessionWorkspaceId,
+  hasTraversal,
+  isWorkspaceNamespaced,
+  logDeniedAssetAccess,
+  serveAssetFromPublic,
+} from '@/lib/security/private-asset';
 
 export async function GET(request: Request, { params }: { params: Promise<{ path: string[] }> }) {
   const resolvedParams = await params;
   const filePathArray = resolvedParams.path || [];
-  
-  // Prevent directory traversal attacks
-  if (filePathArray.some(segment => segment.includes('..'))) {
+  const requestedPath = filePathArray.join('/');
+
+  const workspaceId = await getSessionWorkspaceId();
+  if (!workspaceId) {
+    logDeniedAssetAccess({ kind: 'invoices', reason: 'unauthorized', request, requestedPath });
+    return new NextResponse('Unauthorized', { status: 401 });
+  }
+
+  if (hasTraversal(filePathArray)) {
+    logDeniedAssetAccess({ kind: 'invoices', reason: 'path_traversal', request, requestedPath, workspaceId });
     return new NextResponse('Forbidden', { status: 403 });
   }
 
-  const filePath = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'invoices', ...filePathArray);
-
-  if (!fs.existsSync(filePath)) {
-    return new NextResponse('Not Found', { status: 404 });
+  if (!isWorkspaceNamespaced(filePathArray, workspaceId)) {
+    logDeniedAssetAccess({
+      kind: 'invoices',
+      reason: 'workspace_namespace_mismatch',
+      request,
+      requestedPath,
+      workspaceId,
+    });
+    return new NextResponse('Forbidden', { status: 403 });
   }
 
-  const fileBuffer = fs.readFileSync(filePath);
-  
-  const ext = path.extname(filePath).toLowerCase();
-  let contentType = 'application/octet-stream';
-  if (ext === '.png') contentType = 'image/png';
-  else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
-  else if (ext === '.webp') contentType = 'image/webp';
-  else if (ext === '.gif') contentType = 'image/gif';
-  else if (ext === '.svg') contentType = 'image/svg+xml';
-  else if (ext === '.pdf') contentType = 'application/pdf';
-
-  return new NextResponse(fileBuffer, {
-    headers: {
-      'Content-Type': contentType,
-      // 🚨 FIX: Disable immutable cache to allow stamps/updates to show immediately
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-    },
+  const relativePath = `/invoices/${filePathArray.join('/')}`;
+  const ownedInvoice = await prisma.invoice.findFirst({
+    where: { workspaceId, pdfPath: relativePath },
+    select: { id: true },
   });
+
+  if (!ownedInvoice) {
+    logDeniedAssetAccess({
+      kind: 'invoices',
+      reason: 'ownership_mismatch',
+      request,
+      requestedPath,
+      workspaceId,
+    });
+    return new NextResponse('Forbidden', { status: 403 });
+  }
+
+  return serveAssetFromPublic('invoices', filePathArray);
 }
