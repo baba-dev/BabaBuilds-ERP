@@ -155,23 +155,144 @@ export async function POST(request: Request) {
 
     const { clientId, billingMonth, sacCode, services, customDate, sendEmail, status: rawStatus } = body;
     const normalizedStatus = normalizeInvoiceStatus(rawStatus);
+    const validationErrors: Array<{ field: string; message: string; index?: number }> = [];
 
     if (!clientId) return NextResponse.json({ error: "No client selected." }, { status: 400 });
+    if (typeof billingMonth !== "string" || billingMonth.trim().length === 0) {
+      validationErrors.push({
+        field: "billingMonth",
+        message: "Billing month is required and must be a non-empty string.",
+      });
+    }
+
+    let parsedCustomDate: Date | null = null;
+    if (typeof customDate !== "undefined" && customDate !== null && customDate !== "") {
+      parsedCustomDate = new Date(customDate);
+      if (isNaN(parsedCustomDate.getTime())) {
+        validationErrors.push({
+          field: "customDate",
+          message: "Custom date is invalid. Please provide a valid date value.",
+        });
+      }
+    }
+
     if (!Array.isArray(services) || services.length === 0) {
-      return NextResponse.json({ error: "No services provided." }, { status: 400 });
+      validationErrors.push({
+        field: "services",
+        message: "At least one service is required.",
+      });
+    }
+
+    if (validationErrors.length > 0) {
+      return NextResponse.json(
+        { error: "Validation failed", fields: validationErrors },
+        { status: 400 }
+      );
     }
     
-    // --- 🚨 SECURITY PATCH: Prevent NaN Poisoning ---
-    const sanitizedServices = services.map((s: any) => {
-      const amt = Number(s.amount);
-      if (isNaN(amt) || amt < 0) {
-        throw new Error(`Invalid amount detected for service: ${s.title}`);
-      }
-      return { ...s, amount: amt };
-    });
+    // --- 🚨 SECURITY PATCH: Prevent malformed service payloads / NaN Poisoning ---
+    const MAX_SERVICE_TITLE_LENGTH = 200;
+    const sanitizedServices = services
+      .map((s: any, index: number) => {
+        const title = typeof s?.title === "string" ? s.title.trim() : "";
+        if (!title) {
+          validationErrors.push({
+            field: "services.title",
+            index,
+            message: "Service title is required and cannot be empty.",
+          });
+        } else if (title.length > MAX_SERVICE_TITLE_LENGTH) {
+          validationErrors.push({
+            field: "services.title",
+            index,
+            message: `Service title must be ${MAX_SERVICE_TITLE_LENGTH} characters or fewer.`,
+          });
+        }
+
+        const amt = Number(s?.amount);
+        if (!Number.isFinite(amt) || amt < 0) {
+          validationErrors.push({
+            field: "services.amount",
+            index,
+            message: "Service amount must be a finite number greater than or equal to 0.",
+          });
+        }
+
+        return { ...s, title, amount: amt };
+      });
+
+    if (validationErrors.length > 0) {
+      return NextResponse.json(
+        { error: "Validation failed", fields: validationErrors },
+        { status: 400 }
+      );
+    }
+
+    const date = parsedCustomDate ?? new Date();
+    if (isNaN(date.getTime())) {
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          fields: [{ field: "customDate", message: "Custom date is invalid. Please provide a valid date value." }]
+        },
+        { status: 400 }
+      );
+    }
+    const dueDate = new Date(date);
+    dueDate.setDate(dueDate.getDate() + 7);
 
     const totalAmount = sanitizedServices.reduce((sum: number, service: any) => sum + service.amount, 0);
+    if (!Number.isFinite(totalAmount) || totalAmount < 0) {
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          fields: [{ field: "services.amount", message: "Total service amount is invalid." }]
+        },
+        { status: 400 }
+      );
+    }
+
     const serviceDesc = sanitizedServices.map((s: any) => s.title).join(" + ");
+    if (!serviceDesc.trim()) {
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          fields: [{ field: "services.title", message: "At least one service title is required." }]
+        },
+        { status: 400 }
+      );
+    }
+
+    if (serviceDesc.length > 2000) {
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          fields: [{ field: "services", message: "Combined service description is too long for invoice generation." }]
+        },
+        { status: 400 }
+      );
+    }
+
+    const sanitizedSacCode = typeof sacCode === "string" ? sacCode.trim() : "";
+    if (sanitizedSacCode.length > 100) {
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          fields: [{ field: "sacCode", message: "SAC code is too long." }]
+        },
+        { status: 400 }
+      );
+    }
+
+    if (billingMonth.trim().length > 100) {
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          fields: [{ field: "billingMonth", message: "Billing month is too long." }]
+        },
+        { status: 400 }
+      );
+    }
 
     // 2. FETCH CLIENT
     const client = await prisma.client.findFirst({ 
@@ -191,10 +312,6 @@ export async function POST(request: Request) {
     const userLocale     = profile.workspace?.countryCode === "IN" ? "en-IN" : "en-US";
     const invoiceTheme   = (profile as any).invoiceTheme || "DESIGN_1";
     const baseCurrency   = profile.workspace?.baseCurrency || 'INR';
-
-    const date    = customDate ? new Date(customDate) : new Date();
-    const dueDate = new Date(date);
-    dueDate.setDate(dueDate.getDate() + 7);
 
     const formattedTotal = totalAmount.toLocaleString(userLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
