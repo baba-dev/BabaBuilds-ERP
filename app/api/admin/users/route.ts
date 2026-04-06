@@ -1,15 +1,6 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { handleAdminApiError, verifySuperAdmin } from "../authz";
 import { prisma } from "@/lib/prisma";
-
-// HEAVY SECURITY CHECK
-async function verifySuperAdmin() {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user?.email?.toLowerCase() !== "admin@bababuilds.com") {
-    throw new Error("Unauthorized");
-  }
-}
 
 // GET: Fetch all users & platform stats
 export async function GET() {
@@ -46,8 +37,7 @@ export async function GET() {
 
     return NextResponse.json(mappedUsers);
   } catch (error) {
-    console.error("Admin API Error:", error);
-    return NextResponse.json({ error: "Server Error" }, { status: 500 });
+    return handleAdminApiError(error, "Server Error");
   }
 }
 
@@ -84,7 +74,7 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: "Action failed" }, { status: 500 });
+    return handleAdminApiError(error, "Action failed");
   }
 }
 
@@ -100,6 +90,6 @@ export async function DELETE(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to delete user" }, { status: 500 });
+    return handleAdminApiError(error, "Failed to delete user");
   }
 }
