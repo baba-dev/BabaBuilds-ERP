@@ -414,8 +414,6 @@ export default function ExpenseTracker() {
           </div>
 
         </div>
-      </div>
-
       {/* EDIT EXPENSE MODAL */}
       <Dialog open={!!expenseToEdit} onOpenChange={(open) => !open && setExpenseToEdit(null)}>
         <DialogContent className="dark:bg-zinc-900 dark:border-zinc-800">
