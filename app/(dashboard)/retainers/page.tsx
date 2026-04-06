@@ -5,10 +5,9 @@ import { format, addMonths } from "date-fns";
 import {
   Repeat, Plus, ArrowLeft, Building2, Briefcase,
   Sparkles, CalendarClock, PlayCircle, PauseCircle,
-  Settings2, Activity, CheckCircle2, Trash2, Pencil, Loader2
+  Activity, CheckCircle2, Trash2, Pencil, Loader2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +29,7 @@ import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
 import { useTranslations } from "next-intl";
 import { TaxRateModal } from "@/components/invoice/tax-rate-modal";
+import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 
 export default function RetainersHub() {
   const t = useTranslations('Retainers');
@@ -468,6 +468,106 @@ export default function RetainersHub() {
   // --- RENDER LIST VIEW ---
   const activeCount = retainers.filter(r => r.status === 'ACTIVE').length;
   const mrrPipeline = retainers.filter(r => r.status === 'ACTIVE').reduce((sum, r) => sum + r.amount, 0);
+  const retainerColumns: DataTableColumnDef<any>[] = [
+    {
+      id: "client_service",
+      header: t('col_client_service'),
+      accessor: (ret) => `${ret.client?.name ?? ""} ${ret.serviceName ?? ""}`,
+      className: "px-6 py-4",
+      cell: (ret) => (
+        <>
+          <div className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100">{ret.client?.name}</div>
+          <div className="text-xs font-bold uppercase tracking-tight text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5 mt-1">
+            {ret.serviceName}
+            {ret.autoAppendMonth && <span title="Smart Naming Enabled"><Sparkles className="w-3 h-3 text-purple-500 ml-1" /></span>}
+          </div>
+        </>
+      ),
+    },
+    {
+      id: "amount",
+      header: t('col_amount'),
+      sortable: true,
+      sortAccessor: (ret) => ret.amount,
+      className: "font-black text-sm text-indigo-700 dark:text-indigo-400",
+      cell: (ret) => fCurrency(ret.amount),
+    },
+    {
+      id: "frequency",
+      header: t('col_frequency'),
+      accessor: (ret) => ret.frequency,
+      cell: (ret) => (
+        <Badge variant="outline" className="text-zinc-600 text-xs dark:text-zinc-300 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 font-bold uppercase tracking-widest shadow-sm py-0.5 px-2">
+          {ret.frequency}
+        </Badge>
+      ),
+    },
+    {
+      id: "next_billing",
+      header: t('col_next'),
+      sortable: true,
+      sortAccessor: (ret) => new Date(ret.nextBillingDate).getTime(),
+      cell: (ret) => (
+        <div className="flex items-center gap-2 text-xs font-bold text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-900/50 px-2.5 py-1.5 rounded-lg border border-zinc-100 dark:border-zinc-800/50 w-fit">
+          <CalendarClock className="w-3.5 h-3.5 text-indigo-500" />
+          {format(new Date(ret.nextBillingDate), safeDateFormat)}
+        </div>
+      ),
+    },
+    {
+      id: "status",
+      header: <div className="text-center">{t('col_status')}</div>,
+      accessor: (ret) => ret.status,
+      className: "text-center",
+      cell: (ret) => ret.status === 'ACTIVE' ? (
+        <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 border border-emerald-200/50 dark:border-emerald-800/50 text-xs font-bold uppercase tracking-widest shadow-none px-2 py-0.5">
+          <PlayCircle className="w-3 h-3 mr-1.5" /> {t('status_running')}
+        </Badge>
+      ) : (
+        <Badge className="bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 border border-zinc-200/50 dark:border-zinc-700/50 text-xs font-bold uppercase tracking-widest shadow-none px-2 py-0.5">
+          <PauseCircle className="w-3 h-3 mr-1.5" /> {t('status_paused')}
+        </Badge>
+      ),
+    },
+    {
+      id: "actions",
+      header: <div className="text-right px-6">{t('col_actions')}</div>,
+      className: "text-right px-6",
+      cell: (ret) => (
+        <div className="flex justify-end gap-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={ret.status === 'ACTIVE' ? `Pause retainer for ${ret.client?.name}` : `Resume retainer for ${ret.client?.name}`}
+            onClick={() => handleToggleStatus(ret.id, ret.status)}
+            className={ret.status === 'ACTIVE'
+              ? 'text-amber-600 hover:text-amber-700 bg-white hover:bg-amber-50 border border-zinc-100 hover:border-amber-200 dark:border-zinc-800/50 dark:bg-zinc-900 dark:text-amber-500 dark:hover:text-amber-400 dark:hover:bg-amber-500/10 dark:hover:border-amber-800/50 w-8 px-0 transition-all shadow-sm'
+              : 'text-emerald-600 hover:text-emerald-700 bg-white hover:bg-emerald-50 border border-zinc-100 hover:border-emerald-200 dark:border-zinc-800/50 dark:bg-zinc-900 dark:text-emerald-500 dark:hover:text-emerald-400 dark:hover:bg-emerald-500/10 dark:hover:border-emerald-800/50 w-8 px-0 transition-all shadow-sm'}
+          >
+            {ret.status === 'ACTIVE' ? <PauseCircle className="w-4 h-4" /> : <PlayCircle className="w-4 h-4" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={`Edit retainer details for ${ret.client?.name}`}
+            onClick={() => openEditModal(ret)}
+            className="text-blue-600 hover:text-blue-700 bg-white hover:bg-blue-50 border border-zinc-100 hover:border-blue-200 dark:border-zinc-800/50 dark:bg-zinc-900 dark:text-blue-500 dark:hover:text-blue-400 dark:hover:bg-blue-500/10 dark:hover:border-blue-800/50 w-8 px-0 transition-all shadow-sm"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={`Delete retainer for ${ret.client?.name}`}
+            onClick={() => setRetainerToDelete(ret.id)}
+            className="text-rose-600 hover:text-rose-700 bg-white hover:bg-rose-50 border border-zinc-100 hover:border-rose-200 dark:border-zinc-800/50 dark:bg-zinc-900 dark:text-rose-500 dark:hover:text-rose-400 dark:hover:bg-rose-500/10 dark:hover:border-rose-800/50 w-8 px-0 transition-all shadow-sm"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8 transition-colors duration-300">
@@ -509,124 +609,14 @@ export default function RetainersHub() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center p-24 text-zinc-400 dark:text-zinc-500 bg-zinc-50/20 dark:bg-zinc-950/20">
-                <Loader2 className="w-8 h-8 animate-spin mb-4 text-indigo-500/50" />
-                <span className="text-xs font-bold uppercase tracking-widest animate-pulse">{t('loading')}</span>
-              </div>
-            ) : retainers.length === 0 ? (
-              <div className="p-20 text-center flex flex-col items-center relative overflow-hidden group bg-zinc-50/30 dark:bg-zinc-950/20">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 to-transparent dark:from-indigo-950/20 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="relative z-10 flex flex-col items-center">
-                  <div className="w-16 h-16 rounded-full bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center mb-5 shadow-sm">
-                    <Settings2 className="w-7 h-7 text-zinc-400 dark:text-zinc-500" />
-                  </div>
-                  <h3 className="text-lg font-extrabold uppercase tracking-widest text-zinc-900 dark:text-zinc-100 mb-1">
-                    {t('no_retainers')}
-                  </h3>
-                  <p className="text-zinc-500 dark:text-zinc-400 mt-2 max-w-sm text-sm font-medium leading-relaxed">
-                    {t('no_retainers_desc')}
-                  </p>
-                  <Button
-                    onClick={() => setView('wizard')}
-                    variant="outline"
-                    className="mt-6 border-indigo-200 dark:border-indigo-800/50 text-indigo-700 dark:text-indigo-400 bg-white dark:bg-zinc-950 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-xs font-bold uppercase tracking-wider shadow-sm transition-all active:scale-95 h-10 px-6"
-                  >
-                    {t('setup_first')}
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="overflow-x-auto custom-scrollbar">
-                <Table>
-                  <TableHeader className="bg-zinc-50/80 dark:bg-zinc-900/40 border-b border-zinc-200 dark:border-zinc-800/80 sticky top-0 z-10 backdrop-blur-sm">
-                    <TableRow className="dark:border-zinc-800/80 hover:bg-transparent">
-                      <TableHead className="dark:text-zinc-400 text-xs font-bold uppercase tracking-widest px-6 py-4">{t('col_client_service')}</TableHead>
-                      <TableHead className="dark:text-zinc-400 text-xs font-bold uppercase tracking-widest">{t('col_amount')}</TableHead>
-                      <TableHead className="dark:text-zinc-400 text-xs font-bold uppercase tracking-widest">{t('col_frequency')}</TableHead>
-                      <TableHead className="dark:text-zinc-400 text-xs font-bold uppercase tracking-widest">{t('col_next')}</TableHead>
-                      <TableHead className="text-center dark:text-zinc-400 text-xs font-bold uppercase tracking-widest">{t('col_status')}</TableHead>
-                      <TableHead className="text-right dark:text-zinc-400 text-xs font-bold uppercase tracking-widest px-6">{t('col_actions')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {retainers.map((ret) => (
-                      <TableRow key={ret.id} className={`dark:border-zinc-800/80 transition-all duration-300 ${ret.status === 'PAUSED' ? 'opacity-60 bg-zinc-50/50 dark:bg-zinc-950/30' : 'hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 group'}`}>
-                        <TableCell className="px-6 py-4">
-                          <div className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100">{ret.client?.name}</div>
-                          <div className="text-xs font-bold uppercase tracking-tight text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5 mt-1">
-                            {ret.serviceName}
-                            {ret.autoAppendMonth && <span title="Smart Naming Enabled"><Sparkles className="w-3 h-3 text-purple-500 ml-1" /></span>}
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-black text-sm text-indigo-700 dark:text-indigo-400">
-                          {fCurrency(ret.amount)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-zinc-600 text-xs dark:text-zinc-300 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 font-bold uppercase tracking-widest shadow-sm py-0.5 px-2">
-                            {ret.frequency}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2 text-xs font-bold text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-900/50 px-2.5 py-1.5 rounded-lg border border-zinc-100 dark:border-zinc-800/50 w-fit">
-                            <CalendarClock className="w-3.5 h-3.5 text-indigo-500" />
-                            {format(new Date(ret.nextBillingDate), safeDateFormat)}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {ret.status === 'ACTIVE' ? (
-                            <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 border border-emerald-200/50 dark:border-emerald-800/50 text-xs font-bold uppercase tracking-widest shadow-none px-2 py-0.5">
-                              <PlayCircle className="w-3 h-3 mr-1.5" /> {t('status_running')}
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 border border-zinc-200/50 dark:border-zinc-700/50 text-xs font-bold uppercase tracking-widest shadow-none px-2 py-0.5">
-                              <PauseCircle className="w-3 h-3 mr-1.5" /> {t('status_paused')}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right px-6">
-                          <div className="flex justify-end gap-1.5">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              aria-label={ret.status === 'ACTIVE' ? `Pause retainer for ${ret.client?.name}` : `Resume retainer for ${ret.client?.name}`}
-                              onClick={() => handleToggleStatus(ret.id, ret.status)}
-                              className={ret.status === 'ACTIVE'
-                                ? 'text-amber-600 hover:text-amber-700 bg-white hover:bg-amber-50 border border-zinc-100 hover:border-amber-200 dark:border-zinc-800/50 dark:bg-zinc-900 dark:text-amber-500 dark:hover:text-amber-400 dark:hover:bg-amber-500/10 dark:hover:border-amber-800/50 w-8 px-0 transition-all shadow-sm'
-                                : 'text-emerald-600 hover:text-emerald-700 bg-white hover:bg-emerald-50 border border-zinc-100 hover:border-emerald-200 dark:border-zinc-800/50 dark:bg-zinc-900 dark:text-emerald-500 dark:hover:text-emerald-400 dark:hover:bg-emerald-500/10 dark:hover:border-emerald-800/50 w-8 px-0 transition-all shadow-sm'}
-                            >
-                              {ret.status === 'ACTIVE' ? <PauseCircle className="w-4 h-4" /> : <PlayCircle className="w-4 h-4" />}
-                            </Button>
-
-                            {/* EDIT ACTION BUTTON */}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              aria-label={`Edit retainer details for ${ret.client?.name}`}
-                              onClick={() => openEditModal(ret)}
-                              className="text-blue-600 hover:text-blue-700 bg-white hover:bg-blue-50 border border-zinc-100 hover:border-blue-200 dark:border-zinc-800/50 dark:bg-zinc-900 dark:text-blue-500 dark:hover:text-blue-400 dark:hover:bg-blue-500/10 dark:hover:border-blue-800/50 w-8 px-0 transition-all shadow-sm"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </Button>
-
-                            {/* DESTRUCTIVE ACTION BUTTON */}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              aria-label={`Delete retainer for ${ret.client?.name}`}
-                              onClick={() => setRetainerToDelete(ret.id)}
-                              className="text-rose-600 hover:text-rose-700 bg-white hover:bg-rose-50 border border-zinc-100 hover:border-rose-200 dark:border-zinc-800/50 dark:bg-zinc-900 dark:text-rose-500 dark:hover:text-rose-400 dark:hover:bg-rose-500/10 dark:hover:border-rose-800/50 w-8 px-0 transition-all shadow-sm"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+            <DataTable
+              columns={retainerColumns}
+              data={retainers}
+              rowId={(row) => row.id}
+              loading={isLoading}
+              emptyTitle={t('no_retainers')}
+              emptyDescription={t('no_retainers_desc')}
+            />
           </CardContent>
         </Card>
 
