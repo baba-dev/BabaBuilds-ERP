@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { format } from "date-fns";
 import { animate, useMotionValue } from "framer-motion";
 import {
@@ -32,6 +33,16 @@ import { ChartCard } from "@/components/charts/ChartCard";
 import { ChartTooltip } from "@/components/charts/ChartTooltip";
 import { ChartLegend } from "@/components/charts/ChartLegend";
 import { withChartTokenColors } from "@/components/charts/chart-colors";
+import type { MapPoint } from "@/components/maps";
+import { MapCardSkeleton } from "@/components/maps";
+
+const GeographyInsightCard = dynamic(
+  () => import("@/components/maps").then((mod) => mod.GeographyInsightCard),
+  {
+    loading: () => <MapCardSkeleton />,
+    ssr: false,
+  }
+);
 
 function AnimatedValue({
   value,
@@ -234,6 +245,17 @@ export default function Dashboard() {
     [data?.charts?.wealth]
   );
   const [isCompactCharts, setIsCompactCharts] = useState(false);
+  const geographyPoints: MapPoint[] = useMemo(
+    () => [
+      { id: "sf", label: "San Francisco, US", subtitle: "SaaS retainers", value: "12 clients · 31 invoices", x: 16, y: 36, weight: 31 },
+      { id: "nyc", label: "New York, US", subtitle: "Agency contracts", value: "9 clients · 27 invoices", x: 24, y: 34, weight: 27 },
+      { id: "lon", label: "London, UK", subtitle: "Cross-border billing", value: "6 clients · 18 invoices", x: 47, y: 30, weight: 18 },
+      { id: "blr", label: "Bengaluru, IN", subtitle: "Core delivery hub", value: "14 clients · 43 invoices", x: 66, y: 49, weight: 43 },
+      { id: "sin", label: "Singapore, SG", subtitle: "APAC expansion", value: "5 clients · 12 invoices", x: 75, y: 56, weight: 12 },
+      { id: "syd", label: "Sydney, AU", subtitle: "Recurring retainers", value: "4 clients · 10 invoices", x: 84, y: 74, weight: 10 },
+    ],
+    []
+  );
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 768px)");
@@ -265,6 +287,12 @@ export default function Dashboard() {
         </div>
       }
     >
+
+        <GeographyInsightCard
+          title="Client & invoice geography snapshot"
+          subtitle="Live distribution of active clients and invoice throughput by region."
+          points={geographyPoints}
+        />
 
         {/* --- MRR COMMAND CENTER --- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
