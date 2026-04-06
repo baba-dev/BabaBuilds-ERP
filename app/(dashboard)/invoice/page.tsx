@@ -11,6 +11,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TaxRateModal } from "@/components/invoice/tax-rate-modal";
 
 // MISSION CRITICAL: Globalization & Caching Imports
 import { useFormat } from "@/hooks/use-format";
@@ -47,6 +48,9 @@ export default function InvoiceGenerator() {
 
   // Email State
   const [sendEmail, setSendEmail] = useState(false);
+  const [taxRateModalOpen, setTaxRateModalOpen] = useState(false);
+  const [taxRateInput, setTaxRateInput] = useState("");
+  const [taxRateMeta, setTaxRateMeta] = useState<{ taxLabel?: string; countryCode?: string; candidates?: number[] }>({});
 
   // Dynamic Services State
   const [services, setServices] = useState<any[]>([]);
@@ -217,7 +221,18 @@ export default function InvoiceGenerator() {
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to generate');
+      if (!response.ok) {
+        if (response.status === 422 && data?.code === "TAX_RATE_REQUIRED") {
+          setTaxRateMeta({
+            taxLabel: data.taxLabel,
+            countryCode: data.countryCode,
+            candidates: data.candidates || [],
+          });
+          setTaxRateModalOpen(true);
+          return;
+        }
+        throw new Error(data.error || 'Failed to generate');
+      }
 
       setSuccessData({
         pdfPath: data.invoice.pdfPath,
@@ -225,6 +240,41 @@ export default function InvoiceGenerator() {
         emailStatus: data.emailStatus
       });
       setServices(services.map(s => ({ ...s, selected: false, amount: "" })));
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleTaxRateConfirm = async () => {
+    if (!taxRateInput) return;
+    setIsGenerating(true);
+    const validServices = activeServices.filter(s => Number(s.amount) > 0);
+    try {
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientId: selectedClientId,
+          billingMonth,
+          sacCode: smartSacCode,
+          services: validServices,
+          customDate: invoiceDate.toISOString(),
+          sendEmail,
+          taxRateOverride: Number(taxRateInput),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to generate');
+      setSuccessData({
+        pdfPath: data.invoice.pdfPath,
+        invoiceNumber: data.invoice.invoiceNumber,
+        emailStatus: data.emailStatus
+      });
+      setServices(services.map(s => ({ ...s, selected: false, amount: "" })));
+      setTaxRateInput("");
+      setTaxRateModalOpen(false);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -461,6 +511,19 @@ export default function InvoiceGenerator() {
             </CardFooter>
           </form>
         </Card>
+        <TaxRateModal
+          open={taxRateModalOpen}
+          onOpenChange={setTaxRateModalOpen}
+          taxLabel={taxRateMeta.taxLabel}
+          countryCode={taxRateMeta.countryCode}
+          candidates={taxRateMeta.candidates}
+          value={taxRateInput}
+          onValueChange={setTaxRateInput}
+          onConfirm={handleTaxRateConfirm}
+          isSubmitting={isGenerating}
+          title="Tax rate required to continue"
+          description="We couldn't detect a single applicable rate from your service metadata. Enter it once and we'll remember it for your workspace."
+        />
       </div>
     </div>
   );
