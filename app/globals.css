@@ -39,6 +39,14 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-surface-base: var(--surface-base);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-glass: var(--surface-glass);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-success-soft: var(--success-soft);
+  --color-danger-soft: var(--danger-soft);
+  --color-focus-ring: var(--focus-ring);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -88,6 +96,14 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --surface-base: oklch(0.99 0.002 260);
+  --surface-elevated: oklch(1 0 0);
+  --surface-glass: oklch(1 0 0 / 72%);
+  --accent-strong: oklch(0.57 0.2 279);
+  --accent-soft: oklch(0.95 0.03 279);
+  --success-soft: oklch(0.95 0.06 155);
+  --danger-soft: oklch(0.95 0.05 24);
+  --focus-ring: oklch(0.63 0.19 279);
 }
 
 .dark {
@@ -122,6 +138,14 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --surface-base: oklch(0.19 0.005 260);
+  --surface-elevated: oklch(0.23 0.01 260);
+  --surface-glass: oklch(0.2 0.008 260 / 78%);
+  --accent-strong: oklch(0.66 0.19 279);
+  --accent-soft: oklch(0.3 0.06 279);
+  --success-soft: oklch(0.31 0.08 155);
+  --danger-soft: oklch(0.31 0.08 24);
+  --focus-ring: oklch(0.7 0.17 279);
 }
 
 @layer base {
@@ -133,5 +157,49 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 font-bold text-white transition-all duration-200 active:scale-[0.98];
+    background: var(--accent-strong);
+    box-shadow: 0 16px 30px color-mix(in oklab, var(--accent-strong) 28%, transparent);
+  }
+
+  .btn-primary:hover {
+    filter: brightness(0.96);
+  }
+
+  .btn-primary:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .card-elevated {
+    @apply rounded-2xl border p-6 shadow-sm transition-colors;
+    background: var(--surface-elevated);
+    border-color: color-mix(in oklab, var(--foreground) 10%, transparent);
+    box-shadow: 0 12px 32px color-mix(in oklab, var(--foreground) 8%, transparent);
+  }
+
+  .page-header-sticky {
+    @apply sticky top-0 z-20 border-b backdrop-blur-md transition-all duration-300;
+    background: var(--surface-glass);
+    border-color: color-mix(in oklab, var(--foreground) 12%, transparent);
+  }
+
+  .text-muted-body {
+    color: color-mix(in oklab, var(--foreground) 62%, transparent);
+  }
+
+  .action-destructive {
+    @apply border border-transparent font-semibold transition-colors;
+    background: var(--danger-soft);
+    color: color-mix(in oklab, var(--destructive) 72%, var(--foreground));
+  }
+
+  .action-destructive:hover {
+    border-color: color-mix(in oklab, var(--destructive) 35%, transparent);
   }
 }
