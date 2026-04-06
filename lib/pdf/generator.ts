@@ -422,15 +422,18 @@ export async function generateInvoicePDF({
     let metaStringValue = `${profile.companyName} | PAN: ${profile.panNumber}`;
     if (profile.udyamNumber) metaStringValue += ` | MSME: ${profile.udyamNumber}`;
     if (profile.gstin)       metaStringValue += ` | ${safeTaxIdLabel}: ${profile.gstin}`;
+
+    const contactString = `${profile.email || 'billing@company.com'}${profile.phone ? ` | ${profile.phone}` : ''}${profile.website ? ` | ${profile.website}` : ''}`;
     
-    drawRect(0, height - 60, width, 60, black);
-    drawText(metaStringValue, width / 2, height - 35, 9, false, 'center', white);
+    drawRect(0, height - 72, width, 72, black);
+    drawText(metaStringValue, width / 2, height - 43, 9, false, 'center', white);
+    drawText(contactString, width / 2, height - 24, 9, false, 'center', white);
 
     if (profile.workspace?.planTier === "FREE") {
       drawText(
         "This Receipt was prepared on erp.bababuilds.com | Make yours.", 
         width / 2,           
-        height - 15,         
+        height - 9,         
         7,                   
         false,               
         'center',            
