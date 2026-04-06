@@ -104,6 +104,14 @@
   --success-soft: oklch(0.95 0.06 155);
   --danger-soft: oklch(0.95 0.05 24);
   --focus-ring: oklch(0.63 0.19 279);
+  --motion-duration-fast: 150ms;
+  --motion-duration-base: 220ms;
+  --motion-duration-slow: 320ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-ease-emphasized: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-ease-linear: linear;
+  --motion-hover-lift-y: -2px;
+  --motion-press-scale: 0.985;
 }
 
 .dark {
@@ -205,6 +213,79 @@
 }
 
 @layer utilities {
+  .motion-feedback {
+    transition-property: color, background-color, border-color, opacity, box-shadow, transform;
+    transition-duration: var(--motion-duration-base);
+    transition-timing-function: var(--motion-ease-standard);
+  }
+
+  .motion-feedback-fast {
+    transition-duration: var(--motion-duration-fast);
+  }
+
+  .motion-hover-lift {
+    transition-property: box-shadow, transform;
+    transition-duration: var(--motion-duration-base);
+    transition-timing-function: var(--motion-ease-emphasized);
+  }
+
+  .motion-hover-lift:hover {
+    transform: translateY(var(--motion-hover-lift-y));
+  }
+
+  .motion-press {
+    transition-property: transform;
+    transition-duration: var(--motion-duration-fast);
+    transition-timing-function: var(--motion-ease-standard);
+  }
+
+  .motion-press:active {
+    transform: scale(var(--motion-press-scale));
+  }
+
+  .motion-row-hover {
+    transition-property: background-color, border-color, box-shadow;
+    transition-duration: var(--motion-duration-fast);
+    transition-timing-function: var(--motion-ease-standard);
+  }
+
+  .motion-modal-overlay {
+    transition-duration: var(--motion-duration-fast);
+    transition-timing-function: var(--motion-ease-standard);
+  }
+
+  .motion-modal-content {
+    transition-duration: var(--motion-duration-base);
+    transition-timing-function: var(--motion-ease-emphasized);
+  }
+
+  .dashboard-motion-surface :is([data-slot="button"], [data-slot="table-row"], [data-slot="card"]) {
+    transition-timing-function: var(--motion-ease-standard);
+  }
+
+  .dashboard-motion-surface [data-slot="button"] {
+    transition-property: color, background-color, border-color, box-shadow, transform;
+    transition-duration: var(--motion-duration-base);
+  }
+
+  .dashboard-motion-surface [data-slot="button"]:active:not(:disabled) {
+    transform: translateY(1px) scale(var(--motion-press-scale));
+  }
+
+  .dashboard-motion-surface [data-slot="card"] {
+    transition-property: background-color, border-color, box-shadow, transform;
+    transition-duration: var(--motion-duration-base);
+  }
+
+  .dashboard-motion-surface [data-slot="card"]:hover {
+    transform: translateY(var(--motion-hover-lift-y));
+  }
+
+  .dashboard-motion-surface [data-slot="table-row"] {
+    transition-property: background-color, border-color;
+    transition-duration: var(--motion-duration-fast);
+  }
+
   @keyframes marquee {
     from {
       transform: translateX(0%);
@@ -220,6 +301,22 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+
+    .dashboard-motion-surface [data-slot="card"]:hover,
+    .dashboard-motion-surface [data-slot="button"]:active:not(:disabled),
+    .motion-hover-lift:hover,
+    .motion-press:active {
+      transform: none !important;
+    }
+
     .motion-marquee {
       animation: none;
       transform: translateX(0%);
