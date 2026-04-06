@@ -88,7 +88,7 @@ export default function SettingsWizard() {
       })
       .catch(err => {
         console.error("Failed to load settings:", err);
-        toast.error("Failed to load generic settings profile");
+        toast.error(t("toasts.loadFailed"));
       });
   }, []);
 
@@ -117,12 +117,12 @@ export default function SettingsWizard() {
             accountNumber: data.accountNumber || prev.accountNumber,
             ifscCode: data.ifscCode || prev.ifscCode,
           }));
-          toast.info("Settings form auto-filled by AI. Click Save to confirm.");
+          toast.info(t("toasts.aiAutofill"));
         }
         sessionStorage.removeItem('erp_ai_payload');
       } catch(e) { 
         console.error("Failed to parse AI payload"); 
-        toast.warning("AI auto-fill failed. Please fill the form manually.");
+        toast.warning(t("toasts.aiAutofillFailed"));
       }
     }
   }, []);
@@ -136,7 +136,7 @@ export default function SettingsWizard() {
     e.preventDefault();
     setIsSubmitting(true);
     setSuccessMsg(false);
-    const toastId = toast.loading("Saving configuration...");
+    const toastId = toast.loading(t("toasts.saving"));
 
     const body = new FormData();
     Object.entries(formData).forEach(([key, val]) => {
@@ -153,7 +153,7 @@ export default function SettingsWizard() {
       if (res.ok) {
         setSuccessMsg(true);
         setIsNewSetup(false);
-        toast.success("Master profile updated securely.", { id: toastId });
+        toast.success(t("toasts.saved"), { id: toastId });
         setTimeout(() => setSuccessMsg(false), 3000);
         
         setFormData(prev => ({
@@ -167,10 +167,10 @@ export default function SettingsWizard() {
         // Refresh the page after saving to apply translations if language changed
         setTimeout(() => window.location.reload(), 1500);
       } else {
-        toast.error("Failed to save configuration.", { id: toastId });
+        toast.error(t("toasts.saveFailed"), { id: toastId });
       }
     } catch (err) {
-      toast.error("A network error occurred.", { id: toastId });
+      toast.error(t("toasts.networkError"), { id: toastId });
     } finally {
       setIsSubmitting(false);
     }
@@ -183,14 +183,14 @@ export default function SettingsWizard() {
         <div className="flex gap-2">
           <div className="flex-1 flex items-center gap-2 h-10 rounded-md border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 px-3">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">Secret Configured</span>
+            <span className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">{t("secret.configured")}</span>
           </div>
           <Button
             type="button" variant="outline"
             disabled={planTier === "FREE"}
             onClick={() => setFormData({ ...formData, stripeSecretKey: "" })}
             className="border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400"
-          >Change</Button>
+          >{t("actions.change")}</Button>
           <Button
             type="button" variant="outline"
             disabled={planTier === "FREE"}
@@ -208,7 +208,7 @@ export default function SettingsWizard() {
           disabled={planTier === "FREE"}
           value={formData.stripeSecretKey}
           onChange={e => setFormData({ ...formData, stripeSecretKey: e.target.value })}
-          placeholder="sk_live_••••••••••••••••••••"
+          placeholder={t("placeholders.stripeSecretKey")}
           className={`dark:bg-zinc-950 dark:border-zinc-800 font-mono text-sm ${
             formData.stripeSecretKey === "DELETE_KEY"
               ? "text-rose-600 font-bold bg-rose-50 dark:bg-rose-900/20"
@@ -234,14 +234,14 @@ export default function SettingsWizard() {
         <div className="flex gap-2">
           <div className="flex-1 flex items-center gap-2 h-10 rounded-md border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 px-3">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">Secret Configured</span>
+            <span className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">{t("secret.configured")}</span>
           </div>
           <Button
             type="button" variant="outline"
             disabled={planTier === "FREE" || !isIndian}
             onClick={() => setFormData({ ...formData, razorpayKeySecret: "" })}
             className="border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400"
-          >Change</Button>
+          >{t("actions.change")}</Button>
           <Button
             type="button" variant="outline"
             disabled={planTier === "FREE" || !isIndian}
@@ -285,13 +285,13 @@ export default function SettingsWizard() {
         <div className="flex gap-2">
           <div className="flex-1 flex items-center gap-2 h-10 rounded-md border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 px-3">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">Secret Configured</span>
+            <span className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">{t("secret.configured")}</span>
           </div>
           <Button
             type="button" variant="outline"
             onClick={() => setFormData({ ...formData, groqApiKey: "" })}
             className="border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400"
-          >Change</Button>
+          >{t("actions.change")}</Button>
           <Button
             type="button" variant="outline"
             onClick={() => setFormData({ ...formData, groqApiKey: "DELETE_KEY" })}
@@ -307,7 +307,7 @@ export default function SettingsWizard() {
           type={formData.groqApiKey === "DELETE_KEY" ? "text" : "password"}
           value={formData.groqApiKey}
           onChange={e => setFormData({ ...formData, groqApiKey: e.target.value })}
-          placeholder="gsk_••••••••••••••••••••"
+          placeholder={t("placeholders.groqApiKey")}
           className={`dark:bg-zinc-950 dark:border-zinc-800 font-mono text-sm ${
             formData.groqApiKey === "DELETE_KEY"
               ? "text-rose-600 font-bold bg-rose-50 dark:bg-rose-900/20"
@@ -334,11 +334,11 @@ export default function SettingsWizard() {
             <Building2 className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {isNewSetup ? "Welcome to your ERP" : t('title')}
+            {isNewSetup ? t("welcome.title") : t('title')}
           </h1>
           <p className="text-zinc-500 dark:text-zinc-400 max-w-lg mx-auto text-sm font-medium">
             {isNewSetup 
-              ? "Let's set up your master profile. This data will be used to automatically generate your invoices." 
+              ? t("welcome.description")
               : t('description')}
           </p>
         </div>
@@ -357,17 +357,17 @@ export default function SettingsWizard() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">{t('company_name')} <span className="text-red-500">*</span></Label>
-                  <Input required value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} placeholder="e.g., BabaBuilds" className="h-10 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold" />
+                  <Input required value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} placeholder={t("placeholders.companyName")} className="h-10 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold" />
                 </div>
                 <div className="space-y-2">
                   <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">{t('proprietor_name')} <span className="text-red-500">*</span></Label>
-                  <Input required value={formData.proprietorName} onChange={e => setFormData({...formData, proprietorName: e.target.value})} placeholder="e.g., Sameer Siddiqui" className="h-10 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold" />
+                  <Input required value={formData.proprietorName} onChange={e => setFormData({...formData, proprietorName: e.target.value})} placeholder={t("placeholders.proprietorName")} className="h-10 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold" />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">{t('full_address')} <span className="text-red-500">*</span></Label>
-                <Input required value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} placeholder="C-28, Ganesh Colony..." className="h-10 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-medium" />
+                <Input required value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} placeholder={t("placeholders.address")} className="h-10 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-medium" />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -381,7 +381,7 @@ export default function SettingsWizard() {
                 </div>
                 <div className="space-y-2">
                   <Label className="dark:text-zinc-300">{t('website')}</Label>
-                  <Input value={formData.website} onChange={e => setFormData({...formData, website: e.target.value})} placeholder="https://" className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
+                  <Input value={formData.website} onChange={e => setFormData({...formData, website: e.target.value})} placeholder={t("placeholders.website")} className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
                 </div>
               </div>
 
@@ -415,7 +415,7 @@ export default function SettingsWizard() {
                     <h3 className="font-bold text-zinc-900 dark:text-zinc-100">{t('design1_title')}</h3>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{t('design1_desc')}</p>
                     <div className="flex items-center gap-1 mt-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                      <CheckCircle2 className="w-3 h-3" /> Supports Digital Signatures
+                      <CheckCircle2 className="w-3 h-3" /> {t("invoiceTheme.supportsSignatures")}
                     </div>
                   </div>
 
@@ -444,7 +444,7 @@ export default function SettingsWizard() {
                     <h3 className="font-bold text-zinc-900 dark:text-zinc-100">{t('design2_title')}</h3>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{t('design2_desc')}</p>
                     <div className="flex items-center gap-1 mt-2 text-xs font-medium text-rose-500/80 dark:text-rose-400/80">
-                      Does not support signatures
+                      {t("invoiceTheme.noSignatures")}
                     </div>
                   </div>
                 </div>
@@ -462,10 +462,10 @@ export default function SettingsWizard() {
                       onChange={e => setFormData({...formData, locale: e.target.value})} 
                       className="flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:ring-offset-zinc-950 dark:focus-visible:ring-zinc-300"
                     >
-                      <option value="en-IN">English (India)</option>
-                      <option value="ar">العربية (Arabic)</option>
-                      <option value="es">Español (Spanish)</option>
-                      <option value="hi">हिंदी (Hindi)</option>
+                      <option value="en-IN">{t("languageOptions.enIN")}</option>
+                      <option value="ar">{t("languageOptions.ar")}</option>
+                      <option value="es">{t("languageOptions.es")}</option>
+                      <option value="hi">{t("languageOptions.hi")}</option>
                     </select>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{t('language_description')}</p>
                   </div>
@@ -479,7 +479,7 @@ export default function SettingsWizard() {
                   <Label className="flex items-center gap-2 dark:text-zinc-300"><ImageIcon className="w-4 h-4" /> {t('master_logo')}</Label>
                   <div className="flex items-center gap-4">
                     {formData.existingLogoUrl && !logoFile && (
-                      <img src={getBustedUrl(formData.existingLogoUrl)} alt="Current Logo" className="h-12 object-contain bg-white dark:bg-zinc-200 border rounded p-1" />
+                      <img src={getBustedUrl(formData.existingLogoUrl)} alt={t("alt.currentLogo")} className="h-12 object-contain bg-white dark:bg-zinc-200 border rounded p-1" />
                     )}
                     <div className="flex-1">
                       <Input type="file" accept="image/*" onChange={e => setLogoFile(e.target.files?.[0] || null)} className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
@@ -491,18 +491,18 @@ export default function SettingsWizard() {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <Label className="flex items-center gap-2 dark:text-zinc-300">
-                      Digital Signature
+                      {t("signature.label")}
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Info className="w-4 h-4 text-zinc-400 cursor-help hover:text-indigo-500 transition-colors" />
                           </TooltipTrigger>
                           <TooltipContent className="max-w-[200px] text-xs">
-                            <p className="font-bold text-indigo-200 mb-1">Strict Guidelines:</p>
+                            <p className="font-bold text-indigo-200 mb-1">{t("signature.tooltip.title")}</p>
                             <ul className="list-disc pl-4 space-y-1">
-                              <li>Must have a transparent background</li>
-                              <li>Max size 2MB</li>
-                              <li>Width/Height ratio should be horizontal (e.g. 300x100)</li>
+                              <li>{t("signature.tooltip.transparentBackground")}</li>
+                              <li>{t("signature.tooltip.maxSize")}</li>
+                              <li>{t("signature.tooltip.aspectRatio")}</li>
                             </ul>
                           </TooltipContent>
                         </Tooltip>
@@ -511,11 +511,11 @@ export default function SettingsWizard() {
                   </div>
                   <div className="flex items-center gap-4">
                     {formData.existingSignatureUrl && !signatureFile && (
-                      <img src={getBustedUrl(formData.existingSignatureUrl)} alt="Current Signature" className="h-12 object-contain bg-white dark:bg-zinc-200 border rounded p-1" />
+                      <img src={getBustedUrl(formData.existingSignatureUrl)} alt={t("alt.currentSignature")} className="h-12 object-contain bg-white dark:bg-zinc-200 border rounded p-1" />
                     )}
                     <div className="flex-1">
                       <Input type="file" accept="image/png,image/webp" onChange={e => setSignatureFile(e.target.files?.[0] || null)} className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Transparent PNG/WEBP max 2MB.</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{t("signature.hint")}</p>
                     </div>
                   </div>
                 </div>
@@ -538,16 +538,16 @@ export default function SettingsWizard() {
               </div>
               <div className="space-y-2">
                 <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">{t('udyam_reg')}</Label>
-                <Input className="h-10 uppercase dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold tracking-widest" value={formData.udyamNumber} onChange={e => setFormData({...formData, udyamNumber: e.target.value.toUpperCase()})} placeholder="UDYAM-RJ-..." />
+                <Input className="h-10 uppercase dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold tracking-widest" value={formData.udyamNumber} onChange={e => setFormData({...formData, udyamNumber: e.target.value.toUpperCase()})} placeholder={t("placeholders.udyam")} />
               </div>
               <div className="space-y-2">
                 <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">{t('gstin')}</Label>
-                <Input className="h-10 uppercase dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold tracking-widest" value={formData.gstin} onChange={e => setFormData({...formData, gstin: e.target.value.toUpperCase()})} placeholder="Optional" />
+                <Input className="h-10 uppercase dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold tracking-widest" value={formData.gstin} onChange={e => setFormData({...formData, gstin: e.target.value.toUpperCase()})} placeholder={t("placeholders.optional")} />
               </div>
               <div className="space-y-2">
-                <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">Default SAC/HSN Code <span className="text-red-500">*</span></Label>
-                <Input required className="h-10 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold" value={formData.defaultSacCode} onChange={e => setFormData({...formData, defaultSacCode: e.target.value})} placeholder="e.g. 998313" />
-                <p className="text-xs text-zinc-400">Used as fallback if individual invoice code is blank.</p>
+                <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">{t("defaultSacCode.label")} <span className="text-red-500">*</span></Label>
+                <Input required className="h-10 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold" value={formData.defaultSacCode} onChange={e => setFormData({...formData, defaultSacCode: e.target.value})} placeholder={t("defaultSacCode.placeholder")} />
+                <p className="text-xs text-zinc-400">{t("defaultSacCode.hint")}</p>
               </div>
             </CardContent>
 
@@ -564,7 +564,7 @@ export default function SettingsWizard() {
             <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">{t('bank_name')} <span className="text-red-500">*</span></Label>
-                <Input required value={formData.bankName} onChange={e => setFormData({...formData, bankName: e.target.value})} placeholder="e.g., ICICI Bank" className="h-10 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold" />
+                <Input required value={formData.bankName} onChange={e => setFormData({...formData, bankName: e.target.value})} placeholder={t("placeholders.bankName")} className="h-10 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold" />
               </div>
               <div className="space-y-2">
                 <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">{t('account_name')} <span className="text-red-500">*</span></Label>
@@ -594,11 +594,11 @@ export default function SettingsWizard() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="md:col-span-3 space-y-2">
                   <Label className="dark:text-zinc-300">{t('smtp_host')}</Label>
-                  <Input value={formData.smtpHost} onChange={e => setFormData({...formData, smtpHost: e.target.value})} placeholder="e.g., smtp.gmail.com" className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
+                  <Input value={formData.smtpHost} onChange={e => setFormData({...formData, smtpHost: e.target.value})} placeholder={t("placeholders.smtpHost")} className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
                 </div>
                 <div className="space-y-2">
                   <Label className="dark:text-zinc-300">{t('smtp_port')}</Label>
-                  <Input type="number" value={formData.smtpPort} onChange={e => setFormData({...formData, smtpPort: e.target.value})} placeholder="465" className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
+                  <Input type="number" value={formData.smtpPort} onChange={e => setFormData({...formData, smtpPort: e.target.value})} placeholder={t("placeholders.smtpPort")} className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
                 </div>
               </div>
 
@@ -631,7 +631,7 @@ export default function SettingsWizard() {
               
               <div className="space-y-2">
                 <Label className="dark:text-zinc-300">{t('from_email')}</Label>
-                <Input type="email" value={formData.smtpFromEmail} onChange={e => setFormData({...formData, smtpFromEmail: e.target.value})} placeholder="billing@bababuilds.com" className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
+                <Input type="email" value={formData.smtpFromEmail} onChange={e => setFormData({...formData, smtpFromEmail: e.target.value})} placeholder={t("placeholders.fromEmail")} className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
               </div>
             </CardContent>
           </Card>
@@ -656,13 +656,13 @@ export default function SettingsWizard() {
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 relative overflow-hidden">
             <CardHeader className="bg-zinc-50/50 dark:bg-zinc-950/50 border-b dark:border-zinc-800">
               <CardTitle className="text-lg flex items-center gap-2 dark:text-zinc-50">
-                <CreditCard className="w-5 h-5 text-emerald-600" /> Payment Gateway Integration
+                <CreditCard className="w-5 h-5 text-emerald-600" /> {t("payment.title")}
               </CardTitle>
               <CardDescription className="dark:text-zinc-400">
-                Connect a payment gateway to automatically embed a secure payment link in every invoice PDF.
+                {t("payment.description")}
                 {!isIndian && (
                   <span className="ml-1 text-violet-600 dark:text-violet-400 font-medium">
-                    Stripe is recommended for your region.
+                    {t("payment.nonIndianRecommendation")}
                   </span>
                 )}
               </CardDescription>
@@ -674,9 +674,9 @@ export default function SettingsWizard() {
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50">
                   <Lock className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">PRO Feature</p>
+                    <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">{t("payment.proFeature.title")}</p>
                     <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
-                      Upgrade to PRO to connect Razorpay or Stripe and let clients pay directly from the invoice PDF.
+                      {t("payment.proFeature.description")}
                     </p>
                   </div>
                 </div>
@@ -684,9 +684,9 @@ export default function SettingsWizard() {
 
               {/* DEFAULT GATEWAY SELECTOR — segmented control */}
               <div className={`space-y-3 ${planTier === "FREE" ? "opacity-50 pointer-events-none select-none" : ""}`}>
-                <Label className="dark:text-zinc-300 text-sm font-semibold">Default Payment Gateway</Label>
+                <Label className="dark:text-zinc-300 text-sm font-semibold">{t("payment.defaultGateway.label")}</Label>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  This gateway will be used to generate the payment link on every new invoice.
+                  {t("payment.defaultGateway.hint")}
                 </p>
                 <div className="flex rounded-xl border border-zinc-200 dark:border-zinc-700 overflow-hidden w-fit">
                   <button
@@ -701,7 +701,7 @@ export default function SettingsWizard() {
                     } ${(!isIndian) ? "opacity-40 cursor-not-allowed" : ""}`}
                   >
                     🇮🇳 Razorpay
-                    {!isIndian && <span className="text-xs font-normal opacity-70">(IN only)</span>}
+                    {!isIndian && <span className="text-xs font-normal opacity-70">{t("payment.razorpay.inOnly")}</span>}
                   </button>
                   <button
                     type="button"
@@ -714,8 +714,8 @@ export default function SettingsWizard() {
                         : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"
                     }`}
                   >
-                    <Globe className="w-4 h-4" /> Stripe
-                    <span className="text-xs font-normal opacity-70">(Global)</span>
+                    <Globe className="w-4 h-4" /> {t("payment.stripe.name")}
+                    <span className="text-xs font-normal opacity-70">{t("payment.stripe.global")}</span>
                   </button>
                 </div>
               </div>
@@ -730,12 +730,12 @@ export default function SettingsWizard() {
                   <div className="flex items-center gap-2">
                     <span className="text-lg">🇮🇳</span>
                     <div>
-                      <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">Razorpay</h3>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">INR payments only · Indian businesses</p>
+                      <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">{t("payment.razorpay.name")}</h3>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("payment.razorpay.caption")}</p>
                     </div>
                   </div>
                   {activeGatewayTab === "RAZORPAY" && (
-                    <span className="text-xs font-bold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-1 rounded-full">ACTIVE</span>
+                    <span className="text-xs font-bold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-1 rounded-full">{t("payment.active")}</span>
                   )}
                 </div>
 
@@ -744,28 +744,28 @@ export default function SettingsWizard() {
                   <div className="flex items-start gap-2 p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800/40">
                     <AlertTriangle className="w-4 h-4 text-orange-500 mt-0.5 shrink-0" />
                     <p className="text-xs text-orange-700 dark:text-orange-400">
-                      <span className="font-semibold">Not available for your region.</span> Razorpay only supports Indian businesses and INR payments. Use Stripe for global payment collection.
+                      <span className="font-semibold">{t("payment.razorpay.unavailableTitle")}</span> {t("payment.razorpay.unavailableDescription")}
                     </p>
                   </div>
                 )}
 
                 <div className={`grid grid-cols-1 md:grid-cols-2 gap-5 ${!isIndian ? "opacity-40 pointer-events-none select-none" : ""}`}>
                   <div className="space-y-2">
-                    <Label className="dark:text-zinc-300 text-sm">Razorpay Key ID</Label>
+                    <Label className="dark:text-zinc-300 text-sm">{t("payment.razorpay.keyIdLabel")}</Label>
                     <Input
                       id="razorpay-key-id"
                       disabled={planTier === "FREE" || !isIndian}
                       value={formData.razorpayKeyId}
                       onChange={e => setFormData({...formData, razorpayKeyId: e.target.value})}
-                      placeholder="rzp_live_xxxxxxxxxxxx"
+                      placeholder={t("payment.razorpay.keyIdPlaceholder")}
                       className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-mono text-sm"
                     />
-                    <p className="text-xs text-zinc-400 dark:text-zinc-500">Your publishable Razorpay Key ID. Safe to store.</p>
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500">{t("payment.razorpay.keyIdHint")}</p>
                   </div>
                   <div className="space-y-2">
-                    <Label className="dark:text-zinc-300 text-sm">Razorpay Key Secret</Label>
+                    <Label className="dark:text-zinc-300 text-sm">{t("payment.razorpay.keySecretLabel")}</Label>
                     <RazorpaySecretInput />
-                    <p className="text-xs text-zinc-400 dark:text-zinc-500">Encrypted with AES-256-GCM before storage. Never visible after saving.</p>
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500">{t("payment.secretHint")}</p>
                   </div>
                 </div>
               </div>
@@ -780,12 +780,12 @@ export default function SettingsWizard() {
                   <div className="flex items-center gap-2">
                     <Globe className="w-5 h-5 text-violet-600 dark:text-violet-400" />
                     <div>
-                      <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">Stripe</h3>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">135+ currencies · Global businesses</p>
+                      <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">{t("payment.stripe.name")}</h3>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("payment.stripe.caption")}</p>
                     </div>
                   </div>
                   {activeGatewayTab === "STRIPE" && (
-                    <span className="text-xs font-bold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 px-2 py-1 rounded-full">ACTIVE</span>
+                    <span className="text-xs font-bold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 px-2 py-1 rounded-full">{t("payment.active")}</span>
                   )}
                 </div>
 
@@ -794,28 +794,28 @@ export default function SettingsWizard() {
                   <div className="flex items-start gap-2 p-3 rounded-lg bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800/40">
                     <Globe className="w-4 h-4 text-sky-500 mt-0.5 shrink-0" />
                     <p className="text-xs text-sky-700 dark:text-sky-400">
-                      Stripe works globally and supports USD, EUR, GBP and 135+ currencies. Useful if you bill international clients.
+                      {t("payment.stripe.indianInfo")}
                     </p>
                   </div>
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-2">
-                    <Label className="dark:text-zinc-300 text-sm">Publishable Key</Label>
+                    <Label className="dark:text-zinc-300 text-sm">{t("payment.stripe.publishableKeyLabel")}</Label>
                     <Input
                       id="stripe-publishable-key"
                       disabled={planTier === "FREE"}
                       value={formData.stripePublishableKey}
                       onChange={e => setFormData({...formData, stripePublishableKey: e.target.value})}
-                      placeholder="pk_live_xxxxxxxxxxxx"
+                      placeholder={t("payment.stripe.publishableKeyPlaceholder")}
                       className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-mono text-sm"
                     />
-                    <p className="text-xs text-zinc-400 dark:text-zinc-500">Your publishable Stripe key. Safe to store.</p>
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500">{t("payment.stripe.publishableKeyHint")}</p>
                   </div>
                   <div className="space-y-2">
-                    <Label className="dark:text-zinc-300 text-sm">Secret Key</Label>
+                    <Label className="dark:text-zinc-300 text-sm">{t("payment.stripe.secretKeyLabel")}</Label>
                     <StripeSecretInput />
-                    <p className="text-xs text-zinc-400 dark:text-zinc-500">Encrypted with AES-256-GCM before storage. Never visible after saving.</p>
+                    <p className="text-xs text-zinc-400 dark:text-zinc-500">{t("payment.secretHint")}</p>
                   </div>
                 </div>
               </div>
@@ -827,12 +827,12 @@ export default function SettingsWizard() {
           <div className="sticky bottom-6 flex items-center justify-end gap-4 p-4 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl z-30 transition-all duration-300 group hover:border-indigo-500/30">
             {successMsg && (
               <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 animate-in fade-in slide-in-from-right-2">
-                <CheckCircle2 className="w-4 h-4" /> Profile Saved!
+                <CheckCircle2 className="w-4 h-4" /> {t("profile_saved")}
               </span>
             )}
             <Button type="submit" size="lg" className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[200px] font-bold uppercase tracking-widest text-xs h-12 shadow-lg shadow-indigo-500/20 transition-all active:scale-95 border-none" disabled={isSubmitting}>
               {isSubmitting ? (
-                <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Saving...</span>
+                <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> {t("actions.saving")}</span>
               ) : (
                 <><Save className="w-4 h-4 mr-2" /> {t('save_button')}</>
               )}
