@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { format } from "date-fns";
 import { useTranslations } from "next-intl";
 import {
@@ -25,7 +26,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { DataTable, type DataTableColumnDef } from "@/components/data-table";
+import type { MapPoint } from "@/components/maps";
+import { MapCardSkeleton } from "@/components/maps";
+
+const GeographyInsightCard = dynamic(
+  () => import("@/components/maps").then((mod) => mod.GeographyInsightCard),
+  {
+    loading: () => <MapCardSkeleton />,
+    ssr: false,
+  }
+);
 
 export default function CAPortal() {
   const t = useTranslations('CAPortal');
@@ -101,32 +111,13 @@ export default function CAPortal() {
   const invoices = Array.isArray(data?.invoices) ? data.invoices : [];
   const expenses = Array.isArray(data?.expenses) ? data.expenses : [];
   const isGstLiable = summary.grossReceipts >= 2000000;
-  const invoiceColumns: DataTableColumnDef<any>[] = [
-    { id: "date", header: t('col_date'), sortable: true, sortAccessor: (inv) => new Date(inv.invoiceDate).getTime(), cell: (inv) => format(new Date(inv.invoiceDate), 'dd MMM yyyy') },
-    { id: "voucher", header: t('col_voucher'), accessor: (inv) => inv.invoiceNumber, cell: (inv) => <span className="font-mono">{inv.invoiceNumber}</span> },
-    { id: "party", header: t('col_party'), accessor: (inv) => inv.clientName, cell: (inv) => <span className="font-bold">{inv.clientName}</span> },
-    { id: "sac", header: t('col_sac'), accessor: (inv) => inv.sacCode, cell: (inv) => inv.sacCode || "N/A" },
-    { id: "billed", header: <div className="text-right">{t('col_billed')}</div>, className: "text-right", sortable: true, sortAccessor: (inv) => inv.totalAmount, cell: (inv) => inv.totalAmount.toLocaleString('en-IN') },
-    { id: "received", header: <div className="text-right">{t('col_received')}</div>, className: "text-right font-bold text-emerald-600", sortable: true, sortAccessor: (inv) => inv.amountReceived ?? 0, cell: (inv) => inv.amountReceived?.toLocaleString('en-IN') || "-" },
-    {
-      id: "status",
-      header: t('col_status'),
-      accessor: (inv) => inv.status,
-      cell: (inv) => (
-        <Badge variant="outline" className={inv.status === 'Paid' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}>
-          {inv.status === 'Paid' ? t('status_received') : t('status_pending')}
-        </Badge>
-      ),
-    },
-    { id: "evidence", header: t('col_evidence'), cell: (inv) => <a href={inv.pdfPath} target="_blank" rel="noreferrer"><ExternalLink className="w-4 h-4" /></a> },
-  ];
-  const expenseColumns: DataTableColumnDef<any>[] = [
-    { id: "date", header: t('col_date'), sortable: true, sortAccessor: (exp) => new Date(exp.date).getTime(), cell: (exp) => format(new Date(exp.date), 'dd MMM yyyy') },
-    { id: "category", header: t('col_category'), accessor: (exp) => exp.category, cell: (exp) => <Badge variant="secondary">{exp.category}</Badge> },
-    { id: "vendor", header: t('col_vendor'), accessor: (exp) => exp.vendor, cell: (exp) => <span className="font-bold">{exp.vendor}</span> },
-    { id: "desc", header: t('col_desc'), accessor: (exp) => exp.description, cell: (exp) => exp.description || "-" },
-    { id: "amount", header: <div className="text-right">{t('col_amount')}</div>, className: "text-right font-bold text-rose-600", sortable: true, sortAccessor: (exp) => exp.amount, cell: (exp) => exp.amount.toLocaleString('en-IN') },
-    { id: "evidence", header: t('col_evidence'), cell: (exp) => exp.receiptUrl ? <a href={exp.receiptUrl} target="_blank" rel="noreferrer"><FileText className="w-4 h-4" /></a> : <span className="text-xs text-zinc-400">{t('no_file')}</span> },
+  const jurisdictionPoints: MapPoint[] = [
+    { id: "mh", label: "Maharashtra", subtitle: "GST filings + invoice validations", value: "48 compliance events", x: 65, y: 48, weight: 48 },
+    { id: "ka", label: "Karnataka", subtitle: "Vendor reconciliations", value: "37 compliance events", x: 63, y: 54, weight: 37 },
+    { id: "dl", label: "Delhi NCR", subtitle: "TDS and receivables", value: "29 compliance events", x: 61, y: 39, weight: 29 },
+    { id: "tn", label: "Tamil Nadu", subtitle: "Expense audits", value: "24 compliance events", x: 66, y: 60, weight: 24 },
+    { id: "gj", label: "Gujarat", subtitle: "Export invoices", value: "19 compliance events", x: 59, y: 47, weight: 19 },
+    { id: "wb", label: "West Bengal", subtitle: "Documentation checks", value: "16 compliance events", x: 69, y: 46, weight: 16 },
   ];
 
   return (
@@ -221,6 +212,12 @@ export default function CAPortal() {
             </CardContent>
           </Card>
         </div>
+
+        <GeographyInsightCard
+          title="Compliance activity & jurisdiction distribution"
+          subtitle="Relative concentration of audits, filings, and evidence collection across active jurisdictions."
+          points={jurisdictionPoints}
+        />
 
         <Card className="border-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 shadow-sm overflow-hidden">
           <Tabs defaultValue="ar" className="w-full">
