@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { handleAdminApiError, verifySuperAdmin } from "@/api/admin/authz";
+import { handleAdminApiError, verifySuperAdmin } from "../authz";
 import { prisma } from "@/lib/prisma";
 import os from 'os';
 
