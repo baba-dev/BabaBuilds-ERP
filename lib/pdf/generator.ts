@@ -77,6 +77,49 @@ export async function generateInvoicePDF({
     page.drawRectangle({ x, y: height - y - h, width: w, height: h, color, borderColor: borderColor || undefined, borderWidth: borderColor ? 1 : 0 });
   };
 
+  const wrapTextByWidth = (text: string, maxWidth: number, fontSize: number): string[] => {
+    if (!text) return [];
+
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    const pushCurrentLine = () => {
+      if (currentLine) lines.push(currentLine);
+      currentLine = '';
+    };
+
+    for (const word of words) {
+      const candidate = currentLine ? `${currentLine} ${word}` : word;
+      if (font.widthOfTextAtSize(candidate, fontSize) <= maxWidth) {
+        currentLine = candidate;
+        continue;
+      }
+
+      if (currentLine) pushCurrentLine();
+
+      if (font.widthOfTextAtSize(word, fontSize) <= maxWidth) {
+        currentLine = word;
+        continue;
+      }
+
+      let segment = '';
+      for (const char of word) {
+        const testSegment = `${segment}${char}`;
+        if (font.widthOfTextAtSize(testSegment, fontSize) <= maxWidth) {
+          segment = testSegment;
+        } else {
+          if (segment) lines.push(segment);
+          segment = char;
+        }
+      }
+      currentLine = segment;
+    }
+
+    pushCurrentLine();
+    return lines;
+  };
+
   const addLinkAnnotation = (
     doc: PDFDocument,
     p: PDFPage,
@@ -373,23 +416,39 @@ export async function generateInvoicePDF({
     const bankY = currentY + 130;
 
     if (paymentLink) {
-      const linkLabel = "Pay Online via UPI / Card / Net Banking / Apple Pay: ";
-      const linkLabelWidth = font.widthOfTextAtSize(linkLabel, 9);
-      const linkUrlWidth = font.widthOfTextAtSize(paymentLink, 9);
-      
-      const linkY = bankY - 20;
-      drawText(linkLabel, 40, linkY, 9, true, 'left', black);
-      drawText(paymentLink, 40 + linkLabelWidth, linkY, 9, false, 'left', cfLinkBlue);
+      const linkLabel = "Pay Online via UPI / Card / Net Banking / Apple Pay:";
+      const leftStartX = 40;
+      const maxUrlWidth = width - 40 - 220;
+      const urlFontSize = 9;
+      const lineHeight = 12;
+      const wrappedUrlLines = wrapTextByWidth(paymentLink, maxUrlWidth, urlFontSize);
+      const urlBottomY = bankY - 10;
 
-      addLinkAnnotation(
-        pdfDoc,
-        page,
-        40 + linkLabelWidth,
-        height - linkY - 1,
-        linkUrlWidth,
-        10,
-        paymentLink
-      );
+      const urlLineYs: number[] = [];
+      wrappedUrlLines.forEach((line, index) => {
+        const lineY = urlBottomY - ((wrappedUrlLines.length - 1 - index) * lineHeight);
+        urlLineYs.push(lineY);
+        drawText(line, leftStartX, lineY, urlFontSize, false, 'left', cfLinkBlue);
+      });
+
+      if (wrappedUrlLines.length > 0) {
+        const topUrlLineY = Math.min(...urlLineYs);
+        const labelY = topUrlLineY - lineHeight;
+        drawText(linkLabel, leftStartX, labelY, 9, true, 'left', black);
+
+        const maxRenderedLineWidth = Math.max(...wrappedUrlLines.map((line) => font.widthOfTextAtSize(line, urlFontSize)));
+        const urlBlockHeight = lineHeight * wrappedUrlLines.length;
+
+        addLinkAnnotation(
+          pdfDoc,
+          page,
+          leftStartX,
+          height - (topUrlLineY + urlBlockHeight),
+          maxRenderedLineWidth,
+          urlBlockHeight,
+          paymentLink
+        );
+      }
     }
 
     drawText('Bank Details for Remittance', 40, bankY,      10, true,  'left', black);
