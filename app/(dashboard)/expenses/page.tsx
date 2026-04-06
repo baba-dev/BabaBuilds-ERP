@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { UploadCloud, Receipt, TrendingDown, Wallet, ShieldCheck, FileText, ArrowRight, Loader2, Sparkles, Trash2, Edit, ChevronLeft, ChevronRight } from "lucide-react";
+import { UploadCloud, TrendingDown, Wallet, ShieldCheck, FileText, ArrowRight, Sparkles, Trash2, Edit } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,9 +17,7 @@ import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
-import { PageLoadingState } from "@/components/states/PageLoadingState";
-import { PageErrorState } from "@/components/states/PageErrorState";
-import { PageEmptyState } from "@/components/states/PageEmptyState";
+import { ColumnVisibilityToggle, DataTable, DataTablePagination, DataTableToolbar, RowActionsMenu, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
 
 export default function ExpenseTracker() {
   const t = useTranslations('Expenses');
@@ -51,6 +48,8 @@ export default function ExpenseTracker() {
   const [expenseToEdit, setExpenseToEdit] = useState<any | null>(null);
   const [editForm, setEditForm] = useState({ date: "", category: "", vendor: "", amount: "", description: "" });
   const [isEditing, setIsEditing] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(["date", "vendor", "category", "amount", "actions"]);
+  const tableState = useUrlTableState("expenses");
 
   useEffect(() => {
     fetchData(currentPage);
@@ -90,6 +89,72 @@ export default function ExpenseTracker() {
   const actualProfit = totalRevenue - totalExpenses;
   const taxFreeAlpha = Math.max(0, presumptiveExpenses - totalExpenses);
   const burnPercentage = totalRevenue > 0 ? (totalExpenses / presumptiveExpenses) * 100 : 0;
+  const filteredExpenses = expenses.filter((exp) =>
+    `${exp.vendor} ${exp.category} ${exp.description ?? ""}`.toLowerCase().includes(tableState.search.toLowerCase()),
+  );
+
+  const expenseColumns: DataTableColumnDef<any>[] = [
+    {
+      id: "date",
+      header: t("col_date"),
+      sortable: true,
+      sortAccessor: (row) => new Date(row.date).getTime(),
+      cell: (row) => <span className="text-sm dark:text-zinc-300">{format(new Date(row.date), "dd MMM yyyy")}</span>,
+      hideable: true,
+    },
+    {
+      id: "vendor",
+      header: t("col_vendor"),
+      sortable: true,
+      accessor: (row) => row.vendor,
+      cell: (row) => <span className="font-medium text-zinc-900 dark:text-zinc-100">{row.vendor}</span>,
+      hideable: true,
+    },
+    {
+      id: "category",
+      header: t("col_category"),
+      accessor: (row) => row.category,
+      cell: (row) => (
+        <Badge variant="secondary" className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-normal hover:bg-zinc-100 dark:hover:bg-zinc-800 border-none">
+          {row.category}
+        </Badge>
+      ),
+      hideable: true,
+    },
+    {
+      id: "amount",
+      header: t("col_amount", { currency }),
+      headerClassName: "text-right",
+      className: "text-right font-medium text-rose-600 dark:text-rose-400",
+      sortable: true,
+      sortAccessor: (row) => row.amount,
+      cell: (row) => fCurrency(row.amount),
+      hideable: true,
+    },
+    {
+      id: "actions",
+      header: <div className="text-right">{t("col_actions")}</div>,
+      className: "text-right",
+      cell: (row) => (
+        <div className="flex justify-end gap-1">
+          {row.receiptUrl && (
+            <Button variant="ghost" size="sm" className="w-8 px-0 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10" asChild title="View Receipt">
+              <a href={row.receiptUrl} target="_blank" rel="noopener noreferrer">
+                <FileText className="w-4 h-4" />
+              </a>
+            </Button>
+          )}
+          <RowActionsMenu
+            row={row}
+            actions={[
+              { label: "Edit", onClick: openEditModal, icon: <Edit className="mr-2 h-4 w-4" /> },
+              { label: "Delete", onClick: (r) => setExpenseToDelete(r.id), variant: "danger", icon: <Trash2 className="mr-2 h-4 w-4" /> },
+            ]}
+          />
+        </div>
+      ),
+    },
+  ];
 
   const handleScanReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -344,89 +409,48 @@ export default function ExpenseTracker() {
                 <CardDescription className="dark:text-zinc-400">{t('ledger_desc')}</CardDescription>
               </CardHeader>
               <CardContent className="p-0 sm:p-6 sm:pt-0 flex-1">
-                {isLoading ? (
-                  <PageLoadingState title={t('loading')} description="Refreshing your expense ledger…" className="min-h-[320px]" />
-                ) : fetchError && expenses.length === 0 ? (
-                  <PageErrorState
-                    title="Expense feed unavailable"
-                    description={fetchError}
-                    onRetry={() => fetchData(currentPage)}
-                    className="min-h-[320px]"
-                  />
-                ) : (
-                  <Table>
-                    <TableHeader className="bg-zinc-50 dark:bg-zinc-900/80">
-                      <TableRow className="dark:border-zinc-800 hover:bg-transparent">
-                        <TableHead className="dark:text-zinc-400">{t('col_date')}</TableHead>
-                        <TableHead className="dark:text-zinc-400">{t('col_vendor')}</TableHead>
-                        <TableHead className="dark:text-zinc-400">{t('col_category')}</TableHead>
-                        <TableHead className="text-right dark:text-zinc-400">{t('col_amount', { currency })}</TableHead>
-                        <TableHead className="text-right dark:text-zinc-400">{t('col_actions')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {expenses.map((exp) => (
-                        <TableRow key={exp.id} className="dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                          <TableCell className="text-sm dark:text-zinc-300">{format(new Date(exp.date), 'dd MMM yyyy')}</TableCell>
-                          <TableCell className="font-medium text-zinc-900 dark:text-zinc-100">{exp.vendor}</TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-normal hover:bg-zinc-100 dark:hover:bg-zinc-800 border-none">
-                              {exp.category}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-medium text-rose-600 dark:text-rose-400">
-                            {fCurrency(exp.amount)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                              {exp.receiptUrl && (
-                                <Button variant="ghost" size="sm" className="w-8 px-0 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10" asChild title="View Receipt">
-                                  <a href={exp.receiptUrl} target="_blank" rel="noopener noreferrer">
-                                    <FileText className="w-4 h-4" />
-                                  </a>
-                                </Button>
-                              )}
-                              <Button variant="ghost" size="sm" onClick={() => openEditModal(exp)} className="w-8 px-0 text-blue-600 hover:bg-blue-50 dark:text-blue-500 dark:hover:bg-blue-500/10" title="Edit Expense">
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={() => setExpenseToDelete(exp.id)} className="w-8 px-0 text-rose-600 hover:bg-rose-50 dark:text-rose-500 dark:hover:bg-rose-500/10" title="Delete Expense">
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {expenses.length === 0 && (
-                        <TableRow className="hover:bg-transparent">
-                          <TableCell colSpan={5} className="border-b-0 p-0">
-                            <PageEmptyState
-                              title={t('no_expenses')}
-                              description="Capture your first expense to start tracking burn and tax efficiency."
-                              className="min-h-[220px]"
-                            />
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
+                <DataTableToolbar
+                  searchValue={tableState.search}
+                  onSearchChange={tableState.setSearch}
+                  searchPlaceholder={t("vendor_ph")}
+                  rightSlot={
+                    <ColumnVisibilityToggle
+                      options={expenseColumns
+                        .filter((col) => col.hideable)
+                        .map((col) => ({
+                          id: col.id,
+                          label: typeof col.header === "string" ? col.header : col.id,
+                          visible: visibleColumns.includes(col.id),
+                          onToggle: () =>
+                            setVisibleColumns((prev) =>
+                              prev.includes(col.id) ? prev.filter((existing) => existing !== col.id) : [...prev, col.id],
+                            ),
+                        }))}
+                    />
+                  }
+                />
+                <DataTable
+                  columns={expenseColumns}
+                  data={filteredExpenses}
+                  rowId={(row) => row.id}
+                  loading={isLoading}
+                  error={fetchError}
+                  onRetry={() => fetchData(currentPage)}
+                  visibleColumnIds={visibleColumns}
+                  emptyTitle={t("no_expenses")}
+                  emptyDescription="Capture your first expense to start tracking burn and tax efficiency."
+                />
               </CardContent>
-               {/* --- NEW: PAGINATION CONTROLS --- */}
-              {totalPages > 1 && (
-                <CardFooter className="border-t dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50 p-3 flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                    {t('page_of', { current: currentPage, total: totalPages })}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage <= 1 || isLoading}>
-                      <ChevronLeft className="w-4 h-4 mr-1" /> {t('previous')}
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage >= totalPages || isLoading}>
-                      {t('next')} <ChevronRight className="w-4 h-4 ml-1" />
-                    </Button>
-                  </div>
-                </CardFooter>
-              )}
+              <CardFooter className="p-0">
+                <DataTablePagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPrev={() => setCurrentPage((p) => p - 1)}
+                  onNext={() => setCurrentPage((p) => p + 1)}
+                  disabled={isLoading}
+                  label={t("page_of", { current: currentPage, total: totalPages })}
+                />
+              </CardFooter>
             </Card>
           </div>
 

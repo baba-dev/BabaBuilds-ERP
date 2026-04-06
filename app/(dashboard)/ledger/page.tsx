@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { FileText, CheckCircle, Clock, ReceiptIndianRupee, Download, AlertTriangle, Receipt, PlusCircle, Send, Banknote, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { FileText, Clock, Download, AlertTriangle, PlusCircle, Send, Banknote, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +20,7 @@ import { getCurrencySymbol } from "@/lib/currency";
 import { useTranslations } from "next-intl";
 import { getBustedUrl } from "@/lib/cache-buster";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
+import { ColumnVisibilityToggle, DataTable, DataTablePagination, DataTableToolbar, RowActionsMenu, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
 
 export default function AuditDashboard() {
   const t = useTranslations('Ledger');
@@ -61,6 +61,8 @@ export default function AuditDashboard() {
 
   // Delete Invoice State
   const[invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(["invoice", "date", "billed", "status", "received", "actions"]);
+  const tableState = useUrlTableState("ledger");
 
   useEffect(() => {
     fetchInvoices(currentPage);
@@ -195,6 +197,62 @@ export default function AuditDashboard() {
 
   // Safe Format Date helper
   const safeDateFormat = (dateFormat ?? "dd/MM/yyyy").replace(/D/g, 'd').replace(/Y/g, 'y');
+  const filteredInvoices = invoices.filter((inv) =>
+    `${inv.invoiceNumber} ${inv.clientName ?? ""} ${inv.status}`.toLowerCase().includes(tableState.search.toLowerCase()),
+  );
+  const invoiceColumns: DataTableColumnDef<any>[] = [
+    { id: "invoice", header: t("col_invoice_no"), accessor: (row) => row.invoiceNumber, sortable: true, cell: (row) => <span className="font-bold dark:text-zinc-200 text-sm">{row.invoiceNumber}</span>, hideable: true },
+    { id: "date", header: t("col_date"), sortable: true, sortAccessor: (row) => new Date(row.invoiceDate).getTime(), cell: (row) => <span className="dark:text-zinc-400 text-xs font-medium">{format(new Date(row.invoiceDate), safeDateFormat)}</span>, hideable: true },
+    { id: "billed", header: t("col_billed"), sortable: true, sortAccessor: (row) => row.totalAmount, cell: (row) => <span className="dark:text-zinc-300 font-bold text-sm">{fCurrency(row.totalAmount)}</span>, hideable: true },
+    {
+      id: "status",
+      header: t("col_status"),
+      accessor: (row) => row.status,
+      cell: (row) => row.status === "Paid" || row.status === "PAID" ? (
+        <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-200 uppercase text-xs font-bold tracking-widest">{t("status_paid")}</Badge>
+      ) : row.status === "Partially Paid" || row.status === "PARTIALLY_PAID" ? (
+        <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800/50 hover:bg-blue-200 uppercase text-xs font-bold tracking-widest">{t("status_partial")}</Badge>
+      ) : (
+        <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800/50 hover:bg-amber-200 uppercase text-xs font-bold tracking-widest">{t("status_pending")}</Badge>
+      ),
+      hideable: true,
+    },
+    {
+      id: "received",
+      header: t("col_received", { currency }),
+      sortable: true,
+      sortAccessor: (row) => row.amountReceived ?? 0,
+      cell: (row) => (
+        <div className="dark:text-zinc-300 text-sm font-bold">
+          {row.amountReceived ? fCurrency(row.amountReceived) : "-"}
+        </div>
+      ),
+      hideable: true,
+    },
+    {
+      id: "actions",
+      header: <div className="text-right">{t("col_actions")}</div>,
+      className: "text-right",
+      cell: (row) => (
+        <div className="flex items-center justify-end gap-2">
+          {row.status !== "Paid" && row.status !== "PAID" && (
+            <Button variant="outline" size="sm" onClick={() => openPayModal(row)} className="bg-white dark:bg-zinc-950 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-700 dark:hover:text-emerald-400 dark:border-zinc-800 transition-colors text-xs font-bold uppercase tracking-wider">
+              <Banknote className="w-3.5 h-3.5 mr-1.5" /> {t("log_pay")}
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => handleResendEmail(row)} disabled={resendingId === row.id} className="bg-white dark:bg-zinc-950 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:hover:text-indigo-400 dark:border-zinc-800 transition-colors w-9 px-0 flex justify-center" title="Resend Invoice to Client via Email">
+            <Send className={`w-3.5 h-3.5 ${resendingId === row.id ? "animate-pulse text-indigo-400" : ""}`} />
+          </Button>
+          <Button variant="secondary" size="sm" asChild title="Download PDF" className="dark:bg-zinc-800 dark:hover:bg-zinc-700 w-9 px-0 flex justify-center">
+            <a href={getBustedUrl(row.pdfPath, row.updatedAt)} target="_blank" rel="noopener noreferrer">
+              <Download className="h-3.5 w-3.5 dark:text-zinc-200" />
+            </a>
+          </Button>
+          <RowActionsMenu row={row} actions={[{ label: "Delete", onClick: (r) => setInvoiceToDelete(r.id), variant: "danger", icon: <Trash2 className="mr-2 h-4 w-4" /> }]} />
+        </div>
+      ),
+    },
+  ];
 
   return (
     <DashboardPageShell
@@ -257,124 +315,51 @@ export default function AuditDashboard() {
             <CardDescription className="text-xs dark:text-zinc-400 font-medium">{t('ledger_desc')}</CardDescription>
           </CardHeader>
           <CardContent className="p-0 sm:p-6 sm:pt-0">
-            {isLoading ? (
-              <div className="text-center py-10 text-zinc-500 dark:text-zinc-400 animate-pulse text-xs font-bold uppercase tracking-widest">{t('loading')}</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-zinc-50 dark:bg-zinc-900/80">
-                    <TableRow className="dark:border-zinc-800 hover:bg-transparent">
-                      <TableHead className="dark:text-zinc-400 text-xs font-bold uppercase tracking-wider">{t('col_invoice_no')}</TableHead>
-                      <TableHead className="dark:text-zinc-400 text-xs font-bold uppercase tracking-wider">{t('col_date')}</TableHead>
-                      <TableHead className="dark:text-zinc-400 text-xs font-bold uppercase tracking-wider">{t('col_billed')}</TableHead>
-                      <TableHead className="dark:text-zinc-400 text-xs font-bold uppercase tracking-wider">{t('col_status')}</TableHead>
-                      <TableHead className="dark:text-zinc-400 text-xs font-bold uppercase tracking-wider">{t('col_received', { currency })}</TableHead>
-                      <TableHead className="text-right dark:text-zinc-400 text-xs font-bold uppercase tracking-wider">{t('col_actions')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invoices.map((inv) => (
-                      <TableRow key={inv.id} className="dark:border-zinc-800 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
-                        <TableCell className="font-bold dark:text-zinc-200 text-sm">{inv.invoiceNumber}</TableCell>
-                        <TableCell className="dark:text-zinc-400 text-xs font-medium">{format(new Date(inv.invoiceDate), safeDateFormat)}</TableCell>
-                        <TableCell className="dark:text-zinc-300 font-bold text-sm">{fCurrency(inv.totalAmount)}</TableCell>
-                        <TableCell>
-                            {inv.status === 'Paid' || inv.status === 'PAID' ? (
-                              <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-200 uppercase text-xs font-bold tracking-widest">{t('status_paid')}</Badge>
-                            ) : inv.status === 'Partially Paid' || inv.status === 'PARTIALLY_PAID' ? (
-                              <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800/50 hover:bg-blue-200 uppercase text-xs font-bold tracking-widest">{t('status_partial')}</Badge>
-                            ) : (
-                              <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200 dark:border-amber-800/50 hover:bg-amber-200 uppercase text-xs font-bold tracking-widest">{t('status_pending')}</Badge>
-                            )}
-                          </TableCell>
-                        <TableCell className="dark:text-zinc-300 text-sm font-bold">
-                          {inv.amountReceived ? fCurrency(inv.amountReceived) : '-'}
-                          {inv.status === 'Paid' && inv.amountReceived !== inv.totalAmount && (
-                            <span className="text-xs text-zinc-400 dark:text-zinc-500 block mt-0.5 font-mono uppercase tracking-tighter">{t('variance', { amount: fCurrency(inv.amountReceived - inv.totalAmount) })}</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {inv.status !== 'Paid' && inv.status !== 'PAID' && (
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => openPayModal(inv)}
-                                className="bg-white dark:bg-zinc-950 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-700 dark:hover:text-emerald-400 dark:border-zinc-800 transition-colors text-xs font-bold uppercase tracking-wider"
-                              >
-                                <Banknote className="w-3.5 h-3.5 mr-1.5" /> {t('log_pay')}
-                              </Button>
-                            )}
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => handleResendEmail(inv)}
-                              disabled={resendingId === inv.id}
-                              className="bg-white dark:bg-zinc-950 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:hover:text-indigo-400 dark:border-zinc-800 transition-colors w-9 px-0 flex justify-center"
-                              title="Resend Invoice to Client via Email"
-                            >
-                              <Send className={`w-3.5 h-3.5 ${resendingId === inv.id ? 'animate-pulse text-indigo-400' : ''}`} />
-                            </Button>
-                            <Button variant="secondary" size="sm" asChild title="Download PDF" className="dark:bg-zinc-800 dark:hover:bg-zinc-700 w-9 px-0 flex justify-center">
-                              <a href={getBustedUrl(inv.pdfPath, inv.updatedAt)} target="_blank" rel="noopener noreferrer">
-                                <Download className="h-3.5 w-3.5 dark:text-zinc-200" />
-                              </a>
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => setInvoiceToDelete(inv.id)}
-                              className="text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-500 dark:hover:bg-rose-900/20 w-9 px-0 flex justify-center"
-                              title="Void / Delete Invoice"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {invoices.length === 0 && !isLoading && (
-                      <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={6} className="h-72 text-center align-middle border-none">
-                          <div className="flex flex-col items-center justify-center space-y-3">
-                            <div className="bg-zinc-100 dark:bg-zinc-900 p-4 rounded-full text-zinc-400 dark:text-zinc-700 mb-2 border border-zinc-200 dark:border-zinc-800">
-                              <Receipt className="w-8 h-8" />
-                            </div>
-                            <p className="text-zinc-900 dark:text-zinc-200 text-sm font-bold uppercase tracking-widest">{t('no_entries')}</p>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto mb-4 font-medium">
-                              {t('no_entries_desc')}
-                            </p>
-                            <Button asChild className="mt-2 bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-600 dark:hover:bg-emerald-700 border-none font-bold text-xs uppercase tracking-wider">
-                              <Link href="/invoice">
-                                <PlusCircle className="w-3.5 h-3.5 mr-2" />
-                                {t('generate_first')}
-                              </Link>
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+            <DataTableToolbar
+              searchValue={tableState.search}
+              onSearchChange={tableState.setSearch}
+              searchPlaceholder={t("col_invoice_no")}
+              rightSlot={
+                <ColumnVisibilityToggle
+                  options={invoiceColumns.filter((col) => col.hideable).map((col) => ({
+                    id: col.id,
+                    label: typeof col.header === "string" ? col.header : col.id,
+                    visible: visibleColumns.includes(col.id),
+                    onToggle: () => setVisibleColumns((prev) => prev.includes(col.id) ? prev.filter((id) => id !== col.id) : [...prev, col.id]),
+                  }))}
+                />
+              }
+            />
+            <DataTable
+              columns={invoiceColumns}
+              data={filteredInvoices}
+              rowId={(row) => row.id}
+              loading={isLoading}
+              emptyTitle={t("no_entries")}
+              emptyDescription={t("no_entries_desc")}
+              visibleColumnIds={visibleColumns}
+            />
+            {filteredInvoices.length === 0 && !isLoading && (
+              <div className="pb-4 text-center">
+                <Button asChild className="mt-2 bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-600 dark:hover:bg-emerald-700 border-none font-bold text-xs uppercase tracking-wider">
+                  <Link href="/invoice">
+                    <PlusCircle className="w-3.5 h-3.5 mr-2" />
+                    {t("generate_first")}
+                  </Link>
+                </Button>
               </div>
             )}
           </CardContent>
-           {/* --- NEW: PAGINATION CONTROLS --- */}
-           {totalPages > 1 && (
-            <CardFooter className="border-t dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50 p-3 flex items-center justify-between">
-              <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                {t('page_of', { current: currentPage, total: totalPages })}
-              </span>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage <= 1 || isLoading}>
-                  <ChevronLeft className="w-4 h-4 mr-1" /> {t('previous')}
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage >= totalPages || isLoading}>
-                  {t('next')} <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
-            </CardFooter>
-          )}
+          <CardFooter className="p-0">
+            <DataTablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPrev={() => setCurrentPage((p) => p - 1)}
+              onNext={() => setCurrentPage((p) => p + 1)}
+              disabled={isLoading}
+              label={t("page_of", { current: currentPage, total: totalPages })}
+            />
+          </CardFooter>
         </Card>
 
         {/* Payment Logging Modal */}
