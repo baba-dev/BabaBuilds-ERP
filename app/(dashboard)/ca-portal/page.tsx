@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 import type { MapPoint } from "@/components/maps";
 import { MapCardSkeleton } from "@/components/maps";
+import type { CAExpenseRow, CAInvoiceRow, CAPortalPayload } from "@/lib/ca-portal/types";
 
 const GeographyInsightCard = dynamic(
   () => import("@/components/maps").then((mod) => mod.GeographyInsightCard),
@@ -43,7 +44,7 @@ export default function CAPortal() {
   
   // --- STATE ---
   const [fy, setFy] = useState("25-26"); 
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<CAPortalPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isExportingCSV, setIsExportingCSV] = useState(false);
   const [isExportingZIP, setIsExportingZIP] = useState(false);
