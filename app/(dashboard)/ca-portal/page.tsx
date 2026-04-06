@@ -29,6 +29,114 @@ import { toast } from "sonner";
 import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 import type { MapPoint } from "@/components/maps";
 import { MapCardSkeleton } from "@/components/maps";
+import type { CAExpenseRow, CAInvoiceRow, CAPortalPayload } from "@/lib/ca-portal/types";
+
+
+interface CAInvoiceRow {
+  id: string;
+  invoiceDate: string | Date;
+  invoiceNumber: string;
+  clientName: string;
+  sacCode: string;
+  totalAmount: number;
+  amountReceived: number | null;
+  status: string;
+  pdfPath: string | null;
+}
+
+interface CAExpenseRow {
+  id: string;
+  date: string | Date;
+  category: string;
+  vendor: string;
+  description: string | null;
+  amount: number;
+  receiptUrl: string | null;
+}
+
+interface CAPortalSummary {
+  grossReceipts: number;
+  presumptiveIncome: number;
+  deductions80C: number;
+  deductions80D: number;
+  totalExpenses: number;
+}
+
+interface CAPortalResponse {
+  summary: CAPortalSummary;
+  invoices: CAInvoiceRow[];
+  expenses: CAExpenseRow[];
+}
+
+const defaultSummary: CAPortalSummary = {
+  grossReceipts: 0,
+  presumptiveIncome: 0,
+  deductions80C: 0,
+  deductions80D: 0,
+  totalExpenses: 0,
+};
+
+const isFiniteNumber = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value);
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const isCAInvoiceRow = (value: unknown): value is CAInvoiceRow => {
+  if (!isRecord(value)) return false;
+
+  return (
+    typeof value.id === "string" &&
+    (typeof value.invoiceDate === "string" || value.invoiceDate instanceof Date) &&
+    typeof value.invoiceNumber === "string" &&
+    typeof value.clientName === "string" &&
+    typeof value.sacCode === "string" &&
+    isFiniteNumber(value.totalAmount) &&
+    (value.amountReceived === null || isFiniteNumber(value.amountReceived)) &&
+    typeof value.status === "string" &&
+    (value.pdfPath === null || typeof value.pdfPath === "string")
+  );
+};
+
+const isCAExpenseRow = (value: unknown): value is CAExpenseRow => {
+  if (!isRecord(value)) return false;
+
+  return (
+    typeof value.id === "string" &&
+    (typeof value.date === "string" || value.date instanceof Date) &&
+    typeof value.category === "string" &&
+    typeof value.vendor === "string" &&
+    (value.description === null || typeof value.description === "string") &&
+    isFiniteNumber(value.amount) &&
+    (value.receiptUrl === null || typeof value.receiptUrl === "string")
+  );
+};
+
+const isCAPortalSummary = (value: unknown): value is CAPortalSummary => {
+  if (!isRecord(value)) return false;
+
+  return (
+    isFiniteNumber(value.grossReceipts) &&
+    isFiniteNumber(value.presumptiveIncome) &&
+    isFiniteNumber(value.deductions80C) &&
+    isFiniteNumber(value.deductions80D) &&
+    isFiniteNumber(value.totalExpenses)
+  );
+};
+
+const parseCAPortalResponse = (value: unknown): CAPortalResponse | null => {
+  if (!isRecord(value) || "error" in value) return null;
+
+  const summary = isCAPortalSummary(value.summary) ? value.summary : defaultSummary;
+  const invoices = Array.isArray(value.invoices)
+    ? value.invoices.filter(isCAInvoiceRow)
+    : [];
+  const expenses = Array.isArray(value.expenses)
+    ? value.expenses.filter(isCAExpenseRow)
+    : [];
+
+  return { summary, invoices, expenses };
+};
 
 const GeographyInsightCard = dynamic(
   () => import("@/components/maps").then((mod) => mod.GeographyInsightCard),
@@ -37,6 +145,30 @@ const GeographyInsightCard = dynamic(
     ssr: false,
   }
 );
+
+type CAInvoiceRow = {
+  id: string;
+  invoiceDate: string | Date;
+  invoiceNumber: string;
+  clientName: string;
+  sacCode: string;
+  totalAmount: number;
+  amountReceived: number | null;
+  status: string;
+  pdfPath?: string | null;
+};
+
+type CAExpenseRow = {
+  id: string;
+  date: string | Date;
+  category: string;
+  vendor: string;
+  description?: string | null;
+  amount: number;
+  receiptUrl?: string | null;
+};
+
+const formatINRCurrency = (amount: number) => `₹${amount.toLocaleString("en-IN")}`;
 
 export default function CAPortal() {
   const t = useTranslations('CAPortal');
@@ -173,6 +305,146 @@ export default function CAPortal() {
     { id: "tn", label: "Tamil Nadu", subtitle: "Expense audits", value: "24 compliance events", x: 66, y: 60, weight: 24 },
     { id: "gj", label: "Gujarat", subtitle: "Export invoices", value: "19 compliance events", x: 59, y: 47, weight: 19 },
     { id: "wb", label: "West Bengal", subtitle: "Documentation checks", value: "16 compliance events", x: 69, y: 46, weight: 16 },
+  ];
+
+  const invoiceColumns: DataTableColumnDef<CAInvoiceRow>[] = [
+    {
+      id: "invoiceDate",
+      header: "Date",
+      accessor: (row) => row.invoiceDate,
+      sortable: true,
+      sortAccessor: (row) => new Date(row.invoiceDate).getTime(),
+      cell: (row) => format(new Date(row.invoiceDate), "dd MMM yyyy"),
+    },
+    {
+      id: "invoiceNumber",
+      header: "Invoice No.",
+      accessor: (row) => row.invoiceNumber,
+      sortable: true,
+      cell: (row) => row.invoiceNumber,
+    },
+    {
+      id: "clientName",
+      header: "Client",
+      accessor: (row) => row.clientName,
+      sortable: true,
+      cell: (row) => row.clientName,
+    },
+    {
+      id: "sacCode",
+      header: "SAC",
+      accessor: (row) => row.sacCode,
+      sortable: true,
+      cell: (row) => row.sacCode,
+    },
+    {
+      id: "totalAmount",
+      header: "Total Amount",
+      accessor: (row) => row.totalAmount,
+      sortable: true,
+      sortAccessor: (row) => row.totalAmount,
+      className: "text-right font-medium",
+      headerClassName: "text-right",
+      cell: (row) => formatINRCurrency(row.totalAmount),
+    },
+    {
+      id: "amountReceived",
+      header: "Amount Received",
+      accessor: (row) => row.amountReceived ?? 0,
+      sortable: true,
+      sortAccessor: (row) => row.amountReceived ?? 0,
+      className: "text-right",
+      headerClassName: "text-right",
+      cell: (row) => row.amountReceived === null ? "—" : formatINRCurrency(row.amountReceived),
+    },
+    {
+      id: "status",
+      header: "Status",
+      accessor: (row) => row.status,
+      sortable: true,
+      cell: (row) => (
+        <Badge variant={row.status === "Paid" ? "default" : "secondary"}>
+          {row.status}
+        </Badge>
+      ),
+    },
+    {
+      id: "pdf",
+      header: "Evidence",
+      accessor: (row) => row.pdfPath ?? "",
+      cell: (row) =>
+        row.pdfPath ? (
+          <a
+            href={row.pdfPath}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700"
+          >
+            View <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        ) : (
+          <span className="text-zinc-400">N/A</span>
+        ),
+    },
+  ];
+
+  const expenseColumns: DataTableColumnDef<CAExpenseRow>[] = [
+    {
+      id: "date",
+      header: "Date",
+      accessor: (row) => row.date,
+      sortable: true,
+      sortAccessor: (row) => new Date(row.date).getTime(),
+      cell: (row) => format(new Date(row.date), "dd MMM yyyy"),
+    },
+    {
+      id: "vendor",
+      header: "Vendor",
+      accessor: (row) => row.vendor,
+      sortable: true,
+      cell: (row) => row.vendor,
+    },
+    {
+      id: "category",
+      header: "Category",
+      accessor: (row) => row.category,
+      sortable: true,
+      cell: (row) => row.category,
+    },
+    {
+      id: "description",
+      header: "Description",
+      accessor: (row) => row.description ?? "",
+      cell: (row) => row.description || "—",
+    },
+    {
+      id: "amount",
+      header: "Amount",
+      accessor: (row) => row.amount,
+      sortable: true,
+      sortAccessor: (row) => row.amount,
+      className: "text-right font-medium",
+      headerClassName: "text-right",
+      cell: (row) => formatINRCurrency(row.amount),
+    },
+    {
+      id: "receipt",
+      header: "Receipt",
+      accessor: (row) => row.receiptUrl ?? "",
+      cell: (row) =>
+        row.receiptUrl ? (
+          <a
+            href={row.receiptUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700"
+          >
+            View <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        ) : (
+          <span className="text-zinc-400">N/A</span>
+        ),
+    },
   ];
 
   return (

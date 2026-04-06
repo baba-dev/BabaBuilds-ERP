@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import type { CAExpenseRow, CAInvoiceRow, CAPortalPayload } from "@/lib/ca-portal/types";
 
 // Helper function to calculate exact UTC boundaries for an Indian Financial Year
 function getFinancialYearDates(fyString: string) {
@@ -81,9 +82,9 @@ export async function GET(request: Request) {
 
     // 5. DATA FORMATTING FOR THE UI
     // Ensure the data exactly matches the datatable columns in the UI
-    const formattedInvoices = invoices.map(inv => ({
+    const formattedInvoices: CAInvoiceRow[] = invoices.map(inv => ({
       id: inv.id,
-      invoiceDate: inv.invoiceDate,
+      invoiceDate: inv.invoiceDate.toISOString(),
       invoiceNumber: inv.invoiceNumber,
       clientName: inv.clientName,
       sacCode: inv.sacCode || (profile as any)?.defaultSacCode || "998313", // Dynamic Fallback
@@ -95,9 +96,9 @@ export async function GET(request: Request) {
       pdfPath: inv.pdfPath
     }));
 
-    const formattedExpenses = expenses.map(exp => ({
+    const formattedExpenses: CAExpenseRow[] = expenses.map(exp => ({
       id: exp.id,
-      date: exp.date,
+      date: exp.date.toISOString(),
       category: exp.category,
       vendor: exp.vendor,
       description: exp.description,
@@ -106,7 +107,7 @@ export async function GET(request: Request) {
     }));
 
     // 6. RETURN THE PAYLOAD
-    return NextResponse.json({
+    const payload: CAPortalPayload = {
       summary: {
         grossReceipts,
         presumptiveIncome,
@@ -116,7 +117,9 @@ export async function GET(request: Request) {
       },
       invoices: formattedInvoices,
       expenses: formattedExpenses
-    });
+    };
+
+    return NextResponse.json(payload);
 
   } catch (error) {
     console.error("CA Portal API Error:", error);
