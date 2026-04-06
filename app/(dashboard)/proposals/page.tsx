@@ -7,9 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { DatePickerField } from "@/components/forms/date-picker-field";
+import { SearchableCombobox } from "@/components/forms/searchable-combobox";
+import { FormFieldMessages, FormSection, FormSubmitBar } from "@/components/forms/form-primitives";
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, 
   DialogDescription, DialogFooter 
@@ -391,7 +393,7 @@ export default function ProposalsEngine() {
               <CardContent className="p-6 md:p-8 space-y-10">
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-5 p-5 bg-zinc-50/50 dark:bg-zinc-900/40 rounded-xl border border-zinc-100 dark:border-zinc-800/80">
+                  <FormSection className="space-y-5">
                     <div className="space-y-1.5">
                       <Label htmlFor="proposal-title" className="text-zinc-500 dark:text-zinc-400 font-bold uppercase text-xs tracking-widest">{t('proposal_title')}</Label>
                       <Input 
@@ -405,35 +407,30 @@ export default function ProposalsEngine() {
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="proposal-client" className="text-zinc-500 dark:text-zinc-400 font-bold uppercase text-xs tracking-widest">{t('prepared_for')}</Label>
-                      <Select value={clientId} onValueChange={setClientId}>
-                        <SelectTrigger id="proposal-client" className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 dark:text-zinc-50 h-12 font-bold shadow-sm transition-all focus:ring-indigo-500/30 focus:border-indigo-500">
-                          <SelectValue placeholder={t('select_client')} />
-                        </SelectTrigger>
-                        <SelectContent position="popper" className="dark:bg-zinc-900 dark:border-zinc-800">
-                          {clients.map(c => (
-                            <SelectItem key={c.id} value={c.id} className="dark:focus:bg-zinc-800 py-2.5">
-                              <div className="flex items-center gap-2">
-                                <Building2 className="w-4 h-4 text-zinc-400" />
-                                <span className="dark:text-zinc-100 font-bold">{c.name}</span>
-                                {c.isExport && <Badge className="text-xs uppercase tracking-widest ml-2 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 shadow-none border border-indigo-200/50 dark:border-indigo-800/50 px-1.5">{t('export')}</Badge>}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <SearchableCombobox
+                        value={clientId}
+                        onChange={setClientId}
+                        placeholder={t('select_client')}
+                        options={clients.map((c) => ({
+                          value: c.id,
+                          label: c.name,
+                          description: c.isExport ? t('export') : undefined,
+                          keywords: [c.country || "", c.email || ""],
+                        }))}
+                        className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 dark:text-zinc-50 h-12 font-bold shadow-sm transition-all focus:ring-indigo-500/30 focus:border-indigo-500"
+                      />
                     </div>
-                  </div>
+                  </FormSection>
                   
-                  <div className="space-y-5 p-5 bg-zinc-50/50 dark:bg-zinc-900/40 rounded-xl border border-zinc-100 dark:border-zinc-800/80">
+                  <FormSection className="space-y-5">
                     <div className="space-y-1.5">
                       <Label htmlFor="valid-until" className="text-zinc-500 dark:text-zinc-400 font-bold uppercase text-xs tracking-widest">{t('valid_until')}</Label>
-                      <Input 
-                        id="valid-until"
-                        type="date" 
-                        className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 dark:text-zinc-50 h-12 dark:[color-scheme:dark] font-bold shadow-sm transition-all focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500" 
-                        value={validUntil} 
-                        onChange={e => setValidUntil(e.target.value)} 
-                        required 
+                      <DatePickerField
+                        value={validUntil ? new Date(`${validUntil}T00:00:00`) : undefined}
+                        onChange={(date) => setValidUntil(format(date, "yyyy-MM-dd"))}
+                        placeholder={t('valid_until')}
+                        formatString={dateFormat}
+                        buttonClassName="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 dark:text-zinc-50 h-12 dark:[color-scheme:dark] font-bold shadow-sm transition-all focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500"
                       />
                     </div>
                     {selectedClient && (
@@ -445,7 +442,7 @@ export default function ProposalsEngine() {
                         </p>
                       </div>
                     )}
-                  </div>
+                  </FormSection>
                 </div>
 
                 <div className="space-y-5">
@@ -463,20 +460,17 @@ export default function ProposalsEngine() {
                         <div className="flex-1 space-y-3 min-w-0">
                           <div className="flex flex-col xl:flex-row gap-3">
                             <div className="w-full xl:w-1/3 shrink-0">
-                              <Select onValueChange={(val) => handleCatalogSelect(index, val)}>
-                                <SelectTrigger aria-label={`Select catalog template for item ${index+1}`} className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 dark:text-zinc-100 font-bold text-xs h-10 shadow-sm focus:ring-indigo-500/30">
-                                  <SelectValue placeholder={t('pull_catalog')} />
-                                </SelectTrigger>
-                                <SelectContent position="popper" className="dark:bg-zinc-900 dark:border-zinc-800">
-                                  {catalog.map(cat => (
-                                    <SelectItem key={cat.id} value={cat.id} className="dark:focus:bg-zinc-800">
-                                      <div className="flex items-center gap-2 dark:text-zinc-100 font-bold text-xs">
-                                        <Briefcase className="w-3.5 h-3.5 text-indigo-500" /> {cat.name}
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <SearchableCombobox
+                                value={item.serviceTemplateId}
+                                onChange={(val) => handleCatalogSelect(index, val)}
+                                placeholder={t('pull_catalog')}
+                                options={catalog.map((cat) => ({
+                                  value: cat.id,
+                                  label: cat.name,
+                                  description: cat.description,
+                                }))}
+                                className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 dark:text-zinc-100 font-bold text-xs h-10 shadow-sm focus:ring-indigo-500/30"
+                              />
                             </div>
                             <div className="flex-1 min-w-0">
                               <Label htmlFor={`item-title-${index}`} className="sr-only">Line Item Title</Label>
@@ -556,6 +550,14 @@ export default function ProposalsEngine() {
                     </div>
                   </div>
                 </div>
+                <FormSubmitBar
+                  isSubmitting={isSubmitting}
+                  isDisabled={!clientId}
+                  submitText={t('finalize_save')}
+                  submittingText={t('generating')}
+                  helperText={!clientId ? "Select a client before finalizing this proposal." : "Proposal is ready. Save to create and send the shareable link."}
+                />
+                <FormFieldMessages helpText="Line item level errors, if any, are shown inline in their row." />
 
               </CardContent>
             </form>
@@ -730,12 +732,12 @@ export default function ProposalsEngine() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="conv-date" className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">{t('doc_date')}</Label>
-                    <Input 
-                      id="conv-date"
-                      type="date"
-                      value={conversionDate} 
-                      onChange={e => setConversionDate(e.target.value)} 
-                      className="h-10 bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-50 dark:[color-scheme:dark] font-bold shadow-sm focus-visible:ring-indigo-500/30"
+                    <DatePickerField
+                      value={conversionDate ? new Date(`${conversionDate}T00:00:00`) : undefined}
+                      onChange={(date) => setConversionDate(format(date, "yyyy-MM-dd"))}
+                      placeholder={t('doc_date')}
+                      formatString={dateFormat}
+                      buttonClassName="h-10 bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-50 dark:[color-scheme:dark] font-bold shadow-sm focus-visible:ring-indigo-500/30"
                     />
                   </div>
                 </div>

@@ -2,16 +2,17 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, AlertCircle, Building2, CheckCircle2, Mail, Briefcase, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Mail, Briefcase, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TaxRateModal } from "@/components/invoice/tax-rate-modal";
+import { DatePickerField } from "@/components/forms/date-picker-field";
+import { SearchableCombobox } from "@/components/forms/searchable-combobox";
+import { FormFieldMessages, FormSection, FormSubmitBar } from "@/components/forms/form-primitives";
 
 // MISSION CRITICAL: Globalization & Caching Imports
 import { useFormat } from "@/hooks/use-format";
@@ -282,9 +283,6 @@ export default function InvoiceGenerator() {
     }
   };
 
-  // Safe Date Formatting: Protects against moment.js vs date-fns format mismatches (D vs d, Y vs y)
-  const safeDateFormat = (dateFormat ?? "dd/MM/yyyy").replace(/D/g, 'd').replace(/Y/g, 'y');
-
   return (
     <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8 transition-colors duration-300">
       <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
@@ -308,31 +306,23 @@ export default function InvoiceGenerator() {
           <form onSubmit={handleSubmit} className="bg-white dark:bg-zinc-950 flex flex-col relative">
             <CardContent className="space-y-8 px-6 md:px-8 py-8">
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-5 bg-zinc-50/50 dark:bg-zinc-900/40 rounded-xl border border-zinc-100 dark:border-zinc-800/80">
+              <FormSection className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="invoice-client" className="text-zinc-700 dark:text-zinc-300 font-bold uppercase text-xs tracking-widest">{t('billing_to')}</Label>
-                  <Select value={selectedClientId} onValueChange={(val) => { setSelectedClientId(val); setError(null); }}>
-                    <SelectTrigger id="invoice-client" className="w-full bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-700 h-11 font-bold text-xs shadow-sm text-zinc-900 dark:text-zinc-100 focus:ring-indigo-500/30">
-                      <SelectValue placeholder={t('select_crm')} />
-                    </SelectTrigger>
-                    <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
-                      {clients.length > 0 ? (
-                        clients.map((c) => (
-                          <SelectItem key={c.id} value={c.id.toString()} className="dark:focus:bg-zinc-800 py-2.5">
-                            <div className="flex items-center gap-2">
-                              <Building2 className="w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-                              <span className="font-bold text-xs dark:text-zinc-100">{c.name}</span>
-                              <span className="text-xs uppercase tracking-widest font-bold text-zinc-500 dark:text-zinc-400">
-                                ({c.country})
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <div className="p-4 text-xs font-medium text-zinc-500 text-center italic">{t('no_clients')}</div>
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <SearchableCombobox
+                    value={selectedClientId}
+                    onChange={(val) => { setSelectedClientId(val); setError(null); }}
+                    placeholder={t('select_crm')}
+                    searchPlaceholder={`${t('select_crm')}...`}
+                    emptyText={t('no_clients')}
+                    options={clients.map((c) => ({
+                      value: c.id.toString(),
+                      label: c.name,
+                      description: c.country,
+                      keywords: [c.country, c.email || ""],
+                    }))}
+                    className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-700 h-11 font-bold text-xs shadow-sm text-zinc-900 dark:text-zinc-100 focus:ring-indigo-500/30"
+                  />
                   {selectedClient && (
                     <div className="flex items-center gap-1.5 px-1 pt-1 text-xs text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest animate-in fade-in slide-in-from-left-2">
                       <CheckCircle2 className="h-3 w-3" /> {t('jurisdiction', { country: selectedClient.country })}
@@ -342,17 +332,13 @@ export default function InvoiceGenerator() {
 
                 <div className="space-y-2">
                   <Label htmlFor="invoice-date" className="text-zinc-700 dark:text-zinc-300 font-bold uppercase text-xs tracking-widest">{t('document_date')}</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button id="invoice-date" variant={"outline"} aria-label="Select invoice date" className={`w-full h-11 justify-start text-left font-bold text-xs border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 hover:bg-zinc-50 dark:hover:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm focus-visible:ring-indigo-500/30`}>
-                        <CalendarIcon className="mr-2 h-4 w-4 text-zinc-400 dark:text-zinc-500" />
-                        {isMounted && invoiceDate ? format(invoiceDate, safeDateFormat) : <span>{t('pick_date')}</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 dark:bg-zinc-900 dark:border-zinc-800 shadow-xl" align="start">
-                      <Calendar mode="single" selected={invoiceDate} onSelect={(date) => date && setInvoiceDate(date)} initialFocus className="dark:text-zinc-100" />
-                    </PopoverContent>
-                  </Popover>
+                  <DatePickerField
+                    value={invoiceDate}
+                    onChange={setInvoiceDate}
+                    placeholder={t('pick_date')}
+                    formatString={dateFormat}
+                    buttonClassName="font-bold text-xs border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 hover:bg-zinc-50 dark:hover:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm focus-visible:ring-indigo-500/30"
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -366,7 +352,7 @@ export default function InvoiceGenerator() {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
+              </FormSection>
 
               {isMonthAlreadyBilled && (
                 <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-500/10 border-l-4 border-amber-400 dark:border-amber-500 rounded-r-md text-amber-800 dark:text-amber-400 text-xs font-medium animate-in fade-in slide-in-from-top-2 shadow-sm">
@@ -474,11 +460,13 @@ export default function InvoiceGenerator() {
                 <span className="text-3xl font-black text-indigo-700 dark:text-indigo-400 drop-shadow-sm tracking-tight">{fCurrency(totalAmount)}</span>
               </div>
 
-              <Button type="submit" size="lg" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold uppercase tracking-widest text-xs h-14 shadow-lg shadow-indigo-500/20 dark:shadow-none transition-all active:scale-[0.98] border-none" disabled={isGenerating || totalAmount === 0}>
-                {isGenerating ? (
-                  <span className="flex items-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> {t('generating')}</span>
-                ) : t('generate_btn')}
-              </Button>
+              <FormSubmitBar
+                isSubmitting={isGenerating}
+                isDisabled={totalAmount === 0}
+                submitText={t('generate_btn')}
+                submittingText={t('generating')}
+                helperText={totalAmount === 0 ? "Select at least one priced service to continue." : "Review the preview amount and submit to generate an invoice."}
+              />
 
               {/* SUCCESS BANNER */}
               {successData && (
@@ -502,12 +490,10 @@ export default function InvoiceGenerator() {
                 </div>
               )}
 
-              {error && (
-                <div className="w-full p-4 bg-red-50 dark:bg-red-500/10 border-l-4 border-red-500 rounded-r-xl text-red-600 dark:text-red-400 text-xs text-center font-bold uppercase tracking-widest shadow-sm animate-pulse flex items-center justify-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{error}</span>
-                </div>
-              )}
+              <FormFieldMessages
+                errorText={error ? <span className="flex items-center justify-center gap-2"><AlertCircle className="w-4 h-4 shrink-0" /> {error}</span> : undefined}
+                className="w-full p-4 bg-red-50 dark:bg-red-500/10 border-l-4 border-red-500 rounded-r-xl text-xs text-center font-bold uppercase tracking-widest shadow-sm animate-pulse"
+              />
             </CardFooter>
           </form>
         </Card>

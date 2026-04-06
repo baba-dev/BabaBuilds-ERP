@@ -13,8 +13,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { FileUploadField } from "@/components/forms/file-upload-field";
+import { FormFieldRow, FormSection, FormSubmitBar } from "@/components/forms/form-primitives";
 import { 
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle 
@@ -216,14 +217,13 @@ export default function ClientCRM() {
             <form onSubmit={handleSubmit}>
               <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto bg-surface-elevated custom-scrollbar">
                 
-                <div className="p-5 bg-surface-base border border-border rounded-xl space-y-4">
-                  <h3 className="text-xs font-extrabold text-muted-body uppercase tracking-widest flex items-center gap-2">
-                    <FileText className="w-3.5 h-3.5" /> {t('legal_identity')}</h3>
+                <FormSection
+                  title={t('legal_identity')}
+                  icon={<FileText className="w-3.5 h-3.5" />}
+                  className="bg-surface-base border-border"
+                >
                   <div className="grid gap-5">
-                    <div className="space-y-2">
-                      <Label htmlFor="client-name" className="text-foreground/80 text-xs font-bold uppercase tracking-wider">
-                        {t('company_name')} <span className="text-rose-500 dark:text-rose-400">*</span>
-                      </Label>
+                    <FormFieldRow htmlFor="client-name" label={t('company_name')} required>
                       <Input 
                         id="client-name"
                         placeholder={t('ph_name')} 
@@ -232,11 +232,8 @@ export default function ClientCRM() {
                         required 
                         className="h-10 bg-surface-elevated border-border text-foreground font-bold transition-all focus-visible:ring-focus-ring/30 focus-visible:border-accent-strong shadow-sm" 
                       />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="client-address" className="text-foreground/80 text-xs font-bold uppercase tracking-wider">
-                        {t('billing_address')} <span className="text-rose-500 dark:text-rose-400">*</span>
-                      </Label>
+                    </FormFieldRow>
+                    <FormFieldRow htmlFor="client-address" label={t('billing_address')} required>
                       <Input 
                         id="client-address"
                         placeholder={t('ph_address')} 
@@ -245,12 +242,9 @@ export default function ClientCRM() {
                         required 
                         className="h-10 bg-surface-elevated border-border text-foreground transition-all focus-visible:ring-focus-ring/30 focus-visible:border-accent-strong shadow-sm" 
                       />
-                    </div>
+                    </FormFieldRow>
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="client-country" className="text-foreground/80 text-xs font-bold uppercase tracking-wider">
-                          {t('country')} <span className="text-rose-500 dark:text-rose-400">*</span>
-                        </Label>
+                      <FormFieldRow htmlFor="client-country" label={t('country')} required>
                         <Input 
                           id="client-country"
                           placeholder={t('ph_country')} 
@@ -259,11 +253,8 @@ export default function ClientCRM() {
                           required 
                           className="h-10 bg-surface-elevated border-border text-foreground transition-all focus-visible:ring-focus-ring/30 focus-visible:border-accent-strong shadow-sm" 
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="client-taxid" className="text-foreground/80 text-xs font-bold uppercase tracking-wider">
-                          {taxIdLabel} <span className="text-muted-body font-medium normal-case">(Optional)</span>
-                        </Label>
+                      </FormFieldRow>
+                      <FormFieldRow htmlFor="client-taxid" label={taxIdLabel} optionalText="Optional">
                         <Input 
                           id="client-taxid"
                           placeholder={`Client's ${taxIdLabel}`} 
@@ -271,14 +262,16 @@ export default function ClientCRM() {
                           onChange={e => setFormData({...formData, taxId: e.target.value})} 
                           className="h-10 bg-surface-elevated border-border text-foreground transition-all focus-visible:ring-focus-ring/30 focus-visible:border-accent-strong shadow-sm font-mono text-sm" 
                         />
-                      </div>
+                      </FormFieldRow>
                     </div>
                   </div>
-                </div>
+                </FormSection>
 
-                <div className="p-5 bg-surface-base border border-border rounded-xl space-y-4">
-                  <h3 className="text-xs font-extrabold text-muted-body uppercase tracking-widest flex items-center gap-2">
-                    <Mail className="w-3.5 h-3.5" /> {t('contact_branding')}</h3>
+                <FormSection
+                  title={t('contact_branding')}
+                  icon={<Mail className="w-3.5 h-3.5" />}
+                  className="bg-surface-base border-border"
+                >
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="client-email" className="text-foreground/80 text-xs font-bold uppercase tracking-wider">{t('email_address')}</Label>
@@ -305,15 +298,14 @@ export default function ClientCRM() {
                   <div className="space-y-2 pt-1">
                     <Label htmlFor="client-logo" className="flex items-center gap-2 text-foreground/80 text-xs font-bold uppercase tracking-wider cursor-pointer">
                       <ImageIcon className="w-3.5 h-3.5 text-muted-body" /> {t('company_logo')}</Label>
-                    <Input 
+                    <FileUploadField
                       id="client-logo"
-                      type="file" 
                       accept="image/*" 
-                      onChange={e => setLogoFile(e.target.files?.[0] || null)} 
-                      className="h-10 pt-2 bg-surface-elevated border-border text-foreground text-xs file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-accent-soft file:text-accent-strong hover:file:brightness-95 shadow-sm cursor-pointer" 
+                      onFileSelect={setLogoFile}
+                      inputClassName="bg-surface-elevated border-border text-foreground file:bg-accent-soft file:text-accent-strong hover:file:brightness-95 shadow-sm"
                     />
                   </div>
-                </div>
+                </FormSection>
 
                 <div className="flex items-center justify-between p-5 rounded-xl bg-accent-soft/70 border border-accent-strong/20">
                   <div className="space-y-1 mr-4">
@@ -333,14 +325,15 @@ export default function ClientCRM() {
                 </div>
               </div>
 
-              <DialogFooter className="px-6 py-4 bg-surface-glass border-t border-border flex justify-end gap-3 rounded-b-lg">
+              <DialogFooter className="px-6 py-4 bg-surface-glass border-t border-border flex justify-end gap-3 rounded-b-lg block">
                 <Button type="button" variant="outline" onClick={() => setOpen(false)} className="bg-surface-elevated border-border text-muted-body hover:bg-surface-base text-xs font-bold uppercase tracking-widest px-5">{t('cancel')}</Button>
-                <Button type="submit" className="btn-primary text-xs uppercase tracking-widest px-6 border-none" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <span className="flex items-center gap-2">
-                       <Loader2 className="w-4 h-4 animate-spin" /> {t('saving')}</span>
-                  ) : isEditing ? t('update_client') : t('register_client')}
-                </Button>
+                <FormSubmitBar
+                  isSubmitting={isSubmitting}
+                  submitText={isEditing ? t('update_client') : t('register_client')}
+                  submittingText={t('saving')}
+                  helperText={isEditing ? "Update client details and save changes." : "Complete required fields to register a new client."}
+                  className="mt-3 border-none bg-transparent p-0"
+                />
               </DialogFooter>
             </form>
           </DialogContent>
