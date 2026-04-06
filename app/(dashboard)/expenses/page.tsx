@@ -16,11 +16,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
+import { getCurrencySymbol } from "@/lib/currency";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 
 export default function ExpenseTracker() {
   const t = useTranslations('Expenses');
-  const { currency } = useFormat();
+  const { fCurrency, currency, locale } = useFormat();
+  const currencySymbol = getCurrencySymbol(currency, locale);
   const [expenses, setExpenses] = useState<any[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0); // This stays to power the KPIs
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -198,7 +200,7 @@ export default function ExpenseTracker() {
               <Wallet className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-50">₹{actualProfit.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+              <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-50">{fCurrency(actualProfit)}</div>
               <p className="text-xs text-emerald-600 dark:text-emerald-400/80 mt-1">{t('actual_profit_desc')}</p>
             </CardContent>
           </Card>
@@ -209,11 +211,11 @@ export default function ExpenseTracker() {
               <TrendingDown className="h-4 w-4 text-rose-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">₹{totalExpenses.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{fCurrency(totalExpenses)}</div>
               <div className="mt-4 space-y-2">
                 <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400">
                   <span>{t('presumptive_label')}</span>
-                  <span>₹{presumptiveExpenses.toLocaleString('en-IN')}</span>
+                  <span>{fCurrency(presumptiveExpenses)}</span>
                 </div>
                 <Progress value={Math.min(burnPercentage, 100)} className="h-2 bg-zinc-100 dark:bg-zinc-800 [&>div]:bg-rose-500" />
               </div>
@@ -227,7 +229,7 @@ export default function ExpenseTracker() {
               <ShieldCheck className="h-4 w-4 text-indigo-600 dark:text-indigo-500 relative z-10" />
             </CardHeader>
             <CardContent className="relative z-10">
-              <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-50">₹{taxFreeAlpha.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+              <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-50">{fCurrency(taxFreeAlpha)}</div>
               <p className="text-xs font-medium text-indigo-700/80 dark:text-indigo-400/80 mt-1 leading-tight">
                 {t('tax_free_alpha_desc')}
               </p>
@@ -311,9 +313,9 @@ export default function ExpenseTracker() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="dark:text-zinc-300">{t('amount', { currency: 'INR' })}</Label>
+                    <Label className="dark:text-zinc-300">{t('amount', { currency })}</Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-2.5 text-zinc-500 dark:text-zinc-400 font-medium">₹</span>
+                      <span className="absolute left-3 top-2.5 text-zinc-500 dark:text-zinc-400 font-medium">{currencySymbol}</span>
                       <Input type="number" step="0.01" min="1" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} required className="pl-7 bg-white dark:bg-zinc-950 dark:border-zinc-800 font-medium dark:text-zinc-100" />
                     </div>
                   </div>
@@ -347,7 +349,7 @@ export default function ExpenseTracker() {
                         <TableHead className="dark:text-zinc-400">{t('col_date')}</TableHead>
                         <TableHead className="dark:text-zinc-400">{t('col_vendor')}</TableHead>
                         <TableHead className="dark:text-zinc-400">{t('col_category')}</TableHead>
-                        <TableHead className="text-right dark:text-zinc-400">{t('col_amount', { currency: 'INR' })}</TableHead>
+                        <TableHead className="text-right dark:text-zinc-400">{t('col_amount', { currency })}</TableHead>
                         <TableHead className="text-right dark:text-zinc-400">{t('col_actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -362,7 +364,7 @@ export default function ExpenseTracker() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right font-medium text-rose-600 dark:text-rose-400">
-                            ₹{exp.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            {fCurrency(exp.amount)}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-1">
@@ -429,7 +431,7 @@ export default function ExpenseTracker() {
                   <Input type="date" value={editForm.date} onChange={(e) => setEditForm({...editForm, date: e.target.value})} required className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-50 dark:[color-scheme:dark]" />
                 </div>
                 <div className="space-y-2">
-                  <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">{t('edit_amount', { currency: 'INR' })}</Label>
+                  <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">{t('edit_amount', { currency })}</Label>
                   <Input type="number" step="0.01" min="1" value={editForm.amount} onChange={(e) => setEditForm({...editForm, amount: e.target.value})} required className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-50" />
                 </div>
               </div>
