@@ -29,13 +29,20 @@ import { toast } from "sonner";
 import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 import type { MapPoint } from "@/components/maps";
 import { MapCardSkeleton } from "@/components/maps";
-import type { CAPortalPayload, CAPortalSummary, CAInvoiceRow, CAExpenseRow } from "@/lib/ca-portal/types";
+import type { CAExpenseRow, CAInvoiceRow, CAPortalPayload, CAPortalSummary } from "@/lib/ca-portal/types";
+
+
 const defaultSummary: CAPortalSummary = {
   grossReceipts: 0,
   presumptiveIncome: 0,
   deductions80C: 0,
   deductions80D: 0,
   totalExpenses: 0,
+};
+const EMPTY_PAYLOAD: CAPortalPayload = {
+  summary: defaultSummary,
+  invoices: [],
+  expenses: [],
 };
 
 const isFiniteNumber = (value: unknown): value is number =>
@@ -86,8 +93,8 @@ const isCAPortalSummary = (value: unknown): value is CAPortalSummary => {
   );
 };
 
-const parseCAPortalResponse = (value: unknown): CAPortalPayload | null => {
-  if (!isRecord(value) || "error" in value) return null;
+const parseCAPortalResponse = (value: unknown): CAPortalPayload => {
+  if (!isRecord(value) || "error" in value) return EMPTY_PAYLOAD;
 
   const summary = isCAPortalSummary(value.summary) ? value.summary : defaultSummary;
   const invoices = Array.isArray(value.invoices)
@@ -112,8 +119,7 @@ const formatINRCurrency = (amount: number) => `₹${amount.toLocaleString("en-IN
 
 export default function CAPortal() {
   const t = useTranslations('CAPortal');
-
-  const EMPTY_SUMMARY: CAPortalSummary = {
+  const EMPTY_SUMMARY: CAPortalPayload["summary"] = {
     grossReceipts: 0,
     presumptiveIncome: 0,
     deductions80C: 0,
@@ -123,11 +129,7 @@ export default function CAPortal() {
   
   // --- STATE ---
   const [fy, setFy] = useState("25-26"); 
-  const [data, setData] = useState<CAPortalPayload>({
-    summary: EMPTY_SUMMARY,
-    invoices: [],
-    expenses: [],
-  });
+  const [data, setData] = useState<CAPortalPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isExportingCSV, setIsExportingCSV] = useState(false);
   const [isExportingZIP, setIsExportingZIP] = useState(false);
@@ -143,27 +145,19 @@ export default function CAPortal() {
       const res = await fetch(`/api/ca-portal?fy=${fy}`);
       const json = await res.json();
 
-      const payload = parseCAPortalResponse(json);
+      const parsedData = parseCAPortalResponse(json);
 
-      if (!res.ok || !payload) {
+      if (!res.ok || (isRecord(json) && typeof json.error === "string")) {
         toast.error("Audit data format mismatch. Showing empty dataset.");
-        setData({
-          summary: EMPTY_SUMMARY,
-          invoices: [],
-          expenses: [],
-        });
+        setData(EMPTY_PAYLOAD);
         return;
       }
 
-      setData(payload);
+      setData(parsedData);
     } catch (err) {
       console.error("Failed to fetch audit data", err);
       toast.error("Failed to fetch audit data for this financial year.");
-      setData({
-        summary: EMPTY_SUMMARY,
-        invoices: [],
-        expenses: [],
-      });
+      setData(EMPTY_PAYLOAD);
     } finally {
       setIsLoading(false);
     }
@@ -209,9 +203,9 @@ export default function CAPortal() {
     }
   };
 
-  const summary = data.summary;
-  const invoices: CAInvoiceRow[] = data.invoices;
-  const expenses: CAExpenseRow[] = data.expenses;
+  const summary = data?.summary ?? EMPTY_SUMMARY;
+  const invoices: CAInvoiceRow[] = data?.invoices ?? [];
+  const expenses: CAExpenseRow[] = data?.expenses ?? [];
   const isGstLiable = summary.grossReceipts >= 2000000;
   const jurisdictionPoints: MapPoint[] = [
     { id: "mh", label: "Maharashtra", subtitle: "GST filings + invoice validations", value: "48 compliance events", x: 65, y: 48, weight: 48 },
