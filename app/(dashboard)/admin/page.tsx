@@ -204,7 +204,7 @@ export default function SuperAdminPortal() {
               <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mb-3 flex items-center gap-2">
                 <Server className="w-4 h-4" /> Server & Infrastructure
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <Card className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
                   <CardHeader className="pb-2 flex flex-row items-center justify-between">
@@ -316,6 +316,21 @@ export default function SuperAdminPortal() {
                       {metrics?.platformGmv ? fCurrency(metrics.platformGmv) : '...'}
                     </div>
                     <p className="text-xs text-zinc-500 mt-1">Gross volume moved</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-sm">
+                  <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                    <CardTitle className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Auth Failures</CardTitle>
+                    <FileWarning className="w-4 h-4 text-rose-500" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-extrabold text-rose-600 dark:text-rose-400">
+                      {metrics?.authFailureCount ?? '...'}
+                    </div>
+                    <p className="text-xs text-zinc-500 mt-1 truncate">
+                      Top: {metrics?.authFailureByReason?.[0]?.reason || 'none'} ({metrics?.authFailureByReason?.[0]?.count || 0})
+                    </p>
                   </CardContent>
                 </Card>
               </div>

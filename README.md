@@ -34,3 +34,20 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Google OAuth deployment checklist
+
+Use this checklist before promoting to staging/production:
+
+1. Google Cloud Console OAuth client has this authorized redirect URI:
+   - `https://erp.bababuilds.com/api/auth/callback/google`
+2. Deployment environment contains:
+   - `NEXTAUTH_URL=https://erp.bababuilds.com`
+   - `NEXTAUTH_SECRET=<strong random value>`
+   - `GOOGLE_CLIENT_ID=<google oauth client id>`
+   - `GOOGLE_CLIENT_SECRET=<google oauth client secret>`
+3. If running behind a reverse proxy/CDN, preserve forwarded headers:
+   - `X-Forwarded-Proto`
+   - `X-Forwarded-Host`
+4. Validate login flow end-to-end:
+   - `/login` → Google consent → callback success → dashboard load.
