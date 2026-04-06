@@ -7,9 +7,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useFormat } from "@/hooks/use-format";
+import { formatCurrency } from "@/lib/currency";
 
 export default function PublicProposalPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);  
+  const { fCurrency, currency, locale } = useFormat();
   const [proposal, setProposal] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,6 +27,12 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
   const [isDeclineModalOpen, setIsDeclineModalOpen] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
   const [isSubmittingDecline, setIsSubmittingDecline] = useState(false);
+  const displayCurrency = proposal?.currency || currency;
+  const displayLocale = proposal?.locale || locale;
+  const formatMoney = (amount: number | null | undefined) =>
+    displayCurrency === currency && displayLocale === locale
+      ? fCurrency(amount)
+      : formatCurrency(amount, displayCurrency, displayLocale);
 
   // Fetch the proposal data when the page loads
   useEffect(() => {
@@ -156,8 +165,8 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
                       {item.description && <p className="text-sm text-zinc-500 mt-1">{item.description}</p>}
                     </div>
                     <div className="text-left sm:text-right shrink-0">
-                      <p className="font-bold text-zinc-900">₹{(item.quantity * item.unitPrice).toLocaleString('en-IN')}</p>
-                      <p className="text-xs text-zinc-500">Qty: {item.quantity} × ₹{item.unitPrice}</p>
+                      <p className="font-bold text-zinc-900">{formatMoney(item.quantity * item.unitPrice)}</p>
+                      <p className="text-xs text-zinc-500">Qty: {item.quantity} × {formatMoney(item.unitPrice)}</p>
                     </div>
                   </div>
                 ))}
@@ -169,7 +178,7 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
               <div className="w-full sm:w-64 space-y-3">
                 <div className="flex justify-between text-zinc-900 font-black text-2xl pt-3">
                   <span>Total Value</span>
-                  <span className="text-indigo-600">₹{proposal.totalAmount?.toLocaleString('en-IN')}</span>
+                  <span className="text-indigo-600">{formatMoney(proposal.totalAmount)}</span>
                 </div>
               </div>
             </div>
