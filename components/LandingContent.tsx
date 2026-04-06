@@ -1,20 +1,20 @@
 "use client";
 
-import { motion, useScroll, useTransform } from "framer-motion";
-import { 
-  ArrowRight, 
-  ShieldCheck, 
-  Zap, 
-  Globe, 
-  Sparkles, 
-  Box, 
-  Receipt, 
-  Users, 
-  FileSignature, 
+import dynamic from "next/dynamic";
+import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import {
+  ArrowRight,
+  ShieldCheck,
+  Zap,
+  Globe,
+  Sparkles,
+  Receipt,
+  Users,
+  FileSignature,
   BarChart3,
   Landmark,
   CheckCircle2,
-  Calculator
+  Calculator,
 } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -23,12 +23,27 @@ import LandingNavbar from "@/components/LandingNavbar";
 import ComparisonTable from "@/components/ComparisonTable";
 import PricingSection from "@/components/PricingSection";
 import LandingFooter from "@/components/LandingFooter";
+import { cn } from "@/lib/utils";
+
+const HeroMotionDecor = dynamic(() => import("@/components/landing/HeroMotionDecor"), {
+  ssr: false,
+  loading: () => null,
+});
 
 export default function LandingContent() {
   const t = useTranslations("Landing");
+  const reduceMotion = useReducedMotion();
   const { scrollYProgress } = useScroll();
   const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
-  const scale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
+  const scale = useTransform(scrollYProgress, [0, 0.2], [1, 0.96]);
+
+  const trustCities = [
+    t("trust.cities.dubai"),
+    t("trust.cities.london"),
+    t("trust.cities.singapore"),
+    t("trust.cities.newYork"),
+    t("trust.cities.newDelhi"),
+  ];
 
   const features = [
     {
@@ -36,183 +51,214 @@ export default function LandingContent() {
       description: t("features.items.automatedInvoicing.description"),
       icon: Receipt,
       color: "text-blue-500",
-      bg: "bg-blue-50 dark:bg-blue-950/20",
+      bg: "bg-blue-50 dark:bg-blue-950/30",
+      span: "lg:col-span-2 lg:row-span-2",
+      priority: "Built for velocity",
     },
     {
       title: t("features.items.zeroEffortRetainers.title"),
       description: t("features.items.zeroEffortRetainers.description"),
       icon: Zap,
       color: "text-amber-500",
-      bg: "bg-amber-50 dark:bg-amber-950/20",
+      bg: "bg-amber-50 dark:bg-amber-950/30",
+      span: "lg:col-span-1",
+      priority: "Automation",
     },
     {
       title: t("features.items.aiBabaBotInsights.title"),
       description: t("features.items.aiBabaBotInsights.description"),
       icon: Sparkles,
       color: "text-indigo-500",
-      bg: "bg-indigo-50 dark:bg-indigo-950/20",
+      bg: "bg-indigo-50 dark:bg-indigo-950/30",
+      span: "lg:col-span-1",
+      priority: "Intelligence",
     },
     {
       title: t("features.items.expenseLedger.title"),
       description: t("features.items.expenseLedger.description"),
       icon: BarChart3,
       color: "text-rose-500",
-      bg: "bg-rose-50 dark:bg-rose-950/20",
+      bg: "bg-rose-50 dark:bg-rose-950/30",
+      span: "lg:col-span-1",
+      priority: "Control",
     },
     {
       title: t("features.items.bankReconciliation.title"),
       description: t("features.items.bankReconciliation.description"),
       icon: Landmark,
       color: "text-emerald-500",
-      bg: "bg-emerald-50 dark:bg-emerald-950/20",
+      bg: "bg-emerald-50 dark:bg-emerald-950/30",
+      span: "lg:col-span-1",
+      priority: "Confidence",
     },
     {
       title: t("features.items.investmentHub.title"),
       description: t("features.items.investmentHub.description"),
       icon: Calculator,
       color: "text-violet-500",
-      bg: "bg-violet-50 dark:bg-violet-950/20",
+      bg: "bg-violet-50 dark:bg-violet-950/30",
+      span: "lg:col-span-1",
+      priority: "Forecasting",
     },
     {
-        title: t("features.items.globalCompliance.title"),
-        description: t("features.items.globalCompliance.description"),
-        icon: Globe,
-        color: "text-emerald-500",
-        bg: "bg-emerald-50 dark:bg-emerald-950/20",
-      },
-      {
-        title: t("features.items.clientCrm.title"),
-        description: t("features.items.clientCrm.description"),
-        icon: Users,
-        color: "text-sky-500",
-        bg: "bg-sky-50 dark:bg-sky-950/20",
-      },
-      {
-        title: t("features.items.premiumProposals.title"),
-        description: t("features.items.premiumProposals.description"),
-        icon: FileSignature,
-        color: "text-indigo-500",
-        bg: "bg-indigo-50 dark:bg-indigo-950/20",
-      },
+      title: t("features.items.globalCompliance.title"),
+      description: t("features.items.globalCompliance.description"),
+      icon: Globe,
+      color: "text-emerald-500",
+      bg: "bg-emerald-50 dark:bg-emerald-950/30",
+      span: "lg:col-span-1",
+      priority: "Global",
+    },
+    {
+      title: t("features.items.clientCrm.title"),
+      description: t("features.items.clientCrm.description"),
+      icon: Users,
+      color: "text-sky-500",
+      bg: "bg-sky-50 dark:bg-sky-950/30",
+      span: "lg:col-span-1",
+      priority: "Relationships",
+    },
+    {
+      title: t("features.items.premiumProposals.title"),
+      description: t("features.items.premiumProposals.description"),
+      icon: FileSignature,
+      color: "text-indigo-500",
+      bg: "bg-indigo-50 dark:bg-indigo-950/30",
+      span: "lg:col-span-1",
+      priority: "Conversion",
+    },
   ];
 
   return (
-    <div className="bg-surface-base overflow-x-hidden">
+    <div className="overflow-x-hidden bg-surface-base">
       <LandingNavbar />
 
-      {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center pt-20 px-6 overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-accent-soft blur-[120px] rounded-full pointer-events-none" />
-        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-violet-600/5 blur-[100px] rounded-full pointer-events-none" />
+      <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 pt-20">
+        <div className="pointer-events-none absolute left-1/2 top-0 h-[600px] w-[1000px] -translate-x-1/2 rounded-full bg-accent-soft blur-[120px]" />
+        <div className="pointer-events-none absolute bottom-0 right-0 h-[500px] w-[500px] rounded-full bg-violet-600/10 blur-[110px]" />
 
-        <motion.div 
-          style={{ opacity, scale }}
-          className="max-w-5xl mx-auto text-center space-y-8 z-10"
+        <motion.div
+          style={reduceMotion ? undefined : { opacity, scale }}
+          className="z-10 mx-auto max-w-5xl space-y-8 text-center"
         >
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={reduceMotion ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
           >
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-surface-elevated border border-border text-sm font-bold text-muted-body mb-6">
-              <Sparkles className="w-4 h-4 text-accent-strong" /> {t("hero.badge")}
+            <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-surface-elevated px-4 py-1.5 text-sm font-bold text-muted-body">
+              <Sparkles className="h-4 w-4 text-accent-strong" /> {t("hero.badge")}
             </span>
-            <h1 className="text-6xl md:text-8xl font-black tracking-tight text-foreground leading-[1.05]">
+            <h1 className="text-5xl font-black leading-[1.04] tracking-tight text-foreground md:text-8xl">
               {t("hero.titleLine1")} <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-500">
+              <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-500 bg-clip-text text-transparent">
                 {t("hero.titleLine2")}
               </span>
             </h1>
           </motion.div>
 
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={reduceMotion ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-xl md:text-2xl text-muted-body max-w-3xl mx-auto leading-relaxed font-medium"
+            transition={{ duration: 0.45, delay: 0.15 }}
+            className="mx-auto max-w-3xl text-xl font-medium leading-relaxed text-muted-body md:text-2xl"
           >
             {t("hero.description")}
           </motion.p>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={reduceMotion ? false : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4"
+            transition={{ duration: 0.4, delay: 0.25 }}
+            className="flex flex-col items-center justify-center gap-4 pt-4 sm:flex-row"
           >
-            <Button size="lg" className="btn-primary h-16 px-10 rounded-2xl text-lg gap-2 group" asChild>
+            <Button size="lg" className="btn-primary group h-16 gap-2 rounded-2xl px-10 text-lg" asChild>
               <Link href="/api/auth/signin">
-                {t("hero.primaryCta")} <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                {t("hero.primaryCta")} <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
               </Link>
             </Button>
-            <Button variant="ghost" size="lg" className="h-16 px-10 text-muted-body hover:text-foreground font-bold text-lg" asChild>
+            <Button variant="ghost" size="lg" className="h-16 px-10 text-lg font-bold text-muted-body hover:text-foreground" asChild>
               <Link href="#features">{t("hero.secondaryCta")}</Link>
             </Button>
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 100 }}
-            animate={{ opacity: 1, y: 60 }}
-            transition={{ duration: 1, delay: 0.6, ease: "easeOut" }}
-            className="card-elevated relative mt-20 mx-auto max-w-6xl aspect-[16/9] rounded-3xl overflow-hidden"
+            initial={reduceMotion ? false : { opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
+            className="card-elevated relative mx-auto mt-16 aspect-[16/9] max-w-6xl overflow-hidden rounded-3xl border-white/40 dark:border-white/10"
           >
-             <div className="absolute inset-0 bg-gradient-to-b from-transparent to-zinc-900/50" />
-             <div className="absolute top-4 left-4 flex gap-2">
-                <div className="w-3 h-3 rounded-full bg-rose-500" />
-                <div className="w-3 h-3 rounded-full bg-amber-500" />
-                <div className="w-3 h-3 rounded-full bg-emerald-500" />
-             </div>
-             <div className="flex flex-col items-center justify-center h-full space-y-6">
-                <div className="w-16 h-16 bg-accent-strong rounded-2xl flex items-center justify-center animate-bounce shadow-xl">
-                  <Box className="w-8 h-8 text-white" />
-                </div>
-                <p className="text-muted-body font-medium tracking-widest uppercase text-sm">{t("hero.dashboardPreview")}</p>
-             </div>
+            <HeroMotionDecor />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-zinc-900/65" />
+            <div className="absolute left-4 top-4 flex gap-2">
+              <div className="h-3 w-3 rounded-full bg-rose-500" />
+              <div className="h-3 w-3 rounded-full bg-amber-500" />
+              <div className="h-3 w-3 rounded-full bg-emerald-500" />
+            </div>
+            <div className="relative flex h-full flex-col items-center justify-center space-y-6">
+              <div className="grid h-20 w-20 place-items-center rounded-3xl border border-white/20 bg-white/10 shadow-2xl backdrop-blur-md dark:bg-white/5">
+                <Sparkles className="h-10 w-10 text-white" />
+              </div>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-200 md:text-sm">
+                {t("hero.dashboardPreview")}
+              </p>
+            </div>
           </motion.div>
         </motion.div>
       </section>
 
-      {/* Trust Badges */}
-      <section className="py-12 border-y border-border">
-        <div className="max-w-7xl mx-auto px-6">
-          <p className="text-center text-sm font-bold text-muted-body uppercase tracking-[0.2em] mb-8">{t("trust.title")}</p>
-          <div className="flex flex-wrap justify-center items-center gap-12 opacity-50 grayscale contrast-125">
-             <span className="text-2xl font-black text-foreground">{t("trust.cities.dubai")}</span>
-             <span className="text-2xl font-black text-foreground">{t("trust.cities.london")}</span>
-             <span className="text-2xl font-black text-foreground">{t("trust.cities.singapore")}</span>
-             <span className="text-2xl font-black text-foreground">{t("trust.cities.newYork")}</span>
-             <span className="text-2xl font-black text-foreground">{t("trust.cities.newDelhi")}</span>
+      <section className="overflow-hidden border-y border-border py-12">
+        <div className="mx-auto max-w-7xl px-6">
+          <p className="mb-8 text-center text-sm font-bold uppercase tracking-[0.2em] text-muted-body">{t("trust.title")}</p>
+          <div className="relative">
+            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-surface-base to-transparent" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-surface-base to-transparent" />
+            <div className="motion-marquee flex w-max items-center gap-4">
+              {[...trustCities, ...trustCities].map((city, idx) => (
+                <span
+                  key={`${city}-${idx}`}
+                  className="rounded-full border border-border/80 bg-surface-elevated px-5 py-2 text-sm font-bold tracking-wide text-foreground/85 shadow-sm md:text-base"
+                >
+                  {city}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Feature Grid */}
-      <section id="features" className="py-32 bg-surface-base">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="max-w-3xl space-y-4 mb-20 text-left">
-            <h2 className="text-3xl md:text-5xl font-black tracking-tight text-foreground">
+      <section id="features" className="bg-surface-base py-32">
+        <div className="mx-auto max-w-7xl px-6">
+          <div className="mb-20 max-w-3xl space-y-4 text-left">
+            <h2 className="text-3xl font-black tracking-tight text-foreground md:text-5xl">
               {t("features.headingPrefix")} <span className="text-indigo-600">{t("features.headingHighlight")}</span>
             </h2>
-            <p className="text-lg text-muted-body leading-relaxed font-medium">
-              {t("features.description")}
-            </p>
+            <p className="text-lg font-medium leading-relaxed text-muted-body">{t("features.description")}</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 lg:auto-rows-[minmax(190px,auto)]">
             {features.map((feature, idx) => (
               <motion.div
                 key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
+                initial={reduceMotion ? false : { opacity: 0, y: 18 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.1 }}
-                className="card-elevated group p-8 rounded-3xl hover:border-accent-strong/50 hover:shadow-2xl transition-all"
+                viewport={{ once: true, amount: 0.2 }}
+                transition={{ delay: reduceMotion ? 0 : idx * 0.06, duration: 0.32 }}
+                className={cn(
+                  "card-elevated group relative overflow-hidden rounded-3xl p-7 transition-all duration-300 hover:-translate-y-1 hover:border-accent-strong/45 hover:shadow-2xl",
+                  feature.span,
+                )}
               >
-                <div className={`w-14 h-14 rounded-2xl ${feature.bg} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                  <feature.icon className={`w-7 h-7 ${feature.color}`} />
+                <div className="mb-6 flex items-center justify-between gap-4">
+                  <div className={cn("flex h-14 w-14 items-center justify-center rounded-2xl", feature.bg)}>
+                    <feature.icon className={cn("h-7 w-7", feature.color)} />
+                  </div>
+                  <span className="rounded-full border border-border/80 bg-surface-base px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-body">
+                    {feature.priority}
+                  </span>
                 </div>
-                <h3 className="text-xl font-bold text-foreground mb-3">{feature.title}</h3>
-                <p className="text-muted-body leading-relaxed font-medium">{feature.description}</p>
+                <h3 className="mb-3 text-xl font-bold text-foreground">{feature.title}</h3>
+                <p className="font-medium leading-relaxed text-muted-body">{feature.description}</p>
               </motion.div>
             ))}
           </div>
@@ -222,32 +268,31 @@ export default function LandingContent() {
       <ComparisonTable />
       <PricingSection />
 
-      {/* Final CTA */}
-      <section className="py-32 bg-foreground relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-accent-strong/30 blur-[120px] rounded-full" />
-        <div className="max-w-4xl mx-auto px-6 text-center space-y-12 z-10 relative">
-          <h2 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-tight">
+      <section className="relative overflow-hidden bg-foreground py-32">
+        <div className="absolute right-0 top-0 h-[600px] w-[600px] rounded-full bg-accent-strong/30 blur-[120px]" />
+        <div className="relative z-10 mx-auto max-w-4xl space-y-12 px-6 text-center">
+          <h2 className="text-4xl font-black leading-tight tracking-tight text-white md:text-6xl">
             {t("finalCta.titleLine1")} <br />
             <span className="text-accent-strong">{t("finalCta.titleLine2")}</span>
           </h2>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-            <Button size="lg" className="h-16 px-12 bg-surface-elevated text-foreground hover:bg-surface-base rounded-2xl font-black text-xl shadow-2xl active:scale-95" asChild>
-               <Link href="/api/auth/signin">{t("finalCta.primaryCta")}</Link>
+          <div className="flex flex-col items-center justify-center gap-6 sm:flex-row">
+            <Button size="lg" className="h-16 rounded-2xl bg-surface-elevated px-12 text-xl font-black text-foreground shadow-2xl hover:bg-surface-base active:scale-95" asChild>
+              <Link href="/api/auth/signin">{t("finalCta.primaryCta")}</Link>
             </Button>
-            <Button size="lg" className="h-16 px-12 bg-transparent border border-white/20 text-white hover:bg-white/10 rounded-2xl font-bold text-xl transition-all" asChild>
-               <Link href="/help">{t("finalCta.secondaryCta")}</Link>
+            <Button size="lg" className="h-16 rounded-2xl border border-white/20 bg-transparent px-12 text-xl font-bold text-white transition-all hover:bg-white/10" asChild>
+              <Link href="/help">{t("finalCta.secondaryCta")}</Link>
             </Button>
           </div>
-          <div className="pt-8 flex flex-wrap justify-center gap-8 text-white/65 font-bold uppercase tracking-widest text-xs">
-             <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-500" /> {t("finalCta.badges.udyam")}
-             </div>
-             <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-accent-strong" /> {t("finalCta.badges.wcag")}
-             </div>
-             <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-blue-500" /> {t("finalCta.badges.globalSupport")}
-             </div>
+          <div className="flex flex-wrap justify-center gap-8 pt-8 text-xs font-bold uppercase tracking-widest text-white/70">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-emerald-500" /> {t("finalCta.badges.udyam")}
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-accent-strong" /> {t("finalCta.badges.wcag")}
+            </div>
+            <div className="flex items-center gap-2">
+              <Globe className="h-4 w-4 text-blue-500" /> {t("finalCta.badges.globalSupport")}
+            </div>
           </div>
         </div>
       </section>

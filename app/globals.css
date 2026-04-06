@@ -203,3 +203,26 @@
     border-color: color-mix(in oklab, var(--destructive) 35%, transparent);
   }
 }
+
+@layer utilities {
+  @keyframes marquee {
+    from {
+      transform: translateX(0%);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  .motion-marquee {
+    animation: marquee 20s linear infinite;
+    will-change: transform;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .motion-marquee {
+      animation: none;
+      transform: translateX(0%);
+    }
+  }
+}
