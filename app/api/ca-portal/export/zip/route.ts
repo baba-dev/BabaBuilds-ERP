@@ -56,9 +56,23 @@ export async function GET(request: Request) {
     for (const inv of invoices) {
       if (inv.pdfPath) {
         try {
-          // Translate the public URL (e.g., /invoices/ws_123/INV-001.pdf) to a local server path
-          const filePath = path.join(process.cwd(), 'public', inv.pdfPath);
-          const fileBuffer = await fs.readFile(filePath);
+          const normalizedRelativePath = inv.pdfPath.replace(/^[/\\]+/, '');
+          const candidatePath = path.join(process.cwd(), 'public', normalizedRelativePath);
+          const allowedBaseDir = path.resolve(process.cwd(), 'public', 'invoices');
+          const candidateResolvedPath = path.resolve(candidatePath);
+          const confinedBasePrefix = `${allowedBaseDir}${path.sep}`;
+          const isConfined =
+            candidateResolvedPath === allowedBaseDir ||
+            candidateResolvedPath.startsWith(confinedBasePrefix);
+
+          if (!isConfined) {
+            console.warn(
+              `Security warning: Skipping invoice PDF read outside allowed directory. invoiceId=${inv.id}, pdfPath=${inv.pdfPath}`
+            );
+            continue;
+          }
+
+          const fileBuffer = await fs.readFile(candidateResolvedPath);
           
           // Name the file cleanly for the CA: "INV-24-001_ClientName.pdf"
           const safeClientName = inv.clientName.replace(/[^a-z0-9]/gi, '_');

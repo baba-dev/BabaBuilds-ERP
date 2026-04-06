@@ -34,10 +34,22 @@ export async function DELETE(
 
     // 3. Cleanup Orphaned PDF File
     if (invoice.pdfPath) {
-      const filePath = path.join(process.cwd(), 'public', invoice.pdfPath);
-      if (fs.existsSync(filePath)) {
+      const normalizedRelativePath = invoice.pdfPath.replace(/^[/\\]+/, '');
+      const candidatePath = path.join(process.cwd(), 'public', normalizedRelativePath);
+      const allowedBaseDir = path.resolve(process.cwd(), 'public', 'invoices');
+      const candidateResolvedPath = path.resolve(candidatePath);
+      const confinedBasePrefix = `${allowedBaseDir}${path.sep}`;
+      const isConfined =
+        candidateResolvedPath === allowedBaseDir ||
+        candidateResolvedPath.startsWith(confinedBasePrefix);
+
+      if (!isConfined) {
+        console.warn(
+          `Security warning: Skipping invoice PDF deletion outside allowed directory. invoiceId=${invoiceId}, pdfPath=${invoice.pdfPath}`
+        );
+      } else if (fs.existsSync(candidateResolvedPath)) {
         try {
-          fs.unlinkSync(filePath);
+          fs.unlinkSync(candidateResolvedPath);
         } catch (e) {
           console.error("Failed to delete PDF file:", e);
         }
