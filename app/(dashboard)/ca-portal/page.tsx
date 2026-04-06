@@ -150,114 +150,24 @@ type CAInvoiceRow = {
   invoiceDate: string | Date;
   invoiceNumber: string;
   clientName: string;
+  sacCode: string;
   totalAmount: number;
+  amountReceived: number | null;
   status: string;
   pdfPath?: string | null;
 };
 
 type CAExpenseRow = {
   id: string;
-  vendor?: string | null;
-  category?: string | null;
   date: string | Date;
+  category: string;
+  vendor: string;
+  description?: string | null;
   amount: number;
   receiptUrl?: string | null;
 };
 
-const invoiceColumns: DataTableColumnDef<CAInvoiceRow>[] = [
-  {
-    id: "invoiceNumber",
-    header: "Invoice #",
-    accessor: (row) => row.invoiceNumber,
-    cell: (row) => <span className="font-semibold">{row.invoiceNumber}</span>,
-    sortable: true,
-  },
-  {
-    id: "clientName",
-    header: "Client",
-    accessor: (row) => row.clientName,
-    cell: (row) => row.clientName,
-    sortable: true,
-  },
-  {
-    id: "invoiceDate",
-    header: "Date",
-    accessor: (row) => row.invoiceDate,
-    sortAccessor: (row) => new Date(row.invoiceDate).getTime(),
-    cell: (row) => format(new Date(row.invoiceDate), "dd MMM yyyy"),
-    sortable: true,
-  },
-  {
-    id: "totalAmount",
-    header: "Amount",
-    accessor: (row) => row.totalAmount,
-    sortAccessor: (row) => row.totalAmount,
-    cell: (row) => `₹${row.totalAmount.toLocaleString("en-IN")}`,
-    className: "text-right font-semibold",
-    headerClassName: "text-right",
-    sortable: true,
-  },
-  {
-    id: "status",
-    header: "Status",
-    accessor: (row) => row.status,
-    cell: (row) => (
-      <Badge variant={row.status === "Paid" ? "default" : "secondary"}>
-        {row.status}
-      </Badge>
-    ),
-  },
-];
-
-const expenseColumns: DataTableColumnDef<CAExpenseRow>[] = [
-  {
-    id: "vendor",
-    header: "Vendor",
-    accessor: (row) => row.vendor ?? "",
-    cell: (row) => row.vendor || "—",
-    sortable: true,
-  },
-  {
-    id: "category",
-    header: "Category",
-    accessor: (row) => row.category ?? "",
-    cell: (row) => row.category || "—",
-    sortable: true,
-  },
-  {
-    id: "date",
-    header: "Date",
-    accessor: (row) => row.date,
-    sortAccessor: (row) => new Date(row.date).getTime(),
-    cell: (row) => format(new Date(row.date), "dd MMM yyyy"),
-    sortable: true,
-  },
-  {
-    id: "amount",
-    header: "Amount",
-    accessor: (row) => row.amount,
-    sortAccessor: (row) => row.amount,
-    cell: (row) => `₹${row.amount.toLocaleString("en-IN")}`,
-    className: "text-right font-semibold",
-    headerClassName: "text-right",
-    sortable: true,
-  },
-  {
-    id: "receipt",
-    header: "Receipt",
-    accessor: (row) => row.receiptUrl ?? "",
-    cell: (row) =>
-      row.receiptUrl ? (
-        <Button asChild size="sm" variant="ghost" className="h-8 px-2">
-          <a href={row.receiptUrl} target="_blank" rel="noreferrer">
-            View <ExternalLink className="ml-1 h-3.5 w-3.5" />
-          </a>
-        </Button>
-      ) : (
-        "—"
-      ),
-  },
-];
+const formatINRCurrency = (amount: number) => `₹${amount.toLocaleString("en-IN")}`;
 
 export default function CAPortal() {
   const t = useTranslations('CAPortal');
@@ -340,6 +250,146 @@ export default function CAPortal() {
     { id: "tn", label: "Tamil Nadu", subtitle: "Expense audits", value: "24 compliance events", x: 66, y: 60, weight: 24 },
     { id: "gj", label: "Gujarat", subtitle: "Export invoices", value: "19 compliance events", x: 59, y: 47, weight: 19 },
     { id: "wb", label: "West Bengal", subtitle: "Documentation checks", value: "16 compliance events", x: 69, y: 46, weight: 16 },
+  ];
+
+  const invoiceColumns: DataTableColumnDef<CAInvoiceRow>[] = [
+    {
+      id: "invoiceDate",
+      header: "Date",
+      accessor: (row) => row.invoiceDate,
+      sortable: true,
+      sortAccessor: (row) => new Date(row.invoiceDate).getTime(),
+      cell: (row) => format(new Date(row.invoiceDate), "dd MMM yyyy"),
+    },
+    {
+      id: "invoiceNumber",
+      header: "Invoice No.",
+      accessor: (row) => row.invoiceNumber,
+      sortable: true,
+      cell: (row) => row.invoiceNumber,
+    },
+    {
+      id: "clientName",
+      header: "Client",
+      accessor: (row) => row.clientName,
+      sortable: true,
+      cell: (row) => row.clientName,
+    },
+    {
+      id: "sacCode",
+      header: "SAC",
+      accessor: (row) => row.sacCode,
+      sortable: true,
+      cell: (row) => row.sacCode,
+    },
+    {
+      id: "totalAmount",
+      header: "Total Amount",
+      accessor: (row) => row.totalAmount,
+      sortable: true,
+      sortAccessor: (row) => row.totalAmount,
+      className: "text-right font-medium",
+      headerClassName: "text-right",
+      cell: (row) => formatINRCurrency(row.totalAmount),
+    },
+    {
+      id: "amountReceived",
+      header: "Amount Received",
+      accessor: (row) => row.amountReceived ?? 0,
+      sortable: true,
+      sortAccessor: (row) => row.amountReceived ?? 0,
+      className: "text-right",
+      headerClassName: "text-right",
+      cell: (row) => row.amountReceived === null ? "—" : formatINRCurrency(row.amountReceived),
+    },
+    {
+      id: "status",
+      header: "Status",
+      accessor: (row) => row.status,
+      sortable: true,
+      cell: (row) => (
+        <Badge variant={row.status === "Paid" ? "default" : "secondary"}>
+          {row.status}
+        </Badge>
+      ),
+    },
+    {
+      id: "pdf",
+      header: "Evidence",
+      accessor: (row) => row.pdfPath ?? "",
+      cell: (row) =>
+        row.pdfPath ? (
+          <a
+            href={row.pdfPath}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700"
+          >
+            View <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        ) : (
+          <span className="text-zinc-400">N/A</span>
+        ),
+    },
+  ];
+
+  const expenseColumns: DataTableColumnDef<CAExpenseRow>[] = [
+    {
+      id: "date",
+      header: "Date",
+      accessor: (row) => row.date,
+      sortable: true,
+      sortAccessor: (row) => new Date(row.date).getTime(),
+      cell: (row) => format(new Date(row.date), "dd MMM yyyy"),
+    },
+    {
+      id: "vendor",
+      header: "Vendor",
+      accessor: (row) => row.vendor,
+      sortable: true,
+      cell: (row) => row.vendor,
+    },
+    {
+      id: "category",
+      header: "Category",
+      accessor: (row) => row.category,
+      sortable: true,
+      cell: (row) => row.category,
+    },
+    {
+      id: "description",
+      header: "Description",
+      accessor: (row) => row.description ?? "",
+      cell: (row) => row.description || "—",
+    },
+    {
+      id: "amount",
+      header: "Amount",
+      accessor: (row) => row.amount,
+      sortable: true,
+      sortAccessor: (row) => row.amount,
+      className: "text-right font-medium",
+      headerClassName: "text-right",
+      cell: (row) => formatINRCurrency(row.amount),
+    },
+    {
+      id: "receipt",
+      header: "Receipt",
+      accessor: (row) => row.receiptUrl ?? "",
+      cell: (row) =>
+        row.receiptUrl ? (
+          <a
+            href={row.receiptUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700"
+          >
+            View <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        ) : (
+          <span className="text-zinc-400">N/A</span>
+        ),
+    },
   ];
 
   return (
