@@ -59,7 +59,7 @@ export function SidebarProvider({
       <div
         data-slot="sidebar-wrapper"
         data-state={open ? "expanded" : "collapsed"}
-        className="flex min-h-screen w-full"
+        className="flex min-h-screen w-full items-start"
       >
         {children}
       </div>
@@ -92,7 +92,7 @@ export function Sidebar({ children, className }: { children: React.ReactNode; cl
       data-slot="sidebar"
       data-state={open ? "expanded" : "collapsed"}
       className={cn(
-        "hidden border-r border-white/5 bg-black/90 shadow-[rgba(0,0,0,0.5)_4px_0px_20px] backdrop-blur-2xl md:flex md:inset-y-0 md:sticky md:top-0",
+        "hidden border-r border-white/5 bg-black/90 shadow-[rgba(0,0,0,0.5)_4px_0px_20px] backdrop-blur-2xl md:flex md:h-screen md:self-start md:inset-y-0 md:sticky md:top-0",
         open ? "md:w-64" : "md:w-[4.5rem]",
         className,
       )}
