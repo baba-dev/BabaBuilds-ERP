@@ -12,6 +12,8 @@ import {
 import { PDFDocument, PDFArray, PDFName, PDFString, rgb, StandardFonts } from 'pdf-lib';
 import fs from 'fs';
 import path from 'path';
+import { calculateInvoiceTotals } from '@/lib/invoice/totals';
+import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
 
 // Helper for Indian Financial Year
 const getFY = (date: Date) => {
@@ -64,6 +66,7 @@ async function generateRetainerPDF(
   invoiceNumber: string, 
   billingMonth: string, 
   finalDescription: string,
+  totals: { subtotal: number; taxRate: number; taxAmount: number; total: number; taxMode: 'taxable' | 'exempt' },
   paymentLink: string | null = null
 ) {
   const client = retainer.client;
@@ -75,9 +78,12 @@ async function generateRetainerPDF(
   const dueDate = new Date(date);
   dueDate.setDate(dueDate.getDate() + 7);
 
-  const subtotal = retainer.amount;
-  const estimatedTax = client.isExport ? 0 : subtotal * 0.18;
-  const formattedTotal = subtotal.toLocaleString(userLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const subtotal = totals.subtotal;
+  const estimatedTax = totals.taxAmount;
+  const taxLabel = profile.taxLabel || "Tax";
+  const taxRatePercent = Math.round(totals.taxRate * 100);
+  const taxRowLabel = totals.taxMode === 'exempt' ? `${taxLabel} (Exempt 0%)` : `${taxLabel} (${taxRatePercent}%)`;
+  const formattedTotal = totals.total.toLocaleString(userLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595.28, 841.89]); 
@@ -200,12 +206,10 @@ async function generateRetainerPDF(
     drawText(subtotal.toLocaleString(userLocale, { minimumFractionDigits: 2 }), rightMargin, tableY + 15, 9, false, 'right', black);
     tableY += 20;
 
-    if (!client.isExport) {
-      page.drawLine({ start: { x: totalsLeftMargin, y: height - tableY }, end: { x: rightMargin, y: height - tableY }, thickness: 0.5, color: borderGray });
-      drawText("Tax (18%)", priceX, tableY + 15, 9, false, 'right', textDark);
-      drawText(estimatedTax.toLocaleString(userLocale, { minimumFractionDigits: 2 }), rightMargin, tableY + 15, 9, false, 'right', black);
-      tableY += 20;
-    }
+    page.drawLine({ start: { x: totalsLeftMargin, y: height - tableY }, end: { x: rightMargin, y: height - tableY }, thickness: 0.5, color: borderGray });
+    drawText(taxRowLabel, priceX, tableY + 15, 9, false, 'right', textDark);
+    drawText(estimatedTax.toLocaleString(userLocale, { minimumFractionDigits: 2 }), rightMargin, tableY + 15, 9, false, 'right', black);
+    tableY += 20;
 
     page.drawLine({ start: { x: totalsLeftMargin, y: height - tableY }, end: { x: rightMargin, y: height - tableY }, thickness: 0.5, color: borderGray });
     drawText("Amount due", priceX, tableY + 15, 9, true, 'right', black);
@@ -303,12 +307,12 @@ async function generateRetainerPDF(
     const dividerY = currentY - 10;
     page.drawLine({ start: { x: 40, y: height - dividerY }, end: { x: width - 40, y: height - dividerY }, thickness: 1, color: borderGray });
 
-    drawText('CGST (0%)', width - 150, currentY + 10, 9, false, 'right', textMuted);
-    drawText('0.00', width - 50, currentY + 10, 10, false, 'right', textDark);
-    drawText('SGST (0%)', width - 150, currentY + 25, 9, false, 'right', textMuted);
-    drawText('0.00', width - 50, currentY + 25, 10, false, 'right', textDark);
-    drawText(client.isExport ? 'IGST - Export (0%)' : 'IGST - Domestic (0%)', width - 150, currentY + 40, 9, false, 'right', textMuted);
-    drawText('0.00', width - 50, currentY + 40, 10, false, 'right', textDark);
+    drawText('Subtotal', width - 150, currentY + 10, 9, false, 'right', textMuted);
+    drawText(subtotal.toLocaleString(userLocale, { minimumFractionDigits: 2 }), width - 50, currentY + 10, 10, false, 'right', textDark);
+    drawText(taxRowLabel, width - 150, currentY + 25, 9, false, 'right', textMuted);
+    drawText(estimatedTax.toLocaleString(userLocale, { minimumFractionDigits: 2 }), width - 50, currentY + 25, 10, false, 'right', textDark);
+    drawText('Total', width - 150, currentY + 40, 9, false, 'right', textMuted);
+    drawText(totals.total.toLocaleString(userLocale, { minimumFractionDigits: 2 }), width - 50, currentY + 40, 10, false, 'right', textDark);
 
     drawRect(width - 220, currentY + 70, 180, 35, black);
     drawText('Total Amount', width - 150, currentY + 92, 11, true, 'right', white);
@@ -449,6 +453,23 @@ export async function GET(request: Request) {
           finalDescription = `${retainer.serviceName} (${billingMonth})`;
         }
 
+        const taxResolution = resolveTaxRate({
+          countryCode: profile.workspace?.countryCode || "IN",
+          isTaxExempt: Boolean(retainer.client.isExport),
+          serviceTaxRates: [(retainer as any).taxRate ?? null],
+          workspaceDefaultTaxRate: (profile as any).defaultTaxRate ?? null,
+        });
+        if (taxResolution.requiresUserInput) {
+          throw new Error(
+            `Missing tax rate configuration for retainer ${retainer.id}. Please set a workspace default tax rate from UI.`
+          );
+        }
+        const totals = calculateInvoiceTotals({
+          services: [{ amount: retainer.amount }],
+          isTaxExempt: Boolean(retainer.client.isExport),
+          defaultTaxRate: taxResolution.taxRate,
+        });
+
         // --- PAYMENT LINK GENERATION (PRO ONLY) ---
         let paymentLink: string | null = null;
         const isProPlan = profile.workspace?.planTier === "PRO";
@@ -471,7 +492,7 @@ export async function GET(request: Request) {
               const decryptedSecret = decrypt((profile as any).razorpayKeySecret);
 
               paymentLink = await generateTenantPaymentLink({
-                amount:          retainer.amount,
+                amount:          totals.total,
                 currency:        baseCurrency,
                 description:     `Invoice ${invoiceNumber}`,
                 invoiceDueDate:  dueDate,
@@ -496,7 +517,7 @@ export async function GET(request: Request) {
               const decryptedSecret = decrypt((profile as any).stripeSecretKey);
 
               paymentLink = await generateStripePaymentLink({
-                amount:          retainer.amount,
+                amount:          totals.total,
                 currency:        baseCurrency,
                 description:     `Invoice ${invoiceNumber}`,
                 invoiceNumber,
@@ -516,6 +537,7 @@ export async function GET(request: Request) {
           invoiceNumber, 
           billingMonth, 
           finalDescription,
+          totals,
           paymentLink
         );
 
@@ -534,10 +556,15 @@ export async function GET(request: Request) {
               clientName: retainer.client.name,
               sacCode: retainer.sacCode,
               serviceDescription: finalDescription,
-              totalAmount: retainer.amount,
+              subtotal: totals.subtotal,
+              taxRate: totals.taxRate,
+              taxAmount: totals.taxAmount,
+              grandTotal: totals.total,
+              taxMode: totals.taxMode,
+              totalAmount: totals.total,
               status: "Pending",
               pdfPath: relativePdfPath, 
-            }
+            } as any
           });
 
           // --- SMART DATE LOGIC ---

@@ -10,6 +10,8 @@ import dns from 'dns';
 import { promisify } from 'util';
 import { Prisma } from "@prisma/client";
 import crypto from 'crypto';
+import { calculateInvoiceTotals } from '@/lib/invoice/totals';
+import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
 
 const lookupAsync = promisify(dns.lookup);
 const ALLOWED_STATUSES = ["Pending", "Partially Paid", "Paid"] as const;
@@ -153,7 +155,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const { clientId, billingMonth, sacCode, services, customDate, sendEmail, status: rawStatus } = body;
+    const { clientId, billingMonth, sacCode, services, customDate, sendEmail, status: rawStatus, taxRateOverride } = body;
     const normalizedStatus = normalizeInvoiceStatus(rawStatus);
 
     if (!clientId) return NextResponse.json({ error: "No client selected." }, { status: 400 });
@@ -170,7 +172,6 @@ export async function POST(request: Request) {
       return { ...s, amount: amt };
     });
 
-    const totalAmount = sanitizedServices.reduce((sum: number, service: any) => sum + service.amount, 0);
     const serviceDesc = sanitizedServices.map((s: any) => s.title).join(" + ");
 
     // 2. FETCH CLIENT
@@ -178,13 +179,47 @@ export async function POST(request: Request) {
       where: { id: clientId, workspaceId } 
     });
     if (!client) return NextResponse.json({ error: "Selected client does not exist in your CRM." }, { status: 404 });
-
     // 3. FETCH PROFILE & WORKSPACE
     const profile = await prisma.businessProfile.findUnique({ 
       where: { workspaceId },
       include: { workspace: true }
     });
     if (!profile) return NextResponse.json({ error: "Business profile missing. Please complete Settings Wizard." }, { status: 400 });
+    const countryCode = profile.workspace?.countryCode || "IN";
+    const serviceTaxRates = sanitizedServices
+      .map((service: any) => service?.sac?.igstRate ?? service?.taxRate ?? null)
+      .filter((rate: any) => rate !== null && rate !== undefined);
+    const taxResolution = resolveTaxRate({
+      countryCode,
+      isTaxExempt: Boolean(client.isExport),
+      serviceTaxRates,
+      workspaceDefaultTaxRate: (profile as any).defaultTaxRate,
+      taxRateOverride,
+    });
+
+    if (taxResolution.requiresUserInput) {
+      return NextResponse.json({
+        error: "Tax rate is required before generating this invoice.",
+        code: "TAX_RATE_REQUIRED",
+        reason: taxResolution.reason,
+        countryCode,
+        taxLabel: profile.taxLabel || "Tax",
+        candidates: taxResolution.candidates || [],
+      }, { status: 422 });
+    }
+
+    if (taxResolution.source === 'override' && taxRateOverride !== undefined && taxRateOverride !== null && taxRateOverride !== '') {
+      await prisma.businessProfile.update({
+        where: { workspaceId },
+        data: { defaultTaxRate: taxResolution.taxRate },
+      });
+    }
+
+    const totals = calculateInvoiceTotals({
+      services: sanitizedServices,
+      isTaxExempt: Boolean(client.isExport),
+      defaultTaxRate: taxResolution.taxRate,
+    });
 
     const isFreePlan     = profile.workspace?.planTier === "FREE";
     const isProPlan      = !isFreePlan;
@@ -196,7 +231,7 @@ export async function POST(request: Request) {
     const dueDate = new Date(date);
     dueDate.setDate(dueDate.getDate() + 7);
 
-    const formattedTotal = totalAmount.toLocaleString(userLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formattedTotal = totals.total.toLocaleString(userLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     const currentMonth = date.getMonth() + 1; 
     const currentYear  = date.getFullYear();
@@ -262,7 +297,7 @@ export async function POST(request: Request) {
               const decryptedSecret = decrypt((profile as any).razorpayKeySecret);
 
               paymentLink = await generateTenantPaymentLink({
-                amount:          totalAmount,
+                amount:          totals.total,
                 currency:        baseCurrency,
                 description:     `Invoice ${invoiceNumber}`,
                 invoiceDueDate:  dueDate,
@@ -291,7 +326,7 @@ export async function POST(request: Request) {
               const decryptedSecret = decrypt((profile as any).stripeSecretKey);
 
               paymentLink = await generateStripePaymentLink({
-                amount:          totalAmount,    // in major units — service converts to smallest unit internally
+                amount:          totals.total,    // in major units — service converts to smallest unit internally
                 currency:        baseCurrency,   // passes locale currency accurately for correct unit math
                 description:     `Invoice ${invoiceNumber}`,
                 invoiceNumber,
@@ -316,7 +351,7 @@ export async function POST(request: Request) {
           billingMonth,
           sacCode,
           services: sanitizedServices,
-          totalAmount,
+          totals,
           formattedTotal,
           baseCurrency,
           userLocale,
@@ -334,10 +369,15 @@ export async function POST(request: Request) {
             clientName: client.name, clientId: client.id,
             sacCode: typeof sacCode === 'string' ? sacCode : JSON.stringify(sacCode), 
             serviceDescription: serviceDesc, 
-            totalAmount,
+            subtotal: totals.subtotal,
+            taxRate: totals.taxRate,
+            taxAmount: totals.taxAmount,
+            grandTotal: totals.total,
+            taxMode: totals.taxMode,
+            totalAmount: totals.total,
             pdfPath: relativePdfPath,
             status: normalizedStatus,
-          },
+          } as any,
         });
 
         break;

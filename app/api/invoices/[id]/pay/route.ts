@@ -37,7 +37,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     // 3. SMART STATUS DETERMINATION
     // Compare the new payment amount against the total bill
     let newStatus = 'Paid';
-    if (paymentAmount > 0 && paymentAmount < existingInvoice.totalAmount) {
+    const invoiceGrandTotal = (existingInvoice as any).grandTotal || existingInvoice.totalAmount;
+    if (paymentAmount > 0 && paymentAmount < invoiceGrandTotal) {
       newStatus = 'Partially Paid';
     } else if (paymentAmount === 0) {
       newStatus = 'Pending';

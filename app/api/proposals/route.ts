@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
+import { calculateInvoiceTotals } from '@/lib/invoice/totals';
 
 export async function GET() {
   try {
@@ -33,7 +35,7 @@ export async function POST(request: Request) {
     const workspaceId = (session as any).workspaceId;
 
     const body = await request.json();
-    const { clientId, title, validUntil, items } = body;
+    const { clientId, title, validUntil, items, taxRateOverride } = body;
 
     const client = await prisma.client.findFirst({ 
       where: { id: clientId, workspaceId } 
@@ -67,10 +69,65 @@ export async function POST(request: Request) {
     }
     const proposalNo = `EST-${shortYear}-${sequence.toString().padStart(3, '0')}`;
 
-    // Calculate Totals
-    const subtotal = items.reduce((sum: number, item: any) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0);
-    const estimatedTax = client.isExport ? 0 : subtotal * 0.18; 
-    const totalAmount = subtotal + estimatedTax;
+    const profile = await prisma.businessProfile.findUnique({
+      where: { workspaceId },
+      include: { workspace: true }
+    });
+    const countryCode = profile?.workspace?.countryCode || "IN";
+    const defaultTaxRate = (profile as any)?.defaultTaxRate ?? null;
+
+    const serviceTemplateIds = items
+      .map((item: any) => item.serviceTemplateId)
+      .filter((id: any) => typeof id === 'string' && id.length > 0);
+
+    const templates = serviceTemplateIds.length
+      ? await prisma.serviceTemplate.findMany({
+          where: { workspaceId, id: { in: serviceTemplateIds } },
+          include: { sacCode: true },
+        })
+      : [];
+    const templateMap = new Map(templates.map((template) => [template.id, template]));
+    const serviceTaxRates = items
+      .map((item: any) => templateMap.get(item.serviceTemplateId)?.sacCode?.igstRate ?? null)
+      .filter((rate: any) => rate !== null && rate !== undefined);
+
+    const taxResolution = resolveTaxRate({
+      countryCode,
+      isTaxExempt: Boolean(client.isExport),
+      serviceTaxRates,
+      workspaceDefaultTaxRate: defaultTaxRate,
+      taxRateOverride,
+    });
+
+    if (taxResolution.requiresUserInput) {
+      return NextResponse.json({
+        error: "Tax rate is required before creating this proposal.",
+        code: "TAX_RATE_REQUIRED",
+        reason: taxResolution.reason,
+        countryCode,
+        taxLabel: profile?.taxLabel || "Tax",
+        candidates: taxResolution.candidates || [],
+      }, { status: 422 });
+    }
+
+    if (taxResolution.source === 'override' && taxRateOverride !== undefined && taxRateOverride !== null && taxRateOverride !== '' && profile) {
+      await prisma.businessProfile.update({
+        where: { workspaceId },
+        data: { defaultTaxRate: taxResolution.taxRate },
+      });
+    }
+
+    const pricedLines = items.map((item: any) => ({
+      amount: Number(item.quantity) * Number(item.unitPrice)
+    }));
+    const totals = calculateInvoiceTotals({
+      services: pricedLines,
+      isTaxExempt: Boolean(client.isExport),
+      defaultTaxRate: taxResolution.taxRate,
+    });
+    const subtotal = totals.subtotal;
+    const estimatedTax = totals.taxAmount;
+    const totalAmount = totals.total;
 
     const newProposal = await prisma.proposal.create({
       data: {

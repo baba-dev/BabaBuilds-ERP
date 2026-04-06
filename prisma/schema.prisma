@@ -161,6 +161,7 @@ model BusinessProfile {
   signatureUrl    String?
   groqApiKey      String?
   defaultSacCode  String?   @default("998313") // Default IT Consulting if not specified
+  defaultTaxRate  Float?
 
   // PAYMENT GATEWAY (Per-Tenant Razorpay Keys — PRO users only)
   razorpayKeyId     String?   // Plain text (publishable key, e.g. rzp_live_xxx)
@@ -222,6 +223,11 @@ model Invoice {
   sacCode            String?     // Removed the hardcoded @default("998313")
   serviceDescription String
 
+  subtotal           Float     @default(0)
+  taxRate            Float     @default(0)
+  taxAmount          Float     @default(0)
+  grandTotal         Float     @default(0)
+  taxMode            String    @default("exempt") // "taxable" | "exempt"
   totalAmount        Float
   pdfPath            String
   createdAt          DateTime  @default(now())
@@ -432,6 +438,7 @@ model Retainer {
   // What exactly are we billing them for?
   serviceName     String
   sacCode         String?
+  taxRate         Float?
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

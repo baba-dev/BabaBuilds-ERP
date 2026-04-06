@@ -1,6 +1,7 @@
 import { PDFDocument, PDFPage, PDFArray, PDFName, PDFString, rgb, StandardFonts, degrees } from 'pdf-lib';
 import fs from 'fs';
 import path from 'path';
+import type { InvoiceTotals } from '@/lib/invoice/totals';
 
 export interface PDFParams {
   profile: any;
@@ -11,7 +12,7 @@ export interface PDFParams {
   billingMonth: string;
   sacCode: any;
   services: any[];
-  totalAmount: number;
+  totals: InvoiceTotals;
   formattedTotal: string;
   baseCurrency: string;
   userLocale: string;
@@ -28,7 +29,7 @@ export async function generateInvoicePDF({
   billingMonth,
   sacCode,
   services,
-  totalAmount,
+  totals,
   formattedTotal,
   baseCurrency,
   userLocale,
@@ -209,8 +210,13 @@ export async function generateInvoicePDF({
     });
 
     tableY += 10;
-    const subtotal     = services.reduce((sum: number, service: any) => sum + service.amount, 0);
-    const estimatedTax = client.isExport ? 0 : subtotal * 0.18;
+    const subtotal = totals.subtotal;
+    const taxAmount = totals.taxAmount;
+    const taxRatePercent = Math.round(totals.taxRate * 100);
+    const taxLabel = profile.taxLabel || "Tax";
+    const taxRowLabel = totals.taxMode === 'exempt'
+      ? `${taxLabel} (Exempt 0%)`
+      : `${taxLabel} (${taxRatePercent}%)`;
     const totalsLeftMargin = rightMargin - 200;
 
     page.drawLine({ start: { x: totalsLeftMargin, y: height - tableY }, end: { x: rightMargin, y: height - tableY }, thickness: 0.5, color: borderGray });
@@ -218,16 +224,14 @@ export async function generateInvoicePDF({
     drawText(subtotal.toLocaleString(userLocale, { minimumFractionDigits: 2 }), rightMargin, tableY + 15, 9, false, 'right', black);
     tableY += 20;
 
-    if (!client.isExport) {
-      page.drawLine({ start: { x: totalsLeftMargin, y: height - tableY }, end: { x: rightMargin, y: height - tableY }, thickness: 0.5, color: borderGray });
-      drawText("Tax (18%)", priceX, tableY + 15, 9, false, 'right', textMuted);
-      drawText(estimatedTax.toLocaleString(userLocale, { minimumFractionDigits: 2 }), rightMargin, tableY + 15, 9, false, 'right', black);
-      tableY += 20;
-    }
+    page.drawLine({ start: { x: totalsLeftMargin, y: height - tableY }, end: { x: rightMargin, y: height - tableY }, thickness: 0.5, color: borderGray });
+    drawText(taxRowLabel, priceX, tableY + 15, 9, false, 'right', textMuted);
+    drawText(taxAmount.toLocaleString(userLocale, { minimumFractionDigits: 2 }), rightMargin, tableY + 15, 9, false, 'right', black);
+    tableY += 20;
 
     page.drawLine({ start: { x: totalsLeftMargin, y: height - tableY }, end: { x: rightMargin, y: height - tableY }, thickness: 0.5, color: borderGray });
     drawText("Amount due", priceX, tableY + 15, 9, true, 'right', black);
-    drawText(`${currencyCode} ${formattedTotal}`, rightMargin, tableY + 15, 9, true, 'right', black);
+    drawText(`${currencyCode} ${totals.total.toLocaleString(userLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, rightMargin, tableY + 15, 9, true, 'right', black);
 
     let footerY = tableY + 60;
     drawText(`If this request is concerning an invoice reach out to ${profile.email || 'billing'}. For all other concerns, contact support.`, leftMargin, footerY, 8, false, 'left', textDark);
@@ -350,16 +354,21 @@ export async function generateInvoicePDF({
     const dividerY = currentY - 10;
     page.drawLine({ start: { x: 40, y: height - dividerY }, end: { x: width - 40, y: height - dividerY }, thickness: 1, color: borderGray });
 
-    drawText('CGST (0%)',  width - 150, currentY + 10, 9, false, 'right', textMuted);
-    drawText('0.00',       width - 50,  currentY + 10, 10, false, 'right', textDark);
-    drawText('SGST (0%)',  width - 150, currentY + 25, 9, false, 'right', textMuted);
-    drawText('0.00',       width - 50,  currentY + 25, 10, false, 'right', textDark);
-    drawText(client.isExport ? 'IGST - Export (0%)' : 'IGST - Domestic (0%)', width - 150, currentY + 40, 9, false, 'right', textMuted);
-    drawText('0.00',       width - 50,  currentY + 40, 10, false, 'right', textDark);
+    const taxLabel = profile.taxLabel || "Tax";
+    const taxRatePercent = Math.round(totals.taxRate * 100);
+    const taxRowLabel = totals.taxMode === 'exempt'
+      ? `${taxLabel} (Exempt 0%)`
+      : `${taxLabel} (${taxRatePercent}%)`;
+    drawText('Subtotal',  width - 150, currentY + 10, 9, false, 'right', textMuted);
+    drawText(totals.subtotal.toLocaleString(userLocale, { minimumFractionDigits: 2 }), width - 50,  currentY + 10, 10, false, 'right', textDark);
+    drawText(taxRowLabel, width - 150, currentY + 25, 9, false, 'right', textMuted);
+    drawText(totals.taxAmount.toLocaleString(userLocale, { minimumFractionDigits: 2 }), width - 50, currentY + 25, 10, false, 'right', textDark);
+    drawText('Total', width - 150, currentY + 40, 9, false, 'right', textMuted);
+    drawText(totals.total.toLocaleString(userLocale, { minimumFractionDigits: 2 }), width - 50, currentY + 40, 10, false, 'right', textDark);
 
     drawRect(width - 250, currentY + 70, 210, 35, black);
     drawText('Total Amount',            width - 175, currentY + 92, 11, true, 'right', white);
-    drawText(`${currencyCode} ${formattedTotal}`, width - 55, currentY + 92, 11, true, 'right', white);
+    drawText(`${currencyCode} ${totals.total.toLocaleString(userLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, width - 55, currentY + 92, 11, true, 'right', white);
 
     const bankY = currentY + 130;
 
