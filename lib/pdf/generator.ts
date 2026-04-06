@@ -421,21 +421,21 @@ export async function generateInvoicePDF({
       const maxUrlWidth = width - 40 - 220;
       const urlFontSize = 9;
       const lineHeight = 12;
-      const labelY = bankY - 18;
-      const firstUrlLineY = bankY - 6;
       const wrappedUrlLines = wrapTextByWidth(paymentLink, maxUrlWidth, urlFontSize);
-
-      drawText(linkLabel, leftStartX, labelY, 9, true, 'left', black);
+      const urlBottomY = bankY - 10;
 
       const urlLineYs: number[] = [];
       wrappedUrlLines.forEach((line, index) => {
-        const lineY = firstUrlLineY - (index * lineHeight);
+        const lineY = urlBottomY - ((wrappedUrlLines.length - 1 - index) * lineHeight);
         urlLineYs.push(lineY);
         drawText(line, leftStartX, lineY, urlFontSize, false, 'left', cfLinkBlue);
       });
 
       if (wrappedUrlLines.length > 0) {
         const topUrlLineY = Math.min(...urlLineYs);
+        const labelY = topUrlLineY - lineHeight;
+        drawText(linkLabel, leftStartX, labelY, 9, true, 'left', black);
+
         const maxRenderedLineWidth = Math.max(...wrappedUrlLines.map((line) => font.widthOfTextAtSize(line, urlFontSize)));
         const urlBlockHeight = lineHeight * wrappedUrlLines.length;
 
