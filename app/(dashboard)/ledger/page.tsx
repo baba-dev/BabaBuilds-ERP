@@ -20,6 +20,7 @@ import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
 import { useTranslations } from "next-intl";
 import { getBustedUrl } from "@/lib/cache-buster";
+import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 
 export default function AuditDashboard() {
   const t = useTranslations('Ledger');
@@ -196,16 +197,11 @@ export default function AuditDashboard() {
   const safeDateFormat = (dateFormat ?? "dd/MM/yyyy").replace(/D/g, 'd').replace(/Y/g, 'y');
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto space-y-8">
-        
-        {/* Header Section */}
-        <div className="sticky top-0 z-20 -mx-4 px-4 py-4 md:-mx-8 md:px-8 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200/50 dark:border-zinc-800/50 transition-all duration-300">
-          <div className="max-w-7xl mx-auto w-full">
-            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{t('title')}</h1>
-            <p className="text-zinc-500 dark:text-zinc-400 mt-1.5 font-medium text-sm">{t('description')}</p>
-          </div>
-        </div>
+    <DashboardPageShell
+      title={t('title')}
+      description={t('description')}
+      animated={false}
+    >
 
         {/* Executive KPI Ribbon */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -446,7 +442,6 @@ export default function AuditDashboard() {
           </AlertDialogContent>
         </AlertDialog>
 
-      </div>
-    </div>
+    </DashboardPageShell>
   );
 }
