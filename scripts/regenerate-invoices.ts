@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 import { generateInvoicePDF } from '../lib/pdf/generator';
+import { calculateInvoiceTotals } from '../lib/invoice/totals';
 
 const prisma = new PrismaClient();
 
@@ -38,15 +39,27 @@ async function main() {
       }
 
       // Prepare data
+      const invoiceWithTotals = invoice as any;
       const services = typeof invoice.serviceDescription === 'string' 
-        ? [{ title: invoice.serviceDescription, amount: invoice.totalAmount, nicDetails: 'Service' }]
+        ? [{ title: invoice.serviceDescription, amount: invoiceWithTotals.subtotal ?? invoice.totalAmount, nicDetails: 'Service' }]
         : []; 
       
       // Note: Historical invoices might not have full service breakdown in DB, 
       // but we use totalAmount and description as fallback.
       
       const userLocale = profile.workspace?.countryCode === 'IN' ? 'en-IN' : 'en-US';
-      const formattedTotal = invoice.totalAmount.toLocaleString(userLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const fallbackTotals = calculateInvoiceTotals({
+        services: [{ amount: invoice.totalAmount }],
+        isTaxExempt: Boolean(client.isExport),
+      });
+      const totals = {
+        subtotal: invoiceWithTotals.subtotal ?? fallbackTotals.subtotal,
+        taxRate: invoiceWithTotals.taxRate ?? fallbackTotals.taxRate,
+        taxAmount: invoiceWithTotals.taxAmount ?? fallbackTotals.taxAmount,
+        total: invoiceWithTotals.grandTotal ?? invoice.totalAmount ?? fallbackTotals.total,
+        taxMode: (invoiceWithTotals.taxMode as 'taxable' | 'exempt') ?? fallbackTotals.taxMode,
+      };
+      const formattedTotal = totals.total.toLocaleString(userLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       
       const dueDate = new Date(invoice.invoiceDate);
       dueDate.setDate(dueDate.getDate() + 7);
@@ -60,7 +73,7 @@ async function main() {
         billingMonth: invoice.billingMonth,
         sacCode: invoice.sacCode,
         services: services,
-        totalAmount: invoice.totalAmount,
+        totals,
         formattedTotal,
         baseCurrency: profile.workspace?.baseCurrency || 'INR',
         userLocale,

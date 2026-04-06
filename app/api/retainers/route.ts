@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
 
 export async function GET() {
   try {
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
     const workspaceId = (session as any).workspaceId;
 
     const body = await request.json();
-    const { clientId, serviceName, amount, frequency, autoAppendMonth, nextBillingDate } = body;
+    const { clientId, serviceName, amount, frequency, autoAppendMonth, nextBillingDate, serviceTemplateId, taxRateOverride } = body;
 
     // 2. VALIDATE CLIENT OWNERSHIP
     const client = await prisma.client.findFirst({ 
@@ -48,6 +49,43 @@ export async function POST(request: Request) {
     });
     if (!client) {
       return NextResponse.json({ error: "Invalid client selected." }, { status: 400 });
+    }
+
+    const profile = await prisma.businessProfile.findUnique({
+      where: { workspaceId },
+      include: { workspace: true }
+    });
+    const serviceTemplate = serviceTemplateId
+      ? await prisma.serviceTemplate.findFirst({
+          where: { id: serviceTemplateId, workspaceId },
+          include: { sacCode: true },
+        })
+      : null;
+
+    const taxResolution = resolveTaxRate({
+      countryCode: profile?.workspace?.countryCode || "IN",
+      isTaxExempt: Boolean(client.isExport),
+      serviceTaxRates: [serviceTemplate?.sacCode?.igstRate ?? null],
+      workspaceDefaultTaxRate: (profile as any)?.defaultTaxRate ?? null,
+      taxRateOverride,
+    });
+
+    if (taxResolution.requiresUserInput) {
+      return NextResponse.json({
+        error: "Tax rate is required before creating this retainer.",
+        code: "TAX_RATE_REQUIRED",
+        reason: taxResolution.reason,
+        countryCode: profile?.workspace?.countryCode || "IN",
+        taxLabel: profile?.taxLabel || "Tax",
+        candidates: taxResolution.candidates || [],
+      }, { status: 422 });
+    }
+
+    if (taxResolution.source === 'override' && taxRateOverride !== undefined && taxRateOverride !== null && taxRateOverride !== '' && profile) {
+      await prisma.businessProfile.update({
+        where: { workspaceId },
+        data: { defaultTaxRate: taxResolution.taxRate },
+      });
     }
 
     // 3. CREATE THE AUTOMATED LOOP
@@ -61,8 +99,9 @@ export async function POST(request: Request) {
         autoAppendMonth: Boolean(autoAppendMonth),
         nextBillingDate: new Date(nextBillingDate),
         status: "ACTIVE", // Automatically starts running
-        sacCode: body.sacCode || null // Optional: inherited from profile if blank
-      }
+        sacCode: body.sacCode || serviceTemplate?.sacCode?.code || null, // Optional: inherited from profile if blank
+        taxRate: taxResolution.taxRate,
+      } as any
     });
 
 
