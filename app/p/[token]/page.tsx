@@ -4,6 +4,7 @@ import { useState, useEffect, use } from "react";
 import { format } from "date-fns";
 import { CheckCircle2, FileText, Building2, MessageSquareDashed } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -192,19 +193,23 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
                 <>
                   <p className="text-zinc-600 mb-4 text-sm">By clicking below, you agree to the scope of work and investment detailed above.</p>
                   <div className="flex flex-col sm:flex-row gap-4 justify-center mt-6">
-                    <button 
+                    <Button
+                      variant="destructive"
+                      size="lg"
                       onClick={() => setIsDeclineModalOpen(true)}
-                      className="w-full sm:w-auto px-6 py-3 bg-white border border-zinc-200 hover:border-rose-200 hover:bg-rose-50 text-rose-600 font-bold rounded-lg transition-colors flex items-center justify-center"
+                      className="w-full sm:w-auto"
                     >
                       <MessageSquareDashed className="w-5 h-5 mr-2" />
                       Request Changes
-                    </button>
-                    <button 
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="lg"
                       onClick={() => setShowConfirmModal(true)}
-                      className="w-full sm:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md transition-colors"
+                      className="w-full sm:w-auto"
                     >
                       Review & Accept Proposal
-                    </button>
+                    </Button>
                   </div>
                 </>
               )}
@@ -214,42 +219,57 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
       </div>
 
       {/* Security Verification Modal */}
-      {showConfirmModal && (
-        <div className="fixed inset-0 bg-zinc-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-6 rounded-2xl shadow-2xl max-w-md w-full border border-zinc-100">
-            <h3 className="text-xl font-bold text-zinc-900 mb-2">Verify Identity</h3>
-            <p className="text-zinc-500 mb-6 text-sm">
+      <Dialog
+        open={showConfirmModal}
+        onOpenChange={(open) => {
+          setShowConfirmModal(open);
+          if (!open) {
+            setAcceptError("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Verify Identity</DialogTitle>
+            <DialogDescription>
               To digitally sign this document, please confirm the email address associated with your account.
-            </p>
-            
-            <input
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Input
               type="email"
               placeholder="client@company.com"
-              className="w-full border border-zinc-300 p-3 rounded-lg mb-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               value={clientEmail}
               onChange={(e) => setClientEmail(e.target.value)}
             />
-            
-            {acceptError && <p className="text-rose-500 text-sm mb-4 font-medium bg-rose-50 p-2 rounded">{acceptError}</p>}
-
-            <div className="flex justify-end gap-3 mt-6">
-              <button 
-                onClick={() => { setShowConfirmModal(false); setAcceptError(""); }}
-                className="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-lg font-medium transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleConfirmAccept}
-                disabled={isAccepting}
-                className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold disabled:opacity-50 transition-colors"
-              >
-                {isAccepting ? 'Verifying...' : 'Sign & Accept'}
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+
+          {acceptError && <p className="text-rose-500 text-sm font-medium bg-rose-50 p-2 rounded">{acceptError}</p>}
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="secondary"
+              size="default"
+              className="w-full sm:w-auto"
+              onClick={() => {
+                setShowConfirmModal(false);
+                setAcceptError("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              size="default"
+              className="w-full sm:w-auto"
+              onClick={handleConfirmAccept}
+              disabled={isAccepting}
+            >
+              {isAccepting ? "Verifying..." : "Sign & Accept"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Request Changes / Decline Modal */}
       <Dialog open={isDeclineModalOpen} onOpenChange={setIsDeclineModalOpen}>
@@ -265,16 +285,22 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
               placeholder="e.g., Can we adjust the scope of Phase 2? / The payment terms are a bit tight..."
               value={declineReason}
               onChange={(e) => setDeclineReason(e.target.value)}
-              className="min-h-[120px] resize-none focus-visible:ring-indigo-500"
+              className="min-h-[120px] resize-none"
             />
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsDeclineModalOpen(false)}>
+            <Button
+              variant="secondary"
+              size="default"
+              className="w-full sm:w-auto"
+              onClick={() => setIsDeclineModalOpen(false)}
+            >
               Cancel
             </Button>
             <Button
               variant="default"
-              className="w-full sm:w-auto bg-zinc-900 text-white hover:bg-zinc-800"
+              size="default"
+              className="w-full sm:w-auto"
               disabled={isSubmittingDecline}
               onClick={handleRequestChanges}
             >
