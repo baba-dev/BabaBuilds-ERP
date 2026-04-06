@@ -3,13 +3,14 @@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
-import type { DataTableFilterChip } from "./types";
+import type { DataTableFacetedFilter, DataTableFilterChip } from "./types";
 
 type Props = {
   searchValue: string;
   onSearchChange: (value: string) => void;
   searchPlaceholder?: string;
   chips?: DataTableFilterChip[];
+  facetedFilters?: DataTableFacetedFilter[];
   rightSlot?: React.ReactNode;
 };
 
@@ -18,6 +19,7 @@ export function DataTableToolbar({
   onSearchChange,
   searchPlaceholder = "Search...",
   chips = [],
+  facetedFilters = [],
   rightSlot,
 }: Props) {
   return (
@@ -46,6 +48,27 @@ export function DataTableToolbar({
                 {chip.label}
               </Badge>
             ))}
+          </div>
+        )}
+        {facetedFilters.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            {facetedFilters.map((filter) =>
+              filter.options.map((option) => {
+                const active = filter.selectedValues.includes(option.value);
+                return (
+                  <Badge
+                    key={`${filter.id}-${option.value}`}
+                    variant={active ? "default" : "secondary"}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => filter.onToggle(option.value)}
+                    className="cursor-pointer"
+                  >
+                    {filter.label}: {option.label}
+                  </Badge>
+                );
+              }),
+            )}
           </div>
         )}
       </div>

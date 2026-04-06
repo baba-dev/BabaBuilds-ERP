@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { useState } from "react";
+import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
 import { Check, Gift, Sparkles, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -100,13 +100,11 @@ export default function PricingSection() {
     return Math.floor(finalPrice).toLocaleString();
   };
 
-  const comparisonStrength = useMemo(() => {
-    return {
-      Starter: 35,
-      Professional: billingCycle === "annually" ? 90 : 82,
-      Enterprise: 100,
-    } as Record<(typeof tiers)[number]["name"], number>;
-  }, [billingCycle]);
+  const planSignals = [
+    { label: "Average setup time", value: "<15 min" },
+    { label: "Automated reminders", value: "Included" },
+    { label: "Invoice reconciliation", value: "Real-time" },
+  ];
 
   return (
     <section id="pricing" className="bg-white py-24 dark:bg-zinc-950">
@@ -167,25 +165,35 @@ export default function PricingSection() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-          {tiers.map((tier, idx) => {
-            const Icon = tier.icon;
-            const price = `${currency.symbol}${formatPrice(tier)}`;
-            const priceKey = `${tier.name}-${currency.code}-${billingCycle}`;
-            return (
-              <motion.div
-                key={tier.name}
-                initial={reduceMotion ? false : { opacity: 0, scale: 0.97 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: idx * 0.08, duration: 0.35 }}
-                className={cn(
-                  "relative flex flex-col rounded-3xl border p-8 transition-all",
-                  tier.featured
-                    ? "z-10 scale-[1.02] border-indigo-600 bg-zinc-900 shadow-2xl shadow-indigo-500/10 dark:bg-zinc-950"
-                    : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900",
-                )}
-              >
+        <div className="mb-10 grid gap-4 md:grid-cols-3">
+          {planSignals.map((signal) => (
+            <div key={signal.label} className="rounded-2xl border border-zinc-200 bg-zinc-50 px-5 py-4 dark:border-zinc-800 dark:bg-zinc-900">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">{signal.label}</p>
+              <p className="mt-2 text-lg font-black text-zinc-900 dark:text-zinc-100">{signal.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <LazyMotion features={domAnimation}>
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+            {tiers.map((tier, idx) => {
+              const Icon = tier.icon;
+              const price = `${currency.symbol}${formatPrice(tier)}`;
+              const priceKey = `${tier.name}-${currency.code}-${billingCycle}`;
+              return (
+                <m.div
+                  key={tier.name}
+                  initial={reduceMotion ? false : { opacity: 0, scale: 0.97 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: idx * 0.08, duration: 0.35 }}
+                  className={cn(
+                    "relative flex flex-col rounded-3xl border p-8 transition-all",
+                    tier.featured
+                      ? "z-10 scale-[1.02] border-indigo-600 bg-zinc-900 shadow-2xl shadow-indigo-500/10 dark:bg-zinc-950"
+                      : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900",
+                  )}
+                >
                 {tier.featured && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-indigo-600 px-4 py-1.5 text-xs font-black uppercase tracking-widest text-white shadow-lg">
                     Highest Value
@@ -199,7 +207,7 @@ export default function PricingSection() {
                   <h3 className={cn("text-2xl font-black", tier.featured ? "text-white" : "text-zinc-900 dark:text-zinc-50")}>{tier.name}</h3>
                   <div className="flex items-baseline gap-1" aria-live="polite">
                     <AnimatePresence mode="wait" initial={false}>
-                      <motion.span
+                      <m.span
                         key={priceKey}
                         initial={reduceMotion ? false : { opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -208,11 +216,11 @@ export default function PricingSection() {
                         className={cn("text-4xl font-black tracking-tight", tier.featured ? "text-white" : "text-zinc-900 dark:text-zinc-50")}
                       >
                         {price}
-                      </motion.span>
+                      </m.span>
                     </AnimatePresence>
                     {tier.priceMonthly > 0 && (
                       <span className={cn("text-sm font-medium", tier.featured ? "text-zinc-300" : "text-zinc-500 dark:text-zinc-400")}>
-                        {tier.isOneTime ? "/ one-time" : `/ per ${billingCycle === "monthly" ? "month" : "year"}`}
+                        {"isOneTime" in tier && tier.isOneTime ? "/ one-time" : `/ per ${billingCycle === "monthly" ? "month" : "year"}`}
                       </span>
                     )}
                   </div>
@@ -222,13 +230,8 @@ export default function PricingSection() {
                 <div className="mb-6 space-y-2">
                   <p className={cn("text-xs font-bold uppercase tracking-widest", tier.featured ? "text-indigo-300" : "text-zinc-500 dark:text-zinc-400")}>Plan fit</p>
                   <p className={cn("text-sm", tier.featured ? "text-zinc-100" : "text-zinc-700 dark:text-zinc-300")}>{tier.cue}</p>
-                  <div className="h-2 rounded-full bg-zinc-200/80 dark:bg-zinc-700/70" role="presentation" aria-hidden>
-                    <motion.div
-                      className={cn("h-full rounded-full", tier.featured ? "bg-indigo-500" : "bg-zinc-500 dark:bg-zinc-300")}
-                      initial={false}
-                      animate={{ width: `${comparisonStrength[tier.name]}%` }}
-                      transition={{ duration: reduceMotion ? 0 : 0.35, ease: "easeOut" }}
-                    />
+                  <div className="rounded-xl border border-zinc-200/90 bg-zinc-100/80 px-3 py-2 text-xs font-semibold text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                    {tier.featured ? "Optimized for scaling agencies" : "Best for focused teams with predictable growth"}
                   </div>
                 </div>
 
@@ -256,10 +259,11 @@ export default function PricingSection() {
                 >
                   <a href={tier.href}>{tier.cta}</a>
                 </Button>
-              </motion.div>
-            );
-          })}
-        </div>
+                </m.div>
+              );
+            })}
+          </div>
+        </LazyMotion>
 
         <div className="mt-16 flex flex-col items-center gap-6">
           <div className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-6 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
