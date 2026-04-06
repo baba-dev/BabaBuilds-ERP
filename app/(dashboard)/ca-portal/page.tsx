@@ -38,6 +38,120 @@ const GeographyInsightCard = dynamic(
   }
 );
 
+type CAInvoiceRow = {
+  id: string;
+  invoiceDate: string | Date;
+  invoiceNumber: string;
+  clientName: string;
+  totalAmount: number;
+  status: string;
+  pdfPath?: string | null;
+};
+
+type CAExpenseRow = {
+  id: string;
+  vendor?: string | null;
+  category?: string | null;
+  date: string | Date;
+  amount: number;
+  receiptUrl?: string | null;
+};
+
+const invoiceColumns: DataTableColumnDef<CAInvoiceRow>[] = [
+  {
+    id: "invoiceNumber",
+    header: "Invoice #",
+    accessor: (row) => row.invoiceNumber,
+    cell: (row) => <span className="font-semibold">{row.invoiceNumber}</span>,
+    sortable: true,
+  },
+  {
+    id: "clientName",
+    header: "Client",
+    accessor: (row) => row.clientName,
+    cell: (row) => row.clientName,
+    sortable: true,
+  },
+  {
+    id: "invoiceDate",
+    header: "Date",
+    accessor: (row) => row.invoiceDate,
+    sortAccessor: (row) => new Date(row.invoiceDate).getTime(),
+    cell: (row) => format(new Date(row.invoiceDate), "dd MMM yyyy"),
+    sortable: true,
+  },
+  {
+    id: "totalAmount",
+    header: "Amount",
+    accessor: (row) => row.totalAmount,
+    sortAccessor: (row) => row.totalAmount,
+    cell: (row) => `₹${row.totalAmount.toLocaleString("en-IN")}`,
+    className: "text-right font-semibold",
+    headerClassName: "text-right",
+    sortable: true,
+  },
+  {
+    id: "status",
+    header: "Status",
+    accessor: (row) => row.status,
+    cell: (row) => (
+      <Badge variant={row.status === "Paid" ? "default" : "secondary"}>
+        {row.status}
+      </Badge>
+    ),
+  },
+];
+
+const expenseColumns: DataTableColumnDef<CAExpenseRow>[] = [
+  {
+    id: "vendor",
+    header: "Vendor",
+    accessor: (row) => row.vendor ?? "",
+    cell: (row) => row.vendor || "—",
+    sortable: true,
+  },
+  {
+    id: "category",
+    header: "Category",
+    accessor: (row) => row.category ?? "",
+    cell: (row) => row.category || "—",
+    sortable: true,
+  },
+  {
+    id: "date",
+    header: "Date",
+    accessor: (row) => row.date,
+    sortAccessor: (row) => new Date(row.date).getTime(),
+    cell: (row) => format(new Date(row.date), "dd MMM yyyy"),
+    sortable: true,
+  },
+  {
+    id: "amount",
+    header: "Amount",
+    accessor: (row) => row.amount,
+    sortAccessor: (row) => row.amount,
+    cell: (row) => `₹${row.amount.toLocaleString("en-IN")}`,
+    className: "text-right font-semibold",
+    headerClassName: "text-right",
+    sortable: true,
+  },
+  {
+    id: "receipt",
+    header: "Receipt",
+    accessor: (row) => row.receiptUrl ?? "",
+    cell: (row) =>
+      row.receiptUrl ? (
+        <Button asChild size="sm" variant="ghost" className="h-8 px-2">
+          <a href={row.receiptUrl} target="_blank" rel="noreferrer">
+            View <ExternalLink className="ml-1 h-3.5 w-3.5" />
+          </a>
+        </Button>
+      ) : (
+        "—"
+      ),
+  },
+];
+
 export default function CAPortal() {
   const t = useTranslations('CAPortal');
   
