@@ -1,7 +1,4 @@
-"use client";
-
 import { ReactNode } from "react";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 type DashboardPageShellProps = {
