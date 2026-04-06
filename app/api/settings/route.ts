@@ -8,6 +8,7 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { scanBuffer } from '@/lib/security/clamav';
+import { isSupportedLocale } from '@/i18n/locales';
 
 export async function GET() {
   try {
@@ -84,6 +85,10 @@ export async function POST(request: Request) {
     const defaultSacCode = (formData.get('defaultSacCode') as string) || "998313";
     const invoiceTheme   = (formData.get('invoiceTheme')  as string) || "DESIGN_1";
     const clientLocale   = formData.get('locale')         as string;
+
+    if (clientLocale && !isSupportedLocale(clientLocale)) {
+      return NextResponse.json({ error: 'Invalid locale selection' }, { status: 400 });
+    }
 
     // ── SECRETS INTERCEPTION ─────────────────────────────────────────────────
     const rawSmtpPassword         = formData.get('smtpPassword')         as string;
