@@ -5,7 +5,6 @@ import { format } from "date-fns";
 import { useTranslations } from "next-intl";
 import { PiggyBank, ShieldPlus, Landmark, TrendingUp, Calculator, AlertCircle, CheckCircle2, Globe2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +18,7 @@ import { getCurrencySymbol } from "@/lib/currency";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { PageLoadingState } from "@/components/states/PageLoadingState";
 import { PageErrorState } from "@/components/states/PageErrorState";
-import { PageEmptyState } from "@/components/states/PageEmptyState";
+import { ColumnVisibilityToggle, DataTable, DataTableToolbar, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
 
 export default function WealthAndTaxPlanner() {
   const t = useTranslations('Tax');
@@ -50,6 +49,8 @@ export default function WealthAndTaxPlanner() {
 
   // Tax Settings State
   const [hasSeniorParents, setHasSeniorParents] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(["date", "asset", "category", "amount"]);
+  const tableState = useUrlTableState("tax");
 
   useEffect(() => {
     fetchData();
@@ -141,6 +142,30 @@ export default function WealthAndTaxPlanner() {
   const oldTax = calculateOldRegime(presumptiveIncome);
   const newTax = calculateNewRegime(presumptiveIncome);
   const isOldBetter = oldTax < newTax;
+  const filteredInvestments = investments.filter((inv) =>
+    `${inv.assetName} ${inv.category}`.toLowerCase().includes(tableState.search.toLowerCase()),
+  );
+  const columns: DataTableColumnDef<any>[] = [
+    { id: "date", header: t("col_date"), sortable: true, sortAccessor: (row) => new Date(row.date).getTime(), cell: (row) => <span className="text-xs font-medium dark:text-zinc-300">{format(new Date(row.date), safeDateFormat)}</span>, hideable: true },
+    { id: "asset", header: t("col_asset"), sortable: true, accessor: (row) => row.assetName, cell: (row) => <span className="font-bold text-sm text-zinc-900 dark:text-zinc-100">{row.assetName}</span>, hideable: true },
+    {
+      id: "category",
+      header: t("col_category"),
+      accessor: (row) => row.category,
+      cell: (row) => (
+        <span className={`text-xs uppercase tracking-wider px-2 py-1 rounded-md font-bold ${
+          row.category.includes("80C") ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400" :
+          row.category.includes("80D") ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" :
+          row.category.includes("Gold") ? "bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800/50" :
+          "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"
+        }`}>
+          {row.category}
+        </span>
+      ),
+      hideable: true,
+    },
+    { id: "amount", header: t("col_amount", { currency }), headerClassName: "text-right", className: "text-right font-bold text-sm text-indigo-700 dark:text-indigo-400", sortable: true, sortAccessor: (row) => row.amount, cell: (row) => fCurrency(row.amount), hideable: true },
+  ];
 
   if (isLoading) {
     return (
@@ -352,50 +377,29 @@ export default function WealthAndTaxPlanner() {
                 <CardDescription className="dark:text-zinc-400 text-xs font-medium">{t('ledger_desc')}</CardDescription>
               </CardHeader>
               <CardContent className="p-0 sm:p-6 sm:pt-0">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader className="bg-zinc-50 dark:bg-zinc-900/80">
-                      <TableRow className="dark:border-zinc-800 hover:bg-transparent">
-                        <TableHead className="dark:text-zinc-400 text-xs font-bold uppercase tracking-widest">{t('col_date')}</TableHead>
-                        <TableHead className="dark:text-zinc-400 text-xs font-bold uppercase tracking-widest">{t('col_asset')}</TableHead>
-                        <TableHead className="dark:text-zinc-400 text-xs font-bold uppercase tracking-widest">{t('col_category')}</TableHead>
-                        <TableHead className="text-right dark:text-zinc-400 text-xs font-bold uppercase tracking-widest">{t('col_amount', { currency: currency })}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {investments.map((inv) => (
-                        <TableRow key={inv.id} className="dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                          <TableCell className="text-xs font-medium dark:text-zinc-300">{format(new Date(inv.date), safeDateFormat)}</TableCell>
-                          <TableCell className="font-bold text-sm text-zinc-900 dark:text-zinc-100">{inv.assetName}</TableCell>
-                          <TableCell>
-                            <span className={`text-xs uppercase tracking-wider px-2 py-1 rounded-md font-bold ${
-                              inv.category.includes('80C') ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                              inv.category.includes('80D') ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
-                              inv.category.includes('Gold') ? 'bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800/50' :
-                              'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300'
-                            }`}>
-                              {inv.category}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right font-bold text-sm text-indigo-700 dark:text-indigo-400">
-                            {fCurrency(inv.amount)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {investments.length === 0 && (
-                        <TableRow className="hover:bg-transparent">
-                          <TableCell colSpan={4} className="border-b-0 p-0">
-                            <PageEmptyState
-                              title={t('no_assets')}
-                              description="Log your first investment to unlock deduction insights."
-                              className="min-h-[220px]"
-                            />
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                <DataTableToolbar
+                  searchValue={tableState.search}
+                  onSearchChange={tableState.setSearch}
+                  searchPlaceholder={t("description_label")}
+                  rightSlot={
+                    <ColumnVisibilityToggle
+                      options={columns.filter((col) => col.hideable).map((col) => ({
+                        id: col.id,
+                        label: typeof col.header === "string" ? col.header : col.id,
+                        visible: visibleColumns.includes(col.id),
+                        onToggle: () => setVisibleColumns((prev) => prev.includes(col.id) ? prev.filter((id) => id !== col.id) : [...prev, col.id]),
+                      }))}
+                    />
+                  }
+                />
+                <DataTable
+                  columns={columns}
+                  data={filteredInvestments}
+                  rowId={(row) => row.id}
+                  emptyTitle={t("no_assets")}
+                  emptyDescription="Log your first investment to unlock deduction insights."
+                  visibleColumnIds={visibleColumns}
+                />
               </CardContent>
             </Card>
           </div>
