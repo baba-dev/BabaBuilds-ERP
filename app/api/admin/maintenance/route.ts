@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { handleAdminApiError, verifySuperAdmin } from "@/api/admin/authz";
 import { prisma } from "@/lib/prisma";
 import fs from "fs";
 import path from "path";
@@ -8,14 +7,6 @@ import { exec } from "child_process";
 import util from "util";
 
 const execPromise = util.promisify(exec);
-
-// Security gate
-async function verifySuperAdmin() {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user?.email?.toLowerCase() !== "admin@bababuilds.com") {
-    throw new Error("Unauthorized");
-  }
-}
 
 export async function POST(req: Request) {
   try {
@@ -292,8 +283,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Unknown action" }, { status: 400 });
     }
 
-  } catch (error: any) {
-    console.error("Maintenance Error:", error);
-    return NextResponse.json({ error: error.message || "Action failed" }, { status: 500 });
+  } catch (error) {
+    return handleAdminApiError(error, "Action failed");
   }
 }

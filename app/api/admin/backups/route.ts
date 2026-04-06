@@ -1,17 +1,8 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { handleAdminApiError, verifySuperAdmin } from "@/api/admin/authz";
 import fs from "fs";
 import path from "path";
 import JSZip from "jszip";
-
-// Security gate
-async function verifySuperAdmin() {
-  const session = await getServerSession(authOptions);
-  if (!session || session.user?.email?.toLowerCase() !== "admin@bababuilds.com") {
-    throw new Error("Unauthorized");
-  }
-}
 
 const BACKUP_DIR = path.join(process.cwd(), "backups");
 
@@ -44,8 +35,8 @@ export async function GET() {
     );
 
     return NextResponse.json(backupFiles.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()));
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: error.message === "Unauthorized" ? 401 : 500 });
+  } catch (error) {
+    return handleAdminApiError(error, "Failed to list backups");
   }
 }
 
@@ -114,9 +105,8 @@ export async function POST() {
     }
 
     return NextResponse.json({ success: true, filename: backupName });
-  } catch (error: any) {
-    console.error("Backup Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    return handleAdminApiError(error, "Failed to create backup");
   }
 }
 
