@@ -23,7 +23,7 @@ export interface CAExpenseRow {
   date: string;
   category: string;
   vendor: string;
-  description: string;
+  description: string | null;
   amount: number;
   receiptUrl: string | null;
 }
