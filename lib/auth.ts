@@ -5,10 +5,33 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import { createTransport } from "nodemailer"; // 1. ADDED IMPORT
+import { recordAuthFailure } from "@/lib/auth-observability";
+
+function inferProviderFromMetadata(metadata: Record<string, any> | undefined) {
+  if (!metadata) return "unknown";
+  return (
+    metadata.provider ??
+    metadata.providerId ??
+    metadata.account?.provider ??
+    metadata.cause?.providerId ??
+    "unknown"
+  );
+}
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
+  logger: {
+    error(code, metadata) {
+      const provider = inferProviderFromMetadata(metadata as Record<string, any> | undefined);
+      const reason = String(code || "UNKNOWN_NEXTAUTH_ERROR");
+      console.error(`[NextAuth][error] provider=${provider} code=${reason}`, metadata);
+      recordAuthFailure({ reason, provider, code: reason });
+    },
+    warn(code) {
+      console.warn(`[NextAuth][warn] code=${code}`);
+    },
+  },
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,

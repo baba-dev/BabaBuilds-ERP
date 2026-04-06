@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { handleAdminApiError, verifySuperAdmin } from "../authz";
 import { prisma } from "@/lib/prisma";
+import { getAuthFailureMetrics } from "@/lib/auth-observability";
 
 export async function GET() {
   try {
@@ -22,6 +23,7 @@ export async function GET() {
     
     const totalInvoices = await prisma.invoice.count();
     const totalClients = await prisma.client.count();
+    const authFailures = getAuthFailureMetrics();
 
     // Total gross volume across platform
     const invoices = await prisma.invoice.findMany({ select: { totalAmount: true } });
@@ -33,7 +35,9 @@ export async function GET() {
       totalWorkspaces,
       platformGmv: gmv,
       totalDocuments: totalInvoices + totalClients,
-      churnRate: totalWorkspaces > 0 ? ((totalWorkspaces - workspaces.length) / totalWorkspaces * 10).toFixed(1) + "%" : "0%"
+      churnRate: totalWorkspaces > 0 ? ((totalWorkspaces - workspaces.length) / totalWorkspaces * 10).toFixed(1) + "%" : "0%",
+      authFailureCount: authFailures.reduce((sum, row) => sum + row.count, 0),
+      authFailureByReason: authFailures,
     });
 
   } catch (error) {
