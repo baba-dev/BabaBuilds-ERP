@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Pin } from "lucide-react";
 import {
+  type ColumnDef,
   type ColumnFiltersState,
   type ColumnPinningState,
   flexRender,
@@ -99,29 +100,32 @@ export function DataTable<T>({
 
   const table = useReactTable({
     data,
-    columns: activeColumns.map((column) => ({
-      id: column.id,
-      accessorFn: column.accessor ?? (() => undefined),
-      header: () => column.header,
-      cell: ({ row }) => column.cell(row.original),
-      enableSorting: column.sortable,
-      enableHiding: column.hideable !== false,
-      meta: {
-        className: column.className,
-        headerClassName: column.headerClassName,
-      },
-      sortingFn: column.sortAccessor
-        ? (rowA, rowB) => {
-            const aValue = column.sortAccessor?.(rowA.original);
-            const bValue = column.sortAccessor?.(rowB.original);
-            if (aValue === bValue) return 0;
-            if (aValue == null) return 1;
-            if (bValue == null) return -1;
-            if (typeof aValue === "number" && typeof bValue === "number") return aValue - bValue;
-            return String(aValue).localeCompare(String(bValue), undefined, { sensitivity: "base" });
-          }
-        : undefined,
-    })),
+    columns: activeColumns.map((column) => {
+      const tableColumn: ColumnDef<T, unknown> = {
+        id: column.id,
+        accessorFn: column.accessor ?? (() => undefined),
+        header: () => column.header,
+        cell: (ctx) => column.cell(ctx.row.original),
+        enableSorting: column.sortable,
+        enableHiding: column.hideable !== false,
+        meta: {
+          className: column.className,
+          headerClassName: column.headerClassName,
+        },
+        sortingFn: column.sortAccessor
+          ? (rowA, rowB) => {
+              const aValue = column.sortAccessor?.(rowA.original);
+              const bValue = column.sortAccessor?.(rowB.original);
+              if (aValue === bValue) return 0;
+              if (aValue == null) return 1;
+              if (bValue == null) return -1;
+              if (typeof aValue === "number" && typeof bValue === "number") return aValue - bValue;
+              return String(aValue).localeCompare(String(bValue), undefined, { sensitivity: "base" });
+            }
+          : undefined,
+      };
+      return tableColumn;
+    }),
     state: derivedState,
     getRowId: (row) => rowId(row),
     getCoreRowModel: getCoreRowModel(),
