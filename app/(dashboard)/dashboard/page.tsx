@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
+import { animate, useMotionValue } from "framer-motion";
 import {
   TrendingUp, Landmark, FileText, Users, Calculator, AlertTriangle,
   ArrowUpRight, Sparkles, Activity, CheckCircle2, AlertCircle, ShieldAlert,
@@ -27,6 +28,34 @@ import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { PageLoadingState } from "@/components/states/PageLoadingState";
 import { PageErrorState } from "@/components/states/PageErrorState";
 import { PageEmptyState } from "@/components/states/PageEmptyState";
+import { ChartCard } from "@/components/charts/ChartCard";
+import { ChartTooltip } from "@/components/charts/ChartTooltip";
+import { ChartLegend } from "@/components/charts/ChartLegend";
+import { withChartTokenColors } from "@/components/charts/chart-colors";
+
+function AnimatedValue({
+  value,
+  formatter,
+  className,
+}: {
+  value: number;
+  formatter: (value: number) => string;
+  className?: string;
+}) {
+  const motionValue = useMotionValue(value);
+  const [displayValue, setDisplayValue] = useState(value);
+
+  useEffect(() => {
+    const controls = animate(motionValue, value, {
+      duration: 0.75,
+      ease: "easeOut",
+      onUpdate: (latest) => setDisplayValue(latest),
+    });
+    return () => controls.stop();
+  }, [motionValue, value]);
+
+  return <span className={className}>{formatter(displayValue)}</span>;
+}
 
 export default function Dashboard() {
   const t = useTranslations('Dashboard');
@@ -199,6 +228,20 @@ export default function Dashboard() {
   const arrTotal = mrrTotal * 12;
   const activeRetainers = data?.mrr?.retainers || [];
   const recentInvoices = data?.recentInvoices || [];
+  const revenueSeries = data?.charts?.revenue || [];
+  const wealthSeries = useMemo(
+    () => withChartTokenColors(data?.charts?.wealth || []),
+    [data?.charts?.wealth]
+  );
+  const [isCompactCharts, setIsCompactCharts] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 768px)");
+    const onChange = (event: MediaQueryListEvent) => setIsCompactCharts(event.matches);
+    setIsCompactCharts(mediaQuery.matches);
+    mediaQuery.addEventListener("change", onChange);
+    return () => mediaQuery.removeEventListener("change", onChange);
+  }, []);
 
   return (
     <DashboardPageShell
@@ -238,14 +281,14 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="relative z-10 pb-6 flex-1 flex flex-col justify-end">
               <div className="text-4xl lg:text-5xl font-extrabold tracking-tight text-emerald-950 dark:text-zinc-50 mb-2 drop-shadow-sm">
-                {fCurrency(mrrTotal)}
+                <AnimatedValue value={mrrTotal} formatter={fCurrency} />
               </div>
               <div className="flex items-center justify-between mt-6 pt-4 border-t border-emerald-200/50 dark:border-emerald-900/50">
                 <span className="text-xs font-bold text-emerald-700/80 dark:text-emerald-400/80 uppercase tracking-widest">
                   {t('annual_run_rate')}
                 </span>
                 <span className="text-sm font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100/50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-md">
-                  {fCurrency(arrTotal)}
+                  <AnimatedValue value={arrTotal} formatter={fCurrency} />
                 </span>
               </div>
             </CardContent>
@@ -347,7 +390,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 truncate transition-colors group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
-                {fCurrency(kpi.totalRevenue)}
+                <AnimatedValue value={kpi.totalRevenue} formatter={fCurrency} />
               </div>
               <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 mt-1 uppercase">{t('fy_realized')}</p>
             </CardContent>
@@ -361,7 +404,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-indigo-950 dark:text-zinc-50 truncate">
-                {fCurrency(kpi.totalWealth)}
+                <AnimatedValue value={kpi.totalWealth} formatter={fCurrency} />
               </div>
               <p className="text-xs font-bold text-indigo-600/80 dark:text-indigo-500/80 mt-1 uppercase">{t('market_value')}</p>
             </CardContent>
@@ -375,7 +418,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-50 truncate transition-colors group-hover:text-rose-600 dark:group-hover:text-rose-400">
-                {fCurrency(kpi.estimatedTax)}
+                <AnimatedValue value={kpi.estimatedTax} formatter={fCurrency} />
               </div>
               <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 mt-1 uppercase">{t('liability_est')}</p>
             </CardContent>
@@ -435,83 +478,85 @@ export default function Dashboard() {
 
         {/* --- GLOBALIZED CHARTS --- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-            <CardHeader className="pb-6">
-              <CardTitle className="text-sm font-bold uppercase tracking-wider text-zinc-800 dark:text-zinc-100">{t('revenue_trend')}</CardTitle>
-              <CardDescription className="text-xs dark:text-zinc-400 font-medium">{t('monthly_billing')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px] w-full">
-                {data?.charts?.revenue?.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data.charts.revenue} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#52525b" opacity={0.15} />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#71717a', fontWeight: 600 }} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#71717a', fontWeight: 600 }} tickFormatter={(value) => `${value / 1000}k`} />
-                      <Tooltip
-                        cursor={{ fill: 'rgba(113, 113, 122, 0.05)' }}
-                        contentStyle={{ borderRadius: '12px', border: '1px solid #27272a', backgroundColor: 'rgba(9, 9, 11, 0.95)', backdropFilter: 'blur(8px)', color: '#f4f4f5', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
-                        itemStyle={{ fontSize: '13px', fontWeight: 700 }}
-                        formatter={(value: any) => [fCurrency(value), 'Revenue']}
-                      />
-                      <Bar dataKey="revenue" fill="#4f46e5" radius={[6, 6, 0, 0]} maxBarSize={48} className="hover:opacity-80 transition-opacity" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex flex-col h-full items-center justify-center text-zinc-400 dark:text-zinc-500 border-2 border-dashed border-zinc-100 dark:border-zinc-800/80 rounded-2xl bg-zinc-50/50 dark:bg-zinc-950/20">
-                    <BarChart className="w-8 h-8 opacity-20 mb-3" />
-                    <span className="text-xs font-bold uppercase tracking-widest">{t('no_data_yet')}</span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <ChartCard
+            title={t('revenue_trend')}
+            description={t('monthly_billing')}
+            hasData={revenueSeries.length > 0}
+            noDataLabel={t('no_data_yet')}
+            noDataHint="Add invoice activity to visualize monthly billing."
+            noDataIcon={Banknote}
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={revenueSeries} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#52525b" opacity={0.15} />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  interval={isCompactCharts ? 1 : 0}
+                  tick={{ fontSize: isCompactCharts ? 10 : 12, fill: '#71717a', fontWeight: 600 }}
+                  dy={10}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: isCompactCharts ? 10 : 12, fill: '#71717a', fontWeight: 600 }}
+                  tickFormatter={(value) => `${value / 1000}k`}
+                />
+                <Tooltip
+                  cursor={{ fill: 'rgba(113, 113, 122, 0.05)' }}
+                  content={<ChartTooltip formatterValue={fCurrency} compact={isCompactCharts} />}
+                />
+                <Bar dataKey="revenue" name="Revenue" fill="var(--chart-1)" radius={[6, 6, 0, 0]} maxBarSize={48} className="hover:opacity-80 transition-opacity" />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
 
-          <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-            <CardHeader className="pb-6">
-              <CardTitle className="text-sm font-bold uppercase tracking-wider text-zinc-800 dark:text-zinc-100">{t('allocation')}</CardTitle>
-              <CardDescription className="text-xs dark:text-zinc-400 font-medium">{t('functional_distribution')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px] w-full flex items-center justify-center relative">
-                {data?.charts?.wealth?.length > 0 ? (
-                  <>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Tooltip
-                          contentStyle={{ borderRadius: '12px', border: '1px solid #27272a', backgroundColor: 'rgba(9, 9, 11, 0.95)', backdropFilter: 'blur(8px)', color: '#f4f4f5', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
-                          itemStyle={{ fontSize: '13px', fontWeight: 700 }}
-                          formatter={(value: any) => [fCurrency(value), 'Value']}
-                        />
-                        <Pie
-                          data={data.charts.wealth}
-                          cx="50%" cy="50%"
-                          innerRadius={85} outerRadius={115}
-                          paddingAngle={6}
-                          dataKey="value"
-                          stroke="none"
-                          className="focus:outline-none"
-                        >
-                          {data.charts.wealth.map((entry: any, index: number) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} className="hover:opacity-80 transition-opacity cursor-pointer" />
-                          ))}
-                        </Pie>
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="absolute flex flex-col items-center justify-center pointer-events-none">
-                      <div className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">{t('assets')}</div>
-                      <div className="text-3xl font-black text-zinc-900 dark:text-zinc-50">{data?.charts?.wealth?.length || 0}</div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex flex-col h-full w-full items-center justify-center text-zinc-400 dark:text-zinc-500 border-2 border-dashed border-zinc-100 dark:border-zinc-800/80 rounded-2xl bg-zinc-50/50 dark:bg-zinc-950/20">
-                    <PieChart className="w-8 h-8 opacity-20 mb-3" />
-                    <span className="text-xs font-bold uppercase tracking-widest">{t('log_assets')}</span>
-                  </div>
-                )}
+          <ChartCard
+            title={t('allocation')}
+            description={t('functional_distribution')}
+            hasData={wealthSeries.length > 0}
+            noDataLabel={t('log_assets')}
+            noDataHint="Track liquid assets and allocations to activate this chart."
+            noDataIcon={Landmark}
+            chartClassName="flex items-center justify-center relative pb-24 sm:pb-20"
+          >
+            <>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Tooltip content={<ChartTooltip formatterValue={fCurrency} compact={isCompactCharts} />} />
+                  <Pie
+                    data={wealthSeries}
+                    cx="50%" cy="46%"
+                    innerRadius={isCompactCharts ? 65 : 85}
+                    outerRadius={isCompactCharts ? 90 : 115}
+                    paddingAngle={6}
+                    dataKey="value"
+                    stroke="none"
+                    className="focus:outline-none"
+                  >
+                    {wealthSeries.map((entry: any, index: number) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} className="hover:opacity-80 transition-opacity cursor-pointer" />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute top-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none">
+                <div className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1">{t('assets')}</div>
+                <div className="text-3xl font-black text-zinc-900 dark:text-zinc-50">{wealthSeries.length}</div>
               </div>
-            </CardContent>
-          </Card>
+              <div className="absolute left-0 right-0 bottom-0">
+                <ChartLegend
+                  compact={isCompactCharts}
+                  items={wealthSeries.map((entry: any) => ({
+                    label: String(entry.name),
+                    color: String(entry.color),
+                    value: fCurrency(Number(entry.value ?? 0)),
+                  }))}
+                />
+              </div>
+            </>
+          </ChartCard>
         </div>
 
         {/* --- PORTED LEDGER ACTIVITY TABLE --- */}
