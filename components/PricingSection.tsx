@@ -23,7 +23,7 @@ type PricingTier = {
   features: string[];
   featured: boolean;
   cta: string;
-  icon: LucideIcon;
+  icon: typeof Gift;
   cue: string;
 };
 
@@ -34,7 +34,7 @@ const currencies: Currency[] = [
   { code: "GBP", symbol: "£", rate: 0.79 },
 ];
 
-const tiers = [
+const tiers: PricingTier[] = [
   {
     name: "Starter",
     id: "tier-starter",
@@ -73,7 +73,7 @@ const tiers = [
     icon: ShieldCheck,
     cue: "Tailored onboarding included",
   },
-] as const satisfies readonly PricingTier[];
+];
 
 export default function PricingSection() {
   const [currency, setCurrency] = useState<Currency>(currencies[0]);
