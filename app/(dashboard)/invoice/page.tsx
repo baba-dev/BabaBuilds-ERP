@@ -40,7 +40,7 @@ export default function InvoiceGenerator() {
   // App State
   const [clients, setClients] = useState<any[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
-  const [existingMonths, setExistingMonths] = useState<string[]>([]);
+  const [existingInvoices, setExistingInvoices] = useState<Array<{ billingMonth: string; clientId: string | null }>>([]);
   const [billingMonth, setBillingMonth] = useState("");
   const [invoiceDate, setInvoiceDate] = useState<Date>(new Date());
   const [isMounted, setIsMounted] = useState(false);
@@ -66,7 +66,17 @@ export default function InvoiceGenerator() {
       const parsedClients = Array.isArray(clientsResult) ? clientsResult : clientsResult?.data;
       if (Array.isArray(parsedClients)) setClients(parsedClients);
       
-      if (Array.isArray(invoicesResult)) setExistingMonths(invoicesResult.map(inv => inv.billingMonth));
+      const parsedInvoices = Array.isArray(invoicesResult) ? invoicesResult : invoicesResult?.data;
+      if (Array.isArray(parsedInvoices)) {
+        setExistingInvoices(
+          parsedInvoices
+            .filter((inv: any) => typeof inv?.billingMonth === "string")
+            .map((inv: any) => ({
+              billingMonth: inv.billingMonth,
+              clientId: inv?.clientId ? String(inv.clientId) : null
+            }))
+        );
+      }
       
       const parsedServices = Array.isArray(servicesResult) ? servicesResult : servicesResult?.data;
       if (Array.isArray(parsedServices)) {
@@ -139,7 +149,12 @@ export default function InvoiceGenerator() {
     return Array.from(new Set(sacs)).join(" / ");
   }, [activeServices]);
 
-  const isMonthAlreadyBilled = existingMonths.includes(billingMonth);
+  const isMonthAlreadyBilled = useMemo(() => {
+    if (!selectedClientId || !billingMonth) return false;
+    return existingInvoices.some(
+      (inv) => inv.clientId === selectedClientId && inv.billingMonth === billingMonth
+    );
+  }, [existingInvoices, selectedClientId, billingMonth]);
 
   const monthOptions = useMemo(() => {
     if (!isMounted) return [];
