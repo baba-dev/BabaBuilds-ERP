@@ -27,6 +27,7 @@ import { useFormat } from "@/hooks/use-format";
 import { PageLoadingState } from "@/components/states/PageLoadingState";
 import { PageErrorState } from "@/components/states/PageErrorState";
 import { PageEmptyState } from "@/components/states/PageEmptyState";
+import { DataTable, DataTableToolbar, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
 
 
 // --- STATE MACHINE TYPES ---
@@ -122,6 +123,7 @@ export default function ReconciliationWizard() {
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const readyTableState = useUrlTableState("recon_ready");
 
   // --- UPLOAD HANDLER ---
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -209,6 +211,50 @@ export default function ReconciliationWizard() {
   // --- FINALIZATION ---
   const totalReadyToCommit = state.autoMatched.length + state.approvedAi.length;
   const needsReviewCount = state.pendingAi.length;
+  const readyRows = [...state.autoMatched, ...state.approvedAi].filter((row) =>
+    `${row.description} ${row.aiCategory ?? ""} ${row.aiVendor ?? ""}`.toLowerCase().includes(readyTableState.search.toLowerCase()),
+  );
+  const readyColumns: DataTableColumnDef<Transaction>[] = [
+    {
+      id: "date_desc",
+      header: t("col_date_desc"),
+      sortable: true,
+      sortAccessor: (row) => row.date,
+      cell: (row) => (
+        <div>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">{row.date}</p>
+          <p className="font-mono text-xs font-medium text-zinc-700 dark:text-zinc-300">{row.description}</p>
+        </div>
+      ),
+    },
+    {
+      id: "type",
+      header: t("col_type"),
+      cell: (row) =>
+        row.matchType === "INVOICE" ? (
+          <Badge className="bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 border-none hover:bg-blue-100 dark:hover:bg-blue-900/40">{t("invoice_match")}</Badge>
+        ) : (
+          <div className="flex gap-1">
+            <Badge className="bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300 border-none">{row.aiCategory}</Badge>
+            <Badge variant="outline" className="text-zinc-600 dark:text-zinc-400 dark:border-zinc-700">{row.aiVendor}</Badge>
+          </div>
+        ),
+    },
+    {
+      id: "amount",
+      header: <div className="text-right">{t("col_amount")}</div>,
+      className: "text-right font-bold",
+      sortable: true,
+      sortAccessor: (row) => row.amount,
+      cell: (row) => <span className={row.type === "DEBIT" ? "text-rose-600" : "text-emerald-600"}>{row.type === "DEBIT" ? "-" : "+"} {fCurrency(row.amount)}</span>,
+    },
+    {
+      id: "status",
+      header: <div className="text-center">{t("col_status")}</div>,
+      className: "text-center",
+      cell: () => <CheckCircle2 className="w-5 h-5 text-emerald-500 mx-auto" />,
+    },
+  ];
 
   const handleFinalizeClick = () => {
     if (totalReadyToCommit === 0) {
@@ -405,53 +451,18 @@ export default function ReconciliationWizard() {
             {/* TAB: READY (AUTO + APPROVED) */}
             {activeTab === 'auto' && (
               <div className="overflow-x-auto min-h-[400px]">
-                <Table>
-                  <TableHeader className="bg-emerald-50/30 dark:bg-emerald-900/10">
-                    <TableRow className="dark:border-zinc-800">
-                      <TableHead className="font-bold dark:text-zinc-400">{t('col_date_desc')}</TableHead>
-                      <TableHead className="font-bold dark:text-zinc-400">{t('col_type')}</TableHead>
-                      <TableHead className="font-bold text-right dark:text-zinc-400">{t('col_amount')}</TableHead>
-                      <TableHead className="font-bold text-center dark:text-zinc-400">{t('col_status')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {/* Map Auto Matches */}
-                    {state.autoMatched.map((row) => (
-                       <TableRow key={row.id} className="bg-emerald-50/10 dark:bg-emerald-900/5 dark:border-zinc-800">
-                         <TableCell>
-                           <p className="text-xs text-zinc-500 dark:text-zinc-400">{row.date}</p>
-                           <p className="font-mono text-xs font-medium text-zinc-700 dark:text-zinc-300">{row.description}</p>
-                         </TableCell>
-                         <TableCell><Badge className="bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 border-none hover:bg-blue-100 dark:hover:bg-blue-900/40">{t('invoice_match')}</Badge></TableCell>
-                         <TableCell className="text-right font-bold text-emerald-600 dark:text-emerald-400">+ {fCurrency(row.amount)}</TableCell>
-                         <TableCell className="text-center"><CheckCircle2 className="w-5 h-5 text-emerald-500 mx-auto" /></TableCell>
-                       </TableRow>
-                    ))}
-                    {/* Map Approved AI */}
-                    {state.approvedAi.map((row) => (
-                       <TableRow key={row.id} className="animate-in fade-in duration-300 dark:border-zinc-800">
-                         <TableCell>
-                           <p className="text-xs text-zinc-500 dark:text-zinc-400">{row.date}</p>
-                           <p className="font-mono text-xs font-medium text-zinc-700 dark:text-zinc-300">{row.description}</p>
-                         </TableCell>
-                         <TableCell>
-                           <div className="flex gap-1">
-                             <Badge className="bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300 border-none">{row.aiCategory}</Badge>
-                             <Badge variant="outline" className="text-zinc-600 dark:text-zinc-400 dark:border-zinc-700">{row.aiVendor}</Badge>
-                           </div>
-                         </TableCell>
-                         <TableCell className={`text-right font-bold ${row.type === 'DEBIT' ? 'text-rose-600' : 'text-emerald-600'}`}>
-                           {row.type === 'DEBIT' ? '-' : '+'} {fCurrency(row.amount)}
-                         </TableCell>
-
-                         <TableCell className="text-center"><CheckCircle2 className="w-5 h-5 text-emerald-500 mx-auto" /></TableCell>
-                       </TableRow>
-                    ))}
-                    {totalReadyToCommit === 0 && (
-                      <TableRow className="hover:bg-transparent"><TableCell colSpan={4} className="p-0 border-none"><PageEmptyState title={t('no_approved')} description="Approve matches to build your ready-to-commit queue." className="min-h-[300px]" /></TableCell></TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                <DataTableToolbar
+                  searchValue={readyTableState.search}
+                  onSearchChange={readyTableState.setSearch}
+                  searchPlaceholder={t("col_date_desc")}
+                />
+                <DataTable
+                  columns={readyColumns}
+                  data={readyRows}
+                  rowId={(row) => row.id}
+                  emptyTitle={t("no_approved")}
+                  emptyDescription="Approve matches to build your ready-to-commit queue."
+                />
               </div>
             )}
 
