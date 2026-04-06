@@ -25,6 +25,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
+import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 
 export default function ServiceCatalog() {
   const t = useTranslations('Services');
@@ -199,26 +200,18 @@ export default function ServiceCatalog() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
-        
-        {/* HEADER */}
-        <div className="sticky top-0 z-20 -mx-4 px-4 py-4 md:-mx-8 md:px-8 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200/50 dark:border-zinc-800/50 transition-all duration-300">
-          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 max-w-7xl mx-auto w-full">
-            <div className="space-y-1.5">
-              <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{t('title')}</h1>
-              <p className="text-zinc-500 dark:text-zinc-400 font-medium text-sm max-w-xl">
-                {t.rich('description_rich', { taxLabel, tag: (chunks) => <strong className="text-zinc-700 dark:text-zinc-300">{chunks}</strong> })}
-              </p>
-            </div>
-            <Button 
-              onClick={() => setOpen(true)} 
-              className="w-full md:w-auto shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20 text-xs font-bold uppercase tracking-wider h-11 transition-all active:scale-95"
-            >
-              <Plus className="w-4 h-4 md:mr-2" /> <span className="md:inline">{t('add_new')}</span>
-            </Button>
-          </div>
-        </div>
+    <DashboardPageShell
+      title={t('title')}
+      description={t.rich('description_rich', { taxLabel, tag: (chunks) => <strong className="text-zinc-700 dark:text-zinc-300">{chunks}</strong> })}
+      actions={
+        <Button 
+          onClick={() => setOpen(true)} 
+          className="w-full md:w-auto shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20 text-xs font-bold uppercase tracking-wider h-11 transition-all active:scale-95"
+        >
+          <Plus className="w-4 h-4 md:mr-2" /> <span className="md:inline">{t('add_new')}</span>
+        </Button>
+      }
+    >
 
         {/* MODAL: ADD SERVICE */}
         <Dialog open={open} onOpenChange={setOpen}>
@@ -536,7 +529,6 @@ export default function ServiceCatalog() {
             )}
           </div>
         )}
-      </div>
-    </div>
+    </DashboardPageShell>
   );
 }

@@ -23,6 +23,7 @@ import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
 import { getBustedUrl } from "@/lib/cache-buster";
+import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 
 export default function Dashboard() {
   const t = useTranslations('Dashboard');
@@ -174,38 +175,27 @@ export default function Dashboard() {
   const recentInvoices = data?.recentInvoices || [];
 
   return (
-    <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8 transition-colors duration-200 font-sans">
-      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
-
-        {/* HEADER */}
-        <div className="sticky top-0 z-20 -mx-4 px-4 py-4 md:-mx-8 md:px-8 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200/50 dark:border-zinc-800/50 transition-all duration-300">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 max-w-7xl mx-auto w-full">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                {t('financial_overview')}
-              </h1>
-              <p className="text-zinc-500 dark:text-zinc-400 mt-1.5 font-medium text-sm">
-                {t('global_command_center', { countryCode })}
-              </p>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest hidden sm:inline">FY:</span>
-              <Select value={selectedFy} onValueChange={setSelectedFy}>
-                <SelectTrigger className="w-[120px] h-9 bg-white/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 shadow-sm backdrop-blur-sm font-bold text-xs ring-offset-zinc-50 dark:ring-offset-zinc-950">
-                  <SelectValue placeholder="Select FY" />
-                </SelectTrigger>
-                <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
-                  {getFyOptions().map(fy => (
-                    <SelectItem key={fy} value={fy} className="text-xs font-medium">
-                      FY 20{fy}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+    <DashboardPageShell
+      title={t('financial_overview')}
+      description={t('global_command_center', { countryCode })}
+      actions={
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest hidden sm:inline">FY:</span>
+          <Select value={selectedFy} onValueChange={setSelectedFy}>
+            <SelectTrigger className="w-[120px] h-9 bg-white/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 shadow-sm backdrop-blur-sm font-bold text-xs ring-offset-zinc-50 dark:ring-offset-zinc-950">
+              <SelectValue placeholder="Select FY" />
+            </SelectTrigger>
+            <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
+              {getFyOptions().map(fy => (
+                <SelectItem key={fy} value={fy} className="text-xs font-medium">
+                  FY 20{fy}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
+      }
+    >
 
         {/* --- MRR COMMAND CENTER --- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -685,7 +675,6 @@ export default function Dashboard() {
           </DialogContent>
         </Dialog>
 
-      </div>
-    </div>
+    </DashboardPageShell>
   );
 }
