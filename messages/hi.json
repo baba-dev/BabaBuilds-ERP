@@ -43,7 +43,106 @@
     "ai_config_title": "एआई सहायक विन्यास",
     "ai_config_desc": "अपने व्यक्तिगत वित्तीय चैटबॉट को शक्ति दें।",
     "groq_api_key": "ग्रोक एपीआई कुंजी",
-    "profile_saved": "प्रोफ़ाइल सहेजी गई!"
+    "profile_saved": "प्रोफ़ाइल सहेजी गई!",
+    "welcome": {
+      "title": "Welcome to your ERP",
+      "description": "Let's set up your master profile. This data will be used to automatically generate your invoices."
+    },
+    "toasts": {
+      "loadFailed": "Failed to load generic settings profile",
+      "aiAutofill": "Settings form auto-filled by AI. Click Save to confirm.",
+      "aiAutofillFailed": "AI auto-fill failed. Please fill the form manually.",
+      "saving": "Saving configuration...",
+      "saved": "Master profile updated securely.",
+      "saveFailed": "Failed to save configuration.",
+      "networkError": "A network error occurred."
+    },
+    "secret": {
+      "configured": "Secret Configured"
+    },
+    "actions": {
+      "change": "Change",
+      "saving": "Saving..."
+    },
+    "placeholders": {
+      "companyName": "e.g., BabaBuilds",
+      "proprietorName": "e.g., Sameer Siddiqui",
+      "address": "C-28, Ganesh Colony...",
+      "website": "https://",
+      "stripeSecretKey": "sk_live_••••••••••••••••••••",
+      "groqApiKey": "gsk_••••••••••••••••••••",
+      "udyam": "UDYAM-RJ-...",
+      "optional": "Optional",
+      "bankName": "e.g., ICICI Bank",
+      "smtpHost": "e.g., smtp.gmail.com",
+      "smtpPort": "465",
+      "fromEmail": "billing@bababuilds.com"
+    },
+    "invoiceTheme": {
+      "supportsSignatures": "Supports Digital Signatures",
+      "noSignatures": "Does not support signatures"
+    },
+    "languageOptions": {
+      "enIN": "English (India)",
+      "ar": "العربية (Arabic)",
+      "es": "Español (Spanish)",
+      "hi": "हिंदी (Hindi)"
+    },
+    "alt": {
+      "currentLogo": "Current Logo",
+      "currentSignature": "Current Signature"
+    },
+    "signature": {
+      "label": "Digital Signature",
+      "hint": "Transparent PNG/WEBP max 2MB.",
+      "tooltip": {
+        "title": "Strict Guidelines:",
+        "transparentBackground": "Must have a transparent background",
+        "maxSize": "Max size 2MB",
+        "aspectRatio": "Width/Height ratio should be horizontal (e.g. 300x100)"
+      }
+    },
+    "defaultSacCode": {
+      "label": "Default SAC/HSN Code",
+      "placeholder": "e.g. 998313",
+      "hint": "Used as fallback if individual invoice code is blank."
+    },
+    "payment": {
+      "title": "Payment Gateway Integration",
+      "description": "Connect a payment gateway to automatically embed a secure payment link in every invoice PDF.",
+      "nonIndianRecommendation": "Stripe is recommended for your region.",
+      "proFeature": {
+        "title": "PRO Feature",
+        "description": "Upgrade to PRO to connect Razorpay or Stripe and let clients pay directly from the invoice PDF."
+      },
+      "defaultGateway": {
+        "label": "Default Payment Gateway",
+        "hint": "This gateway will be used to generate the payment link on every new invoice."
+      },
+      "active": "ACTIVE",
+      "secretHint": "Encrypted with AES-256-GCM before storage. Never visible after saving.",
+      "razorpay": {
+        "name": "Razorpay",
+        "caption": "INR payments only · Indian businesses",
+        "inOnly": "(IN only)",
+        "unavailableTitle": "Not available for your region.",
+        "unavailableDescription": "Razorpay only supports Indian businesses and INR payments. Use Stripe for global payment collection.",
+        "keyIdLabel": "Razorpay Key ID",
+        "keyIdPlaceholder": "rzp_live_xxxxxxxxxxxx",
+        "keyIdHint": "Your publishable Razorpay Key ID. Safe to store.",
+        "keySecretLabel": "Razorpay Key Secret"
+      },
+      "stripe": {
+        "name": "Stripe",
+        "global": "(Global)",
+        "caption": "135+ currencies · Global businesses",
+        "indianInfo": "Stripe works globally and supports USD, EUR, GBP and 135+ currencies. Useful if you bill international clients.",
+        "publishableKeyLabel": "Publishable Key",
+        "publishableKeyPlaceholder": "pk_live_xxxxxxxxxxxx",
+        "publishableKeyHint": "Your publishable Stripe key. Safe to store.",
+        "secretKeyLabel": "Secret Key"
+      }
+    }
   },
   "Sidebar": {
     "dashboard": "डैशबोर्ड",
@@ -605,5 +704,118 @@
     "reactivate": "खाता पुनः सक्रिय करें",
     "suspend": "खाता निलंबित करें",
     "delete": "स्थायी रूप से हटाएं"
+  },
+  "Landing": {
+    "hero": {
+      "badge": "Introducing the Next Evolution of ERP",
+      "titleLine1": "Run Your Agency",
+      "titleLine2": "on Autopilot.",
+      "description": "The global command center for bookkeeping, compliance, and growth. Automate your invoices, reconcile bank feeds, and let AI reveal your financial truth.",
+      "primaryCta": "Start for Free",
+      "secondaryCta": "See all Features",
+      "dashboardPreview": "Dashboard Preview"
+    },
+    "trust": {
+      "title": "Trusted by Modern Agencies in",
+      "cities": {
+        "dubai": "Dubai",
+        "london": "London",
+        "singapore": "Singapore",
+        "newYork": "New York",
+        "newDelhi": "New Delhi"
+      }
+    },
+    "features": {
+      "headingPrefix": "Everything you need to",
+      "headingHighlight": "scale with speed.",
+      "description": "We've automated the boring bits so you can focus on building your empire. No more manual reconciliation or missing tax deadlines.",
+      "items": {
+        "automatedInvoicing": {
+          "title": "Automated Invoicing",
+          "description": "Generates professional PDFs with multi-theme support and automatic calculation of taxes."
+        },
+        "zeroEffortRetainers": {
+          "title": "Zero-Effort Retainers",
+          "description": "Set recurring billing once. Our engine auto-appends dates and descriptions every month."
+        },
+        "aiBabaBotInsights": {
+          "title": "AI BabaBot Insights",
+          "description": "Chat with your data. Get instant financial summaries and trend analysis using natural language."
+        },
+        "expenseLedger": {
+          "title": "Expense Ledger",
+          "description": "Track every cent with automated categorization and secure receipt storage."
+        },
+        "bankReconciliation": {
+          "title": "Bank Reconciliation",
+          "description": "One-click matching of bank statements to invoices and expenses for 100% accuracy."
+        },
+        "investmentHub": {
+          "title": "Investment Hub",
+          "description": "Global oversight of your agency's wealth, investments, and growth metrics."
+        },
+        "globalCompliance": {
+          "title": "Global Compliance",
+          "description": "Built-in SAC/HSN code lookup and regional tax compliance for 40+ countries."
+        },
+        "clientCrm": {
+          "title": "Client CRM",
+          "description": "Manage relationships, track statuses, and view complete billing histories in one hub."
+        },
+        "premiumProposals": {
+          "title": "Premium Proposals",
+          "description": "High-converting proposal links with integrated e-signatures and public tracking."
+        }
+      }
+    },
+    "finalCta": {
+      "titleLine1": "Ready to experience the",
+      "titleLine2": "BabaBuilds advantage?",
+      "primaryCta": "Get Started for Free",
+      "secondaryCta": "View Documentation",
+      "badges": {
+        "udyam": "UDYAM Registered",
+        "wcag": "WCAG 2.2 Level AA",
+        "globalSupport": "Global Support"
+      }
+    }
+  },
+  "LandingNavbar": {
+    "nav": {
+      "features": "Features",
+      "comparison": "Comparison",
+      "pricing": "Pricing"
+    },
+    "actions": {
+      "dashboard": "Dashboard",
+      "login": "Log in",
+      "getStarted": "Get Started",
+      "goToDashboard": "Go to Dashboard",
+      "getStartedFree": "Get Started free"
+    }
+  },
+  "AuthModal": {
+    "title": "BabaBuilds ERP",
+    "subtitle": "Sign in to manage your business operations",
+    "or": "Or",
+    "emailSent": {
+      "title": "Check your email",
+      "description": "A magic sign-in link has been sent to {email}"
+    },
+    "placeholders": {
+      "email": "name@company.com"
+    },
+    "actions": {
+      "sendMagicLink": "Send Magic Link",
+      "continueWithGoogle": "Continue with Google",
+      "provisioningSandbox": "Provisioning Sandbox...",
+      "tryInteractiveDemo": "Try Interactive Demo"
+    },
+    "alerts": {
+      "emailFailed": "Failed to send login link. Please try again.",
+      "completeSecurityCheck": "Please complete the security check to proceed.",
+      "demoCreationFailed": "Demo creation failed",
+      "demoSystemBusy": "The demo system is currently busy. Please try Google sign-in."
+    }
   }
 }

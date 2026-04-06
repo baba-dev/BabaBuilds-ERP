@@ -4,11 +4,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { Box, Menu, X, ArrowRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 export default function LandingNavbar() {
+  const t = useTranslations("LandingNavbar");
   const { data: session } = useSession();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -22,9 +24,9 @@ export default function LandingNavbar() {
   }, []);
 
   const navLinks = [
-    { name: "Features", href: "#features" },
-    { name: "Comparison", href: "#comparison" },
-    { name: "Pricing", href: "#pricing" },
+    { name: t("nav.features"), href: "#features" },
+    { name: t("nav.comparison"), href: "#comparison" },
+    { name: t("nav.pricing"), href: "#pricing" },
   ];
 
   return (
@@ -68,7 +70,7 @@ export default function LandingNavbar() {
               className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold gap-2"
             >
               <Link href="/dashboard">
-                Dashboard <ArrowRight className="w-4 h-4" />
+                {t("actions.dashboard")} <ArrowRight className="w-4 h-4" />
               </Link>
             </Button>
           ) : (
@@ -78,13 +80,13 @@ export default function LandingNavbar() {
                 asChild
                 className="font-bold text-zinc-700 dark:text-zinc-300 hover:text-indigo-600"
               >
-                <Link href="/api/auth/signin">Log in</Link>
+                <Link href="/api/auth/signin">{t("actions.login")}</Link>
               </Button>
               <Button
                 asChild
                 className="bg-zinc-900 dark:bg-zinc-50 dark:text-zinc-950 text-white hover:bg-zinc-800 dark:hover:bg-zinc-200 rounded-xl font-bold"
               >
-                <Link href="/api/auth/signin">Get Started</Link>
+                <Link href="/api/auth/signin">{t("actions.getStarted")}</Link>
               </Button>
             </>
           )}
@@ -124,7 +126,7 @@ export default function LandingNavbar() {
                 asChild
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold py-6"
               >
-                <Link href="/dashboard">Go to Dashboard</Link>
+                <Link href="/dashboard">{t("actions.goToDashboard")}</Link>
               </Button>
             ) : (
               <div className="flex flex-col gap-3">
@@ -133,13 +135,13 @@ export default function LandingNavbar() {
                   asChild
                   className="w-full rounded-xl font-bold py-6"
                 >
-                  <Link href="/api/auth/signin">Log in</Link>
+                  <Link href="/api/auth/signin">{t("actions.login")}</Link>
                 </Button>
                 <Button
                   asChild
                   className="w-full bg-zinc-900 dark:bg-zinc-50 dark:text-zinc-950 text-white rounded-xl font-bold py-6"
                 >
-                  <Link href="/api/auth/signin">Get Started free</Link>
+                  <Link href="/api/auth/signin">{t("actions.getStartedFree")}</Link>
                 </Button>
               </div>
             )}

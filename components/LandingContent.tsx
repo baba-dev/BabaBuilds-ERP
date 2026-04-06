@@ -17,6 +17,7 @@ import {
   Calculator
 } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import LandingNavbar from "@/components/LandingNavbar";
 import ComparisonTable from "@/components/ComparisonTable";
@@ -24,70 +25,71 @@ import PricingSection from "@/components/PricingSection";
 import LandingFooter from "@/components/LandingFooter";
 
 export default function LandingContent() {
+  const t = useTranslations("Landing");
   const { scrollYProgress } = useScroll();
   const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
   const scale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
 
   const features = [
     {
-      title: "Automated Invoicing",
-      description: "Generates professional PDFs with multi-theme support and automatic calculation of taxes.",
+      title: t("features.items.automatedInvoicing.title"),
+      description: t("features.items.automatedInvoicing.description"),
       icon: Receipt,
       color: "text-blue-500",
       bg: "bg-blue-50 dark:bg-blue-950/20",
     },
     {
-      title: "Zero-Effort Retainers",
-      description: "Set recurring billing once. Our engine auto-appends dates and descriptions every month.",
+      title: t("features.items.zeroEffortRetainers.title"),
+      description: t("features.items.zeroEffortRetainers.description"),
       icon: Zap,
       color: "text-amber-500",
       bg: "bg-amber-50 dark:bg-amber-950/20",
     },
     {
-      title: "AI BabaBot Insights",
-      description: "Chat with your data. Get instant financial summaries and trend analysis using natural language.",
+      title: t("features.items.aiBabaBotInsights.title"),
+      description: t("features.items.aiBabaBotInsights.description"),
       icon: Sparkles,
       color: "text-indigo-500",
       bg: "bg-indigo-50 dark:bg-indigo-950/20",
     },
     {
-      title: "Expense Ledger",
-      description: "Track every cent with automated categorization and secure receipt storage.",
+      title: t("features.items.expenseLedger.title"),
+      description: t("features.items.expenseLedger.description"),
       icon: BarChart3,
       color: "text-rose-500",
       bg: "bg-rose-50 dark:bg-rose-950/20",
     },
     {
-      title: "Bank Reconciliation",
-      description: "One-click matching of bank statements to invoices and expenses for 100% accuracy.",
+      title: t("features.items.bankReconciliation.title"),
+      description: t("features.items.bankReconciliation.description"),
       icon: Landmark,
       color: "text-emerald-500",
       bg: "bg-emerald-50 dark:bg-emerald-950/20",
     },
     {
-      title: "Investment Hub",
-      description: "Global oversight of your agency's wealth, investments, and growth metrics.",
+      title: t("features.items.investmentHub.title"),
+      description: t("features.items.investmentHub.description"),
       icon: Calculator,
       color: "text-violet-500",
       bg: "bg-violet-50 dark:bg-violet-950/20",
     },
     {
-        title: "Global Compliance",
-        description: "Built-in SAC/HSN code lookup and regional tax compliance for 40+ countries.",
+        title: t("features.items.globalCompliance.title"),
+        description: t("features.items.globalCompliance.description"),
         icon: Globe,
         color: "text-emerald-500",
         bg: "bg-emerald-50 dark:bg-emerald-950/20",
       },
       {
-        title: "Client CRM",
-        description: "Manage relationships, track statuses, and view complete billing histories in one hub.",
+        title: t("features.items.clientCrm.title"),
+        description: t("features.items.clientCrm.description"),
         icon: Users,
         color: "text-sky-500",
         bg: "bg-sky-50 dark:bg-sky-950/20",
       },
       {
-        title: "Premium Proposals",
-        description: "High-converting proposal links with integrated e-signatures and public tracking.",
+        title: t("features.items.premiumProposals.title"),
+        description: t("features.items.premiumProposals.description"),
         icon: FileSignature,
         color: "text-indigo-500",
         bg: "bg-indigo-50 dark:bg-indigo-950/20",
@@ -113,12 +115,12 @@ export default function LandingContent() {
             transition={{ duration: 0.5 }}
           >
             <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-sm font-bold text-zinc-600 dark:text-zinc-400 mb-6">
-              <Sparkles className="w-4 h-4 text-indigo-500" /> Introducing the Next Evolution of ERP
+              <Sparkles className="w-4 h-4 text-indigo-500" /> {t("hero.badge")}
             </span>
             <h1 className="text-6xl md:text-8xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 leading-[1.05]">
-              Run Your Agency <br />
+              {t("hero.titleLine1")} <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-500">
-                on Autopilot.
+                {t("hero.titleLine2")}
               </span>
             </h1>
           </motion.div>
@@ -129,8 +131,7 @@ export default function LandingContent() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-xl md:text-2xl text-zinc-600 dark:text-zinc-400 max-w-3xl mx-auto leading-relaxed font-medium"
           >
-            The global command center for bookkeeping, compliance, and growth. 
-            Automate your invoices, reconcile bank feeds, and let AI reveal your financial truth.
+            {t("hero.description")}
           </motion.p>
 
           <motion.div
@@ -141,11 +142,11 @@ export default function LandingContent() {
           >
             <Button size="lg" className="h-16 px-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl shadow-2xl shadow-indigo-500/20 text-lg font-bold gap-2 group transition-all active:scale-95" asChild>
               <Link href="/api/auth/signin">
-                Start for Free <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                {t("hero.primaryCta")} <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
             </Button>
             <Button variant="ghost" size="lg" className="h-16 px-10 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 font-bold text-lg" asChild>
-              <Link href="#features">See all Features</Link>
+              <Link href="#features">{t("hero.secondaryCta")}</Link>
             </Button>
           </motion.div>
 
@@ -165,7 +166,7 @@ export default function LandingContent() {
                 <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center animate-bounce shadow-xl shadow-indigo-500/50">
                   <Box className="w-8 h-8 text-white" />
                 </div>
-                <p className="text-zinc-400 font-medium tracking-widest uppercase text-sm">Dashboard Preview</p>
+                <p className="text-zinc-400 font-medium tracking-widest uppercase text-sm">{t("hero.dashboardPreview")}</p>
              </div>
           </motion.div>
         </motion.div>
@@ -174,13 +175,13 @@ export default function LandingContent() {
       {/* Trust Badges */}
       <section className="py-12 border-y border-zinc-100 dark:border-zinc-900">
         <div className="max-w-7xl mx-auto px-6">
-          <p className="text-center text-sm font-bold text-zinc-400 uppercase tracking-[0.2em] mb-8">Trusted by Modern Agencies in</p>
+          <p className="text-center text-sm font-bold text-zinc-400 uppercase tracking-[0.2em] mb-8">{t("trust.title")}</p>
           <div className="flex flex-wrap justify-center items-center gap-12 opacity-50 grayscale contrast-125">
-             <span className="text-2xl font-black text-zinc-900 dark:text-zinc-50">Dubai</span>
-             <span className="text-2xl font-black text-zinc-900 dark:text-zinc-50">London</span>
-             <span className="text-2xl font-black text-zinc-900 dark:text-zinc-50">Singapore</span>
-             <span className="text-2xl font-black text-zinc-900 dark:text-zinc-50">New York</span>
-             <span className="text-2xl font-black text-zinc-900 dark:text-zinc-50">New Delhi</span>
+             <span className="text-2xl font-black text-zinc-900 dark:text-zinc-50">{t("trust.cities.dubai")}</span>
+             <span className="text-2xl font-black text-zinc-900 dark:text-zinc-50">{t("trust.cities.london")}</span>
+             <span className="text-2xl font-black text-zinc-900 dark:text-zinc-50">{t("trust.cities.singapore")}</span>
+             <span className="text-2xl font-black text-zinc-900 dark:text-zinc-50">{t("trust.cities.newYork")}</span>
+             <span className="text-2xl font-black text-zinc-900 dark:text-zinc-50">{t("trust.cities.newDelhi")}</span>
           </div>
         </div>
       </section>
@@ -190,11 +191,10 @@ export default function LandingContent() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="max-w-3xl space-y-4 mb-20 text-left">
             <h2 className="text-3xl md:text-5xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
-              Everything you need to <span className="text-indigo-600">scale with speed.</span>
+              {t("features.headingPrefix")} <span className="text-indigo-600">{t("features.headingHighlight")}</span>
             </h2>
             <p className="text-lg text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
-              We've automated the boring bits so you can focus on building your empire. 
-              No more manual reconciliation or missing tax deadlines.
+              {t("features.description")}
             </p>
           </div>
 
@@ -227,26 +227,26 @@ export default function LandingContent() {
         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-600/20 blur-[120px] rounded-full" />
         <div className="max-w-4xl mx-auto px-6 text-center space-y-12 z-10 relative">
           <h2 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-tight">
-            Ready to experience the <br />
-            <span className="text-indigo-500">BabaBuilds advantage?</span>
+            {t("finalCta.titleLine1")} <br />
+            <span className="text-indigo-500">{t("finalCta.titleLine2")}</span>
           </h2>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
             <Button size="lg" className="h-16 px-12 bg-white text-zinc-950 hover:bg-zinc-100 rounded-2xl font-black text-xl shadow-2xl active:scale-95" asChild>
-               <Link href="/api/auth/signin">Get Started for Free</Link>
+               <Link href="/api/auth/signin">{t("finalCta.primaryCta")}</Link>
             </Button>
             <Button size="lg" className="h-16 px-12 bg-transparent border border-zinc-800 text-white hover:bg-zinc-900 rounded-2xl font-bold text-xl transition-all" asChild>
-               <Link href="/help">View Documentation</Link>
+               <Link href="/help">{t("finalCta.secondaryCta")}</Link>
             </Button>
           </div>
           <div className="pt-8 flex flex-wrap justify-center gap-8 text-zinc-500 font-bold uppercase tracking-widest text-xs">
              <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-500" /> UDYAM Registered
+                <ShieldCheck className="w-4 h-4 text-emerald-500" /> {t("finalCta.badges.udyam")}
              </div>
              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-indigo-500" /> WCAG 2.2 Level AA
+                <CheckCircle2 className="w-4 h-4 text-indigo-500" /> {t("finalCta.badges.wcag")}
              </div>
              <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-blue-500" /> Global Support
+                <Globe className="w-4 h-4 text-blue-500" /> {t("finalCta.badges.globalSupport")}
              </div>
           </div>
         </div>
