@@ -338,14 +338,14 @@ export async function POST(request: Request) {
     const invoiceTheme   = (profile as any).invoiceTheme || "DESIGN_1";
     const baseCurrency   = profile.workspace?.baseCurrency || 'INR';
 
-    const date    = customDate ? new Date(customDate) : new Date();
-    const dueDate = new Date(date);
-    dueDate.setDate(dueDate.getDate() + 7);
+    const invoiceDate = customDate ? new Date(customDate) : new Date();
+    const invoiceDueDate = new Date(invoiceDate);
+    invoiceDueDate.setDate(invoiceDueDate.getDate() + 7);
 
     const formattedTotal = totals.total.toLocaleString(userLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    const currentMonth = date.getMonth() + 1; 
-    const currentYear  = date.getFullYear();
+    const currentMonth = invoiceDate.getMonth() + 1; 
+    const currentYear  = invoiceDate.getFullYear();
     const shortYear    = currentYear.toString().slice(-2);
     let fy = currentMonth <= 3
       ? `${parseInt(shortYear) - 1}-${shortYear}`
@@ -411,7 +411,7 @@ export async function POST(request: Request) {
                 amount:          totals.total,
                 currency:        baseCurrency,
                 description:     `Invoice ${invoiceNumber}`,
-                invoiceDueDate:  dueDate,
+                invoiceDueDate:  invoiceDueDate,
                 customerDetails: {
                   name:  client.name,
                   email: client.email ?? undefined,
@@ -457,8 +457,8 @@ export async function POST(request: Request) {
           profile,
           client: client as any,
           invoiceNumber,
-          date,
-          dueDate,
+          date: invoiceDate,
+          dueDate: invoiceDueDate,
           billingMonth,
           sacCode,
           services: sanitizedServices,
@@ -476,7 +476,7 @@ export async function POST(request: Request) {
         newInvoice = await prisma.invoice.create({
           data: {
             workspaceId, 
-            invoiceNumber, financialYear: fy, billingMonth, invoiceDate: date, 
+            invoiceNumber, financialYear: fy, billingMonth, invoiceDate, 
             clientName: client.name, clientId: client.id,
             sacCode: typeof sacCode === 'string' ? sacCode : JSON.stringify(sacCode), 
             serviceDescription: serviceDesc, 
