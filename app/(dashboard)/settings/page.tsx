@@ -17,6 +17,24 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { getBustedUrl } from "@/lib/cache-buster";
 
 export default function SettingsWizard() {
+  /**
+   * Clearable optional fields: if a user clears these inputs in the UI,
+   * we still submit them as explicit empty strings so the API can persist null/empty
+   * instead of treating the field as "omitted / no change".
+   */
+  const CLEARABLE_OPTIONAL_FIELDS = new Set([
+    "phone",
+    "website",
+    "udyamNumber",
+    "gstin",
+    "smtpHost",
+    "smtpPort",
+    "smtpUser",
+    "smtpFromEmail",
+    "razorpayKeyId",
+    "stripePublishableKey",
+  ]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState(false);
   const [isNewSetup, setIsNewSetup] = useState(true);
@@ -140,6 +158,14 @@ export default function SettingsWizard() {
 
     const body = new FormData();
     Object.entries(formData).forEach(([key, val]) => {
+      const shouldSendExplicitEmpty =
+        CLEARABLE_OPTIONAL_FIELDS.has(key) && (val === "" || val === null || val === undefined);
+
+      if (shouldSendExplicitEmpty) {
+        body.append(key, "");
+        return;
+      }
+
       if (val !== "" && val !== null && val !== undefined) {
         body.append(key, String(val));
       }

@@ -63,25 +63,37 @@ export async function POST(request: Request) {
 
     const workspaceId = (session as any).workspaceId;
     const formData = await request.formData();
+
+    const hasField = (field: string) => formData.has(field);
+    const getStringField = (field: string) => {
+      const value = formData.get(field);
+      return typeof value === 'string' ? value : null;
+    };
+    const getNullableFromClearableField = (field: string) => {
+      const value = getStringField(field);
+      if (value === null) return null;
+      return value.trim() === '' ? null : value;
+    };
     
     // ── Core fields ──────────────────────────────────────────────────────────
     const companyName    = formData.get('companyName')    as string;
     const proprietorName = formData.get('proprietorName') as string;
     const address        = formData.get('address')        as string;
     const email          = formData.get('email')          as string;
-    const phone          = formData.get('phone')          as string;
-    const website        = formData.get('website')        as string;
+    const phone          = getStringField('phone');
+    const website        = getStringField('website');
     const panNumber      = formData.get('panNumber')      as string;
-    const udyamNumber    = formData.get('udyamNumber')    as string;
-    const gstin          = formData.get('gstin')          as string;
+    const udyamNumber    = getStringField('udyamNumber');
+    const gstin          = getStringField('gstin');
     const bankName       = formData.get('bankName')       as string;
     const accountName    = formData.get('accountName')    as string;
     const accountNumber  = formData.get('accountNumber')  as string;
     const ifscCode       = formData.get('ifscCode')       as string;
-    const smtpHost       = formData.get('smtpHost')       as string;
-    const smtpPort       = formData.get('smtpPort') ? parseInt(formData.get('smtpPort') as string) : null;
-    const smtpUser       = formData.get('smtpUser')       as string;
-    const smtpFromEmail  = formData.get('smtpFromEmail')  as string;
+    const smtpHost       = getStringField('smtpHost');
+    const smtpPortRaw    = getStringField('smtpPort');
+    const smtpPort       = smtpPortRaw ? parseInt(smtpPortRaw) : null;
+    const smtpUser       = getStringField('smtpUser');
+    const smtpFromEmail  = getStringField('smtpFromEmail');
     const defaultSacCode = (formData.get('defaultSacCode') as string) || "998313";
     const invoiceTheme   = (formData.get('invoiceTheme')  as string) || "DESIGN_1";
     const clientLocale   = formData.get('locale')         as string;
@@ -93,9 +105,9 @@ export async function POST(request: Request) {
     // ── SECRETS INTERCEPTION ─────────────────────────────────────────────────
     const rawSmtpPassword         = formData.get('smtpPassword')         as string;
     const rawGroqApiKey           = formData.get('groqApiKey')           as string;
-    const rawRzpKeyId             = formData.get('razorpayKeyId')        as string;
+    const rawRzpKeyId             = getStringField('razorpayKeyId');
     const rawRzpSecret            = formData.get('razorpayKeySecret')    as string;
-    const rawStripePublishableKey = formData.get('stripePublishableKey') as string;
+    const rawStripePublishableKey = getStringField('stripePublishableKey');
     const rawStripeSecretKey      = formData.get('stripeSecretKey')      as string;
     const defaultGateway          = formData.get('defaultGateway')       as string;
 
@@ -178,6 +190,38 @@ export async function POST(request: Request) {
       ...(signatureUrl !== undefined && { signatureUrl }),
     };
 
+    /**
+     * Clearable optional fields:
+     * - If omitted from request => no change
+     * - If present but empty => persist null
+     */
+    if (hasField('phone')) updateData.phone = getNullableFromClearableField('phone');
+    else delete updateData.phone;
+
+    if (hasField('website')) updateData.website = getNullableFromClearableField('website');
+    else delete updateData.website;
+
+    if (hasField('udyamNumber')) updateData.udyamNumber = getNullableFromClearableField('udyamNumber');
+    else delete updateData.udyamNumber;
+
+    if (hasField('gstin')) updateData.gstin = getNullableFromClearableField('gstin');
+    else delete updateData.gstin;
+
+    if (hasField('smtpHost')) updateData.smtpHost = getNullableFromClearableField('smtpHost');
+    else delete updateData.smtpHost;
+
+    if (hasField('smtpUser')) updateData.smtpUser = getNullableFromClearableField('smtpUser');
+    else delete updateData.smtpUser;
+
+    if (hasField('smtpFromEmail')) updateData.smtpFromEmail = getNullableFromClearableField('smtpFromEmail');
+    else delete updateData.smtpFromEmail;
+
+    if (hasField('smtpPort')) {
+      updateData.smtpPort = smtpPortRaw && smtpPortRaw.trim() !== '' ? smtpPort : null;
+    } else {
+      delete updateData.smtpPort;
+    }
+
     // Append SMTP / Groq secrets only if user typed a new value or deleted them
     if (rawSmtpPassword) updateData.smtpPassword = parsedSmtpPassword;
     
@@ -191,8 +235,8 @@ export async function POST(request: Request) {
 
     // ── Razorpay secrets ──────────────────────────────────────────────────────
     // Key ID is publishable — store plain (or null if cleared)
-    if (rawRzpKeyId !== null && rawRzpKeyId !== undefined) {
-      updateData.razorpayKeyId = rawRzpKeyId || null;
+    if (hasField('razorpayKeyId')) {
+      updateData.razorpayKeyId = rawRzpKeyId && rawRzpKeyId.trim() !== '' ? rawRzpKeyId : null;
     }
 
     // Key Secret: only update if user typed a real new value (not the "SET" mask, not "DELETE_KEY")
@@ -207,8 +251,8 @@ export async function POST(request: Request) {
 
     // ── Stripe secrets ────────────────────────────────────────────────────────
     // Publishable key is non-secret — store plain (or null if cleared)
-    if (rawStripePublishableKey !== null && rawStripePublishableKey !== undefined) {
-      updateData.stripePublishableKey = rawStripePublishableKey || null;
+    if (hasField('stripePublishableKey')) {
+      updateData.stripePublishableKey = rawStripePublishableKey && rawStripePublishableKey.trim() !== '' ? rawStripePublishableKey : null;
     }
 
     // Secret key: only update if user typed a real new value (mirrors Razorpay pattern)
