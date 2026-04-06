@@ -9,10 +9,14 @@ import nodemailer from 'nodemailer';
 import dns from 'dns';
 import { promisify } from 'util';
 import { Prisma } from "@prisma/client";
+import crypto from 'crypto';
 
 const lookupAsync = promisify(dns.lookup);
 const ALLOWED_STATUSES = ["Pending", "Partially Paid", "Paid"] as const;
 type AllowedStatus = (typeof ALLOWED_STATUSES)[number];
+const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
+const IDEMPOTENCY_PENDING = "PENDING";
+const IDEMPOTENCY_CONSUMED = "CONSUMED";
 
 function normalizeInvoiceStatus(status: unknown): AllowedStatus {
   if (typeof status !== "string") return "Pending";
@@ -49,9 +53,30 @@ async function resolveSafeIp(host: string): Promise<string | null> {
   }
 }
 
+function canonicalize(value: any): any {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === "object") {
+    const sortedKeys = Object.keys(value).sort();
+    const result: Record<string, any> = {};
+    for (const key of sortedKeys) {
+      result[key] = canonicalize(value[key]);
+    }
+    return result;
+  }
+  return value;
+}
+
+function buildRequestHash(payload: unknown): string {
+  const canonicalPayload = canonicalize(payload);
+  return crypto.createHash("sha256").update(JSON.stringify(canonicalPayload)).digest("hex");
+}
+
 
 export async function POST(request: Request) {
   let generatedPdfPath = ""; 
+  let workspaceId = "";
+  let idempotencyKey: string | null = null;
+  let lockCreated = false;
 
   try {
     // 1. SECURITY LOCK
@@ -59,9 +84,75 @@ export async function POST(request: Request) {
     if (!session || !(session as any).workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
+    workspaceId = (session as any).workspaceId;
 
     const body = await request.json();
+    idempotencyKey = request.headers.get("Idempotency-Key")?.trim() || body?.idempotencyKey?.trim() || null;
+    const idempotencyBody = { ...body };
+    delete idempotencyBody.idempotencyKey;
+    const requestHash = buildRequestHash(idempotencyBody);
+
+    // Lazy TTL cleanup strategy (remove expired records opportunistically on access).
+    await prisma.invoiceIdempotency.deleteMany({
+      where: { workspaceId, expiresAt: { lt: new Date() } }
+    });
+
+    if (idempotencyKey) {
+      try {
+        const existing = await prisma.invoiceIdempotency.findUnique({
+          where: { workspaceId_idempotencyKey: { workspaceId, idempotencyKey } },
+          include: { invoice: true }
+        });
+
+        if (existing && existing.expiresAt > new Date()) {
+          if (existing.requestHash !== requestHash) {
+            return NextResponse.json(
+              { error: "Idempotency-Key reuse with different request payload is not allowed." },
+              { status: 409 }
+            );
+          }
+
+          if (existing.status === IDEMPOTENCY_CONSUMED) {
+            if (existing.responseBody) {
+              return NextResponse.json(existing.responseBody as any, { status: 200 });
+            }
+            if (existing.invoice) {
+              return NextResponse.json({
+                success: true,
+                invoice: existing.invoice,
+                status: existing.invoice.status,
+                emailStatus: "Replayed from idempotency key",
+              }, { status: 200 });
+            }
+          }
+
+          return NextResponse.json(
+            { error: "A request with this Idempotency-Key is already in progress." },
+            { status: 429 }
+          );
+        }
+
+        await prisma.invoiceIdempotency.create({
+          data: {
+            workspaceId,
+            idempotencyKey,
+            requestHash,
+            status: IDEMPOTENCY_PENDING,
+            expiresAt: new Date(Date.now() + IDEMPOTENCY_TTL_MS),
+          }
+        });
+        lockCreated = true;
+      } catch (idempotencyErr) {
+        if (idempotencyErr instanceof Prisma.PrismaClientKnownRequestError && idempotencyErr.code === "P2002") {
+          return NextResponse.json(
+            { error: "Duplicate request in progress. Please retry after a moment." },
+            { status: 429 }
+          );
+        }
+        throw idempotencyErr;
+      }
+    }
+
     const { clientId, billingMonth, sacCode, services, customDate, sendEmail, status: rawStatus } = body;
     const normalizedStatus = normalizeInvoiceStatus(rawStatus);
 
@@ -81,23 +172,6 @@ export async function POST(request: Request) {
 
     const totalAmount = sanitizedServices.reduce((sum: number, service: any) => sum + service.amount, 0);
     const serviceDesc = sanitizedServices.map((s: any) => s.title).join(" + ");
-
-    // --- 🚨 SECURITY PATCH: Prevent Double-Click Race Conditions (Idempotency) ---
-    const recentDuplicate = await prisma.invoice.findFirst({
-      where: {
-        workspaceId,
-        clientId,
-        totalAmount,
-        serviceDescription: serviceDesc,
-        createdAt: { gte: new Date(Date.now() - 60 * 1000) }
-      }
-    });
-
-    if (recentDuplicate) {
-      return NextResponse.json({ 
-        error: "Duplicate request detected. An identical invoice was generated less than a minute ago." 
-      }, { status: 429 });
-    }
 
     // 2. FETCH CLIENT
     const client = await prisma.client.findFirst({ 
@@ -327,12 +401,26 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({
+    const successResponse = {
       success: true,
       invoice: newInvoice,
       status: newInvoice.status,
       emailStatus
-    });
+    };
+
+    if (idempotencyKey) {
+      await prisma.invoiceIdempotency.update({
+        where: { workspaceId_idempotencyKey: { workspaceId, idempotencyKey } },
+        data: {
+          status: IDEMPOTENCY_CONSUMED,
+          invoiceId: newInvoice.id,
+          responseBody: successResponse as Prisma.InputJsonValue,
+          expiresAt: new Date(Date.now() + IDEMPOTENCY_TTL_MS),
+        }
+      });
+    }
+
+    return NextResponse.json(successResponse);
 
   } catch (error: any) {
     console.error("Invoice Generation Error:", error);
@@ -343,6 +431,16 @@ export async function POST(request: Request) {
         console.log(`🧹 Cleaned up orphaned PDF file after failure: ${generatedPdfPath}`);
       } catch (cleanupError) {
         console.error("Failed to delete orphaned file:", cleanupError);
+      }
+    }
+
+    if (lockCreated && idempotencyKey) {
+      try {
+        await prisma.invoiceIdempotency.delete({
+          where: { workspaceId_idempotencyKey: { workspaceId, idempotencyKey } }
+        });
+      } catch (cleanupErr) {
+        console.error("Failed to release idempotency lock after error:", cleanupErr);
       }
     }
 

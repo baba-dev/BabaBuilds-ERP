@@ -107,6 +107,7 @@ model Workspace {
   proposals             Proposal[]
   retainers             Retainer[]
   tasks                 Task[]
+  invoiceIdempotencies  InvoiceIdempotency[]
 }
 
 model WorkspaceUser {
@@ -231,11 +232,30 @@ model Invoice {
 
   clientId           String?
   client             Client?   @relation(fields: [clientId], references: [id])
+  idempotencyRecords InvoiceIdempotency[]
 
   // Security: Two different workspaces can use invoice number "001"
   @@unique([invoiceNumber, workspaceId])
   @@index([financialYear])
   @@index([workspaceId])
+}
+
+model InvoiceIdempotency {
+  id             String    @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  idempotencyKey String
+  requestHash    String
+  invoiceId      String?
+  invoice        Invoice?   @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  responseBody   Json?
+  status         String    @default("PENDING") // "PENDING" | "CONSUMED"
+  expiresAt      DateTime
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([workspaceId, idempotencyKey])
+  @@index([workspaceId, expiresAt])
 }
 
 model Expense {
