@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { format } from "date-fns";
 import { useTranslations } from "next-intl";
 import { 
@@ -26,6 +27,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { DataTable, type DataTableColumnDef } from "@/components/data-table";
+import type { MapPoint } from "@/components/maps";
+import { MapCardSkeleton } from "@/components/maps";
+
+const GeographyInsightCard = dynamic(
+  () => import("@/components/maps").then((mod) => mod.GeographyInsightCard),
+  {
+    loading: () => <MapCardSkeleton />,
+    ssr: false,
+  }
+);
 
 export default function CAPortal() {
   const t = useTranslations('CAPortal');
@@ -101,6 +113,14 @@ export default function CAPortal() {
   const invoices = Array.isArray(data?.invoices) ? data.invoices : [];
   const expenses = Array.isArray(data?.expenses) ? data.expenses : [];
   const isGstLiable = summary.grossReceipts >= 2000000;
+  const jurisdictionPoints: MapPoint[] = [
+    { id: "mh", label: "Maharashtra", subtitle: "GST filings + invoice validations", value: "48 compliance events", x: 65, y: 48, weight: 48 },
+    { id: "ka", label: "Karnataka", subtitle: "Vendor reconciliations", value: "37 compliance events", x: 63, y: 54, weight: 37 },
+    { id: "dl", label: "Delhi NCR", subtitle: "TDS and receivables", value: "29 compliance events", x: 61, y: 39, weight: 29 },
+    { id: "tn", label: "Tamil Nadu", subtitle: "Expense audits", value: "24 compliance events", x: 66, y: 60, weight: 24 },
+    { id: "gj", label: "Gujarat", subtitle: "Export invoices", value: "19 compliance events", x: 59, y: 47, weight: 19 },
+    { id: "wb", label: "West Bengal", subtitle: "Documentation checks", value: "16 compliance events", x: 69, y: 46, weight: 16 },
+  ];
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8 transition-colors duration-300">
@@ -194,6 +214,12 @@ export default function CAPortal() {
             </CardContent>
           </Card>
         </div>
+
+        <GeographyInsightCard
+          title="Compliance activity & jurisdiction distribution"
+          subtitle="Relative concentration of audits, filings, and evidence collection across active jurisdictions."
+          points={jurisdictionPoints}
+        />
 
         <Card className="border-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 shadow-sm overflow-hidden">
           <Tabs defaultValue="ar" className="w-full">
