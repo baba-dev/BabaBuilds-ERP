@@ -161,7 +161,10 @@
     "ph_address": "مبنى، شارع، منطقة...",
     "ph_country": "على سبيل المثال عمان",
     "ph_email": "billing@client.com",
-    "ph_phone": "اختياري"
+    "ph_phone": "اختياري",
+    "update_client": "تحديث العميل",
+    "edit_registration_title": "تعديل ملف العميل",
+    "edit_registration_desc": "قم بتحديث تفاصيل الكيان القانوني ومعلومات الاتصال."
   },
   "Services": {
     "title": "كتالوج الخدمات الرئيسي",

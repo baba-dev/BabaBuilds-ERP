@@ -161,7 +161,10 @@
     "ph_address": "भवन, सड़क, क्षेत्र...",
     "ph_country": "उदाहरण: ओमान",
     "ph_email": "billing@client.com",
-    "ph_phone": "वैकल्पिक"
+    "ph_phone": "वैकल्पिक",
+    "update_client": "क्लाइंट अपडेट करें",
+    "edit_registration_title": "क्लाइंट प्रोफ़ाइल संपादित करें",
+    "edit_registration_desc": "कानूनी इकाई का विवरण और संपर्क जानकारी अपडेट करें।"
   },
   "Services": {
     "title": "मास्टर सेवा कैटलॉग",
