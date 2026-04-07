@@ -467,7 +467,10 @@ export default function RetainersHub() {
 
   // --- RENDER LIST VIEW ---
   const activeCount = retainers.filter(r => r.status === 'ACTIVE').length;
-  const mrrPipeline = retainers.filter(r => r.status === 'ACTIVE').reduce((sum, r) => sum + r.amount, 0);
+  const mrrPipeline = retainers.filter(r => r.status === 'ACTIVE').reduce((sum, r) => {
+    const amountValue = Number(r.amount ?? 0);
+    return sum + (Number.isFinite(amountValue) ? amountValue : 0);
+  }, 0);
   const retainerColumns: DataTableColumnDef<any>[] = [
     {
       id: "client_service",
