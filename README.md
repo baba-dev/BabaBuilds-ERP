@@ -63,3 +63,9 @@ Use these artifacts to coordinate phased UI delivery and design QA gates:
 
 - [Component adoption matrix](docs/frontend/component-adoption-matrix.md)
 - [Visual QA checklist](docs/frontend/visual-qa-checklist.md)
+
+## Auth/email dependency constraints
+
+To keep email sign-in and verification-token delivery compatible with `next-auth@4.24.13`, keep `nodemailer` on the `^7.0.7` major range (the peer dependency expected by this `next-auth` release).
+
+When updating mailer dependencies, align `@types/nodemailer` to the same runtime major as `nodemailer` to avoid drift between compile-time types and runtime APIs.
