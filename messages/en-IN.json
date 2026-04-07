@@ -185,13 +185,18 @@
       "cta": "Manage API keys",
       "integrations": {
         "groq": "AI Assistant Configuration (Groq)",
-        "razorpay": "Payment Gateway Integration (Razorpay)",
-        "stripe": "Payment Gateway Integration (Stripe)"
+        "payment": "Payment Gateway Integration (Razorpay/Stripe)",
+        "smtp": "SMTP Settings Configuration"
       },
       "status": {
         "configured": "Configured",
         "partial": "Partially configured",
         "missing": "Missing required keys"
+      },
+      "tooltips": {
+        "groq": "Connect Groq to power AI features like faster drafting, suggestions, and assistant workflows.",
+        "payment": "Set up Razorpay or Stripe so clients can pay invoices online without manual follow-ups.",
+        "smtp": "Configure SMTP to reliably send invoices, reminders, and payment updates from your own mailbox."
       }
     },
     "readiness": "Readiness",
