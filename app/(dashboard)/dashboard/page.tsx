@@ -444,7 +444,7 @@ export default function Dashboard() {
     <DashboardPageShell
       title={t('financial_overview')}
       description={t('global_command_center', { countryCode })}
-      actions={
+      secondaryActions={
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest hidden sm:inline">FY:</span>
           <Select value={selectedFy} onValueChange={setSelectedFy}>

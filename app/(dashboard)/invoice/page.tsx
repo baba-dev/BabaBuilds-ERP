@@ -13,6 +13,7 @@ import { TaxRateModal } from "@/components/invoice/tax-rate-modal";
 import { DatePickerField } from "@/components/forms/date-picker-field";
 import { SearchableCombobox } from "@/components/forms/searchable-combobox";
 import { FormFieldMessages, FormSection, FormSubmitBar } from "@/components/forms/form-primitives";
+import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 
 // MISSION CRITICAL: Globalization & Caching Imports
 import { useFormat } from "@/hooks/use-format";
@@ -284,22 +285,17 @@ export default function InvoiceGenerator() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8 transition-colors duration-300">
-      <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
-        <div className="sticky top-0 z-20 -mx-4 px-4 py-4 md:-mx-8 md:px-8 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200/50 dark:border-zinc-800/50 transition-all duration-300">
-          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 max-w-4xl mx-auto w-full">
-            <div className="space-y-1.5">
-              <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{t('title')}</h1>
-              <p className="text-zinc-600 dark:text-zinc-300 font-medium text-sm max-w-xl">
-                {t('description', { countryCode })}
-              </p>
-            </div>
-            <div className="md:text-right bg-white/50 dark:bg-zinc-900/50 p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0 backdrop-blur-sm">
-              <span className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 block mb-1.5">{t('service_classification')}</span>
-              <span className="px-2.5 py-1 bg-indigo-50/80 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 font-mono text-xs font-bold rounded shadow-sm border border-indigo-200/50 dark:border-indigo-800/50">{smartSacCode}</span>
-            </div>
-          </div>
+    <DashboardPageShell
+      title={t('title')}
+      description={t('description', { countryCode })}
+      maxWidthClassName="max-w-4xl"
+      kpiCard={(
+        <div className="md:text-right bg-white/50 dark:bg-zinc-900/50 p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm shrink-0 backdrop-blur-sm">
+          <span className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 block mb-1.5">{t('service_classification')}</span>
+          <span className="px-2.5 py-1 bg-indigo-50/80 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 font-mono text-xs font-bold rounded shadow-sm border border-indigo-200/50 dark:border-indigo-800/50">{smartSacCode}</span>
         </div>
+      )}
+    >
 
         <Card className="shadow-xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
           <div className="h-1.5 bg-gradient-to-r from-indigo-500 to-indigo-600 w-full" />
@@ -510,7 +506,6 @@ export default function InvoiceGenerator() {
           title="Tax rate required to continue"
           description="We couldn't detect a single applicable rate from your service metadata. Enter it once and we'll remember it for your workspace."
         />
-      </div>
-    </div>
+    </DashboardPageShell>
   );
 }
