@@ -7,9 +7,10 @@ import { animate, useMotionValue } from "framer-motion";
 import {
   TrendingUp, Landmark, FileText, Users, Calculator, AlertTriangle,
   ArrowUpRight, Sparkles, Activity, CheckCircle2, AlertCircle, ShieldAlert,
-  ArrowRight, Link as LinkIcon, Mail, Banknote, Send, Download
+  ArrowRight, Link as LinkIcon, Mail, Banknote, Send, Download, Info
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { TooltipProvider, Tooltip as UiTooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
@@ -104,7 +105,7 @@ type DashboardData = {
     wealth: Array<{ name: string; value: number; color: string }>;
   };
   readiness?: {
-    integrations: Record<"groq" | "razorpay" | "stripe", { configured: boolean; status: IntegrationStatus }>;
+    integrations: Record<"groq" | "payment" | "smtp", { configured: boolean; status: IntegrationStatus }>;
     summary: Record<IntegrationStatus, number>;
   };
   recentInvoices: RecentInvoiceRow[];
@@ -331,16 +332,21 @@ export default function Dashboard() {
       status: readinessIntegrations?.groq?.status ?? "missing",
     },
     {
-      id: "razorpay" as const,
-      label: t("api_status.integrations.razorpay"),
-      status: readinessIntegrations?.razorpay?.status ?? "missing",
+      id: "payment" as const,
+      label: t("api_status.integrations.payment"),
+      status: readinessIntegrations?.payment?.status ?? "missing",
     },
     {
-      id: "stripe" as const,
-      label: t("api_status.integrations.stripe"),
-      status: readinessIntegrations?.stripe?.status ?? "missing",
+      id: "smtp" as const,
+      label: t("api_status.integrations.smtp"),
+      status: readinessIntegrations?.smtp?.status ?? "missing",
     },
   ] as const;
+  const apiReadinessHelpText: Record<(typeof apiReadinessRows)[number]["id"], string> = {
+    groq: t("api_status.tooltips.groq"),
+    payment: t("api_status.tooltips.payment"),
+    smtp: t("api_status.tooltips.smtp"),
+  };
   const recentInvoiceColumns: DataTableColumnDef<RecentInvoiceRow>[] = [
     {
       id: "date",
@@ -557,32 +563,50 @@ export default function Dashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0 flex-1 flex flex-col justify-between bg-white dark:bg-zinc-900">
-              <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
-                {apiReadinessRows.map((integration) => (
-                  <div key={integration.id} className="px-5 py-3.5 flex items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{integration.label}</p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                        {integration.status === "healthy"
-                          ? t("api_status.status.configured")
-                          : integration.status === "partial"
-                            ? t("api_status.status.partial")
-                            : t("api_status.status.missing")}
-                      </p>
+              <TooltipProvider delayDuration={150}>
+                <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+                  {apiReadinessRows.map((integration) => (
+                    <div key={integration.id} className="px-5 py-3.5 flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 inline-flex items-center gap-1.5">
+                          <span>{integration.label}</span>
+                          <UiTooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                className="inline-flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                                aria-label={`Why ${integration.label} matters`}
+                              >
+                                <Info className="h-3.5 w-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[260px] leading-relaxed">
+                              {apiReadinessHelpText[integration.id]}
+                            </TooltipContent>
+                          </UiTooltip>
+                        </p>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                          {integration.status === "healthy"
+                            ? t("api_status.status.configured")
+                            : integration.status === "partial"
+                              ? t("api_status.status.partial")
+                              : t("api_status.status.missing")}
+                        </p>
+                      </div>
+                      <div className="inline-flex items-center gap-2 shrink-0">
+                        <StatusDot status={integration.status} />
+                        <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                          {integration.status === "healthy"
+                            ? t("api_status.status.configured")
+                            : integration.status === "partial"
+                              ? t("api_status.status.partial")
+                              : t("api_status.status.missing")}
+                        </span>
+                      </div>
                     </div>
-                    <div className="inline-flex items-center gap-2 shrink-0">
-                      <StatusDot status={integration.status} />
-                      <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-                        {integration.status === "healthy"
-                          ? t("api_status.status.configured")
-                          : integration.status === "partial"
-                            ? t("api_status.status.partial")
-                            : t("api_status.status.missing")}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </TooltipProvider>
               <Link href="/settings" className="flex items-center justify-between p-4 bg-zinc-50/50 dark:bg-zinc-950/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors group mt-auto border-t border-zinc-100 dark:border-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900">
                 <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 group-hover:text-black dark:group-hover:text-white transition-colors">
                   {t("api_status.cta")}

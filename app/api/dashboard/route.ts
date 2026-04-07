@@ -67,14 +67,41 @@ export async function GET(request: Request) {
           razorpayKeySecret: true,
           stripePublishableKey: true,
           stripeSecretKey: true,
+          smtpHost: true,
+          smtpPort: true,
+          smtpUser: true,
+          smtpPassword: true,
+          smtpFromEmail: true,
         },
       }),
     ]);
 
+    const razorpayReadiness = getIntegrationReadiness([profile?.razorpayKeyId, profile?.razorpayKeySecret]);
+    const stripeReadiness = getIntegrationReadiness([profile?.stripePublishableKey, profile?.stripeSecretKey]);
+    const hasAnyPaymentKey = [
+      profile?.razorpayKeyId,
+      profile?.razorpayKeySecret,
+      profile?.stripePublishableKey,
+      profile?.stripeSecretKey,
+    ].some((value) => Boolean(value && value.trim()));
+
+    const paymentReadiness: IntegrationReadiness =
+      razorpayReadiness.status === 'healthy' || stripeReadiness.status === 'healthy'
+        ? { configured: true, status: 'healthy' }
+        : hasAnyPaymentKey
+          ? { configured: false, status: 'partial' }
+          : { configured: false, status: 'missing' };
+
     const integrationReadiness = {
       groq: getIntegrationReadiness([profile?.groqApiKey]),
-      razorpay: getIntegrationReadiness([profile?.razorpayKeyId, profile?.razorpayKeySecret]),
-      stripe: getIntegrationReadiness([profile?.stripePublishableKey, profile?.stripeSecretKey]),
+      payment: paymentReadiness,
+      smtp: getIntegrationReadiness([
+        profile?.smtpHost,
+        profile?.smtpPort ? String(profile.smtpPort) : null,
+        profile?.smtpUser,
+        profile?.smtpPassword,
+        profile?.smtpFromEmail,
+      ]),
     };
 
     const integrationSummary = Object.values(integrationReadiness).reduce(
