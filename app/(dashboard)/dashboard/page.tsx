@@ -7,7 +7,7 @@ import { animate, useMotionValue } from "framer-motion";
 import {
   TrendingUp, Landmark, FileText, Users, Calculator, AlertTriangle,
   ArrowUpRight, Sparkles, Activity, CheckCircle2, AlertCircle, ShieldAlert,
-  ArrowRight, Settings2, Building2, Mail, Banknote, Send, Download
+  ArrowRight, Link as LinkIcon, Mail, Banknote, Send, Download
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -81,9 +81,53 @@ type RecentInvoiceRow = {
   updatedAt?: string | Date | null;
 };
 
+type IntegrationStatus = "healthy" | "partial" | "missing";
+
+type DashboardData = {
+  kpis: {
+    totalRevenue: number;
+    totalWealth: number;
+    estimatedTax: number;
+    activeClients: number;
+  };
+  mrr: {
+    total: number;
+    retainers: Array<{
+      clientName: string;
+      serviceName: string;
+      amount: number;
+      health: "good" | "warning" | "danger" | "pending";
+    }>;
+  };
+  charts: {
+    revenue: Array<{ name: string; revenue: number }>;
+    wealth: Array<{ name: string; value: number; color: string }>;
+  };
+  readiness?: {
+    integrations: Record<"groq" | "razorpay" | "stripe", { configured: boolean; status: IntegrationStatus }>;
+    summary: Record<IntegrationStatus, number>;
+  };
+  recentInvoices: RecentInvoiceRow[];
+};
+
+const statusStyles: Record<IntegrationStatus, string> = {
+  healthy: "bg-emerald-500 dark:bg-emerald-400 shadow-emerald-500/40 dark:shadow-emerald-400/40",
+  partial: "bg-amber-500 dark:bg-amber-400 shadow-amber-500/40 dark:shadow-amber-400/40",
+  missing: "bg-rose-500 dark:bg-rose-400 shadow-rose-500/40 dark:shadow-rose-400/40",
+};
+
+function StatusDot({ status }: { status: IntegrationStatus }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`inline-flex h-2.5 w-2.5 rounded-full shadow-sm motion-safe:animate-pulse motion-reduce:animate-none ${statusStyles[status]}`}
+    />
+  );
+}
+
 export default function Dashboard() {
   const t = useTranslations('Dashboard');
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
@@ -126,7 +170,7 @@ export default function Dashboard() {
 
   // --- PAYMENT & LEDGER ACTION STATE ---
   const [payModalOpen, setPayModalOpen] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<RecentInvoiceRow | null>(null);
   const [amountReceived, setAmountReceived] = useState("");
   const [dateReceived, setDateReceived] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
@@ -145,7 +189,7 @@ export default function Dashboard() {
       if (!res.ok || json.error) {
         throw new Error(json.error || "Failed to load dashboard data.");
       }
-      setData(json);
+      setData(json as DashboardData);
     } catch (err: any) {
       console.error("Failed to fetch dashboard", err);
       const message = err?.message || "Failed to load dashboard data. Please refresh.";
@@ -185,7 +229,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleResendEmail = async (invoice: any) => {
+  const handleResendEmail = async (invoice: RecentInvoiceRow) => {
     setResendingId(invoice.id);
     const toastId = toast.loading(`Sending invoice ${invoice.invoiceNumber}...`);
     try {
@@ -204,7 +248,7 @@ export default function Dashboard() {
     }
   };
 
-  const openPayModal = (invoice: any) => {
+  const openPayModal = (invoice: RecentInvoiceRow) => {
     setSelectedInvoice(invoice);
     setAmountReceived(invoice.totalAmount.toString());
     setPayModalOpen(true);
@@ -277,6 +321,26 @@ export default function Dashboard() {
   const arrTotal = mrrTotal * 12;
   const activeRetainers = data?.mrr?.retainers || [];
   const recentInvoices: RecentInvoiceRow[] = data?.recentInvoices || [];
+  const readinessIntegrations = data?.readiness?.integrations;
+  const readinessSummary = data?.readiness?.summary ?? { healthy: 0, partial: 0, missing: 3 };
+  const configuredConnections = readinessSummary.healthy;
+  const apiReadinessRows = [
+    {
+      id: "groq" as const,
+      label: t("api_status.integrations.groq"),
+      status: readinessIntegrations?.groq?.status ?? "missing",
+    },
+    {
+      id: "razorpay" as const,
+      label: t("api_status.integrations.razorpay"),
+      status: readinessIntegrations?.razorpay?.status ?? "missing",
+    },
+    {
+      id: "stripe" as const,
+      label: t("api_status.integrations.stripe"),
+      status: readinessIntegrations?.stripe?.status ?? "missing",
+    },
+  ] as const;
   const recentInvoiceColumns: DataTableColumnDef<RecentInvoiceRow>[] = [
     {
       id: "date",
@@ -477,35 +541,51 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* 3. Onboarding/{t('readiness')} */}
+          {/* 3. API connections status */}
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col hover:shadow-md transition-all duration-300">
             <CardHeader className="pb-4 border-b border-zinc-100 dark:border-zinc-800 space-y-2">
               <div className="flex justify-between items-center">
                 <CardTitle className="text-sm font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-2 uppercase tracking-wider">
-                  <Settings2 className="w-4 h-4 text-blue-500 animate-spin-slow" /> Readiness
+                  <LinkIcon className="w-4 h-4 text-indigo-500" /> {t("api_status.title")}
                 </CardTitle>
-                <Badge variant="secondary" className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 hover:bg-blue-100 text-xs font-bold uppercase">
-                  {t('synced')}
+                <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50 hover:bg-indigo-100 text-xs font-bold">
+                  {t("api_status.badge", { configured: configuredConnections, total: 3 })}
                 </Badge>
               </div>
+              <CardDescription className="text-xs text-zinc-500 dark:text-zinc-400">
+                {t("api_status.description")}
+              </CardDescription>
             </CardHeader>
             <CardContent className="p-0 flex-1 flex flex-col justify-between bg-white dark:bg-zinc-900">
-              <div className="p-5">
-                <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-2">
-                  {t('functional_locale')}
-                </p>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center border border-indigo-100 dark:border-indigo-800/50">
-                    <Building2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+                {apiReadinessRows.map((integration) => (
+                  <div key={integration.id} className="px-5 py-3.5 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{integration.label}</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        {integration.status === "healthy"
+                          ? t("api_status.status.configured")
+                          : integration.status === "partial"
+                            ? t("api_status.status.partial")
+                            : t("api_status.status.missing")}
+                      </p>
+                    </div>
+                    <div className="inline-flex items-center gap-2 shrink-0">
+                      <StatusDot status={integration.status} />
+                      <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                        {integration.status === "healthy"
+                          ? t("api_status.status.configured")
+                          : integration.status === "partial"
+                            ? t("api_status.status.partial")
+                            : t("api_status.status.missing")}
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-base font-bold text-zinc-900 dark:text-zinc-100">
-                    {t('engine_active', { countryCode })}
-                  </p>
-                </div>
+                ))}
               </div>
-              <Link href="/settings/profile" className="flex items-center justify-between p-4 bg-zinc-50/50 dark:bg-zinc-950/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors group mt-auto border-t border-zinc-100 dark:border-zinc-800">
+              <Link href="/settings" className="flex items-center justify-between p-4 bg-zinc-50/50 dark:bg-zinc-950/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors group mt-auto border-t border-zinc-100 dark:border-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900">
                 <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 group-hover:text-black dark:group-hover:text-white transition-colors">
-                  {t('view_localization_settings')}
+                  {t("api_status.cta")}
                 </span>
                 <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:translate-x-1 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-all duration-300" />
               </Link>

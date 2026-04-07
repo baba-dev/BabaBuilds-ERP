@@ -178,6 +178,22 @@
     "retainer_radar": "Retainer Radar",
     "payment_velocity": "Payment velocity tracking.",
     "no_active_retainers": "No active retainers.",
+    "api_status": {
+      "title": "API Connections Status",
+      "description": "Live readiness of AI and payment integrations.",
+      "badge": "{configured}/3 Configured",
+      "cta": "Manage API keys",
+      "integrations": {
+        "groq": "AI Assistant Configuration (Groq)",
+        "razorpay": "Payment Gateway Integration (Razorpay)",
+        "stripe": "Payment Gateway Integration (Stripe)"
+      },
+      "status": {
+        "configured": "Configured",
+        "partial": "Partially configured",
+        "missing": "Missing required keys"
+      }
+    },
     "readiness": "Readiness",
     "synced": "SYNCED",
     "functional_locale": "Functional Locale",
