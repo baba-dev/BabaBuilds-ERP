@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { INVOICE_STATUS, isOpenInvoiceStatus, isPaidInvoiceStatus } from '@/lib/invoice-status';
+import { toDecimal } from '@/lib/money';
 
 const isPaidStatus = (status: unknown) => String(status).toUpperCase() === "PAID";
 
