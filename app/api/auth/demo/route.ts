@@ -154,17 +154,17 @@ export async function POST(request: Request) {
         daysAgo: number;
         amount: number;
         desc: string;
-        status: "Paid" | "Pending";
+        status: "PAID" | "PENDING";
       }> = [
-        { client: client1, daysAgo: -180, amount: 45000, desc: "Q3 System Architecture", status: "Paid" },
-        { client: client3, daysAgo: -150, amount: 85000, desc: "Frontend Redesign", status: "Paid" },
-        { client: client2, daysAgo: -120, amount: 35000, desc: "Security Audit", status: "Paid" },
-        { client: client1, daysAgo: -90, amount: 45000, desc: "Q4 Cloud Infrastructure", status: "Paid" },
-        { client: client3, daysAgo: -60, amount: 45000, desc: "Performance Tuning", status: "Paid" },
-        { client: client2, daysAgo: -45, amount: 35000, desc: "AWS Migration", status: "Paid" },
-        { client: client2, daysAgo: -25, amount: 35000, desc: "Security Retainer", status: "Pending" }, 
-        { client: client1, daysAgo: -12, amount: 45000, desc: "Cloud Retainer", status: "Pending" },
-        { client: client3, daysAgo: -3, amount: 15000, desc: "Maintenance Retainer", status: "Pending" },
+        { client: client1, daysAgo: -180, amount: 45000, desc: "Q3 System Architecture", status: "PAID" },
+        { client: client3, daysAgo: -150, amount: 85000, desc: "Frontend Redesign", status: "PAID" },
+        { client: client2, daysAgo: -120, amount: 35000, desc: "Security Audit", status: "PAID" },
+        { client: client1, daysAgo: -90, amount: 45000, desc: "Q4 Cloud Infrastructure", status: "PAID" },
+        { client: client3, daysAgo: -60, amount: 45000, desc: "Performance Tuning", status: "PAID" },
+        { client: client2, daysAgo: -45, amount: 35000, desc: "AWS Migration", status: "PAID" },
+        { client: client2, daysAgo: -25, amount: 35000, desc: "Security Retainer", status: "PENDING" }, 
+        { client: client1, daysAgo: -12, amount: 45000, desc: "Cloud Retainer", status: "PENDING" },
+        { client: client3, daysAgo: -3, amount: 15000, desc: "Maintenance Retainer", status: "PENDING" },
       ];
 
       for (let i = 0; i < invoicesToCreate.length; i++) {
@@ -177,8 +177,8 @@ export async function POST(request: Request) {
             financialYear: getFY(date), billingMonth: date.toLocaleString('default', { month: 'long', year: 'numeric' }),
             invoiceDate: date, clientName: inv.client.name, sacCode: "998313", serviceDescription: inv.desc,
             totalAmount: inv.amount, status: inv.status, pdfPath: `/demo-invoices/INV-${i+1}.pdf`,
-            amountReceived: inv.status === "Paid" ? inv.amount : null,
-            dateReceived: inv.status === "Paid" ? getDateOffset(inv.daysAgo + 5) : null,
+            amountReceived: inv.status === "PAID" ? inv.amount : null,
+            dateReceived: inv.status === "PAID" ? getDateOffset(inv.daysAgo + 5) : null,
           }
         });
       }
