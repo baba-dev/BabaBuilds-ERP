@@ -51,6 +51,11 @@ export default function ExpenseTracker() {
   const [visibleColumns, setVisibleColumns] = useState<string[]>(["date", "vendor", "category", "amount", "actions"]);
   const tableState = useUrlTableState("expenses");
 
+  const toSafeNumber = (value: unknown) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
   useEffect(() => {
     fetchData(currentPage);
   }, [currentPage]);
@@ -63,7 +68,10 @@ export default function ExpenseTracker() {
       // Fetch paginated expenses
       const expRes = await fetch(`/api/expenses?page=${page}&limit=15`);
       const { data, meta } = await expRes.json();
-      setExpenses(Array.isArray(data) ? data : []);
+      const normalizedExpenses = Array.isArray(data)
+        ? data.map((exp: any) => ({ ...exp, amount: toSafeNumber(exp.amount) }))
+        : [];
+      setExpenses(normalizedExpenses);
       setTotalPages(meta.totalPages);
       setCurrentPage(meta.currentPage);
 
@@ -73,7 +81,8 @@ export default function ExpenseTracker() {
       // NOTE: This is fetching all invoices. To make KPIs truly scalable, this would also need a summary API.
       if (invData && !invData.error && Array.isArray(invData.data || invData)) {
          const revenueSource = invData.data || invData;
-         setTotalRevenue(revenueSource.reduce((sum: number, inv: any) => sum + inv.totalAmount, 0));
+         const normalizedRevenue = revenueSource.reduce((sum: number, inv: any) => sum + toSafeNumber(inv.totalAmount), 0);
+         setTotalRevenue(normalizedRevenue);
       }
     } catch (err) {
       console.error("Failed to load financial data");
@@ -84,11 +93,12 @@ export default function ExpenseTracker() {
     }
   };
 
-  const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-  const presumptiveExpenses = totalRevenue * 0.5; 
-  const actualProfit = totalRevenue - totalExpenses;
+  const totalExpenses = expenses.reduce((sum, exp) => sum + toSafeNumber(exp.amount), 0);
+  const normalizedRevenue = toSafeNumber(totalRevenue);
+  const presumptiveExpenses = normalizedRevenue * 0.5; 
+  const actualProfit = normalizedRevenue - totalExpenses;
   const taxFreeAlpha = Math.max(0, presumptiveExpenses - totalExpenses);
-  const burnPercentage = totalRevenue > 0 ? (totalExpenses / presumptiveExpenses) * 100 : 0;
+  const burnPercentage = normalizedRevenue > 0 && presumptiveExpenses > 0 ? (totalExpenses / presumptiveExpenses) * 100 : 0;
   const filteredExpenses = expenses.filter((exp) =>
     `${exp.vendor} ${exp.category} ${exp.description ?? ""}`.toLowerCase().includes(tableState.search.toLowerCase()),
   );
