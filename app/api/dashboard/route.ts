@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || !(session as any).workspaceId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' }, { status: 401 });
     }
     const workspaceId = (session as any).workspaceId;
 
@@ -172,6 +172,6 @@ export async function GET(request: Request) {
 
   } catch (error) {
     console.error("Dashboard Data Error:", error);
-    return NextResponse.json({ error: 'Failed to aggregate dashboard data' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to aggregate dashboard data', code: 'DASHBOARD_AGGREGATION_FAILED' }, { status: 500 });
   }
 }
