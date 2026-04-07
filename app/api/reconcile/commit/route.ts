@@ -101,7 +101,7 @@ export async function POST(request: Request) {
                 // Use the actual bank deposit amount; fall back to billed amount
                 amountReceived: bankLine?.amount
                   ? Math.abs(parseFloat(bankLine.amount))
-                  : dbInv.totalAmount,
+                  : Number(dbInv.totalAmount),
                 // Use the bank statement date for chronological tax accuracy
                 dateReceived: bankLine?.date
                   ? new Date(bankLine.date)

@@ -13,6 +13,7 @@ import crypto from 'crypto';
 import { calculateInvoiceTotals } from '@/lib/invoice/totals';
 import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
 import { toInvoiceStatus } from '@/lib/invoice-status';
+import { toDecimal } from '@/lib/money';
 
 const lookupAsync = promisify(dns.lookup);
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;

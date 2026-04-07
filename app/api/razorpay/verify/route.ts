@@ -5,11 +5,19 @@ import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import Razorpay from "razorpay";
 
-// Initialize Razorpay securely on the server
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
+function getRazorpayClient() {
+  const keyId = process.env.RAZORPAY_KEY_ID;
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+  if (!keyId || !keySecret) {
+    throw new Error('Razorpay credentials are not configured');
+  }
+
+  return new Razorpay({
+    key_id: keyId,
+    key_secret: keySecret,
+  });
+}
 
 export async function POST(req: Request) {
   try {
@@ -29,8 +37,13 @@ export async function POST(req: Request) {
 
     // 2. CRYPTOGRAPHIC SIGNATURE VERIFICATION
     // Prevents "Man-in-the-middle" attacks where a user spoofs a successful payment
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!keySecret) {
+      return NextResponse.json({ error: "Payment gateway not configured" }, { status: 500 });
+    }
+
     const generatedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET!)
+      .createHmac("sha256", keySecret)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
 
@@ -41,6 +54,7 @@ export async function POST(req: Request) {
 
     // 3. FETCH SOURCE OF TRUTH FROM RAZORPAY
     // We fetch the payment directly from the gateway to verify the ACTUAL amount paid
+    const razorpay = getRazorpayClient();
     const payment = await razorpay.payments.fetch(razorpay_payment_id);
     const amountPaid = Number(payment.amount) / 100; // Convert from Paise to INR
 

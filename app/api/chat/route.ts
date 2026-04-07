@@ -198,7 +198,7 @@ async function markInvoicePaid(invoiceNumber: string, workspaceId: string) {
       where: { id: invoice.id },
       data: {
         status: "PAID",
-        amountReceived: invoice.totalAmount,
+        amountReceived: Number(invoice.totalAmount),
         dateReceived: new Date()
       }
     });
@@ -387,7 +387,7 @@ async function autoReconcile(transactionId: string, invoiceNumber: string, works
     
     await prisma.invoice.update({
       where: { id: invoice.id },
-      data: { status: "PAID", amountReceived: invoice.totalAmount, dateReceived: transaction.date }
+      data: { status: "PAID", amountReceived: Number(invoice.totalAmount), dateReceived: transaction.date }
     });
     
     return JSON.stringify({ success: true, message: `Perfect match! Invoice ${invoiceNumber} is now marked Paid using deposit of ₹${transaction.amount}.` });

@@ -63,7 +63,7 @@ export async function POST(request: Request) {
             data: {
               status: 'PAID',
               // CRITICAL FIX: Set amountReceived so Dashboard/Tax math works
-              amountReceived: dbInv.totalAmount, 
+              amountReceived: Number(dbInv.totalAmount), 
               // USE STATEMENT DATE: Ensure chronological accuracy for tax audit
               dateReceived: statementLine ? new Date(statementLine.date) : new Date(),
             }

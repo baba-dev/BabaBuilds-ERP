@@ -3,10 +3,19 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import Razorpay from "razorpay";
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
+function getRazorpayClient() {
+  const keyId = process.env.RAZORPAY_KEY_ID;
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+  if (!keyId || !keySecret) {
+    throw new Error('Razorpay credentials are not configured');
+  }
+
+  return new Razorpay({
+    key_id: keyId,
+    key_secret: keySecret,
+  });
+}
 
 const PRICING = {
   MONTHLY: 200,
@@ -42,6 +51,7 @@ export async function POST(req: Request) {
       },
     };
 
+    const razorpay = getRazorpayClient();
     const order = await razorpay.orders.create(options);
 
     return NextResponse.json({ 
