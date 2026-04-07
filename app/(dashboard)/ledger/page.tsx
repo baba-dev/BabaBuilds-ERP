@@ -21,6 +21,12 @@ import { useTranslations } from "next-intl";
 import { getBustedUrl } from "@/lib/cache-buster";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { ColumnVisibilityToggle, DataTable, DataTablePagination, DataTableToolbar, RowActionsMenu, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
+import {
+  DEFAULT_LEDGER_META,
+  parseLedgerInvoicesResponse,
+  resolveLedgerErrorToastMessage,
+  resolveLedgerMalformedJsonToastMessage,
+} from "./fetch-invoices-response";
 
 export default function AuditDashboard() {
   const t = useTranslations('Ledger');
@@ -105,17 +111,45 @@ export default function AuditDashboard() {
     setIsLoading(true);
     try {
       const res = await fetch(`/api/invoices?page=${page}&limit=15`);
-      const { data, meta } = await res.json();
+      let payload: unknown = null;
+      try {
+        payload = await res.json();
+      } catch {
+        toast.error(resolveLedgerMalformedJsonToastMessage());
+        setInvoices([]);
+        setKpis(DEFAULT_LEDGER_META.kpis);
+        setTotalPages(DEFAULT_LEDGER_META.totalPages);
+        return;
+      }
+
+      if (!res.ok) {
+        toast.error(resolveLedgerErrorToastMessage(res.status, payload));
+        setInvoices([]);
+        setKpis(DEFAULT_LEDGER_META.kpis);
+        setTotalPages(DEFAULT_LEDGER_META.totalPages);
+        return;
+      }
+
+      const parsed = parseLedgerInvoicesResponse(payload);
+      if (!parsed) {
+        toast.error("Ledger response payload was malformed.");
+        setInvoices([]);
+        setKpis(DEFAULT_LEDGER_META.kpis);
+        setTotalPages(DEFAULT_LEDGER_META.totalPages);
+        return;
+      }
       
-      setInvoices(Array.isArray(data) ? data : []);
-      setKpis(meta.kpis);
-      setTotalPages(meta.totalPages);
-      setCurrentPage(meta.currentPage);
+      setInvoices(parsed.data);
+      setKpis(parsed.meta.kpis);
+      setTotalPages(parsed.meta.totalPages);
+      setCurrentPage(parsed.meta.currentPage);
 
     } catch (error) {
       console.error("Failed to load ledger");
       toast.error("Failed to load ledger data.");
       setInvoices([]); 
+      setKpis(DEFAULT_LEDGER_META.kpis);
+      setTotalPages(DEFAULT_LEDGER_META.totalPages);
     } finally {
       setIsLoading(false);
     }

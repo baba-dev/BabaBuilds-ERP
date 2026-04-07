@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
     if (!session || !(session as any).workspaceId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized", code: "AUTH_UNAUTHORIZED" }, { status: 401 });
     }
     const workspaceId = (session as any).workspaceId;
 
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
       const { startDate, endDate } = getFinancialYearDates(fy);
       dateFilter = { gte: startDate, lte: endDate };
     } catch (e) {
-      return NextResponse.json({ error: "Invalid Financial Year parameter" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid Financial Year parameter", code: "INVALID_FINANCIAL_YEAR" }, { status: 400 });
     }
 
     // 3. FETCH ALL DATA CONCURRENTLY (Massive performance boost)
@@ -126,6 +126,6 @@ export async function GET(request: Request) {
 
   } catch (error) {
     console.error("CA Portal API Error:", error);
-    return NextResponse.json({ error: "Failed to compile audit data" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to compile audit data", code: "CA_PORTAL_COMPILE_FAILED" }, { status: 500 });
   }
 }
