@@ -88,7 +88,7 @@ export default function SuperAdminPortal() {
     }
   };
 
-  const handleAction = async (userId: string, action: 'UPGRADE' | 'SUSPEND' | 'REACTIVATE' | 'DELETE') => {
+  const handleAction = async (userId: string, action: 'UPGRADE_PRO' | 'UPGRADE_TEAM' | 'SUSPEND' | 'REACTIVATE' | 'DELETE') => {
     const toastId = toast.loading(`Executing ${action}...`);
     try {
       const res = await fetch('/api/admin/users', {
@@ -195,7 +195,8 @@ export default function SuperAdminPortal() {
           <RowActionsMenu
             row={user}
             actions={[
-              { label: "Force Pro", onClick: (u) => handleAction(u.id, "UPGRADE"), icon: <ArrowUpCircle className="mr-2 h-4 w-4" /> },
+              { label: "Force Pro", onClick: (u) => handleAction(u.id, "UPGRADE_PRO"), icon: <ArrowUpCircle className="mr-2 h-4 w-4" /> },
+              { label: "Force Team", onClick: (u) => handleAction(u.id, "UPGRADE_TEAM"), icon: <Users className="mr-2 h-4 w-4" /> },
               user.subscriptionStatus === "SUSPENDED"
                 ? { label: "Reactivate", onClick: (u) => handleAction(u.id, "REACTIVATE"), icon: <RefreshCcw className="mr-2 h-4 w-4" /> }
                 : { label: "Suspend", onClick: (u) => handleAction(u.id, "SUSPEND"), icon: <Ban className="mr-2 h-4 w-4" /> },

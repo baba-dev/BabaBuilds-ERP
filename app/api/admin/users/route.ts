@@ -56,12 +56,14 @@ export async function PATCH(req: Request) {
 
     let updateData: any = {};
     
-    if (action === 'UPGRADE') {
+    if (action === 'UPGRADE_PRO' || action === 'UPGRADE') {
       updateData = { subscriptionStatus: 'PRO', planTier: 'PRO' };
+    } else if (action === 'UPGRADE_TEAM') {
+      updateData = { subscriptionStatus: 'TEAM', planTier: 'TEAM' };
     } else if (action === 'SUSPEND') {
       updateData = { subscriptionStatus: 'SUSPENDED' };
     } else if (action === 'REACTIVATE') {
-      // Restore their original tier (PRO or FREE)
+      // Restore their original tier (PRO, TEAM, or FREE)
       updateData = { subscriptionStatus: userWorkspace.workspace.planTier || 'FREE' };
     } else {
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });

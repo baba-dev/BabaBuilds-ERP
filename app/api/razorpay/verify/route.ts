@@ -82,16 +82,28 @@ export async function POST(req: Request) {
 
     // 5. CALCULATE NEW EXPIRATION BASED ON AMOUNT PAID
     let verifiedInterval = "MONTHLY";
+    let verifiedTier = "PRO";
     const newExpirationDate = new Date(baseDate);
 
-    if (amountPaid >= 2300) {
+    if (amountPaid >= 4500) {
       verifiedInterval = "YEARLY";
+      verifiedTier = "TEAM";
+      newExpirationDate.setFullYear(newExpirationDate.getFullYear() + 1);
+    } else if (amountPaid >= 2300) {
+      verifiedInterval = "YEARLY";
+      verifiedTier = "PRO";
       newExpirationDate.setFullYear(newExpirationDate.getFullYear() + 1);
     } else if (amountPaid >= 550) {
       verifiedInterval = "QUARTERLY";
+      verifiedTier = "PRO";
       newExpirationDate.setMonth(newExpirationDate.getMonth() + 3);
+    } else if (amountPaid >= 400) {
+      verifiedInterval = "MONTHLY";
+      verifiedTier = "TEAM";
+      newExpirationDate.setMonth(newExpirationDate.getMonth() + 1);
     } else if (amountPaid >= 200) {
       verifiedInterval = "MONTHLY";
+      verifiedTier = "PRO";
       newExpirationDate.setMonth(newExpirationDate.getMonth() + 1);
     } else {
       return NextResponse.json({ error: "Insufficient payment amount detected." }, { status: 400 });
@@ -101,8 +113,8 @@ export async function POST(req: Request) {
     await prisma.workspace.update({
       where: { id: workspaceId },
       data: {
-        subscriptionStatus: "PRO",
-        planTier: "PRO",
+        subscriptionStatus: verifiedTier,
+        planTier: verifiedTier,
         planInterval: verifiedInterval,
         subscriptionEndsAt: newExpirationDate, // This is now properly stacked
         billingProviderId: payment.customer_id || razorpay_payment_id,

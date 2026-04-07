@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
-import { Check, Gift, Sparkles, ShieldCheck } from "lucide-react";
+import { Check, Gift, Sparkles, ShieldCheck, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -61,6 +61,19 @@ const tiers: PricingTier[] = [
     cue: "Most teams upgrade here",
   },
   {
+    name: "Team",
+    id: "tier-team",
+    href: "/api/auth/signin",
+    priceMonthly: 5,
+    priceINR: 400,
+    description: "Collaborate with your partners, accountants, and staff in one unified workspace.",
+    features: ["Up to 5 Users", "Role-Based Access Control", "Accountant View", "Unlimited Invoices", "All Pro features"],
+    featured: false,
+    cta: "Start with Team",
+    icon: Users,
+    cue: "Scaling businesses & agencies",
+  },
+  {
     name: "Enterprise",
     id: "tier-enterprise",
     href: "mailto:admin@bababuilds.com",
@@ -86,6 +99,12 @@ export default function PricingSection() {
     if (tier.name === "Professional" && currency.code === "INR") {
       const base = tier.priceINR || 200;
       const final = billingCycle === "annually" ? base * 10 : base;
+      return final.toLocaleString();
+    }
+
+    if (tier.name === "Team" && currency.code === "INR") {
+      const base = tier.priceINR || 400;
+      const final = billingCycle === "annually" ? 4500 : base;
       return final.toLocaleString();
     }
 
@@ -175,7 +194,7 @@ export default function PricingSection() {
         </div>
 
         <LazyMotion features={domAnimation}>
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
             {tiers.map((tier, idx) => {
               const Icon = tier.icon;
               const price = `${currency.symbol}${formatPrice(tier)}`;

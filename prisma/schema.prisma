@@ -116,6 +116,7 @@ model Workspace {
   retainers            Retainer[]
   tasks                Task[]
   invoiceIdempotencies InvoiceIdempotency[]
+  invites              WorkspaceInvite[]
 }
 
 model WorkspaceUser {
@@ -128,6 +129,20 @@ model WorkspaceUser {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([userId, workspaceId])
+}
+
+model WorkspaceInvite {
+  id          String   @id @default(cuid())
+  workspaceId String
+  email       String
+  role        String   @default("MEMBER") // "OWNER", "ADMIN", "MEMBER", "VIEWER"
+  token       String   @unique
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, email])
 }
 
 // ==========================================
