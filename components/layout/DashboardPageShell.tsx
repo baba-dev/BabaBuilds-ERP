@@ -15,10 +15,11 @@ type DashboardPageShellKpiCard =
 type DashboardPageShellProps = {
   title: ReactNode;
   description?: ReactNode;
+  icon?: ReactNode;
+  kpiCard?: ReactNode;
   primaryAction?: ReactNode;
   secondaryActions?: ReactNode;
-  kpiCard?: ReactNode;
-  maxWidthClassName?: string;
+  headerVariant?: "default" | "compact";
   actions?: ReactNode;
   pageActions?: ReactNode;
   icon?: ReactNode;
@@ -58,10 +59,11 @@ function isStructuredKpiCard(value: DashboardPageShellKpiCard | undefined): valu
 export function DashboardPageShell({
   title,
   description,
+  icon,
+  kpiCard,
   primaryAction,
   secondaryActions,
-  kpiCard,
-  maxWidthClassName = "max-w-7xl",
+  headerVariant = "default",
   actions,
   pageActions,
   icon,
@@ -74,15 +76,27 @@ export function DashboardPageShell({
   animated = true,
   animationClassName = defaultAnimationClassName,
 }: DashboardPageShellProps) {
-  const resolvedActions = pageActions ?? actions;
-  const resolvedSecondaryActions = secondaryActions ?? resolvedActions;
-  const structuredKpiCard = isStructuredKpiCard(kpiCard) ? kpiCard : null;
-  const kpiCardNode = structuredKpiCard ? null : (kpiCard as ReactNode | undefined);
+  const resolvedActions =
+    pageActions ??
+    actions ??
+    (primaryAction || secondaryActions ? (
+      <div className="flex items-center gap-2">
+        {secondaryActions}
+        {primaryAction}
+      </div>
+    ) : null);
+
+  const isCompactHeader = headerVariant === "compact";
 
   return (
     <div className="min-h-full bg-background/50 p-4 transition-colors duration-300 md:p-8">
       <div className={cn("mx-auto max-w-7xl space-y-8", animated && animationClassName)}>
-        <header className={cn(headerBaseClassName, headerDividerClassName)}>
+        <header
+          className={cn(
+            "sticky top-0 z-20 -mx-4 border-b border-zinc-200/50 bg-zinc-50/80 px-4 backdrop-blur-md transition-all duration-300 dark:border-zinc-800/50 dark:bg-zinc-950/70 md:-mx-8 md:px-8",
+            isCompactHeader ? "py-3" : "py-4",
+          )}
+        >
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -91,46 +105,17 @@ export function DashboardPageShell({
               </div>
               {headerVariant === "default" && resolvedActions ? <div className="shrink-0">{resolvedActions}</div> : null}
             </div>
-
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div className="flex min-w-0 flex-1 items-start gap-3">
-                {icon ? (
-                  <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-card text-card-foreground">
-                    {icon}
-                  </div>
-                ) : null}
-                <div className="min-w-0 space-y-1.5">
-                  <h1 className="text-3xl font-bold tracking-tight text-foreground">{title}</h1>
-                  {description ? <p className="max-w-xl text-sm font-medium text-muted-foreground">{description}</p> : null}
-                </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-3">
+                {icon ? <span className="shrink-0">{icon}</span> : null}
+                <h1 className={cn("font-bold tracking-tight text-foreground", isCompactHeader ? "text-2xl" : "text-3xl")}>
+                  {title}
+                </h1>
               </div>
-
-              {(kpiCard || primaryAction || resolvedSecondaryActions) && (
-                <div className="flex w-full flex-col items-stretch gap-2 md:w-auto md:min-w-[220px] md:items-end">
-                  {kpiCard ? (
-                    structuredKpiCard ? (
-                      <div
-                        className={cn(
-                          "w-full rounded-lg border p-3 text-left md:w-auto md:min-w-[220px]",
-                          kpiCardToneClassNames[structuredKpiCard.tone ?? "default"],
-                        )}
-                      >
-                        <p className="text-xs font-medium uppercase tracking-wide opacity-75">{structuredKpiCard.label}</p>
-                        <p className="text-2xl font-semibold leading-tight">{structuredKpiCard.value}</p>
-                      </div>
-                    ) : (
-                      <div className="w-full md:w-auto">{kpiCardNode}</div>
-                    )
-                  ) : null}
-
-                  {(primaryAction || resolvedSecondaryActions) && (
-                    <div className="flex w-full flex-wrap items-center justify-start gap-2 md:w-auto md:justify-end">
-                      {resolvedSecondaryActions}
-                      {primaryAction}
-                    </div>
-                  )}
-                </div>
-              )}
+              {description ? (
+                <p className="max-w-xl text-sm font-medium text-zinc-500 dark:text-zinc-400">{description}</p>
+              ) : null}
+              {kpiCard ? <div>{kpiCard}</div> : null}
             </div>
           </div>
         </header>
