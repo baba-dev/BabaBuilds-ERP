@@ -5,7 +5,11 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { INVOICE_STATUS, isOpenInvoiceStatus, isPaidInvoiceStatus } from '@/lib/invoice-status';
 
-const normalizeInvoiceStatus = (status: unknown) => String(status).toUpperCase();
+const normalizeInvoiceStatus = (status: unknown) =>
+  String(status)
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, '_');
 
 export async function GET(request: Request) {
   try {
