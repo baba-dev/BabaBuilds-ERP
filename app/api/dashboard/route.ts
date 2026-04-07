@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { decimalToNumber, toDecimal } from '@/lib/money';
+import { INVOICE_STATUS, isOpenInvoiceStatus, isPaidInvoiceStatus } from '@/lib/invoice-status';
 
 const normalizeInvoiceStatus = (status: unknown) => String(status).toUpperCase();
 
@@ -163,7 +163,10 @@ export async function GET(request: Request) {
         revenue: revenueChartData,
         wealth: wealthChartData
       },
-      recentInvoices
+      recentInvoices: recentInvoices.map((invoice) => ({
+        ...invoice,
+        status: invoice.status || INVOICE_STATUS.PENDING,
+      }))
     });
 
   } catch (error) {

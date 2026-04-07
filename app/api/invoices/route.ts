@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { toDecimal } from '@/lib/money';
+import { INVOICE_STATUS, isOpenInvoiceStatus, isPaidInvoiceStatus } from '@/lib/invoice-status';
 
 const isPaidStatus = (status: unknown) => String(status).toUpperCase() === "PAID";
 
@@ -53,7 +53,10 @@ export async function GET(request: Request) {
     const presumptiveIncomeDecimal = realizedRevenueDecimal.mul(0.5);
 
     return NextResponse.json({
-      data: invoices,
+      data: invoices.map((invoice) => ({
+        ...invoice,
+        status: invoice.status || INVOICE_STATUS.PENDING,
+      })),
       meta: {
         currentPage: page,
         totalPages: Math.ceil(totalInvoices / limit),

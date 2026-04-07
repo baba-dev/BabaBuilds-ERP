@@ -35,6 +35,7 @@ import { withChartTokenColors } from "@/components/charts/chart-colors";
 import type { MapPoint } from "@/components/maps";
 import { MapCardSkeleton } from "@/components/maps";
 import { DataTable, type DataTableColumnDef } from "@/components/data-table";
+import { getInvoiceStatusBadgeKey, INVOICE_STATUS, isPaidInvoiceStatus, toInvoiceStatus } from "@/lib/invoice-status";
 
 const GeographyInsightCard = dynamic(
   () => import("@/components/maps").then((mod) => mod.GeographyInsightCard),
@@ -309,13 +310,18 @@ export default function Dashboard() {
       header: t('table_status'),
       accessor: (inv) => inv.status,
       className: "py-5 px-6",
-      cell: (inv) => inv.status === 'Paid' || inv.status === 'PAID' ? (
-        <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 uppercase text-xs font-bold tracking-widest px-2 py-0.5 shadow-none">{t('status_paid')}</Badge>
-      ) : inv.status === 'Partially Paid' || inv.status === 'PARTIALLY_PAID' ? (
-        <Badge className="bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 hover:bg-blue-100 uppercase text-xs font-bold tracking-widest px-2 py-0.5 shadow-none">{t('status_partial')}</Badge>
-      ) : (
-        <Badge className="bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 uppercase text-xs font-bold tracking-widest px-2 py-0.5 shadow-none">{t('status_pending')}</Badge>
-      ),
+      cell: (inv) => {
+        const canonicalStatus = toInvoiceStatus(inv.status);
+        const badgeKey = getInvoiceStatusBadgeKey(canonicalStatus);
+        const badgeClassName =
+          canonicalStatus === INVOICE_STATUS.PAID
+            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 uppercase text-xs font-bold tracking-widest px-2 py-0.5 shadow-none"
+            : canonicalStatus === INVOICE_STATUS.PARTIALLY_PAID
+              ? "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 hover:bg-blue-100 uppercase text-xs font-bold tracking-widest px-2 py-0.5 shadow-none"
+              : "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 uppercase text-xs font-bold tracking-widest px-2 py-0.5 shadow-none";
+
+        return <Badge className={badgeClassName}>{t(badgeKey)}</Badge>;
+      },
     },
     {
       id: "amount",
@@ -331,7 +337,7 @@ export default function Dashboard() {
       className: "text-right py-5 px-6",
       cell: (inv) => (
         <div className="flex items-center justify-end gap-2 opactiy-100 sm:opacity-70 sm:group-hover:opacity-100 transition-opacity">
-          {inv.status !== 'Paid' && inv.status !== 'PAID' && (
+          {isPaidInvoiceStatus(inv.status) === false && (
             <Button
               variant="outline"
               size="sm"

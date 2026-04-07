@@ -12,23 +12,12 @@ import { Prisma } from "@prisma/client";
 import crypto from 'crypto';
 import { calculateInvoiceTotals } from '@/lib/invoice/totals';
 import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
-import { toDecimal } from '@/lib/money';
+import { toInvoiceStatus } from '@/lib/invoice-status';
 
 const lookupAsync = promisify(dns.lookup);
-const ALLOWED_STATUSES = ["Pending", "Partially Paid", "Paid"] as const;
-type AllowedStatus = (typeof ALLOWED_STATUSES)[number];
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
 const IDEMPOTENCY_PENDING = "PENDING";
 const IDEMPOTENCY_CONSUMED = "CONSUMED";
-
-function normalizeInvoiceStatus(status: unknown): AllowedStatus {
-  if (typeof status !== "string") return "Pending";
-  const normalizedStatus = status.trim().toLowerCase();
-  const matchedStatus = ALLOWED_STATUSES.find(
-    (allowedStatus) => allowedStatus.toLowerCase() === normalizedStatus
-  );
-  return matchedStatus ?? "Pending";
-}
 
 async function resolveSafeIp(host: string): Promise<string | null> {
   try {
@@ -157,7 +146,7 @@ export async function POST(request: Request) {
     }
 
     const { clientId, billingMonth, sacCode, services, customDate, sendEmail, status: rawStatus, taxRateOverride } = body;
-    const normalizedStatus = normalizeInvoiceStatus(rawStatus);
+    const normalizedStatus = toInvoiceStatus(rawStatus);
     const validationErrors: Array<{ field: string; message: string; index?: number }> = [];
 
     if (!clientId) return NextResponse.json({ error: "No client selected." }, { status: 400 });
