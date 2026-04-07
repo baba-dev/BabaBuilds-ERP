@@ -811,7 +811,7 @@ export default function Dashboard() {
                   {t('log_remittance')}
                 </DialogTitle>
                 <DialogDescription className="text-zinc-500 dark:text-zinc-400 text-sm font-medium mt-1.5 leading-relaxed">
-                  {t.rich('record_actual_amount', { currency, invoiceNumber: selectedInvoice?.invoiceNumber, b: (chunks) => <b>{chunks}</b>, strong: (chunks) => <strong className="text-zinc-700 dark:text-zinc-300">{chunks}</strong> })}
+                  {t.rich('record_actual_amount', { currency, invoiceNumber: selectedInvoice?.invoiceNumber ?? "-", b: (chunks) => <b>{chunks}</b>, strong: (chunks) => <strong className="text-zinc-700 dark:text-zinc-300">{chunks}</strong> })}
                 </DialogDescription>
               </DialogHeader>
             </div>
