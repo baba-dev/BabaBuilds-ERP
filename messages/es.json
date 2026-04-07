@@ -185,13 +185,18 @@
       "cta": "Administrar claves API",
       "integrations": {
         "groq": "Configuración del asistente de IA (Groq)",
-        "razorpay": "Integración de pasarela de pago (Razorpay)",
-        "stripe": "Integración de pasarela de pago (Stripe)"
+        "payment": "Integración de pasarela de pago (Razorpay/Stripe)",
+        "smtp": "Configuración de ajustes SMTP"
       },
       "status": {
         "configured": "Configurada",
         "partial": "Configuración parcial",
         "missing": "Faltan claves requeridas"
+      },
+      "tooltips": {
+        "groq": "Conecta Groq para habilitar funciones de IA como borradores rápidos, sugerencias y flujos asistidos.",
+        "payment": "Configura Razorpay o Stripe para que tus clientes paguen facturas en línea sin seguimiento manual.",
+        "smtp": "Configura SMTP para enviar facturas, recordatorios y avisos de pago desde tu propio correo."
       }
     },
     "readiness": "Preparación",
