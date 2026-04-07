@@ -5,6 +5,8 @@ import { authOptions } from "@/lib/auth";
 import type { CAExpenseRow, CAInvoiceRow, CAPortalPayload } from "@/lib/ca-portal/types";
 import { decimalToNumber, toDecimal } from "@/lib/money";
 
+const isPaidStatus = (status: unknown) => String(status).toUpperCase() === "PAID";
+
 // Helper function to calculate exact UTC boundaries for an Indian Financial Year
 function getFinancialYearDates(fyString: string) {
   // fyString format expected: "25-26"
@@ -66,7 +68,7 @@ export async function GET(request: Request) {
 
     // 4. CALCULATE ITR-4 SUMMARY METRICS
     // Rule: For 44ADA, only count REALIZED (Paid) income.
-    const paidInvoices = invoices.filter(inv => inv.status === 'Paid');
+    const paidInvoices = invoices.filter(inv => isPaidStatus(inv.status));
     const grossReceipts = decimalToNumber(paidInvoices.reduce((sum, inv) => sum.plus(toDecimal(inv.totalAmount)), toDecimal(0)));
     
     // Presumptive income is strictly 50% of gross receipts
@@ -92,7 +94,7 @@ export async function GET(request: Request) {
       totalAmount: decimalToNumber(inv.totalAmount),
 
 
-      amountReceived: inv.status === 'Paid' ? decimalToNumber(inv.totalAmount) : null,
+      amountReceived: isPaidStatus(inv.status) ? decimalToNumber(inv.totalAmount) : null,
       status: inv.status,
       pdfPath: inv.pdfPath
     }));

@@ -163,7 +163,7 @@ async function getOverdueInvoices(workspaceId: string) {
     const overdue = await prisma.invoice.findMany({
       where: {
         workspaceId,
-        status: "Pending",
+        status: "PENDING",
         invoiceDate: { lt: thirtyDaysAgo }
       },
       select: { invoiceNumber: true, clientName: true, totalAmount: true, invoiceDate: true },
@@ -192,18 +192,18 @@ async function markInvoicePaid(invoiceNumber: string, workspaceId: string) {
     });
     
     if (!invoice) return JSON.stringify({ error: `Invoice ${invoiceNumber} not found.` });
-    if (invoice.status === "Paid") return JSON.stringify({ message: `Invoice ${invoiceNumber} is already marked as paid.` });
+    if (String(invoice.status).toUpperCase() === "PAID") return JSON.stringify({ message: `Invoice ${invoiceNumber} is already marked as paid.` });
 
     await prisma.invoice.update({
       where: { id: invoice.id },
       data: {
-        status: "Paid",
+        status: "PAID",
         amountReceived: invoice.totalAmount,
         dateReceived: new Date()
       }
     });
     
-    return JSON.stringify({ success: true, message: `Reconciliation complete. Successfully marked Invoice ${invoiceNumber} as Paid.` });
+    return JSON.stringify({ success: true, message: `Reconciliation complete. Successfully marked Invoice ${invoiceNumber} as paid.` });
   } catch (e) { return JSON.stringify({ error: "Failed to update invoice in database." }); }
 }
 
@@ -387,7 +387,7 @@ async function autoReconcile(transactionId: string, invoiceNumber: string, works
     
     await prisma.invoice.update({
       where: { id: invoice.id },
-      data: { status: "Paid", amountReceived: invoice.totalAmount, dateReceived: transaction.date }
+      data: { status: "PAID", amountReceived: invoice.totalAmount, dateReceived: transaction.date }
     });
     
     return JSON.stringify({ success: true, message: `Perfect match! Invoice ${invoiceNumber} is now marked Paid using deposit of ₹${transaction.amount}.` });
@@ -452,7 +452,7 @@ async function convertProposalToInvoice(proposalNo: string, workspaceId: string)
         clientName: proposal.client?.name || "Unknown Client",
         serviceDescription: proposal.title,
         totalAmount: proposal.totalAmount,
-        status: "Pending",
+        status: "PENDING",
         pdfPath: "" 
       }
     });

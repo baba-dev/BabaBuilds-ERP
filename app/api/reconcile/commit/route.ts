@@ -97,7 +97,7 @@ export async function POST(request: Request) {
             await tx.invoice.update({
               where: { id: dbInv.id },
               data: {
-                status:         'Paid',
+                status:         'PAID',
                 // Use the actual bank deposit amount; fall back to billed amount
                 amountReceived: bankLine?.amount
                   ? Math.abs(parseFloat(bankLine.amount))

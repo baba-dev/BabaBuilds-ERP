@@ -4,6 +4,9 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { INVOICE_STATUS, isOpenInvoiceStatus, isPaidInvoiceStatus } from '@/lib/invoice-status';
+import { toDecimal } from '@/lib/money';
+
+const isPaidStatus = (status: unknown) => String(status).toUpperCase() === "PAID";
 
 export async function GET(request: Request) {
   try {
@@ -27,16 +30,28 @@ export async function GET(request: Request) {
         select: { totalAmount: true, grandTotal: true, status: true, amountReceived: true },
       }),
     ]);
-    
-    // 4. SERVER-SIDE KPI CALCULATION
-    const totalRevenue = allInvoicesForKpis.reduce((sum, inv) => sum + ((inv as any).grandTotal || inv.totalAmount), 0);
-    const outstanding = allInvoicesForKpis
-      .filter(inv => isOpenInvoiceStatus(inv.status))
-      .reduce((sum, inv) => sum + ((((inv as any).grandTotal || inv.totalAmount)) - (inv.amountReceived || 0)), 0);
-    const realizedRevenue = allInvoicesForKpis
-      .filter(inv => isPaidInvoiceStatus(inv.status))
-      .reduce((sum, inv) => sum + (inv.amountReceived || (inv as any).grandTotal || inv.totalAmount), 0);
-    const presumptiveIncome = realizedRevenue * 0.5;
+
+    const totalRevenueDecimal = allInvoicesForKpis.reduce((sum, inv) => {
+      const billed = inv.grandTotal ?? inv.totalAmount;
+      return sum.plus(toDecimal(billed));
+    }, new Prisma.Decimal(0));
+
+    const outstandingDecimal = allInvoicesForKpis
+      .filter(inv => !isPaidStatus(inv.status))
+      .reduce((sum, inv) => {
+        const billed = toDecimal(inv.grandTotal ?? inv.totalAmount);
+        const received = toDecimal(inv.amountReceived);
+        return sum.plus(billed.minus(received));
+      }, new Prisma.Decimal(0));
+
+    const realizedRevenueDecimal = allInvoicesForKpis
+      .filter(inv => isPaidStatus(inv.status))
+      .reduce((sum, inv) => {
+        const realized = inv.amountReceived ?? inv.grandTotal ?? inv.totalAmount;
+        return sum.plus(toDecimal(realized));
+      }, new Prisma.Decimal(0));
+
+    const presumptiveIncomeDecimal = realizedRevenueDecimal.mul(0.5);
 
     return NextResponse.json({
       data: invoices.map((invoice) => ({
