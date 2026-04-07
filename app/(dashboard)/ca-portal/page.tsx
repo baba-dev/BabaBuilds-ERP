@@ -208,12 +208,12 @@ export default function CAPortal() {
   const expenses: CAExpenseRow[] = data?.expenses ?? [];
   const isGstLiable = summary.grossReceipts >= 2000000;
   const jurisdictionPoints: MapPoint[] = [
-    { id: "mh", label: "Maharashtra", subtitle: "GST filings + invoice validations", value: "48 compliance events", x: 65, y: 48, weight: 48 },
-    { id: "ka", label: "Karnataka", subtitle: "Vendor reconciliations", value: "37 compliance events", x: 63, y: 54, weight: 37 },
-    { id: "dl", label: "Delhi NCR", subtitle: "TDS and receivables", value: "29 compliance events", x: 61, y: 39, weight: 29 },
-    { id: "tn", label: "Tamil Nadu", subtitle: "Expense audits", value: "24 compliance events", x: 66, y: 60, weight: 24 },
-    { id: "gj", label: "Gujarat", subtitle: "Export invoices", value: "19 compliance events", x: 59, y: 47, weight: 19 },
-    { id: "wb", label: "West Bengal", subtitle: "Documentation checks", value: "16 compliance events", x: 69, y: 46, weight: 16 },
+    { id: "mh", label: "Maharashtra", subtitle: "GST filings + invoice validations", value: "48 compliance events", lat: 3.6, lng: 54, weight: 48 },
+    { id: "ka", label: "Karnataka", subtitle: "Vendor reconciliations", value: "37 compliance events", lat: -7.2, lng: 46.8, weight: 37 },
+    { id: "dl", label: "Delhi NCR", subtitle: "TDS and receivables", value: "29 compliance events", lat: 19.8, lng: 39.6, weight: 29 },
+    { id: "tn", label: "Tamil Nadu", subtitle: "Expense audits", value: "24 compliance events", lat: -18, lng: 57.6, weight: 24 },
+    { id: "gj", label: "Gujarat", subtitle: "Export invoices", value: "19 compliance events", lat: 5.4, lng: 32.4, weight: 19 },
+    { id: "wb", label: "West Bengal", subtitle: "Documentation checks", value: "16 compliance events", lat: 7.2, lng: 68.4, weight: 16 },
   ];
 
   const invoiceColumns: DataTableColumnDef<CAInvoiceRow>[] = [

@@ -1,12 +1,20 @@
+export type LegacyMapPoint = {
+  x: number; // 0-100
+  y: number; // 0-100
+};
+
+export type GeoMapPoint = {
+  lat: number;
+  lng: number;
+};
+
 export type MapPoint = {
   id: string;
   label: string;
   subtitle?: string;
   value: string;
-  x: number; // 0-100
-  y: number; // 0-100
   weight?: number;
-};
+} & (GeoMapPoint | LegacyMapPoint);
 
 export type ClusterPoint = {
   id: string;
