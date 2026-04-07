@@ -178,6 +178,22 @@
     "retainer_radar": "رادار الدفعات المقدمة",
     "payment_velocity": "تتبع سرعة الدفع.",
     "no_active_retainers": "لا توجد دفعات مقدمة نشطة.",
+    "api_status": {
+      "title": "حالة اتصالات API",
+      "description": "جاهزية مباشرة لتكاملات الذكاء الاصطناعي والدفع.",
+      "badge": "{configured}/3 مُهيّأ",
+      "cta": "إدارة مفاتيح API",
+      "integrations": {
+        "groq": "إعداد مساعد الذكاء الاصطناعي (Groq)",
+        "razorpay": "تكامل بوابة الدفع (Razorpay)",
+        "stripe": "تكامل بوابة الدفع (Stripe)"
+      },
+      "status": {
+        "configured": "مُهيّأ",
+        "partial": "مُهيّأ جزئيًا",
+        "missing": "المفاتيح المطلوبة مفقودة"
+      }
+    },
     "readiness": "الجاهزية",
     "synced": "متزامن",
     "functional_locale": "المنطقة الوظيفية",

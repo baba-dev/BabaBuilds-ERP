@@ -178,6 +178,22 @@
     "retainer_radar": "Radar de Iguala",
     "payment_velocity": "Seguimiento de velocidad de pago.",
     "no_active_retainers": "Sin igualas activas.",
+    "api_status": {
+      "title": "Estado de conexiones API",
+      "description": "Disponibilidad en tiempo real de integraciones de IA y pagos.",
+      "badge": "{configured}/3 Configuradas",
+      "cta": "Administrar claves API",
+      "integrations": {
+        "groq": "Configuración del asistente de IA (Groq)",
+        "razorpay": "Integración de pasarela de pago (Razorpay)",
+        "stripe": "Integración de pasarela de pago (Stripe)"
+      },
+      "status": {
+        "configured": "Configurada",
+        "partial": "Configuración parcial",
+        "missing": "Faltan claves requeridas"
+      }
+    },
     "readiness": "Preparación",
     "synced": "Sincronizado",
     "functional_locale": "Local Comercial",
