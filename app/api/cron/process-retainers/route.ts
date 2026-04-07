@@ -14,6 +14,7 @@ import fs from 'fs';
 import path from 'path';
 import { calculateInvoiceTotals } from '@/lib/invoice/totals';
 import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
+import { decimalToNumber, toDecimal } from '@/lib/money';
 
 // Helper for Indian Financial Year
 const getFY = (date: Date) => {
@@ -465,7 +466,7 @@ export async function GET(request: Request) {
           );
         }
         const totals = calculateInvoiceTotals({
-          services: [{ amount: retainer.amount }],
+          services: [{ amount: decimalToNumber(retainer.amount) }],
           isTaxExempt: Boolean(retainer.client.isExport),
           defaultTaxRate: taxResolution.taxRate,
         });
@@ -556,12 +557,12 @@ export async function GET(request: Request) {
               clientName: retainer.client.name,
               sacCode: retainer.sacCode,
               serviceDescription: finalDescription,
-              subtotal: totals.subtotal,
+              subtotal: toDecimal(totals.subtotal).toDecimalPlaces(2),
               taxRate: totals.taxRate,
-              taxAmount: totals.taxAmount,
-              grandTotal: totals.total,
+              taxAmount: toDecimal(totals.taxAmount).toDecimalPlaces(2),
+              grandTotal: toDecimal(totals.total).toDecimalPlaces(2),
               taxMode: totals.taxMode,
-              totalAmount: totals.total,
+              totalAmount: toDecimal(totals.total).toDecimalPlaces(2),
               status: "Pending",
               pdfPath: relativePdfPath, 
             } as any

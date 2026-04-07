@@ -5,6 +5,7 @@ import fs from "fs";
 import path from "path";
 import { exec } from "child_process";
 import util from "util";
+import { decimalToNumber } from "@/lib/money";
 
 const execPromise = util.promisify(exec);
 
@@ -237,15 +238,15 @@ export async function POST(req: Request) {
 
                 const userLocale = profile.workspace?.countryCode === 'IN' ? 'en-IN' : 'en-US';
                 const fallbackTotals = calculateInvoiceTotals({
-                  services: [{ amount: inv.totalAmount }],
+                  services: [{ amount: decimalToNumber(inv.totalAmount) }],
                   isTaxExempt: Boolean(client.isExport),
                 });
                 const invoiceWithTotals = inv as any;
                 const totals = {
-                  subtotal: invoiceWithTotals.subtotal ?? fallbackTotals.subtotal,
+                  subtotal: decimalToNumber(invoiceWithTotals.subtotal ?? fallbackTotals.subtotal),
                   taxRate: invoiceWithTotals.taxRate ?? fallbackTotals.taxRate,
-                  taxAmount: invoiceWithTotals.taxAmount ?? fallbackTotals.taxAmount,
-                  total: invoiceWithTotals.grandTotal ?? inv.totalAmount ?? fallbackTotals.total,
+                  taxAmount: decimalToNumber(invoiceWithTotals.taxAmount ?? fallbackTotals.taxAmount),
+                  total: decimalToNumber(invoiceWithTotals.grandTotal ?? inv.totalAmount ?? fallbackTotals.total),
                   taxMode: (invoiceWithTotals.taxMode as 'taxable' | 'exempt') ?? fallbackTotals.taxMode,
                 };
                 const formattedTotal = totals.total.toLocaleString(userLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });

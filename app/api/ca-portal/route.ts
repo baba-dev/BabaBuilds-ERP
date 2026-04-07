@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import type { CAExpenseRow, CAInvoiceRow, CAPortalPayload } from "@/lib/ca-portal/types";
+import { decimalToNumber, toDecimal } from "@/lib/money";
 
 // Helper function to calculate exact UTC boundaries for an Indian Financial Year
 function getFinancialYearDates(fyString: string) {
@@ -66,18 +67,18 @@ export async function GET(request: Request) {
     // 4. CALCULATE ITR-4 SUMMARY METRICS
     // Rule: For 44ADA, only count REALIZED (Paid) income.
     const paidInvoices = invoices.filter(inv => inv.status === 'Paid');
-    const grossReceipts = paidInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0);
+    const grossReceipts = decimalToNumber(paidInvoices.reduce((sum, inv) => sum.plus(toDecimal(inv.totalAmount)), toDecimal(0)));
     
     // Presumptive income is strictly 50% of gross receipts
     const presumptiveIncome = grossReceipts * 0.5;
 
-    const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+    const totalExpenses = decimalToNumber(expenses.reduce((sum, exp) => sum.plus(toDecimal(exp.amount)), toDecimal(0)));
 
     // Calculate Section 80C & 80D Deductions (Capped at legal limits)
-    const raw80C = investments.filter(i => i.category.includes('80C')).reduce((sum, i) => sum + i.amount, 0);
+    const raw80C = decimalToNumber(investments.filter(i => i.category.includes('80C')).reduce((sum, i) => sum.plus(toDecimal(i.amount)), toDecimal(0)));
     const deductions80C = Math.min(raw80C, 150000);
 
-    const raw80D = investments.filter(i => i.category.includes('80D')).reduce((sum, i) => sum + i.amount, 0);
+    const raw80D = decimalToNumber(investments.filter(i => i.category.includes('80D')).reduce((sum, i) => sum.plus(toDecimal(i.amount)), toDecimal(0)));
     const deductions80D = Math.min(raw80D, 25000); // Using base self-limit for simplicity
 
     // 5. DATA FORMATTING FOR THE UI
@@ -88,10 +89,10 @@ export async function GET(request: Request) {
       invoiceNumber: inv.invoiceNumber,
       clientName: inv.clientName,
       sacCode: inv.sacCode || (profile as any)?.defaultSacCode || "998313", // Dynamic Fallback
-      totalAmount: inv.totalAmount,
+      totalAmount: decimalToNumber(inv.totalAmount),
 
 
-      amountReceived: inv.status === 'Paid' ? inv.totalAmount : null,
+      amountReceived: inv.status === 'Paid' ? decimalToNumber(inv.totalAmount) : null,
       status: inv.status,
       pdfPath: inv.pdfPath
     }));
@@ -102,7 +103,7 @@ export async function GET(request: Request) {
       category: exp.category,
       vendor: exp.vendor,
       description: exp.description,
-      amount: exp.amount,
+      amount: decimalToNumber(exp.amount),
       receiptUrl: exp.receiptUrl
     }));
 

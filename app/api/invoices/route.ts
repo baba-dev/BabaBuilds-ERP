@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
@@ -6,39 +7,24 @@ import { INVOICE_STATUS, isOpenInvoiceStatus, isPaidInvoiceStatus } from '@/lib/
 
 export async function GET(request: Request) {
   try {
-    // 1. SECURITY LOCK & WORKSPACE ID
     const session = await getServerSession(authOptions);
     if (!session || !(session as any).workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const workspaceId = (session as any).workspaceId;
-    const whereClause = { workspaceId: workspaceId };
+    const whereClause = { workspaceId };
 
-    // 2. PAGINATION PARAMETERS
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '15');
     const skip = (page - 1) * limit;
 
-    // 3. CONCURRENT DATABASE QUERIES
     const [invoices, totalInvoices, allInvoicesForKpis] = await Promise.all([
-      // A. Get the paginated data for the current page
-      prisma.invoice.findMany({
-        where: whereClause,
-        orderBy: { invoiceDate: 'desc' },
-        skip: skip,
-        take: limit,
-      }),
-      // B. Get the total count of invoices for calculating total pages
+      prisma.invoice.findMany({ where: whereClause, orderBy: { invoiceDate: 'desc' }, skip, take: limit }),
       prisma.invoice.count({ where: whereClause }),
-      // C. Get all invoices (no pagination) just for calculating accurate KPIs
       prisma.invoice.findMany({
         where: whereClause,
-        select: {
-          totalAmount: true,
-          status: true,
-          amountReceived: true,
-        },
+        select: { totalAmount: true, grandTotal: true, status: true, amountReceived: true },
       }),
     ]);
     
@@ -52,7 +38,6 @@ export async function GET(request: Request) {
       .reduce((sum, inv) => sum + (inv.amountReceived || (inv as any).grandTotal || inv.totalAmount), 0);
     const presumptiveIncome = realizedRevenue * 0.5;
 
-    // 5. CONSTRUCT PAGINATED RESPONSE
     return NextResponse.json({
       data: invoices.map((invoice) => ({
         ...invoice,
@@ -63,9 +48,9 @@ export async function GET(request: Request) {
         totalPages: Math.ceil(totalInvoices / limit),
         totalRecords: totalInvoices,
         kpis: {
-          totalRevenue,
-          outstanding,
-          presumptiveIncome,
+          totalRevenue: totalRevenueDecimal.toNumber(),
+          outstanding: outstandingDecimal.toNumber(),
+          presumptiveIncome: presumptiveIncomeDecimal.toNumber(),
         },
       },
     });
