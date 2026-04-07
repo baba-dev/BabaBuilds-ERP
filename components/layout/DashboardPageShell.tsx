@@ -15,6 +15,10 @@ type DashboardPageShellKpiCard =
 type DashboardPageShellProps = {
   title: ReactNode;
   description?: ReactNode;
+  primaryAction?: ReactNode;
+  secondaryActions?: ReactNode;
+  kpiCard?: ReactNode;
+  maxWidthClassName?: string;
   actions?: ReactNode;
   pageActions?: ReactNode;
   icon?: ReactNode;
@@ -54,6 +58,10 @@ function isStructuredKpiCard(value: DashboardPageShellKpiCard | undefined): valu
 export function DashboardPageShell({
   title,
   description,
+  primaryAction,
+  secondaryActions,
+  kpiCard,
+  maxWidthClassName = "max-w-7xl",
   actions,
   pageActions,
   icon,
