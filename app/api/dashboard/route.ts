@@ -5,7 +5,11 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { decimalToNumber, toDecimal } from '@/lib/money';
 
-const normalizeInvoiceStatus = (status: unknown) => String(status).toUpperCase();
+const normalizeInvoiceStatus = (status: unknown) =>
+  String(status)
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, '_');
 
 export async function GET(request: Request) {
   try {
