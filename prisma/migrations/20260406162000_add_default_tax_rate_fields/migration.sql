@@ -1,5 +1,0 @@
-ALTER TABLE "BusinessProfile"
-  ADD COLUMN "defaultTaxRate" DOUBLE PRECISION;
-
-ALTER TABLE "Retainer"
-  ADD COLUMN "taxRate" DOUBLE PRECISION;
