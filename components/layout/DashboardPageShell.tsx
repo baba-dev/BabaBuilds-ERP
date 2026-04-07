@@ -16,39 +16,35 @@ type DashboardPageShellProps = {
   title: ReactNode;
   description?: ReactNode;
   icon?: ReactNode;
-  kpiCard?: ReactNode;
+  kpiCard?: DashboardPageShellKpiCard;
   primaryAction?: ReactNode;
   secondaryActions?: ReactNode;
   headerVariant?: "default" | "compact";
   actions?: ReactNode;
   pageActions?: ReactNode;
-  icon?: ReactNode;
-  kpiCard?: DashboardPageShellKpiCard;
-  primaryAction?: ReactNode;
-  secondaryActions?: ReactNode;
-  headerVariant?: "default" | "retainersHero";
   breadcrumb?: ReactNode;
   children: ReactNode;
   animated?: boolean;
   animationClassName?: string;
+  maxWidthClassName?: string;
 };
 
 const defaultAnimationClassName =
   "animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out";
 
-const headerBaseClassName =
-  "sticky top-0 z-20 -mx-4 border-b bg-background/80 px-4 py-4 backdrop-blur-md transition-all duration-300 md:-mx-8 md:px-8";
-
-const headerDividerClassName = "border-border/60";
-
 const kpiCardToneClassNames = {
   default: "border-border/60 bg-card text-card-foreground",
-  positive: "border-emerald-300/60 bg-emerald-50 text-emerald-800 dark:border-emerald-700/60 dark:bg-emerald-950/40 dark:text-emerald-200",
-  warning: "border-amber-300/60 bg-amber-50 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200",
-  danger: "border-rose-300/60 bg-rose-50 text-rose-900 dark:border-rose-700/60 dark:bg-rose-950/40 dark:text-rose-200",
+  positive:
+    "border-emerald-300/60 bg-emerald-50 text-emerald-800 dark:border-emerald-700/60 dark:bg-emerald-950/40 dark:text-emerald-200",
+  warning:
+    "border-amber-300/60 bg-amber-50 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200",
+  danger:
+    "border-rose-300/60 bg-rose-50 text-rose-900 dark:border-rose-700/60 dark:bg-rose-950/40 dark:text-rose-200",
 };
 
-function isStructuredKpiCard(value: DashboardPageShellKpiCard | undefined): value is Exclude<DashboardPageShellKpiCard, ReactNode> {
+function isStructuredKpiCard(
+  value: DashboardPageShellKpiCard | undefined,
+): value is Exclude<DashboardPageShellKpiCard, ReactNode> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return false;
   }
@@ -66,15 +62,11 @@ export function DashboardPageShell({
   headerVariant = "default",
   actions,
   pageActions,
-  icon,
-  kpiCard,
-  primaryAction,
-  secondaryActions,
-  headerVariant = "default",
   breadcrumb,
   children,
   animated = true,
   animationClassName = defaultAnimationClassName,
+  maxWidthClassName = "max-w-7xl",
 }: DashboardPageShellProps) {
   const resolvedActions =
     pageActions ??
@@ -87,10 +79,25 @@ export function DashboardPageShell({
     ) : null);
 
   const isCompactHeader = headerVariant === "compact";
+  const resolvedKpiCard = isStructuredKpiCard(kpiCard) ? (
+    <div
+      className={cn(
+        "mt-3 inline-flex flex-col gap-1 rounded-lg border px-3 py-2",
+        kpiCardToneClassNames[kpiCard.tone ?? "default"],
+      )}
+    >
+      <span className="text-[0.7rem] font-semibold uppercase tracking-wide opacity-80">
+        {kpiCard.label}
+      </span>
+      <span className="text-lg font-semibold leading-none">{kpiCard.value}</span>
+    </div>
+  ) : (
+    kpiCard
+  );
 
   return (
     <div className="min-h-full bg-background/50 p-4 transition-colors duration-300 md:p-8">
-      <div className={cn("mx-auto max-w-7xl space-y-8", animated && animationClassName)}>
+      <div className={cn("mx-auto space-y-8", maxWidthClassName, animated && animationClassName)}>
         <header
           className={cn(
             "sticky top-0 z-20 -mx-4 border-b border-zinc-200/50 bg-zinc-50/80 px-4 backdrop-blur-md transition-all duration-300 dark:border-zinc-800/50 dark:bg-zinc-950/70 md:-mx-8 md:px-8",
@@ -115,7 +122,7 @@ export function DashboardPageShell({
               {description ? (
                 <p className="max-w-xl text-sm font-medium text-zinc-500 dark:text-zinc-400">{description}</p>
               ) : null}
-              {kpiCard ? <div>{kpiCard}</div> : null}
+              {resolvedKpiCard ? <div>{resolvedKpiCard}</div> : null}
             </div>
           </div>
         </header>
