@@ -20,10 +20,16 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: npm ci
+
+      - name: Verify auth/email dependency tree
+        run: npm ls next-auth nodemailer @types/nodemailer
 
       - name: Run locale checks
         run: npm run check:locales
 
-      - name: Run project validation
-        run: npm run validate
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
