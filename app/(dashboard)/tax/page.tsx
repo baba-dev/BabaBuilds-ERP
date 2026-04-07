@@ -20,6 +20,11 @@ import { PageLoadingState } from "@/components/states/PageLoadingState";
 import { PageErrorState } from "@/components/states/PageErrorState";
 import { ColumnVisibilityToggle, DataTable, DataTableToolbar, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
 
+const toSafeNumber = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 export default function WealthAndTaxPlanner() {
   const t = useTranslations('Tax');
   const [investments, setInvestments] = useState<any[]>([]);
@@ -88,10 +93,8 @@ export default function WealthAndTaxPlanner() {
 
       const revRes = await fetch('/api/invoices');
       const revData = await revRes.json();
-      let nextRevenue = 0;
-      if (Array.isArray(revData)) {
-        nextRevenue = revData.reduce((sum: number, inv: any) => sum + inv.totalAmount, 0);
-      }
+      const invoiceRows = Array.isArray(revData?.data) ? revData.data : Array.isArray(revData) ? revData : [];
+      const nextRevenue = invoiceRows.reduce((sum: number, inv: any) => sum + toSafeNumber(inv?.totalAmount), 0);
       setInvestments(nextInvestments);
       setTotalRevenue(nextRevenue);
     } catch (err) {
@@ -104,17 +107,17 @@ export default function WealthAndTaxPlanner() {
   };
 
   // --- WEALTH CALCULATIONS (Global) ---
-  const totalNetWorth = investments.reduce((sum, inv) => sum + inv.amount, 0);
+  const totalNetWorth = investments.reduce((sum, inv) => sum + toSafeNumber(inv?.amount), 0);
   
   // --- TAX CALCULATIONS (Indian FY25-26 / AY26-27 Estimation) ---
   // These will safely equal 0 if not used by the UI
   const presumptiveIncome = totalRevenue * 0.5; 
 
-  const raw80C = investments.filter(i => i.category === '80C (LIC, PPF, ELSS)').reduce((sum, i) => sum + i.amount, 0);
+  const raw80C = investments.filter(i => i.category === '80C (LIC, PPF, ELSS)').reduce((sum, i) => sum + toSafeNumber(i?.amount), 0);
   const eligible80C = Math.min(raw80C, 150000);
   const percent80C = (eligible80C / 150000) * 100;
 
-  const raw80D = investments.filter(i => i.category === '80D (Health Insurance)').reduce((sum, i) => sum + i.amount, 0);
+  const raw80D = investments.filter(i => i.category === '80D (Health Insurance)').reduce((sum, i) => sum + toSafeNumber(i?.amount), 0);
   const max80DLimit = hasSeniorParents ? 75000 : 25000;
   const eligible80D = Math.min(raw80D, max80DLimit);
 
