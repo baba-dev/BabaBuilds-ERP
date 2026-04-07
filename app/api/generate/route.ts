@@ -12,6 +12,7 @@ import { Prisma } from "@prisma/client";
 import crypto from 'crypto';
 import { calculateInvoiceTotals } from '@/lib/invoice/totals';
 import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
+import { toDecimal } from '@/lib/money';
 
 const lookupAsync = promisify(dns.lookup);
 const ALLOWED_STATUSES = ["Pending", "Partially Paid", "Paid"] as const;
@@ -220,7 +221,7 @@ export async function POST(request: Request) {
           });
         }
 
-        return { ...s, title, amount: amt };
+        return { ...s, title, amount: amt, amountDecimal: toDecimal(amt).toDecimalPlaces(2) };
       });
 
     if (validationErrors.length > 0) {
@@ -408,7 +409,7 @@ export async function POST(request: Request) {
               const decryptedSecret = decrypt((profile as any).razorpayKeySecret);
 
               paymentLink = await generateTenantPaymentLink({
-                amount:          totals.total,
+                amount:          toDecimal(totals.total).toNumber(),
                 currency:        baseCurrency,
                 description:     `Invoice ${invoiceNumber}`,
                 invoiceDueDate:  invoiceDueDate,
@@ -437,7 +438,7 @@ export async function POST(request: Request) {
               const decryptedSecret = decrypt((profile as any).stripeSecretKey);
 
               paymentLink = await generateStripePaymentLink({
-                amount:          totals.total,    // in major units — service converts to smallest unit internally
+                amount:          toDecimal(totals.total).toNumber(),    // in major units — service converts to smallest unit internally
                 currency:        baseCurrency,   // passes locale currency accurately for correct unit math
                 description:     `Invoice ${invoiceNumber}`,
                 invoiceNumber,
@@ -480,12 +481,12 @@ export async function POST(request: Request) {
             clientName: client.name, clientId: client.id,
             sacCode: typeof sacCode === 'string' ? sacCode : JSON.stringify(sacCode), 
             serviceDescription: serviceDesc, 
-            subtotal: totals.subtotal,
+            subtotal: toDecimal(totals.subtotal).toDecimalPlaces(2),
             taxRate: totals.taxRate,
-            taxAmount: totals.taxAmount,
-            grandTotal: totals.total,
+            taxAmount: toDecimal(totals.taxAmount).toDecimalPlaces(2),
+            grandTotal: toDecimal(totals.total).toDecimalPlaces(2),
             taxMode: totals.taxMode,
-            totalAmount: totals.total,
+            totalAmount: toDecimal(totals.total).toDecimalPlaces(2),
             pdfPath: relativePdfPath,
             status: normalizedStatus,
           } as any,

@@ -7,6 +7,7 @@ import { decrypt } from '@/lib/encryption';
 import nodemailer from 'nodemailer';
 import dns from 'dns';
 import { promisify } from 'util';
+import { decimalToNumber, toDecimal } from '@/lib/money';
 
 const lookupAsync = promisify(dns.lookup);
 
@@ -88,8 +89,8 @@ async function getTaxSummary(workspaceId: string) {
       where: { workspaceId: workspaceId },
       select: { category: true, amount: true } 
     });
-    const section80C = investments.filter(i => i.category.includes('80C')).reduce((sum, i) => sum + i.amount, 0);
-    const section80D = investments.filter(i => i.category.includes('80D')).reduce((sum, i) => sum + i.amount, 0);
+    const section80C = decimalToNumber(investments.filter(i => i.category.includes('80C')).reduce((sum, i) => sum.plus(toDecimal(i.amount)), toDecimal(0)));
+    const section80D = decimalToNumber(investments.filter(i => i.category.includes('80D')).reduce((sum, i) => sum.plus(toDecimal(i.amount)), toDecimal(0)));
     
     return JSON.stringify({
       section80C_Total: `₹${section80C}`, section80C_Limit: "₹1,50,000", section80C_Remaining: `₹${Math.max(0, 150000 - section80C)}`,
@@ -238,7 +239,7 @@ async function sendInvoiceReminder(invoiceNumber: string, workspaceId: string) {
       auth:   { user: profile.smtpUser, pass: profile.smtpPassword },
     });
 
-    const formattedAmount = invoice.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    const formattedAmount = decimalToNumber(invoice.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 });
     await transporter.sendMail({
       from:    `"${profile.companyName}" <${profile.smtpFromEmail || profile.smtpUser}>`,
       to:      email,
@@ -351,7 +352,7 @@ async function getExpensesSummary(workspaceId: string) {
       _sum: { amount: true },
       orderBy: { _sum: { amount: 'desc' } }
     });
-    const total = expenses.reduce((sum, item) => sum + (item._sum.amount || 0), 0);
+    const total = decimalToNumber(expenses.reduce((sum, item) => sum.plus(toDecimal(item._sum.amount)), toDecimal(0)));
     return JSON.stringify({
       totalExpenses: `₹${total}`,
       breakdownCategory: expenses.map(e => ({ category: e.category, amount: `₹${e._sum.amount}` }))
@@ -586,11 +587,11 @@ async function calculateEstimatedTax(workspaceId: string) {
     const expenseAgg = await prisma.expense.aggregate({ where: { workspaceId }, _sum: { amount: true } });
     
     const investments = await prisma.investment.findMany({ where: { workspaceId } });
-    const sec80C = Math.min(150000, investments.filter(i => i.category.includes('80C')).reduce((sum, i) => sum + i.amount, 0));
-    const sec80D = Math.min(25000, investments.filter(i => i.category.includes('80D')).reduce((sum, i) => sum + i.amount, 0));
+    const sec80C = Math.min(150000, decimalToNumber(investments.filter(i => i.category.includes('80C')).reduce((sum, i) => sum.plus(toDecimal(i.amount)), toDecimal(0))));
+    const sec80D = Math.min(25000, decimalToNumber(investments.filter(i => i.category.includes('80D')).reduce((sum, i) => sum.plus(toDecimal(i.amount)), toDecimal(0))));
     
-    const grossIncome = revenueAgg._sum.totalAmount || 0;
-    const grossExpenses = expenseAgg._sum.amount || 0;
+    const grossIncome = decimalToNumber(revenueAgg._sum.totalAmount);
+    const grossExpenses = decimalToNumber(expenseAgg._sum.amount);
     const netProfit = grossIncome - grossExpenses;
     
     const totalDeductions = sec80C + sec80D;

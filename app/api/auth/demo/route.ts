@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { decimalToNumber } from "@/lib/money";
 import { v4 as uuidv4 } from "uuid";
 import { encrypt } from "@/lib/encryption";
 
@@ -134,14 +135,15 @@ export async function POST(request: Request) {
 
       for (let i = 0; i < proposalsToCreate.length; i++) {
         const p = proposalsToCreate[i];
-        const subtotal = p.qty * p.srv.defaultPrice;
+        const unitPrice = decimalToNumber(p.srv.defaultPrice);
+        const subtotal = p.qty * unitPrice;
         const tax = p.client.isExport ? 0 : subtotal * 0.18;
         await tx.proposal.create({
           data: {
             workspaceId: workspace.id, clientId: p.client.id, title: p.title,
             proposalNo: `EST-26-00${i + 1}`, validUntil: getDateOffset(p.validDays),
             subtotal: subtotal, estimatedTax: tax, totalAmount: subtotal + tax, status: p.status,
-            items: { create: [{ serviceTemplateId: p.srv.id, title: p.srv.name, description: p.srv.description, quantity: p.qty, unitPrice: p.srv.defaultPrice, total: subtotal }] }
+            items: { create: [{ serviceTemplateId: p.srv.id, title: p.srv.name, description: p.srv.description, quantity: p.qty, unitPrice, total: subtotal }] }
           }
         });
       }
