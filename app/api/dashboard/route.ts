@@ -8,6 +8,28 @@ import { decimalToNumber, toDecimal } from '@/lib/money';
 
 const normalizeInvoiceStatus = (status: unknown) => String(status).toUpperCase();
 
+type IntegrationStatus = 'healthy' | 'partial' | 'missing';
+
+type IntegrationReadiness = {
+  configured: boolean;
+  status: IntegrationStatus;
+};
+
+const getIntegrationReadiness = (keys: Array<string | null | undefined>): IntegrationReadiness => {
+  const presentKeys = keys.filter((value) => Boolean(value && value.trim())).length;
+  const requiredKeys = keys.length;
+
+  if (presentKeys === requiredKeys) {
+    return { configured: true, status: 'healthy' };
+  }
+
+  if (presentKeys > 0) {
+    return { configured: false, status: 'partial' };
+  }
+
+  return { configured: false, status: 'missing' };
+};
+
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -27,7 +49,7 @@ export async function GET(request: Request) {
       fy = currentMonth <= 3 ? `${parseInt(shortYear) - 1}-${shortYear}` : `${shortYear}-${parseInt(shortYear) + 1}`;
     }
 
-    const [invoices, investments, activeClientCount, retainers, recentInvoices] = await Promise.all([
+    const [invoices, investments, activeClientCount, retainers, recentInvoices, profile] = await Promise.all([
       prisma.invoice.findMany({
         where: { financialYear: fy, workspaceId },
         include: { client: true },
@@ -36,8 +58,32 @@ export async function GET(request: Request) {
       prisma.investment.findMany({ where: { workspaceId } }),
       prisma.client.count({ where: { workspaceId } }),
       prisma.retainer.findMany({ where: { workspaceId, status: "ACTIVE" }, include: { client: true } }),
-      prisma.invoice.findMany({ where: { workspaceId }, orderBy: { invoiceDate: 'desc' }, take: 5, include: { client: true } })
+      prisma.invoice.findMany({ where: { workspaceId }, orderBy: { invoiceDate: 'desc' }, take: 5, include: { client: true } }),
+      prisma.businessProfile.findUnique({
+        where: { workspaceId },
+        select: {
+          groqApiKey: true,
+          razorpayKeyId: true,
+          razorpayKeySecret: true,
+          stripePublishableKey: true,
+          stripeSecretKey: true,
+        },
+      }),
     ]);
+
+    const integrationReadiness = {
+      groq: getIntegrationReadiness([profile?.groqApiKey]),
+      razorpay: getIntegrationReadiness([profile?.razorpayKeyId, profile?.razorpayKeySecret]),
+      stripe: getIntegrationReadiness([profile?.stripePublishableKey, profile?.stripeSecretKey]),
+    };
+
+    const integrationSummary = Object.values(integrationReadiness).reduce(
+      (acc, current) => {
+        acc[current.status] += 1;
+        return acc;
+      },
+      { healthy: 0, partial: 0, missing: 0 }
+    );
 
     const totalRevenueDecimal = invoices.reduce(
       (sum, inv) => sum.plus(toDecimal(inv.totalAmount)),
@@ -163,6 +209,10 @@ export async function GET(request: Request) {
       charts: {
         revenue: revenueChartData,
         wealth: wealthChartData
+      },
+      readiness: {
+        integrations: integrationReadiness,
+        summary: integrationSummary,
       },
       recentInvoices: recentInvoices.map((invoice) => ({
         ...invoice,

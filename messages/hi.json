@@ -178,6 +178,22 @@
     "retainer_radar": "रिटेनर रडार",
     "payment_velocity": "भुगतान वेग ट्रैकिंग।",
     "no_active_retainers": "कोई सक्रिय रिटेनर नहीं।",
+    "api_status": {
+      "title": "API कनेक्शन स्थिति",
+      "description": "AI और पेमेंट इंटीग्रेशन की लाइव तत्परता।",
+      "badge": "{configured}/3 कॉन्फ़िगर",
+      "cta": "API कुंजियाँ प्रबंधित करें",
+      "integrations": {
+        "groq": "AI सहायक कॉन्फ़िगरेशन (Groq)",
+        "razorpay": "पेमेंट गेटवे इंटीग्रेशन (Razorpay)",
+        "stripe": "पेमेंट गेटवे इंटीग्रेशन (Stripe)"
+      },
+      "status": {
+        "configured": "कॉन्फ़िगर किया गया",
+        "partial": "आंशिक रूप से कॉन्फ़िगर",
+        "missing": "आवश्यक कुंजियाँ अनुपलब्ध"
+      }
+    },
     "readiness": "तत्परता",
     "synced": "सिंक किया गया",
     "functional_locale": "कार्यात्मक स्थानीय",
