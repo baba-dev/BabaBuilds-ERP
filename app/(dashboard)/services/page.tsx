@@ -203,7 +203,7 @@ export default function ServiceCatalog() {
     <DashboardPageShell
       title={t('title')}
       description={t.rich('description_rich', { taxLabel, tag: (chunks) => <strong className="text-zinc-700 dark:text-zinc-300">{chunks}</strong> })}
-      actions={
+      primaryAction={
         <Button 
           onClick={() => setOpen(true)} 
           className="w-full md:w-auto shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20 text-xs font-bold uppercase tracking-wider h-11 transition-all active:scale-95"

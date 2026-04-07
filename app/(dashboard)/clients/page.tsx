@@ -183,7 +183,7 @@ export default function ClientCRM() {
     <DashboardPageShell
       title={t('title')}
       description={t('description')}
-      actions={
+      primaryAction={
         <Button 
           onClick={() => { resetForm(); setOpen(true); }}
           className="btn-primary w-full md:w-auto shrink-0 text-xs uppercase tracking-wider h-11"

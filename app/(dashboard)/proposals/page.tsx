@@ -357,36 +357,43 @@ export default function ProposalsEngine() {
 
   const safeDateFormat = (dateFormat ?? "dd/MM/yyyy").replace(/D/g, 'd').replace(/Y/g, 'y');
 
-  // --- RENDER VIEWS ---
-  if (view === 'builder') {
-    return (
-      <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 pb-20 transition-colors duration-300">
-        <div className="sticky top-0 z-50 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-xl border-b border-zinc-200/50 dark:border-zinc-800/50 px-4 md:px-8 py-4 flex items-center justify-between shadow-sm transition-all duration-300">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => setView('list')} aria-label="Back to Proposals List" className="rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 active:scale-95 transition-transform">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <div>
-              <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">{t('draft_new')}</h1>
-              <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{t('unsaved_draft')}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block mr-4">
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 uppercase tracking-widest font-bold">{t('est_total')}</p>
-              <p className="text-xl font-bold text-zinc-900 dark:text-zinc-50">{fCurrency(grandTotal)}</p>
-            </div>
-            <Button onClick={handleSubmit} disabled={isSubmitting || !clientId} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20 text-xs font-bold uppercase tracking-widest h-10 transition-all active:scale-95 border-none">
-              {isSubmitting ? (
-                <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> {t('generating')}</span>
-              ) : (
-                <span className="flex items-center gap-2"><Send className="w-4 h-4" /> {t('finalize_save')}</span>
-              )}
-            </Button>
-          </div>
-        </div>
+  const renderListHeaderActions = () => (
+    <Button 
+      onClick={() => setView('builder')} 
+      className="w-full md:w-auto shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20 text-xs font-bold uppercase tracking-wider h-11 transition-all active:scale-95"
+    >
+      <Plus className="w-4 h-4 md:mr-2" /> <span className="md:inline">{t('create_proposal')}</span>
+    </Button>
+  );
 
-        <div className="max-w-4xl mx-auto p-4 md:p-8 mt-4 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
+  const renderBuilderHeaderActions = () => (
+    <div className="flex items-center gap-3">
+      <Button variant="ghost" size="icon" onClick={() => setView('list')} aria-label="Back to Proposals List" className="rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 active:scale-95 transition-transform">
+        <ArrowLeft className="w-5 h-5" />
+      </Button>
+      <Button onClick={handleSubmit} disabled={isSubmitting || !clientId} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20 text-xs font-bold uppercase tracking-widest h-10 transition-all active:scale-95 border-none">
+        {isSubmitting ? (
+          <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> {t('generating')}</span>
+        ) : (
+          <span className="flex items-center gap-2"><Send className="w-4 h-4" /> {t('finalize_save')}</span>
+        )}
+      </Button>
+    </div>
+  );
+
+  const renderKpiCardForView = (currentView: 'list' | 'builder') => {
+    if (currentView !== 'builder') return null;
+
+    return (
+      <div className="text-right hidden sm:block">
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 uppercase tracking-widest font-bold">{t('est_total')}</p>
+        <p className="text-xl font-bold text-zinc-900 dark:text-zinc-50">{fCurrency(grandTotal)}</p>
+      </div>
+    );
+  };
+
+  const renderBuilderContent = () => (
+    <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
           <Card className="shadow-xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
             <div className="h-1.5 bg-gradient-to-r from-indigo-500 to-indigo-600 w-full" />
             <form onSubmit={handleSubmit}>
@@ -562,32 +569,30 @@ export default function ProposalsEngine() {
               </CardContent>
             </form>
           </Card>
-        </div>
-      </div>
-    );
-  }
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
+    <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8 pb-20 transition-colors duration-300">
+      <div className={`${view === 'list' ? 'max-w-7xl' : 'max-w-4xl'} mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out`}>
         <div className="sticky top-0 z-20 -mx-4 px-4 py-4 md:-mx-8 md:px-8 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200/50 dark:border-zinc-800/50 transition-all duration-300">
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 max-w-7xl mx-auto w-full">
             <div className="space-y-1.5">
-              <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{t('title')}</h1>
+              <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                {view === 'list' ? t('title') : t('draft_new')}
+              </h1>
               <p className="text-zinc-500 dark:text-zinc-400 font-medium text-sm max-w-xl">
-                {t('description')}
+                {view === 'list' ? t('description') : t('unsaved_draft')}
               </p>
             </div>
-            <Button 
-              onClick={() => setView('builder')} 
-              className="w-full md:w-auto shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20 text-xs font-bold uppercase tracking-wider h-11 transition-all active:scale-95"
-            >
-              <Plus className="w-4 h-4 md:mr-2" /> <span className="md:inline">{t('create_proposal')}</span>
-            </Button>
+            <div className="flex items-center gap-3">
+              {renderKpiCardForView(view)}
+              {view === 'list' ? renderListHeaderActions() : renderBuilderHeaderActions()}
+            </div>
           </div>
         </div>
 
-        {isLoading ? (
+        {view === 'builder' ? renderBuilderContent() : isLoading ? (
           <div className="flex flex-col items-center justify-center py-24 text-zinc-400 dark:text-zinc-500 bg-zinc-50/50 dark:bg-zinc-900/20 border-2 border-dashed border-zinc-100 dark:border-zinc-800 rounded-2xl">
             <Loader2 className="w-8 h-8 animate-spin mb-4 text-indigo-500/50" />
             <span className="text-xs font-bold uppercase tracking-widest animate-pulse">{t('loading_proposals')}</span>
