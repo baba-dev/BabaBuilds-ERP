@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { handleAdminApiError, verifySuperAdmin } from "../authz";
 import { prisma } from "@/lib/prisma";
 import { getAuthFailureMetrics } from "@/lib/auth-observability";
+import { decimalToNumber, toDecimal } from "@/lib/money";
 
 export async function GET() {
   try {
@@ -27,7 +28,7 @@ export async function GET() {
 
     // Total gross volume across platform
     const invoices = await prisma.invoice.findMany({ select: { totalAmount: true } });
-    const gmv = invoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0);
+    const gmv = decimalToNumber(invoices.reduce((sum, inv) => sum.plus(toDecimal(inv.totalAmount)), toDecimal(0)));
 
     return NextResponse.json({
       mrr: mrr,

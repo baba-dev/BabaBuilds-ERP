@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { generateInvoicePDF } from '../lib/pdf/generator';
 import { calculateInvoiceTotals } from '../lib/invoice/totals';
+import { decimalToNumber } from '../lib/money';
 
 const prisma = new PrismaClient();
 
@@ -41,7 +42,7 @@ async function main() {
       // Prepare data
       const invoiceWithTotals = invoice as any;
       const services = typeof invoice.serviceDescription === 'string' 
-        ? [{ title: invoice.serviceDescription, amount: invoiceWithTotals.subtotal ?? invoice.totalAmount, nicDetails: 'Service' }]
+        ? [{ title: invoice.serviceDescription, amount: decimalToNumber(invoiceWithTotals.subtotal ?? invoice.totalAmount), nicDetails: 'Service' }]
         : []; 
       
       // Note: Historical invoices might not have full service breakdown in DB, 
@@ -49,14 +50,14 @@ async function main() {
       
       const userLocale = profile.workspace?.countryCode === 'IN' ? 'en-IN' : 'en-US';
       const fallbackTotals = calculateInvoiceTotals({
-        services: [{ amount: invoice.totalAmount }],
+        services: [{ amount: decimalToNumber(invoice.totalAmount) }],
         isTaxExempt: Boolean(client.isExport),
       });
       const totals = {
-        subtotal: invoiceWithTotals.subtotal ?? fallbackTotals.subtotal,
+        subtotal: decimalToNumber(invoiceWithTotals.subtotal ?? fallbackTotals.subtotal),
         taxRate: invoiceWithTotals.taxRate ?? fallbackTotals.taxRate,
-        taxAmount: invoiceWithTotals.taxAmount ?? fallbackTotals.taxAmount,
-        total: invoiceWithTotals.grandTotal ?? invoice.totalAmount ?? fallbackTotals.total,
+        taxAmount: decimalToNumber(invoiceWithTotals.taxAmount ?? fallbackTotals.taxAmount),
+        total: decimalToNumber(invoiceWithTotals.grandTotal ?? invoice.totalAmount ?? fallbackTotals.total),
         taxMode: (invoiceWithTotals.taxMode as 'taxable' | 'exempt') ?? fallbackTotals.taxMode,
       };
       const formattedTotal = totals.total.toLocaleString(userLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });

@@ -22,5 +22,5 @@ export function decimalToNumber(value: MoneyInput): number {
 }
 
 export function sumMoney(values: MoneyInput[]): Prisma.Decimal {
-  return values.reduce((acc, current) => acc.plus(toDecimal(current)), new Prisma.Decimal(0));
+  return values.reduce<Prisma.Decimal>((acc, current) => acc.plus(toDecimal(current)), new Prisma.Decimal(0));
 }
