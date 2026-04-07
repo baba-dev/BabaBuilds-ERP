@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { INVOICE_STATUS, isOpenInvoiceStatus, isPaidInvoiceStatus } from '@/lib/invoice-status';
 
 export async function GET(request: Request) {
   try {
@@ -44,16 +45,19 @@ export async function GET(request: Request) {
     // 4. SERVER-SIDE KPI CALCULATION
     const totalRevenue = allInvoicesForKpis.reduce((sum, inv) => sum + ((inv as any).grandTotal || inv.totalAmount), 0);
     const outstanding = allInvoicesForKpis
-      .filter(inv => inv.status !== 'Paid' && inv.status !== 'PAID')
+      .filter(inv => isOpenInvoiceStatus(inv.status))
       .reduce((sum, inv) => sum + ((((inv as any).grandTotal || inv.totalAmount)) - (inv.amountReceived || 0)), 0);
     const realizedRevenue = allInvoicesForKpis
-      .filter(inv => inv.status === 'Paid' || inv.status === 'PAID')
+      .filter(inv => isPaidInvoiceStatus(inv.status))
       .reduce((sum, inv) => sum + (inv.amountReceived || (inv as any).grandTotal || inv.totalAmount), 0);
     const presumptiveIncome = realizedRevenue * 0.5;
 
     // 5. CONSTRUCT PAGINATED RESPONSE
     return NextResponse.json({
-      data: invoices,
+      data: invoices.map((invoice) => ({
+        ...invoice,
+        status: invoice.status || INVOICE_STATUS.PENDING,
+      })),
       meta: {
         currentPage: page,
         totalPages: Math.ceil(totalInvoices / limit),

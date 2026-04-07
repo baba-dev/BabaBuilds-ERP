@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { INVOICE_STATUS, isOpenInvoiceStatus, isPaidInvoiceStatus } from '@/lib/invoice-status';
 
 export async function GET(request: Request) {
   try {
@@ -103,7 +104,7 @@ export async function GET(request: Request) {
         health = "pending"; // It's brand new, we don't have payment data yet
       } else {
         for (const inv of recentClientInvoices) {
-          if (inv.status === 'Pending' || inv.status === 'PARTIALLY_PAID' || inv.status === 'Partially Paid') {
+          if (isOpenInvoiceStatus(inv.status)) {
             const daysOverdue = Math.floor((today.getTime() - new Date(inv.invoiceDate).getTime()) / (1000 * 3600 * 24));
             if (daysOverdue > 15) {
               health = "danger";
@@ -111,7 +112,7 @@ export async function GET(request: Request) {
             } else if (daysOverdue > 7) {
               health = "warning";
             }
-          } else if (inv.status === 'Paid' || inv.status === 'PAID') {
+          } else if (isPaidInvoiceStatus(inv.status)) {
             if (inv.dateReceived) {
               const daysToPay = Math.floor((new Date(inv.dateReceived).getTime() - new Date(inv.invoiceDate).getTime()) / (1000 * 3600 * 24));
               if (daysToPay > 10 && health !== "danger") {
@@ -182,7 +183,10 @@ export async function GET(request: Request) {
         revenue: revenueChartData,
         wealth: wealthChartData
       },
-      recentInvoices: recentInvoices
+      recentInvoices: recentInvoices.map((invoice) => ({
+        ...invoice,
+        status: invoice.status || INVOICE_STATUS.PENDING,
+      }))
     });
 
   } catch (error) {

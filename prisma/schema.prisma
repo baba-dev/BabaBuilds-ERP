@@ -7,6 +7,12 @@ datasource db {
   url      = "file:./dev.db" // Or "file:../dev.db" depending on your folder structure
 }
 
+enum InvoiceStatus {
+  PENDING
+  PARTIALLY_PAID
+  PAID
+}
+
 // ==========================================
 // 1. AUTHENTICATION (NextAuth Standard)
 // ==========================================
@@ -232,7 +238,7 @@ model Invoice {
   pdfPath            String
   createdAt          DateTime  @default(now())
 
-  status             String    @default("Pending") 
+  status             InvoiceStatus @default(PENDING)
   amountReceived     Float?    
   dateReceived       DateTime? 
 
