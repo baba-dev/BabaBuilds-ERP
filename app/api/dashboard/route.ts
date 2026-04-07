@@ -5,6 +5,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { decimalToNumber, toDecimal } from '@/lib/money';
 
+const normalizeInvoiceStatus = (status: unknown) => String(status).toUpperCase();
+
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -86,7 +88,8 @@ export async function GET(request: Request) {
         health = "pending";
       } else {
         for (const inv of recentClientInvoices) {
-          if (inv.status === 'Pending' || inv.status === 'PARTIALLY_PAID' || inv.status === 'Partially Paid') {
+          const normalizedStatus = normalizeInvoiceStatus(inv.status);
+          if (normalizedStatus === 'PENDING' || normalizedStatus === 'PARTIALLY_PAID') {
             const daysOverdue = Math.floor((today.getTime() - new Date(inv.invoiceDate).getTime()) / (1000 * 3600 * 24));
             if (daysOverdue > 15) {
               health = "danger";
@@ -94,7 +97,7 @@ export async function GET(request: Request) {
             } else if (daysOverdue > 7) {
               health = "warning";
             }
-          } else if (inv.status === 'Paid' || inv.status === 'PAID') {
+          } else if (normalizedStatus === 'PAID') {
             if (inv.dateReceived) {
               const daysToPay = Math.floor((new Date(inv.dateReceived).getTime() - new Date(inv.invoiceDate).getTime()) / (1000 * 3600 * 24));
               if (daysToPay > 10 && health !== "danger") {

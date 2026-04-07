@@ -5,6 +5,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { toDecimal } from '@/lib/money';
 
+const isPaidStatus = (status: unknown) => String(status).toUpperCase() === "PAID";
+
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -34,7 +36,7 @@ export async function GET(request: Request) {
     }, new Prisma.Decimal(0));
 
     const outstandingDecimal = allInvoicesForKpis
-      .filter(inv => inv.status !== 'Paid' && inv.status !== 'PAID')
+      .filter(inv => !isPaidStatus(inv.status))
       .reduce((sum, inv) => {
         const billed = toDecimal(inv.grandTotal ?? inv.totalAmount);
         const received = toDecimal(inv.amountReceived);
@@ -42,7 +44,7 @@ export async function GET(request: Request) {
       }, new Prisma.Decimal(0));
 
     const realizedRevenueDecimal = allInvoicesForKpis
-      .filter(inv => inv.status === 'Paid' || inv.status === 'PAID')
+      .filter(inv => isPaidStatus(inv.status))
       .reduce((sum, inv) => {
         const realized = inv.amountReceived ?? inv.grandTotal ?? inv.totalAmount;
         return sum.plus(toDecimal(realized));

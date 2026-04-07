@@ -117,7 +117,7 @@ export async function POST(request: Request) {
 
     // 3. FETCH DATABASE STATE FOR PASS 1 (Exact Matches)
     const pendingInvoices = await prisma.invoice.findMany({
-      where: { workspaceId, status: 'Pending' }
+      where: { workspaceId, status: 'PENDING' }
     });
 
     const autoMatched: any[] = [];

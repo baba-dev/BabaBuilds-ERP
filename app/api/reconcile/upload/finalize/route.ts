@@ -61,7 +61,7 @@ export async function POST(request: Request) {
           await tx.invoice.update({
             where: { id: dbInv.id },
             data: {
-              status: 'Paid',
+              status: 'PAID',
               // CRITICAL FIX: Set amountReceived so Dashboard/Tax math works
               amountReceived: dbInv.totalAmount, 
               // USE STATEMENT DATE: Ensure chronological accuracy for tax audit

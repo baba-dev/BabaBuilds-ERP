@@ -563,7 +563,7 @@ export async function GET(request: Request) {
               grandTotal: toDecimal(totals.total).toDecimalPlaces(2),
               taxMode: totals.taxMode,
               totalAmount: toDecimal(totals.total).toDecimalPlaces(2),
-              status: "Pending",
+              status: "PENDING",
               pdfPath: relativePdfPath, 
             } as any
           });
