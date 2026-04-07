@@ -149,7 +149,13 @@ export async function POST(request: Request) {
       }
 
       // 6. GENERATE HISTORICAL INVOICES
-      const invoicesToCreate = [
+      const invoicesToCreate: Array<{
+        client: typeof client1;
+        daysAgo: number;
+        amount: number;
+        desc: string;
+        status: "Paid" | "Pending";
+      }> = [
         { client: client1, daysAgo: -180, amount: 45000, desc: "Q3 System Architecture", status: "Paid" },
         { client: client3, daysAgo: -150, amount: 85000, desc: "Frontend Redesign", status: "Paid" },
         { client: client2, daysAgo: -120, amount: 35000, desc: "Security Audit", status: "Paid" },

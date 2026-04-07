@@ -26,6 +26,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
   const t = useTranslations('Setup');
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Form State
   const [form, setForm] = useState({
@@ -57,6 +58,12 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
     } else {
       setForm({ ...form, countryCode: code });
     }
+
+    setFieldErrors(prev => {
+      const next = { ...prev };
+      delete next.countryCode;
+      return next;
+    });
   };
 
   const nextStep = () => setStep(s => s + 1);
@@ -64,6 +71,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
 
   const finishSetup = async () => {
     setIsSubmitting(true);
+    setFieldErrors({});
     const toastId = toast.loading("Configuring your global workspace...");
 
     try {
@@ -83,7 +91,13 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
           router.push("/dashboard"); // Redirect to canonical dashboard entry path
         }
       } else {
-        toast.error("Setup failed. Please check your fields.", { id: toastId });
+        const errorBody = await res.json().catch(() => null);
+        if (errorBody?.code === "VALIDATION_ERROR" && errorBody?.fieldErrors) {
+          setFieldErrors(errorBody.fieldErrors as Record<string, string>);
+          toast.error(errorBody.error || "Please fix the highlighted fields.", { id: toastId });
+        } else {
+          toast.error(errorBody?.error || "Setup failed. Please check your fields.", { id: toastId });
+        }
       }
     } catch (err) {
       toast.error("Network error during setup.", { id: toastId });
@@ -145,6 +159,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                       <SelectItem value="OTHER" className="dark:text-zinc-100">{t('other_international')}</SelectItem>
                     </SelectContent>
                   </Select>
+                  {fieldErrors.countryCode && <p className="text-xs text-red-500">{fieldErrors.countryCode}</p>}
                 </div>
                 <div className="p-4 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl border border-zinc-200 dark:border-zinc-800 flex items-start gap-3">
                   <Zap className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
@@ -170,7 +185,19 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="dark:text-zinc-300">{t('base_currency')}</Label>
-                    <Input value={form.baseCurrency} onChange={e => setForm({...form, baseCurrency: e.target.value.toUpperCase()})} className="h-12 font-bold dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
+                    <Input
+                      value={form.baseCurrency}
+                      onChange={e => {
+                        setForm({...form, baseCurrency: e.target.value.toUpperCase()});
+                        setFieldErrors(prev => {
+                          const next = { ...prev };
+                          delete next.baseCurrency;
+                          return next;
+                        });
+                      }}
+                      className="h-12 font-bold dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100"
+                    />
+                    {fieldErrors.baseCurrency && <p className="text-xs text-red-500">{fieldErrors.baseCurrency}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label className="dark:text-zinc-300">{t('number_system')}</Label>
@@ -180,6 +207,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                   </div>
                 </div>
                 <p className="text-xs text-center text-zinc-400 dark:text-zinc-500">{t('format_hint')}</p>
+                {fieldErrors.locale && <p className="text-xs text-center text-red-500">{fieldErrors.locale}</p>}
               </CardContent>
             </div>
           )}
@@ -224,21 +252,53 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
               <CardContent className="pt-8 space-y-4">
                 <div className="space-y-2">
                   <Label className="dark:text-zinc-300">{t('legal_company_name')}</Label>
-                  <Input value={form.companyName} onChange={e => setForm({...form, companyName: e.target.value})} placeholder={t('ph_company')} className="h-12 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
+                  <Input value={form.companyName} onChange={e => {
+                    setForm({...form, companyName: e.target.value});
+                    setFieldErrors(prev => {
+                      const next = { ...prev };
+                      delete next.companyName;
+                      return next;
+                    });
+                  }} placeholder={t('ph_company')} className="h-12 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
+                  {fieldErrors.companyName && <p className="text-xs text-red-500">{fieldErrors.companyName}</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="dark:text-zinc-300">{t('founder_name')}</Label>
-                    <Input value={form.proprietorName} onChange={e => setForm({...form, proprietorName: e.target.value})} placeholder={t('ph_founder')} className="h-12 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
+                    <Input value={form.proprietorName} onChange={e => {
+                      setForm({...form, proprietorName: e.target.value});
+                      setFieldErrors(prev => {
+                        const next = { ...prev };
+                        delete next.proprietorName;
+                        return next;
+                      });
+                    }} placeholder={t('ph_founder')} className="h-12 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
+                    {fieldErrors.proprietorName && <p className="text-xs text-red-500">{fieldErrors.proprietorName}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label className="dark:text-zinc-300">{t('email')}</Label>
-                    <Input type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="billing@acme.com" className="h-12 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
+                    <Input type="email" value={form.email} onChange={e => {
+                      setForm({...form, email: e.target.value});
+                      setFieldErrors(prev => {
+                        const next = { ...prev };
+                        delete next.email;
+                        return next;
+                      });
+                    }} placeholder="billing@acme.com" className="h-12 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
+                    {fieldErrors.email && <p className="text-xs text-red-500">{fieldErrors.email}</p>}
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label className="dark:text-zinc-300">{t('billing_address')}</Label>
-                  <Input value={form.address} onChange={e => setForm({...form, address: e.target.value})} placeholder={t('ph_address')} className="h-12 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
+                  <Input value={form.address} onChange={e => {
+                    setForm({...form, address: e.target.value});
+                    setFieldErrors(prev => {
+                      const next = { ...prev };
+                      delete next.address;
+                      return next;
+                    });
+                  }} placeholder={t('ph_address')} className="h-12 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
+                  {fieldErrors.address && <p className="text-xs text-red-500">{fieldErrors.address}</p>}
                 </div>
               </CardContent>
             </div>

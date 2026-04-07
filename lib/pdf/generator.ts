@@ -375,7 +375,8 @@ export async function generateInvoicePDF({
     
     let currentY = 335; 
     
-    if (status === 'Paid') {
+    const isPaidStatus = typeof status === "string" && status.trim().toUpperCase() === "PAID";
+    if (isPaidStatus) {
       drawWatermark('PAID');
     }
 
