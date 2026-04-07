@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { PDFDocument, rgb, degrees } from 'pdf-lib';
 import fs from 'fs';
 import path from 'path';
+import { INVOICE_STATUS, toInvoiceStatus, type InvoiceStatusValue } from '@/lib/invoice-status';
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -36,19 +36,19 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     // 3. SMART STATUS DETERMINATION
     // Compare the new payment amount against the total bill
-    let newStatus = 'Paid';
-    const invoiceGrandTotal = (existingInvoice as any).grandTotal || existingInvoice.totalAmount;
+    let newStatus: InvoiceStatusValue = INVOICE_STATUS.PAID;
+    const invoiceGrandTotal = Number((existingInvoice as any).grandTotal || existingInvoice.totalAmount);
     if (paymentAmount > 0 && paymentAmount < invoiceGrandTotal) {
-      newStatus = 'Partially Paid';
+      newStatus = INVOICE_STATUS.PARTIALLY_PAID;
     } else if (paymentAmount === 0) {
-      newStatus = 'Pending';
+      newStatus = INVOICE_STATUS.PENDING;
     }
 
     // 4. UPDATE DATABASE
     const updatedInvoice = await prisma.invoice.update({
       where: { id: invoiceId }, 
       data: {
-        status: newStatus,
+        status: toInvoiceStatus(newStatus),
         amountReceived: paymentAmount,
         dateReceived: new Date(dateReceived),
       }
@@ -57,7 +57,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const { PDFDocument, rgb, degrees, StandardFonts } = await import('pdf-lib');
     
     // 5. APPLY "PAID" WATERMARK TO PDF (ONLY IF FULLY PAID)
-    if (newStatus === 'Paid') {
+    if (newStatus === INVOICE_STATUS.PAID) {
       // Robust path resolution for VPS/Windows
       let relativePath = updatedInvoice.pdfPath.startsWith('/') 
         ? updatedInvoice.pdfPath.substring(1) 
