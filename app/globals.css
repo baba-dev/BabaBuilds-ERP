@@ -104,6 +104,13 @@
   --success-soft: oklch(0.95 0.06 155);
   --danger-soft: oklch(0.95 0.05 24);
   --focus-ring: oklch(0.63 0.19 279);
+  --map-surface: oklch(0.94 0.008 256);
+  --map-land: oklch(0.72 0.028 255 / 92%);
+  --map-glow: oklch(0.76 0.095 255 / 26%);
+  --map-fade: oklch(0.88 0.008 260 / 72%);
+  --map-marker: oklch(0.59 0.2 279);
+  --map-marker-strong: oklch(0.53 0.22 279);
+  --map-marker-border: oklch(0.84 0.012 260 / 92%);
   --motion-duration-fast: 150ms;
   --motion-duration-base: 220ms;
   --motion-duration-slow: 320ms;
