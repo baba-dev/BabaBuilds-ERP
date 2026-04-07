@@ -19,7 +19,7 @@ export function useFormat() {
   const countryCode = isIndia ? "IN" : "Global";
 
   return {
-    fCurrency: (amount: number | null | undefined) => 
+    fCurrency: (amount: number | string | { toString(): string } | null | undefined) => 
       formatCurrency(amount, currency, locale),
     currency,
     locale,
