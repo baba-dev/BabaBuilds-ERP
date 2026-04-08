@@ -56,6 +56,7 @@ Use this checklist before promoting to staging/production:
 
 - Canonical authenticated entry route is `/dashboard` (served by `app/(dashboard)/dashboard/page.tsx`).
 - Keep login and post-auth redirects pointing to `/dashboard` rather than `/` or an implicit `app/(dashboard)/page.tsx`.
+- Legacy user preference values of `/` for `defaultLandingPage` are normalized to `/dashboard` in the profile API and migrated in Prisma SQL.
 
 ## Frontend polish rollout
 
