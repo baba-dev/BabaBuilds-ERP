@@ -129,6 +129,7 @@ model Workspace {
   businessProfile      BusinessProfile?
   clients              Client[]
   invoices             Invoice[]
+  billingTransactions  BillingTransaction[]
   expenses             Expense[]
   bankTransactions     BankTransaction[]
   investments          Investment[]
@@ -142,6 +143,24 @@ model Workspace {
   taxRateOverrides     TaxRateOverride[]
   taxRateOverrideAuditLogs TaxRateOverrideAuditLog[]
   taxDecisionAuditLogs TaxDecisionAuditLog[]
+}
+
+model BillingTransaction {
+  id                String    @id @default(cuid())
+  workspaceId       String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  transactionDate   DateTime  @default(now())
+  amount            Decimal   @default(0)
+  status            String    @default("PAID") // "PAID", "PENDING", "FAILED", etc.
+  description       String
+  providerReference String?
+  receiptUrl        String?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([workspaceId, transactionDate])
 }
 
 model WorkspaceUser {
