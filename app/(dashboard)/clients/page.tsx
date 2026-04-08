@@ -26,11 +26,39 @@ import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
 import { getBustedUrl } from "@/lib/cache-buster";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
+import { guardedFetchJson } from "@/lib/fetch-parse-guard";
+
+type ClientsPagePayload = {
+  data: any[];
+  meta: {
+    currentPage: number;
+    totalPages: number;
+  };
+};
+
+const parseClientsPagePayload = (payload: unknown): ClientsPagePayload | null => {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+  const root = payload as Record<string, unknown>;
+  if (!Array.isArray(root.data)) return null;
+  if (!root.meta || typeof root.meta !== "object" || Array.isArray(root.meta)) return null;
+
+  const meta = root.meta as Record<string, unknown>;
+  if (typeof meta.currentPage !== "number" || typeof meta.totalPages !== "number") return null;
+
+  return {
+    data: root.data as any[],
+    meta: {
+      currentPage: meta.currentPage,
+      totalPages: meta.totalPages,
+    },
+  };
+};
 
 export default function ClientCRM() {
   const t = useTranslations('Clients');
   const [clients, setClients] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [open, setOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -85,18 +113,37 @@ export default function ClientCRM() {
 
   const fetchClients = async (page = 1) => {
     setIsLoading(true);
-    try {
-      const res = await fetch(`/api/clients?page=${page}&limit=9`);
-      const { data, meta } = await res.json();
-      setClients(Array.isArray(data) ? data : []);
-      setTotalPages(meta.totalPages);
-      setCurrentPage(meta.currentPage);
-    } catch (err) {
-      toast.error("Failed to load clients.");
+    setFetchError(null);
+    const result = await guardedFetchJson(
+      `/api/clients?page=${page}&limit=9`,
+      undefined,
+      parseClientsPagePayload,
+      {
+        networkError: { error: "Failed to load clients.", code: "CLIENTS_NETWORK_ERROR" },
+        invalidJsonError: { error: "Clients response was not valid JSON.", code: "CLIENTS_INVALID_JSON" },
+        invalidShapeError: { error: "Clients response payload was invalid.", code: "CLIENTS_INVALID_SHAPE" },
+        httpErrorFallback: (status) => ({
+          error: status === 401 ? "Unauthorized" : "Failed to load clients.",
+          code: status === 401 ? "AUTH_UNAUTHORIZED" : "CLIENTS_FETCH_FAILED",
+        }),
+      }
+    );
+
+    if (!result.ok) {
+      const message = `${result.error.error} (${result.error.code})`;
+      setFetchError(message);
+      toast.error(message);
       setClients([]);
-    } finally {
+      setTotalPages(1);
+      setCurrentPage(1);
       setIsLoading(false);
+      return;
     }
+
+    setClients(result.data.data);
+    setTotalPages(result.data.meta.totalPages);
+    setCurrentPage(result.data.meta.currentPage);
+    setIsLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -343,6 +390,23 @@ export default function ClientCRM() {
           <div className="flex flex-col items-center justify-center py-24 text-muted-body bg-surface-base border-2 border-dashed border-border rounded-2xl">
             <Loader2 className="w-8 h-8 animate-spin mb-4 text-accent-strong/50" />
             <span className="text-xs font-bold uppercase tracking-widest animate-pulse">{t('loading_roster')}</span>
+          </div>
+        ) : fetchError ? (
+          <div className="col-span-full p-12 text-center border-2 border-dashed border-rose-300/50 rounded-2xl bg-rose-50/20 dark:bg-rose-500/5">
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 rounded-full bg-rose-100/70 dark:bg-rose-500/10 border border-rose-300/50 dark:border-rose-500/20 flex items-center justify-center mb-4">
+                <AlertCircle className="w-7 h-7 text-rose-600 dark:text-rose-400" />
+              </div>
+              <h3 className="text-base font-extrabold text-foreground uppercase tracking-widest">Unable to load clients</h3>
+              <p className="text-sm text-muted-body mt-2 max-w-sm mx-auto font-medium leading-relaxed">{fetchError}</p>
+              <Button
+                onClick={() => fetchClients(currentPage)}
+                variant="outline"
+                className="mt-6 text-xs font-bold uppercase tracking-wider h-10 px-6"
+              >
+                Retry
+              </Button>
+            </div>
           </div>
         ) : clients.length === 0 ? (
           <div className="col-span-full p-12 text-center border-2 border-dashed border-border rounded-2xl bg-surface-base relative overflow-hidden group">
