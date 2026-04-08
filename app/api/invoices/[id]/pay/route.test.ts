@@ -39,7 +39,7 @@ test('determineInvoicePaymentStatus covers 0 partial full overpayment values', (
 test('validatePaymentBusinessRules rejects overpayment unless explicitly allowed', () => {
   const blocked = validatePaymentBusinessRules({
     invoiceStatus: INVOICE_STATUS.PENDING,
-    paymentAmount: 1200,
+    cumulativeAmountReceived: 1200,
     invoiceGrandTotal: 1000,
   });
   assert.equal(blocked.ok, false);
@@ -49,7 +49,7 @@ test('validatePaymentBusinessRules rejects overpayment unless explicitly allowed
 
   const allowed = validatePaymentBusinessRules({
     invoiceStatus: INVOICE_STATUS.PENDING,
-    paymentAmount: 1200,
+    cumulativeAmountReceived: 1200,
     invoiceGrandTotal: 1000,
     allowOverpayment: true,
   });
@@ -59,12 +59,54 @@ test('validatePaymentBusinessRules rejects overpayment unless explicitly allowed
 test('validatePaymentBusinessRules rejects non-payable statuses', () => {
   const result = validatePaymentBusinessRules({
     invoiceStatus: 'VOID',
-    paymentAmount: 100,
+    cumulativeAmountReceived: 100,
     invoiceGrandTotal: 1000,
   });
 
   assert.equal(result.ok, false);
   if (!result.ok) {
     assert.equal(result.error.code, 'INVOICE_STATUS_NOT_PAYABLE');
+  }
+});
+
+test('two-step partial payments remain PARTIALLY_PAID until fully settled', () => {
+  const invoiceGrandTotal = 1000;
+  let existingReceived = 0;
+
+  const firstIncomingPayment = 300;
+  const firstCumulative = existingReceived + firstIncomingPayment;
+  assert.equal(determineInvoicePaymentStatus(firstCumulative, invoiceGrandTotal), INVOICE_STATUS.PARTIALLY_PAID);
+  existingReceived = firstCumulative;
+
+  const secondIncomingPayment = 200;
+  const secondCumulative = existingReceived + secondIncomingPayment;
+  assert.equal(determineInvoicePaymentStatus(secondCumulative, invoiceGrandTotal), INVOICE_STATUS.PARTIALLY_PAID);
+});
+
+test('exact final settlement transitions cumulative total to PAID', () => {
+  const invoiceGrandTotal = 1000;
+  const existingReceived = 400;
+  const incomingPayment = 600;
+  const newCumulativeReceived = existingReceived + incomingPayment;
+
+  assert.equal(newCumulativeReceived, invoiceGrandTotal);
+  assert.equal(determineInvoicePaymentStatus(newCumulativeReceived, invoiceGrandTotal), INVOICE_STATUS.PAID);
+});
+
+test('overpayment rejection uses cumulative math, not only incoming amount', () => {
+  const invoiceGrandTotal = 1000;
+  const existingReceived = 900;
+  const incomingPayment = 200;
+  const newCumulativeReceived = existingReceived + incomingPayment;
+
+  const result = validatePaymentBusinessRules({
+    invoiceStatus: INVOICE_STATUS.PARTIALLY_PAID,
+    cumulativeAmountReceived: newCumulativeReceived,
+    invoiceGrandTotal,
+  });
+
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.equal(result.error.code, 'OVERPAYMENT_NOT_ALLOWED');
   }
 });
