@@ -116,6 +116,8 @@ model Workspace {
   retainers            Retainer[]
   tasks                Task[]
   invoiceIdempotencies InvoiceIdempotency[]
+  taxRateOverrides     TaxRateOverride[]
+  taxDecisionAuditLogs TaxDecisionAuditLog[]
 }
 
 model WorkspaceUser {
@@ -239,9 +241,9 @@ model Invoice {
   pdfPath     String
   createdAt   DateTime @default(now())
 
-  status             InvoiceStatus @default(PENDING)
-  amountReceived     Float?    
-  dateReceived       DateTime? 
+  status         InvoiceStatus @default(PENDING)
+  amountReceived Float?
+  dateReceived   DateTime?
 
   clientId           String?
   client             Client?              @relation(fields: [clientId], references: [id])
@@ -462,4 +464,64 @@ model Task {
   createdAt   DateTime  @default(now())
 
   @@index([workspaceId])
+}
+
+model TaxRateOverride {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  scopeType String  @default("WORKSPACE") // "WORKSPACE" | "CLIENT" | "SERVICE"
+  scopeRef  String?
+
+  rate          Float
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  reason        String?
+
+  isActive      Boolean   @default(true)
+  deactivatedAt DateTime?
+
+  createdByUserId String?
+  createdByEmail  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  auditLogs TaxDecisionAuditLog[]
+
+  @@index([workspaceId, scopeType, isActive])
+  @@index([workspaceId, effectiveFrom])
+}
+
+model TaxDecisionAuditLog {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  taxRateOverrideId String?
+  taxRateOverride   TaxRateOverride? @relation(fields: [taxRateOverrideId], references: [id], onDelete: SetNull)
+
+  action         String // "CREATE" | "UPDATE" | "DEACTIVATE"
+  decisionSource String @default("OVERRIDE") // "AUTO" | "OVERRIDE" | "FALLBACK"
+
+  scopeType String
+  scopeRef  String?
+  rate      Float?
+
+  effectiveFrom DateTime?
+  effectiveTo   DateTime?
+  reason        String?
+
+  previousValues Json?
+  newValues      Json?
+
+  actorUserId String?
+  actorEmail  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, action])
+  @@index([workspaceId, scopeType])
 }
