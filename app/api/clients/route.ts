@@ -20,8 +20,31 @@ export async function GET(request: Request) {
 
     // 2. PAGINATION PARAMETERS
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '9'); // 9 clients per page for a 3-column grid
+    const pageParam = searchParams.get('page');
+    const limitParam = searchParams.get('limit');
+
+    const parseIntegerParam = (value: string | null): number | null => {
+      if (value === null || value.trim() === '') return null;
+      const numericValue = Number(value);
+      if (!Number.isFinite(numericValue) || !Number.isInteger(numericValue)) {
+        return Number.NaN;
+      }
+      return numericValue;
+    };
+
+    const parsedPage = parseIntegerParam(pageParam);
+    const parsedLimit = parseIntegerParam(limitParam);
+
+    if (Number.isNaN(parsedPage) || Number.isNaN(parsedLimit)) {
+      return apiError(400, "Invalid pagination parameters", "PAGINATION_INVALID_PARAMS");
+    }
+
+    if ((parsedPage !== null && parsedPage < 0) || (parsedLimit !== null && parsedLimit < 0)) {
+      return apiError(400, "Pagination parameters cannot be negative", "PAGINATION_NEGATIVE_VALUES");
+    }
+
+    const page = Math.max(1, parsedPage ?? 1);
+    const limit = Math.min(100, Math.max(1, parsedLimit ?? 9)); // Safe range: 1..100 (default 9)
     const skip = (page - 1) * limit;
 
     // 3. FETCH PAGINATED DATA & TOTAL COUNT CONCURRENTLY
@@ -40,7 +63,7 @@ export async function GET(request: Request) {
       data: clients,
       meta: {
         currentPage: page,
-        totalPages: Math.ceil(totalClients / limit),
+        totalPages: Math.max(1, Math.ceil(totalClients / limit)),
         totalRecords: totalClients,
       }
     });
