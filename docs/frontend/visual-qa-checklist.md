@@ -21,6 +21,7 @@ Use this checklist before promoting frontend updates between rollout phases.
 | Empty states | Empty collections/messages are informative and include clear next actions. | Product UI Team | Planned | Content design approval and CTA standards | Phase 2 |
 | Error states | Recoverable and fatal error states are distinct, readable, and action-oriented. | Product UI Team | Planned | Error boundary conventions and copy guidelines | Phase 2 |
 | Keyboard focus | Tab order is logical, visible focus indicators pass contrast, and traps are avoided. | Accessibility Lead | In progress | Focus ring token and keyboard test scripts | Phase 1 |
+| Icon-only controls accessibility | Icon-only buttons/links include meaningful `aria-label` + `title`; disclosure toggles set `aria-expanded` and `aria-controls` to expose state and relationship. | Accessibility Lead | In progress | Shared button patterns and lint/checklist enforcement | Phase 1 |
 | Contrast checks | Text, iconography, chart series, and UI states meet contrast requirements. | Accessibility Lead | In progress | Approved palette and semantic color mappings | Phase 1 |
 
 ## Suggested QA cadence by phase
