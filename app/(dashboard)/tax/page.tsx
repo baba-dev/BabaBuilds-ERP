@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useTranslations } from "next-intl";
-import { PiggyBank, ShieldPlus, Landmark, TrendingUp, Calculator, AlertCircle, CheckCircle2, Globe2 } from "lucide-react";
+import { ShieldPlus, Landmark, Calculator, AlertCircle, CheckCircle2, Globe2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { PageLoadingState } from "@/components/states/PageLoadingState";
 import { PageErrorState } from "@/components/states/PageErrorState";
 import { ColumnVisibilityToggle, DataTable, DataTableToolbar, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
+import { TaxOverrideModal, type TaxOverrideWindow } from "@/components/tax/tax-override-modal";
 
 const toSafeNumber = (value: unknown): number => {
   const parsed = Number(value);
@@ -54,6 +55,8 @@ export default function WealthAndTaxPlanner() {
 
   // Tax Settings State
   const [hasSeniorParents, setHasSeniorParents] = useState(false);
+  const [taxOverrideOpen, setTaxOverrideOpen] = useState(false);
+  const [taxOverrides, setTaxOverrides] = useState<TaxOverrideWindow[]>([]);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(["date", "asset", "category", "amount"]);
   const tableState = useUrlTableState("tax");
 
@@ -281,7 +284,19 @@ export default function WealthAndTaxPlanner() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-zinc-800 pb-4">
               <div className="flex items-center gap-2">
                 <AlertCircle className="text-amber-400 h-5 w-5" />
-                <h2 className="text-lg font-bold tracking-tight">{t('advance_tax')} <span className="text-sm font-medium text-zinc-400 ml-2">{t('fy_estimate')}</span></h2>
+                <h2 className="text-lg font-bold tracking-tight flex flex-wrap items-center gap-2">
+                  <span>{t('advance_tax')}</span>
+                  <span className="text-sm font-medium text-zinc-400">{t('fy_estimate')}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTaxOverrideOpen(true)}
+                    className="h-7 px-2 rounded-md border border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 text-[10px] font-bold uppercase tracking-widest"
+                  >
+                    Override tax rate
+                  </Button>
+                </h2>
               </div>
               <div className="flex items-center gap-3 bg-zinc-800/50 dark:bg-zinc-900 px-3 py-2 rounded-lg border border-zinc-700 dark:border-zinc-800">
                 <input
@@ -408,6 +423,17 @@ export default function WealthAndTaxPlanner() {
           </div>
         </div>
 
+      <TaxOverrideModal
+        open={taxOverrideOpen}
+        onOpenChange={setTaxOverrideOpen}
+        currentAutoEstimate={18}
+        existingOverrides={taxOverrides}
+        onSave={(draft) => {
+          setTaxOverrides((prev) => [...prev, { effectiveFrom: draft.effectiveFrom, effectiveTo: draft.effectiveTo }]);
+          setTaxOverrideOpen(false);
+          toast.success(`Tax override saved at ${draft.rate}% (${draft.mode.replace("_", "+")}).`);
+        }}
+      />
     </DashboardPageShell>
   );
 }
