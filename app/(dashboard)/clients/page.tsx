@@ -92,7 +92,7 @@ export default function ClientCRM() {
       setTotalPages(meta.totalPages);
       setCurrentPage(meta.currentPage);
     } catch (err) {
-      toast.error("Failed to load clients.");
+      toast.error(t("toast.error.load_clients"));
       setClients([]);
     } finally {
       setIsLoading(false);
@@ -102,8 +102,8 @@ export default function ClientCRM() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    const mode = isEditing ? "Updating" : "Registering new";
-    const toastId = toast.loading(`${mode} client...`);
+    const mode = isEditing ? t("toast.loading.update_client") : t("toast.loading.register_client");
+    const toastId = toast.loading(mode);
 
     const body = new FormData();
     Object.entries(formData).forEach(([key, val]) => body.append(key, String(val)));
@@ -115,16 +115,16 @@ export default function ClientCRM() {
       const res = await fetch(url, { method, body });
       
       if (res.ok) {
-        toast.success(isEditing ? "Client updated successfully!" : "Client registered successfully!", { id: toastId });
+        toast.success(isEditing ? t("toast.success.client_updated") : t("toast.success.client_registered"), { id: toastId });
         setOpen(false);
         resetForm();
         fetchClients(currentPage);
       } else {
         const data = await res.json();
-        toast.error(data.message || data.error || (isEditing ? "Failed to update client." : "Failed to register client."), { id: toastId });
+        toast.error(data.message || data.error || (isEditing ? t("toast.error.update_client") : t("toast.error.register_client")), { id: toastId });
       }
     } catch (err) {
-      toast.error("A network error occurred.", { id: toastId });
+      toast.error(t("toast.error.network"), { id: toastId });
     } finally {
       setIsSubmitting(false);
     }
@@ -155,17 +155,17 @@ export default function ClientCRM() {
   const confirmDelete = async () => {
     if (!clientToDelete) return;
     const id = clientToDelete;
-    const toastId = toast.loading("Deleting client profile...");
+    const toastId = toast.loading(t("toast.loading.delete_client"));
     
     try {
       const res = await fetch(`/api/clients/${id}`, { method: 'DELETE' });
       const data = await res.json();
       
       if (!res.ok) {
-        throw new Error(data.error || "Deletion failed");
+        throw new Error(data.error || t("toast.error.delete_client"));
       }
       
-      toast.success("Client permanently removed", { id: toastId });
+      toast.success(t("toast.success.client_deleted"), { id: toastId });
       // Refresh data. If it was the last item on a page, go to previous page.
       if (clients.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1);
@@ -254,7 +254,7 @@ export default function ClientCRM() {
                           className="h-10 bg-surface-elevated border-border text-foreground transition-all focus-visible:ring-focus-ring/30 focus-visible:border-accent-strong shadow-sm" 
                         />
                       </FormFieldRow>
-                      <FormFieldRow htmlFor="client-taxid" label={taxIdLabel} optionalText="Optional">
+                      <FormFieldRow htmlFor="client-taxid" label={taxIdLabel} optionalText={t("optional")}>
                         <Input 
                           id="client-taxid"
                           placeholder={`Client's ${taxIdLabel}`} 
@@ -317,7 +317,7 @@ export default function ClientCRM() {
                   </div>
                   <Switch 
                     id="client-export"
-                    aria-label="Toggle export status"
+                    aria-label={t("a11y.toggle_export")}
                     checked={formData.isExport} 
                     onCheckedChange={val => setFormData({...formData, isExport: val})} 
                     className="data-[state=checked]:bg-accent-strong shadow-inner"
@@ -331,7 +331,7 @@ export default function ClientCRM() {
                   isSubmitting={isSubmitting}
                   submitText={isEditing ? t('update_client') : t('register_client')}
                   submittingText={t('saving')}
-                  helperText={isEditing ? "Update client details and save changes." : "Complete required fields to register a new client."}
+                  helperText={isEditing ? t("helper_edit") : t("helper_create")}
                   className="mt-3 border-none bg-transparent p-0"
                 />
               </DialogFooter>
@@ -368,14 +368,14 @@ export default function ClientCRM() {
                   <div className="absolute top-4 right-4 flex gap-2 z-10">
                     <button 
                       onClick={() => handleEdit(client)} 
-                      aria-label={`Edit ${client.name}`}
+                      aria-label={t("a11y.edit_client", { name: client.name })}
                       className="p-2 bg-accent-soft text-accent-strong rounded-lg opacity-100 sm:opacity-0 xl:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-accent-strong hover:text-white shadow-sm sm:shadow-none hover:shadow-md active:scale-95" 
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={() => setClientToDelete(client.id)} 
-                      aria-label={`Delete ${client.name}`}
+                      aria-label={t("a11y.delete_client", { name: client.name })}
                       className="p-2 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg opacity-100 sm:opacity-0 xl:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-rose-600 dark:hover:bg-rose-600 hover:text-white dark:hover:text-white shadow-sm sm:shadow-none hover:shadow-md active:scale-95" 
                     >
                       <Trash2 className="w-4 h-4" />

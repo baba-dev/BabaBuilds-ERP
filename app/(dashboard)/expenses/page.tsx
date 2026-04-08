@@ -87,9 +87,9 @@ export default function ExpenseTracker() {
       setTotalPages(meta.totalPages);
       setCurrentPage(meta.currentPage);
     } catch (err) {
-      console.error("Failed to load expense table data");
-      setFetchError("Failed to load expense table data.");
-      toast.error("Failed to load expense table data.");
+      console.error("Failed to load financial data");
+      setFetchError(t("toast.error.load_financial_data"));
+      toast.error(t("toast.error.load_financial_data"));
     } finally {
       setIsLoading(false);
     }
@@ -169,7 +169,7 @@ export default function ExpenseTracker() {
       cell: (row) => (
         <div className="flex justify-end gap-1">
           {row.receiptUrl && (
-            <Button variant="ghost" size="sm" className="w-8 px-0 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10" asChild title="View Receipt">
+            <Button variant="ghost" size="sm" className="w-8 px-0 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10" asChild title={t("actions.view_receipt")}>
               <a href={row.receiptUrl} target="_blank" rel="noopener noreferrer">
                 <FileText className="w-4 h-4" />
               </a>
@@ -178,8 +178,8 @@ export default function ExpenseTracker() {
           <RowActionsMenu
             row={row}
             actions={[
-              { label: "Edit", onClick: openEditModal, icon: <Edit className="mr-2 h-4 w-4" /> },
-              { label: "Delete", onClick: (r) => setExpenseToDelete(r.id), variant: "danger", icon: <Trash2 className="mr-2 h-4 w-4" /> },
+              { label: t("actions.edit"), onClick: openEditModal, icon: <Edit className="mr-2 h-4 w-4" /> },
+              { label: t("actions.delete"), onClick: (r) => setExpenseToDelete(r.id), variant: "danger", icon: <Trash2 className="mr-2 h-4 w-4" /> },
             ]}
           />
         </div>
@@ -197,7 +197,7 @@ export default function ExpenseTracker() {
       const formData = new FormData();
       formData.append('receipt', file);
       const res = await fetch('/api/expenses/scan', { method: 'POST', body: formData });
-      if (!res.ok) throw new Error("AI could not read the receipt. Please enter manually.");
+      if (!res.ok) throw new Error(t("toast.error.ai_read_receipt"));
       const data = await res.json();
       if (data.vendor) setVendor(data.vendor);
       if (data.amount) setAmount(data.amount.toString());
@@ -225,14 +225,13 @@ export default function ExpenseTracker() {
       if (receiptFile) formData.append('receipt', receiptFile);
 
       const res = await fetch('/api/expenses', { method: 'POST', body: formData });
-      if (!res.ok) throw new Error("Failed to log expense");
+      if (!res.ok) throw new Error(t("toast.error.log_expense"));
 
       setVendor(""); setAmount(""); setDescription(""); setCategory(""); setReceiptFile(null);
       const fileInput = document.getElementById('receipt') as HTMLInputElement;
       if (fileInput) fileInput.value = "";
-      fetchExpenses(currentPage);
-      fetchSummary(); 
-      toast.success("Expense logged successfully!");
+      fetchData(currentPage); 
+      toast.success(t("toast.success.expense_logged"));
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -242,15 +241,14 @@ export default function ExpenseTracker() {
 
   const confirmDelete = async () => {
     if (!expenseToDelete) return;
-    const toastId = toast.loading("Deleting expense...");
+    const toastId = toast.loading(t("toast.loading.delete_expense"));
     try {
       const res = await fetch(`/api/expenses/${expenseToDelete}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error("Failed to delete");
-      toast.success("Expense deleted permanently.", { id: toastId });
-      fetchExpenses(currentPage);
-      fetchSummary();
+      if (!res.ok) throw new Error(t("toast.error.delete_expense"));
+      toast.success(t("toast.success.expense_deleted"), { id: toastId });
+      fetchData(currentPage);
     } catch (err) {
-      toast.error("Failed to delete expense.", { id: toastId });
+      toast.error(t("toast.error.delete_expense"), { id: toastId });
     } finally {
       setExpenseToDelete(null);
     }
@@ -271,20 +269,20 @@ export default function ExpenseTracker() {
     e.preventDefault();
     if (!expenseToEdit) return;
     setIsEditing(true);
-    const toastId = toast.loading("Updating expense...");
+    const toastId = toast.loading(t("toast.loading.update_expense"));
     try {
       const res = await fetch(`/api/expenses/${expenseToEdit.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm)
       });
-      if (!res.ok) throw new Error("Failed to update");
-      toast.success("Expense updated successfully.", { id: toastId });
+      if (!res.ok) throw new Error(t("toast.error.update_expense"));
+      toast.success(t("toast.success.expense_updated"), { id: toastId });
       setExpenseToEdit(null);
       fetchExpenses(currentPage);
       fetchSummary();
     } catch (err) {
-      toast.error("Failed to update expense.", { id: toastId });
+      toast.error(t("toast.error.update_expense"), { id: toastId });
     } finally {
       setIsEditing(false);
     }
@@ -431,7 +429,7 @@ export default function ExpenseTracker() {
                     <Label className="dark:text-zinc-300">{t('amount', { currency })}</Label>
                     <div className="relative">
                       <span className="absolute left-3 top-2.5 text-zinc-500 dark:text-zinc-400 font-medium">{currencySymbol}</span>
-                      <Input type="number" step="0.01" min="1" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} required className="pl-7 bg-white dark:bg-zinc-950 dark:border-zinc-800 font-medium dark:text-zinc-100" />
+                      <Input type="number" step="0.01" min="1" placeholder={t("amount_placeholder")} value={amount} onChange={(e) => setAmount(e.target.value)} required className="pl-7 bg-white dark:bg-zinc-950 dark:border-zinc-800 font-medium dark:text-zinc-100" />
                     </div>
                   </div>
 
@@ -482,7 +480,7 @@ export default function ExpenseTracker() {
                   onRetry={() => fetchExpenses(currentPage)}
                   visibleColumnIds={visibleColumns}
                   emptyTitle={t("no_expenses")}
-                  emptyDescription="Capture your first expense to start tracking burn and tax efficiency."
+                  emptyDescription={t("no_expenses_desc")}
                 />
               </CardContent>
               <CardFooter className="p-0">

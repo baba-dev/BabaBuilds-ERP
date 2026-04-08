@@ -3,12 +3,12 @@ import assert from "node:assert/strict";
 import {
   DEFAULT_LEDGER_META,
   parseLedgerInvoicesResponse,
-  resolveLedgerErrorToastMessage,
-  resolveLedgerMalformedJsonToastMessage,
+  resolveLedgerErrorToastKey,
+  resolveLedgerMalformedJsonToastKey,
 } from "./fetch-invoices-response";
 
 test("uses backend error and code for 401 diagnostics", () => {
-  const message = resolveLedgerErrorToastMessage(401, {
+  const message = resolveLedgerErrorToastKey(401, {
     error: "Unauthorized",
     code: "AUTH_UNAUTHORIZED",
   });
@@ -17,7 +17,7 @@ test("uses backend error and code for 401 diagnostics", () => {
 });
 
 test("uses backend error and code for 500 diagnostics", () => {
-  const message = resolveLedgerErrorToastMessage(500, {
+  const message = resolveLedgerErrorToastKey(500, {
     error: "Failed to fetch invoices",
     code: "INVOICES_FETCH_FAILED",
   });
@@ -27,8 +27,8 @@ test("uses backend error and code for 500 diagnostics", () => {
 
 test("returns a specific message for malformed JSON", () => {
   assert.equal(
-    resolveLedgerMalformedJsonToastMessage(),
-    "Ledger response was not valid JSON. Please refresh and try again."
+    resolveLedgerMalformedJsonToastKey(),
+    "toast.error.malformed_json"
   );
 });
 
