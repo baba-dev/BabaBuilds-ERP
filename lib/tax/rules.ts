@@ -1,46 +1,38 @@
-export interface TaxRulesInput {
-  countryCode?: string | null;
-  regionCode?: string | null;
-  taxableAmount: number;
+import fallbackRatesJson from '@/lib/tax/fallback-rates.json';
+
+export interface TaxRuleSourceMetadata {
+  sourceName: string;
+  sourceUrl: string;
+  fetchedAt: string;
+  licenseNotes: string;
 }
 
-export interface TaxDeductionBucket {
-  label: string;
-  amount: number;
+export interface TaxRuleInput extends TaxRuleSourceMetadata {
+  countryCode: string;
+  rate: number;
 }
 
-const COUNTRY_RULE_RATES: Record<string, number> = {
-  IN: 0.18,
-  AE: 0.05,
-  SA: 0.15,
-  GB: 0.2,
-  DE: 0.19,
-  FR: 0.2,
-  ES: 0.21,
-  IT: 0.22,
-  NL: 0.21,
-  IE: 0.23,
-  AU: 0.1,
-  NZ: 0.15,
-  SG: 0.09,
-  ZA: 0.15,
-  CA: 0.05,
-  US: 0.07,
-};
+export type TaxRuleRecord = Record<string, TaxRuleInput>;
 
-export function estimateTaxFromRules(input: TaxRulesInput): number {
-  const normalizedCountryCode = (input.countryCode || '').toUpperCase();
-  return COUNTRY_RULE_RATES[normalizedCountryCode] ?? 0;
+const normalizeCountryCode = (countryCode: string) => countryCode.trim().toUpperCase();
+
+export const FALLBACK_TAX_RULES: TaxRuleInput[] = (fallbackRatesJson as TaxRuleInput[])
+  .map((rule) => ({
+    ...rule,
+    countryCode: normalizeCountryCode(rule.countryCode),
+  }))
+  .filter((rule) => Number.isFinite(rule.rate) && rule.rate >= 0);
+
+export const FALLBACK_TAX_RULES_BY_COUNTRY: TaxRuleRecord = FALLBACK_TAX_RULES.reduce<TaxRuleRecord>((acc, rule) => {
+  acc[rule.countryCode] = rule;
+  return acc;
+}, {});
+
+export function toTaxResolverInputMap(rules: TaxRuleInput[]): Record<string, number> {
+  return rules.reduce<Record<string, number>>((acc, rule) => {
+    acc[normalizeCountryCode(rule.countryCode)] = rule.rate;
+    return acc;
+  }, {});
 }
 
-export function toTaxDeductionBuckets(taxableAmount: number, rate: number): TaxDeductionBucket[] {
-  const safeAmount = Number.isFinite(taxableAmount) ? Math.max(0, taxableAmount) : 0;
-  const safeRate = Number.isFinite(rate) ? Math.max(0, rate) : 0;
-
-  return [
-    {
-      label: 'estimated_tax',
-      amount: Number((safeAmount * safeRate).toFixed(2)),
-    },
-  ];
-}
+export const COUNTRY_DEFAULT_TAX_RATES = toTaxResolverInputMap(FALLBACK_TAX_RULES);
