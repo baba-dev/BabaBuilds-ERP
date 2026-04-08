@@ -18,6 +18,43 @@ import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { ColumnVisibilityToggle, DataTable, DataTablePagination, DataTableToolbar, RowActionsMenu, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
+import { guardedFetchJson } from "@/lib/fetch-parse-guard";
+
+type ExpensesPagePayload = {
+  data: any[];
+  meta: {
+    currentPage: number;
+    totalPages: number;
+  };
+};
+
+const asRecord = (value: unknown): Record<string, unknown> | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+};
+
+const parseExpensesPagePayload = (payload: unknown): ExpensesPagePayload | null => {
+  const root = asRecord(payload);
+  if (!root || !Array.isArray(root.data)) return null;
+  const meta = asRecord(root.meta);
+  if (!meta || typeof meta.currentPage !== "number" || typeof meta.totalPages !== "number") return null;
+
+  return {
+    data: root.data as any[],
+    meta: {
+      currentPage: meta.currentPage,
+      totalPages: meta.totalPages,
+    },
+  };
+};
+
+const parseInvoicesPayload = (payload: unknown): any[] | null => {
+  if (Array.isArray(payload)) return payload;
+  const root = asRecord(payload);
+  if (!root) return null;
+  if (Array.isArray(root.data)) return root.data as any[];
+  return null;
+};
 
 export default function ExpenseTracker() {
   const t = useTranslations('Expenses');
@@ -76,23 +113,67 @@ export default function ExpenseTracker() {
   const fetchExpenses = async (page = 1) => {
     setIsLoading(true);
     setFetchError(null);
-    try {
-      const expRes = await fetch(`/api/expenses?page=${page}&limit=15`);
-      if (!expRes.ok) throw new Error("Failed to load expenses.");
-      const { data, meta } = await expRes.json();
-      const normalizedExpenses = Array.isArray(data)
-        ? data.map((exp: any) => ({ ...exp, amount: toSafeNumber(exp.amount) }))
-        : [];
-      setExpenses(normalizedExpenses);
-      setTotalPages(meta.totalPages);
-      setCurrentPage(meta.currentPage);
-    } catch (err) {
-      console.error("Failed to load financial data");
-      setFetchError(t("toast.error.load_financial_data"));
-      toast.error(t("toast.error.load_financial_data"));
-    } finally {
+    // Fetch paginated expenses
+    const expensesResult = await guardedFetchJson(
+      `/api/expenses?page=${page}&limit=15`,
+      undefined,
+      parseExpensesPagePayload,
+      {
+        networkError: { error: "Failed to load financial data.", code: "EXPENSES_NETWORK_ERROR" },
+        invalidJsonError: { error: "Expenses response was not valid JSON.", code: "EXPENSES_INVALID_JSON" },
+        invalidShapeError: { error: "Expenses response payload was invalid.", code: "EXPENSES_INVALID_SHAPE" },
+        httpErrorFallback: (status) => ({
+          error: status === 401 ? "Unauthorized" : "Failed to fetch expenses",
+          code: status === 401 ? "AUTH_UNAUTHORIZED" : "EXPENSES_FETCH_FAILED",
+        }),
+      }
+    );
+
+    if (!expensesResult.ok) {
+      const message = `${expensesResult.error.error} (${expensesResult.error.code})`;
+      setFetchError(message);
+      setExpenses([]);
+      setTotalRevenue(0);
+      setTotalPages(1);
+      setCurrentPage(1);
+      toast.error(message);
       setIsLoading(false);
+      return;
     }
+
+    const normalizedExpenses = expensesResult.data.data.map((exp: any) => ({ ...exp, amount: toSafeNumber(exp.amount) }));
+    setExpenses(normalizedExpenses);
+    setTotalPages(expensesResult.data.meta.totalPages);
+    setCurrentPage(expensesResult.data.meta.currentPage);
+
+    // Fetch all invoices for revenue calculation (as per original logic)
+    const invoicesResult = await guardedFetchJson(
+      "/api/invoices",
+      undefined,
+      parseInvoicesPayload,
+      {
+        networkError: { error: "Failed to load financial data.", code: "INVOICES_NETWORK_ERROR" },
+        invalidJsonError: { error: "Invoices response was not valid JSON.", code: "INVOICES_INVALID_JSON" },
+        invalidShapeError: { error: "Invoices response payload was invalid.", code: "INVOICES_INVALID_SHAPE" },
+        httpErrorFallback: (status) => ({
+          error: status === 401 ? "Unauthorized" : "Failed to fetch invoices",
+          code: status === 401 ? "AUTH_UNAUTHORIZED" : "INVOICES_FETCH_FAILED",
+        }),
+      }
+    );
+
+    if (!invoicesResult.ok) {
+      const message = `${invoicesResult.error.error} (${invoicesResult.error.code})`;
+      setFetchError(message);
+      setTotalRevenue(0);
+      toast.error(message);
+      setIsLoading(false);
+      return;
+    }
+
+    const normalizedRevenue = invoicesResult.data.reduce((sum: number, inv: any) => sum + toSafeNumber(inv.totalAmount), 0);
+    setTotalRevenue(normalizedRevenue);
+    setIsLoading(false);
   };
 
   const fetchSummary = async () => {
