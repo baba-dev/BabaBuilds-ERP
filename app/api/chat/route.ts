@@ -731,8 +731,8 @@ export async function POST(request: Request) {
             properties: { 
               path: { 
                 type: "string", 
-                enum: ["/", "/dashboard", "/clients", "/settings", "/ledger", "/tax", "/services", "/proposals"],
-                description: "The URL path. '/' is New Invoice."
+                enum: ["/dashboard", "/clients", "/settings", "/ledger", "/tax", "/services", "/proposals"],
+                description: "The URL path. '/dashboard' is the authenticated home route."
               },
               payload: {
                 type: "object",
