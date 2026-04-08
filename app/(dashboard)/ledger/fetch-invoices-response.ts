@@ -35,10 +35,10 @@ const formatApiErrorMessage = (error?: string, code?: string) => {
   return error || code || null;
 };
 
-export const resolveLedgerErrorToastMessage = (
+export const resolveLedgerErrorToastKey = (
   status: number,
   payload: unknown,
-  fallback = "Failed to load ledger data."
+  fallback = "toast.error.load_data"
 ) => {
   const payloadObj = asRecord(payload);
   const error = typeof payloadObj?.error === "string" ? payloadObj.error : undefined;
@@ -46,13 +46,13 @@ export const resolveLedgerErrorToastMessage = (
   const backendMessage = formatApiErrorMessage(error, code);
 
   if (backendMessage) return backendMessage;
-  if (status === 401) return "You are not authorized to view ledger data.";
-  if (status >= 500) return "Ledger service is temporarily unavailable. Please try again.";
+  if (status === 401) return "toast.error.unauthorized";
+  if (status >= 500) return "toast.error.service_unavailable";
   return fallback;
 };
 
-export const resolveLedgerMalformedJsonToastMessage = () =>
-  "Ledger response was not valid JSON. Please refresh and try again.";
+export const resolveLedgerMalformedJsonToastKey = () =>
+  "toast.error.malformed_json";
 
 export const parseLedgerInvoicesResponse = (payload: unknown) => {
   const payloadObj = asRecord(payload);

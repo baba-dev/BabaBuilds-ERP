@@ -24,8 +24,8 @@ import { ColumnVisibilityToggle, DataTable, DataTablePagination, DataTableToolba
 import {
   DEFAULT_LEDGER_META,
   parseLedgerInvoicesResponse,
-  resolveLedgerErrorToastMessage,
-  resolveLedgerMalformedJsonToastMessage,
+  resolveLedgerErrorToastKey,
+  resolveLedgerMalformedJsonToastKey,
 } from "./fetch-invoices-response";
 
 export default function AuditDashboard() {
@@ -102,7 +102,7 @@ export default function AuditDashboard() {
         sessionStorage.removeItem('erp_ai_payload');
       } catch(e) { 
         console.error("Failed to parse AI payload"); 
-        toast.warning("AI auto-fill failed. Please fill the form manually.");
+        toast.warning(t("toast.warning.ai_autofill_failed"));
       }
     }
   }, [invoices]);
@@ -115,7 +115,7 @@ export default function AuditDashboard() {
       try {
         payload = await res.json();
       } catch {
-        toast.error(resolveLedgerMalformedJsonToastMessage());
+        toast.error(t(resolveLedgerMalformedJsonToastKey()));
         setInvoices([]);
         setKpis(DEFAULT_LEDGER_META.kpis);
         setTotalPages(DEFAULT_LEDGER_META.totalPages);
@@ -123,7 +123,7 @@ export default function AuditDashboard() {
       }
 
       if (!res.ok) {
-        toast.error(resolveLedgerErrorToastMessage(res.status, payload));
+        toast.error(t(resolveLedgerErrorToastKey(res.status, payload)));
         setInvoices([]);
         setKpis(DEFAULT_LEDGER_META.kpis);
         setTotalPages(DEFAULT_LEDGER_META.totalPages);
@@ -132,7 +132,7 @@ export default function AuditDashboard() {
 
       const parsed = parseLedgerInvoicesResponse(payload);
       if (!parsed) {
-        toast.error("Ledger response payload was malformed.");
+        toast.error(t("toast.error.payload_malformed"));
         setInvoices([]);
         setKpis(DEFAULT_LEDGER_META.kpis);
         setTotalPages(DEFAULT_LEDGER_META.totalPages);
@@ -146,7 +146,7 @@ export default function AuditDashboard() {
 
     } catch (error) {
       console.error("Failed to load ledger");
-      toast.error("Failed to load ledger data.");
+      toast.error(t("toast.error.load_data"));
       setInvoices([]); 
       setKpis(DEFAULT_LEDGER_META.kpis);
       setTotalPages(DEFAULT_LEDGER_META.totalPages);
@@ -175,15 +175,15 @@ export default function AuditDashboard() {
 
       if (res.ok) {
         setPayModalOpen(false);
-        toast.success("Payment logged successfully.");
+        toast.success(t("toast.success.payment_logged"));
         fetchInvoices(currentPage); // Refresh the current page
       } else {
         const errorData = await res.json();
-        toast.error(errorData.error || "Failed to log payment.");
+        toast.error(errorData.error || t("toast.error.log_payment"));
       }
     } catch (error) {
       console.error("Payment logging failed");
-      toast.error("A network error occurred.");
+      toast.error(t("toast.error.network"));
     } finally {
       setIsSubmitting(false);
     }
@@ -191,18 +191,18 @@ export default function AuditDashboard() {
 
   const handleResendEmail = async (invoice: any) => {
     setResendingId(invoice.id);
-    const toastId = toast.loading(`Sending invoice ${invoice.invoiceNumber}...`);
+    const toastId = toast.loading(t("toast.loading.send_invoice", { invoiceNumber: invoice.invoiceNumber }));
     try {
       const res = await fetch(`/api/invoices/${invoice.id}/resend`, { method: 'POST' });
       const data = await res.json();
       
       if (res.ok) {
-        toast.success("Email sent successfully!", { id: toastId });
+        toast.success(t("toast.success.email_sent"), { id: toastId });
       } else {
-        toast.error(data.error || "Failed to send email.", { id: toastId });
+        toast.error(data.error || t("toast.error.send_email"), { id: toastId });
       }
     } catch (error) {
-      toast.error("A network error occurred.", { id: toastId });
+      toast.error(t("toast.error.network"), { id: toastId });
     } finally {
       setResendingId(null);
     }
@@ -216,14 +216,14 @@ export default function AuditDashboard() {
 
   const confirmDeleteInvoice = async () => {
     if (!invoiceToDelete) return;
-    const toastId = toast.loading("Deleting invoice...");
+    const toastId = toast.loading(t("toast.loading.delete_invoice"));
     try {
       const res = await fetch(`/api/invoices/${invoiceToDelete}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error("Failed to delete");
-      toast.success("Invoice voided and deleted.", { id: toastId });
+      if (!res.ok) throw new Error(t("toast.error.delete_invoice"));
+      toast.success(t("toast.success.invoice_deleted"), { id: toastId });
       fetchInvoices(currentPage); // Refresh the current page
     } catch (err) {
-      toast.error("Failed to delete invoice.", { id: toastId });
+      toast.error(t("toast.error.delete_invoice"), { id: toastId });
     } finally {
       setInvoiceToDelete(null);
     }
@@ -274,15 +274,15 @@ export default function AuditDashboard() {
               <Banknote className="w-3.5 h-3.5 mr-1.5" /> {t("log_pay")}
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={() => handleResendEmail(row)} disabled={resendingId === row.id} className="bg-white dark:bg-zinc-950 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:hover:text-indigo-400 dark:border-zinc-800 transition-colors w-9 px-0 flex justify-center" title="Resend Invoice to Client via Email">
+          <Button variant="outline" size="sm" onClick={() => handleResendEmail(row)} disabled={resendingId === row.id} className="bg-white dark:bg-zinc-950 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:hover:text-indigo-400 dark:border-zinc-800 transition-colors w-9 px-0 flex justify-center" title={t("actions.resend_invoice_title")}>
             <Send className={`w-3.5 h-3.5 ${resendingId === row.id ? "animate-pulse text-indigo-400" : ""}`} />
           </Button>
-          <Button variant="secondary" size="sm" asChild title="Download PDF" className="dark:bg-zinc-800 dark:hover:bg-zinc-700 w-9 px-0 flex justify-center">
+          <Button variant="secondary" size="sm" asChild title={t("actions.download_pdf_title")} className="dark:bg-zinc-800 dark:hover:bg-zinc-700 w-9 px-0 flex justify-center">
             <a href={getBustedUrl(row.pdfPath, row.updatedAt)} target="_blank" rel="noopener noreferrer">
               <Download className="h-3.5 w-3.5 dark:text-zinc-200" />
             </a>
           </Button>
-          <RowActionsMenu row={row} actions={[{ label: "Delete", onClick: (r) => setInvoiceToDelete(r.id), variant: "danger", icon: <Trash2 className="mr-2 h-4 w-4" /> }]} />
+          <RowActionsMenu row={row} actions={[{ label: t("actions.delete"), onClick: (r) => setInvoiceToDelete(r.id), variant: "danger", icon: <Trash2 className="mr-2 h-4 w-4" /> }]} />
         </div>
       ),
     },
