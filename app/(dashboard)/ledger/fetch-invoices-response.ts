@@ -1,3 +1,5 @@
+import { parseApiMoney } from "@/lib/money-client";
+
 type UnknownRecord = Record<string, unknown>;
 
 type LedgerMeta = {
@@ -29,6 +31,8 @@ const asRecord = (value: unknown): UnknownRecord | null => {
 
 const asFiniteNumber = (value: unknown, fallback: number) =>
   typeof value === "number" && Number.isFinite(value) ? value : fallback;
+
+const asMoneyNumber = (value: unknown, fallback: number) => parseApiMoney(value as string | number, fallback);
 
 const formatApiErrorMessage = (error?: string, code?: string) => {
   if (error && code) return `${error} (${code})`;
@@ -69,9 +73,9 @@ export const parseLedgerInvoicesResponse = (payload: unknown) => {
       currentPage: asFiniteNumber(metaObj.currentPage, DEFAULT_LEDGER_META.currentPage),
       totalPages: asFiniteNumber(metaObj.totalPages, DEFAULT_LEDGER_META.totalPages),
       kpis: {
-        totalRevenue: asFiniteNumber(kpisObj?.totalRevenue, DEFAULT_LEDGER_META.kpis.totalRevenue),
-        outstanding: asFiniteNumber(kpisObj?.outstanding, DEFAULT_LEDGER_META.kpis.outstanding),
-        presumptiveIncome: asFiniteNumber(
+        totalRevenue: asMoneyNumber(kpisObj?.totalRevenue, DEFAULT_LEDGER_META.kpis.totalRevenue),
+        outstanding: asMoneyNumber(kpisObj?.outstanding, DEFAULT_LEDGER_META.kpis.outstanding),
+        presumptiveIncome: asMoneyNumber(
           kpisObj?.presumptiveIncome,
           DEFAULT_LEDGER_META.kpis.presumptiveIncome
         ),

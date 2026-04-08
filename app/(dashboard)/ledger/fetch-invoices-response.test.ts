@@ -32,15 +32,16 @@ test("returns a specific message for malformed JSON", () => {
   );
 });
 
-test("applies defensive defaults for malformed KPI and meta fields", () => {
+test("parses serialized KPI money values and applies defaults for malformed meta fields", () => {
   const parsed = parseLedgerInvoicesResponse({
     data: [{ id: "inv-1" }],
     meta: {
       currentPage: "2",
       totalPages: null,
       kpis: {
-        totalRevenue: "100",
-        outstanding: NaN,
+        totalRevenue: "100.25",
+        outstanding: "33.40",
+        presumptiveIncome: "50.12",
       },
     },
   });
@@ -50,7 +51,11 @@ test("applies defensive defaults for malformed KPI and meta fields", () => {
     meta: {
       currentPage: DEFAULT_LEDGER_META.currentPage,
       totalPages: DEFAULT_LEDGER_META.totalPages,
-      kpis: DEFAULT_LEDGER_META.kpis,
+      kpis: {
+        totalRevenue: 100.25,
+        outstanding: 33.4,
+        presumptiveIncome: 50.12,
+      },
     },
   });
 });
