@@ -26,6 +26,10 @@ function getObservabilityStore() {
 }
 
 export function validateAuthEnvOrThrow() {
+  if (process.env.NEXT_PHASE === "phase-production-build") {
+    return;
+  }
+
   const missing = REQUIRED_AUTH_ENV_VARS.filter((envName) => {
     const value = process.env[envName];
     return !value || value.trim().length === 0;

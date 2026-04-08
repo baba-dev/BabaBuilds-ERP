@@ -137,7 +137,10 @@ model Workspace {
   retainers            Retainer[]
   tasks                Task[]
   invoiceIdempotencies InvoiceIdempotency[]
+  taxPreference        WorkspaceTaxPreference?
+  workspaceTaxOverrides WorkspaceTaxOverride[]
   taxRateOverrides     TaxRateOverride[]
+  taxRateOverrideAuditLogs TaxRateOverrideAuditLog[]
   taxDecisionAuditLogs TaxDecisionAuditLog[]
 }
 
@@ -559,13 +562,13 @@ model TaxRateOverride {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  auditLogs TaxDecisionAuditLog[]
+  auditLogs TaxRateOverrideAuditLog[]
 
   @@index([workspaceId, scopeType, isActive])
   @@index([workspaceId, effectiveFrom])
 }
 
-model TaxDecisionAuditLog {
+model TaxRateOverrideAuditLog {
   id          String    @id @default(cuid())
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)

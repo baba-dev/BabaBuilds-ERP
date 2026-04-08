@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { serializeMoney, toDecimal } from '@/lib/money';
-import { COUNTRY_DEFAULT_TAX_RATES } from '@/lib/invoice/tax-resolver';
+import { COUNTRY_DEFAULT_TAX_RATES } from '@/lib/tax/rules';
 
 export type TaxDisclaimerKey = 'AUTO_RULE' | 'MANUAL_OVERRIDE' | 'PROVIDER_RATE' | 'FALLBACK_RULE';
 

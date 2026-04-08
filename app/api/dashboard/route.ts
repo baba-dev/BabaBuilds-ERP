@@ -149,6 +149,7 @@ export async function GET(request: Request) {
     });
 
     const invoicesByClient = allRelevantInvoices.reduce<Record<string, typeof allRelevantInvoices>>((acc, inv) => {
+      if (!inv.clientId) return acc;
       if (!acc[inv.clientId]) acc[inv.clientId] = [];
       acc[inv.clientId].push(inv);
       return acc;
