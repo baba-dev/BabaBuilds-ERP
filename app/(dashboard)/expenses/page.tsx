@@ -35,6 +35,16 @@ export default function ExpenseTracker() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [summary, setSummary] = useState({
+    totalRevenue: 0,
+    totalExpenses: 0,
+    presumptiveExpenses: 0,
+    actualProfit: 0,
+    taxFreeAlpha: 0,
+    burnPercentage: 0,
+  });
+  const [isSummaryLoading, setIsSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
 
   // Form State
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -91,24 +101,16 @@ export default function ExpenseTracker() {
       } else if (!invData.error && Array.isArray(invData.data)) {
          setTotalRevenue(calculateRevenueTotal(invData.data));
       }
-    );
-
-    if (!expensesResult.ok) {
-      const message = `${expensesResult.error.error} (${expensesResult.error.code})`;
-      setFetchError(message);
+    } catch (err) {
+      console.error("Failed to load expenses", err);
+      setFetchError(t("fetch_error"));
       setExpenses([]);
       setTotalPages(1);
       setCurrentPage(1);
-      toast.error(message);
+      toast.error(t("fetch_error"));
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    const normalizedExpenses = expensesResult.data.data.map((exp: any) => ({ ...exp, amount: toSafeNumber(exp.amount) }));
-    setExpenses(normalizedExpenses);
-    setTotalPages(expensesResult.data.meta.totalPages);
-    setCurrentPage(expensesResult.data.meta.currentPage);
-    setIsLoading(false);
   };
 
   const fetchSummary = async () => {
@@ -246,7 +248,8 @@ export default function ExpenseTracker() {
       setVendor(""); setAmount(""); setDescription(""); setCategory(""); setReceiptFile(null);
       const fileInput = document.getElementById('receipt') as HTMLInputElement;
       if (fileInput) fileInput.value = "";
-      fetchData(currentPage); 
+      fetchExpenses(currentPage);
+      fetchSummary();
       toast.success("Expense logged successfully!");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to log expense");

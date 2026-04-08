@@ -68,8 +68,6 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const invoiceGrandTotal = Number(existingInvoice.grandTotal ?? existingInvoice.totalAmount);
     const newStatus = determineInvoicePaymentStatus(paymentAmount, invoiceGrandTotal);
 
-    const newStatus = determineInvoicePaymentStatus(paymentAmount, invoiceGrandTotal);
-
     const updatedInvoice = await prisma.invoice.update({
       where: { id: invoiceId },
       data: {

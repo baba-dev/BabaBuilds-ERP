@@ -12,6 +12,9 @@ const getWorkspaceId = (session: unknown) => {
   return typeof workspaceId === "string" ? workspaceId : null;
 };
 
+const apiError = (status: number, error: string, code: string) =>
+  NextResponse.json({ success: false, error: { error, code } }, { status });
+
 // UPDATE EXPENSE
 export async function PATCH(
   request: Request,
