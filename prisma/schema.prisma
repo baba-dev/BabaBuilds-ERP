@@ -13,6 +13,27 @@ enum InvoiceStatus {
   PAID
 }
 
+enum WorkspaceTaxMode {
+  AUTO
+  AUTO_WITH_OVERRIDE
+  MANUAL
+}
+
+enum TaxOverrideScopeType {
+  GLOBAL
+  COUNTRY
+  REGION
+  SERVICE
+  CUSTOMER
+}
+
+enum TaxResolutionSource {
+  MANUAL_OVERRIDE
+  WORKSPACE_RULE
+  PROVIDER
+  FALLBACK
+}
+
 // ==========================================
 // 1. AUTHENTICATION (NextAuth Standard)
 // ==========================================
@@ -245,14 +266,64 @@ model Invoice {
   amountReceived Float?
   dateReceived   DateTime?
 
-  clientId           String?
-  client             Client?              @relation(fields: [clientId], references: [id])
-  idempotencyRecords InvoiceIdempotency[]
+  clientId             String?
+  client               Client?               @relation(fields: [clientId], references: [id])
+  idempotencyRecords   InvoiceIdempotency[]
+  taxDecisionAuditLogs TaxDecisionAuditLog[]
 
   // Security: Two different workspaces can use invoice number "001"
   @@unique([invoiceNumber, workspaceId])
   @@index([financialYear])
   @@index([workspaceId])
+}
+
+model WorkspaceTaxPreference {
+  id                 String           @id @default(cuid())
+  workspaceId        String           @unique
+  workspace          Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  mode               WorkspaceTaxMode @default(AUTO)
+  defaultCountryCode String?
+  provider           String?
+  updatedBy          String
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+}
+
+model WorkspaceTaxOverride {
+  id            String               @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  scopeType     TaxOverrideScopeType
+  scopeKey      String
+  ratePercent   Float
+  reason        String?
+  effectiveFrom DateTime?
+  effectiveTo   DateTime?
+  priority      Int                  @default(0)
+  isActive      Boolean              @default(true)
+  createdBy     String
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@index([workspaceId, isActive, effectiveFrom, effectiveTo])
+  @@index([workspaceId, scopeType, scopeKey, priority])
+}
+
+model TaxDecisionAuditLog {
+  id                  String              @id @default(cuid())
+  workspaceId         String
+  workspace           Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invoiceId           String?
+  invoice             Invoice?            @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  resolvedRatePercent Float
+  resolutionSource    TaxResolutionSource
+  basisJson           Json
+  inputHash           String
+  createdBy           String
+  createdAt           DateTime            @default(now())
+
+  @@index([workspaceId])
+  @@index([invoiceId])
 }
 
 model InvoiceIdempotency {
