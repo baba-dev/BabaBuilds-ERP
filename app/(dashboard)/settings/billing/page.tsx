@@ -2,7 +2,20 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import BillingSettingsClient from "./BillingSettingsClient";
+import { 
+  Zap, 
+  CreditCard as CreditCardIcon, 
+  Download, 
+  AlertCircle, 
+  Receipt,
+  Plus,
+  ShieldCheck
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { ProUpgradeCard } from "@/components/UpgradeButton"; // Imported our new interactive widget
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export default async function BillingSettingsPage() {
   const session = await getServerSession(authOptions);
@@ -44,7 +57,7 @@ export default async function BillingSettingsPage() {
         {/* HEADER */}
         <div className="sticky top-0 z-30 -mx-4 px-4 py-6 md:-mx-8 md:px-8 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200/50 dark:border-zinc-800/50 transition-all duration-300 text-center space-y-2 mb-10">
           <div className="mx-auto w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-200 dark:shadow-emerald-900/20 mb-4 transition-transform hover:scale-105">
-            <CreditCard className="w-8 h-8 text-white" />
+            <CreditCardIcon className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
             Billing & Plan
@@ -154,7 +167,7 @@ export default async function BillingSettingsPage() {
                 <div className="flex items-center justify-between p-4 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50 dark:bg-zinc-950/50">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-sm">
-                      <CreditCard className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
+                      <CreditCardIcon className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
                     </div>
                     <div>
                       <p className="font-bold text-zinc-900 dark:text-zinc-100">{workspace.paymentMethodMask}</p>
