@@ -133,7 +133,6 @@ export default function ExpenseTracker() {
       const message = `${expensesResult.error.error} (${expensesResult.error.code})`;
       setFetchError(message);
       setExpenses([]);
-      setTotalRevenue(0);
       setTotalPages(1);
       setCurrentPage(1);
       toast.error(message);
@@ -145,34 +144,6 @@ export default function ExpenseTracker() {
     setExpenses(normalizedExpenses);
     setTotalPages(expensesResult.data.meta.totalPages);
     setCurrentPage(expensesResult.data.meta.currentPage);
-
-    // Fetch all invoices for revenue calculation (as per original logic)
-    const invoicesResult = await guardedFetchJson(
-      "/api/invoices",
-      undefined,
-      parseInvoicesPayload,
-      {
-        networkError: { error: "Failed to load financial data.", code: "INVOICES_NETWORK_ERROR" },
-        invalidJsonError: { error: "Invoices response was not valid JSON.", code: "INVOICES_INVALID_JSON" },
-        invalidShapeError: { error: "Invoices response payload was invalid.", code: "INVOICES_INVALID_SHAPE" },
-        httpErrorFallback: (status) => ({
-          error: status === 401 ? "Unauthorized" : "Failed to fetch invoices",
-          code: status === 401 ? "AUTH_UNAUTHORIZED" : "INVOICES_FETCH_FAILED",
-        }),
-      }
-    );
-
-    if (!invoicesResult.ok) {
-      const message = `${invoicesResult.error.error} (${invoicesResult.error.code})`;
-      setFetchError(message);
-      setTotalRevenue(0);
-      toast.error(message);
-      setIsLoading(false);
-      return;
-    }
-
-    const normalizedRevenue = invoicesResult.data.reduce((sum: number, inv: any) => sum + toSafeNumber(inv.totalAmount), 0);
-    setTotalRevenue(normalizedRevenue);
     setIsLoading(false);
   };
 
@@ -311,7 +282,7 @@ export default function ExpenseTracker() {
       setVendor(""); setAmount(""); setDescription(""); setCategory(""); setReceiptFile(null);
       const fileInput = document.getElementById('receipt') as HTMLInputElement;
       if (fileInput) fileInput.value = "";
-      fetchData(currentPage); 
+      fetchExpenses(currentPage); 
       toast.success(t("toast.success.expense_logged"));
     } catch (err: any) {
       setError(err.message);
@@ -327,7 +298,7 @@ export default function ExpenseTracker() {
       const res = await fetch(`/api/expenses/${expenseToDelete}`, { method: 'DELETE' });
       if (!res.ok) throw new Error(t("toast.error.delete_expense"));
       toast.success(t("toast.success.expense_deleted"), { id: toastId });
-      fetchData(currentPage);
+      fetchExpenses(currentPage);
     } catch (err) {
       toast.error(t("toast.error.delete_expense"), { id: toastId });
     } finally {
