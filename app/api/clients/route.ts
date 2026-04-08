@@ -6,7 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { scanBuffer } from '@/lib/security/clamav';
-import { apiError } from "@/lib/api-error";
+import { CLIENT_LOGO_INVALID_TYPE_ERROR, isAllowedClientLogoExtension } from '@/lib/uploads/client-logo';
 
 export async function GET(request: Request) {
   try {
@@ -92,9 +92,8 @@ export async function POST(request: Request) {
 
     if (file && file.size > 0) {
       const ext = path.extname(file.name).toLowerCase();
-      const allowedExtensions = ['.png', '.jpg', '.jpeg', '.webp']; // Remove .pdf for logos
-      if (!allowedExtensions.includes(ext)) {
-        return apiError(400, "Invalid file type. Only images are allowed.", "INVALID_FILE_TYPE");
+      if (!isAllowedClientLogoExtension(ext)) {
+        return NextResponse.json({ error: CLIENT_LOGO_INVALID_TYPE_ERROR }, { status: 400 });
       }
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
