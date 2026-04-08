@@ -112,7 +112,8 @@ export default function InvoiceGenerator() {
         const { path, data, timestamp } = JSON.parse(aiPayload);
         const isFresh = (Date.now() - timestamp) < 10000;
 
-        if (isFresh && data && path === '/') {
+        const isInvoicePath = path === '/invoice' || path === '/';
+        if (isFresh && data && isInvoicePath) {
           if (data.client) {
             const matchedClient = clients.find(c => c.name.toLowerCase().includes(data.client.toLowerCase()));
             if (matchedClient) setSelectedClientId(matchedClient.id.toString());
