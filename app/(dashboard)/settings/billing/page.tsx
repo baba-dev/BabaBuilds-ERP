@@ -19,58 +19,36 @@ import { Button } from "@/components/ui/button";
 
 export default async function BillingSettingsPage() {
   const session = await getServerSession(authOptions);
-  
-  if (!session || !(session as any).workspaceId) {
+  const scopedSession = session as (typeof session & {
+    workspaceId?: string;
+    locale?: string;
+    baseCurrency?: string;
+    user?: { currencyFormat?: string };
+  }) | null;
+
+  if (!scopedSession?.workspaceId) {
     redirect("/");
   }
 
-  const workspaceId = (session as any).workspaceId;
-  const locale = (session as any).locale || "en-IN";
-  const currency = (session?.user as any)?.currencyFormat || (session as any).baseCurrency || "INR";
+  const workspaceId = scopedSession.workspaceId;
+  const locale = scopedSession.locale || "en-IN";
+  const currency =
+    scopedSession.user?.currencyFormat ||
+    scopedSession.baseCurrency ||
+    "INR";
 
-  // 1. Fetch Workspace Billing State & Usage
   const workspace = await prisma.workspace.findUnique({
     where: { id: workspaceId },
     select: {
-      planTier: true,
-      planInterval: true, // Fetching the new schema field
-      paymentMethodMask: true, // Fetching saved card info
+      planInterval: true,
       subscriptionStatus: true,
       subscriptionEndsAt: true,
-      _count: { select: { clients: true } }
-    }
+      billingProviderId: true,
+      _count: { select: { clients: true } },
+    },
   });
 
-  if (!workspace) redirect("/");
-
-  const isPro = workspace.subscriptionStatus === "PRO";
-  
-  const clientCount = workspace._count.clients;
-  const clientLimit = 3;
-  const usagePercentage = Math.min((clientCount / clientLimit) * 100, 100);
-
-  const formatMoney = (amount: number) => {
-    return new Intl.NumberFormat(locale, { 
-      style: 'currency', 
-      currency: currency, 
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
-
-  // Logic to determine what price/interval text to show active Pro users
-  let activePrice = 0;
-  let intervalText = "Forever";
-  if (isPro) {
-    if (workspace.planInterval === "MONTHLY") { activePrice = 200; intervalText = "Per Month"; }
-    else if (workspace.planInterval === "QUARTERLY") { activePrice = 550; intervalText = "Per Quarter"; }
-    else { activePrice = 2300; intervalText = "Per Year"; } // Default to Yearly if missing
-  }
-
-  // Mocked Billing History 
-  const billingHistory = isPro ? [
-    { id: "inv_1", date: "Oct 24, 2024", amount: formatMoney(activePrice), status: "Paid", plan: `Pro Agency - ${workspace.planInterval || "YEARLY"}` }
-  ] : [];
+  if (!workspace) redirect("/dashboard");
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8 transition-colors duration-300">

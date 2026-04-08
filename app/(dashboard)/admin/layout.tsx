@@ -11,7 +11,7 @@ export default async function AdminLayout({
 
   // STRICT LOCKOUT: Case-insensitive check
   if (session?.user?.email?.toLowerCase() !== "admin@bababuilds.com") {
-    redirect("/"); // Instantly bounce unauthorized users
+    redirect("/dashboard"); // Instantly bounce unauthorized users
   }
 
   return (
