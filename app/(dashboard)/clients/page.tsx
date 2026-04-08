@@ -26,37 +26,11 @@ import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
 import { getBustedUrl } from "@/lib/cache-buster";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
-import { guardedFetchJson } from "@/lib/fetch-parse-guard";
-
-type ClientsPagePayload = {
-  data: any[];
-  meta: {
-    currentPage: number;
-    totalPages: number;
-  };
-};
-
-const parseClientsPagePayload = (payload: unknown): ClientsPagePayload | null => {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
-  const root = payload as Record<string, unknown>;
-  if (!Array.isArray(root.data)) return null;
-  if (!root.meta || typeof root.meta !== "object" || Array.isArray(root.meta)) return null;
-
-  const meta = root.meta as Record<string, unknown>;
-  if (typeof meta.currentPage !== "number" || typeof meta.totalPages !== "number") return null;
-
-  return {
-    data: root.data as any[],
-    meta: {
-      currentPage: meta.currentPage,
-      totalPages: meta.totalPages,
-    },
-  };
-};
+import type { ApiEnvelope, ClientDto } from "@/lib/types/business";
 
 export default function ClientCRM() {
   const t = useTranslations('Clients');
-  const [clients, setClients] = useState<any[]>([]);
+  const [clients, setClients] = useState<ClientDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -113,26 +87,14 @@ export default function ClientCRM() {
 
   const fetchClients = async (page = 1) => {
     setIsLoading(true);
-    setFetchError(null);
-    const result = await guardedFetchJson(
-      `/api/clients?page=${page}&limit=9`,
-      undefined,
-      parseClientsPagePayload,
-      {
-        networkError: { error: "Failed to load clients.", code: "CLIENTS_NETWORK_ERROR" },
-        invalidJsonError: { error: "Clients response was not valid JSON.", code: "CLIENTS_INVALID_JSON" },
-        invalidShapeError: { error: "Clients response payload was invalid.", code: "CLIENTS_INVALID_SHAPE" },
-        httpErrorFallback: (status) => ({
-          error: status === 401 ? "Unauthorized" : "Failed to load clients.",
-          code: status === 401 ? "AUTH_UNAUTHORIZED" : "CLIENTS_FETCH_FAILED",
-        }),
-      }
-    );
-
-    if (!result.ok) {
-      const message = `${result.error.error} (${result.error.code})`;
-      setFetchError(message);
-      toast.error(message);
+    try {
+      const res = await fetch(`/api/clients?page=${page}&limit=9`);
+      const { data, meta } = (await res.json()) as ApiEnvelope<ClientDto[]>;
+      setClients(Array.isArray(data) ? data : []);
+      setTotalPages(meta.totalPages);
+      setCurrentPage(meta.currentPage);
+    } catch (err) {
+      toast.error("Failed to load clients.");
       setClients([]);
       setTotalPages(1);
       setCurrentPage(1);
@@ -177,7 +139,7 @@ export default function ClientCRM() {
     }
   };
 
-  const handleEdit = (client: any) => {
+  const handleEdit = (client: ClientDto) => {
     setIsEditing(true);
     setSelectedClientId(client.id);
     setFormData({
@@ -219,8 +181,8 @@ export default function ClientCRM() {
       } else {
         fetchClients(currentPage);
       }
-    } catch (err: any) {
-      toast.error(err.message, { id: toastId });
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Deletion failed", { id: toastId });
     } finally {
       setClientToDelete(null);
     }

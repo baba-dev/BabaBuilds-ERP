@@ -4,7 +4,13 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import fs from 'fs';
 import path from 'path';
-import { apiError } from "@/lib/api-error";
+import { parseExpenseUpdatePayload } from '@/lib/types/business';
+
+const getWorkspaceId = (session: unknown) => {
+  if (!session || typeof session !== "object") return null;
+  const workspaceId = (session as { workspaceId?: unknown }).workspaceId;
+  return typeof workspaceId === "string" ? workspaceId : null;
+};
 
 // UPDATE EXPENSE
 export async function PATCH(
@@ -13,20 +19,22 @@ export async function PATCH(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
-      return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
+    const workspaceId = getWorkspaceId(session);
+    if (!workspaceId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
     const resolvedParams = await params;
     const expenseId = resolvedParams.id;
 
-    const body = await request.json();
-    const { date, category, vendor, amount, description } = body;
+    const parsedPayload = parseExpenseUpdatePayload(await request.json());
+    if (!parsedPayload) {
+      return NextResponse.json({ error: "Invalid request payload." }, { status: 400 });
+    }
+    const { date, category, vendor, amount, description } = parsedPayload;
 
     // --- 🚨 SECURITY PATCH: Prevent NaN Poisoning & Invalid Dates ---
-    const parsedAmount = Number(amount);
-    if (isNaN(parsedAmount) || parsedAmount < 0) {
-      return apiError(400, "Invalid amount. Must be a positive number.", "INVALID_AMOUNT");
+    if (!Number.isFinite(amount) || amount < 0) {
+      return NextResponse.json({ error: "Invalid amount. Must be a positive number." }, { status: 400 });
     }
 
     const parsedDate = new Date(date);
@@ -43,7 +51,7 @@ export async function PATCH(
         date: parsedDate,
         category,
         vendor,
-        amount: parsedAmount,
+        amount,
         description: description || null,
       }
     });
@@ -66,10 +74,10 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
-      return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
+    const workspaceId = getWorkspaceId(session);
+    if (!workspaceId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
     const resolvedParams = await params;
     const expenseId = resolvedParams.id;
 

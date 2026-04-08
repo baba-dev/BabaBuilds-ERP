@@ -5,113 +5,31 @@ import { authOptions } from "@/lib/auth";
 import fs from 'fs';
 import path from 'path';
 import { INVOICE_STATUS, toInvoiceStatus, type InvoiceStatusValue } from '@/lib/invoice-status';
-import { z } from 'zod';
+import { parseInvoicePaymentPayload } from '@/lib/types/business';
 
-const MAX_PAYMENT_AMOUNT = 1_000_000_000;
-const PAYABLE_STATUSES = new Set<InvoiceStatusValue>([
-  INVOICE_STATUS.PENDING,
-  INVOICE_STATUS.PARTIALLY_PAID,
-  INVOICE_STATUS.PAID,
-]);
-
-const payInvoiceSchema = z.object({
-  amountReceived: z
-    .number()
-    .finite('amountReceived must be finite')
-    .min(0, 'amountReceived must be >= 0')
-    .max(MAX_PAYMENT_AMOUNT, `amountReceived must be <= ${MAX_PAYMENT_AMOUNT}`),
-  dateReceived: z
-    .string()
-    .min(1, 'dateReceived is required')
-    .refine(
-      (value) =>
-        /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})?)?$/.test(value) &&
-        !Number.isNaN(new Date(value).getTime()),
-      'dateReceived must be a valid ISO date string'
-    ),
-  allowOverpayment: z.boolean().optional().default(false),
-});
-
-type PayInvoiceInput = z.infer<typeof payInvoiceSchema>;
-
-type PaymentValidationError = { code: string; message: string; details?: unknown };
-
-export function validatePayInvoicePayload(payload: unknown):
-  | { ok: true; data: PayInvoiceInput }
-  | { ok: false; error: PaymentValidationError } {
-  const parsed = payInvoiceSchema.safeParse(payload);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      error: {
-        code: 'INVALID_PAYMENT_PAYLOAD',
-        message: 'Payment payload validation failed',
-        details: parsed.error.flatten(),
-      },
-    };
-  }
-
-  return { ok: true, data: parsed.data };
-}
-
-export function determineInvoicePaymentStatus(paymentAmount: number, invoiceGrandTotal: number): InvoiceStatusValue {
-  if (paymentAmount > 0 && paymentAmount < invoiceGrandTotal) {
-    return INVOICE_STATUS.PARTIALLY_PAID;
-  }
-  if (paymentAmount === 0) {
-    return INVOICE_STATUS.PENDING;
-  }
-  return INVOICE_STATUS.PAID;
-}
-
-export function validatePaymentBusinessRules(params: {
-  invoiceStatus: unknown;
-  paymentAmount: number;
-  invoiceGrandTotal: number;
-  allowOverpayment?: boolean;
-}): { ok: true } | { ok: false; error: PaymentValidationError } {
-  if (!PAYABLE_STATUSES.has(params.invoiceStatus as InvoiceStatusValue)) {
-    return {
-      ok: false,
-      error: {
-        code: 'INVOICE_STATUS_NOT_PAYABLE',
-        message: `Invoices in status "${String(params.invoiceStatus)}" cannot be paid`,
-      },
-    };
-  }
-
-  if (!params.allowOverpayment && params.paymentAmount > params.invoiceGrandTotal) {
-    return {
-      ok: false,
-      error: {
-        code: 'OVERPAYMENT_NOT_ALLOWED',
-        message: 'Payment amount exceeds invoice total',
-      },
-    };
-  }
-
-  return { ok: true };
-}
+const getWorkspaceId = (session: unknown) => {
+  if (!session || typeof session !== "object") return null;
+  const workspaceId = (session as { workspaceId?: unknown }).workspaceId;
+  return typeof workspaceId === "string" ? workspaceId : null;
+};
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
-      return NextResponse.json(
-        { success: false, error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } },
-        { status: 401 }
-      );
+    const workspaceId = getWorkspaceId(session);
+    if (!workspaceId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
 
     const { id } = await context.params;
-    const invoiceId = id;
-
-    const payloadValidation = validatePayInvoicePayload(await request.json());
-    if (!payloadValidation.ok) {
-      return NextResponse.json({ success: false, error: payloadValidation.error }, { status: 400 });
+    const invoiceId = id; 
+    
+    const parsedPayload = parseInvoicePaymentPayload(await request.json());
+    if (!parsedPayload) {
+      return NextResponse.json({ error: "Invalid request payload." }, { status: 400 });
     }
-    const { amountReceived: paymentAmount, dateReceived, allowOverpayment } = payloadValidation.data;
+    const { amountReceived, dateReceived } = parsedPayload;
+    const paymentAmount = amountReceived;
 
     const existingInvoice = await prisma.invoice.findFirst({
       where: {
@@ -130,15 +48,14 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       );
     }
 
-    const invoiceGrandTotal = Number((existingInvoice as any).grandTotal || existingInvoice.totalAmount);
-    const businessRuleValidation = validatePaymentBusinessRules({
-      invoiceStatus: existingInvoice.status,
-      paymentAmount,
-      invoiceGrandTotal,
-      allowOverpayment,
-    });
-    if (!businessRuleValidation.ok) {
-      return NextResponse.json({ success: false, error: businessRuleValidation.error }, { status: 400 });
+    // 3. SMART STATUS DETERMINATION
+    // Compare the new payment amount against the total bill
+    let newStatus: InvoiceStatusValue = INVOICE_STATUS.PAID;
+    const invoiceGrandTotal = Number(existingInvoice.grandTotal ?? existingInvoice.totalAmount);
+    if (paymentAmount > 0 && paymentAmount < invoiceGrandTotal) {
+      newStatus = INVOICE_STATUS.PARTIALLY_PAID;
+    } else if (paymentAmount === 0) {
+      newStatus = INVOICE_STATUS.PENDING;
     }
 
     const newStatus = determineInvoicePaymentStatus(paymentAmount, invoiceGrandTotal);

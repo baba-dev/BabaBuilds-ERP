@@ -18,59 +18,14 @@ import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { ColumnVisibilityToggle, DataTable, DataTablePagination, DataTableToolbar, RowActionsMenu, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
-import { guardedFetchJson } from "@/lib/fetch-parse-guard";
-
-type ExpensesPagePayload = {
-  data: any[];
-  meta: {
-    currentPage: number;
-    totalPages: number;
-  };
-};
-
-const asRecord = (value: unknown): Record<string, unknown> | null => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  return value as Record<string, unknown>;
-};
-
-const parseExpensesPagePayload = (payload: unknown): ExpensesPagePayload | null => {
-  const root = asRecord(payload);
-  if (!root || !Array.isArray(root.data)) return null;
-  const meta = asRecord(root.meta);
-  if (!meta || typeof meta.currentPage !== "number" || typeof meta.totalPages !== "number") return null;
-
-  return {
-    data: root.data as any[],
-    meta: {
-      currentPage: meta.currentPage,
-      totalPages: meta.totalPages,
-    },
-  };
-};
-
-const parseInvoicesPayload = (payload: unknown): any[] | null => {
-  if (Array.isArray(payload)) return payload;
-  const root = asRecord(payload);
-  if (!root) return null;
-  if (Array.isArray(root.data)) return root.data as any[];
-  return null;
-};
+import type { ApiEnvelope, ExpenseDto, InvoiceDto } from "@/lib/types/business";
 
 export default function ExpenseTracker() {
   const t = useTranslations('Expenses');
   const { fCurrency, currency, locale } = useFormat();
   const currencySymbol = getCurrencySymbol(currency, locale);
-  const [expenses, setExpenses] = useState<any[]>([]);
-  const [summary, setSummary] = useState({
-    totalRevenue: 0,
-    totalExpenses: 0,
-    presumptiveExpenses: 0,
-    actualProfit: 0,
-    taxFreeAlpha: 0,
-    burnPercentage: 0,
-  });
-  const [isSummaryLoading, setIsSummaryLoading] = useState(true);
-  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [expenses, setExpenses] = useState<ExpenseDto[]>([]);
+  const [totalRevenue, setTotalRevenue] = useState(0); // This stays to power the KPIs
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +46,7 @@ export default function ExpenseTracker() {
 
   // Edit & Delete State
   const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
-  const [expenseToEdit, setExpenseToEdit] = useState<any | null>(null);
+  const [expenseToEdit, setExpenseToEdit] = useState<ExpenseDto | null>(null);
   const [editForm, setEditForm] = useState({ date: "", category: "", vendor: "", amount: "", description: "" });
   const [isEditing, setIsEditing] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(["date", "vendor", "category", "amount", "actions"]);
@@ -113,19 +68,28 @@ export default function ExpenseTracker() {
   const fetchExpenses = async (page = 1) => {
     setIsLoading(true);
     setFetchError(null);
-    // Fetch paginated expenses
-    const expensesResult = await guardedFetchJson(
-      `/api/expenses?page=${page}&limit=15`,
-      undefined,
-      parseExpensesPagePayload,
-      {
-        networkError: { error: "Failed to load financial data.", code: "EXPENSES_NETWORK_ERROR" },
-        invalidJsonError: { error: "Expenses response was not valid JSON.", code: "EXPENSES_INVALID_JSON" },
-        invalidShapeError: { error: "Expenses response payload was invalid.", code: "EXPENSES_INVALID_SHAPE" },
-        httpErrorFallback: (status) => ({
-          error: status === 401 ? "Unauthorized" : "Failed to fetch expenses",
-          code: status === 401 ? "AUTH_UNAUTHORIZED" : "EXPENSES_FETCH_FAILED",
-        }),
+    try {
+      // Fetch paginated expenses
+      const expRes = await fetch(`/api/expenses?page=${page}&limit=15`);
+      const { data, meta } = (await expRes.json()) as ApiEnvelope<ExpenseDto[]>;
+      const normalizedExpenses = Array.isArray(data)
+        ? data.map((exp) => ({ ...exp, amount: toSafeNumber(exp.amount) }))
+        : [];
+      setExpenses(normalizedExpenses);
+      setTotalPages(meta.totalPages);
+      setCurrentPage(meta.currentPage);
+
+      // Fetch all invoices for revenue calculation (as per original logic)
+      const invRes = await fetch('/api/invoices');
+      const invData = (await invRes.json()) as { data?: InvoiceDto[]; error?: string } | InvoiceDto[];
+      // NOTE: This is fetching all invoices. To make KPIs truly scalable, this would also need a summary API.
+      if (Array.isArray(invData)) {
+         const normalizedRevenue = invData.reduce((sum: number, inv: InvoiceDto) => sum + toSafeNumber(inv.totalAmount), 0);
+         setTotalRevenue(normalizedRevenue);
+      } else if (!invData.error && Array.isArray(invData.data)) {
+         const revenueSource = invData.data;
+         const normalizedRevenue = revenueSource.reduce((sum: number, inv: InvoiceDto) => sum + toSafeNumber(inv.totalAmount), 0);
+         setTotalRevenue(normalizedRevenue);
       }
     );
 
@@ -176,7 +140,7 @@ export default function ExpenseTracker() {
     `${exp.vendor} ${exp.category} ${exp.description ?? ""}`.toLowerCase().includes(tableState.search.toLowerCase()),
   );
 
-  const expenseColumns: DataTableColumnDef<any>[] = [
+  const expenseColumns: DataTableColumnDef<ExpenseDto>[] = [
     {
       id: "date",
       header: t("col_date"),
@@ -256,7 +220,7 @@ export default function ExpenseTracker() {
       if (data.date) setDate(data.date); 
       if (data.category) setCategory(data.category);
       if (data.description) setDescription(data.description);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Scan error:", err);
     } finally {
       setIsScanning(false);
@@ -282,10 +246,10 @@ export default function ExpenseTracker() {
       setVendor(""); setAmount(""); setDescription(""); setCategory(""); setReceiptFile(null);
       const fileInput = document.getElementById('receipt') as HTMLInputElement;
       if (fileInput) fileInput.value = "";
-      fetchExpenses(currentPage); 
-      toast.success(t("toast.success.expense_logged"));
-    } catch (err: any) {
-      setError(err.message);
+      fetchData(currentPage); 
+      toast.success("Expense logged successfully!");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to log expense");
     } finally {
       setIsSubmitting(false);
     }
@@ -306,7 +270,7 @@ export default function ExpenseTracker() {
     }
   };
 
-  const openEditModal = (exp: any) => {
+  const openEditModal = (exp: ExpenseDto) => {
     setExpenseToEdit(exp);
     setEditForm({
       date: format(new Date(exp.date), 'yyyy-MM-dd'),

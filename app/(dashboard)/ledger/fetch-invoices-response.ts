@@ -1,4 +1,4 @@
-import { parseApiMoney } from "@/lib/money-client";
+import type { ApiEnvelope, InvoiceDto } from "@/lib/types/business";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -58,7 +58,7 @@ export const resolveLedgerErrorToastKey = (
 export const resolveLedgerMalformedJsonToastKey = () =>
   "toast.error.malformed_json";
 
-export const parseLedgerInvoicesResponse = (payload: unknown) => {
+export const parseLedgerInvoicesResponse = (payload: unknown): ApiEnvelope<InvoiceDto[], LedgerMeta> | null => {
   const payloadObj = asRecord(payload);
   if (!payloadObj) return null;
 
