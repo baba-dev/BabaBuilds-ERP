@@ -13,6 +13,21 @@ const getWorkspaceId = (session: unknown) => {
   return typeof workspaceId === "string" ? workspaceId : null;
 };
 
+const determineInvoicePaymentStatus = (
+  paymentAmount: number,
+  invoiceGrandTotal: number
+): InvoiceStatusValue => {
+  if (paymentAmount > 0 && paymentAmount < invoiceGrandTotal) {
+    return INVOICE_STATUS.PARTIALLY_PAID;
+  }
+
+  if (paymentAmount === 0) {
+    return INVOICE_STATUS.PENDING;
+  }
+
+  return INVOICE_STATUS.PAID;
+};
+
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
@@ -50,13 +65,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     // 3. SMART STATUS DETERMINATION
     // Compare the new payment amount against the total bill
-    let newStatus: InvoiceStatusValue = INVOICE_STATUS.PAID;
     const invoiceGrandTotal = Number(existingInvoice.grandTotal ?? existingInvoice.totalAmount);
-    if (paymentAmount > 0 && paymentAmount < invoiceGrandTotal) {
-      newStatus = INVOICE_STATUS.PARTIALLY_PAID;
-    } else if (paymentAmount === 0) {
-      newStatus = INVOICE_STATUS.PENDING;
-    }
+    const newStatus = determineInvoicePaymentStatus(paymentAmount, invoiceGrandTotal);
 
     const newStatus = determineInvoicePaymentStatus(paymentAmount, invoiceGrandTotal);
 

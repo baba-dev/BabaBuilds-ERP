@@ -57,6 +57,9 @@ export default function ExpenseTracker() {
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
+  const calculateRevenueTotal = (invoices: InvoiceDto[]) =>
+    invoices.reduce((sum: number, inv: InvoiceDto) => sum + toSafeNumber(inv.totalAmount), 0);
+
   useEffect(() => {
     fetchExpenses(currentPage);
   }, [currentPage]);
@@ -84,12 +87,9 @@ export default function ExpenseTracker() {
       const invData = (await invRes.json()) as { data?: InvoiceDto[]; error?: string } | InvoiceDto[];
       // NOTE: This is fetching all invoices. To make KPIs truly scalable, this would also need a summary API.
       if (Array.isArray(invData)) {
-         const normalizedRevenue = invData.reduce((sum: number, inv: InvoiceDto) => sum + toSafeNumber(inv.totalAmount), 0);
-         setTotalRevenue(normalizedRevenue);
+         setTotalRevenue(calculateRevenueTotal(invData));
       } else if (!invData.error && Array.isArray(invData.data)) {
-         const revenueSource = invData.data;
-         const normalizedRevenue = revenueSource.reduce((sum: number, inv: InvoiceDto) => sum + toSafeNumber(inv.totalAmount), 0);
-         setTotalRevenue(normalizedRevenue);
+         setTotalRevenue(calculateRevenueTotal(invData.data));
       }
     );
 
