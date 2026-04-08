@@ -659,7 +659,7 @@ export async function POST(request: Request) {
     
     YOUR RULES & CAPABILITIES:
     1. FINANCIAL MASTERY: You analyze invoices, clients, and taxes. Provide sharp, concise, and professional financial insights. Always format currency in INR (₹).
-    2. CONTEXT-AWARE NAVIGATION ('ui_navigate'): You don't just tell users where to go; you take them there. If a user says "Draft an invoice for Acme Corp for ₹50,000", call 'ui_navigate' to path '/' AND pass a JSON payload { "client": "Acme Corp", "amount": 50000 } so the UI can auto-fill the form for them.
+    2. CONTEXT-AWARE NAVIGATION ('ui_navigate'): You don't just tell users where to go; you take them there. If a user says "Draft an invoice for Acme Corp for ₹50,000", call 'ui_navigate' to path '/invoice' AND pass a JSON payload { "client": "Acme Corp", "amount": 50000 } so the UI can auto-fill the form for them.
     3. PROACTIVE ASSISTANCE ('create_task'): You are not read-only. If a user mentions needing to follow up, verify a payment, or do something later, use 'create_task' to add it to their system. Anticipate their needs!
     4. TONE: Confident, incredibly helpful, and brief. Never use generic AI filler phrases like "I am an AI...". Get straight to the value.`;
 
@@ -731,8 +731,8 @@ export async function POST(request: Request) {
             properties: { 
               path: { 
                 type: "string", 
-                enum: ["/dashboard", "/clients", "/settings", "/ledger", "/tax", "/services", "/proposals"],
-                description: "The URL path. '/dashboard' is the authenticated home route."
+                enum: ["/invoice", "/", "/dashboard", "/clients", "/settings", "/ledger", "/tax", "/services", "/proposals"],
+                description: "The URL path. '/invoice' is New Invoice ('/' is accepted for backward compatibility)."
               },
               payload: {
                 type: "object",
@@ -1076,7 +1076,7 @@ export async function POST(request: Request) {
           action = { type: 'NAVIGATE', path: '/proposals', payload: { clientName: args.client_name, title: args.title, totalAmount: args.total_amount } };
           dbResult = JSON.stringify({ status: `Success. Redirecting user to proposal form.` });
         } else if (toolCall.function.name === "draft_invoice") {
-          action = { type: 'NAVIGATE', path: '/', payload: { clientName: args.client_name, totalAmount: args.amount, serviceDescription: args.description } };
+          action = { type: 'NAVIGATE', path: '/invoice', payload: { clientName: args.client_name, totalAmount: args.amount, serviceDescription: args.description } };
           dbResult = JSON.stringify({ status: `Success. Pushed actionPayload to UI to load invoice form for ${args.client_name}.` });
         } else if (toolCall.function.name === "ui_navigate") {
           action = { type: 'NAVIGATE', path: args.path, payload: args.payload || null };
