@@ -11,7 +11,7 @@ CREATE TABLE "User" (
     "timeZone" TEXT NOT NULL DEFAULT 'Asia/Kolkata',
     "locale" TEXT NOT NULL DEFAULT 'en-IN',
     "currencyFormat" TEXT NOT NULL DEFAULT 'INR',
-    "defaultLandingPage" TEXT NOT NULL DEFAULT '/',
+    "defaultLandingPage" TEXT NOT NULL DEFAULT '/dashboard',
     "transactionalAlerts" BOOLEAN NOT NULL DEFAULT true,
     "marketingEmails" BOOLEAN NOT NULL DEFAULT false,
     "weeklyReport" BOOLEAN NOT NULL DEFAULT true

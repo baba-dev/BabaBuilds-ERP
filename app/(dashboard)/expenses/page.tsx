@@ -18,12 +18,13 @@ import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { ColumnVisibilityToggle, DataTable, DataTablePagination, DataTableToolbar, RowActionsMenu, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
+import type { ApiEnvelope, ExpenseDto, InvoiceDto } from "@/lib/types/business";
 
 export default function ExpenseTracker() {
   const t = useTranslations('Expenses');
   const { fCurrency, currency, locale } = useFormat();
   const currencySymbol = getCurrencySymbol(currency, locale);
-  const [expenses, setExpenses] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<ExpenseDto[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0); // This stays to power the KPIs
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
@@ -34,6 +35,16 @@ export default function ExpenseTracker() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [summary, setSummary] = useState({
+    totalRevenue: 0,
+    totalExpenses: 0,
+    presumptiveExpenses: 0,
+    actualProfit: 0,
+    taxFreeAlpha: 0,
+    burnPercentage: 0,
+  });
+  const [isSummaryLoading, setIsSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
 
   // Form State
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -45,7 +56,7 @@ export default function ExpenseTracker() {
 
   // Edit & Delete State
   const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
-  const [expenseToEdit, setExpenseToEdit] = useState<any | null>(null);
+  const [expenseToEdit, setExpenseToEdit] = useState<ExpenseDto | null>(null);
   const [editForm, setEditForm] = useState({ date: "", category: "", vendor: "", amount: "", description: "" });
   const [isEditing, setIsEditing] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(["date", "vendor", "category", "amount", "actions"]);
@@ -56,20 +67,26 @@ export default function ExpenseTracker() {
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
+  const calculateRevenueTotal = (invoices: InvoiceDto[]) =>
+    invoices.reduce((sum: number, inv: InvoiceDto) => sum + toSafeNumber(inv.totalAmount), 0);
+
   useEffect(() => {
-    fetchData(currentPage);
+    fetchExpenses(currentPage);
   }, [currentPage]);
 
-  // Fetches paginated expenses but still gets all invoices for the KPI cards
-  const fetchData = async (page = 1) => {
+  useEffect(() => {
+    fetchSummary();
+  }, []);
+
+  const fetchExpenses = async (page = 1) => {
     setIsLoading(true);
     setFetchError(null);
     try {
       // Fetch paginated expenses
       const expRes = await fetch(`/api/expenses?page=${page}&limit=15`);
-      const { data, meta } = await expRes.json();
+      const { data, meta } = (await expRes.json()) as ApiEnvelope<ExpenseDto[]>;
       const normalizedExpenses = Array.isArray(data)
-        ? data.map((exp: any) => ({ ...exp, amount: toSafeNumber(exp.amount) }))
+        ? data.map((exp) => ({ ...exp, amount: toSafeNumber(exp.amount) }))
         : [];
       setExpenses(normalizedExpenses);
       setTotalPages(meta.totalPages);
@@ -77,33 +94,55 @@ export default function ExpenseTracker() {
 
       // Fetch all invoices for revenue calculation (as per original logic)
       const invRes = await fetch('/api/invoices');
-      const invData = await invRes.json();
+      const invData = (await invRes.json()) as { data?: InvoiceDto[]; error?: string } | InvoiceDto[];
       // NOTE: This is fetching all invoices. To make KPIs truly scalable, this would also need a summary API.
-      if (invData && !invData.error && Array.isArray(invData.data || invData)) {
-         const revenueSource = invData.data || invData;
-         const normalizedRevenue = revenueSource.reduce((sum: number, inv: any) => sum + toSafeNumber(inv.totalAmount), 0);
-         setTotalRevenue(normalizedRevenue);
+      if (Array.isArray(invData)) {
+         setTotalRevenue(calculateRevenueTotal(invData));
+      } else if (!invData.error && Array.isArray(invData.data)) {
+         setTotalRevenue(calculateRevenueTotal(invData.data));
       }
     } catch (err) {
-      console.error("Failed to load financial data");
-      setFetchError("Failed to load financial data.");
-      toast.error("Failed to load financial data.");
+      console.error("Failed to load expenses", err);
+      setFetchError(t("fetch_error"));
+      setExpenses([]);
+      setTotalPages(1);
+      setCurrentPage(1);
+      toast.error(t("fetch_error"));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const totalExpenses = expenses.reduce((sum, exp) => sum + toSafeNumber(exp.amount), 0);
-  const normalizedRevenue = toSafeNumber(totalRevenue);
-  const presumptiveExpenses = normalizedRevenue * 0.5; 
-  const actualProfit = normalizedRevenue - totalExpenses;
-  const taxFreeAlpha = Math.max(0, presumptiveExpenses - totalExpenses);
-  const burnPercentage = normalizedRevenue > 0 && presumptiveExpenses > 0 ? (totalExpenses / presumptiveExpenses) * 100 : 0;
+  const fetchSummary = async () => {
+    setIsSummaryLoading(true);
+    setSummaryError(null);
+    try {
+      const summaryRes = await fetch("/api/finance/summary");
+      if (!summaryRes.ok) throw new Error("Failed to load financial summary.");
+      const payload = await summaryRes.json();
+      const nextSummary = payload?.data ?? {};
+      setSummary({
+        totalRevenue: toSafeNumber(nextSummary.totalRevenue),
+        totalExpenses: toSafeNumber(nextSummary.totalExpenses),
+        presumptiveExpenses: toSafeNumber(nextSummary.presumptiveExpenses),
+        actualProfit: toSafeNumber(nextSummary.actualProfit),
+        taxFreeAlpha: toSafeNumber(nextSummary.taxFreeAlpha),
+        burnPercentage: toSafeNumber(nextSummary.burnPercentage),
+      });
+    } catch (err) {
+      console.error("Failed to load financial summary");
+      setSummaryError("Failed to load financial summary cards.");
+      toast.error("Failed to load financial summary cards.");
+    } finally {
+      setIsSummaryLoading(false);
+    }
+  };
+
   const filteredExpenses = expenses.filter((exp) =>
     `${exp.vendor} ${exp.category} ${exp.description ?? ""}`.toLowerCase().includes(tableState.search.toLowerCase()),
   );
 
-  const expenseColumns: DataTableColumnDef<any>[] = [
+  const expenseColumns: DataTableColumnDef<ExpenseDto>[] = [
     {
       id: "date",
       header: t("col_date"),
@@ -148,7 +187,7 @@ export default function ExpenseTracker() {
       cell: (row) => (
         <div className="flex justify-end gap-1">
           {row.receiptUrl && (
-            <Button variant="ghost" size="sm" className="w-8 px-0 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10" asChild title="View Receipt">
+            <Button variant="ghost" size="sm" className="w-8 px-0 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10" asChild title={t("actions.view_receipt")}>
               <a href={row.receiptUrl} target="_blank" rel="noopener noreferrer">
                 <FileText className="w-4 h-4" />
               </a>
@@ -157,8 +196,8 @@ export default function ExpenseTracker() {
           <RowActionsMenu
             row={row}
             actions={[
-              { label: "Edit", onClick: openEditModal, icon: <Edit className="mr-2 h-4 w-4" /> },
-              { label: "Delete", onClick: (r) => setExpenseToDelete(r.id), variant: "danger", icon: <Trash2 className="mr-2 h-4 w-4" /> },
+              { label: t("actions.edit"), onClick: openEditModal, icon: <Edit className="mr-2 h-4 w-4" /> },
+              { label: t("actions.delete"), onClick: (r) => setExpenseToDelete(r.id), variant: "danger", icon: <Trash2 className="mr-2 h-4 w-4" /> },
             ]}
           />
         </div>
@@ -176,14 +215,14 @@ export default function ExpenseTracker() {
       const formData = new FormData();
       formData.append('receipt', file);
       const res = await fetch('/api/expenses/scan', { method: 'POST', body: formData });
-      if (!res.ok) throw new Error("AI could not read the receipt. Please enter manually.");
+      if (!res.ok) throw new Error(t("toast.error.ai_read_receipt"));
       const data = await res.json();
       if (data.vendor) setVendor(data.vendor);
       if (data.amount) setAmount(data.amount.toString());
       if (data.date) setDate(data.date); 
       if (data.category) setCategory(data.category);
       if (data.description) setDescription(data.description);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Scan error:", err);
     } finally {
       setIsScanning(false);
@@ -204,15 +243,16 @@ export default function ExpenseTracker() {
       if (receiptFile) formData.append('receipt', receiptFile);
 
       const res = await fetch('/api/expenses', { method: 'POST', body: formData });
-      if (!res.ok) throw new Error("Failed to log expense");
+      if (!res.ok) throw new Error(t("toast.error.log_expense"));
 
       setVendor(""); setAmount(""); setDescription(""); setCategory(""); setReceiptFile(null);
       const fileInput = document.getElementById('receipt') as HTMLInputElement;
       if (fileInput) fileInput.value = "";
-      fetchData(currentPage); 
+      fetchExpenses(currentPage);
+      fetchSummary();
       toast.success("Expense logged successfully!");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to log expense");
     } finally {
       setIsSubmitting(false);
     }
@@ -220,20 +260,20 @@ export default function ExpenseTracker() {
 
   const confirmDelete = async () => {
     if (!expenseToDelete) return;
-    const toastId = toast.loading("Deleting expense...");
+    const toastId = toast.loading(t("toast.loading.delete_expense"));
     try {
       const res = await fetch(`/api/expenses/${expenseToDelete}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error("Failed to delete");
-      toast.success("Expense deleted permanently.", { id: toastId });
-      fetchData(currentPage);
+      if (!res.ok) throw new Error(t("toast.error.delete_expense"));
+      toast.success(t("toast.success.expense_deleted"), { id: toastId });
+      fetchExpenses(currentPage);
     } catch (err) {
-      toast.error("Failed to delete expense.", { id: toastId });
+      toast.error(t("toast.error.delete_expense"), { id: toastId });
     } finally {
       setExpenseToDelete(null);
     }
   };
 
-  const openEditModal = (exp: any) => {
+  const openEditModal = (exp: ExpenseDto) => {
     setExpenseToEdit(exp);
     setEditForm({
       date: format(new Date(exp.date), 'yyyy-MM-dd'),
@@ -248,19 +288,20 @@ export default function ExpenseTracker() {
     e.preventDefault();
     if (!expenseToEdit) return;
     setIsEditing(true);
-    const toastId = toast.loading("Updating expense...");
+    const toastId = toast.loading(t("toast.loading.update_expense"));
     try {
       const res = await fetch(`/api/expenses/${expenseToEdit.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm)
       });
-      if (!res.ok) throw new Error("Failed to update");
-      toast.success("Expense updated successfully.", { id: toastId });
+      if (!res.ok) throw new Error(t("toast.error.update_expense"));
+      toast.success(t("toast.success.expense_updated"), { id: toastId });
       setExpenseToEdit(null);
-      fetchData(currentPage);
+      fetchExpenses(currentPage);
+      fetchSummary();
     } catch (err) {
-      toast.error("Failed to update expense.", { id: toastId });
+      toast.error(t("toast.error.update_expense"), { id: toastId });
     } finally {
       setIsEditing(false);
     }
@@ -281,7 +322,7 @@ export default function ExpenseTracker() {
               <Wallet className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-50">{fCurrency(actualProfit)}</div>
+              <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-50">{isSummaryLoading ? "—" : fCurrency(summary.actualProfit)}</div>
               <p className="text-xs text-emerald-600 dark:text-emerald-400/80 mt-1">{t('actual_profit_desc')}</p>
             </CardContent>
           </Card>
@@ -292,13 +333,13 @@ export default function ExpenseTracker() {
               <TrendingDown className="h-4 w-4 text-rose-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{fCurrency(totalExpenses)}</div>
+              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{isSummaryLoading ? "—" : fCurrency(summary.totalExpenses)}</div>
               <div className="mt-4 space-y-2">
                 <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400">
                   <span>{t('presumptive_label')}</span>
-                  <span>{fCurrency(presumptiveExpenses)}</span>
+                  <span>{isSummaryLoading ? "—" : fCurrency(summary.presumptiveExpenses)}</span>
                 </div>
-                <Progress value={Math.min(burnPercentage, 100)} className="h-2 bg-zinc-100 dark:bg-zinc-800 [&>div]:bg-rose-500" />
+                <Progress value={Math.min(summary.burnPercentage, 100)} className="h-2 bg-zinc-100 dark:bg-zinc-800 [&>div]:bg-rose-500" />
               </div>
             </CardContent>
           </Card>
@@ -310,13 +351,23 @@ export default function ExpenseTracker() {
               <ShieldCheck className="h-4 w-4 text-indigo-600 dark:text-indigo-500 relative z-10" />
             </CardHeader>
             <CardContent className="relative z-10">
-              <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-50">{fCurrency(taxFreeAlpha)}</div>
+              <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-50">{isSummaryLoading ? "—" : fCurrency(summary.taxFreeAlpha)}</div>
               <p className="text-xs font-medium text-indigo-700/80 dark:text-indigo-400/80 mt-1 leading-tight">
                 {t('tax_free_alpha_desc')}
               </p>
             </CardContent>
           </Card>
         </div>
+        {summaryError && (
+          <Card className="border-rose-200 bg-rose-50/70 dark:border-rose-900/50 dark:bg-rose-950/20">
+            <CardContent className="py-3 text-sm text-rose-700 dark:text-rose-300 flex items-center justify-between gap-4">
+              <span>{summaryError}</span>
+              <Button size="sm" variant="outline" onClick={fetchSummary}>
+                Retry summary
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Split Layout: Form & Ledger */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -397,7 +448,7 @@ export default function ExpenseTracker() {
                     <Label className="dark:text-zinc-300">{t('amount', { currency })}</Label>
                     <div className="relative">
                       <span className="absolute left-3 top-2.5 text-zinc-500 dark:text-zinc-400 font-medium">{currencySymbol}</span>
-                      <Input type="number" step="0.01" min="1" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} required className="pl-7 bg-white dark:bg-zinc-950 dark:border-zinc-800 font-medium dark:text-zinc-100" />
+                      <Input type="number" step="0.01" min="1" placeholder={t("amount_placeholder")} value={amount} onChange={(e) => setAmount(e.target.value)} required className="pl-7 bg-white dark:bg-zinc-950 dark:border-zinc-800 font-medium dark:text-zinc-100" />
                     </div>
                   </div>
 
@@ -445,10 +496,10 @@ export default function ExpenseTracker() {
                   rowId={(row) => row.id}
                   loading={isLoading}
                   error={fetchError}
-                  onRetry={() => fetchData(currentPage)}
+                  onRetry={() => fetchExpenses(currentPage)}
                   visibleColumnIds={visibleColumns}
                   emptyTitle={t("no_expenses")}
-                  emptyDescription="Capture your first expense to start tracking burn and tax efficiency."
+                  emptyDescription={t("no_expenses_desc")}
                 />
               </CardContent>
               <CardFooter className="p-0">

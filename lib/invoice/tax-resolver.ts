@@ -1,3 +1,4 @@
+import { COUNTRY_DEFAULT_TAX_RATES } from '@/lib/tax/rules';
 export interface ResolveTaxRateInput {
   countryCode?: string | null;
   isTaxExempt: boolean;
@@ -15,23 +16,6 @@ export interface TaxRateResolution {
   candidates?: number[];
 }
 
-export const COUNTRY_DEFAULT_TAX_RATES: Record<string, number> = {
-  IN: 0.18,
-  AE: 0.05,
-  SA: 0.15,
-  GB: 0.2,
-  DE: 0.19,
-  FR: 0.2,
-  ES: 0.21,
-  IT: 0.22,
-  NL: 0.21,
-  IE: 0.23,
-  AU: 0.1,
-  NZ: 0.15,
-  SG: 0.09,
-  ZA: 0.15,
-  CA: 0.05,
-};
 
 export function normalizeTaxRate(raw: unknown): number | null {
   if (raw === null || raw === undefined || raw === '') return null;
