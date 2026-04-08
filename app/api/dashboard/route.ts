@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { INVOICE_STATUS, isOpenInvoiceStatus, isPaidInvoiceStatus } from '@/lib/invoice-status';
-import { decimalToNumber, toDecimal } from '@/lib/money';
+import { serializeMoney, toDecimal } from '@/lib/money';
 
 const normalizeInvoiceStatus = (status: unknown) => String(status).toUpperCase();
 
@@ -28,6 +28,32 @@ const getIntegrationReadiness = (keys: Array<string | null | undefined>): Integr
   }
 
   return { configured: false, status: 'missing' };
+};
+
+const calculateEstimatedTaxDecimal = (taxableIncome: Prisma.Decimal): Prisma.Decimal => {
+  if (taxableIncome.lte(700000)) {
+    return new Prisma.Decimal(0);
+  }
+
+  const slabs: Array<{ floor: number; width: number | null; rate: number }> = [
+    { floor: 300000, width: 300000, rate: 0.05 },
+    { floor: 600000, width: 300000, rate: 0.1 },
+    { floor: 900000, width: 300000, rate: 0.15 },
+    { floor: 1200000, width: 300000, rate: 0.2 },
+    { floor: 1500000, width: null, rate: 0.3 },
+  ];
+
+  return slabs.reduce((tax, slab) => {
+    const floor = new Prisma.Decimal(slab.floor);
+    if (taxableIncome.lte(floor)) return tax;
+
+    const slabWidth = slab.width === null
+      ? taxableIncome.minus(floor)
+      : Prisma.Decimal.min(taxableIncome.minus(floor), new Prisma.Decimal(slab.width));
+
+    if (slabWidth.lte(0)) return tax;
+    return tax.plus(slabWidth.mul(slab.rate));
+  }, new Prisma.Decimal(0));
 };
 
 export async function GET(request: Request) {
@@ -125,19 +151,14 @@ export async function GET(request: Request) {
     const eligible80CDecimal = investments
       .filter(i => i.category.includes('80C'))
       .reduce((sum, i) => sum.plus(toDecimal(i.amount)), new Prisma.Decimal(0));
-    const eligible80C = decimalToNumber(Prisma.Decimal.min(eligible80CDecimal, new Prisma.Decimal(150000)));
-    const taxableIncome = Math.max(0, decimalToNumber(presumptiveIncomeDecimal.minus(eligible80C)));
+    const eligible80CDecimalCapped = Prisma.Decimal.min(eligible80CDecimal, new Prisma.Decimal(150000));
+    const taxableIncomeDecimal = Prisma.Decimal.max(
+      new Prisma.Decimal(0),
+      presumptiveIncomeDecimal.minus(eligible80CDecimalCapped)
+    );
+    const estimatedTaxDecimal = calculateEstimatedTaxDecimal(taxableIncomeDecimal);
 
-    let estimatedTax = 0;
-    if (taxableIncome > 700000) {
-      if (taxableIncome > 300000) estimatedTax += Math.min(taxableIncome - 300000, 300000) * 0.05;
-      if (taxableIncome > 600000) estimatedTax += Math.min(taxableIncome - 600000, 300000) * 0.10;
-      if (taxableIncome > 900000) estimatedTax += Math.min(taxableIncome - 900000, 300000) * 0.15;
-      if (taxableIncome > 1200000) estimatedTax += Math.min(taxableIncome - 1200000, 300000) * 0.20;
-      if (taxableIncome > 1500000) estimatedTax += (taxableIncome - 1500000) * 0.30;
-    }
-
-    let mrrTotal = 0;
+    let mrrTotal = new Prisma.Decimal(0);
     const clientIds = retainers.map(ret => ret.clientId);
 
     const allRelevantInvoices = await prisma.invoice.findMany({
@@ -152,7 +173,7 @@ export async function GET(request: Request) {
     }, {});
 
     const retainerRadar = retainers.map((ret) => {
-      mrrTotal += decimalToNumber(ret.amount);
+      mrrTotal = mrrTotal.plus(toDecimal(ret.amount));
       const recentClientInvoices = (invoicesByClient[ret.clientId as string] || []).slice(0, 3);
 
       let health = "good";
@@ -185,7 +206,7 @@ export async function GET(request: Request) {
       return {
         clientName: ret.client.name,
         serviceName: ret.serviceName,
-        amount: decimalToNumber(ret.amount),
+        amount: serializeMoney(ret.amount),
         health
       };
     });
@@ -193,7 +214,7 @@ export async function GET(request: Request) {
     const healthWeight: Record<string, number> = { "danger": 3, "warning": 2, "good": 1 };
     retainerRadar.sort((a, b) => healthWeight[b.health] - healthWeight[a.health]);
 
-    const monthlyRevenue: Record<string, number> = {};
+    const monthlyRevenue: Record<string, Prisma.Decimal> = {};
     invoices.forEach(inv => {
       const billingMonth = inv.billingMonth ? String(inv.billingMonth).trim() : '';
       const billingMonthToken = billingMonth ? billingMonth.split(' ')[0] : '';
@@ -203,34 +224,34 @@ export async function GET(request: Request) {
         : '';
 
       const month = billingMonthToken || invoiceDateMonth || 'Unknown';
-      monthlyRevenue[month] = (monthlyRevenue[month] || 0) + decimalToNumber(inv.totalAmount);
+      monthlyRevenue[month] = (monthlyRevenue[month] ?? new Prisma.Decimal(0)).plus(toDecimal(inv.totalAmount));
     });
     const revenueChartData = Object.keys(monthlyRevenue).map(month => ({
       name: month.substring(0, 3),
-      revenue: monthlyRevenue[month]
+      revenue: serializeMoney(monthlyRevenue[month])
     }));
 
-    const wealthDistribution: Record<string, number> = {};
+    const wealthDistribution: Record<string, Prisma.Decimal> = {};
     investments.forEach(inv => {
       const cat = inv.category.split(' ')[0];
-      wealthDistribution[cat] = (wealthDistribution[cat] || 0) + decimalToNumber(inv.amount);
+      wealthDistribution[cat] = (wealthDistribution[cat] ?? new Prisma.Decimal(0)).plus(toDecimal(inv.amount));
     });
 
     const wealthChartData = Object.keys(wealthDistribution).map((key, index) => ({
       name: key,
-      value: wealthDistribution[key],
+      value: serializeMoney(wealthDistribution[key]),
       color: ['#4f46e5', '#10b981', '#f59e0b', '#3b82f6', '#8b5cf6'][index % 5]
     }));
 
     return NextResponse.json({
       kpis: {
-        totalRevenue: decimalToNumber(totalRevenueDecimal),
-        totalWealth: decimalToNumber(totalWealthDecimal),
-        estimatedTax,
+        totalRevenue: serializeMoney(totalRevenueDecimal),
+        totalWealth: serializeMoney(totalWealthDecimal),
+        estimatedTax: serializeMoney(estimatedTaxDecimal),
         activeClients: activeClientCount
       },
       mrr: {
-        total: mrrTotal,
+        total: serializeMoney(mrrTotal),
         retainers: retainerRadar
       },
       charts: {
