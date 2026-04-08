@@ -14,6 +14,7 @@ export interface TaxEstimateInput {
   overrideRatePercent?: number | string | null;
   overrideId?: string | null;
   overrideReason?: string | null;
+  resolutionMode?: 'auto' | 'prefer_provider_rate';
 }
 
 export interface TaxEstimateResult {
@@ -39,6 +40,7 @@ export interface TaxEstimateResult {
 }
 
 const DEFAULT_FALLBACK_RATE = 0.3;
+const RULE_ENGINE_COUNTRIES = new Set(['IN']);
 
 const normalizePercent = (value: unknown): number | null => {
   if (value === null || value === undefined || value === '') return null;
@@ -92,11 +94,14 @@ export const estimateTax = (input: TaxEstimateInput): TaxEstimateResult => {
   const asOfDateIso = Number.isNaN(asOfDate.getTime()) ? new Date().toISOString() : asOfDate.toISOString();
 
   const overrideRatePercent = normalizePercent(input.overrideRatePercent);
-  const providerRatePercent = resolveProviderRatePercent(input.countryCode);
+  const normalizedCountryCode = input.countryCode?.trim().toUpperCase() || null;
+  const providerRatePercent = resolveProviderRatePercent(normalizedCountryCode);
+  const resolutionMode = input.resolutionMode ?? 'auto';
+  const hasCountryRuleEngine = Boolean(normalizedCountryCode && RULE_ENGINE_COUNTRIES.has(normalizedCountryCode));
 
   const baseResult = {
     basis: {
-      countryCode: input.countryCode?.trim().toUpperCase() || null,
+      countryCode: normalizedCountryCode,
       revenue: serializeMoney(revenue),
       deductions: serializeMoney(deductions),
       taxableIncome: serializeMoney(taxableIncome),
@@ -132,6 +137,20 @@ export const estimateTax = (input: TaxEstimateInput): TaxEstimateResult => {
       };
     }
 
+    if (hasCountryRuleEngine && resolutionMode !== 'prefer_provider_rate') {
+      const fromRules = estimateTaxFromRules(taxableIncome);
+      return {
+        amount: serializeMoney(fromRules.amount),
+        ratePercent: fromRules.ratePercent,
+        basis: {
+          ...baseResult.basis,
+          method: 'rule_engine',
+        },
+        override: baseResult.override,
+        disclaimerKey: 'AUTO_RULE',
+      };
+    }
+
     if (providerRatePercent !== null) {
       const amount = taxableIncome.mul(providerRatePercent).div(100);
       return {
@@ -146,16 +165,16 @@ export const estimateTax = (input: TaxEstimateInput): TaxEstimateResult => {
       };
     }
 
-    const fromRules = estimateTaxFromRules(taxableIncome);
+    const amount = taxableIncome.mul(DEFAULT_FALLBACK_RATE);
     return {
-      amount: serializeMoney(fromRules.amount),
-      ratePercent: fromRules.ratePercent,
+      amount: serializeMoney(amount),
+      ratePercent: DEFAULT_FALLBACK_RATE * 100,
       basis: {
         ...baseResult.basis,
-        method: 'rule_engine',
+        method: 'fallback',
       },
       override: baseResult.override,
-      disclaimerKey: 'AUTO_RULE',
+      disclaimerKey: 'FALLBACK_RULE',
     };
   } catch {
     const amount = taxableIncome.mul(DEFAULT_FALLBACK_RATE);
