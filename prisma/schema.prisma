@@ -30,7 +30,7 @@ model User {
   timeZone           String @default("Asia/Kolkata")
   locale             String @default("en-IN") // Formatting rules (e.g., en-IN, en-US)
   currencyFormat     String @default("INR") // Currency symbol/math (e.g., INR, USD)
-  defaultLandingPage String @default("/") // e.g., "/", "/invoice", "/clients"
+  defaultLandingPage String @default("/dashboard") // e.g., "/dashboard", "/invoice", "/clients"
 
   // --- NEW: NOTIFICATION SETTINGS ---
   transactionalAlerts Boolean @default(true) // E.g., "Invoice Paid" alerts

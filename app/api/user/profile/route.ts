@@ -3,6 +3,13 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+const LEGACY_HOME_ROUTE = "/";
+const CANONICAL_DASHBOARD_ROUTE = "/dashboard";
+
+function normalizeLandingPage(path: string | null | undefined) {
+  return path === LEGACY_HOME_ROUTE || !path ? CANONICAL_DASHBOARD_ROUTE : path;
+}
+
 // ==========================================
 // GET: Fetch the user's personal settings
 // ==========================================
@@ -39,7 +46,10 @@ export async function GET() {
       return NextResponse.json({ error: "User profile not found." }, { status: 404 });
     }
 
-    return NextResponse.json(userProfile);
+    return NextResponse.json({
+      ...userProfile,
+      defaultLandingPage: normalizeLandingPage(userProfile.defaultLandingPage),
+    });
   } catch (error) {
     console.error("GET Profile Error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -87,7 +97,7 @@ export async function PATCH(request: Request) {
         ...(timeZone !== undefined && { timeZone }),
         ...(locale !== undefined && { locale }),
         ...(currencyFormat !== undefined && { currencyFormat }),
-        ...(defaultLandingPage !== undefined && { defaultLandingPage }),
+        ...(defaultLandingPage !== undefined && { defaultLandingPage: normalizeLandingPage(defaultLandingPage) }),
         
         // Strict boolean coercion for security
         ...(transactionalAlerts !== undefined && { transactionalAlerts: Boolean(transactionalAlerts) }),
