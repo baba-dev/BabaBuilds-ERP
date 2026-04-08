@@ -16,12 +16,13 @@ const PAYABLE_STATUSES = new Set<InvoiceStatusValue>([
 
 const payInvoiceSchema = z.object({
   amountReceived: z
-    .number({ invalid_type_error: 'amountReceived must be a number' })
+    .number()
     .finite('amountReceived must be finite')
     .min(0, 'amountReceived must be >= 0')
     .max(MAX_PAYMENT_AMOUNT, `amountReceived must be <= ${MAX_PAYMENT_AMOUNT}`),
   dateReceived: z
-    .string({ required_error: 'dateReceived is required' })
+    .string()
+    .min(1, 'dateReceived is required')
     .refine(
       (value) =>
         /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:\d{2})?)?$/.test(value) &&
