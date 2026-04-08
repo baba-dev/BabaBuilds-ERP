@@ -21,6 +21,7 @@ import { useTranslations } from "next-intl";
 import { getBustedUrl } from "@/lib/cache-buster";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { ColumnVisibilityToggle, DataTable, DataTablePagination, DataTableToolbar, RowActionsMenu, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
+import type { InvoiceDto } from "@/lib/types/business";
 import {
   DEFAULT_LEDGER_META,
   parseLedgerInvoicesResponse,
@@ -30,7 +31,7 @@ import {
 
 export default function AuditDashboard() {
   const t = useTranslations('Ledger');
-  const[invoices, setInvoices] = useState<any[]>([]);
+  const[invoices, setInvoices] = useState<InvoiceDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // --- NEW: PAGINATION STATE ---
@@ -57,7 +58,7 @@ export default function AuditDashboard() {
 
   // Payment Modal State
   const [payModalOpen, setPayModalOpen] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceDto | null>(null);
   const [amountReceived, setAmountReceived] = useState("");
   const [dateReceived, setDateReceived] = useState(format(new Date(), 'yyyy-MM-dd'));
   const[isSubmitting, setIsSubmitting] = useState(false);
@@ -189,7 +190,7 @@ export default function AuditDashboard() {
     }
   };
 
-  const handleResendEmail = async (invoice: any) => {
+  const handleResendEmail = async (invoice: InvoiceDto) => {
     setResendingId(invoice.id);
     const toastId = toast.loading(`Sending invoice ${invoice.invoiceNumber}...`);
     try {
@@ -208,7 +209,7 @@ export default function AuditDashboard() {
     }
   };
 
-  const openPayModal = (invoice: any) => {
+  const openPayModal = (invoice: InvoiceDto) => {
     setSelectedInvoice(invoice);
     setAmountReceived(invoice.totalAmount.toString()); 
     setPayModalOpen(true);
@@ -234,7 +235,7 @@ export default function AuditDashboard() {
   const filteredInvoices = invoices.filter((inv) =>
     `${inv.invoiceNumber} ${inv.clientName ?? ""} ${inv.status}`.toLowerCase().includes(tableState.search.toLowerCase()),
   );
-  const invoiceColumns: DataTableColumnDef<any>[] = [
+  const invoiceColumns: DataTableColumnDef<InvoiceDto>[] = [
     { id: "invoice", header: t("col_invoice_no"), accessor: (row) => row.invoiceNumber, sortable: true, cell: (row) => <span className="font-bold dark:text-zinc-200 text-sm">{row.invoiceNumber}</span>, hideable: true },
     { id: "date", header: t("col_date"), sortable: true, sortAccessor: (row) => new Date(row.invoiceDate).getTime(), cell: (row) => <span className="dark:text-zinc-400 text-xs font-medium">{format(new Date(row.invoiceDate), safeDateFormat)}</span>, hideable: true },
     { id: "billed", header: t("col_billed"), sortable: true, sortAccessor: (row) => row.totalAmount, cell: (row) => <span className="dark:text-zinc-300 font-bold text-sm">{fCurrency(row.totalAmount)}</span>, hideable: true },

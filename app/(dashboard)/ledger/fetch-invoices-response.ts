@@ -1,3 +1,5 @@
+import type { ApiEnvelope, InvoiceDto } from "@/lib/types/business";
+
 type UnknownRecord = Record<string, unknown>;
 
 type LedgerMeta = {
@@ -54,7 +56,7 @@ export const resolveLedgerErrorToastMessage = (
 export const resolveLedgerMalformedJsonToastMessage = () =>
   "Ledger response was not valid JSON. Please refresh and try again.";
 
-export const parseLedgerInvoicesResponse = (payload: unknown) => {
+export const parseLedgerInvoicesResponse = (payload: unknown): ApiEnvelope<InvoiceDto[], LedgerMeta> | null => {
   const payloadObj = asRecord(payload);
   if (!payloadObj) return null;
 
