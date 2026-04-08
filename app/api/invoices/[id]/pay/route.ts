@@ -77,12 +77,12 @@ export const validatePayInvoicePayload = (
 
 export const validatePaymentBusinessRules = ({
   invoiceStatus,
-  paymentAmount,
+  cumulativeAmountReceived,
   invoiceGrandTotal,
   allowOverpayment = false,
 }: {
   invoiceStatus: string;
-  paymentAmount: number;
+  cumulativeAmountReceived: number;
   invoiceGrandTotal: number;
   allowOverpayment?: boolean;
 }): ValidationResult<undefined, 'INVOICE_STATUS_NOT_PAYABLE' | 'OVERPAYMENT_NOT_ALLOWED'> => {
@@ -94,7 +94,7 @@ export const validatePaymentBusinessRules = ({
     };
   }
 
-  if (!allowOverpayment && paymentAmount > invoiceGrandTotal) {
+  if (!allowOverpayment && cumulativeAmountReceived > invoiceGrandTotal) {
     return {
       ok: false,
       error: { code: 'OVERPAYMENT_NOT_ALLOWED', message: 'Overpayment is not allowed.' },
@@ -123,7 +123,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       );
     }
     const { amountReceived, dateReceived } = payloadValidation.data;
-    const paymentAmount = amountReceived;
+    const incomingPayment = amountReceived;
 
     const existingInvoice = await prisma.invoice.findFirst({
       where: {
@@ -142,12 +142,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       );
     }
 
-    // 3. SMART STATUS DETERMINATION
-    // Compare the new payment amount against the total bill
+    const existingReceived = Number(existingInvoice.amountReceived ?? 0);
+    const newCumulativeReceived = existingReceived + incomingPayment;
     const invoiceGrandTotal = Number(existingInvoice.grandTotal ?? existingInvoice.totalAmount);
+
     const businessRuleValidation = validatePaymentBusinessRules({
       invoiceStatus: existingInvoice.status,
-      paymentAmount,
+      cumulativeAmountReceived: newCumulativeReceived,
       invoiceGrandTotal,
     });
     if (!businessRuleValidation.ok) {
@@ -157,20 +158,20 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       );
     }
 
-    const newStatus = determineInvoicePaymentStatus(paymentAmount, invoiceGrandTotal);
+    const newStatus = determineInvoicePaymentStatus(newCumulativeReceived, invoiceGrandTotal);
 
     const updatedInvoice = await prisma.invoice.update({
       where: { id: invoiceId },
       data: {
         status: toInvoiceStatus(newStatus),
-        amountReceived: paymentAmount,
+        amountReceived: newCumulativeReceived,
         dateReceived: new Date(dateReceived),
       },
     });
 
     const { PDFDocument, rgb, degrees, StandardFonts } = await import('pdf-lib');
 
-    if (newStatus === INVOICE_STATUS.PAID) {
+    if (newStatus === INVOICE_STATUS.PAID && existingInvoice.status !== INVOICE_STATUS.PAID) {
       let relativePath = updatedInvoice.pdfPath.startsWith('/')
         ? updatedInvoice.pdfPath.substring(1)
         : updatedInvoice.pdfPath;
