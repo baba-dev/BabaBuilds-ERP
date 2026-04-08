@@ -31,7 +31,7 @@ export default function ProfileSettingsPage() {
     timeZone: "Asia/Kolkata",
     locale: "en-IN",
     currencyFormat: "INR",
-    defaultLandingPage: "/",
+    defaultLandingPage: "/dashboard",
     transactionalAlerts: true,
     marketingEmails: false,
     weeklyReport: true,
@@ -162,7 +162,7 @@ export default function ProfileSettingsPage() {
                   <div className="relative">
                     <LayoutDashboard className="absolute left-3 top-3 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
                     <select value={formData.defaultLandingPage} onChange={(e) => setFormData({ ...formData, defaultLandingPage: e.target.value })} className={`${selectClass} pl-9`}>
-                      <option value="/">Dashboard</option>
+                      <option value="/dashboard">Dashboard</option>
                       <option value="/invoice">New Invoice</option>
                       <option value="/clients">Client CRM</option>
                     </select>

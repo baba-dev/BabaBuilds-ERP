@@ -37,6 +37,7 @@ import type { MapPoint } from "@/components/maps";
 import { MapCardSkeleton } from "@/components/maps";
 import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 import { getInvoiceStatusBadgeKey, INVOICE_STATUS, isPaidInvoiceStatus, toInvoiceStatus } from "@/lib/invoice-status";
+import { parseDashboardResponse } from "./parse-dashboard-response";
 
 const GeographyInsightCard = dynamic(
   () => import("@/components/maps").then((mod) => mod.GeographyInsightCard),
@@ -190,7 +191,11 @@ export default function Dashboard() {
       if (!res.ok || json.error) {
         throw new Error(json.error || t("toast.error.load_dashboard"));
       }
-      setData(json as DashboardData);
+      const parsed = parseDashboardResponse(json);
+      if (!parsed) {
+        throw new Error("Dashboard payload was malformed.");
+      }
+      setData(parsed as DashboardData);
     } catch (err: any) {
       console.error("Failed to fetch dashboard", err);
       const message = err?.message || t("toast.error.load_dashboard_refresh");
