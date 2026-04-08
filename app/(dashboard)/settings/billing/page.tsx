@@ -21,7 +21,7 @@ export default async function BillingSettingsPage() {
   const session = await getServerSession(authOptions);
   
   if (!session || !(session as any).workspaceId) {
-    redirect("/");
+    redirect("/dashboard");
   }
 
   const workspaceId = (session as any).workspaceId;
@@ -41,7 +41,7 @@ export default async function BillingSettingsPage() {
     }
   });
 
-  if (!workspace) redirect("/");
+  if (!workspace) redirect("/dashboard");
 
   const isPro = workspace.subscriptionStatus === "PRO";
   

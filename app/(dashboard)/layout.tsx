@@ -18,7 +18,7 @@ export default async function DashboardLayout({
         "[DashboardLayout] Missing workspace context on authenticated session; redirecting to recovery route."
       );
     }
-    redirect("/?auth=required");
+    redirect("/login?callbackUrl=/dashboard");
   }
 
   return (

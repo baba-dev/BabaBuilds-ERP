@@ -32,15 +32,17 @@ const asRecord = (value: unknown): UnknownRecord | null => {
 const asFiniteNumber = (value: unknown, fallback: number) =>
   typeof value === "number" && Number.isFinite(value) ? value : fallback;
 
+const asMoneyNumber = (value: unknown, fallback: number) => parseApiMoney(value as string | number, fallback);
+
 const formatApiErrorMessage = (error?: string, code?: string) => {
   if (error && code) return `${error} (${code})`;
   return error || code || null;
 };
 
-export const resolveLedgerErrorToastMessage = (
+export const resolveLedgerErrorToastKey = (
   status: number,
   payload: unknown,
-  fallback = "Failed to load ledger data."
+  fallback = "toast.error.load_data"
 ) => {
   const payloadObj = asRecord(payload);
   const error = typeof payloadObj?.error === "string" ? payloadObj.error : undefined;
@@ -48,13 +50,13 @@ export const resolveLedgerErrorToastMessage = (
   const backendMessage = formatApiErrorMessage(error, code);
 
   if (backendMessage) return backendMessage;
-  if (status === 401) return "You are not authorized to view ledger data.";
-  if (status >= 500) return "Ledger service is temporarily unavailable. Please try again.";
+  if (status === 401) return "toast.error.unauthorized";
+  if (status >= 500) return "toast.error.service_unavailable";
   return fallback;
 };
 
-export const resolveLedgerMalformedJsonToastMessage = () =>
-  "Ledger response was not valid JSON. Please refresh and try again.";
+export const resolveLedgerMalformedJsonToastKey = () =>
+  "toast.error.malformed_json";
 
 export const parseLedgerInvoicesResponse = (payload: unknown): ApiEnvelope<InvoiceDto[], LedgerMeta> | null => {
   const payloadObj = asRecord(payload);
@@ -71,9 +73,9 @@ export const parseLedgerInvoicesResponse = (payload: unknown): ApiEnvelope<Invoi
       currentPage: asFiniteNumber(metaObj.currentPage, DEFAULT_LEDGER_META.currentPage),
       totalPages: asFiniteNumber(metaObj.totalPages, DEFAULT_LEDGER_META.totalPages),
       kpis: {
-        totalRevenue: asFiniteNumber(kpisObj?.totalRevenue, DEFAULT_LEDGER_META.kpis.totalRevenue),
-        outstanding: asFiniteNumber(kpisObj?.outstanding, DEFAULT_LEDGER_META.kpis.outstanding),
-        presumptiveIncome: asFiniteNumber(
+        totalRevenue: asMoneyNumber(kpisObj?.totalRevenue, DEFAULT_LEDGER_META.kpis.totalRevenue),
+        outstanding: asMoneyNumber(kpisObj?.outstanding, DEFAULT_LEDGER_META.kpis.outstanding),
+        presumptiveIncome: asMoneyNumber(
           kpisObj?.presumptiveIncome,
           DEFAULT_LEDGER_META.kpis.presumptiveIncome
         ),
