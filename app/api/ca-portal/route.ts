@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import type { CAExpenseRow, CAInvoiceRow, CAPortalPayload } from "@/lib/ca-portal/types";
 import { decimalToNumber, toDecimal } from "@/lib/money";
+import { getCurrentFinancialYear } from '@/lib/financial-year';
 
 const isPaidStatus = (status: unknown) => String(status).toUpperCase() === "PAID";
 const isReceiptStatus = (status: unknown) => {
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
 
     // 2. PARSE FINANCIAL YEAR
     const { searchParams } = new URL(request.url);
-    const fy = searchParams.get('fy') || "25-26"; // Default fallback
+    const fy = searchParams.get('fy') || getCurrentFinancialYear();
     
     let dateFilter;
     try {

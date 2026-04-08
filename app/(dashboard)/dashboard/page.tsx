@@ -38,6 +38,7 @@ import { MapCardSkeleton } from "@/components/maps";
 import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 import { getInvoiceStatusBadgeKey, INVOICE_STATUS, isPaidInvoiceStatus, toInvoiceStatus } from "@/lib/invoice-status";
 import { parseDashboardResponse } from "./parse-dashboard-response";
+import { getCurrentFinancialYear } from "@/lib/financial-year";
 
 const GeographyInsightCard = dynamic(
   () => import("@/components/maps").then((mod) => mod.GeographyInsightCard),
@@ -135,16 +136,7 @@ export default function Dashboard() {
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   // --- FINANCIAL YEAR LOGIC ---
-  const getCurrentFY = () => {
-    const today = new Date();
-    const month = today.getMonth() + 1;
-    const year = today.getFullYear();
-    const shortYear = year.toString().slice(-2);
-    return month <= 3 
-      ? `${parseInt(shortYear) - 1}-${shortYear}` 
-      : `${shortYear}-${parseInt(shortYear) + 1}`;
-  };
-  const [selectedFy, setSelectedFy] = useState(getCurrentFY());
+  const [selectedFy, setSelectedFy] = useState(getCurrentFinancialYear(new Date(), 'local'));
 
   // Generate FY Options for the last 3 years
   const getFyOptions = () => {
