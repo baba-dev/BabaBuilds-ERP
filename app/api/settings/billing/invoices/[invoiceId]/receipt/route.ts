@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+// Legacy route path: `/api/settings/billing/invoices/[invoiceId]/receipt`.
+// The `invoiceId` param now represents a billing transaction id.
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ invoiceId: string }> },
@@ -18,22 +20,17 @@ export async function GET(
     const { invoiceId } = await params;
     const workspaceId = scopedSession.workspaceId;
 
-    const invoice = await prisma.invoice.findFirst({
+    const transaction = await prisma.billingTransaction.findFirst({
       where: { id: invoiceId, workspaceId },
-      select: { pdfPath: true },
+      select: { receiptUrl: true },
     });
 
-    if (!invoice) {
-      return NextResponse.json({ error: "Invoice not found." }, { status: 404 });
+    if (!transaction?.receiptUrl) {
+      return NextResponse.json({ error: "Receipt not found." }, { status: 404 });
     }
 
-    const normalizedPath = invoice.pdfPath.replace(/^[/\\]+/, "");
-    const downloadUrl = normalizedPath.startsWith("invoices/")
-      ? `/${normalizedPath}`
-      : `/invoices/${normalizedPath}`;
-
-    return NextResponse.json({ downloadUrl });
+    return NextResponse.json({ downloadUrl: transaction.receiptUrl });
   } catch {
-    return NextResponse.json({ error: "Failed to fetch invoice receipt." }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch billing receipt." }, { status: 500 });
   }
 }

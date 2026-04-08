@@ -165,11 +165,11 @@ export default function BillingSettingsClient({
     }
   };
 
-  const handleDownload = async (invoiceId: string) => {
-    setDownloadingId(invoiceId);
+  const handleDownload = async (transactionId: string) => {
+    setDownloadingId(transactionId);
     setBillingError(null);
     try {
-      const response = await fetch(`/api/settings/billing/invoices/${invoiceId}/receipt`, { cache: "no-store" });
+      const response = await fetch(`/api/settings/billing/invoices/${transactionId}/receipt`, { cache: "no-store" });
       const data = await response.json();
       if (!response.ok || !data?.downloadUrl) {
         throw new Error(data?.error || "Could not prepare receipt download.");
