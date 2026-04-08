@@ -12,6 +12,13 @@ export interface TaxRuleInput extends TaxRuleSourceMetadata {
   rate: number;
 }
 
+export interface TaxDeductionBucket {
+  label: string;
+  amount: number;
+  rate: number;
+  tax: number;
+}
+
 export type TaxRuleRecord = Record<string, TaxRuleInput>;
 
 const normalizeCountryCode = (countryCode: string) => countryCode.trim().toUpperCase();
@@ -36,3 +43,24 @@ export function toTaxResolverInputMap(rules: TaxRuleInput[]): Record<string, num
 }
 
 export const COUNTRY_DEFAULT_TAX_RATES = toTaxResolverInputMap(FALLBACK_TAX_RULES);
+
+export function estimateTaxFromRules(input: { countryCode?: string | null; regionCode?: string | null; taxableAmount?: number }): number {
+  const normalizedCountryCode = normalizeCountryCode(input.countryCode ?? '');
+  if (!normalizedCountryCode) return 0;
+  const rate = COUNTRY_DEFAULT_TAX_RATES[normalizedCountryCode];
+  return typeof rate === 'number' ? rate : 0;
+}
+
+export function toTaxDeductionBuckets(taxableAmount: number, rate: number): TaxDeductionBucket[] {
+  const safeAmount = Number.isFinite(taxableAmount) ? Math.max(0, taxableAmount) : 0;
+  const safeRate = Number.isFinite(rate) ? Math.max(0, rate) : 0;
+
+  return [
+    {
+      label: 'Standard taxable base',
+      amount: safeAmount,
+      rate: safeRate,
+      tax: safeAmount * safeRate,
+    },
+  ];
+}

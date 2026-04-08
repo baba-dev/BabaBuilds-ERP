@@ -48,8 +48,8 @@ export async function GET(request: Request) {
     }
 
     const [total, logs] = await Promise.all([
-      prisma.taxDecisionAuditLog.count({ where }),
-      prisma.taxDecisionAuditLog.findMany({
+      prisma.taxRateOverrideAuditLog.count({ where }),
+      prisma.taxRateOverrideAuditLog.findMany({
         where,
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,

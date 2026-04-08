@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
@@ -20,6 +21,9 @@ const toOptionalDate = (value: unknown): Date | null => {
   const parsed = new Date(String(value));
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
+
+const toJsonValue = (value: unknown): Prisma.InputJsonValue =>
+  JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 
 export async function GET() {
   try {
@@ -88,7 +92,7 @@ export async function POST(request: Request) {
       },
     });
 
-    await prisma.taxDecisionAuditLog.create({
+    await prisma.taxRateOverrideAuditLog.create({
       data: {
         workspaceId,
         taxRateOverrideId: created.id,
@@ -100,8 +104,8 @@ export async function POST(request: Request) {
         effectiveFrom: created.effectiveFrom,
         effectiveTo: created.effectiveTo,
         reason: created.reason,
-        previousValues: null,
-        newValues: created,
+        previousValues: Prisma.JsonNull,
+        newValues: toJsonValue(created),
         actorUserId,
         actorEmail,
       },
