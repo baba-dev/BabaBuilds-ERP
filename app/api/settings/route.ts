@@ -9,6 +9,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { scanBuffer } from '@/lib/security/clamav';
 import { isSupportedLocale } from '@/i18n/locales';
+import { getTaxFeatureFlags } from '@/lib/tax/feature-flags';
 
 export async function GET() {
   try {
@@ -42,13 +43,18 @@ export async function GET() {
       }
     }
     
-    const planTier    = (profile as any)?.workspace?.planTier    ?? "FREE";
-    const countryCode = (profile as any)?.workspace?.countryCode ?? "IN";
+    const workspace = (profile as any)?.workspace;
+    const planTier    = workspace?.planTier    ?? "FREE";
+    const countryCode = workspace?.countryCode ?? "IN";
+    const taxFeatureFlags = getTaxFeatureFlags({
+      workspaceId,
+      workspaceName: workspace?.name ?? null,
+    });
 
     // Strip the nested workspace object before returning (cleaner payload)
     const { workspace: _ws, ...safeProfile } = (profile as any) ?? {};
 
-    return NextResponse.json({ ...safeProfile, locale, planTier, countryCode });
+    return NextResponse.json({ ...safeProfile, locale, planTier, countryCode, taxFeatureFlags });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
   }

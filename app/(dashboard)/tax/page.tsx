@@ -3,14 +3,18 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useTranslations } from "next-intl";
-import { PiggyBank, ShieldPlus, Landmark, TrendingUp, Calculator, AlertCircle, CheckCircle2, Globe2 } from "lucide-react";
+import { PiggyBank, ShieldPlus, Landmark, TrendingUp, Calculator, AlertCircle, CheckCircle2, Globe2, CircleHelp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TAX_HELP_COPY } from "@/lib/tax/help-copy";
 
 // MISSION CRITICAL: Globalization Imports
 import { useFormat } from "@/hooks/use-format";
@@ -19,6 +23,24 @@ import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { PageLoadingState } from "@/components/states/PageLoadingState";
 import { PageErrorState } from "@/components/states/PageErrorState";
 import { ColumnVisibilityToggle, DataTable, DataTableToolbar, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
+import { TaxOverrideModal, type TaxOverrideWindow } from "@/components/tax/tax-override-modal";
+
+
+
+const HelpTooltip = ({ copy }: { copy: string }) => (
+  <TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button type="button" className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200" aria-label="More info">
+          <CircleHelp className="h-3.5 w-3.5" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-[280px] text-xs leading-relaxed">
+        {copy}
+      </TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
+);
 
 const toSafeNumber = (value: unknown): number => {
   const parsed = Number(value);
@@ -32,6 +54,15 @@ export default function WealthAndTaxPlanner() {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [taxAuditRows, setTaxAuditRows] = useState<any[]>([]);
+  const [taxAuditPage, setTaxAuditPage] = useState(1);
+  const [taxAuditTotalPages, setTaxAuditTotalPages] = useState(1);
+  const [taxAuditFilters, setTaxAuditFilters] = useState({
+    startDate: "",
+    endDate: "",
+    action: "ALL",
+    scopeType: "ALL",
+  });
 
   // --- GLOBALIZATION ENGINE ---
   const { 
@@ -54,6 +85,8 @@ export default function WealthAndTaxPlanner() {
 
   // Tax Settings State
   const [hasSeniorParents, setHasSeniorParents] = useState(false);
+  const [taxOverrideOpen, setTaxOverrideOpen] = useState(false);
+  const [taxOverrides, setTaxOverrides] = useState<TaxOverrideWindow[]>([]);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(["date", "asset", "category", "amount"]);
   const tableState = useUrlTableState("tax");
 
@@ -97,6 +130,7 @@ export default function WealthAndTaxPlanner() {
       const nextRevenue = invoiceRows.reduce((sum: number, inv: any) => sum + toSafeNumber(inv?.totalAmount), 0);
       setInvestments(nextInvestments);
       setTotalRevenue(nextRevenue);
+      await fetchTaxAuditLogs(1);
     } catch (err) {
       console.error("Failed to load data");
       setFetchError("Failed to load tax planner data. Please refresh.");
@@ -104,6 +138,33 @@ export default function WealthAndTaxPlanner() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const fetchTaxAuditLogs = async (page = 1, filters = taxAuditFilters) => {
+    const searchParams = new URLSearchParams({
+      page: String(page),
+      pageSize: "10",
+      action: filters.action,
+      scopeType: filters.scopeType,
+    });
+    if (filters.startDate) searchParams.set("startDate", filters.startDate);
+    if (filters.endDate) searchParams.set("endDate", filters.endDate);
+
+    const res = await fetch(`/api/tax/audit?${searchParams.toString()}`);
+    if (!res.ok) {
+      throw new Error("Failed to fetch tax audit history");
+    }
+    const payload = await res.json();
+    setTaxAuditRows(Array.isArray(payload?.data) ? payload.data : []);
+    setTaxAuditPage(payload?.pagination?.page ?? 1);
+    setTaxAuditTotalPages(payload?.pagination?.totalPages ?? 1);
+  };
+
+  const resolveDecisionBadgeClass = (source: string) => {
+    const normalized = source?.toUpperCase();
+    if (normalized === "OVERRIDE") return "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300";
+    if (normalized === "AUTO") return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300";
+    return "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300";
   };
 
   // --- WEALTH CALCULATIONS (Global) ---
@@ -215,6 +276,16 @@ export default function WealthAndTaxPlanner() {
     }
   };
 
+  const handleTaxAuditFilterChange = async (nextFilters: typeof taxAuditFilters) => {
+    setTaxAuditFilters(nextFilters);
+    try {
+      await fetchTaxAuditLogs(1, nextFilters);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to refresh tax history.");
+    }
+  };
+
   return (
     <DashboardPageShell
       title={t('title')}
@@ -281,7 +352,19 @@ export default function WealthAndTaxPlanner() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-zinc-800 pb-4">
               <div className="flex items-center gap-2">
                 <AlertCircle className="text-amber-400 h-5 w-5" />
-                <h2 className="text-lg font-bold tracking-tight">{t('advance_tax')} <span className="text-sm font-medium text-zinc-400 ml-2">{t('fy_estimate')}</span></h2>
+                <h2 className="text-lg font-bold tracking-tight flex flex-wrap items-center gap-2">
+                  <span>{t('advance_tax')}</span>
+                  <span className="text-sm font-medium text-zinc-400">{t('fy_estimate')}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTaxOverrideOpen(true)}
+                    className="h-7 px-2 rounded-md border border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 text-[10px] font-bold uppercase tracking-widest"
+                  >
+                    Override tax rate
+                  </Button>
+                </h2>
               </div>
               <div className="flex items-center gap-3 bg-zinc-800/50 dark:bg-zinc-900 px-3 py-2 rounded-lg border border-zinc-700 dark:border-zinc-800">
                 <input
@@ -328,6 +411,64 @@ export default function WealthAndTaxPlanner() {
               </CardHeader>
               <form onSubmit={handleSubmit} className="bg-zinc-50/50 dark:bg-zinc-950/50">
                 <CardContent className="space-y-4 pt-6">
+                  <div className="space-y-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Estimate basis tag</p>
+                      <HelpTooltip copy={TAX_HELP_COPY.estimate_basis_explainer} />
+                    </div>
+                    <div className="inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300">
+                      Basis v1 · Country + Effective Date
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-widest">Override mode selector</Label>
+                        <HelpTooltip copy={TAX_HELP_COPY.manual_override_warning} />
+                      </div>
+                      <Select defaultValue="auto">
+                        <SelectTrigger className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold text-xs">
+                          <SelectValue placeholder="Select mode" />
+                        </SelectTrigger>
+                        <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
+                          <SelectItem value="auto" className="text-xs font-bold">Auto</SelectItem>
+                          <SelectItem value="manual" className="text-xs font-bold">Manual override</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-widest">Scope selector</Label>
+                        <HelpTooltip copy={TAX_HELP_COPY.scope_hint_country_vs_region} />
+                      </div>
+                      <Select defaultValue="country">
+                        <SelectTrigger className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold text-xs">
+                          <SelectValue placeholder="Select scope" />
+                        </SelectTrigger>
+                        <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
+                          <SelectItem value="country" className="text-xs font-bold">Country</SelectItem>
+                          <SelectItem value="region" className="text-xs font-bold">Region</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-widest">Effective date fields</Label>
+                        <HelpTooltip copy={TAX_HELP_COPY.effective_dates_hint} />
+                      </div>
+                      <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 dark:[color-scheme:dark] font-bold text-xs" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-widest">Reason field</Label>
+                        <HelpTooltip copy={TAX_HELP_COPY.audit_log_explainer} />
+                      </div>
+                      <Input placeholder="Why was this changed?" className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold text-xs" />
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-widest">{t('date')}</Label>
                     <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 dark:[color-scheme:dark] font-bold text-xs" />
@@ -407,6 +548,115 @@ export default function WealthAndTaxPlanner() {
             </Card>
           </div>
         </div>
+
+        <Card className="mt-8 shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+          <CardHeader className="border-b border-zinc-200 dark:border-zinc-800">
+            <CardTitle className="dark:text-zinc-50 text-sm font-bold uppercase tracking-wider">Tax Decision History</CardTitle>
+            <CardDescription className="dark:text-zinc-400 text-xs font-medium">
+              Override and decision events with actor traceability.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <Input
+                type="date"
+                value={taxAuditFilters.startDate}
+                onChange={(event) => handleTaxAuditFilterChange({ ...taxAuditFilters, startDate: event.target.value })}
+                className="dark:[color-scheme:dark]"
+              />
+              <Input
+                type="date"
+                value={taxAuditFilters.endDate}
+                onChange={(event) => handleTaxAuditFilterChange({ ...taxAuditFilters, endDate: event.target.value })}
+                className="dark:[color-scheme:dark]"
+              />
+              <Select
+                value={taxAuditFilters.action}
+                onValueChange={(action) => handleTaxAuditFilterChange({ ...taxAuditFilters, action })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Action type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All actions</SelectItem>
+                  <SelectItem value="CREATE">Create</SelectItem>
+                  <SelectItem value="UPDATE">Update</SelectItem>
+                  <SelectItem value="DEACTIVATE">Deactivate</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={taxAuditFilters.scopeType}
+                onValueChange={(scopeType) => handleTaxAuditFilterChange({ ...taxAuditFilters, scopeType })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Scope type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All scopes</SelectItem>
+                  <SelectItem value="WORKSPACE">Workspace</SelectItem>
+                  <SelectItem value="CLIENT">Client</SelectItem>
+                  <SelectItem value="SERVICE">Service</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="rounded-md border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Timestamp</TableHead>
+                    <TableHead>Actor</TableHead>
+                    <TableHead>Action</TableHead>
+                    <TableHead>Scope</TableHead>
+                    <TableHead className="text-right">Rate</TableHead>
+                    <TableHead>Effective Range</TableHead>
+                    <TableHead>Reason</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {taxAuditRows.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-xs text-zinc-500 py-8">
+                        No tax decision history found for the selected filters.
+                      </TableCell>
+                    </TableRow>
+                  ) : taxAuditRows.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell className="text-xs">{format(new Date(row.createdAt), `${safeDateFormat} HH:mm`)}</TableCell>
+                      <TableCell className="text-xs">{row.actorEmail || row.actorUserId || "System"}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-[10px]">{row.action}</Badge>
+                          <Badge className={`text-[10px] border-0 ${resolveDecisionBadgeClass(row.decisionSource)}`}>
+                            {row.decisionSource}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs">{row.scopeType}{row.scopeRef ? ` • ${row.scopeRef}` : ""}</TableCell>
+                      <TableCell className="text-right text-xs font-semibold">{typeof row.rate === "number" ? `${row.rate.toFixed(2)}%` : "—"}</TableCell>
+                      <TableCell className="text-xs">
+                        {row.effectiveFrom ? format(new Date(row.effectiveFrom), safeDateFormat) : "—"}
+                        {" → "}
+                        {row.effectiveTo ? format(new Date(row.effectiveTo), safeDateFormat) : "Open"}
+                      </TableCell>
+                      <TableCell className="text-xs max-w-[260px] truncate">{row.reason || "—"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="outline" size="sm" disabled={taxAuditPage <= 1} onClick={() => fetchTaxAuditLogs(taxAuditPage - 1)}>
+                Previous
+              </Button>
+              <span className="text-xs text-zinc-500">Page {taxAuditPage} of {taxAuditTotalPages}</span>
+              <Button variant="outline" size="sm" disabled={taxAuditPage >= taxAuditTotalPages} onClick={() => fetchTaxAuditLogs(taxAuditPage + 1)}>
+                Next
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
     </DashboardPageShell>
   );

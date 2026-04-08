@@ -579,10 +579,11 @@ export default function Dashboard() {
                             <TooltipTrigger asChild>
                               <button
                                 type="button"
-                                className="inline-flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
-                                aria-label={t("a11y.integration_why", { label: integration.label })}
+                                className="inline-flex items-center justify-center rounded-sm text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900"
+                                aria-label={`Why ${integration.label} matters`}
+                                title={`Why ${integration.label} matters`}
                               >
-                                <Info className="h-3.5 w-3.5" />
+                                <Info className="h-3.5 w-3.5" aria-hidden="true" />
                               </button>
                             </TooltipTrigger>
                             <TooltipContent side="top" className="max-w-[260px] leading-relaxed">
