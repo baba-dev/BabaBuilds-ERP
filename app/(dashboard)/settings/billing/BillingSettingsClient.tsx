@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { ProUpgradeCard } from "@/components/UpgradeButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useSession } from "next-auth/react";
 
 type WorkspaceSummary = {
   planInterval: string | null;
@@ -39,6 +40,18 @@ type PaymentMethod = {
   provider: "RAZORPAY" | "STRIPE" | null;
 };
 
+type PaymentClientAction =
+  | { type: "REDIRECT"; url?: string | null; checkoutSessionId?: string }
+  | {
+      type: "RAZORPAY_CHECKOUT";
+      keyId: string;
+      orderId: string;
+      amount: number;
+      currency: string;
+      name: string;
+      description: string;
+    };
+
 export default function BillingSettingsClient({
   locale,
   currency,
@@ -48,6 +61,22 @@ export default function BillingSettingsClient({
   currency: string;
   workspace: WorkspaceSummary;
 }) {
+  const { data: session } = useSession();
+  const loadRazorpayScript = useCallback(async () => {
+    if (typeof window === "undefined") return false;
+    if ((window as unknown as { Razorpay?: unknown }).Razorpay) return true;
+
+    await new Promise<boolean>((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+
+    return Boolean((window as unknown as { Razorpay?: unknown }).Razorpay);
+  }, []);
+
   const getErrorMessage = (error: unknown, fallback: string) =>
     error instanceof Error ? error.message : fallback;
   const [billingHistory, setBillingHistory] = useState<BillingHistoryItem[]>([]);
@@ -131,6 +160,43 @@ export default function BillingSettingsClient({
     void fetchPaymentMethod();
   }, [fetchBillingHistory, fetchPaymentMethod]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const query = new URLSearchParams(window.location.search);
+    const setupState = query.get("pm_setup");
+    const checkoutSessionId = query.get("session_id");
+
+    if (setupState !== "stripe_success" || !checkoutSessionId) return;
+
+    const finalizeStripe = async () => {
+      try {
+        const response = await fetch("/api/settings/billing/payment-method", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            provider: "STRIPE",
+            checkoutSessionId,
+          }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data?.error || "Stripe confirmation failed.");
+        }
+        await fetchPaymentMethod();
+      } catch (error: unknown) {
+        setPaymentError(getErrorMessage(error, "Stripe confirmation failed."));
+      } finally {
+        query.delete("pm_setup");
+        query.delete("session_id");
+        const cleaned = query.toString();
+        window.history.replaceState({}, "", cleaned ? `${window.location.pathname}?${cleaned}` : window.location.pathname);
+      }
+    };
+
+    void finalizeStripe();
+  }, [fetchPaymentMethod]);
+
   const handleCancelSubscription = async () => {
     setCancelling(true);
     setCancelError(null);
@@ -157,6 +223,62 @@ export default function BillingSettingsClient({
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || "Unable to add a payment method right now.");
+
+      const clientAction = data?.clientAction as PaymentClientAction | undefined;
+      if (!clientAction) {
+        await fetchPaymentMethod();
+        return;
+      }
+
+      if (clientAction.type === "REDIRECT") {
+        if (!clientAction.url) throw new Error("Stripe setup redirect URL is missing.");
+        window.location.href = clientAction.url;
+        return;
+      }
+
+      if (clientAction.type === "RAZORPAY_CHECKOUT") {
+        const loaded = await loadRazorpayScript();
+        if (!loaded) throw new Error("Failed to load Razorpay checkout. Please try again.");
+
+        const RazorpayCtor = (window as unknown as { Razorpay?: new (options: unknown) => { open: () => void } }).Razorpay;
+        if (!RazorpayCtor) throw new Error("Razorpay SDK unavailable.");
+
+        const paymentObject = new RazorpayCtor({
+          key: clientAction.keyId,
+          amount: clientAction.amount,
+          currency: clientAction.currency,
+          name: clientAction.name,
+          description: clientAction.description,
+          order_id: clientAction.orderId,
+          prefill: {
+            name: session?.user?.name || "",
+            email: session?.user?.email || "",
+          },
+          handler: async (gatewayResponse: {
+            razorpay_payment_id: string;
+            razorpay_order_id: string;
+            razorpay_signature: string;
+          }) => {
+            const finalizeRes = await fetch("/api/settings/billing/payment-method", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                provider: "RAZORPAY",
+                ...gatewayResponse,
+              }),
+            });
+            const finalizeData = await finalizeRes.json();
+            if (!finalizeRes.ok) {
+              throw new Error(finalizeData?.error || "Razorpay confirmation failed.");
+            }
+            await fetchPaymentMethod();
+          },
+        });
+
+        paymentObject.open();
+        return;
+      }
+
       await fetchPaymentMethod();
     } catch (error: unknown) {
       setPaymentError(getErrorMessage(error, "Unable to add a payment method right now."));
