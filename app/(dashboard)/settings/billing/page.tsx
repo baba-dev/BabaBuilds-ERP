@@ -251,8 +251,13 @@ export default async function BillingSettingsPage() {
                             </span>
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <button className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 p-2 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
-                              <Download className="w-4 h-4" />
+                            <button
+                              type="button"
+                              className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 p-2 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900"
+                              aria-label={`Download receipt for ${inv.plan} on ${inv.date}`}
+                              title="Download receipt"
+                            >
+                              <Download className="w-4 h-4" aria-hidden="true" />
                             </button>
                           </td>
                         </tr>
