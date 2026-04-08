@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { INVOICE_STATUS } from '@/lib/invoice-status';
 import { serializeMoney, toDecimal } from '@/lib/money';
+import { getInvoiceBilledAmount, sumInvoiceBilledAmount } from '@/lib/invoice/totals';
 import { estimateTax } from '@/lib/tax/engine';
 import { getCurrentFinancialYear } from '@/lib/financial-year';
 
@@ -114,10 +115,7 @@ export async function GET(request: Request) {
       { healthy: 0, partial: 0, missing: 0 }
     );
 
-    const totalRevenueDecimal = invoices.reduce(
-      (sum, inv) => sum.plus(toDecimal(inv.totalAmount)),
-      new Prisma.Decimal(0)
-    );
+    const totalRevenueDecimal = sumInvoiceBilledAmount(invoices);
     const totalWealthDecimal = investments.reduce(
       (sum, inv) => sum.plus(toDecimal(inv.amount)),
       new Prisma.Decimal(0)
@@ -204,7 +202,7 @@ export async function GET(request: Request) {
         : '';
 
       const month = billingMonthToken || invoiceDateMonth || 'Unknown';
-      monthlyRevenue[month] = (monthlyRevenue[month] ?? new Prisma.Decimal(0)).plus(toDecimal(inv.totalAmount));
+      monthlyRevenue[month] = (monthlyRevenue[month] ?? new Prisma.Decimal(0)).plus(getInvoiceBilledAmount(inv));
     });
     const revenueChartData = Object.keys(monthlyRevenue).map(month => ({
       name: month.substring(0, 3),

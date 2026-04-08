@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { INVOICE_STATUS, isOpenInvoiceStatus, isPaidInvoiceStatus } from '@/lib/invoice-status';
 import { serializeMoney, toDecimal } from '@/lib/money';
+import { getInvoiceBilledAmount, sumInvoiceBilledAmount } from '@/lib/invoice/totals';
 
 const isPaidStatus = (status: unknown) => String(status).toUpperCase() === "PAID";
 
@@ -31,15 +32,12 @@ export async function GET(request: Request) {
       }),
     ]);
 
-    const totalRevenueDecimal = allInvoicesForKpis.reduce((sum, inv) => {
-      const billed = inv.grandTotal ?? inv.totalAmount;
-      return sum.plus(toDecimal(billed));
-    }, new Prisma.Decimal(0));
+    const totalRevenueDecimal = sumInvoiceBilledAmount(allInvoicesForKpis);
 
     const outstandingDecimal = allInvoicesForKpis
       .filter(inv => !isPaidStatus(inv.status))
       .reduce((sum, inv) => {
-        const billed = toDecimal(inv.grandTotal ?? inv.totalAmount);
+        const billed = getInvoiceBilledAmount(inv);
         const received = toDecimal(inv.amountReceived);
         return sum.plus(billed.minus(received));
       }, new Prisma.Decimal(0));
@@ -47,7 +45,7 @@ export async function GET(request: Request) {
     const realizedRevenueDecimal = allInvoicesForKpis
       .filter(inv => isPaidStatus(inv.status))
       .reduce((sum, inv) => {
-        const realized = inv.amountReceived ?? inv.grandTotal ?? inv.totalAmount;
+        const realized = inv.amountReceived ?? getInvoiceBilledAmount(inv);
         return sum.plus(toDecimal(realized));
       }, new Prisma.Decimal(0));
 
