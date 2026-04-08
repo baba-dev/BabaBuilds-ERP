@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import fs from 'fs';
 import path from 'path';
 import { scanBuffer } from '@/lib/security/clamav';
+import { apiError } from "@/lib/api-error";
 
 // Fetch all expenses for the ledger (NOW PAGINATED)
 export async function GET(request: Request) {
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
     if (!session || !(session as any).workspaceId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
     }
     const workspaceId = (session as any).workspaceId;
     const whereClause = { workspaceId: workspaceId };
@@ -46,7 +47,7 @@ export async function GET(request: Request) {
 
   } catch (error) {
     console.error("API Error fetching expenses:", error);
-    return NextResponse.json({ error: 'Failed to fetch expenses' }, { status: 500 });
+    return apiError(500, "Failed to fetch expenses", "EXPENSES_FETCH_FAILED");
   }
 }
 
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
     if (!session || !(session as any).workspaceId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
     }
     const workspaceId = (session as any).workspaceId;
 
@@ -72,12 +73,12 @@ export async function POST(request: Request) {
     // --- 🚨 SECURITY PATCH: Prevent NaN Poisoning & Invalid Dates ---
     const parsedAmount = Number(amount);
     if (isNaN(parsedAmount) || parsedAmount < 0) {
-      return NextResponse.json({ error: "Invalid amount. Must be a positive number." }, { status: 400 });
+      return apiError(400, "Invalid amount. Must be a positive number.", "INVALID_AMOUNT");
     }
 
     const parsedDate = new Date(date);
     if (isNaN(parsedDate.getTime())) {
-      return NextResponse.json({ error: "Invalid date format." }, { status: 400 });
+      return apiError(400, "Invalid date format.", "INVALID_DATE");
     }
     // ----------------------------------------------------------------
 
@@ -90,14 +91,14 @@ export async function POST(request: Request) {
       const ext = path.extname(file.name).toLowerCase();
       const allowedExtensions = ['.png', '.jpg', '.jpeg', '.webp', '.pdf']; // PDFs are okay for receipts
       if (!allowedExtensions.includes(ext)) {
-        return NextResponse.json({ error: "Invalid file type. Only images/PDFs are allowed." }, { status: 400 });
+        return apiError(400, "Invalid file type. Only images/PDFs are allowed.", "INVALID_FILE_TYPE");
       }
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
 
       const isSafe = await scanBuffer(buffer);
       if (!isSafe) {
-        return NextResponse.json({ error: "Malware detected in uploaded file." }, { status: 400 });
+        return apiError(400, "Malware detected in uploaded file.", "MALWARE_DETECTED");
       }
 
       // 2. NAMESPACED UPLOADS: Save to a workspace-specific folder
@@ -129,6 +130,6 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error('Expense logging error:', error);
-    return NextResponse.json({ error: 'Failed to log expense and save receipt' }, { status: 500 });
+    return apiError(500, "Failed to log expense and save receipt", "EXPENSE_CREATE_FAILED");
   }
 }
