@@ -87,6 +87,7 @@ export default function ClientCRM() {
 
   const fetchClients = async (page = 1) => {
     setIsLoading(true);
+    setFetchError(null);
     try {
       const res = await fetch(`/api/clients?page=${page}&limit=9`);
       const { data, meta } = (await res.json()) as ApiEnvelope<ClientDto[]>;
@@ -95,17 +96,13 @@ export default function ClientCRM() {
       setCurrentPage(meta.currentPage);
     } catch (err) {
       toast.error("Failed to load clients.");
+      setFetchError("Failed to load clients.");
       setClients([]);
       setTotalPages(1);
       setCurrentPage(1);
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    setClients(result.data.data);
-    setTotalPages(result.data.meta.totalPages);
-    setCurrentPage(result.data.meta.currentPage);
-    setIsLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
