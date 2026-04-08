@@ -79,6 +79,7 @@ type RecentInvoiceRow = {
   billingMonth?: string | null;
   status: string;
   totalAmount: number;
+  amountReceived?: number | null;
   pdfPath: string;
   updatedAt?: string | Date | null;
 };
@@ -255,8 +256,10 @@ export default function Dashboard() {
   };
 
   const openPayModal = (invoice: RecentInvoiceRow) => {
+    const alreadyReceived = Number(invoice.amountReceived ?? 0);
+    const remaining = Math.max(0, Number(invoice.totalAmount) - alreadyReceived);
     setSelectedInvoice(invoice);
-    setAmountReceived(invoice.totalAmount.toString());
+    setAmountReceived(remaining.toString());
     setPayModalOpen(true);
   };
 
@@ -327,6 +330,9 @@ export default function Dashboard() {
   const arrTotal = mrrTotal * 12;
   const activeRetainers = data?.mrr?.retainers || [];
   const recentInvoices: RecentInvoiceRow[] = data?.recentInvoices || [];
+  const selectedInvoiceBilled = Number(selectedInvoice?.totalAmount ?? 0);
+  const selectedInvoiceReceived = Number(selectedInvoice?.amountReceived ?? 0);
+  const selectedInvoiceRemaining = Math.max(0, selectedInvoiceBilled - selectedInvoiceReceived);
   const readinessIntegrations = data?.readiness?.integrations;
   const readinessSummary = data?.readiness?.summary ?? { healthy: 0, partial: 0, missing: 3 };
   const configuredConnections = readinessSummary.healthy;
@@ -871,8 +877,12 @@ export default function Dashboard() {
                       {t('billed_amount')}
                     </p>
                     <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                      {fCurrency(selectedInvoice?.totalAmount || 0)}
+                      {fCurrency(selectedInvoiceBilled)}
                     </p>
+                  </div>
+                  <div className="mt-1 px-1 space-y-1 text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                    <p>Already received: {fCurrency(selectedInvoiceReceived)}</p>
+                    <p>Remaining due: {fCurrency(selectedInvoiceRemaining)}</p>
                   </div>
                 </div>
 
