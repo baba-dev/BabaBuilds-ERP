@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { scanBuffer } from '@/lib/security/clamav';
+import { CLIENT_LOGO_INVALID_TYPE_ERROR, isAllowedClientLogoExtension } from '@/lib/uploads/client-logo';
 
 export async function DELETE(
   request: Request,
@@ -103,9 +104,8 @@ export async function PATCH(
 
     if (file && file.size > 0) {
       const ext = path.extname(file.name).toLowerCase();
-      const allowedExtensions = ['.png', '.jpg', '.jpeg', '.webp'];
-      if (!allowedExtensions.includes(ext)) {
-        return NextResponse.json({ error: "Invalid file type." }, { status: 400 });
+      if (!isAllowedClientLogoExtension(ext)) {
+        return NextResponse.json({ error: CLIENT_LOGO_INVALID_TYPE_ERROR }, { status: 400 });
       }
       
       const bytes = await file.arrayBuffer();

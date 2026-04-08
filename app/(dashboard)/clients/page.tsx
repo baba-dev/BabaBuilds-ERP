@@ -26,6 +26,7 @@ import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
 import { getBustedUrl } from "@/lib/cache-buster";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
+import { CLIENT_LOGO_ACCEPT_ATTR, CLIENT_LOGO_HELP_TEXT } from "@/lib/uploads/client-logo";
 
 export default function ClientCRM() {
   const t = useTranslations('Clients');
@@ -300,7 +301,8 @@ export default function ClientCRM() {
                       <ImageIcon className="w-3.5 h-3.5 text-muted-body" /> {t('company_logo')}</Label>
                     <FileUploadField
                       id="client-logo"
-                      accept="image/*" 
+                      accept={CLIENT_LOGO_ACCEPT_ATTR}
+                      helpText={CLIENT_LOGO_HELP_TEXT}
                       onFileSelect={setLogoFile}
                       inputClassName="bg-surface-elevated border-border text-foreground file:bg-accent-soft file:text-accent-strong hover:file:brightness-95 shadow-sm"
                     />
