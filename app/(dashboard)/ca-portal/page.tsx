@@ -30,6 +30,7 @@ import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 import type { MapPoint } from "@/components/maps";
 import { MapCardSkeleton } from "@/components/maps";
 import type { CAExpenseRow, CAInvoiceRow, CAPortalPayload, CAPortalSummary } from "@/lib/ca-portal/types";
+import { getCurrentFinancialYear } from "@/lib/financial-year";
 
 
 const defaultSummary: CAPortalSummary = {
@@ -128,7 +129,7 @@ export default function CAPortal() {
   };
   
   // --- STATE ---
-  const [fy, setFy] = useState("25-26"); 
+  const [fy, setFy] = useState(getCurrentFinancialYear(new Date(), 'local')); 
   const [data, setData] = useState<CAPortalPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isExportingCSV, setIsExportingCSV] = useState(false);

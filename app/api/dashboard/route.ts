@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { INVOICE_STATUS } from '@/lib/invoice-status';
 import { serializeMoney, toDecimal } from '@/lib/money';
 import { estimateTax } from '@/lib/tax/engine';
+import { getCurrentFinancialYear } from '@/lib/financial-year';
 
 const normalizeInvoiceStatus = (status: unknown) => String(status).toUpperCase();
 
@@ -47,11 +48,7 @@ export async function GET(request: Request) {
     let fy = searchParams.get('fy');
 
     if (!fy) {
-      const today = new Date();
-      const currentMonth = today.getMonth() + 1;
-      const currentYear = today.getFullYear();
-      const shortYear = currentYear.toString().slice(-2);
-      fy = currentMonth <= 3 ? `${parseInt(shortYear) - 1}-${shortYear}` : `${shortYear}-${parseInt(shortYear) + 1}`;
+      fy = getCurrentFinancialYear();
     }
 
     const [invoices, investments, activeClientCount, retainers, recentInvoices, profile] = await Promise.all([
