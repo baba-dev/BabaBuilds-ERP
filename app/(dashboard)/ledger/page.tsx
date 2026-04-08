@@ -210,8 +210,10 @@ export default function AuditDashboard() {
   };
 
   const openPayModal = (invoice: InvoiceDto) => {
+    const alreadyReceived = Number(invoice.amountReceived ?? 0);
+    const remaining = Math.max(0, Number(invoice.totalAmount) - alreadyReceived);
     setSelectedInvoice(invoice);
-    setAmountReceived(invoice.totalAmount.toString()); 
+    setAmountReceived(remaining.toString()); 
     setPayModalOpen(true);
   };
 
@@ -232,6 +234,9 @@ export default function AuditDashboard() {
 
   // Safe Format Date helper
   const safeDateFormat = (dateFormat ?? "dd/MM/yyyy").replace(/D/g, 'd').replace(/Y/g, 'y');
+  const selectedInvoiceBilled = Number(selectedInvoice?.totalAmount ?? 0);
+  const selectedInvoiceReceived = Number(selectedInvoice?.amountReceived ?? 0);
+  const selectedInvoiceRemaining = Math.max(0, selectedInvoiceBilled - selectedInvoiceReceived);
   const filteredInvoices = invoices.filter((inv) =>
     `${inv.invoiceNumber} ${inv.clientName ?? ""} ${inv.status}`.toLowerCase().includes(tableState.search.toLowerCase()),
   );
@@ -421,7 +426,11 @@ export default function AuditDashboard() {
                       required 
                     />
                   </div>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-widest mt-1">{t('billed_amount', { amount: fCurrency(selectedInvoice?.totalAmount || 0) })}</p>
+                  <div className="mt-1 space-y-1 text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                    <p>{t('billed_amount', { amount: fCurrency(selectedInvoiceBilled) })}</p>
+                    <p>Already received: {fCurrency(selectedInvoiceReceived)}</p>
+                    <p>Remaining due: {fCurrency(selectedInvoiceRemaining)}</p>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">{t('date_credited')}</Label>
