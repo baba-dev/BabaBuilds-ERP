@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useTranslations } from "next-intl";
-import { PiggyBank, ShieldPlus, Landmark, TrendingUp, Calculator, AlertCircle, CheckCircle2, Globe2 } from "lucide-react";
+import { PiggyBank, ShieldPlus, Landmark, TrendingUp, Calculator, AlertCircle, CheckCircle2, Globe2, CircleHelp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TAX_HELP_COPY } from "@/lib/tax/help-copy";
 
 // MISSION CRITICAL: Globalization Imports
 import { useFormat } from "@/hooks/use-format";
@@ -19,6 +21,23 @@ import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { PageLoadingState } from "@/components/states/PageLoadingState";
 import { PageErrorState } from "@/components/states/PageErrorState";
 import { ColumnVisibilityToggle, DataTable, DataTableToolbar, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
+
+
+
+const HelpTooltip = ({ copy }: { copy: string }) => (
+  <TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button type="button" className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200" aria-label="More info">
+          <CircleHelp className="h-3.5 w-3.5" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-[280px] text-xs leading-relaxed">
+        {copy}
+      </TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
+);
 
 const toSafeNumber = (value: unknown): number => {
   const parsed = Number(value);
@@ -328,6 +347,64 @@ export default function WealthAndTaxPlanner() {
               </CardHeader>
               <form onSubmit={handleSubmit} className="bg-zinc-50/50 dark:bg-zinc-950/50">
                 <CardContent className="space-y-4 pt-6">
+                  <div className="space-y-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Estimate basis tag</p>
+                      <HelpTooltip copy={TAX_HELP_COPY.estimate_basis_explainer} />
+                    </div>
+                    <div className="inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300">
+                      Basis v1 · Country + Effective Date
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-widest">Override mode selector</Label>
+                        <HelpTooltip copy={TAX_HELP_COPY.manual_override_warning} />
+                      </div>
+                      <Select defaultValue="auto">
+                        <SelectTrigger className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold text-xs">
+                          <SelectValue placeholder="Select mode" />
+                        </SelectTrigger>
+                        <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
+                          <SelectItem value="auto" className="text-xs font-bold">Auto</SelectItem>
+                          <SelectItem value="manual" className="text-xs font-bold">Manual override</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-widest">Scope selector</Label>
+                        <HelpTooltip copy={TAX_HELP_COPY.scope_hint_country_vs_region} />
+                      </div>
+                      <Select defaultValue="country">
+                        <SelectTrigger className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold text-xs">
+                          <SelectValue placeholder="Select scope" />
+                        </SelectTrigger>
+                        <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
+                          <SelectItem value="country" className="text-xs font-bold">Country</SelectItem>
+                          <SelectItem value="region" className="text-xs font-bold">Region</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-widest">Effective date fields</Label>
+                        <HelpTooltip copy={TAX_HELP_COPY.effective_dates_hint} />
+                      </div>
+                      <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 dark:[color-scheme:dark] font-bold text-xs" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-widest">Reason field</Label>
+                        <HelpTooltip copy={TAX_HELP_COPY.audit_log_explainer} />
+                      </div>
+                      <Input placeholder="Why was this changed?" className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold text-xs" />
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-widest">{t('date')}</Label>
                     <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 dark:[color-scheme:dark] font-bold text-xs" />
