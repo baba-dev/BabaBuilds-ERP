@@ -18,12 +18,13 @@ import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { ColumnVisibilityToggle, DataTable, DataTablePagination, DataTableToolbar, RowActionsMenu, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
+import type { ApiEnvelope, ExpenseDto, InvoiceDto } from "@/lib/types/business";
 
 export default function ExpenseTracker() {
   const t = useTranslations('Expenses');
   const { fCurrency, currency, locale } = useFormat();
   const currencySymbol = getCurrencySymbol(currency, locale);
-  const [expenses, setExpenses] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<ExpenseDto[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0); // This stays to power the KPIs
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
@@ -45,7 +46,7 @@ export default function ExpenseTracker() {
 
   // Edit & Delete State
   const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
-  const [expenseToEdit, setExpenseToEdit] = useState<any | null>(null);
+  const [expenseToEdit, setExpenseToEdit] = useState<ExpenseDto | null>(null);
   const [editForm, setEditForm] = useState({ date: "", category: "", vendor: "", amount: "", description: "" });
   const [isEditing, setIsEditing] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(["date", "vendor", "category", "amount", "actions"]);
@@ -55,6 +56,9 @@ export default function ExpenseTracker() {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
   };
+
+  const calculateRevenueTotal = (invoices: InvoiceDto[]) =>
+    invoices.reduce((sum: number, inv: InvoiceDto) => sum + toSafeNumber(inv.totalAmount), 0);
 
   useEffect(() => {
     fetchData(currentPage);
@@ -67,9 +71,9 @@ export default function ExpenseTracker() {
     try {
       // Fetch paginated expenses
       const expRes = await fetch(`/api/expenses?page=${page}&limit=15`);
-      const { data, meta } = await expRes.json();
+      const { data, meta } = (await expRes.json()) as ApiEnvelope<ExpenseDto[]>;
       const normalizedExpenses = Array.isArray(data)
-        ? data.map((exp: any) => ({ ...exp, amount: toSafeNumber(exp.amount) }))
+        ? data.map((exp) => ({ ...exp, amount: toSafeNumber(exp.amount) }))
         : [];
       setExpenses(normalizedExpenses);
       setTotalPages(meta.totalPages);
@@ -77,12 +81,12 @@ export default function ExpenseTracker() {
 
       // Fetch all invoices for revenue calculation (as per original logic)
       const invRes = await fetch('/api/invoices');
-      const invData = await invRes.json();
+      const invData = (await invRes.json()) as { data?: InvoiceDto[]; error?: string } | InvoiceDto[];
       // NOTE: This is fetching all invoices. To make KPIs truly scalable, this would also need a summary API.
-      if (invData && !invData.error && Array.isArray(invData.data || invData)) {
-         const revenueSource = invData.data || invData;
-         const normalizedRevenue = revenueSource.reduce((sum: number, inv: any) => sum + toSafeNumber(inv.totalAmount), 0);
-         setTotalRevenue(normalizedRevenue);
+      if (Array.isArray(invData)) {
+         setTotalRevenue(calculateRevenueTotal(invData));
+      } else if (!invData.error && Array.isArray(invData.data)) {
+         setTotalRevenue(calculateRevenueTotal(invData.data));
       }
     } catch (err) {
       console.error("Failed to load financial data");
@@ -103,7 +107,7 @@ export default function ExpenseTracker() {
     `${exp.vendor} ${exp.category} ${exp.description ?? ""}`.toLowerCase().includes(tableState.search.toLowerCase()),
   );
 
-  const expenseColumns: DataTableColumnDef<any>[] = [
+  const expenseColumns: DataTableColumnDef<ExpenseDto>[] = [
     {
       id: "date",
       header: t("col_date"),
@@ -183,7 +187,7 @@ export default function ExpenseTracker() {
       if (data.date) setDate(data.date); 
       if (data.category) setCategory(data.category);
       if (data.description) setDescription(data.description);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Scan error:", err);
     } finally {
       setIsScanning(false);
@@ -211,8 +215,8 @@ export default function ExpenseTracker() {
       if (fileInput) fileInput.value = "";
       fetchData(currentPage); 
       toast.success("Expense logged successfully!");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to log expense");
     } finally {
       setIsSubmitting(false);
     }
@@ -233,7 +237,7 @@ export default function ExpenseTracker() {
     }
   };
 
-  const openEditModal = (exp: any) => {
+  const openEditModal = (exp: ExpenseDto) => {
     setExpenseToEdit(exp);
     setEditForm({
       date: format(new Date(exp.date), 'yyyy-MM-dd'),

@@ -26,10 +26,11 @@ import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
 import { getBustedUrl } from "@/lib/cache-buster";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
+import type { ApiEnvelope, ClientDto } from "@/lib/types/business";
 
 export default function ClientCRM() {
   const t = useTranslations('Clients');
-  const [clients, setClients] = useState<any[]>([]);
+  const [clients, setClients] = useState<ClientDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [open, setOpen] = useState(false);
@@ -87,7 +88,7 @@ export default function ClientCRM() {
     setIsLoading(true);
     try {
       const res = await fetch(`/api/clients?page=${page}&limit=9`);
-      const { data, meta } = await res.json();
+      const { data, meta } = (await res.json()) as ApiEnvelope<ClientDto[]>;
       setClients(Array.isArray(data) ? data : []);
       setTotalPages(meta.totalPages);
       setCurrentPage(meta.currentPage);
@@ -130,7 +131,7 @@ export default function ClientCRM() {
     }
   };
 
-  const handleEdit = (client: any) => {
+  const handleEdit = (client: ClientDto) => {
     setIsEditing(true);
     setSelectedClientId(client.id);
     setFormData({
@@ -172,8 +173,8 @@ export default function ClientCRM() {
       } else {
         fetchClients(currentPage);
       }
-    } catch (err: any) {
-      toast.error(err.message, { id: toastId });
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Deletion failed", { id: toastId });
     } finally {
       setClientToDelete(null);
     }

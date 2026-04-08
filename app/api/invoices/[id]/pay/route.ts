@@ -5,22 +5,48 @@ import { authOptions } from "@/lib/auth";
 import fs from 'fs';
 import path from 'path';
 import { INVOICE_STATUS, toInvoiceStatus, type InvoiceStatusValue } from '@/lib/invoice-status';
+import { parseInvoicePaymentPayload } from '@/lib/types/business';
+
+const getWorkspaceId = (session: unknown) => {
+  if (!session || typeof session !== "object") return null;
+  const workspaceId = (session as { workspaceId?: unknown }).workspaceId;
+  return typeof workspaceId === "string" ? workspaceId : null;
+};
+
+const determineInvoicePaymentStatus = (
+  paymentAmount: number,
+  invoiceGrandTotal: number
+): InvoiceStatusValue => {
+  if (paymentAmount > 0 && paymentAmount < invoiceGrandTotal) {
+    return INVOICE_STATUS.PARTIALLY_PAID;
+  }
+
+  if (paymentAmount === 0) {
+    return INVOICE_STATUS.PENDING;
+  }
+
+  return INVOICE_STATUS.PAID;
+};
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    const workspaceId = getWorkspaceId(session);
+    if (!workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
 
     // Await params in Next.js 15+ 
     const { id } = await context.params;
     const invoiceId = id; 
     
-    const { amountReceived, dateReceived } = await request.json();
-    const paymentAmount = Number(amountReceived);
+    const parsedPayload = parseInvoicePaymentPayload(await request.json());
+    if (!parsedPayload) {
+      return NextResponse.json({ error: "Invalid request payload." }, { status: 400 });
+    }
+    const { amountReceived, dateReceived } = parsedPayload;
+    const paymentAmount = amountReceived;
 
     // 2. FETCH EXISTING INVOICE & VERIFY OWNERSHIP
     const existingInvoice = await prisma.invoice.findFirst({
@@ -36,13 +62,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     // 3. SMART STATUS DETERMINATION
     // Compare the new payment amount against the total bill
-    let newStatus: InvoiceStatusValue = INVOICE_STATUS.PAID;
-    const invoiceGrandTotal = Number((existingInvoice as any).grandTotal || existingInvoice.totalAmount);
-    if (paymentAmount > 0 && paymentAmount < invoiceGrandTotal) {
-      newStatus = INVOICE_STATUS.PARTIALLY_PAID;
-    } else if (paymentAmount === 0) {
-      newStatus = INVOICE_STATUS.PENDING;
-    }
+    const invoiceGrandTotal = Number(existingInvoice.grandTotal ?? existingInvoice.totalAmount);
+    const newStatus = determineInvoicePaymentStatus(paymentAmount, invoiceGrandTotal);
 
     // 4. UPDATE DATABASE
     const updatedInvoice = await prisma.invoice.update({
