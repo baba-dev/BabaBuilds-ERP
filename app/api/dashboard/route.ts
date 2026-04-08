@@ -3,8 +3,9 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { INVOICE_STATUS, isOpenInvoiceStatus, isPaidInvoiceStatus } from '@/lib/invoice-status';
+import { INVOICE_STATUS } from '@/lib/invoice-status';
 import { serializeMoney, toDecimal } from '@/lib/money';
+import { estimateTax } from '@/lib/tax/engine';
 
 const normalizeInvoiceStatus = (status: unknown) => String(status).toUpperCase();
 
@@ -13,6 +14,10 @@ type IntegrationStatus = 'healthy' | 'partial' | 'missing';
 type IntegrationReadiness = {
   configured: boolean;
   status: IntegrationStatus;
+};
+
+type SessionWithWorkspace = {
+  workspaceId?: string | null;
 };
 
 const getIntegrationReadiness = (keys: Array<string | null | undefined>): IntegrationReadiness => {
@@ -30,39 +35,13 @@ const getIntegrationReadiness = (keys: Array<string | null | undefined>): Integr
   return { configured: false, status: 'missing' };
 };
 
-const calculateEstimatedTaxDecimal = (taxableIncome: Prisma.Decimal): Prisma.Decimal => {
-  if (taxableIncome.lte(700000)) {
-    return new Prisma.Decimal(0);
-  }
-
-  const slabs: Array<{ floor: number; width: number | null; rate: number }> = [
-    { floor: 300000, width: 300000, rate: 0.05 },
-    { floor: 600000, width: 300000, rate: 0.1 },
-    { floor: 900000, width: 300000, rate: 0.15 },
-    { floor: 1200000, width: 300000, rate: 0.2 },
-    { floor: 1500000, width: null, rate: 0.3 },
-  ];
-
-  return slabs.reduce((tax, slab) => {
-    const floor = new Prisma.Decimal(slab.floor);
-    if (taxableIncome.lte(floor)) return tax;
-
-    const slabWidth = slab.width === null
-      ? taxableIncome.minus(floor)
-      : Prisma.Decimal.min(taxableIncome.minus(floor), new Prisma.Decimal(slab.width));
-
-    if (slabWidth.lte(0)) return tax;
-    return tax.plus(slabWidth.mul(slab.rate));
-  }, new Prisma.Decimal(0));
-};
-
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    const workspaceId = (session as SessionWithWorkspace | null)?.workspaceId;
+    if (!workspaceId) {
       return NextResponse.json({ error: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
 
     const { searchParams } = new URL(request.url);
     let fy = searchParams.get('fy');
@@ -152,11 +131,14 @@ export async function GET(request: Request) {
       .filter(i => i.category.includes('80C'))
       .reduce((sum, i) => sum.plus(toDecimal(i.amount)), new Prisma.Decimal(0));
     const eligible80CDecimalCapped = Prisma.Decimal.min(eligible80CDecimal, new Prisma.Decimal(150000));
-    const taxableIncomeDecimal = Prisma.Decimal.max(
-      new Prisma.Decimal(0),
-      presumptiveIncomeDecimal.minus(eligible80CDecimalCapped)
-    );
-    const estimatedTaxDecimal = calculateEstimatedTaxDecimal(taxableIncomeDecimal);
+    const taxEstimate = estimateTax({
+      countryCode: 'IN',
+      revenue: presumptiveIncomeDecimal,
+      deductions: eligible80CDecimalCapped,
+      serviceScope: 'dashboard_summary',
+      customerScope: 'workspace',
+      asOfDate: new Date(),
+    });
 
     let mrrTotal = new Prisma.Decimal(0);
     const clientIds = retainers.map(ret => ret.clientId);
@@ -166,7 +148,7 @@ export async function GET(request: Request) {
       orderBy: { invoiceDate: 'desc' },
     });
 
-    const invoicesByClient = allRelevantInvoices.reduce((acc: any, inv: any) => {
+    const invoicesByClient = allRelevantInvoices.reduce<Record<string, typeof allRelevantInvoices>>((acc, inv) => {
       if (!acc[inv.clientId]) acc[inv.clientId] = [];
       acc[inv.clientId].push(inv);
       return acc;
@@ -247,9 +229,10 @@ export async function GET(request: Request) {
       kpis: {
         totalRevenue: serializeMoney(totalRevenueDecimal),
         totalWealth: serializeMoney(totalWealthDecimal),
-        estimatedTax: serializeMoney(estimatedTaxDecimal),
+        estimatedTax: taxEstimate.amount,
         activeClients: activeClientCount
       },
+      taxEstimate,
       mrr: {
         total: serializeMoney(mrrTotal),
         retainers: retainerRadar

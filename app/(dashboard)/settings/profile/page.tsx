@@ -89,12 +89,14 @@ export default function ProfileSettingsPage() {
     }
   };
 
-  const CustomToggle = ({ checked, onChange }: { checked: boolean; onChange: () => void }) => (
+  const CustomToggle = ({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) => (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
       onClick={onChange}
+      aria-label={label}
+      title={label}
       className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2 ${
         checked ? "bg-indigo-600" : "bg-zinc-200 dark:bg-zinc-800"
       }`}
@@ -224,7 +226,7 @@ export default function ProfileSettingsPage() {
                   <Label className="text-base dark:text-zinc-200">Transactional Alerts</Label>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400">Receive emails when invoices are paid or retainers execute.</p>
                 </div>
-                <CustomToggle checked={formData.transactionalAlerts} onChange={() => setFormData({ ...formData, transactionalAlerts: !formData.transactionalAlerts })} />
+                <CustomToggle label="Toggle transactional email alerts" checked={formData.transactionalAlerts} onChange={() => setFormData({ ...formData, transactionalAlerts: !formData.transactionalAlerts })} />
               </div>
               <Separator className="dark:bg-zinc-800" />
               <div className="flex items-center justify-between">
@@ -232,7 +234,7 @@ export default function ProfileSettingsPage() {
                   <Label className="text-base dark:text-zinc-200">Weekly AI Report</Label>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400">Get a Monday morning summary of your financial health.</p>
                 </div>
-                <CustomToggle checked={formData.weeklyReport} onChange={() => setFormData({ ...formData, weeklyReport: !formData.weeklyReport })} />
+                <CustomToggle label="Toggle weekly performance report emails" checked={formData.weeklyReport} onChange={() => setFormData({ ...formData, weeklyReport: !formData.weeklyReport })} />
               </div>
             </CardContent>
           </Card>
