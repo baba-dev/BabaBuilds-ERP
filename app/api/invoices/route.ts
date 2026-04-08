@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { INVOICE_STATUS, isOpenInvoiceStatus, isPaidInvoiceStatus } from '@/lib/invoice-status';
-import { toDecimal } from '@/lib/money';
+import { serializeMoney, toDecimal } from '@/lib/money';
 
 const isPaidStatus = (status: unknown) => String(status).toUpperCase() === "PAID";
 
@@ -63,9 +63,9 @@ export async function GET(request: Request) {
         totalPages: Math.ceil(totalInvoices / limit),
         totalRecords: totalInvoices,
         kpis: {
-          totalRevenue: totalRevenueDecimal.toNumber(),
-          outstanding: outstandingDecimal.toNumber(),
-          presumptiveIncome: presumptiveIncomeDecimal.toNumber(),
+          totalRevenue: serializeMoney(totalRevenueDecimal),
+          outstanding: serializeMoney(outstandingDecimal),
+          presumptiveIncome: serializeMoney(presumptiveIncomeDecimal),
         },
       },
     });

@@ -7,6 +7,9 @@ import { prisma } from "@/lib/prisma";
 import { createTransport } from "nodemailer"; // 1. ADDED IMPORT
 import { recordAuthFailure } from "@/lib/auth-observability";
 
+const CANONICAL_DASHBOARD_ROUTE = "/dashboard";
+const LEGACY_HOME_ROUTE = "/";
+
 function inferProviderFromMetadata(metadata: Record<string, any> | undefined) {
   if (!metadata) return "unknown";
   return (
@@ -190,6 +193,23 @@ export const authOptions: NextAuthOptions = {
       }
 
       return token;
+    },
+
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) {
+        return url === LEGACY_HOME_ROUTE ? `${baseUrl}${CANONICAL_DASHBOARD_ROUTE}` : `${baseUrl}${url}`;
+      }
+
+      try {
+        const target = new URL(url);
+        if (target.origin === baseUrl && target.pathname === LEGACY_HOME_ROUTE) {
+          return `${baseUrl}${CANONICAL_DASHBOARD_ROUTE}`;
+        }
+      } catch {
+        return `${baseUrl}${CANONICAL_DASHBOARD_ROUTE}`;
+      }
+
+      return url;
     },
 
     async session({ session, token }) {

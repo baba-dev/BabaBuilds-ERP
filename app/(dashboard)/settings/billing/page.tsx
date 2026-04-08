@@ -35,7 +35,7 @@ export default async function BillingSettingsPage() {
     },
   });
 
-  if (!workspace) redirect("/");
+  if (!workspace) redirect("/dashboard");
 
   return (
     <BillingSettingsClient
