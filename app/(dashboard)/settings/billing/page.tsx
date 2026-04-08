@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { 
   Zap, 
-  CreditCard, 
+  CreditCard as CreditCardIcon, 
   Download, 
   AlertCircle, 
   Receipt,
@@ -79,7 +79,7 @@ export default async function BillingSettingsPage() {
         {/* HEADER */}
         <div className="sticky top-0 z-30 -mx-4 px-4 py-6 md:-mx-8 md:px-8 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200/50 dark:border-zinc-800/50 transition-all duration-300 text-center space-y-2 mb-10">
           <div className="mx-auto w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-200 dark:shadow-emerald-900/20 mb-4 transition-transform hover:scale-105">
-            <CreditCard className="w-8 h-8 text-white" />
+            <CreditCardIcon className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
             Billing & Plan
@@ -189,7 +189,7 @@ export default async function BillingSettingsPage() {
                 <div className="flex items-center justify-between p-4 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50 dark:bg-zinc-950/50">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-sm">
-                      <CreditCard className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
+                      <CreditCardIcon className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
                     </div>
                     <div>
                       <p className="font-bold text-zinc-900 dark:text-zinc-100">{workspace.paymentMethodMask}</p>
@@ -251,8 +251,13 @@ export default async function BillingSettingsPage() {
                             </span>
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <button className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 p-2 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
-                              <Download className="w-4 h-4" />
+                            <button
+                              type="button"
+                              className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 p-2 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900"
+                              aria-label={`Download receipt for ${inv.plan} on ${inv.date}`}
+                              title="Download receipt"
+                            >
+                              <Download className="w-4 h-4" aria-hidden="true" />
                             </button>
                           </td>
                         </tr>
