@@ -30,14 +30,12 @@ const determineInvoicePaymentStatus = (
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
     const workspaceId = getWorkspaceId(session);
     if (!workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Await params in Next.js 15+ 
     const { id } = await context.params;
     const invoiceId = id; 
     
@@ -48,16 +46,21 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const { amountReceived, dateReceived } = parsedPayload;
     const paymentAmount = amountReceived;
 
-    // 2. FETCH EXISTING INVOICE & VERIFY OWNERSHIP
     const existingInvoice = await prisma.invoice.findFirst({
-      where: { 
+      where: {
         id: invoiceId,
-        workspaceId: workspaceId 
-      }
+        workspaceId: workspaceId,
+      },
     });
 
     if (!existingInvoice) {
-      return NextResponse.json({ error: 'Invoice not found or unauthorized' }, { status: 404 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: { code: 'INVOICE_NOT_FOUND', message: 'Invoice not found or unauthorized' },
+        },
+        { status: 404 }
+      );
     }
 
     // 3. SMART STATUS DETERMINATION
@@ -65,97 +68,96 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const invoiceGrandTotal = Number(existingInvoice.grandTotal ?? existingInvoice.totalAmount);
     const newStatus = determineInvoicePaymentStatus(paymentAmount, invoiceGrandTotal);
 
-    // 4. UPDATE DATABASE
+    const newStatus = determineInvoicePaymentStatus(paymentAmount, invoiceGrandTotal);
+
     const updatedInvoice = await prisma.invoice.update({
-      where: { id: invoiceId }, 
+      where: { id: invoiceId },
       data: {
         status: toInvoiceStatus(newStatus),
         amountReceived: paymentAmount,
         dateReceived: new Date(dateReceived),
-      }
+      },
     });
 
     const { PDFDocument, rgb, degrees, StandardFonts } = await import('pdf-lib');
-    
-    // 5. APPLY "PAID" WATERMARK TO PDF (ONLY IF FULLY PAID)
+
     if (newStatus === INVOICE_STATUS.PAID) {
-      // Robust path resolution for VPS/Windows
-      let relativePath = updatedInvoice.pdfPath.startsWith('/') 
-        ? updatedInvoice.pdfPath.substring(1) 
+      let relativePath = updatedInvoice.pdfPath.startsWith('/')
+        ? updatedInvoice.pdfPath.substring(1)
         : updatedInvoice.pdfPath;
       let fullPdfPath = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', relativePath);
-      
+
       let fileExists = fs.existsSync(fullPdfPath);
 
-      // --- 🔍 FUZZY PATH FINDER (For cross-platform / historical paths) ---
       if (!fileExists) {
         const sanitizedFilename = (updatedInvoice.invoiceNumber || "").replace(/\//g, '_') + ".pdf";
         const sanitizedRelative = `invoices/${updatedInvoice.workspaceId}/${sanitizedFilename}`;
-        const sanitizedFull     = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', sanitizedRelative);
-        
+        const sanitizedFull = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', sanitizedRelative);
+
         if (fs.existsSync(sanitizedFull)) {
-            fullPdfPath = sanitizedFull;
-            relativePath = sanitizedRelative;
-            fileExists = true;
-            
-            // Auto-heal the database path while we're here
-            await prisma.invoice.update({
-              where: { id: updatedInvoice.id },
-              data: { pdfPath: `/${sanitizedRelative}` }
-            });
+          fullPdfPath = sanitizedFull;
+          relativePath = sanitizedRelative;
+          fileExists = true;
+
+          await prisma.invoice.update({
+            where: { id: updatedInvoice.id },
+            data: { pdfPath: `/${sanitizedRelative}` },
+          });
         }
       }
 
       if (fileExists) {
         const existingPdfBytes = fs.readFileSync(fullPdfPath);
         const pdfDoc = await PDFDocument.load(existingPdfBytes);
-        
-        // 🚨 CRITICAL FIX: Embed font explicitly for existing documents
+
         const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-        
+
         const pages = pdfDoc.getPages();
         const paymentDateObj = new Date(dateReceived);
         const formattedDate = paymentDateObj.toLocaleDateString('en-GB', {
           day: '2-digit',
           month: 'short',
-          year: 'numeric'
+          year: 'numeric',
         }).toUpperCase();
 
-        // Apply to ALL pages in case of multi-page invoices
         pages.forEach(page => {
           const { width, height } = page.getSize();
 
-          // Draw the massive, translucent red stamp
           page.drawText('PAID', {
-            x: width / 2 - 140, 
-            y: height / 2 - 50, 
+            x: width / 2 - 140,
+            y: height / 2 - 50,
             size: 130,
             font: fontBold,
-            color: rgb(0.85, 0.15, 0.15), 
-            opacity: 0.10, 
+            color: rgb(0.85, 0.15, 0.15),
+            opacity: 0.10,
             rotate: degrees(45),
           });
 
-          // Add the Date Received below PAID
           page.drawText(`RECEIVED: ${formattedDate}`, {
-            x: width / 2 - 110, 
-            y: height / 2 - 130, 
+            x: width / 2 - 110,
+            y: height / 2 - 130,
             size: 24,
             font: fontBold,
-            color: rgb(0.85, 0.15, 0.15), 
-            opacity: 0.10, 
+            color: rgb(0.85, 0.15, 0.15),
+            opacity: 0.10,
             rotate: degrees(45),
           });
         });
 
         const pdfBytes = await pdfDoc.save();
-        fs.writeFileSync(fullPdfPath, pdfBytes); // Overwrite the file
+        fs.writeFileSync(fullPdfPath, pdfBytes);
       }
     }
 
     return NextResponse.json({ success: true, invoice: updatedInvoice });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: 'Failed to process payment' }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: { code: 'PAYMENT_PROCESSING_FAILED', message: 'Failed to process payment' },
+      },
+      { status: 500 }
+    );
   }
 }

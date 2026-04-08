@@ -244,7 +244,81 @@
     "cancel": "Cancelar",
     "stamp_paid": "Sellar como PAGADO",
     "processing": "Procesando",
-    "loading": "Cargando el Centro de Mando..."
+    "loading": "Cargando el Centro de Mando...",
+    "loading_desc": "Building your command center…",
+    "sync_issue_title": "Dashboard sync issue",
+    "empty_title": "No dashboard signal yet",
+    "empty_desc": "Create invoices, expenses, and retainers to activate this view.",
+    "fy_label": "FY:",
+    "select_fy": "Select FY",
+    "geo_title": "Client & invoice geography snapshot",
+    "geo_subtitle": "Live distribution of active clients and invoice throughput by region.",
+    "no_data_hint_revenue": "Add invoice activity to visualize monthly billing.",
+    "no_data_hint_assets": "Track liquid assets and allocations to activate this chart.",
+    "chart_revenue_name": "Revenue",
+    "actions": {
+      "resend_invoice_title": "Resend Invoice to Client via Email",
+      "download_pdf_title": "Download PDF",
+      "download_pdf_aria": "Download PDF for {invoiceNumber}"
+    },
+    "a11y": {
+      "view_retainers": "View Retainers",
+      "health_good": "Good Health",
+      "health_warning": "Warning Health",
+      "health_critical": "Critical Health",
+      "integration_why": "Why {label} matters",
+      "threshold_warning": "Threshold Warning"
+    },
+    "geo": {
+      "points": {
+        "sf": {
+          "label": "San Francisco, US",
+          "subtitle": "SaaS retainers",
+          "value": "12 clients · 31 invoices"
+        },
+        "nyc": {
+          "label": "New York, US",
+          "subtitle": "Agency contracts",
+          "value": "9 clients · 27 invoices"
+        },
+        "lon": {
+          "label": "London, UK",
+          "subtitle": "Cross-border billing",
+          "value": "6 clients · 18 invoices"
+        },
+        "blr": {
+          "label": "Bengaluru, IN",
+          "subtitle": "Core delivery hub",
+          "value": "14 clients · 43 invoices"
+        },
+        "sin": {
+          "label": "Singapore, SG",
+          "subtitle": "APAC expansion",
+          "value": "5 clients · 12 invoices"
+        },
+        "syd": {
+          "label": "Sydney, AU",
+          "subtitle": "Recurring retainers",
+          "value": "4 clients · 10 invoices"
+        }
+      }
+    },
+    "toast": {
+      "loading": {
+        "send_invoice": "Sending invoice {invoiceNumber}..."
+      },
+      "success": {
+        "payment_logged": "Payment logged successfully.",
+        "email_sent": "Email sent successfully!"
+      },
+      "error": {
+        "load_dashboard": "Failed to load dashboard data.",
+        "load_dashboard_refresh": "Failed to load dashboard data. Please refresh.",
+        "log_payment": "Failed to log payment.",
+        "send_email": "Failed to send email.",
+        "network": "A network error occurred."
+      }
+    }
   },
   "Clients": {
     "title": "CRM de Clientes",
@@ -284,7 +358,34 @@
     "ph_phone": "Opcional",
     "update_client": "Actualizar cliente",
     "edit_registration_title": "Editar perfil del cliente",
-    "edit_registration_desc": "Actualiza los detalles de la entidad legal y la información de contacto."
+    "edit_registration_desc": "Actualiza los detalles de la entidad legal y la información de contacto.",
+    "optional": "Optional",
+    "helper_create": "Complete required fields to register a new client.",
+    "helper_edit": "Update client details and save changes.",
+    "a11y": {
+      "toggle_export": "Toggle export status",
+      "edit_client": "Edit {name}",
+      "delete_client": "Delete {name}"
+    },
+    "toast": {
+      "loading": {
+        "register_client": "Registering new client...",
+        "update_client": "Updating client...",
+        "delete_client": "Deleting client profile..."
+      },
+      "success": {
+        "client_registered": "Client registered successfully!",
+        "client_updated": "Client updated successfully!",
+        "client_deleted": "Client permanently removed"
+      },
+      "error": {
+        "load_clients": "Failed to load clients.",
+        "register_client": "Failed to register client.",
+        "update_client": "Failed to update client.",
+        "delete_client": "Deletion failed",
+        "network": "A network error occurred."
+      }
+    }
   },
   "Services": {
     "title": "Catálogo Maestro de Servicios",
@@ -446,7 +547,32 @@
     "cat_contractors": "Subcontratistas / Freelancers",
     "cat_office": "Espacio de Oficina y Alquiler",
     "cat_meals": "Comidas y Entretenimiento",
-    "cat_other": "Otro Costo Operativo"
+    "cat_other": "Otro Costo Operativo",
+    "actions": {
+      "view_receipt": "View Receipt",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "amount_placeholder": "0.00",
+    "no_expenses_desc": "Capture your first expense to start tracking burn and tax efficiency.",
+    "toast": {
+      "loading": {
+        "delete_expense": "Deleting expense...",
+        "update_expense": "Updating expense..."
+      },
+      "success": {
+        "expense_logged": "Expense logged successfully!",
+        "expense_deleted": "Expense deleted permanently.",
+        "expense_updated": "Expense updated successfully."
+      },
+      "error": {
+        "load_financial_data": "Failed to load financial data.",
+        "ai_read_receipt": "AI could not read the receipt. Please enter manually.",
+        "log_expense": "Failed to log expense",
+        "delete_expense": "Failed to delete expense.",
+        "update_expense": "Failed to update expense."
+      }
+    }
   },
   "Ledger": {
     "title": "Libro Mayor de Auditoría",
@@ -488,7 +614,37 @@
     "stamp_paid": "Sellar como PAGADO",
     "void_delete": "¿Anular y eliminar esta factura?",
     "void_desc": "Esta acción no se puede deshacer.",
-    "yes_delete": "Sí, eliminar factura"
+    "yes_delete": "Sí, eliminar factura",
+    "actions": {
+      "resend_invoice_title": "Resend Invoice to Client via Email",
+      "download_pdf_title": "Download PDF",
+      "delete": "Delete"
+    },
+    "toast": {
+      "warning": {
+        "ai_autofill_failed": "AI auto-fill failed. Please fill the form manually."
+      },
+      "loading": {
+        "send_invoice": "Sending invoice {invoiceNumber}...",
+        "delete_invoice": "Deleting invoice..."
+      },
+      "success": {
+        "payment_logged": "Payment logged successfully.",
+        "email_sent": "Email sent successfully!",
+        "invoice_deleted": "Invoice voided and deleted."
+      },
+      "error": {
+        "malformed_json": "Ledger response was not valid JSON. Please refresh and try again.",
+        "unauthorized": "You are not authorized to view ledger data.",
+        "service_unavailable": "Ledger service is temporarily unavailable. Please try again.",
+        "payload_malformed": "Ledger response payload was malformed.",
+        "load_data": "Failed to load ledger data.",
+        "log_payment": "Failed to log payment.",
+        "send_email": "Failed to send email.",
+        "delete_invoice": "Failed to delete invoice.",
+        "network": "A network error occurred."
+      }
+    }
   },
   "Retainers": {
     "title": "Hub de Retenciones",

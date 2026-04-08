@@ -39,7 +39,7 @@ export async function PATCH(
 
     const parsedDate = new Date(date);
     if (isNaN(parsedDate.getTime())) {
-      return NextResponse.json({ error: "Invalid date format." }, { status: 400 });
+      return apiError(400, "Invalid date format.", "INVALID_DATE");
     }
 
     const updatedExpense = await prisma.expense.updateMany({
@@ -57,13 +57,13 @@ export async function PATCH(
     });
 
     if (updatedExpense.count === 0) {
-      return NextResponse.json({ error: "Expense not found or unauthorized." }, { status: 404 });
+      return apiError(404, "Expense not found or unauthorized.", "EXPENSE_NOT_FOUND");
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Expense Update Error:", error);
-    return NextResponse.json({ error: "Failed to update expense." }, { status: 500 });
+    return apiError(500, "Failed to update expense.", "EXPENSE_UPDATE_FAILED");
   }
 }
 
@@ -87,7 +87,7 @@ export async function DELETE(
     });
 
     if (!expense) {
-      return NextResponse.json({ error: "Expense not found or unauthorized." }, { status: 404 });
+      return apiError(404, "Expense not found or unauthorized.", "EXPENSE_NOT_FOUND");
     }
 
     // 2. Delete from Database
@@ -113,6 +113,6 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Expense Deletion Error:", error);
-    return NextResponse.json({ error: "Failed to delete expense." }, { status: 500 });
+    return apiError(500, "Failed to delete expense.", "EXPENSE_DELETE_FAILED");
   }
 }
