@@ -10,6 +10,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { validateAuthEnvOrThrow } from "@/lib/auth-observability";
 import { getLocaleDirection } from "@/lib/i18n";
+import PWARegistration from "@/components/PWARegistration";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -61,6 +62,7 @@ export default async function RootLayout({
                   It will now globally monitor if the user needs to complete setup.
               */}
               <SetupGatekeeper />
+              <PWARegistration />
 
               <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col transition-colors duration-300">
                 <main className="flex-1 relative">
