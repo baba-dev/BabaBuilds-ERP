@@ -484,7 +484,7 @@ export default function SuperAdminPortal() {
                         <details className="rounded-md border border-zinc-200 p-2 text-xs dark:border-zinc-800">
                           <summary className="cursor-pointer font-semibold">More actions</summary>
                           <div className="flex flex-wrap gap-2 pt-2">
-                            <Button variant="outline" size="sm" onClick={() => handleAction(user.id, "UPGRADE")}>Force Pro</Button>
+                            <Button variant="outline" size="sm" onClick={() => handleAction(user.id, "UPGRADE_PRO")}>Force Pro</Button>
                             <Button variant="outline" size="sm" onClick={() => handleAction(user.id, user.subscriptionStatus === "SUSPENDED" ? "REACTIVATE" : "SUSPEND")}>
                               {user.subscriptionStatus === "SUSPENDED" ? "Reactivate" : "Suspend"}
                             </Button>
