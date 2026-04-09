@@ -1,16 +1,57 @@
 import { MetadataRoute } from 'next';
 
+type FileHandlerEntry = {
+  action: string;
+  accept: Record<string, string[]>;
+};
+
+const erpFileHandlers: FileHandlerEntry[] = [
+  {
+    action: '/open-file',
+    accept: {
+      'application/pdf': ['.pdf'],
+      'text/csv': ['.csv'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'image/png': ['.png'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+    },
+  },
+];
+
 const defaultShortcutIcon = {
   src: '/icons/launchericon-192x192.png',
   sizes: '192x192',
   type: 'image/png',
 } as const;
 
-export default function manifest(): MetadataRoute.Manifest {
-  const webManifest: MetadataRoute.Manifest & {
+type ShareTargetField = {
+  share_target: {
+    action: string;
+    method: 'POST';
+    enctype: 'multipart/form-data';
+    params: {
+      title: string;
+      text: string;
+      url: string;
+      files: Array<{
+        name: string;
+        accept: string[];
+      }>;
+    };
+  };
+};
+
+export default function manifest(): MetadataRoute.Manifest & ShareTargetField & {
+  launch_handler: {
+    client_mode: 'focus-existing';
+  };
+  file_handlers: FileHandlerEntry[];
+} {
+  const webManifest: MetadataRoute.Manifest & ShareTargetField & {
     launch_handler: {
       client_mode: 'focus-existing';
     };
+    file_handlers: FileHandlerEntry[];
   } = {
     id: '/',
     name: 'BabaBuilds ERP',
@@ -80,6 +121,23 @@ export default function manifest(): MetadataRoute.Manifest {
         label: 'BabaBuilds ERP mobile portrait splash',
       },
     ],
+    file_handlers: erpFileHandlers,
+    share_target: {
+      action: '/share-target',
+      method: 'POST',
+      enctype: 'multipart/form-data',
+      params: {
+        title: 'title',
+        text: 'text',
+        url: 'url',
+        files: [
+          {
+            name: 'files',
+            accept: ['image/*', 'application/pdf'],
+          },
+        ],
+      },
+    },
     shortcuts: [
       {
         name: 'Dashboard',
