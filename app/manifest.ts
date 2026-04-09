@@ -1,4 +1,6 @@
 import { MetadataRoute } from 'next';
+import { getLocale } from 'next-intl/server';
+import { getLocaleDirection } from '@/lib/i18n';
 
 const defaultShortcutIcon = {
   src: '/icons/launchericon-192x192.png',
@@ -6,12 +8,17 @@ const defaultShortcutIcon = {
   type: 'image/png',
 } as const;
 
-export default function manifest(): MetadataRoute.Manifest {
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const locale = await getLocale();
+  const dir = getLocaleDirection(locale);
+
   return {
     id: '/',
     name: 'BabaBuilds ERP',
     short_name: 'BabaBuilds',
     description: 'Internal compliance and financial management system.',
+    lang: locale,
+    dir,
     start_url: '/dashboard',
     scope: '/',
     display: 'standalone',
@@ -20,6 +27,8 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: '#ffffff',
     theme_color: '#0062ff',
     categories: ['business', 'finance', 'productivity'],
+    // We intentionally omit `prefer_related_applications` and `related_applications`
+    // because BabaBuilds ERP does not currently publish native companion apps.
     icons: [
       {
         src: '/icons/launchericon-192x192.png',
