@@ -127,6 +127,50 @@ export default function CAPortal() {
   const [isExportingCSV, setIsExportingCSV] = useState(false);
   const [isExportingZIP, setIsExportingZIP] = useState(false);
 
+  const notifyDownloadBlocked = (directUrl: string) => {
+    toast.error("Download was blocked by your browser.", {
+      description: "Allow downloads/pop-ups for this site, then retry. You can also open the file directly.",
+      action: {
+        label: "Open direct link",
+        onClick: () => window.open(directUrl, "_blank", "noopener,noreferrer"),
+      },
+    });
+  };
+
+  const downloadWithAnchorFallback = (
+    blob: Blob,
+    filename: string,
+    mimeType: string,
+    directUrl: string
+  ) => {
+    const fileBlob = new Blob([blob], { type: mimeType });
+    const objectUrl = window.URL.createObjectURL(fileBlob);
+    let anchorAttempted = false;
+
+    try {
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = filename;
+      anchor.rel = "noopener noreferrer";
+      anchor.style.display = "none";
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      anchorAttempted = true;
+    } catch (error) {
+      console.error("Anchor download attempt failed", error);
+    } finally {
+      window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1000);
+    }
+
+    if (!anchorAttempted) {
+      const popup = window.open(directUrl, "_blank", "noopener,noreferrer");
+      if (!popup) {
+        notifyDownloadBlocked(directUrl);
+      }
+    }
+  };
+
   // --- DATA FETCHING ---
   useEffect(() => {
     fetchAuditData();
@@ -160,14 +204,11 @@ export default function CAPortal() {
     setIsExportingCSV(true);
     const toastId = toast.loading(t('generating'));
     try {
-      const res = await fetch(`/api/ca-portal/export/csv?fy=${fy}`);
+      const directUrl = `/api/ca-portal/export/csv?fy=${fy}`;
+      const res = await fetch(directUrl);
       if (!res.ok) throw new Error();
       const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Audit_Ledger_FY${fy}.csv`;
-      a.click();
+      downloadWithAnchorFallback(blob, `Audit_Ledger_FY${fy}.csv`, "text/csv;charset=utf-8", directUrl);
       toast.success(t('download_success'), { id: toastId });
     } catch {
       toast.error(t('export_failed'), { id: toastId });
@@ -180,14 +221,11 @@ export default function CAPortal() {
     setIsExportingZIP(true);
     const toastId = toast.loading(t('zipping'));
     try {
-      const res = await fetch(`/api/ca-portal/export/zip?fy=${fy}`);
+      const directUrl = `/api/ca-portal/export/zip?fy=${fy}`;
+      const res = await fetch(directUrl);
       if (!res.ok) throw new Error();
       const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Audit_Evidence_FY${fy}.zip`;
-      a.click();
+      downloadWithAnchorFallback(blob, `Audit_Evidence_FY${fy}.zip`, "application/zip", directUrl);
       toast.success(t('download_success'), { id: toastId });
     } catch {
       toast.error(t('export_failed'), { id: toastId });

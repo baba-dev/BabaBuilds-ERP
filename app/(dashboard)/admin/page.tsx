@@ -135,8 +135,41 @@ export default function SuperAdminPortal() {
     }
   };
 
-  const handleDownloadBackup = (filename: string) => {
-    window.open(`/api/admin/backups/${filename}`, '_blank');
+  const handleDownloadBackup = async (filename: string) => {
+    const directUrl = `/api/admin/backups/${filename}`;
+    let objectUrl: string | null = null;
+    try {
+      const res = await fetch(directUrl);
+      if (!res.ok) throw new Error("Download failed");
+      const sourceBlob = await res.blob();
+      const blob = new Blob([sourceBlob], { type: "application/octet-stream" });
+      objectUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = filename;
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      anchor.style.display = "none";
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+    } catch (error) {
+      console.error("Backup download failed", error);
+      const popup = window.open(directUrl, "_blank", "noopener,noreferrer");
+      if (!popup) {
+        toast.error("Browser blocked the backup download.", {
+          description: "Enable pop-ups/downloads for this site and retry, or open the backup directly.",
+          action: {
+            label: "Open direct link",
+            onClick: () => window.open(directUrl, "_blank", "noopener,noreferrer"),
+          },
+        });
+      }
+    } finally {
+      if (objectUrl) {
+        window.setTimeout(() => window.URL.revokeObjectURL(objectUrl as string), 1000);
+      }
+    }
   };
 
   const handleDeleteBackup = async (filename: string) => {
