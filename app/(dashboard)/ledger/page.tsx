@@ -354,26 +354,66 @@ export default function AuditDashboard() {
               searchValue={tableState.search}
               onSearchChange={tableState.setSearch}
               searchPlaceholder={t("col_invoice_no")}
-              rightSlot={
-                <ColumnVisibilityToggle
-                  options={invoiceColumns.filter((col) => col.hideable).map((col) => ({
-                    id: col.id,
-                    label: typeof col.header === "string" ? col.header : col.id,
-                    visible: visibleColumns.includes(col.id),
-                    onToggle: () => setVisibleColumns((prev) => prev.includes(col.id) ? prev.filter((id) => id !== col.id) : [...prev, col.id]),
-                  }))}
-                />
-              }
+              rightSlot={<div className="hidden md:block"><ColumnVisibilityToggle
+                options={invoiceColumns.filter((col) => col.hideable).map((col) => ({
+                  id: col.id,
+                  label: typeof col.header === "string" ? col.header : col.id,
+                  visible: visibleColumns.includes(col.id),
+                  onToggle: () => setVisibleColumns((prev) => prev.includes(col.id) ? prev.filter((id) => id !== col.id) : [...prev, col.id]),
+                }))}
+              /></div>}
             />
-            <DataTable
-              columns={invoiceColumns}
-              data={filteredInvoices}
-              rowId={(row) => row.id}
-              loading={isLoading}
-              emptyTitle={t("no_entries")}
-              emptyDescription={t("no_entries_desc")}
-              visibleColumnIds={visibleColumns}
-            />
+            <div className="hidden md:block">
+              <DataTable
+                columns={invoiceColumns}
+                data={filteredInvoices}
+                rowId={(row) => row.id}
+                loading={isLoading}
+                emptyTitle={t("no_entries")}
+                emptyDescription={t("no_entries_desc")}
+                visibleColumnIds={visibleColumns}
+              />
+            </div>
+            <div className="space-y-3 p-3 pb-20 md:hidden">
+              {filteredInvoices.map((invoice) => (
+                <Card key={invoice.id} className="border-zinc-200 dark:border-zinc-800">
+                  <CardContent className="space-y-3 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs text-zinc-500">{t("col_invoice_no")}</p>
+                        <p className="font-bold text-zinc-900 dark:text-zinc-100">{invoice.invoiceNumber}</p>
+                      </div>
+                      <Badge className="text-[10px] uppercase tracking-widest">{invoice.status}</Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <p className="text-xs text-zinc-500">{t("col_billed")}</p>
+                        <p className="font-semibold">{fCurrency(invoice.totalAmount)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-zinc-500">{t("col_received", { currency })}</p>
+                        <p className="font-semibold">{invoice.amountReceived ? fCurrency(invoice.amountReceived) : "-"}</p>
+                      </div>
+                    </div>
+                    <details className="rounded-md border border-zinc-200 p-2 text-xs dark:border-zinc-800">
+                      <summary className="cursor-pointer font-semibold">More details</summary>
+                      <div className="space-y-1 pt-2 text-zinc-600 dark:text-zinc-300">
+                        <p>{t("col_date")}: {format(new Date(invoice.invoiceDate), safeDateFormat)}</p>
+                        <p>{t("col_status")}: {invoice.status}</p>
+                      </div>
+                    </details>
+                    <div className="flex flex-wrap gap-2">
+                      {invoice.status !== "Paid" && invoice.status !== "PAID" && (
+                        <Button variant="outline" size="sm" onClick={() => openPayModal(invoice)}><Banknote className="mr-1.5 h-3.5 w-3.5" />{t("log_pay")}</Button>
+                      )}
+                      <Button variant="outline" size="sm" onClick={() => handleResendEmail(invoice)} disabled={resendingId === invoice.id}><Send className="mr-1.5 h-3.5 w-3.5" />{t("actions.resend_invoice_title")}</Button>
+                      <Button variant="secondary" size="sm" asChild><a href={getBustedUrl(invoice.pdfPath, invoice.updatedAt)} target="_blank" rel="noopener noreferrer"><Download className="mr-1.5 h-3.5 w-3.5" />{t("actions.download_pdf_title")}</a></Button>
+                      <Button variant="destructive" size="sm" onClick={() => setInvoiceToDelete(invoice.id)}><Trash2 className="mr-1.5 h-3.5 w-3.5" />{t("actions.delete")}</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
             {filteredInvoices.length === 0 && !isLoading && (
               <div className="pb-4 text-center">
                 <Button asChild className="mt-2 bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-600 dark:hover:bg-emerald-700 border-none font-bold text-xs uppercase tracking-wider">

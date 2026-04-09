@@ -526,24 +526,55 @@ export default function WealthAndTaxPlanner() {
                   onSearchChange={tableState.setSearch}
                   searchPlaceholder={t("description_label")}
                   rightSlot={
-                    <ColumnVisibilityToggle
-                      options={columns.filter((col) => col.hideable).map((col) => ({
-                        id: col.id,
-                        label: typeof col.header === "string" ? col.header : col.id,
-                        visible: visibleColumns.includes(col.id),
-                        onToggle: () => setVisibleColumns((prev) => prev.includes(col.id) ? prev.filter((id) => id !== col.id) : [...prev, col.id]),
-                      }))}
-                    />
+                    <div className="hidden md:block">
+                      <ColumnVisibilityToggle
+                        options={columns.filter((col) => col.hideable).map((col) => ({
+                          id: col.id,
+                          label: typeof col.header === "string" ? col.header : col.id,
+                          visible: visibleColumns.includes(col.id),
+                          onToggle: () => setVisibleColumns((prev) => prev.includes(col.id) ? prev.filter((id) => id !== col.id) : [...prev, col.id]),
+                        }))}
+                      />
+                    </div>
                   }
                 />
-                <DataTable
-                  columns={columns}
-                  data={filteredInvestments}
-                  rowId={(row) => row.id}
-                  emptyTitle={t("no_assets")}
-                  emptyDescription="Log your first investment to unlock deduction insights."
-                  visibleColumnIds={visibleColumns}
-                />
+                <div className="hidden md:block">
+                  <DataTable
+                    columns={columns}
+                    data={filteredInvestments}
+                    rowId={(row) => row.id}
+                    emptyTitle={t("no_assets")}
+                    emptyDescription="Log your first investment to unlock deduction insights."
+                    visibleColumnIds={visibleColumns}
+                  />
+                </div>
+                <div className="space-y-3 p-3 pb-20 md:hidden">
+                  {filteredInvestments.map((investment) => (
+                    <Card key={investment.id} className="border-zinc-200 dark:border-zinc-800">
+                      <CardContent className="space-y-3 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs text-zinc-500">{t("col_asset")}</p>
+                            <p className="font-semibold text-zinc-900 dark:text-zinc-100">{investment.assetName}</p>
+                          </div>
+                          <p className="font-bold text-indigo-700 dark:text-indigo-400">{fCurrency(toSafeNumber(investment.amount))}</p>
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <Badge variant="secondary" className="max-w-[70%] truncate">{investment.category}</Badge>
+                          <span className="text-xs text-zinc-500">{format(new Date(investment.date), safeDateFormat)}</span>
+                        </div>
+                        <details className="rounded-md border border-zinc-200 p-2 text-xs dark:border-zinc-800">
+                          <summary className="cursor-pointer font-semibold">More details</summary>
+                          <div className="space-y-1 pt-2 text-zinc-600 dark:text-zinc-300">
+                            <p>{t("col_date")}: {format(new Date(investment.date), safeDateFormat)}</p>
+                            <p>{t("col_category")}: {investment.category}</p>
+                            <p>{t("col_amount", { currency })}: {fCurrency(toSafeNumber(investment.amount))}</p>
+                          </div>
+                        </details>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -600,7 +631,7 @@ export default function WealthAndTaxPlanner() {
               </Select>
             </div>
 
-            <div className="rounded-md border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+            <div className="hidden overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-800 md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -644,6 +675,35 @@ export default function WealthAndTaxPlanner() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+            <div className="space-y-3 md:hidden">
+              {taxAuditRows.length === 0 ? (
+                <div className="rounded-md border border-zinc-200 py-8 text-center text-xs text-zinc-500 dark:border-zinc-800">
+                  No tax decision history found for the selected filters.
+                </div>
+              ) : (
+                taxAuditRows.map((row) => (
+                  <Card key={row.id} className="border-zinc-200 dark:border-zinc-800">
+                    <CardContent className="space-y-2 p-4 text-xs">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-semibold">{format(new Date(row.createdAt), `${safeDateFormat} HH:mm`)}</p>
+                        <Badge className={`text-[10px] border-0 ${resolveDecisionBadgeClass(row.decisionSource)}`}>{row.decisionSource}</Badge>
+                      </div>
+                      <p>{row.actorEmail || row.actorUserId || "System"} · {row.action}</p>
+                      <p>{row.scopeType}{row.scopeRef ? ` • ${row.scopeRef}` : ""}</p>
+                      <details className="rounded-md border border-zinc-200 p-2 dark:border-zinc-800">
+                        <summary className="cursor-pointer font-semibold">More details</summary>
+                        <div className="space-y-1 pt-2 text-zinc-600 dark:text-zinc-300">
+                          <p>Rate: {typeof row.rate === "number" ? `${row.rate.toFixed(2)}%` : "—"}</p>
+                          <p>From: {row.effectiveFrom ? format(new Date(row.effectiveFrom), safeDateFormat) : "—"}</p>
+                          <p>To: {row.effectiveTo ? format(new Date(row.effectiveTo), safeDateFormat) : "Open"}</p>
+                          <p>Reason: {row.reason || "—"}</p>
+                        </div>
+                      </details>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
 
             <div className="flex items-center justify-end gap-2">
