@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Viewport, Metadata } from "next";
 import { Inter } from "next/font/google";
+
 import "./globals.css";
 import AuthProvider from "@/components/AuthProvider";
 import SetupGatekeeper from "@/components/SetupGatekeeper";
@@ -12,9 +13,26 @@ import { getLocaleDirection } from "@/lib/i18n";
 
 const inter = Inter({ subsets: ["latin"] });
 
+export const viewport: Viewport = {
+  themeColor: '#0062ff',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export const metadata: Metadata = {
   title: "BabaBuilds ERP",
   description: "Internal compliance and financial management system.",
+  applicationName: "BabaBuilds ERP",
+  appleWebApp: {
+    capable: true,
+    title: "BabaBuilds ERP",
+    statusBarStyle: "default",
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export default async function RootLayout({

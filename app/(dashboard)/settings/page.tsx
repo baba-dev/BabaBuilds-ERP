@@ -19,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { getBustedUrl } from "@/lib/cache-buster";
 import { FileUploadField } from "@/components/forms/file-upload-field";
 import { FormFieldMessages, FormSection, FormSubmitBar } from "@/components/forms/form-primitives";
+import { PWASettings } from "@/components/settings/pwa-settings";
 
 export default function SettingsWizard() {
   /**
@@ -1042,6 +1043,8 @@ export default function SettingsWizard() {
               )}
             </CardContent>
           </Card>
+
+          <PWASettings />
 
           {/* STICKY SAVE FOOTER */}
           <div className="sticky bottom-6 z-30">

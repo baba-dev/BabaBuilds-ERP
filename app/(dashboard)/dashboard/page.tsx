@@ -33,20 +33,12 @@ import { ChartCard } from "@/components/charts/ChartCard";
 import { ChartTooltip } from "@/components/charts/ChartTooltip";
 import { ChartLegend } from "@/components/charts/ChartLegend";
 import { withChartTokenColors } from "@/components/charts/chart-colors";
-import type { MapPoint } from "@/components/maps";
-import { MapCardSkeleton } from "@/components/maps";
 import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 import { getInvoiceStatusBadgeKey, INVOICE_STATUS, isPaidInvoiceStatus, toInvoiceStatus } from "@/lib/invoice-status";
 import { parseDashboardResponse } from "./parse-dashboard-response";
 import { getCurrentFinancialYear } from "@/lib/financial-year";
 
-const GeographyInsightCard = dynamic(
-  () => import("@/components/maps").then((mod) => mod.GeographyInsightCard),
-  {
-    loading: () => <MapCardSkeleton />,
-    ssr: false,
-  }
-);
+
 
 function AnimatedValue({
   value,
@@ -260,17 +252,7 @@ export default function Dashboard() {
     [data?.charts?.wealth]
   );
   const [isCompactCharts, setIsCompactCharts] = useState(false);
-  const geographyPoints: MapPoint[] = useMemo(
-    () => [
-      { id: "sf", label: t("geo.points.sf.label"), subtitle: t("geo.points.sf.subtitle"), value: t("geo.points.sf.value"), lat: 25.2, lng: -122.4, weight: 31 },
-      { id: "nyc", label: t("geo.points.nyc.label"), subtitle: t("geo.points.nyc.subtitle"), value: t("geo.points.nyc.value"), lat: 28.8, lng: -93.6, weight: 27 },
-      { id: "lon", label: t("geo.points.lon.label"), subtitle: t("geo.points.lon.subtitle"), value: t("geo.points.lon.value"), lat: 36, lng: -10.8, weight: 18 },
-      { id: "blr", label: t("geo.points.blr.label"), subtitle: t("geo.points.blr.subtitle"), value: t("geo.points.blr.value"), lat: 1.8, lng: 57.6, weight: 43 },
-      { id: "sin", label: t("geo.points.sin.label"), subtitle: t("geo.points.sin.subtitle"), value: t("geo.points.sin.value"), lat: -10.8, lng: 90, weight: 12 },
-      { id: "syd", label: t("geo.points.syd.label"), subtitle: t("geo.points.syd.subtitle"), value: t("geo.points.syd.value"), lat: -43.2, lng: 122.4, weight: 10 },
-    ],
-    [t]
-  );
+
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 768px)");
@@ -466,11 +448,6 @@ export default function Dashboard() {
       }
     >
 
-        <GeographyInsightCard
-          title={t("geo_title")}
-          subtitle={t("geo_subtitle")}
-          points={geographyPoints}
-        />
 
         {/* --- MRR COMMAND CENTER --- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

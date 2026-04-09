@@ -27,8 +27,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { DataTable, type DataTableColumnDef } from "@/components/data-table";
-import type { MapPoint } from "@/components/maps";
-import { MapCardSkeleton } from "@/components/maps";
 import type { CAExpenseRow, CAInvoiceRow, CAPortalPayload, CAPortalSummary } from "@/lib/ca-portal/types";
 import { getCurrentFinancialYear } from "@/lib/financial-year";
 
@@ -108,13 +106,7 @@ const parseCAPortalResponse = (value: unknown): CAPortalPayload => {
   return { summary, invoices, expenses };
 };
 
-const GeographyInsightCard = dynamic(
-  () => import("@/components/maps").then((mod) => mod.GeographyInsightCard),
-  {
-    loading: () => <MapCardSkeleton />,
-    ssr: false,
-  }
-);
+
 
 const formatINRCurrency = (amount: number) => `₹${amount.toLocaleString("en-IN")}`;
 
@@ -208,14 +200,7 @@ export default function CAPortal() {
   const invoices: CAInvoiceRow[] = data?.invoices ?? [];
   const expenses: CAExpenseRow[] = data?.expenses ?? [];
   const isGstLiable = summary.grossReceipts >= 2000000;
-  const jurisdictionPoints: MapPoint[] = [
-    { id: "mh", label: "Maharashtra", subtitle: "GST filings + invoice validations", value: "48 compliance events", lat: 3.6, lng: 54, weight: 48 },
-    { id: "ka", label: "Karnataka", subtitle: "Vendor reconciliations", value: "37 compliance events", lat: -7.2, lng: 46.8, weight: 37 },
-    { id: "dl", label: "Delhi NCR", subtitle: "TDS and receivables", value: "29 compliance events", lat: 19.8, lng: 39.6, weight: 29 },
-    { id: "tn", label: "Tamil Nadu", subtitle: "Expense audits", value: "24 compliance events", lat: -18, lng: 57.6, weight: 24 },
-    { id: "gj", label: "Gujarat", subtitle: "Export invoices", value: "19 compliance events", lat: 5.4, lng: 32.4, weight: 19 },
-    { id: "wb", label: "West Bengal", subtitle: "Documentation checks", value: "16 compliance events", lat: 7.2, lng: 68.4, weight: 16 },
-  ];
+
 
   const invoiceColumns: DataTableColumnDef<CAInvoiceRow>[] = [
     {
@@ -450,11 +435,6 @@ export default function CAPortal() {
           </Card>
         </div>
 
-        <GeographyInsightCard
-          title="Compliance activity & jurisdiction distribution"
-          subtitle="Relative concentration of audits, filings, and evidence collection across active jurisdictions."
-          points={jurisdictionPoints}
-        />
 
         <Card className="border-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 shadow-sm overflow-hidden">
           <Tabs defaultValue="ar" className="w-full">
