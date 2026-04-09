@@ -15,6 +15,7 @@ import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
 import { toInvoiceStatus } from '@/lib/invoice-status';
 import { toDecimal } from '@/lib/money';
 import { getRuntimeSmtpPassword } from '@/lib/mailer';
+import { logActivity } from '@/lib/activity-log';
 
 const lookupAsync = promisify(dns.lookup);
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
@@ -69,8 +70,12 @@ function buildRequestHash(payload: unknown): string {
 export async function POST(request: Request) {
   let generatedPdfPath = ""; 
   let workspaceId = "";
+  let actorId: string | null = null;
+  let actorEmail: string | null = null;
   let idempotencyKey: string | null = null;
   let lockCreated = false;
+  let currentInvoiceNumber = "";
+  let createdInvoiceId: string | null = null;
 
   try {
     // 1. SECURITY LOCK
@@ -79,6 +84,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     workspaceId = (session as any).workspaceId;
+    actorId = (session as any)?.user?.id ?? null;
+    actorEmail = (session as any)?.user?.email ?? null;
 
     const body = await request.json();
     idempotencyKey = request.headers.get("Idempotency-Key")?.trim() || body?.idempotencyKey?.trim() || null;
@@ -348,7 +355,6 @@ export async function POST(request: Request) {
     let attempts = 0;
     const MAX_ATTEMPTS = 5;
     
-    let currentInvoiceNumber = "";
     let finalPdfFilename = "";
     let finalPdfPath = "";
 
@@ -482,6 +488,7 @@ export async function POST(request: Request) {
             status: normalizedStatus,
           } as any,
         });
+        createdInvoiceId = newInvoice.id;
 
         break;
 
@@ -563,6 +570,21 @@ export async function POST(request: Request) {
       });
     }
 
+    logActivity({
+      action: "invoice_generate",
+      outcome: "success",
+      entityType: "invoice",
+      entityId: newInvoice.id,
+      workspaceId,
+      actorId,
+      actorEmail,
+      metadata: {
+        invoiceId: newInvoice.id,
+        invoiceNumber: newInvoice.invoiceNumber,
+        emailRequested: Boolean(sendEmail),
+      },
+    });
+
     return NextResponse.json(successResponse);
 
   } catch (error: any) {
@@ -586,6 +608,22 @@ export async function POST(request: Request) {
         console.error("Failed to release idempotency lock after error:", cleanupErr);
       }
     }
+
+    logActivity({
+      action: "invoice_generate",
+      outcome: "error",
+      entityType: "invoice",
+      entityId: createdInvoiceId,
+      workspaceId: workspaceId || null,
+      actorId,
+      actorEmail,
+      metadata: {
+        invoiceId: createdInvoiceId,
+        invoiceNumber: currentInvoiceNumber || null,
+        idempotencyKeyPresent: Boolean(idempotencyKey),
+        errorMessage: error?.message || "Unknown invoice generation error",
+      },
+    });
 
     return NextResponse.json({ error: error.message || 'Failed to generate invoice' }, { status: 400 });
   }

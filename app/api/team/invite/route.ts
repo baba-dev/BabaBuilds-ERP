@@ -5,15 +5,23 @@ import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { sendEmail } from "@/lib/mailer";
 import { canInviteMembers, getMaxUsersForPlan, Role } from "@/lib/permissions";
+import { logActivity } from "@/lib/activity-log";
 
 export async function POST(req: Request) {
+  let workspaceId = "";
+  let actorId: string | null = null;
+  let actorEmail: string | null = null;
+  let actorRole: string | null = null;
+
   try {
     const session: any = await getServerSession(authOptions);
     if (!session || !session.workspaceId || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const workspaceId = session.workspaceId;
+    workspaceId = session.workspaceId;
+    actorId = session.user.id ?? null;
+    actorEmail = session.user.email ?? null;
     const body = await req.json();
     const { email, role } = body;
 
@@ -25,8 +33,22 @@ export async function POST(req: Request) {
     const currentUserReq = await prisma.workspaceUser.findUnique({
       where: { userId_workspaceId: { userId: session.user.id, workspaceId } }
     });
+    actorRole = currentUserReq?.role ?? null;
 
     if (!currentUserReq || !canInviteMembers(currentUserReq.role)) {
+      logActivity({
+        action: "team_member_invite",
+        outcome: "error",
+        entityType: "workspace_member",
+        workspaceId,
+        actorId,
+        actorEmail,
+        metadata: {
+          actorRole,
+          targetEmail: typeof email === "string" ? email : null,
+          reason: "forbidden",
+        },
+      });
       return NextResponse.json({ error: "You do not have permission to invite members." }, { status: 403 });
     }
 
@@ -87,14 +109,55 @@ export async function POST(req: Request) {
          });
       } catch (err: any) {
          console.error("Failed to send email", err);
+         logActivity({
+           action: "team_member_invite",
+           outcome: "error",
+           entityType: "workspace_member",
+           workspaceId,
+           actorId,
+           actorEmail,
+           metadata: {
+             actorRole,
+             targetEmail: email,
+             inviteId: invite.id,
+             reason: "email_delivery_failed",
+           },
+         });
          // Optionally, you could delete the invite here, or just inform the frontend it was created but email failed.
          return NextResponse.json({ error: "Invite created, but failed to send email: " + err.message }, { status: 500 });
       }
     }
 
+    logActivity({
+      action: "team_member_invite",
+      outcome: "success",
+      entityType: "workspace_member",
+      entityId: invite.id,
+      workspaceId,
+      actorId,
+      actorEmail,
+      metadata: {
+        actorRole,
+        targetEmail: email,
+        targetRole: role,
+      },
+    });
+
     return NextResponse.json({ success: true, invite });
   } catch (error: any) {
     console.error("Invite Error:", error);
+    logActivity({
+      action: "team_member_invite",
+      outcome: "error",
+      entityType: "workspace_member",
+      workspaceId: workspaceId || null,
+      actorId,
+      actorEmail,
+      metadata: {
+        actorRole,
+        reason: "unhandled_exception",
+      },
+    });
     if (error.code === 'P2002') {
       return NextResponse.json({ error: "An invite for this email already exists." }, { status: 400 });
     }

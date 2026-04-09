@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { createTransport } from "nodemailer"; // 1. ADDED IMPORT
 import { recordAuthFailure } from "@/lib/auth-observability";
 import { normalizeLaunchDestination } from "@/lib/launch-routing";
+import { logActivity } from "@/lib/activity-log";
 
 const CANONICAL_DASHBOARD_ROUTE = "/dashboard";
 
@@ -243,14 +244,43 @@ export const authOptions: NextAuthOptions = {
       const trialEndDate = new Date();
       trialEndDate.setDate(trialEndDate.getDate() + trialDays);
 
-      await prisma.workspace.create({
-        data: {
-          name: `${user.name?.split(' ')[0] || user.email?.split('@')[0] || 'My'} Business`, 
-          subscriptionStatus: "TRIALING",
-          subscriptionEndsAt: trialEndDate, 
-          users: { create: { userId: user.id, role: "OWNER" } }
-        }
-      });
+      try {
+        const workspace = await prisma.workspace.create({
+          data: {
+            name: `${user.name?.split(' ')[0] || user.email?.split('@')[0] || 'My'} Business`, 
+            subscriptionStatus: "TRIALING",
+            subscriptionEndsAt: trialEndDate, 
+            users: { create: { userId: user.id, role: "OWNER" } }
+          }
+        });
+
+        logActivity({
+          action: "workspace_bootstrap",
+          outcome: "success",
+          entityType: "workspace",
+          entityId: workspace.id,
+          workspaceId: workspace.id,
+          actorId: user.id,
+          actorEmail: user.email ?? null,
+          metadata: {
+            source: "nextauth_create_user",
+          },
+        });
+      } catch (error: any) {
+        logActivity({
+          action: "workspace_bootstrap",
+          outcome: "error",
+          entityType: "workspace",
+          entityId: null,
+          actorId: user.id,
+          actorEmail: user.email ?? null,
+          metadata: {
+            source: "nextauth_create_user",
+            errorMessage: error?.message || "Workspace bootstrap failed",
+          },
+        });
+        throw error;
+      }
     }
   },
   pages: {
