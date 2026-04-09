@@ -144,6 +144,7 @@ model Workspace {
   taxRateOverrideAuditLogs TaxRateOverrideAuditLog[]
   taxDecisionAuditLogs     TaxDecisionAuditLog[]
   fileImportAuditLogs      FileImportAuditLog[]
+  appActivityLogs          AppActivityLog[]
   workspaceInvites         WorkspaceInvite[]
 }
 
@@ -652,4 +653,28 @@ model FileImportAuditLog {
 
   @@index([workspaceId, createdAt])
   @@index([workspaceId, status])
+}
+
+model AppActivityLog {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  action        String
+  status        String
+  actorUserId   String?
+  actorEmail    String?
+  entityType    String?
+  entityId      String?
+  metadata      Json?
+  ipAddress     String?
+  userAgent     String?
+  correlationId String
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, action])
+  @@index([workspaceId, status])
+  @@index([workspaceId, correlationId])
 }
