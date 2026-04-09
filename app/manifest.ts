@@ -1,12 +1,30 @@
 import { MetadataRoute } from 'next';
 
+type FileHandlerEntry = {
+  action: string;
+  accept: Record<string, string[]>;
+};
+
+const erpFileHandlers: FileHandlerEntry[] = [
+  {
+    action: '/open-file',
+    accept: {
+      'application/pdf': ['.pdf'],
+      'text/csv': ['.csv'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'image/png': ['.png'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+    },
+  },
+];
+
 const defaultShortcutIcon = {
   src: '/icons/launchericon-192x192.png',
   sizes: '192x192',
   type: 'image/png',
 } as const;
 
-type ShareTargetManifest = MetadataRoute.Manifest & {
+type ShareTargetField = {
   share_target: {
     action: string;
     method: 'POST';
@@ -24,7 +42,9 @@ type ShareTargetManifest = MetadataRoute.Manifest & {
 };
 
 export default function manifest(): MetadataRoute.Manifest {
-  const webManifest: ShareTargetManifest = {
+  const webManifest: MetadataRoute.Manifest &
+    { file_handlers: FileHandlerEntry[] } &
+    ShareTargetField = {
     id: '/',
     name: 'BabaBuilds ERP',
     short_name: 'BabaBuilds',
@@ -90,6 +110,7 @@ export default function manifest(): MetadataRoute.Manifest {
         label: 'BabaBuilds ERP mobile portrait splash',
       },
     ],
+    file_handlers: erpFileHandlers,
     share_target: {
       action: '/share-target',
       method: 'POST',
