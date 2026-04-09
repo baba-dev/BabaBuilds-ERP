@@ -1,5 +1,25 @@
 import { MetadataRoute } from 'next';
 
+
+
+type FileHandlerEntry = {
+  action: string;
+  accept: Record<string, string[]>;
+};
+
+const erpFileHandlers: FileHandlerEntry[] = [
+  {
+    action: '/open-file',
+    accept: {
+      'application/pdf': ['.pdf'],
+      'text/csv': ['.csv'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'image/png': ['.png'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+    },
+  },
+];
+
 const defaultShortcutIcon = {
   src: '/icons/launchericon-192x192.png',
   sizes: '192x192',
@@ -7,7 +27,7 @@ const defaultShortcutIcon = {
 } as const;
 
 export default function manifest(): MetadataRoute.Manifest {
-  return {
+  const appManifest: MetadataRoute.Manifest & { file_handlers: FileHandlerEntry[] } = {
     id: '/',
     name: 'BabaBuilds ERP',
     short_name: 'BabaBuilds',
@@ -73,6 +93,7 @@ export default function manifest(): MetadataRoute.Manifest {
         label: 'BabaBuilds ERP mobile portrait splash',
       },
     ],
+    file_handlers: erpFileHandlers,
     shortcuts: [
       {
         name: 'Dashboard',
@@ -153,4 +174,7 @@ export default function manifest(): MetadataRoute.Manifest {
       },
     ],
   };
+
+  return appManifest;
 }
+

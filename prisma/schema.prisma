@@ -143,6 +143,7 @@ model Workspace {
   taxRateOverrides         TaxRateOverride[]
   taxRateOverrideAuditLogs TaxRateOverrideAuditLog[]
   taxDecisionAuditLogs     TaxDecisionAuditLog[]
+  fileImportAuditLogs      FileImportAuditLog[]
   workspaceInvites         WorkspaceInvite[]
 }
 
@@ -632,4 +633,23 @@ model TaxRateOverrideAuditLog {
   @@index([workspaceId, createdAt])
   @@index([workspaceId, action])
   @@index([workspaceId, scopeType])
+}
+
+
+model FileImportAuditLog {
+  id            String    @id
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  fileName      String?
+  mimeType      String?
+  fileSizeBytes Int?
+  flow          String?
+  status        String
+  reason        String?
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, status])
 }
