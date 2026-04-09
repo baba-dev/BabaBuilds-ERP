@@ -1,6 +1,6 @@
 import 'server-only';
 
-import crypto from 'crypto';
+import crypto, { randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
@@ -118,10 +118,6 @@ export async function validateTaxOverrideAuditChain(workspaceId?: string) {
     violations,
   };
 }
-import { randomUUID } from 'crypto';
-
-import { Prisma } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
 
 type JsonPrimitive = string | number | boolean | null;
 type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };

@@ -34,11 +34,6 @@ enum TaxResolutionSource {
   FALLBACK
 }
 
-enum AppActivityStatus {
-  SUCCESS
-  FAILURE
-}
-
 // ==========================================
 // 1. AUTHENTICATION (NextAuth Standard)
 // ==========================================
@@ -158,7 +153,6 @@ model Workspace {
   fileImportAuditLogs      FileImportAuditLog[]
   appActivityLogs          AppActivityLog[]
   workspaceInvites         WorkspaceInvite[]
-  appActivityLogs          AppActivityLog[]
 }
 
 model AppActivityLog {
@@ -175,14 +169,12 @@ model AppActivityLog {
   entityType String?
   entityId   String?
 
-  status AppActivityStatus
-  message String
+  status   String // "SUCCESS" | "FAILURE" | "WARNING" | "INFO"
+  metadata Json?
 
-  metadataJson Json?
-
-  ipAddress String?
-  userAgent String?
-  requestId String?
+  ipAddress     String?
+  userAgent     String?
+  correlationId String?
 
   createdAt DateTime @default(now())
 
@@ -747,28 +739,4 @@ model InAppNotification {
   @@index([userId, isRead, createdAt])
   @@index([userId, createdAt])
   @@index([workspaceId])
-}
-
-model AppActivityLog {
-  id          String    @id @default(cuid())
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  action        String
-  status        String
-  actorUserId   String?
-  actorEmail    String?
-  entityType    String?
-  entityId      String?
-  metadata      Json?
-  ipAddress     String?
-  userAgent     String?
-  correlationId String
-
-  createdAt DateTime @default(now())
-
-  @@index([workspaceId, createdAt])
-  @@index([workspaceId, action])
-  @@index([workspaceId, status])
-  @@index([workspaceId, correlationId])
 }
