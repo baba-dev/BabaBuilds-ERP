@@ -8,17 +8,17 @@ declare global {
     __SW_MANIFEST: (PrecacheEntry | string)[] | undefined;
   }
 
-  interface PeriodicSyncEvent extends ExtendableEvent {
-    readonly tag: string;
-  }
-
-  interface SyncEvent extends ExtendableEvent {
-    readonly tag: string;
-    readonly lastChance?: boolean;
-  }
 }
 
 declare const self: ServiceWorkerGlobalScope;
+
+type SyncEventLike = ExtendableEvent & {
+  tag: string;
+};
+
+type PeriodicSyncEventLike = ExtendableEvent & {
+  tag: string;
+};
 
 const OFFLINE_FALLBACK_PAGE = '/offline';
 
@@ -125,7 +125,6 @@ self.addEventListener('push', (event) => {
       badge: '/icons/launchericon-72x72.png',
       data: { url },
       tag: 'bababuilds-notification',
-      renotify: true,
     }),
   );
 });
@@ -151,7 +150,7 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 self.addEventListener('sync', (event: Event) => {
-  const syncEvent = event as SyncEvent;
+  const syncEvent = event as SyncEventLike;
   if (syncEvent.tag !== 'sync-pending-requests') {
     return;
   }
@@ -160,7 +159,7 @@ self.addEventListener('sync', (event: Event) => {
 });
 
 self.addEventListener('periodicsync', (event: Event) => {
-  const periodicEvent = event as PeriodicSyncEvent;
+  const periodicEvent = event as PeriodicSyncEventLike;
   if (periodicEvent.tag !== 'refresh-core-data') {
     return;
   }

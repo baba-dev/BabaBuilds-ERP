@@ -9,19 +9,19 @@ interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
 }
 
-interface BadgeNavigator extends Navigator {
+type BadgeNavigator = Navigator & {
   setAppBadge?: (count?: number) => Promise<void>;
   clearAppBadge?: () => Promise<void>;
-}
+};
 
-interface SyncServiceWorkerRegistration extends ServiceWorkerRegistration {
+type SyncServiceWorkerRegistration = ServiceWorkerRegistration & {
   sync?: {
     register: (tag: string) => Promise<void>;
   };
   periodicSync?: {
     register: (tag: string, options: { minInterval: number }) => Promise<void>;
   };
-}
+};
 
 export function usePWA() {
   const [isInstallable, setIsInstallable] = useState(false);

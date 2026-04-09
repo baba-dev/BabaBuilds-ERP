@@ -2,14 +2,14 @@
 
 import { useEffect } from 'react';
 
-interface ExtendedServiceWorkerRegistration extends ServiceWorkerRegistration {
+type ExtendedServiceWorkerRegistration = ServiceWorkerRegistration & {
   sync?: {
     register: (tag: string) => Promise<void>;
   };
   periodicSync?: {
     register: (tag: string, options: { minInterval: number }) => Promise<void>;
   };
-}
+};
 
 async function registerOptionalCapabilities(registration: ExtendedServiceWorkerRegistration) {
   if (registration.sync) {
