@@ -1,4 +1,4 @@
-import fs from 'fs';
+import { promises as fs } from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
@@ -10,6 +10,19 @@ import { scanBuffer } from '@/lib/security/clamav';
 
 type ImportFlow = 'expenses' | 'invoices' | 'reconciliation';
 type ImportStatus = 'IMPORTED' | 'UNSUPPORTED' | 'PERMISSION_DENIED' | 'FAILED';
+type ImportErrorCode =
+  | 'PERMISSION_DENIED'
+  | 'NO_FILE'
+  | 'UNSUPPORTED_FILE'
+  | 'UNSUPPORTED_FOR_FLOW'
+  | 'FILE_TOO_LARGE'
+  | 'MALWARE_DETECTED'
+  | 'MALWARE_SCAN_TIMEOUT'
+  | 'FILE_IMPORT_FAILED';
+
+const MAX_FILE_SIZE_BYTES = Number(process.env.OPEN_FILE_MAX_SIZE_BYTES ?? 10 * 1024 * 1024);
+const MAX_MULTIPART_OVERHEAD_BYTES = Number(process.env.OPEN_FILE_MAX_MULTIPART_OVERHEAD_BYTES ?? 1 * 1024 * 1024);
+const MALWARE_SCAN_TIMEOUT_MS = Number(process.env.OPEN_FILE_SCAN_TIMEOUT_MS ?? 60_000);
 
 const supportedTypes: Record<string, string[]> = {
   'application/pdf': ['.pdf'],
@@ -30,6 +43,25 @@ const EXTENSION_TO_FLOW: Record<string, ImportFlow> = {
 };
 
 const normalizeExt = (filename: string) => path.extname(filename).toLowerCase();
+const parseContentLength = (request: Request) => {
+  const header = request.headers.get('content-length');
+  const parsed = header ? Number(header) : NaN;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+};
+
+const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
+  let timeoutHandle: NodeJS.Timeout | undefined;
+
+  try {
+    const timeoutPromise = new Promise<T>((_, reject) => {
+      timeoutHandle = setTimeout(() => reject(new Error('MALWARE_SCAN_TIMEOUT')), timeoutMs);
+    });
+
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+  }
+};
 
 const logAudit = async (params: {
   workspaceId: string;
@@ -65,13 +97,28 @@ const isSupportedFile = (file: File, ext: string) => {
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
-  if (!session || !(session as any).workspaceId) {
+  const workspaceId = (session as { workspaceId?: string } | null)?.workspaceId;
+
+  if (!session || !workspaceId) {
     return apiError(403, 'Permission denied for file import.', 'PERMISSION_DENIED');
   }
 
-  const workspaceId = (session as any).workspaceId as string;
-
   try {
+    const contentLength = parseContentLength(request);
+    if (contentLength && contentLength > MAX_FILE_SIZE_BYTES + MAX_MULTIPART_OVERHEAD_BYTES) {
+      await logAudit({
+        workspaceId,
+        status: 'FAILED',
+        reason: `Payload exceeds limit (${contentLength} > ${MAX_FILE_SIZE_BYTES + MAX_MULTIPART_OVERHEAD_BYTES})`,
+      });
+      return apiError(
+        413,
+        `File exceeds maximum upload size of ${Math.floor(MAX_FILE_SIZE_BYTES / (1024 * 1024))}MB.`,
+        'FILE_TOO_LARGE' satisfies ImportErrorCode,
+        { maxSizeBytes: MAX_FILE_SIZE_BYTES, contentLength }
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const requestedFlow = formData.get('flow');
@@ -83,6 +130,24 @@ export async function POST(request: Request) {
         reason: 'Missing file payload',
       });
       return apiError(400, 'No file provided.', 'NO_FILE');
+    }
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      await logAudit({
+        workspaceId,
+        fileName: file.name,
+        mimeType: file.type,
+        fileSize: file.size,
+        status: 'FAILED',
+        reason: `File size ${file.size} exceeds max ${MAX_FILE_SIZE_BYTES}`,
+      });
+
+      return apiError(
+        413,
+        `File exceeds maximum upload size of ${Math.floor(MAX_FILE_SIZE_BYTES / (1024 * 1024))}MB.`,
+        'FILE_TOO_LARGE' satisfies ImportErrorCode,
+        { maxSizeBytes: MAX_FILE_SIZE_BYTES, fileSizeBytes: file.size }
+      );
     }
 
     const ext = normalizeExt(file.name);
@@ -113,7 +178,7 @@ export async function POST(request: Request) {
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const isSafe = await scanBuffer(buffer);
+    const isSafe = await withTimeout(scanBuffer(buffer), MALWARE_SCAN_TIMEOUT_MS);
     if (!isSafe) {
       await logAudit({
         workspaceId,
@@ -148,12 +213,12 @@ export async function POST(request: Request) {
 
     if (flow === 'expenses') {
       const receiptsDir = path.join(process.cwd(), 'public', 'receipts', workspaceId);
-      if (!fs.existsSync(receiptsDir)) fs.mkdirSync(receiptsDir, { recursive: true });
+      await fs.mkdir(receiptsDir, { recursive: true });
 
       const safeFilename = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
       const uniqueFilename = `${Date.now()}-${safeFilename}`;
       const filepath = path.join(receiptsDir, uniqueFilename);
-      fs.writeFileSync(filepath, buffer);
+      await fs.writeFile(filepath, buffer);
 
       const importedExpense = await prisma.expense.create({
         data: {
@@ -223,11 +288,28 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error('Open file import failed:', error);
+    const isScanTimeout = error instanceof Error && error.message === 'MALWARE_SCAN_TIMEOUT';
+
+    if (isScanTimeout) {
+      await logAudit({
+        workspaceId,
+        status: 'FAILED',
+        reason: `Malware scan timed out after ${MALWARE_SCAN_TIMEOUT_MS}ms`,
+      });
+
+      return apiError(
+        504,
+        'File security scan timed out. Please retry shortly.',
+        'MALWARE_SCAN_TIMEOUT' satisfies ImportErrorCode,
+        { timeoutMs: MALWARE_SCAN_TIMEOUT_MS }
+      );
+    }
+
     await logAudit({
       workspaceId,
       status: 'FAILED',
       reason: error instanceof Error ? error.message : 'Unknown import failure',
     });
-    return apiError(500, 'Failed to import launched file.', 'FILE_IMPORT_FAILED');
+    return apiError(500, 'Failed to import launched file.', 'FILE_IMPORT_FAILED' satisfies ImportErrorCode);
   }
 }
