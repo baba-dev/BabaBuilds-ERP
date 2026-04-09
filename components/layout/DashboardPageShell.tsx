@@ -98,6 +98,7 @@ export function DashboardPageShell({
 
 
   return (
+    <div className="min-h-full bg-background/50 p-4 transition-colors duration-300 md:p-8">
       <div className={cn("mx-auto space-y-8", maxWidthClassName, animated && animationClassName)}>
         <header
           className={cn(
