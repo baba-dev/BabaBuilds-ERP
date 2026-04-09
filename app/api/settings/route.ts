@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { encrypt } from '@/lib/encryption';
+import { decrypt, encrypt } from '@/lib/encryption';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
@@ -229,7 +229,29 @@ export async function POST(request: Request) {
     }
 
     // Append SMTP / Groq secrets only if user typed a new value or deleted them
-    if (rawSmtpPassword) updateData.smtpPassword = parsedSmtpPassword;
+    if (rawSmtpPassword && rawSmtpPassword !== "SET") {
+      if (rawSmtpPassword === "DELETE_KEY") {
+        updateData.smtpPassword = null;
+      } else {
+        updateData.smtpPassword = encrypt(rawSmtpPassword);
+      }
+    } else {
+      const existingProfile = await prisma.businessProfile.findUnique({
+        where: { workspaceId },
+        select: { smtpPassword: true },
+      });
+      const existingSmtpPassword = existingProfile?.smtpPassword;
+
+      // Legacy fallback: plaintext passwords remain usable at runtime.
+      // On the next save, auto-re-encrypt plaintext values.
+      if (existingSmtpPassword) {
+        try {
+          decrypt(existingSmtpPassword);
+        } catch {
+          updateData.smtpPassword = encrypt(existingSmtpPassword);
+        }
+      }
+    }
     
     if (rawGroqApiKey && rawGroqApiKey !== "SET") {
       if (rawGroqApiKey === "DELETE_KEY") {
@@ -285,7 +307,10 @@ export async function POST(request: Request) {
         panNumber, udyamNumber, gstin,
         bankName, accountName, accountNumber, ifscCode,
         smtpHost, smtpPort, smtpUser, smtpFromEmail, 
-        smtpPassword:        parsedSmtpPassword || null,
+        smtpPassword:
+          parsedSmtpPassword && parsedSmtpPassword !== "SET"
+            ? encrypt(parsedSmtpPassword)
+            : null,
         groqApiKey:          (rawGroqApiKey && rawGroqApiKey !== "SET" && rawGroqApiKey !== "DELETE_KEY")
                                ? encrypt(rawGroqApiKey) : (parsedGroqApiKey || null),
         razorpayKeyId:       rawRzpKeyId        || null,

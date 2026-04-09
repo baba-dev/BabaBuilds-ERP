@@ -14,6 +14,7 @@ import { calculateInvoiceTotals } from '@/lib/invoice/totals';
 import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
 import { toInvoiceStatus } from '@/lib/invoice-status';
 import { toDecimal } from '@/lib/money';
+import { getRuntimeSmtpPassword } from '@/lib/mailer';
 
 const lookupAsync = promisify(dns.lookup);
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
@@ -522,7 +523,7 @@ export async function POST(request: Request) {
               port:   profile.smtpPort || 587,
               secure: profile.smtpPort === 465, 
               tls:    { servername: profile.smtpHost },
-              auth:   { user: profile.smtpUser, pass: profile.smtpPassword },
+              auth:   { user: profile.smtpUser, pass: getRuntimeSmtpPassword(profile.smtpPassword) },
             });
 
             const mailOptions = {

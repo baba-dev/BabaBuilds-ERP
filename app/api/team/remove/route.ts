@@ -25,7 +25,16 @@ export async function POST(req: Request) {
     }
 
     if (inviteId) {
-      await prisma.workspaceInvite.delete({
+      const invite = await prisma.workspaceInvite.findFirst({
+        where: { id: inviteId, workspaceId },
+        select: { id: true }
+      });
+
+      if (!invite) {
+        return NextResponse.json({ error: "Invite not found" }, { status: 404 });
+      }
+
+      await prisma.workspaceInvite.deleteMany({
         where: { id: inviteId, workspaceId }
       });
       return NextResponse.json({ success: true });

@@ -1,17 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { isCronAuthorized, unauthorizedCronResponse } from '@/lib/security/cron-auth';
 
 export async function GET(request: Request) {
+  if (!isCronAuthorized(request)) {
+    return unauthorizedCronResponse();
+  }
+
   try {
-    // 1. SECURITY LOCK: CRON AUTHENTICATION
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-
-    // Only enforce this in production; allows for easy browser testing in dev
-    if (process.env.NODE_ENV === 'production' && authHeader !== `Bearer ${cronSecret}`) {
-      return new NextResponse("Unauthorized Cron Trigger", { status: 401 });
-    }
-
     // 2. DEFINE THE PURGE WINDOW (24 Hours)
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
