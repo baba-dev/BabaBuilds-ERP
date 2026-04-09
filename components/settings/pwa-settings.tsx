@@ -1,32 +1,61 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { usePWA } from '@/hooks/use-pwa';
-import { DownloadCloud, Smartphone, ArrowDownToLine, BellRing } from 'lucide-react';
+import { DownloadCloud, Smartphone, ArrowDownToLine, BellRing, RefreshCcw, Cloud } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function PWASettings() {
-  const { isInstallable, installPWA } = usePWA();
-  const [permission, setPermission] = useState<NotificationPermission>('default');
-
-  useEffect(() => {
-    if ('Notification' in window) {
-      setPermission(Notification.permission);
-    }
-  }, []);
+  const {
+    isInstallable,
+    installPWA,
+    registerBackgroundSync,
+    registerPeriodicSync,
+    sendTestNotification,
+  } = usePWA();
+  const [permission, setPermission] = useState<NotificationPermission>(
+    typeof Notification === 'undefined' ? 'default' : Notification.permission,
+  );
 
   const requestNotificationPermission = async () => {
     if (!('Notification' in window)) {
       toast.error('Notifications are not supported by your browser.');
       return;
     }
+
     const result = await Notification.requestPermission();
     setPermission(result);
+
     if (result === 'granted') {
       toast.success('Notifications enabled successfully.');
-    } else {
-      toast.warning('Notifications permission denied.');
+      const sent = await sendTestNotification();
+      if (!sent) {
+        toast.warning('Notification permission granted, but test notification was blocked by browser policy.');
+      }
+      return;
     }
+
+    toast.warning('Notifications permission denied.');
+  };
+
+  const enableBackgroundSync = async () => {
+    const ok = await registerBackgroundSync();
+    if (!ok) {
+      toast.warning('Background Sync is not available in this browser.');
+      return;
+    }
+
+    toast.success('Background Sync enabled. Pending offline requests will sync when online.');
+  };
+
+  const enablePeriodicSync = async () => {
+    const ok = await registerPeriodicSync();
+    if (!ok) {
+      toast.warning('Periodic Background Sync is unavailable or permission was not granted.');
+      return;
+    }
+
+    toast.success('Periodic data refresh enabled.');
   };
 
   return (
@@ -36,9 +65,10 @@ export function PWASettings() {
           <Smartphone className="w-5 h-5 text-indigo-600" /> App Features (PWA)
         </CardTitle>
         <CardDescription className="dark:text-zinc-400">
-          Install the app and manage native functionalities.
+          Install the app and enable available native-like capabilities.
         </CardDescription>
       </CardHeader>
+
       <CardContent className="pt-6 space-y-6">
         <div className="flex items-center justify-between border-b dark:border-zinc-800 pb-4">
           <div>
@@ -61,7 +91,7 @@ export function PWASettings() {
           </Button>
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between border-b dark:border-zinc-800 pb-4">
           <div>
             <h3 className="font-semibold dark:text-zinc-200 flex items-center gap-2">
               <BellRing className="w-4 h-4 text-zinc-500" /> Push Notifications
@@ -77,6 +107,34 @@ export function PWASettings() {
             variant={permission === 'granted' ? 'secondary' : 'outline'}
           >
             {permission === 'granted' ? 'Enabled' : 'Enable Notifications'}
+          </Button>
+        </div>
+
+        <div className="flex items-center justify-between border-b dark:border-zinc-800 pb-4">
+          <div>
+            <h3 className="font-semibold dark:text-zinc-200 flex items-center gap-2">
+              <Cloud className="w-4 h-4 text-zinc-500" /> Background Sync
+            </h3>
+            <p className="text-sm text-zinc-500 mt-1">
+              Queue updates while offline and sync when your connection returns.
+            </p>
+          </div>
+          <Button type="button" onClick={enableBackgroundSync} variant="outline">
+            Enable Sync
+          </Button>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold dark:text-zinc-200 flex items-center gap-2">
+              <RefreshCcw className="w-4 h-4 text-zinc-500" /> Periodic Background Refresh
+            </h3>
+            <p className="text-sm text-zinc-500 mt-1">
+              Refresh key cached pages periodically on supported browsers.
+            </p>
+          </div>
+          <Button type="button" onClick={enablePeriodicSync} variant="outline">
+            Enable Refresh
           </Button>
         </div>
       </CardContent>
