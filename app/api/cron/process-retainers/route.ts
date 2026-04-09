@@ -15,6 +15,7 @@ import path from 'path';
 import { calculateInvoiceTotals } from '@/lib/invoice/totals';
 import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
 import { decimalToNumber, toDecimal } from '@/lib/money';
+import { isCronAuthorized, unauthorizedCronResponse } from '@/lib/security/cron-auth';
 
 // Helper for Indian Financial Year
 const getFY = (date: Date) => {
@@ -380,15 +381,11 @@ async function generateRetainerPDF(
 }
 
 export async function GET(request: Request) {
-  try {
-    // 1. CRON SECURITY AUTHENTICATION
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-    
-    if (process.env.NODE_ENV === 'production' && authHeader !== `Bearer ${cronSecret}`) {
-      return new NextResponse("Unauthorized Cron Trigger", { status: 401 });
-    }
+  if (!isCronAuthorized(request)) {
+    return unauthorizedCronResponse();
+  }
 
+  try {
     const today = new Date();
     
     // 2. FIND ALL DUE RETAINERS
