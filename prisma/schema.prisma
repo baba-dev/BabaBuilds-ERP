@@ -628,6 +628,10 @@ model TaxRateOverrideAuditLog {
   actorUserId String?
   actorEmail  String?
 
+  prevHash         String?
+  entryHash        String?
+  canonicalPayload Json?
+
   createdAt DateTime @default(now())
 
   @@index([workspaceId, createdAt])

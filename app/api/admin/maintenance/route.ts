@@ -6,6 +6,7 @@ import path from "path";
 import { exec } from "child_process";
 import util from "util";
 import { decimalToNumber } from "@/lib/money";
+import { sendActivityAlert } from '@/lib/security/alert-hooks';
 
 const execPromise = util.promisify(exec);
 
@@ -13,6 +14,16 @@ export async function POST(req: Request) {
   try {
     await verifySuperAdmin();
     const { action } = await req.json();
+
+    if (['PURGE_DEMO', 'PRUNE_FILES', 'CLEAR_LOGS', 'CLEAR_CACHE', 'STAMP_PAID_INVOICES', 'REGENERATE_INVOICES', 'REBOOT'].includes(action)) {
+      await sendActivityAlert({
+        type: 'MASS_MAINTENANCE_ACTION',
+        severity: 'warning',
+        message: `Super-admin initiated maintenance action: ${action}.`,
+        details: { action },
+        dedupeKey: `maintenance:${action}`
+      });
+    }
 
     switch (action) {
       case "PURGE_DEMO":

@@ -1,3 +1,5 @@
+import { maybeAlertRepeatedAuthFailures } from "@/lib/security/alert-hooks";
+
 type AuthFailureRecord = {
   count: number;
   lastSeenAt: string;
@@ -57,13 +59,16 @@ export function recordAuthFailure(input: { reason: string; code: string; provide
   const key = `${normalizedReason}::${provider}::${input.code}`;
   const current = store.get(key);
 
-  store.set(key, {
+  const nextRecord = {
     count: (current?.count || 0) + 1,
     provider,
     code: input.code,
     reason: normalizedReason,
     lastSeenAt: new Date().toISOString(),
-  });
+  };
+
+  store.set(key, nextRecord);
+  void maybeAlertRepeatedAuthFailures(nextRecord);
 }
 
 export function getAuthFailureMetrics() {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { handleAdminApiError, verifySuperAdmin } from "../authz";
 import { prisma } from "@/lib/prisma";
+import { sendActivityAlert } from '@/lib/security/alert-hooks';
 
 // GET: Fetch all users & platform stats
 export async function GET() {
@@ -86,8 +87,16 @@ export async function DELETE(req: Request) {
     await verifySuperAdmin();
     const { userId } = await req.json();
 
-    await prisma.user.delete({
-      where: { id: userId }
+    const deletedUser = await prisma.user.delete({
+      where: { id: userId },
+      select: { id: true, email: true }
+    });
+
+    await sendActivityAlert({
+      type: 'USER_DELETED',
+      severity: 'critical',
+      message: 'A user account was deleted by super-admin.',
+      details: { userId: deletedUser.id, email: deletedUser.email }
     });
 
     return NextResponse.json({ success: true });
