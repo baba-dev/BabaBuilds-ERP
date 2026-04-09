@@ -30,6 +30,7 @@ export default function manifest(): MetadataRoute.Manifest {
         src: '/icons/launchericon-512x512.png',
         sizes: '512x512',
         type: 'image/png',
+        urpose: 'any',
       },
       {
         src: '/icons/launchericon-512x512.png',
@@ -45,18 +46,25 @@ export default function manifest(): MetadataRoute.Manifest {
     ],
     screenshots: [
       {
-        src: '/banners',
+        src: '/icons/Banner-1.png',
         sizes: '1536x1024',
         type: 'image/png',
         form_factor: 'wide',
-        label: 'Dashboard overview with business insights',
+        label: 'BabaBuilds ERP Features Slide 1 - Wide',
       },
       {
-        src: '/icons/windows/Wide310x150Logo.scale-400.png',
-        sizes: '1240x600',
+        src: '/icons/Banner-2.png',
+        sizes: '1536x1024',
         type: 'image/png',
         form_factor: 'wide',
-        label: 'Invoices and financial workflow overview',
+        label: 'BabaBuilds ERP Features Slide 2 - Wide',
+      },
+      {
+        src: '/icons/Banner-3.png',
+        sizes: '1536x1024',
+        type: 'image/png',
+        form_factor: 'wide',
+        label: 'BabaBuilds ERP Features Slide 3 - Wide',
       },
       {
         src: '/splash',
