@@ -19,6 +19,12 @@ import { getCurrencySymbol } from "@/lib/currency";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { ColumnVisibilityToggle, DataTable, DataTablePagination, DataTableToolbar, RowActionsMenu, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
 import type { ApiEnvelope, ExpenseDto, InvoiceDto } from "@/lib/types/business";
+import { getConflictPolicy, queueOfflineMutation } from "@/lib/offline-sync";
+
+const isLikelyOfflineError = (error: unknown) => {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return true;
+  return error instanceof TypeError;
+};
 
 export default function ExpenseTracker() {
   const t = useTranslations('Expenses');
@@ -292,7 +298,10 @@ export default function ExpenseTracker() {
     try {
       const res = await fetch(`/api/expenses/${expenseToEdit.id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Offline-Conflict-Policy': getConflictPolicy('expense', 'update'),
+        },
         body: JSON.stringify(editForm)
       });
       if (!res.ok) throw new Error(t("toast.error.update_expense"));
@@ -301,6 +310,19 @@ export default function ExpenseTracker() {
       fetchExpenses(currentPage);
       fetchSummary();
     } catch (err) {
+      if (isLikelyOfflineError(err)) {
+        queueOfflineMutation({
+          entity: 'expense',
+          operation: 'update',
+          endpoint: `/api/expenses/${expenseToEdit.id}`,
+          method: 'PATCH',
+          payload: editForm,
+          conflictPolicy: getConflictPolicy('expense', 'update'),
+          lastError: err instanceof Error ? err.message : 'Offline request queued',
+        });
+        toast.warning('You are offline. Expense edits were queued and will retry with client-wins conflict policy.', { id: toastId });
+        return;
+      }
       toast.error(t("toast.error.update_expense"), { id: toastId });
     } finally {
       setIsEditing(false);

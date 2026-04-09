@@ -20,8 +20,15 @@ import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
 import { useTranslations } from "next-intl";
 import { getBustedUrl } from "@/lib/cache-buster";
+import { getConflictPolicy, queueOfflineMutation } from "@/lib/offline-sync";
+
+const isLikelyOfflineError = (error: unknown) => {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return true;
+  return error instanceof TypeError;
+};
 
 export default function InvoiceGenerator() {
+
   const t = useTranslations('Invoice');
   const [isGenerating, setIsGenerating] = useState(false);
   const [successData, setSuccessData] = useState<{ pdfPath: string; invoiceNumber: string; emailStatus?: string } | null>(null);
@@ -212,7 +219,10 @@ export default function InvoiceGenerator() {
     try {
       const response = await fetch('/api/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Offline-Conflict-Policy': getConflictPolicy('invoice', 'create'),
+        },
         body: JSON.stringify({
           clientId: selectedClientId,
           billingMonth,
@@ -243,8 +253,29 @@ export default function InvoiceGenerator() {
         emailStatus: data.emailStatus
       });
       setServices(services.map(s => ({ ...s, selected: false, amount: "" })));
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (isLikelyOfflineError(err)) {
+        queueOfflineMutation({
+          entity: 'invoice',
+          operation: 'create',
+          endpoint: '/api/generate',
+          method: 'POST',
+          payload: {
+            clientId: selectedClientId,
+            billingMonth,
+            sacCode: smartSacCode,
+            services: validServices,
+            customDate: invoiceDate.toISOString(),
+            sendEmail,
+          },
+          conflictPolicy: getConflictPolicy('invoice', 'create'),
+          lastError: err?.message || 'Offline request queued',
+        });
+
+        setError('You appear to be offline. Invoice request has been queued for retry.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to generate');
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -257,7 +288,10 @@ export default function InvoiceGenerator() {
     try {
       const response = await fetch('/api/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Offline-Conflict-Policy': getConflictPolicy('invoice', 'update'),
+        },
         body: JSON.stringify({
           clientId: selectedClientId,
           billingMonth,
@@ -278,8 +312,30 @@ export default function InvoiceGenerator() {
       setServices(services.map(s => ({ ...s, selected: false, amount: "" })));
       setTaxRateInput("");
       setTaxRateModalOpen(false);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (isLikelyOfflineError(err)) {
+        queueOfflineMutation({
+          entity: 'invoice',
+          operation: 'update',
+          endpoint: '/api/generate',
+          method: 'POST',
+          payload: {
+            clientId: selectedClientId,
+            billingMonth,
+            sacCode: smartSacCode,
+            services: validServices,
+            customDate: invoiceDate.toISOString(),
+            sendEmail,
+            taxRateOverride: Number(taxRateInput),
+          },
+          conflictPolicy: getConflictPolicy('invoice', 'update'),
+          lastError: err?.message || 'Offline request queued',
+        });
+
+        setError('You appear to be offline. Invoice override request has been queued for manual merge review.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to generate');
+      }
     } finally {
       setIsGenerating(false);
     }
