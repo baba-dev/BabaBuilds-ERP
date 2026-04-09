@@ -3,7 +3,6 @@
 import { defaultCache } from '@serwist/next/worker';
 import { 
   ExpirationPlugin, 
-  NetworkFirst, 
   StaleWhileRevalidate, 
   type PrecacheEntry, 
   Serwist, 
@@ -31,25 +30,6 @@ type PeriodicSyncEventLike = ExtendableEvent & {
 const OFFLINE_FALLBACK_PAGE = '/offline';
 
 const dashboardRuntimeCaching = [
-  {
-    matcher: ({ sameOrigin, url, request }: { sameOrigin: boolean; url: URL; request: Request }) =>
-      sameOrigin &&
-      request.method === 'GET' &&
-      ['/api/dashboard', '/api/invoices', '/api/expenses', '/api/clients'].some((endpoint) =>
-        url.pathname.startsWith(endpoint),
-      ),
-    handler: new NetworkFirst({
-      cacheName: 'erp-read-api-cache',
-      networkTimeoutSeconds: 6,
-      plugins: [
-        new ExpirationPlugin({
-          maxEntries: 60,
-          maxAgeSeconds: 12 * 60 * 60,
-          maxAgeFrom: 'last-used',
-        }),
-      ],
-    }),
-  },
   {
     matcher: ({ sameOrigin, url, request }: { sameOrigin: boolean; url: URL; request: Request }) =>
       sameOrigin &&
