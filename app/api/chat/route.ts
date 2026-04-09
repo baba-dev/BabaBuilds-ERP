@@ -8,6 +8,7 @@ import nodemailer from 'nodemailer';
 import dns from 'dns';
 import { promisify } from 'util';
 import { decimalToNumber, toDecimal } from '@/lib/money';
+import { getRuntimeSmtpPassword } from '@/lib/mailer';
 
 const lookupAsync = promisify(dns.lookup);
 
@@ -236,7 +237,7 @@ async function sendInvoiceReminder(invoiceNumber: string, workspaceId: string) {
       port:   profile.smtpPort || 587,
       secure: profile.smtpPort === 465,
       tls:    { servername: profile.smtpHost },
-      auth:   { user: profile.smtpUser, pass: profile.smtpPassword },
+      auth:   { user: profile.smtpUser, pass: getRuntimeSmtpPassword(profile.smtpPassword) },
     });
 
     const formattedAmount = decimalToNumber(invoice.totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 });

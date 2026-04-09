@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "validate": "npm run lint && npm run typecheck && npm run build",
     "check:locales": "node scripts/check-locales.js",
-    "codex:quick": "bash scripts/codex-quick-check.sh"
+    "codex:quick": "bash scripts/codex-quick-check.sh",
+    "backfill:smtp-passwords": "node scripts/backfill-smtp-password-encryption.js"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.4.2",
