@@ -30,7 +30,7 @@ export default function manifest(): MetadataRoute.Manifest {
         src: '/icons/launchericon-512x512.png',
         sizes: '512x512',
         type: 'image/png',
-        urpose: 'any',
+        purpose: 'any',
       },
       {
         src: '/icons/launchericon-512x512.png',
