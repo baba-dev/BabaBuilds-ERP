@@ -32,11 +32,16 @@ function resolveEntityType(url: URL): EntityType | null {
 
 function resolveRecordId(url: URL): string | null {
   const pathParts = url.pathname.split("/").filter(Boolean);
+  const hostEntity = url.hostname.toLowerCase();
+  const pathEntity = pathParts[0]?.toLowerCase();
 
-  const idFromHostPattern = pathParts[0] ?? "";
-  const idFromPathPattern = pathParts[1] ?? "";
+  let candidateId = "";
+  if (hostEntity === "client" || hostEntity === "invoice" || hostEntity === "proposal") {
+    candidateId = pathParts[0] ?? "";
+  } else if (pathEntity === "client" || pathEntity === "invoice" || pathEntity === "proposal") {
+    candidateId = pathParts[1] ?? "";
+  }
 
-  const candidateId = idFromPathPattern || idFromHostPattern;
   if (!candidateId || !SAFE_ID_PATTERN.test(candidateId)) {
     return null;
   }
