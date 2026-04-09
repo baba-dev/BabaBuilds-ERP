@@ -67,7 +67,7 @@ export default function manifest(): MetadataRoute.Manifest {
         label: 'BabaBuilds ERP Features Slide 3 - Wide',
       },
       {
-        src: '/splash',
+        src: '/icons/Splash-Tablet-Portrait.png',
         sizes: '1024x1536',
         type: 'image/png',
         label: 'BabaBuilds ERP mobile portrait splash',
