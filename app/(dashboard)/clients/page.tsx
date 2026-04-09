@@ -28,9 +28,11 @@ import { getBustedUrl } from "@/lib/cache-buster";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { CLIENT_LOGO_ACCEPT_ATTR, CLIENT_LOGO_HELP_TEXT } from "@/lib/uploads/client-logo";
 import { type ClientDto, type ApiEnvelope } from "@/lib/types/business";
+import { useSearchParams } from "next/navigation";
 
 export default function ClientCRM() {
   const t = useTranslations('Clients');
+  const searchParams = useSearchParams();
   const [clients, setClients] = useState<ClientDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -39,6 +41,7 @@ export default function ClientCRM() {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [clientToDelete, setClientToDelete] = useState<string | null>(null);
+  const [hasHandledProtocolRecord, setHasHandledProtocolRecord] = useState(false);
 
   // --- NEW: PAGINATION STATE ---
   const [currentPage, setCurrentPage] = useState(1);
@@ -185,6 +188,43 @@ export default function ClientCRM() {
       setClientToDelete(null);
     }
   };
+
+  useEffect(() => {
+    const protocolRecord = searchParams.get("protocolRecord");
+    const protocolEntity = searchParams.get("protocolEntity");
+
+    if (hasHandledProtocolRecord || !protocolRecord || protocolEntity !== "client") {
+      return;
+    }
+
+    setHasHandledProtocolRecord(true);
+    void (async () => {
+      try {
+        const res = await fetch(`/api/clients/${encodeURIComponent(protocolRecord)}`);
+        const payload = await res.json().catch(() => null);
+        if (!res.ok || !payload?.data) {
+          toast.error("Could not open deep-linked client.");
+          return;
+        }
+        const client = payload.data as ClientDto;
+        setIsEditing(true);
+        setSelectedClientId(client.id);
+        setFormData({
+          name: client.name || "",
+          address: client.address || "",
+          country: client.country || "",
+          taxId: client.taxId || "",
+          email: client.email || "",
+          phone: client.phone || "",
+          isExport: client.isExport,
+        });
+        setOpen(true);
+        toast.success("Deep-linked client opened.");
+      } catch {
+        toast.error("Could not open deep-linked client.");
+      }
+    })();
+  }, [hasHandledProtocolRecord, searchParams]);
 
   return (
     <DashboardPageShell

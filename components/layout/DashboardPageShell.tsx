@@ -33,14 +33,15 @@ const defaultAnimationClassName =
   "animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out";
 
 const kpiCardToneClassNames = {
-  default: "border-border/60 bg-card text-card-foreground",
+  default: "border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 text-zinc-900 dark:text-zinc-50",
   positive:
-    "border-emerald-300/60 bg-emerald-50 text-emerald-800 dark:border-emerald-700/60 dark:bg-emerald-950/40 dark:text-emerald-200",
+    "border-emerald-200/60 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400",
   warning:
-    "border-amber-300/60 bg-amber-50 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200",
+    "border-amber-200/60 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400",
   danger:
-    "border-rose-300/60 bg-rose-50 text-rose-900 dark:border-rose-700/60 dark:bg-rose-950/40 dark:text-rose-200",
+    "border-rose-200/60 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400",
 };
+
 
 function isStructuredKpiCard(
   value: DashboardPageShellKpiCard | undefined,
@@ -82,25 +83,26 @@ export function DashboardPageShell({
   const resolvedKpiCard = isStructuredKpiCard(kpiCard) ? (
     <div
       className={cn(
-        "mt-3 inline-flex flex-col gap-1 rounded-lg border px-3 py-2",
+        "inline-flex flex-col gap-0.5 rounded-xl border px-5 py-2.5 shadow-sm text-center sm:text-right backdrop-blur-sm transition-all",
         kpiCardToneClassNames[kpiCard.tone ?? "default"],
       )}
     >
-      <span className="text-[0.7rem] font-semibold uppercase tracking-wide opacity-80">
+      <span className="text-[0.65rem] font-bold uppercase tracking-[0.15em] opacity-60">
         {kpiCard.label}
       </span>
-      <span className="text-lg font-semibold leading-none">{kpiCard.value}</span>
+      <span className="text-xl font-black leading-tight tracking-tight">{kpiCard.value}</span>
     </div>
   ) : (
     kpiCard
   );
+
 
   return (
     <div className="min-h-full bg-background/50 p-4 transition-colors duration-300 md:p-8">
       <div className={cn("mx-auto space-y-8", maxWidthClassName, animated && animationClassName)}>
         <header
           className={cn(
-            "sticky top-0 z-20 -mx-4 border-b border-zinc-200/50 bg-zinc-50/80 px-4 backdrop-blur-md transition-all duration-300 dark:border-zinc-800/50 dark:bg-zinc-950/70 md:-mx-8 md:px-8",
+            "sticky top-0 z-20 -mx-4 border-b border-zinc-200/50 bg-zinc-50/50 px-4 backdrop-blur-md transition-all duration-300 dark:border-zinc-800/50 dark:bg-zinc-950/50 md:-mx-8 md:px-8",
             isCompactHeader ? "py-3" : "py-4",
           )}
         >
@@ -108,24 +110,39 @@ export function DashboardPageShell({
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 <SidebarTrigger className="md:hidden" />
-                <span className="min-h-5">{breadcrumb}</span>
+                {breadcrumb ? <span className="min-h-5">{breadcrumb}</span> : null}
               </div>
-              {headerVariant === "default" && resolvedActions ? <div className="shrink-0">{resolvedActions}</div> : null}
+              {/* Desktop-only action placement for non-compact header handled below */}
             </div>
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-3">
-                {icon ? <span className="shrink-0">{icon}</span> : null}
-                <h1 className={cn("font-bold tracking-tight text-foreground", isCompactHeader ? "text-2xl" : "text-3xl")}>
-                  {title}
-                </h1>
+
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-3">
+                  {icon ? (
+                    <div className="p-2.5 bg-indigo-600/10 dark:bg-indigo-500/20 rounded-xl border border-indigo-200/50 dark:border-indigo-400/20 transition-all duration-300">
+                      {icon}
+                    </div>
+                  ) : null}
+
+                  <h1 className={cn("font-bold tracking-tight text-foreground", isCompactHeader ? "text-2xl" : "text-3xl")}>
+                    {title}
+                  </h1>
+                </div>
+                {description ? (
+                  <p className="max-w-xl text-sm font-medium text-zinc-500 dark:text-zinc-400">{description}</p>
+                ) : null}
               </div>
-              {description ? (
-                <p className="max-w-xl text-sm font-medium text-zinc-500 dark:text-zinc-400">{description}</p>
-              ) : null}
-              {resolvedKpiCard ? <div>{resolvedKpiCard}</div> : null}
+
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                {resolvedKpiCard ? <div className="backdrop-blur-sm">{resolvedKpiCard}</div> : null}
+                {headerVariant === "default" && resolvedActions ? (
+                  <div className="shrink-0">{resolvedActions}</div>
+                ) : null}
+              </div>
             </div>
           </div>
         </header>
+
 
         {children}
       </div>

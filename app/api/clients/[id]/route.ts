@@ -9,6 +9,38 @@ import { scanBuffer } from '@/lib/security/clamav';
 import { CLIENT_LOGO_INVALID_TYPE_ERROR, isAllowedClientLogoExtension } from '@/lib/uploads/client-logo';
 import { apiError } from '@/lib/api-error';
 
+export async function GET(
+  request: Request,
+  props: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !(session as any).workspaceId) {
+      return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
+    }
+
+    const workspaceId = (session as any).workspaceId;
+    const params = await props.params;
+    const clientId = params.id;
+
+    const client = await prisma.client.findFirst({
+      where: {
+        id: clientId,
+        workspaceId,
+      },
+    });
+
+    if (!client) {
+      return apiError(404, "Client not found", "CLIENT_NOT_FOUND");
+    }
+
+    return NextResponse.json({ data: client });
+  } catch (error) {
+    console.error("Client fetch error:", error);
+    return apiError(500, "Failed to fetch client", "CLIENT_FETCH_FAILED");
+  }
+}
+
 export async function DELETE(
   request: Request,
   // 1. Next.js 15 Async Params: `params` must be typed as a Promise

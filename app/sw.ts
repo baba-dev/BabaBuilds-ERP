@@ -1,7 +1,14 @@
 /// <reference lib="webworker" />
 
 import { defaultCache } from '@serwist/next/worker';
-import { type PrecacheEntry, Serwist, type SerwistGlobalConfig } from 'serwist';
+import { 
+  ExpirationPlugin, 
+  StaleWhileRevalidate, 
+  type PrecacheEntry, 
+  Serwist, 
+  type SerwistGlobalConfig 
+} from 'serwist';
+import { normalizeLaunchDestination } from '@/lib/launch-routing';
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -22,12 +29,33 @@ type PeriodicSyncEventLike = ExtendableEvent & {
 
 const OFFLINE_FALLBACK_PAGE = '/offline';
 
+const dashboardRuntimeCaching = [
+  {
+    matcher: ({ sameOrigin, url, request }: { sameOrigin: boolean; url: URL; request: Request }) =>
+      sameOrigin &&
+      request.method === 'GET' &&
+      ['/dashboard', '/invoice', '/expenses', '/clients', '/proposals', '/tax'].some((route) =>
+        url.pathname === route || url.pathname.startsWith(`${route}/`),
+      ),
+    handler: new StaleWhileRevalidate({
+      cacheName: 'erp-dashboard-pages-cache',
+      plugins: [
+        new ExpirationPlugin({
+          maxEntries: 40,
+          maxAgeSeconds: 7 * 24 * 60 * 60,
+          maxAgeFrom: 'last-used',
+        }),
+      ],
+    }),
+  },
+];
+
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
-  runtimeCaching: defaultCache,
+  runtimeCaching: [...dashboardRuntimeCaching, ...defaultCache],
 });
 
 async function notifyClients(message: Record<string, string>) {
@@ -132,7 +160,8 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const destination = typeof event.notification.data?.url === 'string' ? event.notification.data.url : '/dashboard';
+  const rawDestination = typeof event.notification.data?.url === 'string' ? event.notification.data.url : '/dashboard';
+  const destination = normalizeLaunchDestination(rawDestination);
 
   event.waitUntil(
     (async () => {
@@ -155,7 +184,12 @@ self.addEventListener('sync', (event: Event) => {
     return;
   }
 
-  syncEvent.waitUntil(notifyClients({ type: 'background-sync-fired' }));
+  syncEvent.waitUntil(
+    (async () => {
+      await notifyClients({ type: 'background-sync-fired' });
+      await notifyClients({ type: 'offline-sync-queue-updated' });
+    })(),
+  );
 });
 
 self.addEventListener('periodicsync', (event: Event) => {

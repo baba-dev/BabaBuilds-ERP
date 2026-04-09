@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
+import { useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { animate, useMotionValue } from "framer-motion";
 import {
@@ -37,6 +38,7 @@ import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 import { getInvoiceStatusBadgeKey, INVOICE_STATUS, isPaidInvoiceStatus, toInvoiceStatus } from "@/lib/invoice-status";
 import { parseDashboardResponse } from "./parse-dashboard-response";
 import { getCurrentFinancialYear } from "@/lib/financial-year";
+import { resolveDashboardLaunchTarget } from "@/lib/launch-routing";
 
 
 
@@ -123,6 +125,8 @@ function StatusDot({ status }: { status: IntegrationStatus }) {
 
 export default function Dashboard() {
   const t = useTranslations('Dashboard');
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -166,6 +170,15 @@ export default function Dashboard() {
   useEffect(() => {
     fetchDashboardData(selectedFy);
   }, [selectedFy]);
+
+  useEffect(() => {
+    const launchTarget = resolveDashboardLaunchTarget(new URLSearchParams(searchParams.toString()));
+    if (!launchTarget) {
+      return;
+    }
+
+    router.replace(launchTarget);
+  }, [router, searchParams]);
 
   const fetchDashboardData = async (fy: string) => {
     setIsLoading(true);
@@ -429,11 +442,17 @@ export default function Dashboard() {
     <DashboardPageShell
       title={t('financial_overview')}
       description={t('global_command_center', { countryCode })}
+      icon={<Landmark className="w-6 h-6 text-indigo-700 dark:text-indigo-400" />}
+      kpiCard={{
+        label: t('billed_revenue'),
+        value: fCurrency(kpi.totalRevenue),
+        tone: "positive"
+      }}
       secondaryActions={
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest hidden sm:inline">{t("fy_label")}</span>
           <Select value={selectedFy} onValueChange={setSelectedFy}>
-            <SelectTrigger className="w-[120px] h-9 bg-white/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 shadow-sm backdrop-blur-sm font-bold text-xs ring-offset-zinc-50 dark:ring-offset-zinc-950">
+            <SelectTrigger className="w-[120px] h-9 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-sm backdrop-blur-sm font-bold text-xs">
               <SelectValue placeholder={t("select_fy")} />
             </SelectTrigger>
             <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
@@ -447,6 +466,7 @@ export default function Dashboard() {
         </div>
       }
     >
+
 
 
         {/* --- MRR COMMAND CENTER --- */}

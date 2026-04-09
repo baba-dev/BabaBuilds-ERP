@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 // MISSION CRITICAL: Globalization Imports
@@ -31,6 +32,7 @@ import {
 
 export default function AuditDashboard() {
   const t = useTranslations('Ledger');
+  const searchParams = useSearchParams();
   const[invoices, setInvoices] = useState<InvoiceDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -69,6 +71,7 @@ export default function AuditDashboard() {
   // Delete Invoice State
   const[invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(["invoice", "date", "billed", "status", "received", "actions"]);
+  const [hasHandledProtocolRecord, setHasHandledProtocolRecord] = useState(false);
   const tableState = useUrlTableState("ledger");
 
   useEffect(() => {
@@ -156,6 +159,35 @@ export default function AuditDashboard() {
     }
   };
 
+  const findInvoicePageById = async (invoiceId: string): Promise<number | null> => {
+    const fetchPage = async (page: number) => {
+      const res = await fetch(`/api/invoices?page=${page}&limit=15`);
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) return null;
+
+      const parsed = parseLedgerInvoicesResponse(payload);
+      if (!parsed) return null;
+
+      return {
+        found: parsed.data.some((invoice) => invoice.id === invoiceId),
+        totalPages: parsed.meta.totalPages,
+      };
+    };
+
+    const firstPage = await fetchPage(1);
+    if (!firstPage) return null;
+    if (firstPage.found) return 1;
+
+    for (let page = 2; page <= firstPage.totalPages; page += 1) {
+      const current = await fetchPage(page);
+      if (current?.found) {
+        return page;
+      }
+    }
+
+    return null;
+  };
+
   // --- KPI CALCULATIONS (Now read from state) ---
   const { totalRevenue, outstanding, presumptiveIncome } = kpis;
   const thresholdValue = countryCode === "IN" ? 2000000 : 100000;
@@ -240,6 +272,36 @@ export default function AuditDashboard() {
   const filteredInvoices = invoices.filter((inv) =>
     `${inv.invoiceNumber} ${inv.clientName ?? ""} ${inv.status}`.toLowerCase().includes(tableState.search.toLowerCase()),
   );
+
+  useEffect(() => {
+    const protocolRecord = searchParams.get("protocolRecord");
+    const protocolEntity = searchParams.get("protocolEntity");
+
+    if (hasHandledProtocolRecord || !protocolRecord || protocolEntity !== "invoice") {
+      return;
+    }
+
+    setHasHandledProtocolRecord(true);
+    void (async () => {
+      try {
+        const res = await fetch(`/api/invoices/${encodeURIComponent(protocolRecord)}`);
+        const payload = await res.json().catch(() => null);
+        if (!res.ok || !payload?.data?.invoiceNumber) {
+          toast.error("Could not open deep-linked invoice.");
+          return;
+        }
+        const invoicePage = await findInvoicePageById(String(payload.data.id ?? protocolRecord));
+        if (invoicePage && invoicePage !== currentPage) {
+          setCurrentPage(invoicePage);
+        }
+        tableState.setSearch(String(payload.data.invoiceNumber));
+        toast.success(`Deep-linked invoice ${payload.data.invoiceNumber} loaded.`);
+      } catch {
+        toast.error("Could not open deep-linked invoice.");
+      }
+    })();
+  }, [currentPage, hasHandledProtocolRecord, searchParams, tableState]);
+
   const invoiceColumns: DataTableColumnDef<InvoiceDto>[] = [
     { id: "invoice", header: t("col_invoice_no"), accessor: (row) => row.invoiceNumber, sortable: true, cell: (row) => <span className="font-bold dark:text-zinc-200 text-sm">{row.invoiceNumber}</span>, hideable: true },
     { id: "date", header: t("col_date"), sortable: true, sortAccessor: (row) => new Date(row.invoiceDate).getTime(), cell: (row) => <span className="dark:text-zinc-400 text-xs font-medium">{format(new Date(row.invoiceDate), safeDateFormat)}</span>, hideable: true },

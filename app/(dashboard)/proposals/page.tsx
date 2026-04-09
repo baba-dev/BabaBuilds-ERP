@@ -26,9 +26,11 @@ import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
 import { TaxRateModal } from "@/components/invoice/tax-rate-modal";
+import { useSearchParams } from "next/navigation";
 
 export default function ProposalsEngine() {
   const t = useTranslations('Proposals');
+  const searchParams = useSearchParams();
   const [view, setView] = useState<'list' | 'builder'>('list');
   const [proposals, setProposals] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
@@ -66,10 +68,50 @@ export default function ProposalsEngine() {
   const [taxRateModalOpen, setTaxRateModalOpen] = useState(false);
   const [taxRateInput, setTaxRateInput] = useState("");
   const [taxRateMeta, setTaxRateMeta] = useState<{ taxLabel?: string; countryCode?: string; candidates?: number[] }>({});
+  const [protocolFocusedProposalId, setProtocolFocusedProposalId] = useState<string | null>(null);
+  const [hasHandledProtocolRecord, setHasHandledProtocolRecord] = useState(false);
 
   useEffect(() => {
     fetchData();
   }, [view]);
+
+  useEffect(() => {
+    const protocolRecord = searchParams.get("protocolRecord");
+    const protocolEntity = searchParams.get("protocolEntity");
+
+    if (hasHandledProtocolRecord || !protocolRecord || protocolEntity !== "proposal") {
+      return;
+    }
+
+    setHasHandledProtocolRecord(true);
+    setView("list");
+    setProtocolFocusedProposalId(protocolRecord);
+    void (async () => {
+      try {
+        const res = await fetch(`/api/proposals/${encodeURIComponent(protocolRecord)}`);
+        const payload = await res.json().catch(() => null);
+        if (!res.ok || !payload?.data?.id) {
+          toast.error("Could not open deep-linked proposal.");
+          return;
+        }
+        setProtocolFocusedProposalId(payload.data.id);
+        toast.success(`Deep-linked proposal ${payload.data.proposalNo || ""} loaded.`);
+      } catch {
+        toast.error("Could not open deep-linked proposal.");
+      }
+    })();
+  }, [hasHandledProtocolRecord, searchParams]);
+
+  useEffect(() => {
+    if (!protocolFocusedProposalId || proposals.length === 0 || view !== "list") {
+      return;
+    }
+
+    const focusedCard = document.getElementById(`proposal-card-${protocolFocusedProposalId}`);
+    if (focusedCard) {
+      focusedCard.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [proposals, protocolFocusedProposalId, view]);
 
   const fetchData = async () => {
     try {
@@ -600,7 +642,11 @@ export default function ProposalsEngine() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {proposals.map((prop) => (
-              <Card key={prop.id} className="group relative hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden flex flex-col">
+              <Card
+                id={`proposal-card-${prop.id}`}
+                key={prop.id}
+                className={`group relative hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden flex flex-col ${protocolFocusedProposalId === prop.id ? "ring-2 ring-indigo-500/70" : ""}`}
+              >
                 
                 {/* DESTRUCTIVE ACTION: Delete Proposal */}
                 <button 

@@ -5,6 +5,34 @@ import { authOptions } from "@/lib/auth";
 import fs from 'fs';
 import path from 'path';
 
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !(session as any).workspaceId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const workspaceId = (session as any).workspaceId;
+    const resolvedParams = await params;
+    const invoiceId = resolvedParams.id;
+
+    const invoice = await prisma.invoice.findFirst({
+      where: { id: invoiceId, workspaceId },
+    });
+
+    if (!invoice) {
+      return NextResponse.json({ error: "Invoice not found or unauthorized." }, { status: 404 });
+    }
+
+    return NextResponse.json({ data: invoice });
+  } catch (error) {
+    console.error("Invoice fetch error:", error);
+    return NextResponse.json({ error: "Failed to fetch invoice." }, { status: 500 });
+  }
+}
+
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

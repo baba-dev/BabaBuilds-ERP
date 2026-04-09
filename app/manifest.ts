@@ -2,17 +2,65 @@ import { MetadataRoute } from 'next';
 import { getLocale } from 'next-intl/server';
 import { getLocaleDirection } from '@/lib/i18n';
 
+type FileHandlerEntry = {
+  action: string;
+  accept: Record<string, string[]>;
+};
+
+const erpFileHandlers: FileHandlerEntry[] = [
+  {
+    action: '/open-file',
+    accept: {
+      'application/pdf': ['.pdf'],
+      'text/csv': ['.csv'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'image/png': ['.png'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+    },
+  },
+];
+
 const defaultShortcutIcon = {
   src: '/icons/launchericon-192x192.png',
   sizes: '192x192',
   type: 'image/png',
 } as const;
 
-export default async function manifest(): Promise<MetadataRoute.Manifest> {
+type ShareTargetField = {
+  share_target: {
+    action: string;
+    method: 'POST';
+    enctype: 'multipart/form-data';
+    params: {
+      title: string;
+      text: string;
+      url: string;
+      files: Array<{
+        name: string;
+        accept: string[];
+      }>;
+    };
+  };
+};
+
+export default async function manifest(): Promise<
+  MetadataRoute.Manifest & 
+  ShareTargetField & {
+    launch_handler: {
+      client_mode: 'focus-existing';
+    };
+    file_handlers: FileHandlerEntry[];
+  }
+> {
   const locale = await getLocale();
   const dir = getLocaleDirection(locale);
 
-  return {
+  const webManifest: MetadataRoute.Manifest & ShareTargetField & {
+    launch_handler: {
+      client_mode: 'focus-existing';
+    };
+    file_handlers: FileHandlerEntry[];
+  } = {
     id: '/',
     name: 'BabaBuilds ERP',
     short_name: 'BabaBuilds',
@@ -23,6 +71,9 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     scope: '/',
     display: 'standalone',
     display_override: ['window-controls-overlay', 'standalone'],
+    launch_handler: {
+      client_mode: 'focus-existing',
+    },
     orientation: 'portrait',
     background_color: '#ffffff',
     theme_color: '#0062ff',
@@ -82,6 +133,23 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
         label: 'BabaBuilds ERP mobile portrait splash',
       },
     ],
+    file_handlers: erpFileHandlers,
+    share_target: {
+      action: '/share-target',
+      method: 'POST',
+      enctype: 'multipart/form-data',
+      params: {
+        title: 'title',
+        text: 'text',
+        url: 'url',
+        files: [
+          {
+            name: 'files',
+            accept: ['image/*', 'application/pdf'],
+          },
+        ],
+      },
+    },
     shortcuts: [
       {
         name: 'Dashboard',
@@ -161,5 +229,17 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
         icons: [defaultShortcutIcon],
       },
     ],
+    protocol_handlers: [
+      {
+        protocol: 'web+erp',
+        url: '/launch?url=%s',
+      },
+      {
+        protocol: 'web+bababuilds-erp',
+        url: '/launch?url=%s',
+      },
+    ],
   };
+
+  return webManifest;
 }
