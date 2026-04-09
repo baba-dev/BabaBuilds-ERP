@@ -6,8 +6,25 @@ const defaultShortcutIcon = {
   type: 'image/png',
 } as const;
 
+type ShareTargetManifest = MetadataRoute.Manifest & {
+  share_target: {
+    action: string;
+    method: 'POST';
+    enctype: 'multipart/form-data';
+    params: {
+      title: string;
+      text: string;
+      url: string;
+      files: Array<{
+        name: string;
+        accept: string[];
+      }>;
+    };
+  };
+};
+
 export default function manifest(): MetadataRoute.Manifest {
-  return {
+  const webManifest: ShareTargetManifest = {
     id: '/',
     name: 'BabaBuilds ERP',
     short_name: 'BabaBuilds',
@@ -73,6 +90,22 @@ export default function manifest(): MetadataRoute.Manifest {
         label: 'BabaBuilds ERP mobile portrait splash',
       },
     ],
+    share_target: {
+      action: '/share-target',
+      method: 'POST',
+      enctype: 'multipart/form-data',
+      params: {
+        title: 'title',
+        text: 'text',
+        url: 'url',
+        files: [
+          {
+            name: 'files',
+            accept: ['image/*', 'application/pdf'],
+          },
+        ],
+      },
+    },
     shortcuts: [
       {
         name: 'Dashboard',
@@ -153,4 +186,6 @@ export default function manifest(): MetadataRoute.Manifest {
       },
     ],
   };
+
+  return webManifest;
 }
