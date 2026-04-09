@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import SetupWizard from "@/app/(dashboard)/setup/page"; // Updated path after route segmentation
+import SetupWizard from "@/components/setup/SetupWizard";
 
 export default function SetupGatekeeper() {
   const { data: session, status, update } = useSession();
