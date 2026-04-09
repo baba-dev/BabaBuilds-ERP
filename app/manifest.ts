@@ -1,7 +1,5 @@
 import { MetadataRoute } from 'next';
 
-
-
 type FileHandlerEntry = {
   action: string;
   accept: Record<string, string[]>;
@@ -26,8 +24,27 @@ const defaultShortcutIcon = {
   type: 'image/png',
 } as const;
 
+type ShareTargetField = {
+  share_target: {
+    action: string;
+    method: 'POST';
+    enctype: 'multipart/form-data';
+    params: {
+      title: string;
+      text: string;
+      url: string;
+      files: Array<{
+        name: string;
+        accept: string[];
+      }>;
+    };
+  };
+};
+
 export default function manifest(): MetadataRoute.Manifest {
-  const appManifest: MetadataRoute.Manifest & { file_handlers: FileHandlerEntry[] } = {
+  const webManifest: MetadataRoute.Manifest &
+    { file_handlers: FileHandlerEntry[] } &
+    ShareTargetField = {
     id: '/',
     name: 'BabaBuilds ERP',
     short_name: 'BabaBuilds',
@@ -94,6 +111,22 @@ export default function manifest(): MetadataRoute.Manifest {
       },
     ],
     file_handlers: erpFileHandlers,
+    share_target: {
+      action: '/share-target',
+      method: 'POST',
+      enctype: 'multipart/form-data',
+      params: {
+        title: 'title',
+        text: 'text',
+        url: 'url',
+        files: [
+          {
+            name: 'files',
+            accept: ['image/*', 'application/pdf'],
+          },
+        ],
+      },
+    },
     shortcuts: [
       {
         name: 'Dashboard',
@@ -175,6 +208,5 @@ export default function manifest(): MetadataRoute.Manifest {
     ],
   };
 
-  return appManifest;
+  return webManifest;
 }
-
