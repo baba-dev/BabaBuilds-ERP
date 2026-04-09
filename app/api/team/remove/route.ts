@@ -3,15 +3,23 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hasPermission } from "@/lib/permissions";
+import { logActivity } from "@/lib/activity-log";
 
 export async function POST(req: Request) {
+  let workspaceId = "";
+  let actorId: string | null = null;
+  let actorEmail: string | null = null;
+  let actorRole: string | null = null;
+
   try {
     const session: any = await getServerSession(authOptions);
     if (!session || !session.workspaceId || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const workspaceId = session.workspaceId;
+    workspaceId = session.workspaceId;
+    actorId = session.user.id ?? null;
+    actorEmail = session.user.email ?? null;
     const body = await req.json();
     const { targetUserId, inviteId } = body;
 
@@ -19,8 +27,23 @@ export async function POST(req: Request) {
     const currentUserReq = await prisma.workspaceUser.findUnique({
       where: { userId_workspaceId: { userId: session.user.id, workspaceId } }
     });
+    actorRole = currentUserReq?.role ?? null;
 
     if (!currentUserReq || !hasPermission(currentUserReq.role, "MANAGE_WORKSPACE_SETTINGS")) {
+      logActivity({
+        action: "team_member_remove",
+        outcome: "error",
+        entityType: "workspace_member",
+        workspaceId,
+        actorId,
+        actorEmail,
+        metadata: {
+          actorRole,
+          targetUserId: targetUserId ?? null,
+          inviteId: inviteId ?? null,
+          reason: "forbidden",
+        },
+      });
       return NextResponse.json({ error: "No permission to remove members" }, { status: 403 });
     }
 
@@ -37,6 +60,20 @@ export async function POST(req: Request) {
       await prisma.workspaceInvite.deleteMany({
         where: { id: inviteId, workspaceId }
       });
+      logActivity({
+        action: "team_member_remove",
+        outcome: "success",
+        entityType: "workspace_member",
+        entityId: invite.id,
+        workspaceId,
+        actorId,
+        actorEmail,
+        metadata: {
+          actorRole,
+          targetType: "invite",
+          inviteId: invite.id,
+        },
+      });
       return NextResponse.json({ success: true });
     }
 
@@ -47,7 +84,8 @@ export async function POST(req: Request) {
       }
       
       const targetUser = await prisma.workspaceUser.findUnique({
-         where: { userId_workspaceId: { userId: targetUserId, workspaceId } }
+         where: { userId_workspaceId: { userId: targetUserId, workspaceId } },
+         include: { user: { select: { email: true } } }
       });
       if (targetUser?.role === "OWNER" && currentUserReq.role !== "OWNER") {
          return NextResponse.json({ error: "Only owners can remove other owners" }, { status: 403 });
@@ -56,6 +94,21 @@ export async function POST(req: Request) {
       await prisma.workspaceUser.delete({
         where: { userId_workspaceId: { userId: targetUserId, workspaceId } }
       });
+      logActivity({
+        action: "team_member_remove",
+        outcome: "success",
+        entityType: "workspace_member",
+        entityId: targetUserId,
+        workspaceId,
+        actorId,
+        actorEmail,
+        metadata: {
+          actorRole,
+          targetType: "workspace_user",
+          targetUserId,
+          targetEmail: targetUser?.user?.email ?? null,
+        },
+      });
       return NextResponse.json({ success: true });
     }
 
@@ -63,6 +116,18 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("Remove Member Error:", error);
+    logActivity({
+      action: "team_member_remove",
+      outcome: "error",
+      entityType: "workspace_member",
+      workspaceId: workspaceId || null,
+      actorId,
+      actorEmail,
+      metadata: {
+        actorRole,
+        reason: "unhandled_exception",
+      },
+    });
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

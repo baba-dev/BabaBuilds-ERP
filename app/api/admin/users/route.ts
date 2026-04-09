@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { handleAdminApiError, verifySuperAdmin } from "../authz";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { logActivity } from "@/lib/activity-log";
 
 // GET: Fetch all users & platform stats
 export async function GET() {
@@ -43,16 +46,58 @@ export async function GET() {
 
 // PATCH: Upgrade, Suspend, Reactivate
 export async function PATCH(req: Request) {
+  let actorId: string | null = null;
+  let actorEmail: string | null = null;
+  let targetUserId: string | null = null;
+  let targetWorkspaceId: string | null = null;
+  let action: string | null = null;
+
   try {
     await verifySuperAdmin();
-    const { userId, action } = await req.json();
+    const session = await getServerSession(authOptions);
+    actorId = (session?.user as any)?.id ?? null;
+    actorEmail = session?.user?.email ?? null;
+    const body = await req.json();
+    const userId = typeof body?.userId === "string" ? body.userId : null;
+    action = typeof body?.action === "string" ? body.action : null;
+    targetUserId = userId;
+    if (!userId) {
+      logActivity({
+        action: "admin_user_patch",
+        outcome: "error",
+        entityType: "workspace",
+        actorId,
+        actorEmail,
+        metadata: {
+          action,
+          reason: "invalid_user_id",
+        },
+      });
+      return NextResponse.json({ error: "Invalid userId" }, { status: 400 });
+    }
 
     const userWorkspace = await prisma.workspaceUser.findFirst({
       where: { userId },
       include: { workspace: true }
     });
+    targetWorkspaceId = userWorkspace?.workspaceId ?? null;
 
-    if (!userWorkspace) return NextResponse.json({ error: "No workspace found" }, { status: 404 });
+    if (!userWorkspace) {
+      logActivity({
+        action: "admin_user_patch",
+        outcome: "error",
+        entityType: "workspace",
+        workspaceId: null,
+        actorId,
+        actorEmail,
+        metadata: {
+          targetUserId,
+          action,
+          reason: "workspace_not_found",
+        },
+      });
+      return NextResponse.json({ error: "No workspace found" }, { status: 404 });
+    }
 
     let updateData: any = {};
     
@@ -66,6 +111,20 @@ export async function PATCH(req: Request) {
       // Restore their original tier (PRO, TEAM, or FREE)
       updateData = { subscriptionStatus: userWorkspace.workspace.planTier || 'FREE' };
     } else {
+      logActivity({
+        action: "admin_user_patch",
+        outcome: "error",
+        entityType: "workspace",
+        entityId: userWorkspace.workspaceId,
+        workspaceId: userWorkspace.workspaceId,
+        actorId,
+        actorEmail,
+        metadata: {
+          targetUserId,
+          action,
+          reason: "invalid_action",
+        },
+      });
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
 
@@ -74,24 +133,98 @@ export async function PATCH(req: Request) {
       data: updateData
     });
 
+    logActivity({
+      action: "admin_user_patch",
+      outcome: "success",
+      entityType: "workspace",
+      entityId: userWorkspace.workspaceId,
+      workspaceId: userWorkspace.workspaceId,
+      actorId,
+      actorEmail,
+      metadata: {
+        targetUserId,
+        action,
+      },
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
+    logActivity({
+      action: "admin_user_patch",
+      outcome: "error",
+      entityType: "workspace",
+      entityId: targetWorkspaceId,
+      workspaceId: targetWorkspaceId,
+      actorId,
+      actorEmail,
+      metadata: {
+        targetUserId,
+        action,
+        reason: "unhandled_exception",
+      },
+    });
     return handleAdminApiError(error, "Action failed");
   }
 }
 
 // DELETE: Obliterate a user and their data
 export async function DELETE(req: Request) {
+  let actorId: string | null = null;
+  let actorEmail: string | null = null;
+  let targetUserId: string | null = null;
+
   try {
     await verifySuperAdmin();
-    const { userId } = await req.json();
+    const session = await getServerSession(authOptions);
+    actorId = (session?.user as any)?.id ?? null;
+    actorEmail = session?.user?.email ?? null;
+    const body = await req.json();
+    const userId = typeof body?.userId === "string" ? body.userId : null;
+    targetUserId = userId;
+    if (!userId) {
+      logActivity({
+        action: "admin_user_delete",
+        outcome: "error",
+        entityType: "user",
+        actorId,
+        actorEmail,
+        metadata: {
+          reason: "invalid_user_id",
+        },
+      });
+      return NextResponse.json({ error: "Invalid userId" }, { status: 400 });
+    }
 
     await prisma.user.delete({
       where: { id: userId }
     });
 
+    logActivity({
+      action: "admin_user_delete",
+      outcome: "success",
+      entityType: "user",
+      entityId: userId,
+      actorId,
+      actorEmail,
+      metadata: {
+        targetUserId: userId,
+      },
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
+    logActivity({
+      action: "admin_user_delete",
+      outcome: "error",
+      entityType: "user",
+      entityId: targetUserId,
+      actorId,
+      actorEmail,
+      metadata: {
+        targetUserId,
+        reason: "unhandled_exception",
+      },
+    });
     return handleAdminApiError(error, "Failed to delete user");
   }
 }
