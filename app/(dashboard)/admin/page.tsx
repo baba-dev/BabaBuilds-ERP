@@ -410,25 +410,64 @@ export default function SuperAdminPortal() {
                   onSearchChange={userTableState.setSearch}
                   searchPlaceholder={t("search_placeholder") || "Search users..."}
                   rightSlot={
-                    <ColumnVisibilityToggle
-                      options={userColumns.filter((col) => col.hideable).map((col) => ({
-                        id: col.id,
-                        label: typeof col.header === "string" ? col.header : col.id,
-                        visible: userVisibleColumns.includes(col.id),
-                        onToggle: () => setUserVisibleColumns((prev) => prev.includes(col.id) ? prev.filter((id) => id !== col.id) : [...prev, col.id]),
-                      }))}
-                    />
+                    <div className="hidden md:block">
+                      <ColumnVisibilityToggle
+                        options={userColumns.filter((col) => col.hideable).map((col) => ({
+                          id: col.id,
+                          label: typeof col.header === "string" ? col.header : col.id,
+                          visible: userVisibleColumns.includes(col.id),
+                          onToggle: () => setUserVisibleColumns((prev) => prev.includes(col.id) ? prev.filter((id) => id !== col.id) : [...prev, col.id]),
+                        }))}
+                      />
+                    </div>
                   }
                 />
-                <DataTable
-                  columns={userColumns}
-                  data={filteredUsers}
-                  rowId={(row) => row.id}
-                  loading={isLoading}
-                  emptyTitle={t("no_users") || "No users found."}
-                  emptyDescription="Try a different query or refresh admin data."
-                  visibleColumnIds={userVisibleColumns}
-                />
+                <div className="hidden md:block">
+                  <DataTable
+                    columns={userColumns}
+                    data={filteredUsers}
+                    rowId={(row) => row.id}
+                    loading={isLoading}
+                    emptyTitle={t("no_users") || "No users found."}
+                    emptyDescription="Try a different query or refresh admin data."
+                    visibleColumnIds={userVisibleColumns}
+                  />
+                </div>
+                <div className="space-y-3 pb-24 md:hidden">
+                  {filteredUsers.map((user) => (
+                    <Card key={user.id} className="border-zinc-200 dark:border-zinc-800">
+                      <CardContent className="space-y-3 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-zinc-900 dark:text-zinc-100">{user.name || t("unnamed") || "Unnamed"}</p>
+                            <p className="text-xs text-zinc-500">{user.email}</p>
+                          </div>
+                          <Badge variant="secondary">{user.subscriptionStatus}</Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <p>Workspace: {user.workspaceName || t("no_ws") || "No Workspace"}</p>
+                          <p className="text-right">Invoices: {user.invoiceCount}</p>
+                        </div>
+                        <details className="rounded-md border border-zinc-200 p-2 text-xs dark:border-zinc-800">
+                          <summary className="cursor-pointer font-semibold">More actions</summary>
+                          <div className="flex flex-wrap gap-2 pt-2">
+                            <Button variant="outline" size="sm" onClick={() => handleAction(user.id, "UPGRADE")}>Force Pro</Button>
+                            <Button variant="outline" size="sm" onClick={() => handleAction(user.id, user.subscriptionStatus === "SUSPENDED" ? "REACTIVATE" : "SUSPEND")}>
+                              {user.subscriptionStatus === "SUSPENDED" ? "Reactivate" : "Suspend"}
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => setUserToDelete({ id: user.id, name: user.name || "Unnamed", email: user.email })}>Delete</Button>
+                          </div>
+                        </details>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+                <div className="fixed inset-x-0 bottom-0 z-20 border-t border-zinc-200 bg-white/95 p-3 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95 md:hidden">
+                  <div className="mx-auto flex max-w-7xl items-center justify-between gap-2">
+                    <p className="text-xs text-zinc-500">{filteredUsers.length} users</p>
+                    <Button size="sm" onClick={fetchAdminData}>Refresh users</Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -619,26 +658,60 @@ export default function SuperAdminPortal() {
                   onSearchChange={backupTableState.setSearch}
                   searchPlaceholder="Search backups..."
                   rightSlot={
-                    <ColumnVisibilityToggle
-                      options={backupColumns.filter((col) => col.hideable).map((col) => ({
-                        id: col.id,
-                        label: typeof col.header === "string" ? col.header : col.id,
-                        visible: backupVisibleColumns.includes(col.id),
-                        onToggle: () => setBackupVisibleColumns((prev) => prev.includes(col.id) ? prev.filter((id) => id !== col.id) : [...prev, col.id]),
-                      }))}
-                    />
+                    <div className="hidden md:block">
+                      <ColumnVisibilityToggle
+                        options={backupColumns.filter((col) => col.hideable).map((col) => ({
+                          id: col.id,
+                          label: typeof col.header === "string" ? col.header : col.id,
+                          visible: backupVisibleColumns.includes(col.id),
+                          onToggle: () => setBackupVisibleColumns((prev) => prev.includes(col.id) ? prev.filter((id) => id !== col.id) : [...prev, col.id]),
+                        }))}
+                      />
+                    </div>
                   }
                 />
-                <DataTable
-                  columns={backupColumns}
-                  data={filteredBackups}
-                  rowId={(row) => row.filename}
-                  emptyTitle="No backups found in the archive."
-                  emptyDescription="Trigger a smart backup to populate this table."
-                  visibleColumnIds={backupVisibleColumns}
-                />
+                <div className="hidden md:block">
+                  <DataTable
+                    columns={backupColumns}
+                    data={filteredBackups}
+                    rowId={(row) => row.filename}
+                    emptyTitle="No backups found in the archive."
+                    emptyDescription="Trigger a smart backup to populate this table."
+                    visibleColumnIds={backupVisibleColumns}
+                  />
+                </div>
+                <div className="space-y-3 pb-24 md:hidden">
+                  {filteredBackups.map((backup) => (
+                    <Card key={backup.filename} className="border-zinc-200 dark:border-zinc-800">
+                      <CardContent className="space-y-3 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">{backup.filename}</p>
+                          <p className="text-xs text-zinc-500">{(backup.size / 1024 / 1024).toFixed(2)} MB</p>
+                        </div>
+                        <p className="text-xs text-zinc-500">{new Date(backup.createdAt).toLocaleString()}</p>
+                        <details className="rounded-md border border-zinc-200 p-2 text-xs dark:border-zinc-800">
+                          <summary className="cursor-pointer font-semibold">More actions</summary>
+                          <div className="flex flex-wrap gap-2 pt-2">
+                            <Button variant="outline" size="sm" onClick={() => handleDownloadBackup(backup.filename)}>
+                              <Download className="mr-1.5 h-3.5 w-3.5" /> Download
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => handleDeleteBackup(backup.filename)}>
+                              <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
+                            </Button>
+                          </div>
+                        </details>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
                </CardContent>
             </Card>
+            <div className="fixed inset-x-0 bottom-0 z-20 border-t border-zinc-200 bg-white/95 p-3 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95 md:hidden">
+              <div className="mx-auto flex max-w-7xl items-center justify-between gap-2">
+                <p className="text-xs text-zinc-500">{filteredBackups.length} backups</p>
+                <Button size="sm" onClick={handleCreateBackup} className="bg-indigo-600 text-white hover:bg-indigo-700">Trigger Backup</Button>
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <Card className="bg-zinc-900 border-zinc-800 text-zinc-400">

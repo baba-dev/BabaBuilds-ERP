@@ -475,32 +475,78 @@ export default function ExpenseTracker() {
                   onSearchChange={tableState.setSearch}
                   searchPlaceholder={t("vendor_ph")}
                   rightSlot={
-                    <ColumnVisibilityToggle
-                      options={expenseColumns
-                        .filter((col) => col.hideable)
-                        .map((col) => ({
-                          id: col.id,
-                          label: typeof col.header === "string" ? col.header : col.id,
-                          visible: visibleColumns.includes(col.id),
-                          onToggle: () =>
-                            setVisibleColumns((prev) =>
-                              prev.includes(col.id) ? prev.filter((existing) => existing !== col.id) : [...prev, col.id],
-                            ),
-                        }))}
-                    />
+                    <div className="hidden md:block">
+                      <ColumnVisibilityToggle
+                        options={expenseColumns
+                          .filter((col) => col.hideable)
+                          .map((col) => ({
+                            id: col.id,
+                            label: typeof col.header === "string" ? col.header : col.id,
+                            visible: visibleColumns.includes(col.id),
+                            onToggle: () =>
+                              setVisibleColumns((prev) =>
+                                prev.includes(col.id) ? prev.filter((existing) => existing !== col.id) : [...prev, col.id],
+                              ),
+                          }))}
+                      />
+                    </div>
                   }
                 />
-                <DataTable
-                  columns={expenseColumns}
-                  data={filteredExpenses}
-                  rowId={(row) => row.id}
-                  loading={isLoading}
-                  error={fetchError}
-                  onRetry={() => fetchExpenses(currentPage)}
-                  visibleColumnIds={visibleColumns}
-                  emptyTitle={t("no_expenses")}
-                  emptyDescription={t("no_expenses_desc")}
-                />
+                <div className="hidden md:block">
+                  <DataTable
+                    columns={expenseColumns}
+                    data={filteredExpenses}
+                    rowId={(row) => row.id}
+                    loading={isLoading}
+                    error={fetchError}
+                    onRetry={() => fetchExpenses(currentPage)}
+                    visibleColumnIds={visibleColumns}
+                    emptyTitle={t("no_expenses")}
+                    emptyDescription={t("no_expenses_desc")}
+                  />
+                </div>
+                <div className="space-y-3 p-3 pb-20 md:hidden">
+                  {filteredExpenses.map((expense) => (
+                    <Card key={expense.id} className="border-zinc-200 dark:border-zinc-800">
+                      <CardContent className="space-y-3 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs text-zinc-500">{t("col_vendor")}</p>
+                            <p className="font-semibold text-zinc-900 dark:text-zinc-100">{expense.vendor}</p>
+                          </div>
+                          <p className="font-bold text-rose-600 dark:text-rose-400">{fCurrency(expense.amount)}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary">{expense.category}</Badge>
+                          <span className="text-xs text-zinc-500">{format(new Date(expense.date), "dd MMM yyyy")}</span>
+                        </div>
+                        <details className="rounded-md border border-zinc-200 p-2 text-xs dark:border-zinc-800">
+                          <summary className="cursor-pointer font-semibold">More details</summary>
+                          <div className="space-y-1 pt-2 text-zinc-600 dark:text-zinc-300">
+                            <p>{t("col_category")}: {expense.category}</p>
+                            <p>{t("col_date")}: {format(new Date(expense.date), "dd MMM yyyy")}</p>
+                            {expense.description && <p>{expense.description}</p>}
+                          </div>
+                        </details>
+                        <div className="flex flex-wrap gap-2">
+                          {expense.receiptUrl && (
+                            <Button variant="outline" size="sm" asChild>
+                              <a href={expense.receiptUrl} target="_blank" rel="noopener noreferrer">
+                                <FileText className="mr-1.5 h-3.5 w-3.5" /> {t("actions.view_receipt")}
+                              </a>
+                            </Button>
+                          )}
+                          <Button variant="outline" size="sm" onClick={() => openEditModal(expense)}>
+                            <Edit className="mr-1.5 h-3.5 w-3.5" /> {t("actions.edit")}
+                          </Button>
+                          <Button variant="destructive" size="sm" onClick={() => setExpenseToDelete(expense.id)}>
+                            <Trash2 className="mr-1.5 h-3.5 w-3.5" /> {t("actions.delete")}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </CardContent>
               <CardFooter className="p-0">
                 <DataTablePagination
