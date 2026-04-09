@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
 import { calculateInvoiceTotals } from '@/lib/invoice/totals';
+import { dispatchNotification } from '@/lib/notifications/dispatcher';
 
 export async function GET() {
   try {
@@ -152,6 +153,17 @@ export async function POST(request: Request) {
         }
       }
     });
+
+    // Fire notification (fire-and-forget)
+    dispatchNotification({
+      event: 'PROPOSAL_CREATED',
+      workspaceId,
+      data: {
+        proposalNo,
+        clientName: client.name,
+        amount: String(totalAmount),
+      },
+    }).catch(() => null);
 
     return NextResponse.json({ success: true, proposal: newProposal });
   } catch (error) {

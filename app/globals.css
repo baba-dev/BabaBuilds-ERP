@@ -302,6 +302,19 @@
     will-change: transform;
   }
 
+  /* ── Notification Bell Wiggle ───────────────────────────────────────── */
+  @keyframes wiggle {
+    0%,100% { transform: rotate(0deg); }
+    25%      { transform: rotate(-18deg); }
+    75%      { transform: rotate(18deg); }
+  }
+
+  /* ── Custom Scrollbar (webkit) ──────────────────────────────────────── */
+  .custom-scrollbar::-webkit-scrollbar         { width: 4px; }
+  .custom-scrollbar::-webkit-scrollbar-track   { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb   { background: oklch(0.4 0 0 / 40%); border-radius: 999px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: oklch(0.55 0 0 / 60%); }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

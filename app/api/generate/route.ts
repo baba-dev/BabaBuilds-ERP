@@ -15,6 +15,7 @@ import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
 import { toInvoiceStatus } from '@/lib/invoice-status';
 import { toDecimal } from '@/lib/money';
 import { getRuntimeSmtpPassword } from '@/lib/mailer';
+import { dispatchNotification } from '@/lib/notifications/dispatcher';
 
 const lookupAsync = promisify(dns.lookup);
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
@@ -501,6 +502,19 @@ export async function POST(request: Request) {
     if (!newInvoice) {
       throw new Error("Could not generate a unique invoice number after multiple attempts.");
     }
+
+    // ── INVOICE_GENERATED Notification (fire-and-forget) ──────────────────
+    const userLocaleStr = profile.workspace?.baseCurrency || 'INR';
+    dispatchNotification({
+      event: 'INVOICE_GENERATED',
+      workspaceId,
+      data: {
+        invoiceNumber: currentInvoiceNumber,
+        clientName: client.name,
+        amount: `${userLocaleStr} ${formattedTotal}`,
+        pdfUrl: `/invoices/${workspaceId}/${finalPdfFilename}`,
+      },
+    }).catch(() => null);
 
     // --- EMAIL DELIVERY LOGIC ---
     let emailStatus = "Not requested";

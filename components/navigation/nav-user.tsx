@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { UserNav } from "@/components/UserNav";
 import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 export function NavUser() {
   const { status, data: session } = useSession();
@@ -28,7 +29,18 @@ export function NavUser() {
   }
 
   if (session?.user) {
-    return <UserNav />;
+    return (
+      <div className="flex flex-col gap-1">
+        {/* Notification Bell — only show when sidebar is expanded or mobile */}
+        {(open || isMobile) && (
+          <div className="flex items-center justify-between px-1 pb-1">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Alerts</span>
+            <NotificationBell />
+          </div>
+        )}
+        <UserNav />
+      </div>
+    );
   }
 
   return (

@@ -53,15 +53,21 @@ model User {
   currencyFormat     String @default("INR") // Currency symbol/math (e.g., INR, USD)
   defaultLandingPage String @default("/dashboard") // e.g., "/dashboard", "/invoice", "/clients"
 
-  // --- NEW: NOTIFICATION SETTINGS ---
+  // --- NOTIFICATION SETTINGS ---
   transactionalAlerts Boolean @default(true) // E.g., "Invoice Paid" alerts
   marketingEmails     Boolean @default(false) // Product updates/news
   weeklyReport        Boolean @default(true) // AI Financial Summary emails
+  // Granular channel toggles (user-configurable per channel)
+  notifyEmail         Boolean @default(true)
+  notifyPush          Boolean @default(true)
+  notifyInApp         Boolean @default(true)
 
   // --- RELATIONS ---
-  accounts   Account[]
-  sessions   Session[]
-  workspaces WorkspaceUser[]
+  accounts          Account[]
+  sessions          Session[]
+  workspaces        WorkspaceUser[]
+  pushSubscriptions PushSubscription[]
+  inAppNotifications InAppNotification[]
 }
 
 model Account {
@@ -652,4 +658,50 @@ model FileImportAuditLog {
 
   @@index([workspaceId, createdAt])
   @@index([workspaceId, status])
+}
+
+// ==========================================
+// 7. NOTIFICATION SYSTEM
+// ==========================================
+
+/// Stores Web Push API subscriptions (one per browser/device per user)
+model PushSubscription {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  endpoint    String   @unique
+  p256dh      String   // Browser-generated public key
+  auth        String   // Browser-generated auth secret
+  userAgent   String?  // Optional: identify device
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+
+/// Persisted in-app notifications for the Bell UI / Sonner polling
+model InAppNotification {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Event type: INVOICE_GENERATED | CLIENT_ADDED | RENEWAL_ALERT | PAYMENT_REMINDER | TAX_ALERT | DEADLINE_ALERT | PROPOSAL_CREATED | SERVICE_CREATED
+  eventType   String
+  title       String
+  body        String
+  /// Deep-link URL to navigate to on click
+  actionUrl   String?
+  isRead      Boolean  @default(false)
+  readAt      DateTime?
+
+  /// Optional workspace context
+  workspaceId String?
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId, isRead, createdAt])
+  @@index([userId, createdAt])
+  @@index([workspaceId])
 }

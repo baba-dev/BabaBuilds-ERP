@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { scanBuffer } from '@/lib/security/clamav';
 import { CLIENT_LOGO_INVALID_TYPE_ERROR, isAllowedClientLogoExtension } from '@/lib/uploads/client-logo';
 import { apiError } from '@/lib/api-error';
+import { dispatchNotification } from '@/lib/notifications/dispatcher';
 
 export async function GET(request: Request) {
   try {
@@ -149,6 +150,13 @@ export async function POST(request: Request) {
         logoUrl
       }
     });
+
+    // Fire notification (fire-and-forget)
+    dispatchNotification({
+      event: 'CLIENT_ADDED',
+      workspaceId,
+      data: { clientName: newClient.name },
+    }).catch(() => null);
 
     return NextResponse.json({ success: true, client: newClient });
   } catch (error) {

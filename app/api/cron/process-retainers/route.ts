@@ -16,6 +16,7 @@ import { calculateInvoiceTotals } from '@/lib/invoice/totals';
 import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
 import { decimalToNumber, toDecimal } from '@/lib/money';
 import { isCronAuthorized, unauthorizedCronResponse } from '@/lib/security/cron-auth';
+import { dispatchNotification } from '@/lib/notifications/dispatcher';
 
 // Helper for Indian Financial Year
 const getFY = (date: Date) => {
@@ -584,6 +585,19 @@ export async function GET(request: Request) {
 
         results.successful++;
         results.logs.push(`Successfully billed ${retainer.client.name} for ${finalDescription}`);
+
+        // Fire INVOICE_GENERATED notification (fire-and-forget)
+        dispatchNotification({
+          event: 'INVOICE_GENERATED',
+          workspaceId,
+          data: {
+            invoiceNumber,
+            clientName: retainer.client.name,
+            amount: `${profile.workspace?.baseCurrency || 'INR'} ${totals.total.toFixed(2)}`,
+            pdfUrl: relativePdfPath,
+          },
+        }).catch(() => null);
+
 
       } catch (err: any) {
         console.error(`Failed to process retainer ${retainer.id}:`, err);

@@ -133,6 +133,9 @@ self.addEventListener('push', (event) => {
         title?: string;
         body?: string;
         url?: string;
+        tag?: string;
+        image?: string;
+        actions?: Array<{ action: string; title: string; icon?: string }>;
       };
     } catch {
       return {
@@ -142,20 +145,43 @@ self.addEventListener('push', (event) => {
     }
   })();
 
-  const title = payload.title || 'BabaBuilds ERP';
-  const body = payload.body || 'You have a new update.';
-  const url = payload.url || '/dashboard';
+  const title   = payload.title || 'BabaBuilds ERP';
+  const body    = payload.body  || 'You have a new update.';
+  const url     = payload.url   || '/dashboard';
+  const tag     = payload.tag   || 'bababuilds-notification';
+
+  // Determine urgency-based vibration pattern
+  const isUrgent =
+    tag === 'payment_reminder' || tag === 'deadline_alert' || tag === 'tax_alert';
 
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
-      icon: '/icons/launchericon-192x192.png',
-      badge: '/icons/launchericon-72x72.png',
+      // App icon — high-res for Android adaptive icons
+      icon:   '/icons/launchericon-192x192.png',
+      // Small monochrome badge (shown in Android status bar)
+      badge:  '/icons/launchericon-72x72.png',
+      // Hero image for rich notifications (Android 12+)
+      ...(payload.image ? { image: payload.image } : {}),
+      // Deduplication tag — new notification replaces old with same tag
+      tag,
+      // Keep notification visible until user interacts (critical alerts)
+      requireInteraction: isUrgent,
+      // Haptic feedback pattern (Android)
+      vibrate: isUrgent ? [200, 100, 200, 100, 400] : [200, 100, 200],
+      // Silent = no system sound; remove to use system default
+      silent: false,
+      // Deep-link data passed to notificationclick
       data: { url },
-      tag: 'bababuilds-notification',
-    }),
+      // Action buttons shown on Android (iOS ignores these)
+      actions: payload.actions ?? [
+        { action: 'open',    title: 'Open',    icon: '/icons/launchericon-72x72.png' },
+        { action: 'dismiss', title: 'Dismiss' },
+      ],
+    } as NotificationOptions),
   );
 });
+
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
