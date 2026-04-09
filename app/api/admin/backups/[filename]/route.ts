@@ -3,7 +3,7 @@ import { handleAdminApiError, verifySuperAdmin } from "../../authz";
 import fs from "fs";
 import path from "path";
 
-const BACKUP_DIR = path.join(process.cwd(), "backups");
+const BACKUP_DIR = path.join(/*turbopackIgnore: true*/ process.cwd(), "backups");
 const BACKUP_DIR_RESOLVED = path.resolve(BACKUP_DIR);
 const SAFE_FILENAME_CHARS_REGEX = /^[A-Za-z0-9T:._-]+$/;
 const BACKUP_FILENAME_REGEX = /^ERP_BACKUP_[0-9T:.-]+\.zip$/;

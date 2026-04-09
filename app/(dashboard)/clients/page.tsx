@@ -27,7 +27,7 @@ import { useFormat } from "@/hooks/use-format";
 import { getBustedUrl } from "@/lib/cache-buster";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { CLIENT_LOGO_ACCEPT_ATTR, CLIENT_LOGO_HELP_TEXT } from "@/lib/uploads/client-logo";
-import type { ClientDto, ApiEnvelope } from "@/lib/types/business";
+import { type ClientDto, type ApiEnvelope } from "@/lib/types/business";
 
 export default function ClientCRM() {
   const t = useTranslations('Clients');

@@ -125,41 +125,41 @@ model Workspace {
   updatedAt DateTime @default(now()) @updatedAt
 
   // RELATIONS
-  users                WorkspaceUser[]
-  businessProfile      BusinessProfile?
-  clients              Client[]
-  invoices             Invoice[]
-  billingTransactions  BillingTransaction[]
-  expenses             Expense[]
-  bankTransactions     BankTransaction[]
-  investments          Investment[]
-  serviceTemplates     ServiceTemplate[]
-  proposals            Proposal[]
-  retainers            Retainer[]
-  tasks                Task[]
-  invoiceIdempotencies InvoiceIdempotency[]
-  taxPreference        WorkspaceTaxPreference?
-  workspaceTaxOverrides WorkspaceTaxOverride[]
-  taxRateOverrides     TaxRateOverride[]
+  users                    WorkspaceUser[]
+  businessProfile          BusinessProfile?
+  clients                  Client[]
+  invoices                 Invoice[]
+  billingTransactions      BillingTransaction[]
+  expenses                 Expense[]
+  bankTransactions         BankTransaction[]
+  investments              Investment[]
+  serviceTemplates         ServiceTemplate[]
+  proposals                Proposal[]
+  retainers                Retainer[]
+  tasks                    Task[]
+  invoiceIdempotencies     InvoiceIdempotency[]
+  taxPreference            WorkspaceTaxPreference?
+  workspaceTaxOverrides    WorkspaceTaxOverride[]
+  taxRateOverrides         TaxRateOverride[]
   taxRateOverrideAuditLogs TaxRateOverrideAuditLog[]
-  taxDecisionAuditLogs TaxDecisionAuditLog[]
-  workspaceInvites     WorkspaceInvite[]
+  taxDecisionAuditLogs     TaxDecisionAuditLog[]
+  workspaceInvites         WorkspaceInvite[]
 }
 
 model BillingTransaction {
-  id                String    @id @default(cuid())
-  workspaceId       String
-  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  transactionDate   DateTime  @default(now())
-  amount            Decimal   @default(0)
-  status            String    @default("PAID") // "PAID", "PENDING", "FAILED", etc.
+  transactionDate   DateTime @default(now())
+  amount            Decimal  @default(0)
+  status            String   @default("PAID") // "PAID", "PENDING", "FAILED", etc.
   description       String
   providerReference String?
   receiptUrl        String?
 
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([workspaceId, transactionDate])
 }
@@ -185,7 +185,7 @@ model WorkspaceInvite {
   expiresAt   DateTime
   createdAt   DateTime @default(now())
 
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, email])
 }
