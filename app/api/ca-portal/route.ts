@@ -4,8 +4,13 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import type { CAExpenseRow, CAInvoiceRow, CAPortalPayload } from "@/lib/ca-portal/types";
 import { decimalToNumber, toDecimal } from "@/lib/money";
+import { getCurrentFinancialYear } from '@/lib/financial-year';
 
 const isPaidStatus = (status: unknown) => String(status).toUpperCase() === "PAID";
+const isReceiptStatus = (status: unknown) => {
+  const normalizedStatus = String(status).toUpperCase();
+  return normalizedStatus === "PAID" || normalizedStatus === "PARTIALLY_PAID";
+};
 
 // Helper function to calculate exact UTC boundaries for an Indian Financial Year
 function getFinancialYearDates(fyString: string) {
@@ -36,7 +41,7 @@ export async function GET(request: Request) {
 
     // 2. PARSE FINANCIAL YEAR
     const { searchParams } = new URL(request.url);
-    const fy = searchParams.get('fy') || "25-26"; // Default fallback
+    const fy = searchParams.get('fy') || getCurrentFinancialYear();
     
     let dateFilter;
     try {
@@ -47,11 +52,18 @@ export async function GET(request: Request) {
     }
 
     // 3. FETCH ALL DATA CONCURRENTLY (Massive performance boost)
-    const [invoices, expenses, investments, profile] = await Promise.all([
+    const [invoices, receiptInvoices, expenses, investments, profile] = await Promise.all([
       prisma.invoice.findMany({
 
         where: { workspaceId, invoiceDate: dateFilter },
         orderBy: { invoiceDate: 'asc' }
+      }),
+      prisma.invoice.findMany({
+        where: {
+          workspaceId,
+          dateReceived: dateFilter,
+          status: { in: ['PAID', 'PARTIALLY_PAID'] }
+        }
       }),
       prisma.expense.findMany({
         where: { workspaceId, date: dateFilter },
@@ -67,9 +79,19 @@ export async function GET(request: Request) {
 
 
     // 4. CALCULATE ITR-4 SUMMARY METRICS
-    // Rule: For 44ADA, only count REALIZED (Paid) income.
-    const paidInvoices = invoices.filter(inv => isPaidStatus(inv.status));
-    const grossReceipts = decimalToNumber(paidInvoices.reduce((sum, inv) => sum.plus(toDecimal(inv.totalAmount)), toDecimal(0)));
+    // Tax basis assumption: summary metrics follow cash/receipt basis (not accrual).
+    // Therefore, gross receipts only include collections whose dateReceived falls within the selected FY.
+    const grossReceipts = decimalToNumber(
+      receiptInvoices.reduce((sum, inv) => {
+        if (!isReceiptStatus(inv.status)) return sum;
+
+        // Prefer the explicit collected amount; only use billed totals for legacy PAID rows missing amountReceived.
+        const realizedAmount = inv.amountReceived ?? (isPaidStatus(inv.status) ? (inv.grandTotal ?? inv.totalAmount) : null);
+        if (realizedAmount === null) return sum;
+
+        return sum.plus(toDecimal(realizedAmount));
+      }, toDecimal(0))
+    );
     
     // Presumptive income is strictly 50% of gross receipts
     const presumptiveIncome = grossReceipts * 0.5;
@@ -94,7 +116,7 @@ export async function GET(request: Request) {
       totalAmount: decimalToNumber(inv.totalAmount),
 
 
-      amountReceived: isPaidStatus(inv.status) ? decimalToNumber(inv.totalAmount) : null,
+      amountReceived: inv.amountReceived === null ? null : decimalToNumber(inv.amountReceived),
       status: inv.status,
       pdfPath: inv.pdfPath
     }));

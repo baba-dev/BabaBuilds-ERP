@@ -37,6 +37,8 @@ import type { MapPoint } from "@/components/maps";
 import { MapCardSkeleton } from "@/components/maps";
 import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 import { getInvoiceStatusBadgeKey, INVOICE_STATUS, isPaidInvoiceStatus, toInvoiceStatus } from "@/lib/invoice-status";
+import { parseDashboardResponse } from "./parse-dashboard-response";
+import { getCurrentFinancialYear } from "@/lib/financial-year";
 
 const GeographyInsightCard = dynamic(
   () => import("@/components/maps").then((mod) => mod.GeographyInsightCard),
@@ -78,6 +80,7 @@ type RecentInvoiceRow = {
   billingMonth?: string | null;
   status: string;
   totalAmount: number;
+  amountReceived?: number | null;
   pdfPath: string;
   updatedAt?: string | Date | null;
 };
@@ -133,16 +136,7 @@ export default function Dashboard() {
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   // --- FINANCIAL YEAR LOGIC ---
-  const getCurrentFY = () => {
-    const today = new Date();
-    const month = today.getMonth() + 1;
-    const year = today.getFullYear();
-    const shortYear = year.toString().slice(-2);
-    return month <= 3 
-      ? `${parseInt(shortYear) - 1}-${shortYear}` 
-      : `${shortYear}-${parseInt(shortYear) + 1}`;
-  };
-  const [selectedFy, setSelectedFy] = useState(getCurrentFY());
+  const [selectedFy, setSelectedFy] = useState(getCurrentFinancialYear(new Date(), 'local'));
 
   // Generate FY Options for the last 3 years
   const getFyOptions = () => {
@@ -188,14 +182,18 @@ export default function Dashboard() {
       const res = await fetch(`/api/dashboard?fy=${fy}`);
       const json = await res.json();
       if (!res.ok || json.error) {
-        throw new Error(json.error || "Failed to load dashboard data.");
+        throw new Error(json.error || t("toast.error.load_dashboard"));
       }
-      setData(json as DashboardData);
+      const parsed = parseDashboardResponse(json);
+      if (!parsed) {
+        throw new Error("Dashboard payload was malformed.");
+      }
+      setData(parsed as DashboardData);
     } catch (err: any) {
       console.error("Failed to fetch dashboard", err);
-      const message = err?.message || "Failed to load dashboard data. Please refresh.";
+      const message = err?.message || t("toast.error.load_dashboard_refresh");
       setFetchError(message);
-      toast.error("Failed to load dashboard data. Please refresh.");
+      toast.error(t("toast.error.load_dashboard_refresh"));
     } finally {
       setIsLoading(false);
     }
@@ -216,15 +214,15 @@ export default function Dashboard() {
 
       if (res.ok) {
         setPayModalOpen(false);
-        toast.success("Payment logged successfully.");
+        toast.success(t("toast.success.payment_logged"));
         fetchDashboardData(selectedFy); // Refresh the dashboard data
       } else {
         const errorData = await res.json();
-        toast.error(errorData.error || "Failed to log payment.");
+        toast.error(errorData.error || t("toast.error.log_payment"));
       }
     } catch (error) {
       console.error("Payment logging failed");
-      toast.error("A network error occurred.");
+      toast.error(t("toast.error.network"));
     } finally {
       setIsSubmittingPayment(false);
     }
@@ -232,26 +230,28 @@ export default function Dashboard() {
 
   const handleResendEmail = async (invoice: RecentInvoiceRow) => {
     setResendingId(invoice.id);
-    const toastId = toast.loading(`Sending invoice ${invoice.invoiceNumber}...`);
+    const toastId = toast.loading(t("toast.loading.send_invoice", { invoiceNumber: invoice.invoiceNumber }));
     try {
       const res = await fetch(`/api/invoices/${invoice.id}/resend`, { method: 'POST' });
       const data = await res.json();
 
       if (res.ok) {
-        toast.success("Email sent successfully!", { id: toastId });
+        toast.success(t("toast.success.email_sent"), { id: toastId });
       } else {
-        toast.error(data.error || "Failed to send email.", { id: toastId });
+        toast.error(data.error || t("toast.error.send_email"), { id: toastId });
       }
     } catch (error) {
-      toast.error("A network error occurred.", { id: toastId });
+      toast.error(t("toast.error.network"), { id: toastId });
     } finally {
       setResendingId(null);
     }
   };
 
   const openPayModal = (invoice: RecentInvoiceRow) => {
+    const alreadyReceived = Number(invoice.amountReceived ?? 0);
+    const remaining = Math.max(0, Number(invoice.totalAmount) - alreadyReceived);
     setSelectedInvoice(invoice);
-    setAmountReceived(invoice.totalAmount.toString());
+    setAmountReceived(remaining.toString());
     setPayModalOpen(true);
   };
 
@@ -262,14 +262,14 @@ export default function Dashboard() {
   const [isCompactCharts, setIsCompactCharts] = useState(false);
   const geographyPoints: MapPoint[] = useMemo(
     () => [
-      { id: "sf", label: "San Francisco, US", subtitle: "SaaS retainers", value: "12 clients · 31 invoices", lat: 25.2, lng: -122.4, weight: 31 },
-      { id: "nyc", label: "New York, US", subtitle: "Agency contracts", value: "9 clients · 27 invoices", lat: 28.8, lng: -93.6, weight: 27 },
-      { id: "lon", label: "London, UK", subtitle: "Cross-border billing", value: "6 clients · 18 invoices", lat: 36, lng: -10.8, weight: 18 },
-      { id: "blr", label: "Bengaluru, IN", subtitle: "Core delivery hub", value: "14 clients · 43 invoices", lat: 1.8, lng: 57.6, weight: 43 },
-      { id: "sin", label: "Singapore, SG", subtitle: "APAC expansion", value: "5 clients · 12 invoices", lat: -10.8, lng: 90, weight: 12 },
-      { id: "syd", label: "Sydney, AU", subtitle: "Recurring retainers", value: "4 clients · 10 invoices", lat: -43.2, lng: 122.4, weight: 10 },
+      { id: "sf", label: t("geo.points.sf.label"), subtitle: t("geo.points.sf.subtitle"), value: t("geo.points.sf.value"), lat: 25.2, lng: -122.4, weight: 31 },
+      { id: "nyc", label: t("geo.points.nyc.label"), subtitle: t("geo.points.nyc.subtitle"), value: t("geo.points.nyc.value"), lat: 28.8, lng: -93.6, weight: 27 },
+      { id: "lon", label: t("geo.points.lon.label"), subtitle: t("geo.points.lon.subtitle"), value: t("geo.points.lon.value"), lat: 36, lng: -10.8, weight: 18 },
+      { id: "blr", label: t("geo.points.blr.label"), subtitle: t("geo.points.blr.subtitle"), value: t("geo.points.blr.value"), lat: 1.8, lng: 57.6, weight: 43 },
+      { id: "sin", label: t("geo.points.sin.label"), subtitle: t("geo.points.sin.subtitle"), value: t("geo.points.sin.value"), lat: -10.8, lng: 90, weight: 12 },
+      { id: "syd", label: t("geo.points.syd.label"), subtitle: t("geo.points.syd.subtitle"), value: t("geo.points.syd.value"), lat: -43.2, lng: 122.4, weight: 10 },
     ],
-    []
+    [t]
   );
 
   useEffect(() => {
@@ -283,7 +283,7 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 transition-colors duration-200">
-        <PageLoadingState title={t('loading')} description="Building your command center…" className="min-h-screen" />
+        <PageLoadingState title={t('loading')} description={t("loading_desc")} className="min-h-screen" />
       </div>
     );
   }
@@ -292,7 +292,7 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 transition-colors duration-200">
         <PageErrorState
-          title="Dashboard sync issue"
+          title={t("sync_issue_title")}
           description={fetchError}
           onRetry={() => fetchDashboardData(selectedFy)}
           className="min-h-screen"
@@ -305,8 +305,8 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 transition-colors duration-200">
         <PageEmptyState
-          title="No dashboard signal yet"
-          description="Create invoices, expenses, and retainers to activate this view."
+          title={t("empty_title")}
+          description={t("empty_desc")}
           className="min-h-screen"
         />
       </div>
@@ -322,6 +322,9 @@ export default function Dashboard() {
   const arrTotal = mrrTotal * 12;
   const activeRetainers = data?.mrr?.retainers || [];
   const recentInvoices: RecentInvoiceRow[] = data?.recentInvoices || [];
+  const selectedInvoiceBilled = Number(selectedInvoice?.totalAmount ?? 0);
+  const selectedInvoiceReceived = Number(selectedInvoice?.amountReceived ?? 0);
+  const selectedInvoiceRemaining = Math.max(0, selectedInvoiceBilled - selectedInvoiceReceived);
   const readinessIntegrations = data?.readiness?.integrations;
   const readinessSummary = data?.readiness?.summary ?? { healthy: 0, partial: 0, missing: 3 };
   const configuredConnections = readinessSummary.healthy;
@@ -424,13 +427,13 @@ export default function Dashboard() {
             onClick={() => handleResendEmail(inv)}
             disabled={resendingId === inv.id}
             className="bg-white dark:bg-zinc-900 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 hover:text-indigo-700 dark:hover:text-indigo-400 border-zinc-200 dark:border-zinc-700 transition-colors w-8 h-8 p-0 flex justify-center active:scale-95"
-            title="Resend Invoice to Client via Email"
+            title={t("actions.resend_invoice_title")}
             aria-label={`Resend email for ${inv.invoiceNumber}`}
           >
             <Send className={`w-3.5 h-3.5 ${resendingId === inv.id ? 'animate-pulse text-indigo-400' : ''}`} />
           </Button>
-          <Button variant="secondary" size="sm" asChild title="Download PDF" className="bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 w-8 h-8 p-0 flex justify-center active:scale-95 transition-colors">
-            <a href={getBustedUrl(inv.pdfPath, inv.updatedAt)} target="_blank" rel="noopener noreferrer" aria-label={`Download PDF for ${inv.invoiceNumber}`}>
+          <Button variant="secondary" size="sm" asChild title={t("actions.download_pdf_title")} className="bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 w-8 h-8 p-0 flex justify-center active:scale-95 transition-colors">
+            <a href={getBustedUrl(inv.pdfPath, inv.updatedAt)} target="_blank" rel="noopener noreferrer" aria-label={t("actions.download_pdf_aria", { invoiceNumber: inv.invoiceNumber })}>
               <Download className="h-3.5 w-3.5" />
             </a>
           </Button>
@@ -444,12 +447,12 @@ export default function Dashboard() {
     <DashboardPageShell
       title={t('financial_overview')}
       description={t('global_command_center', { countryCode })}
-      actions={
+      secondaryActions={
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest hidden sm:inline">FY:</span>
+          <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest hidden sm:inline">{t("fy_label")}</span>
           <Select value={selectedFy} onValueChange={setSelectedFy}>
             <SelectTrigger className="w-[120px] h-9 bg-white/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 shadow-sm backdrop-blur-sm font-bold text-xs ring-offset-zinc-50 dark:ring-offset-zinc-950">
-              <SelectValue placeholder="Select FY" />
+              <SelectValue placeholder={t("select_fy")} />
             </SelectTrigger>
             <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
               {getFyOptions().map(fy => (
@@ -464,8 +467,8 @@ export default function Dashboard() {
     >
 
         <GeographyInsightCard
-          title="Client & invoice geography snapshot"
-          subtitle="Live distribution of active clients and invoice throughput by region."
+          title={t("geo_title")}
+          subtitle={t("geo_subtitle")}
           points={geographyPoints}
         />
 
@@ -508,7 +511,7 @@ export default function Dashboard() {
                   {t('payment_velocity')}
                 </CardDescription>
               </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" asChild aria-label="View Retainers">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" asChild aria-label={t("a11y.view_retainers")}>
                 <Link href="/retainers"><ArrowRight className="w-4 h-4" /></Link>
               </Button>
             </CardHeader>
@@ -519,11 +522,11 @@ export default function Dashboard() {
                     <div key={i} className="p-4 flex items-center justify-between bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 transition-colors cursor-default">
                       <div className="flex items-center gap-3">
                         {ret.health === 'good' ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" aria-label="Good Health" />
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" aria-label={t("a11y.health_good")} />
                         ) : ret.health === 'warning' ? (
-                          <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" aria-label="Warning Health" />
+                          <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" aria-label={t("a11y.health_warning")} />
                         ) : (
-                          <ShieldAlert className="w-4 h-4 text-rose-500 shrink-0" aria-label="Critical Health" />
+                          <ShieldAlert className="w-4 h-4 text-rose-500 shrink-0" aria-label={t("a11y.health_critical")} />
                         )}
                         <div className="min-w-0">
                           <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">{ret.clientName}</p>
@@ -574,10 +577,11 @@ export default function Dashboard() {
                             <TooltipTrigger asChild>
                               <button
                                 type="button"
-                                className="inline-flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                                className="inline-flex items-center justify-center rounded-sm text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900"
                                 aria-label={`Why ${integration.label} matters`}
+                                title={`Why ${integration.label} matters`}
                               >
-                                <Info className="h-3.5 w-3.5" />
+                                <Info className="h-3.5 w-3.5" aria-hidden="true" />
                               </button>
                             </TooltipTrigger>
                             <TooltipContent side="top" className="max-w-[260px] leading-relaxed">
@@ -688,10 +692,10 @@ export default function Dashboard() {
               <div className="space-y-1.5">
                 <h3 className="font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2 uppercase tracking-tight text-sm">
                   {t('tax_threshold', { taxLabel })}
-                  {compliancePercentage >= 90 && <AlertTriangle className="h-4 w-4 text-amber-500 animate-pulse" aria-label="Threshold Warning" />}
+                  {compliancePercentage >= 90 && <AlertTriangle className="h-4 w-4 text-amber-500 animate-pulse" aria-label={t("a11y.threshold_warning")} />}
                 </h3>
                 <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 max-w-md">
-                  Monitoring revenue against the local mandatory filing limit of <strong className="text-zinc-700 dark:text-zinc-300">{fCurrency(thresholdValue)}</strong>.
+                  {t("monitoring_revenue", { amount: fCurrency(thresholdValue) })}
                 </p>
               </div>
               <div className="text-left md:text-right">
@@ -720,7 +724,7 @@ export default function Dashboard() {
             description={t('monthly_billing')}
             hasData={revenueSeries.length > 0}
             noDataLabel={t('no_data_yet')}
-            noDataHint="Add invoice activity to visualize monthly billing."
+            noDataHint={t("no_data_hint_revenue")}
             noDataIcon={Banknote}
           >
             <ResponsiveContainer width="100%" height="100%">
@@ -744,7 +748,7 @@ export default function Dashboard() {
                   cursor={{ fill: 'rgba(113, 113, 122, 0.05)' }}
                   content={<ChartTooltip formatterValue={fCurrency} compact={isCompactCharts} />}
                 />
-                <Bar dataKey="revenue" name="Revenue" fill="var(--chart-1)" radius={[6, 6, 0, 0]} maxBarSize={48} className="hover:opacity-80 transition-opacity" />
+                <Bar dataKey="revenue" name={t("chart_revenue_name")} fill="var(--chart-1)" radius={[6, 6, 0, 0]} maxBarSize={48} className="hover:opacity-80 transition-opacity" />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -754,7 +758,7 @@ export default function Dashboard() {
             description={t('functional_distribution')}
             hasData={wealthSeries.length > 0}
             noDataLabel={t('log_assets')}
-            noDataHint="Track liquid assets and allocations to activate this chart."
+            noDataHint={t("no_data_hint_assets")}
             noDataIcon={Landmark}
             chartClassName="flex items-center justify-center relative pb-24 sm:pb-20"
           >
@@ -865,8 +869,12 @@ export default function Dashboard() {
                       {t('billed_amount')}
                     </p>
                     <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                      {fCurrency(selectedInvoice?.totalAmount || 0)}
+                      {fCurrency(selectedInvoiceBilled)}
                     </p>
+                  </div>
+                  <div className="mt-1 px-1 space-y-1 text-xs text-zinc-500 dark:text-zinc-400 font-medium">
+                    <p>Already received: {fCurrency(selectedInvoiceReceived)}</p>
+                    <p>Remaining due: {fCurrency(selectedInvoiceRemaining)}</p>
                   </div>
                 </div>
 
@@ -887,7 +895,7 @@ export default function Dashboard() {
 
               <div className="px-6 py-4 bg-zinc-50/80 dark:bg-zinc-900/40 border-t border-zinc-100 dark:border-zinc-800/80 flex justify-end gap-3">
                 <Button type="button" variant="outline" onClick={() => setPayModalOpen(false)} className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-bold uppercase tracking-widest px-5">
-                  Cancel
+                  {t("cancel")}
                 </Button>
                 <Button type="submit" disabled={isSubmittingPayment} className="bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 border-none text-xs font-bold uppercase tracking-widest px-6 shadow-sm shadow-emerald-500/20 transition-all active:scale-95">
                   {isSubmittingPayment ? (

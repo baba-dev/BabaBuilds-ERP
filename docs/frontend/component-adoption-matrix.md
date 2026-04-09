@@ -2,6 +2,8 @@
 
 This matrix tracks frontend component rollout readiness, delivery controls, and design QA dependency mapping across phases.
 
+> Note: Master Settings uses bespoke header by design.
+
 ## Rollout phases
 
 - **Phase 1:** Navigation and shell consistency foundations.

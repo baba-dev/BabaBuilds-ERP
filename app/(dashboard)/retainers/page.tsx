@@ -310,25 +310,43 @@ export default function RetainersHub() {
   // Safe Date Formatting
   const safeDateFormat = (dateFormat ?? "dd/MM/yyyy").replace(/D/g, 'd').replace(/Y/g, 'y');
 
-  // --- RENDER WIZARD ---
-  if (view === 'wizard') {
-    return (
-      <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 pb-20 p-4 md:p-8 transition-colors duration-300">
-        <div className="max-w-3xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
-          <div className="flex items-center gap-4 mb-8">
-            <Button variant="ghost" size="icon" onClick={() => setView('list')} aria-label="Back to Retainers List" className="rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 active:scale-95 transition-transform">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50 tracking-tight">{t('configure')}</h1>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-wider mt-0.5">{t('configure_desc')}</p>
-            </div>
-          </div>
+  const renderListHeaderActions = () => (
+    <Button
+      onClick={() => setView('wizard')}
+      className="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-50 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 h-12 px-6 shadow-md shadow-zinc-900/10 dark:shadow-none text-xs font-bold uppercase tracking-wider transition-all active:scale-95"
+    >
+      <Plus className="w-4 h-4 mr-2" /> {t('new_retainer')}
+    </Button>
+  );
 
-          <Card className="shadow-2xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
-            <div className="h-1.5 bg-gradient-to-r from-indigo-500 to-emerald-500 w-full" />
-            <form onSubmit={handleSubmit}>
-              <CardContent className="p-6 md:p-8 space-y-8">
+  const renderBuilderHeaderActions = () => (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => setView('list')}
+      aria-label="Back to Retainers List"
+      className="rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 active:scale-95 transition-transform"
+    >
+      <ArrowLeft className="w-5 h-5" />
+    </Button>
+  );
+
+  const renderKpiCardForView = (currentView: 'list' | 'wizard') => {
+    if (currentView !== 'list') return null;
+
+    return (
+      <div className="bg-white/50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 px-5 py-2.5 rounded-xl shadow-sm text-center sm:text-right backdrop-blur-sm">
+        <p className="text-xs uppercase font-bold text-zinc-400 dark:text-zinc-500 tracking-widest">{t('active_pipeline')}</p>
+        <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">{fCurrency(mrrPipeline)}</p>
+      </div>
+    );
+  };
+
+  const renderWizardContent = () => (
+    <Card className="shadow-2xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
+      <div className="h-1.5 bg-gradient-to-r from-indigo-500 to-emerald-500 w-full" />
+      <form onSubmit={handleSubmit}>
+        <CardContent className="p-6 md:p-8 space-y-8">
 
                 {/* Section 1: The Who & What */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-zinc-50/50 dark:bg-zinc-900/40 rounded-xl border border-zinc-100 dark:border-zinc-800/80">
@@ -448,22 +466,19 @@ export default function RetainersHub() {
                   </div>
                 </div>
 
-              </CardContent>
-              <CardFooter className="bg-zinc-50/80 dark:bg-zinc-900/40 border-t border-zinc-100 dark:border-zinc-800/80 p-6 rounded-b-xl flex justify-end">
-                <Button type="submit" size="lg" className="w-full md:w-auto md:px-12 bg-indigo-600 hover:bg-indigo-700 text-white font-bold uppercase tracking-widest text-xs h-12 shadow-sm shadow-indigo-500/20 transition-all active:scale-95 border-none" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> {t('configuring')}</span>
-                  ) : (
-                    <span className="flex items-center gap-2"><Repeat className="w-4 h-4" /> {t('activate')}</span>
-                  )}
-                </Button>
-              </CardFooter>
-            </form>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+        </CardContent>
+        <CardFooter className="bg-zinc-50/80 dark:bg-zinc-900/40 border-t border-zinc-100 dark:border-zinc-800/80 p-6 rounded-b-xl flex justify-end">
+          <Button type="submit" size="lg" className="w-full md:w-auto md:px-12 bg-indigo-600 hover:bg-indigo-700 text-white font-bold uppercase tracking-widest text-xs h-12 shadow-sm shadow-indigo-500/20 transition-all active:scale-95 border-none" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> {t('configuring')}</span>
+            ) : (
+              <span className="flex items-center gap-2"><Repeat className="w-4 h-4" /> {t('activate')}</span>
+            )}
+          </Button>
+        </CardFooter>
+      </form>
+    </Card>
+  );
 
   // --- RENDER LIST VIEW ---
   const activeCount = retainers.filter(r => r.status === 'ACTIVE').length;
@@ -573,8 +588,8 @@ export default function RetainersHub() {
   ];
 
   return (
-    <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
+    <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8 pb-20 transition-colors duration-300">
+      <div className={`${view === 'list' ? 'max-w-7xl' : 'max-w-3xl'} mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out`}>
 
         {/* Header & Metrics */}
         <div className="sticky top-0 z-20 -mx-4 px-4 py-4 md:-mx-8 md:px-8 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200/50 dark:border-zinc-800/50 transition-all duration-300">
@@ -584,27 +599,21 @@ export default function RetainersHub() {
                 <div className="p-2.5 bg-indigo-600/10 dark:bg-indigo-500/20 rounded-xl border border-indigo-200/50 dark:border-indigo-400/20">
                   <Repeat className="w-6 h-6 text-indigo-700 dark:text-indigo-400" />
                 </div>
-                {t('title')}
+                {view === 'list' ? t('title') : t('configure')}
               </h1>
-              <p className="text-zinc-500 dark:text-zinc-400 font-medium text-sm">{t('description')}</p>
+              <p className="text-zinc-500 dark:text-zinc-400 font-medium text-sm">
+                {view === 'list' ? t('description') : t('configure_desc')}
+              </p>
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="bg-white/50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 px-5 py-2.5 rounded-xl shadow-sm text-center sm:text-right backdrop-blur-sm">
-                <p className="text-xs uppercase font-bold text-zinc-400 dark:text-zinc-500 tracking-widest">{t('active_pipeline')}</p>
-                <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">{fCurrency(mrrPipeline)}</p>
-              </div>
-              <Button
-                onClick={() => setView('wizard')}
-                className="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-50 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 h-12 px-6 shadow-md shadow-zinc-900/10 dark:shadow-none text-xs font-bold uppercase tracking-wider transition-all active:scale-95"
-              >
-                <Plus className="w-4 h-4 mr-2" /> {t('new_retainer')}
-              </Button>
+              {renderKpiCardForView(view)}
+              {view === 'list' ? renderListHeaderActions() : renderBuilderHeaderActions()}
             </div>
           </div>
         </div>
 
-        {/* Data Table */}
+        {view === 'list' ? (
         <Card className="shadow-xl border-zinc-200 dark:border-zinc-800/80 overflow-hidden bg-white dark:bg-zinc-900/95 flex flex-col">
           <CardHeader className="bg-zinc-50/50 dark:bg-zinc-900/50 border-b border-zinc-100 dark:border-zinc-800/80 py-4 px-6">
             <CardTitle className="text-base font-extrabold uppercase tracking-widest flex items-center gap-2 text-zinc-900 dark:text-zinc-50">
@@ -622,6 +631,9 @@ export default function RetainersHub() {
             />
           </CardContent>
         </Card>
+        ) : (
+          renderWizardContent()
+        )}
 
         {/* EDIT RETAINER MODAL */}
         <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>

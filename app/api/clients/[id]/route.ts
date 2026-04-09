@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { scanBuffer } from '@/lib/security/clamav';
+import { CLIENT_LOGO_INVALID_TYPE_ERROR, isAllowedClientLogoExtension } from '@/lib/uploads/client-logo';
 
 export async function DELETE(
   request: Request,
@@ -16,7 +17,7 @@ export async function DELETE(
     // SECURITY LOCK
     const session = await getServerSession(authOptions);
     if (!session || !(session as any).workspaceId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
     }
     const workspaceId = (session as any).workspaceId;
     
@@ -41,7 +42,11 @@ export async function DELETE(
       if (retainerCount > 0) blockers.push(`${retainerCount} retainer(s)`);
 
       return NextResponse.json(
-        { error: `Cannot delete client. Please remove their associated ${blockers.join(", ")} first.` }, 
+        {
+          error: `Cannot delete client. Please remove their associated ${blockers.join(", ")} first.`,
+          code: "CLIENT_HAS_DEPENDENCIES",
+          details: { invoiceCount, proposalCount, retainerCount },
+        },
         { status: 400 }
       );
     }
@@ -57,13 +62,13 @@ export async function DELETE(
     });
 
     if (result.count === 0) {
-      return NextResponse.json({ error: "Client not found or unauthorized." }, { status: 404 });
+      return apiError(404, "Client not found or unauthorized.", "CLIENT_NOT_FOUND");
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Delete error:", error);
-    return NextResponse.json({ error: "Failed to delete client" }, { status: 500 });
+    return apiError(500, "Failed to delete client", "CLIENT_DELETE_FAILED");
   }
 }
 
@@ -74,7 +79,7 @@ export async function PATCH(
   try {
     const session = await getServerSession(authOptions);
     if (!session || !(session as any).workspaceId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
     }
     const workspaceId = (session as any).workspaceId;
     const params = await props.params;
@@ -95,7 +100,7 @@ export async function PATCH(
     });
 
     if (!existingClient) {
-      return NextResponse.json({ error: "Client not found" }, { status: 404 });
+      return apiError(404, "Client not found", "CLIENT_NOT_FOUND");
     }
 
     const file = formData.get('logo') as File | null;
@@ -103,9 +108,8 @@ export async function PATCH(
 
     if (file && file.size > 0) {
       const ext = path.extname(file.name).toLowerCase();
-      const allowedExtensions = ['.png', '.jpg', '.jpeg', '.webp'];
-      if (!allowedExtensions.includes(ext)) {
-        return NextResponse.json({ error: "Invalid file type." }, { status: 400 });
+      if (!isAllowedClientLogoExtension(ext)) {
+        return NextResponse.json({ error: CLIENT_LOGO_INVALID_TYPE_ERROR }, { status: 400 });
       }
       
       const bytes = await file.arrayBuffer();
@@ -114,7 +118,7 @@ export async function PATCH(
       // Malware scan
       const isSafe = await scanBuffer(buffer);
       if (!isSafe) {
-        return NextResponse.json({ error: "Malware detected in uploaded file." }, { status: 400 });
+        return apiError(400, "Malware detected in uploaded file.", "MALWARE_DETECTED");
       }
 
       const dir = path.join(process.cwd(), 'public', 'logos', workspaceId);
@@ -164,6 +168,6 @@ export async function PATCH(
     return NextResponse.json({ success: true, client: updatedClient });
   } catch (error) {
     console.error("Update error:", error);
-    return NextResponse.json({ error: "Failed to update client" }, { status: 500 });
+    return apiError(500, "Failed to update client", "CLIENT_UPDATE_FAILED");
   }
 }

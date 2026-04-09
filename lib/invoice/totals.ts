@@ -1,4 +1,7 @@
 export type InvoiceTaxMode = 'taxable' | 'exempt';
+import type { MoneyInput } from '@/lib/money';
+import { toDecimal } from '@/lib/money';
+import { Prisma } from '@prisma/client';
 
 export interface InvoiceTotalsInput {
   services: Array<{ amount: number }>;
@@ -12,6 +15,22 @@ export interface InvoiceTotals {
   taxAmount: number;
   total: number;
   taxMode: InvoiceTaxMode;
+}
+
+export interface InvoiceBilledAmountInput {
+  totalAmount?: MoneyInput;
+  grandTotal?: MoneyInput;
+}
+
+export function getInvoiceBilledAmount(invoice: InvoiceBilledAmountInput): Prisma.Decimal {
+  return toDecimal(invoice.grandTotal ?? invoice.totalAmount);
+}
+
+export function sumInvoiceBilledAmount(invoices: InvoiceBilledAmountInput[]): Prisma.Decimal {
+  return invoices.reduce(
+    (sum, invoice) => sum.plus(getInvoiceBilledAmount(invoice)),
+    new Prisma.Decimal(0)
+  );
 }
 
 function toMinorUnits(value: number): number {

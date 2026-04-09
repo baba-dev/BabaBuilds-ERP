@@ -6,13 +6,14 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { scanBuffer } from '@/lib/security/clamav';
+import { CLIENT_LOGO_INVALID_TYPE_ERROR, isAllowedClientLogoExtension } from '@/lib/uploads/client-logo';
 
 export async function GET(request: Request) {
   try {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
     if (!session || !(session as any).workspaceId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
     }
     const workspaceId = (session as any).workspaceId;
     const whereClause = { workspaceId: workspaceId };
@@ -45,7 +46,7 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("API Error fetching clients:", error);
-    return NextResponse.json({ error: 'Failed to fetch clients' }, { status: 500 });
+    return apiError(500, "Failed to fetch clients", "CLIENTS_FETCH_FAILED");
   }
 }
 
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
     if (!session || !(session as any).workspaceId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
     }
     const workspaceId = (session as any).workspaceId;
 
@@ -65,16 +66,15 @@ export async function POST(request: Request) {
     });
 
     if (!workspace) {
-      return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
+      return apiError(404, "Workspace not found", "WORKSPACE_NOT_FOUND");
     }
 
     // The Rule: Free tier gets 3 clients max.
     if (workspace.planTier === "FREE" && workspace._count.clients >= 3) {
-      return NextResponse.json({ 
-        error: 'Upgrade Required', 
-        message: 'You have reached the limit of 3 clients on the Free plan. Upgrade to Pro for unlimited clients.',
-        requiresUpgrade: true 
-      }, { status: 403 });
+      return apiError(403, "Upgrade Required", "PLAN_LIMIT_REACHED", {
+        message: "You have reached the limit of 3 clients on the Free plan. Upgrade to Pro for unlimited clients.",
+        requiresUpgrade: true,
+      });
     }
     // --- 🚨 SAAS MONETIZATION BARRICADE END ---
 
@@ -92,16 +92,15 @@ export async function POST(request: Request) {
 
     if (file && file.size > 0) {
       const ext = path.extname(file.name).toLowerCase();
-      const allowedExtensions = ['.png', '.jpg', '.jpeg', '.webp']; // Remove .pdf for logos
-      if (!allowedExtensions.includes(ext)) {
-        return NextResponse.json({ error: "Invalid file type. Only images/PDFs are allowed." }, { status: 400 });
+      if (!isAllowedClientLogoExtension(ext)) {
+        return NextResponse.json({ error: CLIENT_LOGO_INVALID_TYPE_ERROR }, { status: 400 });
       }
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
 
       const isSafe = await scanBuffer(buffer);
       if (!isSafe) {
-        return NextResponse.json({ error: "Malware detected in uploaded file." }, { status: 400 });
+        return apiError(400, "Malware detected in uploaded file.", "MALWARE_DETECTED");
       }
 
       const dir = path.join(process.cwd(), 'public', 'logos', workspaceId); 
@@ -130,6 +129,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, client: newClient });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: 'Failed to create client' }, { status: 500 });
+    return apiError(500, "Failed to create client", "CLIENT_CREATE_FAILED");
   }
 }
