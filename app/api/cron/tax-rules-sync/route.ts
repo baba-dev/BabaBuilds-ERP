@@ -1,15 +1,10 @@
 import { NextResponse } from 'next/server';
 import { syncFallbackRates } from '@/scripts/tax/sync-fallback-rates';
-
-function isAuthorized(request: Request): boolean {
-  if (process.env.NODE_ENV !== 'production') return true;
-  const authHeader = request.headers.get('authorization');
-  return authHeader === `Bearer ${process.env.CRON_SECRET}`;
-}
+import { isCronAuthorized, unauthorizedCronResponse } from '@/lib/security/cron-auth';
 
 export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
-    return new NextResponse('Unauthorized Cron Trigger', { status: 401 });
+  if (!isCronAuthorized(request)) {
+    return unauthorizedCronResponse();
   }
 
   const { searchParams } = new URL(request.url);
