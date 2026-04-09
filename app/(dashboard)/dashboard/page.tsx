@@ -429,11 +429,17 @@ export default function Dashboard() {
     <DashboardPageShell
       title={t('financial_overview')}
       description={t('global_command_center', { countryCode })}
+      icon={<Landmark className="w-6 h-6 text-indigo-700 dark:text-indigo-400" />}
+      kpiCard={{
+        label: t('billed_revenue'),
+        value: fCurrency(kpi.totalRevenue),
+        tone: "positive"
+      }}
       secondaryActions={
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest hidden sm:inline">{t("fy_label")}</span>
           <Select value={selectedFy} onValueChange={setSelectedFy}>
-            <SelectTrigger className="w-[120px] h-9 bg-white/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 shadow-sm backdrop-blur-sm font-bold text-xs ring-offset-zinc-50 dark:ring-offset-zinc-950">
+            <SelectTrigger className="w-[120px] h-9 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-sm backdrop-blur-sm font-bold text-xs">
               <SelectValue placeholder={t("select_fy")} />
             </SelectTrigger>
             <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
@@ -447,6 +453,7 @@ export default function Dashboard() {
         </div>
       }
     >
+
 
 
         {/* --- MRR COMMAND CENTER --- */}
