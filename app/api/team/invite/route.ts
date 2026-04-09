@@ -35,7 +35,7 @@ export async function POST(req: Request) {
       where: { id: workspaceId },
       include: {
         users: true,
-        invites: true,
+        workspaceInvites: true,
         businessProfile: true,
       }
     });
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
     }
 
-    const currentMemberCount = workspace.users.length + workspace.invites.length;
+    const currentMemberCount = workspace.users.length + workspace.workspaceInvites.length;
     const maxUsers = getMaxUsersForPlan(workspace.planTier);
 
     if (currentMemberCount >= maxUsers) {

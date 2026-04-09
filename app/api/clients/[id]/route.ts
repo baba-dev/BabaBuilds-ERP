@@ -7,6 +7,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { scanBuffer } from '@/lib/security/clamav';
 import { CLIENT_LOGO_INVALID_TYPE_ERROR, isAllowedClientLogoExtension } from '@/lib/uploads/client-logo';
+import { apiError } from '@/lib/api-error';
 
 export async function DELETE(
   request: Request,

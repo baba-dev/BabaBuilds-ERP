@@ -9,7 +9,7 @@ export default async function InviteAcceptancePage({ params }: { params: { token
   
   const invite = await prisma.workspaceInvite.findUnique({
     where: { token },
-    include: { workspace: { include: { users: true, invites: true } } }
+    include: { workspace: { include: { users: true, workspaceInvites: true } } }
   });
 
   if (!invite) {

@@ -34,7 +34,7 @@ export async function GET() {
       },
     });
 
-    const items = transactions.map((transaction) => ({
+    const items = transactions.map((transaction: typeof transactions[number]) => ({
       id: transaction.id,
       date: transaction.transactionDate.toLocaleDateString(locale, {
         year: "numeric",
