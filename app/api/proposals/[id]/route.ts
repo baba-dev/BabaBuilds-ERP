@@ -3,6 +3,34 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !(session as any).workspaceId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const workspaceId = (session as any).workspaceId;
+    const resolvedParams = await params;
+    const proposalId = resolvedParams.id;
+
+    const proposal = await prisma.proposal.findFirst({
+      where: { id: proposalId, workspaceId },
+    });
+
+    if (!proposal) {
+      return NextResponse.json({ error: "Proposal not found or unauthorized" }, { status: 404 });
+    }
+
+    return NextResponse.json({ data: proposal });
+  } catch (error: any) {
+    console.error("Proposal fetch error:", error);
+    return NextResponse.json({ error: "An error occurred while fetching the proposal" }, { status: 500 });
+  }
+}
+
 export async function DELETE(
   request: Request, 
   { params }: { params: Promise<{ id: string }> }

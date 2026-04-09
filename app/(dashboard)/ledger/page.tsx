@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 // MISSION CRITICAL: Globalization Imports
@@ -31,6 +32,7 @@ import {
 
 export default function AuditDashboard() {
   const t = useTranslations('Ledger');
+  const searchParams = useSearchParams();
   const[invoices, setInvoices] = useState<InvoiceDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -69,6 +71,7 @@ export default function AuditDashboard() {
   // Delete Invoice State
   const[invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(["invoice", "date", "billed", "status", "received", "actions"]);
+  const [hasHandledProtocolRecord, setHasHandledProtocolRecord] = useState(false);
   const tableState = useUrlTableState("ledger");
 
   useEffect(() => {
@@ -240,6 +243,32 @@ export default function AuditDashboard() {
   const filteredInvoices = invoices.filter((inv) =>
     `${inv.invoiceNumber} ${inv.clientName ?? ""} ${inv.status}`.toLowerCase().includes(tableState.search.toLowerCase()),
   );
+
+  useEffect(() => {
+    const protocolRecord = searchParams.get("protocolRecord");
+    const protocolEntity = searchParams.get("protocolEntity");
+
+    if (hasHandledProtocolRecord || !protocolRecord || protocolEntity !== "invoice") {
+      return;
+    }
+
+    setHasHandledProtocolRecord(true);
+    void (async () => {
+      try {
+        const res = await fetch(`/api/invoices/${encodeURIComponent(protocolRecord)}`);
+        const payload = await res.json().catch(() => null);
+        if (!res.ok || !payload?.data?.invoiceNumber) {
+          toast.error("Could not open deep-linked invoice.");
+          return;
+        }
+        tableState.setSearch(String(payload.data.invoiceNumber));
+        toast.success(`Deep-linked invoice ${payload.data.invoiceNumber} loaded.`);
+      } catch {
+        toast.error("Could not open deep-linked invoice.");
+      }
+    })();
+  }, [hasHandledProtocolRecord, searchParams, tableState]);
+
   const invoiceColumns: DataTableColumnDef<InvoiceDto>[] = [
     { id: "invoice", header: t("col_invoice_no"), accessor: (row) => row.invoiceNumber, sortable: true, cell: (row) => <span className="font-bold dark:text-zinc-200 text-sm">{row.invoiceNumber}</span>, hideable: true },
     { id: "date", header: t("col_date"), sortable: true, sortAccessor: (row) => new Date(row.invoiceDate).getTime(), cell: (row) => <span className="dark:text-zinc-400 text-xs font-medium">{format(new Date(row.invoiceDate), safeDateFormat)}</span>, hideable: true },
