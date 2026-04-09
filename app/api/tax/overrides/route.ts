@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { createTaxOverrideAuditLog } from '@/lib/security/activity-log';
 import type { Session } from 'next-auth';
 
 type SessionWithWorkspace = Session & { workspaceId?: string; user?: Session['user'] & { id?: string } };
@@ -21,9 +21,6 @@ const toOptionalDate = (value: unknown): Date | null => {
   const parsed = new Date(String(value));
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
-
-const toJsonValue = (value: unknown): Prisma.InputJsonValue =>
-  JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 
 export async function GET() {
   try {
@@ -92,23 +89,21 @@ export async function POST(request: Request) {
       },
     });
 
-    await prisma.taxRateOverrideAuditLog.create({
-      data: {
-        workspaceId,
-        taxRateOverrideId: created.id,
-        action: 'CREATE',
-        decisionSource: 'OVERRIDE',
-        scopeType: created.scopeType,
-        scopeRef: created.scopeRef,
-        rate: created.rate,
-        effectiveFrom: created.effectiveFrom,
-        effectiveTo: created.effectiveTo,
-        reason: created.reason,
-        previousValues: Prisma.JsonNull,
-        newValues: toJsonValue(created),
-        actorUserId,
-        actorEmail,
-      },
+    await createTaxOverrideAuditLog({
+      workspaceId,
+      taxRateOverrideId: created.id,
+      action: 'CREATE',
+      decisionSource: 'OVERRIDE',
+      scopeType: created.scopeType,
+      scopeRef: created.scopeRef,
+      rate: created.rate,
+      effectiveFrom: created.effectiveFrom,
+      effectiveTo: created.effectiveTo,
+      reason: created.reason,
+      previousValues: null,
+      newValues: created,
+      actorUserId,
+      actorEmail,
     });
 
     return NextResponse.json({ success: true, data: created }, { status: 201 });

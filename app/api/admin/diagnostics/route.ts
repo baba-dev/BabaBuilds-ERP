@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { handleAdminApiError, verifySuperAdmin } from "../authz";
 import { prisma } from "@/lib/prisma";
 import os from 'os';
+import { validateTaxOverrideAuditChain } from '@/lib/security/activity-log';
 
 export async function GET() {
   try {
@@ -21,6 +22,8 @@ export async function GET() {
     const cpus = os.cpus();
     const loadAvg = os.loadavg(); // Returns an array [1, 5, 15] minutes of load averages
 
+    const auditChain = await validateTaxOverrideAuditChain();
+
     const uptime = os.uptime();
     const hours = Math.floor(uptime / 3600);
     const minutes = Math.floor((uptime % 3600) / 60);
@@ -38,7 +41,12 @@ export async function GET() {
         loadAverage: loadAvg.map(l => l.toFixed(2)).join(', ')
       },
       uptime: `${hours}h ${minutes}m`,
-      status: dbLatency < 200 ? "Healthy" : "Degraded"
+      activityLogChain: {
+        checked: auditChain.checked,
+        valid: auditChain.valid,
+        violations: auditChain.violations.slice(0, 25),
+      },
+      status: dbLatency < 200 && auditChain.valid ? "Healthy" : "Degraded"
     });
   } catch (error) {
     return handleAdminApiError(error, "Server Error");

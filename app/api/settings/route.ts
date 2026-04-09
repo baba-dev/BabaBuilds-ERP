@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { scanBuffer } from '@/lib/security/clamav';
 import { isSupportedLocale } from '@/i18n/locales';
 import { getTaxFeatureFlags } from '@/lib/tax/feature-flags';
+import { logActivity } from '@/lib/activity-log';
 
 export async function GET() {
   try {
@@ -61,13 +62,20 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  let workspaceId = "";
+  let actorId: string | null = null;
+  let actorEmail: string | null = null;
+  let changedFieldNames: string[] = [];
+
   try {
     const session = await getServerSession(authOptions);
     if (!session || !(session as any).workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const workspaceId = (session as any).workspaceId;
+    workspaceId = (session as any).workspaceId;
+    actorId = (session as any)?.user?.id ?? null;
+    actorEmail = (session as any)?.user?.email ?? null;
     const formData = await request.formData();
 
     const hasField = (field: string) => formData.has(field);
@@ -345,9 +353,41 @@ export async function POST(request: Request) {
       cookieStore.set('NEXT_LOCALE', clientLocale, { path: '/' });
     }
 
+    changedFieldNames = Object.keys(updateData).sort();
+    if (clientLocale) {
+      changedFieldNames.push('locale');
+    }
+
+    logActivity({
+      action: "settings_update",
+      outcome: "success",
+      entityType: "workspace_settings",
+      entityId: workspaceId,
+      workspaceId,
+      actorId,
+      actorEmail,
+      metadata: {
+        changedFieldNames,
+        changedFieldCount: changedFieldNames.length,
+      },
+    });
+
     return NextResponse.json({ success: true, profile });
   } catch (error) {
     console.error(error);
+    logActivity({
+      action: "settings_update",
+      outcome: "error",
+      entityType: "workspace_settings",
+      entityId: workspaceId || null,
+      workspaceId: workspaceId || null,
+      actorId,
+      actorEmail,
+      metadata: {
+        changedFieldNames,
+        changedFieldCount: changedFieldNames.length,
+      },
+    });
     return NextResponse.json({ error: 'Failed to save business profile' }, { status: 500 });
   }
 }

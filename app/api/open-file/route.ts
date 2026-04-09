@@ -1,12 +1,12 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { apiError } from '@/lib/api-error';
 import { scanBuffer } from '@/lib/security/clamav';
+import { logActivity } from '@/lib/security/activity-log';
 
 type ImportFlow = 'expenses' | 'invoices' | 'reconciliation';
 type ImportStatus = 'IMPORTED' | 'UNSUPPORTED' | 'PERMISSION_DENIED' | 'FAILED';
@@ -71,22 +71,30 @@ const logAudit = async (params: {
   flow?: string;
   status: ImportStatus;
   reason?: string;
+  request?: Request;
+  actorUserId?: string | null;
+  actorEmail?: string | null;
 }) => {
-  await prisma.$executeRaw`
-    INSERT INTO "FileImportAuditLog" (
-      "id", "workspaceId", "fileName", "mimeType", "fileSizeBytes", "flow", "status", "reason", "createdAt"
-    ) VALUES (
-      ${randomUUID()},
-      ${params.workspaceId},
-      ${params.fileName ?? null},
-      ${params.mimeType ?? null},
-      ${params.fileSize ?? null},
-      ${params.flow ?? null},
-      ${params.status},
-      ${params.reason ?? null},
-      CURRENT_TIMESTAMP
-    )
-  `;
+  await logActivity({
+    action: 'OPEN_FILE_IMPORT',
+    status: params.status,
+    workspaceId: params.workspaceId,
+    actor: {
+      userId: params.actorUserId,
+      email: params.actorEmail,
+    },
+    entity: {
+      type: 'file-import',
+    },
+    metadata: {
+      fileName: params.fileName,
+      mimeType: params.mimeType,
+      fileSizeBytes: params.fileSize,
+      flow: params.flow,
+      reason: params.reason,
+    },
+    request: params.request,
+  });
 };
 
 const isSupportedFile = (file: File, ext: string) => {
@@ -98,6 +106,12 @@ const isSupportedFile = (file: File, ext: string) => {
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   const workspaceId = (session as { workspaceId?: string } | null)?.workspaceId;
+  const actor = session?.user
+    ? {
+        userId: (session.user as { id?: string | null } | undefined)?.id ?? null,
+        email: session.user.email ?? null,
+      }
+    : undefined;
 
   if (!session || !workspaceId) {
     return apiError(403, 'Permission denied for file import.', 'PERMISSION_DENIED');
@@ -108,6 +122,9 @@ export async function POST(request: Request) {
     if (contentLength && contentLength > MAX_FILE_SIZE_BYTES + MAX_MULTIPART_OVERHEAD_BYTES) {
       await logAudit({
         workspaceId,
+        request,
+        actorUserId: actor?.userId,
+        actorEmail: actor?.email,
         status: 'FAILED',
         reason: `Payload exceeds limit (${contentLength} > ${MAX_FILE_SIZE_BYTES + MAX_MULTIPART_OVERHEAD_BYTES})`,
       });
@@ -126,6 +143,9 @@ export async function POST(request: Request) {
     if (!file || file.size === 0) {
       await logAudit({
         workspaceId,
+        request,
+        actorUserId: actor?.userId,
+        actorEmail: actor?.email,
         status: 'FAILED',
         reason: 'Missing file payload',
       });
@@ -135,6 +155,9 @@ export async function POST(request: Request) {
     if (file.size > MAX_FILE_SIZE_BYTES) {
       await logAudit({
         workspaceId,
+        request,
+        actorUserId: actor?.userId,
+        actorEmail: actor?.email,
         fileName: file.name,
         mimeType: file.type,
         fileSize: file.size,
@@ -158,6 +181,9 @@ export async function POST(request: Request) {
     if (!flow || !isSupportedFile(file, ext)) {
       await logAudit({
         workspaceId,
+        request,
+        actorUserId: actor?.userId,
+        actorEmail: actor?.email,
         fileName: file.name,
         mimeType: file.type,
         fileSize: file.size,
@@ -182,6 +208,9 @@ export async function POST(request: Request) {
     if (!isSafe) {
       await logAudit({
         workspaceId,
+        request,
+        actorUserId: actor?.userId,
+        actorEmail: actor?.email,
         fileName: file.name,
         mimeType: file.type,
         fileSize: file.size,
@@ -195,6 +224,9 @@ export async function POST(request: Request) {
     if (flow === 'reconciliation' && ext !== '.csv') {
       await logAudit({
         workspaceId,
+        request,
+        actorUserId: actor?.userId,
+        actorEmail: actor?.email,
         fileName: file.name,
         mimeType: file.type,
         fileSize: file.size,
@@ -234,6 +266,9 @@ export async function POST(request: Request) {
 
       await logAudit({
         workspaceId,
+        request,
+        actorUserId: actor?.userId,
+        actorEmail: actor?.email,
         fileName: file.name,
         mimeType: file.type,
         fileSize: file.size,
@@ -254,6 +289,9 @@ export async function POST(request: Request) {
     if (flow === 'reconciliation') {
       await logAudit({
         workspaceId,
+        request,
+        actorUserId: actor?.userId,
+        actorEmail: actor?.email,
         fileName: file.name,
         mimeType: file.type,
         fileSize: file.size,
@@ -272,6 +310,9 @@ export async function POST(request: Request) {
 
     await logAudit({
       workspaceId,
+      request,
+      actorUserId: actor?.userId,
+      actorEmail: actor?.email,
       fileName: file.name,
       mimeType: file.type,
       fileSize: file.size,
@@ -293,6 +334,9 @@ export async function POST(request: Request) {
     if (isScanTimeout) {
       await logAudit({
         workspaceId,
+        request,
+        actorUserId: actor?.userId,
+        actorEmail: actor?.email,
         status: 'FAILED',
         reason: `Malware scan timed out after ${MALWARE_SCAN_TIMEOUT_MS}ms`,
       });
@@ -307,6 +351,9 @@ export async function POST(request: Request) {
 
     await logAudit({
       workspaceId,
+      request,
+      actorUserId: actor?.userId,
+      actorEmail: actor?.email,
       status: 'FAILED',
       reason: error instanceof Error ? error.message : 'Unknown import failure',
     });

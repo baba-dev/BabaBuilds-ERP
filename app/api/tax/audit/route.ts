@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import type { Session } from 'next-auth';
+import { verifySuperAdmin } from '@/app/api/admin/authz';
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
-type SessionWithWorkspace = Session & { workspaceId?: string };
 
 const toDateOrNull = (value: string | null): Date | null => {
   if (!value) return null;
@@ -16,28 +13,26 @@ const toDateOrNull = (value: string | null): Date | null => {
 
 export async function GET(request: Request) {
   try {
-    const session = (await getServerSession(authOptions)) as SessionWithWorkspace | null;
-    if (!session?.workspaceId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    await verifySuperAdmin();
 
-    const workspaceId = session.workspaceId;
     const { searchParams } = new URL(request.url);
 
     const page = Math.max(1, Number(searchParams.get('page') ?? '1'));
     const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Number(searchParams.get('pageSize') ?? DEFAULT_PAGE_SIZE)));
 
+    const workspaceId = searchParams.get('workspaceId') ?? undefined;
     const action = searchParams.get('action');
     const scopeType = searchParams.get('scopeType');
     const startDate = toDateOrNull(searchParams.get('startDate'));
     const endDate = toDateOrNull(searchParams.get('endDate'));
 
     const where: {
-      workspaceId: string;
+      workspaceId?: string;
       action?: string;
       scopeType?: string;
       createdAt?: { gte?: Date; lte?: Date };
-    } = { workspaceId };
+    } = {};
+    if (workspaceId) where.workspaceId = workspaceId;
     if (action && action !== 'ALL') where.action = action;
     if (scopeType && scopeType !== 'ALL') where.scopeType = scopeType;
     if (startDate || endDate) {

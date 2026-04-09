@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { createTaxOverrideAuditLog } from '@/lib/security/activity-log';
 import type { Session } from 'next-auth';
 
 type SessionWithWorkspace = Session & { workspaceId?: string; user?: Session['user'] & { id?: string } };
@@ -21,9 +21,6 @@ const toOptionalDate = (value: unknown): Date | null => {
   const parsed = new Date(String(value));
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
-
-const toJsonValue = (value: unknown): Prisma.InputJsonValue =>
-  JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -98,23 +95,21 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       data,
     });
 
-    await prisma.taxRateOverrideAuditLog.create({
-      data: {
-        workspaceId,
-        taxRateOverrideId: updated.id,
-        action: deactivate ? 'DEACTIVATE' : 'UPDATE',
-        decisionSource: 'OVERRIDE',
-        scopeType: updated.scopeType,
-        scopeRef: updated.scopeRef,
-        rate: updated.rate,
-        effectiveFrom: updated.effectiveFrom,
-        effectiveTo: updated.effectiveTo,
-        reason: updated.reason,
-        previousValues: toJsonValue(existing),
-        newValues: toJsonValue(updated),
-        actorUserId,
-        actorEmail,
-      },
+    await createTaxOverrideAuditLog({
+      workspaceId,
+      taxRateOverrideId: updated.id,
+      action: deactivate ? 'DEACTIVATE' : 'UPDATE',
+      decisionSource: 'OVERRIDE',
+      scopeType: updated.scopeType,
+      scopeRef: updated.scopeRef,
+      rate: updated.rate,
+      effectiveFrom: updated.effectiveFrom,
+      effectiveTo: updated.effectiveTo,
+      reason: updated.reason,
+      previousValues: existing,
+      newValues: updated,
+      actorUserId,
+      actorEmail,
     });
 
     return NextResponse.json({ success: true, data: updated });
