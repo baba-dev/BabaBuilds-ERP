@@ -1,7 +1,14 @@
 /// <reference lib="webworker" />
 
 import { defaultCache } from '@serwist/next/worker';
-import { type PrecacheEntry, Serwist, type SerwistGlobalConfig } from 'serwist';
+import { 
+  ExpirationPlugin, 
+  NetworkFirst, 
+  StaleWhileRevalidate, 
+  type PrecacheEntry, 
+  Serwist, 
+  type SerwistGlobalConfig 
+} from 'serwist';
 import { normalizeLaunchDestination } from '@/lib/launch-routing';
 
 declare global {
@@ -23,12 +30,52 @@ type PeriodicSyncEventLike = ExtendableEvent & {
 
 const OFFLINE_FALLBACK_PAGE = '/offline';
 
+const dashboardRuntimeCaching = [
+  {
+    matcher: ({ sameOrigin, url, request }: { sameOrigin: boolean; url: URL; request: Request }) =>
+      sameOrigin &&
+      request.method === 'GET' &&
+      ['/api/dashboard', '/api/invoices', '/api/expenses', '/api/clients'].some((endpoint) =>
+        url.pathname.startsWith(endpoint),
+      ),
+    handler: new NetworkFirst({
+      cacheName: 'erp-read-api-cache',
+      networkTimeoutSeconds: 6,
+      plugins: [
+        new ExpirationPlugin({
+          maxEntries: 60,
+          maxAgeSeconds: 12 * 60 * 60,
+          maxAgeFrom: 'last-used',
+        }),
+      ],
+    }),
+  },
+  {
+    matcher: ({ sameOrigin, url, request }: { sameOrigin: boolean; url: URL; request: Request }) =>
+      sameOrigin &&
+      request.method === 'GET' &&
+      ['/dashboard', '/invoice', '/expenses', '/clients', '/proposals', '/tax'].some((route) =>
+        url.pathname === route || url.pathname.startsWith(`${route}/`),
+      ),
+    handler: new StaleWhileRevalidate({
+      cacheName: 'erp-dashboard-pages-cache',
+      plugins: [
+        new ExpirationPlugin({
+          maxEntries: 40,
+          maxAgeSeconds: 7 * 24 * 60 * 60,
+          maxAgeFrom: 'last-used',
+        }),
+      ],
+    }),
+  },
+];
+
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
-  runtimeCaching: defaultCache,
+  runtimeCaching: [...dashboardRuntimeCaching, ...defaultCache],
 });
 
 async function notifyClients(message: Record<string, string>) {
@@ -157,7 +204,12 @@ self.addEventListener('sync', (event: Event) => {
     return;
   }
 
-  syncEvent.waitUntil(notifyClients({ type: 'background-sync-fired' }));
+  syncEvent.waitUntil(
+    (async () => {
+      await notifyClients({ type: 'background-sync-fired' });
+      await notifyClients({ type: 'offline-sync-queue-updated' });
+    })(),
+  );
 });
 
 self.addEventListener('periodicsync', (event: Event) => {
