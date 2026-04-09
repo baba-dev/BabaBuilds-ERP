@@ -1,4 +1,13 @@
-export const GEOGRAPHY_DB: Record<string, any> = {
+export type GeographyInfo = {
+  country: string;
+  currency: string;
+  locale: string;
+  taxLabel: string;
+  taxIdLabel: string;
+  routingLabel: string;
+};
+
+export const GEOGRAPHY_DB: Record<string, GeographyInfo> = {
   "AF": { country: "Afghanistan", currency: "AFN", locale: "fa-AF", taxLabel: "VAT", taxIdLabel: "TIN", routingLabel: "SWIFT/BIC" },
   "AL": { country: "Albania", currency: "ALL", locale: "sq-AL", taxLabel: "VAT", taxIdLabel: "NIPT", routingLabel: "IBAN" },
   "DZ": { country: "Algeria", currency: "DZD", locale: "ar-DZ", taxLabel: "VAT", taxIdLabel: "NIF", routingLabel: "SWIFT/BIC" },

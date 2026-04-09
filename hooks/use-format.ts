@@ -5,8 +5,9 @@ export function useFormat() {
   const { data: session } = useSession();
   
   // These values should ideally be added to your Session object in lib/auth.ts
-  const currency = (session?.user as any)?.currencyFormat || (session as any)?.baseCurrency || "INR";
-  const locale = (session as any)?.locale || "en-IN";
+  const s = session as { user?: { currencyFormat?: string }, baseCurrency?: string, locale?: string } | null;
+  const currency = s?.user?.currencyFormat || s?.baseCurrency || "INR";
+  const locale = s?.locale || "en-IN";
 
   // --- GLOBALIZATION LOGIC ---
   // Determine if the user is in the Indian jurisdiction

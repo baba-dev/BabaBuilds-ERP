@@ -59,11 +59,11 @@ export async function generateTenantPaymentLink(
     const result = await Promise.race([linkPromise, timeoutPromise]);
     return result;
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Silent fail — log and return null, NEVER re-throw
     console.error(
       '[razorpay-links] Payment link generation failed (non-fatal):',
-      err?.message ?? err
+      err instanceof Error ? err.message : String(err)
     );
     return null;
   }
@@ -84,7 +84,7 @@ async function _createLink(params: PaymentLinkParams): Promise<string | null> {
     new Date(params.invoiceDueDate.getTime() + 24 * 60 * 60 * 1000).getTime() / 1000
   );
 
-  const payload: Record<string, any> = {
+  const payload: Record<string, unknown> = {
     amount: amountInPaise,
     currency: params.currency,
     description: params.description,
@@ -102,10 +102,10 @@ async function _createLink(params: PaymentLinkParams): Promise<string | null> {
     };
   }
 
-  // @ts-ignore — Razorpay SDK types may lag behind API
-  const link = await rzp.paymentLink.create(payload) as any;
+  // @ts-expect-error — Razorpay SDK types may lag behind API
+  const link = await rzp.paymentLink.create(payload) as Record<string, unknown>;
 
-  const shortUrl: string | null = link?.short_url ?? link?.shortUrl ?? null;
+  const shortUrl = (link?.short_url as string) ?? (link?.shortUrl as string) ?? null;
 
   if (!shortUrl) {
     console.warn('[razorpay-links] Razorpay returned a link object but no short_url:', link);

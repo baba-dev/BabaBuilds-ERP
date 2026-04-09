@@ -5,7 +5,7 @@ import {
   determineInvoicePaymentStatus,
   validatePayInvoicePayload,
   validatePaymentBusinessRules,
-} from './route';
+} from './logic';
 import { INVOICE_STATUS } from '@/lib/invoice-status';
 
 test('validatePayInvoicePayload rejects invalid amount/date', () => {

@@ -10,13 +10,14 @@ import { normalizeLaunchDestination } from "@/lib/launch-routing";
 
 const CANONICAL_DASHBOARD_ROUTE = "/dashboard";
 
-function inferProviderFromMetadata(metadata: Record<string, any> | undefined) {
+function inferProviderFromMetadata(metadata: Record<string, unknown> | undefined) {
   if (!metadata) return "unknown";
+  const m = metadata as any;
   return (
-    metadata.provider ??
-    metadata.providerId ??
-    metadata.account?.provider ??
-    metadata.cause?.providerId ??
+    m.provider ??
+    m.providerId ??
+    m.account?.provider ??
+    m.cause?.providerId ??
     "unknown"
   );
 }

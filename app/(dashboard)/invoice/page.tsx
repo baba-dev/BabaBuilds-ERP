@@ -269,7 +269,7 @@ export default function InvoiceGenerator() {
             sendEmail,
           },
           conflictPolicy: getConflictPolicy('invoice', 'create'),
-          lastError: err?.message || 'Offline request queued',
+          lastError: err instanceof Error ? err.message : 'Offline request queued',
         });
 
         setError('You appear to be offline. Invoice request has been queued for retry.');
@@ -329,7 +329,7 @@ export default function InvoiceGenerator() {
             taxRateOverride: Number(taxRateInput),
           },
           conflictPolicy: getConflictPolicy('invoice', 'update'),
-          lastError: err?.message || 'Offline request queued',
+          lastError: err instanceof Error ? err.message : 'Offline request queued',
         });
 
         setError('You appear to be offline. Invoice override request has been queued for manual merge review.');

@@ -80,12 +80,12 @@ export async function generateStripePaymentLink(
 
     return await Promise.race([linkPromise, timeoutPromise]);
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Silent fail — log and return null, NEVER re-throw
     // Includes auth errors (invalid key), network errors, and timeout
     console.error(
       '[stripe-links] Payment link generation failed (non-fatal):',
-      err?.message ?? err
+      err instanceof Error ? err.message : String(err)
     );
     return null;
   }

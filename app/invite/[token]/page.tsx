@@ -4,8 +4,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { Role, getMaxUsersForPlan } from "@/lib/permissions";
 
-export default async function InviteAcceptancePage({ params }: { params: { token: string } }) {
-  const token = params.token;
+export default async function InviteAcceptancePage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params;
   
   const invite = await prisma.workspaceInvite.findUnique({
     where: { token },

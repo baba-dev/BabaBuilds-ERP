@@ -2,7 +2,7 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { CreditCard, LifeBuoy, LogOut, Settings, User as UserIcon } from "lucide-react";
+import { CreditCard, LifeBuoy, LogOut, User as UserIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,7 +48,7 @@ export function UserNav() {
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-bold leading-none text-white">{t('my_account')}</p>
             <p className="text-xs leading-none text-white/70 truncate">
-              {t('workspace_id')} {(session as any).workspaceId?.substring(0, 8)}...
+              {t('workspace_id')} {(session as { workspaceId?: string } | null)?.workspaceId?.substring(0, 8)}...
             </p>
           </div>
         </DropdownMenuLabel>

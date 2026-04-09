@@ -42,7 +42,7 @@ export function logDeniedAssetAccess(args: {
 
 export async function getSessionWorkspaceId() {
   const session = await getServerSession(authOptions);
-  return (session as any)?.workspaceId as string | undefined;
+  return (session as { workspaceId?: string } | null)?.workspaceId;
 }
 
 export function hasTraversal(pathSegments: string[]) {

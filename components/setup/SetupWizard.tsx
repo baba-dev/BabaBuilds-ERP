@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { 
-  Globe, Landmark, ShieldCheck, Building2, 
+  Globe, ShieldCheck, Building2, 
   ArrowRight, ArrowLeft, CheckCircle2, Sparkles,
   Zap, Wallet
 } from "lucide-react";
@@ -99,7 +99,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
           toast.error(errorBody?.error || "Setup failed. Please check your fields.", { id: toastId });
         }
       }
-    } catch (err) {
+    } catch (_err) {
       toast.error("Network error during setup.", { id: toastId });
     } finally {
       setIsSubmitting(false);

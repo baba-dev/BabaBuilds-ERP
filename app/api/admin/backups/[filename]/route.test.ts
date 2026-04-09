@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { validateAndResolveBackupPath } from "./route";
+import { validateAndResolveBackupPath } from "../utils";
 
 test("rejects parent traversal payloads", () => {
   const traversalPayloads = [

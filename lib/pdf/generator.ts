@@ -3,21 +3,64 @@ import fs from 'fs';
 import path from 'path';
 import type { InvoiceTotals } from '@/lib/invoice/totals';
 
+export interface PDFProfile {
+  companyName: string;
+  proprietorName?: string | null;
+  address: string;
+  taxIdLabel?: string | null;
+  routingLabel?: string | null;
+  logoUrl?: string | null;
+  gstin?: string | null; // Tax ID
+  email?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  udyamNumber?: string | null;
+  panNumber?: string | null;
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+  ifscCode: string; // Routing ID
+  signatureUrl?: string | null;
+  invoiceTheme?: string | null;
+  taxLabel?: string | null;
+  workspace?: {
+    planTier: string;
+    countryCode?: string | null;
+    baseCurrency?: string | null;
+  } | null;
+}
+
+export interface PDFClient {
+  name: string;
+  address: string;
+  country: string;
+  email?: string | null;
+  taxId?: string | null;
+  isExport: boolean;
+  logoUrl?: string | null;
+}
+
+export interface PDFService {
+  title: string;
+  nicDetails: string;
+  amount: number;
+}
+
 export interface PDFParams {
-  profile: any;
-  client: any;
+  profile: PDFProfile;
+  client: PDFClient;
   invoiceNumber: string;
   date: Date;
   dueDate: Date;
   billingMonth: string;
-  sacCode: any;
-  services: any[];
+  sacCode: string | { code?: string | null; value?: string | null; label?: string | null } | null;
+  services: PDFService[];
   totals: InvoiceTotals;
   formattedTotal: string;
   baseCurrency: string;
   userLocale: string;
   paymentLink?: string | null;
-  status?: string;
+  status?: string | null;
 }
 
 export async function generateInvoicePDF({
@@ -66,14 +109,14 @@ export async function generateInvoicePDF({
   };
 
   const drawText = (text: string, x: number, y: number, size: number, isBold = false, align = 'left', color = textDark, isItalic = false) => {
-    let currentFont = isBold ? fontBold : (isItalic ? fontOblique : font);
+    const currentFont = isBold ? fontBold : (isItalic ? fontOblique : font);
     let textX = x;
     if (align === 'right')  textX = x - currentFont.widthOfTextAtSize(text, size);
     else if (align === 'center') textX = x - (currentFont.widthOfTextAtSize(text, size) / 2);
     page.drawText(text, { x: textX, y: height - y, size, font: currentFont, color });
   };
 
-  const drawRect = (x: number, y: number, w: number, h: number, color: any, borderColor?: any) => {
+  const drawRect = (x: number, y: number, w: number, h: number, color: import('pdf-lib').Color, borderColor?: import('pdf-lib').Color) => {
     page.drawRectangle({ x, y: height - y - h, width: w, height: h, color, borderColor: borderColor || undefined, borderWidth: borderColor ? 1 : 0 });
   };
 
@@ -176,7 +219,7 @@ export async function generateInvoicePDF({
   const safeTaxIdLabel    = profile.taxIdLabel    || "VAT/GST Number";
   const safeRoutingLabel  = profile.routingLabel  || "IFSC Code";
 
-  const invoiceTheme = (profile as any).invoiceTheme || "DESIGN_1";
+  const invoiceTheme = profile.invoiceTheme || "DESIGN_1";
 
   if (invoiceTheme === "DESIGN_2") {
     const leftMargin  = 40;
@@ -202,7 +245,7 @@ export async function generateInvoicePDF({
     drawMeta(safeTaxIdLabel, profile.gstin || "N/A");
     drawMeta("Company name", profile.companyName);
 
-    let billY = 170;
+    const billY = 170;
     drawText(profile.companyName, leftMargin, billY, 9, true,  'left', black);
     const profileAddr = profile.address.split(', ');
     drawText(profileAddr[0] || "", leftMargin, billY + 14, 9, false, 'left', textDark);
@@ -219,14 +262,14 @@ export async function generateInvoicePDF({
     drawText(client.country, rightColX, billY + 56, 9, false, 'left', textDark);
     if (client.email) drawText(client.email, rightColX, billY + 70, 9, false, 'left', textDark);
 
-    let calloutY = 270;
+    const calloutY = 270;
     const currencyCode  = baseCurrency;
     const bigDueText    = `${currencyCode} ${formattedTotal} due ${dueDate.toLocaleDateString(userLocale, { month: 'long', day: 'numeric', year: 'numeric' })}`;
     drawText(bigDueText, leftMargin, calloutY, 14, true, 'left', black);
     
-    let displaySac = sacCode;
+    let displaySac: string | undefined = typeof sacCode === 'string' ? sacCode : undefined;
     if (typeof sacCode === 'object' && sacCode !== null) {
-      displaySac = (sacCode as any).code || (sacCode as any).value || (sacCode as any).label || JSON.stringify(sacCode);
+      displaySac = sacCode.code || sacCode.value || sacCode.label || JSON.stringify(sacCode);
     }
     drawText(`Service Classification: ${displaySac || 'N/A'}`, leftMargin, calloutY + 24, 9, false, 'left', textMuted);
 
@@ -380,9 +423,9 @@ export async function generateInvoicePDF({
       drawWatermark('PAID');
     }
 
-    let displaySac = sacCode;
+    let displaySac: string | undefined = typeof sacCode === 'string' ? sacCode : undefined;
     if (typeof sacCode === 'object' && sacCode !== null) {
-      displaySac = (sacCode as any).code || (sacCode as any).value || (sacCode as any).label || JSON.stringify(sacCode);
+      displaySac = sacCode.code || sacCode.value || sacCode.label || JSON.stringify(sacCode);
     }
     const safeSac = displaySac && displaySac.length > 25 ? displaySac.substring(0, 23) + '...' : (displaySac || 'N/A');
 
