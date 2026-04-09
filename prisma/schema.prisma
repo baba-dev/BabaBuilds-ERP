@@ -34,6 +34,11 @@ enum TaxResolutionSource {
   FALLBACK
 }
 
+enum AppActivityStatus {
+  SUCCESS
+  FAILURE
+}
+
 // ==========================================
 // 1. AUTHENTICATION (NextAuth Standard)
 // ==========================================
@@ -62,6 +67,7 @@ model User {
   accounts   Account[]
   sessions   Session[]
   workspaces WorkspaceUser[]
+  appActivities AppActivityLog[] @relation("AppActivityActor")
 }
 
 model Account {
@@ -145,6 +151,38 @@ model Workspace {
   taxDecisionAuditLogs     TaxDecisionAuditLog[]
   fileImportAuditLogs      FileImportAuditLog[]
   workspaceInvites         WorkspaceInvite[]
+  appActivityLogs          AppActivityLog[]
+}
+
+model AppActivityLog {
+  id String @id @default(cuid())
+
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+
+  actorUserId String?
+  actorUser   User?   @relation("AppActivityActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorEmail  String?
+
+  action     String
+  entityType String?
+  entityId   String?
+
+  status AppActivityStatus
+  message String
+
+  metadataJson Json?
+
+  ipAddress String?
+  userAgent String?
+  requestId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([action, createdAt(sort: Desc)])
+  @@index([actorUserId, createdAt(sort: Desc)])
 }
 
 model BillingTransaction {
