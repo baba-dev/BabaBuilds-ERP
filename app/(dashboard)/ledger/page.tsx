@@ -159,6 +159,35 @@ export default function AuditDashboard() {
     }
   };
 
+  const findInvoicePageById = async (invoiceId: string): Promise<number | null> => {
+    const fetchPage = async (page: number) => {
+      const res = await fetch(`/api/invoices?page=${page}&limit=15`);
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) return null;
+
+      const parsed = parseLedgerInvoicesResponse(payload);
+      if (!parsed) return null;
+
+      return {
+        found: parsed.data.some((invoice) => invoice.id === invoiceId),
+        totalPages: parsed.meta.totalPages,
+      };
+    };
+
+    const firstPage = await fetchPage(1);
+    if (!firstPage) return null;
+    if (firstPage.found) return 1;
+
+    for (let page = 2; page <= firstPage.totalPages; page += 1) {
+      const current = await fetchPage(page);
+      if (current?.found) {
+        return page;
+      }
+    }
+
+    return null;
+  };
+
   // --- KPI CALCULATIONS (Now read from state) ---
   const { totalRevenue, outstanding, presumptiveIncome } = kpis;
   const thresholdValue = countryCode === "IN" ? 2000000 : 100000;
@@ -261,13 +290,17 @@ export default function AuditDashboard() {
           toast.error("Could not open deep-linked invoice.");
           return;
         }
+        const invoicePage = await findInvoicePageById(String(payload.data.id ?? protocolRecord));
+        if (invoicePage && invoicePage !== currentPage) {
+          setCurrentPage(invoicePage);
+        }
         tableState.setSearch(String(payload.data.invoiceNumber));
         toast.success(`Deep-linked invoice ${payload.data.invoiceNumber} loaded.`);
       } catch {
         toast.error("Could not open deep-linked invoice.");
       }
     })();
-  }, [hasHandledProtocolRecord, searchParams, tableState]);
+  }, [currentPage, hasHandledProtocolRecord, searchParams, tableState]);
 
   const invoiceColumns: DataTableColumnDef<InvoiceDto>[] = [
     { id: "invoice", header: t("col_invoice_no"), accessor: (row) => row.invoiceNumber, sortable: true, cell: (row) => <span className="font-bold dark:text-zinc-200 text-sm">{row.invoiceNumber}</span>, hideable: true },
