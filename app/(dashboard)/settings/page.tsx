@@ -5,9 +5,11 @@ import { useTranslations } from "next-intl";
 import {
   Building2, Landmark, ShieldCheck, Image as ImageIcon, CheckCircle2,
   Mailbox, Bot, Trash2, CreditCard, Lock, Globe, AlertTriangle,
-  Loader2, Info
+  Loader2, Info, Users, Mail, Clock, UserPlus, ArrowRight, Sparkles
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +41,11 @@ export default function SettingsWizard() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState(false);
+  // Team invite state
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("MEMBER");
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isNewSetup, setIsNewSetup] = useState(true);
   const [countryCode, setCountryCode] = useState<string>("IN");
   const [activeGatewayTab, setActiveGatewayTab] = useState<"RAZORPAY" | "STRIPE">("RAZORPAY");
@@ -150,6 +157,31 @@ export default function SettingsWizard() {
   const handleGatewayTabChange = (tab: "RAZORPAY" | "STRIPE") => {
     setActiveGatewayTab(tab);
     setFormData(prev => ({ ...prev, defaultGateway: tab }));
+  };
+
+  const isTeamPlan = planTier === "TEAM" || planTier === "ENTERPRISE";
+
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isTeamPlan) return;
+    setInviteLoading(true);
+    const toastId = toast.loading("Sending secure invite...");
+    try {
+      const res = await fetch("/api/team/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail, role: inviteRole })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to dispatch invite");
+      toast.success("Team member successfully invited", { id: toastId });
+      setInviteEmail("");
+      setIsInviteOpen(false);
+    } catch (err: any) {
+      toast.error(err.message, { id: toastId });
+    } finally {
+      setInviteLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -857,6 +889,157 @@ export default function SettingsWizard() {
                 </div>
               </div>
 
+            </CardContent>
+          </Card>
+
+          {/* TEAM COLLABORATION */}
+          <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
+            <CardHeader className="bg-zinc-50/50 dark:bg-zinc-950/50 border-b dark:border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2 dark:text-zinc-50">
+                  <Users className="w-5 h-5 text-indigo-600" /> Team Collaboration
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="w-4 h-4 text-zinc-400 cursor-help hover:text-indigo-500 transition-colors" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-[220px] text-xs">
+                        <p className="font-bold text-indigo-200 mb-1">Team Plan Required</p>
+                        <p>Upgrade to the Team plan to invite collaborators, assign roles, and manage workspace members. Free and Pro users can view this section but cannot use team features.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </CardTitle>
+                <CardDescription className="dark:text-zinc-400">Invite partners and accountants to collaborate on your workspace.</CardDescription>
+              </div>
+              {isTeamPlan ? (
+                <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/20 font-bold gap-2 rounded-xl">
+                      <UserPlus className="w-4 h-4" /> Invite Member
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-2xl">
+                    <div className="bg-gradient-to-br from-indigo-50 dark:from-indigo-950/40 to-white dark:to-zinc-950 p-6 px-8 border-b border-zinc-100 dark:border-zinc-800/60">
+                      <DialogHeader>
+                        <DialogTitle className="text-xl font-extrabold flex items-center gap-2 text-zinc-900 dark:text-zinc-50">
+                          <UserPlus className="w-5 h-5 text-indigo-500" /> Add to Workspace
+                        </DialogTitle>
+                        <DialogDescription className="font-medium">
+                          Send a secure, tokenized email link to a new participant.
+                        </DialogDescription>
+                      </DialogHeader>
+                    </div>
+                    <form onSubmit={handleInvite} className="p-8 space-y-6">
+                      <div className="space-y-3">
+                        <Label className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Team Member Email</Label>
+                        <Input
+                          type="email"
+                          required
+                          placeholder="colleague@example.com"
+                          value={inviteEmail}
+                          onChange={(e) => setInviteEmail(e.target.value)}
+                          className="h-11 bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 transition-all focus:bg-white dark:focus:bg-zinc-950 px-4 focus-visible:ring-indigo-500"
+                        />
+                      </div>
+                      <div className="space-y-3">
+                        <Label className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Assign Role Focus</Label>
+                        <Select value={inviteRole} onValueChange={setInviteRole}>
+                          <SelectTrigger className="h-11 bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
+                            <SelectValue placeholder="Select a role" />
+                          </SelectTrigger>
+                          <SelectContent className="border-zinc-200 dark:border-zinc-800">
+                            <SelectItem value="MEMBER">
+                              <div className="flex flex-col">
+                                <span className="font-bold text-zinc-900 dark:text-zinc-100">Member</span>
+                                <span className="text-xs text-zinc-500 dark:text-zinc-400">Can view and create invoices natively</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="VIEWER">
+                              <div className="flex flex-col">
+                                <span className="font-bold text-indigo-600 dark:text-indigo-400">Accountant / Viewer</span>
+                                <span className="text-xs text-zinc-500 dark:text-zinc-400">Strictly read-only access for auditing</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="ADMIN">
+                              <div className="flex flex-col">
+                                <span className="font-bold text-rose-600 dark:text-rose-400">Admin</span>
+                                <span className="text-xs text-zinc-500 dark:text-zinc-400">Full control over settings and data</span>
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button
+                        disabled={inviteLoading}
+                        type="submit"
+                        className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl mt-4 relative overflow-hidden group"
+                      >
+                        <span className="relative z-10 flex items-center justify-center gap-2">
+                          {inviteLoading ? "Dispatching..." : "Send Invitation"} <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        </span>
+                      </Button>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              ) : (
+                <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 px-4 py-2 rounded-xl text-sm font-semibold">
+                  <Lock className="w-4 h-4 shrink-0" />
+                  Team tools require Team Plan
+                </div>
+              )}
+            </CardHeader>
+
+            <CardContent className="pt-6">
+              <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 ${!isTeamPlan ? "opacity-50 pointer-events-none select-none" : ""}`}>
+                {/* ACTIVE MEMBERS */}
+                <div className="space-y-4">
+                  <h3 className="font-black text-sm tracking-[0.2em] text-zinc-400 dark:text-zinc-500 uppercase flex items-center gap-2">
+                    <Users className="w-4 h-4" /> Active Seats
+                  </h3>
+                  <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden relative">
+                    <div className="p-5 text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 bg-zinc-50/30 dark:bg-zinc-900/30 min-h-[140px]">
+                      <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-zinc-900 dark:text-zinc-100">You are the Owner</p>
+                        <p className="text-xs text-zinc-500 mt-1 max-w-[200px]">Any additional accepted members will dynamically populate here.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* PENDING INVITES */}
+                <div className="space-y-4">
+                  <h3 className="font-black text-sm tracking-[0.2em] text-zinc-400 dark:text-zinc-500 uppercase flex items-center gap-2">
+                    <Mail className="w-4 h-4" /> Transit Tokens
+                  </h3>
+                  <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden relative">
+                    <div className="p-5 text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 bg-zinc-50/30 dark:bg-zinc-900/30 min-h-[140px]">
+                      <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-zinc-400" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-zinc-900 dark:text-zinc-100">No Pending Invites</p>
+                        <p className="text-xs text-zinc-500 mt-1 max-w-[200px]">Invited users who haven&apos;t accepted will visibly hang here.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {!isTeamPlan && (
+                <div className="mt-6 flex items-start gap-3 p-4 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/50">
+                  <Sparkles className="w-5 h-5 text-indigo-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-indigo-800 dark:text-indigo-300">Unlock Team Collaboration</p>
+                    <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5">
+                      Upgrade to the <strong>Team Plan</strong> to invite accountants, assign roles (Member, Viewer, Admin), and collaborate in real-time on your workspace.
+                    </p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

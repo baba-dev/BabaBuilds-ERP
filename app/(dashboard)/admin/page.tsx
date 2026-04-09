@@ -178,10 +178,12 @@ export default function SuperAdminPortal() {
       accessor: (row) => row.subscriptionStatus,
       cell: (user) => user.subscriptionStatus === "PRO" ? (
         <Badge className="bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-none text-xs font-bold uppercase tracking-widest">{t("status_pro") || "PRO"}</Badge>
+      ) : user.subscriptionStatus === "TEAM" ? (
+        <Badge className="bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 border-none text-xs font-bold uppercase tracking-widest">{t("status_team") || "TEAM"}</Badge>
       ) : user.subscriptionStatus === "SUSPENDED" ? (
         <Badge className="bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 border-none text-xs font-bold uppercase tracking-widest">{t("status_suspended") || "SUSPENDED"}</Badge>
       ) : (
-        <Badge className="bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-none text-xs font-bold uppercase tracking-widest">{t("status_free") || "FREE"}</Badge>
+        <Badge className="bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-none text-xs font-bold uppercase tracking-widest">{t("status_free") || "FREE / TRIAL"}</Badge>
       ),
       hideable: true,
     },
