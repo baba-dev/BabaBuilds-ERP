@@ -6,7 +6,11 @@ import { Box, Sparkles, ArrowRight, Mail, Loader2, CheckCircle2 } from "lucide-r
 import { useTranslations } from "next-intl";
 import { Turnstile } from "@marsidev/react-turnstile"; // Ensure this is installed
 
-export default function AuthModal() {
+type AuthModalProps = {
+  callbackUrl?: string;
+};
+
+export default function AuthModal({ callbackUrl = "/dashboard" }: AuthModalProps) {
   const t = useTranslations("AuthModal");
   const { status } = useSession();
   const [email, setEmail] = useState("");
@@ -24,7 +28,7 @@ export default function AuthModal() {
     if (!email) return;
     
     setIsLoading(true);
-    const res = await signIn("email", { email, redirect: false, callbackUrl: "/dashboard" });
+    const res = await signIn("email", { email, redirect: false, callbackUrl });
     
     setIsLoading(false);
     if (res?.error) {
@@ -56,7 +60,7 @@ const handleDemoSignIn = async () => {
         await signIn("demo-login", { 
           email: data.email, 
           password: data.password, // Inject the secure token here
-          callbackUrl: "/dashboard" 
+          callbackUrl,
         });
       } else {
         throw new Error(data.error || t("alerts.demoCreationFailed"));
@@ -124,7 +128,7 @@ const handleDemoSignIn = async () => {
           </div>
 
           <button 
-            onClick={() => signIn("google", { callbackUrl: "/dashboard" })} 
+            onClick={() => signIn("google", { callbackUrl })}
             disabled={isLoading || isDemoLoading}
             className="w-full flex items-center justify-center gap-3 bg-white hover:bg-zinc-100 text-zinc-900 px-4 py-2.5 rounded-xl font-bold transition-colors shadow-sm active:scale-95 disabled:opacity-50"
           >

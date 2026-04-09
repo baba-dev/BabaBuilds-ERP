@@ -4,13 +4,20 @@ import { authOptions } from "@/lib/auth";
 import AuthModal from "@/components/AuthModal";
 import Link from "next/link";
 import { Box } from "lucide-react";
+import { normalizeLaunchDestination } from "@/lib/launch-routing";
 
-export default async function LoginPage() {
+type LoginPageProps = {
+  searchParams?: Promise<{ callbackUrl?: string }>;
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
   const session = await getServerSession(authOptions);
+  const resolvedSearchParams = await searchParams;
+  const callbackUrl = normalizeLaunchDestination(resolvedSearchParams?.callbackUrl ?? "/dashboard");
 
   // If already authenticated, go to dashboard
   if (session) {
-    redirect("/dashboard");
+    redirect(callbackUrl);
   }
 
   return (
@@ -28,7 +35,7 @@ export default async function LoginPage() {
         </Link>
         
         {/* AuthModal handles its own state and UI */}
-        <AuthModal />
+        <AuthModal callbackUrl={callbackUrl} />
       </div>
 
       <div className="mt-8 text-center text-zinc-500 text-xs font-medium space-x-4">

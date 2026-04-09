@@ -41,10 +41,18 @@ type ShareTargetField = {
   };
 };
 
-export default function manifest(): MetadataRoute.Manifest {
-  const webManifest: MetadataRoute.Manifest &
-    { file_handlers: FileHandlerEntry[] } &
-    ShareTargetField = {
+export default function manifest(): MetadataRoute.Manifest & ShareTargetField & {
+  launch_handler: {
+    client_mode: 'focus-existing';
+  };
+  file_handlers: FileHandlerEntry[];
+} {
+  const webManifest: MetadataRoute.Manifest & ShareTargetField & {
+    launch_handler: {
+      client_mode: 'focus-existing';
+    };
+    file_handlers: FileHandlerEntry[];
+  } = {
     id: '/',
     name: 'BabaBuilds ERP',
     short_name: 'BabaBuilds',
@@ -53,6 +61,9 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: '/',
     display: 'standalone',
     display_override: ['window-controls-overlay', 'standalone'],
+    launch_handler: {
+      client_mode: 'focus-existing',
+    },
     orientation: 'portrait',
     background_color: '#ffffff',
     theme_color: '#0062ff',
