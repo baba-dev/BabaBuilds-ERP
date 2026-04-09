@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import dns from 'dns';
 import { promisify } from 'util';
+import { getRuntimeSmtpPassword } from '@/lib/mailer';
 const lookupAsync = promisify(dns.lookup);
 
 async function resolveSafeIp(host: string): Promise<string | null> {
@@ -97,7 +98,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       },
       auth: {
         user: profile.smtpUser,
-        pass: profile.smtpPassword,
+        pass: getRuntimeSmtpPassword(profile.smtpPassword),
       },
     });
 

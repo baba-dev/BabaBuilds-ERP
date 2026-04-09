@@ -1,8 +1,18 @@
 import nodemailer from 'nodemailer';
 import dns from 'dns';
 import { promisify } from 'util';
+import { decrypt } from '@/lib/encryption';
 
 const lookupAsync = promisify(dns.lookup);
+
+export function getRuntimeSmtpPassword(smtpPassword: string): string {
+  try {
+    return decrypt(smtpPassword);
+  } catch {
+    // Temporary legacy fallback for older plaintext rows.
+    return smtpPassword;
+  }
+}
 
 export async function resolveSafeIp(host: string): Promise<string | null> {
   try {
@@ -61,7 +71,7 @@ export async function sendEmail({
     },
     auth: {
       user: profile.smtpUser,
-      pass: profile.smtpPassword,
+      pass: getRuntimeSmtpPassword(profile.smtpPassword),
     },
   });
 
