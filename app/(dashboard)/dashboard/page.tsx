@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
+import { useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { animate, useMotionValue } from "framer-motion";
 import {
@@ -37,6 +38,7 @@ import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 import { getInvoiceStatusBadgeKey, INVOICE_STATUS, isPaidInvoiceStatus, toInvoiceStatus } from "@/lib/invoice-status";
 import { parseDashboardResponse } from "./parse-dashboard-response";
 import { getCurrentFinancialYear } from "@/lib/financial-year";
+import { resolveDashboardLaunchTarget } from "@/lib/launch-routing";
 
 
 
@@ -123,6 +125,8 @@ function StatusDot({ status }: { status: IntegrationStatus }) {
 
 export default function Dashboard() {
   const t = useTranslations('Dashboard');
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -166,6 +170,15 @@ export default function Dashboard() {
   useEffect(() => {
     fetchDashboardData(selectedFy);
   }, [selectedFy]);
+
+  useEffect(() => {
+    const launchTarget = resolveDashboardLaunchTarget(new URLSearchParams(searchParams.toString()));
+    if (!launchTarget) {
+      return;
+    }
+
+    router.replace(launchTarget);
+  }, [router, searchParams]);
 
   const fetchDashboardData = async (fy: string) => {
     setIsLoading(true);

@@ -6,9 +6,9 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import { createTransport } from "nodemailer"; // 1. ADDED IMPORT
 import { recordAuthFailure } from "@/lib/auth-observability";
+import { normalizeLaunchDestination } from "@/lib/launch-routing";
 
 const CANONICAL_DASHBOARD_ROUTE = "/dashboard";
-const LEGACY_HOME_ROUTE = "/";
 
 function inferProviderFromMetadata(metadata: Record<string, any> | undefined) {
   if (!metadata) return "unknown";
@@ -197,13 +197,14 @@ export const authOptions: NextAuthOptions = {
 
     async redirect({ url, baseUrl }) {
       if (url.startsWith("/")) {
-        return url === LEGACY_HOME_ROUTE ? `${baseUrl}${CANONICAL_DASHBOARD_ROUTE}` : `${baseUrl}${url}`;
+        return `${baseUrl}${normalizeLaunchDestination(url)}`;
       }
 
       try {
         const target = new URL(url);
-        if (target.origin === baseUrl && target.pathname === LEGACY_HOME_ROUTE) {
-          return `${baseUrl}${CANONICAL_DASHBOARD_ROUTE}`;
+        if (target.origin === baseUrl) {
+          const normalized = normalizeLaunchDestination(`${target.pathname}${target.search}${target.hash}`);
+          return `${baseUrl}${normalized}`;
         }
       } catch {
         return `${baseUrl}${CANONICAL_DASHBOARD_ROUTE}`;

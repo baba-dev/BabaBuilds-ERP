@@ -7,7 +7,11 @@ const defaultShortcutIcon = {
 } as const;
 
 export default function manifest(): MetadataRoute.Manifest {
-  return {
+  const webManifest: MetadataRoute.Manifest & {
+    launch_handler: {
+      client_mode: 'focus-existing';
+    };
+  } = {
     id: '/',
     name: 'BabaBuilds ERP',
     short_name: 'BabaBuilds',
@@ -16,6 +20,9 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: '/',
     display: 'standalone',
     display_override: ['window-controls-overlay', 'standalone'],
+    launch_handler: {
+      client_mode: 'focus-existing',
+    },
     orientation: 'portrait',
     background_color: '#ffffff',
     theme_color: '#0062ff',
@@ -153,4 +160,6 @@ export default function manifest(): MetadataRoute.Manifest {
       },
     ],
   };
+
+  return webManifest;
 }

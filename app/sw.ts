@@ -2,6 +2,7 @@
 
 import { defaultCache } from '@serwist/next/worker';
 import { type PrecacheEntry, Serwist, type SerwistGlobalConfig } from 'serwist';
+import { normalizeLaunchDestination } from '@/lib/launch-routing';
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -132,7 +133,8 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const destination = typeof event.notification.data?.url === 'string' ? event.notification.data.url : '/dashboard';
+  const rawDestination = typeof event.notification.data?.url === 'string' ? event.notification.data.url : '/dashboard';
+  const destination = normalizeLaunchDestination(rawDestination);
 
   event.waitUntil(
     (async () => {
