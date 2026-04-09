@@ -217,6 +217,16 @@ export default function manifest(): MetadataRoute.Manifest & ShareTargetField & 
         icons: [defaultShortcutIcon],
       },
     ],
+    protocol_handlers: [
+      {
+        protocol: 'web+erp',
+        url: '/launch?url=%s',
+      },
+      {
+        protocol: 'web+bababuilds-erp',
+        url: '/launch?url=%s',
+      },
+    ],
   };
 
   return webManifest;
