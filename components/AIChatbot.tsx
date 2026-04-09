@@ -177,9 +177,9 @@ export default function AIChatbot() {
         className={`flex flex-col overflow-hidden shadow-2xl bg-white dark:bg-zinc-950 border border-purple-200 dark:border-purple-900/50 z-[100] transition-all duration-300 ease-in-out
           ${isOpen 
             ? isExpanded 
-              ? 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[95vw] max-w-4xl h-[90vh] sm:h-[85vh] rounded-xl opacity-100 scale-100' 
-              : 'fixed bottom-24 right-6 w-[340px] sm:w-[400px] h-[600px] rounded-xl opacity-100 scale-100 origin-bottom-right'
-            : 'fixed bottom-24 right-6 w-[340px] sm:w-[400px] h-[600px] rounded-xl opacity-0 scale-95 pointer-events-none origin-bottom-right'
+              ? 'fixed inset-x-0 top-[max(env(safe-area-inset-top),0.5rem)] bottom-[max(env(safe-area-inset-bottom),0.5rem)] w-full rounded-none opacity-100 scale-100 sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:inset-x-auto sm:w-[95vw] sm:max-w-4xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:h-[85dvh] sm:max-h-[calc(100dvh-2.5rem)]' 
+              : 'fixed bottom-[max(env(safe-area-inset-bottom),1rem)] right-0 w-full h-[70dvh] max-h-[calc(100dvh-6rem)] rounded-t-2xl opacity-100 scale-100 origin-bottom sm:right-6 sm:w-[400px] sm:max-w-[calc(100vw-3rem)] sm:h-auto sm:max-h-[calc(100dvh-8rem)] sm:min-h-[520px] sm:rounded-xl sm:origin-bottom-right'
+            : 'fixed bottom-[max(env(safe-area-inset-bottom),1rem)] right-0 w-full h-[70dvh] max-h-[calc(100dvh-6rem)] rounded-t-2xl opacity-0 scale-95 pointer-events-none origin-bottom sm:right-6 sm:w-[400px] sm:max-w-[calc(100vw-3rem)] sm:h-auto sm:max-h-[calc(100dvh-8rem)] sm:min-h-[520px] sm:rounded-xl sm:origin-bottom-right'
           }`}
       >
         {/* HEADER */}
@@ -269,7 +269,7 @@ export default function AIChatbot() {
         </CardContent>
 
         {/* INPUT FORM */}
-        <form onSubmit={handleFormSubmit} className="p-3 bg-white dark:bg-zinc-950 border-t border-purple-100 dark:border-zinc-800 flex gap-2 shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.05)] dark:shadow-none z-10 shrink-0">
+        <form onSubmit={handleFormSubmit} className="p-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] bg-white dark:bg-zinc-950 border-t border-purple-100 dark:border-zinc-800 flex gap-2 shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.05)] dark:shadow-none z-10 shrink-0">
           <Input 
             ref={inputRef}
             value={input} 
@@ -284,7 +284,7 @@ export default function AIChatbot() {
         </form>
 
         {/* HELP CENTER LINK */}
-        <div className="px-3 py-1.5 bg-white dark:bg-zinc-950 border-t border-zinc-100 dark:border-zinc-800/50 flex items-center justify-center shrink-0">
+        <div className="px-3 py-1.5 pb-[max(env(safe-area-inset-bottom),0.375rem)] bg-white dark:bg-zinc-950 border-t border-zinc-100 dark:border-zinc-800/50 flex items-center justify-center shrink-0">
           <a
             href="/help"
             className="flex items-center gap-1.5 text-[10px] font-semibold text-zinc-400 dark:text-zinc-600 hover:text-purple-600 dark:hover:text-purple-400 transition-colors uppercase tracking-widest"
@@ -298,7 +298,7 @@ export default function AIChatbot() {
       {/* FLOATING ACTION BUTTON */}
       {/* Bug 9 fix: hide FAB whenever chat is open (isOpen) so it doesn't overlap page
           content as a floating X. The header close button handles dismissal instead. */}
-      <div className={`fixed bottom-6 right-6 z-[100] transition-all duration-300 ${isOpen || isExpanded ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}`}>
+      <div className={`fixed bottom-[max(env(safe-area-inset-bottom),1.5rem)] right-6 z-[100] transition-all duration-300 ${isOpen || isExpanded ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}`}>
         <button 
           onClick={() => setIsOpen(!isOpen)}
           className={`h-14 w-14 rounded-full flex items-center justify-center text-white shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 ${isOpen ? 'bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 rotate-90 shadow-zinc-400/50' : 'bg-purple-900 dark:bg-purple-600 hover:bg-purple-800 dark:hover:bg-purple-500 hover:shadow-purple-900/40 rotate-0'}`}
