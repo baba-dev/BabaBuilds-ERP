@@ -89,7 +89,7 @@ function StatusDot({ status }: { status: IntegrationStatus }) {
 
 export default function Dashboard() {
   const t = useTranslations('Dashboard');
-  const islandsEnabled = process.env.NEXT_PUBLIC_DASHBOARD_ISLANDS === 'true';
+  const [islandsEnabled, setIslandsEnabled] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [data, setData] = useState<DashboardData | null>(null);
@@ -135,6 +135,28 @@ export default function Dashboard() {
   useEffect(() => {
     fetchDashboardData(selectedFy);
   }, [selectedFy]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRuntimeFlags = async () => {
+      try {
+        const response = await fetch("/api/runtime-flags", { cache: "no-store" });
+        if (!response.ok) return;
+        const runtimeFlags = (await response.json()) as { dashboardIslands?: boolean };
+        if (isMounted) {
+          setIslandsEnabled(Boolean(runtimeFlags.dashboardIslands));
+        }
+      } catch {
+        // Keep default false on runtime flag fetch errors.
+      }
+    };
+
+    loadRuntimeFlags();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const launchTarget = resolveDashboardLaunchTarget(new URLSearchParams(searchParams.toString()));

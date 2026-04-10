@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { Landmark, Banknote } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { ChartCard } from "@/components/charts/ChartCard";
@@ -20,16 +20,20 @@ export function ChartsIsland({
   fCurrency: (value: number) => string;
 }) {
   const coloredWealth = useMemo(() => withChartTokenColors(wealthSeries), [wealthSeries]);
-  const [isCompactCharts, setIsCompactCharts] = useState(
-    typeof window !== "undefined" ? window.matchMedia("(max-width: 768px)").matches : false,
-  );
+  const isCompactCharts = useSyncExternalStore(
+    (onStoreChange) => {
+      if (typeof window === "undefined") {
+        return () => undefined;
+      }
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 768px)");
-    const onChange = (event: MediaQueryListEvent) => setIsCompactCharts(event.matches);
-    mediaQuery.addEventListener("change", onChange);
-    return () => mediaQuery.removeEventListener("change", onChange);
-  }, []);
+      const mediaQuery = window.matchMedia("(max-width: 768px)");
+      const onChange = () => onStoreChange();
+      mediaQuery.addEventListener("change", onChange);
+      return () => mediaQuery.removeEventListener("change", onChange);
+    },
+    () => (typeof window !== "undefined" ? window.matchMedia("(max-width: 768px)").matches : false),
+    () => false,
+  );
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
