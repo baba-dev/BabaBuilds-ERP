@@ -15,8 +15,8 @@ interface Props {
 // PREMIUM MDX COMPONENTS
 const components = {
   h2: ({ children, ...props }: any) => (
-    <h2 {...props} className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 mt-12 mb-5 pb-2.5 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-2 group">
-      <span className="w-1.5 h-6 bg-indigo-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity -ml-3.5 mr-2"></span>
+    <h2 {...props} className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 mt-12 mb-4 pb-2 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-2 group">
+      <span className="w-1.5 h-6 bg-indigo-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity -ml-3 mr-2"></span>
       {children}
     </h2>
   ),
@@ -31,7 +31,7 @@ const components = {
     </p>
   ),
   ul: ({ children, ...props }: any) => (
-    <ul {...props} className="space-y-3 mb-8 ml-1">
+    <ul {...props} className="mb-8 space-y-3">
       {children}
     </ul>
   ),
@@ -42,12 +42,12 @@ const components = {
   ),
   li: ({ children, ...props }: any) => (
     <li {...props} className="flex gap-3 text-[15px] leading-7 text-zinc-600 dark:text-zinc-400">
-      <span className="mt-2.5 w-1.5 h-1.5 rounded-full bg-indigo-600/40 shrink-0"></span>
+      <span className="mt-2 w-1.5 h-1.5 rounded-full bg-indigo-600/40 shrink-0"></span>
       <span>{children}</span>
     </li>
   ),
   blockquote: ({ children, ...props }: any) => (
-    <div className="my-8 p-5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/50 flex gap-4 animate-in fade-in slide-in-from-left-4 duration-500">
+    <div className="my-8 p-6 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/50 flex gap-4 animate-in fade-in slide-in-from-left-4 duration-500">
       <div className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-indigo-100 dark:border-indigo-800 shadow-sm flex items-center justify-center shrink-0">
         <Info className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
       </div>
@@ -89,7 +89,7 @@ const components = {
     };
     const { bg, border, icon: Icon, color } = styles[type];
     return (
-      <div className={`my-8 p-5 rounded-2xl ${bg} border ${border} flex gap-4`}>
+      <div className={`my-8 p-6 rounded-2xl ${bg} border ${border} flex gap-4`}>
         <div className={`w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border ${border} shadow-sm flex items-center justify-center shrink-0`}>
           <Icon className={`w-5 h-5 ${color}`} />
         </div>
@@ -157,11 +157,11 @@ export default async function DocPage({ params }: Props) {
   return (
     <div className="space-y-10">
       {/* Doc header */}
-      <div className="pb-6 border-b border-zinc-200 dark:border-zinc-800">
-        <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-3">
+      <div className="space-y-3 border-b border-zinc-200 pb-6 dark:border-zinc-800">
+        <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
           Guide #{doc.order}
         </p>
-        <h1 className="text-4xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 mb-4 bg-gradient-to-r from-zinc-900 to-zinc-500 dark:from-zinc-50 dark:to-zinc-500 bg-clip-text text-transparent">
+        <h1 className="text-4xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 bg-gradient-to-r from-zinc-900 to-zinc-500 dark:from-zinc-50 dark:to-zinc-500 bg-clip-text text-transparent">
           {doc.title}
         </h1>
         <p className="text-lg text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">

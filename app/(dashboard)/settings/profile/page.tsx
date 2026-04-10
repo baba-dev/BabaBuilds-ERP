@@ -123,12 +123,12 @@ export default function ProfileSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8 transition-colors duration-300">
+    <div className="min-h-screen bg-zinc-50 px-4 py-6 transition-colors duration-300 dark:bg-zinc-950 md:px-8 md:py-8">
       <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
         
         {/* HEADER */}
-        <div className="text-center space-y-2 mb-10">
-          <div className="mx-auto w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200 dark:shadow-blue-900/20 mb-6">
+        <div className="space-y-4 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 shadow-lg shadow-blue-200 dark:shadow-blue-900/20">
             <UserCircle className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -149,7 +149,7 @@ export default function ProfileSettingsPage() {
                 <Globe className="w-5 h-5 text-indigo-600" /> Regional & Display
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-6">
+            <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label className="dark:text-zinc-300">UI Theme</Label>
@@ -220,7 +220,7 @@ export default function ProfileSettingsPage() {
                 <Bell className="w-5 h-5 text-amber-500" /> Notifications
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-6 space-y-6">
+            <CardContent className="space-y-6 p-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label className="text-base dark:text-zinc-200">Transactional Alerts</Label>
