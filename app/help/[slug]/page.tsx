@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { getDocBySlug, getAllDocs } from "@/lib/docs";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
+import { typography } from "@/lib/ui/typography";
 import { 
   ArrowLeft, ArrowRight, Mail, Info, 
   Lightbulb, AlertCircle, CheckCircle2, ChevronRight 
@@ -15,18 +17,18 @@ interface Props {
 // PREMIUM MDX COMPONENTS
 const components = {
   h2: ({ children, ...props }: any) => (
-    <h2 {...props} className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 mt-12 mb-5 pb-2.5 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-2 group">
+    <h2 {...props} className={cn(typography.sectionHeader, "mt-12 mb-5 pb-2.5 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-2 group")}>
       <span className="w-1.5 h-6 bg-indigo-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity -ml-3.5 mr-2"></span>
       {children}
     </h2>
   ),
   h3: ({ children, ...props }: any) => (
-    <h3 {...props} className="text-lg font-bold text-zinc-800 dark:text-zinc-100 mt-8 mb-4">
+    <h3 {...props} className={cn(typography.sectionHeader, "text-base sm:text-lg mt-8 mb-4")}>
       {children}
     </h3>
   ),
   p: ({ children, ...props }: any) => (
-    <p {...props} className="text-[15px] leading-7 text-zinc-600 dark:text-zinc-400 mb-6">
+    <p {...props} className={cn(typography.bodyCopy, "text-[15px] mb-6")}>
       {children}
     </p>
   ),
@@ -41,7 +43,7 @@ const components = {
     </ol>
   ),
   li: ({ children, ...props }: any) => (
-    <li {...props} className="flex gap-3 text-[15px] leading-7 text-zinc-600 dark:text-zinc-400">
+    <li {...props} className={cn(typography.bodyCopy, "flex gap-3 text-[15px]")}>
       <span className="mt-2.5 w-1.5 h-1.5 rounded-full bg-indigo-600/40 shrink-0"></span>
       <span>{children}</span>
     </li>
@@ -161,16 +163,16 @@ export default async function DocPage({ params }: Props) {
         <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-3">
           Guide #{doc.order}
         </p>
-        <h1 className="text-4xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 mb-4 bg-gradient-to-r from-zinc-900 to-zinc-500 dark:from-zinc-50 dark:to-zinc-500 bg-clip-text text-transparent">
+        <h1 className={cn(typography.pageTitle, "mb-4 bg-gradient-to-r from-zinc-900 to-zinc-500 dark:from-zinc-50 dark:to-zinc-500 bg-clip-text text-transparent")}>
           {doc.title}
         </h1>
-        <p className="text-lg text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
+        <p className={cn(typography.bodyCopy, "text-base sm:text-lg font-medium max-w-3xl")}>
           {doc.description}
         </p>
       </div>
 
       {/* Markdown content rendered via MDXRemote with custom components */}
-      <div className="max-w-none">
+      <div className={cn(typography.richContent, "max-w-3xl")}>
         <MDXRemote source={doc.content} components={components as any} />
       </div>
 
