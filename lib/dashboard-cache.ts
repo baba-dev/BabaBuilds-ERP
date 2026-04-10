@@ -15,6 +15,9 @@ type DashboardCacheEntry = {
 const MIN_TTL_SECONDS = 30;
 const MAX_TTL_SECONDS = 120;
 const DEFAULT_TTL_SECONDS = 60;
+const DEFAULT_MAX_ENTRIES = 250;
+const MIN_MAX_ENTRIES = 50;
+const MAX_MAX_ENTRIES = 2000;
 
 const dashboardCache = new Map<string, DashboardCacheEntry>();
 const dashboardCacheIncidentCounters = {
@@ -33,6 +36,32 @@ function getDashboardCacheTtlSeconds(): number {
   const raw = Number(process.env.DASHBOARD_CACHE_TTL_SECONDS ?? DEFAULT_TTL_SECONDS);
   if (!Number.isFinite(raw)) return DEFAULT_TTL_SECONDS;
   return Math.min(MAX_TTL_SECONDS, Math.max(MIN_TTL_SECONDS, Math.floor(raw)));
+}
+
+
+function getDashboardCacheMaxEntries(): number {
+  const raw = Number(process.env.DASHBOARD_CACHE_MAX_ENTRIES ?? DEFAULT_MAX_ENTRIES);
+  if (!Number.isFinite(raw)) return DEFAULT_MAX_ENTRIES;
+  return Math.min(MAX_MAX_ENTRIES, Math.max(MIN_MAX_ENTRIES, Math.floor(raw)));
+}
+
+function sweepExpiredEntries(now: number): void {
+  for (const [key, entry] of dashboardCache.entries()) {
+    if (entry.expiresAt <= now) {
+      dashboardCache.delete(key);
+    }
+  }
+}
+
+function evictOldestEntries(maxEntries: number): void {
+  while (dashboardCache.size >= maxEntries) {
+    const oldestKey = dashboardCache.keys().next().value as string | undefined;
+    if (!oldestKey) {
+      break;
+    }
+
+    dashboardCache.delete(oldestKey);
+  }
 }
 
 export function isDashboardCacheEnabled(): boolean {
@@ -68,6 +97,13 @@ export function getDashboardCacheEntry(cacheKey: string): DashboardCacheEntry | 
 
 export function setDashboardCacheEntry(cacheKey: string, payload: unknown): DashboardCacheEntry {
   const now = Date.now();
+  const maxEntries = getDashboardCacheMaxEntries();
+
+  sweepExpiredEntries(now);
+  if (!dashboardCache.has(cacheKey)) {
+    evictOldestEntries(maxEntries);
+  }
+
   const ttlMs = getDashboardCacheTtlSeconds() * 1000;
   const entry = {
     payload,

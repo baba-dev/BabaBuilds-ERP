@@ -19,6 +19,22 @@ import {
 
 const normalizeInvoiceStatus = (status: unknown) => String(status).toUpperCase();
 const LOCALE_CURRENCY_AFFECTS_PAYLOAD = false;
+const FINANCIAL_YEAR_PATTERN = /^(\d{2})-(\d{2})$/;
+
+const normalizeFinancialYear = (fy: string | null): string | null => {
+  if (!fy) return null;
+
+  const trimmed = fy.trim();
+  const match = FINANCIAL_YEAR_PATTERN.exec(trimmed);
+  if (!match) return null;
+
+  const startYear = Number.parseInt(match[1], 10);
+  const endYear = Number.parseInt(match[2], 10);
+  const expectedEndYear = (startYear + 1) % 100;
+
+  return endYear === expectedEndYear ? trimmed : null;
+};
+
 
 type IntegrationStatus = 'healthy' | 'partial' | 'missing';
 
@@ -252,11 +268,15 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    let fy = searchParams.get('fy');
-
-    if (!fy) {
-      fy = getCurrentFinancialYear();
+    const requestedFy = normalizeFinancialYear(searchParams.get('fy'));
+    if (searchParams.get('fy') && !requestedFy) {
+      return NextResponse.json(
+        { error: 'Invalid financial year format. Expected YY-YY with consecutive years.', code: 'INVALID_FINANCIAL_YEAR' },
+        { status: 400 }
+      );
     }
+
+    const fy = requestedFy ?? getCurrentFinancialYear();
 
     const locale = searchParams.get('locale');
     const currency = searchParams.get('currency');
