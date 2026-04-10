@@ -318,26 +318,26 @@ export default function SuperAdminPortal() {
   ];
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
+    <div className="mx-auto max-w-7xl space-y-8 px-4 py-6 md:px-8 md:py-8">
       
       {/* GOD MODE HEADER */}
-      <div className="sticky top-0 z-30 -mx-4 px-4 py-6 md:-mx-8 md:px-8 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200/50 dark:border-zinc-800/50 transition-all duration-300 mb-6">
-        <div className="max-w-7xl mx-auto w-full flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
+      <div className="sticky top-0 z-30 -mx-4 border-b border-zinc-200/50 bg-zinc-50/50 px-4 py-6 backdrop-blur-md transition-all duration-300 dark:border-zinc-800/50 dark:bg-zinc-950/50 md:-mx-8 md:px-8">
+        <div className="mx-auto flex w-full max-w-7xl flex-col justify-between gap-4 md:flex-row md:items-center">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
               <ShieldAlert className="w-6 h-6 text-rose-600 dark:text-rose-500 animate-pulse" />
               <Badge variant="outline" className="text-rose-600 border-rose-200 bg-rose-50 dark:text-rose-500 dark:border-rose-500/30 dark:bg-rose-500/10 uppercase tracking-widest text-xs font-bold">
                 {t('god_mode') || 'GOD MODE'}
               </Badge>
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">{t('title') || 'Platform Command'}</h1>
-            <p className="text-zinc-500 dark:text-zinc-400 mt-1 text-sm font-medium">{t('desc') || 'System-wide visibility and billing controls.'}</p>
+            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{t('desc') || 'System-wide visibility and billing controls.'}</p>
           </div>
         </div>
       </div>
 
       {/* GOD MODE NAVIGATION */}
-      <div className="flex space-x-2 border-b border-zinc-200 dark:border-zinc-800 overflow-x-auto pb-1 scrollbar-hide">
+      <div className="scrollbar-hide flex gap-2 overflow-x-auto border-b border-zinc-200 pb-1 dark:border-zinc-800">
         {["OVERVIEW", "ACCOUNTS", "DIAGNOSTICS", "SECURITY", "MAINTENANCE", "BACKUP", "LOGS"].map((tName) => (
           <button
             key={tName}
@@ -355,7 +355,7 @@ export default function SuperAdminPortal() {
       </div>
 
       {/* TAB CONTENTS */}
-      <div className="pt-2">
+      <div>
         {tab === "OVERVIEW" && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* ROW 1: SERVER METRICS */}
