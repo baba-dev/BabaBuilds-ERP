@@ -2,9 +2,22 @@ import type { Metadata } from "next";
 import { getAllDocs } from "@/lib/docs";
 import { HelpSidebar } from "./HelpSidebar";
 
+const HELP_URL = "https://erp.bababuilds.com/help";
+
 export const metadata: Metadata = {
-  title: "Help Center — BabaBuilds ERP",
-  description: "Guides, tutorials and documentation for BabaBuilds ERP. Learn how to generate invoices, manage clients, set up payments, and more.",
+  title: "Help Center \u2014 BabaBuilds ERP",
+  description:
+    "Guides, tutorials and documentation for BabaBuilds ERP. Learn how to generate invoices, manage clients, set up Razorpay & Stripe payments, configure GST/VAT, and reconcile bank statements.",
+  alternates: {
+    canonical: HELP_URL,
+    languages: {
+      "en-IN": HELP_URL,
+      "hi": HELP_URL,
+      "ar": HELP_URL,
+      "es": HELP_URL,
+      "x-default": HELP_URL,
+    },
+  },
 };
 
 export default async function HelpLayout({

@@ -29,3 +29,22 @@ Use this checklist before promoting frontend updates between rollout phases.
 - **Phase 1:** Run parity + responsiveness + keyboard/contrast checks on every merge candidate.
 - **Phase 2:** Add loading/empty/error and reduced-motion checks to release gates.
 - **Phase 3:** Require all checks plus regression snapshots for advanced pages (maps/charts/admin).
+
+## Regression checks for interactive state styling (hotspot audit)
+
+Run these checks whenever interactive classnames are touched in high-traffic UI surfaces:
+
+- Verify **hover + focus-visible + disabled** states for each interactive control in:
+  - `components/AuthModal.tsx`
+  - `components/AIChatbot.tsx`
+  - `components/PricingSection.tsx`
+  - `app/help/HelpSidebar.tsx`
+  - `components/notifications/NotificationBell.tsx`
+- Confirm all keyboard-focusable controls show a visible ring with `focus-visible:ring-2` and `focus-visible:ring-offset-2`.
+- Confirm ring color family is consistent per surface:
+  - Indigo family for auth, pricing, help center, and notifications.
+  - Purple family for chatbot surface controls.
+- Confirm disabled controls use reduced opacity and blocked pointer intent (`disabled:opacity-*` + `disabled:pointer-events-none`) where controls can be disabled.
+- Validate in both themes:
+  - Light mode ring offsets match light surfaces (`ring-offset-white`/`ring-offset-zinc-100`).
+  - Dark mode ring offsets match dark surfaces (`dark:ring-offset-zinc-900`/`dark:ring-offset-zinc-950`).

@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertCircle, Ban, CheckCircle2, FileWarning, Loader2, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 type ImportFlow = 'expenses' | 'invoices' | 'reconciliation';
 type UiState = 'idle' | 'processing' | 'success' | 'unsupported' | 'permissionDenied' | 'error';
@@ -31,6 +33,7 @@ export default function OpenFilePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [state, setState] = useState<UiState>('idle');
+  const [isDragActive, setIsDragActive] = useState(false);
   const initialStatus = typeof window !== 'undefined' && !window.launchQueue?.setConsumer
     ? 'No launched file detected. You can still choose a file manually.'
     : 'Waiting for launched file...';
@@ -115,15 +118,17 @@ export default function OpenFilePage() {
     await importFile(file, preferredFlow);
   };
 
+  const isProcessing = state === 'processing';
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8 flex items-center justify-center">
       <Card className="max-w-xl w-full border-zinc-200 dark:border-zinc-800">
-        <CardHeader>
+        <CardHeader className="space-y-1.5">
           <CardTitle className="text-2xl">Open file import</CardTitle>
           <CardDescription>{supportedText}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 p-4 bg-white dark:bg-zinc-900 flex gap-3 items-start">
+        <CardContent className="space-y-5">
+          <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 flex gap-3 items-start">
             {state === 'processing' && <Loader2 className="w-5 h-5 animate-spin text-indigo-500 mt-0.5" />}
             {state === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-500 mt-0.5" />}
             {state === 'unsupported' && <FileWarning className="w-5 h-5 text-amber-500 mt-0.5" />}
@@ -131,9 +136,9 @@ export default function OpenFilePage() {
             {state === 'error' && <AlertCircle className="w-5 h-5 text-rose-500 mt-0.5" />}
             {state === 'idle' && <UploadCloud className="w-5 h-5 text-zinc-500 mt-0.5" />}
 
-            <div>
-              <p className="font-medium text-zinc-900 dark:text-zinc-100">{statusText}</p>
-              {selectedFileName && <p className="text-xs text-zinc-500 mt-1">File: {selectedFileName}</p>}
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{statusText}</p>
+              {selectedFileName && <p className="text-xs text-zinc-500">File: {selectedFileName}</p>}
             </div>
           </div>
 
@@ -141,14 +146,59 @@ export default function OpenFilePage() {
             <p className="text-sm text-zinc-600 dark:text-zinc-400">{supportedText}</p>
           )}
 
-          <div className="space-y-2">
-            <label className="block text-sm font-medium">Choose file manually</label>
-            <input
-              type="file"
-              className="w-full text-sm"
-              accept=".pdf,.csv,.xlsx,.png,.jpg,.jpeg"
-              onChange={onManualFileSelect}
-            />
+          <div
+            className={cn(
+              'rounded-lg border-2 border-dashed p-4 transition-colors',
+              isDragActive
+                ? 'border-indigo-400 bg-indigo-50/60 dark:border-indigo-700 dark:bg-indigo-950/30'
+                : 'border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900/40',
+              isProcessing && 'opacity-60',
+            )}
+            onDragOver={(event) => {
+              event.preventDefault();
+              if (!isProcessing) setIsDragActive(true);
+            }}
+            onDragLeave={() => setIsDragActive(false)}
+            onDrop={(event) => {
+              event.preventDefault();
+              setIsDragActive(false);
+              if (isProcessing) return;
+              const file = event.dataTransfer.files?.[0];
+              if (file) {
+                void importFile(file, preferredFlow);
+              }
+            }}
+          >
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Choose file manually</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">Drag and drop or use the file chooser.</p>
+              </div>
+              <Input
+                id="manual-file-input"
+                type="file"
+                disabled={isProcessing}
+                className="peer sr-only"
+                accept=".pdf,.csv,.xlsx,.png,.jpg,.jpeg"
+                onChange={onManualFileSelect}
+                aria-describedby="manual-file-help"
+              />
+              <label
+                htmlFor="manual-file-input"
+                className={cn(
+                  'inline-flex h-10 items-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium ring-offset-background transition-colors',
+                  'focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-500 peer-focus-visible:ring-offset-2',
+                  isProcessing
+                    ? 'cursor-not-allowed text-zinc-400 dark:text-zinc-500'
+                    : 'cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800',
+                )}
+              >
+                {isProcessing ? 'Uploading…' : 'Choose file'}
+              </label>
+              <p id="manual-file-help" className="text-xs text-zinc-500 dark:text-zinc-400">
+                Accepted: PDF, CSV, XLSX, PNG, JPG.
+              </p>
+            </div>
           </div>
 
           {state === 'success' && redirectTo && (

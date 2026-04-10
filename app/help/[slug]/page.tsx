@@ -33,7 +33,7 @@ const components = {
     </p>
   ),
   ul: ({ children, ...props }: any) => (
-    <ul {...props} className="space-y-3 mb-8 ml-1">
+    <ul {...props} className="mb-8 space-y-3">
       {children}
     </ul>
   ),
@@ -49,7 +49,7 @@ const components = {
     </li>
   ),
   blockquote: ({ children, ...props }: any) => (
-    <div className="my-8 p-5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/50 flex gap-4 animate-in fade-in slide-in-from-left-4 duration-500">
+    <div className="my-8 p-6 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/50 flex gap-4 animate-in fade-in slide-in-from-left-4 duration-500">
       <div className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-indigo-100 dark:border-indigo-800 shadow-sm flex items-center justify-center shrink-0">
         <Info className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
       </div>
@@ -91,7 +91,7 @@ const components = {
     };
     const { bg, border, icon: Icon, color } = styles[type];
     return (
-      <div className={`my-8 p-5 rounded-2xl ${bg} border ${border} flex gap-4`}>
+      <div className={`my-8 p-6 rounded-2xl ${bg} border ${border} flex gap-4`}>
         <div className={`w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border ${border} shadow-sm flex items-center justify-center shrink-0`}>
           <Icon className={`w-5 h-5 ${color}`} />
         </div>
@@ -109,30 +109,48 @@ export async function generateStaticParams() {
   return docs.map((doc) => ({ slug: doc.slug }));
 }
 
+const BASE_URL = "https://erp.bababuilds.com";
+
 // Dynamic metadata per doc
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   try {
     const doc = getDocBySlug(slug);
-    const baseUrl = "https://erp.bababuilds.com";
+    const canonicalUrl = `${BASE_URL}/help/${slug}`;
 
     return {
       title: `${doc.title} — BabaBuilds ERP Help`,
       description: doc.description,
-      keywords: ["How to generate invoices", "Bank reconciliation guide", "BabaBuilds Help", "ERP Tutorials", slug.replace(/-/g, " ")],
+      keywords: [
+        "How to generate invoices",
+        "Bank reconciliation guide",
+        "BabaBuilds Help",
+        "ERP Tutorials",
+        slug.replace(/-/g, " "),
+      ],
+      alternates: {
+        canonical: canonicalUrl,
+        languages: {
+          "en-IN": canonicalUrl,
+          "hi": canonicalUrl,
+          "ar": canonicalUrl,
+          "es": canonicalUrl,
+          "x-default": canonicalUrl,
+        },
+      },
       openGraph: {
         title: `${doc.title} | BabaBuilds Help Center`,
         description: doc.description,
-        url: `${baseUrl}/help/${slug}`,
+        url: canonicalUrl,
         siteName: "BabaBuilds ERP",
         type: "article",
-        images: [{ url: "/og-help.png", width: 1200, height: 630 }],
+        images: [{ url: "/icons/Banner-1.png", width: 1536, height: 1024 }],
       },
       twitter: {
         card: "summary_large_image",
         title: `${doc.title} | Help Center`,
         description: doc.description,
-        images: ["/og-help.png"],
+        images: ["/icons/Banner-1.png"],
       },
     };
   } catch {
@@ -156,9 +174,41 @@ export default async function DocPage({ params }: Props) {
   const prevDoc = currentIndex > 0 ? allDocs[currentIndex - 1] : null;
   const nextDoc = currentIndex < allDocs.length - 1 ? allDocs[currentIndex + 1] : null;
 
+  // ── Article JSON-LD for each help doc ──
+  const articleJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: doc.title,
+    description: doc.description,
+    url: `${BASE_URL}/help/${slug}`,
+    image: `${BASE_URL}/icons/Banner-1.png`,
+    author: {
+      "@type": "Organization",
+      name: "BabaBuilds",
+      url: BASE_URL,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "BabaBuilds",
+      logo: {
+        "@type": "ImageObject",
+        url: `${BASE_URL}/icons/BabaBuillds_ERP_Logo.png`,
+      },
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `${BASE_URL}/help/${slug}`,
+    },
+    inLanguage: "en-IN",
+  };
+
   return (
     <div className="space-y-10">
-      {/* Doc header */}
+      {/* Article structured data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+      />
       <div className="pb-6 border-b border-zinc-200 dark:border-zinc-800">
         <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-3">
           Guide #{doc.order}
