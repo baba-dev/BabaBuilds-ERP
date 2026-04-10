@@ -161,6 +161,7 @@ model Workspace {
   retainers                  Retainer[]
   tasks                      Task[]
   invoiceIdempotencies       InvoiceIdempotency[]
+  financialOperationLocks    FinancialOperationIdempotency[]
   taxPreference              WorkspaceTaxPreference?
   workspaceTaxOverrides      WorkspaceTaxOverride[]
   taxRateOverrides           TaxRateOverride[]
@@ -225,6 +226,24 @@ model BillingTransaction {
   updatedAt DateTime @updatedAt
 
   @@index([workspaceId, transactionDate])
+  @@unique([workspaceId, providerReference])
+}
+
+model FinancialOperationIdempotency {
+  id             String    @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  operation      String
+  idempotencyKey String
+  requestHash    String
+  responseBody   Json?
+  status         String    @default("PENDING") // "PENDING" | "CONSUMED"
+  expiresAt      DateTime
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([workspaceId, operation, idempotencyKey])
+  @@index([workspaceId, operation, expiresAt])
 }
 
 model AccountingTransaction {

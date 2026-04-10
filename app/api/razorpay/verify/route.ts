@@ -4,6 +4,12 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import Razorpay from "razorpay";
+import {
+  acquireFinancialIdempotency,
+  buildRequestHash,
+  consumeFinancialIdempotency,
+  releaseFinancialIdempotency,
+} from "@/lib/financial-idempotency";
 
 function getRazorpayClient() {
   const keyId = process.env.RAZORPAY_KEY_ID;
@@ -20,6 +26,8 @@ function getRazorpayClient() {
 }
 
 export async function POST(req: Request) {
+  let idempotencyContext: { workspaceId: string; operation: string; idempotencyKey: string } | null = null;
+  let idempotencyConsumed = false;
   try {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
@@ -30,9 +38,28 @@ export async function POST(req: Request) {
     const workspaceId = (session as any).workspaceId;
     const body = await req.json().catch(() => ({}));
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = body;
+    const operation = "RAZORPAY_SUBSCRIPTION_VERIFY";
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return NextResponse.json({ error: "Missing payment identifiers" }, { status: 400 });
+    }
+    const idempotencyKey = req.headers.get("Idempotency-Key")?.trim() || razorpay_payment_id;
+    const requestHash = buildRequestHash({ razorpay_order_id, razorpay_payment_id, razorpay_signature });
+    const acquired = await acquireFinancialIdempotency({
+      workspaceId,
+      operation,
+      idempotencyKey,
+      requestHash,
+    });
+    idempotencyContext = { workspaceId, operation, idempotencyKey };
+    if (acquired.kind === "hash_mismatch") {
+      return NextResponse.json({ error: "Conflicting idempotency payload." }, { status: 409 });
+    }
+    if (acquired.kind === "in_progress") {
+      return NextResponse.json({ error: "Verification request already in progress." }, { status: 409 });
+    }
+    if (acquired.kind === "replay") {
+      return NextResponse.json({ ...(acquired.responseBody as object), replayed: true });
     }
 
     // 2. CRYPTOGRAPHIC SIGNATURE VERIFICATION
@@ -110,29 +137,48 @@ export async function POST(req: Request) {
     }
 
     // 6. SECURELY UPGRADE THE WORKSPACE
-    await prisma.workspace.update({
-      where: { id: workspaceId },
-      data: {
-        subscriptionStatus: verifiedTier,
-        planTier: verifiedTier,
-        planInterval: verifiedInterval,
-        subscriptionEndsAt: newExpirationDate, // This is now properly stacked
-        billingProviderId: payment.customer_id || razorpay_payment_id,
-        paymentMethodMask: payment.method === 'card' 
-          ? `•••• ${payment.card?.last4}` 
-          : (payment.vpa || "UPI/NetBanking")
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.workspace.update({
+        where: { id: workspaceId },
+        data: {
+          subscriptionStatus: verifiedTier,
+          planTier: verifiedTier,
+          planInterval: verifiedInterval,
+          subscriptionEndsAt: newExpirationDate,
+          billingProviderId: payment.customer_id || razorpay_payment_id,
+          paymentMethodMask: payment.method === 'card'
+            ? `•••• ${payment.card?.last4}`
+            : (payment.vpa || "UPI/NetBanking"),
+        },
+      });
+      await tx.billingTransaction.create({
+        data: {
+          workspaceId,
+          amount: amountPaid,
+          status: "PAID",
+          description: `Subscription ${verifiedTier} (${verifiedInterval}) via Razorpay`,
+          providerReference: razorpay_payment_id,
+          transactionDate: new Date(),
+        },
+      });
     });
 
-    return NextResponse.json({ 
+    const responseBody = { 
       success: true, 
       message: isCurrentlyActivePro 
         ? "Subscription extended successfully!" 
         : "Welcome to Pro Agency!" 
-    });
+    };
+    await consumeFinancialIdempotency({ workspaceId, operation, idempotencyKey, responseBody });
+    idempotencyConsumed = true;
+    return NextResponse.json(responseBody);
 
   } catch (error) {
     console.error("Razorpay Verification Error:", error);
     return NextResponse.json({ error: "Failed to verify payment securely" }, { status: 500 });
+  } finally {
+    if (idempotencyContext && !idempotencyConsumed) {
+      await releaseFinancialIdempotency(idempotencyContext);
+    }
   }
 }
