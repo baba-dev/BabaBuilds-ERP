@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import fs from 'fs';
 import path from 'path';
 import { INVOICE_STATUS, toInvoiceStatus, type InvoiceStatusValue } from '@/lib/invoice-status';
@@ -147,6 +148,12 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         const pdfBytes = await pdfDoc.save();
         fs.writeFileSync(fullPdfPath, pdfBytes);
       }
+    }
+
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'invoice', action: 'payment', error: String(error) });
     }
 
     return NextResponse.json({ success: true, invoice: updatedInvoice });

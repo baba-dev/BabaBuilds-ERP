@@ -9,6 +9,7 @@ import dns from 'dns';
 import { promisify } from 'util';
 import { decimalToNumber, toDecimal } from '@/lib/money';
 import { getRuntimeSmtpPassword } from '@/lib/mailer';
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 
 const lookupAsync = promisify(dns.lookup);
 
@@ -203,6 +204,12 @@ async function markInvoicePaid(invoiceNumber: string, workspaceId: string) {
         dateReceived: new Date()
       }
     });
+
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'invoice', action: 'payment', error: String(error) });
+    }
     
     return JSON.stringify({ success: true, message: `Reconciliation complete. Successfully marked Invoice ${invoiceNumber} as paid.` });
   } catch (e) { return JSON.stringify({ error: "Failed to update invoice in database." }); }
@@ -390,6 +397,12 @@ async function autoReconcile(transactionId: string, invoiceNumber: string, works
       where: { id: invoice.id },
       data: { status: "PAID", amountReceived: Number(invoice.totalAmount), dateReceived: transaction.date }
     });
+
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'invoice', action: 'payment', error: String(error) });
+    }
     
     return JSON.stringify({ success: true, message: `Perfect match! Invoice ${invoiceNumber} is now marked Paid using deposit of ₹${transaction.amount}.` });
 
@@ -458,6 +471,12 @@ async function convertProposalToInvoice(proposalNo: string, workspaceId: string)
       }
     });
 
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'invoice', action: 'create', error: String(error) });
+    }
+
     return JSON.stringify({ 
       success: true, 
       message: `Proposal ${proposalNo} marked ACCEPTED! Auto-generated new Invoice ${newInvoice.invoiceNumber} for ₹${newInvoice.totalAmount}.` 
@@ -504,6 +523,12 @@ async function createRetainer(clientName: string, serviceName: string, amount: n
       }
     });
 
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'retainer', action: 'create', error: String(error) });
+    }
+
     return JSON.stringify({ 
       success: true, 
       message: `Successfully created ${freqCaps} retainer for ${client.name} for '${serviceName}' at ₹${amount}. Next bill triggers on ${nextDate.toISOString().split('T')[0]}.` 
@@ -525,6 +550,12 @@ async function updateRetainerStatus(serviceName: string, clientName: string, sta
       where: { id: retainer.id },
       data: { status: status.toUpperCase() }
     });
+
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'retainer', action: 'update', error: String(error) });
+    }
 
     return JSON.stringify({ success: true, message: `Retainer ${retainer.serviceName} for ${client.name} is now ${status.toUpperCase()}.` });
   } catch (e) { return JSON.stringify({ error: "Failed to update retainer status." }); }
