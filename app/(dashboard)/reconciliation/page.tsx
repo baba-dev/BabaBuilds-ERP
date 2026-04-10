@@ -359,7 +359,7 @@ export default function ReconciliationWizard() {
         {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
+            <h1 className="text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 flex flex-wrap items-center gap-2">
               {t('wizard_title')} <Badge className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-none"><Sparkles className="w-3 h-3 mr-1" /> {t('human_loop')}</Badge>
             </h1>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 font-medium">{t('wizard_desc')}</p>
@@ -367,7 +367,7 @@ export default function ReconciliationWizard() {
           <Button 
             onClick={handleFinalizeClick} 
             disabled={isFinalizing || totalReadyToCommit === 0}
-            className="bg-zinc-900 dark:bg-zinc-50 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 shadow-lg transition-transform hover:scale-[1.02]"
+            className="w-full md:w-auto bg-zinc-900 dark:bg-zinc-50 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 shadow-lg transition-transform hover:scale-[1.02]"
           >
             {isFinalizing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ListChecks className="w-4 h-4 mr-2" />}
             {isFinalizing ? t('locking') : t('finalize_btn', { count: totalReadyToCommit })}
@@ -423,7 +423,7 @@ export default function ReconciliationWizard() {
                 aria-controls="recon-tab-ai"
                 onClick={() => setActiveTab("ai")}
                 className={cn(
-                  "h-auto shrink-0 min-w-[11rem] grow justify-center gap-2 px-4 py-3 text-sm",
+                  "h-auto min-h-11 shrink-0 min-w-[11rem] grow justify-center gap-2 px-4 py-3 text-sm transition-all duration-300",
                   segmentedControlItemClass,
                   activeTab === "ai" && segmentedControlItemActiveClass,
                 )}
@@ -440,7 +440,7 @@ export default function ReconciliationWizard() {
                 aria-controls="recon-tab-auto"
                 onClick={() => setActiveTab("auto")}
                 className={cn(
-                  "h-auto shrink-0 min-w-[11rem] grow justify-center gap-2 px-4 py-3 text-sm",
+                  "h-auto min-h-11 shrink-0 min-w-[11rem] grow justify-center gap-2 px-4 py-3 text-sm transition-all duration-300",
                   segmentedControlItemClass,
                   activeTab === "auto" && segmentedControlItemActiveClass,
                 )}
@@ -457,7 +457,7 @@ export default function ReconciliationWizard() {
                 aria-controls="recon-tab-ignored"
                 onClick={() => setActiveTab("ignored")}
                 className={cn(
-                  "h-auto shrink-0 min-w-[11rem] grow justify-center gap-2 px-4 py-3 text-sm",
+                  "h-auto min-h-11 shrink-0 min-w-[11rem] grow justify-center gap-2 px-4 py-3 text-sm transition-all duration-300",
                   segmentedControlItemClass,
                   activeTab === "ignored" && segmentedControlItemActiveClass,
                 )}

@@ -208,13 +208,13 @@ export default function AIChatbot() {
             </div>
           </div>
           <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" onClick={() => setIsClearDialogOpen(true)} title="Clear Chat" className="h-8 w-8 text-purple-200 hover:bg-purple-800 dark:hover:bg-purple-900 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-purple-900 dark:focus-visible:ring-purple-500 dark:focus-visible:ring-offset-purple-950">
+              <Button variant="ghost" size="icon" onClick={() => setIsClearDialogOpen(true)} title="Clear Chat" className="h-10 w-10 sm:h-8 sm:w-8 text-purple-200 hover:bg-purple-800 dark:hover:bg-purple-900 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-purple-900 dark:focus-visible:ring-purple-500 dark:focus-visible:ring-offset-purple-950">
               <Trash2 className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsExpanded(!isExpanded)} title={isExpanded ? "Minimize" : "Expand"} className="h-8 w-8 text-purple-200 hover:bg-purple-800 dark:hover:bg-purple-900 hover:text-white focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-purple-900 dark:focus-visible:ring-purple-500 dark:focus-visible:ring-offset-purple-950">
+            <Button variant="ghost" size="icon" onClick={() => setIsExpanded(!isExpanded)} title={isExpanded ? "Minimize" : "Expand"} className="h-10 w-10 sm:h-8 sm:w-8 text-purple-200 hover:bg-purple-800 dark:hover:bg-purple-900 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-purple-900 dark:focus-visible:ring-purple-500 dark:focus-visible:ring-offset-purple-950">
               {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </Button>
-            <Button variant="ghost" size="icon" onClick={closeChat} title="Close" className="h-8 w-8 text-purple-200 hover:bg-purple-800 dark:hover:bg-purple-900 hover:text-white focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-purple-900 dark:focus-visible:ring-purple-500 dark:focus-visible:ring-offset-purple-950">
+            <Button variant="ghost" size="icon" onClick={closeChat} title="Close" className="h-10 w-10 sm:h-8 sm:w-8 text-purple-200 hover:bg-purple-800 dark:hover:bg-purple-900 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-purple-900 dark:focus-visible:ring-purple-500 dark:focus-visible:ring-offset-purple-950">
               <X className="w-4 h-4" />
             </Button>
           </div>

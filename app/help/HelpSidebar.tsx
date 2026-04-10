@@ -100,6 +100,8 @@ export function HelpSidebar({ docs }: HelpSidebarProps) {
         size="lg"
         className="lg:hidden fixed top-20 left-4 z-40 flex items-center gap-2 min-h-10 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white shadow-lg shadow-indigo-900/20 hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70 active:scale-95 disabled:bg-indigo-600/60 disabled:text-white/70 transition-all"
         aria-label="Open Help sidebar"
+        aria-controls="help-sidebar-drawer"
+        aria-expanded={mobileOpen}
       >
         <Menu className="w-4 h-4" />
         Help Menu
@@ -108,7 +110,7 @@ export function HelpSidebar({ docs }: HelpSidebarProps) {
       {/* --- MOBILE DRAWER OVERLAY --- */}
       {mobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-50 flex"
+          className="lg:hidden fixed inset-0 z-[130] flex"
           onClick={() => setMobileOpen(false)}
         >
           {/* Backdrop */}
@@ -116,12 +118,13 @@ export function HelpSidebar({ docs }: HelpSidebarProps) {
 
           {/* Drawer */}
           <div
-            className="relative z-50 w-[280px] bg-white dark:bg-zinc-900 h-full shadow-2xl flex flex-col animate-in slide-in-from-left duration-300"
+            id="help-sidebar-drawer"
+            className="relative z-50 w-[min(85vw,320px)] bg-white dark:bg-zinc-900 h-full shadow-2xl flex flex-col animate-in slide-in-from-left duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <Button
               onClick={() => setMobileOpen(false)}
-              variant="ghost"
+variant="ghost"
               size="icon-lg"
               className="absolute right-4 top-4 rounded-full bg-zinc-100 text-zinc-500 hover:bg-zinc-200 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-100 disabled:bg-zinc-100/60 disabled:text-zinc-400 dark:disabled:bg-zinc-800/60 dark:disabled:text-zinc-500 transition-colors"
               aria-label="Close Help sidebar"
