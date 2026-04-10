@@ -10,6 +10,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -42,6 +52,7 @@ export default function AIChatbot() {
   const [messages, setMessages] = useState<{role: 'user' | 'assistant', content: string, actionExecuted?: string}[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -85,10 +96,9 @@ export default function AIChatbot() {
   }, [isOpen, isLoading, isExpanded]);
 
   const clearChat = () => {
-    if (confirm("Are you sure you want to clear the conversation history?")) {
-      setMessages([DEFAULT_GREETING]);
-      if (storageKey) localStorage.removeItem(storageKey);
-    }
+    setMessages([DEFAULT_GREETING]);
+    if (storageKey) localStorage.removeItem(storageKey);
+    setIsClearDialogOpen(false);
   };
 
   const closeChat = () => {
@@ -198,7 +208,7 @@ export default function AIChatbot() {
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={clearChat} title="Clear Chat" className="h-8 w-8 text-purple-200 hover:bg-purple-800 dark:hover:bg-purple-900 hover:text-white">
+            <Button variant="ghost" size="icon" onClick={() => setIsClearDialogOpen(true)} title="Clear Chat" className="h-8 w-8 text-purple-200 hover:bg-purple-800 dark:hover:bg-purple-900 hover:text-white">
               <Trash2 className="w-4 h-4" />
             </Button>
             <Button variant="ghost" size="icon" onClick={() => setIsExpanded(!isExpanded)} title={isExpanded ? "Minimize" : "Expand"} className="h-8 w-8 text-purple-200 hover:bg-purple-800 dark:hover:bg-purple-900 hover:text-white">
@@ -306,6 +316,26 @@ export default function AIChatbot() {
           {isOpen ? <X className="w-6 h-6 -rotate-90 transition-transform duration-300" /> : <MessageSquare className="w-6 h-6" />}
         </button>
       </div>
+
+      <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear conversation history?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove all messages in this workspace chat thread. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={clearChat}
+              className="bg-rose-600 hover:bg-rose-700 text-white"
+            >
+              Clear history
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
