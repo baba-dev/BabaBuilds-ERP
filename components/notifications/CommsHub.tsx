@@ -92,28 +92,32 @@ function NotificationItem({ notification: n, onRead }: NotificationItemProps) {
       </div>
 
       {/* Actions */}
-      <div className="flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex w-12 flex-shrink-0 flex-col items-center justify-center gap-2 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
         {n.actionUrl && (
           <Button
             asChild
             variant="ghost"
             size="icon-sm"
-            className="h-11 w-11 rounded-lg text-zinc-400 hover:bg-indigo-500/20 hover:text-indigo-300 md:h-8 md:w-8"
+            className="h-9 w-9 touch-manipulation rounded-lg text-zinc-400 hover:bg-indigo-500/20 hover:text-indigo-300 focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
             title="View Details"
           >
             <a href={n.actionUrl} onClick={() => onRead(n.id)}>
               <ExternalLink className="h-4 w-4" />
+              <span className="sr-only">View notification details</span>
             </a>
           </Button>
         )}
+        {!n.actionUrl && <div className="h-9 w-9" aria-hidden="true" />}
         <Button
           onClick={() => onRead(n.id)}
+          type="button"
           variant="ghost"
           size="icon-sm"
-          className="h-11 w-11 rounded-lg text-zinc-400 hover:bg-emerald-500/20 hover:text-emerald-300 md:h-8 md:w-8"
+          className="h-9 w-9 touch-manipulation rounded-lg text-zinc-400 hover:bg-emerald-500/20 hover:text-emerald-300 focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
           title="Mark as Read"
         >
           <Check className="h-4 w-4" />
+          <span className="sr-only">Mark notification as read</span>
         </Button>
       </div>
     </div>
