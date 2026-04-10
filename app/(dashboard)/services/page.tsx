@@ -1,534 +1,738 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Plus, Briefcase, FileText, Trash2, ShieldCheck, Tag, Pickaxe, Loader2 } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  Plus, Briefcase, FileText, Trash2, ShieldCheck, Tag, Loader2,
+  Pencil, Store, ShoppingBag, Eye, EyeOff, ExternalLink,
+  Search, ShoppingCart, Check, X, Clock, AlertCircle
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-// MISSION CRITICAL: Globalization Imports
 import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { FileUploadField } from "@/components/forms/file-upload-field";
+import { format } from "date-fns";
+
+type Service = {
+  id: string; name: string; description?: string; longDescription?: string;
+  defaultPrice: number; imageUrl?: string; showInShop: boolean;
+  nicCode?: { code: string; description: string };
+  sacCode?: { code: string; description: string; igstRate: number };
+};
+
+type ShopOrder = {
+  id: string; buyerName: string; buyerEmail: string; buyerPhone?: string;
+  buyerNote?: string; amount: number; currency: string; gateway?: string;
+  status: string; createdAt: string;
+  serviceTemplate: { name: string };
+};
+
+const EMPTY_FORM = {
+  name: "", description: "", longDescription: "", defaultPrice: "",
+  nicCodeId: "", sacCodeId: "", showInShop: false, imageUrl: ""
+};
 
 export default function ServiceCatalog() {
-  const t = useTranslations('Services');
-  const [services, setServices] = useState<any[]>([]);
-  const [taxCodes, setTaxCodes] = useState<{nic: any[], sac: any[]}>({ nic: [], sac: [] });
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [open, setOpen] = useState(false);
-
-  // --- GLOBALIZATION ENGINE ---
-  const { 
-    fCurrency, 
-    currency, 
-    locale, 
-    taxLabel, 
-    countryCode = "Global" 
-  } = useFormat();
+  const t = useTranslations("Services");
+  const { fCurrency, currency, locale, taxLabel, countryCode = "Global" } = useFormat();
   const currencySymbol = getCurrencySymbol(currency, locale);
 
-  // Dynamic Compliance Labels
+  // Tab state
+  const [activeTab, setActiveTab] = useState<"catalogue" | "orders">("catalogue");
+
+  // Catalogue state
+  const [services, setServices] = useState<Service[]>([]);
+  const [taxCodes, setTaxCodes] = useState<{ nic: any[]; sac: any[] }>({ nic: [], sac: [] });
+  const [isLoading, setIsLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [editingService, setEditingService] = useState<Service | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
+  // Form state
+  const [form, setForm] = useState({ ...EMPTY_FORM });
+
+  // Orders state
+  const [orders, setOrders] = useState<ShopOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [orderFilter, setOrderFilter] = useState("ALL");
+  const [orderSearch, setOrderSearch] = useState("");
+  const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
+
+  // Shop info
+  const [shopSlug, setShopSlug] = useState<string | null>(null);
+
   const industryLabel = countryCode === "IN" ? "NIC Code" : "Industry Class";
   const taxClassLabel = countryCode === "IN" ? "SAC/HSN Code" : "Service Class";
 
-  // Deletion State
-  const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  // Form State
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [defaultPrice, setDefaultPrice] = useState("");
-  const [nicCodeId, setNicCodeId] = useState("");
-  const [sacCodeId, setSacCodeId] = useState("");
-
-  // --- CUSTOM COMPLIANCE STATE ---
-  const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
-  const [customType, setCustomType] = useState<"NIC" | "SAC">("SAC");
-  const [customCode, setCustomCode] = useState("");
-  const [customDesc, setCustomDesc] = useState("");
-  const [customIgst, setCustomIgst] = useState("18.0");
-  const [isSavingCustom, setIsSavingCustom] = useState(false);
+  useEffect(() => { fetchData(); }, []);
 
   useEffect(() => {
-    fetchData();
+    // Load shop slug from settings for the "View Live Shop" link
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((d) => { if (d.shopSlug) setShopSlug(d.shopSlug); })
+      .catch(() => {});
   }, []);
 
-  // --- SMART AI AUTO-FILL HOOK ---
   useEffect(() => {
-    const aiPayload = sessionStorage.getItem('erp_ai_payload');
+    // AI auto-fill hook
+    const aiPayload = sessionStorage.getItem("erp_ai_payload");
     if (aiPayload) {
       try {
         const { path, data, timestamp } = JSON.parse(aiPayload);
-        const isFresh = (Date.now() - timestamp) < 10000;
-        
-        if (isFresh && data && path === '/services') {
-          if (data.name || data.title) setName(data.name || data.title);
-          if (data.price || data.amount) setDefaultPrice((data.price || data.amount).toString());
-          if (data.description) setDescription(data.description);
-          setOpen(true); 
+        if ((Date.now() - timestamp) < 10000 && data && path === "/services") {
+          setForm((f) => ({
+            ...f,
+            name: data.name || data.title || f.name,
+            defaultPrice: (data.price || data.amount || "").toString(),
+            description: data.description || f.description,
+          }));
+          setOpen(true);
         }
-        sessionStorage.removeItem('erp_ai_payload');
-      } catch(e) {
-        console.error("Failed to parse AI payload");
-      }
+        sessionStorage.removeItem("erp_ai_payload");
+      } catch { /* ignore */ }
     }
   }, []);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const srvRes = await fetch('/api/services');
-      const srvData = await srvRes.json();
+      const [srvRes, taxRes] = await Promise.all([fetch("/api/services"), fetch("/api/tax-codes")]);
+      const [srvData, taxData] = await Promise.all([srvRes.json(), taxRes.json()]);
       setServices(Array.isArray(srvData) ? srvData : []);
+      if (taxData && !taxData.error) setTaxCodes(taxData);
+    } catch { toast.error("Failed to load service catalog. Please refresh."); }
+    finally { setIsLoading(false); }
+  };
 
-      const taxRes = await fetch('/api/tax-codes');
-      const taxData = await taxRes.json();
-      if (taxData && !taxData.error) {
-        setTaxCodes(taxData);
-      }
-    } catch (err) {
-      console.error("Failed to load catalog data");
-      toast.error("Failed to load service catalog. Please refresh.");
-    } finally {
-      setIsLoading(false);
-    }
+  const fetchOrders = useCallback(async () => {
+    setOrdersLoading(true);
+    try {
+      const res = await fetch(`/api/shop/orders?status=${orderFilter}`);
+      const data = await res.json();
+      setOrders(Array.isArray(data.orders) ? data.orders : []);
+    } catch { toast.error("Failed to load orders."); }
+    finally { setOrdersLoading(false); }
+  }, [orderFilter]);
+
+  useEffect(() => {
+    if (activeTab === "orders") fetchOrders();
+  }, [activeTab, fetchOrders]);
+
+  const openAddDialog = () => {
+    setEditingService(null);
+    setForm({ ...EMPTY_FORM });
+    setImageFile(null);
+    setOpen(true);
+  };
+
+  const openEditDialog = (srv: Service) => {
+    setEditingService(srv);
+    setForm({
+      name: srv.name,
+      description: srv.description || "",
+      longDescription: srv.longDescription || "",
+      defaultPrice: String(srv.defaultPrice),
+      nicCodeId: srv.nicCode ? "" : "",
+      sacCodeId: srv.sacCode ? "" : "",
+      showInShop: srv.showInShop,
+      imageUrl: srv.imageUrl || "",
+    });
+    setImageFile(null);
+    setOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/services', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description, defaultPrice, nicCodeId, sacCodeId })
-      });
-      
+      const fd = new FormData();
+      fd.append("name", form.name);
+      fd.append("description", form.description);
+      fd.append("longDescription", form.longDescription);
+      fd.append("defaultPrice", form.defaultPrice);
+      fd.append("nicCodeId", form.nicCodeId);
+      fd.append("sacCodeId", form.sacCodeId);
+      fd.append("showInShop", String(form.showInShop));
+      if (imageFile) fd.append("serviceImage", imageFile);
+      if (editingService) fd.append("existingImageUrl", form.imageUrl);
+
+      const url    = editingService ? `/api/services/${editingService.id}` : "/api/services";
+      const method = editingService ? "PATCH" : "POST";
+
+      const res = await fetch(url, { method, body: fd });
       if (res.ok) {
         setOpen(false);
-        setName(""); setDescription(""); setDefaultPrice(""); setNicCodeId(""); setSacCodeId("");
-        toast.success("Service added to catalog successfully.");
+        toast.success(editingService ? "Service updated." : "Service added to catalog.");
         fetchData();
       } else {
-        toast.error("Failed to save service.");
+        const err = await res.json();
+        toast.error(err.error || "Failed to save service.");
       }
-    } catch (err) {
-      toast.error("A network error occurred.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    } catch { toast.error("A network error occurred."); }
+    finally { setIsSubmitting(false); }
   };
 
   const confirmDelete = async () => {
     if (!serviceToDelete) return;
     setIsDeleting(true);
-    const toastId = toast.loading("Removing service from catalog...");
-    
+    const tid = toast.loading("Removing service...");
     try {
-      const res = await fetch(`/api/services/${serviceToDelete}`, { method: 'DELETE' });
-      if (res.ok) {
-        toast.success("Service removed.", { id: toastId });
-        fetchData();
-      } else {
-        toast.error("Failed to delete service.", { id: toastId });
-      }
-    } catch (err) {
-      toast.error("A network error occurred while deleting.", { id: toastId });
-    } finally {
-      setIsDeleting(false);
-      setServiceToDelete(null); 
+      const res = await fetch(`/api/services/${serviceToDelete}`, { method: "DELETE" });
+      if (res.ok) { toast.success("Service removed.", { id: tid }); fetchData(); }
+      else toast.error("Failed to delete service.", { id: tid });
+    } catch { toast.error("Network error.", { id: tid }); }
+    finally { setIsDeleting(false); setServiceToDelete(null); }
+  };
+
+  const toggleShopStatus = async (srv: Service) => {
+    const fd = new FormData();
+    fd.append("name", srv.name);
+    fd.append("description", srv.description || "");
+    fd.append("longDescription", srv.longDescription || "");
+    fd.append("defaultPrice", String(srv.defaultPrice));
+    fd.append("showInShop", String(!srv.showInShop));
+    fd.append("existingImageUrl", srv.imageUrl || "");
+    const res = await fetch(`/api/services/${srv.id}`, { method: "PATCH", body: fd });
+    if (res.ok) {
+      toast.success(srv.showInShop ? "Removed from shop." : "Now live in your shop!");
+      fetchData();
     }
   };
 
-  const handleSaveCustomCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSavingCustom(true);
-    try {
-      const res = await fetch('/api/tax-codes/custom', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: customType,
-          code: customCode,
-          description: customDesc,
-          countryCode,
-          igstRate: parseFloat(customIgst)
-        })
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        toast.success(`${customType === 'SAC' ? 'Tax' : 'Industry'} code added.`);
-        setIsCustomModalOpen(false);
-        setCustomCode(""); setCustomDesc("");
-        // Refresh and auto-select
-        await fetchData();
-        if (customType === 'SAC') setSacCodeId(data.id);
-        else setNicCodeId(data.id);
-      } else {
-        toast.error(data.error || "Failed to save code.");
-      }
-    } catch (error) {
-      toast.error("A network error occurred.");
-    } finally {
-      setIsSavingCustom(false);
-    }
+  const updateOrderStatus = async (orderId: string, status: string) => {
+    const res = await fetch(`/api/shop/orders/${orderId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    if (res.ok) { toast.success("Order updated."); fetchOrders(); }
+    else toast.error("Failed to update order.");
   };
 
-  const openCustomModal = (type: "NIC" | "SAC") => {
-    setCustomType(type);
-    setIsCustomModalOpen(true);
+  const deleteOrder = async (orderId: string) => {
+    const res = await fetch(`/api/shop/orders/${orderId}`, { method: "DELETE" });
+    if (res.ok) { toast.success("Order deleted."); fetchOrders(); }
+    else toast.error("Failed to delete order.");
+    setDeletingOrderId(null);
+  };
+
+  const filteredOrders = orders.filter((o) => {
+    const q = orderSearch.toLowerCase();
+    return (
+      o.buyerName.toLowerCase().includes(q) ||
+      o.buyerEmail.toLowerCase().includes(q) ||
+      o.serviceTemplate.name.toLowerCase().includes(q)
+    );
+  });
+
+  const statusConfig: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
+    PAID:     { label: "Paid",     className: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-400", icon: <Check className="w-3 h-3" /> },
+    PENDING:  { label: "Pending",  className: "bg-amber-100  dark:bg-amber-900/40  text-amber-800  dark:text-amber-400",  icon: <Clock className="w-3 h-3" /> },
+    FAILED:   { label: "Failed",   className: "bg-rose-100   dark:bg-rose-900/40   text-rose-800   dark:text-rose-400",   icon: <X className="w-3 h-3" /> },
+    REFUNDED: { label: "Refunded", className: "bg-sky-100    dark:bg-sky-900/40    text-sky-800    dark:text-sky-400",    icon: <AlertCircle className="w-3 h-3" /> },
   };
 
   return (
     <DashboardPageShell
-      title={t('title')}
-      description={t.rich('description_rich', { taxLabel, tag: (chunks) => <strong className="text-zinc-700 dark:text-zinc-300">{chunks}</strong> })}
+      title="Service Catalogue & Shop"
+      description="Manage your services and publish them to your public E-Store."
       primaryAction={
-        <Button 
-          onClick={() => setOpen(true)} 
-          className="w-full md:w-auto shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20 text-xs font-bold uppercase tracking-wider h-11 transition-all active:scale-95"
-        >
-          <Plus className="w-4 h-4 md:mr-2" /> <span className="md:inline">{t('add_new')}</span>
-        </Button>
+        <div className="flex items-center gap-3">
+          {shopSlug && (
+            <Button
+              onClick={() => window.open(`/shop/${shopSlug}`, "_blank")}
+              variant="outline"
+              className="hidden md:flex items-center gap-2 border-indigo-200 dark:border-indigo-800/50 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-xs font-bold uppercase tracking-wider h-11"
+            >
+              <ExternalLink className="w-4 h-4" /> View Live Shop
+            </Button>
+          )}
+          {activeTab === "catalogue" && (
+            <Button
+              onClick={openAddDialog}
+              className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20 text-xs font-bold uppercase tracking-wider h-11 transition-all active:scale-95"
+            >
+              <Plus className="w-4 h-4 md:mr-2" /><span className="md:inline">Add Service</span>
+            </Button>
+          )}
+        </div>
       }
     >
+      {/* ── TABS ── */}
+      <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-900 rounded-xl p-1 w-fit mb-6">
+        {([
+          { key: "catalogue", label: "Catalogue", icon: Briefcase },
+          { key: "orders",    label: "Shop Orders", icon: ShoppingBag },
+        ] as const).map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
+              activeTab === key
+                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-sm"
+                : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+            }`}
+          >
+            <Icon className="w-3.5 h-3.5" /> {label}
+          </button>
+        ))}
+      </div>
 
-        {/* MODAL: ADD SERVICE */}
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="sm:max-w-[600px] border-none shadow-2xl p-0 overflow-hidden bg-white dark:bg-zinc-950/95 dark:backdrop-blur-xl">
-            <div className="px-6 pt-6 pb-5 bg-zinc-50/80 dark:bg-zinc-900/40 border-b border-zinc-100 dark:border-zinc-800/80">
-              <DialogHeader>
-                <div className="flex items-center gap-3.5">
-                  <div className="p-2.5 bg-indigo-600/10 dark:bg-indigo-500/20 rounded-xl border border-indigo-200/50 dark:border-indigo-400/20">
-                    <Briefcase className="w-5 h-5 text-indigo-700 dark:text-indigo-400" />
+      {/* ──────── CATALOGUE TAB ──────── */}
+      {activeTab === "catalogue" && (
+        <>
+          {/* Add / Edit Dialog */}
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogContent className="sm:max-w-[680px] border-none shadow-2xl p-0 overflow-hidden bg-white dark:bg-zinc-950/95">
+              <div className="px-6 pt-6 pb-5 bg-zinc-50/80 dark:bg-zinc-900/40 border-b border-zinc-100 dark:border-zinc-800">
+                <DialogHeader>
+                  <div className="flex items-center gap-3.5">
+                    <div className="p-2.5 bg-indigo-600/10 dark:bg-indigo-500/20 rounded-xl border border-indigo-200/50 dark:border-indigo-400/20">
+                      <Briefcase className="w-5 h-5 text-indigo-700 dark:text-indigo-400" />
+                    </div>
+                    <div>
+                      <DialogTitle className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                        {editingService ? "Edit Service" : "Add Service"}
+                      </DialogTitle>
+                      <DialogDescription className="text-zinc-500 dark:text-zinc-400 mt-1 text-xs font-medium">
+                        {editingService ? "Update the service details and shop visibility." : "Configure your service for invoicing and the public shop."}
+                      </DialogDescription>
+                    </div>
                   </div>
-                  <div>
-                    <DialogTitle className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{t('config_title')}</DialogTitle>
-                    <DialogDescription className="text-zinc-500 dark:text-zinc-400 mt-1 text-xs font-medium">{t('config_desc')}</DialogDescription>
-                  </div>
-                </div>
-              </DialogHeader>
-            </div>
+                </DialogHeader>
+              </div>
 
-            <form onSubmit={handleSubmit}>
-              <div className="p-6 space-y-6 bg-white dark:bg-zinc-950">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                  <div className="md:col-span-2 space-y-2">
-                    <Label htmlFor="service-name" className="font-bold text-zinc-700 dark:text-zinc-300 text-xs uppercase tracking-wider">
-                      {t('display_name')} <span className="text-rose-500 dark:text-rose-400">*</span>
-                    </Label>
-                    <Input 
-                      id="service-name"
-                      placeholder={t('ph_name')} 
-                      value={name} 
-                      onChange={e => setName(e.target.value)} 
-                      required 
-                      className="h-10 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 font-bold transition-all focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500 shadow-sm" 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="base-rate" className="font-bold text-zinc-700 dark:text-zinc-300 text-xs uppercase tracking-wider">
-                      {t('base_rate')} <span className="text-rose-500 dark:text-rose-400">*</span>
-                    </Label>
-                    <div className="relative group">
-                      <span className="absolute left-3.5 top-2.5 text-zinc-400 group-focus-within:text-zinc-900 dark:group-focus-within:text-zinc-100 font-bold text-sm transition-colors">
-                        {currencySymbol}
-                      </span>
-                      <Input 
-                        id="base-rate"
-                        type="number" 
-                        min="0" 
-                        placeholder={t('ph_rate')} 
-                        value={defaultPrice} 
-                        onChange={e => setDefaultPrice(e.target.value)} 
-                        required 
-                        className="h-10 pl-8 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 font-bold transition-all focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500 shadow-sm" 
+              <form onSubmit={handleSubmit}>
+                <div className="p-6 space-y-6 bg-white dark:bg-zinc-950 max-h-[70vh] overflow-y-auto">
+
+                  {/* Name + Price */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div className="md:col-span-2 space-y-2">
+                      <Label className="font-bold text-zinc-700 dark:text-zinc-300 text-xs uppercase tracking-wider">
+                        Service Name <span className="text-rose-500">*</span>
+                      </Label>
+                      <Input
+                        placeholder="e.g. Monthly SEO Package"
+                        value={form.name}
+                        onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                        required
+                        className="h-10 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 font-bold focus-visible:ring-indigo-500"
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label className="font-bold text-zinc-700 dark:text-zinc-300 text-xs uppercase tracking-wider">
+                        Base Price <span className="text-rose-500">*</span>
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-2.5 text-zinc-400 font-bold text-sm">{currencySymbol}</span>
+                        <Input
+                          type="number" min="0" placeholder="0"
+                          value={form.defaultPrice}
+                          onChange={(e) => setForm((f) => ({ ...f, defaultPrice: e.target.value }))}
+                          required
+                          className="h-10 pl-8 font-bold focus-visible:ring-indigo-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Short description */}
+                  <div className="space-y-2">
+                    <Label className="font-bold text-zinc-700 dark:text-zinc-300 text-xs uppercase tracking-wider">
+                      Short Description <span className="text-zinc-400 font-normal">(invoice / proposal)</span>
+                    </Label>
+                    <Input
+                      placeholder="Brief one-line summary for invoices..."
+                      value={form.description}
+                      onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                      className="h-10 focus-visible:ring-indigo-500"
+                    />
+                  </div>
+
+                  {/* Long description (Tiptap) */}
+                  <div className="space-y-2">
+                    <Label className="font-bold text-zinc-700 dark:text-zinc-300 text-xs uppercase tracking-wider">
+                      Shop Description <span className="text-zinc-400 font-normal">(shown on your public shop)</span>
+                    </Label>
+                    <RichTextEditor
+                      value={form.longDescription}
+                      onChange={(html) => setForm((f) => ({ ...f, longDescription: html }))}
+                      placeholder="Describe what's included, deliverables, turnaround time..."
+                    />
+                  </div>
+
+                  {/* Hero image */}
+                  <div className="space-y-2">
+                    <Label className="font-bold text-zinc-700 dark:text-zinc-300 text-xs uppercase tracking-wider">
+                      Hero Image <span className="text-zinc-400 font-normal">(displayed on shop card)</span>
+                    </Label>
+                    {form.imageUrl && !imageFile && (
+                      <div className="relative w-full h-32 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 mb-2">
+                        <img src={form.imageUrl} alt="Current" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setForm((f) => ({ ...f, imageUrl: "" }))}
+                          className="absolute top-2 right-2 p-1 bg-rose-600 text-white rounded-md text-[10px] font-bold"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                    <FileUploadField
+                      accept="image/*"
+                      onFileSelect={setImageFile}
+                      helpText="PNG, JPG or WEBP · recommended 1200×600px"
+                      inputClassName="dark:bg-zinc-900 dark:border-zinc-800"
+                    />
+                  </div>
+
+                  {/* Show in Shop toggle */}
+                  <div className="flex items-center justify-between p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-800/30 rounded-xl">
+                    <div>
+                      <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+                        <Store className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                        Show in Public Shop
+                      </p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                        Publish this service on your shop page so clients can browse and buy.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={form.showInShop}
+                      onCheckedChange={(v) => setForm((f) => ({ ...f, showInShop: v }))}
+                      className="data-[state=checked]:bg-indigo-600"
+                    />
+                  </div>
+
+                  {/* Tax mapping */}
+                  <div className="p-5 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800/80 rounded-xl space-y-4">
+                    <h3 className="text-xs font-extrabold uppercase tracking-widest text-zinc-600 dark:text-zinc-400 flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4" /> Tax & Compliance Mapping
+                    </h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-zinc-500 font-bold uppercase tracking-wider">{industryLabel}</Label>
+                        <Select value={form.nicCodeId} onValueChange={(v) => setForm((f) => ({ ...f, nicCodeId: v }))}>
+                          <SelectTrigger className="h-auto min-h-10 py-2 bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-left">
+                            <SelectValue placeholder={`Select ${industryLabel}...`} />
+                          </SelectTrigger>
+                          <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
+                            {taxCodes.nic.map((c) => (
+                              <SelectItem key={c.id} value={c.id}><span className="font-bold mr-2">{c.code}</span> — {c.description}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-zinc-500 font-bold uppercase tracking-wider">{taxClassLabel}</Label>
+                        <Select value={form.sacCodeId} onValueChange={(v) => setForm((f) => ({ ...f, sacCodeId: v }))}>
+                          <SelectTrigger className="h-auto min-h-10 py-2 bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-left">
+                            <SelectValue placeholder={`Select ${taxLabel} category...`} />
+                          </SelectTrigger>
+                          <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
+                            {taxCodes.sac.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                <span className="font-bold mr-2">{c.code}</span> — {c.description} ({c.igstRate}% {taxLabel})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="client-desc" className="font-bold text-zinc-700 dark:text-zinc-300 text-xs uppercase tracking-wider">{t('client_desc')}</Label>
-                  <Input 
-                    id="client-desc"
-                    placeholder={t('ph_desc')} 
-                    value={description} 
-                    onChange={e => setDescription(e.target.value)} 
-                    className="h-10 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 transition-all focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500 shadow-sm" 
-                  />
-                </div>
+                <DialogFooter className="px-6 py-4 bg-zinc-50/80 dark:bg-zinc-900/40 border-t border-zinc-100 dark:border-zinc-800 flex justify-end gap-3">
+                  <Button type="button" variant="outline" onClick={() => setOpen(false)} className="text-xs font-bold uppercase tracking-widest px-5">Cancel</Button>
+                  <Button type="submit" disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-widest px-6">
+                    {isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : (editingService ? "Save Changes" : "Add to Catalogue")}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
 
-                <div className="p-5 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800/80 rounded-xl space-y-4">
-                  <h3 className="text-xs font-extrabold uppercase tracking-widest text-zinc-600 dark:text-zinc-400 flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-zinc-400 dark:text-zinc-500" /> {t('tax_mapping')}</h3>
-                  
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="industry-code" className="text-xs text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-wider">
-                        {industryLabel}
-                      </Label>
-                      <Select 
-                        value={nicCodeId} 
-                        onValueChange={(val) => {
-                          if (val === "ADD_CUSTOM") openCustomModal("NIC");
-                          else setNicCodeId(val);
-                        }}
-                      >
-                        <SelectTrigger id="industry-code" className="h-auto min-h-10 py-2 whitespace-normal bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 focus:ring-zinc-400 dark:focus:ring-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm text-left">
-                          <SelectValue placeholder={t('ph_industry')} />
-                        </SelectTrigger>
-                        <SelectContent position="popper" className="dark:bg-zinc-900 dark:border-zinc-800">
-                          <SelectItem value="ADD_CUSTOM" className="font-bold text-indigo-600 dark:text-indigo-400 border-b border-zinc-100 dark:border-zinc-800">
-                             + Add Custom {industryLabel}
-                          </SelectItem>
-                          {taxCodes.nic.map(code => (
-                             <SelectItem key={code.id} value={code.id} className="dark:focus:bg-zinc-800 text-sm">
-                               <span className="font-bold mr-2">{code.code}</span> - {code.description}
-                             </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="tax-code" className="text-xs text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-wider">
-                        {taxClassLabel}
-                      </Label>
-                      <Select 
-                        value={sacCodeId} 
-                        onValueChange={(val) => {
-                          if (val === "ADD_CUSTOM") openCustomModal("SAC");
-                          else setSacCodeId(val);
-                        }}
-                      >
-                        <SelectTrigger id="tax-code" className="h-auto min-h-10 py-2 whitespace-normal bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 focus:ring-zinc-400 dark:focus:ring-zinc-700 text-zinc-900 dark:text-zinc-100 shadow-sm w-full text-left">
-                          <SelectValue placeholder={`Select ${taxLabel} category...`} />
-                        </SelectTrigger>
-                        <SelectContent position="popper" className="dark:bg-zinc-900 dark:border-zinc-800">
-                          <SelectItem value="ADD_CUSTOM" className="font-bold text-indigo-600 dark:text-indigo-400 border-b border-zinc-100 dark:border-zinc-800">
-                             + Add Custom {taxClassLabel}
-                          </SelectItem>
-                          {taxCodes.sac.map(code => (
-                            <SelectItem key={code.id} value={code.id} className="dark:focus:bg-zinc-800 text-sm">
-                              <span className="font-bold mr-2">{code.code}</span> - {code.description} ({code.igstRate}% {taxLabel})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
+          {/* Delete dialog */}
+          <AlertDialog open={!!serviceToDelete} onOpenChange={(o) => !o && setServiceToDelete(null)}>
+            <AlertDialogContent className="dark:bg-zinc-900 dark:border-zinc-800 p-0 overflow-hidden">
+              <div className="p-6">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="font-bold tracking-tight text-lg">Remove Service?</AlertDialogTitle>
+                  <AlertDialogDescription className="text-sm font-medium mt-2 leading-relaxed">
+                    This will permanently remove this service from your catalogue. Past invoices using this service will not be affected.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
               </div>
-              <DialogFooter className="px-6 py-4 bg-zinc-50/80 dark:bg-zinc-900/40 border-t border-zinc-100 dark:border-zinc-800/80 flex justify-end gap-3">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)} className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-bold uppercase tracking-widest px-5">{t('cancel')}</Button>
-                <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 border-none text-xs font-bold uppercase tracking-widest px-6 shadow-sm shadow-indigo-500/20 transition-all active:scale-95" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <span className="flex items-center gap-2">
-                       <Loader2 className="w-4 h-4 animate-spin" /> {t('saving')}</span>
-                  ) : t('save_catalog')}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        {/* MODAL: CREATE CUSTOM COMPLIANCE CODE */}
-        <Dialog open={isCustomModalOpen} onOpenChange={setIsCustomModalOpen}>
-          <DialogContent className="sm:max-w-md dark:bg-zinc-900 dark:border-zinc-800">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                <Tag className="w-5 h-5 text-indigo-500" />
-                Add Custom {customType === 'SAC' ? taxClassLabel : industryLabel}
-              </DialogTitle>
-              <DialogDescription>
-                Register a new {customType === 'SAC' ? 'Tax' : 'Industry'} classification for your business.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSaveCustomCode} className="space-y-5 pt-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase">{customType} Code</Label>
-                <Input 
-                  placeholder={countryCode === 'IN' ? (customType === 'SAC' ? '99xxxx' : 'xxxxx') : 'Alphanumeric...'}
-                  value={customCode}
-                  onChange={e => setCustomCode(e.target.value)}
-                  required
-                  className="font-bold"
-                />
-                <p className="text-[10px] text-zinc-500 font-medium italic">
-                  {countryCode === 'IN' 
-                    ? (customType === 'SAC' ? 'Official SAC must start with 99 and have 6 digits.' : 'NIC-2008 codes are 5 digits.')
-                    : 'International codes should be alphanumeric (3-10 chars).'}
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase">Description</Label>
-                <Input 
-                  placeholder="Official description..."
-                  value={customDesc}
-                  onChange={e => setCustomDesc(e.target.value)}
-                  required
-                />
-              </div>
-              {customType === 'SAC' && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase">{taxLabel} Rate (%)</Label>
-                  <Input 
-                    type="number"
-                    step="0.1"
-                    value={customIgst}
-                    onChange={e => setCustomIgst(e.target.value)}
-                    required
-                  />
-                </div>
-              )}
-              <DialogFooter className="pt-4">
-                <Button type="button" variant="ghost" onClick={() => setIsCustomModalOpen(false)}>Cancel</Button>
-                <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white" disabled={isSavingCustom}>
-                  {isSavingCustom ? "Saving..." : "Verify & Save"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        {/* ALERT DIALOG: DELETE CONFIRMATION */}
-        <AlertDialog open={!!serviceToDelete} onOpenChange={(isOpen) => !isOpen && setServiceToDelete(null)}>
-          <AlertDialogContent className="dark:bg-zinc-900 dark:border-zinc-800 sm:max-w-md p-0 overflow-hidden">
-            <div className="p-6">
-              <AlertDialogHeader>
-                <AlertDialogTitle className="text-zinc-900 dark:text-zinc-50 font-bold tracking-tight text-lg">{t('delete_title')}</AlertDialogTitle>
-                <AlertDialogDescription className="text-zinc-500 dark:text-zinc-400 text-sm font-medium mt-2 leading-relaxed">{t('delete_desc')}</AlertDialogDescription>
-              </AlertDialogHeader>
-            </div>
-            <div className="px-6 py-4 bg-zinc-50/80 dark:bg-zinc-900/40 border-t border-zinc-100 dark:border-zinc-800/80 flex justify-end gap-3">
-              <AlertDialogCancel 
-                disabled={isDeleting} 
-                className="mt-0 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-bold uppercase tracking-widest px-5"
-              >{t('cancel')}</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={(e) => {
-                  e.preventDefault(); 
-                  confirmDelete();
-                }}
-                className="bg-rose-600 hover:bg-rose-700 text-white dark:bg-rose-600 dark:hover:bg-rose-500 text-xs font-bold uppercase tracking-widest px-6 shadow-sm shadow-rose-500/20 transition-all active:scale-95"
-                disabled={isDeleting}
-              >
-                {isDeleting ? t('deleting') : t('yes_remove')}
-              </AlertDialogAction>
-            </div>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        {/* CATALOG GRID */}
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-24 text-zinc-400 dark:text-zinc-500 bg-zinc-50/50 dark:bg-zinc-900/20 border-2 border-dashed border-zinc-100 dark:border-zinc-800 rounded-2xl">
-             <Loader2 className="w-8 h-8 animate-spin mb-4 text-indigo-500/50" />
-             <span className="text-xs font-bold uppercase tracking-widest animate-pulse">{t('loading_catalog')}</span>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {services.map((srv) => (
-              <Card key={srv.id} className="group relative hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/95 overflow-hidden flex flex-col">
-                <button 
-                  onClick={() => setServiceToDelete(srv.id)}
-                  aria-label={`Delete ${srv.name}`}
-                  className="absolute top-4 right-4 p-2 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-300 hover:bg-rose-600 dark:hover:bg-rose-600 hover:text-white z-10 shadow-sm sm:shadow-none hover:shadow-md active:scale-95"
+              <div className="px-6 py-4 bg-zinc-50/80 dark:bg-zinc-900/40 border-t border-zinc-100 dark:border-zinc-800 flex justify-end gap-3">
+                <AlertDialogCancel disabled={isDeleting} className="text-xs font-bold uppercase tracking-widest px-5 mt-0">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={(e) => { e.preventDefault(); confirmDelete(); }}
+                  disabled={isDeleting}
+                  className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold uppercase tracking-widest px-6"
                 >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                  {isDeleting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Removing...</> : "Yes, Remove"}
+                </AlertDialogAction>
+              </div>
+            </AlertDialogContent>
+          </AlertDialog>
 
-                <CardHeader className="pb-4 pt-5 px-5 border-b border-zinc-100 dark:border-zinc-800/80">
-                  <div className="pr-10">
-                    <CardTitle className="text-lg font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight leading-tight">
-                      {srv.name}
-                    </CardTitle>
+          {/* Service cards grid */}
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-24 text-zinc-400 dark:text-zinc-500 bg-zinc-50/50 dark:bg-zinc-900/20 border-2 border-dashed border-zinc-100 dark:border-zinc-800 rounded-2xl">
+              <Loader2 className="w-8 h-8 animate-spin mb-4 text-indigo-500/50" />
+              <span className="text-xs font-bold uppercase tracking-widest animate-pulse">Loading catalog...</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {services.map((srv) => (
+                <Card key={srv.id} className="group relative hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/95 overflow-hidden flex flex-col">
+                  {/* Hero image */}
+                  {srv.imageUrl && (
+                    <div className="w-full h-40 overflow-hidden relative">
+                      <img src={srv.imageUrl} alt={srv.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  <div className="absolute top-3 right-3 flex gap-2 z-10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-300">
+                    <button
+                      onClick={() => openEditDialog(srv)}
+                      className="p-2 bg-white/90 dark:bg-zinc-900/90 text-zinc-700 dark:text-zinc-300 rounded-lg shadow-sm hover:bg-indigo-600 hover:text-white active:scale-95 transition-all"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setServiceToDelete(srv.id)}
+                      className="p-2 bg-white/90 dark:bg-zinc-900/90 text-rose-500 rounded-lg shadow-sm hover:bg-rose-600 hover:text-white active:scale-95 transition-all"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <CardHeader className={`pb-4 pt-5 px-5 border-b border-zinc-100 dark:border-zinc-800/80 ${srv.imageUrl ? "pt-4" : ""}`}>
+                    <div className="flex items-start justify-between gap-3 pr-10">
+                      <CardTitle className="text-lg font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight leading-tight">{srv.name}</CardTitle>
+                      {/* Shop toggle */}
+                      <button
+                        onClick={() => toggleShopStatus(srv)}
+                        title={srv.showInShop ? "Live in shop — click to unpublish" : "Click to publish to shop"}
+                        className={`shrink-0 flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold transition-all ${
+                          srv.showInShop
+                            ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 hover:bg-rose-100 hover:text-rose-700"
+                            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:bg-emerald-100 hover:text-emerald-700"
+                        }`}
+                      >
+                        {srv.showInShop ? <><Eye className="w-2.5 h-2.5" /> LIVE</> : <><EyeOff className="w-2.5 h-2.5" /> PRIVATE</>}
+                      </button>
+                    </div>
                     {srv.description && (
                       <CardDescription className="line-clamp-2 mt-1.5 text-xs text-zinc-500 dark:text-zinc-400 font-medium">
                         {srv.description}
                       </CardDescription>
                     )}
-                  </div>
-                  <div className="mt-4 flex items-center">
-                    <Badge variant="secondary" className="bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-400/20 text-sm font-bold tracking-tight px-3 py-1 shadow-sm">
-                      {fCurrency(srv.defaultPrice)}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="p-0 flex-1 bg-zinc-50/50 dark:bg-zinc-950/30 text-xs">
-                  <div className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
-                    <div className="flex gap-3 items-start p-4 hover:bg-white dark:hover:bg-zinc-900/80 transition-colors">
-                      <div className="w-6 h-6 rounded bg-emerald-100/50 dark:bg-emerald-900/30 flex items-center justify-center shrink-0 border border-emerald-200/50 dark:border-emerald-800/50">
-                        <Tag className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <div className="mt-4">
+                      <Badge variant="secondary" className="bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-400/20 text-sm font-bold tracking-tight px-3 py-1">
+                        {fCurrency(srv.defaultPrice)}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="p-0 flex-1 bg-zinc-50/50 dark:bg-zinc-950/30 text-xs">
+                    <div className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
+                      <div className="flex gap-3 items-start p-4">
+                        <div className="w-6 h-6 rounded bg-emerald-100/50 dark:bg-emerald-900/30 flex items-center justify-center shrink-0 border border-emerald-200/50 dark:border-emerald-800/50">
+                          <Tag className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-widest text-xs mb-0.5">{taxClassLabel}: {srv.sacCode?.code || "Unmapped"}</p>
+                          <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 line-clamp-1 uppercase">{srv.sacCode?.description || `No ${taxLabel} mapped`}</p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-widest text-xs mb-0.5">
-                          {taxClassLabel}: {srv.sacCode?.code || t('unmapped')}
-                        </p>
-                        <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 line-clamp-1 uppercase">
-                          {srv.sacCode?.description || t('no_tax_mapped', { taxLabel })}
-                        </p>
+                      <div className="flex gap-3 items-start p-4">
+                        <div className="w-6 h-6 rounded bg-sky-100/50 dark:bg-sky-900/30 flex items-center justify-center shrink-0 border border-sky-200/50 dark:border-sky-800/50">
+                          <FileText className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-sky-800 dark:text-sky-400 uppercase tracking-widest text-xs mb-0.5">{industryLabel}: {srv.nicCode?.code || "Unmapped"}</p>
+                          <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 line-clamp-1 uppercase">{srv.nicCode?.description || "No industry mapped"}</p>
+                        </div>
                       </div>
                     </div>
-                    
-                    <div className="flex gap-3 items-start p-4 hover:bg-white dark:hover:bg-zinc-900/80 transition-colors">
-                      <div className="w-6 h-6 rounded bg-sky-100/50 dark:bg-sky-900/30 flex items-center justify-center shrink-0 border border-sky-200/50 dark:border-sky-800/50">
-                        <FileText className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-bold text-sky-800 dark:text-sky-400 uppercase tracking-widest text-xs mb-0.5">
-                          {industryLabel}: {srv.nicCode?.code || t('unmapped')}
-                        </p>
-                        <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 line-clamp-1 uppercase">
-                          {srv.nicCode?.description || t('no_industry_mapped')}
-                        </p>
-                      </div>
+                  </CardContent>
+                </Card>
+              ))}
+
+              {services.length === 0 && (
+                <div className="col-span-full p-12 text-center border-2 border-dashed border-zinc-200 dark:border-zinc-800/80 rounded-2xl bg-zinc-50/50 dark:bg-zinc-950/20">
+                  <div className="flex flex-col items-center">
+                    <div className="w-16 h-16 rounded-full bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center mb-4">
+                      <Briefcase className="w-7 h-7 text-zinc-400 dark:text-zinc-500" />
                     </div>
+                    <h3 className="text-base font-extrabold text-zinc-900 dark:text-zinc-100 uppercase tracking-widest">Catalogue is empty</h3>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2 max-w-sm mx-auto font-medium leading-relaxed">
+                      Start by adding your first service. Toggle "Show in Shop" to publish it to your public storefront.
+                    </p>
+                    <Button onClick={openAddDialog} variant="outline" className="mt-6 border-indigo-200 dark:border-indigo-800/50 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 text-xs font-bold uppercase tracking-wider h-10 px-6">
+                      Create First Service
+                    </Button>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-            
-            {services.length === 0 && (
-              <div className="col-span-full p-12 text-center border-2 border-dashed border-zinc-200 dark:border-zinc-800/80 rounded-2xl bg-zinc-50/50 dark:bg-zinc-950/20 relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/50 to-transparent dark:from-indigo-950/20 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="relative z-10 flex flex-col items-center">
-                  <div className="w-16 h-16 rounded-full bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center mb-4 shadow-sm">
-                    <Briefcase className="w-7 h-7 text-zinc-400 dark:text-zinc-500" />
-                  </div>
-                  <h3 className="text-base font-extrabold text-zinc-900 dark:text-zinc-100 uppercase tracking-widest">{t('catalog_empty')}</h3>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2 max-w-sm mx-auto font-medium leading-relaxed">{t('catalog_empty_desc')}</p>
-                  <Button 
-                    onClick={() => setOpen(true)} 
-                    variant="outline" 
-                    className="mt-6 border-indigo-200 dark:border-indigo-800/50 text-indigo-700 dark:text-indigo-400 bg-white dark:bg-zinc-950 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-xs font-bold uppercase tracking-wider shadow-sm transition-all active:scale-95 h-10 px-6"
-                  >{t('create_first')}</Button>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ──────── ORDERS TAB ──────── */}
+      {activeTab === "orders" && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* Filters */}
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-4 justify-between">
+            <div className="relative w-full md:w-80">
+              <Search className="absolute left-3 top-3 w-4 h-4 text-zinc-400" />
+              <Input
+                placeholder="Search buyer or service..."
+                value={orderSearch}
+                onChange={(e) => setOrderSearch(e.target.value)}
+                className="pl-9 h-10 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 font-bold focus-visible:ring-indigo-500"
+              />
+            </div>
+            <div className="flex bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-1 gap-1 h-10">
+              {["ALL", "PAID", "PENDING", "FAILED", "REFUNDED"].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setOrderFilter(s)}
+                  className={`px-3 py-1 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all ${
+                    orderFilter === s
+                      ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-sm"
+                      : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
+
+          {/* Orders table */}
+          {ordersLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-indigo-500/50" />
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-zinc-950/50 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead className="border-b border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/50">
+                    <tr>
+                      {["Date", "Buyer", "Service", "Amount", "Gateway", "Status", "Actions"].map((h) => (
+                        <th key={h} className="px-4 py-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
+                    {filteredOrders.map((o) => {
+                      const sc = statusConfig[o.status] || statusConfig.PENDING;
+                      return (
+                        <tr key={o.id} className="hover:bg-zinc-50/80 dark:hover:bg-zinc-900/50 transition-colors">
+                          <td className="px-4 py-4 text-xs text-zinc-500 whitespace-nowrap">
+                            {format(new Date(o.createdAt), "dd MMM yyyy")}
+                          </td>
+                          <td className="px-4 py-4">
+                            <p className="font-bold text-[13px] text-zinc-900 dark:text-zinc-100">{o.buyerName}</p>
+                            <p className="text-[11px] text-zinc-500">{o.buyerEmail}</p>
+                          </td>
+                          <td className="px-4 py-4 text-[13px] font-semibold text-zinc-700 dark:text-zinc-300 max-w-[180px] truncate">
+                            {o.serviceTemplate.name}
+                          </td>
+                          <td className="px-4 py-4 font-bold text-[13px] text-zinc-800 dark:text-zinc-200">
+                            {fCurrency(o.amount)}
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">{o.gateway || "—"}</span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${sc.className}`}>
+                              {sc.icon} {sc.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-2">
+                              <select
+                                value={o.status}
+                                onChange={(e) => updateOrderStatus(o.id, e.target.value)}
+                                className="text-[10px] font-bold uppercase border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                              >
+                                {["PENDING", "PAID", "FAILED", "REFUNDED"].map((s) => (
+                                  <option key={s} value={s}>{s}</option>
+                                ))}
+                              </select>
+                              <button
+                                onClick={() => setDeletingOrderId(o.id)}
+                                className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {filteredOrders.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="text-center py-16">
+                          <ShoppingCart className="w-10 h-10 text-zinc-300 dark:text-zinc-700 mx-auto mb-3" />
+                          <p className="font-bold text-sm uppercase tracking-widest text-zinc-400">No orders yet</p>
+                          <p className="text-xs text-zinc-400 mt-1">When customers buy from your shop, orders will appear here.</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Delete order dialog */}
+          <AlertDialog open={!!deletingOrderId} onOpenChange={(o) => !o && setDeletingOrderId(null)}>
+            <AlertDialogContent className="dark:bg-zinc-900 dark:border-zinc-800">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Order?</AlertDialogTitle>
+                <AlertDialogDescription>This will permanently delete this order record. This cannot be undone.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => deletingOrderId && deleteOrder(deletingOrderId)}
+                  className="bg-rose-600 hover:bg-rose-700 text-white"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
     </DashboardPageShell>
   );
 }

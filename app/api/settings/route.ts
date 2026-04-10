@@ -126,6 +126,31 @@ export async function POST(request: Request) {
     const rawStripeSecretKey      = formData.get('stripeSecretKey')      as string;
     const defaultGateway          = formData.get('defaultGateway')       as string;
 
+    // ── Shop / E-Store fields ─────────────────────────────────────────────────
+    const rawShopSlug        = getStringField('shopSlug');
+    const shopTagline        = getStringField('shopTagline');
+    const shopEnabledRaw     = formData.get('shopEnabled');
+    const shopEnabled        = shopEnabledRaw === 'true' ? true : shopEnabledRaw === 'false' ? false : undefined;
+    const shopAccentColor    = getStringField('shopAccentColor');
+
+    // Validate + normalize slug
+    let shopSlug: string | null | undefined = undefined;
+    if (rawShopSlug !== null) {
+      const normalized = rawShopSlug.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      if (normalized && normalized.length >= 3) {
+        // Uniqueness check — ignore current workspace
+        const existing = await prisma.businessProfile.findFirst({
+          where: { shopSlug: normalized, NOT: { workspaceId } },
+        });
+        if (existing) {
+          return NextResponse.json({ error: 'That shop URL is already taken. Please choose a different one.' }, { status: 409 });
+        }
+        shopSlug = normalized;
+      } else if (normalized === '') {
+        shopSlug = null; // Clear slug
+      }
+    }
+
     // "DELETE_KEY" sentinel means the user explicitly cleared the secret
     const parsedSmtpPassword = rawSmtpPassword === "DELETE_KEY" ? null : rawSmtpPassword;
     const parsedGroqApiKey   = rawGroqApiKey   === "DELETE_KEY" ? null : rawGroqApiKey;
@@ -203,6 +228,11 @@ export async function POST(request: Request) {
       invoiceTheme, defaultSacCode,
       ...(logoUrl && { logoUrl }),
       ...(signatureUrl !== undefined && { signatureUrl }),
+      // E-Store shop fields
+      ...(shopSlug       !== undefined && { shopSlug }),
+      ...(shopTagline    !== null       && { shopTagline:    shopTagline    || null }),
+      ...(shopEnabled    !== undefined  && { shopEnabled }),
+      ...(shopAccentColor !== null      && { shopAccentColor: shopAccentColor || '#6366f1' }),
     };
 
     /**

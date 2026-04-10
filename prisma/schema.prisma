@@ -158,6 +158,9 @@ model Workspace {
   products                 Product[]
   inventoryMovements       InventoryMovement[]
   purchaseOrders           PurchaseOrder[]
+
+  // E-STORE Relations
+  serviceOrders            ServiceOrder[]
 }
 
 model AppActivityLog {
@@ -282,6 +285,12 @@ model BusinessProfile {
   stripePublishableKey String? // Plain text (pk_live_xxx)
   stripeSecretKey      String? // AES-256-GCM encrypted blob (NEVER stored plain)
   defaultGateway       String? @default("RAZORPAY") // "RAZORPAY" | "STRIPE"
+
+  // PUBLIC SHOP (E-Store)
+  shopSlug        String?  @unique // URL slug e.g. "bababuilds" → /shop/bababuilds
+  shopTagline     String?           // Hero subtitle shown on shop page
+  shopEnabled     Boolean  @default(false) // Master on/off for the public shop
+  shopAccentColor String?  @default("#6366f1") // HSL accent color for shop branding
 
   // EMAIL SERVER (SMTP)
   smtpHost      String?
@@ -516,8 +525,13 @@ model ServiceTemplate {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   name         String
-  description  String?
-  defaultPrice Decimal @default(0)
+  description  String?  // Short description (for invoices/proposals)
+  defaultPrice Decimal  @default(0)
+
+  // E-STORE FIELDS
+  longDescription String? // Rich HTML/markdown from Tiptap — shown on shop page
+  imageUrl        String? // Hero image path e.g. /uploads/service-hero/xxx.webp
+  showInShop      Boolean @default(false) // Publishes service to workspace public shop
 
   // Relational Links to the Global Dictionaries
   nicCodeId String?
@@ -527,8 +541,10 @@ model ServiceTemplate {
   sacCode   SACCode? @relation(fields: [sacCodeId], references: [id])
 
   proposalItems ProposalItem[]
+  serviceOrders ServiceOrder[]
 
   @@index([workspaceId])
+  @@index([workspaceId, showInShop])
 }
 
 model Proposal {
@@ -859,3 +875,47 @@ model PurchaseOrderItem {
   expectedTotal Decimal
 }
 
+// ==========================================
+// 9. E-STORE / SHOP
+// ==========================================
+
+model ServiceOrder {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  serviceTemplateId String
+  serviceTemplate   ServiceTemplate @relation(fields: [serviceTemplateId], references: [id], onDelete: Restrict)
+
+  // Buyer info (unauthenticated customer)
+  buyerName   String
+  buyerEmail  String
+  buyerPhone  String?
+  buyerNote   String? // Optional message / requirements from buyer
+
+  // Pricing snapshot (frozen at time of order)
+  amount      Decimal
+  currency    String  @default("INR")
+
+  // Payment gateway references
+  gateway             String?  // "RAZORPAY" | "STRIPE"
+  razorpayOrderId     String?  @unique
+  razorpayPaymentId   String?
+  razorpaySignature   String?
+  stripePaymentIntentId String? @unique
+  stripeSessionId     String?
+
+  // Status lifecycle
+  status      String  @default("PENDING") // PENDING | PAID | FAILED | REFUNDED
+
+  // Linked ERP invoice (auto-generated on payment success)
+  linkedInvoiceId String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([razorpayOrderId])
+  @@index([stripePaymentIntentId])
+}

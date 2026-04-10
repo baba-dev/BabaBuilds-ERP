@@ -7,6 +7,7 @@ import {
   Mailbox, Bot, Trash2, CreditCard, Lock, Globe, AlertTriangle,
   Loader2, Info, Users, Mail, Clock, UserPlus, ArrowRight, Sparkles
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -67,6 +68,8 @@ export default function SettingsWizard() {
     stripePublishableKey: "", stripeSecretKey: "",
     // Gateway preference
     defaultGateway: "RAZORPAY",
+    // Shop / E-Store
+    shopSlug: "", shopTagline: "", shopEnabled: false, shopAccentColor: "#6366f1",
   });
 
   const [planTier, setPlanTier] = useState<string>("FREE");
@@ -106,13 +109,16 @@ export default function SettingsWizard() {
             existingLogoUrl: data.logoUrl || "",
             existingSignatureUrl: data.signatureUrl || "",
             defaultSacCode: data.defaultSacCode || "998313",
-            // Razorpay: server returns "SET" if secret is configured
             razorpayKeyId:     data.razorpayKeyId     || "",
             razorpayKeySecret: data.razorpayKeySecret || "",
-            // Stripe: server returns "SET" if secret is configured
             stripePublishableKey: data.stripePublishableKey || "",
             stripeSecretKey:      data.stripeSecretKey      || "",
             defaultGateway: gateway,
+            // Shop
+            shopSlug:        data.shopSlug        || "",
+            shopTagline:     data.shopTagline      || "",
+            shopEnabled:     data.shopEnabled      ?? false,
+            shopAccentColor: data.shopAccentColor  || "#6366f1",
           });
         }
       })
@@ -210,6 +216,11 @@ export default function SettingsWizard() {
     
     if (logoFile) body.append('logo', logoFile);
     if (signatureFile) body.append('signature', signatureFile);
+    // Shop / E-Store fields
+    body.append('shopSlug',        formData.shopSlug || '');
+    body.append('shopTagline',     formData.shopTagline || '');
+    body.append('shopEnabled',     String(!!formData.shopEnabled));
+    body.append('shopAccentColor', formData.shopAccentColor || '#6366f1');
 
     try {
       const res = await fetch('/api/settings', { method: 'POST', body });
@@ -724,7 +735,107 @@ export default function SettingsWizard() {
             </CardContent>
           </Card>
 
-          {/* ── PAYMENT GATEWAY INTEGRATION ──────────────────────────────────────── */}
+          {/* ── SHOP / E-STORE ── */}
+          <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+            <CardHeader className="bg-zinc-50/50 dark:bg-zinc-950/50 border-b dark:border-zinc-800">
+              <CardTitle className={cn(typography.sectionHeader, "text-lg flex items-center gap-2")}>
+                <Sparkles className="w-5 h-5 text-indigo-600" /> Public Shop (E-Store)
+              </CardTitle>
+              <CardDescription className={typography.bodyCopy}>
+                Give your clients a beautiful public storefront to browse and purchase your services.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-6">
+
+              {/* Master switch */}
+              <div className="flex items-center justify-between p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-800/30 rounded-xl">
+                <div>
+                  <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200">Enable Public Shop</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    Your shop will be publicly accessible at your chosen URL.
+                  </p>
+                </div>
+                <Switch
+                  checked={!!formData.shopEnabled}
+                  onCheckedChange={(v) => setFormData({ ...formData, shopEnabled: v })}
+                  className="data-[state=checked]:bg-indigo-600"
+                />
+              </div>
+
+              {/* Slug */}
+              <div className="space-y-2">
+                <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">Shop URL Slug</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-zinc-500 dark:text-zinc-400 font-mono whitespace-nowrap">/shop/</span>
+                  <Input
+                    value={formData.shopSlug}
+                    onChange={(e) => {
+                      const raw = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+                      setFormData({ ...formData, shopSlug: raw });
+                    }}
+                    placeholder={formData.companyName ? formData.companyName.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") : "your-shop"}
+                    className="h-10 dark:bg-zinc-950 dark:border-zinc-800 font-mono font-bold"
+                  />
+                </div>
+                {formData.shopSlug && (
+                  <a
+                    href={`/shop/${formData.shopSlug}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium mt-1"
+                  >
+                    <ArrowRight className="w-3 h-3" /> Preview: /shop/{formData.shopSlug}
+                  </a>
+                )}
+                <p className="text-xs text-zinc-400">Use lowercase letters, numbers, and hyphens only. Min 3 characters.</p>
+              </div>
+
+              {/* Tagline */}
+              <div className="space-y-2">
+                <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">Shop Tagline</Label>
+                <Input
+                  value={formData.shopTagline}
+                  onChange={(e) => setFormData({ ...formData, shopTagline: e.target.value })}
+                  placeholder="Premium IT solutions for modern businesses..."
+                  className="h-10 dark:bg-zinc-950 dark:border-zinc-800"
+                />
+                <p className="text-xs text-zinc-400">Displayed as a subtitle below your company name on the shop page.</p>
+              </div>
+
+              {/* Accent color */}
+              <div className="space-y-2">
+                <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">Shop Accent Color</Label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={formData.shopAccentColor || "#6366f1"}
+                    onChange={(e) => setFormData({ ...formData, shopAccentColor: e.target.value })}
+                    className="w-12 h-10 rounded-lg border border-zinc-200 dark:border-zinc-700 cursor-pointer p-1 bg-white dark:bg-zinc-900"
+                  />
+                  <div className="flex gap-2">
+                    {["#6366f1","#10b981","#f59e0b","#ec4899","#3b82f6","#8b5cf6","#ef4444","#06b6d4"].map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, shopAccentColor: c })}
+                        className="w-7 h-7 rounded-lg border-2 transition-all active:scale-95 hover:scale-110"
+                        style={{
+                          backgroundColor: c,
+                          borderColor: formData.shopAccentColor === c ? "#000" : "transparent",
+                          boxShadow: formData.shopAccentColor === c ? `0 0 0 2px white, 0 0 0 4px ${c}` : "none",
+                        }}
+                        title={c}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <p className="text-xs text-zinc-400">Used for buttons, highlights, and branding on your shop page.</p>
+              </div>
+
+            </CardContent>
+          </Card>
+
+          {/* ── PAYMENT GATEWAY INTEGRATION ── */}
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 relative overflow-hidden">
             <CardHeader className="bg-zinc-50/50 dark:bg-zinc-950/50 border-b dark:border-zinc-800">
               <CardTitle className={cn(typography.sectionHeader, "text-lg flex items-center gap-2")}>
