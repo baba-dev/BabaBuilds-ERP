@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { 
   ShieldAlert, Users, Activity, CreditCard,
   ArrowUpCircle, Ban, RefreshCcw, Trash2,
   Server, HardDrive, Cpu, Clock, DollarSign, FileText, Database, ShieldCheck, Download,
-  Wrench, Zap, FileWarning, RotateCcw
+  Wrench, Zap, FileWarning, RotateCcw, ScrollText, ChevronLeft, ChevronRight,
+  CheckCircle2, XCircle, AlertTriangle, Info, Search, Filter, Shield, Hash
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ export default function SuperAdminPortal() {
   const t = useTranslations('Admin');
   const { fCurrency } = useFormat();
   
-  const [tab, setTab] = useState<"OVERVIEW" | "ACCOUNTS" | "DIAGNOSTICS" | "SECURITY" | "MAINTENANCE" | "BACKUP">("OVERVIEW");
+  const [tab, setTab] = useState<"OVERVIEW" | "ACCOUNTS" | "DIAGNOSTICS" | "SECURITY" | "MAINTENANCE" | "BACKUP" | "LOGS">("OVERVIEW");
   const [backups, setBackups] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [diagnostics, setDiagnostics] = useState<any>(null);
@@ -35,6 +36,67 @@ export default function SuperAdminPortal() {
   const [userToDelete, setUserToDelete] = useState<{ id: string; name: string; email: string } | null>(null);
   const userTableState = useUrlTableState("admin_users");
   const backupTableState = useUrlTableState("admin_backups");
+
+  // --- LOGS TAB STATE ---
+  const [logType, setLogType] = useState<"activity" | "tax_audit">("activity");
+  const [logs, setLogs] = useState<any[]>([]);
+  const [logsTotal, setLogsTotal] = useState(0);
+  const [logsPage, setLogsPage] = useState(1);
+  const [logsPages, setLogsPages] = useState(1);
+  const [logsSearch, setLogsSearch] = useState("");
+  const [logsStatus, setLogsStatus] = useState("ALL");
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logIntegrity, setLogIntegrity] = useState<{ checked: number; valid: boolean; violations: any[] } | null>(null);
+  const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
+  const [purgingLogs, setPurgingLogs] = useState(false);
+
+  const fetchLogs = useCallback(async (page = 1, search = logsSearch, status = logsStatus, type = logType) => {
+    setLogsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        type,
+        page: String(page),
+        search,
+        status,
+      });
+      const res = await fetch(`/api/admin/logs?${params}`);
+      if (!res.ok) throw new Error("Failed to fetch logs");
+      const data = await res.json();
+      setLogs(data.logs ?? []);
+      setLogsTotal(data.total ?? 0);
+      setLogsPage(data.page ?? 1);
+      setLogsPages(data.pages ?? 1);
+      if (data.integrity) setLogIntegrity(data.integrity);
+      else setLogIntegrity(null);
+    } catch (err) {
+      toast.error("Failed to load logs.");
+    } finally {
+      setLogsLoading(false);
+    }
+  }, [logsSearch, logsStatus, logType]);
+
+  const handlePurgeLogs = async () => {
+    if (!confirm(`Permanently purge ALL ${logType === 'tax_audit' ? 'tax audit' : 'activity'} logs? This cannot be undone.`)) return;
+    setPurgingLogs(true);
+    try {
+      const res = await fetch(`/api/admin/logs?type=${logType}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Purge failed');
+      toast.success(`Purged ${data.purged} log entries.`);
+      fetchLogs(1, logsSearch, logsStatus, logType);
+    } catch (err: any) {
+      toast.error(err.message || 'Purge failed');
+    } finally {
+      setPurgingLogs(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === 'LOGS') {
+      fetchLogs(1, logsSearch, logsStatus, logType);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, logType]);
 
   useEffect(() => {
     fetchAdminData();
@@ -270,16 +332,17 @@ export default function SuperAdminPortal() {
 
       {/* GOD MODE NAVIGATION */}
       <div className="flex space-x-2 border-b border-zinc-200 dark:border-zinc-800 overflow-x-auto pb-1 scrollbar-hide">
-        {["OVERVIEW", "ACCOUNTS", "DIAGNOSTICS", "SECURITY", "MAINTENANCE", "BACKUP"].map((tName) => (
+        {["OVERVIEW", "ACCOUNTS", "DIAGNOSTICS", "SECURITY", "MAINTENANCE", "BACKUP", "LOGS"].map((tName) => (
           <button
             key={tName}
             onClick={() => setTab(tName as any)}
-            className={`px-4 py-2 text-sm font-bold uppercase tracking-widest rounded-t-lg transition-all ${
+            className={`px-4 py-2 text-sm font-bold uppercase tracking-widest rounded-t-lg transition-all flex items-center gap-1.5 ${
               tab === tName 
               ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-md" 
               : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100"
             }`}
           >
+            {tName === 'LOGS' && <ScrollText className="w-3.5 h-3.5" />}
             {tName}
           </button>
         ))}
@@ -771,6 +834,390 @@ export default function SuperAdminPortal() {
                   </CardContent>
                </Card>
             </div>
+          </div>
+        )}
+
+        {tab === "LOGS" && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+            {/* LOG TYPE SWITCHER + CONTROLS */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1 gap-1">
+                  <button
+                    onClick={() => { setLogType('activity'); setLogsPage(1); setLogsSearch(''); setLogsStatus('ALL'); }}
+                    className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-1.5 ${
+                      logType === 'activity'
+                        ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm'
+                        : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
+                    }`}
+                  >
+                    <Activity className="w-3 h-3" /> Activity Log
+                  </button>
+                  <button
+                    onClick={() => { setLogType('tax_audit'); setLogsPage(1); setLogsSearch(''); setLogsStatus('ALL'); }}
+                    className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-1.5 ${
+                      logType === 'tax_audit'
+                        ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm'
+                        : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
+                    }`}
+                  >
+                    <Shield className="w-3 h-3" /> Tax Audit Chain
+                  </button>
+                </div>
+
+                {/* Integrity badge for tax audit */}
+                {logType === 'tax_audit' && logIntegrity && (
+                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border ${
+                    logIntegrity.valid
+                      ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30'
+                      : 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/30'
+                  }`}>
+                    {logIntegrity.valid
+                      ? <><CheckCircle2 className="w-3.5 h-3.5" /> Chain Intact ({logIntegrity.checked} entries)</>  
+                      : <><XCircle className="w-3.5 h-3.5" /> {logIntegrity.violations.length} Violations Detected!</>}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => fetchLogs(logsPage, logsSearch, logsStatus, logType)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                >
+                  <RefreshCcw className="w-3 h-3" /> Refresh
+                </button>
+                <button
+                  onClick={handlePurgeLogs}
+                  disabled={purgingLogs}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 dark:border-rose-500/30 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Trash2 className="w-3 h-3" /> {purgingLogs ? 'Purging...' : 'Purge Logs'}
+                </button>
+              </div>
+            </div>
+
+            {/* SEARCH + FILTER BAR */}
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                <input
+                  type="text"
+                  placeholder={logType === 'activity' ? 'Search action, email, entity, IP...' : 'Search action, email, scope...'}
+                  value={logsSearch}
+                  onChange={(e) => setLogsSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && fetchLogs(1, logsSearch, logsStatus, logType)}
+                  className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                />
+              </div>
+              {logType === 'activity' && (
+                <div className="relative">
+                  <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                  <select
+                    value={logsStatus}
+                    onChange={(e) => { setLogsStatus(e.target.value); fetchLogs(1, logsSearch, e.target.value, logType); }}
+                    className="pl-9 pr-4 py-2 text-sm rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 appearance-none cursor-pointer"
+                  >
+                    <option value="ALL">All Statuses</option>
+                    <option value="SUCCESS">SUCCESS</option>
+                    <option value="FAILURE">FAILURE</option>
+                    <option value="WARNING">WARNING</option>
+                    <option value="INFO">INFO</option>
+                  </select>
+                </div>
+              )}
+              <button
+                onClick={() => fetchLogs(1, logsSearch, logsStatus, logType)}
+                className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-colors"
+              >
+                Search
+              </button>
+            </div>
+
+            {/* STATS ROW */}
+            <div className="flex items-center gap-4 text-xs text-zinc-500 dark:text-zinc-400">
+              <span className="font-bold text-zinc-900 dark:text-zinc-100">{logsTotal.toLocaleString()}</span> total entries
+              <span>·</span>
+              <span>Page <span className="font-bold text-zinc-900 dark:text-zinc-100">{logsPage}</span> of <span className="font-bold text-zinc-900 dark:text-zinc-100">{logsPages}</span></span>
+              {logsLoading && <span className="animate-pulse text-indigo-500">Loading...</span>}
+            </div>
+
+            {/* ACTIVITY LOG TABLE */}
+            {logType === 'activity' && (
+              <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
+                        <th className="text-left px-4 py-3 font-bold text-xs uppercase tracking-widest text-zinc-500 dark:text-zinc-400 w-32">Status</th>
+                        <th className="text-left px-4 py-3 font-bold text-xs uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Action</th>
+                        <th className="text-left px-4 py-3 font-bold text-xs uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Actor</th>
+                        <th className="text-left px-4 py-3 font-bold text-xs uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Entity</th>
+                        <th className="text-left px-4 py-3 font-bold text-xs uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Workspace</th>
+                        <th className="text-left px-4 py-3 font-bold text-xs uppercase tracking-widest text-zinc-500 dark:text-zinc-400">IP</th>
+                        <th className="text-left px-4 py-3 font-bold text-xs uppercase tracking-widest text-zinc-500 dark:text-zinc-400 w-40">Timestamp</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                      {logsLoading && logs.length === 0 ? (
+                        Array.from({ length: 8 }).map((_, i) => (
+                          <tr key={i} className="animate-pulse">
+                            {Array.from({ length: 7 }).map((__, j) => (
+                              <td key={j} className="px-4 py-3"><div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded w-full" /></td>
+                            ))}
+                          </tr>
+                        ))
+                      ) : logs.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-4 py-12 text-center text-zinc-400">
+                            <ScrollText className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                            <p className="font-medium">No log entries found</p>
+                            <p className="text-xs mt-1">Activity will appear here as users interact with the platform.</p>
+                          </td>
+                        </tr>
+                      ) : logs.map((log: any) => (
+                        <>
+                          <tr
+                            key={log.id}
+                            onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
+                            className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors"
+                          >
+                            <td className="px-4 py-3">
+                              {log.status === 'SUCCESS' && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                                  <CheckCircle2 className="w-3 h-3" />SUCCESS
+                                </span>
+                              )}
+                              {log.status === 'FAILURE' && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400">
+                                  <XCircle className="w-3 h-3" />FAILURE
+                                </span>
+                              )}
+                              {log.status === 'WARNING' && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400">
+                                  <AlertTriangle className="w-3 h-3" />WARNING
+                                </span>
+                              )}
+                              {log.status === 'INFO' && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400">
+                                  <Info className="w-3 h-3" />INFO
+                                </span>
+                              )}
+                              {!['SUCCESS','FAILURE','WARNING','INFO'].includes(log.status) && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
+                                  {log.status}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <code className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">{log.action}</code>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="text-xs">
+                                {log.actorEmail ? (
+                                  <span className="font-medium text-zinc-700 dark:text-zinc-300">{log.actorEmail}</span>
+                                ) : (
+                                  <span className="text-zinc-400 italic">system</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              {log.entityType ? (
+                                <div className="text-xs">
+                                  <span className="font-medium text-zinc-600 dark:text-zinc-400">{log.entityType}</span>
+                                  {log.entityId && <span className="text-zinc-400 ml-1 font-mono">#{log.entityId.slice(-6)}</span>}
+                                </div>
+                              ) : <span className="text-zinc-300 dark:text-zinc-600">—</span>}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-xs text-zinc-500 dark:text-zinc-400 truncate max-w-[120px] block">
+                                {log.workspace?.name ?? (log.workspaceId ? log.workspaceId.slice(-8) : <span className="text-zinc-300 dark:text-zinc-600">—</span>)}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <code className="text-xs font-mono text-zinc-500 dark:text-zinc-400">{log.ipAddress ?? '—'}</code>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-xs text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+                                {new Date(log.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </td>
+                          </tr>
+                          {expandedLogId === log.id && (
+                            <tr key={`${log.id}-expanded`} className="bg-zinc-50 dark:bg-zinc-950">
+                              <td colSpan={7} className="px-6 py-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                                  <div>
+                                    <p className="font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-1">Correlation ID</p>
+                                    <code className="font-mono text-zinc-700 dark:text-zinc-300 break-all">{log.correlationId ?? '—'}</code>
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-1">User Agent</p>
+                                    <span className="text-zinc-600 dark:text-zinc-400 break-all">{log.userAgent ?? '—'}</span>
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-1">Metadata</p>
+                                    <pre className="text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-900 rounded p-2 overflow-x-auto text-xs max-h-32">
+                                      {log.metadata ? JSON.stringify(log.metadata, null, 2) : '—'}
+                                    </pre>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* TAX AUDIT CHAIN TABLE */}
+            {logType === 'tax_audit' && (
+              <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
+                        <th className="text-left px-4 py-3 font-bold text-xs uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Action</th>
+                        <th className="text-left px-4 py-3 font-bold text-xs uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Scope</th>
+                        <th className="text-left px-4 py-3 font-bold text-xs uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Rate</th>
+                        <th className="text-left px-4 py-3 font-bold text-xs uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Actor</th>
+                        <th className="text-left px-4 py-3 font-bold text-xs uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Source</th>
+                        <th className="text-left px-4 py-3 font-bold text-xs uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Hash</th>
+                        <th className="text-left px-4 py-3 font-bold text-xs uppercase tracking-widest text-zinc-500 dark:text-zinc-400 w-40">Timestamp</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                      {logsLoading && logs.length === 0 ? (
+                        Array.from({ length: 6 }).map((_, i) => (
+                          <tr key={i} className="animate-pulse">
+                            {Array.from({ length: 7 }).map((__, j) => (
+                              <td key={j} className="px-4 py-3"><div className="h-4 bg-zinc-100 dark:bg-zinc-800 rounded w-full" /></td>
+                            ))}
+                          </tr>
+                        ))
+                      ) : logs.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-4 py-12 text-center text-zinc-400">
+                            <Shield className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                            <p className="font-medium">No tax audit entries</p>
+                            <p className="text-xs mt-1">Tax rate overrides will appear here with a cryptographic chain.</p>
+                          </td>
+                        </tr>
+                      ) : logs.map((log: any) => {
+                        const isViolation = logIntegrity?.violations?.some((v: any) => v.id === log.id);
+                        return (
+                          <>
+                            <tr
+                              key={log.id}
+                              onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
+                              className={`hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors ${
+                                isViolation ? 'bg-rose-50/50 dark:bg-rose-950/20 border-l-2 border-l-rose-500' : ''
+                              }`}
+                            >
+                              <td className="px-4 py-3">
+                                <code className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400">{log.action}</code>
+                                {isViolation && <span className="ml-2 text-rose-500"><AlertTriangle className="w-3 h-3 inline" /></span>}
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="text-xs">
+                                  <span className="font-bold text-zinc-700 dark:text-zinc-300">{log.scopeType}</span>
+                                  {log.scopeRef && <span className="text-zinc-400 ml-1">/ {log.scopeRef}</span>}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                                  {log.rate != null ? `${log.rate}%` : '—'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-xs text-zinc-600 dark:text-zinc-400">{log.actorEmail ?? <span className="text-zinc-300 dark:text-zinc-600 italic">system</span>}</span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 font-medium">{log.decisionSource}</span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-1">
+                                  <Hash className="w-3 h-3 text-zinc-400" />
+                                  <code className="text-xs font-mono text-zinc-400 dark:text-zinc-500">{log.entryHash ? log.entryHash.slice(0, 10) + '...' : '—'}</code>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-xs text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+                                  {new Date(log.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </td>
+                            </tr>
+                            {expandedLogId === log.id && (
+                              <tr key={`${log.id}-expanded`} className="bg-zinc-50 dark:bg-zinc-950">
+                                <td colSpan={7} className="px-6 py-4">
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                                    <div>
+                                      <p className="font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-1">Effective Period</p>
+                                      <span className="text-zinc-700 dark:text-zinc-300">
+                                        {log.effectiveFrom ? new Date(log.effectiveFrom).toLocaleDateString() : '—'}
+                                        {log.effectiveTo ? ` → ${new Date(log.effectiveTo).toLocaleDateString()}` : ' → ongoing'}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <p className="font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-1">Reason</p>
+                                      <span className="text-zinc-600 dark:text-zinc-400">{log.reason ?? '—'}</span>
+                                    </div>
+                                    <div>
+                                      <p className="font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-1">Full Entry Hash</p>
+                                      <code className="font-mono text-zinc-500 dark:text-zinc-400 break-all text-xs">{log.entryHash ?? '—'}</code>
+                                    </div>
+                                    <div>
+                                      <p className="font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest mb-1">Prev Hash</p>
+                                      <code className="font-mono text-zinc-500 dark:text-zinc-400 break-all text-xs">{log.prevHash ?? 'genesis'}</code>
+                                    </div>
+                                  </div>
+                                  {isViolation && (
+                                    <div className="mt-3 p-3 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-500/30 text-xs text-rose-700 dark:text-rose-400 flex items-center gap-2">
+                                      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                                      <span><strong>Chain Violation:</strong> This entry has a hash mismatch — it may have been tampered with or the chain was disrupted.</span>
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            )}
+                          </>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* PAGINATION */}
+            {logsPages > 1 && (
+              <div className="flex items-center justify-between pt-2">
+                <p className="text-xs text-zinc-500">
+                  Showing {((logsPage - 1) * 50) + 1}–{Math.min(logsPage * 50, logsTotal)} of {logsTotal.toLocaleString()}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { const p = logsPage - 1; setLogsPage(p); fetchLogs(p, logsSearch, logsStatus, logType); }}
+                    disabled={logsPage <= 1}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" /> Prev
+                  </button>
+                  <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 px-2">{logsPage} / {logsPages}</span>
+                  <button
+                    onClick={() => { const p = logsPage + 1; setLogsPage(p); fetchLogs(p, logsSearch, logsStatus, logType); }}
+                    disabled={logsPage >= logsPages}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Next <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
       </div>
