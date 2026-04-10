@@ -160,16 +160,33 @@ export const authOptions: NextAuthOptions = {
       if (!user?.id || !user?.email) return false;
 
       const inviteEmail = user.email.toLowerCase();
+      const pendingInvites = await prisma.workspaceInvite.findMany({
+        where: {
+          email: inviteEmail,
+          expiresAt: { gt: new Date() },
+        },
+        select: { id: true, workspaceId: true, role: true },
+      });
+
+      const memberships = await prisma.workspaceUser.findMany({
+        where: { userId: user.id },
+        select: { role: true, workspaceId: true },
+      });
+
+      const hasHighRiskRole = [...memberships, ...pendingInvites].some((membership) =>
+        HIGH_RISK_ROLES.has(membership.role)
+      );
+      if (hasHighRiskRole && !isPhishingResistantSignIn(account)) {
+        const provider = account?.provider ?? "unknown";
+        recordAuthFailure({
+          reason: "HIGH_RISK_ROLE_REQUIRES_PHISHING_RESISTANT_MFA",
+          code: "MFA_POLICY_BLOCK",
+          provider,
+        });
+        return false;
+      }
 
       await prisma.$transaction(async (tx) => {
-        const pendingInvites = await tx.workspaceInvite.findMany({
-          where: {
-            email: inviteEmail,
-            expiresAt: { gt: new Date() },
-          },
-          select: { id: true, workspaceId: true, role: true },
-        });
-
         if (pendingInvites.length === 0) return;
 
         for (const invite of pendingInvites) {
@@ -196,24 +213,8 @@ export const authOptions: NextAuthOptions = {
         });
       });
 
-      const memberships = await prisma.workspaceUser.findMany({
-        where: { userId: user.id },
-        select: { role: true, workspaceId: true },
-      });
-
       if (memberships.length === 0) {
         return true;
-      }
-
-      const hasHighRiskRole = memberships.some((membership) => HIGH_RISK_ROLES.has(membership.role));
-      if (hasHighRiskRole && !isPhishingResistantSignIn(account)) {
-        const provider = account?.provider ?? "unknown";
-        recordAuthFailure({
-          reason: "HIGH_RISK_ROLE_REQUIRES_PHISHING_RESISTANT_MFA",
-          code: "MFA_POLICY_BLOCK",
-          provider,
-        });
-        return false;
       }
 
       return true;
