@@ -17,7 +17,7 @@ npx prisma migrate deploy
 
 # 3. Build the Next.js App
 echo "3. Building the production bundle..."
-npm run build -- --webpack
+npm run build
 
 echo "3.1 Validating service worker artifact..."
 if [ ! -f "public/sw.js" ]; then

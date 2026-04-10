@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
 import { GEOGRAPHY_DB } from "@/lib/geography";
@@ -89,27 +91,7 @@ export default function ProfileSettingsPage() {
     }
   };
 
-  const CustomToggle = ({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) => (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={onChange}
-      aria-label={label}
-      title={label}
-      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2 ${
-        checked ? "bg-indigo-600" : "bg-zinc-200 dark:bg-zinc-800"
-      }`}
-    >
-      <span
-        className={`pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${
-          checked ? "translate-x-5" : "translate-x-0"
-        }`}
-      />
-    </button>
-  );
-
-  const selectClass = "flex h-10 w-full items-center justify-between rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50";
+  const selectTriggerClass = "h-10 w-full rounded-md border-zinc-200 bg-white text-zinc-900 focus-visible:ring-indigo-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100";
 
   if (!mounted || isLoading) {
     return (
@@ -152,61 +134,112 @@ export default function ProfileSettingsPage() {
             <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label className="dark:text-zinc-300">UI Theme</Label>
-                  <select value={formData.theme} onChange={(e) => { const newTheme = e.target.value; setFormData({ ...formData, theme: newTheme }); setTheme(newTheme); }} className={selectClass}>
-                    <option value="system">System Default</option>
-                    <option value="light">Light Mode</option>
-                    <option value="dark">Dark Mode</option>
-                  </select>
+                  <Label className="text-sm font-medium dark:text-zinc-300">UI Theme</Label>
+                  <Select
+                    value={formData.theme}
+                    onValueChange={(newTheme) => {
+                      setFormData({ ...formData, theme: newTheme });
+                      setTheme(newTheme);
+                    }}
+                  >
+                    <SelectTrigger className={selectTriggerClass}>
+                      <SelectValue placeholder="Select theme" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="system">System Default</SelectItem>
+                      <SelectItem value="light">Light Mode</SelectItem>
+                      <SelectItem value="dark">Dark Mode</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label className="dark:text-zinc-300">Default Landing Page</Label>
+                  <Label className="text-sm font-medium dark:text-zinc-300">Default Landing Page</Label>
                   <div className="relative">
-                    <LayoutDashboard className="absolute left-3 top-3 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-                    <select value={formData.defaultLandingPage} onChange={(e) => setFormData({ ...formData, defaultLandingPage: e.target.value })} className={`${selectClass} pl-9`}>
-                      <option value="/dashboard">Dashboard</option>
-                      <option value="/invoice">New Invoice</option>
-                      <option value="/clients">Client CRM</option>
-                    </select>
+                    <LayoutDashboard className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
+                    <Select
+                      value={formData.defaultLandingPage}
+                      onValueChange={(value) => setFormData({ ...formData, defaultLandingPage: value })}
+                    >
+                      <SelectTrigger className={`${selectTriggerClass} pl-9`}>
+                        <SelectValue placeholder="Select landing page" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="/dashboard">Dashboard</SelectItem>
+                        <SelectItem value="/invoice">New Invoice</SelectItem>
+                        <SelectItem value="/clients">Client CRM</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="dark:text-zinc-300">Time Zone</Label>
+                  <Label className="text-sm font-medium dark:text-zinc-300">Time Zone</Label>
                   <div className="relative">
-                    <Clock className="absolute left-3 top-3 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-                    <select value={formData.timeZone} onChange={(e) => setFormData({ ...formData, timeZone: e.target.value })} className={`${selectClass} pl-9`}>
-                      <option value="Asia/Kolkata">India Standard Time (IST)</option>
-                      <option value="Asia/Dubai">Gulf Standard Time (GST)</option>
-                      <option value="Europe/London">Greenwich Mean Time (GMT)</option>
-                      <option value="America/New_York">Eastern Time (US & Canada)</option>
-                    </select>
+                    <Clock className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" />
+                    <Select
+                      value={formData.timeZone}
+                      onValueChange={(value) => setFormData({ ...formData, timeZone: value })}
+                    >
+                      <SelectTrigger className={`${selectTriggerClass} pl-9`}>
+                        <SelectValue placeholder="Select time zone" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Asia/Kolkata">India Standard Time (IST)</SelectItem>
+                        <SelectItem value="Asia/Dubai">Gulf Standard Time (GST)</SelectItem>
+                        <SelectItem value="Europe/London">Greenwich Mean Time (GMT)</SelectItem>
+                        <SelectItem value="America/New_York">Eastern Time (US & Canada)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="dark:text-zinc-300">Date Format</Label>
-                  <select value={formData.dateFormat} onChange={(e) => setFormData({ ...formData, dateFormat: e.target.value })} className={selectClass}>
-                    <option value="DD/MM/YYYY">DD/MM/YYYY (31/12/2026)</option>
-                    <option value="MM/DD/YYYY">MM/DD/YYYY (12/31/2026)</option>
-                    <option value="YYYY-MM-DD">YYYY-MM-DD (2026-12-31)</option>
-                  </select>
+                  <Label className="text-sm font-medium dark:text-zinc-300">Date Format</Label>
+                  <Select
+                    value={formData.dateFormat}
+                    onValueChange={(value) => setFormData({ ...formData, dateFormat: value })}
+                  >
+                    <SelectTrigger className={selectTriggerClass}>
+                      <SelectValue placeholder="Select date format" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="DD/MM/YYYY">DD/MM/YYYY (31/12/2026)</SelectItem>
+                      <SelectItem value="MM/DD/YYYY">MM/DD/YYYY (12/31/2026)</SelectItem>
+                      <SelectItem value="YYYY-MM-DD">YYYY-MM-DD (2026-12-31)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label className="dark:text-zinc-300">Currency Display</Label>
-                  <select value={formData.currencyFormat} onChange={(e) => setFormData({ ...formData, currencyFormat: e.target.value })} className={selectClass}>
-                    {uniqueCurrencies.map(c => (
-                      <option key={c} value={c}>{c} ({getCurrencySymbol(c)})</option>
-                    ))}
-                  </select>
+                  <Label className="text-sm font-medium dark:text-zinc-300">Currency Display</Label>
+                  <Select
+                    value={formData.currencyFormat}
+                    onValueChange={(value) => setFormData({ ...formData, currencyFormat: value })}
+                  >
+                    <SelectTrigger className={selectTriggerClass}>
+                      <SelectValue placeholder="Select currency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {uniqueCurrencies.map(c => (
+                        <SelectItem key={c} value={c}>{c} ({getCurrencySymbol(c)})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label className="dark:text-zinc-300">Number Locale (Commas)</Label>
-                  <select value={formData.locale} onChange={(e) => setFormData({ ...formData, locale: e.target.value })} className={selectClass}>
-                    {uniqueLocales.map(l => (
-                      <option key={l} value={l}>
-                        {l} (e.g. {new Intl.NumberFormat(l, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(100000)})
-                      </option>
-                    ))}
-                  </select>
+                  <Label className="text-sm font-medium dark:text-zinc-300">Number Locale (Commas)</Label>
+                  <Select
+                    value={formData.locale}
+                    onValueChange={(value) => setFormData({ ...formData, locale: value })}
+                  >
+                    <SelectTrigger className={selectTriggerClass}>
+                      <SelectValue placeholder="Select locale" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {uniqueLocales.map(l => (
+                        <SelectItem key={l} value={l}>
+                          {l} (e.g. {new Intl.NumberFormat(l, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(100000)})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </CardContent>
@@ -226,15 +259,23 @@ export default function ProfileSettingsPage() {
                   <Label className="text-base dark:text-zinc-200">Transactional Alerts</Label>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400">Receive emails when invoices are paid or retainers execute.</p>
                 </div>
-                <CustomToggle label="Toggle transactional email alerts" checked={formData.transactionalAlerts} onChange={() => setFormData({ ...formData, transactionalAlerts: !formData.transactionalAlerts })} />
+                <Switch
+                  aria-label="Toggle transactional email alerts"
+                  checked={formData.transactionalAlerts}
+                  onCheckedChange={(checked) => setFormData({ ...formData, transactionalAlerts: checked })}
+                />
               </div>
               <Separator className="dark:bg-zinc-800" />
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div className="space-y-0.5">
                   <Label className="text-base dark:text-zinc-200">Weekly AI Report</Label>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400">Get a Monday morning summary of your financial health.</p>
                 </div>
-                <CustomToggle label="Toggle weekly performance report emails" checked={formData.weeklyReport} onChange={() => setFormData({ ...formData, weeklyReport: !formData.weeklyReport })} />
+                <Switch
+                  aria-label="Toggle weekly performance report emails"
+                  checked={formData.weeklyReport}
+                  onCheckedChange={(checked) => setFormData({ ...formData, weeklyReport: checked })}
+                />
               </div>
             </CardContent>
           </Card>
