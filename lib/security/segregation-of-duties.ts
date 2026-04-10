@@ -80,7 +80,7 @@ export function detectSoDConflictsByRole() {
   const roles: Role[] = ['OWNER', 'ADMIN', 'MEMBER', 'VIEWER'];
   return roles.flatMap((role) =>
     SOD_CONFLICT_RULES.flatMap((rule) => {
-      const perms = rule.incompatiblePermissions as Array<keyof typeof PERMISSIONS>;
+      const perms = [...rule.incompatiblePermissions] as Array<keyof typeof PERMISSIONS>;
       const hasAll = perms.every((permission) => PERMISSIONS[permission].includes(role));
       if (!hasAll) return [];
       return [{ role, ruleId: rule.id, description: rule.description, violatedPermissions: perms, impactedWorkflows: rule.impactedWorkflows, severity: rule.severity }];
