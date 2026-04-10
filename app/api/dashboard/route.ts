@@ -176,25 +176,34 @@ export async function GET(request: Request) {
 
     let mrrTotal = new Prisma.Decimal(0);
     const clientIds = retainers.map(ret => ret.clientId);
+    const uniqueClientIds = Array.from(new Set(clientIds.filter((id): id is string => Boolean(id))));
 
-    const allRelevantInvoices = await prisma.invoice.findMany({
-      where: { clientId: { in: clientIds }, workspaceId },
-      orderBy: { invoiceDate: 'desc' },
-      take: Math.max(clientIds.length * 3, 9),
-      select: {
-        clientId: true,
-        status: true,
-        invoiceDate: true,
-        dateReceived: true,
+    const relevantInvoicesByClient = uniqueClientIds.length
+      ? await prisma.$transaction(
+          uniqueClientIds.map(clientId =>
+            prisma.invoice.findMany({
+              where: { clientId, workspaceId },
+              orderBy: { invoiceDate: 'desc' },
+              take: 3,
+              select: {
+                clientId: true,
+                status: true,
+                invoiceDate: true,
+                dateReceived: true,
+              },
+            })
+          )
+        )
+      : [];
+
+    const invoicesByClient = relevantInvoicesByClient.reduce<Record<string, (typeof relevantInvoicesByClient)[number]>>(
+      (acc, invoices, index) => {
+        const clientId = uniqueClientIds[index];
+        acc[clientId] = invoices;
+        return acc;
       },
-    });
-
-    const invoicesByClient = allRelevantInvoices.reduce<Record<string, typeof allRelevantInvoices>>((acc, inv) => {
-      if (!inv.clientId) return acc;
-      if (!acc[inv.clientId]) acc[inv.clientId] = [];
-      acc[inv.clientId].push(inv);
-      return acc;
-    }, {});
+      {}
+    );
 
     const retainerRadar = retainers.map((ret) => {
       mrrTotal = mrrTotal.plus(toDecimal(ret.amount));
