@@ -6,7 +6,12 @@ import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from
 import fs from 'fs';
 import path from 'path';
 import { INVOICE_STATUS, toInvoiceStatus, type InvoiceStatusValue } from '@/lib/invoice-status';
-import { parseInvoicePaymentPayload } from '@/lib/types/business';
+import {
+  acquireFinancialIdempotency,
+  buildRequestHash,
+  consumeFinancialIdempotency,
+  releaseFinancialIdempotency,
+} from '@/lib/financial-idempotency';
 
 import { 
   getWorkspaceId,
@@ -16,6 +21,8 @@ import {
 } from './logic';
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
+  let idempotencyContext: { workspaceId: string; operation: string; idempotencyKey: string } | null = null;
+  let idempotencyConsumed = false;
   try {
     const session = await getServerSession(authOptions);
     const workspaceId = getWorkspaceId(session);
@@ -26,7 +33,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const { id } = await context.params;
     const invoiceId = id; 
     
-    const payloadValidation = validatePayInvoicePayload(await request.json());
+    const body = await request.json();
+    const payloadValidation = validatePayInvoicePayload(body);
     if (!payloadValidation.ok) {
       return NextResponse.json(
         { success: false, error: payloadValidation.error },
@@ -35,86 +43,135 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     }
     const { amountReceived, dateReceived } = payloadValidation.data;
     const incomingPayment = amountReceived;
-
-    const existingInvoice = await prisma.invoice.findFirst({
-      where: {
-        id: invoiceId,
-        workspaceId: workspaceId,
-      },
-      include: {
-        items: true
-      }
+    const operation = 'INVOICE_PAYMENT_CAPTURE';
+    const idempotencyKey =
+      request.headers.get('Idempotency-Key')?.trim() ||
+      body?.idempotencyKey?.trim() ||
+      `auto:${invoiceId}:${amountReceived}:${dateReceived}`;
+    const requestHash = buildRequestHash({ invoiceId, amountReceived, dateReceived });
+    const idempotencyAcquire = await acquireFinancialIdempotency({
+      workspaceId,
+      operation,
+      idempotencyKey,
+      requestHash,
     });
+    idempotencyContext = { workspaceId, operation, idempotencyKey };
 
-    if (!existingInvoice) {
+    if (idempotencyAcquire.kind === 'hash_mismatch') {
       return NextResponse.json(
-        {
-          success: false,
-          error: { code: 'INVOICE_NOT_FOUND', message: 'Invoice not found or unauthorized' },
+        { success: false, error: { code: 'IDEMPOTENCY_HASH_MISMATCH', message: 'Idempotency key reuse with different payload is not allowed.' } },
+        { status: 409 },
+      );
+    }
+    if (idempotencyAcquire.kind === 'in_progress') {
+      return NextResponse.json(
+        { success: false, error: { code: 'REQUEST_IN_PROGRESS', message: 'A payment request with this key is already in progress.' } },
+        { status: 409 },
+      );
+    }
+    if (idempotencyAcquire.kind === 'replay') {
+      return NextResponse.json({ ...(idempotencyAcquire.responseBody as object), replayed: true });
+    }
+    const transitionResult = await prisma.$transaction(async (tx) => {
+      const existingInvoice = await tx.invoice.findFirst({
+        where: {
+          id: invoiceId,
+          workspaceId: workspaceId,
         },
-        { status: 404 }
-      );
-    }
+        include: {
+          items: true,
+        },
+      });
 
-    const existingReceived = Number(existingInvoice.amountReceived ?? 0);
-    const newCumulativeReceived = existingReceived + incomingPayment;
-    const invoiceGrandTotal = Number(existingInvoice.grandTotal ?? existingInvoice.totalAmount);
+      if (!existingInvoice) {
+        return { kind: 'not_found' as const };
+      }
 
-    const businessRuleValidation = validatePaymentBusinessRules({
-      invoiceStatus: existingInvoice.status,
-      cumulativeAmountReceived: newCumulativeReceived,
-      invoiceGrandTotal,
-    });
-    if (!businessRuleValidation.ok) {
-      return NextResponse.json(
-        { success: false, error: businessRuleValidation.error },
-        { status: 400 }
-      );
-    }
+      const existingReceived = Number(existingInvoice.amountReceived ?? 0);
+      const newCumulativeReceived = existingReceived + incomingPayment;
+      const invoiceGrandTotal = Number(existingInvoice.grandTotal ?? existingInvoice.totalAmount);
 
-    const newStatus = determineInvoicePaymentStatus(newCumulativeReceived, invoiceGrandTotal);
+      const businessRuleValidation = validatePaymentBusinessRules({
+        invoiceStatus: existingInvoice.status,
+        cumulativeAmountReceived: newCumulativeReceived,
+        invoiceGrandTotal,
+      });
+      if (!businessRuleValidation.ok) {
+        return { kind: 'invalid' as const, error: businessRuleValidation.error };
+      }
 
-    const updatedInvoice = await prisma.invoice.update({
-      where: { id: invoiceId },
-      data: {
-        status: toInvoiceStatus(newStatus),
-        amountReceived: newCumulativeReceived,
-        dateReceived: new Date(dateReceived),
-      },
-    });
+      const newStatus = determineInvoicePaymentStatus(newCumulativeReceived, invoiceGrandTotal);
+      const updateResult = await tx.invoice.updateMany({
+        where: {
+          id: invoiceId,
+          workspaceId,
+          status: existingInvoice.status as InvoiceStatusValue,
+          amountReceived: existingInvoice.amountReceived,
+        },
+        data: {
+          status: toInvoiceStatus(newStatus),
+          amountReceived: newCumulativeReceived,
+          dateReceived: new Date(dateReceived),
+        },
+      });
+      if (updateResult.count === 0) {
+        return { kind: 'write_conflict' as const };
+      }
 
-    const { PDFDocument, rgb, degrees, StandardFonts } = await import('pdf-lib');
+      const updatedInvoice = await tx.invoice.findUniqueOrThrow({ where: { id: invoiceId } });
 
-    if (newStatus === INVOICE_STATUS.PAID && existingInvoice.status !== INVOICE_STATUS.PAID) {
-      if (existingInvoice.items && existingInvoice.items.length > 0) {
+      const becamePaidNow = newStatus === INVOICE_STATUS.PAID && existingInvoice.status !== INVOICE_STATUS.PAID;
+
+      if (becamePaidNow && existingInvoice.items && existingInvoice.items.length > 0) {
         for (const item of existingInvoice.items) {
           if (item.productId) {
-            const product = await prisma.product.findUnique({ where: { id: item.productId } });
+            const product = await tx.product.findUnique({ where: { id: item.productId } });
             if (product) {
               const newStock = product.currentStock - item.quantity;
-              await prisma.$transaction([
-                prisma.product.update({
-                  where: { id: item.productId },
-                  data: {
-                    currentStock: newStock,
-                    status: newStock <= 0 ? "OUT_OF_STOCK" : (newStock <= product.safetyStock ? "LOW_STOCK" : "IN_STOCK")
-                  }
-                }),
-                prisma.inventoryMovement.create({
-                  data: {
-                    workspaceId,
-                    productId: item.productId,
-                    type: "OUT",
-                    quantity: -item.quantity,
-                    reason: `Invoice #${updatedInvoice.invoiceNumber} Payment`,
-                    referenceId: updatedInvoice.id
-                  }
-                })
-              ]);
+              await tx.product.update({
+                where: { id: item.productId },
+                data: {
+                  currentStock: newStock,
+                  status: newStock <= 0 ? "OUT_OF_STOCK" : (newStock <= product.safetyStock ? "LOW_STOCK" : "IN_STOCK"),
+                },
+              });
+              await tx.inventoryMovement.create({
+                data: {
+                  workspaceId,
+                  productId: item.productId,
+                  type: "OUT",
+                  quantity: -item.quantity,
+                  reason: `Invoice #${updatedInvoice.invoiceNumber} Payment`,
+                  referenceId: updatedInvoice.id,
+                },
+              });
             }
           }
         }
       }
+      return { kind: 'ok' as const, existingInvoice, updatedInvoice, newStatus };
+    });
+
+    if (transitionResult.kind === 'not_found') {
+      return NextResponse.json(
+        { success: false, error: { code: 'INVOICE_NOT_FOUND', message: 'Invoice not found or unauthorized' } },
+        { status: 404 },
+      );
+    }
+    if (transitionResult.kind === 'invalid') {
+      return NextResponse.json({ success: false, error: transitionResult.error }, { status: 400 });
+    }
+    if (transitionResult.kind === 'write_conflict') {
+      return NextResponse.json(
+        { success: false, error: { code: 'WRITE_CONFLICT_RETRY', message: 'Concurrent payment update detected. Retry with the same idempotency key.' } },
+        { status: 409 },
+      );
+    }
+
+    const { PDFDocument, rgb, degrees, StandardFonts } = await import('pdf-lib');
+    const { existingInvoice, updatedInvoice, newStatus } = transitionResult;
+
+    if (newStatus === INVOICE_STATUS.PAID && existingInvoice.status !== INVOICE_STATUS.PAID) {
       let relativePath = updatedInvoice.pdfPath.startsWith('/')
         ? updatedInvoice.pdfPath.substring(1)
         : updatedInvoice.pdfPath;
@@ -188,7 +245,15 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'invoice', action: 'payment', error: String(error) });
     }
 
-    return NextResponse.json({ success: true, invoice: updatedInvoice });
+    const responseBody = { success: true, invoice: updatedInvoice };
+    await consumeFinancialIdempotency({
+      workspaceId,
+      operation,
+      idempotencyKey,
+      responseBody,
+    });
+    idempotencyConsumed = true;
+    return NextResponse.json(responseBody);
   } catch (error) {
     console.error(error);
     return NextResponse.json(
@@ -198,5 +263,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       },
       { status: 500 }
     );
+  }
+  finally {
+    if (idempotencyContext && !idempotencyConsumed) {
+      await releaseFinancialIdempotency(idempotencyContext);
+    }
   }
 }
