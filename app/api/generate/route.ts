@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import { generateInvoicePDF } from '@/lib/pdf/generator';
 import fs from 'fs';
 import path from 'path';
@@ -524,6 +525,12 @@ export async function POST(request: Request) {
     }).catch(() => null);
 
     // --- EMAIL DELIVERY LOGIC ---
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'invoice', action: 'create', error: String(error) });
+    }
+
     let emailStatus = "Not requested";
 
     if (sendEmail) {

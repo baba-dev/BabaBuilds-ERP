@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
 
 export async function GET() {
@@ -104,6 +105,12 @@ export async function POST(request: Request) {
       } as any
     });
 
+
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'retainer', action: 'create', error: String(error) });
+    }
 
     return NextResponse.json({ success: true, retainer: newRetainer });
   } catch (error) {

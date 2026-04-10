@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 
 // --- EDIT RETAINER LOGIC ---
 export async function PATCH(
@@ -40,6 +41,12 @@ export async function PATCH(
       }
     });
 
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'retainer', action: 'update', error: String(error) });
+    }
+
     return NextResponse.json({ success: true, retainer: updatedRetainer });
 
   } catch (error: any) {
@@ -73,6 +80,12 @@ export async function DELETE(
 
     if (result.count === 0) {
       return NextResponse.json({ error: "Retainer engine not found or unauthorized to delete" }, { status: 404 });
+    }
+
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'retainer', action: 'delete', error: String(error) });
     }
 
     return NextResponse.json({ success: true, message: "Retainer engine destroyed successfully" });

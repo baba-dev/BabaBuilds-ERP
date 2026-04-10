@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import fs from 'fs';
 import path from 'path';
 
@@ -82,6 +83,12 @@ export async function DELETE(
           console.error("Failed to delete PDF file:", e);
         }
       }
+    }
+
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'invoice', action: 'delete', error: String(error) });
     }
 
     return NextResponse.json({ success: true });

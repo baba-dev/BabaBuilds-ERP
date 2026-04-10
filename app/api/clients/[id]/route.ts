@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
@@ -96,6 +97,12 @@ export async function DELETE(
 
     if (result.count === 0) {
       return apiError(404, "Client not found or unauthorized.", "CLIENT_NOT_FOUND");
+    }
+
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'client', action: 'delete', error: String(error) });
     }
 
     return NextResponse.json({ success: true });
@@ -197,6 +204,12 @@ export async function PATCH(
         logoUrl
       }
     });
+
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'client', action: 'update', error: String(error) });
+    }
 
     return NextResponse.json({ success: true, client: updatedClient });
   } catch (error) {
