@@ -40,7 +40,11 @@ import { parseDashboardResponse } from "./parse-dashboard-response";
 import { getCurrentFinancialYear } from "@/lib/financial-year";
 import { resolveDashboardLaunchTarget } from "@/lib/launch-routing";
 import { cn } from "@/lib/utils";
+import { ChartsIsland } from "./charts-island";
+import { TableActions } from "./table-actions";
+import { PaymentModalIsland } from "./payment-modal-island";
 import { typography } from "@/lib/ui/typography";
+import type { DashboardData, RecentInvoiceRow, IntegrationStatus } from "./types";
 
 
 
@@ -68,48 +72,6 @@ function AnimatedValue({
   return <span className={className}>{formatter(displayValue)}</span>;
 }
 
-type RecentInvoiceRow = {
-  id: string;
-  invoiceDate: string | Date;
-  invoiceNumber: string;
-  clientName: string;
-  billingMonth?: string | null;
-  status: string;
-  totalAmount: number;
-  amountReceived?: number | null;
-  pdfPath: string;
-  updatedAt?: string | Date | null;
-};
-
-type IntegrationStatus = "healthy" | "partial" | "missing";
-
-type DashboardData = {
-  kpis: {
-    totalRevenue: number;
-    totalWealth: number;
-    estimatedTax: number;
-    activeClients: number;
-  };
-  mrr: {
-    total: number;
-    retainers: Array<{
-      clientName: string;
-      serviceName: string;
-      amount: number;
-      health: "good" | "warning" | "danger" | "pending";
-    }>;
-  };
-  charts: {
-    revenue: Array<{ name: string; revenue: number }>;
-    wealth: Array<{ name: string; value: number; color: string }>;
-  };
-  readiness?: {
-    integrations: Record<"groq" | "payment" | "smtp", { configured: boolean; status: IntegrationStatus }>;
-    summary: Record<IntegrationStatus, number>;
-  };
-  recentInvoices: RecentInvoiceRow[];
-};
-
 const statusStyles: Record<IntegrationStatus, string> = {
   healthy: "bg-emerald-500 dark:bg-emerald-400 shadow-emerald-500/40 dark:shadow-emerald-400/40",
   partial: "bg-amber-500 dark:bg-amber-400 shadow-amber-500/40 dark:shadow-amber-400/40",
@@ -127,6 +89,7 @@ function StatusDot({ status }: { status: IntegrationStatus }) {
 
 export default function Dashboard() {
   const t = useTranslations('Dashboard');
+  const [islandsEnabled, setIslandsEnabled] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [data, setData] = useState<DashboardData | null>(null);
@@ -172,6 +135,28 @@ export default function Dashboard() {
   useEffect(() => {
     fetchDashboardData(selectedFy);
   }, [selectedFy]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRuntimeFlags = async () => {
+      try {
+        const response = await fetch("/api/runtime-flags", { cache: "no-store" });
+        if (!response.ok) return;
+        const runtimeFlags = (await response.json()) as { dashboardIslands?: boolean };
+        if (isMounted) {
+          setIslandsEnabled(Boolean(runtimeFlags.dashboardIslands));
+        }
+      } catch {
+        // Keep default false on runtime flag fetch errors.
+      }
+    };
+
+    loadRuntimeFlags();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const launchTarget = resolveDashboardLaunchTarget(new URLSearchParams(searchParams.toString()));
@@ -406,35 +391,31 @@ export default function Dashboard() {
       header: <div className="text-right">{t('table_actions')}</div>,
       className: "text-right py-5 px-6",
       cell: (inv) => (
-        <div className="flex items-center justify-end gap-2 opactiy-100 sm:opacity-70 sm:group-hover:opacity-100 transition-opacity">
-          {isPaidInvoiceStatus(inv.status) === false && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => openPayModal(inv)}
-              className="bg-white dark:bg-zinc-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-700 dark:hover:text-emerald-400 border-zinc-200 dark:border-zinc-700 transition-colors text-xs font-bold uppercase tracking-wider h-8 active:scale-95"
-              aria-label={`Log payment for ${inv.invoiceNumber}`}
-            >
-              <Banknote className="w-3.5 h-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{t('log_pay')}</span>
+        islandsEnabled ? (
+          <TableActions
+            invoice={inv}
+            t={t}
+            onOpenPayModal={openPayModal}
+            onResendEmail={handleResendEmail}
+            resending={resendingId === inv.id}
+          />
+        ) : (
+          <div className="flex items-center justify-end gap-2 opactiy-100 sm:opacity-70 sm:group-hover:opacity-100 transition-opacity">
+            {isPaidInvoiceStatus(inv.status) === false && (
+              <Button variant="outline" size="sm" onClick={() => openPayModal(inv)} className="bg-white dark:bg-zinc-900 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 hover:text-emerald-700 dark:hover:text-emerald-400 border-zinc-200 dark:border-zinc-700 transition-colors text-xs font-bold uppercase tracking-wider h-8 active:scale-95" aria-label={`Log payment for ${inv.invoiceNumber}`}>
+                <Banknote className="w-3.5 h-3.5 sm:mr-1.5" /> <span className="hidden sm:inline">{t('log_pay')}</span>
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => handleResendEmail(inv)} disabled={resendingId === inv.id} className="bg-white dark:bg-zinc-900 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 hover:text-indigo-700 dark:hover:text-indigo-400 border-zinc-200 dark:border-zinc-700 transition-colors w-8 h-8 p-0 flex justify-center active:scale-95" title={t("actions.resend_invoice_title")} aria-label={`Resend email for ${inv.invoiceNumber}`}>
+              <Send className={`w-3.5 h-3.5 ${resendingId === inv.id ? 'animate-pulse text-indigo-400' : ''}`} />
             </Button>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleResendEmail(inv)}
-            disabled={resendingId === inv.id}
-            className="bg-white dark:bg-zinc-900 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 hover:text-indigo-700 dark:hover:text-indigo-400 border-zinc-200 dark:border-zinc-700 transition-colors w-8 h-8 p-0 flex justify-center active:scale-95"
-            title={t("actions.resend_invoice_title")}
-            aria-label={`Resend email for ${inv.invoiceNumber}`}
-          >
-            <Send className={`w-3.5 h-3.5 ${resendingId === inv.id ? 'animate-pulse text-indigo-400' : ''}`} />
-          </Button>
-          <Button variant="secondary" size="sm" asChild title={t("actions.download_pdf_title")} className="bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 w-8 h-8 p-0 flex justify-center active:scale-95 transition-colors">
-            <a href={getBustedUrl(inv.pdfPath, inv.updatedAt)} target="_blank" rel="noopener noreferrer" aria-label={t("actions.download_pdf_aria", { invoiceNumber: inv.invoiceNumber })}>
-              <Download className="h-3.5 w-3.5" />
-            </a>
-          </Button>
-        </div>
+            <Button variant="secondary" size="sm" asChild title={t("actions.download_pdf_title")} className="bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 w-8 h-8 p-0 flex justify-center active:scale-95 transition-colors">
+              <a href={getBustedUrl(inv.pdfPath, inv.updatedAt)} target="_blank" rel="noopener noreferrer" aria-label={t("actions.download_pdf_aria", { invoiceNumber: inv.invoiceNumber })}>
+                <Download className="h-3.5 w-3.5" />
+              </a>
+            </Button>
+          </div>
+        )
       ),
     },
   ];
@@ -717,6 +698,14 @@ export default function Dashboard() {
         </Card>
 
         {/* --- GLOBALIZED CHARTS --- */}
+        {islandsEnabled ? (
+          <ChartsIsland
+            revenueSeries={revenueSeries}
+            wealthSeries={data?.charts?.wealth || []}
+            t={t}
+            fCurrency={fCurrency}
+          />
+        ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ChartCard
             title={t('revenue_trend')}
@@ -798,6 +787,7 @@ export default function Dashboard() {
             </>
           </ChartCard>
         </div>
+        )}
 
         {/* --- PORTED LEDGER ACTIVITY TABLE --- */}
         <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
@@ -830,6 +820,26 @@ export default function Dashboard() {
         </Card>
 
         {/* --- PAYMENT LOGGING MODAL --- */}
+        {islandsEnabled ? (
+          <PaymentModalIsland
+            open={payModalOpen}
+            onOpenChange={setPayModalOpen}
+            onSubmit={handleMarkAsPaid}
+            t={t}
+            currency={currency}
+            currencySymbol={currencySymbol}
+            amountReceived={amountReceived}
+            setAmountReceived={setAmountReceived}
+            dateReceived={dateReceived}
+            setDateReceived={setDateReceived}
+            isSubmittingPayment={isSubmittingPayment}
+            selectedInvoice={selectedInvoice}
+            selectedInvoiceBilled={selectedInvoiceBilled}
+            selectedInvoiceReceived={selectedInvoiceReceived}
+            selectedInvoiceRemaining={selectedInvoiceRemaining}
+            fCurrency={fCurrency}
+          />
+        ) : (
         <Dialog open={payModalOpen} onOpenChange={setPayModalOpen}>
           <DialogContent className="dark:bg-zinc-900 dark:border-zinc-800 p-0 overflow-hidden sm:max-w-md">
             <div className="px-6 pt-6 pb-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/50">
@@ -907,6 +917,8 @@ export default function Dashboard() {
             </form>
           </DialogContent>
         </Dialog>
+
+        )}
 
     </DashboardPageShell>
   );
