@@ -4,7 +4,7 @@ import EmailProvider from "next-auth/providers/email";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
-import { createTransport } from "nodemailer"; // 1. ADDED IMPORT
+import { createTransport } from "nodemailer";
 import { recordAuthFailure } from "@/lib/auth-observability";
 import { normalizeLaunchDestination } from "@/lib/launch-routing";
 import { logActivity } from "@/lib/activity-log";
@@ -44,8 +44,6 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
-    
-    // 2. UPGRADED EMAIL PROVIDER
     EmailProvider({
       server: {
         host: process.env.EMAIL_SERVER_HOST,
@@ -168,18 +166,16 @@ export const authOptions: NextAuthOptions = {
         select: { id: true, workspaceId: true, role: true },
       });
 
-      const memberships = user.id
+const memberships = user.id
         ? await prisma.workspaceUser.findMany({
             where: { userId: user.id },
             select: { role: true, workspaceId: true },
           })
         : [];
 
-      const hasHighRiskRole = [
-        ...memberships.map((membership) => membership.role),
-        ...pendingInvites.map((invite) => invite.role),
-      ].some((role) => HIGH_RISK_ROLES.has(role));
-
+      const hasHighRiskRole = [...memberships, ...pendingInvites].some((entry) =>
+        HIGH_RISK_ROLES.has(entry.role)
+      );
       if (hasHighRiskRole && !isPhishingResistantSignIn(account)) {
         const provider = account?.provider ?? "unknown";
         recordAuthFailure({
@@ -190,10 +186,11 @@ export const authOptions: NextAuthOptions = {
         return false;
       }
 
-      if (!user.id || pendingInvites.length === 0) {
+if (!user.id || pendingInvites.length === 0) {
         return true;
       }
 
+      await prisma.$transaction(async (tx) => {
       await prisma.$transaction(async (tx) => {
         for (const invite of pendingInvites) {
           await tx.workspaceUser.createMany({
