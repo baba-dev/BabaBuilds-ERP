@@ -4,7 +4,7 @@ import EmailProvider from "next-auth/providers/email";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
-import { createTransport } from "nodemailer"; // 1. ADDED IMPORT
+import { createTransport } from "nodemailer";
 import { recordAuthFailure } from "@/lib/auth-observability";
 import { normalizeLaunchDestination } from "@/lib/launch-routing";
 import { logActivity } from "@/lib/activity-log";
@@ -44,8 +44,6 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
-    
-    // 2. UPGRADED EMAIL PROVIDER
     EmailProvider({
       server: {
         host: process.env.EMAIL_SERVER_HOST,
@@ -212,10 +210,6 @@ export const authOptions: NextAuthOptions = {
           where: { id: { in: pendingInvites.map((invite) => invite.id) } },
         });
       });
-
-      if (memberships.length === 0) {
-        return true;
-      }
 
       return true;
     },
