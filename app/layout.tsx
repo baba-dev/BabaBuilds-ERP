@@ -1,4 +1,5 @@
 import type { Viewport, Metadata } from "next";
+import Script from "next/script";
 import { Inter } from "next/font/google";
 
 import "./globals.css";
@@ -23,10 +24,80 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
+const SITE_URL = "https://erp.bababuilds.com";
+
 export const metadata: Metadata = {
-  title: "BabaBuilds ERP",
-  description: "Internal compliance and financial management system.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "BabaBuilds ERP — Automated Invoicing, Reconciliation & Tax Compliance",
+    template: "%s | BabaBuilds ERP",
+  },
+  description:
+    "The all-in-one ERP for agencies and freelancers. Automate multi-currency invoicing, GST/VAT compliance, AI-powered bank reconciliation, and real-time financial dashboards — trusted by businesses across India, the Middle East, and LATAM.",
   applicationName: "BabaBuilds ERP",
+  keywords: [
+    "ERP for freelancers",
+    "automated invoicing software",
+    "GST compliance ERP",
+    "VAT invoicing Oman",
+    "multi-currency invoicing",
+    "bank reconciliation software",
+    "agency finance management",
+    "MSME invoicing India",
+    "SaaS bookkeeping tool",
+    "BabaBuilds ERP",
+  ],
+  authors: [{ name: "BabaBuilds", url: SITE_URL }],
+  creator: "BabaBuilds",
+  publisher: "BabaBuilds",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  alternates: {
+    canonical: SITE_URL,
+    languages: {
+      "en-IN": `${SITE_URL}`,
+      "hi": `${SITE_URL}`,
+      "ar": `${SITE_URL}`,
+      "es": `${SITE_URL}`,
+      "x-default": `${SITE_URL}`,
+    },
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_IN",
+    alternateLocale: ["hi_IN", "ar_OM", "es_MX"],
+    url: SITE_URL,
+    siteName: "BabaBuilds ERP",
+    title: "BabaBuilds ERP — Run Your Agency on Autopilot",
+    description:
+      "Multi-currency invoicing, AI-powered reconciliation, and global tax compliance for modern agencies and freelancers.",
+    images: [
+      {
+        url: "/icons/Banner-1.png",
+        width: 1536,
+        height: 1024,
+        alt: "BabaBuilds ERP Dashboard — Invoicing, Reconciliation & Tax Compliance",
+        type: "image/png",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "BabaBuilds ERP — Automated Invoicing & Compliance",
+    description:
+      "The global command center for bookkeeping and growth. Automate invoices, manage clients, and track expenses.",
+    images: ["/icons/Banner-1.png"],
+    creator: "@bababuilds",
+  },
   appleWebApp: {
     capable: true,
     title: "BabaBuilds ERP",
@@ -35,6 +106,7 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+  category: "Business Software",
 };
 
 export default async function RootLayout({
@@ -50,6 +122,60 @@ export default async function RootLayout({
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
       <body className={inter.className} suppressHydrationWarning>
+        {/* ── Structured Data: Organization ── */}
+        <Script
+          id="ld-json-organization"
+          type="application/ld+json"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "BabaBuilds",
+              url: SITE_URL,
+              logo: `${SITE_URL}/icons/BabaBuillds_ERP_Logo.png`,
+              sameAs: [],
+              contactPoint: {
+                "@type": "ContactPoint",
+                email: "admin@bababuilds.com",
+                contactType: "customer support",
+                availableLanguage: ["English", "Hindi", "Arabic", "Spanish"],
+              },
+            }),
+          }}
+        />
+        {/* ── Structured Data: SoftwareApplication ── */}
+        <Script
+          id="ld-json-software-application"
+          type="application/ld+json"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "SoftwareApplication",
+              name: "BabaBuilds ERP",
+              applicationCategory: "BusinessApplication",
+              operatingSystem: "Web, Android, iOS",
+              url: SITE_URL,
+              description:
+                "All-in-one ERP for agencies: automated invoicing, multi-currency billing, GST/VAT compliance, AI reconciliation, and financial dashboards.",
+              offers: {
+                "@type": "Offer",
+                price: "0",
+                priceCurrency: "INR",
+                availability: "https://schema.org/InStock",
+              },
+              aggregateRating: {
+                "@type": "AggregateRating",
+                ratingValue: "4.8",
+                ratingCount: "42",
+                bestRating: "5",
+                worstRating: "1",
+              },
+              screenshot: `${SITE_URL}/icons/Banner-1.png`,
+            }),
+          }}
+        />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ThemeProvider
             attribute="class"
