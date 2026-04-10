@@ -128,14 +128,14 @@ export function CommsHub() {
   if (!session?.user) return null;
 
   return (
-    <DialogContent className="max-w-2xl border-zinc-800/50 bg-zinc-950/90 p-0 shadow-2xl backdrop-blur-2xl sm:rounded-3xl overflow-hidden">
+    <DialogContent className="w-full max-w-[calc(100%-1rem)] sm:max-w-[calc(100%-2rem)] md:max-w-3xl lg:max-w-5xl border-zinc-800/50 bg-zinc-950/90 p-0 shadow-2xl backdrop-blur-2xl sm:rounded-3xl overflow-hidden">
       <div className="relative">
         {/* Aesthetic Background Accents */}
         <div className="absolute -top-24 -left-24 h-64 w-64 rounded-full bg-indigo-600/10 blur-[100px] pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 h-64 w-64 rounded-full bg-violet-600/10 blur-[100px] pointer-events-none" />
 
-        <DialogHeader className="px-8 pt-8 pb-4">
-          <div className="flex items-center gap-3">
+        <DialogHeader className="px-4 pb-4 pt-6 sm:px-6 sm:pt-8 lg:px-10">
+          <div className="mx-auto flex w-full max-w-4xl items-center gap-3">
              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600/20 text-indigo-400 shadow-lg shadow-indigo-500/10">
                 <Zap className="h-6 w-6" />
              </div>
@@ -149,8 +149,8 @@ export function CommsHub() {
         </DialogHeader>
 
         <Tabs defaultValue="inbox" className="w-full">
-          <div className="px-8">
-            <TabsList className="w-full justify-start bg-transparent border-b border-zinc-800/50 rounded-none h-auto p-0 gap-8">
+          <div className="px-4 sm:px-6 lg:px-10">
+            <TabsList className="mx-auto h-auto w-full max-w-4xl justify-start gap-5 rounded-none border-b border-zinc-800/50 bg-transparent p-0 sm:gap-8">
               <TabsTrigger 
                 value="inbox" 
                 className="data-[state=active]:bg-transparent data-[state=active]:text-indigo-400 data-[state=active]:border-b-2 data-[state=active]:border-indigo-400 rounded-none pb-4 transition-all"
@@ -187,8 +187,9 @@ export function CommsHub() {
           </div>
 
           <div className="max-h-[60vh] overflow-y-auto custom-scrollbar">
-            <TabsContent value="inbox" className="p-8 mt-0 outline-none">
-              <div className="flex items-center justify-between mb-6">
+            <TabsContent value="inbox" className="mt-0 px-4 py-6 outline-none sm:px-6 sm:py-8 lg:px-10">
+              <div className="mx-auto w-full max-w-4xl">
+                <div className="mb-6 flex items-center justify-between">
                 <h3 className="text-sm font-semibold uppercase tracking-widest text-zinc-500">Recent Notifications</h3>
                 {notifications.length > 0 && (
                   <Button
@@ -210,12 +211,12 @@ export function CommsHub() {
                     <Inbox className="relative h-12 w-12 text-zinc-700" />
                   </div>
                   <h4 className="text-lg font-medium text-zinc-300">All caught up!</h4>
-                  <p className="text-sm text-zinc-600 max-w-[200px] mt-1">
-                    You've handled all your recent business notifications.
+                  <p className="mt-1 max-w-[260px] text-sm text-zinc-600">
+                    You&apos;ve handled all your recent business notifications.
                   </p>
                 </div>
               ) : (
-                <div className="flex flex-col gap-3">
+                <div className="grid gap-3 xl:grid-cols-2">
                   {notifications.map((n) => (
                     <NotificationItem
                       key={n.id}
@@ -225,10 +226,11 @@ export function CommsHub() {
                   ))}
                 </div>
               )}
+              </div>
             </TabsContent>
 
-            <TabsContent value="account" className="p-8 mt-0 outline-none">
-               <div className="grid gap-6">
+            <TabsContent value="account" className="mt-0 px-4 py-6 outline-none sm:px-6 sm:py-8 lg:px-10">
+               <div className="mx-auto grid w-full max-w-4xl gap-6">
                   {/* User Profile Summary */}
                   <div className="flex items-center gap-4 rounded-2xl bg-white/[0.03] p-5 border border-zinc-800/30">
                     <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600 text-2xl font-bold text-white shadow-xl shadow-indigo-500/20">
@@ -296,9 +298,9 @@ export function CommsHub() {
                </div>
             </TabsContent>
 
-            <TabsContent value="security" className="p-8 mt-0 outline-none">
+            <TabsContent value="security" className="mt-0 px-4 py-6 outline-none sm:px-6 sm:py-8 lg:px-10">
               {/* Security Placeholder */}
-              <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="mx-auto flex w-full max-w-4xl flex-col items-center justify-center py-16 text-center">
                   <Shield className="h-12 w-12 text-zinc-700 mb-4" />
                   <h4 className="text-lg font-medium text-zinc-300">Security & Privacy</h4>
                   <p className="text-sm text-zinc-600 max-w-[300px] mt-1">
@@ -313,9 +315,11 @@ export function CommsHub() {
         </Tabs>
 
         {/* Footer info */}
-        <div className="border-t border-zinc-800/50 bg-white/[0.02] px-8 py-4 flex justify-between items-center">
+        <div className="border-t border-zinc-800/50 bg-white/[0.02] px-4 py-4 sm:px-6 lg:px-10">
+          <div className="mx-auto flex w-full max-w-4xl items-center justify-between">
            <p className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold">BabaBuilds ERP Core</p>
            <p className="text-[10px] text-zinc-600">v2.4.0-stable</p>
+          </div>
         </div>
       </div>
     </DialogContent>
