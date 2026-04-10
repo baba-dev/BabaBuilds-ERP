@@ -34,6 +34,22 @@ enum TaxResolutionSource {
   FALLBACK
 }
 
+enum AccountingEventType {
+  INVOICE_CREATED
+  PAYMENT_CAPTURED
+  REFUND_ISSUED
+  CREDIT_NOTE_ISSUED
+  CHARGEBACK_RECORDED
+  FX_CONVERSION_RECORDED
+  WRITE_OFF_RECORDED
+  MANUAL_ADJUSTMENT
+}
+
+enum AccountingLineSide {
+  DEBIT
+  CREDIT
+}
+
 // ==========================================
 // 1. AUTHENTICATION (NextAuth Standard)
 // ==========================================
@@ -63,11 +79,11 @@ model User {
   notifyInApp         Boolean @default(true)
 
   // --- RELATIONS ---
-  accounts          Account[]
-  sessions          Session[]
-  workspaces        WorkspaceUser[]
-  appActivities AppActivityLog[] @relation("AppActivityActor")
-  pushSubscriptions PushSubscription[]
+  accounts           Account[]
+  sessions           Session[]
+  workspaces         WorkspaceUser[]
+  appActivities      AppActivityLog[]    @relation("AppActivityActor")
+  pushSubscriptions  PushSubscription[]
   inAppNotifications InAppNotification[]
 }
 
@@ -132,32 +148,36 @@ model Workspace {
   updatedAt DateTime @default(now()) @updatedAt
 
   // RELATIONS
-  users                    WorkspaceUser[]
-  businessProfile          BusinessProfile?
-  clients                  Client[]
-  invoices                 Invoice[]
-  billingTransactions      BillingTransaction[]
-  expenses                 Expense[]
-  bankTransactions         BankTransaction[]
-  investments              Investment[]
-  serviceTemplates         ServiceTemplate[]
-  proposals                Proposal[]
-  retainers                Retainer[]
-  tasks                    Task[]
-  invoiceIdempotencies     InvoiceIdempotency[]
-  taxPreference            WorkspaceTaxPreference?
-  workspaceTaxOverrides    WorkspaceTaxOverride[]
-  taxRateOverrides         TaxRateOverride[]
-  taxRateOverrideAuditLogs TaxRateOverrideAuditLog[]
-  taxDecisionAuditLogs     TaxDecisionAuditLog[]
-  fileImportAuditLogs      FileImportAuditLog[]
-  appActivityLogs          AppActivityLog[]
-  workspaceInvites         WorkspaceInvite[]
+  users                      WorkspaceUser[]
+  businessProfile            BusinessProfile?
+  clients                    Client[]
+  invoices                   Invoice[]
+  billingTransactions        BillingTransaction[]
+  expenses                   Expense[]
+  bankTransactions           BankTransaction[]
+  investments                Investment[]
+  serviceTemplates           ServiceTemplate[]
+  proposals                  Proposal[]
+  retainers                  Retainer[]
+  tasks                      Task[]
+  invoiceIdempotencies       InvoiceIdempotency[]
+  taxPreference              WorkspaceTaxPreference?
+  workspaceTaxOverrides      WorkspaceTaxOverride[]
+  taxRateOverrides           TaxRateOverride[]
+  taxRateOverrideAuditLogs   TaxRateOverrideAuditLog[]
+  taxDecisionAuditLogs       TaxDecisionAuditLog[]
+  fileImportAuditLogs        FileImportAuditLog[]
+  appActivityLogs            AppActivityLog[]
+  workspaceInvites           WorkspaceInvite[]
+  accountingTransactions     AccountingTransaction[]
+  accountingIntegrityRuns    AccountingIntegrityRun[]
+  accountingViolationReports AccountingViolationReport[]
 
   // IMS Relations
-  products                 Product[]
-  inventoryMovements       InventoryMovement[]
-  purchaseOrders           PurchaseOrder[]
+  products           Product[]
+  inventoryMovements InventoryMovement[]
+  purchaseOrders     PurchaseOrder[]
+  accountingEntries  AccountingEntry[]
 }
 
 model AppActivityLog {
@@ -205,6 +225,97 @@ model BillingTransaction {
   updatedAt DateTime @updatedAt
 
   @@index([workspaceId, transactionDate])
+}
+
+model AccountingTransaction {
+  id String @id @default(cuid())
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  eventType       AccountingEventType
+  eventOccurredAt DateTime
+  postedAt        DateTime            @default(now())
+  postingCurrency String
+  exchangeRate    Decimal?
+  description     String?
+
+  sourceTable      String
+  sourceId         String
+  sourceRef        String?
+  requestId        String?
+  jobId            String?
+  statementBatchId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entries AccountingEntry[]
+
+  @@unique([workspaceId, sourceTable, sourceId, eventType])
+  @@index([workspaceId, eventType, postedAt])
+  @@index([workspaceId, sourceTable, sourceId])
+  @@index([requestId])
+  @@index([jobId])
+}
+
+model AccountingEntry {
+  id String @id @default(cuid())
+
+  transactionId String
+  transaction   AccountingTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  lineNumber  Int
+  accountCode String
+  side        AccountingLineSide
+  amount      Decimal
+  currency    String
+  postedAt    DateTime
+  isPosted    Boolean            @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@unique([transactionId, lineNumber])
+  @@index([workspaceId, accountCode, postedAt])
+  @@index([workspaceId, transactionId])
+}
+
+model AccountingIntegrityRun {
+  id String @id @default(cuid())
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  runType     String    @default("NIGHTLY")
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  status      String    @default("RUNNING")
+  summary     Json?
+
+  violations AccountingViolationReport[]
+
+  @@index([workspaceId, startedAt(sort: Desc)])
+}
+
+model AccountingViolationReport {
+  id String @id @default(cuid())
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  runId String
+  run   AccountingIntegrityRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  invariantCode String
+  severity      String   @default("ERROR")
+  details       Json
+  detectedAt    DateTime @default(now())
+
+  @@index([workspaceId, detectedAt(sort: Desc)])
+  @@index([runId, invariantCode])
 }
 
 model WorkspaceUser {
@@ -682,11 +793,10 @@ model TaxRateOverrideAuditLog {
   @@index([workspaceId, scopeType])
 }
 
-
 model FileImportAuditLog {
-  id            String    @id
-  workspaceId   String
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id          String    @id
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   fileName      String?
   mimeType      String?
@@ -707,40 +817,40 @@ model FileImportAuditLog {
 
 /// Stores Web Push API subscriptions (one per browser/device per user)
 model PushSubscription {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  endpoint    String   @unique
-  p256dh      String   // Browser-generated public key
-  auth        String   // Browser-generated auth secret
-  userAgent   String?  // Optional: identify device
+  endpoint  String  @unique
+  p256dh    String // Browser-generated public key
+  auth      String // Browser-generated auth secret
+  userAgent String? // Optional: identify device
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
 
 /// Persisted in-app notifications for the Bell UI / Sonner polling
 model InAppNotification {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   /// Event type: INVOICE_GENERATED | CLIENT_ADDED | RENEWAL_ALERT | PAYMENT_REMINDER | TAX_ALERT | DEADLINE_ALERT | PROPOSAL_CREATED | SERVICE_CREATED
-  eventType   String
-  title       String
-  body        String
+  eventType String
+  title     String
+  body      String
   /// Deep-link URL to navigate to on click
-  actionUrl   String?
-  isRead      Boolean  @default(false)
-  readAt      DateTime?
+  actionUrl String?
+  isRead    Boolean   @default(false)
+  readAt    DateTime?
 
   /// Optional workspace context
   workspaceId String?
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId, isRead, createdAt])
   @@index([userId, createdAt])
@@ -755,31 +865,31 @@ model Product {
   id          String    @id @default(cuid())
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  
-  sku         String    
+
+  sku         String
   name        String
   description String?
   category    String?
-  unit        String    @default("pcs")
-  
+  unit        String  @default("pcs")
+
   // Cost & Valuation
   baselinePrice Decimal @default(0)
   costPrice     Decimal @default(0)
-  
+
   // Stock Levels
-  currentStock  Int     @default(0)
-  safetyStock   Int     @default(5)
-  status        String  @default("IN_STOCK") // "IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK"
+  currentStock Int    @default(0)
+  safetyStock  Int    @default(5)
+  status       String @default("IN_STOCK") // "IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK"
 
-  barcode       String? // For zero-latency search
-  imageUrl      String? // Product image
-  location      String? // e.g., "Warehouse A", "Van 1"
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  barcode  String? // For zero-latency search
+  imageUrl String? // Product image
+  location String? // e.g., "Warehouse A", "Van 1"
 
-  movements   InventoryMovement[]
-  invoiceItems InvoiceItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  movements     InventoryMovement[]
+  invoiceItems  InvoiceItem[]
   purchaseItems PurchaseOrderItem[]
 
   @@unique([sku, workspaceId])
@@ -787,17 +897,17 @@ model Product {
 }
 
 model InvoiceItem {
-  id          String   @id @default(cuid())
-  invoiceId   String
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  
-  productId   String?
-  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
-  
+  id        String  @id @default(cuid())
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
   description String
-  quantity    Int      @default(1)
+  quantity    Int     @default(1)
   unitPrice   Decimal
-  taxRate     Float    @default(0)
+  taxRate     Float   @default(0)
   totalAmount Decimal
 
   @@index([invoiceId])
@@ -805,21 +915,21 @@ model InvoiceItem {
 }
 
 model InventoryMovement {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
-  type        String   // "IN" (Purchase, Return), "OUT" (Sale, Damage, Loss), "ADJ" (Manual Adjustment)
-  quantity    Int      // Positive for IN, Negative for OUT/ADJ if reducing
-  reason      String?  // e.g., "Invoice #101 Payment", "Manual Sync", "Found behind shelf"
-  
-  referenceId String?  // ID of Invoice or PO
-  
-  createdAt   DateTime @default(now())
-  
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  type     String // "IN" (Purchase, Return), "OUT" (Sale, Damage, Loss), "ADJ" (Manual Adjustment)
+  quantity Int // Positive for IN, Negative for OUT/ADJ if reducing
+  reason   String? // e.g., "Invoice #101 Payment", "Manual Sync", "Found behind shelf"
+
+  referenceId String? // ID of Invoice or PO
+
+  createdAt DateTime @default(now())
+
   @@index([workspaceId])
   @@index([productId])
   @@index([createdAt])
@@ -829,33 +939,32 @@ model PurchaseOrder {
   id          String    @id @default(cuid())
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  
-  poNumber    String
-  supplier    String
-  status      String    @default("DRAFT") // "DRAFT", "SENT", "DELIVERED", "CANCELLED"
-  
+
+  poNumber String
+  supplier String
+  status   String @default("DRAFT") // "DRAFT", "SENT", "DELIVERED", "CANCELLED"
+
   expectedDate DateTime?
   totalAmount  Decimal   @default(0)
-  
-  items       PurchaseOrderItem[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+
+  items PurchaseOrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([poNumber, workspaceId])
   @@index([workspaceId])
 }
 
 model PurchaseOrderItem {
-  id          String    @id @default(cuid())
-  poId        String
+  id            String        @id @default(cuid())
+  poId          String
   purchaseOrder PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
-  
-  productId   String
-  product     Product   @relation(fields: [productId], references: [id])
-  
-  quantity    Int
-  unitPrice   Decimal
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  quantity      Int
+  unitPrice     Decimal
   expectedTotal Decimal
 }
-
