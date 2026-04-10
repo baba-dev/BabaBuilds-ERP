@@ -157,55 +157,29 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user, account }) {
-      if (!user?.id || !user?.email) return false;
+      if (!user?.email) return false;
 
       const inviteEmail = user.email.toLowerCase();
-
-      await prisma.$transaction(async (tx) => {
-        const pendingInvites = await tx.workspaceInvite.findMany({
-          where: {
-            email: inviteEmail,
-            expiresAt: { gt: new Date() },
-          },
-          select: { id: true, workspaceId: true, role: true },
-        });
-
-        if (pendingInvites.length === 0) return;
-
-        for (const invite of pendingInvites) {
-          await tx.workspaceUser.upsert({
-            where: {
-              userId_workspaceId: {
-                userId: user.id,
-                workspaceId: invite.workspaceId,
-              },
-            },
-            create: {
-              userId: user.id,
-              workspaceId: invite.workspaceId,
-              role: invite.role,
-            },
-            update: {
-              role: invite.role,
-            },
-          });
-        }
-
-        await tx.workspaceInvite.deleteMany({
-          where: { id: { in: pendingInvites.map((invite) => invite.id) } },
-        });
+      const pendingInvites = await prisma.workspaceInvite.findMany({
+        where: {
+          email: inviteEmail,
+          expiresAt: { gt: new Date() },
+        },
+        select: { id: true, workspaceId: true, role: true },
       });
 
-      const memberships = await prisma.workspaceUser.findMany({
-        where: { userId: user.id },
-        select: { role: true, workspaceId: true },
-      });
+      const memberships = user.id
+        ? await prisma.workspaceUser.findMany({
+            where: { userId: user.id },
+            select: { role: true, workspaceId: true },
+          })
+        : [];
 
-      if (memberships.length === 0) {
-        return true;
-      }
+      const hasHighRiskRole = [
+        ...memberships.map((membership) => membership.role),
+        ...pendingInvites.map((invite) => invite.role),
+      ].some((role) => HIGH_RISK_ROLES.has(role));
 
-      const hasHighRiskRole = memberships.some((membership) => HIGH_RISK_ROLES.has(membership.role));
       if (hasHighRiskRole && !isPhishingResistantSignIn(account)) {
         const provider = account?.provider ?? "unknown";
         recordAuthFailure({
@@ -215,6 +189,27 @@ export const authOptions: NextAuthOptions = {
         });
         return false;
       }
+
+      if (!user.id || pendingInvites.length === 0) {
+        return true;
+      }
+
+      await prisma.$transaction(async (tx) => {
+        for (const invite of pendingInvites) {
+          await tx.workspaceUser.createMany({
+            data: {
+              userId: user.id,
+              workspaceId: invite.workspaceId,
+              role: invite.role,
+            },
+            skipDuplicates: true,
+          });
+        }
+
+        await tx.workspaceInvite.deleteMany({
+          where: { id: { in: pendingInvites.map((invite) => invite.id) } },
+        });
+      });
 
       return true;
     },
