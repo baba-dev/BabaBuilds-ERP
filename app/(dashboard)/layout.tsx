@@ -1,15 +1,9 @@
 import { getServerSession } from "next-auth/next";
 import { headers } from "next/headers";
-import dynamic from "next/dynamic";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { normalizeLaunchDestination } from "@/lib/launch-routing";
-
-const AIChatbot = dynamic(() => import("@/components/AIChatbot"), {
-  ssr: false,
-  loading: () => null,
-});
 
 export default async function DashboardLayout({
   children,
@@ -32,9 +26,6 @@ export default async function DashboardLayout({
   }
 
   return (
-    <>
-      <DashboardShell>{children}</DashboardShell>
-      <AIChatbot />
-    </>
+    <DashboardShell>{children}</DashboardShell>
   );
 }
