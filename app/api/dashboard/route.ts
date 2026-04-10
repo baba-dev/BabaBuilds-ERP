@@ -295,6 +295,7 @@ export async function GET(request: Request) {
         });
       } catch (cacheError) {
         noteDashboardCacheIncident('cacheErrors', { workspaceId, fy, cacheKey, error: String(cacheError) });
+        console.error('Dashboard cache error:', cacheError);
       }
     }
 
