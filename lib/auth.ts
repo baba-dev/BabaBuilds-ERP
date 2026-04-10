@@ -155,7 +155,7 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user, account }) {
-      if (!user?.id || !user?.email) return false;
+      if (!user?.email) return false;
 
       const inviteEmail = user.email.toLowerCase();
       const pendingInvites = await prisma.workspaceInvite.findMany({
@@ -166,13 +166,15 @@ export const authOptions: NextAuthOptions = {
         select: { id: true, workspaceId: true, role: true },
       });
 
-      const memberships = await prisma.workspaceUser.findMany({
-        where: { userId: user.id },
-        select: { role: true, workspaceId: true },
-      });
+const memberships = user.id
+        ? await prisma.workspaceUser.findMany({
+            where: { userId: user.id },
+            select: { role: true, workspaceId: true },
+          })
+        : [];
 
-      const hasHighRiskRole = [...memberships, ...pendingInvites].some((membership) =>
-        HIGH_RISK_ROLES.has(membership.role)
+      const hasHighRiskRole = [...memberships, ...pendingInvites].some((entry) =>
+        HIGH_RISK_ROLES.has(entry.role)
       );
       if (hasHighRiskRole && !isPhishingResistantSignIn(account)) {
         const provider = account?.provider ?? "unknown";
@@ -184,25 +186,20 @@ export const authOptions: NextAuthOptions = {
         return false;
       }
 
-      await prisma.$transaction(async (tx) => {
-        if (pendingInvites.length === 0) return;
+if (!user.id || pendingInvites.length === 0) {
+        return true;
+      }
 
+      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx) => {
         for (const invite of pendingInvites) {
-          await tx.workspaceUser.upsert({
-            where: {
-              userId_workspaceId: {
-                userId: user.id,
-                workspaceId: invite.workspaceId,
-              },
-            },
-            create: {
+          await tx.workspaceUser.createMany({
+            data: {
               userId: user.id,
               workspaceId: invite.workspaceId,
               role: invite.role,
             },
-            update: {
-              role: invite.role,
-            },
+            skipDuplicates: true,
           });
         }
 
