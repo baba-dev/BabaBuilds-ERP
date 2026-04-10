@@ -10,20 +10,30 @@ export async function GET(request: Request) {
 
   const workspaces = await prisma.workspace.findMany({ select: { id: true } });
   const runs = [] as Array<{ workspaceId: string; runId: string; violationCount: number }>;
+  const failures = [] as Array<{ workspaceId: string; error: string }>;
 
   for (const workspace of workspaces) {
-    const result = await persistAccountingIntegrityRun(workspace.id);
-    runs.push({
-      workspaceId: workspace.id,
-      runId: result.runId,
-      violationCount: result.violations.length,
-    });
+    try {
+      const result = await persistAccountingIntegrityRun(workspace.id);
+      runs.push({
+        workspaceId: workspace.id,
+        runId: result.runId,
+        violationCount: result.violations.length,
+      });
+    } catch (error) {
+      failures.push({
+        workspaceId: workspace.id,
+        error: error instanceof Error ? error.message : 'Unknown integrity run error',
+      });
+    }
   }
 
   return NextResponse.json({
-    success: true,
+    success: failures.length === 0,
     checkedAt: new Date().toISOString(),
-    workspacesChecked: workspaces.length,
+    workspacesChecked: runs.length,
+    workspaceFailures: failures.length,
     runs,
+    failures,
   });
 }
