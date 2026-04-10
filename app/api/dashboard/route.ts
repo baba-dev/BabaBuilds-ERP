@@ -55,13 +55,52 @@ export async function GET(request: Request) {
     const [invoices, investments, activeClientCount, retainers, recentInvoices, profile] = await Promise.all([
       prisma.invoice.findMany({
         where: { financialYear: fy, workspaceId },
-        include: { client: true },
+        select: {
+          grandTotal: true,
+          totalAmount: true,
+          billingMonth: true,
+          invoiceDate: true,
+        },
         orderBy: { invoiceDate: 'asc' }
       }),
-      prisma.investment.findMany({ where: { workspaceId } }),
+      prisma.investment.findMany({
+        where: { workspaceId },
+        select: {
+          amount: true,
+          category: true,
+        },
+      }),
       prisma.client.count({ where: { workspaceId } }),
-      prisma.retainer.findMany({ where: { workspaceId, status: "ACTIVE" }, include: { client: true } }),
-      prisma.invoice.findMany({ where: { workspaceId }, orderBy: { invoiceDate: 'desc' }, take: 5, include: { client: true } }),
+      prisma.retainer.findMany({
+        where: { workspaceId, status: "ACTIVE" },
+        select: {
+          amount: true,
+          clientId: true,
+          serviceName: true,
+          client: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      }),
+      prisma.invoice.findMany({
+        where: { workspaceId },
+        orderBy: { invoiceDate: 'desc' },
+        take: 5,
+        select: {
+          id: true,
+          invoiceDate: true,
+          invoiceNumber: true,
+          clientName: true,
+          billingMonth: true,
+          status: true,
+          totalAmount: true,
+          amountReceived: true,
+          pdfPath: true,
+          createdAt: true,
+        },
+      }),
       prisma.businessProfile.findUnique({
         where: { workspaceId },
         select: {
@@ -141,6 +180,13 @@ export async function GET(request: Request) {
     const allRelevantInvoices = await prisma.invoice.findMany({
       where: { clientId: { in: clientIds }, workspaceId },
       orderBy: { invoiceDate: 'desc' },
+      take: Math.max(clientIds.length * 3, 9),
+      select: {
+        clientId: true,
+        status: true,
+        invoiceDate: true,
+        dateReceived: true,
+      },
     });
 
     const invoicesByClient = allRelevantInvoices.reduce<Record<string, typeof allRelevantInvoices>>((acc, inv) => {
