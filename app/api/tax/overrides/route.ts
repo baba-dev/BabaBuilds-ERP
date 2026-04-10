@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { createTaxOverrideAuditLog } from '@/lib/security/activity-log';
+import { createTaxOverrideAuditLog, logActivity } from '@/lib/security/activity-log';
 import type { Session } from 'next-auth';
 
 type SessionWithWorkspace = Session & { workspaceId?: string; user?: Session['user'] & { id?: string } };
@@ -14,6 +14,28 @@ type TaxOverrideCreateBody = {
   reason?: string | null;
   effectiveFrom?: string;
   effectiveTo?: string | null;
+};
+
+
+
+const getCheckerContext = (request: Request) => {
+  const checkerUserId = request.headers.get('x-checker-user-id');
+  const checkerRole = request.headers.get('x-checker-role');
+
+  if (!checkerUserId || !checkerRole) {
+    return { valid: false as const, error: 'Maker-checker approval headers are required for tax config edits.' };
+  }
+
+  const normalizedRole = checkerRole.toUpperCase();
+  if (!['OWNER', 'ADMIN'].includes(normalizedRole)) {
+    return { valid: false as const, error: 'Checker must have OWNER or ADMIN role.' };
+  }
+
+  return {
+    valid: true as const,
+    checkerUserId,
+    checkerRole: normalizedRole,
+  };
 };
 
 const toOptionalDate = (value: unknown): Date | null => {
@@ -54,6 +76,15 @@ export async function POST(request: Request) {
     const workspaceId = typedSession.workspaceId;
     const actorUserId = typedSession.user?.id ?? null;
     const actorEmail = typedSession.user?.email ?? null;
+
+    const checker = getCheckerContext(request);
+    if (!checker.valid) {
+      return NextResponse.json({ error: checker.error }, { status: 400 });
+    }
+
+    if (checker.checkerUserId === actorUserId) {
+      return NextResponse.json({ error: 'Maker and checker must be different users.' }, { status: 400 });
+    }
 
     const body = (await request.json()) as TaxOverrideCreateBody;
     const rate = Number(body?.rate);
@@ -104,6 +135,26 @@ export async function POST(request: Request) {
       newValues: created,
       actorUserId,
       actorEmail,
+    });
+
+    await logActivity({
+      action: 'tax_override_create_maker_checker',
+      status: 'SUCCESS',
+      workspaceId,
+      actor: {
+        userId: actorUserId,
+        email: actorEmail,
+      },
+      entity: {
+        type: 'tax_rate_override',
+        id: created.id,
+      },
+      metadata: {
+        checkerUserId: checker.checkerUserId,
+        checkerRole: checker.checkerRole,
+        scopeType: created.scopeType,
+      },
+      request,
     });
 
     return NextResponse.json({ success: true, data: created }, { status: 201 });

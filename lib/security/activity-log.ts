@@ -164,7 +164,29 @@ const DENYLIST_KEYS = new Set([
   'privateKey',
   'signature',
   'otp',
+  'pan',
+  'panNumber',
+  'taxId',
+  'taxIdentifier',
+  'gstin',
+  'ein',
+  'ssn',
+  'sin',
+  'accountNumber',
+  'iban',
+  'ifsc',
+  'swift',
+  'routingNumber',
+  'salary',
+  'payroll',
 ]);
+
+const SENSITIVE_VALUE_PATTERNS: RegExp[] = [
+  /\b[A-Z]{5}[0-9]{4}[A-Z]\b/, // PAN (India)
+  /\b[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}\b/, // IBAN
+  /\b[A-Z]{4}0[A-Z0-9]{6}\b/, // IFSC
+  /\b[0-9]{9,18}\b/, // bank/account-like long numeric strings
+];
 
 const MAX_METADATA_DEPTH = 4;
 const MAX_OBJECT_KEYS = 50;
@@ -178,9 +200,14 @@ const MAX_CORRELATION_ID_LENGTH = 128;
 const sanitizeString = (value: string): string =>
   value.length <= MAX_STRING_LENGTH ? value : `${value.slice(0, MAX_STRING_LENGTH)}${TRUNCATED}`;
 
+const sanitizePotentialSensitiveString = (value: string): string => {
+  const sanitized = sanitizeString(value);
+  return SENSITIVE_VALUE_PATTERNS.some((pattern) => pattern.test(sanitized)) ? REDACTED : sanitized;
+};
+
 const toSafePrimitive = (value: unknown): JsonPrimitive => {
   if (value === null) return null;
-  if (typeof value === 'string') return sanitizeString(value);
+  if (typeof value === 'string') return sanitizePotentialSensitiveString(value);
   if (typeof value === 'number') return Number.isFinite(value) ? value : String(value);
   if (typeof value === 'boolean') return value;
   if (typeof value === 'bigint') return value.toString();
