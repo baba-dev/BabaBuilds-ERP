@@ -67,7 +67,11 @@ export async function sendEmail({
     port: profile.smtpPort || 587,
     secure: profile.smtpPort === 465,
     tls: {
-      servername: profile.smtpHost 
+      servername: profile.smtpHost,
+      minVersion: 'TLSv1.2',
+      rejectUnauthorized: true,
+      ciphers: 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256',
+      honorCipherOrder: true,
     },
     auth: {
       user: profile.smtpUser,
