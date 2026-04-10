@@ -44,7 +44,6 @@ test('validateBreakGlassAccounts flags missing expiry and stale review', () => {
   const results = validateBreakGlassAccounts(
     [
       {
-        userId: 'u1',
         label: 'Break Glass 1',
         expiresAt: null,
         lastReviewAt: '2025-01-01T00:00:00.000Z',
