@@ -6,13 +6,38 @@
 import webpush from 'web-push';
 import type { PushPayload } from './types';
 
-// Configure VAPID once per process.
-// Keys live in .env: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT || 'mailto:admin@bababuilds.com',
-  process.env.VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!,
-);
+let vapidConfigured = false;
+
+class PushVapidMissingError extends Error {
+  readonly code = 'PUSH_VAPID_MISSING' as const;
+
+  constructor(missingVars: string[]) {
+    super(`Missing required VAPID env vars: ${missingVars.join(', ')}`);
+    this.name = 'PushVapidMissingError';
+  }
+}
+
+function ensureVapidConfigured(): void {
+  if (vapidConfigured) return;
+
+  const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
+  const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+
+  if (!vapidPublicKey || !vapidPrivateKey) {
+    const missingVars: string[] = [];
+    if (!vapidPublicKey) missingVars.push('VAPID_PUBLIC_KEY');
+    if (!vapidPrivateKey) missingVars.push('VAPID_PRIVATE_KEY');
+    throw new PushVapidMissingError(missingVars);
+  }
+
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT || 'mailto:admin@bababuilds.com',
+    vapidPublicKey,
+    vapidPrivateKey,
+  );
+
+  vapidConfigured = true;
+}
 
 export interface StoredPushSubscription {
   endpoint: string;
@@ -31,6 +56,8 @@ export async function sendPushNotification(
   payload: PushPayload,
 ): Promise<{ success: boolean; gone: boolean }> {
   try {
+    ensureVapidConfigured();
+
     await webpush.sendNotification(
       {
         endpoint: subscription.endpoint,
@@ -61,6 +88,11 @@ export async function sendPushNotification(
     );
     return { success: true, gone: false };
   } catch (err: unknown) {
+    if (err instanceof PushVapidMissingError) {
+      console.error(`[web-push] ${err.code}`, err.message);
+      return { success: false, gone: false };
+    }
+
     const statusCode = (err as { statusCode?: number }).statusCode;
     if (statusCode === 410 || statusCode === 404) {
       // Browser unsubscribed — caller should delete from DB
