@@ -6,6 +6,7 @@ import crypto from "crypto";
 import { sendEmail } from "@/lib/mailer";
 import { canInviteMembers, getMaxUsersForPlan, Role } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity-log";
+import { alertElevatedPrivilegeGrant, HIGH_RISK_ROLES } from "@/lib/security/access-risk";
 
 export async function POST(req: Request) {
   let workspaceId = "";
@@ -29,6 +30,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email and role are required." }, { status: 400 });
     }
 
+    const normalizedEmail = String(email).trim().toLowerCase();
+
     // 1. Check if user has permission to invite
     const currentUserReq = await prisma.workspaceUser.findUnique({
       where: { userId_workspaceId: { userId: session.user.id, workspaceId } }
@@ -45,7 +48,7 @@ export async function POST(req: Request) {
         actorEmail,
         metadata: {
           actorRole,
-          targetEmail: typeof email === "string" ? email : null,
+          targetEmail: normalizedEmail,
           reason: "forbidden",
         },
       });
@@ -83,7 +86,7 @@ export async function POST(req: Request) {
     const invite = await prisma.workspaceInvite.create({
       data: {
         workspaceId,
-        email,
+        email: normalizedEmail,
         role: role as Role,
         token,
         expiresAt,
@@ -97,7 +100,7 @@ export async function POST(req: Request) {
       try {
          await sendEmail({
            profile,
-           to: email,
+           to: normalizedEmail,
            subject: `You have been invited to join ${workspace.name} on BabaERP`,
            html: `
              <h2>You're invited!</h2>
@@ -118,7 +121,7 @@ export async function POST(req: Request) {
            actorEmail,
            metadata: {
              actorRole,
-             targetEmail: email,
+             targetEmail: normalizedEmail,
              inviteId: invite.id,
              reason: "email_delivery_failed",
            },
@@ -138,10 +141,20 @@ export async function POST(req: Request) {
       actorEmail,
       metadata: {
         actorRole,
-        targetEmail: email,
+        targetEmail: normalizedEmail,
         targetRole: role,
       },
     });
+
+    if (HIGH_RISK_ROLES.has(String(role))) {
+      await alertElevatedPrivilegeGrant({
+        workspaceId,
+        actorId,
+        actorEmail,
+        targetEmail: normalizedEmail,
+        targetRole: String(role),
+      });
+    }
 
     return NextResponse.json({ success: true, invite });
   } catch (error: any) {
