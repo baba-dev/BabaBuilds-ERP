@@ -14,6 +14,7 @@ import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { InAppNotification } from '@prisma/client';
 import { formatDistanceToNow } from 'date-fns';
+import { Button } from '@/components/ui/button';
 
 const EVENT_ICON: Record<string, string> = {
   INVOICE_GENERATED: '🧾',
@@ -69,22 +70,29 @@ function NotificationItem({ notification: n, onRead }: NotificationItemProps) {
       {/* Actions */}
       <div className="flex flex-col items-center gap-1">
         {n.actionUrl && (
-          <a
-            href={n.actionUrl}
-            onClick={() => onRead(n.id)}
-            className="rounded p-1 text-zinc-500 hover:text-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-colors"
-            title="Open"
+          <Button
+            asChild
+            variant="ghost"
+            size="icon-lg"
+            className="rounded-lg text-zinc-500 hover:bg-white/10 hover:text-indigo-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70 disabled:text-zinc-600 transition-colors"
+            aria-label="Open notification link"
+            title="Open notification link"
           >
-            <ExternalLink className="h-3.5 w-3.5" />
-          </a>
+            <a href={n.actionUrl} onClick={() => onRead(n.id)}>
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          </Button>
         )}
-        <button
+        <Button
           onClick={() => onRead(n.id)}
-          className="rounded p-1 text-zinc-500 hover:text-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-colors"
-          title="Mark as read"
+          variant="ghost"
+          size="icon-lg"
+          className="rounded-lg text-zinc-500 hover:bg-white/10 hover:text-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70 disabled:text-zinc-600 transition-colors"
+          aria-label="Mark notification as read"
+          title="Mark notification as read"
         >
           <Check className="h-3.5 w-3.5" />
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -133,12 +141,14 @@ export function NotificationBell() {
   return (
     <div ref={panelRef} className="relative">
       {/* Bell Button */}
-      <button
+      <Button
         id="notification-bell-btn"
         onClick={handleOpen}
+        variant="ghost"
+        size="icon-lg"
         className={cn(
           'relative flex h-9 w-9 items-center justify-center rounded-xl text-zinc-400 transition-all duration-200',
-          'hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950',
+          'hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70 disabled:text-zinc-600',
           open && 'bg-white/10 text-white',
         )}
         aria-label="Notifications"
@@ -154,7 +164,7 @@ export function NotificationBell() {
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
-      </button>
+      </Button>
 
       {/* Dropdown Panel */}
       {open && (
@@ -179,14 +189,16 @@ export function NotificationBell() {
               )}
             </div>
             {notifications.length > 0 && (
-              <button
+              <Button
                 onClick={markAllRead}
-                className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
-                title="Mark all as read"
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-1 min-h-10 text-xs text-zinc-400 hover:bg-white/10 hover:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70 disabled:text-zinc-600 transition-colors"
+                title="Mark all notifications as read"
               >
                 <CheckCheck className="h-3.5 w-3.5" />
                 All read
-              </button>
+              </Button>
             )}
           </div>
 
