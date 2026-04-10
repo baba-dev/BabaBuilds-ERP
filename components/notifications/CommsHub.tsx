@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import type { InAppNotification } from '@prisma/client';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import {
   DialogContent,
   DialogHeader,
@@ -27,7 +28,6 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSession, signOut } from 'next-auth/react';
-import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 
 const EVENT_ICON: Record<string, string> = {
@@ -59,6 +59,21 @@ interface NotificationItemProps {
   onRead: (id: string) => void;
 }
 
+const typography = {
+  title: 'text-lg font-semibold tracking-tight text-zinc-100',
+  subtitle: 'text-sm text-zinc-400',
+  metadata: 'text-[11px] font-medium uppercase tracking-wider text-zinc-500',
+};
+
+const cardSurfaceClass =
+  'rounded-2xl border border-zinc-800/60 bg-zinc-900/45 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.03)]';
+
+const iconContainerClass =
+  'flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 text-zinc-300 transition-colors group-hover:bg-indigo-600/20 group-hover:text-indigo-300';
+
+const badgeClass =
+  'inline-flex items-center rounded-full border border-zinc-700/70 bg-zinc-800/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-300';
+
 function NotificationItem({ notification: n, onRead }: NotificationItemProps) {
   const accent = EVENT_ACCENT[n.eventType] ?? 'border-l-zinc-500';
   const icon   = EVENT_ICON[n.eventType]   ?? '🔔';
@@ -73,7 +88,7 @@ function NotificationItem({ notification: n, onRead }: NotificationItemProps) {
     >
       {/* Icon Group */}
       <div className="flex-shrink-0">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 shadow-inner">
+        <div className={cn(iconContainerClass, 'shadow-inner')}>
           <span className="text-xl leading-none">{icon}</span>
         </div>
       </div>
@@ -86,7 +101,7 @@ function NotificationItem({ notification: n, onRead }: NotificationItemProps) {
         <p className="mt-1 text-xs text-zinc-400 line-clamp-2 leading-relaxed">
           {n.body}
         </p>
-        <p className="mt-2 text-[10px] font-medium text-zinc-600 uppercase tracking-wider">
+        <p className={cn(typography.metadata, 'mt-2')}>
           {ago}
         </p>
       </div>
@@ -123,7 +138,6 @@ function NotificationItem({ notification: n, onRead }: NotificationItemProps) {
 export function CommsHub() {
   const { data: session } = useSession();
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
-  const t = useTranslations('UserNav'); // Re-using UserNav translations
 
   if (!session?.user) return null;
 
@@ -159,7 +173,7 @@ export function CommsHub() {
                   <Bell className="h-4 w-4" />
                   <span>Inbox</span>
                   {unreadCount > 0 && (
-                    <span className="ml-1 rounded-full bg-indigo-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                    <span className={cn(badgeClass, 'ml-1 border-indigo-400/40 bg-indigo-500/20 text-indigo-200')}>
                       {unreadCount}
                     </span>
                   )}
@@ -187,9 +201,9 @@ export function CommsHub() {
           </div>
 
           <div className="max-h-[60vh] overflow-y-auto custom-scrollbar">
-            <TabsContent value="inbox" className="p-8 mt-0 outline-none">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-sm font-semibold uppercase tracking-widest text-zinc-500">Recent Notifications</h3>
+            <TabsContent value="inbox" className="mt-0 space-y-6 p-8 outline-none motion-safe:transition-all motion-safe:duration-200 data-[state=inactive]:translate-y-1 data-[state=inactive]:opacity-0 data-[state=active]:translate-y-0 data-[state=active]:opacity-100">
+              <div className="flex items-center justify-between">
+                <h3 className={typography.metadata}>Recent Notifications</h3>
                 {notifications.length > 0 && (
                   <Button
                     onClick={markAllRead}
@@ -202,20 +216,21 @@ export function CommsHub() {
                   </Button>
                 )}
               </div>
+              <Separator className="bg-zinc-800/70" />
 
               {notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className={cn(cardSurfaceClass, 'flex flex-col items-center justify-center py-16 text-center')}>
                   <div className="relative mb-4">
                     <div className="absolute -inset-4 rounded-full bg-indigo-500/10 blur-xl opacity-50" />
                     <Inbox className="relative h-12 w-12 text-zinc-700" />
                   </div>
-                  <h4 className="text-lg font-medium text-zinc-300">All caught up!</h4>
-                  <p className="text-sm text-zinc-600 max-w-[200px] mt-1">
-                    You've handled all your recent business notifications.
+                  <h4 className={typography.title}>All caught up!</h4>
+                  <p className={cn(typography.subtitle, 'mt-1 max-w-[200px]')}>
+                    You&apos;ve handled all your recent business notifications.
                   </p>
                 </div>
               ) : (
-                <div className="flex flex-col gap-3">
+                <div className={cn(cardSurfaceClass, 'space-y-3 p-4')}>
                   {notifications.map((n) => (
                     <NotificationItem
                       key={n.id}
@@ -227,81 +242,83 @@ export function CommsHub() {
               )}
             </TabsContent>
 
-            <TabsContent value="account" className="p-8 mt-0 outline-none">
+            <TabsContent value="account" className="mt-0 space-y-6 p-8 outline-none motion-safe:transition-all motion-safe:duration-200 data-[state=inactive]:translate-y-1 data-[state=inactive]:opacity-0 data-[state=active]:translate-y-0 data-[state=active]:opacity-100">
                <div className="grid gap-6">
                   {/* User Profile Summary */}
-                  <div className="flex items-center gap-4 rounded-2xl bg-white/[0.03] p-5 border border-zinc-800/30">
+                  <div className={cn(cardSurfaceClass, 'flex items-center gap-4 p-5')}>
                     <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600 text-2xl font-bold text-white shadow-xl shadow-indigo-500/20">
                       {session.user.name?.[0] || 'U'}
                     </div>
                     <div>
-                      <h4 className="text-lg font-bold text-white">{session.user.name}</h4>
-                      <p className="text-sm text-zinc-400">{session.user.email}</p>
+                      <h4 className={typography.title}>{session.user.name}</h4>
+                      <p className={typography.subtitle}>{session.user.email}</p>
                       <div className="mt-2 flex items-center gap-2">
-                        <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400 ring-1 ring-inset ring-emerald-500/20">
+                        <span className={cn(badgeClass, 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300')}>
                            Professional Plan
                         </span>
                       </div>
                     </div>
                   </div>
 
+                  <Separator className="bg-zinc-800/70" />
+
                   {/* Actions Grid */}
                   <div className="grid grid-cols-2 gap-3">
                     <Link href="/settings/profile" className="block">
-                      <div className="group flex flex-col gap-3 rounded-2xl bg-white/[0.03] p-5 border border-zinc-800/30 hover:bg-white/[0.06] hover:border-zinc-700/50 transition-all text-left">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 group-hover:bg-indigo-600/20 group-hover:text-indigo-400 transition-colors">
+                      <div className={cn(cardSurfaceClass, 'group flex flex-col gap-3 p-5 transition-all hover:border-zinc-700/80 hover:bg-zinc-900/70 text-left')}>
+                        <div className={iconContainerClass}>
                           <User className="h-5 w-5" />
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-white">Profile Settings</p>
-                          <p className="text-[11px] text-zinc-500">Manage your personal info</p>
+                          <p className={cn(typography.subtitle, 'font-semibold text-zinc-100')}>Profile Settings</p>
+                          <p className={typography.metadata}>Manage your personal info</p>
                         </div>
                       </div>
                     </Link>
                     <Link href="/settings/billing" className="block">
-                      <div className="group flex flex-col gap-3 rounded-2xl bg-white/[0.03] p-5 border border-zinc-800/30 hover:bg-white/[0.06] hover:border-zinc-700/50 transition-all text-left">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 group-hover:bg-indigo-600/20 group-hover:text-indigo-400 transition-colors">
+                      <div className={cn(cardSurfaceClass, 'group flex flex-col gap-3 p-5 transition-all hover:border-zinc-700/80 hover:bg-zinc-900/70 text-left')}>
+                        <div className={iconContainerClass}>
                           <CreditCard className="h-5 w-5" />
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-white">Billing & Plan</p>
-                          <p className="text-[11px] text-zinc-500">View invoices & upgrade</p>
+                          <p className={cn(typography.subtitle, 'font-semibold text-zinc-100')}>Billing & Plan</p>
+                          <p className={typography.metadata}>View invoices & upgrade</p>
                         </div>
                       </div>
                     </Link>
                     <Link href="/help" className="block">
-                      <div className="group flex flex-col gap-3 rounded-2xl bg-white/[0.03] p-5 border border-zinc-800/30 hover:bg-white/[0.06] hover:border-zinc-700/50 transition-all text-left">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 group-hover:bg-sky-600/20 group-hover:text-sky-400 transition-colors">
+                      <div className={cn(cardSurfaceClass, 'group flex flex-col gap-3 p-5 transition-all hover:border-zinc-700/80 hover:bg-zinc-900/70 text-left')}>
+                        <div className={cn(iconContainerClass, 'group-hover:bg-sky-600/20 group-hover:text-sky-300')}>
                           <LifeBuoy className="h-5 w-5" />
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-white">Help Center</p>
-                          <p className="text-[11px] text-zinc-500">Guides and support</p>
+                          <p className={cn(typography.subtitle, 'font-semibold text-zinc-100')}>Help Center</p>
+                          <p className={typography.metadata}>Guides and support</p>
                         </div>
                       </div>
                     </Link>
                     <button 
                       onClick={() => signOut({ callbackUrl: "/" })}
-                      className="group flex flex-col gap-3 rounded-2xl bg-red-500/5 p-5 border border-red-900/10 hover:bg-red-500/10 hover:border-red-500/30 transition-all text-left"
+                      className={cn(cardSurfaceClass, 'group flex flex-col gap-3 border-red-900/40 bg-red-950/10 p-5 text-left transition-all hover:border-red-500/40 hover:bg-red-950/20')}
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 group-hover:bg-red-600/20 group-hover:text-red-400 transition-colors">
+                      <div className={cn(iconContainerClass, 'group-hover:bg-red-600/20 group-hover:text-red-300')}>
                         <LogOut className="h-5 w-5" />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-red-400">Sign Out</p>
-                        <p className="text-[11px] text-red-900/50">End current session</p>
+                        <p className={cn(typography.subtitle, 'font-semibold text-red-300')}>Sign Out</p>
+                        <p className="text-[11px] font-medium uppercase tracking-wider text-red-300/60">End current session</p>
                       </div>
                     </button>
                   </div>
                </div>
             </TabsContent>
 
-            <TabsContent value="security" className="p-8 mt-0 outline-none">
+            <TabsContent value="security" className="mt-0 space-y-6 p-8 outline-none motion-safe:transition-all motion-safe:duration-200 data-[state=inactive]:translate-y-1 data-[state=inactive]:opacity-0 data-[state=active]:translate-y-0 data-[state=active]:opacity-100">
               {/* Security Placeholder */}
-              <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className={cn(cardSurfaceClass, 'flex flex-col items-center justify-center py-16 text-center')}>
                   <Shield className="h-12 w-12 text-zinc-700 mb-4" />
-                  <h4 className="text-lg font-medium text-zinc-300">Security & Privacy</h4>
-                  <p className="text-sm text-zinc-600 max-w-[300px] mt-1">
+                  <h4 className={typography.title}>Security & Privacy</h4>
+                  <p className={cn(typography.subtitle, 'mt-1 max-w-[300px]')}>
                     Manage your password, two-factor authentication, and active sessions.
                   </p>
                   <Button variant="outline" className="mt-6 border-zinc-800 hover:bg-white/5">
