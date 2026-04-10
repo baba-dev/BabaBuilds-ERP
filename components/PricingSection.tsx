@@ -174,7 +174,7 @@ export default function PricingSection() {
                   aria-pressed={currency.code === c.code}
                   onClick={() => setCurrency(c)}
                   className={cn(
-                    "h-auto shrink-0 px-4 py-2 text-sm font-semibold",
+                    "h-auto shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-100 dark:focus-visible:ring-offset-zinc-900",
                     segmentedControlItemClass,
                     currency.code === c.code && segmentedControlItemActiveClass,
                   )}
@@ -272,7 +272,7 @@ export default function PricingSection() {
                   asChild
                   size="lg"
                   className={cn(
-                    "w-full rounded-2xl py-6 font-bold transition-all active:scale-95",
+                    "w-full rounded-2xl py-6 font-bold transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900",
                     tier.featured
                       ? "bg-indigo-600 text-white shadow-xl shadow-indigo-600/20 hover:bg-indigo-700"
                       : "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200",
@@ -296,7 +296,7 @@ export default function PricingSection() {
           </div>
           <p className="text-sm text-zinc-600 dark:text-zinc-300">
             Need a custom solution for your enterprise?{" "}
-            <a href="mailto:admin@bababuilds.com" className="font-bold text-indigo-600 hover:underline">
+            <a href="mailto:admin@bababuilds.com" className="rounded-sm font-bold text-indigo-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950">
               Speak with an expert
             </a>
           </p>

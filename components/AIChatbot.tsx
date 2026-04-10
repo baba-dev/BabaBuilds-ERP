@@ -208,13 +208,13 @@ export default function AIChatbot() {
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={() => setIsClearDialogOpen(true)} title="Clear Chat" className="h-8 w-8 text-purple-200 hover:bg-purple-800 dark:hover:bg-purple-900 hover:text-white">
+              <Button variant="ghost" size="icon" onClick={() => setIsClearDialogOpen(true)} title="Clear Chat" className="h-8 w-8 text-purple-200 hover:bg-purple-800 dark:hover:bg-purple-900 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-purple-900 dark:focus-visible:ring-purple-500 dark:focus-visible:ring-offset-purple-950">
               <Trash2 className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsExpanded(!isExpanded)} title={isExpanded ? "Minimize" : "Expand"} className="h-8 w-8 text-purple-200 hover:bg-purple-800 dark:hover:bg-purple-900 hover:text-white">
+            <Button variant="ghost" size="icon" onClick={() => setIsExpanded(!isExpanded)} title={isExpanded ? "Minimize" : "Expand"} className="h-8 w-8 text-purple-200 hover:bg-purple-800 dark:hover:bg-purple-900 hover:text-white focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-purple-900 dark:focus-visible:ring-purple-500 dark:focus-visible:ring-offset-purple-950">
               {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </Button>
-            <Button variant="ghost" size="icon" onClick={closeChat} title="Close" className="h-8 w-8 text-purple-200 hover:bg-purple-800 dark:hover:bg-purple-900 hover:text-white">
+            <Button variant="ghost" size="icon" onClick={closeChat} title="Close" className="h-8 w-8 text-purple-200 hover:bg-purple-800 dark:hover:bg-purple-900 hover:text-white focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2 focus-visible:ring-offset-purple-900 dark:focus-visible:ring-purple-500 dark:focus-visible:ring-offset-purple-950">
               <X className="w-4 h-4" />
             </Button>
           </div>
@@ -255,7 +255,7 @@ export default function AIChatbot() {
               <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider ml-11">Suggested Queries</p>
               <div className="flex flex-wrap gap-2 ml-11">
                 {QUICK_PROMPTS.map((prompt, idx) => (
-                  <button key={idx} onClick={() => sendMessage(prompt)} className="text-xs bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 px-3 py-2 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 hover:border-purple-200 dark:hover:border-purple-800/50 transition-all text-left font-medium active:scale-95 shadow-sm">
+                  <button key={idx} onClick={() => sendMessage(prompt)} className="text-xs bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 px-3 py-2 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 hover:border-purple-200 dark:hover:border-purple-800/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-purple-500 dark:focus-visible:ring-offset-zinc-900 transition-all text-left font-medium active:scale-95 shadow-sm">
                     {prompt}
                   </button>
                 ))}
@@ -285,10 +285,10 @@ export default function AIChatbot() {
             value={input} 
             onChange={e => setInput(e.target.value)} 
             placeholder={isExpanded ? "Ask about your finances or give me a task..." : "Ask your AI..."}
-            className={`flex-1 bg-zinc-50/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus-visible:ring-purple-600 dark:focus-visible:ring-purple-500 focus-visible:bg-white dark:focus-visible:bg-zinc-900 transition-all ${isExpanded ? 'h-12 text-base rounded-xl' : 'rounded-lg'}`} 
+            className={`flex-1 bg-zinc-50/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 focus-visible:ring-purple-600 dark:focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950 focus-visible:bg-white dark:focus-visible:bg-zinc-900 transition-all ${isExpanded ? 'h-12 text-base rounded-xl' : 'rounded-lg'}`} 
             disabled={isLoading} 
           />
-          <Button type="submit" size="icon" className={`bg-purple-900 dark:bg-purple-600 hover:bg-purple-800 dark:hover:bg-purple-700 shrink-0 shadow-md text-white transition-all ${input.trim() ? 'scale-100' : 'opacity-80'} ${isExpanded ? 'h-12 w-12 rounded-xl' : 'rounded-lg'}`} disabled={isLoading || !input.trim()}>
+          <Button type="submit" size="icon" className={`bg-purple-900 dark:bg-purple-600 hover:bg-purple-800 dark:hover:bg-purple-700 focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950 disabled:pointer-events-none disabled:opacity-60 shrink-0 shadow-md text-white transition-all ${input.trim() ? 'scale-100' : 'opacity-80'} ${isExpanded ? 'h-12 w-12 rounded-xl' : 'rounded-lg'}`} disabled={isLoading || !input.trim()}>
             {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-4 h-4" />}
           </Button>
         </form>
@@ -297,7 +297,7 @@ export default function AIChatbot() {
         <div className="px-3 py-1.5 pb-[max(env(safe-area-inset-bottom),0.375rem)] bg-white dark:bg-zinc-950 border-t border-zinc-100 dark:border-zinc-800/50 flex items-center justify-center shrink-0">
           <a
             href="/help"
-            className="flex items-center gap-1.5 text-[10px] font-semibold text-zinc-400 dark:text-zinc-600 hover:text-purple-600 dark:hover:text-purple-400 transition-colors uppercase tracking-widest"
+            className="flex items-center gap-1.5 rounded-md text-[10px] font-semibold text-zinc-400 dark:text-zinc-600 hover:text-purple-600 dark:hover:text-purple-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950 transition-colors uppercase tracking-widest"
           >
             <BookOpen className="w-3 h-3" />
             Help Center & Docs
@@ -311,7 +311,7 @@ export default function AIChatbot() {
       <div className={`fixed bottom-[max(env(safe-area-inset-bottom),1.5rem)] right-6 z-[100] transition-all duration-300 ${isOpen || isExpanded ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}`}>
         <button 
           onClick={() => setIsOpen(!isOpen)}
-          className={`h-14 w-14 rounded-full flex items-center justify-center text-white shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 ${isOpen ? 'bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 rotate-90 shadow-zinc-400/50' : 'bg-purple-900 dark:bg-purple-600 hover:bg-purple-800 dark:hover:bg-purple-500 hover:shadow-purple-900/40 rotate-0'}`}
+          className={`h-14 w-14 rounded-full flex items-center justify-center text-white shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950 ${isOpen ? 'bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 rotate-90 shadow-zinc-400/50' : 'bg-purple-900 dark:bg-purple-600 hover:bg-purple-800 dark:hover:bg-purple-500 hover:shadow-purple-900/40 rotate-0'}`}
         >
           {isOpen ? <X className="w-6 h-6 -rotate-90 transition-transform duration-300" /> : <MessageSquare className="w-6 h-6" />}
         </button>

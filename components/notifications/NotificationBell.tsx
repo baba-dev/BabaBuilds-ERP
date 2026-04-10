@@ -74,7 +74,7 @@ function NotificationItem({ notification: n, onRead }: NotificationItemProps) {
             asChild
             variant="ghost"
             size="icon-lg"
-            className="rounded-lg text-zinc-500 hover:bg-white/10 hover:text-indigo-300 focus-visible:ring-indigo-500/70 disabled:text-zinc-600"
+            className="rounded-lg text-zinc-500 hover:bg-white/10 hover:text-indigo-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70 disabled:text-zinc-600 transition-colors"
             aria-label="Open notification link"
             title="Open notification link"
           >
@@ -87,7 +87,7 @@ function NotificationItem({ notification: n, onRead }: NotificationItemProps) {
           onClick={() => onRead(n.id)}
           variant="ghost"
           size="icon-lg"
-          className="rounded-lg text-zinc-500 hover:bg-white/10 hover:text-emerald-300 focus-visible:ring-indigo-500/70 disabled:text-zinc-600"
+          className="rounded-lg text-zinc-500 hover:bg-white/10 hover:text-emerald-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70 disabled:text-zinc-600 transition-colors"
           aria-label="Mark notification as read"
           title="Mark notification as read"
         >
@@ -147,8 +147,8 @@ export function NotificationBell() {
         variant="ghost"
         size="icon-lg"
         className={cn(
-          'relative rounded-xl text-zinc-400 transition-all duration-200',
-          'hover:bg-white/10 hover:text-white focus-visible:ring-indigo-500/70 disabled:text-zinc-600',
+          'relative flex h-9 w-9 items-center justify-center rounded-xl text-zinc-400 transition-all duration-200',
+          'hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70 disabled:text-zinc-600',
           open && 'bg-white/10 text-white',
         )}
         aria-label="Notifications"
@@ -193,7 +193,7 @@ export function NotificationBell() {
                 onClick={markAllRead}
                 variant="ghost"
                 size="sm"
-                className="min-h-10 text-xs text-zinc-400 hover:bg-white/10 hover:text-zinc-100 focus-visible:ring-indigo-500/70 disabled:text-zinc-600"
+                className="flex items-center gap-1 min-h-10 text-xs text-zinc-400 hover:bg-white/10 hover:text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70 disabled:text-zinc-600 transition-colors"
                 title="Mark all notifications as read"
               >
                 <CheckCheck className="h-3.5 w-3.5" />
