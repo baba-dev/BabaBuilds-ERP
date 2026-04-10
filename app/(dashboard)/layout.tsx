@@ -2,7 +2,6 @@ import { getServerSession } from "next-auth/next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
-import AIChatbot from "@/components/AIChatbot";
 import { DashboardShell } from "@/components/layout/DashboardShell";
 import { normalizeLaunchDestination } from "@/lib/launch-routing";
 
@@ -27,9 +26,6 @@ export default async function DashboardLayout({
   }
 
   return (
-    <>
-      <DashboardShell>{children}</DashboardShell>
-      <AIChatbot />
-    </>
+    <DashboardShell>{children}</DashboardShell>
   );
 }

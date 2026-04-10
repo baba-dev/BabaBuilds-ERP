@@ -280,6 +280,187 @@ export async function GET(request: Request) {
               'X-Dashboard-Cache-TTL': String(cacheMeta.ttlSeconds),
             },
           });
+    const [invoices, investments, activeClientCount, retainers, recentInvoices, profile] = await Promise.all([
+      prisma.invoice.findMany({
+        where: { financialYear: fy, workspaceId },
+        select: {
+          grandTotal: true,
+          totalAmount: true,
+          billingMonth: true,
+          invoiceDate: true,
+        },
+        orderBy: { invoiceDate: 'asc' }
+      }),
+      prisma.investment.findMany({
+        where: { workspaceId },
+        select: {
+          amount: true,
+          category: true,
+        },
+      }),
+      prisma.client.count({ where: { workspaceId } }),
+      prisma.retainer.findMany({
+        where: { workspaceId, status: "ACTIVE" },
+        select: {
+          amount: true,
+          clientId: true,
+          serviceName: true,
+          client: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      }),
+      prisma.invoice.findMany({
+        where: { workspaceId },
+        orderBy: { invoiceDate: 'desc' },
+        take: 5,
+        select: {
+          id: true,
+          invoiceDate: true,
+          invoiceNumber: true,
+          clientName: true,
+          billingMonth: true,
+          status: true,
+          totalAmount: true,
+          amountReceived: true,
+          pdfPath: true,
+          createdAt: true,
+        },
+      }),
+      prisma.businessProfile.findUnique({
+        where: { workspaceId },
+        select: {
+          groqApiKey: true,
+          razorpayKeyId: true,
+          razorpayKeySecret: true,
+          stripePublishableKey: true,
+          stripeSecretKey: true,
+          smtpHost: true,
+          smtpPort: true,
+          smtpUser: true,
+          smtpPassword: true,
+          smtpFromEmail: true,
+        },
+      }),
+    ]);
+
+    const razorpayReadiness = getIntegrationReadiness([profile?.razorpayKeyId, profile?.razorpayKeySecret]);
+    const stripeReadiness = getIntegrationReadiness([profile?.stripePublishableKey, profile?.stripeSecretKey]);
+    const hasAnyPaymentKey = [
+      profile?.razorpayKeyId,
+      profile?.razorpayKeySecret,
+      profile?.stripePublishableKey,
+      profile?.stripeSecretKey,
+    ].some((value) => Boolean(value && value.trim()));
+
+    const paymentReadiness: IntegrationReadiness =
+      razorpayReadiness.status === 'healthy' || stripeReadiness.status === 'healthy'
+        ? { configured: true, status: 'healthy' }
+        : hasAnyPaymentKey
+          ? { configured: false, status: 'partial' }
+          : { configured: false, status: 'missing' };
+
+    const integrationReadiness = {
+      groq: getIntegrationReadiness([profile?.groqApiKey]),
+      payment: paymentReadiness,
+      smtp: getIntegrationReadiness([
+        profile?.smtpHost,
+        profile?.smtpPort ? String(profile.smtpPort) : null,
+        profile?.smtpUser,
+        profile?.smtpPassword,
+        profile?.smtpFromEmail,
+      ]),
+    };
+
+    const integrationSummary = Object.values(integrationReadiness).reduce(
+      (acc, current) => {
+        acc[current.status] += 1;
+        return acc;
+      },
+      { healthy: 0, partial: 0, missing: 0 }
+    );
+
+    const totalRevenueDecimal = sumInvoiceBilledAmount(invoices);
+    const totalWealthDecimal = investments.reduce(
+      (sum, inv) => sum.plus(toDecimal(inv.amount)),
+      new Prisma.Decimal(0)
+    );
+
+    const presumptiveIncomeDecimal = totalRevenueDecimal.mul(0.5);
+    const eligible80CDecimal = investments
+      .filter(i => i.category.includes('80C'))
+      .reduce((sum, i) => sum.plus(toDecimal(i.amount)), new Prisma.Decimal(0));
+    const eligible80CDecimalCapped = Prisma.Decimal.min(eligible80CDecimal, new Prisma.Decimal(150000));
+    const taxEstimate = estimateTax({
+      countryCode: 'IN',
+      revenue: presumptiveIncomeDecimal,
+      deductions: eligible80CDecimalCapped,
+      serviceScope: 'dashboard_summary',
+      customerScope: 'workspace',
+      asOfDate: new Date(),
+    });
+
+    let mrrTotal = new Prisma.Decimal(0);
+    const clientIds = retainers.map(ret => ret.clientId);
+    const uniqueClientIds = Array.from(new Set(clientIds.filter((id): id is string => Boolean(id))));
+
+    const relevantInvoicesByClient = uniqueClientIds.length
+      ? await prisma.$transaction(
+          uniqueClientIds.map(clientId =>
+            prisma.invoice.findMany({
+              where: { clientId, workspaceId },
+              orderBy: { invoiceDate: 'desc' },
+              take: 3,
+              select: {
+                clientId: true,
+                status: true,
+                invoiceDate: true,
+                dateReceived: true,
+              },
+            })
+          )
+        )
+      : [];
+
+    const invoicesByClient = relevantInvoicesByClient.reduce<Record<string, (typeof relevantInvoicesByClient)[number]>>(
+      (acc, invoices, index) => {
+        const clientId = uniqueClientIds[index];
+        acc[clientId] = invoices;
+        return acc;
+      },
+      {}
+    );
+
+    const retainerRadar = retainers.map((ret) => {
+      mrrTotal = mrrTotal.plus(toDecimal(ret.amount));
+      const recentClientInvoices = (invoicesByClient[ret.clientId as string] || []).slice(0, 3);
+
+      let health = "good";
+      const today = new Date();
+
+      if (recentClientInvoices.length === 0) {
+        health = "pending";
+      } else {
+        for (const inv of recentClientInvoices) {
+          const normalizedStatus = normalizeInvoiceStatus(inv.status);
+          if (normalizedStatus === 'PENDING' || normalizedStatus === 'PARTIALLY_PAID') {
+            const daysOverdue = Math.floor((today.getTime() - new Date(inv.invoiceDate).getTime()) / (1000 * 3600 * 24));
+            if (daysOverdue > 15) {
+              health = "danger";
+              break;
+            } else if (daysOverdue > 7) {
+              health = "warning";
+            }
+          } else if (normalizedStatus === 'PAID') {
+            if (inv.dateReceived) {
+              const daysToPay = Math.floor((new Date(inv.dateReceived).getTime() - new Date(inv.invoiceDate).getTime()) / (1000 * 3600 * 24));
+              if (daysToPay > 10 && health !== "danger") {
+                health = "warning";
+              }
+            }
+          }
         }
 
         const payload = await buildDashboardPayload(workspaceId, fy);
