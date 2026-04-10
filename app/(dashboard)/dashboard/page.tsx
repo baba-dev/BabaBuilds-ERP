@@ -39,6 +39,8 @@ import { getInvoiceStatusBadgeKey, INVOICE_STATUS, isPaidInvoiceStatus, toInvoic
 import { parseDashboardResponse } from "./parse-dashboard-response";
 import { getCurrentFinancialYear } from "@/lib/financial-year";
 import { resolveDashboardLaunchTarget } from "@/lib/launch-routing";
+import { cn } from "@/lib/utils";
+import { typography } from "@/lib/ui/typography";
 
 
 
@@ -478,7 +480,7 @@ export default function Dashboard() {
               <TrendingUp className="w-32 h-32 text-emerald-600 dark:text-emerald-400 -mr-4 -mt-4 transform group-hover:scale-110 transition-transform duration-700" />
             </div>
             <CardHeader className="pb-4 relative z-10">
-              <CardTitle className="text-sm font-bold text-emerald-800 dark:text-emerald-400 flex items-center gap-2 uppercase tracking-wider">
+              <CardTitle className={cn(typography.cardTitle, "flex items-center gap-2 uppercase tracking-wider text-emerald-800 dark:text-emerald-400")}>
                 <Activity className="w-4 h-4 text-emerald-600 dark:text-emerald-500" /> {t('guaranteed_mrr')}
               </CardTitle>
             </CardHeader>
@@ -501,10 +503,10 @@ export default function Dashboard() {
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col group hover:shadow-md transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-zinc-100 dark:border-zinc-800/80">
               <div className="space-y-1.5">
-                <CardTitle className="text-sm font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-2 uppercase tracking-wider">
+                <CardTitle className={cn(typography.cardTitle, "flex items-center gap-2 uppercase tracking-wider")}>
                   <Sparkles className="w-4 h-4 text-indigo-500 animate-pulse" /> {t('retainer_radar')}
                 </CardTitle>
-                <CardDescription className="text-xs text-zinc-500 dark:text-zinc-400">
+                <CardDescription className={typography.cardBody}>
                   {t('payment_velocity')}
                 </CardDescription>
               </div>
@@ -551,14 +553,14 @@ export default function Dashboard() {
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col hover:shadow-md transition-all duration-300">
             <CardHeader className="pb-4 border-b border-zinc-100 dark:border-zinc-800 space-y-2">
               <div className="flex justify-between items-center">
-                <CardTitle className="text-sm font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-2 uppercase tracking-wider">
+                <CardTitle className={cn(typography.cardTitle, "flex items-center gap-2 uppercase tracking-wider")}>
                   <LinkIcon className="w-4 h-4 text-indigo-500" /> {t("api_status.title")}
                 </CardTitle>
                 <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/50 hover:bg-indigo-100 text-xs font-bold">
                   {t("api_status.badge", { configured: configuredConnections, total: 3 })}
                 </Badge>
               </div>
-              <CardDescription className="text-xs text-zinc-500 dark:text-zinc-400">
+              <CardDescription className={typography.cardBody}>
                 {t("api_status.description")}
               </CardDescription>
             </CardHeader>
@@ -586,7 +588,7 @@ export default function Dashboard() {
                             </TooltipContent>
                           </UiTooltip>
                         </p>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                        <p className={typography.cardBody}>
                           {integration.status === "healthy"
                             ? t("api_status.status.configured")
                             : integration.status === "partial"
@@ -622,7 +624,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 group hover:shadow-md transition-shadow duration-300">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">
+              <CardTitle className={cn(typography.cardTitle, "text-xs uppercase tracking-widest text-zinc-500 dark:text-zinc-400")}>
                 {t('billed_revenue')}
               </CardTitle>
             </CardHeader>
@@ -636,7 +638,7 @@ export default function Dashboard() {
 
           <Card className="shadow-sm border-indigo-200/60 dark:border-indigo-800/40 bg-indigo-50/30 dark:bg-indigo-950/20 group hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700/50 transition-all duration-300">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-widest">
+              <CardTitle className={cn(typography.cardTitle, "text-xs uppercase tracking-widest text-indigo-700 dark:text-indigo-400")}>
                 {t('liquid_assets')}
               </CardTitle>
             </CardHeader>
@@ -650,7 +652,7 @@ export default function Dashboard() {
 
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 group hover:shadow-md transition-shadow duration-300">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">
+              <CardTitle className={cn(typography.cardTitle, "text-xs uppercase tracking-widest text-zinc-500 dark:text-zinc-400")}>
                 {t('advance_tax', { taxLabel })}
               </CardTitle>
             </CardHeader>
@@ -664,7 +666,7 @@ export default function Dashboard() {
 
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 group hover:shadow-md transition-shadow duration-300">
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">
+              <CardTitle className={cn(typography.cardTitle, "text-xs uppercase tracking-widest text-zinc-500 dark:text-zinc-400")}>
                 {t('active_clients')}
               </CardTitle>
             </CardHeader>
@@ -687,7 +689,7 @@ export default function Dashboard() {
           <CardContent className="p-6 md:p-8">
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-5 gap-4">
               <div className="space-y-1.5">
-                <h3 className="font-bold text-zinc-900 dark:text-zinc-50 flex items-center gap-2 uppercase tracking-tight text-sm">
+                <h3 className={cn(typography.cardTitle, "flex items-center gap-2 uppercase tracking-tight text-sm")}>
                   {t('tax_threshold', { taxLabel })}
                   {compliancePercentage >= 90 && <AlertTriangle className="h-4 w-4 text-amber-500 animate-pulse" aria-label={t("a11y.threshold_warning")} />}
                 </h3>
@@ -802,10 +804,10 @@ export default function Dashboard() {
           <CardHeader className="border-b border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/80 dark:bg-zinc-900/40 p-5 md:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <CardTitle className="text-sm font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
+                <CardTitle className={cn(typography.cardTitle, "uppercase tracking-wider flex items-center gap-2")}>
                   <FileText className="w-4 h-4 text-indigo-500" /> {t('recent_ledger')}
                 </CardTitle>
-                <CardDescription className="text-xs dark:text-zinc-400 font-medium mt-1.5">
+                <CardDescription className={cn(typography.cardBody, "font-medium mt-1.5")}>
                   {t('recent_ledger_desc')}
                 </CardDescription>
               </div>
@@ -835,7 +837,7 @@ export default function Dashboard() {
                 <DialogTitle className="text-zinc-900 dark:text-zinc-50 font-bold tracking-tight text-xl">
                   {t('log_remittance')}
                 </DialogTitle>
-                <DialogDescription className="text-zinc-500 dark:text-zinc-400 text-sm font-medium mt-1.5 leading-relaxed">
+                <DialogDescription className={cn(typography.bodyCopy, "font-medium mt-1.5")}>
                   {t.rich('record_actual_amount', { currency, invoiceNumber: selectedInvoice?.invoiceNumber ?? "-", b: (chunks) => <b>{chunks}</b>, strong: (chunks) => <strong className="text-zinc-700 dark:text-zinc-300">{chunks}</strong> })}
                 </DialogDescription>
               </DialogHeader>

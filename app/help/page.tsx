@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { getAllDocs } from "@/lib/docs";
 import Link from "next/link";
 import { BookOpen, ArrowRight, Mail } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { typography } from "@/lib/ui/typography";
 
 export default function HelpPage() {
   const docs = getAllDocs();
@@ -20,11 +22,11 @@ export default function HelpPage() {
             <BookOpen className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Help Center</h1>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">BabaBuilds ERP Documentation</p>
+            <h1 className={cn(typography.pageTitle, "text-2xl sm:text-3xl lg:text-4xl")}>Help Center</h1>
+            <p className={cn(typography.bodyCopy, "text-xs sm:text-sm")}>BabaBuilds ERP Documentation</p>
           </div>
         </div>
-        <p className="text-zinc-600 dark:text-zinc-400 max-w-xl">
+        <p className={cn(typography.bodyCopy, "max-w-2xl")}>
           Everything you need to get the most out of BabaBuilds ERP. Choose an article from the sidebar or browse below.
         </p>
       </div>
@@ -37,10 +39,10 @@ export default function HelpPage() {
             className="group flex flex-col justify-between p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-indigo-300 dark:hover:border-indigo-700/50 hover:shadow-md transition-all duration-200"
           >
             <div>
-              <h2 className="font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors mb-1.5">
+              <h2 className={cn(typography.sectionHeader, "text-base sm:text-lg group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors mb-1.5")}>
                 {doc.title}
               </h2>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">{doc.description}</p>
+              <p className={cn(typography.bodyCopy, "text-sm")}>{doc.description}</p>
             </div>
             <div className="flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 mt-4 group-hover:gap-2 transition-all">
               Read guide <ArrowRight className="w-3.5 h-3.5" />

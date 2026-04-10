@@ -49,6 +49,9 @@ export default function SuperAdminPortal() {
   const [logIntegrity, setLogIntegrity] = useState<{ checked: number; valid: boolean; violations: any[] } | null>(null);
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const [purgingLogs, setPurgingLogs] = useState(false);
+  const [purgeDialogOpen, setPurgeDialogOpen] = useState(false);
+  const [backupToDelete, setBackupToDelete] = useState<string | null>(null);
+  const [deletingBackup, setDeletingBackup] = useState(false);
 
   const fetchLogs = useCallback(async (page = 1, search = logsSearch, status = logsStatus, type = logType) => {
     setLogsLoading(true);
@@ -76,7 +79,6 @@ export default function SuperAdminPortal() {
   }, [logsSearch, logsStatus, logType]);
 
   const handlePurgeLogs = async () => {
-    if (!confirm(`Permanently purge ALL ${logType === 'tax_audit' ? 'tax audit' : 'activity'} logs? This cannot be undone.`)) return;
     setPurgingLogs(true);
     try {
       const res = await fetch(`/api/admin/logs?type=${logType}`, { method: 'DELETE' });
@@ -84,6 +86,7 @@ export default function SuperAdminPortal() {
       if (!res.ok) throw new Error(data.error || 'Purge failed');
       toast.success(`Purged ${data.purged} log entries.`);
       fetchLogs(1, logsSearch, logsStatus, logType);
+      setPurgeDialogOpen(false);
     } catch (err: any) {
       toast.error(err.message || 'Purge failed');
     } finally {
@@ -235,15 +238,18 @@ export default function SuperAdminPortal() {
   };
 
   const handleDeleteBackup = async (filename: string) => {
-    if (!confirm("Are you sure you want to delete this backup?")) return;
+    setDeletingBackup(true);
     const toastId = toast.loading("Deleting backup...");
     try {
       const res = await fetch(`/api/admin/backups/${filename}`, { method: 'DELETE' });
       if (!res.ok) throw new Error("Delete failed");
       toast.success("Backup deleted", { id: toastId });
       fetchBackups();
+      setBackupToDelete(null);
     } catch (error: any) {
       toast.error(error.message || "Failed to delete backup", { id: toastId });
+    } finally {
+      setDeletingBackup(false);
     }
   };
 
@@ -308,30 +314,30 @@ export default function SuperAdminPortal() {
     { id: "timestamp", header: "Timestamp", sortable: true, sortAccessor: (row) => new Date(row.createdAt).getTime(), cell: (row) => <span className="text-xs font-medium text-zinc-500">{new Date(row.createdAt).toLocaleString()}</span>, hideable: true },
     { id: "filename", header: "File Name", accessor: (row) => row.filename, sortable: true, cell: (row) => <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">{row.filename}</span>, hideable: true },
     { id: "size", header: "Size", sortable: true, sortAccessor: (row) => row.size, cell: (row) => <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">{(row.size / 1024 / 1024).toFixed(2)} MB</span>, hideable: true },
-    { id: "actions", header: <div className="text-right">Actions</div>, className: "text-right", cell: (row) => <div className="flex items-center justify-end gap-2"><Button variant="outline" size="sm" className="h-7 px-2 text-xs font-bold uppercase border-zinc-200 dark:border-zinc-800" onClick={() => handleDownloadBackup(row.filename)}><Download className="w-3 h-3 mr-1" /> Download</Button><Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30" onClick={() => handleDeleteBackup(row.filename)}><Trash2 className="w-3 h-3" /></Button></div> },
+    { id: "actions", header: <div className="text-right">Actions</div>, className: "text-right", cell: (row) => <div className="flex items-center justify-end gap-2"><Button variant="outline" size="sm" className="h-7 px-2 text-xs font-bold uppercase border-zinc-200 dark:border-zinc-800" onClick={() => handleDownloadBackup(row.filename)}><Download className="w-3 h-3 mr-1" /> Download</Button><Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30" onClick={() => setBackupToDelete(row.filename)}><Trash2 className="w-3 h-3" /></Button></div> },
   ];
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
+    <div className="mx-auto max-w-7xl space-y-8 px-4 py-6 md:px-8 md:py-8">
       
       {/* GOD MODE HEADER */}
-      <div className="sticky top-0 z-30 -mx-4 px-4 py-6 md:-mx-8 md:px-8 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200/50 dark:border-zinc-800/50 transition-all duration-300 mb-6">
-        <div className="max-w-7xl mx-auto w-full flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
+      <div className="sticky top-0 z-30 -mx-4 border-b border-zinc-200/50 bg-zinc-50/50 px-4 py-6 backdrop-blur-md transition-all duration-300 dark:border-zinc-800/50 dark:bg-zinc-950/50 md:-mx-8 md:px-8">
+        <div className="mx-auto flex w-full max-w-7xl flex-col justify-between gap-4 md:flex-row md:items-center">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
               <ShieldAlert className="w-6 h-6 text-rose-600 dark:text-rose-500 animate-pulse" />
               <Badge variant="outline" className="text-rose-600 border-rose-200 bg-rose-50 dark:text-rose-500 dark:border-rose-500/30 dark:bg-rose-500/10 uppercase tracking-widest text-xs font-bold">
                 {t('god_mode') || 'GOD MODE'}
               </Badge>
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">{t('title') || 'Platform Command'}</h1>
-            <p className="text-zinc-500 dark:text-zinc-400 mt-1 text-sm font-medium">{t('desc') || 'System-wide visibility and billing controls.'}</p>
+            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{t('desc') || 'System-wide visibility and billing controls.'}</p>
           </div>
         </div>
       </div>
 
       {/* GOD MODE NAVIGATION */}
-      <div className="flex space-x-2 border-b border-zinc-200 dark:border-zinc-800 overflow-x-auto pb-1 scrollbar-hide">
+      <div className="scrollbar-hide flex gap-2 overflow-x-auto border-b border-zinc-200 pb-1 dark:border-zinc-800">
         {["OVERVIEW", "ACCOUNTS", "DIAGNOSTICS", "SECURITY", "MAINTENANCE", "BACKUP", "LOGS"].map((tName) => (
           <button
             key={tName}
@@ -349,7 +355,7 @@ export default function SuperAdminPortal() {
       </div>
 
       {/* TAB CONTENTS */}
-      <div className="pt-2">
+      <div>
         {tab === "OVERVIEW" && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* ROW 1: SERVER METRICS */}
@@ -791,7 +797,7 @@ export default function SuperAdminPortal() {
                             <Button variant="outline" size="sm" onClick={() => handleDownloadBackup(backup.filename)}>
                               <Download className="mr-1.5 h-3.5 w-3.5" /> Download
                             </Button>
-                            <Button variant="destructive" size="sm" onClick={() => handleDeleteBackup(backup.filename)}>
+                            <Button variant="destructive" size="sm" onClick={() => setBackupToDelete(backup.filename)}>
                               <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
                             </Button>
                           </div>
@@ -888,7 +894,7 @@ export default function SuperAdminPortal() {
                   <RefreshCcw className="w-3 h-3" /> Refresh
                 </button>
                 <button
-                  onClick={handlePurgeLogs}
+                  onClick={() => setPurgeDialogOpen(true)}
                   disabled={purgingLogs}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 dark:border-rose-500/30 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -1252,6 +1258,58 @@ export default function SuperAdminPortal() {
               className="bg-rose-600 hover:bg-rose-700 text-white border-none"
             >
               Yes, Delete Permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={purgeDialogOpen} onOpenChange={setPurgeDialogOpen}>
+        <AlertDialogContent className="dark:bg-zinc-900 dark:border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-rose-600 dark:text-rose-400 flex items-center gap-2">
+              <Trash2 className="w-5 h-5" /> Purge all {logType === "tax_audit" ? "tax audit" : "activity"} logs?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="dark:text-zinc-400">
+              This will permanently remove every {logType === "tax_audit" ? "tax audit" : "activity"} log entry from the system. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={purgingLogs}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handlePurgeLogs}
+              disabled={purgingLogs}
+              className="bg-rose-600 hover:bg-rose-700 text-white border-none disabled:opacity-50"
+            >
+              {purgingLogs ? "Purging..." : "Yes, Purge Logs"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!backupToDelete} onOpenChange={(open) => { if (!open && !deletingBackup) setBackupToDelete(null); }}>
+        <AlertDialogContent className="dark:bg-zinc-900 dark:border-zinc-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-rose-600 dark:text-rose-400 flex items-center gap-2">
+              <Trash2 className="w-5 h-5" /> Delete backup?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="dark:text-zinc-400 space-y-2">
+              <span className="block">
+                You are about to permanently delete{" "}
+                <span className="font-mono text-xs text-zinc-900 dark:text-zinc-100">{backupToDelete}</span>.
+              </span>
+              <span className="block font-semibold text-rose-600 dark:text-rose-400">
+                This action cannot be undone.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingBackup}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => backupToDelete && handleDeleteBackup(backupToDelete)}
+              disabled={deletingBackup}
+              className="bg-rose-600 hover:bg-rose-700 text-white border-none disabled:opacity-50"
+            >
+              {deletingBackup ? "Deleting..." : "Delete backup"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -15,6 +15,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  segmentedControlContainerClass,
+  segmentedControlItemActiveClass,
+  segmentedControlItemClass,
+} from "@/components/ui/segmented-control";
 import { toast } from "sonner";
 import { 
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
@@ -28,6 +33,7 @@ import { PageLoadingState } from "@/components/states/PageLoadingState";
 import { PageErrorState } from "@/components/states/PageErrorState";
 import { PageEmptyState } from "@/components/states/PageEmptyState";
 import { DataTable, DataTableToolbar, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
+import { cn } from "@/lib/utils";
 
 
 // --- STATE MACHINE TYPES ---
@@ -405,23 +411,67 @@ export default function ReconciliationWizard() {
         </div>
 
         {/* DATA GRIDS */}
-        <Card className="border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden bg-white dark:bg-zinc-900">
-          <div className="flex flex-wrap border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/50">
-            <button onClick={() => setActiveTab('ai')} className={`min-h-11 min-w-[11rem] flex-1 py-3 px-4 text-sm font-bold flex items-center justify-center gap-2 transition-all duration-300 ${activeTab === 'ai' ? 'bg-white dark:bg-zinc-900 text-purple-700 dark:text-purple-400 border-b-2 border-purple-600' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
-              <Sparkles className="w-4 h-4" /> {t('tab_queue')} <Badge variant="secondary" className="ml-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 border-none">{state.pendingAi.length}</Badge>
-            </button>
-            <button onClick={() => setActiveTab('auto')} className={`min-h-11 min-w-[11rem] flex-1 py-3 px-4 text-sm font-bold flex items-center justify-center gap-2 transition-all duration-300 ${activeTab === 'auto' ? 'bg-white dark:bg-zinc-900 text-emerald-700 dark:text-emerald-400 border-b-2 border-emerald-600' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
-              <CheckCircle2 className="w-4 h-4" /> {t('tab_ready')} <Badge variant="secondary" className="ml-1 bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 border-none">{totalReadyToCommit}</Badge>
-            </button>
-            <button onClick={() => setActiveTab('ignored')} className={`min-h-11 min-w-[11rem] flex-1 py-3 px-4 text-sm font-bold flex items-center justify-center gap-2 transition-all duration-300 ${activeTab === 'ignored' ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 border-b-2 border-zinc-900 dark:border-zinc-50' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
-              <XCircle className="w-4 h-4" /> {t('tab_excluded')} <Badge variant="secondary" className="ml-1 bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-400 border-none">{state.ignored.length}</Badge>
-            </button>
+        <Card className="overflow-hidden border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="border-b border-zinc-200 bg-zinc-50/80 p-2 dark:border-zinc-800 dark:bg-zinc-950/50">
+            <div role="tablist" aria-label={t("workflow_title")} className={cn(segmentedControlContainerClass, "w-full flex-nowrap overflow-x-auto md:flex-wrap")}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                role="tab"
+                aria-selected={activeTab === "ai"}
+                aria-controls="recon-tab-ai"
+                onClick={() => setActiveTab("ai")}
+                className={cn(
+                  "h-auto min-h-11 shrink-0 min-w-[11rem] grow justify-center gap-2 px-4 py-3 text-sm transition-all duration-300",
+                  segmentedControlItemClass,
+                  activeTab === "ai" && segmentedControlItemActiveClass,
+                )}
+              >
+                <Sparkles className="size-4" /> {t("tab_queue")}
+                <Badge variant="secondary" className="ml-1 border-none bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">{state.pendingAi.length}</Badge>
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                role="tab"
+                aria-selected={activeTab === "auto"}
+                aria-controls="recon-tab-auto"
+                onClick={() => setActiveTab("auto")}
+                className={cn(
+                  "h-auto min-h-11 shrink-0 min-w-[11rem] grow justify-center gap-2 px-4 py-3 text-sm transition-all duration-300",
+                  segmentedControlItemClass,
+                  activeTab === "auto" && segmentedControlItemActiveClass,
+                )}
+              >
+                <CheckCircle2 className="size-4" /> {t("tab_ready")}
+                <Badge variant="secondary" className="ml-1 border-none bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">{totalReadyToCommit}</Badge>
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                role="tab"
+                aria-selected={activeTab === "ignored"}
+                aria-controls="recon-tab-ignored"
+                onClick={() => setActiveTab("ignored")}
+                className={cn(
+                  "h-auto min-h-11 shrink-0 min-w-[11rem] grow justify-center gap-2 px-4 py-3 text-sm transition-all duration-300",
+                  segmentedControlItemClass,
+                  activeTab === "ignored" && segmentedControlItemActiveClass,
+                )}
+              >
+                <XCircle className="size-4" /> {t("tab_excluded")}
+                <Badge variant="secondary" className="ml-1 border-none bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400">{state.ignored.length}</Badge>
+              </Button>
+            </div>
           </div>
 
           <CardContent className="p-0">
             {/* TAB: REVIEW QUEUE (AI SUGGESTIONS) */}
             {activeTab === 'ai' && (
-              <div className="overflow-x-auto min-h-[400px]">
+              <div id="recon-tab-ai" role="tabpanel" className="overflow-x-auto min-h-[400px]">
                 {state.pendingAi.length === 0 ? (
                   <PageEmptyState title={t('empty_queue_title')} description={t('empty_queue_desc')} className="min-h-[400px]" />
                 ) : (
@@ -450,7 +500,7 @@ export default function ReconciliationWizard() {
 
             {/* TAB: READY (AUTO + APPROVED) */}
             {activeTab === 'auto' && (
-              <div className="overflow-x-auto min-h-[400px]">
+              <div id="recon-tab-auto" role="tabpanel" className="overflow-x-auto min-h-[400px]">
                 <DataTableToolbar
                   searchValue={readyTableState.search}
                   onSearchChange={readyTableState.setSearch}
@@ -468,7 +518,7 @@ export default function ReconciliationWizard() {
 
             {/* TAB: EXCLUDED */}
             {activeTab === 'ignored' && (
-              <div className="overflow-x-auto min-h-[400px]">
+              <div id="recon-tab-ignored" role="tabpanel" className="overflow-x-auto min-h-[400px]">
                 <Table>
                   <TableBody>
                     {state.ignored.length === 0 ? (

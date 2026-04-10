@@ -57,3 +57,21 @@ Validated target hotspots at **360, 390, 768, 820, 1024** widths:
 2. Check all icon-only controls in hotspot headers are at least 40px square on mobile and remain keyboard-focusable.
 3. Confirm tab/control groups do not require horizontal scroll unless intentional; prefer wrapping/stacking first.
 4. Re-test dark mode after responsive adjustments to ensure active/inactive control contrast remains clear.
+## Regression checks for interactive state styling (hotspot audit)
+
+Run these checks whenever interactive classnames are touched in high-traffic UI surfaces:
+
+- Verify **hover + focus-visible + disabled** states for each interactive control in:
+  - `components/AuthModal.tsx`
+  - `components/AIChatbot.tsx`
+  - `components/PricingSection.tsx`
+  - `app/help/HelpSidebar.tsx`
+  - `components/notifications/NotificationBell.tsx`
+- Confirm all keyboard-focusable controls show a visible ring with `focus-visible:ring-2` and `focus-visible:ring-offset-2`.
+- Confirm ring color family is consistent per surface:
+  - Indigo family for auth, pricing, help center, and notifications.
+  - Purple family for chatbot surface controls.
+- Confirm disabled controls use reduced opacity and blocked pointer intent (`disabled:opacity-*` + `disabled:pointer-events-none`) where controls can be disabled.
+- Validate in both themes:
+  - Light mode ring offsets match light surfaces (`ring-offset-white`/`ring-offset-zinc-100`).
+  - Dark mode ring offsets match dark surfaces (`dark:ring-offset-zinc-900`/`dark:ring-offset-zinc-950`).
