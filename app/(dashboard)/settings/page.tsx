@@ -20,6 +20,8 @@ import { getBustedUrl } from "@/lib/cache-buster";
 import { FileUploadField } from "@/components/forms/file-upload-field";
 import { FormFieldMessages, FormSection, FormSubmitBar } from "@/components/forms/form-primitives";
 import { PWASettings } from "@/components/settings/pwa-settings";
+import { cn } from "@/lib/utils";
+import { typography } from "@/lib/ui/typography";
 
 export default function SettingsWizard() {
   /**
@@ -395,10 +397,10 @@ export default function SettingsWizard() {
           <div className="mx-auto w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200 dark:shadow-indigo-900/20 mb-4 transition-transform hover:scale-105">
             <Building2 className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">
+          <h1 className={cn(typography.pageTitle, "text-3xl sm:text-4xl")}>
             {isNewSetup ? t("welcome.title") : t('title')}
           </h1>
-          <p className="text-zinc-500 dark:text-zinc-400 max-w-lg mx-auto text-sm font-medium">
+          <p className={cn(typography.bodyCopy, "max-w-2xl mx-auto font-medium")}>
             {isNewSetup 
               ? t("welcome.description")
               : t('description')}
@@ -410,10 +412,10 @@ export default function SettingsWizard() {
           {/* IDENTITY & BRANDING */}
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
             <CardHeader className="bg-zinc-50/50 dark:bg-zinc-950/50 border-b dark:border-zinc-800">
-              <CardTitle className="text-lg flex items-center gap-2 dark:text-zinc-50">
+              <CardTitle className={cn(typography.sectionHeader, "text-lg flex items-center gap-2")}>
                 <Building2 className="w-5 h-5 text-indigo-600" /> {t('identity_title')}
               </CardTitle>
-              <CardDescription className="dark:text-zinc-400">{t('identity_description')}</CardDescription>
+              <CardDescription className={typography.bodyCopy}>{t('identity_description')}</CardDescription>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -450,7 +452,7 @@ export default function SettingsWizard() {
               {/* INVOICE THEME SELECTOR */}
               <div className="space-y-3 pt-6 border-t border-zinc-100 dark:border-zinc-800">
                 <Label className="dark:text-zinc-300 text-base">{t('invoice_theme')}</Label>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">{t('invoice_theme_desc')}</p>
+                <p className={cn(typography.bodyCopy, "mb-4")}>{t('invoice_theme_desc')}</p>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* DESIGN 1: Classic */}
@@ -596,10 +598,10 @@ export default function SettingsWizard() {
           {/* COMPLIANCE & TAX */}
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
             <CardHeader className="bg-zinc-50/50 dark:bg-zinc-950/50 border-b dark:border-zinc-800">
-              <CardTitle className="text-lg flex items-center gap-2 dark:text-zinc-50">
+              <CardTitle className={cn(typography.sectionHeader, "text-lg flex items-center gap-2")}>
                 <ShieldCheck className="w-5 h-5 text-emerald-600" /> {t('compliance_title')}
               </CardTitle>
-              <CardDescription className="dark:text-zinc-400">{t('compliance_desc')}</CardDescription>
+              <CardDescription className={typography.bodyCopy}>{t('compliance_desc')}</CardDescription>
             </CardHeader>
             <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
@@ -626,10 +628,10 @@ export default function SettingsWizard() {
           {/* BANKING DETAILS */}
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
             <CardHeader className="bg-zinc-50/50 dark:bg-zinc-950/50 border-b dark:border-zinc-800">
-              <CardTitle className="text-lg flex items-center gap-2 dark:text-zinc-50">
+              <CardTitle className={cn(typography.sectionHeader, "text-lg flex items-center gap-2")}>
                 <Landmark className="w-5 h-5 text-amber-600" /> {t('banking_title')}
               </CardTitle>
-              <CardDescription className="dark:text-zinc-400">{t('banking_desc')}</CardDescription>
+              <CardDescription className={typography.bodyCopy}>{t('banking_desc')}</CardDescription>
             </CardHeader>
             <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -655,10 +657,10 @@ export default function SettingsWizard() {
           {/* EMAIL SERVER (SMTP) */}
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
             <CardHeader className="bg-zinc-50/50 dark:bg-zinc-950/50 border-b dark:border-zinc-800">
-              <CardTitle className="text-lg flex items-center gap-2 dark:text-zinc-50">
+              <CardTitle className={cn(typography.sectionHeader, "text-lg flex items-center gap-2")}>
                 <Mailbox className="w-5 h-5 text-blue-600" /> {t('smtp_title')}
               </CardTitle>
-              <CardDescription className="dark:text-zinc-400">{t('smtp_desc')}</CardDescription>
+              <CardDescription className={typography.bodyCopy}>{t('smtp_desc')}</CardDescription>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -709,10 +711,10 @@ export default function SettingsWizard() {
           {/* AI ASSISTANT CONFIGURATION */}
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
             <CardHeader className="bg-zinc-50/50 dark:bg-zinc-950/50 border-b dark:border-zinc-800">
-              <CardTitle className="text-lg flex items-center gap-2 dark:text-zinc-50">
+              <CardTitle className={cn(typography.sectionHeader, "text-lg flex items-center gap-2")}>
                 <Bot className="w-5 h-5 text-purple-600" /> {t('ai_config_title')}
               </CardTitle>
-              <CardDescription className="dark:text-zinc-400">{t('ai_config_desc')}</CardDescription>
+              <CardDescription className={typography.bodyCopy}>{t('ai_config_desc')}</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               <div className="space-y-2">
@@ -725,10 +727,10 @@ export default function SettingsWizard() {
           {/* ── PAYMENT GATEWAY INTEGRATION ──────────────────────────────────────── */}
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 relative overflow-hidden">
             <CardHeader className="bg-zinc-50/50 dark:bg-zinc-950/50 border-b dark:border-zinc-800">
-              <CardTitle className="text-lg flex items-center gap-2 dark:text-zinc-50">
+              <CardTitle className={cn(typography.sectionHeader, "text-lg flex items-center gap-2")}>
                 <CreditCard className="w-5 h-5 text-emerald-600" /> {t("payment.title")}
               </CardTitle>
-              <CardDescription className="dark:text-zinc-400">
+              <CardDescription className={typography.bodyCopy}>
                 {t("payment.description")}
                 {!isIndian && (
                   <span className="ml-1 text-violet-600 dark:text-violet-400 font-medium">
@@ -897,7 +899,7 @@ export default function SettingsWizard() {
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
             <CardHeader className="bg-zinc-50/50 dark:bg-zinc-950/50 border-b dark:border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <CardTitle className="text-lg flex items-center gap-2 dark:text-zinc-50">
+                <CardTitle className={cn(typography.sectionHeader, "text-lg flex items-center gap-2")}>
                   <Users className="w-5 h-5 text-indigo-600" /> Team Collaboration
                   <TooltipProvider>
                     <Tooltip>
@@ -911,7 +913,7 @@ export default function SettingsWizard() {
                     </Tooltip>
                   </TooltipProvider>
                 </CardTitle>
-                <CardDescription className="dark:text-zinc-400">Invite partners and accountants to collaborate on your workspace.</CardDescription>
+                <CardDescription className={typography.bodyCopy}>Invite partners and accountants to collaborate on your workspace.</CardDescription>
               </div>
               {isTeamPlan ? (
                 <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
