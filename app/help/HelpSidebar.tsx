@@ -97,6 +97,8 @@ export function HelpSidebar({ docs }: HelpSidebarProps) {
         onClick={() => setMobileOpen(true)}
         className="lg:hidden fixed top-20 left-4 z-40 flex items-center gap-2 bg-indigo-600 text-white text-xs font-bold px-3 py-2 rounded-lg shadow-lg shadow-indigo-900/20 hover:bg-indigo-700 active:scale-95 transition-all"
         aria-label="Open Help sidebar"
+        aria-controls="help-sidebar-drawer"
+        aria-expanded={mobileOpen}
       >
         <Menu className="w-4 h-4" />
         Help Menu
@@ -105,7 +107,7 @@ export function HelpSidebar({ docs }: HelpSidebarProps) {
       {/* --- MOBILE DRAWER OVERLAY --- */}
       {mobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-50 flex"
+          className="lg:hidden fixed inset-0 z-[130] flex"
           onClick={() => setMobileOpen(false)}
         >
           {/* Backdrop */}
@@ -113,12 +115,13 @@ export function HelpSidebar({ docs }: HelpSidebarProps) {
 
           {/* Drawer */}
           <div
-            className="relative z-50 w-[280px] bg-white dark:bg-zinc-900 h-full shadow-2xl flex flex-col animate-in slide-in-from-left duration-300"
+            id="help-sidebar-drawer"
+            className="relative z-50 w-[min(85vw,320px)] bg-white dark:bg-zinc-900 h-full shadow-2xl flex flex-col animate-in slide-in-from-left duration-300"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setMobileOpen(false)}
-              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+              className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
               aria-label="Close Help sidebar"
             >
               <X className="w-4 h-4" />

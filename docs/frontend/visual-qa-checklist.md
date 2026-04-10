@@ -29,3 +29,31 @@ Use this checklist before promoting frontend updates between rollout phases.
 - **Phase 1:** Run parity + responsiveness + keyboard/contrast checks on every merge candidate.
 - **Phase 2:** Add loading/empty/error and reduced-motion checks to release gates.
 - **Phase 3:** Require all checks plus regression snapshots for advanced pages (maps/charts/admin).
+
+## Responsive hotspot QA log (2026-04-10)
+
+Validated target hotspots at **360, 390, 768, 820, 1024** widths:
+
+- `components/AIChatbot.tsx`
+- `app/help/HelpSidebar.tsx`
+- `app/(dashboard)/reconciliation/page.tsx`
+
+### Findings and outcomes
+
+| Hotspot | Check | Finding | Outcome |
+|---|---|---|---|
+| AI Chatbot | Overlay stacking and dismissal | Expanded modal overlay behavior was already dismissible, but header icon controls were below common 44px touch-target guidance on small screens. | Increased mobile touch-target sizes for clear / expand / close controls to `40x40` (retaining compact desktop sizing). |
+| Help Sidebar | Overlay stacking and dismissal | Mobile drawer overlay could be obscured by other fixed overlays/components with higher z-index; close control was small for thumb use. | Raised mobile drawer overlay stack level and increased close button to `40x40`; added drawer relationship semantics (`aria-controls`, `aria-expanded`). |
+| Reconciliation page | Horizontal overflow in tab/control rows | Tab controls were set to horizontal scrolling (`overflow-x-auto`) and could feel cramped at narrow widths. | Refactored tab row to wrap with minimum per-tab width and 44px minimum height; reduced horizontal padding and enabled multi-line distribution. |
+| Reconciliation page | Touch targets and control density | Finalize action could crowd header content on narrow viewports. | Made finalize CTA full-width on mobile and preserved inline desktop layout for readability/tap reliability. |
+| Reconciliation page | Header compression | Title + status badge could compress awkwardly at smaller widths. | Enabled title cluster wrapping to prevent overflow/collision. |
+
+### Repeatable QA steps for future runs
+
+1. At each target width (360, 390, 768, 820, 1024), open all overlays/drawers and verify:
+   - backdrop appears above page content,
+   - tap/click outside dismisses correctly,
+   - close controls remain visible and tappable.
+2. Check all icon-only controls in hotspot headers are at least 40px square on mobile and remain keyboard-focusable.
+3. Confirm tab/control groups do not require horizontal scroll unless intentional; prefer wrapping/stacking first.
+4. Re-test dark mode after responsive adjustments to ensure active/inactive control contrast remains clear.

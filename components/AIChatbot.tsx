@@ -198,13 +198,13 @@ export default function AIChatbot() {
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={clearChat} title="Clear Chat" className="h-8 w-8 text-purple-200 hover:bg-purple-800 dark:hover:bg-purple-900 hover:text-white">
+            <Button variant="ghost" size="icon" onClick={clearChat} title="Clear Chat" className="h-10 w-10 sm:h-8 sm:w-8 text-purple-200 hover:bg-purple-800 dark:hover:bg-purple-900 hover:text-white">
               <Trash2 className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setIsExpanded(!isExpanded)} title={isExpanded ? "Minimize" : "Expand"} className="h-8 w-8 text-purple-200 hover:bg-purple-800 dark:hover:bg-purple-900 hover:text-white">
+            <Button variant="ghost" size="icon" onClick={() => setIsExpanded(!isExpanded)} title={isExpanded ? "Minimize" : "Expand"} className="h-10 w-10 sm:h-8 sm:w-8 text-purple-200 hover:bg-purple-800 dark:hover:bg-purple-900 hover:text-white">
               {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </Button>
-            <Button variant="ghost" size="icon" onClick={closeChat} title="Close" className="h-8 w-8 text-purple-200 hover:bg-purple-800 dark:hover:bg-purple-900 hover:text-white">
+            <Button variant="ghost" size="icon" onClick={closeChat} title="Close" className="h-10 w-10 sm:h-8 sm:w-8 text-purple-200 hover:bg-purple-800 dark:hover:bg-purple-900 hover:text-white">
               <X className="w-4 h-4" />
             </Button>
           </div>

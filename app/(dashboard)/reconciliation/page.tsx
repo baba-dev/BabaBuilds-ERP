@@ -353,7 +353,7 @@ export default function ReconciliationWizard() {
         {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
+            <h1 className="text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 flex flex-wrap items-center gap-2">
               {t('wizard_title')} <Badge className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-none"><Sparkles className="w-3 h-3 mr-1" /> {t('human_loop')}</Badge>
             </h1>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 font-medium">{t('wizard_desc')}</p>
@@ -361,7 +361,7 @@ export default function ReconciliationWizard() {
           <Button 
             onClick={handleFinalizeClick} 
             disabled={isFinalizing || totalReadyToCommit === 0}
-            className="bg-zinc-900 dark:bg-zinc-50 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 shadow-lg transition-transform hover:scale-[1.02]"
+            className="w-full md:w-auto bg-zinc-900 dark:bg-zinc-50 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 shadow-lg transition-transform hover:scale-[1.02]"
           >
             {isFinalizing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ListChecks className="w-4 h-4 mr-2" />}
             {isFinalizing ? t('locking') : t('finalize_btn', { count: totalReadyToCommit })}
@@ -406,14 +406,14 @@ export default function ReconciliationWizard() {
 
         {/* DATA GRIDS */}
         <Card className="border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden bg-white dark:bg-zinc-900">
-          <div className="flex border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/50 overflow-x-auto">
-            <button onClick={() => setActiveTab('ai')} className={`whitespace-nowrap flex-1 py-4 px-6 text-sm font-bold flex items-center justify-center gap-2 transition-all duration-300 ${activeTab === 'ai' ? 'bg-white dark:bg-zinc-900 text-purple-700 dark:text-purple-400 border-b-2 border-purple-600' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
+          <div className="flex flex-wrap border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-950/50">
+            <button onClick={() => setActiveTab('ai')} className={`min-h-11 min-w-[11rem] flex-1 py-3 px-4 text-sm font-bold flex items-center justify-center gap-2 transition-all duration-300 ${activeTab === 'ai' ? 'bg-white dark:bg-zinc-900 text-purple-700 dark:text-purple-400 border-b-2 border-purple-600' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
               <Sparkles className="w-4 h-4" /> {t('tab_queue')} <Badge variant="secondary" className="ml-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 border-none">{state.pendingAi.length}</Badge>
             </button>
-            <button onClick={() => setActiveTab('auto')} className={`whitespace-nowrap flex-1 py-4 px-6 text-sm font-bold flex items-center justify-center gap-2 transition-all duration-300 ${activeTab === 'auto' ? 'bg-white dark:bg-zinc-900 text-emerald-700 dark:text-emerald-400 border-b-2 border-emerald-600' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
+            <button onClick={() => setActiveTab('auto')} className={`min-h-11 min-w-[11rem] flex-1 py-3 px-4 text-sm font-bold flex items-center justify-center gap-2 transition-all duration-300 ${activeTab === 'auto' ? 'bg-white dark:bg-zinc-900 text-emerald-700 dark:text-emerald-400 border-b-2 border-emerald-600' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
               <CheckCircle2 className="w-4 h-4" /> {t('tab_ready')} <Badge variant="secondary" className="ml-1 bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 border-none">{totalReadyToCommit}</Badge>
             </button>
-            <button onClick={() => setActiveTab('ignored')} className={`whitespace-nowrap flex-1 py-4 px-6 text-sm font-bold flex items-center justify-center gap-2 transition-all duration-300 ${activeTab === 'ignored' ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 border-b-2 border-zinc-900 dark:border-zinc-50' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
+            <button onClick={() => setActiveTab('ignored')} className={`min-h-11 min-w-[11rem] flex-1 py-3 px-4 text-sm font-bold flex items-center justify-center gap-2 transition-all duration-300 ${activeTab === 'ignored' ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 border-b-2 border-zinc-900 dark:border-zinc-50' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
               <XCircle className="w-4 h-4" /> {t('tab_excluded')} <Badge variant="secondary" className="ml-1 bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-400 border-none">{state.ignored.length}</Badge>
             </button>
           </div>
