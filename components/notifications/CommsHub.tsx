@@ -213,7 +213,7 @@ export function CommsHub() {
                   </p>
                 </div>
               ) : (
-                <div className="flex flex-col gap-3">
+                <div className="grid gap-3 xl:grid-cols-2">
                   {notifications.map((n) => (
                     <NotificationItem
                       key={n.id}
@@ -223,10 +223,11 @@ export function CommsHub() {
                   ))}
                 </div>
               )}
+              </div>
             </TabsContent>
 
-            <TabsContent value="account" className="p-8 mt-0 outline-none">
-               <div className="grid gap-6">
+            <TabsContent value="account" className="mt-0 px-4 py-6 outline-none sm:px-6 sm:py-8 lg:px-10">
+               <div className="mx-auto grid w-full max-w-4xl gap-6">
                   {/* User Profile Summary */}
                   <div className="flex items-center gap-4 rounded-2xl border border-border/60 bg-muted/40 p-5">
                     <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-500/85 text-2xl font-bold text-white shadow-xl shadow-indigo-500/20 dark:bg-indigo-500">
@@ -294,7 +295,7 @@ export function CommsHub() {
                </div>
             </TabsContent>
 
-            <TabsContent value="security" className="p-8 mt-0 outline-none">
+            <TabsContent value="security" className="mt-0 px-4 py-6 outline-none sm:px-6 sm:py-8 lg:px-10">
               {/* Security Placeholder */}
               <div className="flex flex-col items-center justify-center py-16 text-center">
                   <Shield className="mb-4 h-12 w-12 text-muted-foreground/70" />
