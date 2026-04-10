@@ -67,26 +67,26 @@ function NotificationItem({ notification: n, onRead }: NotificationItemProps) {
   return (
     <div
       className={cn(
-        'group relative flex gap-4 rounded-xl border-l-4 bg-white/[0.03] p-4 transition-all hover:bg-white/[0.06] border border-transparent hover:border-zinc-800/50',
+        'group relative flex gap-4 rounded-xl border border-border/60 border-l-4 bg-muted/40 p-4 transition-all hover:bg-muted',
         accent,
       )}
     >
       {/* Icon Group */}
       <div className="flex-shrink-0">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 shadow-inner">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-background/80 shadow-inner ring-1 ring-border/60">
           <span className="text-xl leading-none">{icon}</span>
         </div>
       </div>
 
       {/* Content */}
       <div className="min-w-0 flex-1 flex flex-col justify-center">
-        <p className="text-sm font-semibold text-zinc-100 leading-tight group-hover:text-white transition-colors">
+        <p className="text-sm font-semibold text-foreground leading-tight transition-colors">
           {n.title}
         </p>
-        <p className="mt-1 text-xs text-zinc-400 line-clamp-2 leading-relaxed">
+        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
           {n.body}
         </p>
-        <p className="mt-2 text-[10px] font-medium text-zinc-600 uppercase tracking-wider">
+        <p className="mt-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">
           {ago}
         </p>
       </div>
