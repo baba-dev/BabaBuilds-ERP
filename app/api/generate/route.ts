@@ -488,6 +488,16 @@ export async function POST(request: Request) {
             totalAmount: toDecimal(totals.total).toDecimalPlaces(2),
             pdfPath: relativePdfPath,
             status: normalizedStatus,
+            items: {
+              create: sanitizedServices.map((s: any) => ({
+                productId: s.productId || null,
+                description: s.title,
+                quantity: s.quantity || 1,
+                unitPrice: toDecimal(s.unitPrice || s.amount).toDecimalPlaces(2),
+                taxRate: 0,
+                totalAmount: toDecimal(s.amount).toDecimalPlaces(2)
+              }))
+            }
           } as any,
         });
         createdInvoiceId = newInvoice.id;

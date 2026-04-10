@@ -642,6 +642,61 @@ async function calculateEstimatedTax(workspaceId: string) {
 }
 
 
+// +++ NEW INVENTORY TOOLS +++
+async function predictStockouts(workspaceId: string) {
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const products = await prisma.product.findMany({
+      where: { workspaceId },
+      include: {
+        movements: {
+          where: {
+            type: "OUT",
+            createdAt: { gte: thirtyDaysAgo }
+          }
+        }
+      }
+    });
+
+    const forecasts = [];
+    for (const p of products) {
+      if (p.currentStock <= 0) continue;
+      
+      let outQuantity = 0;
+      for (const m of p.movements) {
+        outQuantity += Math.abs(m.quantity);
+      }
+      
+      if (outQuantity === 0) continue;
+      
+      const velocityPerDay = outQuantity / 30;
+      const daysUntilOut = Math.floor(p.currentStock / velocityPerDay);
+      
+      if (daysUntilOut <= 15) {
+        forecasts.push({
+          sku: p.sku,
+          name: p.name,
+          currentStock: p.currentStock,
+          daysUntilStockout: daysUntilOut,
+          velocityPerDay: velocityPerDay.toFixed(2)
+        });
+      }
+    }
+    
+    if (forecasts.length === 0) return JSON.stringify({ message: "Inventory is healthy. No immediate stockouts predicted based on the last 30 days velocity." });
+
+    return JSON.stringify({
+      message: "Here are the items predicted to run out of stock soon based on the last 30 days velocity:",
+      forecasts: forecasts.sort((a, b) => a.daysUntilStockout - b.daysUntilStockout)
+    });
+
+  } catch (e) {
+    return JSON.stringify({ error: "Failed to calculate inventory forecasts." });
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -1038,6 +1093,14 @@ export async function POST(request: Request) {
           description: "Runs a massive automated P&L script across Revenues, Expenses, and capped Deductions to calculate a 30% tax liability estimate.",
           parameters: { type: "object", properties: {} }
         }
+      },
+      // +++ NEW INVENTORY TOOLS +++
+      {
+        type: "function", function: {
+          name: "predict_stockouts",
+          description: "Calculates the recent 30-day sales velocity across all inventory products and predicts which products will run out of stock in the next 15 days.",
+          parameters: { type: "object", properties: {} }
+        }
       }
     ];
 
@@ -1097,7 +1160,8 @@ export async function POST(request: Request) {
           get_active_retainers: (_a: any, wid: string) => getActiveRetainers(wid),
           log_investment: (a: any, wid: string) => logInvestment(a.asset_name, a.amount, a.category, a.date_string, wid),
           get_investments_list: (_a: any, wid: string) => getInvestmentsList(wid),
-          calculate_estimated_tax: (_a: any, wid: string) => calculateEstimatedTax(wid)
+          calculate_estimated_tax: (_a: any, wid: string) => calculateEstimatedTax(wid),
+          predict_stockouts: (_a: any, wid: string) => predictStockouts(wid)
         };
 
         if (toolHandlers[toolCall.function.name]) {

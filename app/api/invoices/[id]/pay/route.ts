@@ -41,6 +41,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         id: invoiceId,
         workspaceId: workspaceId,
       },
+      include: {
+        items: true
+      }
     });
 
     if (!existingInvoice) {
@@ -83,6 +86,35 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const { PDFDocument, rgb, degrees, StandardFonts } = await import('pdf-lib');
 
     if (newStatus === INVOICE_STATUS.PAID && existingInvoice.status !== INVOICE_STATUS.PAID) {
+      if (existingInvoice.items && existingInvoice.items.length > 0) {
+        for (const item of existingInvoice.items) {
+          if (item.productId) {
+            const product = await prisma.product.findUnique({ where: { id: item.productId } });
+            if (product) {
+              const newStock = product.currentStock - item.quantity;
+              await prisma.$transaction([
+                prisma.product.update({
+                  where: { id: item.productId },
+                  data: {
+                    currentStock: newStock,
+                    status: newStock <= 0 ? "OUT_OF_STOCK" : (newStock <= product.safetyStock ? "LOW_STOCK" : "IN_STOCK")
+                  }
+                }),
+                prisma.inventoryMovement.create({
+                  data: {
+                    workspaceId,
+                    productId: item.productId,
+                    type: "OUT",
+                    quantity: -item.quantity,
+                    reason: `Invoice #${updatedInvoice.invoiceNumber} Payment`,
+                    referenceId: updatedInvoice.id
+                  }
+                })
+              ]);
+            }
+          }
+        }
+      }
       let relativePath = updatedInvoice.pdfPath.startsWith('/')
         ? updatedInvoice.pdfPath.substring(1)
         : updatedInvoice.pdfPath;

@@ -153,6 +153,11 @@ model Workspace {
   fileImportAuditLogs      FileImportAuditLog[]
   appActivityLogs          AppActivityLog[]
   workspaceInvites         WorkspaceInvite[]
+
+  // IMS Relations
+  products                 Product[]
+  inventoryMovements       InventoryMovement[]
+  purchaseOrders           PurchaseOrder[]
 }
 
 model AppActivityLog {
@@ -345,6 +350,7 @@ model Invoice {
   client               Client?               @relation(fields: [clientId], references: [id])
   idempotencyRecords   InvoiceIdempotency[]
   taxDecisionAuditLogs TaxDecisionAuditLog[]
+  items                InvoiceItem[]
 
   // Security: Two different workspaces can use invoice number "001"
   @@unique([invoiceNumber, workspaceId])
@@ -740,3 +746,114 @@ model InAppNotification {
   @@index([userId, createdAt])
   @@index([workspaceId])
 }
+
+// ==========================================
+// 8. INVENTORY MANAGEMENT SYSTEM
+// ==========================================
+
+model Product {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  sku         String    
+  name        String
+  description String?
+  category    String?
+  unit        String    @default("pcs")
+  
+  // Cost & Valuation
+  baselinePrice Decimal @default(0)
+  costPrice     Decimal @default(0)
+  
+  // Stock Levels
+  currentStock  Int     @default(0)
+  safetyStock   Int     @default(5)
+  status        String  @default("IN_STOCK") // "IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK"
+
+  barcode       String? // For zero-latency search
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  movements   InventoryMovement[]
+  invoiceItems InvoiceItem[]
+  purchaseItems PurchaseOrderItem[]
+
+  @@unique([sku, workspaceId])
+  @@index([workspaceId])
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  
+  description String
+  quantity    Int      @default(1)
+  unitPrice   Decimal
+  taxRate     Float    @default(0)
+  totalAmount Decimal
+
+  @@index([invoiceId])
+  @@index([productId])
+}
+
+model InventoryMovement {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  type        String   // "IN" (Purchase, Return), "OUT" (Sale, Damage, Loss), "ADJ" (Manual Adjustment)
+  quantity    Int      // Positive for IN, Negative for OUT/ADJ if reducing
+  reason      String?  // e.g., "Invoice #101 Payment", "Manual Sync", "Found behind shelf"
+  
+  referenceId String?  // ID of Invoice or PO
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([workspaceId])
+  @@index([productId])
+  @@index([createdAt])
+}
+
+model PurchaseOrder {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  poNumber    String
+  supplier    String
+  status      String    @default("DRAFT") // "DRAFT", "SENT", "DELIVERED", "CANCELLED"
+  
+  expectedDate DateTime?
+  totalAmount  Decimal   @default(0)
+  
+  items       PurchaseOrderItem[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([poNumber, workspaceId])
+  @@index([workspaceId])
+}
+
+model PurchaseOrderItem {
+  id          String    @id @default(cuid())
+  poId        String
+  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id])
+  
+  quantity    Int
+  unitPrice   Decimal
+  expectedTotal Decimal
+}
+

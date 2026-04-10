@@ -73,8 +73,9 @@ export default function InvoiceGenerator() {
     Promise.all([
       fetch('/api/clients?limit=100').then(res => res.json()).catch(() => ({ data: [] })),
       fetch('/api/invoices').then(res => res.json()).catch(() => []),
-      fetch('/api/services?limit=100').then(res => res.json()).catch(() => ({ data: [] }))
-    ]).then(([clientsResult, invoicesResult, servicesResult]) => {
+      fetch('/api/services?limit=100').then(res => res.json()).catch(() => ({ data: [] })),
+      fetch('/api/inventory/products?limit=100').then(res => res.json()).catch(() => ([]))
+    ]).then(([clientsResult, invoicesResult, servicesResult, productsResult]) => {
       
       const parsedClients = Array.isArray(clientsResult) ? clientsResult : clientsResult?.data;
       if (Array.isArray(parsedClients)) setClients(parsedClients);
@@ -92,18 +93,47 @@ export default function InvoiceGenerator() {
       }
       
       const parsedServices = Array.isArray(servicesResult) ? servicesResult : servicesResult?.data;
+      const mappedCatalog: any[] = [];
       if (Array.isArray(parsedServices)) {
-        const mappedCatalog = parsedServices.map((srv: any) => ({
-          id: srv.id,
-          selected: false,
-          title: srv.name,
-          nicDetails: srv.description || "Standard Service Rendered",
-          sac: srv.sacCode || (countryCode === "IN" ? "998313" : "GENERIC"),
-          amount: "",
-          defaultPrice: srv.defaultPrice || 0
-        }));
-        setServices(mappedCatalog);
+        parsedServices.forEach((srv: any) => {
+          mappedCatalog.push({
+            id: srv.id,
+            selected: false,
+            title: srv.name,
+            nicDetails: srv.description || "Standard Service Rendered",
+            sac: srv.sacCode || (countryCode === "IN" ? "998313" : "GENERIC"),
+            amount: "",
+            quantity: 1,
+            unitPrice: srv.defaultPrice || 0,
+            defaultPrice: srv.defaultPrice || 0,
+            isProduct: false,
+            productId: null,
+            currentStock: 0
+          });
+        });
       }
+
+      const parsedProducts = Array.isArray(productsResult) ? productsResult : [];
+      if (Array.isArray(parsedProducts)) {
+        parsedProducts.forEach((p: any) => {
+          mappedCatalog.push({
+            id: p.id,
+            selected: false,
+            title: p.name,
+            nicDetails: `SKU: ${p.sku}`,
+            sac: p.category || "GOODS",
+            amount: "",
+            quantity: 1,
+            unitPrice: p.baselinePrice || p.costPrice || 0,
+            defaultPrice: p.baselinePrice || p.costPrice || 0,
+            isProduct: true,
+            productId: p.id,
+            currentStock: p.currentStock
+          });
+        });
+      }
+
+      setServices(mappedCatalog);
     }).finally(() => {
       setIsLoadingServices(false);
     });
@@ -185,6 +215,7 @@ export default function InvoiceGenerator() {
     newServices[index].selected = !newServices[index].selected;
 
     if (newServices[index].selected) {
+      newServices[index].quantity = 1;
       newServices[index].amount = newServices[index].defaultPrice > 0 ? newServices[index].defaultPrice.toString() : "";
     } else {
       newServices[index].amount = "";
@@ -195,6 +226,22 @@ export default function InvoiceGenerator() {
   const handleAmountChange = (index: number, value: string) => {
     const newServices = [...services];
     newServices[index].amount = value;
+    newServices[index].unitPrice = Number(value) / Number(newServices[index].quantity || 1);
+    setServices(newServices);
+  };
+
+  const handleQuantityChange = (index: number, qty: string) => {
+    const newServices = [...services];
+    const newQty = parseInt(qty) || 0;
+    
+    // Enforce stock guard
+    if (newServices[index].isProduct && newQty > newServices[index].currentStock) {
+      setError(`Cannot add ${newQty} of ${newServices[index].title}. Only ${newServices[index].currentStock} in stock.`);
+      return;
+    }
+    setError(null);
+    newServices[index].quantity = newQty;
+    newServices[index].amount = (newQty * Number(newServices[index].unitPrice || newServices[index].defaultPrice)).toString();
     setServices(newServices);
   };
 
@@ -436,23 +483,47 @@ export default function InvoiceGenerator() {
                   ) : (
                     services.map((service, index) => (
                       <div key={service.id} className={`p-4 border rounded-xl transition-all duration-300 ${service.selected ? 'border-indigo-500 dark:border-indigo-500 bg-indigo-50/30 dark:bg-indigo-900/10 shadow-sm ring-1 ring-indigo-500/10 dark:ring-indigo-500/20 md:-translate-y-0.5' : 'border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/40 hover:bg-white dark:hover:bg-zinc-900/80 hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-sm group'}`}>
-                        <div className="flex items-start gap-4">
-                          <div className="pt-[5px]">
-                            <Checkbox
-                              id={`service-check-${index}`}
-                              checked={service.selected}
-                              onCheckedChange={() => handleServiceToggle(index)}
-                              aria-label={`Select ${service.title}`}
-                            />
-                          </div>
-                          <div className="flex-1 space-y-1">
-                            <Label htmlFor={`service-check-${index}`} className="text-sm font-bold text-zinc-900 dark:text-zinc-50 cursor-pointer block">{service.title}</Label>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono uppercase tracking-widest font-bold opacity-80">{service.nicDetails}</p>
+                        <div className="flex flex-col sm:flex-row items-start gap-4">
+                          <div className="flex items-start gap-4 flex-1">
+                            <div className="pt-[5px]">
+                              <Checkbox
+                                id={`service-check-${index}`}
+                                checked={service.selected}
+                                onCheckedChange={() => handleServiceToggle(index)}
+                                aria-label={`Select ${service.title}`}
+                                disabled={service.isProduct && service.currentStock === 0}
+                              />
+                            </div>
+                            <div className="flex-1 space-y-1">
+                              <Label htmlFor={`service-check-${index}`} className="text-sm font-bold text-zinc-900 dark:text-zinc-50 cursor-pointer flex items-center gap-2">
+                                {service.title} 
+                                {service.isProduct && (
+                                  <span className={`text-[10px] px-1.5 py-0.5 rounded-sm font-bold tracking-widest ${service.currentStock > 0 ? 'bg-emerald-100/50 text-emerald-700' : 'bg-red-100/50 text-red-700'}`}>
+                                    {service.currentStock} IN STOCK
+                                  </span>
+                                )}
+                              </Label>
+                              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono uppercase tracking-widest font-bold opacity-80">{service.nicDetails}</p>
+                            </div>
                           </div>
                           {service.selected && (
-                            <div className="w-1/3 min-w-[120px] animate-in fade-in zoom-in-95 duration-300 ease-out">
-                              <div className="relative group/price">
-                                {/* DYNAMIC CURRENCY SYMBOL */}
+                            <div className="flex items-center gap-2 w-full sm:w-auto animate-in fade-in zoom-in-95 duration-300 ease-out">
+                              {service.isProduct && (
+                                <div className="w-[80px]">
+                                  <Label htmlFor={`service-qty-${index}`} className="sr-only">Quantity</Label>
+                                  <Input
+                                    id={`service-qty-${index}`}
+                                    type="number"
+                                    min="1"
+                                    max={service.currentStock}
+                                    placeholder="Qty"
+                                    value={service.quantity}
+                                    onChange={(e) => handleQuantityChange(index, e.target.value)}
+                                    className="h-9 font-bold text-sm text-center"
+                                  />
+                                </div>
+                              )}
+                              <div className="relative group/price w-[120px]">
                                 <span className="absolute left-3 top-2.5 text-zinc-400 dark:text-zinc-500 text-xs font-bold transition-colors group-focus-within/price:text-indigo-600 dark:group-focus-within/price:text-indigo-400">{currencySymbol}</span>
                                 <Label htmlFor={`service-price-${index}`} className="sr-only">Amount for {service.title}</Label>
                                 <Input
