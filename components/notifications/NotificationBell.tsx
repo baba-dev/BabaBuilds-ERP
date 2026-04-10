@@ -72,7 +72,7 @@ function NotificationItem({ notification: n, onRead }: NotificationItemProps) {
           <a
             href={n.actionUrl}
             onClick={() => onRead(n.id)}
-            className="rounded p-1 text-zinc-500 hover:text-indigo-400 transition-colors"
+            className="rounded p-1 text-zinc-500 hover:text-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-colors"
             title="Open"
           >
             <ExternalLink className="h-3.5 w-3.5" />
@@ -80,7 +80,7 @@ function NotificationItem({ notification: n, onRead }: NotificationItemProps) {
         )}
         <button
           onClick={() => onRead(n.id)}
-          className="rounded p-1 text-zinc-500 hover:text-emerald-400 transition-colors"
+          className="rounded p-1 text-zinc-500 hover:text-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-colors"
           title="Mark as read"
         >
           <Check className="h-3.5 w-3.5" />
@@ -138,7 +138,7 @@ export function NotificationBell() {
         onClick={handleOpen}
         className={cn(
           'relative flex h-9 w-9 items-center justify-center rounded-xl text-zinc-400 transition-all duration-200',
-          'hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500',
+          'hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950',
           open && 'bg-white/10 text-white',
         )}
         aria-label="Notifications"
@@ -181,7 +181,7 @@ export function NotificationBell() {
             {notifications.length > 0 && (
               <button
                 onClick={markAllRead}
-                className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+                className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
                 title="Mark all as read"
               >
                 <CheckCheck className="h-3.5 w-3.5" />

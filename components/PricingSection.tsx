@@ -141,7 +141,7 @@ export default function PricingSection() {
               <button
                 onClick={() => setBillingCycle("monthly")}
                 className={cn(
-                  "rounded-xl px-6 py-2 text-sm font-bold transition-all",
+                  "rounded-xl px-6 py-2 text-sm font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-100 dark:focus-visible:ring-offset-zinc-900",
                   billingCycle === "monthly"
                     ? "bg-white text-indigo-600 shadow-sm dark:bg-zinc-800"
                     : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200",
@@ -152,7 +152,7 @@ export default function PricingSection() {
               <button
                 onClick={() => setBillingCycle("annually")}
                 className={cn(
-                  "flex items-center gap-2 rounded-xl px-6 py-2 text-sm font-bold transition-all",
+                  "flex items-center gap-2 rounded-xl px-6 py-2 text-sm font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-100 dark:focus-visible:ring-offset-zinc-900",
                   billingCycle === "annually"
                     ? "bg-white text-indigo-600 shadow-sm dark:bg-zinc-800"
                     : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200",
@@ -171,7 +171,7 @@ export default function PricingSection() {
                   key={c.code}
                   onClick={() => setCurrency(c)}
                   className={cn(
-                    "shrink-0 rounded-xl px-4 py-2 text-sm font-bold transition-all",
+                    "shrink-0 rounded-xl px-4 py-2 text-sm font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-100 dark:focus-visible:ring-offset-zinc-900",
                     currency.code === c.code
                       ? "bg-white text-indigo-600 shadow-sm dark:bg-zinc-800"
                       : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200",
@@ -270,7 +270,7 @@ export default function PricingSection() {
                   asChild
                   size="lg"
                   className={cn(
-                    "w-full rounded-2xl py-6 font-bold transition-all active:scale-95",
+                    "w-full rounded-2xl py-6 font-bold transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-900",
                     tier.featured
                       ? "bg-indigo-600 text-white shadow-xl shadow-indigo-600/20 hover:bg-indigo-700"
                       : "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200",
@@ -294,7 +294,7 @@ export default function PricingSection() {
           </div>
           <p className="text-sm text-zinc-600 dark:text-zinc-300">
             Need a custom solution for your enterprise?{" "}
-            <a href="mailto:admin@bababuilds.com" className="font-bold text-indigo-600 hover:underline">
+            <a href="mailto:admin@bababuilds.com" className="rounded-sm font-bold text-indigo-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950">
               Speak with an expert
             </a>
           </p>
