@@ -147,6 +147,7 @@
   "Sidebar": {
     "dashboard": "Dashboard",
     "service_catalog": "Service Catalog",
+    "inventory": "Inventory Hub",
     "client_crm": "Client CRM",
     "quotes_proposals": "Quotes & Proposals",
     "new_invoice": "New Invoice",

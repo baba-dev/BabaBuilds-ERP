@@ -772,6 +772,8 @@ model Product {
   status        String  @default("IN_STOCK") // "IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK"
 
   barcode       String? // For zero-latency search
+  imageUrl      String? // Product image
+  location      String? // e.g., "Warehouse A", "Van 1"
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

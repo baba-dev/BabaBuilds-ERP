@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Sparkles,
   Users,
+  Archive,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -22,6 +23,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 const routes = [
   { key: "dashboard", path: "/dashboard", icon: LayoutDashboard },
   { key: "service_catalog", path: "/services", icon: Briefcase },
+  { key: "inventory", path: "/inventory", icon: Archive },
   { key: "client_crm", path: "/clients", icon: Users },
   { key: "quotes_proposals", path: "/proposals", icon: FileSignature },
   { key: "new_invoice", path: "/invoice", icon: FilePlus },

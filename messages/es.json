@@ -147,6 +147,7 @@
   "Sidebar": {
     "dashboard": "Panel principal",
     "service_catalog": "Catálogo de servicios",
+    "inventory": "Inventario",
     "client_crm": "CRM de clientes",
     "quotes_proposals": "Presupuestos y propuestas",
     "new_invoice": "Nueva factura",

@@ -12,10 +12,12 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
-import { DataTable, type DataTableColumnDef } from "@/components/data-table";
-import { QuickAdjustModal } from "@/components/inventory/QuickAdjustModal";
 import { InventoryDetailSheet } from "@/components/inventory/InventoryDetailSheet";
 import { MobileScanner } from "@/components/inventory/MobileScanner";
+import { ProductFormModal } from "@/components/inventory/ProductFormModal";
+import { ProductCard } from "@/components/inventory/ProductCard";
+import { QuickAdjustModal } from "@/components/inventory/QuickAdjustModal";
+import { LayoutGrid, List, MapPin, RefreshCw } from "lucide-react";
 
 export default function InventoryHub() {
   const [view, setView] = useState<'list' | 'draft_po'>('list');
@@ -28,12 +30,14 @@ export default function InventoryHub() {
   const [products, setProducts] = useState<any[]>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   
-  // Modals state
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
   const [selectedProductForAdjust, setSelectedProductForAdjust] = useState<any>(null);
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
   const [selectedProductForDetail, setSelectedProductForDetail] = useState<any>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
+  
+  const [formModalOpen, setFormModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'list'|'grid'>('list');
 
   useEffect(() => {
     fetchProducts();
@@ -78,102 +82,97 @@ export default function InventoryHub() {
     );
   }, [products, globalFilter]);
 
-  const productColumns: DataTableColumnDef<any>[] = [
+  const productColumns: { id: string; header: any; accessor?: (p: any) => any; className?: string; sortable?: boolean; sortAccessor?: (p: any) => any; cell?: (p: any) => any }[] = [
     {
-      id: "sku_name",
+      id: "sku",
+      header: "SKU",
+      accessor: (p: any) => p.sku,
+      className: "px-6 py-4 w-[100px] text-zinc-500 font-mono text-xs font-bold",
+    },
+    {
+      id: "product",
       header: "Product",
-      accessor: (p) => `${p.sku} ${p.name}`,
-      className: "px-6 py-4",
-      cell: (p) => (
-        <div className="cursor-pointer group flex flex-col items-start gap-1" onClick={() => openDetailSheet(p)}>
-          <div className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 transition-colors">
+      accessor: (p: any) => p.name,
+      className: "px-2 py-4",
+      cell: (p: any) => (
+        <div className="flex flex-col">
+          <span className="font-extrabold text-[13px] text-zinc-900 dark:text-zinc-100 cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => openDetailSheet(p)}>
             {p.name}
-          </div>
-          <div className="text-xs font-bold uppercase tracking-tight text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
-            <Tag className="w-3 h-3" /> {p.sku}
-          </div>
+          </span>
+          <span className="text-[11px] font-medium text-zinc-500">{p.category || "Uncategorized"}</span>
         </div>
       ),
     },
     {
       id: "stock",
-      header: "Stock Level",
+      header: "Stock",
       sortable: true,
-      sortAccessor: (p) => p.currentStock,
-      cell: (p) => {
-        let isDanger = p.currentStock === 0;
-        let isWarning = p.currentStock > 0 && p.currentStock <= p.safetyStock;
-        let fillWidth = Math.min((p.currentStock / (p.safetyStock * 3 || 10)) * 100, 100);
-        
+      sortAccessor: (p: any) => p.currentStock,
+      className: "px-2 py-4 font-bold text-sm",
+      cell: (p: any) => {
+        const isDanger = p.currentStock === 0;
+        const isCritical = p.currentStock > 0 && p.currentStock <= (p.safetyStock / 2);
+        const isWarning = p.currentStock > 0 && p.currentStock <= p.safetyStock && !isCritical;
         return (
-          <div className="flex items-center gap-3 w-32">
-            <span className={`font-black text-sm ${isDanger ? 'text-rose-500' : isWarning ? 'text-amber-500' : 'text-zinc-900 dark:text-zinc-100'}`}>
+          <div className="flex items-center gap-1.5">
+            <span className={isDanger || isCritical ? 'text-rose-600' : isWarning ? 'text-amber-600' : 'text-zinc-900 dark:text-zinc-100'}>
               {p.currentStock}
             </span>
-            <div className="flex-1 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden relative">
-              <div 
-                className={`absolute left-0 top-0 h-full ${isDanger ? 'bg-rose-500' : isWarning ? 'bg-amber-500' : 'bg-emerald-500'} transition-all`}
-                style={{ width: `${fillWidth}%` }}
-              />
-              {/* Safety Marker */}
-              <div 
-                className="absolute top-0 bottom-0 w-[2px] bg-red-500/50"
-                style={{ left: `${Math.min((p.safetyStock / (p.safetyStock * 3 || 10)) * 100, 100)}%` }}
-              />
-            </div>
-            {isDanger && <ArrowDownRight className="w-3 h-3 text-rose-500" />}
+            {(isDanger || isCritical) && <ArrowDownRight className="w-3 h-3 text-rose-500" />}
           </div>
         );
-      },
+      }
+    },
+    {
+      id: "level",
+      header: "Level",
+      className: "px-2 py-4 w-[100px]",
+      cell: (p: any) => {
+        const isDanger = p.currentStock === 0;
+        const isCritical = p.currentStock > 0 && p.currentStock <= (p.safetyStock / 2);
+        const fillWidth = Math.min((p.currentStock / (p.safetyStock * 3 || 10)) * 100, 100);
+        return (
+          <div className="w-16 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full relative overflow-hidden">
+            <div 
+              className={`absolute left-0 top-0 h-full ${isDanger || isCritical ? 'bg-rose-500' : 'bg-zinc-800 dark:bg-zinc-200'}`}
+              style={{ width: `${fillWidth}%` }}
+            />
+            <div className="absolute top-0 bottom-0 w-[1px] bg-red-500" style={{ left: `${Math.min((p.safetyStock / (p.safetyStock * 3 || 10)) * 100, 100)}%` }} />
+          </div>
+        );
+      }
     },
     {
       id: "status",
-      header: <div className="text-center">Status</div>,
-      accessor: (p) => p.status,
-      className: "text-center",
-      cell: (p) => {
-        if (p.currentStock === 0) {
-          return (
-            <Badge className="bg-rose-500 text-white hover:bg-rose-600 border-none text-[10px] font-bold uppercase tracking-widest shadow-none px-2 py-0.5 animate-pulse">
-              <AlertCircle className="w-3 h-3 mr-1" /> Out of Stock
-            </Badge>
-          );
-        }
-        if (p.currentStock <= p.safetyStock) {
-          return (
-            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-500/20 dark:text-amber-400 border-none text-[10px] font-bold uppercase tracking-widest shadow-none px-2 py-0.5">
-              <AlertTriangle className="w-3 h-3 mr-1" /> Low Stock
-            </Badge>
-          );
-        }
-        return (
-          <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-800/50 text-[10px] font-bold uppercase tracking-widest shadow-none px-2 py-0.5">
-            In Stock
-          </Badge>
-        );
+      header: "Status",
+      accessor: (p: any) => p.status,
+      className: "px-2 py-4 text-xs font-bold",
+      cell: (p: any) => {
+        if (p.currentStock === 0) return <span className="text-rose-600 text-[11px] font-medium tracking-wide">Out of Stock</span>;
+        if (p.currentStock <= (p.safetyStock / 2)) return <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] tracking-wide">Critical</span>;
+        if (p.currentStock <= p.safetyStock) return <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-400 text-[10px] tracking-wide">Low Stock</span>;
+        return <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-400 text-[10px] tracking-wide">In Stock</span>;
       },
+    },
+    {
+      id: "location",
+      header: "Location",
+      className: "px-2 py-4 text-[11px] font-medium text-zinc-500 whitespace-nowrap",
+      cell: (p: any) => p.location ? (
+        <span className="flex items-center gap-1.5"><MapPin className="w-3 h-3 opacity-60" /> {p.location}</span>
+      ) : <span className="text-zinc-300 dark:text-zinc-700">-</span>
     },
     {
       id: "value",
       header: "Value",
       sortable: true,
-      sortAccessor: (p) => p.currentStock * p.costPrice,
-      className: "font-black text-sm text-zinc-700 dark:text-zinc-300",
-      cell: (p) => fCurrency(p.currentStock * p.costPrice),
-    },
-    {
-      id: "actions",
-      header: <div className="text-right px-6">Actions</div>,
-      className: "text-right px-6",
-      cell: (p) => (
-        <div className="flex justify-end gap-1.5">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => openAdjustModal(p)}
-            className="text-xs font-bold uppercase tracking-widest h-8 px-3 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
-          >
-            Adjust
+      sortAccessor: (p: any) => p.currentStock * p.costPrice,
+      className: "font-semibold text-[13px] text-zinc-800 dark:text-zinc-200 text-right px-6",
+      cell: (p: any) => (
+        <div className="flex items-center justify-end gap-3">
+          {fCurrency(p.currentStock * (p.costPrice || 0))}
+          <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100" onClick={(e) => { e.stopPropagation(); openAdjustModal(p); }}>
+            <RefreshCw className="w-3.5 h-3.5" />
           </Button>
         </div>
       ),
@@ -205,8 +204,8 @@ export default function InventoryHub() {
                 <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">{fCurrency(totalValue)}</p>
               </div>
               <Button
-                className="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-50 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 h-12 px-6 shadow-md text-xs font-bold uppercase tracking-wider transition-all active:scale-95"
-                onClick={() => toast.success("New product creation modal would open here.")}
+                className="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-50 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 h-10 px-5 shadow-md text-xs font-bold uppercase tracking-wider transition-all active:scale-95"
+                onClick={() => setFormModalOpen(true)}
               >
                 <Plus className="w-4 h-4 mr-2" /> New Product
               </Button>
@@ -227,35 +226,82 @@ export default function InventoryHub() {
             />
           </div>
           
-          <div className="flex gap-2">
-            <Button variant="outline" className="h-10 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 font-bold flex items-center gap-2" onClick={() => setScannerOpen(true)}>
-              <Search className="w-4 h-4 text-indigo-500" /> Use Scanner
-            </Button>
+          <div className="flex gap-2 items-center">
+            <div className="hidden md:flex bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-1 rounded-xl shadow-sm h-10">
+              <Button 
+                variant={viewMode === 'list' ? 'secondary' : 'ghost'} 
+                size="sm" 
+                onClick={() => setViewMode('list')}
+                className={`px-3 h-8 text-xs font-bold uppercase tracking-widest ${viewMode === 'list' ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100' : 'text-zinc-500'}`}
+              >
+                <List className="w-4 h-4 mr-1.5" /> List
+              </Button>
+              <Button 
+                variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className={`px-3 h-8 text-xs font-bold uppercase tracking-widest ${viewMode === 'grid' ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100' : 'text-zinc-500'}`}
+              >
+                <LayoutGrid className="w-4 h-4 mr-1.5" /> Grid
+              </Button>
+            </div>
+            
             {outOfStockCount > 0 && (
-              <Badge variant="destructive" className="h-8 px-3 font-bold uppercase text-[10px] tracking-widest bg-rose-500 hover:bg-rose-600">
-                <AlertCircle className="w-3 h-3 mr-1.5" /> {outOfStockCount} Need Restock
+              <Badge variant="destructive" className="h-10 px-4 font-bold uppercase text-[11px] tracking-widest bg-rose-600 hover:bg-rose-700 shadow-sm ml-2">
+                <AlertCircle className="w-4 h-4 mr-2" /> {outOfStockCount} Need Restock
               </Badge>
-            )}
-            {lowStockCount > 0 && (
-               <Badge className="h-8 px-3 font-bold uppercase text-[10px] tracking-widest bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-400 hover:bg-amber-200">
-               <AlertTriangle className="w-3 h-3 mr-1.5" /> {lowStockCount} Low Stock
-             </Badge>
             )}
           </div>
         </div>
 
-        <Card className="shadow-xl border-zinc-200 dark:border-zinc-800/80 overflow-hidden bg-white dark:bg-zinc-900/95 flex flex-col">
-          <CardContent className="p-0">
-            <DataTable
-              columns={productColumns}
-              data={filteredProducts}
-              rowId={(row) => row.id}
-              loading={isLoading}
-              emptyTitle="No inventory found"
-              emptyDescription="Add some products or import them."
-            />
-          </CardContent>
-        </Card>
+        {viewMode === 'grid' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both">
+            {filteredProducts.map((p, i) => (
+              <div key={p.id} style={{ animationDelay: `${i * 50}ms` }} className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both">
+                <ProductCard 
+                  product={p} 
+                  onClick={openDetailSheet} 
+                  onAdjust={openAdjustModal} 
+                />
+              </div>
+            ))}
+            {filteredProducts.length === 0 && !isLoading && (
+              <div className="col-span-full py-20 text-center text-zinc-500">
+                <p className="font-bold uppercase tracking-widest">No products found.</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="bg-white dark:bg-zinc-950/50 rounded-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="border-b border-zinc-200/80 dark:border-zinc-800/80">
+                  <tr>
+                    {productColumns.map(col => (
+                      <th key={col.id as string} className="px-4 py-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest bg-transparent">
+                        {col.header as any}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
+                  {filteredProducts.map(p => (
+                    <tr key={p.id} className={`hover:bg-zinc-50/80 dark:hover:bg-zinc-900/50 transition-colors ${p.currentStock === 0 ? 'bg-rose-50/40 dark:bg-rose-500/5' : ''}`}>
+                      {productColumns.map(col => (
+                        <td key={col.id as string} className={col.className}>
+                          {col.cell ? col.cell(p) : (p as any)[col.accessor as any]}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                  {filteredProducts.length === 0 && !isLoading && (
+                    <tr><td colSpan={7} className="text-center py-12 text-zinc-500 font-bold uppercase tracking-widest text-sm">No products match your search</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
       </div>
       
@@ -283,6 +329,11 @@ export default function InventoryHub() {
           setGlobalFilter(text);
           toast.success("Barcode scanned successfully!");
         }}
+      />
+      <ProductFormModal
+        open={formModalOpen}
+        onOpenChange={setFormModalOpen}
+        onSuccess={fetchProducts}
       />
     </div>
   );
