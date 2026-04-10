@@ -11,6 +11,7 @@ import { scanBuffer } from '@/lib/security/clamav';
 import { isSupportedLocale } from '@/i18n/locales';
 import { getTaxFeatureFlags } from '@/lib/tax/feature-flags';
 import { logActivity } from '@/lib/activity-log';
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 
 export async function GET() {
   try {
@@ -351,6 +352,12 @@ export async function POST(request: Request) {
       }
       const cookieStore = await cookies();
       cookieStore.set('NEXT_LOCALE', clientLocale, { path: '/' });
+    }
+
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'businessProfile', action: 'update', error: String(error) });
     }
 
     changedFieldNames = Object.keys(updateData).sort();
