@@ -26,6 +26,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { SheetContent } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
@@ -82,7 +83,7 @@ function NotificationItem({ notification: n, onRead }: NotificationItemProps) {
   return (
     <div
       className={cn(
-        'group relative flex gap-4 rounded-xl border-l-4 bg-white/[0.03] p-4 transition-all hover:bg-white/[0.06] border border-transparent hover:border-zinc-800/50',
+        'group relative flex gap-4 rounded-xl border border-border/60 border-l-4 bg-muted/40 p-4 transition-all hover:bg-muted',
         accent,
       )}
     >
@@ -95,10 +96,10 @@ function NotificationItem({ notification: n, onRead }: NotificationItemProps) {
 
       {/* Content */}
       <div className="min-w-0 flex-1 flex flex-col justify-center">
-        <p className="text-sm font-semibold text-zinc-100 leading-tight group-hover:text-white transition-colors">
+        <p className="text-sm font-semibold text-foreground leading-tight transition-colors">
           {n.title}
         </p>
-        <p className="mt-1 text-xs text-zinc-400 line-clamp-2 leading-relaxed">
+        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
           {n.body}
         </p>
         <p className={cn(typography.metadata, 'mt-2')}>
@@ -107,28 +108,32 @@ function NotificationItem({ notification: n, onRead }: NotificationItemProps) {
       </div>
 
       {/* Actions */}
-      <div className="flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex w-12 flex-shrink-0 flex-col items-center justify-center gap-2 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
         {n.actionUrl && (
           <Button
             asChild
             variant="ghost"
             size="icon-sm"
-            className="h-8 w-8 rounded-lg text-zinc-400 hover:bg-indigo-500/20 hover:text-indigo-300"
+            className="h-9 w-9 touch-manipulation rounded-lg text-zinc-400 hover:bg-indigo-500/20 hover:text-indigo-300 focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
             title="View Details"
           >
             <a href={n.actionUrl} onClick={() => onRead(n.id)}>
               <ExternalLink className="h-4 w-4" />
+              <span className="sr-only">View notification details</span>
             </a>
           </Button>
         )}
+        {!n.actionUrl && <div className="h-9 w-9" aria-hidden="true" />}
         <Button
           onClick={() => onRead(n.id)}
+          type="button"
           variant="ghost"
           size="icon-sm"
-          className="h-8 w-8 rounded-lg text-zinc-400 hover:bg-emerald-500/20 hover:text-emerald-300"
+          className="h-9 w-9 touch-manipulation rounded-lg text-zinc-400 hover:bg-emerald-500/20 hover:text-emerald-300 focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
           title="Mark as Read"
         >
           <Check className="h-4 w-4" />
+          <span className="sr-only">Mark notification as read</span>
         </Button>
       </div>
     </div>
@@ -139,26 +144,60 @@ export function CommsHub() {
   const { data: session } = useSession();
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
 
-  if (!session?.user) return null;
+  React.useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 767px)');
+    const onChange = () => setIsMobile(mediaQuery.matches);
+    onChange();
+    mediaQuery.addEventListener('change', onChange);
+    return () => mediaQuery.removeEventListener('change', onChange);
+  }, []);
+
+  return isMobile;
+}
+
+interface CommsHubInnerProps {
+  session: {
+    name?: string | null;
+    email?: string | null;
+  };
+  notifications: InAppNotification[];
+  unreadCount: number;
+  markRead: (ids: string[]) => void;
+  markAllRead: () => void;
+  isMobile: boolean;
+}
+
+function CommsHubInner({
+  session,
+  notifications,
+  unreadCount,
+  markRead,
+  markAllRead,
+  isMobile,
+}: CommsHubInnerProps) {
+  const tabTriggerClasses = cn(
+    'group rounded-none border-b-2 border-transparent bg-transparent text-zinc-400 transition-all data-[state=active]:bg-transparent data-[state=active]:text-indigo-400 data-[state=active]:border-indigo-400',
+    'min-h-11 px-3 py-2 text-sm md:pb-4 md:px-1',
+    isMobile && 'flex-1 min-w-fit justify-center',
+  );
+
+  const contentPaddingClasses = isMobile ? 'p-4' : 'p-8';
 
   return (
-    <DialogContent className="max-w-2xl border-zinc-800/50 bg-zinc-950/90 p-0 shadow-2xl backdrop-blur-2xl sm:rounded-3xl overflow-hidden">
-      <div className="relative">
-        {/* Aesthetic Background Accents */}
-        <div className="absolute -top-24 -left-24 h-64 w-64 rounded-full bg-indigo-600/10 blur-[100px] pointer-events-none" />
-        <div className="absolute -bottom-24 -right-24 h-64 w-64 rounded-full bg-violet-600/10 blur-[100px] pointer-events-none" />
+    <div className="relative">
+      {/* Aesthetic Background Accents */}
+      <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-indigo-600/10 blur-[100px]" />
+      <div className="pointer-events-none absolute -right-24 -bottom-24 h-64 w-64 rounded-full bg-violet-600/10 blur-[100px]" />
 
-        <DialogHeader className="px-8 pt-8 pb-4">
-          <div className="flex items-center gap-3">
-             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-600/20 text-indigo-400 shadow-lg shadow-indigo-500/10">
-                <Zap className="h-6 w-6" />
-             </div>
-             <div>
-               <DialogTitle className="text-2xl font-bold tracking-tight text-white">Comms Hub</DialogTitle>
-               <DialogDescription className="text-zinc-500">
-                 Unified inbox and account management for {session.user.name}
-               </DialogDescription>
-             </div>
+      <DialogHeader className={cn(isMobile ? 'px-4 pt-5 pb-3' : 'px-8 pt-8 pb-4')}>
+        <div className={cn('flex items-center', isMobile ? 'gap-2.5' : 'gap-3')}>
+          <div
+            className={cn(
+              'flex items-center justify-center rounded-2xl bg-indigo-600/20 text-indigo-400 shadow-lg shadow-indigo-500/10',
+              isMobile ? 'h-10 w-10' : 'h-12 w-12',
+            )}
+          >
+            <Zap className={cn(isMobile ? 'h-5 w-5' : 'h-6 w-6')} />
           </div>
         </DialogHeader>
 
@@ -199,6 +238,8 @@ export function CommsHub() {
               </TabsTrigger>
             </TabsList>
           </div>
+        </div>
+      </DialogHeader>
 
           <div className="max-h-[60vh] overflow-y-auto custom-scrollbar">
             <TabsContent value="inbox" className="mt-0 space-y-6 p-8 outline-none motion-safe:transition-all motion-safe:duration-200 data-[state=inactive]:translate-y-1 data-[state=inactive]:opacity-0 data-[state=active]:translate-y-0 data-[state=active]:opacity-100">
@@ -239,8 +280,16 @@ export function CommsHub() {
                     />
                   ))}
                 </div>
-              )}
-            </TabsContent>
+                <div className="min-w-0">
+                  <h4 className="truncate text-lg font-bold text-white">{session.name}</h4>
+                  <p className="truncate text-sm text-zinc-400">{session.email}</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400 ring-1 ring-inset ring-emerald-500/20">
+                      Professional Plan
+                    </span>
+                  </div>
+                </div>
+              </div>
 
             <TabsContent value="account" className="mt-0 space-y-6 p-8 outline-none motion-safe:transition-all motion-safe:duration-200 data-[state=inactive]:translate-y-1 data-[state=inactive]:opacity-0 data-[state=active]:translate-y-0 data-[state=active]:opacity-100">
                <div className="grid gap-6">
@@ -325,16 +374,72 @@ export function CommsHub() {
                     Go to Security Settings
                   </Button>
               </div>
-            </TabsContent>
-          </div>
-        </Tabs>
+            </div>
+          </TabsContent>
 
-        {/* Footer info */}
-        <div className="border-t border-zinc-800/50 bg-white/[0.02] px-8 py-4 flex justify-between items-center">
-           <p className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold">BabaBuilds ERP Core</p>
-           <p className="text-[10px] text-zinc-600">v2.4.0-stable</p>
+          <TabsContent value="security" className={cn('mt-0 outline-none', contentPaddingClasses)}>
+            {/* Security Placeholder */}
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Shield className="mb-4 h-12 w-12 text-zinc-700" />
+              <h4 className="text-lg font-medium text-zinc-300">Security & Privacy</h4>
+              <p className="mt-1 max-w-[300px] text-sm text-zinc-600">
+                Manage your password, two-factor authentication, and active sessions.
+              </p>
+              <Button variant="outline" className="mt-6 h-11 border-zinc-800 hover:bg-white/5">
+                Go to Security Settings
+              </Button>
+            </div>
+          </TabsContent>
         </div>
+      </Tabs>
+
+      {/* Footer info */}
+      <div className={cn('flex items-center justify-between border-t border-zinc-800/50 bg-white/[0.02]', isMobile ? 'px-4 py-3' : 'px-8 py-4')}>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">BabaBuilds ERP Core</p>
+        <p className="text-[10px] text-zinc-600">v2.4.0-stable</p>
       </div>
+    </div>
+  );
+}
+
+export function CommsHub() {
+  const { data: session } = useSession();
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
+  const isMobile = useIsMobile();
+  const preferBottomSheet = true;
+  const mobileSheetSide: 'bottom' | 'right' = preferBottomSheet ? 'bottom' : 'right';
+
+  if (!session?.user) return null;
+
+  const sharedContent = (
+    <CommsHubInner
+      session={session.user}
+      notifications={notifications}
+      unreadCount={unreadCount}
+      markRead={markRead}
+      markAllRead={markAllRead}
+      isMobile={isMobile}
+    />
+  );
+
+  if (isMobile) {
+    return (
+      <SheetContent
+        side={mobileSheetSide}
+        className={cn(
+          'border-zinc-800/50 bg-zinc-950/95 p-0 shadow-2xl backdrop-blur-2xl overflow-hidden',
+          mobileSheetSide === 'bottom' && 'max-h-[90dvh] rounded-t-3xl border-x border-t',
+          mobileSheetSide === 'right' && 'w-full max-w-none border-l',
+        )}
+      >
+        {sharedContent}
+      </SheetContent>
+    );
+  }
+
+  return (
+    <DialogContent className="max-w-2xl border-zinc-800/50 bg-zinc-950/90 p-0 shadow-2xl backdrop-blur-2xl sm:rounded-3xl overflow-hidden">
+      {sharedContent}
     </DialogContent>
   );
 }
