@@ -5,6 +5,7 @@ import { useSession, signIn } from "next-auth/react";
 import { Box, Sparkles, ArrowRight, Mail, Loader2, CheckCircle2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Turnstile } from "@marsidev/react-turnstile"; // Ensure this is installed
+import { toast } from "sonner";
 
 type AuthModalProps = {
   callbackUrl?: string;
@@ -32,7 +33,7 @@ export default function AuthModal({ callbackUrl = "/dashboard" }: AuthModalProps
     
     setIsLoading(false);
     if (res?.error) {
-      alert(t("alerts.emailFailed"));
+      toast.error(t("alerts.emailFailed"));
     } else {
       setIsSent(true);
     }
@@ -40,7 +41,7 @@ export default function AuthModal({ callbackUrl = "/dashboard" }: AuthModalProps
 
 const handleDemoSignIn = async () => {
     if (!turnstileToken && process.env.NODE_ENV === "production") {
-      alert(t("alerts.completeSecurityCheck"));
+      toast.error(t("alerts.completeSecurityCheck"));
       return;
     }
 
@@ -69,7 +70,7 @@ const handleDemoSignIn = async () => {
 
     } catch (error: any) {
       console.error(error);
-      alert(error.message || t("alerts.demoSystemBusy"));
+      toast.error(error.message || t("alerts.demoSystemBusy"));
     } finally {
       setIsDemoLoading(false);
     }
