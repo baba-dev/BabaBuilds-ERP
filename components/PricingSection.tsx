@@ -4,6 +4,12 @@ import { useState } from "react";
 import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
 import { Check, Gift, Sparkles, ShieldCheck, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  SegmentedControl,
+  segmentedControlContainerClass,
+  segmentedControlItemActiveClass,
+  segmentedControlItemClass,
+} from "@/components/ui/segmented-control";
 import { cn } from "@/lib/utils";
 
 type Currency = {
@@ -136,49 +142,45 @@ export default function PricingSection() {
             Choose the plan that fits your current operational scale. No hidden fees, just pure productivity.
           </p>
 
-          <div className="flex flex-col items-center justify-center gap-8 py-4 md:flex-row">
-            <div className="flex items-center gap-4 rounded-2xl border border-zinc-200 bg-zinc-100 p-1.5 dark:border-zinc-800 dark:bg-zinc-900">
-              <button
-                onClick={() => setBillingCycle("monthly")}
-                className={cn(
-                  "rounded-xl px-6 py-2 text-sm font-bold transition-all",
-                  billingCycle === "monthly"
-                    ? "bg-white text-indigo-600 shadow-sm dark:bg-zinc-800"
-                    : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200",
-                )}
-              >
-                Monthly
-              </button>
-              <button
-                onClick={() => setBillingCycle("annually")}
-                className={cn(
-                  "flex items-center gap-2 rounded-xl px-6 py-2 text-sm font-bold transition-all",
-                  billingCycle === "annually"
-                    ? "bg-white text-indigo-600 shadow-sm dark:bg-zinc-800"
-                    : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200",
-                )}
-              >
-                Annually
-                <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] uppercase tracking-tighter text-emerald-600 dark:text-emerald-400">
-                  Best Value
-                </span>
-              </button>
-            </div>
+          <div className="flex w-full flex-col items-center justify-center gap-4 py-4 md:flex-row md:gap-8">
+            <SegmentedControl
+              className="md:w-auto"
+              value={billingCycle}
+              onValueChange={setBillingCycle}
+              options={[
+                { value: "monthly", label: "Monthly" },
+                {
+                  value: "annually",
+                  label: (
+                    <span className="flex items-center gap-2">
+                      Annually
+                      <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] uppercase tracking-tighter text-emerald-600 dark:text-emerald-400">
+                        Best Value
+                      </span>
+                    </span>
+                  ),
+                },
+              ]}
+              itemClassName="min-w-[8.25rem] grow-0 basis-auto px-6"
+            />
 
-            <div className="flex max-w-full items-center gap-2 overflow-x-auto rounded-2xl border border-zinc-200 bg-zinc-100 p-1.5 dark:border-zinc-800 dark:bg-zinc-900">
+            <div className={cn(segmentedControlContainerClass, "w-full max-w-full flex-nowrap overflow-x-auto md:w-auto")}>
               {currencies.map((c) => (
-                <button
+                <Button
                   key={c.code}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-pressed={currency.code === c.code}
                   onClick={() => setCurrency(c)}
                   className={cn(
-                    "shrink-0 rounded-xl px-4 py-2 text-sm font-bold transition-all",
-                    currency.code === c.code
-                      ? "bg-white text-indigo-600 shadow-sm dark:bg-zinc-800"
-                      : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200",
+                    "h-auto shrink-0 px-4 py-2 text-sm font-semibold",
+                    segmentedControlItemClass,
+                    currency.code === c.code && segmentedControlItemActiveClass,
                   )}
                 >
                   {c.code} {c.symbol}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
