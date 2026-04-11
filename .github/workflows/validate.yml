@@ -41,8 +41,17 @@ jobs:
       - name: Run locale checks
         run: npm run check:locales
 
+      - name: Lint
+        run: npm run lint
+
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Integration tests
+        run: npm run test:integration
 
       - name: Build
         run: npm run build
