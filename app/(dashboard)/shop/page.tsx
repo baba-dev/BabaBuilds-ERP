@@ -6,6 +6,7 @@ import {
   Check,
   Clock,
   ExternalLink,
+  FileSignature,
   Loader2,
   Search,
   ShoppingBag,
@@ -24,7 +25,15 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { useFormat } from "@/hooks/use-format";
 
-type Service = { id: string; showInShop: boolean };
+type Service = {
+  id: string;
+  name: string;
+  description: string | null;
+  defaultPrice: number | string;
+  showInShop: boolean;
+  sacCodeId: string | null;
+  nicCodeId: string | null;
+};
 
 type ShopOrder = {
   id: string;
@@ -55,6 +64,7 @@ export default function ShopDashboardPage() {
   const { fCurrency } = useFormat();
   const [orders, setOrders] = useState<ShopOrder[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [shopOverview, setShopOverview] = useState<ShopOverview>({
     totalOrders: 0,
     statusCounts: { PAID: 0, PENDING: 0, FAILED: 0, REFUNDED: 0 },
@@ -62,6 +72,7 @@ export default function ShopDashboardPage() {
   });
   const [shopSlug, setShopSlug] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCreatingProposalDraft, setIsCreatingProposalDraft] = useState(false);
   const [orderFilter, setOrderFilter] = useState("ALL");
   const [orderSearch, setOrderSearch] = useState("");
   const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
@@ -83,7 +94,15 @@ export default function ShopDashboardPage() {
 
       setOrders(Array.isArray(ordersData.orders) ? ordersData.orders : []);
       setShopOverview(ordersData.overview ?? { totalOrders: 0, statusCounts: { PAID: 0, PENDING: 0, FAILED: 0, REFUNDED: 0 }, paidRevenue: 0 });
-      setServices(Array.isArray(servicesData) ? servicesData : []);
+      const parsedServices = Array.isArray(servicesData) ? servicesData : [];
+      setServices(parsedServices);
+      const publishedServices = parsedServices.filter((service: Service) => service.showInShop);
+      setSelectedServiceIds((current) => {
+        if (current.length > 0) {
+          return current.filter((id) => publishedServices.some((service: Service) => service.id === id));
+        }
+        return publishedServices.map((service: Service) => service.id);
+      });
       setShopSlug(settingsData?.shopSlug || null);
     } catch {
       toast.error("Failed to load shop details.");
@@ -107,6 +126,8 @@ export default function ShopDashboardPage() {
       return matchesSearch && matchesFilter;
     });
   }, [orderSearch, orderFilter, orders]);
+
+  const publishedServices = useMemo(() => services.filter((service) => service.showInShop), [services]);
 
   const stats = useMemo(() => ({
     totalOrders: shopOverview.totalOrders,
@@ -152,12 +173,79 @@ export default function ShopDashboardPage() {
     setDeletingOrderId(null);
   };
 
+  const toggleServiceSelection = (serviceId: string) => {
+    setSelectedServiceIds((current) => (
+      current.includes(serviceId)
+        ? current.filter((id) => id !== serviceId)
+        : [...current, serviceId]
+    ));
+  };
+
+  const toggleSelectAllPublished = () => {
+    setSelectedServiceIds((current) => (
+      current.length === publishedServices.length
+        ? []
+        : publishedServices.map((service) => service.id)
+    ));
+  };
+
+  const createProposalDraft = async () => {
+    if (selectedServiceIds.length === 0) {
+      toast.error("Select at least one published service.");
+      return;
+    }
+
+    setIsCreatingProposalDraft(true);
+    const toastId = toast.loading("Preparing proposal draft...");
+
+    try {
+      const res = await fetch("/api/proposals/draft-from-services", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serviceTemplateIds: selectedServiceIds }),
+      });
+      const payload = await res.json().catch(() => null);
+
+      if (!res.ok || !payload?.draft) {
+        throw new Error(payload?.error || "Could not prepare a proposal draft.");
+      }
+
+      sessionStorage.setItem("erp_ai_payload", JSON.stringify({
+        path: "/proposals",
+        data: {
+          title: payload.draft.title,
+          items: payload.draft.items,
+          source: "shop",
+        },
+        timestamp: Date.now(),
+      }));
+
+      toast.success("Draft prepared. Redirecting to Proposals...", { id: toastId });
+      window.location.href = "/proposals";
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to create proposal draft.";
+      toast.error(message, { id: toastId });
+    } finally {
+      setIsCreatingProposalDraft(false);
+    }
+  };
+
   return (
     <DashboardPageShell
       title="Shop Command Center"
       icon={<Store className="w-6 h-6 text-indigo-700 dark:text-indigo-400" />}
       description="Monitor storefront performance, manage incoming orders, and keep your public shop healthy."
       primaryAction={
+        <Button
+          onClick={createProposalDraft}
+          disabled={isCreatingProposalDraft || selectedServiceIds.length === 0 || publishedServices.length === 0}
+          className="hidden md:flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-wider h-11"
+        >
+          {isCreatingProposalDraft ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSignature className="w-4 h-4" />}
+          Create Proposal
+        </Button>
+      }
+      secondaryActions={
         shopSlug ? (
           <Button
             onClick={() => window.open(`/shop/${shopSlug}`, "_blank")}
@@ -169,6 +257,55 @@ export default function ShopDashboardPage() {
         ) : null
       }
     >
+      <Card className="mb-6 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950/40">
+        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+          <CardTitle className="text-xs uppercase tracking-widest text-zinc-500">Proposal Draft Builder</CardTitle>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-[11px] font-bold uppercase tracking-widest"
+            onClick={toggleSelectAllPublished}
+            disabled={publishedServices.length === 0}
+          >
+            {selectedServiceIds.length === publishedServices.length ? "Clear" : "Select all"}
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {publishedServices.length === 0 ? (
+            <p className="text-xs text-zinc-500">Publish services in the Services page to build proposal drafts from Shop.</p>
+          ) : (
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+              {publishedServices.map((service) => {
+                const checked = selectedServiceIds.includes(service.id);
+                return (
+                  <label
+                    key={service.id}
+                    className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                      checked
+                        ? "border-indigo-300 bg-indigo-50/70 dark:border-indigo-800 dark:bg-indigo-950/30"
+                        : "border-zinc-200 dark:border-zinc-800 hover:border-indigo-200"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleServiceSelection(service.id)}
+                      className="mt-1 h-4 w-4 rounded border-zinc-300"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">{service.name}</p>
+                      <p className="text-xs text-zinc-500 truncate">{service.description || "No description"}</p>
+                      <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-300 mt-1">{fCurrency(Number(service.defaultPrice || 0))}</p>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <Card className="border-indigo-200/60 dark:border-indigo-800/40 bg-gradient-to-br from-indigo-50/70 to-white dark:from-indigo-950/30 dark:to-zinc-900">
           <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2"><ShoppingCart className="w-3.5 h-3.5" />Total Orders</CardTitle></CardHeader>
