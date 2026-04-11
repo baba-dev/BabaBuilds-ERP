@@ -21,7 +21,7 @@ const BASE_URL = "https://erp.bababuilds.com";
 const SHOP_REVALIDATE_SECONDS = 60;
 const FALLBACK_SOCIAL_IMAGE = "/icons/Banner-1.png";
 
-export const revalidate = SHOP_REVALIDATE_SECONDS;
+export const revalidate = 60;
 
 async function getShopData(slug: string): Promise<ShopData | null> {
   try {
