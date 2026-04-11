@@ -290,6 +290,78 @@ export function buildEmailTemplate(
         text: `Tax Filing Reminder: ${taxType} due by ${dueDate}.`,
       };
     }
+    case 'SHOP_ORDER_CREATED': {
+      const orderId = data.orderId as string;
+      const serviceName = data.serviceName as string;
+      const buyerName = data.buyerName as string;
+      const amount = data.amount as string;
+      return {
+        subject: `🛒 New shop order received: ${orderId}`,
+        html: layout({
+          appUrl, companyName, emoji: '🛒',
+          headline: 'New Shop Order',
+          subheadline: `${buyerName} placed an order for ${serviceName}`,
+          body: `<p>Order <strong>${orderId}</strong> has been created for <strong>${amount}</strong>.</p>`,
+          ctaLabel: 'Review Shop Orders',
+          ctaUrl: `${appUrl}/shop`,
+        }),
+        text: `New shop order ${orderId} by ${buyerName} for ${serviceName} (${amount}).`,
+      };
+    }
+
+    case 'SHOP_ORDER_UPDATED': {
+      const orderId = data.orderId as string;
+      const buyerName = data.buyerName as string;
+      return {
+        subject: `📝 Shop order updated: ${orderId}`,
+        html: layout({
+          appUrl, companyName, emoji: '📝',
+          headline: 'Shop Order Updated',
+          subheadline: `Order ${orderId} was updated`,
+          body: `<p>The shop order for <strong>${buyerName}</strong> has new details.</p>`,
+          ctaLabel: 'View Shop Orders',
+          ctaUrl: `${appUrl}/shop`,
+        }),
+        text: `Shop order ${orderId} for ${buyerName} was updated.`,
+      };
+    }
+
+    case 'SHOP_ORDER_DELETED': {
+      const orderId = data.orderId as string;
+      const buyerName = data.buyerName as string;
+      return {
+        subject: `🗑️ Shop order deleted: ${orderId}`,
+        html: layout({
+          appUrl, companyName, emoji: '🗑️',
+          headline: 'Shop Order Deleted',
+          subheadline: `Order ${orderId} was removed`,
+          accentColor: '#ef4444',
+          body: `<p>The shop order for <strong>${buyerName}</strong> was deleted.</p>`,
+          ctaLabel: 'Open Shop Orders',
+          ctaUrl: `${appUrl}/shop`,
+        }),
+        text: `Shop order ${orderId} for ${buyerName} was deleted.`,
+      };
+    }
+
+    case 'SHOP_ORDER_STATUS_CHANGED': {
+      const orderId = data.orderId as string;
+      const buyerName = data.buyerName as string;
+      const oldStatus = data.oldStatus as string;
+      const newStatus = data.newStatus as string;
+      return {
+        subject: `📦 Shop order status changed: ${orderId} (${newStatus})`,
+        html: layout({
+          appUrl, companyName, emoji: '📦',
+          headline: 'Shop Order Status Changed',
+          subheadline: `Order ${orderId} moved to ${newStatus}`,
+          body: `<p><strong>${buyerName}</strong>'s order changed from <strong>${oldStatus}</strong> to <strong>${newStatus}</strong>.</p>`,
+          ctaLabel: 'Track Shop Orders',
+          ctaUrl: `${appUrl}/shop`,
+        }),
+        text: `Shop order ${orderId} for ${buyerName} changed from ${oldStatus} to ${newStatus}.`,
+      };
+    }
 
     default:
       return {

@@ -12,7 +12,11 @@ export type NotificationEventType =
   | 'SERVICE_CREATED'
   | 'RENEWAL_ALERT'
   | 'DEADLINE_ALERT'
-  | 'TAX_ALERT';
+  | 'TAX_ALERT'
+  | 'SHOP_ORDER_CREATED'
+  | 'SHOP_ORDER_UPDATED'
+  | 'SHOP_ORDER_DELETED'
+  | 'SHOP_ORDER_STATUS_CHANGED';
 
 export interface NotificationPayload {
   event: NotificationEventType;
