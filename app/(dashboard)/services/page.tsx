@@ -18,6 +18,7 @@ import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { ServiceFormDialog, ServiceFormService } from "@/components/services/ServiceFormDialog";
 
 type Service = ServiceFormService;
+type PlanTier = "FREE" | "PRO" | "TEAM" | "ENTERPRISE";
 
 export default function ServiceCatalog() {
   const { fCurrency, countryCode = "Global", taxLabel } = useFormat();
@@ -29,6 +30,9 @@ export default function ServiceCatalog() {
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [shopSlug, setShopSlug] = useState<string | null>(null);
+  
+  const [planTier, setPlanTier] = useState<PlanTier>("FREE");
+  const publishedCount = services.filter((s) => s.showInShop).length;
 
   const industryLabel = countryCode === "IN" ? "NIC Code" : "Industry Class";
   const taxClassLabel = countryCode === "IN" ? "SAC/HSN Code" : "Service Class";
@@ -50,7 +54,10 @@ export default function ServiceCatalog() {
     fetchData();
     fetch("/api/settings")
       .then((r) => r.json())
-      .then((d) => { if (d.shopSlug) setShopSlug(d.shopSlug); })
+      .then((d) => {
+        if (d.shopSlug) setShopSlug(d.shopSlug);
+        setPlanTier((d.planTier as PlanTier) || "FREE");
+      })
       .catch(() => {});
   }, [fetchData]);
 
@@ -84,7 +91,13 @@ export default function ServiceCatalog() {
     }
   };
 
-  const toggleShopStatus = async (srv: Service) => {
+    const toggleShopStatus = async (srv: Service) => {
+    // FIX: Check publishedCount directly instead of the deleted variable
+    if (!srv.showInShop && planTier === "FREE" && publishedCount >= 3) {
+      toast.error("Free plan allows up to 3 published services. Upgrade your plan to publish more.");
+      return;
+    }
+
     const fd = new FormData();
     fd.append("name", srv.name);
     fd.append("description", srv.description || "");
@@ -92,10 +105,18 @@ export default function ServiceCatalog() {
     fd.append("defaultPrice", String(srv.defaultPrice));
     fd.append("showInShop", String(!srv.showInShop));
     fd.append("existingImageUrl", srv.imageUrl || "");
+    
     const res = await fetch(`/api/services/${srv.id}`, { method: "PATCH", body: fd });
     if (res.ok) {
       toast.success(srv.showInShop ? "Removed from shop." : "Now live in your shop!");
       fetchData();
+    } else {
+      const err = await res.json().catch(() => null);
+      if (err?.code === "PLAN_LIMIT_REACHED" || err?.details?.requiresUpgrade) {
+        toast.error(err?.details?.message || "Free plan allows up to 3 published services. Upgrade your plan to publish more.");
+      } else {
+        toast.error("Failed to update shop visibility.");
+      }
     }
   };
 
@@ -128,6 +149,8 @@ export default function ServiceCatalog() {
         onOpenChange={setOpen}
         service={editingService}
         onSuccess={fetchData}
+        planTier={planTier}
+        publishedCount={publishedCount}
       />
 
       <AlertDialog open={!!serviceToDelete} onOpenChange={(o) => !o && setServiceToDelete(null)}>

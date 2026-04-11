@@ -27,6 +27,7 @@ import { useFormat } from "@/hooks/use-format";
 import { ServiceFormDialog, ServiceFormService } from "@/components/services/ServiceFormDialog";
 
 type Service = ServiceFormService;
+type PlanTier = "FREE" | "PRO" | "TEAM" | "ENTERPRISE";
 
 type ServiceCatalogItem = {
   id: string;
@@ -97,6 +98,8 @@ export default function ShopDashboardPage() {
     paidRevenue: 0,
   });
   const [shopSlug, setShopSlug] = useState<string | null>(null);
+  const [shopSlug, setShopSlug] = useState<string | null>(null);
+  const [planTier, setPlanTier] = useState<PlanTier>("FREE");
   const [shopAccentColor, setShopAccentColor] = useState("#6366f1");
   const [accentDraft, setAccentDraft] = useState("#6366f1");
   const [isSavingAccent, setIsSavingAccent] = useState(false);
@@ -127,6 +130,8 @@ export default function ShopDashboardPage() {
       setShopOverview(ordersData.overview ?? { totalOrders: 0, statusCounts: { PAID: 0, PENDING: 0, FAILED: 0, REFUNDED: 0 }, paidRevenue: 0 });
       setServices(Array.isArray(servicesData) ? servicesData : []);
       setShopSlug(settingsData?.shopSlug || null);
+      setShopSlug(settingsData?.shopSlug || null);
+      setPlanTier((settingsData?.planTier as PlanTier) || "FREE");
       const accent = settingsData?.shopAccentColor || "#6366f1";
       setShopAccentColor(accent);
       setAccentDraft(accent);
@@ -357,7 +362,14 @@ const serviceFilterOptions = useMemo(() => {
         </Card>
         <Card className="border-sky-200/60 dark:border-sky-800/40 bg-gradient-to-br from-sky-50/70 to-white dark:from-sky-950/20 dark:to-zinc-900">
           <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2"><Store className="w-3.5 h-3.5" />Shop Catalog</CardTitle></CardHeader>
-          <CardContent><p className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">{stats.publishedServices}/{stats.totalServices}</p><p className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mt-1">services published</p></CardContent>
+          <CardContent>
+            <p className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
+              {planTier === "FREE" ? `${stats.publishedServices}/3` : stats.publishedServices}
+            </p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mt-1">
+              {planTier === "FREE" ? `${stats.publishedServices}/3 Services Published` : `${stats.publishedServices} Services Published`}
+            </p>
+          </CardContent>
         </Card>
       </div>
 
