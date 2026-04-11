@@ -6,6 +6,7 @@ import { Box } from "lucide-react";
 import { NavMain } from "@/components/navigation/nav-main";
 import { NavSecondary } from "@/components/navigation/nav-secondary";
 import { NavUser } from "@/components/navigation/nav-user";
+import { SidebarOnboardingChecklist } from "@/components/onboarding/SidebarOnboardingChecklist";
 import { Sidebar, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 
 function SidebarBrand() {
@@ -37,6 +38,7 @@ export function AppSidebar() {
 
         <div className="flex-1 overflow-auto py-2 custom-scrollbar">
           <NavMain />
+          <SidebarOnboardingChecklist />
         </div>
 
         <div className="border-t border-zinc-800/30 px-2 pt-2 pb-4">

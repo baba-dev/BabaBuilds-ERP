@@ -44,6 +44,7 @@ import { ChartsIsland } from "./charts-island";
 import { TableActions } from "./table-actions";
 import { PaymentModalIsland } from "./payment-modal-island";
 import { typography } from "@/lib/ui/typography";
+import { OnboardingHint } from "@/components/onboarding/OnboardingHint";
 import type { DashboardData, RecentInvoiceRow, IntegrationStatus } from "./types";
 
 
@@ -449,6 +450,12 @@ export default function Dashboard() {
         </div>
       }
     >
+        <OnboardingHint
+          stepId="dashboard_overview"
+          title="Onboarding tip: Dashboard"
+          message="Review your KPI cards first so your Start Here checklist can be completed."
+          className="mb-4"
+        />
 
 
 
