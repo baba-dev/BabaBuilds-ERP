@@ -15,17 +15,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useFormat } from "@/hooks/use-format";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
-import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import { FileUploadField } from "@/components/forms/file-upload-field";
 import { useRouter } from "next/navigation";
+import { ServiceFormDialog, type ServiceFormService } from "@/components/services/ServiceFormDialog";
 
 type Service = ServiceFormService;
 type PlanTier = "FREE" | "PRO" | "TEAM" | "ENTERPRISE";
 
 export default function ServiceCatalog() {
   const router = useRouter();
-  const { fCurrency, currency, locale, taxLabel, countryCode = "Global" } = useFormat();
-  const currencySymbol = getCurrencySymbol(currency, locale);
+  const { fCurrency, taxLabel, countryCode = "Global" } = useFormat();
 
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
