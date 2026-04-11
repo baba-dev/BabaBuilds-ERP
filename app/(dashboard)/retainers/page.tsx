@@ -92,7 +92,20 @@ export default function RetainersHub() {
       const { path, data, timestamp } = JSON.parse(aiPayload);
       const isFresh = (Date.now() - timestamp) < 10000;
 
-      if (!isFresh || path !== '/retainers' || !data) {
+      if (isFresh && data && path === '/retainers') {
+        if (data.amount) setAmount(data.amount.toString());
+        if (data.serviceTemplateId) setServiceTemplateId(data.serviceTemplateId.toString());
+        if (!data.serviceTemplateId && data.serviceName && catalog.length > 0) {
+          const matchedService = catalog.find(s => s.name.toLowerCase().includes(data.serviceName.toLowerCase()));
+          if (matchedService) setServiceTemplateId(matchedService.id.toString());
+        }
+
+        if (data.client && clients.length > 0) {
+          const matchedClient = clients.find(c => c.name.toLowerCase().includes(data.client.toLowerCase()));
+          if (matchedClient) setClientId(matchedClient.id.toString());
+        }
+        setView('wizard');
+      }
         sessionStorage.removeItem('erp_ai_payload');
         return;
       }

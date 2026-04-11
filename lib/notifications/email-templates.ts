@@ -14,6 +14,16 @@ const BRAND_DARK = '#18181b';   // zinc-900
 const BRAND_LIGHT = '#f4f4f5';  // zinc-100
 const FONT_STACK = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
+const escapeHtml = (value: unknown): string => {
+  const str = String(value ?? '');
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
+
 /** Absolute public URL of the BabaBuilds logo (served from /icons/) */
 function logoTag(appUrl: string): string {
   return `<img src="${appUrl}/icons/BabaBuillds_ERP_Logo.png" alt="BabaBuilds ERP" width="140" style="display:block;max-width:140px;height:auto;" />`;
@@ -288,6 +298,78 @@ export function buildEmailTemplate(
           ctaUrl: `${appUrl}/tax`,
         }),
         text: `Tax Filing Reminder: ${taxType} due by ${dueDate}.`,
+      };
+    }
+    case 'SHOP_ORDER_CREATED': {
+      const orderId = escapeHtml(data.orderId);
+      const serviceName = escapeHtml(data.serviceName);
+      const buyerName = escapeHtml(data.buyerName);
+      const amount = escapeHtml(data.amount);
+      return {
+        subject: `🛒 New shop order received: ${orderId}`,
+        html: layout({
+          appUrl, companyName, emoji: '🛒',
+          headline: 'New Shop Order',
+          subheadline: `${buyerName} placed an order for ${serviceName}`,
+          body: `<p>Order <strong>${orderId}</strong> has been created for <strong>${amount}</strong>.</p>`,
+          ctaLabel: 'Review Shop Orders',
+          ctaUrl: `${appUrl}/shop`,
+        }),
+        text: `New shop order ${orderId} by ${buyerName} for ${serviceName} (${amount}).`,
+      };
+    }
+
+    case 'SHOP_ORDER_UPDATED': {
+      const orderId = escapeHtml(data.orderId);
+      const buyerName = escapeHtml(data.buyerName);
+      return {
+        subject: `📝 Shop order updated: ${orderId}`,
+        html: layout({
+          appUrl, companyName, emoji: '📝',
+          headline: 'Shop Order Updated',
+          subheadline: `Order ${orderId} was updated`,
+          body: `<p>The shop order for <strong>${buyerName}</strong> has new details.</p>`,
+          ctaLabel: 'View Shop Orders',
+          ctaUrl: `${appUrl}/shop`,
+        }),
+        text: `Shop order ${orderId} for ${buyerName} was updated.`,
+      };
+    }
+
+    case 'SHOP_ORDER_DELETED': {
+      const orderId = escapeHtml(data.orderId);
+      const buyerName = escapeHtml(data.buyerName);
+      return {
+        subject: `🗑️ Shop order deleted: ${orderId}`,
+        html: layout({
+          appUrl, companyName, emoji: '🗑️',
+          headline: 'Shop Order Deleted',
+          subheadline: `Order ${orderId} was removed`,
+          accentColor: '#ef4444',
+          body: `<p>The shop order for <strong>${buyerName}</strong> was deleted.</p>`,
+          ctaLabel: 'Open Shop Orders',
+          ctaUrl: `${appUrl}/shop`,
+        }),
+        text: `Shop order ${orderId} for ${buyerName} was deleted.`,
+      };
+    }
+
+    case 'SHOP_ORDER_STATUS_CHANGED': {
+      const orderId = escapeHtml(data.orderId);
+      const buyerName = escapeHtml(data.buyerName);
+      const oldStatus = escapeHtml(data.oldStatus);
+      const newStatus = escapeHtml(data.newStatus);
+      return {
+        subject: `📦 Shop order status changed: ${orderId} (${newStatus})`,
+        html: layout({
+          appUrl, companyName, emoji: '📦',
+          headline: 'Shop Order Status Changed',
+          subheadline: `Order ${orderId} moved to ${newStatus}`,
+          body: `<p><strong>${buyerName}</strong>'s order changed from <strong>${oldStatus}</strong> to <strong>${newStatus}</strong>.</p>`,
+          ctaLabel: 'Track Shop Orders',
+          ctaUrl: `${appUrl}/shop`,
+        }),
+        text: `Shop order ${orderId} for ${buyerName} changed from ${oldStatus} to ${newStatus}.`,
       };
     }
 

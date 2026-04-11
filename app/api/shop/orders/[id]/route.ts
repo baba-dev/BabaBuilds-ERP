@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { logActivity } from '@/lib/activity-log';
+import { dispatchNotification } from '@/lib/notifications/dispatcher';
+import { logActivity } from '@/lib/security/activity-log';
 
 type SessionContext = {
   workspaceId?: string;
@@ -26,17 +27,69 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const existing = await prisma.serviceOrder.findFirst({ where: { id, workspaceId } });
     if (!existing) return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
 
-    await prisma.serviceOrder.update({ where: { id }, data: { status } });
+    const updated = await prisma.serviceOrder.update({ where: { id }, data: { status } });
 
-    logActivity({
-      action: 'shop.order.update_status',
-      outcome: 'success',
-      entityType: 'serviceOrder',
-      entityId: id,
+    dispatchNotification({
+      event: 'SHOP_ORDER_UPDATED',
       workspaceId,
-      actorId: sessionCtx.user?.id ?? null,
-      actorEmail: sessionCtx.user?.email ?? null,
-      metadata: { oldStatus: existing.status, newStatus: status },
+      data: {
+        orderId: updated.id,
+        buyerName: updated.buyerName,
+        buyerEmail: updated.buyerEmail,
+        oldStatus: existing.status,
+        newStatus: status,
+      },
+    }).catch(() => null);
+
+    dispatchNotification({
+      event: 'SHOP_ORDER_STATUS_CHANGED',
+      workspaceId,
+      data: {
+        orderId: updated.id,
+        buyerName: updated.buyerName,
+        buyerEmail: updated.buyerEmail,
+        oldStatus: existing.status,
+        newStatus: status,
+        amount: `${updated.currency} ${updated.amount.toString()}`,
+      },
+    }).catch(() => null);
+
+    await logActivity({
+      action: 'shop_order_update',
+      status: 'SUCCESS',
+      workspaceId,
+      actor: {
+        userId: sessionCtx.user?.id ?? null,
+        email: sessionCtx.user?.email ?? null,
+      },
+      entity: {
+        type: 'service_order',
+        id,
+      },
+      metadata: {
+        oldStatus: existing.status,
+        newStatus: status,
+      },
+      request,
+    });
+
+    await logActivity({
+      action: 'shop_order_status_change',
+      status: 'SUCCESS',
+      workspaceId,
+      actor: {
+        userId: sessionCtx.user?.id ?? null,
+        email: sessionCtx.user?.email ?? null,
+      },
+      entity: {
+        type: 'service_order',
+        id,
+      },
+      metadata: {
+        oldStatus: existing.status,
+        newStatus: status,
+      },
+      request,
     });
 
     return NextResponse.json({ success: true });
@@ -45,7 +98,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   }
 }
 
-export async function DELETE(_req: Request, context: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     const sessionCtx = session as SessionContext | null;
@@ -59,15 +112,35 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
 
     await prisma.serviceOrder.delete({ where: { id } });
 
-    logActivity({
-      action: 'shop.order.delete',
-      outcome: 'success',
-      entityType: 'serviceOrder',
-      entityId: id,
+    dispatchNotification({
+      event: 'SHOP_ORDER_DELETED',
       workspaceId,
-      actorId: sessionCtx.user?.id ?? null,
-      actorEmail: sessionCtx.user?.email ?? null,
-      metadata: { status: existing.status, amount: existing.amount.toString() },
+      data: {
+        orderId: existing.id,
+        buyerName: existing.buyerName,
+        buyerEmail: existing.buyerEmail,
+        status: existing.status,
+        amount: `${existing.currency} ${existing.amount.toString()}`,
+      },
+    }).catch(() => null);
+
+    await logActivity({
+      action: 'shop_order_delete',
+      status: 'SUCCESS',
+      workspaceId,
+      actor: {
+        userId: sessionCtx.user?.id ?? null,
+        email: sessionCtx.user?.email ?? null,
+      },
+      entity: {
+        type: 'service_order',
+        id,
+      },
+      metadata: {
+        status: existing.status,
+        amount: existing.amount.toString(),
+      },
+      request,
     });
 
     return NextResponse.json({ success: true });

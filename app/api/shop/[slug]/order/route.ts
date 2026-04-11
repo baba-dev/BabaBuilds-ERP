@@ -2,6 +2,12 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { decrypt } from '@/lib/encryption';
 import Razorpay from 'razorpay';
+import { dispatchNotification } from '@/lib/notifications/dispatcher';
+import { logActivity } from '@/lib/security/activity-log';
+
+type BusinessProfileWithSecrets = {
+  stripeSecretKey?: string | null;
+};
 
 /**
  * POST /api/shop/[slug]/order
@@ -46,7 +52,8 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
 
     // Determine which gateway to use
     const hasRazorpay = !!(profile.razorpayKeyId && profile.razorpayKeySecret);
-    const hasStripe   = !!(profile.stripePublishableKey && (profile as any).stripeSecretKey);
+    const profileSecrets = profile as typeof profile & BusinessProfileWithSecrets;
+    const hasStripe   = !!(profile.stripePublishableKey && profileSecrets.stripeSecretKey);
     const gateway     = hasRazorpay && profile.defaultGateway !== 'STRIPE'
       ? 'RAZORPAY'
       : hasStripe ? 'STRIPE' : null;
@@ -69,6 +76,44 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
         gateway,
         status: 'PENDING',
       },
+    });
+
+    dispatchNotification({
+      event: 'SHOP_ORDER_CREATED',
+      workspaceId: profile.workspaceId,
+      data: {
+        orderId: order.id,
+        serviceName: service.name,
+        buyerName,
+        buyerEmail,
+        amount: `${currency} ${amount}`,
+        status: order.status,
+      },
+    }).catch(() => null);
+
+    await logActivity({
+      action: 'shop_order_create',
+      status: 'SUCCESS',
+      workspaceId: profile.workspaceId,
+      actor: {
+        userId: null,
+        email: buyerEmail,
+      },
+      entity: {
+        type: 'service_order',
+        id: order.id,
+      },
+      metadata: {
+        source: 'public_shop',
+        serviceTemplateId: service.id,
+        serviceName: service.name,
+        gateway,
+        amount,
+        currency,
+        buyerName,
+        buyerPhone: buyerPhone || null,
+      },
+      request,
     });
 
     if (gateway === 'RAZORPAY') {
@@ -102,7 +147,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
     // STRIPE path
     if (gateway === 'STRIPE') {
       const Stripe = (await import('stripe')).default;
-      const decryptedSecret = decrypt((profile as any).stripeSecretKey!);
+      const decryptedSecret = decrypt(profileSecrets.stripeSecretKey!);
       const stripe = new Stripe(decryptedSecret, { apiVersion: '2026-03-25.dahlia' });
 
       const session = await stripe.checkout.sessions.create({

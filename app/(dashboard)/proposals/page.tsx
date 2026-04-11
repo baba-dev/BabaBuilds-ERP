@@ -163,6 +163,15 @@ export default function ProposalsEngine() {
       if (isFresh && data && path === '/proposals') {
         setView('builder');
         if (data.title) setTitle(data.title);
+        if (Array.isArray(data.items) && data.items.length > 0) {
+          setItems(data.items.map((item: any) => ({
+            serviceTemplateId: typeof item.serviceTemplateId === 'string' ? item.serviceTemplateId : '',
+            title: item.title || '',
+            description: item.description || '',
+            quantity: Number(item.quantity || 1),
+            unitPrice: Number(item.unitPrice || 0),
+          })));
+        }
         if (data.clientName) {
           const matched = clients.find((c: any) =>
             c.name.toLowerCase().includes(data.clientName.toLowerCase())
