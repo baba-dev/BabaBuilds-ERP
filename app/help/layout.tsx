@@ -10,13 +10,6 @@ export const metadata: Metadata = {
     "Guides, tutorials and documentation for BabaBuilds ERP. Learn how to generate invoices, manage clients, set up Razorpay & Stripe payments, configure GST/VAT, and reconcile bank statements.",
   alternates: {
     canonical: HELP_URL,
-    languages: {
-      "en-IN": HELP_URL,
-      "hi": HELP_URL,
-      "ar": HELP_URL,
-      "es": HELP_URL,
-      "x-default": HELP_URL,
-    },
   },
 };
 

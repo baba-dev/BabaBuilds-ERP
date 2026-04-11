@@ -130,13 +130,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ],
       alternates: {
         canonical: canonicalUrl,
-        languages: {
-          "en-IN": canonicalUrl,
-          "hi": canonicalUrl,
-          "ar": canonicalUrl,
-          "es": canonicalUrl,
-          "x-default": canonicalUrl,
-        },
       },
       robots: {
         index: true,

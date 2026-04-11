@@ -4,6 +4,14 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { Role, getMaxUsersForPlan } from "@/lib/permissions";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 const BASE_URL = "https://erp.bababuilds.com";
 
