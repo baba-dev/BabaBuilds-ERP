@@ -1,28 +1,76 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { MetadataRoute } from 'next';
+import { prisma } from '@/lib/prisma';
 import { getAllDocs } from '@/lib/docs';
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://erp.bababuilds.com';
+const BASE_URL = 'https://erp.bababuilds.com';
+const BUILD_DATE = new Date();
 
-  // Base routes
-  const routes = [
-    '',
-    '/help',
-  ].map((route) => ({
-    url: `${baseUrl}${route}`,
-    lastModified: new Date(),
-    changeFrequency: 'monthly' as const,
-    priority: 1.0,
+type SitemapEntry = MetadataRoute.Sitemap[number];
+
+const STATIC_ROUTES: Array<{
+  route: string;
+  changeFrequency: NonNullable<SitemapEntry['changeFrequency']>;
+  priority: number;
+}> = [
+  { route: '', changeFrequency: 'weekly', priority: 1.0 },
+  { route: '/help', changeFrequency: 'weekly', priority: 0.9 },
+  { route: '/login', changeFrequency: 'monthly', priority: 0.5 },
+];
+
+function getDocLastModified(slug: string): Date {
+  const docPath = path.join(process.cwd(), 'content', 'docs', `${slug}.md`);
+  try {
+    const stats = fs.statSync(docPath);
+    return stats.mtime;
+  } catch {
+    return BUILD_DATE;
+  }
+}
+
+async function getActiveShopSlugs(): Promise<Array<{ slug: string; updatedAt: Date }>> {
+  const shops = await prisma.$queryRaw<Array<{ slug: string; updatedAt: Date }>>`
+    SELECT "shopSlug" as slug, "updatedAt"
+    FROM "BusinessProfile"
+    WHERE "shopEnabled" = true
+      AND "shopSlug" IS NOT NULL
+    ORDER BY "updatedAt" DESC
+  `;
+
+  return shops.map((shop) => ({ slug: shop.slug.toLowerCase(), updatedAt: new Date(shop.updatedAt) }));
+}
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const staticRoutes: MetadataRoute.Sitemap = STATIC_ROUTES.map(({ route, changeFrequency, priority }) => ({
+    url: `${BASE_URL}${route}`,
+    lastModified: BUILD_DATE,
+    changeFrequency,
+    priority,
   }));
 
-  // Dynamic help docs from MDX
   const docs = getAllDocs();
-  const docRoutes = docs.map((doc) => ({
-    url: `${baseUrl}/help/${doc.slug}`,
-    lastModified: new Date(),
-    changeFrequency: 'weekly' as const,
+  const docRoutes: MetadataRoute.Sitemap = docs.map((doc) => ({
+    url: `${BASE_URL}/help/${doc.slug}`,
+    lastModified: getDocLastModified(doc.slug),
+    changeFrequency: 'monthly',
+    priority: 0.7,
+  }));
+
+  let shops: Array<{ slug: string; updatedAt: Date }> = [];
+
+  try {
+    shops = await getActiveShopSlugs();
+  } catch (error) {
+    console.error('Failed to fetch active shop slugs for sitemap generation.', error);
+  }
+
+  const shopRoutes: MetadataRoute.Sitemap = shops.map((shop) => ({
+    url: `${BASE_URL}/shop/${shop.slug}`,
+    lastModified: shop.updatedAt,
+    changeFrequency: 'daily',
     priority: 0.8,
   }));
 
-  return [...routes, ...docRoutes];
+  return [...staticRoutes, ...docRoutes, ...shopRoutes] satisfies MetadataRoute.Sitemap;
 }
