@@ -67,7 +67,7 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
       workspaceId,
       actorId: sessionCtx.user?.id ?? null,
       actorEmail: sessionCtx.user?.email ?? null,
-      metadata: { status: existing.status, amount: existing.amount },
+      metadata: { status: existing.status, amount: existing.amount.toString() },
     });
 
     return NextResponse.json({ success: true });
