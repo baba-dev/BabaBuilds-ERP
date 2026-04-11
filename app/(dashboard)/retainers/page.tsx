@@ -85,8 +85,6 @@ export default function RetainersHub() {
 
   // --- SMART AI AUTO-FILL HOOK ---
   useEffect(() => {
-    if (clients.length === 0) return;
-
     const aiPayload = sessionStorage.getItem('erp_ai_payload');
     if (aiPayload) {
       try {
@@ -95,8 +93,13 @@ export default function RetainersHub() {
 
         if (isFresh && data && path === '/retainers') {
           if (data.amount) setAmount(data.amount.toString());
+          if (data.serviceTemplateId) setServiceTemplateId(data.serviceTemplateId.toString());
+          if (!data.serviceTemplateId && data.serviceName && catalog.length > 0) {
+            const matchedService = catalog.find(s => s.name.toLowerCase().includes(data.serviceName.toLowerCase()));
+            if (matchedService) setServiceTemplateId(matchedService.id.toString());
+          }
 
-          if (data.client) {
+          if (data.client && clients.length > 0) {
             const matchedClient = clients.find(c => c.name.toLowerCase().includes(data.client.toLowerCase()));
             if (matchedClient) setClientId(matchedClient.id.toString());
           }
@@ -107,7 +110,7 @@ export default function RetainersHub() {
         console.error("Failed to parse AI payload");
       }
     }
-  }, [clients]);
+  }, [clients, catalog]);
 
   const fetchData = async () => {
     setIsLoading(true);
