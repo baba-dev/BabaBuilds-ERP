@@ -155,6 +155,7 @@ export default function ShopDashboardPage() {
   return (
     <DashboardPageShell
       title="Shop Command Center"
+      icon={<Store className="w-6 h-6 text-indigo-700 dark:text-indigo-400" />}
       description="Monitor storefront performance, manage incoming orders, and keep your public shop healthy."
       primaryAction={
         shopSlug ? (
