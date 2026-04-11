@@ -17,10 +17,18 @@ interface ShopData {
   }[];
 }
 
+const BASE_URL = "https://erp.bababuilds.com";
+const SHOP_REVALIDATE_SECONDS = 60;
+const FALLBACK_SOCIAL_IMAGE = "/icons/Banner-1.png";
+
+export const revalidate = SHOP_REVALIDATE_SECONDS;
+
 async function getShopData(slug: string): Promise<ShopData | null> {
   try {
-    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-    const res = await fetch(`${baseUrl}/api/shop/${slug}`, { next: { revalidate: 60 } });
+    const baseUrl = process.env.NEXTAUTH_URL || BASE_URL;
+    const res = await fetch(`${baseUrl}/api/shop/${slug}`, {
+      next: { revalidate: SHOP_REVALIDATE_SECONDS },
+    });
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -30,22 +38,44 @@ async function getShopData(slug: string): Promise<ShopData | null> {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
+  const canonicalUrl = `${BASE_URL}/shop/${slug}`;
   const data = await getShopData(slug);
-  if (!data) return { title: "Shop Not Found" };
+  if (!data) {
+    return {
+      title: "Shop Not Found",
+      alternates: { canonical: canonicalUrl },
+      robots: { index: false, follow: false },
+    };
+  }
 
   const { shop } = data;
   const title       = `${shop.companyName} — Services & Shop`;
   const description = shop.tagline || `Browse and purchase services from ${shop.companyName}.`;
+  const primaryImage = shop.logoUrl || FALLBACK_SOCIAL_IMAGE;
+  const openGraphImages = shop.logoUrl
+    ? [{ url: shop.logoUrl, width: 1200, height: 630, alt: `${shop.companyName} logo` }]
+    : [{ url: FALLBACK_SOCIAL_IMAGE, width: 1536, height: 1024, alt: "BabaBuilds ERP services storefront" }];
 
   return {
     title,
     description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
-      title, description,
-      images: shop.logoUrl ? [{ url: shop.logoUrl }] : [],
+      title,
+      description,
+      url: canonicalUrl,
+      siteName: "BabaBuilds ERP",
+      images: openGraphImages,
       type:  "website",
     },
-    twitter: { card: "summary_large_image", title, description },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [primaryImage],
+    },
   };
 }
 
