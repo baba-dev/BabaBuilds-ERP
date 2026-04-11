@@ -85,29 +85,45 @@ export default function RetainersHub() {
 
   // --- SMART AI AUTO-FILL HOOK ---
   useEffect(() => {
-    if (clients.length === 0) return;
-
     const aiPayload = sessionStorage.getItem('erp_ai_payload');
-    if (aiPayload) {
-      try {
-        const { path, data, timestamp } = JSON.parse(aiPayload);
-        const isFresh = (Date.now() - timestamp) < 10000;
+    if (!aiPayload) return;
 
-        if (isFresh && data && path === '/retainers') {
-          if (data.amount) setAmount(data.amount.toString());
+    try {
+      const { path, data, timestamp } = JSON.parse(aiPayload);
+      const isFresh = (Date.now() - timestamp) < 10000;
 
-          if (data.client) {
-            const matchedClient = clients.find(c => c.name.toLowerCase().includes(data.client.toLowerCase()));
-            if (matchedClient) setClientId(matchedClient.id.toString());
-          }
-          setView('wizard');
-        }
+      if (!isFresh || path !== '/retainers' || !data) {
         sessionStorage.removeItem('erp_ai_payload');
-      } catch (e) {
-        console.error("Failed to parse AI payload");
+        return;
       }
+
+      const needsServiceLookup = !data.serviceTemplateId && !!data.serviceName;
+      const needsClientLookup = !!data.client;
+      const lookupReady =
+        (!needsServiceLookup || catalog.length > 0) &&
+        (!needsClientLookup || clients.length > 0);
+
+      // Defer payload consumption until required lookup datasets are loaded.
+      if (!lookupReady) return;
+
+      if (data.amount) setAmount(data.amount.toString());
+      if (data.serviceTemplateId) setServiceTemplateId(data.serviceTemplateId.toString());
+      if (needsServiceLookup) {
+        const matchedService = catalog.find(s => s.name.toLowerCase().includes(data.serviceName.toLowerCase()));
+        if (matchedService) setServiceTemplateId(matchedService.id.toString());
+      }
+
+      if (needsClientLookup) {
+        const matchedClient = clients.find(c => c.name.toLowerCase().includes(data.client.toLowerCase()));
+        if (matchedClient) setClientId(matchedClient.id.toString());
+      }
+      setView('wizard');
+      sessionStorage.removeItem('erp_ai_payload');
+    } catch (e) {
+      console.error("Failed to parse AI payload");
+      sessionStorage.removeItem('erp_ai_payload');
     }
-  }, [clients]);
+  }, [clients, catalog]);
 
   const fetchData = async () => {
     setIsLoading(true);
