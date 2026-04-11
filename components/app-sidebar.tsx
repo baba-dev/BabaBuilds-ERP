@@ -9,6 +9,7 @@ import { NavMain } from "@/components/navigation/nav-main";
 import { NavSecondary } from "@/components/navigation/nav-secondary";
 import { NavUser } from "@/components/navigation/nav-user";
 import { Sidebar, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { SidebarSearch } from "@/src/components/sidebar/SidebarSearch";
 import {
   DEFAULT_USER_PREFERENCES,
   MAX_PINNED_ITEMS,
@@ -61,23 +62,26 @@ export function AppSidebar() {
     }
   }, []);
 
-  const persistPreferencePatch = useCallback(async (patch: Partial<UserPreferences>) => {
-    try {
-      const res = await fetch("/api/user-preferences", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patch),
-      });
+  const persistPreferencePatch = useCallback(
+    async (patch: Partial<UserPreferences>) => {
+      try {
+        const res = await fetch("/api/user-preferences", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        });
 
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? "Failed to save preferences.");
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as { error?: string };
+          throw new Error(body.error ?? "Failed to save preferences.");
+        }
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to save preferences.");
+        await loadPreferences();
       }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save preferences.");
-      await loadPreferences();
-    }
-  }, [loadPreferences]);
+    },
+    [loadPreferences],
+  );
 
   useEffect(() => {
     skipNextOpenSyncRef.current = true;
@@ -110,29 +114,35 @@ export function AppSidebar() {
   const onTogglePin = (itemId: SidebarItemId, shouldPin: boolean) => {
     setPinError(null);
 
-    updatePreferencesOptimistically((current) => {
-      if (shouldPin && !current.pinnedIds.includes(itemId) && current.pinnedIds.length >= MAX_PINNED_ITEMS) {
-        const message = `You can only pin up to ${MAX_PINNED_ITEMS} items.`;
-        setPinError(message);
-        toast.error(message);
-        return current;
-      }
+    updatePreferencesOptimistically(
+      (current) => {
+        if (shouldPin && !current.pinnedIds.includes(itemId) && current.pinnedIds.length >= MAX_PINNED_ITEMS) {
+          const message = `You can only pin up to ${MAX_PINNED_ITEMS} items.`;
+          setPinError(message);
+          toast.error(message);
+          return current;
+        }
 
-      const nextPinned = shouldPin
-        ? current.pinnedIds.includes(itemId)
-          ? current.pinnedIds
-          : [...current.pinnedIds, itemId]
-        : current.pinnedIds.filter((id) => id !== itemId);
+        const nextPinned = shouldPin
+          ? current.pinnedIds.includes(itemId)
+            ? current.pinnedIds
+            : [...current.pinnedIds, itemId]
+          : current.pinnedIds.filter((id) => id !== itemId);
 
-      return { ...current, pinnedIds: nextPinned };
-    }, (next) => ({ pinnedIds: next.pinnedIds }));
+        return { ...current, pinnedIds: nextPinned };
+      },
+      (next) => ({ pinnedIds: next.pinnedIds }),
+    );
   };
 
   const onNavigate = (itemId: SidebarItemId) => {
-    updatePreferencesOptimistically((current) => {
-      const nextRecent = [itemId, ...current.recentItems.filter((id) => id !== itemId)].slice(0, 10);
-      return { ...current, recentItems: nextRecent };
-    }, (next) => ({ recentItems: next.recentItems }));
+    updatePreferencesOptimistically(
+      (current) => {
+        const nextRecent = [itemId, ...current.recentItems.filter((id) => id !== itemId)].slice(0, 10);
+        return { ...current, recentItems: nextRecent };
+      },
+      (next) => ({ recentItems: next.recentItems }),
+    );
   };
 
   useEffect(() => {
@@ -159,6 +169,8 @@ export function AppSidebar() {
     <Sidebar>
       <div className="flex h-full w-full max-h-screen flex-col gap-2 bg-gradient-to-b from-white/[0.03] to-transparent">
         <SidebarBrand />
+
+        <SidebarSearch />
 
         <div className="flex-1 overflow-auto py-2 custom-scrollbar">
           <NavMain

@@ -78,7 +78,11 @@ export async function updateUserPreferences(
   };
 
   const resultPromise = storeWriteQueue.then(run);
-  storeWriteQueue = resultPromise.then(() => undefined, () => undefined);
+  storeWriteQueue = resultPromise.then(
+    () => undefined,
+    () => undefined,
+  );
+
   return resultPromise;
 }
 

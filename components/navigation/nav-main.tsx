@@ -3,51 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import {
-  Box,
-  Briefcase,
-  ChevronDown,
-  FileSignature,
-  Landmark,
-  LayoutDashboard,
-  Pin,
-  PinOff,
-  Receipt,
-  Settings,
-  ReceiptText,
-  ShieldCheck,
-  Sparkles,
-  Users,
-  Archive,
-  Store,
-} from "lucide-react";
-import { type ComponentType, useState } from "react";
+import { ChevronDown, Pin, PinOff } from "lucide-react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/ui/sidebar";
+import { sidebarItems } from "@/components/navigation/sidebar-items";
 import { type SidebarItemId, type UserPreferences } from "@/src/types/user-preferences";
 
-type NavItem = {
-  key: SidebarItemId;
-  path: string;
-  icon: ComponentType<{ className?: string }>;
-  group?: "core" | "operations" | "finance";
-};
+type NavItem = (typeof sidebarItems)[number];
 
-const routes: NavItem[] = [
-  { key: "dashboard", path: "/dashboard", icon: LayoutDashboard, group: "core" },
-  { key: "service_catalog", path: "/services", icon: Briefcase, group: "core" },
-  { key: "shop", path: "/shop", icon: Store, group: "core" },
-  { key: "inventory", path: "/inventory", icon: Archive, group: "operations" },
-  { key: "client_crm", path: "/clients", icon: Users, group: "operations" },
-  { key: "quotes_proposals", path: "/proposals", icon: FileSignature, group: "operations" },
-  { key: "retainers_hub", path: "/retainers", icon: Box, group: "operations" },
-  { key: "expenses_margins", path: "/expenses", icon: Receipt, group: "finance" },
-  { key: "savings_tax", path: "/tax", icon: ShieldCheck, group: "finance" },
-  { key: "ai_reconciliation", path: "/reconciliation", icon: Sparkles, group: "finance" },
-  { key: "invoices_and_earnings", path: "/income", icon: ReceiptText, group: "finance" },
-  { key: "ca_compliance", path: "/ca-portal", icon: Landmark, group: "finance" },
-  { key: "settings", path: "/settings", icon: Settings },
-];
+const routes: NavItem[] = sidebarItems.filter((item) => item.key !== "settings");
 
 type Props = {
   preferences: UserPreferences;
@@ -97,7 +62,11 @@ function SidebarRow({
           aria-label={isPinned ? `Unpin ${t(item.key)}` : `Pin ${t(item.key)}`}
           title={isPinned ? `Unpin ${t(item.key)}` : `Pin ${t(item.key)}`}
         >
-          {isPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />}
+          {isPinned ? (
+            <PinOff className="h-3.5 w-3.5" />
+          ) : (
+            <Pin className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />
+          )}
         </button>
       )}
     </div>
@@ -106,6 +75,7 @@ function SidebarRow({
 
 export function NavMain({ preferences, pinError, onTogglePin, onNavigate }: Props) {
   const { open, isMobile } = useSidebar();
+
   const [collapsedGroups, setCollapsedGroups] = useState<Record<"core" | "operations" | "finance", boolean>>({
     core: false,
     operations: false,
@@ -157,7 +127,9 @@ export function NavMain({ preferences, pinError, onTogglePin, onNavigate }: Prop
               className="flex w-full items-center justify-between rounded-md px-2 py-1 text-xs uppercase tracking-wider text-zinc-400 hover:bg-white/5"
             >
               <span>{groupLabels[group]}</span>
-              <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", collapsedGroups[group] && "-rotate-90")} />
+              <ChevronDown
+                className={cn("h-3.5 w-3.5 transition-transform", collapsedGroups[group] && "-rotate-90")}
+              />
             </button>
           )}
 
