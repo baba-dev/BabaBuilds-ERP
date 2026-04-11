@@ -161,7 +161,13 @@
     "soon": "जल्द",
     "sign_in_google": "Google के साथ साइन इन करें",
     "bababuilds_erp": "BabaBuilds ईआरपी",
-    "bababuilds": "BabaBuilds"
+    "bababuilds": "BabaBuilds",
+    "group_overview": "अवलोकन",
+    "group_operations": "संचालन",
+    "group_sales": "बिक्री",
+    "group_finance": "वित्त",
+    "group_compliance": "अनुपालन",
+    "group_workspace": "वर्कस्पेस"
   },
   "UserNav": {
     "my_account": "मेरा खाता",

@@ -161,7 +161,13 @@
     "soon": "قريباً",
     "sign_in_google": "تسجيل الدخول مع جوجل",
     "bababuilds_erp": "بابا بيلدز ERP",
-    "bababuilds": "بابا بيلدز"
+    "bababuilds": "بابا بيلدز",
+    "group_overview": "نظرة عامة",
+    "group_operations": "العمليات",
+    "group_sales": "المبيعات",
+    "group_finance": "المالية",
+    "group_compliance": "الامتثال",
+    "group_workspace": "مساحة العمل"
   },
   "UserNav": {
     "my_account": "حسابي",
