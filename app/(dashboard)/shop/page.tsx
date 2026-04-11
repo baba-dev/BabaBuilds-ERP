@@ -65,6 +65,21 @@ type ShopOverview = {
 };
 
 const ORDER_STATUSES = ["ALL", "PAID", "PENDING", "FAILED", "REFUNDED"];
+const ACCENT_SWATCHES = ["#6366f1", "#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#a855f7", "#111827"];
+const SETTINGS_REQUIRED_FIELDS = [
+  "companyName",
+  "proprietorName",
+  "address",
+  "email",
+  "panNumber",
+  "bankName",
+  "accountName",
+  "accountNumber",
+  "ifscCode",
+  "invoiceTheme",
+  "defaultSacCode",
+] as const;
+
 const DATA_SEGMENTS = ["ALL", "ORDERS", "CATALOG"] as const;
 type DataSegment = (typeof DATA_SEGMENTS)[number];
 
@@ -82,6 +97,9 @@ export default function ShopDashboardPage() {
     paidRevenue: 0,
   });
   const [shopSlug, setShopSlug] = useState<string | null>(null);
+  const [shopAccentColor, setShopAccentColor] = useState("#6366f1");
+  const [accentDraft, setAccentDraft] = useState("#6366f1");
+  const [isSavingAccent, setIsSavingAccent] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [orderFilter, setOrderFilter] = useState("ALL");
   const [serviceFilter, setServiceFilter] = useState("ALL");
@@ -109,6 +127,9 @@ export default function ShopDashboardPage() {
       setShopOverview(ordersData.overview ?? { totalOrders: 0, statusCounts: { PAID: 0, PENDING: 0, FAILED: 0, REFUNDED: 0 }, paidRevenue: 0 });
       setServices(Array.isArray(servicesData) ? servicesData : []);
       setShopSlug(settingsData?.shopSlug || null);
+      const accent = settingsData?.shopAccentColor || "#6366f1";
+      setShopAccentColor(accent);
+      setAccentDraft(accent);
     } catch {
       toast.error("Failed to load shop details.");
     } finally {
@@ -240,6 +261,56 @@ const serviceFilterOptions = useMemo(() => {
     setDeletingOrderId(null);
   };
 
+  const saveAccentColor = async () => {
+    const previous = shopAccentColor;
+    setIsSavingAccent(true);
+    setShopAccentColor(accentDraft);
+    const toastId = toast.loading("Saving branding color...");
+
+    try {
+      const settingsRes = await fetch("/api/settings");
+      if (!settingsRes.ok) {
+        setShopAccentColor(previous);
+        toast.error("Failed to load current settings.", { id: toastId });
+        return;
+      }
+      const settingsData = await settingsRes.json();
+
+      const missingRequired = SETTINGS_REQUIRED_FIELDS.filter((field) => {
+        const value = settingsData?.[field];
+        return value === null || value === undefined || value === "";
+      });
+      if (missingRequired.length > 0) {
+        setShopAccentColor(previous);
+        toast.error("Complete business profile setup in Settings before updating branding.", { id: toastId });
+        return;
+      }
+
+      const body = new FormData();
+      SETTINGS_REQUIRED_FIELDS.forEach((field) => {
+        body.append(field, String(settingsData[field]));
+      });
+      body.append("shopAccentColor", accentDraft);
+      body.append("shopSlug", settingsData?.shopSlug || "");
+      body.append("shopTagline", settingsData?.shopTagline || "");
+      body.append("shopEnabled", String(!!settingsData?.shopEnabled));
+      const res = await fetch("/api/settings", { method: "POST", body });
+
+      if (!res.ok) {
+        setShopAccentColor(previous);
+        toast.error("Failed to save branding color.", { id: toastId });
+        return;
+      }
+
+      toast.success("Branding color saved.", { id: toastId });
+    } catch {
+      setShopAccentColor(previous);
+      toast.error("Network error while saving branding color.", { id: toastId });
+    } finally {
+      setIsSavingAccent(false);
+    }
+  };
+
   return (
     <DashboardPageShell
       title="Shop Command Center"
@@ -291,6 +362,60 @@ const serviceFilterOptions = useMemo(() => {
       </div>
 
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <Card className="border-zinc-200 dark:border-zinc-800">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-200">Branding</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={accentDraft}
+                  onChange={(e) => setAccentDraft(e.target.value)}
+                  className="h-10 w-10 rounded-md border border-zinc-200 dark:border-zinc-700 bg-transparent cursor-pointer"
+                  aria-label="Shop accent color"
+                />
+                <div className="space-y-1">
+                  <p className="text-[11px] uppercase tracking-widest text-zinc-500 font-bold">Current Value</p>
+                  <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">{accentDraft.toUpperCase()}</p>
+                </div>
+                <span className="inline-flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-300">
+                  <span className="h-4 w-4 rounded-full border border-zinc-300 dark:border-zinc-600" style={{ backgroundColor: shopAccentColor }} />
+                  Live
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {ACCENT_SWATCHES.map((swatch) => (
+                  <button
+                    key={swatch}
+                    type="button"
+                    onClick={() => setAccentDraft(swatch)}
+                    className={`h-7 w-7 rounded-full border-2 transition-all ${accentDraft.toLowerCase() === swatch.toLowerCase() ? "border-zinc-900 dark:border-zinc-100 scale-105" : "border-transparent hover:scale-105"}`}
+                    style={{ backgroundColor: swatch }}
+                    aria-label={`Use ${swatch} accent`}
+                    title={swatch}
+                  />
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2 lg:ml-auto">
+                <Button type="button" onClick={saveAccentColor} disabled={isSavingAccent || accentDraft === shopAccentColor} className="h-9 text-xs font-bold uppercase tracking-wider">
+                  {isSavingAccent ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
+                  Save
+                </Button>
+                {shopSlug ? (
+                  <Button type="button" variant="outline" onClick={() => window.open(`/shop/${shopSlug}`, "_blank")} className="h-9 text-xs font-bold uppercase tracking-wider">
+                    <ExternalLink className="w-3.5 h-3.5 mr-1" />
+                    View Shop
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="flex flex-col md:flex-row items-start md:items-center gap-4 justify-between">
           <div className="relative w-full md:w-80">
             <Search className="absolute left-3 top-3 w-4 h-4 text-zinc-400" />
