@@ -6,7 +6,7 @@ import {
   updateUserPreferences,
 } from "@/src/server/user-preferences/service";
 import {
-  sanitizeUserPreferences,
+  sanitizeUserPreferencesPatch,
   type UserPreferences,
 } from "@/src/types/user-preferences";
 
@@ -42,7 +42,7 @@ export async function PATCH(request: Request) {
     }
 
     const body = (await request.json()) as Partial<UserPreferences>;
-    const next = await updateUserPreferences(userId, sanitizeUserPreferences(body));
+    const next = await updateUserPreferences(userId, sanitizeUserPreferencesPatch(body));
 
     return NextResponse.json(next);
   } catch (error) {

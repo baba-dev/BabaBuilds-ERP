@@ -68,3 +68,37 @@ export function sanitizeUserPreferences(input: unknown): UserPreferences {
     recentItems,
   };
 }
+
+export function sanitizeUserPreferencesPatch(input: unknown): Partial<UserPreferences> {
+  if (typeof input !== "object" || input === null) {
+    return {};
+  }
+
+  const source = input as Partial<UserPreferences>;
+  const patch: Partial<UserPreferences> = {};
+
+  if (Array.isArray(source.pinnedIds)) {
+    patch.pinnedIds = source.pinnedIds
+      .filter((id): id is SidebarItemId => typeof id === "string" && ALLOWED_IDS.has(id as SidebarItemId))
+      .slice(0, MAX_PINNED_ITEMS);
+  }
+
+  if (typeof source.sidebarCollapsed === "boolean") {
+    patch.sidebarCollapsed = source.sidebarCollapsed;
+  }
+
+  if (source.sidebarWidth !== undefined) {
+    const rawWidth = Number(source.sidebarWidth);
+    if (Number.isFinite(rawWidth)) {
+      patch.sidebarWidth = Math.min(360, Math.max(220, Math.round(rawWidth)));
+    }
+  }
+
+  if (Array.isArray(source.recentItems)) {
+    patch.recentItems = source.recentItems
+      .filter((id): id is SidebarItemId => typeof id === "string" && ALLOWED_IDS.has(id as SidebarItemId))
+      .slice(0, 10);
+  }
+
+  return patch;
+}
