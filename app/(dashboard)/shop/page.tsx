@@ -30,12 +30,23 @@ type ShopOrder = {
   id: string;
   buyerName: string;
   buyerEmail: string;
-  amount: number;
+  amount: number | string;
   status: string;
   currency: string;
   gateway?: string;
   createdAt: string;
   serviceTemplate: { name: string };
+};
+
+type ShopOverview = {
+  totalOrders: number;
+  statusCounts: {
+    PAID: number;
+    PENDING: number;
+    FAILED: number;
+    REFUNDED: number;
+  };
+  paidRevenue: number;
 };
 
 const ORDER_STATUSES = ["ALL", "PAID", "PENDING", "FAILED", "REFUNDED"];
@@ -44,6 +55,11 @@ export default function ShopDashboardPage() {
   const { fCurrency } = useFormat();
   const [orders, setOrders] = useState<ShopOrder[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [shopOverview, setShopOverview] = useState<ShopOverview>({
+    totalOrders: 0,
+    statusCounts: { PAID: 0, PENDING: 0, FAILED: 0, REFUNDED: 0 },
+    paidRevenue: 0,
+  });
   const [shopSlug, setShopSlug] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [orderFilter, setOrderFilter] = useState("ALL");
@@ -66,6 +82,7 @@ export default function ShopDashboardPage() {
       ]);
 
       setOrders(Array.isArray(ordersData.orders) ? ordersData.orders : []);
+      setShopOverview(ordersData.overview ?? { totalOrders: 0, statusCounts: { PAID: 0, PENDING: 0, FAILED: 0, REFUNDED: 0 }, paidRevenue: 0 });
       setServices(Array.isArray(servicesData) ? servicesData : []);
       setShopSlug(settingsData?.shopSlug || null);
     } catch {
@@ -91,19 +108,16 @@ export default function ShopDashboardPage() {
     });
   }, [orderSearch, orderFilter, orders]);
 
-  const stats = useMemo(() => {
-    const paidOrders = orders.filter((o) => o.status === "PAID");
-    return {
-      totalOrders: orders.length,
-      paidOrders: paidOrders.length,
-      pendingOrders: orders.filter((o) => o.status === "PENDING").length,
-      failedOrders: orders.filter((o) => o.status === "FAILED").length,
-      refundedOrders: orders.filter((o) => o.status === "REFUNDED").length,
-      publishedServices: services.filter((s) => s.showInShop).length,
-      totalServices: services.length,
-      grossRevenue: paidOrders.reduce((sum, o) => sum + o.amount, 0),
-    };
-  }, [orders, services]);
+  const stats = useMemo(() => ({
+    totalOrders: shopOverview.totalOrders,
+    paidOrders: shopOverview.statusCounts.PAID,
+    pendingOrders: shopOverview.statusCounts.PENDING,
+    failedOrders: shopOverview.statusCounts.FAILED,
+    refundedOrders: shopOverview.statusCounts.REFUNDED,
+    publishedServices: services.filter((s) => s.showInShop).length,
+    totalServices: services.length,
+    grossRevenue: Number(shopOverview.paidRevenue || 0),
+  }), [shopOverview, services]);
 
   const statusConfig: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
     PAID: { label: "Paid", className: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-400", icon: <Check className="w-3 h-3" /> },
@@ -200,12 +214,13 @@ export default function ShopDashboardPage() {
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
                   {filteredOrders.map((o) => {
                     const sc = statusConfig[o.status] || statusConfig.PENDING;
+                    const orderAmount = Number(o.amount || 0);
                     return (
                       <tr key={o.id} className="hover:bg-zinc-50/80 dark:hover:bg-zinc-900/50 transition-colors">
                         <td className="px-4 py-4 text-xs text-zinc-500 whitespace-nowrap">{format(new Date(o.createdAt), "dd MMM yyyy")}</td>
                         <td className="px-4 py-4"><p className="font-bold text-[13px] text-zinc-900 dark:text-zinc-100">{o.buyerName}</p><p className="text-[11px] text-zinc-500">{o.buyerEmail}</p></td>
                         <td className="px-4 py-4 text-[13px] font-semibold text-zinc-700 dark:text-zinc-300 max-w-[180px] truncate">{o.serviceTemplate.name}</td>
-                        <td className="px-4 py-4 font-bold text-[13px] text-zinc-800 dark:text-zinc-200">{fCurrency(o.amount)}</td>
+                        <td className="px-4 py-4 font-bold text-[13px] text-zinc-800 dark:text-zinc-200">{fCurrency(orderAmount)}</td>
                         <td className="px-4 py-4"><span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">{o.gateway || "—"}</span></td>
                         <td className="px-4 py-4"><span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${sc.className}`}>{sc.icon} {sc.label}</span></td>
                         <td className="px-4 py-4">
