@@ -3,16 +3,51 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ChevronDown, Pin, PinOff } from "lucide-react";
-import { useState } from "react";
+import {
+  Box,
+  Briefcase,
+  ChevronDown,
+  FileSignature,
+  Landmark,
+  LayoutDashboard,
+  Pin,
+  PinOff,
+  Receipt,
+  Settings,
+  ReceiptText,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  Archive,
+  Store,
+} from "lucide-react";
+import { type ComponentType, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/ui/sidebar";
-import { sidebarItems } from "@/components/navigation/sidebar-items";
 import { type SidebarItemId, type UserPreferences } from "@/src/types/user-preferences";
 
-type NavItem = (typeof sidebarItems)[number];
+type NavItem = {
+  key: SidebarItemId;
+  path: string;
+  icon: ComponentType<{ className?: string }>;
+  group?: "core" | "operations" | "finance";
+};
 
-const routes: NavItem[] = sidebarItems.filter((item) => item.key !== "settings");
+const allRoutes: NavItem[] = [
+  { key: "dashboard", path: "/dashboard", icon: LayoutDashboard, group: "core" },
+  { key: "service_catalog", path: "/services", icon: Briefcase, group: "core" },
+  { key: "shop", path: "/shop", icon: Store, group: "core" },
+  { key: "inventory", path: "/inventory", icon: Archive, group: "operations" },
+  { key: "client_crm", path: "/clients", icon: Users, group: "operations" },
+  { key: "quotes_proposals", path: "/proposals", icon: FileSignature, group: "operations" },
+  { key: "retainers_hub", path: "/retainers", icon: Box, group: "operations" },
+  { key: "expenses_margins", path: "/expenses", icon: Receipt, group: "finance" },
+  { key: "savings_tax", path: "/tax", icon: ShieldCheck, group: "finance" },
+  { key: "ai_reconciliation", path: "/reconciliation", icon: Sparkles, group: "finance" },
+  { key: "invoices_and_earnings", path: "/income", icon: ReceiptText, group: "finance" },
+  { key: "ca_compliance", path: "/ca-portal", icon: Landmark, group: "finance" },
+  { key: "settings", path: "/settings", icon: Settings },
+];
 
 type Props = {
   preferences: UserPreferences;
@@ -82,12 +117,13 @@ export function NavMain({ preferences, pinError, onTogglePin, onNavigate }: Prop
     finance: false,
   });
 
-  const pinnedItems = routes.filter((route) => preferences.pinnedIds.includes(route.key));
+  const pinnedItems = allRoutes.filter((route) => preferences.pinnedIds.includes(route.key));
+  const groupedRoutes = allRoutes.filter((route) => route.key !== "settings");
 
   const grouped: Record<"core" | "operations" | "finance", NavItem[]> = {
-    core: routes.filter((route) => route.group === "core"),
-    operations: routes.filter((route) => route.group === "operations"),
-    finance: routes.filter((route) => route.group === "finance"),
+    core: groupedRoutes.filter((route) => route.group === "core"),
+    operations: groupedRoutes.filter((route) => route.group === "operations"),
+    finance: groupedRoutes.filter((route) => route.group === "finance"),
   };
 
   const groupLabels: Record<"core" | "operations" | "finance", string> = {

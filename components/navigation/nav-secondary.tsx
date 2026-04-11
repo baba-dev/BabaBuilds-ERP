@@ -3,10 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Pin, PinOff } from "lucide-react";
+import { Pin, PinOff, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/ui/sidebar";
-import { sidebarItems } from "@/components/navigation/sidebar-items";
 import { type UserPreferences } from "@/src/types/user-preferences";
 
 type Props = {
@@ -19,13 +18,8 @@ export function NavSecondary({ preferences, onTogglePin, onNavigate }: Props) {
   const pathname = usePathname();
   const t = useTranslations("Sidebar");
   const { open, isMobile } = useSidebar();
-
-  const settingsRoute = sidebarItems.find((item) => item.key === "settings");
-  if (!settingsRoute) return null;
-
-  const isActive = pathname.startsWith(settingsRoute.path);
+  const isActive = pathname.startsWith("/settings");
   const isPinned = preferences.pinnedIds.includes("settings");
-  const SettingsIcon = settingsRoute.icon;
 
   return (
     <nav className="grid items-start gap-1 px-2 py-2 text-sm font-medium">
@@ -35,7 +29,7 @@ export function NavSecondary({ preferences, onTogglePin, onNavigate }: Props) {
 
       <div className="group flex items-center gap-1">
         <Link
-          href={settingsRoute.path}
+          href="/settings"
           onClick={() => onNavigate("settings")}
           className={cn(
             "flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2 text-zinc-200 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500",
@@ -44,7 +38,7 @@ export function NavSecondary({ preferences, onTogglePin, onNavigate }: Props) {
           )}
           title={!open && !isMobile ? t("settings") : undefined}
         >
-          <SettingsIcon className="h-4 w-4 shrink-0" />
+          <Settings className="h-4 w-4 shrink-0" />
           {(open || isMobile) && <span className="truncate">{t("settings")}</span>}
         </Link>
 

@@ -97,19 +97,29 @@ export function AppSidebar() {
     }
   }, [preferences.sidebarCollapsed, preferences.sidebarWidth, open, setOpen, setSidebarWidth]);
 
-  const updatePreferencesOptimistically = (
-    updater: (current: UserPreferences) => UserPreferences,
-    patchFromNext: (next: UserPreferences) => Partial<UserPreferences>,
-  ) => {
-    setPreferences((current) => {
-      const next = updater(current);
-      if (next === current) {
-        return current;
+  const updatePreferencesOptimistically = useCallback(
+    (
+      updater: (current: UserPreferences) => UserPreferences,
+      patchFromNext: (next: UserPreferences) => Partial<UserPreferences>,
+    ) => {
+      let patchToPersist: Partial<UserPreferences> | null = null;
+
+      setPreferences((current) => {
+        const next = updater(current);
+        if (next === current) {
+          return current;
+        }
+
+        patchToPersist = patchFromNext(next);
+        return next;
+      });
+
+      if (patchToPersist) {
+        void persistPreferencePatch(patchToPersist);
       }
-      void persistPreferencePatch(patchFromNext(next));
-      return next;
-    });
-  };
+    },
+    [persistPreferencePatch],
+  );
 
   const onTogglePin = (itemId: SidebarItemId, shouldPin: boolean) => {
     setPinError(null);
@@ -154,15 +164,20 @@ export function AppSidebar() {
     }
 
     const collapsed = !open;
+    let didChange = false;
+
     setPreferences((current) => {
       if (current.sidebarCollapsed === collapsed) {
         return current;
       }
 
-      const next = { ...current, sidebarCollapsed: collapsed };
-      void persistPreferencePatch({ sidebarCollapsed: collapsed });
-      return next;
+      didChange = true;
+      return { ...current, sidebarCollapsed: collapsed };
     });
+
+    if (didChange) {
+      void persistPreferencePatch({ sidebarCollapsed: collapsed });
+    }
   }, [open, isHydrated, persistPreferencePatch]);
 
   return (
