@@ -5,32 +5,36 @@ import { authOptions } from "@/lib/auth";
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { logActivity } from '@/lib/activity-log';
+
+type SessionContext = {
+  workspaceId?: string;
+  user?: { id?: string | null; email?: string | null };
+};
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    const session = (await getServerSession(authOptions)) as SessionContext | null;
+    if (!session?.workspaceId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
     const { id } = await context.params;
 
-    // Verify ownership
     const existing = await prisma.serviceTemplate.findFirst({ where: { id, workspaceId } });
     if (!existing) return NextResponse.json({ error: "Service not found or unauthorized." }, { status: 404 });
 
     const formData = await request.formData();
-    const name            = formData.get('name') as string;
-    const description     = formData.get('description') as string | null;
+    const name = formData.get('name') as string;
+    const description = formData.get('description') as string | null;
     const longDescription = formData.get('longDescription') as string | null;
-    const defaultPrice    = formData.get('defaultPrice') as string;
-    const nicCodeId       = formData.get('nicCodeId') as string | null;
-    const sacCodeId       = formData.get('sacCodeId') as string | null;
-    const showInShop      = formData.get('showInShop') === 'true';
+    const defaultPrice = formData.get('defaultPrice') as string;
+    const nicCodeId = formData.get('nicCodeId') as string | null;
+    const sacCodeId = formData.get('sacCodeId') as string | null;
+    const showInShop = formData.get('showInShop') === 'true';
 
     let imageUrl: string | null = (formData.get('existingImageUrl') as string) || null;
 
-    // Handle hero image upload
     const imageFile = formData.get('serviceImage') as File | null;
     if (imageFile && imageFile.size > 0) {
       const ext = path.extname(imageFile.name).toLowerCase();
@@ -38,9 +42,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       if (!allowedExtensions.includes(ext)) {
         return NextResponse.json({ error: "Invalid image type. Only PNG, JPG, or WEBP allowed." }, { status: 400 });
       }
-      const bytes  = await imageFile.arrayBuffer();
+      const bytes = await imageFile.arrayBuffer();
       const buffer = Buffer.from(bytes);
-      const dir    = path.join(process.cwd(), 'public', 'uploads', 'service-hero', workspaceId);
+      const dir = path.join(process.cwd(), 'public', 'uploads', 'service-hero', workspaceId);
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
       const filename = `hero-${Date.now()}-${uuidv4()}${ext}`;
       fs.writeFileSync(path.join(dir, filename), buffer);
@@ -51,15 +55,30 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       where: { id },
       data: {
         name,
-        description:     description     || null,
+        description: description || null,
         longDescription: longDescription || null,
-        defaultPrice:    Number(defaultPrice),
-        nicCodeId:       nicCodeId       || null,
-        sacCodeId:       sacCodeId       || null,
+        defaultPrice: Number(defaultPrice),
+        nicCodeId: nicCodeId || null,
+        sacCodeId: sacCodeId || null,
         showInShop,
         imageUrl,
       },
       include: { nicCode: true, sacCode: true },
+    });
+
+    logActivity({
+      action: existing.showInShop !== showInShop ? 'shop.service.visibility' : 'shop.service.update',
+      outcome: 'success',
+      entityType: 'serviceTemplate',
+      entityId: updated.id,
+      workspaceId,
+      actorId: session.user?.id ?? null,
+      actorEmail: session.user?.email ?? null,
+      metadata: {
+        oldShowInShop: existing.showInShop,
+        newShowInShop: showInShop,
+        name: updated.name,
+      },
     });
 
     return NextResponse.json({ success: true, service: updated });
@@ -69,20 +88,32 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   }
 }
 
-export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
+export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    
-    const { id } = await context.params; 
+    const session = (await getServerSession(authOptions)) as SessionContext | null;
+    if (!session?.workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const result = await prisma.serviceTemplate.deleteMany({
-      where: { id: id, workspaceId: (session as any).workspaceId }
+    const workspaceId = session.workspaceId;
+    const { id } = await context.params;
+
+    const existing = await prisma.serviceTemplate.findFirst({ where: { id, workspaceId } });
+    if (!existing) return NextResponse.json({ error: "Service not found or unauthorized." }, { status: 404 });
+
+    await prisma.serviceTemplate.delete({ where: { id } });
+
+    logActivity({
+      action: 'shop.service.delete',
+      outcome: 'success',
+      entityType: 'serviceTemplate',
+      entityId: id,
+      workspaceId,
+      actorId: session.user?.id ?? null,
+      actorEmail: session.user?.email ?? null,
+      metadata: { name: existing.name },
     });
 
-    if (result.count === 0) return NextResponse.json({ error: "Service not found or unauthorized." }, { status: 404 });
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Failed to delete service" }, { status: 500 });
   }
-}
+}
