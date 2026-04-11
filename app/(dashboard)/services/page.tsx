@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  Plus, Briefcase, FileText, Trash2, Tag,
-  Pencil, Eye, EyeOff, ExternalLink, Loader2,
+  Plus, Briefcase, FileText, Trash2, ShieldCheck, Tag, Loader2,
+  Pencil, Store, Eye, EyeOff, ExternalLink, Repeat,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,13 +15,17 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useFormat } from "@/hooks/use-format";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
-import { ServiceFormDialog, ServiceFormService } from "@/components/services/ServiceFormDialog";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { FileUploadField } from "@/components/forms/file-upload-field";
+import { useRouter } from "next/navigation";
 
 type Service = ServiceFormService;
 type PlanTier = "FREE" | "PRO" | "TEAM" | "ENTERPRISE";
 
 export default function ServiceCatalog() {
-  const { fCurrency, countryCode = "Global", taxLabel } = useFormat();
+  const router = useRouter();
+  const { fCurrency, currency, locale, taxLabel, countryCode = "Global" } = useFormat();
+  const currencySymbol = getCurrencySymbol(currency, locale);
 
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -118,6 +122,19 @@ export default function ServiceCatalog() {
         toast.error("Failed to update shop visibility.");
       }
     }
+  };
+
+  const launchRetainerWizard = (srv: Service) => {
+    sessionStorage.setItem('erp_ai_payload', JSON.stringify({
+      path: '/retainers',
+      data: {
+        serviceTemplateId: srv.id,
+        amount: srv.defaultPrice,
+        serviceName: srv.name,
+      },
+      timestamp: new Date().getTime()
+    }));
+    router.push('/retainers');
   };
 
   return (
@@ -220,6 +237,17 @@ export default function ServiceCatalog() {
                   </div>
                 </div>
               </CardContent>
+              <div className="px-5 py-4 border-t border-zinc-100 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/60">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => launchRetainerWizard(srv)}
+                  className="w-full text-[11px] font-bold uppercase tracking-widest border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
+                >
+                  <Repeat className="w-3.5 h-3.5 mr-2" />
+                  Create Retainer
+                </Button>
+              </div>
             </Card>
           ))}
 
