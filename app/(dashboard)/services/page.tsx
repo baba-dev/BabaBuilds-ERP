@@ -17,6 +17,7 @@ import { useFormat } from "@/hooks/use-format";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { useRouter } from "next/navigation";
 import { ServiceFormDialog, type ServiceFormService } from "@/components/services/ServiceFormDialog";
+import { OnboardingHint } from "@/components/onboarding/OnboardingHint";
 
 type Service = ServiceFormService;
 type PlanTier = "FREE" | "PRO" | "TEAM" | "ENTERPRISE";
@@ -159,6 +160,13 @@ export default function ServiceCatalog() {
         </div>
       }
     >
+      <OnboardingHint
+        stepId="create_service"
+        title="Onboarding tip: Service Catalog"
+        message="Add one service so invoices, proposals, and retainers can be generated quickly."
+        className="mb-4"
+      />
+
       <ServiceFormDialog
         open={open}
         onOpenChange={setOpen}

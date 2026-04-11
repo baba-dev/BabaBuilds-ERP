@@ -40,6 +40,34 @@ const features = [
     quickbooks: true,
     desc: "AI matching of bank transactions with invoices and expenses.",
   },
+  {
+    name: "Integrated Service E-Store",
+    baba: true,
+    tally: false,
+    quickbooks: "Add-on",
+    desc: "A centralized, public-facing shop for selling services directly.",
+  },
+  {
+    name: "Native Apps & PWA Support",
+    baba: true,
+    tally: "Partial",
+    quickbooks: true,
+    desc: "Fully built native applications for Android, iOS & PC.",
+  },
+  {
+    name: "Dedicated CA Audit Portal",
+    baba: true,
+    tally: "Manual",
+    quickbooks: false,
+    desc: "1-click evidence exports for Chartered Accountants to perform year-end audits.",
+  },
+  {
+    name: "Role-Based Team Access",
+    baba: true,
+    tally: "Add-on",
+    quickbooks: "Premium",
+    desc: "Granular permission controls for your team members and accountants.",
+  },
 ];
 
 export default function ComparisonTable() {
