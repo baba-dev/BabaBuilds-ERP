@@ -80,7 +80,7 @@ export default function LandingNavbar() {
                 asChild
                 className="font-bold text-zinc-700 dark:text-zinc-300 hover:text-indigo-600"
               >
-                <Link href="/api/auth/signin">{t("actions.login")}</Link>
+                <Link href="/help">Help Docs</Link>
               </Button>
               <Button
                 asChild
@@ -141,7 +141,7 @@ export default function LandingNavbar() {
                   asChild
                   className="w-full rounded-xl font-bold py-6"
                 >
-                  <Link href="/api/auth/signin">{t("actions.login")}</Link>
+                  <Link href="/help">Help Docs</Link>
                 </Button>
                 <Button
                   asChild

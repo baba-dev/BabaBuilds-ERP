@@ -173,3 +173,135 @@ export function NavMain() {
     </nav>
   );
 }
+
+export function NavMain({ preferences, pinError, onTogglePin, onNavigate }: Props) {
+  const pathname = usePathname();
+  const { data: session } = useSession();
+  const t = useTranslations("Sidebar");
+  const { open, isMobile } = useSidebar();
+
+  const [collapsedGroups, setCollapsedGroups] = useState<
+    Record<"core" | "operations" | "finance", boolean>
+  >({
+    core: false,
+    operations: false,
+    finance: false,
+  });
+
+  const pinnedItems = allRoutes.filter((route) => preferences.pinnedIds.includes(route.key));
+  const groupedRoutes = allRoutes.filter((route) => route.key !== "settings");
+
+  const grouped: Record<"core" | "operations" | "finance", NavItem[]> = {
+    core: groupedRoutes.filter((route) => route.group === "core"),
+    operations: groupedRoutes.filter((route) => route.group === "operations"),
+    finance: groupedRoutes.filter((route) => route.group === "finance"),
+  };
+
+  const groupLabels: Record<"core" | "operations" | "finance", string> = {
+    core: "Core",
+    operations: "Operations",
+    finance: "Finance",
+  };
+
+  const toggleGroup = (group: "core" | "operations" | "finance") => {
+    setCollapsedGroups((prev) => ({ ...prev, [group]: !prev[group] }));
+  };
+
+  const userId = (session?.user as { id?: string } | undefined)?.id;
+  const shouldTrackPath = Boolean(
+    userId && pathname && !isExcludedRoute(pathname) && routeByPath.has(pathname),
+  );
+
+  const recentItems = useMemo(() => {
+    if (!userId) return [];
+
+    const storedItems = readRecentItems(userId);
+    if (!shouldTrackPath || !pathname) return storedItems;
+
+    return [
+      { path: pathname, visitedAt: Number.MAX_SAFE_INTEGER },
+      ...storedItems.filter((item) => item.path !== pathname),
+    ]
+      .sort((a, b) => b.visitedAt - a.visitedAt)
+      .slice(0, MAX_RECENT_ITEMS);
+  }, [pathname, shouldTrackPath, userId]);
+
+  useEffect(() => {
+    if (!shouldTrackPath || !userId || !pathname) return;
+    persistRecentItems(userId, pathname);
+  }, [pathname, shouldTrackPath, userId]);
+
+  const recentRoutes = recentItems
+    .map((item) => routeByPath.get(item.path))
+    .filter((route): route is NavItem => Boolean(route) && route.key !== "settings");
+
+  return (
+    <nav className="grid items-start gap-2 px-2 py-4 text-sm font-medium">
+      {(open || isMobile) && pinnedItems.length > 0 && (
+        <div className="space-y-1 pb-2">
+          <div className="px-2 text-[11px] uppercase tracking-wider text-zinc-400">
+            {t("pinned")}
+          </div>
+          {pinnedItems.map((item) => (
+            <SidebarRow
+              key={`pinned-${item.key}`}
+              item={item}
+              isPinned
+              onTogglePin={onTogglePin}
+              onNavigate={onNavigate}
+            />
+          ))}
+          {pinError && <p className="px-2 pt-1 text-xs text-rose-400">{pinError}</p>}
+        </div>
+      )}
+
+      {(open || isMobile) && recentRoutes.length > 0 && (
+        <div className="space-y-1 pb-2">
+          <div className="px-2 text-[11px] uppercase tracking-wider text-zinc-400">
+            {t("recently_visited")}
+          </div>
+          {recentRoutes.map((item) => (
+            <SidebarRow
+              key={`recent-${item.key}`}
+              item={item}
+              isPinned={preferences.pinnedIds.includes(item.key)}
+              onTogglePin={onTogglePin}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </div>
+      )}
+
+      {(["core", "operations", "finance"] as const).map((group) => (
+        <div key={group} className="space-y-1">
+          {(open || isMobile) && (
+            <button
+              type="button"
+              onClick={() => toggleGroup(group)}
+              className="flex w-full items-center justify-between rounded-md px-2 py-1 text-xs uppercase tracking-wider text-zinc-400 hover:bg-white/5"
+            >
+              <span>{groupLabels[group]}</span>
+              <ChevronDown
+                className={cn(
+                  "h-3.5 w-3.5 transition-transform",
+                  collapsedGroups[group] && "-rotate-90",
+                )}
+              />
+            </button>
+          )}
+
+          {(!collapsedGroups[group] || !open) &&
+            grouped[group].map((route) => (
+              <SidebarRow
+                key={route.key}
+                item={route}
+                isPinned={preferences.pinnedIds.includes(route.key)}
+                onTogglePin={onTogglePin}
+                onNavigate={onNavigate}
+              />
+            ))}
+        </div>
+      ))}
+    </nav>
+  );
+}

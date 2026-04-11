@@ -29,6 +29,7 @@ import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { CLIENT_LOGO_ACCEPT_ATTR, CLIENT_LOGO_HELP_TEXT } from "@/lib/uploads/client-logo";
 import { type ClientDto, type ApiEnvelope } from "@/lib/types/business";
 import { useSearchParams } from "next/navigation";
+import { OnboardingHint } from "@/components/onboarding/OnboardingHint";
 
 export default function ClientCRM() {
   const t = useTranslations('Clients');
@@ -239,6 +240,13 @@ export default function ClientCRM() {
         </Button>
       }
     >
+      <OnboardingHint
+        stepId="add_first_client"
+        title="Onboarding tip: Client CRM"
+        message="Create your first client profile here. You can mark the step done once saved."
+        className="mb-4"
+      />
+
 
         {/* ONBOARDING / EDIT MODAL */}
         <Dialog open={open} onOpenChange={(v) => { if(!v) resetForm(); setOpen(v); }}>
