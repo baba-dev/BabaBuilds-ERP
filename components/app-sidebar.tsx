@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { NavMain } from "@/components/navigation/nav-main";
 import { NavSecondary } from "@/components/navigation/nav-secondary";
 import { NavUser } from "@/components/navigation/nav-user";
+import { SidebarOnboardingChecklist } from "@/components/onboarding/SidebarOnboardingChecklist";
 import { Sidebar, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { SidebarSearch } from "@/src/components/sidebar/SidebarSearch";
 import {
@@ -194,6 +195,7 @@ export function AppSidebar() {
             onTogglePin={onTogglePin}
             onNavigate={onNavigate}
           />
+          <SidebarOnboardingChecklist />
         </div>
 
         <div className="border-t border-zinc-800/30 px-2 pt-2 pb-4">

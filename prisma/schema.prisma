@@ -85,6 +85,7 @@ model User {
   appActivities      AppActivityLog[]    @relation("AppActivityActor")
   pushSubscriptions  PushSubscription[]
   inAppNotifications InAppNotification[]
+  onboarding         UserOnboarding?
   userPreference     UserPreference?
 }
 
