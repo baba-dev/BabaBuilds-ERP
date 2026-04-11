@@ -102,6 +102,15 @@ function buildStorefrontJsonLd(data: ShopData) {
   };
 }
 
+function serializeJsonLd(data: ReturnType<typeof buildStorefrontJsonLd>): string {
+  return JSON.stringify(data)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const canonicalUrl = `${BASE_URL}/shop/${slug}`;
@@ -157,12 +166,13 @@ export default async function ShopPage({ params }: { params: Promise<{ slug: str
   if (!data) notFound();
 
   const storefrontJsonLd = buildStorefrontJsonLd(data);
+  const safeStorefrontJsonLd = serializeJsonLd(storefrontJsonLd);
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(storefrontJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeStorefrontJsonLd }}
       />
       <ShopClient data={data} />
     </>
