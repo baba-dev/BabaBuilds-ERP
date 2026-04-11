@@ -28,6 +28,10 @@ export const metadata: Metadata = {
       "x-default": SITE_URL,
     },
   },
+  robots: {
+    index: true,
+    follow: true,
+  },
   openGraph: {
     title: "BabaBuilds ERP | Run Your Agency on Autopilot",
     description:
