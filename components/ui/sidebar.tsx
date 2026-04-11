@@ -44,6 +44,7 @@ export function SidebarProvider({
   const [openMobile, setOpenMobile] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
   const [width, setWidth] = React.useState(SIDEBAR_DEFAULT_WIDTH);
+  const [prefsHydrated, setPrefsHydrated] = React.useState(false);
 
   const storageKey = React.useMemo(() => {
     const userId = session?.user && "id" in session.user ? String(session.user.id ?? "anonymous") : "anonymous";
@@ -59,8 +60,12 @@ export function SidebarProvider({
   }, []);
 
   React.useEffect(() => {
+    setPrefsHydrated(false);
     const rawState = window.localStorage.getItem(storageKey);
     if (!rawState) {
+      setOpen(defaultOpen);
+      setWidth(SIDEBAR_DEFAULT_WIDTH);
+      setPrefsHydrated(true);
       return;
     }
 
@@ -74,12 +79,17 @@ export function SidebarProvider({
       }
     } catch {
       window.localStorage.removeItem(storageKey);
+      setOpen(defaultOpen);
+      setWidth(SIDEBAR_DEFAULT_WIDTH);
+    } finally {
+      setPrefsHydrated(true);
     }
-  }, [storageKey]);
+  }, [defaultOpen, storageKey]);
 
   React.useEffect(() => {
+    if (!prefsHydrated) return;
     window.localStorage.setItem(storageKey, JSON.stringify({ collapsed: !open, width }));
-  }, [open, storageKey, width]);
+  }, [open, prefsHydrated, storageKey, width]);
 
   const toggleSidebar = React.useCallback(() => {
     if (isMobile) {

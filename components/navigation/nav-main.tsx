@@ -23,6 +23,7 @@ export function NavMain() {
   const [search, setSearch] = React.useState("");
   const [pinned, setPinned] = React.useState<string[]>([]);
   const [recent, setRecent] = React.useState<string[]>([]);
+  const [prefsHydrated, setPrefsHydrated] = React.useState(false);
 
   const navItems = React.useMemo(() => filterAppNavItems(appNavItems), []);
 
@@ -32,20 +33,32 @@ export function NavMain() {
   }, [session]);
 
   React.useEffect(() => {
+    setPrefsHydrated(false);
     const raw = window.localStorage.getItem(storageKey);
-    if (!raw) return;
+    if (!raw) {
+      setPinned([]);
+      setRecent([]);
+      setPrefsHydrated(true);
+      return;
+    }
+
     try {
       const parsed = JSON.parse(raw) as { pinned?: string[]; recent?: string[] };
-      if (Array.isArray(parsed.pinned)) setPinned(parsed.pinned);
-      if (Array.isArray(parsed.recent)) setRecent(parsed.recent);
+      setPinned(Array.isArray(parsed.pinned) ? parsed.pinned : []);
+      setRecent(Array.isArray(parsed.recent) ? parsed.recent : []);
     } catch {
       window.localStorage.removeItem(storageKey);
+      setPinned([]);
+      setRecent([]);
+    } finally {
+      setPrefsHydrated(true);
     }
   }, [storageKey]);
 
   React.useEffect(() => {
+    if (!prefsHydrated) return;
     window.localStorage.setItem(storageKey, JSON.stringify({ pinned, recent }));
-  }, [pinned, recent, storageKey]);
+  }, [pinned, prefsHydrated, recent, storageKey]);
 
   React.useEffect(() => {
     if (!pathname) return;
