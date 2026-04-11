@@ -14,6 +14,28 @@ CREATE UNIQUE INDEX "UserOnboarding_userId_key" ON "UserOnboarding"("userId");
 
 CREATE INDEX "UserOnboarding_isFirstLogin_idx" ON "UserOnboarding"("isFirstLogin");
 
+-- Backfill legacy accounts so pre-existing users are NOT treated as first-login users.
+INSERT INTO "UserOnboarding" (
+    "id",
+    "userId",
+    "isFirstLogin",
+    "completedSteps",
+    "dismissedAt",
+    "completedAt",
+    "createdAt",
+    "updatedAt"
+)
+SELECT
+    'legacy_onboarding_' || "id",
+    "id",
+    false,
+    '[]',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+FROM "User";
+
 ALTER TABLE "UserOnboarding"
 ADD CONSTRAINT "UserOnboarding_userId_fkey"
 FOREIGN KEY ("userId") REFERENCES "User"("id")
