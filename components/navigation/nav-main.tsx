@@ -28,10 +28,13 @@ export function NavMain({ preferences, pinError, onTogglePin, onNavigate }: Prop
   const recentSet = new Set(recentIds);
 
   const pinnedItems = appNavItems.filter((item) => pinnedSet.has(item.key as Exclude<SidebarItemId, "settings">));
-  const recentItems = appNavItems.filter(
-    (item) => recentSet.has(item.key as Exclude<SidebarItemId, "settings">) && !pinnedSet.has(item.key as Exclude<SidebarItemId, "settings">),
-  );
-  const regularItems = appNavItems.filter((item) => !pinnedSet.has(item.key as Exclude<SidebarItemId, "settings">));
+  const byKey = new Map(appNavItems.map((item) => [item.key, item] as const));
+  const recentItems = recentIds
+    .map((id) => byKey.get(id))
+    .filter((item): item is (typeof appNavItems)[number] => Boolean(item) && !pinnedSet.has((item?.key ?? "") as Exclude<SidebarItemId, "settings">));
+  const regularItems = (open || isMobile)
+    ? appNavItems.filter((item) => !pinnedSet.has(item.key as Exclude<SidebarItemId, "settings">))
+    : appNavItems;
 
   const renderItem = (item: (typeof appNavItems)[number], area: "pinned" | "recent" | "all") => {
     const Icon = item.icon;

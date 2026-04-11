@@ -43,6 +43,9 @@ export function SidebarProvider({
   const [openMobile, setOpenMobile] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
   const [sidebarWidth, setSidebarWidth] = React.useState(SIDEBAR_DEFAULT_WIDTH);
+  const setSidebarWidthStable = React.useCallback((width: number) => {
+    setSidebarWidth(Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, width)));
+  }, []);
 
   React.useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)");
@@ -86,7 +89,7 @@ export function SidebarProvider({
         isMobile,
         toggleSidebar,
         sidebarWidth,
-        setSidebarWidth: (width) => setSidebarWidth(Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, width))),
+        setSidebarWidth: setSidebarWidthStable,
       }}
     >
       <div data-slot="sidebar-wrapper" data-state={open ? "expanded" : "collapsed"} className="flex min-h-screen w-full items-start">
