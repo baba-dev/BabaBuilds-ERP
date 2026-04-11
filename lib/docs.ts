@@ -9,6 +9,8 @@ export interface DocMeta {
   title: string;
   description: string;
   order: number;
+  datePublished?: string;
+  dateModified?: string;
 }
 
 export interface Doc extends DocMeta {
@@ -29,6 +31,10 @@ export function getDocBySlug(slug: string): Doc {
     title: data.title || slug,
     description: data.description || '',
     order: typeof data.order === 'number' ? data.order : 99,
+    datePublished:
+      typeof data.datePublished === 'string' ? data.datePublished : undefined,
+    dateModified:
+      typeof data.dateModified === 'string' ? data.dateModified : undefined,
     content,
   };
 }
@@ -52,6 +58,10 @@ export function getAllDocs(): DocMeta[] {
         title: data.title || slug,
         description: data.description || '',
         order: typeof data.order === 'number' ? data.order : 99,
+        datePublished:
+          typeof data.datePublished === 'string' ? data.datePublished : undefined,
+        dateModified:
+          typeof data.dateModified === 'string' ? data.dateModified : undefined,
       };
     })
     .sort((a, b) => a.order - b.order);
