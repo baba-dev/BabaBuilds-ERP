@@ -10,47 +10,19 @@ import {
   type NavModule,
 } from './role-nav-policy';
 
-const expectedAllowlistByRole: Record<AppRole, NavModule[]> = {
-  OWNER: [
-    'DASHBOARD',
-    'CLIENT_CRM',
-    'SERVICE_CATALOG',
-    'QUOTES_AND_PROPOSALS',
-    'SHOP',
-    'INVENTORY_HUB',
-    'RETAINERS_HUB',
-    'EXPENSES_AND_MARGINS',
-    'AI_RECONCILIATION',
-    'INVOICES_AND_EARNINGS',
-    'SAVINGS_AND_TAX',
-    'CA_COMPLIANCE',
-  ],
-  SALES: [
-    'DASHBOARD',
-    'CLIENT_CRM',
-    'SERVICE_CATALOG',
-    'QUOTES_AND_PROPOSALS',
-    'SHOP',
-    'INVOICES_AND_EARNINGS',
-  ],
-  FINANCE: [
-    'DASHBOARD',
-    'INVOICES_AND_EARNINGS',
-    'EXPENSES_AND_MARGINS',
-    'AI_RECONCILIATION',
-    'SAVINGS_AND_TAX',
-    'CA_COMPLIANCE',
-  ],
-  OPS: [
-    'DASHBOARD',
-    'INVENTORY_HUB',
-    'RETAINERS_HUB',
-    'SERVICE_CATALOG',
-    'SHOP',
-  ],
-};
-
 const allModules = Object.keys(NAV_ITEMS) as NavModule[];
+
+const expectedAllowlistByRole: Record<AppRole, NavModule[]> = {
+  OWNER: allModules,
+  SALES: ['DASHBOARD', 'CLIENT_CRM', 'SERVICE_CATALOG', 'QUOTES_AND_PROPOSALS', 'SHOP', 'INVOICES_AND_EARNINGS'],
+  FINANCE: ['DASHBOARD', 'INVOICES_AND_EARNINGS', 'EXPENSES_AND_MARGINS', 'AI_RECONCILIATION', 'SAVINGS_AND_TAX', 'CA_COMPLIANCE'],
+  OPS: ['DASHBOARD', 'INVENTORY_HUB', 'RETAINERS_HUB', 'SERVICE_CATALOG', 'SHOP'],
+
+  // legacy workspace roles should not be denied by default
+  ADMIN: allModules,
+  MEMBER: allModules,
+  VIEWER: allModules,
+};
 
 test('each role can only access explicitly allowed nav modules', () => {
   (Object.keys(expectedAllowlistByRole) as AppRole[]).forEach((role) => {
@@ -75,6 +47,21 @@ test('each role can only access routes for its allowed nav modules', () => {
       assert.equal(canAccessRoute(role, navItem.route), expectedSet.has(module));
     });
   });
+});
+
+test('invoice route aliases resolve to invoices module authorization', () => {
+  assert.equal(canAccessRoute('SALES', '/income'), true);
+  assert.equal(canAccessRoute('SALES', '/invoice'), true);
+  assert.equal(canAccessRoute('SALES', '/ledger'), true);
+
+  assert.equal(canAccessRoute('OPS', '/invoice'), false);
+  assert.equal(canAccessRoute('OPS', '/ledger'), false);
+});
+
+test('route authorization normalizes trailing slash and query/hash', () => {
+  assert.equal(canAccessRoute('FINANCE', '/income/'), true);
+  assert.equal(canAccessRoute('FINANCE', '/ledger?tab=monthly#summary'), true);
+  assert.equal(canAccessRoute('INTERN', '/dashboard?x=1'), false);
 });
 
 test('deny by default when role or module mapping is missing', () => {
