@@ -324,8 +324,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       flow,
-      message: 'File routed to invoice workflow. Continue from Invoice.',
-      redirectTo: '/invoice',
+      message: 'File routed to invoice workflow. Continue from Invoices & Earnings.',
+      redirectTo: '/income',
     });
   } catch (error) {
     console.error('Open file import failed:', error);

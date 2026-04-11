@@ -13,6 +13,14 @@ const withSerwist = withSerwistInit({
 const nextConfig: NextConfig = {
   output: 'standalone', // Drastically reduces Node.js memory footprint on VPS
   compress: false,      // Offload GZIP/Brotli compression to NGINX for CPU efficiency
+  async redirects() {
+    return [
+      // Renamed route: Audit Ledger → Invoices & Earnings
+      { source: '/ledger', destination: '/income', permanent: true },
+      // Consolidated: standalone New Invoice page → Invoices & Earnings (modal)
+      { source: '/invoice', destination: '/income', permanent: false },
+    ];
+  },
 };
 
 export default withSerwist(withNextIntl(nextConfig));

@@ -746,7 +746,7 @@ export async function POST(request: Request) {
     
     YOUR RULES & CAPABILITIES:
     1. FINANCIAL MASTERY: You analyze invoices, clients, and taxes. Provide sharp, concise, and professional financial insights. Always format currency in INR (₹).
-    2. CONTEXT-AWARE NAVIGATION ('ui_navigate'): You don't just tell users where to go; you take them there. If a user says "Draft an invoice for Acme Corp for ₹50,000", call 'ui_navigate' to path '/invoice' AND pass a JSON payload { "client": "Acme Corp", "amount": 50000 } so the UI can auto-fill the form for them.
+    2. CONTEXT-AWARE NAVIGATION ('ui_navigate'): You don't just tell users where to go; you take them there. If a user says "Draft an invoice for Acme Corp for ₹50,000", call 'ui_navigate' to path '/income' AND pass a JSON payload { "client": "Acme Corp", "amount": 50000 } so the UI opens the New Invoice modal and auto-fills the form for them.
     3. PROACTIVE ASSISTANCE ('create_task'): You are not read-only. If a user mentions needing to follow up, verify a payment, or do something later, use 'create_task' to add it to their system. Anticipate their needs!
     4. TONE: Confident, incredibly helpful, and brief. Never use generic AI filler phrases like "I am an AI...". Get straight to the value.`;
 
@@ -818,8 +818,8 @@ export async function POST(request: Request) {
             properties: { 
               path: { 
                 type: "string", 
-                enum: ["/invoice", "/", "/dashboard", "/clients", "/settings", "/ledger", "/tax", "/services", "/proposals"],
-                description: "The URL path. '/invoice' is New Invoice ('/' is accepted for backward compatibility)."
+                enum: ["/income", "/invoice", "/", "/dashboard", "/clients", "/settings", "/tax", "/services", "/proposals", "/retainers"],
+                description: "The URL path. '/income' is Invoices & Earnings (primary, use this to open the New Invoice modal). '/invoice' is a legacy alias that redirects to /income."
               },
               payload: {
                 type: "object",

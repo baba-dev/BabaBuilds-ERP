@@ -60,7 +60,7 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
         description:    s.description,
         longDescription: s.longDescription,
         imageUrl:       s.imageUrl,
-        price:          s.defaultPrice,
+        price:          Number(s.defaultPrice),
         sacCode:        s.sacCode?.code || null,
         taxRate:        s.sacCode?.igstRate || 0,
       })),

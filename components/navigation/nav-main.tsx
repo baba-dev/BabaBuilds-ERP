@@ -4,14 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
-  BookText,
   Box,
   Briefcase,
-  FilePlus,
   FileSignature,
   Landmark,
   LayoutDashboard,
   Receipt,
+  ReceiptText,
   ShieldCheck,
   Sparkles,
   Users,
@@ -28,12 +27,11 @@ const routes = [
   { key: "inventory", path: "/inventory", icon: Archive },
   { key: "client_crm", path: "/clients", icon: Users },
   { key: "quotes_proposals", path: "/proposals", icon: FileSignature },
-  { key: "new_invoice", path: "/invoice", icon: FilePlus },
   { key: "retainers_hub", path: "/retainers", icon: Box },
   { key: "expenses_margins", path: "/expenses", icon: Receipt },
   { key: "savings_tax", path: "/tax", icon: ShieldCheck },
   { key: "ai_reconciliation", path: "/reconciliation", icon: Sparkles },
-  { key: "audit_ledger", path: "/ledger", icon: BookText },
+  { key: "invoices_and_earnings", path: "/income", icon: ReceiptText },
   { key: "ca_compliance", path: "/ca-portal", icon: Landmark },
 ] as const;
 
