@@ -9,6 +9,7 @@ import { NavMain } from "@/components/navigation/nav-main";
 import { NavSecondary } from "@/components/navigation/nav-secondary";
 import { NavUser } from "@/components/navigation/nav-user";
 import { Sidebar, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { SidebarSearch } from "@/src/components/sidebar/SidebarSearch";
 import {
   DEFAULT_USER_PREFERENCES,
   MAX_PINNED_ITEMS,
@@ -154,6 +155,8 @@ export function AppSidebar() {
     <Sidebar>
       <div className="flex h-full w-full max-h-screen flex-col gap-2 bg-gradient-to-b from-white/[0.03] to-transparent">
         <SidebarBrand />
+
+        <SidebarSearch />
 
         <div className="flex-1 overflow-auto py-2 custom-scrollbar">
           <NavMain

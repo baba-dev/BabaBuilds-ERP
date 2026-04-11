@@ -3,35 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import {
-  Box,
-  Briefcase,
-  ChevronDown,
-  FileSignature,
-  Landmark,
-  LayoutDashboard,
-  Pin,
-  PinOff,
-  Receipt,
-  Settings,
-  ReceiptText,
-  ShieldCheck,
-  Sparkles,
-  Users,
-  Archive,
-  Store,
-} from "lucide-react";
-import { type ComponentType, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/ui/sidebar";
+import { sidebarItems } from "@/components/navigation/sidebar-items";
 import { type SidebarItemId, type UserPreferences } from "@/src/types/user-preferences";
 
-type NavItem = {
-  key: SidebarItemId;
-  path: string;
-  icon: ComponentType<{ className?: string }>;
-  group?: "core" | "operations" | "finance";
-};
+type NavItem = (typeof sidebarItems)[number];
+
+const routes: NavItem[] = sidebarItems.filter((item) => item.key !== "settings");
 
 const routes: NavItem[] = [
   { key: "dashboard", path: "/dashboard", icon: LayoutDashboard, group: "core" },
