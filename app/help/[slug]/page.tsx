@@ -110,6 +110,9 @@ export async function generateStaticParams() {
 }
 
 const BASE_URL = "https://erp.bababuilds.com";
+const ORGANIZATION_NAME = "BabaBuilds";
+const ORGANIZATION_LOGO_URL = `${BASE_URL}/icons/BabaBuillds_ERP_Logo.png`;
+const ORGANIZATION_SAME_AS = ["https://github.com/BabaBuilds-ERP"];
 
 // Dynamic metadata per doc
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -191,15 +194,18 @@ export default async function DocPage({ params }: Props) {
     image: `${BASE_URL}/icons/Banner-1.png`,
     author: {
       "@type": "Organization",
-      name: "BabaBuilds",
+      name: ORGANIZATION_NAME,
       url: BASE_URL,
+      sameAs: ORGANIZATION_SAME_AS,
     },
     publisher: {
       "@type": "Organization",
-      name: "BabaBuilds",
+      name: ORGANIZATION_NAME,
+      url: BASE_URL,
+      sameAs: ORGANIZATION_SAME_AS,
       logo: {
         "@type": "ImageObject",
-        url: `${BASE_URL}/icons/BabaBuillds_ERP_Logo.png`,
+        url: ORGANIZATION_LOGO_URL,
       },
     },
     mainEntityOfPage: {
@@ -207,6 +213,8 @@ export default async function DocPage({ params }: Props) {
       "@id": `${BASE_URL}/help/${slug}`,
     },
     inLanguage: "en-IN",
+    ...(doc.datePublished ? { datePublished: doc.datePublished } : {}),
+    ...(doc.dateModified ? { dateModified: doc.dateModified } : {}),
   };
 
   return (

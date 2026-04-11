@@ -9,10 +9,20 @@ export interface DocMeta {
   title: string;
   description: string;
   order: number;
+  datePublished?: string;
+  dateModified?: string;
 }
 
 export interface Doc extends DocMeta {
   content: string; // raw markdown string for MDXRemote
+}
+
+function parseFrontmatterDate(value: unknown): string | undefined {
+  if (typeof value === 'string') return value;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+  return undefined;
 }
 
 /**
@@ -29,6 +39,8 @@ export function getDocBySlug(slug: string): Doc {
     title: data.title || slug,
     description: data.description || '',
     order: typeof data.order === 'number' ? data.order : 99,
+    datePublished: parseFrontmatterDate(data.datePublished),
+    dateModified: parseFrontmatterDate(data.dateModified),
     content,
   };
 }
@@ -52,6 +64,8 @@ export function getAllDocs(): DocMeta[] {
         title: data.title || slug,
         description: data.description || '',
         order: typeof data.order === 'number' ? data.order : 99,
+        datePublished: parseFrontmatterDate(data.datePublished),
+        dateModified: parseFrontmatterDate(data.dateModified),
       };
     })
     .sort((a, b) => a.order - b.order);

@@ -25,6 +25,9 @@ export const viewport: Viewport = {
 };
 
 const SITE_URL = "https://erp.bababuilds.com";
+const ORGANIZATION_NAME = "BabaBuilds";
+const ORGANIZATION_LOGO_URL = `${SITE_URL}/icons/BabaBuillds_ERP_Logo.png`;
+const ORGANIZATION_SAME_AS = ["https://github.com/BabaBuilds-ERP"];
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -124,10 +127,10 @@ export default async function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "Organization",
-              name: "BabaBuilds",
+              name: ORGANIZATION_NAME,
               url: SITE_URL,
-              logo: `${SITE_URL}/icons/BabaBuillds_ERP_Logo.png`,
-              sameAs: [],
+              logo: ORGANIZATION_LOGO_URL,
+              sameAs: ORGANIZATION_SAME_AS,
               contactPoint: {
                 "@type": "ContactPoint",
                 email: "admin@bababuilds.com",
@@ -150,20 +153,29 @@ export default async function RootLayout({
               applicationCategory: "BusinessApplication",
               operatingSystem: "Web, Android, iOS",
               url: SITE_URL,
+              image: `${SITE_URL}/icons/Banner-1.png`,
               description:
                 "All-in-one ERP for agencies: automated invoicing, multi-currency billing, GST/VAT compliance, AI reconciliation, and financial dashboards.",
+              author: {
+                "@type": "Organization",
+                name: ORGANIZATION_NAME,
+                url: SITE_URL,
+              },
+              publisher: {
+                "@type": "Organization",
+                name: ORGANIZATION_NAME,
+                url: SITE_URL,
+                logo: {
+                  "@type": "ImageObject",
+                  url: ORGANIZATION_LOGO_URL,
+                },
+                sameAs: ORGANIZATION_SAME_AS,
+              },
               offers: {
                 "@type": "Offer",
                 price: "0",
                 priceCurrency: "INR",
                 availability: "https://schema.org/InStock",
-              },
-              aggregateRating: {
-                "@type": "AggregateRating",
-                ratingValue: "4.8",
-                ratingCount: "42",
-                bestRating: "5",
-                worstRating: "1",
               },
               screenshot: `${SITE_URL}/icons/Banner-1.png`,
             }),
