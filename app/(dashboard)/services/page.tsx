@@ -55,6 +55,8 @@ export default function ServiceCatalog() {
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const publishedCount = services.filter((s) => s.showInShop).length;
   const canPublishMoreOnFree = planTier !== "FREE" || publishedCount < 3;
+  const publishedCountForEditor = editingService?.showInShop ? Math.max(0, publishedCount - 1) : publishedCount;
+  const canPublishCurrentForm = planTier !== "FREE" || publishedCountForEditor < 3;
 
   const industryLabel = countryCode === "IN" ? "NIC Code" : "Industry Class";
   const taxClassLabel = countryCode === "IN" ? "SAC/HSN Code" : "Service Class";
@@ -284,7 +286,7 @@ export default function ServiceCatalog() {
                 <Switch
                   checked={form.showInShop}
                   onCheckedChange={(v) => {
-                    if (v && !form.showInShop && planTier === "FREE" && !canPublishMoreOnFree) {
+                    if (v && !form.showInShop && !canPublishCurrentForm) {
                       toast.error("Free plan allows up to 3 published services. Upgrade your plan to publish more.");
                       return;
                     }
