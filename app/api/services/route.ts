@@ -7,6 +7,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { logActivity } from '@/lib/activity-log';
 import { apiError } from '@/lib/api-error';
+import { invalidateDashboardCacheForWorkspace } from '@/lib/dashboard-cache';
 
 type SessionContext = {
   workspaceId?: string;
@@ -111,6 +112,10 @@ export async function POST(request: Request) {
       actorEmail: session.user?.email ?? null,
       metadata: { showInShop, name: newService.name },
     });
+
+    if (showInShop) {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    }
 
     return NextResponse.json({ success: true, service: newService });
   } catch (error) {

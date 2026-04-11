@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { decrypt } from '@/lib/encryption';
 import crypto from 'crypto';
+import { invalidateDashboardCacheForWorkspace } from '@/lib/dashboard-cache';
 
 /**
  * POST /api/shop/[slug]/verify
@@ -46,6 +47,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
 
       if (expectedSig !== razorpaySignature) {
         await prisma.serviceOrder.update({ where: { id: order.id }, data: { status: 'FAILED' } });
+        invalidateDashboardCacheForWorkspace(order.workspaceId);
         return NextResponse.json({ error: 'Payment signature verification failed.' }, { status: 400 });
       }
 
@@ -53,6 +55,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
         where: { id: order.id },
         data:  { razorpayPaymentId, razorpaySignature, status: 'PAID' },
       });
+      invalidateDashboardCacheForWorkspace(order.workspaceId);
     }
 
     // ── Auto-generate ERP Invoice ─────────────────────────────────────────────

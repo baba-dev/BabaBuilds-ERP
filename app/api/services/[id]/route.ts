@@ -7,6 +7,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { logActivity } from '@/lib/activity-log';
 import { apiError } from '@/lib/api-error';
+import { invalidateDashboardCacheForWorkspace } from '@/lib/dashboard-cache';
 
 type SessionContext = {
   workspaceId?: string;
@@ -109,6 +110,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         name: updated.name,
       },
     });
+
+    if (existing.showInShop !== showInShop) {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    }
 
     return NextResponse.json({ success: true, service: updated });
   } catch (error) {

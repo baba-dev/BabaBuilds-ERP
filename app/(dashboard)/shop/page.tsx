@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { useFormat } from "@/hooks/use-format";
 import { ServiceFormDialog, ServiceFormService } from "@/components/services/ServiceFormDialog";
+import { SHOP_ORDER_STATUSES, SHOP_STATUS_COUNT_DEFAULTS } from "@/lib/reporting/definitions";
 
 type Service = ServiceFormService;
 type PlanTier = "FREE" | "PRO" | "TEAM" | "ENTERPRISE";
@@ -65,7 +66,7 @@ type ShopOverview = {
   paidRevenue: number;
 };
 
-const ORDER_STATUSES = ["ALL", "PAID", "PENDING", "FAILED", "REFUNDED"];
+const ORDER_STATUSES = ["ALL", ...SHOP_ORDER_STATUSES];
 const ACCENT_SWATCHES = ["#6366f1", "#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#a855f7", "#111827"];
 const SETTINGS_REQUIRED_FIELDS = [
   "companyName",
@@ -94,10 +95,9 @@ export default function ShopDashboardPage() {
   const [services, setServices] = useState<ServiceCatalogItem[]>([]);
   const [shopOverview, setShopOverview] = useState<ShopOverview>({
     totalOrders: 0,
-    statusCounts: { PAID: 0, PENDING: 0, FAILED: 0, REFUNDED: 0 },
+    statusCounts: { ...SHOP_STATUS_COUNT_DEFAULTS },
     paidRevenue: 0,
   });
-  const [shopSlug, setShopSlug] = useState<string | null>(null);
   const [shopSlug, setShopSlug] = useState<string | null>(null);
   const [planTier, setPlanTier] = useState<PlanTier>("FREE");
   const [shopAccentColor, setShopAccentColor] = useState("#6366f1");
@@ -127,9 +127,8 @@ export default function ShopDashboardPage() {
       ]);
 
       setOrders(Array.isArray(ordersData.orders) ? ordersData.orders : []);
-      setShopOverview(ordersData.overview ?? { totalOrders: 0, statusCounts: { PAID: 0, PENDING: 0, FAILED: 0, REFUNDED: 0 }, paidRevenue: 0 });
+      setShopOverview(ordersData.overview ?? { totalOrders: 0, statusCounts: { ...SHOP_STATUS_COUNT_DEFAULTS }, paidRevenue: 0 });
       setServices(Array.isArray(servicesData) ? servicesData : []);
-      setShopSlug(settingsData?.shopSlug || null);
       setShopSlug(settingsData?.shopSlug || null);
       setPlanTier((settingsData?.planTier as PlanTier) || "FREE");
       const accent = settingsData?.shopAccentColor || "#6366f1";

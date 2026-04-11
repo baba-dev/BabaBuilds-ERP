@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { logActivity } from '@/lib/activity-log';
+import { invalidateDashboardCacheForWorkspace } from '@/lib/dashboard-cache';
+import { SHOP_ORDER_STATUSES } from '@/lib/reporting/definitions';
 
 type SessionContext = {
   workspaceId?: string;
@@ -20,8 +22,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const body = await request.json();
     const { status } = body;
 
-    const allowed = ['PENDING', 'PAID', 'FAILED', 'REFUNDED'];
-    if (!allowed.includes(status)) return NextResponse.json({ error: 'Invalid status.' }, { status: 400 });
+    if (!SHOP_ORDER_STATUSES.includes(status)) return NextResponse.json({ error: 'Invalid status.' }, { status: 400 });
 
     const existing = await prisma.serviceOrder.findFirst({ where: { id, workspaceId } });
     if (!existing) return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
@@ -38,6 +39,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       actorEmail: sessionCtx.user?.email ?? null,
       metadata: { oldStatus: existing.status, newStatus: status },
     });
+
+    if (existing.status !== status) {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    }
 
     return NextResponse.json({ success: true });
   } catch {
@@ -69,6 +74,8 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
       actorEmail: sessionCtx.user?.email ?? null,
       metadata: { status: existing.status, amount: existing.amount.toString() },
     });
+
+    invalidateDashboardCacheForWorkspace(workspaceId);
 
     return NextResponse.json({ success: true });
   } catch {

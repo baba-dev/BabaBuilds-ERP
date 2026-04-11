@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { SHOP_STATUS_COUNT_DEFAULTS } from '@/lib/reporting/definitions';
 
 type SessionContext = {
   workspaceId?: string;
@@ -50,12 +51,7 @@ export async function GET(request: Request) {
       }),
     ]);
 
-    const statusCounts = {
-      PAID: 0,
-      PENDING: 0,
-      FAILED: 0,
-      REFUNDED: 0,
-    };
+    const statusCounts = { ...SHOP_STATUS_COUNT_DEFAULTS };
 
     for (const row of allStatusCounts) {
       if (row.status in statusCounts) {
