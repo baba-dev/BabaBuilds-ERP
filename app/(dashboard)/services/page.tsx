@@ -77,6 +77,34 @@ export default function ServiceCatalog() {
       .catch(() => {});
   }, [fetchData]);
 
+  useEffect(() => {
+    const aiPayload = sessionStorage.getItem("erp_ai_payload");
+    if (!aiPayload) return;
+
+    try {
+      const { path, data, timestamp } = JSON.parse(aiPayload);
+      const isFresh = (Date.now() - Number(timestamp)) < 10_000;
+
+      if (isFresh && data && path === "/services") {
+        setEditingService(null);
+        setImageFile(null);
+        setForm((current) => ({
+          ...EMPTY_FORM,
+          ...current,
+          name: data.name || data.title || current.name,
+          defaultPrice: (data.price || data.amount || current.defaultPrice || "").toString(),
+          description: data.description || current.description,
+          longDescription: data.longDescription || current.longDescription,
+        }));
+        setOpen(true);
+      }
+    } catch {
+      toast.warning("AI auto-fill failed. Please fill the form manually.");
+    } finally {
+      sessionStorage.removeItem("erp_ai_payload");
+    }
+  }, []);
+
   const openAddDialog = () => {
     setEditingService(null);
     setForm({ ...EMPTY_FORM });
