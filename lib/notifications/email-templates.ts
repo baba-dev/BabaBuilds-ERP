@@ -14,6 +14,16 @@ const BRAND_DARK = '#18181b';   // zinc-900
 const BRAND_LIGHT = '#f4f4f5';  // zinc-100
 const FONT_STACK = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
+const escapeHtml = (value: unknown): string => {
+  const str = String(value ?? '');
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
+
 /** Absolute public URL of the BabaBuilds logo (served from /icons/) */
 function logoTag(appUrl: string): string {
   return `<img src="${appUrl}/icons/BabaBuillds_ERP_Logo.png" alt="BabaBuilds ERP" width="140" style="display:block;max-width:140px;height:auto;" />`;
@@ -291,10 +301,10 @@ export function buildEmailTemplate(
       };
     }
     case 'SHOP_ORDER_CREATED': {
-      const orderId = data.orderId as string;
-      const serviceName = data.serviceName as string;
-      const buyerName = data.buyerName as string;
-      const amount = data.amount as string;
+      const orderId = escapeHtml(data.orderId);
+      const serviceName = escapeHtml(data.serviceName);
+      const buyerName = escapeHtml(data.buyerName);
+      const amount = escapeHtml(data.amount);
       return {
         subject: `🛒 New shop order received: ${orderId}`,
         html: layout({
@@ -310,8 +320,8 @@ export function buildEmailTemplate(
     }
 
     case 'SHOP_ORDER_UPDATED': {
-      const orderId = data.orderId as string;
-      const buyerName = data.buyerName as string;
+      const orderId = escapeHtml(data.orderId);
+      const buyerName = escapeHtml(data.buyerName);
       return {
         subject: `📝 Shop order updated: ${orderId}`,
         html: layout({
@@ -327,8 +337,8 @@ export function buildEmailTemplate(
     }
 
     case 'SHOP_ORDER_DELETED': {
-      const orderId = data.orderId as string;
-      const buyerName = data.buyerName as string;
+      const orderId = escapeHtml(data.orderId);
+      const buyerName = escapeHtml(data.buyerName);
       return {
         subject: `🗑️ Shop order deleted: ${orderId}`,
         html: layout({
@@ -345,10 +355,10 @@ export function buildEmailTemplate(
     }
 
     case 'SHOP_ORDER_STATUS_CHANGED': {
-      const orderId = data.orderId as string;
-      const buyerName = data.buyerName as string;
-      const oldStatus = data.oldStatus as string;
-      const newStatus = data.newStatus as string;
+      const orderId = escapeHtml(data.orderId);
+      const buyerName = escapeHtml(data.buyerName);
+      const oldStatus = escapeHtml(data.oldStatus);
+      const newStatus = escapeHtml(data.newStatus);
       return {
         subject: `📦 Shop order status changed: ${orderId} (${newStatus})`,
         html: layout({
