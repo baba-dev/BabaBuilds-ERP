@@ -229,6 +229,7 @@ export const authOptions: NextAuthOptions = {
           workspaces: {
             take: 1,
             select: {
+              role: true,
               workspace: {
                 select: {
                   id: true,
@@ -243,13 +244,15 @@ export const authOptions: NextAuthOptions = {
       });
 
       if (dbUser && dbUser.workspaces.length > 0) {
-        const ws = dbUser.workspaces[0].workspace;
+        const workspaceMembership = dbUser.workspaces[0];
+        const ws = workspaceMembership.workspace;
         token.workspaceId = ws.id;
         token.baseCurrency = ws.baseCurrency;
         token.isSetupComplete = ws.isSetupComplete;
         token.countryCode = ws.countryCode;
         token.locale = dbUser.locale;
         token.currencyFormat = dbUser.currencyFormat;
+        token.role = workspaceMembership.role;
       }
 
       return token;
@@ -290,6 +293,7 @@ export const authOptions: NextAuthOptions = {
         (session as any).countryCode = token.countryCode;
         (session as any).locale = token.locale;
         (session.user as any).currencyFormat = token.currencyFormat;
+        (session.user as any).role = token.role;
       }
       return session;
     },

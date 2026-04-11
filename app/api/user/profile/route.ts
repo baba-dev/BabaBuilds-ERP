@@ -39,6 +39,11 @@ export async function GET() {
         transactionalAlerts: true,
         marketingEmails: true,
         weeklyReport: true,
+        onboarding: {
+          select: {
+            isFirstLogin: true,
+          },
+        },
       },
     });
 
@@ -46,9 +51,11 @@ export async function GET() {
       return NextResponse.json({ error: "User profile not found." }, { status: 404 });
     }
 
+    const { onboarding, ...safeProfile } = userProfile;
     return NextResponse.json({
-      ...userProfile,
+      ...safeProfile,
       defaultLandingPage: normalizeLandingPage(userProfile.defaultLandingPage),
+      isFirstLogin: onboarding?.isFirstLogin ?? true,
     });
   } catch (error) {
     console.error("GET Profile Error:", error);

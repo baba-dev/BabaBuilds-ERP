@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { useSession } from "next-auth/react";
 import { PanelLeft } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { emitSidebarAnalyticsEvent } from "@/lib/sidebar-analytics";
 
 type SidebarContextValue = {
   open: boolean;
@@ -12,8 +14,14 @@ type SidebarContextValue = {
   openMobile: boolean;
   setOpenMobile: (open: boolean) => void;
   isMobile: boolean;
-  toggleSidebar: () => void;
+  toggleSidebar: (metadata?: { route?: string; role?: string; module?: string }) => void;
+  width: number;
+  setWidth: (width: number) => void;
 };
+
+const SIDEBAR_MIN_WIDTH = 224;
+const SIDEBAR_MAX_WIDTH = 420;
+const SIDEBAR_DEFAULT_WIDTH = 256;
 
 const SidebarContext = React.createContext<SidebarContextValue | null>(null);
 
@@ -32,9 +40,11 @@ export function SidebarProvider({
   children: React.ReactNode;
   defaultOpen?: boolean;
 }) {
+  const { data: session } = useSession();
   const [open, setOpen] = React.useState(defaultOpen);
   const [openMobile, setOpenMobile] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
+  const [width, setWidth] = React.useState(256);
 
   React.useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)");
@@ -43,6 +53,72 @@ export function SidebarProvider({
     mediaQuery.addEventListener("change", onChange);
     return () => mediaQuery.removeEventListener("change", onChange);
   }, []);
+
+  React.useEffect(() => {
+    const stored = window.localStorage.getItem("sidebar:width");
+    if (!stored) return;
+    const parsed = Number(stored);
+    if (!Number.isFinite(parsed)) return;
+    setWidth(Math.min(420, Math.max(200, parsed)));
+  }, []);
+
+  const toggleSidebar = React.useCallback(
+    (metadata?: { route?: string; role?: string; module?: string }) => {
+      const route = metadata?.route ?? window.location.pathname;
+      const role = metadata?.role ?? "unknown";
+      const moduleKey = metadata?.module ?? "navigation";
+
+      if (isMobile) {
+        setOpenMobile((value) => {
+          const next = !value;
+          emitSidebarAnalyticsEvent("sidebar_collapse_toggle", { route, role, module: moduleKey, open: next, platform: "mobile" });
+          return next;
+        });
+        return;
+      }
+
+      setOpen((value) => {
+        const next = !value;
+        emitSidebarAnalyticsEvent("sidebar_collapse_toggle", { route, role, module: moduleKey, open: next, platform: "desktop" });
+        return next;
+      });
+    },
+    [isMobile],
+  );
+
+  return (
+    <SidebarContext.Provider
+      value={{ open, setOpen, openMobile, setOpenMobile, isMobile, toggleSidebar, width, setWidth }}
+    setPrefsHydrated(false);
+    const rawState = window.localStorage.getItem(storageKey);
+    if (!rawState) {
+      setOpen(defaultOpen);
+      setWidth(SIDEBAR_DEFAULT_WIDTH);
+      setPrefsHydrated(true);
+      return;
+    }
+
+    try {
+      const parsedState = JSON.parse(rawState) as { collapsed?: boolean; width?: number };
+      if (typeof parsedState.collapsed === "boolean") {
+        setOpen(!parsedState.collapsed);
+      }
+      if (typeof parsedState.width === "number") {
+        setWidth(Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, parsedState.width)));
+      }
+    } catch {
+      window.localStorage.removeItem(storageKey);
+      setOpen(defaultOpen);
+      setWidth(SIDEBAR_DEFAULT_WIDTH);
+    } finally {
+      setPrefsHydrated(true);
+    }
+  }, [defaultOpen, storageKey]);
+
+  React.useEffect(() => {
+    if (!prefsHydrated) return;
+    window.localStorage.setItem(storageKey, JSON.stringify({ collapsed: !open, width }));
+  }, [open, prefsHydrated, storageKey, width]);
 
   const toggleSidebar = React.useCallback(() => {
     if (isMobile) {
@@ -54,7 +130,7 @@ export function SidebarProvider({
 
   return (
     <SidebarContext.Provider
-      value={{ open, setOpen, openMobile, setOpenMobile, isMobile, toggleSidebar }}
+      value={{ open, setOpen, openMobile, setOpenMobile, isMobile, width, setWidth, toggleSidebar }}
     >
       <div
         data-slot="sidebar-wrapper"
@@ -68,13 +144,40 @@ export function SidebarProvider({
 }
 
 export function Sidebar({ children, className }: { children: React.ReactNode; className?: string }) {
-  const { isMobile, open, openMobile, setOpenMobile } = useSidebar();
+  const { isMobile, open, openMobile, setOpenMobile, width, setWidth } = useSidebar();
+  const [isResizing, setIsResizing] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isResizing) return;
+
+    const onMove = (event: MouseEvent) => {
+      const nextWidth = Math.min(420, Math.max(200, event.clientX));
+      setWidth(nextWidth);
+      window.localStorage.setItem("sidebar:width", String(nextWidth));
+      emitSidebarAnalyticsEvent("sidebar_resize", {
+        route: window.location.pathname,
+        role: "unknown",
+        module: "navigation",
+        width: nextWidth,
+      });
+    };
+
+    const onUp = () => setIsResizing(false);
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [isResizing, setWidth]);
 
   if (isMobile) {
     return (
       <Sheet open={openMobile} onOpenChange={setOpenMobile}>
         <SheetContent
           side="left"
+          aria-label="Mobile navigation menu"
           className={cn(
             "w-[280px] border-r border-white/5 bg-black/95 p-0 text-zinc-50 backdrop-blur-3xl",
             className,
@@ -91,13 +194,22 @@ export function Sidebar({ children, className }: { children: React.ReactNode; cl
     <aside
       data-slot="sidebar"
       data-state={open ? "expanded" : "collapsed"}
+      style={{ width: open ? `${width}px` : "4.5rem" }}
       className={cn(
-        "hidden border-r border-white/5 bg-black/90 shadow-[rgba(0,0,0,0.5)_4px_0px_20px] backdrop-blur-2xl md:flex md:h-screen md:self-start md:inset-y-0 md:sticky md:top-0",
-        open ? "md:w-64" : "md:w-[4.5rem]",
+        "relative hidden border-r border-white/5 bg-black/90 shadow-[rgba(0,0,0,0.5)_4px_0px_20px] backdrop-blur-2xl md:flex md:h-screen md:self-start md:inset-y-0 md:sticky md:top-0",
         className,
       )}
+      style={{ width: open ? width : 72 }}
     >
       {children}
+      {open ? (
+        <button
+          type="button"
+          aria-label="Resize sidebar"
+          onMouseDown={() => setIsResizing(true)}
+          className="absolute right-0 top-0 h-full w-1.5 translate-x-1/2 cursor-col-resize bg-transparent hover:bg-indigo-400/30"
+        />
+      ) : null}
     </aside>
   );
 }
@@ -111,14 +223,14 @@ export function SidebarInset({ children, className }: { children: React.ReactNod
 }
 
 export function SidebarTrigger({ className }: { className?: string }) {
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, open, isMobile, openMobile } = useSidebar();
 
   return (
     <Button
       type="button"
       size="icon"
       variant="ghost"
-      onClick={toggleSidebar}
+      onClick={() => toggleSidebar({ module: "navigation" })}
       className={cn("h-9 w-9 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-200 dark:hover:bg-white/10 dark:hover:text-white", className)}
     >
       <PanelLeft className="h-5 w-5" />

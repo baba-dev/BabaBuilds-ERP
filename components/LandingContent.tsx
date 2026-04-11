@@ -15,6 +15,12 @@ import {
   Landmark,
   CheckCircle2,
   Calculator,
+  Package,
+  Store,
+  BellRing,
+  Shield,
+  UsersRound,
+  MonitorSmartphone,
 } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -29,6 +35,9 @@ const HeroMotionDecor = dynamic(() => import("@/components/landing/HeroMotionDec
   ssr: false,
   loading: () => null,
 });
+const SocialProofHero = dynamic(() => import("@/components/landing/SocialProofHero"));
+const RotatorText = dynamic(() => import("@/components/landing/RotatorText"), { ssr: false });
+const AnimatedChartDecor = dynamic(() => import("@/components/landing/AnimatedChartDecor"), { ssr: false });
 
 export default function LandingContent() {
   const t = useTranslations("Landing");
@@ -133,33 +142,99 @@ export default function LandingContent() {
       span: "lg:col-span-1",
       priority: "Conversion",
     },
+    {
+      title: t("features.items.inventoryHub.title"),
+      description: t("features.items.inventoryHub.description"),
+      icon: Package,
+      color: "text-orange-500",
+      bg: "bg-orange-50 dark:bg-orange-950/30",
+      span: "lg:col-span-1",
+      priority: "Logistics",
+    },
+    {
+      title: t("features.items.storeCatalog.title"),
+      description: t("features.items.storeCatalog.description"),
+      icon: Store,
+      color: "text-pink-500",
+      bg: "bg-pink-50 dark:bg-pink-950/30",
+      span: "lg:col-span-1",
+      priority: "Commerce",
+    },
+    {
+      title: t("features.items.multiChannelNotifications.title"),
+      description: t("features.items.multiChannelNotifications.description"),
+      icon: BellRing,
+      color: "text-yellow-500",
+      bg: "bg-yellow-50 dark:bg-yellow-950/30",
+      span: "lg:col-span-1",
+      priority: "Alerts",
+    },
+    {
+      title: t("features.items.caCompliance.title"),
+      description: t("features.items.caCompliance.description"),
+      icon: Shield,
+      color: "text-teal-500",
+      bg: "bg-teal-50 dark:bg-teal-950/30",
+      span: "lg:col-span-1",
+      priority: "Auditing",
+    },
+    {
+      title: t("features.items.multiLevelRoles.title"),
+      description: t("features.items.multiLevelRoles.description"),
+      icon: UsersRound,
+      color: "text-blue-500",
+      bg: "bg-blue-50 dark:bg-blue-950/30",
+      span: "lg:col-span-1",
+      priority: "Security",
+    },
+    {
+      title: t("features.items.pwaImplementation.title"),
+      description: t("features.items.pwaImplementation.description"),
+      icon: MonitorSmartphone,
+      color: "text-purple-500",
+      bg: "bg-purple-50 dark:bg-purple-950/30",
+      span: "lg:col-span-1",
+      priority: "Offline",
+    },
+    {
+      title: t("features.items.nativeApps.title"),
+      description: t("features.items.nativeApps.description"),
+      icon: MonitorSmartphone,
+      color: "text-green-500",
+      bg: "bg-green-50 dark:bg-green-950/30",
+      span: "lg:col-span-2",
+      priority: "Mobile",
+    },
   ];
 
   return (
     <div className="overflow-x-hidden bg-surface-base">
       <LandingNavbar />
 
-      <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 pt-20">
+      <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 pt-32 pb-20">
         <div className="pointer-events-none absolute left-1/2 top-0 h-[600px] w-[1000px] -translate-x-1/2 rounded-full bg-accent-soft blur-[120px]" />
         <div className="pointer-events-none absolute bottom-0 right-0 h-[500px] w-[500px] rounded-full bg-violet-600/10 blur-[110px]" />
+        
+        {/* Floating background noise/grid for dark mode texture */}
+        <div className="pointer-events-none absolute inset-0 opacity-[0.02] mix-blend-overlay dark:opacity-[0.04]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=0 0 200 200 xmlns=http://www.w3.org/2000/svg%3E%3Cfilter id=noiseFilter%3E%3CfeTurbulence type=fractalNoise baseFrequency=0.65 numOctaves=3 stitchTiles=stitch/%3E%3C/filter%3E%3Crect width=100%25 height=100%25 filter=url(%23noiseFilter)/%3E%3C/svg%3E")' }} />
+
+        <AnimatedChartDecor />
 
         <motion.div
           style={reduceMotion ? undefined : { opacity, scale }}
-          className="z-10 mx-auto max-w-5xl space-y-8 text-center"
+          className="z-10 mx-auto max-w-5xl space-y-10 text-center relative"
         >
           <motion.div
             initial={reduceMotion ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
           >
-            <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-surface-elevated px-4 py-1.5 text-sm font-bold text-muted-body">
+            <span className="mb-8 inline-flex items-center gap-2 rounded-full border border-border/80 bg-surface-elevated/80 backdrop-blur-md px-5 py-2 text-sm font-bold text-muted-body shadow-sm">
               <Sparkles className="h-4 w-4 text-accent-strong" /> {t("hero.badge")}
             </span>
-            <h1 className="text-5xl font-black leading-[1.04] tracking-tight text-foreground md:text-8xl">
+            <h1 className="text-5xl font-black leading-[1.1] tracking-tight text-foreground md:text-8xl">
               {t("hero.titleLine1")} <br />
-              <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-500 bg-clip-text text-transparent">
-                {t("hero.titleLine2")}
-              </span>
+              <RotatorText />
             </h1>
           </motion.div>
 
@@ -176,36 +251,42 @@ export default function LandingContent() {
             initial={reduceMotion ? false : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.25 }}
-            className="flex flex-col items-center justify-center gap-4 pt-4 sm:flex-row"
+            className="flex flex-col items-center justify-center gap-5 pt-6 sm:flex-row"
           >
-            <Button size="lg" className="btn-primary group h-16 gap-2 rounded-2xl px-10 text-lg" asChild>
-              <Link href="/api/auth/signin">
-                {t("hero.primaryCta")} <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-              </Link>
-            </Button>
-            <Button variant="ghost" size="lg" className="h-16 px-10 text-lg font-bold text-muted-body hover:text-foreground" asChild>
+            {/* Enhanced glowing primary CTA button */}
+            <div className="relative group">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-violet-500 rounded-2xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
+              <Button size="lg" className="relative btn-primary h-16 gap-2 rounded-2xl px-12 text-lg font-black shadow-2xl transition-all" asChild>
+                <Link href="/api/auth/signin">
+                  {t("hero.primaryCta")} <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </Button>
+            </div>
+            <Button variant="ghost" size="lg" className="h-16 px-10 text-lg font-bold text-muted-body hover:bg-surface-elevated hover:text-foreground transition-colors rounded-2xl" asChild>
               <Link href="#features">{t("hero.secondaryCta")}</Link>
             </Button>
           </motion.div>
 
+          <SocialProofHero />
+
           <motion.div
-            initial={reduceMotion ? false : { opacity: 0, y: 40 }}
+            initial={reduceMotion ? false : { opacity: 0, y: 60 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
-            className="card-elevated relative mx-auto mt-16 aspect-[16/9] max-w-6xl overflow-hidden rounded-3xl border-white/40 dark:border-white/10"
+            transition={{ duration: 0.8, delay: 0.4, type: "spring", stiffness: 40 }}
+            className="card-elevated relative mx-auto mt-20 aspect-[16/9] max-w-6xl overflow-hidden rounded-[2.5rem] border-white/20 dark:border-white/10 shadow-[0_30px_100px_-20px_rgba(0,0,0,0.5)]"
           >
             <HeroMotionDecor />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-zinc-900/65" />
-            <div className="absolute left-4 top-4 flex gap-2">
-              <div className="h-3 w-3 rounded-full bg-rose-500" />
-              <div className="h-3 w-3 rounded-full bg-amber-500" />
-              <div className="h-3 w-3 rounded-full bg-emerald-500" />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-surface-base/80" />
+            <div className="absolute left-6 top-6 flex gap-2">
+              <div className="h-3.5 w-3.5 rounded-full bg-rose-500 shadow-sm" />
+              <div className="h-3.5 w-3.5 rounded-full bg-amber-500 shadow-sm" />
+              <div className="h-3.5 w-3.5 rounded-full bg-emerald-500 shadow-sm" />
             </div>
             <div className="relative flex h-full flex-col items-center justify-center space-y-6">
-              <div className="grid h-20 w-20 place-items-center rounded-3xl border border-white/20 bg-white/10 shadow-2xl backdrop-blur-md dark:bg-white/5">
-                <Sparkles className="h-10 w-10 text-white" />
+              <div className="grid h-24 w-24 place-items-center rounded-3xl border border-white/20 bg-white/10 shadow-[0_0_50px_rgba(255,255,255,0.1)] backdrop-blur-md dark:bg-white/5">
+                <Sparkles className="h-12 w-12 text-white drop-shadow-xl" />
               </div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-200 md:text-sm">
+              <p className="text-sm font-black uppercase tracking-[0.25em] text-zinc-100 drop-shadow-md">
                 {t("hero.dashboardPreview")}
               </p>
             </div>
