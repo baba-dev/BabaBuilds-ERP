@@ -57,7 +57,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  const shops = await getActiveShopSlugs();
+  let shops: Array<{ slug: string; updatedAt: Date }> = [];
+
+  try {
+    shops = await getActiveShopSlugs();
+  } catch (error) {
+    console.error('Failed to fetch active shop slugs for sitemap generation.', error);
+  }
+
   const shopRoutes: MetadataRoute.Sitemap = shops.map((shop) => ({
     url: `${BASE_URL}/shop/${shop.slug}`,
     lastModified: shop.updatedAt,
