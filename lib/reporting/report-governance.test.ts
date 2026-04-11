@@ -39,6 +39,12 @@ test('report governance regression snapshot is deterministic and policy controls
   const deferredTrace = snapshot.explainability.find((artifact) => artifact.figureId === 'kpi.deferredRevenue');
   assert.ok(deferredTrace);
   assert.equal(deferredTrace?.value, '595.00');
+  assert.equal(
+    deferredTrace?.sourceEntries
+      .reduce((sum, entry) => sum + Number(entry.contribution), 0)
+      .toFixed(2),
+    deferredTrace?.value
+  );
 
   snapshot.validation.forEach((control) => {
     assert.equal(control.passed, true, `failed control ${control.controlId}: ${control.actual}`);

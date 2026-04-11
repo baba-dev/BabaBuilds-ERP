@@ -83,26 +83,35 @@ export function buildDeferredRevenueFigureTrace(
   invoices.forEach((invoice) => {
     const billed = getInvoiceBilledAmount(invoice);
     const settled = settledByInvoice[invoice.id] ?? new Prisma.Decimal(0);
+    const settledApplied = Prisma.Decimal.min(billed, settled);
     const deferred = Prisma.Decimal.max(new Prisma.Decimal(0), billed.minus(settled));
     aggregate = aggregate.plus(deferred);
+
+    let remainingSettledApplied = settledApplied;
+    const paymentEntries = payments
+      .filter((payment) => payment.invoiceId === invoice.id)
+      .map((payment) => {
+        const paymentAmount = toDecimal(payment.amount);
+        const appliedToDeferred = Prisma.Decimal.min(remainingSettledApplied, paymentAmount);
+        remainingSettledApplied = remainingSettledApplied.minus(appliedToDeferred);
+        return {
+          table: 'Payment',
+          entryId: payment.id,
+          amount: serialize(paymentAmount),
+          contribution: serialize(appliedToDeferred.mul(-1)),
+          note: 'Settlement payment applied against deferred balance (capped at billed amount)',
+        };
+      });
 
     sourceEntries.push(
       {
         table: 'Invoice',
         entryId: invoice.id,
         amount: serialize(billed),
-        contribution: serialize(deferred),
-        note: 'Deferred balance computed as max(0, billed - settled)',
+        contribution: serialize(billed),
+        note: 'Billed amount contribution before settlement allocation',
       },
-      ...payments
-        .filter((payment) => payment.invoiceId === invoice.id)
-        .map((payment) => ({
-          table: 'Payment',
-          entryId: payment.id,
-          amount: serialize(toDecimal(payment.amount)),
-          contribution: serialize(toDecimal(payment.amount).mul(-1)),
-          note: 'Settlement payment reducing deferred balance',
-        }))
+      ...paymentEntries
     );
   });
 
