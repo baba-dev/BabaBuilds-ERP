@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { getAllDocs } from "@/lib/docs";
 import Link from "next/link";
 import { BookOpen, ArrowRight, Mail } from "lucide-react";
@@ -21,12 +20,6 @@ export const metadata: Metadata = {
 export default function HelpPage() {
   const docs = getAllDocs();
 
-  // If we have docs, redirect to the first one automatically
-  if (docs.length > 0) {
-    redirect(`/help/${docs[0].slug}`);
-  }
-
-  // Fallback: show an index if somehow no docs exist
   return (
     <div className="space-y-8">
       <div>
