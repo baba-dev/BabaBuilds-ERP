@@ -1,3 +1,17 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Offline Mode - BabaBuilds ERP",
+  description: "Offline fallback screen shown when BabaBuilds ERP cannot reach the network.",
+  alternates: {
+    canonical: "https://erp.bababuilds.com/offline",
+  },
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
 export default function OfflinePage() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4">

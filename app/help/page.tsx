@@ -1,9 +1,22 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getAllDocs } from "@/lib/docs";
 import Link from "next/link";
 import { BookOpen, ArrowRight, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { typography } from "@/lib/ui/typography";
+
+export const metadata: Metadata = {
+  title: "Help Center",
+  description: "Explore BabaBuilds ERP documentation, onboarding guides, and workflow tutorials.",
+  alternates: {
+    canonical: "https://erp.bababuilds.com/help",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
 
 export default function HelpPage() {
   const docs = getAllDocs();

@@ -1,8 +1,35 @@
+import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { Role, getMaxUsersForPlan } from "@/lib/permissions";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
+const BASE_URL = "https://erp.bababuilds.com";
+
+export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
+  const { token } = await params;
+
+  return {
+    title: "Workspace Invite",
+    description: "Private workspace invitation acceptance page.",
+    alternates: {
+      canonical: `${BASE_URL}/invite/${token}`,
+    },
+    robots: {
+      index: false,
+      follow: false,
+    },
+  };
+}
 
 export default async function InviteAcceptancePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;

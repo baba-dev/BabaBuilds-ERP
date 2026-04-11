@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
@@ -5,9 +6,29 @@ import AuthModal from "@/components/AuthModal";
 import Link from "next/link";
 import { Box } from "lucide-react";
 import { normalizeLaunchDestination } from "@/lib/launch-routing";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 type LoginPageProps = {
   searchParams?: Promise<{ callbackUrl?: string }>;
+};
+
+export const metadata: Metadata = {
+  title: "Login to BabaBuilds ERP",
+  description: "Secure sign-in page for accessing your BabaBuilds ERP workspace and business dashboard.",
+  alternates: {
+    canonical: "https://erp.bababuilds.com/login",
+  },
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {

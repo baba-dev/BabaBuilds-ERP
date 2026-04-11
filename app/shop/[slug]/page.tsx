@@ -43,8 +43,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!data) {
     return {
       title: "Shop Not Found",
-      alternates: { canonical: canonicalUrl },
-      robots: { index: false, follow: false },
+      description: "The requested public shop page could not be found.",
+      alternates: {
+        canonical: `https://erp.bababuilds.com/shop/${slug}`,
+      },
+      robots: {
+        index: false,
+        follow: false,
+      },
     };
   }
 
