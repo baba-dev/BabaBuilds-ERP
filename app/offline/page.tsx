@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
+  title: "Offline Mode - BabaBuilds ERP",
+  description: "Offline fallback screen shown when BabaBuilds ERP cannot reach the network.",
+  alternates: {
+    canonical: "https://erp.bababuilds.com/offline",
+  },
   robots: {
     index: false,
     follow: false,

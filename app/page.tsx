@@ -21,6 +21,10 @@ export const metadata: Metadata = {
   alternates: {
     canonical: SITE_URL,
   },
+  robots: {
+    index: true,
+    follow: true,
+  },
   openGraph: {
     title: "BabaBuilds ERP | Run Your Agency on Autopilot",
     description:

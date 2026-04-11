@@ -131,6 +131,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       alternates: {
         canonical: canonicalUrl,
       },
+      robots: {
+        index: true,
+        follow: true,
+      },
       openGraph: {
         title: `${doc.title} | BabaBuilds Help Center`,
         description: doc.description,
@@ -147,7 +151,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       },
     };
   } catch {
-    return { title: "Help Center — BabaBuilds ERP" };
+    return {
+      title: "Help Center — BabaBuilds ERP",
+      description: "BabaBuilds ERP documentation and guides.",
+      alternates: {
+        canonical: `${BASE_URL}/help`,
+      },
+      robots: {
+        index: true,
+        follow: true,
+      },
+    };
   }
 }
 
