@@ -36,6 +36,8 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   service?: ServiceFormService | null;
   onSuccess?: () => void;
+  planTier?: "FREE" | "PRO" | "TEAM" | "ENTERPRISE";
+  publishedCount?: number;
 };
 
 const EMPTY_FORM = {

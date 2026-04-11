@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json().catch(() => null);
-    const serviceTemplateIds = Array.isArray(body?.serviceTemplateIds)
+    const serviceTemplateIds: string[] = Array.isArray(body?.serviceTemplateIds)
       ? body.serviceTemplateIds.filter((id: unknown): id is string => typeof id === "string" && id.length > 0)
       : [];
 
@@ -23,16 +23,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Select at least one service." }, { status: 400 });
     }
 
-    const uniqueIds = Array.from(new Set(serviceTemplateIds));
+    const uniqueIds: string[] = Array.from(new Set(serviceTemplateIds));
     const templates = await prisma.serviceTemplate.findMany({
       where: {
         workspaceId: session.workspaceId,
         showInShop: true,
         id: { in: uniqueIds },
-      },
-      include: {
-        nicCode: true,
-        sacCode: true,
       },
     });
 
@@ -40,10 +36,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No published services found for this request." }, { status: 404 });
     }
 
-    const templateMap = new Map(templates.map((template) => [template.id, template]));
+    const templateMap = new Map<string, (typeof templates)[number]>(templates.map((template) => [template.id, template]));
     const orderedTemplates = uniqueIds
       .map((id) => templateMap.get(id))
       .filter((template): template is NonNullable<typeof template> => Boolean(template));
+
+    const nicIds = Array.from(
+      new Set(
+        orderedTemplates
+          .map((template) => template.nicCodeId)
+          .filter((id): id is string => Boolean(id))
+      )
+    );
+    const sacIds = Array.from(
+      new Set(
+        orderedTemplates
+          .map((template) => template.sacCodeId)
+          .filter((id): id is string => Boolean(id))
+      )
+    );
+
+    const [nicCodes, sacCodes] = await Promise.all([
+      nicIds.length ? prisma.nICCode.findMany({ where: { id: { in: nicIds } } }) : Promise.resolve([]),
+      sacIds.length ? prisma.sACCode.findMany({ where: { id: { in: sacIds } } }) : Promise.resolve([]),
+    ]);
+    const nicMap = new Map(nicCodes.map((code) => [code.id, code]));
+    const sacMap = new Map(sacCodes.map((code) => [code.id, code]));
 
     const draft = {
       title:
@@ -58,10 +76,10 @@ export async function POST(request: Request) {
         unitPrice: Number(template.defaultPrice || 0),
         taxMapping: {
           nicCodeId: template.nicCodeId,
-          nicCode: template.nicCode?.code || null,
+          nicCode: template.nicCodeId ? nicMap.get(template.nicCodeId)?.code || null : null,
           sacCodeId: template.sacCodeId,
-          sacCode: template.sacCode?.code || null,
-          defaultTaxRate: template.sacCode?.igstRate ?? null,
+          sacCode: template.sacCodeId ? sacMap.get(template.sacCodeId)?.code || null : null,
+          defaultTaxRate: template.sacCodeId ? sacMap.get(template.sacCodeId)?.igstRate ?? null : null,
         },
       })),
     };
