@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useSession } from "next-auth/react";
 import type { ComponentType } from "react";
 import {
   Box,
@@ -46,7 +47,9 @@ export function NavMain() {
   const pathname = usePathname();
   const t = useTranslations("Sidebar");
   const { open, isMobile } = useSidebar();
-  const activeRole: SidebarRole = "MEMBER";
+  const { data: session } = useSession();
+  const roleFromSession = (session?.user as { role?: SidebarRole } | undefined)?.role;
+  const activeRole: SidebarRole = roleFromSession ?? "MEMBER";
   const visibleRoutes = filterSidebarItemsByRole(routes, activeRole);
 
   return (

@@ -27,7 +27,7 @@ export function applyBottomPinRule(
   pinnedIds: ReadonlyArray<string>,
 ): string[] {
   const itemMap = new Map(items.map((item) => [item.id, item]));
-  const validPinned = pinnedIds.filter((id) => itemMap.has(id));
+  const validPinned = Array.from(new Set(pinnedIds.filter((id) => itemMap.has(id))));
   const topPins: string[] = [];
   const bottomPins: string[] = [];
 
