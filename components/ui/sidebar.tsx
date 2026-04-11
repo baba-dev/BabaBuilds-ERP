@@ -12,6 +12,8 @@ type SidebarContextValue = {
   openMobile: boolean;
   setOpenMobile: (open: boolean) => void;
   isMobile: boolean;
+  sidebarWidth: number;
+  setSidebarWidth: (width: number) => void;
   toggleSidebar: () => void;
 };
 
@@ -35,6 +37,7 @@ export function SidebarProvider({
   const [open, setOpen] = React.useState(defaultOpen);
   const [openMobile, setOpenMobile] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
+  const [sidebarWidth, setSidebarWidth] = React.useState(256);
 
   React.useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)");
@@ -54,7 +57,7 @@ export function SidebarProvider({
 
   return (
     <SidebarContext.Provider
-      value={{ open, setOpen, openMobile, setOpenMobile, isMobile, toggleSidebar }}
+      value={{ open, setOpen, openMobile, setOpenMobile, isMobile, sidebarWidth, setSidebarWidth, toggleSidebar }}
     >
       <div
         data-slot="sidebar-wrapper"
@@ -68,7 +71,7 @@ export function SidebarProvider({
 }
 
 export function Sidebar({ children, className }: { children: React.ReactNode; className?: string }) {
-  const { isMobile, open, openMobile, setOpenMobile } = useSidebar();
+  const { isMobile, open, openMobile, setOpenMobile, sidebarWidth } = useSidebar();
 
   if (isMobile) {
     return (
@@ -91,9 +94,10 @@ export function Sidebar({ children, className }: { children: React.ReactNode; cl
     <aside
       data-slot="sidebar"
       data-state={open ? "expanded" : "collapsed"}
+      style={{ ["--sidebar-width" as string]: `${sidebarWidth}px` }}
       className={cn(
         "hidden border-r border-white/5 bg-black/90 shadow-[rgba(0,0,0,0.5)_4px_0px_20px] backdrop-blur-2xl md:flex md:h-screen md:self-start md:inset-y-0 md:sticky md:top-0",
-        open ? "md:w-64" : "md:w-[4.5rem]",
+        open ? "md:w-[var(--sidebar-width)]" : "md:w-[4.5rem]",
         className,
       )}
     >
