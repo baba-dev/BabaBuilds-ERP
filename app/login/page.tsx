@@ -5,6 +5,14 @@ import AuthModal from "@/components/AuthModal";
 import Link from "next/link";
 import { Box } from "lucide-react";
 import { normalizeLaunchDestination } from "@/lib/launch-routing";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 type LoginPageProps = {
   searchParams?: Promise<{ callbackUrl?: string }>;
