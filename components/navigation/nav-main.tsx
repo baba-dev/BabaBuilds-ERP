@@ -24,7 +24,9 @@ import {
 import { type ComponentType, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/ui/sidebar";
-import { type SidebarItemId, type UserPreferences } from "@/src/types/user-preferences";
+import { NavItemBadge } from "@/src/components/sidebar/NavItemBadge";
+import { isSidebarBadgeModuleKey } from "@/src/config/navigation";
+import { useSidebarBadges } from "@/src/hooks/useSidebarBadges";
 
 type NavItem = {
   key: SidebarItemId;
@@ -70,41 +72,51 @@ function SidebarRow({
   const pathname = usePathname();
   const t = useTranslations("Sidebar");
   const { open, isMobile } = useSidebar();
-  const Icon = item.icon;
-  const isActive = pathname === item.path;
+const { badges } = useSidebarBadges({ pollIntervalMs: 90_000 });
 
-  return (
-    <div className="group flex items-center gap-1">
-      <Link
-        href={item.path}
-        onClick={() => onNavigate(item.key)}
-        className={cn(
-          "flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2 text-zinc-200 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500",
-          isActive ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/20" : "hover:bg-white/10 hover:text-white",
-          !open && !isMobile && "justify-center px-2",
-        )}
-        title={!open && !isMobile ? t(item.key) : undefined}
-      >
-        <Icon className="h-4 w-4 shrink-0" />
-        {(open || isMobile) && <span className="truncate">{t(item.key)}</span>}
-      </Link>
+const Icon = item.icon;
+const isActive = pathname === item.path;
+const badgeState = isSidebarBadgeModuleKey(item.key) ? badges[item.key] : null;
 
-      {(open || isMobile) && (
-        <button
-          type="button"
-          className="rounded-md p-1 text-zinc-400 transition hover:bg-white/10 hover:text-zinc-100"
-          onClick={() => onTogglePin(item.key, !isPinned)}
-          aria-label={isPinned ? `Unpin ${t(item.key)}` : `Pin ${t(item.key)}`}
-          title={isPinned ? `Unpin ${t(item.key)}` : `Pin ${t(item.key)}`}
-        >
-          {isPinned ? (
-            <PinOff className="h-3.5 w-3.5" />
-          ) : (
-            <Pin className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />
-          )}
-        </button>
+return (
+  <div className="group flex items-center gap-1">
+    <Link
+      href={item.path}
+      onClick={() => onNavigate(item.key)}
+      className={cn(
+        "flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2 text-zinc-200 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500",
+        isActive ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/20" : "hover:bg-white/10 hover:text-white",
+        !open && !isMobile && "justify-center px-2",
       )}
-    </div>
+      title={!open && !isMobile ? t(item.key) : undefined}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      {(open || isMobile) && <span className="truncate">{t(item.key)}</span>}
+      <NavItemBadge
+        badge={badgeState?.badge ?? null}
+        isLoading={badgeState?.isLoading}
+        isStale={badgeState?.isStale}
+        hasError={badgeState?.hasError}
+        collapsed={!open && !isMobile}
+      />
+    </Link>
+
+    {(open || isMobile) && (
+      <button
+        type="button"
+        className="rounded-md p-1 text-zinc-400 transition hover:bg-white/10 hover:text-zinc-100"
+        onClick={() => onTogglePin(item.key, !isPinned)}
+        aria-label={isPinned ? `Unpin ${t(item.key)}` : `Pin ${t(item.key)}`}
+        title={isPinned ? `Unpin ${t(item.key)}` : `Pin ${t(item.key)}`}
+      >
+        {isPinned ? (
+          <PinOff className="h-3.5 w-3.5" />
+        ) : (
+          <Pin className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />
+        )}
+      </button>
+    )}
+  </div>
   );
 }
 
