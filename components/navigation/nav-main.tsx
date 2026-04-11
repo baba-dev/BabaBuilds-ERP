@@ -19,6 +19,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/ui/sidebar";
+import { NavItemBadge } from "@/src/components/sidebar/NavItemBadge";
+import { isSidebarBadgeModuleKey } from "@/src/config/navigation";
+import { useSidebarBadges } from "@/src/hooks/useSidebarBadges";
 
 const routes = [
   { key: "dashboard", path: "/dashboard", icon: LayoutDashboard },
@@ -39,12 +42,14 @@ export function NavMain() {
   const pathname = usePathname();
   const t = useTranslations("Sidebar");
   const { open, isMobile } = useSidebar();
+  const { badges } = useSidebarBadges({ pollIntervalMs: 90_000 });
 
   return (
     <nav className="grid items-start gap-1 px-2 py-4 text-sm font-medium">
       {routes.map((route) => {
         const Icon = route.icon;
         const isActive = pathname === route.path;
+        const badgeState = isSidebarBadgeModuleKey(route.key) ? badges[route.key] : null;
 
         return (
           <Link
@@ -59,6 +64,13 @@ export function NavMain() {
           >
             <Icon className="h-4 w-4 shrink-0" />
             {(open || isMobile) && <span className="truncate">{t(route.key)}</span>}
+            <NavItemBadge
+              badge={badgeState?.badge ?? null}
+              isLoading={badgeState?.isLoading}
+              isStale={badgeState?.isStale}
+              hasError={badgeState?.hasError}
+              collapsed={!open && !isMobile}
+            />
           </Link>
         );
       })}
