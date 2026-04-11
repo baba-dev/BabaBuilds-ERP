@@ -23,6 +23,8 @@ type DashboardPageShellProps = {
   actions?: ReactNode;
   pageActions?: ReactNode;
   breadcrumb?: ReactNode;
+  headerTone?: "plain" | "transparent";
+  headerClassName?: string;
   children: ReactNode;
   animated?: boolean;
   animationClassName?: string;
@@ -64,6 +66,8 @@ export function DashboardPageShell({
   actions,
   pageActions,
   breadcrumb,
+  headerTone = "plain",
+  headerClassName,
   children,
   animated = true,
   animationClassName = defaultAnimationClassName,
@@ -80,6 +84,10 @@ export function DashboardPageShell({
     ) : null);
 
   const isCompactHeader = headerVariant === "compact";
+  const headerToneClassName =
+    headerTone === "transparent"
+      ? "bg-transparent dark:bg-transparent"
+      : "bg-background dark:bg-background";
   const resolvedKpiCard = isStructuredKpiCard(kpiCard) ? (
     <div
       className={cn(
@@ -102,8 +110,10 @@ export function DashboardPageShell({
       <div className={cn("mx-auto space-y-8", maxWidthClassName, animated && animationClassName)}>
         <header
           className={cn(
-            "sticky top-0 z-20 -mx-4 border-b border-zinc-200/50 bg-zinc-50/50 px-4 backdrop-blur-md transition-all duration-300 dark:border-zinc-800/50 dark:bg-zinc-950/50 md:-mx-8 md:px-8",
+            "sticky top-0 z-20 -mx-4 border-b border-zinc-200/50 px-4 backdrop-blur-md transition-all duration-300 dark:border-zinc-800/50 md:-mx-8 md:px-8",
+            headerToneClassName,
             isCompactHeader ? "py-3" : "py-4",
+            headerClassName,
           )}
         >
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
