@@ -89,6 +89,21 @@ model User {
   userPreference     UserPreference?
 }
 
+
+model UserOnboarding {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isFirstLogin   Boolean  @default(true)
+  completedSteps String   @default("[]")
+  dismissedAt    DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([isFirstLogin])
+}
+
 model Account {
   id                String  @id @default(cuid())
   userId            String
