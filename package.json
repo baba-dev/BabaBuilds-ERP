@@ -11,7 +11,10 @@
     "validate": "npm run lint && npm run typecheck && npm run build",
     "check:locales": "node scripts/check-locales.js",
     "codex:quick": "bash scripts/codex-quick-check.sh",
-    "backfill:smtp-passwords": "node scripts/backfill-smtp-password-encryption.js"
+    "backfill:smtp-passwords": "node scripts/backfill-smtp-password-encryption.js",
+    "test:unit": "vitest run tests/sidebar/sidebar-rules.unit.test.ts",
+    "test:integration": "vitest run tests/sidebar/mobile-drawer-parity.integration.test.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.4.2",
@@ -82,6 +85,7 @@
     "eslint-config-next": "16.2.0",
     "prisma": "^6.19.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.4"
   }
 }
