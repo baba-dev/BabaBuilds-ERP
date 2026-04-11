@@ -1,12 +1,38 @@
 import { MetadataRoute } from 'next';
 
+const AUTHENTICATED_TOP_LEVEL_PATHS = [
+  '/admin/',
+  '/ca-portal/',
+  '/clients/',
+  '/dashboard/',
+  '/expenses/',
+  '/inbox/',
+  '/inventory/',
+  '/invoice/',
+  '/launch/',
+  '/ledger/',
+  '/proposals/',
+  '/reconciliation/',
+  '/retainers/',
+  '/services/',
+  '/settings/',
+  '/setup/',
+  '/shop/',
+  '/tax/',
+];
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
         userAgent: '*',
-        allow: '/',
-        disallow: ['/api/', '/dashboard/', '/authenticated/', '/p/'],
+        allow: ['/', '/help/', '/shop/'],
+        disallow: [
+          '/api/',
+          '/authenticated/',
+          '/p/',
+          ...AUTHENTICATED_TOP_LEVEL_PATHS,
+        ],
       },
     ],
     sitemap: 'https://erp.bababuilds.com/sitemap.xml',
