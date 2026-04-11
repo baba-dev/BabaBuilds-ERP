@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useSyncExternalStore } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { 
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { closeAIChat, getAIChatStoreSnapshot, subscribeToAIChatStore, openAIChat } from "@/src/stores/ui/aiChatStore";
 
 const QUICK_PROMPTS = [
   "📈 What's my estimated tax liability?",
@@ -56,6 +57,7 @@ export default function AIChatbot() {
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const aiChatStoreState = useSyncExternalStore(subscribeToAIChatStore, getAIChatStoreSnapshot, getAIChatStoreSnapshot);
 
   const workspaceId = (session as any)?.workspaceId;
   const storageKey = workspaceId ? `cfo_chat_history_${workspaceId}` : null;
@@ -95,6 +97,18 @@ export default function AIChatbot() {
     }
   }, [isOpen, isLoading, isExpanded]);
 
+  useEffect(() => {
+    if (!aiChatStoreState.requestId) return;
+
+    if (aiChatStoreState.isOpen) {
+      setIsOpen(true);
+      setInput(aiChatStoreState.payload?.query ?? "");
+    } else {
+      setIsOpen(false);
+      setTimeout(() => setIsExpanded(false), 300);
+    }
+  }, [aiChatStoreState]);
+
   const clearChat = () => {
     setMessages([DEFAULT_GREETING]);
     if (storageKey) localStorage.removeItem(storageKey);
@@ -103,6 +117,7 @@ export default function AIChatbot() {
 
   const closeChat = () => {
     setIsOpen(false);
+    closeAIChat();
     setTimeout(() => setIsExpanded(false), 300);
   };
 
@@ -310,7 +325,7 @@ export default function AIChatbot() {
           content as a floating X. The header close button handles dismissal instead. */}
       <div className={`fixed bottom-[max(env(safe-area-inset-bottom),1.5rem)] right-6 z-[100] transition-all duration-300 ${isOpen || isExpanded ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}`}>
         <button 
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => (isOpen ? closeAIChat() : openAIChat())}
           className={`h-14 w-14 rounded-full flex items-center justify-center text-white shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950 ${isOpen ? 'bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 rotate-90 shadow-zinc-400/50' : 'bg-purple-900 dark:bg-purple-600 hover:bg-purple-800 dark:hover:bg-purple-500 hover:shadow-purple-900/40 rotate-0'}`}
         >
           {isOpen ? <X className="w-6 h-6 -rotate-90 transition-transform duration-300" /> : <MessageSquare className="w-6 h-6" />}
