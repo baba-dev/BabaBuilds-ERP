@@ -97,7 +97,11 @@ function SidebarRow({
           aria-label={isPinned ? `Unpin ${t(item.key)}` : `Pin ${t(item.key)}`}
           title={isPinned ? `Unpin ${t(item.key)}` : `Pin ${t(item.key)}`}
         >
-          {isPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />}
+          {isPinned ? (
+            <PinOff className="h-3.5 w-3.5" />
+          ) : (
+            <Pin className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />
+          )}
         </button>
       )}
     </div>
@@ -106,6 +110,7 @@ function SidebarRow({
 
 export function NavMain({ preferences, pinError, onTogglePin, onNavigate }: Props) {
   const { open, isMobile } = useSidebar();
+
   const [collapsedGroups, setCollapsedGroups] = useState<Record<"core" | "operations" | "finance", boolean>>({
     core: false,
     operations: false,
@@ -158,7 +163,9 @@ export function NavMain({ preferences, pinError, onTogglePin, onNavigate }: Prop
               className="flex w-full items-center justify-between rounded-md px-2 py-1 text-xs uppercase tracking-wider text-zinc-400 hover:bg-white/5"
             >
               <span>{groupLabels[group]}</span>
-              <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", collapsedGroups[group] && "-rotate-90")} />
+              <ChevronDown
+                className={cn("h-3.5 w-3.5 transition-transform", collapsedGroups[group] && "-rotate-90")}
+              />
             </button>
           )}
 

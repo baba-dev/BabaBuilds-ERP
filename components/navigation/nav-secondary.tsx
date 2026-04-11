@@ -26,6 +26,7 @@ export function NavSecondary({ preferences, onTogglePin, onNavigate }: Props) {
       {(open || isMobile) && (
         <p className="px-2 pb-1 text-[11px] uppercase tracking-wider text-zinc-400">System</p>
       )}
+
       <div className="group flex items-center gap-1">
         <Link
           href="/settings"
@@ -40,6 +41,7 @@ export function NavSecondary({ preferences, onTogglePin, onNavigate }: Props) {
           <Settings className="h-4 w-4 shrink-0" />
           {(open || isMobile) && <span className="truncate">{t("settings")}</span>}
         </Link>
+
         {(open || isMobile) && (
           <button
             type="button"
@@ -48,7 +50,11 @@ export function NavSecondary({ preferences, onTogglePin, onNavigate }: Props) {
             aria-label={isPinned ? "Unpin settings" : "Pin settings"}
             title={isPinned ? "Unpin settings" : "Pin settings"}
           >
-            {isPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />}
+            {isPinned ? (
+              <PinOff className="h-3.5 w-3.5" />
+            ) : (
+              <Pin className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />
+            )}
           </button>
         )}
       </div>

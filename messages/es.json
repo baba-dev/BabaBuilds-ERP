@@ -161,7 +161,13 @@
     "soon": "Pronto",
     "sign_in_google": "Iniciar sesión con Google",
     "bababuilds_erp": "BabaBuilds ERP",
-    "bababuilds": "BabaBuilds"
+    "bababuilds": "BabaBuilds",
+    "group_overview": "Resumen",
+    "group_operations": "Operaciones",
+    "group_sales": "Ventas",
+    "group_finance": "Finanzas",
+    "group_compliance": "Cumplimiento",
+    "group_workspace": "Espacio de trabajo"
   },
   "UserNav": {
     "my_account": "Mi Cuenta",
@@ -943,6 +949,34 @@
         "premiumProposals": {
           "title": "Premium Proposals",
           "description": "High-converting proposal links with integrated e-signatures and public tracking."
+        },
+        "inventoryHub": {
+          "title": "Inventory Hub",
+          "description": "Track physical assets, raw materials, and finished goods across multiple warehouses."
+        },
+        "storeCatalog": {
+          "title": "Integrated Service E-Store",
+          "description": "A centralized, public-facing shop for selling services directly without sending proposals."
+        },
+        "multiChannelNotifications": {
+          "title": "Multi-Channel Notifications",
+          "description": "Get real-time alerts via Email, Web Push, and In-App notifications for critical business events."
+        },
+        "caCompliance": {
+          "title": "CA Compliance & Audit Ledger",
+          "description": "A dedicated portal for your Chartered Accountant to perform year-end audits with 1-click evidence exports."
+        },
+        "multiLevelRoles": {
+          "title": "Multi-Level Roles",
+          "description": "Granular permission controls for your team members, accountants, and external contributors."
+        },
+        "pwaImplementation": {
+          "title": "PWA Implementation",
+          "description": "Install the application directly from the browser for lightning-fast, offline-capable access."
+        },
+        "nativeApps": {
+          "title": "Native Android & iOS Apps",
+          "description": "Fully built native applications for all platforms so you can manage your agency from anywhere."
         }
       }
     },
