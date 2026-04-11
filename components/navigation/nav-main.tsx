@@ -85,7 +85,9 @@ export function NavMain() {
   const recentSet = new Set(recent);
 
   const pinnedItems = filteredItems.filter((item) => pinnedSet.has(item.path));
-  const regularItems = filteredItems.filter((item) => !pinnedSet.has(item.path));
+  const regularItems = (open || isMobile)
+    ? filteredItems.filter((item) => !pinnedSet.has(item.path))
+    : filteredItems;
   const recentItems = filteredItems.filter((item) => recentSet.has(item.path) && !pinnedSet.has(item.path));
 
   const renderRoute = (route: (typeof navItems)[number]) => {
