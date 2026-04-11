@@ -51,6 +51,19 @@ type ShopOverview = {
 
 const ORDER_STATUSES = ["ALL", "PAID", "PENDING", "FAILED", "REFUNDED"];
 const ACCENT_SWATCHES = ["#6366f1", "#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#a855f7", "#111827"];
+const SETTINGS_REQUIRED_FIELDS = [
+  "companyName",
+  "proprietorName",
+  "address",
+  "email",
+  "panNumber",
+  "bankName",
+  "accountName",
+  "accountNumber",
+  "ifscCode",
+  "invoiceTheme",
+  "defaultSacCode",
+] as const;
 
 export default function ShopDashboardPage() {
   const { fCurrency } = useFormat();
@@ -166,8 +179,32 @@ export default function ShopDashboardPage() {
     const toastId = toast.loading("Saving branding color...");
 
     try {
+      const settingsRes = await fetch("/api/settings");
+      if (!settingsRes.ok) {
+        setShopAccentColor(previous);
+        toast.error("Failed to load current settings.", { id: toastId });
+        return;
+      }
+      const settingsData = await settingsRes.json();
+
+      const missingRequired = SETTINGS_REQUIRED_FIELDS.filter((field) => {
+        const value = settingsData?.[field];
+        return value === null || value === undefined || value === "";
+      });
+      if (missingRequired.length > 0) {
+        setShopAccentColor(previous);
+        toast.error("Complete business profile setup in Settings before updating branding.", { id: toastId });
+        return;
+      }
+
       const body = new FormData();
+      SETTINGS_REQUIRED_FIELDS.forEach((field) => {
+        body.append(field, String(settingsData[field]));
+      });
       body.append("shopAccentColor", accentDraft);
+      body.append("shopSlug", settingsData?.shopSlug || "");
+      body.append("shopTagline", settingsData?.shopTagline || "");
+      body.append("shopEnabled", String(!!settingsData?.shopEnabled));
       const res = await fetch("/api/settings", { method: "POST", body });
 
       if (!res.ok) {
