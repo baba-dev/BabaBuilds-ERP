@@ -80,6 +80,14 @@ export function validateAccountingPolicyControls(dataset: ReportFixtureDataset, 
   const recognizedRevenue = computeRecognizedRevenue(dataset);
   const deferredRevenue = computeDeferredRevenue(dataset);
   const accrualBalance = computeAccrualBalance(dataset, cutoffDate);
+  const cutoff = new Date(cutoffDate);
+  const accrualFromEligibleEntries = dataset.journalEntries.reduce((sum, entry) => {
+    const postingDate = new Date(entry.postingDate);
+    if (Number.isNaN(postingDate.getTime()) || postingDate.getTime() > cutoff.getTime()) {
+      return sum;
+    }
+    return sum.plus(toDecimal(entry.amount));
+  }, new Prisma.Decimal(0));
 
   const deductions = dataset.deductions80C.reduce((sum, row) => sum.plus(toDecimal(row.amount)), new Prisma.Decimal(0));
   const cappedDeductions = Prisma.Decimal.min(deductions, new Prisma.Decimal(150000));
@@ -108,9 +116,9 @@ export function validateAccountingPolicyControls(dataset: ReportFixtureDataset, 
     },
     {
       controlId: 'ACC-001',
-      passed: accrualBalance.eq(computeAccrualBalance(dataset, cutoffDate)),
-      expected: 'accruals are computed from entries on or before cutoff',
-      actual: `accrualBalance=${serialize(accrualBalance)}`,
+      passed: accrualBalance.eq(accrualFromEligibleEntries),
+      expected: 'accruals equal the sum of journal entries with postingDate on or before cutoff',
+      actual: `accrualBalance=${serialize(accrualBalance)}; eligibleEntriesTotal=${serialize(accrualFromEligibleEntries)}`,
     },
     {
       controlId: 'TAX-001',
