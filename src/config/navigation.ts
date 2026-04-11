@@ -49,8 +49,8 @@ const navItems: NavItem[] = [
   { id: "client_crm", label: "client_crm", href: "/clients", icon: "clientCrm", group: "Start Here", keywords: ["clients", "crm"], pinnable: true },
   { id: "service_catalog", label: "service_catalog", href: "/services", icon: "serviceCatalog", group: "Start Here", keywords: ["services", "catalog"], pinnable: true },
 
-  { id: "quotes_proposals", label: "quotes_proposals", href: "/proposals", icon: "quotesAndProposals", group: "Set Up Your Business", keywords: ["quotes", "proposals"], pinnable: true },
-  { id: "shop", label: "shop", href: "/shop", icon: "shop", group: "Set Up Your Business", keywords: ["store", "shop"], pinnable: true },
+  { id: "quotes_proposals", label: "quotes_proposals", href: "/proposals", icon: "quotesAndProposals", group: "Setup Business", keywords: ["quotes", "proposals"], pinnable: true },
+  { id: "shop", label: "shop", href: "/shop", icon: "shop", group: "Setup Business", keywords: ["store", "shop"], pinnable: true },
 
   { id: "inventory_hub", label: "inventory", href: "/inventory", icon: "inventoryHub", group: "Run Operations", keywords: ["inventory", "stock"], pinnable: true },
   { id: "retainers_hub", label: "retainers_hub", href: "/retainers", icon: "retainersHub", group: "Run Operations", keywords: ["retainers", "mrr"], pinnable: true },
@@ -67,7 +67,7 @@ const navItems: NavItem[] = [
 
 const groupOrder: NavGroupName[] = [
   "Start Here",
-  "Set Up Your Business",
+  "Setup Business",
   "Run Operations",
   "Get Paid & Track Money",
   "Taxes & Compliance",
