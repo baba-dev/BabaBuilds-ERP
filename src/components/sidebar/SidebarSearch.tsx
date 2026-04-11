@@ -1,6 +1,6 @@
 "use client";
 
-import { type KeyboardEvent as ReactKeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent as ReactKeyboardEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Search, Sparkles } from "lucide-react";
@@ -9,13 +9,22 @@ import { cn } from "@/lib/utils";
 import { sidebarItems } from "@/components/navigation/sidebar-items";
 import { openAIChat } from "@/src/stores/ui/aiChatStore";
 
-const GROUP_LABELS: Record<string, string> = {
+const GROUP_LABEL_FALLBACKS: Record<string, string> = {
   overview: "Overview",
   operations: "Operations",
   sales: "Sales",
   finance: "Finance",
   compliance: "Compliance",
   workspace: "Workspace",
+};
+
+const GROUP_LABEL_TRANSLATION_KEYS: Record<string, string> = {
+  overview: "group_overview",
+  operations: "group_operations",
+  sales: "group_sales",
+  finance: "group_finance",
+  compliance: "group_compliance",
+  workspace: "group_workspace",
 };
 
 const DEBOUNCE_MS = 200;
@@ -30,7 +39,7 @@ export function SidebarSearch() {
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
-      setDebouncedSearchText(searchText.trim());
+      setDebouncedSearchText(searchText);
     }, DEBOUNCE_MS);
 
     return () => window.clearTimeout(timeout);
@@ -39,11 +48,7 @@ export function SidebarSearch() {
   useEffect(() => {
     const handleSlashFocus = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      const isTypingTarget = !!target && (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable
-      );
+      const isTypingTarget = !!target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
 
       if (event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey && !isTypingTarget) {
         event.preventDefault();
@@ -56,32 +61,39 @@ export function SidebarSearch() {
     return () => window.removeEventListener("keydown", handleSlashFocus);
   }, []);
 
-  const filteredItems = useMemo(() => {
-    if (!debouncedSearchText) {
-      return sidebarItems;
-    }
+  const getGroupLabel = (groupKey: string) => {
+    const translationKey = GROUP_LABEL_TRANSLATION_KEYS[groupKey];
+    if (translationKey && t.has(translationKey)) return t(translationKey);
+    return GROUP_LABEL_FALLBACKS[groupKey] ?? groupKey;
+  };
 
-    const needle = debouncedSearchText.toLowerCase();
+  const filterByQuery = (query: string) => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return sidebarItems;
+
     return sidebarItems.filter((item) => {
       const label = t(item.key).toLowerCase();
-      const groupName = (GROUP_LABELS[item.groupKey] ?? item.groupKey).toLowerCase();
-      const keywordHit = item.keywords.some((keyword) => keyword.toLowerCase().includes(needle));
-      return label.includes(needle) || groupName.includes(needle) || keywordHit;
+      const groupLabel = getGroupLabel(item.groupKey).toLowerCase();
+      const keywordMatch = item.keywords.some((keyword) => keyword.toLowerCase().includes(needle));
+      return label.includes(needle) || groupLabel.includes(needle) || keywordMatch;
     });
-  }, [debouncedSearchText, t]);
+  };
 
-  const shouldShowAskAI = debouncedSearchText.length > 0 && filteredItems.length === 0;
-  const selectableCount = shouldShowAskAI ? 1 : filteredItems.length;
+  const filteredItems = filterByQuery(debouncedSearchText);
+  const liveFilteredItems = filterByQuery(searchText);
+
+  const shouldShowAskAI = searchText.trim().length > 0 && filteredItems.length === 0;
+  const shouldShowAskAILive = searchText.trim().length > 0 && liveFilteredItems.length === 0;
+  const selectableCount = shouldShowAskAILive ? 1 : liveFilteredItems.length;
   const activeIndex = selectableCount > 0 ? Math.min(selectedIndex, selectableCount - 1) : 0;
 
-
   const handleOpenSelection = (index: number) => {
-    if (shouldShowAskAI) {
+    if (shouldShowAskAILive) {
       openAIChat({ query: searchText });
       return;
     }
 
-    const item = filteredItems[index];
+    const item = liveFilteredItems[index];
     if (!item) return;
     router.push(item.path);
   };
@@ -155,7 +167,7 @@ export function SidebarSearch() {
               )}
             >
               <span className="truncate">{t(item.key)}</span>
-              <span className="ml-2 shrink-0 text-xs text-zinc-300">{GROUP_LABELS[item.groupKey] ?? item.groupKey}</span>
+              <span className="ml-2 shrink-0 text-xs text-zinc-300">{getGroupLabel(item.groupKey)}</span>
             </button>
           ))
         )}
