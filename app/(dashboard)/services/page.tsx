@@ -30,6 +30,7 @@ type Service = {
   nicCode?: { code: string; description: string };
   sacCode?: { code: string; description: string; igstRate: number };
 };
+type PlanTier = "FREE" | "PRO" | "TEAM" | "ENTERPRISE";
 
 const EMPTY_FORM = {
   name: "", description: "", longDescription: "", defaultPrice: "",
@@ -50,7 +51,10 @@ export default function ServiceCatalog() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [shopSlug, setShopSlug] = useState<string | null>(null);
+  const [planTier, setPlanTier] = useState<PlanTier>("FREE");
   const [form, setForm] = useState({ ...EMPTY_FORM });
+  const publishedCount = services.filter((s) => s.showInShop).length;
+  const canPublishMoreOnFree = planTier !== "FREE" || publishedCount < 3;
 
   const industryLabel = countryCode === "IN" ? "NIC Code" : "Industry Class";
   const taxClassLabel = countryCode === "IN" ? "SAC/HSN Code" : "Service Class";
@@ -73,7 +77,10 @@ export default function ServiceCatalog() {
     fetchData();
     fetch("/api/settings")
       .then((r) => r.json())
-      .then((d) => { if (d.shopSlug) setShopSlug(d.shopSlug); })
+      .then((d) => {
+        if (d.shopSlug) setShopSlug(d.shopSlug);
+        setPlanTier((d.planTier as PlanTier) || "FREE");
+      })
       .catch(() => {});
   }, [fetchData]);
 
@@ -125,7 +132,11 @@ export default function ServiceCatalog() {
         fetchData();
       } else {
         const err = await res.json();
-        toast.error(err.error || "Failed to save service.");
+        if (err?.code === "PLAN_LIMIT_REACHED" || err?.details?.requiresUpgrade) {
+          toast.error(err?.details?.message || "Free plan allows up to 3 published services. Upgrade your plan to publish more.");
+        } else {
+          toast.error(err.error || "Failed to save service.");
+        }
       }
     } catch {
       toast.error("A network error occurred.");
@@ -155,6 +166,11 @@ export default function ServiceCatalog() {
   };
 
   const toggleShopStatus = async (srv: Service) => {
+    if (!srv.showInShop && planTier === "FREE" && !canPublishMoreOnFree) {
+      toast.error("Free plan allows up to 3 published services. Upgrade your plan to publish more.");
+      return;
+    }
+
     const fd = new FormData();
     fd.append("name", srv.name);
     fd.append("description", srv.description || "");
@@ -166,6 +182,13 @@ export default function ServiceCatalog() {
     if (res.ok) {
       toast.success(srv.showInShop ? "Removed from shop." : "Now live in your shop!");
       fetchData();
+    } else {
+      const err = await res.json().catch(() => null);
+      if (err?.code === "PLAN_LIMIT_REACHED" || err?.details?.requiresUpgrade) {
+        toast.error(err?.details?.message || "Free plan allows up to 3 published services. Upgrade your plan to publish more.");
+      } else {
+        toast.error("Failed to update shop visibility.");
+      }
     }
   };
 
@@ -253,9 +276,22 @@ export default function ServiceCatalog() {
               <div className="flex items-center justify-between p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-800/30 rounded-xl">
                 <div>
                   <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-2"><Store className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />Show in Public Shop</p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Publish this service on your shop page so clients can browse and buy.</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    Publish this service on your shop page so clients can browse and buy.
+                    {planTier === "FREE" ? ` (${publishedCount}/3 published on Free plan)` : ""}
+                  </p>
                 </div>
-                <Switch checked={form.showInShop} onCheckedChange={(v) => setForm((f) => ({ ...f, showInShop: v }))} className="data-[state=checked]:bg-indigo-600" />
+                <Switch
+                  checked={form.showInShop}
+                  onCheckedChange={(v) => {
+                    if (v && !form.showInShop && planTier === "FREE" && !canPublishMoreOnFree) {
+                      toast.error("Free plan allows up to 3 published services. Upgrade your plan to publish more.");
+                      return;
+                    }
+                    setForm((f) => ({ ...f, showInShop: v }));
+                  }}
+                  className="data-[state=checked]:bg-indigo-600"
+                />
               </div>
 
               <div className="p-5 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800/80 rounded-xl space-y-4">

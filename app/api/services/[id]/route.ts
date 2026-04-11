@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { logActivity } from '@/lib/activity-log';
+import { apiError } from '@/lib/api-error';
 
 type SessionContext = {
   workspaceId?: string;
@@ -32,6 +33,34 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const nicCodeId = formData.get('nicCodeId') as string | null;
     const sacCodeId = formData.get('sacCodeId') as string | null;
     const showInShop = formData.get('showInShop') === 'true';
+
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        planTier: true,
+        _count: {
+          select: {
+            serviceTemplates: {
+              where: {
+                showInShop: true,
+                id: { not: id },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!workspace) {
+      return apiError(404, "Workspace not found", "WORKSPACE_NOT_FOUND");
+    }
+
+    if (showInShop && !existing.showInShop && workspace.planTier === "FREE" && workspace._count.serviceTemplates >= 3) {
+      return apiError(403, "Upgrade Required", "PLAN_LIMIT_REACHED", {
+        message: "You have reached the limit of 3 published services on the Free plan. Upgrade to Pro for unlimited published services.",
+        requiresUpgrade: true,
+      });
+    }
 
     let imageUrl: string | null = (formData.get('existingImageUrl') as string) || null;
 
