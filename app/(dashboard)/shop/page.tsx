@@ -7,6 +7,7 @@ import {
   Clock,
   ExternalLink,
   Loader2,
+  Plus,
   Search,
   ShoppingBag,
   ShoppingCart,
@@ -23,8 +24,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useFormat } from "@/hooks/use-format";
+import { ServiceFormDialog, ServiceFormService } from "@/components/services/ServiceFormDialog";
 
-type Service = { id: string; showInShop: boolean };
+type Service = ServiceFormService;
 
 type ShopOrder = {
   id: string;
@@ -63,8 +65,10 @@ export default function ShopDashboardPage() {
   const [shopSlug, setShopSlug] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [orderFilter, setOrderFilter] = useState("ALL");
+  const [serviceFilter, setServiceFilter] = useState("ALL");
   const [orderSearch, setOrderSearch] = useState("");
   const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
+  const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -96,6 +100,21 @@ export default function ShopDashboardPage() {
     fetchData();
   }, [fetchData]);
 
+  const serviceFilterOptions = useMemo(() => {
+    const names = services
+      .filter((service) => service.showInShop)
+      .map((service) => service.name)
+      .sort((a, b) => a.localeCompare(b));
+
+    return ["ALL", ...new Set(names)];
+  }, [services]);
+
+  useEffect(() => {
+    if (!serviceFilterOptions.includes(serviceFilter)) {
+      setServiceFilter("ALL");
+    }
+  }, [serviceFilter, serviceFilterOptions]);
+
   const filteredOrders = useMemo(() => {
     const q = orderSearch.toLowerCase();
     return orders.filter((o) => {
@@ -104,9 +123,10 @@ export default function ShopDashboardPage() {
         o.buyerEmail.toLowerCase().includes(q) ||
         o.serviceTemplate.name.toLowerCase().includes(q);
       const matchesFilter = orderFilter === "ALL" ? true : o.status === orderFilter;
-      return matchesSearch && matchesFilter;
+      const matchesService = serviceFilter === "ALL" ? true : o.serviceTemplate.name === serviceFilter;
+      return matchesSearch && matchesFilter && matchesService;
     });
-  }, [orderSearch, orderFilter, orders]);
+  }, [orderSearch, orderFilter, serviceFilter, orders]);
 
   const stats = useMemo(() => ({
     totalOrders: shopOverview.totalOrders,
@@ -157,17 +177,31 @@ export default function ShopDashboardPage() {
       title="Shop Command Center"
       description="Monitor storefront performance, manage incoming orders, and keep your public shop healthy."
       primaryAction={
-        shopSlug ? (
+        <div className="flex items-center gap-3">
+          {shopSlug ? (
+            <Button
+              onClick={() => window.open(`/shop/${shopSlug}`, "_blank")}
+              variant="outline"
+              className="hidden md:flex items-center gap-2 border-indigo-200 dark:border-indigo-800/50 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-xs font-bold uppercase tracking-wider h-11"
+            >
+              <ExternalLink className="w-4 h-4" /> View Live Shop
+            </Button>
+          ) : null}
           <Button
-            onClick={() => window.open(`/shop/${shopSlug}`, "_blank")}
-            variant="outline"
-            className="hidden md:flex items-center gap-2 border-indigo-200 dark:border-indigo-800/50 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-xs font-bold uppercase tracking-wider h-11"
+            onClick={() => setServiceDialogOpen(true)}
+            className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20 text-xs font-bold uppercase tracking-wider h-11 transition-all active:scale-95"
           >
-            <ExternalLink className="w-4 h-4" /> View Live Shop
+            <Plus className="w-4 h-4 md:mr-2" /> <span className="md:inline">Add Item</span>
           </Button>
-        ) : null
+        </div>
       }
     >
+      <ServiceFormDialog
+        open={serviceDialogOpen}
+        onOpenChange={setServiceDialogOpen}
+        onSuccess={fetchData}
+      />
+
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <Card className="border-indigo-200/60 dark:border-indigo-800/40 bg-gradient-to-br from-indigo-50/70 to-white dark:from-indigo-950/30 dark:to-zinc-900">
           <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2"><ShoppingCart className="w-3.5 h-3.5" />Total Orders</CardTitle></CardHeader>
@@ -193,12 +227,25 @@ export default function ShopDashboardPage() {
             <Search className="absolute left-3 top-3 w-4 h-4 text-zinc-400" />
             <Input placeholder="Search buyer or service..." value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)} className="pl-9 h-10 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 font-bold focus-visible:ring-indigo-500" />
           </div>
-          <div className="flex bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-1 gap-1 h-10">
-            {ORDER_STATUSES.map((s) => (
-              <button key={s} onClick={() => setOrderFilter(s)} className={`px-3 py-1 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all ${orderFilter === s ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"}`}>
-                {s}
-              </button>
-            ))}
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <select
+              value={serviceFilter}
+              onChange={(e) => setServiceFilter(e.target.value)}
+              className="h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-300"
+            >
+              {serviceFilterOptions.map((serviceName) => (
+                <option key={serviceName} value={serviceName}>
+                  {serviceName === "ALL" ? "All Services" : serviceName}
+                </option>
+              ))}
+            </select>
+            <div className="flex bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-1 gap-1 h-10">
+              {ORDER_STATUSES.map((s) => (
+                <button key={s} onClick={() => setOrderFilter(s)} className={`px-3 py-1 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all ${orderFilter === s ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"}`}>
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
