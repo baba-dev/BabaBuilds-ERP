@@ -140,6 +140,7 @@ function RouteLink({ route, activePathname }: { route: NavRoute; activePathname:
 export function NavMain() {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const t = useTranslations("Sidebar");
   const { open, isMobile } = useSidebar();
 
   const userId = (session?.user as { id?: string } | undefined)?.id;
@@ -174,19 +175,19 @@ export function NavMain() {
 
   return (
     <nav className="grid items-start gap-1 px-2 py-4 text-sm font-medium">
-      {(open || isMobile) && <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">Pinned</p>}
+      {(open || isMobile) && <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">{t("pinned")}</p>}
       {pinnedRoutes.map((route) => (
         <RouteLink key={route.key} route={route} activePathname={pathname} />
       ))}
 
       {(open || isMobile) && recentRoutes.length > 0 && (
-        <p className="px-3 pt-4 pb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">Recently Visited</p>
+        <p className="px-3 pt-4 pb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">{t("recently_visited")}</p>
       )}
       {recentRoutes.map((route) => (
         <RouteLink key={`recent-${route.key}`} route={route} activePathname={pathname} />
       ))}
 
-      {(open || isMobile) && <p className="px-3 pt-4 pb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">Groups</p>}
+      {(open || isMobile) && <p className="px-3 pt-4 pb-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">{t("groups")}</p>}
       {groupedRoutes.map((route) => (
         <RouteLink key={route.key} route={route} activePathname={pathname} />
       ))}

@@ -161,7 +161,10 @@
     "soon": "Soon",
     "sign_in_google": "Sign In with Google",
     "bababuilds_erp": "BabaBuilds ERP",
-    "bababuilds": "BabaBuilds"
+    "bababuilds": "BabaBuilds",
+    "pinned": "Pinned",
+    "recently_visited": "Recently Visited",
+    "groups": "Groups"
   },
   "UserNav": {
     "my_account": "My Account",
