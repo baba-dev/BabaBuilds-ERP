@@ -313,6 +313,7 @@ export function ShopClient({ data }: { data: ShopData }) {
               {services.map((service, i) => (
                 <div
                   key={service.id}
+                  id={`service-${service.id}`}
                   className="group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300"
                   style={{ animationDelay: `${i * 80}ms`, animation: "shopCardIn 0.5s ease both" }}
                 >

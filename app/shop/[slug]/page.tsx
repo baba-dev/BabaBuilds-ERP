@@ -36,6 +36,72 @@ async function getShopData(slug: string): Promise<ShopData | null> {
   }
 }
 
+function toAbsoluteUrl(value: string | null | undefined): string | undefined {
+  if (!value) return undefined;
+  if (value.startsWith("http://") || value.startsWith("https://")) return value;
+  if (!value.startsWith("/")) return `${BASE_URL}/${value}`;
+  return `${BASE_URL}${value}`;
+}
+
+function buildStorefrontJsonLd(data: ShopData) {
+  const canonicalUrl = `${BASE_URL}/shop/${data.shop.slug}`;
+  const organizationId = `${canonicalUrl}#organization`;
+  const itemListId = `${canonicalUrl}#services`;
+  const shopImage = toAbsoluteUrl(data.shop.logoUrl) ?? `${BASE_URL}${FALLBACK_SOCIAL_IMAGE}`;
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "LocalBusiness",
+        "@id": organizationId,
+        name: data.shop.companyName,
+        description: data.shop.tagline || `Public storefront for ${data.shop.companyName}`,
+        url: canonicalUrl,
+        image: shopImage,
+        logo: shopImage,
+        email: data.shop.email,
+        telephone: data.shop.phone || undefined,
+        address: {
+          "@type": "PostalAddress",
+          streetAddress: data.shop.address,
+        },
+        sameAs: data.shop.website ? [data.shop.website] : undefined,
+      },
+      {
+        "@type": "ItemList",
+        "@id": itemListId,
+        name: `${data.shop.companyName} Services`,
+        itemListOrder: "https://schema.org/ItemListOrderAscending",
+        numberOfItems: data.services.length,
+        itemListElement: data.services.map((service, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          url: `${canonicalUrl}#service-${service.id}`,
+          item: {
+            "@type": "Service",
+            "@id": `${canonicalUrl}#service-${service.id}`,
+            name: service.name,
+            description: service.longDescription || service.description || `Service by ${data.shop.companyName}`,
+            image: toAbsoluteUrl(service.imageUrl) || shopImage,
+            provider: { "@id": organizationId },
+            url: `${canonicalUrl}#service-${service.id}`,
+            offers: {
+              "@type": "Offer",
+              price: service.price.toFixed(2),
+              priceCurrency: "INR",
+              availability: data.checkout.available
+                ? "https://schema.org/InStock"
+                : "https://schema.org/OutOfStock",
+              url: `${canonicalUrl}#service-${service.id}`,
+            },
+          },
+        })),
+      },
+    ],
+  };
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const canonicalUrl = `${BASE_URL}/shop/${slug}`;
@@ -90,5 +156,15 @@ export default async function ShopPage({ params }: { params: Promise<{ slug: str
   const data = await getShopData(slug);
   if (!data) notFound();
 
-  return <ShopClient data={data} />;
+  const storefrontJsonLd = buildStorefrontJsonLd(data);
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(storefrontJsonLd) }}
+      />
+      <ShopClient data={data} />
+    </>
+  );
 }
