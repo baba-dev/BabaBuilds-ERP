@@ -3,37 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import {
-  Box,
-  Briefcase,
-  FileSignature,
-  Landmark,
-  LayoutDashboard,
-  Receipt,
-  ReceiptText,
-  ShieldCheck,
-  Sparkles,
-  Users,
-  Archive,
-  Store,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/ui/sidebar";
 
-const routes = [
-  { key: "dashboard", path: "/dashboard", icon: LayoutDashboard },
-  { key: "service_catalog", path: "/services", icon: Briefcase },
-  { key: "shop", path: "/shop", icon: Store },
-  { key: "inventory", path: "/inventory", icon: Archive },
-  { key: "client_crm", path: "/clients", icon: Users },
-  { key: "quotes_proposals", path: "/proposals", icon: FileSignature },
-  { key: "retainers_hub", path: "/retainers", icon: Box },
-  { key: "expenses_margins", path: "/expenses", icon: Receipt },
-  { key: "savings_tax", path: "/tax", icon: ShieldCheck },
-  { key: "ai_reconciliation", path: "/reconciliation", icon: Sparkles },
-  { key: "invoices_and_earnings", path: "/income", icon: ReceiptText },
-  { key: "ca_compliance", path: "/ca-portal", icon: Landmark },
-] as const;
+import { sidebarItems } from "@/components/navigation/sidebar-items";
+
+const routes = sidebarItems.filter((item) => item.key !== "settings");
 
 export function NavMain() {
   const pathname = usePathname();
