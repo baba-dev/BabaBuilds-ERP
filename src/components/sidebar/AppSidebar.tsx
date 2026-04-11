@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { Box } from "lucide-react";
+import { useEffect, useState } from "react";
 import { NavUser } from "@/components/navigation/nav-user";
 import { Sidebar, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { navIconMap } from "@/src/config/nav-icons";
-import { navigationGroups } from "@/src/config/navigation";
+import { type AppRole, navigationGroups } from "@/src/config/navigation";
 import { filterByRole } from "@/src/lib/nav/filterByRole";
 import { filterByFlag } from "@/src/lib/nav/filterByFlag";
 
@@ -37,11 +39,37 @@ export function AppSidebar() {
   const pathname = usePathname();
   const t = useTranslations("Sidebar");
   const { open, isMobile } = useSidebar();
+  const { data: session } = useSession();
+  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({
+    aiReconciliation: false,
+  });
 
-  const role = undefined;
-  const featureFlags = {
-    aiReconciliation: true,
-  };
+  const role = (session?.user as { role?: AppRole } | undefined)?.role;
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadRuntimeFlags() {
+      try {
+        const response = await fetch("/api/runtime-flags", { cache: "no-store" });
+        if (!response.ok) return;
+        const runtimeFlags = (await response.json()) as { aiReconciliation?: boolean };
+        if (!active) return;
+        setFeatureFlags((prev) => ({
+          ...prev,
+          aiReconciliation: Boolean(runtimeFlags.aiReconciliation),
+        }));
+      } catch {
+        // Keep defaults when runtime flags are unavailable.
+      }
+    }
+
+    void loadRuntimeFlags();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const visibleGroups = filterByFlag(filterByRole(navigationGroups, role), featureFlags);
 
