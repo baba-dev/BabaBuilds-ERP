@@ -63,6 +63,7 @@ export function NavMain() {
   const [showPinned, setShowPinned] = React.useState(true);
   const [showAll, setShowAll] = React.useState(true);
   const searchRef = React.useRef<HTMLInputElement>(null);
+  const [isSearchFocused, setIsSearchFocused] = React.useState(false);
 
   const role = session?.user && "role" in session.user ? String((session.user as { role?: string }).role ?? "unknown") : "unknown";
 
@@ -81,18 +82,28 @@ export function NavMain() {
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName ?? "";
+      const isEditableTarget =
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        target?.isContentEditable === true ||
+        target?.getAttribute("role") === "textbox";
+
       if (event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey) {
-        const target = event.target as HTMLElement | null;
-        const tag = target?.tagName ?? "";
-        if (tag !== "INPUT" && tag !== "TEXTAREA") {
-          event.preventDefault();
-          searchRef.current?.focus();
+        if (isEditableTarget || !searchRef.current) {
+          return;
         }
+        event.preventDefault();
+        searchRef.current.focus();
       }
 
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        if (!searchRef.current) {
+          return;
+        }
         event.preventDefault();
-        searchRef.current?.focus();
+        searchRef.current.focus();
       }
     };
 
@@ -181,7 +192,7 @@ export function NavMain() {
   const renderRouteLink = (route: RouteItem, idx: number) => {
     const Icon = route.icon;
     const isActive = pathname === route.path;
-    const isFocused = idx === activeIndex && document.activeElement === searchRef.current;
+    const isFocused = idx === activeIndex && isSearchFocused;
     const isPinned = pinned.includes(route.key);
 
     return (
@@ -231,6 +242,8 @@ export function NavMain() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={onSearchKeyDown}
+            onFocus={() => setIsSearchFocused(true)}
+            onBlur={() => setIsSearchFocused(false)}
             placeholder="Search modules…"
             className="h-9 border-zinc-700 bg-zinc-900 text-zinc-100"
             aria-label="Sidebar search"
