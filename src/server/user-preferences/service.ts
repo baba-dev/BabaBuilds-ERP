@@ -9,6 +9,7 @@ import {
 } from "@/src/types/user-preferences";
 
 type StoreShape = Record<string, UserPreferences>;
+let storeWriteQueue: Promise<void> = Promise.resolve();
 
 const STORE_DIR = path.join(process.cwd(), ".data");
 const STORE_FILE = path.join(STORE_DIR, "user-preferences.json");
@@ -58,21 +59,31 @@ export async function updateUserPreferences(
   userId: string,
   patch: Partial<UserPreferences>,
 ): Promise<UserPreferences> {
-  const store = await readStore();
-  const current = store[userId] ?? DEFAULT_USER_PREFERENCES;
+  const run = async () => {
+    const store = await readStore();
+    const current = store[userId] ?? DEFAULT_USER_PREFERENCES;
 
-  const next = sanitizeUserPreferences({
-    ...current,
-    ...patch,
-  });
+    const next = sanitizeUserPreferences({
+      ...current,
+      ...patch,
+    });
 
-  if (next.pinnedIds.length > MAX_PINNED_ITEMS) {
-    throw new Error(`Only ${MAX_PINNED_ITEMS} items can be pinned.`);
-  }
+    if (next.pinnedIds.length > MAX_PINNED_ITEMS) {
+      throw new Error(`Only ${MAX_PINNED_ITEMS} items can be pinned.`);
+    }
 
-  store[userId] = next;
-  await writeStore(store);
-  return next;
+    store[userId] = next;
+    await writeStore(store);
+    return next;
+  };
+
+  const resultPromise = storeWriteQueue.then(run);
+  storeWriteQueue = resultPromise.then(
+    () => undefined,
+    () => undefined,
+  );
+
+  return resultPromise;
 }
 
 export function buildPinnedList(

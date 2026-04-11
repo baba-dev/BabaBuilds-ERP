@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Box } from "lucide-react";
 import { toast } from "sonner";
@@ -45,60 +45,68 @@ export function AppSidebar() {
   const [isHydrated, setIsHydrated] = useState(false);
   const skipNextOpenSyncRef = useRef(false);
 
-  const persistPreferences = async (next: UserPreferences, previous: UserPreferences) => {
+  const loadPreferences = useCallback(async () => {
     try {
-      const res = await fetch("/api/user-preferences", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(next),
-      });
-
+      const res = await fetch("/api/user-preferences");
       if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(body.error ?? "Failed to save preferences.");
+        setIsHydrated(true);
+        return;
       }
-    } catch (error) {
-      setPreferences(previous);
-      toast.error(error instanceof Error ? error.message : "Failed to save preferences.");
+
+      const payload = (await res.json()) as UserPreferences;
+      setPreferences(payload);
+    } catch {
+      // no-op: defaults still render
+    } finally {
+      setIsHydrated(true);
     }
-  };
+  }, []);
+
+  const persistPreferencePatch = useCallback(
+    async (patch: Partial<UserPreferences>) => {
+      try {
+        const res = await fetch("/api/user-preferences", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        });
+
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as { error?: string };
+          throw new Error(body.error ?? "Failed to save preferences.");
+        }
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to save preferences.");
+        await loadPreferences();
+      }
+    },
+    [loadPreferences],
+  );
 
   useEffect(() => {
-    const loadPreferences = async () => {
-      try {
-        const res = await fetch("/api/user-preferences");
-        if (!res.ok) {
-          setIsHydrated(true);
-          return;
-        }
-
-        const payload = (await res.json()) as UserPreferences;
-        skipNextOpenSyncRef.current = true;
-        setPreferences(payload);
-      } catch {
-        // no-op: defaults still render
-      } finally {
-        setIsHydrated(true);
-      }
-    };
-
+    skipNextOpenSyncRef.current = true;
     void loadPreferences();
-  }, []);
+  }, [loadPreferences]);
 
   useEffect(() => {
     setSidebarWidth(preferences.sidebarWidth);
-    skipNextOpenSyncRef.current = true;
-    setOpen(!preferences.sidebarCollapsed);
-  }, [preferences.sidebarCollapsed, preferences.sidebarWidth, setOpen, setSidebarWidth]);
+    const nextOpen = !preferences.sidebarCollapsed;
+    if (open !== nextOpen) {
+      skipNextOpenSyncRef.current = true;
+      setOpen(nextOpen);
+    }
+  }, [preferences.sidebarCollapsed, preferences.sidebarWidth, open, setOpen, setSidebarWidth]);
 
-  const updatePreferencesOptimistically = (updater: (current: UserPreferences) => UserPreferences) => {
+  const updatePreferencesOptimistically = (
+    updater: (current: UserPreferences) => UserPreferences,
+    patchFromNext: (next: UserPreferences) => Partial<UserPreferences>,
+  ) => {
     setPreferences((current) => {
-      const previous = current;
       const next = updater(current);
-      if (next === previous) {
+      if (next === current) {
         return current;
       }
-      void persistPreferences(next, previous);
+      void persistPreferencePatch(patchFromNext(next));
       return next;
     });
   };
@@ -106,29 +114,35 @@ export function AppSidebar() {
   const onTogglePin = (itemId: SidebarItemId, shouldPin: boolean) => {
     setPinError(null);
 
-    updatePreferencesOptimistically((current) => {
-      if (shouldPin && !current.pinnedIds.includes(itemId) && current.pinnedIds.length >= MAX_PINNED_ITEMS) {
-        const message = `You can only pin up to ${MAX_PINNED_ITEMS} items.`;
-        setPinError(message);
-        toast.error(message);
-        return current;
-      }
+    updatePreferencesOptimistically(
+      (current) => {
+        if (shouldPin && !current.pinnedIds.includes(itemId) && current.pinnedIds.length >= MAX_PINNED_ITEMS) {
+          const message = `You can only pin up to ${MAX_PINNED_ITEMS} items.`;
+          setPinError(message);
+          toast.error(message);
+          return current;
+        }
 
-      const nextPinned = shouldPin
-        ? current.pinnedIds.includes(itemId)
-          ? current.pinnedIds
-          : [...current.pinnedIds, itemId]
-        : current.pinnedIds.filter((id) => id !== itemId);
+        const nextPinned = shouldPin
+          ? current.pinnedIds.includes(itemId)
+            ? current.pinnedIds
+            : [...current.pinnedIds, itemId]
+          : current.pinnedIds.filter((id) => id !== itemId);
 
-      return { ...current, pinnedIds: nextPinned };
-    });
+        return { ...current, pinnedIds: nextPinned };
+      },
+      (next) => ({ pinnedIds: next.pinnedIds }),
+    );
   };
 
   const onNavigate = (itemId: SidebarItemId) => {
-    updatePreferencesOptimistically((current) => {
-      const nextRecent = [itemId, ...current.recentItems.filter((id) => id !== itemId)].slice(0, 10);
-      return { ...current, recentItems: nextRecent };
-    });
+    updatePreferencesOptimistically(
+      (current) => {
+        const nextRecent = [itemId, ...current.recentItems.filter((id) => id !== itemId)].slice(0, 10);
+        return { ...current, recentItems: nextRecent };
+      },
+      (next) => ({ recentItems: next.recentItems }),
+    );
   };
 
   useEffect(() => {
@@ -146,10 +160,10 @@ export function AppSidebar() {
       }
 
       const next = { ...current, sidebarCollapsed: collapsed };
-      void persistPreferences(next, current);
+      void persistPreferencePatch({ sidebarCollapsed: collapsed });
       return next;
     });
-  }, [open, isHydrated]);
+  }, [open, isHydrated, persistPreferencePatch]);
 
   return (
     <Sidebar>
