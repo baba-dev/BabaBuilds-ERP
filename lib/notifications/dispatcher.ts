@@ -81,6 +81,30 @@ function buildPushAndInAppContent(
         body: `Return due by ${d.dueDate}`,
         actionUrl: '/tax',
       };
+    case 'SHOP_ORDER_CREATED':
+      return {
+        title: `🛒 New Shop Order: ${d.orderId}`,
+        body: `${d.buyerName} placed an order for ${d.serviceName} (${d.amount})`,
+        actionUrl: '/shop',
+      };
+    case 'SHOP_ORDER_UPDATED':
+      return {
+        title: `📝 Shop Order Updated: ${d.orderId}`,
+        body: `Order for ${d.buyerName} was updated`,
+        actionUrl: '/shop',
+      };
+    case 'SHOP_ORDER_DELETED':
+      return {
+        title: `🗑️ Shop Order Deleted: ${d.orderId}`,
+        body: `Order for ${d.buyerName} was removed`,
+        actionUrl: '/shop',
+      };
+    case 'SHOP_ORDER_STATUS_CHANGED':
+      return {
+        title: `📦 Shop Order Status: ${d.orderId}`,
+        body: `${d.buyerName} order changed from ${d.oldStatus} to ${d.newStatus}`,
+        actionUrl: '/shop',
+      };
     default:
       return { title: 'BabaBuilds ERP', body: 'You have a new notification', actionUrl: '/dashboard' };
   }
