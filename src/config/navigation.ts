@@ -34,7 +34,7 @@ export const SIDEBAR_BADGE_SOURCES: Record<SidebarModuleKey, SidebarBadgeSource>
   },
   invoices_and_earnings: {
     key: "invoices_and_earnings",
-    endpoint: "/api/invoices?page=1&limit=100",
+    endpoint: "/api/invoices/open-count",
     staleAfterMs: 2 * 60_000,
     failureFallback: "dot",
   },

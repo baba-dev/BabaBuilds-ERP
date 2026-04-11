@@ -25,6 +25,14 @@ type UseSidebarBadgesOptions = {
   staleAfterMs?: number;
 };
 
+type PollResult = {
+  key: SidebarModuleKey;
+  badge: SidebarBadge | null;
+  hasError: boolean;
+  updatedAt: number | null;
+  skipped?: boolean;
+};
+
 const OPEN_INVOICE_STATUSES = new Set(["PENDING", "PARTIALLY_PAID", "OVERDUE", "SENT"]);
 const APPROVAL_PENDING_PROPOSAL_STATUSES = new Set(["SENT", "VIEWED", "PENDING"]);
 
@@ -66,9 +74,8 @@ const parseBadge = (key: SidebarModuleKey, payload: unknown): SidebarBadge | nul
       return pendingApprovals > 0 ? { variant: "count", count: pendingApprovals } : null;
     }
     case "invoices_and_earnings": {
-      const invoices = toObjectArray(safePayload.data);
-      const unresolvedInvoices = invoices.filter((invoice) => OPEN_INVOICE_STATUSES.has(normalizeStatus(invoice.status))).length;
-      return unresolvedInvoices > 0 ? { variant: "count", count: unresolvedInvoices } : null;
+      const openInvoiceCount = Number(safePayload.openInvoiceCount ?? 0);
+      return openInvoiceCount > 0 ? { variant: "count", count: openInvoiceCount } : null;
     }
     case "ai_reconciliation": {
       const recentInvoices = toObjectArray(safePayload.recentInvoices);
@@ -97,16 +104,24 @@ export function useSidebarBadges(options?: UseSidebarBadgesOptions) {
   const globalStaleAfterMs = options?.staleAfterMs ?? 2 * pollIntervalMs;
   const [badges, setBadges] = useState<SidebarBadgeMap>(initialState);
   const isMountedRef = useRef(false);
+  const requestIdRef = useRef(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const poll = useCallback(async () => {
     const now = Date.now();
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     const results = await Promise.all(
-      SIDEBAR_BADGE_MODULE_KEYS.map(async (key) => {
+      SIDEBAR_BADGE_MODULE_KEYS.map(async (key): Promise<PollResult> => {
         const source = SIDEBAR_BADGE_SOURCES[key];
 
         try {
-          const response = await fetch(source.endpoint, { cache: "no-store" });
+          const response = await fetch(source.endpoint, { cache: "no-store", signal: controller.signal });
           if (!response.ok) {
             throw new Error(`Badge source failed (${source.endpoint}): ${response.status}`);
           }
@@ -117,26 +132,44 @@ export function useSidebarBadges(options?: UseSidebarBadgesOptions) {
             badge: parseBadge(key, payload),
             hasError: false,
             updatedAt: now,
-          } as const;
+          };
         } catch (error) {
+          if (error instanceof DOMException && error.name === "AbortError") {
+            return {
+              key,
+              badge: null,
+              hasError: false,
+              updatedAt: null,
+              skipped: true,
+            };
+          }
+
           console.error("useSidebarBadges poll failed", { key, error });
           return {
             key,
             badge: withFailureFallback(key),
             hasError: true,
             updatedAt: null,
-          } as const;
+          };
         }
       }),
     );
 
-    if (!isMountedRef.current) {
+    if (!isMountedRef.current || requestId !== requestIdRef.current) {
       return;
     }
 
     setBadges((previous) => {
       const next = { ...previous };
       for (const result of results) {
+        if (result.skipped) {
+          next[result.key] = {
+            ...previous[result.key],
+            isLoading: false,
+          };
+          continue;
+        }
+
         const staleAfterMs = SIDEBAR_BADGE_SOURCES[result.key].staleAfterMs || globalStaleAfterMs;
         const previousEntry = previous[result.key];
         const updatedAt = result.updatedAt ?? previousEntry.updatedAt;
@@ -163,6 +196,7 @@ export function useSidebarBadges(options?: UseSidebarBadgesOptions) {
 
     return () => {
       isMountedRef.current = false;
+      abortControllerRef.current?.abort();
       window.clearInterval(intervalId);
     };
   }, [poll, pollIntervalMs]);
