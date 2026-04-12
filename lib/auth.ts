@@ -13,6 +13,7 @@ import {
   HIGH_RISK_MAGIC_LINK_ERROR_CODE,
   hasHighRiskRole,
   isEmailMagicLinkAllowedForRoles,
+  isMagicLinkExceptionEmail,
   isPhishingResistantSignIn,
 } from "@/lib/security/access-risk";
 
@@ -24,6 +25,34 @@ function isAuthErrorRoute(candidate: string) {
 }
 
 type ParsedSenderAddress = { name?: string; address?: string };
+
+function hasNonEmptyEnv(name: string) {
+  const value = process.env[name];
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isProviderEnabled(toggleEnvName: string, inferredFromEnvVars: readonly string[]) {
+  const toggle = process.env[toggleEnvName]?.trim().toLowerCase();
+
+  if (toggle === "true" || toggle === "1" || toggle === "yes" || toggle === "on") {
+    return true;
+  }
+
+  if (toggle === "false" || toggle === "0" || toggle === "no" || toggle === "off") {
+    return false;
+  }
+
+  return inferredFromEnvVars.some((envName) => hasNonEmptyEnv(envName));
+}
+
+const googleAuthEnabled = isProviderEnabled("AUTH_GOOGLE_ENABLED", ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]);
+const emailAuthEnabled = isProviderEnabled("AUTH_EMAIL_ENABLED", [
+  "EMAIL_SERVER_HOST",
+  "EMAIL_SERVER_PORT",
+  "EMAIL_SERVER_USER",
+  "EMAIL_SERVER_PASSWORD",
+  "EMAIL_FROM",
+]);
 
 function validateAndNormalizeEmailSender(emailFrom?: string): string {
   if (!emailFrom) {
@@ -58,7 +87,7 @@ function validateAndNormalizeEmailSender(emailFrom?: string): string {
   return sender.name ? `${sender.name} <${normalizedAddress}>` : normalizedAddress;
 }
 
-const emailSender = validateAndNormalizeEmailSender(process.env.EMAIL_FROM);
+const emailSender = emailAuthEnabled ? validateAndNormalizeEmailSender(process.env.EMAIL_FROM) : "";
 
 function escapeHtmlText(value: string) {
   return value
@@ -110,36 +139,41 @@ export const authOptions: NextAuthOptions = {
     },
   },
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-    
-    // 2. UPGRADED EMAIL PROVIDER
-    EmailProvider({
-      server: {
-        host: process.env.EMAIL_SERVER_HOST,
-        port: Number(process.env.EMAIL_SERVER_PORT),
-        auth: {
-          user: process.env.EMAIL_SERVER_USER,
-          pass: process.env.EMAIL_SERVER_PASSWORD,
-        },
-      },
-      from: emailSender,
-      sendVerificationRequest: async ({ identifier, url, provider }) => {
-        const transport = createTransport(provider.server);
-        const normalizedUrl = normalizeEmailUrl(url);
-        const escapedIdentifier = escapeHtmlText(identifier);
-        const escapedUrlText = escapeHtmlText(normalizedUrl);
-        const escapedUrlHref = escapeHtmlAttribute(normalizedUrl);
-        const plainTextBody = `Sign in to BabaBuilds ERP\n${normalizedUrl}\n\nIf you did not request this email you can safely ignore it.`;
+    ...(googleAuthEnabled
+      ? [
+          GoogleProvider({
+            clientId: process.env.GOOGLE_CLIENT_ID!,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+          }),
+        ]
+      : []),
+    ...(emailAuthEnabled
+      ? [
+          // 2. UPGRADED EMAIL PROVIDER
+          EmailProvider({
+            server: {
+              host: process.env.EMAIL_SERVER_HOST,
+              port: Number(process.env.EMAIL_SERVER_PORT),
+              auth: {
+                user: process.env.EMAIL_SERVER_USER,
+                pass: process.env.EMAIL_SERVER_PASSWORD,
+              },
+            },
+            from: emailSender,
+            sendVerificationRequest: async ({ identifier, url, provider }) => {
+              const transport = createTransport(provider.server);
+              const normalizedUrl = normalizeEmailUrl(url);
+              const escapedIdentifier = escapeHtmlText(identifier);
+              const escapedUrlText = escapeHtmlText(normalizedUrl);
+              const escapedUrlHref = escapeHtmlAttribute(normalizedUrl);
+              const plainTextBody = `Sign in to BabaBuilds ERP\n${normalizedUrl}\n\nIf you did not request this email you can safely ignore it.`;
 
-        const result = await transport.sendMail({
-          to: identifier,
-          from: provider.from,
-          subject: `Secure Authentication - BabaBuilds ERP`,
-          text: plainTextBody,
-          html: `
+              const result = await transport.sendMail({
+                to: identifier,
+                from: provider.from,
+                subject: `Secure Authentication - BabaBuilds ERP`,
+                text: plainTextBody,
+                html: `
             <body style="background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 60px 20px; margin: 0;">
               <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-w: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);">
                 <tr>
@@ -182,15 +216,17 @@ export const authOptions: NextAuthOptions = {
                 </tr>
               </table>
             </body>
-          `
-        });
+          `,
+              });
 
-        const failed = result.rejected.concat(result.pending).filter(Boolean);
-        if (failed.length) {
-          throw new Error(`Email(s) (${failed.join(", ")}) could not be sent`);
-        }
-      },
-    }),
+              const failed = result.rejected.concat(result.pending).filter(Boolean);
+              if (failed.length) {
+                throw new Error(`Email(s) (${failed.join(", ")}) could not be sent`);
+              }
+            },
+          }),
+        ]
+      : []),
 
     CredentialsProvider({
       id: "demo-login",
@@ -256,7 +292,9 @@ export const authOptions: NextAuthOptions = {
         ...pendingInvites.map((invite) => invite.role),
       ];
 
-      if (!isEmailMagicLinkAllowedForRoles(effectiveRoles) && account?.provider === "email") {
+      const isExceptionEmail = isMagicLinkExceptionEmail(user.email);
+
+      if (!isEmailMagicLinkAllowedForRoles(effectiveRoles, user.email) && account?.provider === "email") {
         recordAuthFailure({
           reason: "HIGH_RISK_MAGIC_LINK_BLOCKED",
           code: HIGH_RISK_MAGIC_LINK_ERROR_CODE,
@@ -265,7 +303,8 @@ export const authOptions: NextAuthOptions = {
         return `/login?error=${HIGH_RISK_MAGIC_LINK_ERROR_CODE}&provider=email`;
       }
 
-      if (hasHighRiskRole(effectiveRoles) && !isPhishingResistantSignIn(account)) {
+      const isAllowedExceptionMagicLinkSignIn = isExceptionEmail && account?.provider === "email";
+      if (hasHighRiskRole(effectiveRoles) && !isPhishingResistantSignIn(account) && !isAllowedExceptionMagicLinkSignIn) {
         const provider = account?.provider ?? "unknown";
         recordAuthFailure({
           reason: "HIGH_RISK_ROLE_REQUIRES_PHISHING_RESISTANT_MFA",

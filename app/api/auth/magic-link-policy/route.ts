@@ -39,7 +39,7 @@ export async function POST(req: Request) {
       ...memberships.map((membership) => membership.role),
       ...pendingInvites.map((invite) => invite.role),
     ];
-    const allowed = isEmailMagicLinkAllowedForRoles(effectiveRoles);
+    const allowed = isEmailMagicLinkAllowedForRoles(effectiveRoles, email);
 
     if (!allowed) {
       return NextResponse.json({

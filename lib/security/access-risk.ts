@@ -2,6 +2,7 @@ import type { Account } from "next-auth";
 import { sendActivityAlert } from "@/lib/security/alert-hooks";
 
 const DEFAULT_PHISHING_RESISTANT_PROVIDERS = ["google", "azure-ad", "okta"];
+const DEFAULT_MAGIC_LINK_EXCEPTION_EMAILS = ["admin@bababuilds.com"];
 
 export const HIGH_RISK_ROLES = new Set(["OWNER", "ADMIN"]);
 export const HIGH_RISK_MAGIC_LINK_ERROR_CODE = "HIGH_RISK_MAGIC_LINK_BLOCKED";
@@ -22,11 +23,29 @@ export function isPhishingResistantSignIn(account: Account | null | undefined): 
   return getPhishingResistantProviders().has(account.provider.toLowerCase());
 }
 
+export function getMagicLinkExceptionEmails(): Set<string> {
+  const configured = process.env.MAGIC_LINK_EXCEPTION_EMAILS
+    ?.split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+
+  return new Set(configured && configured.length > 0 ? configured : DEFAULT_MAGIC_LINK_EXCEPTION_EMAILS);
+}
+
+export function isMagicLinkExceptionEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return getMagicLinkExceptionEmails().has(email.trim().toLowerCase());
+}
+
 export function hasHighRiskRole(roles: Array<string | null | undefined>): boolean {
   return roles.some((role) => !!role && HIGH_RISK_ROLES.has(role));
 }
 
-export function isEmailMagicLinkAllowedForRoles(roles: Array<string | null | undefined>): boolean {
+export function isEmailMagicLinkAllowedForRoles(
+  roles: Array<string | null | undefined>,
+  email?: string | null,
+): boolean {
+  if (isMagicLinkExceptionEmail(email)) return true;
   return !hasHighRiskRole(roles);
 }
 
