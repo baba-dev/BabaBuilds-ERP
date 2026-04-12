@@ -9,24 +9,71 @@ import { toast } from "sonner";
 
 type AuthModalProps = {
   callbackUrl?: string;
+  authError?: string;
 };
 
-export default function AuthModal({ callbackUrl = "/dashboard" }: AuthModalProps) {
+const HIGH_RISK_MAGIC_LINK_BLOCKED = "HIGH_RISK_MAGIC_LINK_BLOCKED";
+const MFA_POLICY_BLOCK = "MFA_POLICY_BLOCK";
+
+export default function AuthModal({ callbackUrl = "/dashboard", authError }: AuthModalProps) {
   const t = useTranslations("AuthModal");
   const { status } = useSession();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSent, setIsSent] = useState(false);
   const [isDemoLoading, setIsDemoLoading] = useState(false);
+  const [isPolicyChecking, setIsPolicyChecking] = useState(false);
+  const [magicLinkPolicyMessage, setMagicLinkPolicyMessage] = useState<string | null>(
+    authError === HIGH_RISK_MAGIC_LINK_BLOCKED
+      ? t("alerts.highRiskMagicLinkBlocked")
+      : authError === MFA_POLICY_BLOCK
+        ? t("alerts.phishingResistantRequired")
+        : null
+  );
+  const [isMagicLinkAllowed, setIsMagicLinkAllowed] = useState(authError !== HIGH_RISK_MAGIC_LINK_BLOCKED);
   
   // NEW: State to store the security token
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   if (status === "loading" || status === "authenticated") return null;
 
+  const verifyMagicLinkPolicy = async () => {
+    if (!email || !email.includes("@")) return true;
+
+    setIsPolicyChecking(true);
+    try {
+      const response = await fetch("/api/auth/magic-link-policy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { allowed?: boolean; reason?: string };
+
+      if (!response.ok || payload.allowed === false) {
+        const reason = payload.reason || t("alerts.highRiskMagicLinkBlocked");
+        setIsMagicLinkAllowed(false);
+        setMagicLinkPolicyMessage(reason);
+        return false;
+      }
+
+      setIsMagicLinkAllowed(true);
+      setMagicLinkPolicyMessage(null);
+      return true;
+    } catch {
+      setIsMagicLinkAllowed(false);
+      setMagicLinkPolicyMessage(t("alerts.policyCheckFailed"));
+      return false;
+    } finally {
+      setIsPolicyChecking(false);
+    }
+  };
+
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
+
+    const isAllowed = await verifyMagicLinkPolicy();
+    if (!isAllowed) return;
     
     setIsLoading(true);
     const res = await signIn("email", { email, redirect: false, callbackUrl });
@@ -108,16 +155,26 @@ const handleDemoSignIn = async () => {
                   required
                   placeholder={t("placeholders.email")}
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setMagicLinkPolicyMessage(null);
+                    setIsMagicLinkAllowed(true);
+                  }}
+                  onBlur={verifyMagicLinkPolicy}
                   className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-xl pl-10 pr-4 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-all placeholder:text-zinc-600"
                 />
               </div>
+              {magicLinkPolicyMessage && (
+                <p className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                  {magicLinkPolicyMessage}
+                </p>
+              )}
               <button 
                 type="submit" 
-                disabled={isLoading || isDemoLoading}
+                disabled={isLoading || isDemoLoading || !isMagicLinkAllowed || isPolicyChecking}
                 className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 disabled:opacity-50 disabled:pointer-events-none disabled:hover:bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm active:scale-95"
               >
-                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : t("actions.sendMagicLink")}
+                {isLoading || isPolicyChecking ? <Loader2 className="w-5 h-5 animate-spin" /> : t("actions.sendMagicLink")}
               </button>
             </form>
           )}
