@@ -11,6 +11,23 @@ type AuthModalProps = {
   callbackUrl?: string;
 };
 
+function hasNextAuthErrorRedirect(payload: Record<string, unknown>): boolean {
+  if (typeof payload.error === "string" && payload.error.trim().length > 0) {
+    return true;
+  }
+
+  if (typeof payload.url !== "string" || payload.url.length === 0) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(payload.url, window.location.origin);
+    return parsed.searchParams.has("error");
+  } catch {
+    return payload.url.includes("error=");
+  }
+}
+
 function getDeviceFingerprint(): string {
   if (typeof window === "undefined") return "server";
 
@@ -86,7 +103,7 @@ export default function AuthModal({ callbackUrl = "/dashboard" }: AuthModalProps
         return;
       }
 
-      if (!response.ok || payload?.error) {
+      if (!response.ok || hasNextAuthErrorRedirect(payload)) {
         toast.error(t("alerts.emailFailed"));
         return;
       }

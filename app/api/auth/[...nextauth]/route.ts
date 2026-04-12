@@ -88,15 +88,21 @@ async function applyEmailSignInThrottle(req: NextRequest): Promise<Response | nu
   return null;
 }
 
-export async function GET(req: Request) {
-  return handler(req);
+type RouteContext = {
+  params: {
+    nextauth: string[];
+  };
+};
+
+export async function GET(req: Request, context: RouteContext) {
+  return handler(req, context);
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest, context: RouteContext) {
   const throttleResponse = await applyEmailSignInThrottle(req);
   if (throttleResponse) {
     return throttleResponse;
   }
 
-  return handler(req);
+  return handler(req, context);
 }
