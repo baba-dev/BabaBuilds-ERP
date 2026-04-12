@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession, signIn } from "next-auth/react";
 import { Box, Sparkles, ArrowRight, Mail, Loader2, CheckCircle2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -11,35 +11,88 @@ type AuthModalProps = {
   callbackUrl?: string;
 };
 
+type EmailErrorCase = "CONFIG_ERROR" | "RATE_LIMITED" | "INVALID_EMAIL" | "GENERIC";
+type EmailStatus = "idle" | "loading" | "success" | "error";
+
 export default function AuthModal({ callbackUrl = "/dashboard" }: AuthModalProps) {
   const t = useTranslations("AuthModal");
   const { status } = useSession();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSent, setIsSent] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<EmailStatus>("idle");
+  const [emailErrorCase, setEmailErrorCase] = useState<EmailErrorCase | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [isDemoLoading, setIsDemoLoading] = useState(false);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+  const statusPanelRef = useRef<HTMLDivElement>(null);
   
   // NEW: State to store the security token
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+
+    const timer = window.setInterval(() => {
+      setResendCooldown((prev) => Math.max(prev - 1, 0));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [resendCooldown]);
+
+  useEffect(() => {
+    if (emailStatus === "error") {
+      emailInputRef.current?.focus();
+      statusPanelRef.current?.focus();
+      return;
+    }
+
+    if (emailStatus === "success") {
+      statusPanelRef.current?.focus();
+    }
+  }, [emailStatus]);
+
   if (status === "loading" || status === "authenticated") return null;
+
+  const mapEmailError = (error?: string | null): EmailErrorCase => {
+    const normalized = (error || "").toUpperCase();
+    if (normalized.includes("CONFIG")) return "CONFIG_ERROR";
+    if (normalized.includes("RATE")) return "RATE_LIMITED";
+    if (normalized.includes("INVALID_EMAIL")) return "INVALID_EMAIL";
+    return "GENERIC";
+  };
+
+  const sendMagicLink = async () => {
+    setIsLoading(true);
+    setEmailStatus("loading");
+    setEmailErrorCase(null);
+    const res = await signIn("email", { email, redirect: false, callbackUrl });
+
+    setIsLoading(false);
+    if (res?.error) {
+      setEmailStatus("error");
+      setEmailErrorCase(mapEmailError(res.error));
+      return;
+    }
+
+    setIsSent(true);
+    setEmailStatus("success");
+    setResendCooldown(30);
+  };
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
-    
-    setIsLoading(true);
-    const res = await signIn("email", { email, redirect: false, callbackUrl });
-    
-    setIsLoading(false);
-    if (res?.error) {
-      toast.error(t("alerts.emailFailed"));
-    } else {
-      setIsSent(true);
-    }
+
+    await sendMagicLink();
   };
 
-const handleDemoSignIn = async () => {
+  const handleResend = async () => {
+    if (resendCooldown > 0 || !email) return;
+    await sendMagicLink();
+  };
+
+  const handleDemoSignIn = async () => {
     if (!turnstileToken && process.env.NODE_ENV === "production") {
       toast.error(t("alerts.completeSecurityCheck"));
       return;
@@ -68,9 +121,10 @@ const handleDemoSignIn = async () => {
       }
       // --- 🚨 SECURITY PATCH END ---
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      toast.error(error.message || t("alerts.demoSystemBusy"));
+      const message = error instanceof Error ? error.message : t("alerts.demoSystemBusy");
+      toast.error(message);
     } finally {
       setIsDemoLoading(false);
     }
@@ -104,11 +158,18 @@ const handleDemoSignIn = async () => {
               <div className="relative">
                 <Mail className="absolute left-3 top-3 w-5 h-5 text-zinc-500" />
                 <input 
+                  ref={emailInputRef}
                   type="email" 
                   required
                   placeholder={t("placeholders.email")}
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (emailStatus === "error") {
+                      setEmailStatus("idle");
+                      setEmailErrorCase(null);
+                    }
+                  }}
                   className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-xl pl-10 pr-4 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-all placeholder:text-zinc-600"
                 />
               </div>
@@ -119,6 +180,66 @@ const handleDemoSignIn = async () => {
               >
                 {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : t("actions.sendMagicLink")}
               </button>
+
+              {emailStatus !== "idle" && (
+                <div
+                  ref={statusPanelRef}
+                  tabIndex={-1}
+                  role={emailStatus === "error" ? "alert" : "status"}
+                  aria-live={emailStatus === "error" ? "assertive" : "polite"}
+                  className={`rounded-xl border p-3 space-y-2 outline-none ${
+                    emailStatus === "error"
+                      ? "bg-red-500/10 border-red-500/30"
+                      : emailStatus === "loading"
+                      ? "bg-zinc-900 border-zinc-700"
+                      : "bg-indigo-500/10 border-indigo-500/20"
+                  }`}
+                >
+                  {emailStatus === "loading" && (
+                    <p className="text-xs text-zinc-300">{t("status.sending")}</p>
+                  )}
+
+                  {emailStatus === "success" && (
+                    <>
+                      <p className="text-xs text-indigo-300">{t("status.sent")}</p>
+                      <div className="flex items-center justify-between gap-3">
+                        <button
+                          type="button"
+                          onClick={handleResend}
+                          disabled={isLoading || resendCooldown > 0}
+                          className="text-xs text-indigo-200 hover:text-white disabled:text-zinc-500 disabled:cursor-not-allowed"
+                        >
+                          {t("actions.resendLink")}
+                        </button>
+                        <p className="text-[11px] text-zinc-400">
+                          {resendCooldown > 0
+                            ? t("status.resendCooldown", { seconds: resendCooldown })
+                            : t("status.resendReady")}
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  {emailStatus === "error" && (
+                    <>
+                      <p className="text-xs font-medium text-red-300">{t(`errors.${emailErrorCase || "GENERIC"}`)}</p>
+                      <p className="text-[11px] text-zinc-400">{t("status.support")}</p>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={handleResend}
+                          className="text-xs text-red-200 hover:text-white"
+                        >
+                          {t("actions.retry")}
+                        </button>
+                        <a href="mailto:support@bababuilds.com" className="text-xs text-zinc-300 hover:text-white underline">
+                          {t("actions.contactSupport")}
+                        </a>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </form>
           )}
 
@@ -142,33 +263,41 @@ const handleDemoSignIn = async () => {
             {t("actions.continueWithGoogle")}
           </button>
 
-          {/* NEW: Turnstile Widget - Only shows when not loading */}
-          {!isDemoLoading && !isSent && (
-            <div className="flex justify-center py-2 scale-90">
-              <Turnstile 
-                siteKey="0x4AAAAAACvSwAyJa3nVFu2n" 
-                onSuccess={(token) => setTurnstileToken(token)} 
-                options={{ theme: 'dark' }}
-              />
-            </div>
-          )}
+          <details className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3 group">
+            <summary className="cursor-pointer list-none text-sm text-zinc-300 group-open:text-zinc-100">
+              {t("actions.demoSection")}
+            </summary>
 
-          {/* Interactive Demo Button */}
-          <button 
-            onClick={handleDemoSignIn} 
-            disabled={isLoading || isDemoLoading || (!turnstileToken && process.env.NODE_ENV === "production")}
-            className="w-full flex items-center justify-between group bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 text-zinc-300 px-4 py-3 rounded-xl font-medium transition-all active:scale-95 mt-2 disabled:opacity-50 disabled:pointer-events-none"
-          >
-            <div className="flex items-center gap-3">
-              {isDemoLoading ? (
-                <Loader2 className="w-5 h-5 text-indigo-400 animate-spin" />
-              ) : (
-                <Sparkles className="w-5 h-5 text-indigo-400" />
+            <div className="mt-3 space-y-3">
+              {/* NEW: Turnstile Widget - Only shows when not loading */}
+              {!isDemoLoading && !isSent && (
+                <div className="flex justify-center py-2 scale-90">
+                  <Turnstile 
+                    siteKey="0x4AAAAAACvSwAyJa3nVFu2n" 
+                    onSuccess={(token) => setTurnstileToken(token)} 
+                    options={{ theme: 'dark' }}
+                  />
+                </div>
               )}
-              <span>{isDemoLoading ? t("actions.provisioningSandbox") : t("actions.tryInteractiveDemo")}</span>
+
+              {/* Interactive Demo Button */}
+              <button 
+                onClick={handleDemoSignIn} 
+                disabled={isLoading || isDemoLoading || (!turnstileToken && process.env.NODE_ENV === "production")}
+                className="w-full flex items-center justify-between group bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 text-zinc-300 px-4 py-3 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+              >
+                <div className="flex items-center gap-3">
+                  {isDemoLoading ? (
+                    <Loader2 className="w-5 h-5 text-indigo-400 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-5 h-5 text-indigo-400" />
+                  )}
+                  <span>{isDemoLoading ? t("actions.provisioningSandbox") : t("actions.tryInteractiveDemo")}</span>
+                </div>
+                {!isDemoLoading && <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300 transition-colors" />}
+              </button>
             </div>
-            {!isDemoLoading && <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300 transition-colors" />}
-          </button>
+          </details>
 
         </div>
       </div>
