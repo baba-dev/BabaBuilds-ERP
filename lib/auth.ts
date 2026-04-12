@@ -13,6 +13,7 @@ import {
   HIGH_RISK_MAGIC_LINK_ERROR_CODE,
   hasHighRiskRole,
   isEmailMagicLinkAllowedForRoles,
+  isMagicLinkExceptionEmail,
   isPhishingResistantSignIn,
 } from "@/lib/security/access-risk";
 
@@ -291,7 +292,9 @@ export const authOptions: NextAuthOptions = {
         ...pendingInvites.map((invite) => invite.role),
       ];
 
-      if (!isEmailMagicLinkAllowedForRoles(effectiveRoles) && account?.provider === "email") {
+      const isExceptionEmail = isMagicLinkExceptionEmail(user.email);
+
+      if (!isEmailMagicLinkAllowedForRoles(effectiveRoles, user.email) && account?.provider === "email") {
         recordAuthFailure({
           reason: "HIGH_RISK_MAGIC_LINK_BLOCKED",
           code: HIGH_RISK_MAGIC_LINK_ERROR_CODE,
@@ -300,7 +303,8 @@ export const authOptions: NextAuthOptions = {
         return `/login?error=${HIGH_RISK_MAGIC_LINK_ERROR_CODE}&provider=email`;
       }
 
-      if (hasHighRiskRole(effectiveRoles) && !isPhishingResistantSignIn(account)) {
+      const isAllowedExceptionMagicLinkSignIn = isExceptionEmail && account?.provider === "email";
+      if (hasHighRiskRole(effectiveRoles) && !isPhishingResistantSignIn(account) && !isAllowedExceptionMagicLinkSignIn) {
         const provider = account?.provider ?? "unknown";
         recordAuthFailure({
           reason: "HIGH_RISK_ROLE_REQUIRES_PHISHING_RESISTANT_MFA",
