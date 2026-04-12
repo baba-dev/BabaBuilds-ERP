@@ -1,33 +1,94 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useSession, signIn } from "next-auth/react";
-import { Box, Sparkles, ArrowRight, Mail, Loader2, CheckCircle2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSession, signIn, getCsrfToken } from "next-auth/react";
+import {
+  Box,
+  Sparkles,
+  ArrowRight,
+  Mail,
+  Loader2,
+  CheckCircle2,
+  ShieldAlert,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Turnstile } from "@marsidev/react-turnstile"; // Ensure this is installed
+import { Turnstile } from "@marsidev/react-turnstile";
 import { toast } from "sonner";
 
 type AuthModalProps = {
   callbackUrl?: string;
+  authError?: string;
 };
 
 type EmailErrorCase = "CONFIG_ERROR" | "RATE_LIMITED" | "INVALID_EMAIL" | "GENERIC";
 type EmailStatus = "idle" | "loading" | "success" | "error";
 
-export default function AuthModal({ callbackUrl = "/dashboard" }: AuthModalProps) {
+const HIGH_RISK_MAGIC_LINK_BLOCKED = "HIGH_RISK_MAGIC_LINK_BLOCKED";
+const MFA_POLICY_BLOCK = "MFA_POLICY_BLOCK";
+
+function hasNextAuthErrorRedirect(payload: Record<string, unknown>): boolean {
+  if (typeof payload.error === "string" && payload.error.trim().length > 0) {
+    return true;
+  }
+
+  if (typeof payload.url !== "string" || payload.url.length === 0) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(payload.url, window.location.origin);
+    return parsed.searchParams.has("error");
+  } catch {
+    return payload.url.includes("error=");
+  }
+}
+
+function getDeviceFingerprint(): string {
+  if (typeof window === "undefined") return "server";
+
+  const existing = window.localStorage.getItem("auth_device_fp");
+  if (existing) return existing;
+
+  const generated =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  window.localStorage.setItem("auth_device_fp", generated);
+  return generated;
+}
+
+export default function AuthModal({
+  callbackUrl = "/dashboard",
+  authError,
+}: AuthModalProps) {
   const t = useTranslations("AuthModal");
   const { status } = useSession();
+
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [emailStatus, setEmailStatus] = useState<EmailStatus>("idle");
   const [emailErrorCase, setEmailErrorCase] = useState<EmailErrorCase | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isDemoLoading, setIsDemoLoading] = useState(false);
+  const [isPolicyChecking, setIsPolicyChecking] = useState(false);
+  const [magicLinkPolicyMessage, setMagicLinkPolicyMessage] = useState<string | null>(
+    authError === HIGH_RISK_MAGIC_LINK_BLOCKED
+      ? t("alerts.highRiskMagicLinkBlocked")
+      : authError === MFA_POLICY_BLOCK
+        ? t("alerts.phishingResistantRequired")
+        : null
+  );
+  const [isMagicLinkAllowed, setIsMagicLinkAllowed] = useState(
+    authError !== HIGH_RISK_MAGIC_LINK_BLOCKED
+  );
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [cooldownMessage, setCooldownMessage] = useState<string | null>(null);
+  const [requiresTurnstile, setRequiresTurnstile] = useState(false);
+
   const emailInputRef = useRef<HTMLInputElement>(null);
   const statusPanelRef = useRef<HTMLDivElement>(null);
-  
-  // NEW: State to store the security token
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const fingerprint = useMemo(() => getDeviceFingerprint(), []);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -61,27 +122,120 @@ export default function AuthModal({ callbackUrl = "/dashboard" }: AuthModalProps
     return "GENERIC";
   };
 
-  const sendMagicLink = async () => {
-    setIsLoading(true);
-    setEmailStatus("loading");
-    setEmailErrorCase(null);
-    const res = await signIn("email", { email, redirect: false, callbackUrl });
+  const verifyMagicLinkPolicy = async () => {
+    if (!email || !email.includes("@")) return true;
 
-    setIsLoading(false);
-    if (res?.error) {
+    setIsPolicyChecking(true);
+
+    try {
+      const response = await fetch("/api/auth/magic-link-policy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        allowed?: boolean;
+        reason?: string;
+      };
+
+      if (!response.ok || payload.allowed === false) {
+        const reason = payload.reason || t("alerts.highRiskMagicLinkBlocked");
+        setIsMagicLinkAllowed(false);
+        setMagicLinkPolicyMessage(reason);
+        return false;
+      }
+
+      setIsMagicLinkAllowed(true);
+      setMagicLinkPolicyMessage(null);
+      return true;
+    } catch {
+      setIsMagicLinkAllowed(false);
+      setMagicLinkPolicyMessage(t("alerts.policyCheckFailed"));
+      return false;
+    } finally {
+      setIsPolicyChecking(false);
+    }
+  };
+
+  const sendMagicLink = async () => {
+    const isAllowed = await verifyMagicLinkPolicy();
+    if (!isAllowed) {
       setEmailStatus("error");
-      setEmailErrorCase(mapEmailError(res.error));
+      setEmailErrorCase("GENERIC");
       return;
     }
 
-    setEmailStatus("success");
-    setResendCooldown(30);
+    setIsLoading(true);
+    setEmailStatus("loading");
+    setEmailErrorCase(null);
+    setCooldownMessage(null);
+
+    try {
+      const csrfToken = await getCsrfToken();
+      if (!csrfToken) {
+        throw new Error("Missing CSRF token.");
+      }
+
+      const body = new URLSearchParams({
+        email,
+        csrfToken,
+        callbackUrl,
+        json: "true",
+      });
+
+      if (turnstileToken) {
+        body.set("turnstileToken", turnstileToken);
+      }
+
+      const response = await fetch("/api/auth/signin/email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "X-Auth-Fingerprint": fingerprint,
+        },
+        body,
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+
+      if (response.status === 429) {
+        const retryAfter = Number(payload?.retryAfter ?? 60);
+        const mins = Math.max(1, Math.ceil(retryAfter / 60));
+        const message = `Too many attempts. Retry in about ${mins} min.`;
+
+        setCooldownMessage(message);
+        setRequiresTurnstile(Boolean(payload?.requiresTurnstile));
+        setEmailStatus("error");
+        setEmailErrorCase("RATE_LIMITED");
+        toast.error(message);
+        return;
+      }
+
+      if (!response.ok || hasNextAuthErrorRedirect(payload)) {
+        const inferredError =
+          typeof payload.error === "string" ? mapEmailError(payload.error) : "GENERIC";
+        setEmailStatus("error");
+        setEmailErrorCase(inferredError);
+        toast.error(t("alerts.emailFailed"));
+        return;
+      }
+
+      setEmailStatus("success");
+      setResendCooldown(30);
+    } catch (error) {
+      console.error(error);
+      setEmailStatus("error");
+      setEmailErrorCase("GENERIC");
+      toast.error(t("alerts.emailFailed"));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
-
     await sendMagicLink();
   };
 
@@ -97,28 +251,25 @@ export default function AuthModal({ callbackUrl = "/dashboard" }: AuthModalProps
     }
 
     setIsDemoLoading(true);
+
     try {
-      const response = await fetch("/api/auth/demo", { 
+      const response = await fetch("/api/auth/demo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: turnstileToken }) 
+        body: JSON.stringify({ token: turnstileToken }),
       });
-      
+
       const data = await response.json();
 
-      // --- 🚨 SECURITY PATCH START ---
-      // Require both email AND the newly generated password
       if (data.email && data.password) {
-        await signIn("demo-login", { 
-          email: data.email, 
-          password: data.password, // Inject the secure token here
+        await signIn("demo-login", {
+          email: data.email,
+          password: data.password,
           callbackUrl,
         });
       } else {
         throw new Error(data.error || t("alerts.demoCreationFailed"));
       }
-      // --- 🚨 SECURITY PATCH END ---
-
     } catch (error: unknown) {
       console.error(error);
       const message = error instanceof Error ? error.message : t("alerts.demoSystemBusy");
@@ -127,11 +278,10 @@ export default function AuthModal({ callbackUrl = "/dashboard" }: AuthModalProps
       setIsDemoLoading(false);
     }
   };
-  
+
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-zinc-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-300">
       <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-        
         <div className="p-8 text-center space-y-4 border-b border-zinc-800/50 bg-zinc-900/20">
           <div className="mx-auto w-12 h-12 bg-indigo-600 rounded-xl shadow-inner shadow-indigo-400/20 flex items-center justify-center">
             <Box className="w-7 h-7 text-white" />
@@ -143,8 +293,6 @@ export default function AuthModal({ callbackUrl = "/dashboard" }: AuthModalProps
         </div>
 
         <div className="p-8 space-y-5">
-          
-          {/* Email Magic Link Form */}
           <form onSubmit={handleEmailSignIn} className="space-y-3">
             {emailStatus === "success" && (
               <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 text-center space-y-2 animate-in fade-in">
@@ -154,100 +302,144 @@ export default function AuthModal({ callbackUrl = "/dashboard" }: AuthModalProps
               </div>
             )}
 
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 w-5 h-5 text-zinc-500" />
-                <input 
-                  ref={emailInputRef}
-                  type="email" 
-                  required
-                  placeholder={t("placeholders.email")}
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (emailStatus === "error") {
-                      setEmailStatus("idle");
-                      setEmailErrorCase(null);
-                    }
-                  }}
-                  className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-xl pl-10 pr-4 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-all placeholder:text-zinc-600"
-                />
-              </div>
-              <button 
-                type="submit" 
-                disabled={isLoading || isDemoLoading}
-                className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 disabled:opacity-50 disabled:pointer-events-none disabled:hover:bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm active:scale-95"
-              >
-                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : t("actions.sendMagicLink")}
-              </button>
+            <div className="relative">
+              <Mail className="absolute left-3 top-3 w-5 h-5 text-zinc-500" />
+              <input
+                ref={emailInputRef}
+                type="email"
+                required
+                placeholder={t("placeholders.email")}
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setMagicLinkPolicyMessage(null);
+                  setIsMagicLinkAllowed(true);
+                  setCooldownMessage(null);
 
-              {emailStatus !== "idle" && (
-                <div
-                  ref={statusPanelRef}
-                  tabIndex={-1}
-                  role={emailStatus === "error" ? "alert" : "status"}
-                  aria-live={emailStatus === "error" ? "assertive" : "polite"}
-                  className={`rounded-xl border p-3 space-y-2 outline-none ${
-                    emailStatus === "error"
-                      ? "bg-red-500/10 border-red-500/30"
-                      : emailStatus === "loading"
-                      ? "bg-zinc-900 border-zinc-700"
-                      : "bg-indigo-500/10 border-indigo-500/20"
-                  }`}
-                >
-                  {emailStatus === "loading" && (
-                    <p className="text-xs text-zinc-300">{t("status.sending")}</p>
-                  )}
+                  if (emailStatus === "error") {
+                    setEmailStatus("idle");
+                    setEmailErrorCase(null);
+                  }
+                }}
+                onBlur={verifyMagicLinkPolicy}
+                className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-xl pl-10 pr-4 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-all placeholder:text-zinc-600"
+              />
+            </div>
 
-                  {emailStatus === "success" && (
-                    <>
-                      <p className="text-xs text-indigo-300">{t("status.sent")}</p>
-                      <div className="flex items-center justify-between gap-3">
-                        <button
-                          type="button"
-                          onClick={handleResend}
-                          disabled={isLoading || resendCooldown > 0}
-                          className="text-xs text-indigo-200 hover:text-white disabled:text-zinc-500 disabled:cursor-not-allowed"
-                        >
-                          {t("actions.resendLink")}
-                        </button>
-                        <p className="text-[11px] text-zinc-400">
-                          {resendCooldown > 0
-                            ? t("status.resendCooldown", { seconds: resendCooldown })
-                            : t("status.resendReady")}
-                        </p>
-                      </div>
-                    </>
-                  )}
+            {magicLinkPolicyMessage && (
+              <p className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                {magicLinkPolicyMessage}
+              </p>
+            )}
 
-                  {emailStatus === "error" && (
-                    <>
-                      <p className="text-xs font-medium text-red-300">{t(`errors.${emailErrorCase || "GENERIC"}`)}</p>
-                      <p className="text-[11px] text-zinc-400">{t("status.support")}</p>
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={handleResend}
-                          className="text-xs text-red-200 hover:text-white"
-                        >
-                          {t("actions.retry")}
-                        </button>
-                        <a href="mailto:support@bababuilds.com" className="text-xs text-zinc-300 hover:text-white underline">
-                          {t("actions.contactSupport")}
-                        </a>
-                      </div>
-                    </>
+            {cooldownMessage && (
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200 flex items-start gap-2">
+                <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-semibold">{cooldownMessage}</p>
+                  {requiresTurnstile && (
+                    <p className="text-amber-300/90 mt-1">
+                      Complete the security check, then retry.
+                    </p>
                   )}
                 </div>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={
+                isLoading ||
+                isDemoLoading ||
+                !isMagicLinkAllowed ||
+                isPolicyChecking
+              }
+              className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 disabled:opacity-50 disabled:pointer-events-none disabled:hover:bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm active:scale-95"
+            >
+              {isLoading || isPolicyChecking ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                t("actions.sendMagicLink")
               )}
+            </button>
+
+            {emailStatus !== "idle" && (
+              <div
+                ref={statusPanelRef}
+                tabIndex={-1}
+                role={emailStatus === "error" ? "alert" : "status"}
+                aria-live={emailStatus === "error" ? "assertive" : "polite"}
+                className={`rounded-xl border p-3 space-y-2 outline-none ${
+                  emailStatus === "error"
+                    ? "bg-red-500/10 border-red-500/30"
+                    : emailStatus === "loading"
+                      ? "bg-zinc-900 border-zinc-700"
+                      : "bg-indigo-500/10 border-indigo-500/20"
+                }`}
+              >
+                {emailStatus === "loading" && (
+                  <p className="text-xs text-zinc-300">{t("status.sending")}</p>
+                )}
+
+                {emailStatus === "success" && (
+                  <>
+                    <p className="text-xs text-indigo-300">{t("status.sent")}</p>
+                    <div className="flex items-center justify-between gap-3">
+                      <button
+                        type="button"
+                        onClick={handleResend}
+                        disabled={isLoading || resendCooldown > 0}
+                        className="text-xs text-indigo-200 hover:text-white disabled:text-zinc-500 disabled:cursor-not-allowed"
+                      >
+                        {t("actions.resendLink")}
+                      </button>
+                      <p className="text-[11px] text-zinc-400">
+                        {resendCooldown > 0
+                          ? t("status.resendCooldown", { seconds: resendCooldown })
+                          : t("status.resendReady")}
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {emailStatus === "error" && (
+                  <>
+                    <p className="text-xs font-medium text-red-300">
+                      {cooldownMessage
+                        ? cooldownMessage
+                        : t(`errors.${emailErrorCase || "GENERIC"}`)}
+                    </p>
+                    <p className="text-[11px] text-zinc-400">{t("status.support")}</p>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={handleResend}
+                        className="text-xs text-red-200 hover:text-white"
+                      >
+                        {t("actions.retry")}
+                      </button>
+                      <a
+                        href="mailto:support@bababuilds.com"
+                        className="text-xs text-zinc-300 hover:text-white underline"
+                      >
+                        {t("actions.contactSupport")}
+                      </a>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </form>
 
           <div className="relative flex items-center py-1">
             <div className="flex-grow border-t border-zinc-800"></div>
-            <span className="flex-shrink-0 mx-4 text-xs font-medium text-zinc-600 uppercase tracking-widest">{t("or")}</span>
+            <span className="flex-shrink-0 mx-4 text-xs font-medium text-zinc-600 uppercase tracking-widest">
+              {t("or")}
+            </span>
             <div className="flex-grow border-t border-zinc-800"></div>
           </div>
 
-          <button 
+          <button
             onClick={() => signIn("google", { callbackUrl })}
             disabled={isLoading || isDemoLoading}
             className="w-full flex items-center justify-center gap-3 bg-white hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 text-zinc-900 px-4 py-2.5 rounded-xl font-bold transition-colors shadow-sm active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
@@ -267,21 +459,26 @@ export default function AuthModal({ callbackUrl = "/dashboard" }: AuthModalProps
             </summary>
 
             <div className="mt-3 space-y-3">
-              {/* NEW: Turnstile Widget - Only shows when not loading */}
               {!isDemoLoading && (
                 <div className="flex justify-center py-2 scale-90">
-                  <Turnstile 
-                    siteKey="0x4AAAAAACvSwAyJa3nVFu2n" 
-                    onSuccess={(token) => setTurnstileToken(token)} 
-                    options={{ theme: 'dark' }}
+                  <Turnstile
+                    siteKey="0x4AAAAAACvSwAyJa3nVFu2n"
+                    onSuccess={(token) => {
+                      setTurnstileToken(token);
+                      setRequiresTurnstile(false);
+                    }}
+                    options={{ theme: "dark" }}
                   />
                 </div>
               )}
 
-              {/* Interactive Demo Button */}
-              <button 
-                onClick={handleDemoSignIn} 
-                disabled={isLoading || isDemoLoading || (!turnstileToken && process.env.NODE_ENV === "production")}
+              <button
+                onClick={handleDemoSignIn}
+                disabled={
+                  isLoading ||
+                  isDemoLoading ||
+                  (!turnstileToken && process.env.NODE_ENV === "production")
+                }
                 className="w-full flex items-center justify-between group bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 text-zinc-300 px-4 py-3 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
               >
                 <div className="flex items-center gap-3">
@@ -290,13 +487,18 @@ export default function AuthModal({ callbackUrl = "/dashboard" }: AuthModalProps
                   ) : (
                     <Sparkles className="w-5 h-5 text-indigo-400" />
                   )}
-                  <span>{isDemoLoading ? t("actions.provisioningSandbox") : t("actions.tryInteractiveDemo")}</span>
+                  <span>
+                    {isDemoLoading
+                      ? t("actions.provisioningSandbox")
+                      : t("actions.tryInteractiveDemo")}
+                  </span>
                 </div>
-                {!isDemoLoading && <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300 transition-colors" />}
+                {!isDemoLoading && (
+                  <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
+                )}
               </button>
             </div>
           </details>
-
         </div>
       </div>
     </div>
