@@ -16,6 +16,11 @@ import {
 } from "@/lib/security/access-risk";
 
 const CANONICAL_DASHBOARD_ROUTE = "/dashboard";
+const LOGIN_ROUTE = "/login";
+
+function isAuthErrorRoute(candidate: string) {
+  return candidate === LOGIN_ROUTE || candidate.startsWith(`${LOGIN_ROUTE}?`) || candidate.startsWith(`${LOGIN_ROUTE}#`);
+}
 
 function inferProviderFromMetadata(metadata: Record<string, unknown> | undefined) {
   if (!metadata) return "unknown";
@@ -276,7 +281,7 @@ export const authOptions: NextAuthOptions = {
       const isRootRelativeCallback = (candidate: string) => candidate === "/" || candidate.startsWith("/?");
 
       if (url.startsWith("/")) {
-        if (isRootRelativeCallback(url)) {
+        if (isRootRelativeCallback(url) || isAuthErrorRoute(url)) {
           return `${baseUrl}${url}`;
         }
         return `${baseUrl}${normalizeLaunchDestination(url)}`;
@@ -285,7 +290,7 @@ export const authOptions: NextAuthOptions = {
       try {
         const target = new URL(url);
         if (target.origin === baseUrl) {
-          if (target.pathname === "/") {
+          if (target.pathname === "/" || target.pathname === LOGIN_ROUTE) {
             return `${baseUrl}${target.search}${target.hash}`;
           }
           const normalized = normalizeLaunchDestination(`${target.pathname}${target.search}${target.hash}`);
