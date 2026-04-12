@@ -10,61 +10,97 @@ const asRecord = (value: unknown): UnknownRecord | null => {
   return value as UnknownRecord;
 };
 
-const asNumber = (value: unknown, fallback: number) =>
+const asNumber = (value: unknown, fallback = 0) =>
   typeof value === "number" && Number.isFinite(value) ? value : fallback;
+
+const mapMoneyArray = (rows: unknown[], key: string) =>
+  rows.map((row) => {
+    const obj = asRecord(row);
+    if (!obj) return row;
+
+    return {
+      ...obj,
+      [key]: parseApiMoney(obj[key] as string | number),
+    };
+  });
 
 export const parseDashboardResponse = (payload: unknown) => {
   const obj = asRecord(payload);
   if (!obj) return null;
 
-  const kpis = asRecord(obj.kpis);
-  const mrr = asRecord(obj.mrr);
+  const health = asRecord(obj.health);
+  const attention = asRecord(obj.attention);
+  const financialPulse = asRecord(obj.financialPulse);
+  const salesAndShop = asRecord(obj.salesAndShop);
+  const operations = asRecord(obj.operations);
+  const trust = asRecord(obj.trust);
   const charts = asRecord(obj.charts);
 
-  if (!kpis || !mrr || !charts || !Array.isArray(obj.recentInvoices)) {
+  if (!health || !attention || !financialPulse || !salesAndShop || !operations || !trust || !charts || !Array.isArray(obj.recentInvoices)) {
     return null;
   }
 
-  const retainers = Array.isArray(mrr.retainers) ? mrr.retainers : [];
-  const revenue = Array.isArray(charts.revenue) ? charts.revenue : [];
-  const wealth = Array.isArray(charts.wealth) ? charts.wealth : [];
+  const topServices = Array.isArray(salesAndShop.topServices) ? salesAndShop.topServices : [];
+  const recentServiceOrders = Array.isArray(salesAndShop.recentServiceOrders) ? salesAndShop.recentServiceOrders : [];
+  const receivablesAging = Array.isArray(charts.receivablesAging) ? charts.receivablesAging : [];
+  const proposalFunnel = Array.isArray(charts.proposalFunnel) ? charts.proposalFunnel : [];
+  const serviceOrderHealth = Array.isArray(charts.serviceOrderHealth) ? charts.serviceOrderHealth : [];
+  const revenueVsExpense = Array.isArray(charts.revenueVsExpense) ? charts.revenueVsExpense : [];
+  const recurringRevenue = Array.isArray(charts.recurringRevenue) ? charts.recurringRevenue : [];
 
   return {
     ...obj,
-    kpis: {
-      totalRevenue: parseApiMoney(kpis.totalRevenue as string | number),
-      totalWealth: parseApiMoney(kpis.totalWealth as string | number),
-      estimatedTax: parseApiMoney(kpis.estimatedTax as string | number),
-      activeClients: asNumber(kpis.activeClients, 0),
+    financialPulse: {
+      ...financialPulse,
+      billedRevenue: parseApiMoney(financialPulse.billedRevenue as string | number),
+      receivables: parseApiMoney(financialPulse.receivables as string | number),
+      expenses: parseApiMoney(financialPulse.expenses as string | number),
+      estimatedTax: parseApiMoney(financialPulse.estimatedTax as string | number),
+      liquidAssets: parseApiMoney(financialPulse.liquidAssets as string | number),
+      recurringRevenue: parseApiMoney(financialPulse.recurringRevenue as string | number),
+      arr: parseApiMoney(financialPulse.arr as string | number),
+      reconciliationProgress: asNumber(financialPulse.reconciliationProgress),
     },
-    mrr: {
-      ...mrr,
-      total: parseApiMoney(mrr.total as string | number),
-      retainers: retainers.map((retainer) => {
-        const row = asRecord(retainer);
-        if (!row) return retainer;
-        return {
-          ...row,
-          amount: parseApiMoney(row.amount as string | number),
-        };
-      }),
+    salesAndShop: {
+      ...salesAndShop,
+      serviceOrderConversion: asNumber(salesAndShop.serviceOrderConversion),
+      topServices: mapMoneyArray(topServices, "revenue"),
+      recentServiceOrders: mapMoneyArray(recentServiceOrders, "amount"),
     },
     charts: {
       ...charts,
-      revenue: revenue.map((point) => {
+      revenueVsExpense: revenueVsExpense.map((point) => {
         const row = asRecord(point);
         if (!row) return point;
         return {
           ...row,
           revenue: parseApiMoney(row.revenue as string | number),
+          expenses: parseApiMoney(row.expenses as string | number),
         };
       }),
-      wealth: wealth.map((point) => {
+      recurringRevenue: recurringRevenue.map((point) => {
         const row = asRecord(point);
         if (!row) return point;
         return {
           ...row,
-          value: parseApiMoney(row.value as string | number),
+          mrr: parseApiMoney(row.mrr as string | number),
+        };
+      }),
+      receivablesAging: mapMoneyArray(receivablesAging, "value"),
+      proposalFunnel: proposalFunnel.map((point) => {
+        const row = asRecord(point);
+        if (!row) return point;
+        return {
+          ...row,
+          value: asNumber(row.value),
+        };
+      }),
+      serviceOrderHealth: serviceOrderHealth.map((point) => {
+        const row = asRecord(point);
+        if (!row) return point;
+        return {
+          ...row,
+          value: asNumber(row.value),
         };
       }),
     },
