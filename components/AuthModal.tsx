@@ -280,9 +280,9 @@ export default function AuthModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-zinc-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-      <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-        <div className="p-8 text-center space-y-4 border-b border-zinc-800/50 bg-zinc-900/20">
+    <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-zinc-950/80 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-300">
+      <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden animate-in sm:zoom-in-95 slide-in-from-bottom duration-300 max-h-[90vh] sm:max-h-none overflow-y-auto">
+        <div className="p-6 sm:p-8 text-center space-y-4 border-b border-zinc-800/50 bg-zinc-900/20">
           <div className="mx-auto w-12 h-12 bg-indigo-600 rounded-xl shadow-inner shadow-indigo-400/20 flex items-center justify-center">
             <Box className="w-7 h-7 text-white" />
           </div>
@@ -292,7 +292,7 @@ export default function AuthModal({
           </div>
         </div>
 
-        <div className="p-8 space-y-5">
+        <div className="p-6 sm:p-8 space-y-5">
           <form onSubmit={handleEmailSignIn} className="space-y-3">
             {emailStatus === "success" && (
               <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 text-center space-y-2 animate-in fade-in">

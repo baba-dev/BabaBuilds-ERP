@@ -20,8 +20,6 @@ export const viewport: Viewport = {
   themeColor: '#0062ff',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
 };
 
 const SITE_URL = "https://erp.bababuilds.com";
@@ -197,13 +195,16 @@ export default async function RootLayout({
               <PWARegistration />
               <OfflineSyncBanner />
 
-              <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col transition-colors duration-300">
-                <main className="flex-1 relative">
+              <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col transition-colors duration-300 relative overflow-hidden">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none" />
+                <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-violet-600/5 blur-[100px] rounded-full pointer-events-none" />
+                
+                <main className="flex-1 relative z-10">
                   {children}
                 </main>
               </div>
 
-              <Toaster richColors position="bottom-right" />
+              <Toaster richColors position="top-center" />
             </AuthProvider>
           </ThemeProvider>
         </NextIntlClientProvider>

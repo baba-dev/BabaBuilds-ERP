@@ -9,8 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
@@ -21,7 +19,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
 
-// MISSION CRITICAL: Globalization Imports
+import { ResponsiveDialog } from "@/components/ResponsiveDialog";
 import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
 import { getBustedUrl } from "@/lib/cache-buster";
@@ -249,27 +247,39 @@ export default function ClientCRM() {
 
 
         {/* ONBOARDING / EDIT MODAL */}
-        <Dialog open={open} onOpenChange={(v) => { if(!v) resetForm(); setOpen(v); }}>
-          <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden border-none shadow-2xl bg-surface-elevated dark:backdrop-blur-xl border border-border">
-            <div className="px-6 pt-6 pb-5 bg-surface-glass border-b border-border">
-              <DialogHeader>
-                <div className="flex items-center gap-3.5">
-                  <div className="p-2.5 bg-accent-soft rounded-xl border border-accent-strong/25">
-                    <Building2 className="w-5 h-5 text-accent-strong" />
-                  </div>
-                  <div>
-                    <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
-                      {isEditing ? t('edit_registration_title') : t('registration_title')}
-                    </DialogTitle>
-                    <DialogDescription className="text-muted-body mt-1 text-xs font-medium">
-                      {isEditing ? t('edit_registration_desc') : t('registration_desc')}
-                    </DialogDescription>
-                  </div>
-                </div>
-              </DialogHeader>
+        <ResponsiveDialog 
+          open={open} 
+          onOpenChange={(v) => { if(!v) resetForm(); setOpen(v); }}
+          desktopClassName="sm:max-w-[550px] p-0 overflow-hidden border-none shadow-2xl bg-surface-elevated dark:backdrop-blur-xl border border-border"
+          title={
+            <div className="flex items-center gap-3.5 px-6 pt-6 pb-2">
+              <div className="p-2.5 bg-accent-soft rounded-xl border border-accent-strong/25">
+                <Building2 className="w-5 h-5 text-accent-strong" />
+              </div>
+              <span className="text-xl font-bold tracking-tight text-foreground">
+                {isEditing ? t('edit_registration_title') : t('registration_title')}
+              </span>
             </div>
-
-            <form onSubmit={handleSubmit}>
+          }
+          description={
+            <div className="px-6 pb-5 border-b border-border bg-surface-glass">
+              {isEditing ? t('edit_registration_desc') : t('registration_desc')}
+            </div>
+          }
+          footer={
+            <div className="px-6 py-4 bg-surface-glass border-t border-border flex justify-end gap-3 rounded-b-lg block">
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} className="bg-surface-elevated border-border text-muted-body hover:bg-surface-base text-xs font-bold uppercase tracking-widest px-5 mt-2 sm:mt-0">{t('cancel')}</Button>
+              <FormSubmitBar
+                isSubmitting={isSubmitting}
+                submitText={isEditing ? t('update_client') : t('register_client')}
+                submittingText={t('saving')}
+                helperText={isEditing ? t("helper_edit") : t("helper_create")}
+                className="mt-3 border-none bg-transparent p-0"
+              />
+            </div>
+          }
+        >
+          <form onSubmit={handleSubmit} id="client-form" className="contents">
               <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto bg-surface-elevated custom-scrollbar">
                 
                 <FormSection
@@ -298,7 +308,7 @@ export default function ClientCRM() {
                         className="h-10 bg-surface-elevated border-border text-foreground transition-all focus-visible:ring-focus-ring/30 focus-visible:border-accent-strong shadow-sm" 
                       />
                     </FormFieldRow>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormFieldRow htmlFor="client-country" label={t('country')} required>
                         <Input 
                           id="client-country"
@@ -327,7 +337,7 @@ export default function ClientCRM() {
                   icon={<Mail className="w-3.5 h-3.5" />}
                   className="bg-surface-base border-border"
                 >
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="client-email" className="text-foreground/80 text-xs font-bold uppercase tracking-wider">{t('email_address')}</Label>
                       <Input 
@@ -380,20 +390,8 @@ export default function ClientCRM() {
                   />
                 </div>
               </div>
-
-              <DialogFooter className="px-6 py-4 bg-surface-glass border-t border-border flex justify-end gap-3 rounded-b-lg block">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)} className="bg-surface-elevated border-border text-muted-body hover:bg-surface-base text-xs font-bold uppercase tracking-widest px-5">{t('cancel')}</Button>
-                <FormSubmitBar
-                  isSubmitting={isSubmitting}
-                  submitText={isEditing ? t('update_client') : t('register_client')}
-                  submittingText={t('saving')}
-                  helperText={isEditing ? t("helper_edit") : t("helper_create")}
-                  className="mt-3 border-none bg-transparent p-0"
-                />
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+          </form>
+        </ResponsiveDialog>
         
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-24 text-muted-body bg-surface-base border-2 border-dashed border-border rounded-2xl">
@@ -437,7 +435,7 @@ export default function ClientCRM() {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {clients.map((client) => (
-                <Card key={client.id} className="group relative hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-border bg-surface-elevated overflow-hidden flex flex-col">
+                <Card key={client.id} className="group relative hover:shadow-xl hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-all duration-300 border-border bg-surface-elevated overflow-hidden flex flex-col">
                   <div className="absolute top-4 right-4 flex gap-2 z-10">
                     <button 
                       onClick={() => handleEdit(client)} 

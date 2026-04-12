@@ -16,6 +16,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, 
   DialogDescription, DialogFooter 
 } from "@/components/ui/dialog";
+import { ResponsiveDialog } from "@/components/ResponsiveDialog";
 import { 
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle 
@@ -757,29 +758,37 @@ export default function ProposalsEngine() {
         )}
 
         {/* --- CONVERT TO INVOICE CONFIGURATION MODAL --- */}
-        <Dialog open={!!proposalToConvert} onOpenChange={(open) => !open && setProposalToConvert(null)}>
-          <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden border-none shadow-2xl bg-white dark:bg-zinc-950/95 dark:backdrop-blur-xl">
-            <div className="px-6 pt-6 pb-5 bg-zinc-50/80 dark:bg-zinc-900/40 border-b border-zinc-100 dark:border-zinc-800/80">
-              <DialogHeader>
-                <div className="flex items-center gap-3.5">
-                  <div className="p-2.5 bg-emerald-600/10 dark:bg-emerald-500/20 rounded-xl border border-emerald-200/50 dark:border-emerald-400/20">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
-                  </div>
-                  <div>
-                    <DialogTitle className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                      {t('config_invoice')}
-                    </DialogTitle>
-                    <DialogDescription className="text-zinc-500 dark:text-zinc-400 mt-1 text-xs font-medium">
-                      {t('config_invoice_desc')}
-                    </DialogDescription>
-                  </div>
-                </div>
-              </DialogHeader>
+        <ResponsiveDialog 
+          open={!!proposalToConvert} 
+          onOpenChange={(open) => !open && setProposalToConvert(null)}
+          desktopClassName="sm:max-w-[480px] p-0 overflow-hidden border-none shadow-2xl bg-white dark:bg-zinc-950/95 dark:backdrop-blur-xl"
+          title={
+            <div className="flex items-center gap-3.5 px-6 pt-6 pb-2">
+              <div className="p-2.5 bg-emerald-600/10 dark:bg-emerald-500/20 rounded-xl border border-emerald-200/50 dark:border-emerald-400/20">
+                <CheckCircle2 className="w-5 h-5 text-emerald-700 dark:text-emerald-400" />
+              </div>
+              <span className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                {t('config_invoice')}
+              </span>
             </div>
-            
+          }
+          description={
+            <div className="px-6 pb-5 border-b border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/80 dark:bg-zinc-900/40">
+              {t('config_invoice_desc')}
+            </div>
+          }
+          footer={
+            <div className="px-6 py-4 bg-zinc-50/80 dark:bg-zinc-900/40 border-t border-zinc-100 dark:border-zinc-800/80 flex justify-end gap-3 rounded-b-lg">
+              <Button variant="outline" onClick={() => setProposalToConvert(null)} className="mt-2 sm:mt-0 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-bold uppercase tracking-widest px-5">{t('cancel')}</Button>
+              <Button onClick={confirmConversion} className="bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 text-xs font-bold uppercase tracking-widest px-6 shadow-sm shadow-emerald-500/20 transition-all active:scale-95 border-none">
+                {t('generate_invoice')}
+              </Button>
+            </div>
+          }
+        >
             {proposalToConvert && (
               <div className="p-6 grid gap-6 bg-white dark:bg-zinc-950">
-                <div className="grid grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div className="space-y-2">
                     <Label htmlFor="conv-month" className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">{t('cycle_period')}</Label>
                     <Input 
@@ -822,15 +831,7 @@ export default function ProposalsEngine() {
                 </div>
               </div>
             )}
-
-            <DialogFooter className="px-6 py-4 bg-zinc-50/80 dark:bg-zinc-900/40 border-t border-zinc-100 dark:border-zinc-800/80 flex justify-end gap-3 rounded-b-lg">
-              <Button variant="outline" onClick={() => setProposalToConvert(null)} className="mt-0 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-xs font-bold uppercase tracking-widest px-5">{t('cancel')}</Button>
-              <Button onClick={confirmConversion} className="bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 text-xs font-bold uppercase tracking-widest px-6 shadow-sm shadow-emerald-500/20 transition-all active:scale-95 border-none">
-                {t('generate_invoice')}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        </ResponsiveDialog>
 
         {/* --- DESTRUCTIVE ACTION ALERT DIALOG --- */}
         <AlertDialog open={!!proposalToDelete} onOpenChange={() => setProposalToDelete(null)}>
