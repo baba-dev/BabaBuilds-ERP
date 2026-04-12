@@ -35,22 +35,57 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
-## Google OAuth deployment checklist
+## Auth provider configuration
 
-Use this checklist before promoting to staging/production:
+`validateAuthEnvOrThrow` always requires these core NextAuth variables in all modes:
 
-1. Google Cloud Console OAuth client has this authorized redirect URI:
-   - `https://erp.bababuilds.com/api/auth/callback/google`
-2. Deployment environment contains:
-   - `NEXTAUTH_URL=https://erp.bababuilds.com`
-   - `NEXTAUTH_SECRET=<strong random value>`
-   - `GOOGLE_CLIENT_ID=<google oauth client id>`
-   - `GOOGLE_CLIENT_SECRET=<google oauth client secret>`
-3. If running behind a reverse proxy/CDN, preserve forwarded headers:
+- `NEXTAUTH_URL=https://erp.bababuilds.com`
+- `NEXTAUTH_SECRET=<strong random value>`
+
+Provider-specific variables are only required when that provider is enabled.
+
+### Mode A: Email-only auth
+
+Use this when you only want magic-link sign in.
+
+- Set `AUTH_EMAIL_ENABLED=true`
+- Set `AUTH_GOOGLE_ENABLED=false` (optional but recommended for explicitness)
+- Provide SMTP/email vars:
+  - `EMAIL_SERVER_HOST=<smtp host>`
+  - `EMAIL_SERVER_PORT=<smtp port>`
+  - `EMAIL_SERVER_USER=<smtp username>`
+  - `EMAIL_SERVER_PASSWORD=<smtp password>`
+  - `EMAIL_FROM=<sender address>`
+
+### Mode B: Google + Email auth
+
+Use this when you want both OAuth and magic-link sign in.
+
+- Set `AUTH_GOOGLE_ENABLED=true`
+- Set `AUTH_EMAIL_ENABLED=true`
+- Provide Google OAuth vars:
+  - `GOOGLE_CLIENT_ID=<google oauth client id>`
+  - `GOOGLE_CLIENT_SECRET=<google oauth client secret>`
+- Provide SMTP/email vars:
+  - `EMAIL_SERVER_HOST=<smtp host>`
+  - `EMAIL_SERVER_PORT=<smtp port>`
+  - `EMAIL_SERVER_USER=<smtp username>`
+  - `EMAIL_SERVER_PASSWORD=<smtp password>`
+  - `EMAIL_FROM=<sender address>`
+
+For Google OAuth, ensure the Google Cloud Console OAuth client includes this redirect URI:
+
+- `https://erp.bababuilds.com/api/auth/callback/google`
+
+### Deployment checks
+
+Before promoting to staging/production:
+
+1. If running behind a reverse proxy/CDN, preserve forwarded headers:
    - `X-Forwarded-Proto`
    - `X-Forwarded-Host`
-4. Validate login flow end-to-end:
-   - `/login` → Google consent → callback success → dashboard load.
+2. Validate login flow end-to-end:
+   - `/login` → provider flow (Google or email link) → callback success → dashboard load.
 
 ### Auth/login route note
 

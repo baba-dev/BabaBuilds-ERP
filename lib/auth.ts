@@ -5,12 +5,50 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import { createTransport } from "nodemailer"; // 1. ADDED IMPORT
+import addressparser from "nodemailer/lib/addressparser";
 import { recordAuthFailure } from "@/lib/auth-observability";
 import { normalizeLaunchDestination } from "@/lib/launch-routing";
 import { logActivity } from "@/lib/activity-log";
 import { HIGH_RISK_ROLES, isPhishingResistantSignIn } from "@/lib/security/access-risk";
 
 const CANONICAL_DASHBOARD_ROUTE = "/dashboard";
+
+type ParsedSenderAddress = { name?: string; address?: string };
+
+function validateAndNormalizeEmailSender(emailFrom?: string): string {
+  if (!emailFrom) {
+    throw new Error(
+      "Invalid auth configuration: EMAIL_FROM is required and must be a valid email sender address.",
+    );
+  }
+
+  const parsed = addressparser(emailFrom) as ParsedSenderAddress[];
+
+  if (parsed.length !== 1 || !parsed[0]?.address) {
+    throw new Error(
+      `Invalid auth configuration: EMAIL_FROM must contain exactly one sender address. Received: "${emailFrom}".`,
+    );
+  }
+
+  const sender = parsed[0];
+  const normalizedAddress = sender.address?.trim();
+
+  if (!normalizedAddress) {
+    throw new Error(
+      `Invalid auth configuration: EMAIL_FROM must include a valid email address. Received: "${emailFrom}".`,
+    );
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedAddress)) {
+    throw new Error(
+      `Invalid auth configuration: EMAIL_FROM contains an invalid email address "${normalizedAddress}".`,
+    );
+  }
+
+  return sender.name ? `${sender.name} <${normalizedAddress}>` : normalizedAddress;
+}
+
+const emailSender = validateAndNormalizeEmailSender(process.env.EMAIL_FROM);
 
 function inferProviderFromMetadata(metadata: Record<string, unknown> | undefined) {
   if (!metadata) return "unknown";
@@ -55,12 +93,12 @@ export const authOptions: NextAuthOptions = {
           pass: process.env.EMAIL_SERVER_PASSWORD,
         },
       },
-      from: process.env.EMAIL_FROM,
+      from: emailSender,
       sendVerificationRequest: async ({ identifier, url, provider }) => {
         const transport = createTransport(provider.server);
         const result = await transport.sendMail({
           to: identifier,
-          from: `"BabaBuilds Security" <${provider.from}>`,
+          from: provider.from,
           subject: `Secure Authentication - BabaBuilds ERP`,
           text: `Sign in to BabaBuilds ERP\n${url}\n\nIf you did not request this email you can safely ignore it.`,
           html: `

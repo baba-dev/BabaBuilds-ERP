@@ -13,6 +13,9 @@ const REQUIRED_AUTH_ENV_VARS = [
   "GOOGLE_CLIENT_SECRET",
   "NEXTAUTH_URL",
   "NEXTAUTH_SECRET",
+const ALWAYS_REQUIRED_AUTH_ENV_VARS = ["NEXTAUTH_URL", "NEXTAUTH_SECRET"] as const;
+const GOOGLE_REQUIRED_AUTH_ENV_VARS = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"] as const;
+const EMAIL_REQUIRED_AUTH_ENV_VARS = [
   "EMAIL_SERVER_HOST",
   "EMAIL_SERVER_PORT",
   "EMAIL_SERVER_USER",
@@ -38,6 +41,54 @@ function isValidEmailAddress(input: string) {
 
   const namedMatch = input.match(namedEmailPattern);
   return Boolean(namedMatch && plainEmailPattern.test(namedMatch[1]));
+function hasNonEmptyEnv(name: string) {
+  const value = process.env[name];
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isProviderEnabled(toggleEnvName: string, inferredFromEnvVars: readonly string[]) {
+  const toggle = process.env[toggleEnvName]?.trim().toLowerCase();
+
+  if (toggle === "true" || toggle === "1" || toggle === "yes" || toggle === "on") {
+    return true;
+  }
+
+  if (toggle === "false" || toggle === "0" || toggle === "no" || toggle === "off") {
+    return false;
+  }
+
+  return inferredFromEnvVars.some((envName) => hasNonEmptyEnv(envName));
+}
+
+function getMissingEnv(envNames: readonly string[]) {
+  return envNames.filter((envName) => !hasNonEmptyEnv(envName));
+}
+
+function getRequiredProviderEnv() {
+  const required: string[] = [...ALWAYS_REQUIRED_AUTH_ENV_VARS];
+
+  const googleEnabled = isProviderEnabled("AUTH_GOOGLE_ENABLED", GOOGLE_REQUIRED_AUTH_ENV_VARS);
+  const emailEnabled = isProviderEnabled("AUTH_EMAIL_ENABLED", EMAIL_REQUIRED_AUTH_ENV_VARS);
+
+  if (googleEnabled) {
+    required.push(...GOOGLE_REQUIRED_AUTH_ENV_VARS);
+  }
+
+  if (emailEnabled) {
+    required.push(...EMAIL_REQUIRED_AUTH_ENV_VARS);
+  }
+
+  return required;
+}
+
+function getProviderModeLabel() {
+  const googleEnabled = isProviderEnabled("AUTH_GOOGLE_ENABLED", GOOGLE_REQUIRED_AUTH_ENV_VARS);
+  const emailEnabled = isProviderEnabled("AUTH_EMAIL_ENABLED", EMAIL_REQUIRED_AUTH_ENV_VARS);
+
+  if (googleEnabled && emailEnabled) return "google+email";
+  if (googleEnabled) return "google-only";
+  if (emailEnabled) return "email-only";
+  return "none";
 }
 
 function getObservabilityStore() {
@@ -58,9 +109,12 @@ export function validateAuthEnvOrThrow() {
   }
 
   const missing = REQUIRED_AUTH_ENV_VARS.filter((envName) => getRequiredEnvValue(envName).length === 0);
+  const requiredEnvVars = getRequiredProviderEnv();
+  const missing = getMissingEnv(requiredEnvVars);
 
   if (missing.length > 0) {
-    const message = `[AuthConfig] Missing required environment variable(s): ${missing.join(", ")}. Refusing to boot so OAuth does not fail at runtime.`;
+    const mode = getProviderModeLabel();
+    const message = `[AuthConfig] Missing required environment variable(s) for mode=${mode}: ${missing.join(", ")}. Refusing to boot so auth providers do not fail at runtime.`;
     console.error(message);
     throw new Error(message);
   }
