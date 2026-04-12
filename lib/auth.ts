@@ -12,6 +12,28 @@ import { HIGH_RISK_ROLES, isPhishingResistantSignIn } from "@/lib/security/acces
 
 const CANONICAL_DASHBOARD_ROUTE = "/dashboard";
 
+function escapeHtmlText(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+function escapeHtmlAttribute(value: string) {
+  return escapeHtmlText(value)
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function normalizeEmailUrl(value: string) {
+  const trimmed = value.trim();
+  try {
+    return new URL(trimmed).toString();
+  } catch {
+    return trimmed;
+  }
+}
+
 function inferProviderFromMetadata(metadata: Record<string, unknown> | undefined) {
   if (!metadata) return "unknown";
   const m = metadata as any;
@@ -58,11 +80,17 @@ export const authOptions: NextAuthOptions = {
       from: process.env.EMAIL_FROM,
       sendVerificationRequest: async ({ identifier, url, provider }) => {
         const transport = createTransport(provider.server);
+        const normalizedUrl = normalizeEmailUrl(url);
+        const escapedIdentifier = escapeHtmlText(identifier);
+        const escapedUrlText = escapeHtmlText(normalizedUrl);
+        const escapedUrlHref = escapeHtmlAttribute(normalizedUrl);
+        const plainTextBody = `Sign in to BabaBuilds ERP\n${normalizedUrl}\n\nIf you did not request this email you can safely ignore it.`;
+
         const result = await transport.sendMail({
           to: identifier,
           from: `"BabaBuilds Security" <${provider.from}>`,
           subject: `Secure Authentication - BabaBuilds ERP`,
-          text: `Sign in to BabaBuilds ERP\n${url}\n\nIf you did not request this email you can safely ignore it.`,
+          text: plainTextBody,
           html: `
             <body style="background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 60px 20px; margin: 0;">
               <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-w: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);">
@@ -74,10 +102,10 @@ export const authOptions: NextAuthOptions = {
                     
                     <h2 style="margin: 40px 0 16px 0; color: #18181b; font-size: 20px; font-weight: 600;">Secure Login Request</h2>
                     <p style="margin: 0 0 32px 0; color: #52525b; font-size: 15px; line-height: 24px;">
-                      We received a request to authenticate <strong>${identifier}</strong> into the BabaBuilds ERP platform. Click the button below to securely sign in.
+                      We received a request to authenticate <strong>${escapedIdentifier}</strong> into the BabaBuilds ERP platform. Click the button below to securely sign in.
                     </p>
                     
-                    <a href="${url}" target="_blank" style="display: inline-block; background-color: #4f46e5; color: #ffffff; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; text-decoration: none; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3);">
+                    <a href="${escapedUrlHref}" target="_blank" style="display: inline-block; background-color: #4f46e5; color: #ffffff; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; text-decoration: none; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3);">
                       Authenticate Session
                     </a>
                     
@@ -90,7 +118,7 @@ export const authOptions: NextAuthOptions = {
                     <p style="margin: 0 0 8px 0; color: #a1a1aa; font-size: 11px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Trouble clicking?</p>
                     <p style="margin: 0; color: #71717a; font-size: 12px; word-break: break-all;">
                       Copy and paste this URL into your browser:<br/>
-                      <a href="${url}" style="color: #4f46e5; text-decoration: underline;">${url}</a>
+                      <a href="${escapedUrlHref}" style="color: #4f46e5; text-decoration: underline;">${escapedUrlText}</a>
                     </p>
 
                   </td>
