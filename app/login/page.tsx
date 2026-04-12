@@ -8,7 +8,7 @@ import { Box } from "lucide-react";
 import { normalizeLaunchDestination } from "@/lib/launch-routing";
 
 type LoginPageProps = {
-  searchParams?: Promise<{ callbackUrl?: string }>;
+  searchParams?: Promise<{ callbackUrl?: string; error?: string }>;
 };
 
 export const metadata: Metadata = {
@@ -27,6 +27,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const session = await getServerSession(authOptions);
   const resolvedSearchParams = await searchParams;
   const callbackUrl = normalizeLaunchDestination(resolvedSearchParams?.callbackUrl ?? "/dashboard");
+  const authError = resolvedSearchParams?.error;
 
   // If already authenticated, go to dashboard
   if (session) {
@@ -48,7 +49,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </Link>
         
         {/* AuthModal handles its own state and UI */}
-        <AuthModal callbackUrl={callbackUrl} />
+        <AuthModal callbackUrl={callbackUrl} authError={authError} />
       </div>
 
       <div className="mt-8 text-center text-zinc-500 text-xs font-medium space-x-4">

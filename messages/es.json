@@ -1028,6 +1028,9 @@
     },
     "alerts": {
       "emailFailed": "Failed to send login link. Please try again.",
+      "highRiskMagicLinkBlocked": "Magic links are disabled for OWNER/ADMIN accounts. Use Google or your enterprise SSO provider.",
+      "phishingResistantRequired": "This account requires phishing-resistant sign-in. Use Google or your enterprise SSO provider.",
+      "policyCheckFailed": "Unable to verify magic-link policy right now. Please use Google sign-in.",
       "completeSecurityCheck": "Please complete the security check to proceed.",
       "demoCreationFailed": "Demo creation failed",
       "demoSystemBusy": "The demo system is currently busy. Please try Google sign-in."

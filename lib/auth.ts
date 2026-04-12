@@ -8,7 +8,12 @@ import { createTransport } from "nodemailer"; // 1. ADDED IMPORT
 import { recordAuthFailure } from "@/lib/auth-observability";
 import { normalizeLaunchDestination } from "@/lib/launch-routing";
 import { logActivity } from "@/lib/activity-log";
-import { HIGH_RISK_ROLES, isPhishingResistantSignIn } from "@/lib/security/access-risk";
+import {
+  HIGH_RISK_MAGIC_LINK_ERROR_CODE,
+  hasHighRiskRole,
+  isEmailMagicLinkAllowedForRoles,
+  isPhishingResistantSignIn,
+} from "@/lib/security/access-risk";
 
 const CANONICAL_DASHBOARD_ROUTE = "/dashboard";
 
@@ -175,19 +180,28 @@ export const authOptions: NextAuthOptions = {
           })
         : [];
 
-      const hasHighRiskRole = [
+      const effectiveRoles = [
         ...memberships.map((membership) => membership.role),
         ...pendingInvites.map((invite) => invite.role),
-      ].some((role) => HIGH_RISK_ROLES.has(role));
+      ];
 
-      if (hasHighRiskRole && !isPhishingResistantSignIn(account)) {
+      if (!isEmailMagicLinkAllowedForRoles(effectiveRoles) && account?.provider === "email") {
+        recordAuthFailure({
+          reason: "HIGH_RISK_MAGIC_LINK_BLOCKED",
+          code: HIGH_RISK_MAGIC_LINK_ERROR_CODE,
+          provider: "email",
+        });
+        return `/login?error=${HIGH_RISK_MAGIC_LINK_ERROR_CODE}&provider=email`;
+      }
+
+      if (hasHighRiskRole(effectiveRoles) && !isPhishingResistantSignIn(account)) {
         const provider = account?.provider ?? "unknown";
         recordAuthFailure({
           reason: "HIGH_RISK_ROLE_REQUIRES_PHISHING_RESISTANT_MFA",
           code: "MFA_POLICY_BLOCK",
           provider,
         });
-        return false;
+        return "/login?error=MFA_POLICY_BLOCK";
       }
 
       if (!user.id || pendingInvites.length === 0) {
