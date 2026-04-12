@@ -89,9 +89,9 @@ async function applyEmailSignInThrottle(req: NextRequest): Promise<Response | nu
 }
 
 type RouteContext = {
-  params: {
+  params: Promise<{
     nextauth: string[];
-  };
+  }>;
 };
 
 export async function GET(req: Request, context: RouteContext) {
