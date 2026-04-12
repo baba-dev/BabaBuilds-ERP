@@ -1024,7 +1024,11 @@
       "sendMagicLink": "Send Magic Link",
       "continueWithGoogle": "Continue with Google",
       "provisioningSandbox": "Provisioning Sandbox...",
-      "tryInteractiveDemo": "Try Interactive Demo"
+      "tryInteractiveDemo": "Try Interactive Demo",
+      "resendLink": "Resend link",
+      "retry": "Retry",
+      "contactSupport": "Contact support",
+      "demoSection": "Need a sandbox instead?"
     },
     "alerts": {
       "emailFailed": "Failed to send login link. Please try again.",
@@ -1034,6 +1038,19 @@
       "completeSecurityCheck": "Please complete the security check to proceed.",
       "demoCreationFailed": "Demo creation failed",
       "demoSystemBusy": "The demo system is currently busy. Please try Google sign-in."
+    },
+    "status": {
+      "sending": "Sending your secure sign-in link…",
+      "sent": "Magic link sent. Check your inbox and spam folder.",
+      "resendCooldown": "You can resend in {seconds}s.",
+      "resendReady": "You can resend now.",
+      "support": "If this keeps happening, retry once and contact support."
+    },
+    "errors": {
+      "CONFIG_ERROR": "Sign-in is temporarily unavailable due to a configuration issue.",
+      "RATE_LIMITED": "Too many requests. Please wait a moment and try again.",
+      "INVALID_EMAIL": "Please enter a valid email address before continuing.",
+      "GENERIC": "We could not send your sign-in link. Please try again."
     }
   }
 }
