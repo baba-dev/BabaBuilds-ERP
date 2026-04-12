@@ -8,6 +8,18 @@ type AuthFailureRecord = {
   reason: string;
 };
 
+
+
+type AuthThrottleRecord = {
+  ip: string;
+  emailHash: string;
+  fingerprint: string | null;
+  decision: string;
+  retryAfterSeconds: number;
+  requiresTurnstile: boolean;
+  at: string;
+};
+
 const REQUIRED_AUTH_ENV_VARS = [
   "GOOGLE_CLIENT_ID",
   "GOOGLE_CLIENT_SECRET",
@@ -18,13 +30,21 @@ const REQUIRED_AUTH_ENV_VARS = [
 function getObservabilityStore() {
   const globalStore = globalThis as typeof globalThis & {
     __authFailureCounts?: Map<string, AuthFailureRecord>;
+    __authThrottleEvents?: AuthThrottleRecord[];
   };
 
   if (!globalStore.__authFailureCounts) {
     globalStore.__authFailureCounts = new Map<string, AuthFailureRecord>();
   }
 
-  return globalStore.__authFailureCounts;
+  if (!globalStore.__authThrottleEvents) {
+    globalStore.__authThrottleEvents = [];
+  }
+
+  return {
+    failures: globalStore.__authFailureCounts,
+    throttleEvents: globalStore.__authThrottleEvents,
+  };
 }
 
 export function validateAuthEnvOrThrow() {
@@ -53,7 +73,7 @@ export function validateAuthEnvOrThrow() {
 }
 
 export function recordAuthFailure(input: { reason: string; code: string; provider?: string }) {
-  const store = getObservabilityStore();
+  const store = getObservabilityStore().failures;
   const provider = input.provider || "unknown";
   const normalizedReason = input.reason || "unknown";
   const key = `${normalizedReason}::${provider}::${input.code}`;
@@ -72,5 +92,22 @@ export function recordAuthFailure(input: { reason: string; code: string; provide
 }
 
 export function getAuthFailureMetrics() {
-  return Array.from(getObservabilityStore().values()).sort((a, b) => b.count - a.count);
+  return Array.from(getObservabilityStore().failures.values()).sort((a, b) => b.count - a.count);
+}
+
+
+export function recordAuthThrottleAttempt(event: Omit<AuthThrottleRecord, "at">) {
+  const store = getObservabilityStore().throttleEvents;
+  store.push({
+    ...event,
+    at: new Date().toISOString(),
+  });
+
+  if (store.length > 1000) {
+    store.splice(0, store.length - 1000);
+  }
+}
+
+export function getAuthThrottleMetrics() {
+  return [...getObservabilityStore().throttleEvents];
 }

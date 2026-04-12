@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useSession, signIn } from "next-auth/react";
-import { Box, Sparkles, ArrowRight, Mail, Loader2, CheckCircle2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useSession, signIn, getCsrfToken } from "next-auth/react";
+import { Box, Sparkles, ArrowRight, Mail, Loader2, CheckCircle2, ShieldAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Turnstile } from "@marsidev/react-turnstile"; // Ensure this is installed
 import { toast } from "sonner";
@@ -11,6 +11,21 @@ type AuthModalProps = {
   callbackUrl?: string;
 };
 
+function getDeviceFingerprint(): string {
+  if (typeof window === "undefined") return "server";
+
+  const existing = window.localStorage.getItem("auth_device_fp");
+  if (existing) return existing;
+
+  const generated =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  window.localStorage.setItem("auth_device_fp", generated);
+  return generated;
+}
+
 export default function AuthModal({ callbackUrl = "/dashboard" }: AuthModalProps) {
   const t = useTranslations("AuthModal");
   const { status } = useSession();
@@ -18,28 +33,74 @@ export default function AuthModal({ callbackUrl = "/dashboard" }: AuthModalProps
   const [isLoading, setIsLoading] = useState(false);
   const [isSent, setIsSent] = useState(false);
   const [isDemoLoading, setIsDemoLoading] = useState(false);
-  
-  // NEW: State to store the security token
+
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [cooldownMessage, setCooldownMessage] = useState<string | null>(null);
+  const [requiresTurnstile, setRequiresTurnstile] = useState(false);
+  const fingerprint = useMemo(() => getDeviceFingerprint(), []);
 
   if (status === "loading" || status === "authenticated") return null;
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
-    
+
     setIsLoading(true);
-    const res = await signIn("email", { email, redirect: false, callbackUrl });
-    
-    setIsLoading(false);
-    if (res?.error) {
-      toast.error(t("alerts.emailFailed"));
-    } else {
+    setCooldownMessage(null);
+
+    try {
+      const csrfToken = await getCsrfToken();
+      if (!csrfToken) {
+        throw new Error("Missing CSRF token.");
+      }
+
+      const body = new URLSearchParams({
+        email,
+        csrfToken,
+        callbackUrl,
+        json: "true",
+      });
+
+      if (turnstileToken) {
+        body.set("turnstileToken", turnstileToken);
+      }
+
+      const response = await fetch("/api/auth/signin/email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "X-Auth-Fingerprint": fingerprint,
+        },
+        body,
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (response.status === 429) {
+        const retryAfter = Number(payload?.retryAfter ?? 60);
+        const mins = Math.max(1, Math.ceil(retryAfter / 60));
+        const message = `Too many attempts. Retry in about ${mins} min.`;
+        setCooldownMessage(message);
+        setRequiresTurnstile(Boolean(payload?.requiresTurnstile));
+        toast.error(message);
+        return;
+      }
+
+      if (!response.ok || payload?.error) {
+        toast.error(t("alerts.emailFailed"));
+        return;
+      }
+
       setIsSent(true);
+    } catch (error) {
+      console.error(error);
+      toast.error(t("alerts.emailFailed"));
+    } finally {
+      setIsLoading(false);
     }
   };
 
-const handleDemoSignIn = async () => {
+  const handleDemoSignIn = async () => {
     if (!turnstileToken && process.env.NODE_ENV === "production") {
       toast.error(t("alerts.completeSecurityCheck"));
       return;
@@ -47,27 +108,23 @@ const handleDemoSignIn = async () => {
 
     setIsDemoLoading(true);
     try {
-      const response = await fetch("/api/auth/demo", { 
+      const response = await fetch("/api/auth/demo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: turnstileToken }) 
+        body: JSON.stringify({ token: turnstileToken }),
       });
-      
+
       const data = await response.json();
 
-      // --- 🚨 SECURITY PATCH START ---
-      // Require both email AND the newly generated password
       if (data.email && data.password) {
-        await signIn("demo-login", { 
-          email: data.email, 
-          password: data.password, // Inject the secure token here
+        await signIn("demo-login", {
+          email: data.email,
+          password: data.password,
           callbackUrl,
         });
       } else {
         throw new Error(data.error || t("alerts.demoCreationFailed"));
       }
-      // --- 🚨 SECURITY PATCH END ---
-
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || t("alerts.demoSystemBusy"));
@@ -75,11 +132,10 @@ const handleDemoSignIn = async () => {
       setIsDemoLoading(false);
     }
   };
-  
+
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-zinc-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-300">
       <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-        
         <div className="p-8 text-center space-y-4 border-b border-zinc-800/50 bg-zinc-900/20">
           <div className="mx-auto w-12 h-12 bg-indigo-600 rounded-xl shadow-inner shadow-indigo-400/20 flex items-center justify-center">
             <Box className="w-7 h-7 text-white" />
@@ -91,8 +147,6 @@ const handleDemoSignIn = async () => {
         </div>
 
         <div className="p-8 space-y-5">
-          
-          {/* Email Magic Link Form */}
           {isSent ? (
             <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 text-center space-y-2 animate-in fade-in">
               <CheckCircle2 className="w-8 h-8 text-indigo-400 mx-auto" />
@@ -103,8 +157,8 @@ const handleDemoSignIn = async () => {
             <form onSubmit={handleEmailSignIn} className="space-y-3">
               <div className="relative">
                 <Mail className="absolute left-3 top-3 w-5 h-5 text-zinc-500" />
-                <input 
-                  type="email" 
+                <input
+                  type="email"
                   required
                   placeholder={t("placeholders.email")}
                   value={email}
@@ -112,8 +166,19 @@ const handleDemoSignIn = async () => {
                   className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-xl pl-10 pr-4 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-all placeholder:text-zinc-600"
                 />
               </div>
-              <button 
-                type="submit" 
+
+              {cooldownMessage && (
+                <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200 flex items-start gap-2">
+                  <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-semibold">{cooldownMessage}</p>
+                    {requiresTurnstile && <p className="text-amber-300/90 mt-1">Complete the security check, then retry.</p>}
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="submit"
                 disabled={isLoading || isDemoLoading}
                 className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 disabled:opacity-50 disabled:pointer-events-none disabled:hover:bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm active:scale-95"
               >
@@ -128,7 +193,7 @@ const handleDemoSignIn = async () => {
             <div className="flex-grow border-t border-zinc-800"></div>
           </div>
 
-          <button 
+          <button
             onClick={() => signIn("google", { callbackUrl })}
             disabled={isLoading || isDemoLoading}
             className="w-full flex items-center justify-center gap-3 bg-white hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 text-zinc-900 px-4 py-2.5 rounded-xl font-bold transition-colors shadow-sm active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
@@ -142,20 +207,21 @@ const handleDemoSignIn = async () => {
             {t("actions.continueWithGoogle")}
           </button>
 
-          {/* NEW: Turnstile Widget - Only shows when not loading */}
           {!isDemoLoading && !isSent && (
             <div className="flex justify-center py-2 scale-90">
-              <Turnstile 
-                siteKey="0x4AAAAAACvSwAyJa3nVFu2n" 
-                onSuccess={(token) => setTurnstileToken(token)} 
-                options={{ theme: 'dark' }}
+              <Turnstile
+                siteKey="0x4AAAAAACvSwAyJa3nVFu2n"
+                onSuccess={(token) => {
+                  setTurnstileToken(token);
+                  setRequiresTurnstile(false);
+                }}
+                options={{ theme: "dark" }}
               />
             </div>
           )}
 
-          {/* Interactive Demo Button */}
-          <button 
-            onClick={handleDemoSignIn} 
+          <button
+            onClick={handleDemoSignIn}
             disabled={isLoading || isDemoLoading || (!turnstileToken && process.env.NODE_ENV === "production")}
             className="w-full flex items-center justify-between group bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 text-zinc-300 px-4 py-3 rounded-xl font-medium transition-all active:scale-95 mt-2 disabled:opacity-50 disabled:pointer-events-none"
           >
@@ -169,7 +235,6 @@ const handleDemoSignIn = async () => {
             </div>
             {!isDemoLoading && <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300 transition-colors" />}
           </button>
-
         </div>
       </div>
     </div>
