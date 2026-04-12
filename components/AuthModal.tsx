@@ -19,7 +19,6 @@ export default function AuthModal({ callbackUrl = "/dashboard" }: AuthModalProps
   const { status } = useSession();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isSent, setIsSent] = useState(false);
   const [emailStatus, setEmailStatus] = useState<EmailStatus>("idle");
   const [emailErrorCase, setEmailErrorCase] = useState<EmailErrorCase | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -75,7 +74,6 @@ export default function AuthModal({ callbackUrl = "/dashboard" }: AuthModalProps
       return;
     }
 
-    setIsSent(true);
     setEmailStatus("success");
     setResendCooldown(30);
   };
@@ -147,14 +145,15 @@ export default function AuthModal({ callbackUrl = "/dashboard" }: AuthModalProps
         <div className="p-8 space-y-5">
           
           {/* Email Magic Link Form */}
-          {isSent ? (
-            <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 text-center space-y-2 animate-in fade-in">
-              <CheckCircle2 className="w-8 h-8 text-indigo-400 mx-auto" />
-              <p className="text-sm font-medium text-indigo-300">{t("emailSent.title")}</p>
-              <p className="text-xs text-zinc-400">{t("emailSent.description", { email })}</p>
-            </div>
-          ) : (
-            <form onSubmit={handleEmailSignIn} className="space-y-3">
+          <form onSubmit={handleEmailSignIn} className="space-y-3">
+            {emailStatus === "success" && (
+              <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 text-center space-y-2 animate-in fade-in">
+                <CheckCircle2 className="w-8 h-8 text-indigo-400 mx-auto" />
+                <p className="text-sm font-medium text-indigo-300">{t("emailSent.title")}</p>
+                <p className="text-xs text-zinc-400">{t("emailSent.description", { email })}</p>
+              </div>
+            )}
+
               <div className="relative">
                 <Mail className="absolute left-3 top-3 w-5 h-5 text-zinc-500" />
                 <input 
@@ -240,8 +239,7 @@ export default function AuthModal({ callbackUrl = "/dashboard" }: AuthModalProps
                   )}
                 </div>
               )}
-            </form>
-          )}
+          </form>
 
           <div className="relative flex items-center py-1">
             <div className="flex-grow border-t border-zinc-800"></div>
@@ -270,7 +268,7 @@ export default function AuthModal({ callbackUrl = "/dashboard" }: AuthModalProps
 
             <div className="mt-3 space-y-3">
               {/* NEW: Turnstile Widget - Only shows when not loading */}
-              {!isDemoLoading && !isSent && (
+              {!isDemoLoading && (
                 <div className="flex justify-center py-2 scale-90">
                   <Turnstile 
                     siteKey="0x4AAAAAACvSwAyJa3nVFu2n" 
