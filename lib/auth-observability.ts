@@ -8,8 +8,6 @@ type AuthFailureRecord = {
   reason: string;
 };
 
-
-
 type AuthThrottleRecord = {
   ip: string;
   emailHash: string;
@@ -20,11 +18,6 @@ type AuthThrottleRecord = {
   at: string;
 };
 
-const REQUIRED_AUTH_ENV_VARS = [
-  "GOOGLE_CLIENT_ID",
-  "GOOGLE_CLIENT_SECRET",
-  "NEXTAUTH_URL",
-  "NEXTAUTH_SECRET",
 const ALWAYS_REQUIRED_AUTH_ENV_VARS = ["NEXTAUTH_URL", "NEXTAUTH_SECRET"] as const;
 const GOOGLE_REQUIRED_AUTH_ENV_VARS = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"] as const;
 const EMAIL_REQUIRED_AUTH_ENV_VARS = [
@@ -38,7 +31,7 @@ const EMAIL_REQUIRED_AUTH_ENV_VARS = [
 const MIN_PORT = 1;
 const MAX_PORT = 65535;
 
-function getRequiredEnvValue(envName: (typeof REQUIRED_AUTH_ENV_VARS)[number]) {
+function getRequiredEnvValue(envName: string) {
   const value = process.env[envName];
   return typeof value === "string" ? value.trim() : "";
 }
@@ -53,6 +46,8 @@ function isValidEmailAddress(input: string) {
 
   const namedMatch = input.match(namedEmailPattern);
   return Boolean(namedMatch && plainEmailPattern.test(namedMatch[1]));
+}
+
 function hasNonEmptyEnv(name: string) {
   const value = process.env[name];
   return typeof value === "string" && value.trim().length > 0;
@@ -76,11 +71,16 @@ function getMissingEnv(envNames: readonly string[]) {
   return envNames.filter((envName) => !hasNonEmptyEnv(envName));
 }
 
-function getRequiredProviderEnv() {
-  const required: string[] = [...ALWAYS_REQUIRED_AUTH_ENV_VARS];
-
+function getProviderFlags() {
   const googleEnabled = isProviderEnabled("AUTH_GOOGLE_ENABLED", GOOGLE_REQUIRED_AUTH_ENV_VARS);
   const emailEnabled = isProviderEnabled("AUTH_EMAIL_ENABLED", EMAIL_REQUIRED_AUTH_ENV_VARS);
+
+  return { googleEnabled, emailEnabled };
+}
+
+function getRequiredProviderEnv() {
+  const required: string[] = [...ALWAYS_REQUIRED_AUTH_ENV_VARS];
+  const { googleEnabled, emailEnabled } = getProviderFlags();
 
   if (googleEnabled) {
     required.push(...GOOGLE_REQUIRED_AUTH_ENV_VARS);
@@ -94,8 +94,7 @@ function getRequiredProviderEnv() {
 }
 
 function getProviderModeLabel() {
-  const googleEnabled = isProviderEnabled("AUTH_GOOGLE_ENABLED", GOOGLE_REQUIRED_AUTH_ENV_VARS);
-  const emailEnabled = isProviderEnabled("AUTH_EMAIL_ENABLED", EMAIL_REQUIRED_AUTH_ENV_VARS);
+  const { googleEnabled, emailEnabled } = getProviderFlags();
 
   if (googleEnabled && emailEnabled) return "google+email";
   if (googleEnabled) return "google-only";
@@ -128,7 +127,6 @@ export function validateAuthEnvOrThrow() {
     return;
   }
 
-  const missing = REQUIRED_AUTH_ENV_VARS.filter((envName) => getRequiredEnvValue(envName).length === 0);
   const requiredEnvVars = getRequiredProviderEnv();
   const missing = getMissingEnv(requiredEnvVars);
 
@@ -140,11 +138,16 @@ export function validateAuthEnvOrThrow() {
   }
 
   try {
-    new URL(process.env.NEXTAUTH_URL as string);
+    new URL(getRequiredEnvValue("NEXTAUTH_URL"));
   } catch {
     const message = `[AuthConfig] NEXTAUTH_URL must be a valid absolute URL. Current value: "${process.env.NEXTAUTH_URL}".`;
     console.error(message);
     throw new Error(message);
+  }
+
+  const { emailEnabled } = getProviderFlags();
+  if (!emailEnabled) {
+    return;
   }
 
   const emailServerPort = Number(getRequiredEnvValue("EMAIL_SERVER_PORT"));
@@ -185,7 +188,6 @@ export function recordAuthFailure(input: { reason: string; code: string; provide
 export function getAuthFailureMetrics() {
   return Array.from(getObservabilityStore().failures.values()).sort((a, b) => b.count - a.count);
 }
-
 
 export function recordAuthThrottleAttempt(event: Omit<AuthThrottleRecord, "at">) {
   const store = getObservabilityStore().throttleEvents;
