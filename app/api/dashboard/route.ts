@@ -125,7 +125,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       where: { workspaceId, financialYear: fy },
       select: { status: true, invoiceDate: true, totalAmount: true, grandTotal: true, amountReceived: true },
       orderBy: { invoiceDate: "asc" },
-    })),
+    }),
     timed("invoices.attention", () => prisma.invoice.findMany({
       where: { workspaceId },
       select: { status: true, invoiceDate: true, totalAmount: true, grandTotal: true, amountReceived: true },
