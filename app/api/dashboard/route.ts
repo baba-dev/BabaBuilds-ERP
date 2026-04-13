@@ -256,10 +256,10 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   const setupCompletion = asPct(setupSignals, 5);
 
   const attentionCards = [
-    { id: "overdue", title: "Overdue invoices", value: overdueInvoices, tone: "critical", href: "/invoices", helper: "Prioritize collections to improve cash flow." },
-    { id: "bank", title: "Unreconciled transactions", value: unreconciledTransactions, tone: "warning", href: "/banking", helper: "Match transactions to keep books accurate." },
+    { id: "overdue", title: "Overdue invoices", value: overdueInvoices, tone: "critical", href: "/invoice", helper: "Prioritize collections to improve cash flow." },
+    { id: "bank", title: "Unreconciled transactions", value: unreconciledTransactions, tone: "warning", href: "/reconciliation", helper: "Match transactions to keep books accurate." },
     { id: "proposals", title: "Accepted, awaiting invoice", value: acceptedUninvoicedProposals, tone: "warning", href: "/proposals", helper: "Convert accepted proposals into billable invoices." },
-    { id: "tasks", title: "Urgent tasks", value: urgentTasks, tone: "info", href: "/tasks", helper: "Handle due tasks to avoid operational blockers." },
+    { id: "tasks", title: "Urgent tasks", value: urgentTasks, tone: "info", href: "/dashboard", helper: "Handle due tasks to avoid operational blockers." },
   ] as const;
 
   const receivablesAgingBuckets = invoices.reduce(

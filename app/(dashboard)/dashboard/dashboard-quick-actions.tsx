@@ -6,10 +6,10 @@ import { Card } from "@/components/ui/card";
 import { useTranslations } from "next-intl";
 
 const actions = [
-  { href: "/invoices/new", label: "Create invoice", icon: FilePlus2 },
-  { href: "/proposals/new", label: "Draft proposal", icon: Receipt },
+  { href: "/invoice", label: "Create invoice", icon: FilePlus2 },
+  { href: "/proposals", label: "Draft proposal", icon: Receipt },
   { href: "/shop", label: "Open shop", icon: ShoppingBag },
-  { href: "/accounting", label: "Run integrity check", icon: Shield },
+  { href: "/reconciliation", label: "Run integrity check", icon: Shield },
 ];
 
 export function DashboardQuickActions() {
