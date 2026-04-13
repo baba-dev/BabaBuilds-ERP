@@ -191,7 +191,7 @@ export default function Dashboard() {
           <TableActions invoice={row} t={tr} onOpenPayModal={openPayModal} onResendEmail={handleResendEmail} resending={resendingId === row.id} />
         ) : (
           <div className="flex items-center justify-end gap-2">
-            {!isPaidInvoiceStatus(row.status) && <Button size="sm" variant="outline" onClick={() => openPayModal(row)}>Mark paid</Button>}
+            {!isPaidInvoiceStatus(row.status) && <Button size="sm" variant="outline" onClick={() => openPayModal(row)}>{tr("stamp_paid", "Mark paid")}</Button>}
             <Button size="icon" variant="outline" onClick={() => handleResendEmail(row)} disabled={resendingId === row.id}><Send className="w-3.5 h-3.5" /></Button>
             <Button size="icon" variant="secondary" asChild><a href={getBustedUrl(row.pdfPath, row.updatedAt)} target="_blank" rel="noreferrer"><Download className="w-3.5 h-3.5" /></a></Button>
           </div>
@@ -264,8 +264,8 @@ export default function Dashboard() {
         </Card>
 
         <Card className="p-4 border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60">
-          <p className="text-sm text-zinc-600 inline-flex items-center gap-1"><AlertCircle className="w-4 h-4" /> Mobile/PWA focus: urgent actions and health are intentionally above charts for faster launch scanning.</p>
-          <Button asChild variant="link" className="px-0 mt-1"><Link href="/notifications">Review notifications</Link></Button>
+          <p className="text-sm text-zinc-600 inline-flex items-center gap-1"><AlertCircle className="w-4 h-4" /> {tr("mobile_focus_note", "Mobile/PWA focus: urgent actions and health are intentionally above charts for faster launch scanning.")}</p>
+          <Button asChild variant="link" className="px-0 mt-1"><Link href="/notifications">{tr("review_notifications", "Review notifications")}</Link></Button>
         </Card>
       </div>
 
