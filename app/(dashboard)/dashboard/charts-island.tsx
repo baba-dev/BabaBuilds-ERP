@@ -78,23 +78,54 @@ export function ChartsIsland({
     () => false,
   );
 
-  // Proposal Pipeline Logic
-  const pipelineOrder = ["draft", "sent", "viewed", "accepted", "invoiced"];
-  const funnelData = pipelineOrder.map(stage => {
-    const found = charts.proposalFunnel.find(f => f.stage.toLowerCase() === stage);
-    return { name: tr(`funnel_${stage}`, stage.charAt(0).toUpperCase() + stage.slice(1)), value: found?.value ?? 0, key: stage };
-  });
-  const hasProposalData = funnelData.some(d => d.value > 0);
+  // Proposal Pipeline Logic - Memoized
+  const funnelData = useMemo(() => {
+    const pipelineOrder = ["draft", "sent", "viewed", "accepted", "invoiced"];
+    return pipelineOrder.map(stage => {
+      const found = charts.proposalFunnel.find(f => f.stage.toLowerCase() === stage);
+      return { 
+        name: tr(`funnel_${stage}`, stage.charAt(0).toUpperCase() + stage.slice(1)), 
+        value: found?.value ?? 0, 
+        key: stage 
+      };
+    });
+  }, [charts.proposalFunnel, tr]);
 
-  // Order Health Logic
-  const serviceOrderHealth = withChartTokenColors(
+  const hasProposalData = useMemo(() => funnelData.some(d => d.value > 0), [funnelData]);
+
+  // Order Health Logic - Memoized
+  const serviceOrderHealth = useMemo(() => withChartTokenColors(
     charts.serviceOrderHealth.map((row) => ({ name: row.status, value: row.value })),
-  );
-  const totalOrders = serviceOrderHealth.reduce((acc, curr) => acc + curr.value, 0);
+  ), [charts.serviceOrderHealth]);
+
+  const totalOrders = useMemo(() => serviceOrderHealth.reduce((acc, curr) => acc + curr.value, 0), [serviceOrderHealth]);
   const hasOrderData = totalOrders > 0;
 
-  // Aging Logic
-  const totalReceivables = charts.receivablesAging.reduce((acc, curr) => acc + curr.value, 0);
+  // Aging Logic - Memoized
+  const totalReceivables = useMemo(() => charts.receivablesAging.reduce((acc, curr) => acc + curr.value, 0), [charts.receivablesAging]);
+
+  // SVG Properties - Memoized for Ring Chart
+  const ringSegments = useMemo(() => {
+    if (!hasOrderData) return [];
+    let cumulativePercentage = 0;
+    const dashArray = 2 * Math.PI * 42;
+    
+    return serviceOrderHealth.map((segment) => {
+      const percentage = (segment.value / totalOrders) * 100;
+      if (percentage === 0) return null;
+      
+      const dashOffset = dashArray - (dashArray * percentage) / 100;
+      const rotation = (cumulativePercentage / 100) * dashArray;
+      cumulativePercentage += percentage;
+
+      return {
+        ...segment,
+        dashArray,
+        dashOffset,
+        rotationDeg: (rotation / dashArray) * 360
+      };
+    }).filter(Boolean);
+  }, [serviceOrderHealth, totalOrders, hasOrderData]);
 
   return (
     <motion.div 
@@ -322,38 +353,27 @@ export function ChartsIsland({
                   <circle cx="50" cy="50" r="42" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-zinc-100 dark:text-zinc-800/60" />
                   
                   {/* Dynamic Segments */}
-                  {(() => {
-                    let cumulativePercentage = 0;
-                    return serviceOrderHealth.map((segment, i) => {
-                      const percentage = (segment.value / totalOrders) * 100;
-                      if (percentage === 0) return null;
-                      
-                      const dashArray = 2 * Math.PI * 42;
-                      const dashOffset = dashArray - (dashArray * percentage) / 100;
-                      const rotation = (cumulativePercentage / 100) * dashArray;
-                      cumulativePercentage += percentage;
-
-                      return (
-                        <motion.circle
-                          key={i}
-                          cx="50"
-                          cy="50"
-                          r="42"
-                          stroke={segment.color}
-                          strokeWidth="8"
-                          fill="transparent"
-                          strokeDasharray={dashArray}
-                          strokeDashoffset={dashArray}
-                          animate={{ strokeDashoffset: dashOffset }}
-                          transition={{ duration: 1.5, delay: 0.2, ease: "circOut" }}
-                          style={{ 
-                            transform: `rotate(${(rotation / dashArray) * 360}deg)`,
-                            transformOrigin: '50px 50px'
-                          }}
-                        />
-                      );
-                    });
-                  })()}
+                  {ringSegments.map((segment: any, i: number) => {
+                    return (
+                      <motion.circle
+                        key={i}
+                        cx="50"
+                        cy="50"
+                        r="42"
+                        stroke={segment.color}
+                        strokeWidth="8"
+                        fill="transparent"
+                        strokeDasharray={segment.dashArray}
+                        strokeDashoffset={segment.dashArray}
+                        animate={{ strokeDashoffset: segment.dashOffset }}
+                        transition={{ duration: 1.5, delay: 0.2, ease: "circOut" }}
+                        style={{ 
+                          renderTransform: `rotate(${segment.rotationDeg}deg)`,
+                          transformOrigin: '50px 50px'
+                        } as any}
+                      />
+                    );
+                  })}
                </svg>
                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                   <span className="text-2xl font-black text-zinc-900 dark:text-white tracking-widest">{totalOrders}</span>

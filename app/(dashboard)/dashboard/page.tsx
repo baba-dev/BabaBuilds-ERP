@@ -41,9 +41,13 @@ export default function Dashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedFy, setSelectedFy] = useState(getCurrentFinancialYear(new Date(), "local"));
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<Partial<DashboardData>>({});
+  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({
+    finance: true, ops: true, sales: true, trust: true, ledger: true, activity: true, attention: true, health: true
+  });
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   const [islandsEnabled, setIslandsEnabled] = useState(false);
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<RecentInvoiceRow | null>(null);
@@ -82,28 +86,38 @@ export default function Dashboard() {
     loadFlags().catch(() => undefined);
   }, []);
 
-  const loadData = async (fy: string) => {
-    setLoading(true);
-    setError(null);
+  const loadSegment = async (fy: string, segment: string) => {
+    setLoadingStates(prev => ({ ...prev, [segment]: true }));
     try {
-      const res = await fetch(`/api/dashboard?fy=${fy}`, { cache: "no-store" });
+      const res = await fetch(`/api/dashboard?fy=${fy}&segment=${segment}`, { cache: "no-store" });
       const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || tr("toast.error.load_dashboard", "Unable to load dashboard"));
-      }
-      const parsed = parseDashboardResponse(json) as DashboardData | null;
-      if (!parsed) throw new Error("Dashboard payload malformed");
-      setData(parsed);
+      if (!res.ok || json.error) throw new Error(json.error || `Failed to load ${segment}`);
+      
+      setData(prev => ({ ...prev, ...json }));
+    } catch (e: any) {
+      console.error(`Error loading segment ${segment}:`, e);
+    } finally {
+      setLoadingStates(prev => ({ ...prev, [segment]: false }));
+    }
+  };
+
+  const loadAllData = async (fy: string) => {
+    setError(null);
+    setIsInitialLoad(true);
+    
+    const segments = ['finance', 'ops', 'sales', 'trust', 'ledger', 'activity', 'attention', 'health', 'charts'];
+    
+    try {
+      await Promise.all(segments.map(s => loadSegment(fy, s)));
+      setIsInitialLoad(false);
     } catch (e: any) {
       setError(e?.message ?? "Unable to load dashboard");
       toast.error(tr("toast.error.load_dashboard_refresh", "Failed to load dashboard"));
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData(selectedFy);
+    loadAllData(selectedFy);
   }, [selectedFy]);
 
   useEffect(() => {
@@ -168,9 +182,10 @@ export default function Dashboard() {
       cell: (row) => (
         <div className="flex flex-col py-1">
           <span className="font-bold text-zinc-900 dark:text-zinc-100 leading-tight">{row.invoiceNumber}</span>
-          <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium uppercase tracking-tighter sm:hidden">
+          <span className="text-xxs text-zinc-400 dark:text-zinc-500 font-medium uppercase tracking-tighter sm:hidden">
             {format(new Date(row.invoiceDate), "dd MMM yyyy")}
           </span>
+
         </div>
       )
     },
@@ -197,7 +212,8 @@ export default function Dashboard() {
             : status === INVOICE_STATUS.PARTIALLY_PAID
               ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
               : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
-        return <Badge variant="outline" className={`h-5 text-[10px] font-bold uppercase tracking-wider ${className}`}>{tr(key, status)}</Badge>;
+        return <Badge variant="outline" className={`h-5 text-xxs font-bold uppercase tracking-wider ${className}`}>{tr(key, status)}</Badge>;
+
       },
     },
     { 
@@ -218,7 +234,8 @@ export default function Dashboard() {
         ) : (
           <div className="flex items-center justify-end gap-2 pr-2">
             {!isPaidInvoiceStatus(row.status) && (
-              <Button size="sm" variant="outline" className="h-7 px-2.5 text-[11px] font-semibold uppercase tracking-wider bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800" onClick={() => openPayModal(row)}>
+              <Button size="sm" variant="outline" className="h-7 px-2.5 text-xxs font-semibold uppercase tracking-wider bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800" onClick={() => openPayModal(row)}>
+
                 {tr("record_payment", "Record payment")}
               </Button>
             )}
@@ -229,9 +246,16 @@ export default function Dashboard() {
     },
   ];
 
-  if (loading) return <PageLoadingState title={tr("loading", "Loading dashboard")} description={tr("loading_desc", "Preparing command center")} className="min-h-screen" />;
-  if (error && !data) return <PageErrorState title={tr("sync_issue_title", "Dashboard unavailable")} description={error} className="min-h-screen" onRetry={() => loadData(selectedFy)} />;
-  if (!data) return <PageEmptyState title={tr("empty_title", "No dashboard data")} description={tr("empty_desc", "Start by creating invoices, proposals, or service orders.")} className="min-h-screen" />;
+  if (isInitialLoad && Object.values(loadingStates).every(v => v)) {
+    return <PageLoadingState title={tr("loading", "Loading dashboard")} description={tr("loading_desc", "Preparing command center")} className="min-h-screen" />;
+  }
+  
+  if (error && Object.keys(data).length === 0) {
+    return <PageErrorState title={tr("sync_issue_title", "Dashboard unavailable")} description={error} className="min-h-screen" onRetry={() => loadAllData(selectedFy)} />;
+  }
+
+  // Use a type-safe getter helper as we are working with Partial<DashboardData>
+  const d = data as DashboardData;
 
   const selectedInvoiceBilled = Number(selectedInvoice?.totalAmount ?? 0);
   const selectedInvoiceReceived = Number(selectedInvoice?.amountReceived ?? 0);
@@ -250,17 +274,50 @@ export default function Dashboard() {
       }
     >
       <div className="space-y-6">
-        <DashboardHealthStrip health={data.health} />
-        <DashboardAttentionCenter attention={data.attention} />
-        <DashboardFinancialPulse financialPulse={data.financialPulse} fCurrency={fCurrency} />
+        {loadingStates.health || !d.health ? (
+          <div className="h-12 w-full rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
+        ) : (
+          <DashboardHealthStrip health={d.health} />
+        )}
 
-        <div className="grid grid-cols-1 2xl:grid-cols-3 gap-6">
-          <div className="2xl:col-span-2 space-y-6">
-            <DashboardSalesAndShopPanel salesAndShop={data.salesAndShop} fCurrency={fCurrency} />
-            <DashboardOperationsPanel operations={data.operations} />
-            <DashboardTrustPanel trust={data.trust} />
-            {islandsEnabled ? (
-              <ChartsIsland charts={data.charts} fCurrency={fCurrency} />
+        {loadingStates.attention || !d.attention ? (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+             {[1,2,3,4].map(i => <div key={i} className="h-24 rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse" />)}
+          </div>
+        ) : (
+          <DashboardAttentionCenter attention={d.attention} />
+        )}
+
+        {loadingStates.finance || !d.financialPulse ? (
+           <div className="h-32 rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
+        ) : (
+          <DashboardFinancialPulse financialPulse={d.financialPulse} fCurrency={fCurrency} />
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
+          <div className="lg:col-span-1 2xl:col-span-2 space-y-6">
+            {loadingStates.sales || !d.salesAndShop ? (
+              <div className="h-64 rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
+            ) : (
+              <DashboardSalesAndShopPanel salesAndShop={d.salesAndShop} fCurrency={fCurrency} />
+            )}
+
+            {loadingStates.ops || !d.operations ? (
+               <div className="h-48 rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
+            ) : (
+              <DashboardOperationsPanel operations={d.operations} />
+            )}
+
+            {loadingStates.trust || !d.trust ? (
+               <div className="h-48 rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
+            ) : (
+              <DashboardTrustPanel trust={d.trust} />
+            )}
+            
+            {loadingStates.charts || !d.charts ? (
+              <div className="h-80 rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
+            ) : islandsEnabled ? (
+              <ChartsIsland charts={d.charts} fCurrency={fCurrency} />
             ) : (
               <Card className="p-5 border-zinc-200 dark:border-zinc-800">
                 <CardTitle className="text-base">{tr("charts_disabled_title", "Charts are in fallback mode")}</CardTitle>
@@ -270,14 +327,19 @@ export default function Dashboard() {
               </Card>
             )}
           </div>
-            <DashboardRightRail data={data} fCurrency={fCurrency} />
+          {loadingStates.health || loadingStates.attention || !d.health ? (
+             <div className="h-[600px] rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
+          ) : (
+            <DashboardRightRail data={d} fCurrency={fCurrency} />
+          )}
         </div>
 
         <Card className="border-0 shadow-xl shadow-zinc-200/20 dark:shadow-black/20 ring-1 ring-zinc-200 dark:ring-zinc-800/60 bg-white dark:bg-zinc-900/50 overflow-hidden">
           <CardHeader className="border-b border-zinc-100 dark:border-zinc-800/50 bg-zinc-50/70 dark:bg-zinc-900/80 px-6 py-4 flex flex-row items-center justify-between relative overflow-hidden">
             <div className="space-y-0.5 relative z-10">
               <CardTitle className="text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-100 uppercase">{tr("recent_ledger", "Recent ledger activity")}</CardTitle>
-              <p className="text-[11px] font-medium text-zinc-400 dark:text-zinc-500">{tr("recent_ledger_subtitle", "Your most recent billing and payment operations")}</p>
+              <p className="text-xxs font-medium text-zinc-400 dark:text-zinc-500">{tr("recent_ledger_subtitle", "Your most recent billing and payment operations")}</p>
+
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="bg-white dark:bg-zinc-950 text-[10px] font-bold text-zinc-400 border-zinc-200/60 dark:border-zinc-800/60 uppercase">Live Feed</Badge>
@@ -285,8 +347,12 @@ export default function Dashboard() {
             <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500" />
           </CardHeader>
           <CardContent className={isMobile ? "p-4 space-y-3" : "p-0"}>
-            {isMobile ? (
-              data.recentInvoices.length === 0 ? (
+            {loadingStates.ledger || !d.recentInvoices ? (
+              <div className="p-8 space-y-4">
+                 {[1,2,3].map(i => <div key={i} className="h-12 w-full rounded-lg bg-zinc-100 dark:bg-zinc-800 animate-pulse" />)}
+              </div>
+            ) : isMobile ? (
+              d.recentInvoices.length === 0 ? (
                 <p className="text-sm text-zinc-500">{tr("no_recent_ledger", "No recent invoices")}</p>
               ) : (
                 data.recentInvoices.slice(0, 5).map((invoice) => (

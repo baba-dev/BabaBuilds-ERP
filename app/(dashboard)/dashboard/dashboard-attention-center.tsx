@@ -81,7 +81,7 @@ export function DashboardAttentionCenter({ attention }: { attention: DashboardDa
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3 mt-6 pt-4 border-t border-zinc-200/80 dark:border-zinc-800/80 text-xs text-zinc-500 dark:text-zinc-400">
         <span className="inline-flex items-center gap-1.5">
           <FileText className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" /> 
-          Pending invoices: <span className="font-medium text-zinc-700 dark:text-zinc-300">{attention.pendingInvoices}</span>
+          {tr("receivables", "Receivables")}: <span className="font-medium text-zinc-700 dark:text-zinc-300">{attention.pendingInvoices}</span>
         </span>
         <span className="inline-flex items-center gap-1.5">
           <Bell className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" /> 

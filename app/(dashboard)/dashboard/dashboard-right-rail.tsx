@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useTranslations } from "next-intl";
+import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,8 +49,8 @@ export function DashboardRightRail({ data, fCurrency }: DashboardRightRailProps)
     return translation;
   };
 
-  const mood = deriveWorkspaceMood(data);
-  const aiState = deriveAIState(data);
+  const mood = useMemo(() => deriveWorkspaceMood(data), [data]);
+  const aiState = useMemo(() => deriveAIState(data), [data]);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-1000">
@@ -77,6 +78,7 @@ export function DashboardRightRail({ data, fCurrency }: DashboardRightRailProps)
     </div>
   );
 }
+
 
 function deriveWorkspaceMood(data: DashboardData): WorkspaceMood {
   const { attention, trust, health } = data;
@@ -327,7 +329,7 @@ function RecentNotificationsSection({ data, tr, mood }: { data: DashboardData, t
 }
 
 function SuggestedActionsSection({ data, tr, mood }: { data: DashboardData, tr: any, mood: WorkspaceMood }) {
-  const suggestions = deriveIntelligenceSuggestions(data, tr);
+  const suggestions = useMemo(() => deriveIntelligenceSuggestions(data, tr), [data, tr]);
 
   return (
     <div className="p-6 space-y-5">

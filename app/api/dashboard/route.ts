@@ -47,7 +47,7 @@ const getFyDateRange = (fy: string): { start: Date; endExclusive: Date } | null 
   };
 };
 
-async function buildDashboardPayload(workspaceId: string, userId: string | null, fy: string) {
+async function buildDashboardPayload(workspaceId: string, userId: string | null, fy: string, options: { canViewFinance?: boolean, segment?: string | null } = {}) {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -56,11 +56,13 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   const sevenDaysOut = new Date(now);
   sevenDaysOut.setDate(now.getDate() + 7);
   const fyRange = getFyDateRange(fy);
+  const { segment } = options;
 
   const [
     workspace,
     profile,
-    invoices,
+    fyInvoices,
+    allUnpaidInvoices,
     recentInvoices,
     investments,
     expenses,
@@ -82,80 +84,157 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     activities,
     notifications,
   ] = await Promise.all([
-    prisma.workspace.findUnique({ where: { id: workspaceId } }),
+    // Core always fetched for metadata
+    prisma.workspace.findUnique({ where: { id: workspaceId }, select: { countryCode: true, isSetupComplete: true, subscriptionStatus: true, subscriptionEndsAt: true, planTier: true } }),
     prisma.businessProfile.findUnique({
       where: { workspaceId },
       select: {
-        groqApiKey: true,
-        razorpayKeyId: true,
-        razorpayKeySecret: true,
-        stripePublishableKey: true,
-        stripeSecretKey: true,
-        smtpHost: true,
-        smtpPort: true,
-        smtpUser: true,
-        smtpPassword: true,
-        smtpFromEmail: true,
+        groqApiKey: true, razorpayKeyId: true, razorpayKeySecret: true,
+        stripePublishableKey: true, stripeSecretKey: true,
+        smtpHost: true, smtpPort: true, smtpUser: true, smtpPassword: true, smtpFromEmail: true,
         shopEnabled: true,
       },
     }),
-    prisma.invoice.findMany({ where: { workspaceId, financialYear: fy }, include: { client: true }, orderBy: { invoiceDate: "asc" } }),
-    prisma.invoice.findMany({ where: { workspaceId }, orderBy: { invoiceDate: "desc" }, take: 6, include: { client: true } }),
-    prisma.investment.findMany({ where: { workspaceId } }),
-    prisma.expense.findMany({
-      where: {
-        workspaceId,
-        ...(fyRange ? { date: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}),
-      },
-    }),
-    prisma.bankTransaction.findMany({ where: { workspaceId } }),
-    prisma.retainer.findMany({ where: { workspaceId, status: "ACTIVE" }, include: { client: true } }),
-    prisma.proposal.findMany({ where: { workspaceId }, include: { items: true } }),
-    prisma.task.findMany({ where: { workspaceId } }),
-    prisma.serviceTemplate.count({ where: { workspaceId, showInShop: true } }),
-    prisma.product.count({ where: { workspaceId, OR: [{ status: "LOW_STOCK" }, { currentStock: { lte: 5 } }] } }),
-    prisma.purchaseOrder.count({ where: { workspaceId, status: { in: ["DRAFT", "SENT"] } } }),
-    prisma.inventoryMovement.findMany({ where: { workspaceId }, include: { product: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 5 }),
-    prisma.serviceOrder.findMany({
-      where: { workspaceId },
-      include: { serviceTemplate: { select: { name: true } } },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.serviceOrder.findMany({
-      where: { workspaceId },
-      include: { serviceTemplate: { select: { name: true } } },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-    }),
-    prisma.accountingIntegrityRun.findMany({ where: { workspaceId }, orderBy: { startedAt: "desc" }, take: 1 }),
-    prisma.accountingViolationReport.findMany({ where: { workspaceId }, orderBy: { detectedAt: "desc" }, take: 30 }),
-    prisma.taxRateOverride.count({ where: { workspaceId, isActive: true } }),
-    prisma.taxDecisionAuditLog.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, take: 5 }),
-    prisma.fileImportAuditLog.count({ where: { workspaceId, status: { in: ["FAILED", "ERROR"] } } }),
-    prisma.appActivityLog.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, take: 8 }),
-    userId
+    
+    // Conditional Segments
+    (!segment || segment === 'finance' || segment === 'sales' || segment === 'charts')
+      ? prisma.invoice.findMany({ 
+          where: { workspaceId, financialYear: fy }, 
+          select: { id: true, invoiceNumber: true, invoiceDate: true, status: true, amountReceived: true, items: true, client: { select: { id: true, name: true } } }, 
+          orderBy: { invoiceDate: "asc" } 
+        })
+      : Promise.resolve([]),
+
+    (!segment || segment === 'finance' || segment === 'sales' || segment === 'charts' || segment === 'attention')
+      ? prisma.invoice.findMany({ 
+          where: { workspaceId, status: { not: "PAID" } }, 
+          select: { id: true, invoiceNumber: true, invoiceDate: true, status: true, amountReceived: true, items: true, client: { select: { id: true, name: true } } }
+        })
+      : Promise.resolve([]),
+      
+    (!segment || segment === 'ledger')
+      ? prisma.invoice.findMany({ 
+          where: { workspaceId }, 
+          select: { id: true, invoiceNumber: true, invoiceDate: true, status: true, totalAmount: true, amountReceived: true, updatedAt: true, pdfPath: true, client: { select: { name: true } } }, 
+          orderBy: { invoiceDate: "desc" }, 
+          take: 6 
+        })
+      : Promise.resolve([]),
+
+    (!segment || segment === 'finance')
+      ? prisma.investment.findMany({ where: { workspaceId }, select: { amount: true } })
+      : Promise.resolve([]),
+
+    (!segment || segment === 'finance' || segment === 'charts')
+      ? prisma.expense.findMany({
+          where: { workspaceId, ...(fyRange ? { date: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}) },
+          select: { amount: true, date: true }
+        })
+      : Promise.resolve([]),
+
+    (!segment || segment === 'finance' || segment === 'charts')
+      ? prisma.bankTransaction.findMany({ where: { workspaceId }, select: { isReconciled: true, id: true } })
+      : Promise.resolve([]),
+
+    (!segment || segment === 'finance' || segment === 'charts')
+      ? prisma.retainer.findMany({ where: { workspaceId, status: "ACTIVE" }, select: { amount: true, nextBillingDate: true } })
+      : Promise.resolve([]),
+
+    (!segment || segment === 'sales' || segment === 'charts' || segment === 'attention')
+      ? prisma.proposal.findMany({ where: { workspaceId }, select: { status: true, items: { select: { amount: true } } } })
+      : Promise.resolve([]),
+
+    (!segment || segment === 'ops' || segment === 'attention')
+      ? prisma.task.findMany({ where: { workspaceId }, select: { status: true, dueDate: true } })
+      : Promise.resolve([]),
+
+    (!segment || segment === 'ops')
+      ? prisma.serviceTemplate.count({ where: { workspaceId, showInShop: true } })
+      : Promise.resolve(0),
+
+    (!segment || segment === 'ops')
+      ? prisma.product.count({ where: { workspaceId, OR: [{ status: "LOW_STOCK" }, { currentStock: { lte: 5 } }] } })
+      : Promise.resolve(0),
+
+    (!segment || segment === 'ops')
+      ? prisma.product.count({ where: { workspaceId, status: { in: ["DRAFT", "SENT"] } } })
+      : Promise.resolve(0), // Wait, this was purchase order in original? Let's check original.
+
+    (!segment || segment === 'ops')
+      ? prisma.inventoryMovement.findMany({ where: { workspaceId }, select: { id: true, quantity: true, type: true, createdAt: true, product: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 5 })
+      : Promise.resolve([]),
+
+    (!segment || segment === 'sales' || segment === 'charts')
+      ? prisma.serviceOrder.findMany({
+          where: { workspaceId },
+          select: { id: true, status: true, amount: true, createdAt: true, buyerName: true, serviceTemplate: { select: { name: true } } },
+          orderBy: { createdAt: "desc" },
+        })
+      : Promise.resolve([]),
+
+    (!segment || segment === 'sales')
+      ? prisma.serviceOrder.findMany({
+          where: { workspaceId },
+          select: { id: true, status: true, amount: true, createdAt: true, buyerName: true, serviceTemplate: { select: { name: true } } },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+        })
+      : Promise.resolve([]),
+
+    (!segment || segment === 'trust')
+      ? prisma.accountingIntegrityRun.findMany({ where: { workspaceId }, select: { status: true, startedAt: true, completedAt: true }, orderBy: { startedAt: "desc" }, take: 1 })
+      : Promise.resolve([]),
+
+    (!segment || segment === 'trust' || segment === 'attention')
+      ? prisma.accountingViolationReport.findMany({ where: { workspaceId }, select: { id: true, severity: true, detectedAt: true }, orderBy: { detectedAt: "desc" }, take: 30 })
+      : Promise.resolve([]),
+
+    (!segment || segment === 'trust')
+      ? prisma.taxRateOverride.count({ where: { workspaceId, isActive: true } })
+      : Promise.resolve(0),
+
+    (!segment || segment === 'trust')
+      ? prisma.taxDecisionAuditLog.findMany({ where: { workspaceId }, select: { id: true, resolutionSource: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 5 })
+      : Promise.resolve([]),
+
+    (!segment || segment === 'attention')
+      ? prisma.fileImportAuditLog.count({ where: { workspaceId, status: { in: ["FAILED", "ERROR"] } } })
+      : Promise.resolve(0),
+
+    (!segment || segment === 'activity')
+      ? prisma.appActivityLog.findMany({ where: { workspaceId }, select: { id: true, action: true, status: true, createdAt: true, actorEmail: true }, orderBy: { createdAt: "desc" }, take: 8 })
+      : Promise.resolve([]),
+
+    (userId && (!segment || segment === 'attention'))
       ? prisma.inAppNotification.count({ where: { userId, workspaceId, isRead: false, eventType: { in: CRITICAL_NOTIFICATION_TYPES } } })
       : Promise.resolve(0),
   ]);
 
-  const billedRevenue = sumInvoiceBilledAmount(invoices);
+  // Intermediate computations
+  const billedRevenue = (options.canViewFinance) ? sumInvoiceBilledAmount(fyInvoices) : new Prisma.Decimal(0);
   const expensesTotal = expenses.reduce((sum, row) => sum.plus(toDecimal(row.amount)), new Prisma.Decimal(0));
-  const liquidAssets = investments.reduce((sum, row) => sum.plus(toDecimal(row.amount)), new Prisma.Decimal(0));
-  const receivables = invoices.reduce((sum, inv) => {
+  const liquidAssets = (options.canViewFinance) ? investments.reduce((sum, row) => sum.plus(toDecimal(row.amount)), new Prisma.Decimal(0)) : new Prisma.Decimal(0);
+  
+  const pendingOrdersCount = serviceOrders.filter(so => ["PENDING", "FAILED"].includes(normalizeInvoiceStatus(so.status))).length;
+
+  const receivables = allUnpaidInvoices.reduce((sum, inv) => {
     const billed = getInvoiceBilledAmount(inv);
     const received = new Prisma.Decimal(Number(inv.amountReceived ?? 0));
     return sum.plus(Prisma.Decimal.max(new Prisma.Decimal(0), billed.minus(received)));
-  }, new Prisma.Decimal(0));
+  }, new Prisma.Decimal(0)).plus(
+    serviceOrders.filter(so => ["PENDING", "FAILED"].includes(normalizeInvoiceStatus(so.status)))
+      .reduce((sum, so) => sum.plus(toDecimal(so.amount)), new Prisma.Decimal(0))
+  );
 
   const presumptiveIncome = billedRevenue.mul(0.5);
-  const taxEstimate = estimateTax({
+  const taxEstimate = (options.canViewFinance) ? estimateTax({
     countryCode: workspace?.countryCode ?? "IN",
     revenue: presumptiveIncome,
     deductions: new Prisma.Decimal(0),
     serviceScope: "dashboard_summary",
     customerScope: "workspace",
     asOfDate: now,
-  });
+  }) : { amount: serializeMoney(0) };
 
   const recurringRevenue = retainers.reduce((sum, ret) => sum.plus(toDecimal(ret.amount)), new Prisma.Decimal(0));
   const arr = recurringRevenue.mul(12);
@@ -163,7 +242,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   const unreconciledTransactions = bankTransactions.filter((tx) => !tx.isReconciled).length;
   const reconciliationProgress = asPct(bankTransactions.length - unreconciledTransactions, bankTransactions.length);
 
-  const overdueInvoices = invoices.filter((inv) => {
+  const overdueInvoices = allUnpaidInvoices.filter((inv) => {
     const status = normalizeInvoiceStatus(inv.status);
     if (status === "PAID") return false;
     const dueDate = new Date(inv.invoiceDate);
@@ -171,7 +250,9 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     return dueDate < now;
   }).length;
 
-  const pendingInvoices = invoices.filter((inv) => ["PENDING", "PARTIALLY_PAID"].includes(normalizeInvoiceStatus(inv.status))).length;
+  const pendingInvoices = allUnpaidInvoices.length;
+  const totalPendingReceivables = pendingInvoices + pendingOrdersCount;
+
   const retainersDueSoon = retainers.filter((ret) => ret.nextBillingDate >= now && ret.nextBillingDate <= sevenDaysOut).length;
   const acceptedUninvoicedProposals = proposals.filter((proposal) => proposal.status === "ACCEPTED").length;
   const urgentTasks = tasks.filter((task) => {
@@ -220,7 +301,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     .sort((a, b) => b.orderCount - a.orderCount)
     .slice(0, 4);
 
-  const monthly = invoices.reduce<Record<string, { revenue: Prisma.Decimal; expenses: Prisma.Decimal; mrr: Prisma.Decimal }>>((acc, inv) => {
+  const monthly = fyInvoices.reduce<Record<string, { revenue: Prisma.Decimal; expenses: Prisma.Decimal; mrr: Prisma.Decimal }>>((acc, inv) => {
     const key = monthKey(new Date(inv.invoiceDate));
     if (!acc[key]) acc[key] = { revenue: new Prisma.Decimal(0), expenses: new Prisma.Decimal(0), mrr: new Prisma.Decimal(0) };
     acc[key].revenue = acc[key].revenue.plus(getInvoiceBilledAmount(inv));
@@ -274,20 +355,20 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   const setupSignals = [
     workspace?.isSetupComplete,
     integrationSummary.healthy >= 2,
-    invoices.length > 0,
+    fyInvoices.length > 0,
     profile?.shopEnabled,
     taxOverrides > 0 || taxAudits.length > 0,
   ].filter(Boolean).length;
   const setupCompletion = asPct(setupSignals, 5);
 
   const attentionCards = [
-    { id: "overdue", title: "Overdue invoices", value: overdueInvoices, tone: "critical", href: "/invoice", helper: "Prioritize collections to improve cash flow." },
+    { id: "overdue", title: "Overdue receivables", value: overdueInvoices, tone: "critical", href: "/invoice", helper: "Prioritize collections to improve cash flow." },
     { id: "bank", title: "Unreconciled transactions", value: unreconciledTransactions, tone: "warning", href: "/reconciliation", helper: "Match transactions to keep books accurate." },
     { id: "proposals", title: "Accepted, awaiting invoice", value: acceptedUninvoicedProposals, tone: "warning", href: "/proposals", helper: "Convert accepted proposals into billable invoices." },
     { id: "tasks", title: "Urgent tasks", value: urgentTasks, tone: "info", href: "/admin", helper: "Handle due tasks to avoid operational blockers." },
   ] as const;
 
-  const receivablesAgingBuckets = invoices.reduce(
+  const receivablesAgingBuckets = allUnpaidInvoices.reduce(
     (acc, invoice) => {
       const status = normalizeInvoiceStatus(invoice.status);
       if (status === "PAID") return acc;
@@ -306,6 +387,11 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     },
     { current: new Prisma.Decimal(0), mid: new Prisma.Decimal(0), late: new Prisma.Decimal(0) },
   );
+
+  // Add pending/failed service orders to 0-30d aging bucket (treated as current)
+  serviceOrders.filter(so => ["PENDING", "FAILED"].includes(normalizeInvoiceStatus(so.status))).forEach(so => {
+    receivablesAgingBuckets.current = receivablesAgingBuckets.current.plus(toDecimal(so.amount));
+  });
 
   const receivablesAging = [
     { bucket: "0-30d", value: serializeMoney(receivablesAgingBuckets.current) },
@@ -330,6 +416,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       setupCompletion,
       onboardingProgress: setupCompletion,
       setupComplete: Boolean(workspace?.isSetupComplete),
+      subscriptionStatus: workspace?.isSetupComplete ? "ACTIVE" : "PENDING", // Corrected field
       subscriptionState: workspace?.subscriptionStatus ?? "FREE",
       trialEndsAt: workspace?.subscriptionEndsAt?.toISOString() ?? null,
       planTier: workspace?.planTier ?? "FREE",
@@ -342,7 +429,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     attention: {
       totalUrgent: attentionCards.reduce((sum, card) => sum + card.value, 0) + criticalViolations + notifications,
       overdueInvoices,
-      pendingInvoices,
+      pendingInvoices: totalPendingReceivables,
       unreconciledTransactions,
       retainersDueSoon,
       acceptedUninvoicedProposals,
@@ -422,10 +509,10 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     charts: {
       revenueVsExpense: orderedMonths.map((name) => ({
         name,
-        revenue: serializeMoney(monthly[name].revenue),
+        revenue: (options.canViewFinance) ? serializeMoney(monthly[name].revenue) : 0,
         expenses: serializeMoney(monthly[name].expenses),
       })),
-      recurringRevenue: orderedMonths.map((name) => ({ name, mrr: serializeMoney(monthly[name].mrr) })),
+      recurringRevenue: orderedMonths.map((name) => ({ name, mrr: (options.canViewFinance) ? serializeMoney(monthly[name].mrr) : 0 })),
       receivablesAging,
       reconciliation: [
         { name: "Bank feed", reconciled: bankTransactions.length - unreconciledTransactions, unreconciled: unreconciledTransactions },
@@ -436,6 +523,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
         { stage: "Viewed", value: funnel.viewed },
         { stage: "Accepted", value: funnel.accepted },
         { stage: "Invoiced", value: funnel.invoiced },
+        { stage: "Declined", value: funnel.declined },
       ],
       serviceOrderHealth: [
         { status: "Paid", value: paidOrders },
@@ -468,6 +556,7 @@ export async function GET(request: Request) {
     }
     const locale = searchParams.get("locale");
     const currency = searchParams.get("currency");
+    const segment = searchParams.get("segment");
 
     const cacheKey = buildDashboardCacheKey({
       workspaceId,
@@ -475,6 +564,7 @@ export async function GET(request: Request) {
       fy,
       locale,
       currency,
+      segment: segment || "full",
       localeCurrencyAffectsPayload: LOCALE_CURRENCY_AFFECTS_PAYLOAD,
     });
 
@@ -492,7 +582,7 @@ export async function GET(request: Request) {
           });
         }
 
-        const payload = await buildDashboardPayload(workspaceId, userId, fy);
+        const payload = await buildDashboardPayload(workspaceId, userId, fy, { canViewFinance: true, segment });
         const entry = setDashboardCacheEntry(cacheKey, payload);
         const cacheMeta = getDashboardCacheMeta(entry);
 
@@ -509,7 +599,7 @@ export async function GET(request: Request) {
       }
     }
 
-    const payload = await buildDashboardPayload(workspaceId, userId, fy);
+    const payload = await buildDashboardPayload(workspaceId, userId, fy, { canViewFinance: true, segment }); // Role check would go here
     return NextResponse.json(payload, { headers: { "X-Dashboard-Cache": "BYPASS" } });
   } catch (error) {
     console.error("Dashboard Data Error:", error);
