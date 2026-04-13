@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { 
   Activity, 
   ArrowRight, 
@@ -35,12 +36,13 @@ import type { DashboardData } from "./types";
 interface DashboardRightRailProps {
   data: DashboardData;
   fCurrency: (val: number | string) => string;
+  onRefreshSyncImportHealth?: () => Promise<void>;
 }
 
 type WorkspaceMood = 'critical' | 'warning' | 'opportunity' | 'healthy';
 type AIState = 'enabled' | 'locked_no_key' | 'fallback';
 
-export function DashboardRightRail({ data, fCurrency }: DashboardRightRailProps) {
+export function DashboardRightRail({ data, fCurrency, onRefreshSyncImportHealth }: DashboardRightRailProps) {
   const t = useTranslations("Dashboard");
   const tr = (key: string, fallback: string, values?: any) => {
     const translation = t(key as any, values);
@@ -71,7 +73,7 @@ export function DashboardRightRail({ data, fCurrency }: DashboardRightRailProps)
           <RecentNotificationsSection data={data} tr={tr} mood={mood} />
           <SuggestedActionsSection data={data} tr={tr} mood={mood} />
           <SystemSignalsSection data={data} tr={tr} mood={mood} />
-          <SyncImportHealthSection data={data} tr={tr} />
+          <SyncImportHealthSection data={data} tr={tr} onRefreshSyncImportHealth={onRefreshSyncImportHealth} />
         </div>
       </Card>
     </div>
@@ -499,8 +501,27 @@ function SignalPill({ label, value, tone }: { label: string, value: string, tone
   );
 }
 
-function SyncImportHealthSection({ data, tr }: { data: DashboardData, tr: any }) {
+function SyncImportHealthSection({
+  data,
+  tr,
+  onRefreshSyncImportHealth,
+}: {
+  data: DashboardData;
+  tr: any;
+  onRefreshSyncImportHealth?: () => Promise<void>;
+}) {
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const hasFailures = data.attention.failedImports > 0;
+  
+  const handleRefresh = async () => {
+    if (!onRefreshSyncImportHealth || isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await onRefreshSyncImportHealth();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
   
   return (
     <div className="p-6 space-y-5 bg-zinc-50/20 dark:bg-zinc-800/20">
@@ -532,9 +553,22 @@ function SyncImportHealthSection({ data, tr }: { data: DashboardData, tr: any })
               </p>
             </div>
           </div>
-          <button className="h-10 w-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-indigo-600 hover:border-indigo-500/50 transition-all shadow-sm active:scale-90">
-            <RefreshCw className="w-5 h-5" />
-          </button>
+          {onRefreshSyncImportHealth ? (
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              aria-label={tr("refresh_sync_pipeline", "Refresh sync pipeline status")}
+              className="h-10 w-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-indigo-600 hover:border-indigo-500/50 transition-all shadow-sm active:scale-90 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:text-zinc-400 disabled:hover:border-zinc-100 dark:disabled:hover:border-zinc-800"
+            >
+              <RefreshCw className={`w-5 h-5 ${isRefreshing ? "animate-spin" : ""}`} />
+            </button>
+          ) : (
+            <div className="h-10 px-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center gap-2 text-zinc-400 cursor-default select-none">
+              <RefreshCw className="w-4 h-4" />
+              <span className="text-xs font-medium">{tr("sync_status_live", "Status updates live")}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
