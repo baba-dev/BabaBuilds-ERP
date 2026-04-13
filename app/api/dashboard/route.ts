@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { INVOICE_STATUS } from "@/lib/invoice-status";
 import { serializeMoney, toDecimal } from "@/lib/money";
+import { summarizeReceivablesForAttention } from "@/lib/dashboard/attention-receivables";
 import { getInvoiceBilledAmount, sumInvoiceBilledAmount } from "@/lib/invoice/totals";
 import { estimateTax } from "@/lib/tax/engine";
 import { getCurrentFinancialYear } from "@/lib/financial-year";
@@ -47,6 +48,7 @@ const getFyDateRange = (fy: string): { start: Date; endExclusive: Date } | null 
   };
 };
 
+
 async function buildDashboardPayload(workspaceId: string, userId: string | null, fy: string) {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -61,6 +63,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     workspace,
     profile,
     invoices,
+    attentionInvoices,
     recentInvoices,
     investments,
     expenses,
@@ -100,6 +103,10 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       },
     }),
     prisma.invoice.findMany({ where: { workspaceId, financialYear: fy }, include: { client: true }, orderBy: { invoiceDate: "asc" } }),
+    prisma.invoice.findMany({
+      where: { workspaceId },
+      select: { status: true, invoiceDate: true, totalAmount: true, grandTotal: true, amountReceived: true },
+    }),
     prisma.invoice.findMany({ where: { workspaceId }, orderBy: { invoiceDate: "desc" }, take: 6, include: { client: true } }),
     prisma.investment.findMany({ where: { workspaceId } }),
     prisma.expense.findMany({
@@ -163,15 +170,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   const unreconciledTransactions = bankTransactions.filter((tx) => !tx.isReconciled).length;
   const reconciliationProgress = asPct(bankTransactions.length - unreconciledTransactions, bankTransactions.length);
 
-  const overdueInvoices = invoices.filter((inv) => {
-    const status = normalizeInvoiceStatus(inv.status);
-    if (status === "PAID") return false;
-    const dueDate = new Date(inv.invoiceDate);
-    dueDate.setDate(dueDate.getDate() + 30);
-    return dueDate < now;
-  }).length;
-
-  const pendingInvoices = invoices.filter((inv) => ["PENDING", "PARTIALLY_PAID"].includes(normalizeInvoiceStatus(inv.status))).length;
+  const { overdueReceivables, outstandingReceivables } = summarizeReceivablesForAttention(attentionInvoices, now);
   const retainersDueSoon = retainers.filter((ret) => ret.nextBillingDate >= now && ret.nextBillingDate <= sevenDaysOut).length;
   const acceptedUninvoicedProposals = proposals.filter((proposal) => proposal.status === "ACCEPTED").length;
   const urgentTasks = tasks.filter((task) => {
@@ -281,7 +280,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   const setupCompletion = asPct(setupSignals, 5);
 
   const attentionCards = [
-    { id: "overdue", title: "Overdue invoices", value: overdueInvoices, tone: "critical", href: "/invoice", helper: "Prioritize collections to improve cash flow." },
+    { id: "overdue", title: "Overdue receivables", value: overdueReceivables, tone: "critical", href: "/income", helper: "Follow up on overdue balances to protect cash flow." },
     { id: "bank", title: "Unreconciled transactions", value: unreconciledTransactions, tone: "warning", href: "/reconciliation", helper: "Match transactions to keep books accurate." },
     { id: "proposals", title: "Accepted, awaiting invoice", value: acceptedUninvoicedProposals, tone: "warning", href: "/proposals", helper: "Convert accepted proposals into billable invoices." },
     { id: "tasks", title: "Urgent tasks", value: urgentTasks, tone: "info", href: "/admin", helper: "Handle due tasks to avoid operational blockers." },
@@ -341,8 +340,10 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     },
     attention: {
       totalUrgent: attentionCards.reduce((sum, card) => sum + card.value, 0) + criticalViolations + notifications,
-      overdueInvoices,
-      pendingInvoices,
+      overdueInvoices: overdueReceivables,
+      pendingInvoices: outstandingReceivables,
+      overdueReceivables,
+      outstandingReceivables,
       unreconciledTransactions,
       retainersDueSoon,
       acceptedUninvoicedProposals,
