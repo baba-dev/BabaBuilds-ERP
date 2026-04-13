@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
+import { logActivity } from '@/lib/security/activity-log';
 
 export async function GET() {
   try {
@@ -112,9 +113,25 @@ export async function POST(request: Request) {
       noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'retainer', action: 'create', error: String(error) });
     }
 
+    logActivity({
+      action: "retainer_created",
+      status: "SUCCESS",
+      workspaceId,
+      actor: { userId: (session as any).user?.id, email: (session as any).user?.email },
+      entity: { type: "retainer", id: newRetainer.id },
+      request,
+    });
+
     return NextResponse.json({ success: true, retainer: newRetainer });
   } catch (error) {
     console.error("Retainer Creation Error:", error);
+    logActivity({
+      action: "retainer_created",
+      status: "FAILURE",
+      workspaceId: (await getServerSession(authOptions) as any)?.workspaceId ?? null,
+      request,
+      metadata: { error: String(error) },
+    });
     return NextResponse.json({ error: 'Failed to configure retainer engine' }, { status: 500 });
   }
 }

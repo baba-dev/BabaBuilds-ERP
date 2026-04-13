@@ -10,6 +10,7 @@ import { scanBuffer } from '@/lib/security/clamav';
 import { CLIENT_LOGO_INVALID_TYPE_ERROR, isAllowedClientLogoExtension } from '@/lib/uploads/client-logo';
 import { apiError } from '@/lib/api-error';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
+import { logActivity } from '@/lib/security/activity-log';
 
 export async function GET(request: Request) {
   try {
@@ -165,9 +166,25 @@ export async function POST(request: Request) {
       noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'client', action: 'create', error: String(error) });
     }
 
+    logActivity({
+      action: "client_created",
+      status: "SUCCESS",
+      workspaceId,
+      actor: { userId: (session as any).user?.id, email: (session as any).user?.email },
+      entity: { type: "client", id: newClient.id },
+      request,
+    });
+
     return NextResponse.json({ success: true, client: newClient });
   } catch (error) {
     console.error(error);
+    logActivity({
+      action: "client_created",
+      status: "FAILURE",
+      workspaceId: (await getServerSession(authOptions) as any)?.workspaceId ?? "UNKNOWN",
+      request,
+      metadata: { error: String(error) },
+    });
     return apiError(500, "Failed to create client", "CLIENT_CREATE_FAILED");
   }
 }

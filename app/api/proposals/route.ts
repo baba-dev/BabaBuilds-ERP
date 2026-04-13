@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
 import { calculateInvoiceTotals } from '@/lib/invoice/totals';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
+import { logActivity } from '@/lib/security/activity-log';
 
 export async function GET() {
   try {
@@ -165,9 +166,25 @@ export async function POST(request: Request) {
       },
     }).catch(() => null);
 
+    logActivity({
+      action: "proposal_created",
+      status: "SUCCESS",
+      workspaceId,
+      actor: { userId: (session as any).user?.id, email: (session as any).user?.email },
+      entity: { type: "proposal", id: newProposal.id },
+      request,
+    });
+
     return NextResponse.json({ success: true, proposal: newProposal });
   } catch (error) {
     console.error("Proposal Creation Error:", error);
+    logActivity({
+      action: "proposal_created",
+      status: "FAILURE",
+      workspaceId: (await getServerSession(authOptions) as any)?.workspaceId ?? null,
+      request,
+      metadata: { error: String(error) },
+    });
     return NextResponse.json({ error: 'Failed to create proposal' }, { status: 500 });
   }
 }

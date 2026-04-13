@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import fs from 'fs';
 import path from 'path';
+import { logActivity } from '@/lib/security/activity-log';
 
 export async function GET(
   request: Request,
@@ -91,9 +92,25 @@ export async function DELETE(
       noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'invoice', action: 'delete', error: String(error) });
     }
 
+    logActivity({
+      action: "invoice_deleted",
+      status: "SUCCESS",
+      workspaceId,
+      actor: { userId: (session as any).user?.id, email: (session as any).user?.email },
+      entity: { type: "invoice", id: invoiceId },
+      request,
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Invoice Deletion Error:", error);
+    logActivity({
+      action: "invoice_deleted",
+      status: "FAILURE",
+      workspaceId: (await getServerSession(authOptions) as any)?.workspaceId ?? null,
+      request,
+      metadata: { error: String(error) },
+    });
     return NextResponse.json({ error: "Failed to delete invoice." }, { status: 500 });
   }
 }

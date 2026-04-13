@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { scanBuffer } from '@/lib/security/clamav';
 import { apiError } from "@/lib/api-error";
+import { logActivity } from '@/lib/security/activity-log';
 
 // Fetch all expenses for the ledger (NOW PAGINATED)
 export async function GET(request: Request) {
@@ -126,10 +127,26 @@ export async function POST(request: Request) {
       }
     });
 
+    logActivity({
+      action: "expense_created",
+      status: "SUCCESS",
+      workspaceId,
+      actor: { userId: (session as any).user?.id, email: (session as any).user?.email },
+      entity: { type: "expense", id: newExpense.id },
+      request,
+    });
+
     return NextResponse.json({ success: true, expense: newExpense });
 
   } catch (error) {
     console.error('Expense logging error:', error);
+    logActivity({
+      action: "expense_created",
+      status: "FAILURE",
+      workspaceId: (await getServerSession(authOptions) as any)?.workspaceId ?? null,
+      request,
+      metadata: { error: String(error) },
+    });
     return apiError(500, "Failed to log expense and save receipt", "EXPENSE_CREATE_FAILED");
   }
 }

@@ -1,5 +1,6 @@
-type ActivityOutcome = "success" | "error";
+import { logActivity as secureLogActivity } from '@/lib/security/activity-log';
 
+type ActivityOutcome = "success" | "error";
 type JsonPrimitive = string | number | boolean | null;
 type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 
@@ -13,17 +14,18 @@ export function logActivity(input: {
   actorEmail?: string | null;
   metadata?: Record<string, JsonValue>;
 }) {
-  const payload = {
-    ts: new Date().toISOString(),
-    ...input,
-    metadata: input.metadata ?? {},
-  };
-
-  const prefix = `[ACTIVITY] ${input.action} ${input.outcome}`;
-  if (input.outcome === "error") {
-    console.error(prefix, JSON.stringify(payload));
-    return;
-  }
-
-  console.info(prefix, JSON.stringify(payload));
+  secureLogActivity({
+    action: input.action,
+    status: input.outcome === "error" ? "FAILURE" : "SUCCESS",
+    workspaceId: input.workspaceId ?? null,
+    actor: {
+        userId: input.actorId,
+        email: input.actorEmail,
+    },
+    entity: {
+        type: input.entityType,
+        id: input.entityId,
+    },
+    metadata: input.metadata as Record<string, unknown>,
+  }).catch(err => console.error("Failed to default proxy logActivity:", err));
 }

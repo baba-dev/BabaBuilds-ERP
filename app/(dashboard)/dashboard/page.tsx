@@ -86,38 +86,43 @@ export default function Dashboard() {
     loadFlags().catch(() => undefined);
   }, []);
 
-  const loadSegment = async (fy: string, segment: string) => {
+  const loadSegment = async (fy: string, segment: string, signal?: AbortSignal) => {
     setLoadingStates(prev => ({ ...prev, [segment]: true }));
     try {
-      const res = await fetch(`/api/dashboard?fy=${fy}&segment=${segment}`, { cache: "no-store" });
+      const res = await fetch(`/api/dashboard?fy=${fy}&segment=${segment}`, { cache: "no-store", signal });
       const json = await res.json();
       if (!res.ok || json.error) throw new Error(json.error || `Failed to load ${segment}`);
       
       setData(prev => ({ ...prev, ...json }));
     } catch (e: any) {
+      if (e.name === 'AbortError') return;
       console.error(`Error loading segment ${segment}:`, e);
     } finally {
       setLoadingStates(prev => ({ ...prev, [segment]: false }));
     }
   };
 
-  const loadAllData = async (fy: string) => {
+  const loadAllData = async (fy: string, signal?: AbortSignal) => {
     setError(null);
     setIsInitialLoad(true);
     
     const segments = ['finance', 'ops', 'sales', 'trust', 'ledger', 'activity', 'attention', 'health', 'charts'];
     
     try {
-      await Promise.all(segments.map(s => loadSegment(fy, s)));
+      await Promise.all(segments.map(s => loadSegment(fy, s, signal)));
+      if (signal?.aborted) return;
       setIsInitialLoad(false);
     } catch (e: any) {
+      if (e.name === 'AbortError') return;
       setError(e?.message ?? "Unable to load dashboard");
       toast.error(tr("toast.error.load_dashboard_refresh", "Failed to load dashboard"));
     }
   };
 
   useEffect(() => {
-    loadAllData(selectedFy);
+    const controller = new AbortController();
+    loadAllData(selectedFy, controller.signal);
+    return () => controller.abort();
   }, [selectedFy]);
 
   useEffect(() => {
@@ -159,7 +164,7 @@ export default function Dashboard() {
       if (!res.ok) throw new Error();
       toast.success(tr("toast.success.payment_logged", "Payment logged"));
       setPayModalOpen(false);
-      loadData(selectedFy);
+      loadAllData(selectedFy);
     } catch {
       toast.error(tr("toast.error.log_payment", "Unable to log payment"));
     } finally {
@@ -261,6 +266,8 @@ export default function Dashboard() {
   const selectedInvoiceReceived = Number(selectedInvoice?.amountReceived ?? 0);
   const selectedInvoiceRemaining = Math.max(0, selectedInvoiceBilled - selectedInvoiceReceived);
 
+const SkeletonBlock = ({ className }: { className?: string }) => <div className={`rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse ${className}`} />;
+
   return (
     <DashboardPageShell
       title={tr("financial_overview", "Business command center")}
@@ -275,21 +282,21 @@ export default function Dashboard() {
     >
       <div className="space-y-6">
         {loadingStates.health || !d.health ? (
-          <div className="h-12 w-full rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
+          <SkeletonBlock className="h-12 w-full" />
         ) : (
           <DashboardHealthStrip health={d.health} />
         )}
 
         {loadingStates.attention || !d.attention ? (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-             {[1,2,3,4].map(i => <div key={i} className="h-24 rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse" />)}
+             {[1,2,3,4].map(i => <SkeletonBlock key={i} className="h-24" />)}
           </div>
         ) : (
           <DashboardAttentionCenter attention={d.attention} />
         )}
 
         {loadingStates.finance || !d.financialPulse ? (
-           <div className="h-32 rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
+           <SkeletonBlock className="h-32" />
         ) : (
           <DashboardFinancialPulse financialPulse={d.financialPulse} fCurrency={fCurrency} />
         )}
@@ -297,25 +304,25 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
           <div className="lg:col-span-1 2xl:col-span-2 space-y-6">
             {loadingStates.sales || !d.salesAndShop ? (
-              <div className="h-64 rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
+              <SkeletonBlock className="h-64" />
             ) : (
               <DashboardSalesAndShopPanel salesAndShop={d.salesAndShop} fCurrency={fCurrency} />
             )}
 
             {loadingStates.ops || !d.operations ? (
-               <div className="h-48 rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
+               <SkeletonBlock className="h-48" />
             ) : (
               <DashboardOperationsPanel operations={d.operations} />
             )}
 
             {loadingStates.trust || !d.trust ? (
-               <div className="h-48 rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
+               <SkeletonBlock className="h-48" />
             ) : (
               <DashboardTrustPanel trust={d.trust} />
             )}
             
             {loadingStates.charts || !d.charts ? (
-              <div className="h-80 rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
+              <SkeletonBlock className="h-80" />
             ) : islandsEnabled ? (
               <ChartsIsland charts={d.charts} fCurrency={fCurrency} />
             ) : (
@@ -328,7 +335,7 @@ export default function Dashboard() {
             )}
           </div>
           {loadingStates.health || loadingStates.attention || !d.health ? (
-             <div className="h-[600px] rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
+             <SkeletonBlock className="h-[600px]" />
           ) : (
             <DashboardRightRail data={d} fCurrency={fCurrency} />
           )}

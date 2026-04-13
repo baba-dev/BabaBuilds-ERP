@@ -85,15 +85,15 @@ export function DashboardAttentionCenter({ attention }: { attention: DashboardDa
         </span>
         <span className="inline-flex items-center gap-1.5">
           <Bell className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" /> 
-          Critical notifications: <span className="font-medium text-zinc-700 dark:text-zinc-300">{attention.criticalNotifications}</span>
+          {tr("critical_notifications", "Critical notifications")}: <span className="font-medium text-zinc-700 dark:text-zinc-300">{attention.criticalNotifications}</span>
         </span>
         <span className="inline-flex items-center gap-1.5">
           <AlertTriangle className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" /> 
-          Retainers due soon: <span className="font-medium text-zinc-700 dark:text-zinc-300">{attention.retainersDueSoon}</span>
+          {tr("retainers_due_soon", "Retainers due soon")}: <span className="font-medium text-zinc-700 dark:text-zinc-300">{attention.retainersDueSoon}</span>
         </span>
         <span className="inline-flex items-center gap-1.5">
           <CircleAlert className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" /> 
-          Failed imports: <span className="font-medium text-zinc-700 dark:text-zinc-300">{attention.failedImports}</span>
+          {tr("failed_imports", "Failed imports")}: <span className="font-medium text-zinc-700 dark:text-zinc-300">{attention.failedImports}</span>
         </span>
       </div>
     </Card>

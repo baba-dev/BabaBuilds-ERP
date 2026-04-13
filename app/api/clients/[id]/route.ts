@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { scanBuffer } from '@/lib/security/clamav';
 import { CLIENT_LOGO_INVALID_TYPE_ERROR, isAllowedClientLogoExtension } from '@/lib/uploads/client-logo';
 import { apiError } from '@/lib/api-error';
+import { logActivity } from '@/lib/security/activity-log';
 
 export async function GET(
   request: Request,
@@ -105,9 +106,25 @@ export async function DELETE(
       noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'client', action: 'delete', error: String(error) });
     }
 
+    logActivity({
+      action: "client_deleted",
+      status: "SUCCESS",
+      workspaceId,
+      actor: { userId: (session as any).user?.id, email: (session as any).user?.email },
+      entity: { type: "client", id: clientId },
+      request,
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Delete error:", error);
+    logActivity({
+      action: "client_deleted",
+      status: "FAILURE",
+      workspaceId: (await getServerSession(authOptions) as any)?.workspaceId ?? null,
+      request,
+      metadata: { error: String(error) },
+    });
     return apiError(500, "Failed to delete client", "CLIENT_DELETE_FAILED");
   }
 }
@@ -211,9 +228,25 @@ export async function PATCH(
       noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'client', action: 'update', error: String(error) });
     }
 
+    logActivity({
+      action: "client_updated",
+      status: "SUCCESS",
+      workspaceId,
+      actor: { userId: (session as any).user?.id, email: (session as any).user?.email },
+      entity: { type: "client", id: updatedClient.id },
+      request,
+    });
+
     return NextResponse.json({ success: true, client: updatedClient });
   } catch (error) {
     console.error("Update error:", error);
+    logActivity({
+      action: "client_updated",
+      status: "FAILURE",
+      workspaceId: (await getServerSession(authOptions) as any)?.workspaceId ?? null,
+      request,
+      metadata: { error: String(error) },
+    });
     return apiError(500, "Failed to update client", "CLIENT_UPDATE_FAILED");
   }
 }
