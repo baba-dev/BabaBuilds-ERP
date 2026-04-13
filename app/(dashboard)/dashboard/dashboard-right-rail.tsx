@@ -31,6 +31,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { DashboardData } from "./types";
+import { INTELLIGENCE_SUGGESTION_ROUTES } from "./intelligence-suggestion-routes";
 
 interface DashboardRightRailProps {
   data: DashboardData;
@@ -381,8 +382,8 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
   if (data.attention.failedImports > 0) {
     suggestions.push({
       label: tr("action_fix_imports", "Resolve Failed Data Syncs"),
-      desc: tr("action_fix_imports_desc", "Data import failures detected. Resolution is mandatory for statement accuracy."),
-      href: "/settings/imports",
+      desc: tr("action_fix_imports_desc", "Failed statement imports need review. Open the import workspace to classify debit/credit rows with AI guidance."),
+      href: INTELLIGENCE_SUGGESTION_ROUTES.fixImports,
       icon: DatabaseZap,
       tone: "amber"
     });
@@ -392,7 +393,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
     suggestions.push({
       label: tr("action_finish_onboarding", "Finalize Workspace Configuration"),
       desc: tr("action_finish_onboarding_desc", "A few remaining setup steps will unlock full automation and cleaner workstreams."),
-      href: "/settings",
+      href: INTELLIGENCE_SUGGESTION_ROUTES.finishOnboarding,
       icon: FilePlus2,
       tone: "indigo"
     });
@@ -402,7 +403,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
     suggestions.push({
       label: tr("action_optimize_receivables", "Review Outstanding Receivables"),
       desc: tr("action_optimize_receivables_desc", "Pending invoices identified. Strategic follow-up will optimize available cash."),
-      href: "/invoice",
+      href: INTELLIGENCE_SUGGESTION_ROUTES.reviewReceivables,
       icon: Receipt,
       tone: "amber"
     });
@@ -412,7 +413,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
     suggestions.push({
       label: tr("action_reconcile_books", "Execute Final Reconciliation"),
       desc: tr("action_reconcile_books_desc", "Unmatched bank entries detected. Reconcile to ensure ledger trust."),
-      href: "/reconciliation",
+      href: INTELLIGENCE_SUGGESTION_ROUTES.reconcileBooks,
       icon: ShieldEllipsis,
       tone: "indigo"
     });
@@ -421,8 +422,8 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
   if (!data.salesAndShop.shopEnabled && data.salesAndShop.publishedServices > 0) {
     suggestions.push({
       label: tr("action_launch_store", "Enable Storefront Publicly"),
-      desc: tr("action_launch_store_desc", "Your published services are ready for public orders. Growth signal is active."),
-      href: "/settings/shop",
+      desc: tr("action_launch_store_desc", "Published services are ready. Complete storefront settings and launch your public shop."),
+      href: INTELLIGENCE_SUGGESTION_ROUTES.launchStorefront,
       icon: ShoppingBag,
       tone: "emerald"
     });
@@ -433,7 +434,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
     suggestions.push({
       label: tr("action_scale_billing", "Focus on Revenue Generation"),
       desc: tr("action_scale_billing_desc", "Workspace state is stable. Now is the peak time to generate new growth signals."),
-      href: "/invoice",
+      href: INTELLIGENCE_SUGGESTION_ROUTES.scaleBilling,
       icon: Sparkles,
       tone: "indigo"
     });
