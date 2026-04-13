@@ -8,7 +8,7 @@ on:
 
 jobs:
   check-locales:
-    runs-on: ubuntu-latest
+    runs-on: runs-on: [self-hosted, linux, x64, erp-ci]
 
     steps:
       - name: Checkout repository
