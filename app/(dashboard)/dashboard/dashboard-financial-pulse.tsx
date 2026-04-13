@@ -1,10 +1,44 @@
 "use client";
 
-import { Landmark, TrendingUp, ArrowUpRight, ArrowDownRight, ShieldCheck, Activity } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Landmark, ArrowUpRight, ArrowDownRight, ShieldCheck, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import type { DashboardData } from "./types";
 import { DashboardTooltip } from "./dashboard-tooltip";
+
+// Optional subtle count animation for values to make it feel "alive"
+function CountUpValue({ value, formatter }: { value: number; formatter: (v: number) => string }) {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    let startTimestamp: number | null = null;
+    const duration = 1200; // ms
+    
+    const step = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      // easeOutExpo
+      const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      setDisplayValue(easeProgress * value);
+      
+      if (progress < 1) {
+        window.requestAnimationFrame(step);
+      } else {
+        setDisplayValue(value);
+      }
+    };
+    
+    // Slight delay to allow layout to settle before animating
+    const timer = setTimeout(() => {
+      window.requestAnimationFrame(step);
+    }, 150);
+    
+    return () => clearTimeout(timer);
+  }, [value]);
+
+  return <>{formatter(displayValue)}</>;
+}
 
 export function DashboardFinancialPulse({
   financialPulse,
@@ -52,121 +86,203 @@ export function DashboardFinancialPulse({
     ? "bg-amber-500"
     : "bg-rose-500";
 
+  const ReconIcon = isHealthy ? CheckCircle2 : isModerate ? Clock : AlertCircle;
+
+  // Mount animation for the progress bar
+  const [mountedWidth, setMountedWidth] = useState(0);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMountedWidth(Math.max(5, reconciliationProgress));
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [reconciliationProgress]);
+
   return (
-    <section className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Landmark className="w-4 h-4 text-indigo-500" />
-        <h3 className="font-semibold">{tr("financial_pulse", "Financial pulse")}</h3>
+    <section className="space-y-6">
+      <div className="flex items-center gap-2 px-1">
+        <Landmark className="w-5 h-5 text-indigo-500" />
+        <h3 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+          {tr("financial_pulse", "Financial pulse")}
+        </h3>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* 1. Revenue & Collections */}
-        <Card className="group relative overflow-hidden p-5 border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/90 shadow-sm hover:-translate-y-0.5 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2">
-          <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-indigo-500 to-indigo-400/20" />
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-              {tr("revenue_collections", "Revenue & Collections")}
-            </p>
-            <ArrowUpRight className="w-4 h-4 text-indigo-500/70" />
-          </div>
-          <div className="mt-4">
-            <p className="text-xs text-zinc-500 dark:text-zinc-500 flex items-center gap-1 font-medium tracking-wide uppercase">
-              {tr("billed_revenue", "Billed revenue")} <DashboardTooltip label={tr("billed_revenue_help", "Revenue invoiced in the selected financial year.")} />
-            </p>
-            <p className="text-3xl font-semibold mt-1 tracking-tight text-zinc-900 dark:text-zinc-50">
-              {fCurrency(billedRevenue)}
-            </p>
-          </div>
-          <div className="mt-5 pt-4 border-t border-zinc-100 dark:border-zinc-800/60 flex items-center justify-between">
-            <p className="text-sm text-zinc-500 flex items-center gap-1">
-              {tr("receivables", "Receivables")} <DashboardTooltip label={tr("receivables_help", "Money still expected from issued invoices.")} />
-            </p>
-            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{fCurrency(receivables)}</p>
+        <Card className="group relative overflow-hidden p-6 border-zinc-200 dark:border-zinc-800/60 bg-white dark:bg-zinc-950/50 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-500 animate-in fade-in slide-in-from-bottom-3">
+          <div className="absolute -top-12 -right-12 w-32 h-32 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/10 dark:group-hover:bg-indigo-500/20 transition-all duration-700" />
+          
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center border border-indigo-100 dark:border-indigo-500/20 shadow-sm">
+                  <ArrowUpRight className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                  {tr("revenue_collections", "Revenue & Collections")}
+                </p>
+              </div>
+            </div>
+            
+            <div className="space-y-1 mb-8">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5 font-semibold tracking-wider uppercase">
+                {tr("billed_revenue", "Billed revenue")} 
+                <DashboardTooltip label={tr("billed_revenue_help", "Revenue invoiced in the selected financial year.")} />
+              </p>
+              <p className="text-4xl font-light tracking-tight text-zinc-900 dark:text-white">
+                <CountUpValue value={billedRevenue} formatter={fCurrency} />
+              </p>
+            </div>
+            
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/50 dark:border-zinc-800 flex items-center justify-between transition-colors group-hover:border-indigo-100 dark:group-hover:border-indigo-900/40">
+              <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
+                {tr("receivables", "Receivables")} 
+                <DashboardTooltip label={tr("receivables_help", "Money still expected from issued invoices.")} />
+              </p>
+              <p className="text-sm font-bold text-zinc-900 dark:text-zinc-200">
+                {fCurrency(receivables)}
+              </p>
+            </div>
           </div>
         </Card>
 
         {/* 2. Outflow & Obligations */}
-        <Card className="group relative overflow-hidden p-5 border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/90 shadow-sm hover:-translate-y-0.5 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2 delay-100 fill-mode-both">
-          <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-rose-500 to-rose-400/20" />
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-              {tr("outflow_obligations", "Outflow & Obligations")}
-            </p>
-            <ArrowDownRight className="w-4 h-4 text-rose-500/70" />
-          </div>
-          <div className="mt-4">
-            <p className="text-xs text-zinc-500 dark:text-zinc-500 flex items-center gap-1 font-medium tracking-wide uppercase">
-              {tr("expenses", "Expenses")} <DashboardTooltip label={tr("expenses_help", "Recorded outgoing spend for the selected period.")} />
-            </p>
-            <p className="text-3xl font-semibold mt-1 tracking-tight text-zinc-900 dark:text-zinc-50">
-              {fCurrency(expenses)}
-            </p>
-          </div>
-          <div className="mt-5 pt-4 border-t border-zinc-100 dark:border-zinc-800/60 flex items-center justify-between">
-            <p className="text-sm text-zinc-500 flex items-center gap-1">
-              {tr("estimated_tax", "Estimated tax")} <DashboardTooltip label={tr("estimated_tax_help", "Projected tax due based on current revenue profile.")} />
-            </p>
-            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{fCurrency(estimatedTax)}</p>
+        <Card className="group relative overflow-hidden p-6 border-zinc-200 dark:border-zinc-800/60 bg-white dark:bg-zinc-950/50 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-500 animate-in fade-in slide-in-from-bottom-3 delay-100 fill-mode-both">
+          <div className="absolute -top-12 -right-12 w-32 h-32 bg-rose-500/5 dark:bg-rose-500/10 rounded-full blur-3xl group-hover:bg-rose-500/10 dark:group-hover:bg-rose-500/20 transition-all duration-700" />
+          
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center border border-rose-100 dark:border-rose-500/20 shadow-sm">
+                  <ArrowDownRight className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                </div>
+                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                  {tr("outflow_obligations", "Outflow & Obligations")}
+                </p>
+              </div>
+            </div>
+            
+            <div className="space-y-1 mb-8">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5 font-semibold tracking-wider uppercase">
+                {tr("expenses", "Expenses")} 
+                <DashboardTooltip label={tr("expenses_help", "Recorded outgoing spend for the selected period.")} />
+              </p>
+              <p className="text-4xl font-light tracking-tight text-zinc-900 dark:text-white">
+                <CountUpValue value={expenses} formatter={fCurrency} />
+              </p>
+            </div>
+            
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/50 dark:border-zinc-800 flex items-center justify-between transition-colors group-hover:border-rose-100 dark:group-hover:border-rose-900/40">
+              <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
+                {tr("estimated_tax", "Estimated tax")} 
+                <DashboardTooltip label={tr("estimated_tax_help", "Projected tax due based on current revenue profile.")} />
+              </p>
+              <p className="text-sm font-bold text-zinc-900 dark:text-zinc-200">
+                {fCurrency(estimatedTax)}
+              </p>
+            </div>
           </div>
         </Card>
 
-        {/* 3. Stability & MRR */}
-        <Card className="group relative overflow-hidden p-5 border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/90 shadow-sm hover:-translate-y-0.5 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2 delay-200 fill-mode-both">
-          <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-emerald-500 to-emerald-400/20" />
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
-              {tr("capital_stability", "Capital & Stability")}
-            </p>
-            <ShieldCheck className="w-4 h-4 text-emerald-500/70" />
-          </div>
-          <div className="mt-4">
-            <p className="text-xs text-indigo-600 dark:text-indigo-400 flex items-center gap-1 font-bold tracking-wide uppercase">
-              {tr("mrr", "Monthly Recurring (MRR)")} <DashboardTooltip label={tr("mrr_help", "Monthly recurring revenue from active retainers.")} />
-            </p>
-            <p className="text-3xl font-semibold mt-1 tracking-tight text-zinc-900 dark:text-zinc-50">
-              {fCurrency(recurringRevenue)}
-            </p>
-          </div>
-          <div className="mt-5 pt-4 border-t border-zinc-100 dark:border-zinc-800/60 flex items-center justify-between">
-            <p className="text-sm text-zinc-500 flex items-center gap-1">
-              {tr("liquid_assets", "Liquid assets")} <DashboardTooltip label={tr("liquid_assets_help", "Investments and liquid holdings currently tracked.")} />
-            </p>
-            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{fCurrency(liquidAssets)}</p>
+        {/* 3. Stability & MRR (Visual Anchor) */}
+        <Card className="group relative overflow-hidden p-6 border-indigo-200 dark:border-indigo-500/30 bg-[#f8f9ff] dark:bg-indigo-950/20 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-500 animate-in fade-in slide-in-from-bottom-3 delay-200 fill-mode-both ring-1 ring-inset ring-indigo-500/5 dark:ring-indigo-500/10">
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 dark:from-indigo-500/10 dark:to-purple-500/10 opacity-80 pointer-events-none" />
+          
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center shadow-md">
+                  <ShieldCheck className="w-4 h-4 text-white" />
+                </div>
+                <p className="text-sm font-semibold text-indigo-950 dark:text-indigo-100">
+                  {tr("capital_stability", "Capital & Stability")}
+                </p>
+              </div>
+            </div>
+            
+            <div className="space-y-1 mb-8">
+              <p className="text-xs text-indigo-800/80 dark:text-indigo-300 flex items-center gap-1.5 font-bold tracking-wider uppercase">
+                {tr("mrr", "Monthly Recurring (MRR)")} 
+                <DashboardTooltip label={tr("mrr_help", "Monthly recurring revenue from active retainers.")} />
+              </p>
+              <p className="text-4xl font-semibold tracking-tight text-indigo-950 dark:text-white">
+                <CountUpValue value={recurringRevenue} formatter={fCurrency} />
+              </p>
+            </div>
+            
+            <div className="p-3.5 rounded-xl bg-white/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-500/20 flex items-center justify-between backdrop-blur-sm transition-colors group-hover:border-indigo-200 dark:group-hover:border-indigo-500/40">
+              <p className="text-xs font-semibold text-indigo-900/80 dark:text-indigo-200 flex items-center gap-1.5">
+                {tr("liquid_assets", "Liquid assets")} 
+                <DashboardTooltip label={tr("liquid_assets_help", "Investments and liquid holdings currently tracked.")} />
+              </p>
+              <p className="text-sm font-bold text-indigo-950 dark:text-white">
+                {fCurrency(liquidAssets)}
+              </p>
+            </div>
           </div>
         </Card>
       </div>
 
       {/* Reconciliation Progress */}
-      <Card className="p-5 border-zinc-200 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/90 shadow-sm overflow-hidden relative animate-in fade-in slide-in-from-bottom-2 delay-300 fill-mode-both hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors duration-300">
-        <div className="flex flex-col md:flex-row md:items-center gap-6">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1.5">
-              <Activity className="w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex items-center gap-1">
-                {tr("reconciliation_progress", "Reconciliation progress")} <DashboardTooltip label={tr("reconciliation_progress_help", "Percent of bank transactions matched against invoices/expenses.")} />
+      <Card className={`group p-6 overflow-hidden relative animate-in fade-in slide-in-from-bottom-4 delay-300 fill-mode-both transition-all duration-500 border ${
+        isHealthy 
+          ? "border-emerald-200/60 dark:border-emerald-900/40 bg-emerald-50/40 dark:bg-emerald-950/10 shadow-sm hover:shadow-md"
+          : isModerate 
+          ? "border-amber-200/60 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/10 shadow-sm hover:shadow-md"
+          : "border-rose-200/60 dark:border-rose-900/40 bg-rose-50/40 dark:bg-rose-950/10 shadow-sm hover:shadow-md"
+      }`}>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 relative z-10">
+          
+          <div className="flex items-start gap-4 flex-1">
+            <div className={`p-3.5 rounded-2xl flex-shrink-0 shadow-sm border ${
+              isHealthy ? "bg-emerald-100/80 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30"
+              : isModerate ? "bg-amber-100/80 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/30"
+              : "bg-rose-100/80 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-500/30"
+            }`}>
+              <ReconIcon className="w-6 h-6" />
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                  {tr("reconciliation_progress", "Reconciliation Progress")}
+                </h4>
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  isHealthy ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
+                  : isModerate ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400"
+                  : "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400"
+                }`}>
+                  {reconStatus}
+                </span>
+                <DashboardTooltip label={tr("reconciliation_progress_help", "Percent of bank transactions matched against invoices/expenses.")} />
+              </div>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 max-w-xl leading-relaxed">
+                {reconMessage}
               </p>
             </div>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-lg leading-relaxed">
-              {reconMessage}
-            </p>
           </div>
 
-          <div className="flex-1 md:max-w-sm w-full">
-            <div className="flex justify-between items-end mb-2">
-              <span className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">{reconciliationProgress}%</span>
-              <span className={`text-xs font-bold uppercase tracking-wide ${isHealthy ? 'text-emerald-600 dark:text-emerald-500' : isModerate ? 'text-amber-600 dark:text-amber-500' : 'text-rose-600 dark:text-rose-500'}`}>
-                {reconStatus}
+          <div className="flex-shrink-0 w-full lg:w-80 mt-2 lg:mt-0">
+            <div className="flex justify-between items-end mb-3">
+              <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Match rate</span>
+              <span className={`text-3xl font-bold tracking-tight ${
+                  isHealthy ? 'text-emerald-600 dark:text-emerald-400' 
+                  : isModerate ? 'text-amber-600 dark:text-amber-400' 
+                  : 'text-rose-600 dark:text-rose-400'
+              }`}>
+                {reconciliationProgress}%
               </span>
             </div>
-            <div className="h-2.5 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+            <div className="h-3.5 w-full bg-zinc-200/60 dark:bg-zinc-800/80 rounded-full overflow-hidden shadow-inner flex items-center">
               <div
-                className={`h-full rounded-full transition-all duration-1000 ease-out ${reconColorClass}`}
-                style={{ width: `${reconciliationProgress}%` }}
+                className={`h-full rounded-full transition-all duration-[1500ms] ease-out relative ${reconColorClass}`}
+                style={{ width: `${mountedWidth}%` }}
               />
             </div>
           </div>
+          
         </div>
       </Card>
     </section>
   );
 }
+
