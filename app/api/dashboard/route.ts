@@ -10,6 +10,7 @@ import { getInvoiceBilledAmount, sumInvoiceBilledAmount } from "@/lib/invoice/to
 import { estimateTax } from "@/lib/tax/engine";
 import { getCurrentFinancialYear } from "@/lib/financial-year";
 import { buildMonthlyChartBuckets } from "./monthly-series";
+import { describeKpiPeriod, getFyDateRange } from "./sales-shop-kpi-periods";
 import {
   buildDashboardCacheKey,
   getDashboardCacheEntry,
@@ -35,23 +36,8 @@ const getIntegrationReadiness = (keys: Array<string | null | undefined>): Integr
 };
 
 const asPct = (num: number, den: number) => (den <= 0 ? 0 : Math.min(100, Math.round((num / den) * 100)));
-const getFyDateRange = (fy: string): { start: Date; endExclusive: Date } | null => {
-  const match = fy.match(/^(\d{2})-(\d{2})$/);
-  if (!match) return null;
-  const startYear = 2000 + Number(match[1]);
-  const endYear = 2000 + Number(match[2]);
-  if (!Number.isFinite(startYear) || !Number.isFinite(endYear) || endYear !== startYear + 1) return null;
-  return {
-    start: new Date(Date.UTC(startYear, 3, 1, 0, 0, 0)),
-    endExclusive: new Date(Date.UTC(endYear, 3, 1, 0, 0, 0)),
-  };
-};
-
-
 async function buildDashboardPayload(workspaceId: string, userId: string | null, fy: string) {
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const thirtyDaysBack = new Date(now);
   thirtyDaysBack.setDate(now.getDate() - 30);
   const sevenDaysOut = new Date(now);
@@ -68,13 +54,14 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     expenses,
     bankTransactions,
     retainers,
-    proposals,
+    proposalsFy,
     tasks,
     publishedServices,
     lowStockProducts,
     openPurchaseOrders,
     inventoryMovements,
-    serviceOrders,
+    serviceOrdersFy,
+    serviceOrdersRolling30d,
     recentServiceOrders,
     integrityRuns,
     violationReports,
@@ -116,14 +103,31 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     }),
     prisma.bankTransaction.findMany({ where: { workspaceId } }),
     prisma.retainer.findMany({ where: { workspaceId, status: "ACTIVE" }, include: { client: true } }),
-    prisma.proposal.findMany({ where: { workspaceId }, include: { items: true } }),
+    prisma.proposal.findMany({
+      where: {
+        workspaceId,
+        ...(fyRange ? { dateCreated: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}),
+      },
+      include: { items: true },
+    }),
     prisma.task.findMany({ where: { workspaceId } }),
     prisma.serviceTemplate.count({ where: { workspaceId, showInShop: true } }),
     prisma.product.count({ where: { workspaceId, OR: [{ status: "LOW_STOCK" }, { currentStock: { lte: 5 } }] } }),
     prisma.purchaseOrder.count({ where: { workspaceId, status: { in: ["DRAFT", "SENT"] } } }),
     prisma.inventoryMovement.findMany({ where: { workspaceId }, include: { product: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 5 }),
     prisma.serviceOrder.findMany({
-      where: { workspaceId },
+      where: {
+        workspaceId,
+        ...(fyRange ? { createdAt: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}),
+      },
+      include: { serviceTemplate: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.serviceOrder.findMany({
+      where: {
+        workspaceId,
+        createdAt: { gte: thirtyDaysBack, lt: now },
+      },
       include: { serviceTemplate: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
     }),
@@ -171,7 +175,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
 
   const { overdueReceivables, outstandingReceivables } = summarizeReceivablesForAttention(attentionInvoices, now);
   const retainersDueSoon = retainers.filter((ret) => ret.nextBillingDate >= now && ret.nextBillingDate <= sevenDaysOut).length;
-  const acceptedUninvoicedProposals = proposals.filter((proposal) => proposal.status === "ACCEPTED").length;
+  const acceptedUninvoicedProposals = proposalsFy.filter((proposal) => proposal.status === "ACCEPTED").length;
   const urgentTasks = tasks.filter((task) => {
     const due = task.dueDate ? new Date(task.dueDate) : null;
     return task.status !== "DONE" && ((due && due <= sevenDaysOut) || String(task.status).toUpperCase().includes("URGENT"));
@@ -181,7 +185,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   const criticalViolations = violationReports.filter((v) => String(v.severity).toUpperCase() === "CRITICAL").length;
   const complianceIssues = violationReports.length + (criticalViolations > 0 ? 1 : 0);
 
-  const funnel = proposals.reduce(
+  const funnel = proposalsFy.reduce(
     (acc, proposal) => {
       const status = String(proposal.status || "DRAFT").toUpperCase();
       if (status === "SENT") acc.sent += 1;
@@ -195,7 +199,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     { draft: 0, sent: 0, viewed: 0, accepted: 0, invoiced: 0, declined: 0 },
   );
 
-  const serviceOrderByStatus = serviceOrders.reduce<Record<string, number>>((acc, order) => {
+  const serviceOrderByStatus = serviceOrdersFy.reduce<Record<string, number>>((acc, order) => {
     const status = String(order.status || "PENDING").toUpperCase();
     acc[status] = (acc[status] ?? 0) + 1;
     return acc;
@@ -206,7 +210,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   const failedOrders = serviceOrderByStatus.FAILED ?? 0;
   const conversion = asPct(paidOrders, Math.max(1, paidOrders + pendingOrders + failedOrders));
 
-  const topServicesMap = serviceOrders.reduce<Record<string, { orderCount: number; revenue: Prisma.Decimal }>>((acc, order) => {
+  const topServicesMap = serviceOrdersFy.reduce<Record<string, { orderCount: number; revenue: Prisma.Decimal }>>((acc, order) => {
     const name = order.serviceTemplate?.name ?? "Unknown service";
     if (!acc[name]) acc[name] = { orderCount: 0, revenue: new Prisma.Decimal(0) };
     acc[name].orderCount += 1;
@@ -303,10 +307,19 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   ];
 
   const lastRun = integrityRuns[0];
-  const shopRevenueThisMonth = serviceOrders
-    .filter((order) => order.status === "PAID" && order.createdAt >= monthStart && order.createdAt < nextMonthStart)
+  const shopRevenueThisMonth = serviceOrdersRolling30d
+    .filter((order) => order.status === "PAID")
     .reduce((sum, order) => sum.plus(toDecimal(order.amount)), new Prisma.Decimal(0));
-  const ordersLast30Days = serviceOrders.filter((order) => order.createdAt >= thirtyDaysBack).length;
+  const ordersLast30Days = serviceOrdersRolling30d.length;
+  const salesAndShopKpiPeriods = {
+    proposalFunnel: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
+    acceptedAwaitingInvoicing: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
+    publicShopOrders: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
+    serviceOrderConversion: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
+    topServices: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
+    shopRevenueThisMonth: describeKpiPeriod({ type: "ROLLING_30D", now, fy, fyRange }),
+    ordersLast30Days: describeKpiPeriod({ type: "ROLLING_30D", now, fy, fyRange }),
+  };
 
   return {
     health: {
@@ -352,7 +365,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       acceptedAwaitingInvoicing: acceptedUninvoicedProposals,
       shopEnabled: Boolean(profile?.shopEnabled),
       publicShopOrders: {
-        total: serviceOrders.length,
+        total: serviceOrdersFy.length,
         paid: paidOrders,
         pending: pendingOrders,
         failed: failedOrders,
@@ -362,6 +375,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       ordersLast30Days,
       publishedServices,
       topServices,
+      kpiPeriods: salesAndShopKpiPeriods,
       recentServiceOrders: recentServiceOrders.map((order) => ({
         id: order.id,
         serviceName: order.serviceTemplate?.name ?? "Unknown service",
