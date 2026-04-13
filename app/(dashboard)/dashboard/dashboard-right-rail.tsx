@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { 
   Activity, 
   ArrowRight, 
@@ -38,12 +37,20 @@ interface DashboardRightRailProps {
   data: DashboardData;
   fCurrency: (val: number | string) => string;
   onRefreshSyncImportHealth?: () => Promise<void>;
+  syncImportHealthLoading?: boolean;
+  syncImportHealthError?: string | null;
 }
 
 type WorkspaceMood = 'critical' | 'warning' | 'opportunity' | 'healthy';
 type AIState = 'enabled' | 'locked_no_key' | 'fallback';
 
-export function DashboardRightRail({ data, fCurrency, onRefreshSyncImportHealth }: DashboardRightRailProps) {
+export function DashboardRightRail({
+  data,
+  fCurrency,
+  onRefreshSyncImportHealth,
+  syncImportHealthLoading = false,
+  syncImportHealthError = null,
+}: DashboardRightRailProps) {
   const t = useTranslations("Dashboard");
   const tr = (key: string, fallback: string, values?: any) => {
     const translation = t(key as any, values);
@@ -74,7 +81,13 @@ export function DashboardRightRail({ data, fCurrency, onRefreshSyncImportHealth 
           <RecentNotificationsSection data={data} tr={tr} mood={mood} />
           <SuggestedActionsSection data={data} tr={tr} mood={mood} />
           <SystemSignalsSection data={data} tr={tr} mood={mood} />
-          <SyncImportHealthSection data={data} tr={tr} onRefreshSyncImportHealth={onRefreshSyncImportHealth} />
+          <SyncImportHealthSection
+            data={data}
+            tr={tr}
+            onRefreshSyncImportHealth={onRefreshSyncImportHealth}
+            isRefreshing={syncImportHealthLoading}
+            error={syncImportHealthError}
+          />
         </div>
       </Card>
     </div>
@@ -506,22 +519,20 @@ function SyncImportHealthSection({
   data,
   tr,
   onRefreshSyncImportHealth,
+  isRefreshing,
+  error,
 }: {
   data: DashboardData;
   tr: any;
   onRefreshSyncImportHealth?: () => Promise<void>;
+  isRefreshing: boolean;
+  error: string | null;
 }) {
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const hasFailures = data.attention.failedImports > 0;
   
   const handleRefresh = async () => {
     if (!onRefreshSyncImportHealth || isRefreshing) return;
-    setIsRefreshing(true);
-    try {
-      await onRefreshSyncImportHealth();
-    } finally {
-      setIsRefreshing(false);
-    }
+    await onRefreshSyncImportHealth();
   };
   
   return (
@@ -552,6 +563,11 @@ function SyncImportHealthSection({
                   ? tr("sync_fix_note", "Manual intervention required for {count} records", { count: data.attention.failedImports })
                   : tr("reassurance_sync", "Infrastructure and data linkage are nominal.")}
               </p>
+              {error ? (
+                <p className="text-xs font-semibold text-rose-600 dark:text-rose-400 mt-2">
+                  {error}
+                </p>
+              ) : null}
             </div>
           </div>
           {onRefreshSyncImportHealth ? (
