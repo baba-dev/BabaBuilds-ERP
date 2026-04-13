@@ -36,7 +36,30 @@ const getIntegrationReadiness = (keys: Array<string | null | undefined>): Integr
 };
 
 const asPct = (num: number, den: number) => (den <= 0 ? 0 : Math.min(100, Math.round((num / den) * 100)));
-async function buildDashboardPayload(workspaceId: string, userId: string | null, fy: string) {
+const getFyDateRange = (fy: string): { start: Date; endExclusive: Date } | null => {
+  const match = fy.match(/^(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const startYear = 2000 + Number(match[1]);
+  const endYear = 2000 + Number(match[2]);
+  if (!Number.isFinite(startYear) || !Number.isFinite(endYear) || endYear !== startYear + 1) return null;
+  return {
+    start: new Date(Date.UTC(startYear, 3, 1, 0, 0, 0)),
+    endExclusive: new Date(Date.UTC(endYear, 3, 1, 0, 0, 0)),
+  };
+};
+
+
+export async function buildDashboardPayload(workspaceId: string, userId: string | null, fy: string) {
+  const queryTimingsMs: Record<string, number> = {};
+  const timed = async <T,>(label: string, op: () => Promise<T>): Promise<T> => {
+    const startedAt = performance.now();
+    try {
+      return await op();
+    } finally {
+      queryTimingsMs[label] = Number((performance.now() - startedAt).toFixed(2));
+    }
+  };
+
   const now = new Date();
   const thirtyDaysBack = new Date(now);
   thirtyDaysBack.setDate(now.getDate() - 30);
@@ -53,29 +76,35 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     invoices,
     attentionInvoices,
     recentInvoices,
-    investments,
+    investmentAggregate,
     expenses,
-    bankTransactions,
+    bankTransactionGroups,
     retainers,
-    proposalsFy,
-    tasks,
+    proposalStatusGroups,
+    taskCount,
+    openTaskCount,
+    urgentTaskCount,
+    blockedTaskCount,
     publishedServices,
     lowStockProducts,
     openPurchaseOrders,
     inventoryMovements,
-    serviceOrdersFy,
-    serviceOrdersRolling30d,
+    serviceOrderStatusGroups,
+    paidOrderRevenueThisMonth,
+    ordersLast30Days,
+    topServiceOrderGroups,
     recentServiceOrders,
     integrityRuns,
-    violationReports,
+    violationCount,
+    criticalViolationCount,
     taxOverrides,
     taxAudits,
     fileImportFailures,
     activities,
     notifications,
   ] = await Promise.all([
-    prisma.workspace.findUnique({ where: { id: workspaceId } }),
-    prisma.businessProfile.findUnique({
+    timed("workspace", () => prisma.workspace.findUnique({ where: { id: workspaceId } })),
+    timed("profile", () => prisma.businessProfile.findUnique({
       where: { workspaceId },
       select: {
         groqApiKey: true,
@@ -90,70 +119,70 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
         smtpFromEmail: true,
         shopEnabled: true,
       },
-    }),
-    prisma.invoice.findMany({ where: { workspaceId, financialYear: fy }, include: { client: true }, orderBy: { invoiceDate: "asc" } }),
-    prisma.invoice.findMany({
+    })),
+    timed("invoices.fy", () => prisma.invoice.findMany({
+      where: { workspaceId, financialYear: fy },
+      select: { status: true, invoiceDate: true, totalAmount: true, grandTotal: true, amountReceived: true },
+      orderBy: { invoiceDate: "asc" },
+    })),
+    timed("invoices.attention", () => prisma.invoice.findMany({
       where: { workspaceId },
       select: { status: true, invoiceDate: true, totalAmount: true, grandTotal: true, amountReceived: true },
-    }),
-    prisma.invoice.findMany({ where: { workspaceId }, orderBy: { invoiceDate: "desc" }, take: 6, include: { client: true } }),
-    prisma.investment.findMany({ where: { workspaceId } }),
-    prisma.expense.findMany({
+    })),
+    timed("invoices.recent", () => prisma.invoice.findMany({ where: { workspaceId }, orderBy: { invoiceDate: "desc" }, take: 6, include: { client: true } })),
+    timed("investments.sum", () => prisma.investment.aggregate({ where: { workspaceId }, _sum: { amount: true } })),
+    timed("expenses.fy", () => prisma.expense.findMany({
       where: {
         workspaceId,
         ...(fyRange ? { date: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}),
       },
-    }),
-    prisma.bankTransaction.findMany({ where: { workspaceId } }),
-    prisma.retainer.findMany({ where: { workspaceId, status: "ACTIVE" }, include: { client: true } }),
-    prisma.proposal.findMany({
+      select: { date: true, amount: true },
+    })),
+    timed("bank.grouped", () => prisma.bankTransaction.groupBy({ where: { workspaceId }, by: ["isReconciled"], _count: { _all: true } })),
+    timed("retainers.active", () => prisma.retainer.findMany({ where: { workspaceId, status: "ACTIVE" }, select: { amount: true, nextBillingDate: true } })),
+    timed("proposals.grouped", () => prisma.proposal.groupBy({ where: { workspaceId }, by: ["status"], _count: { _all: true } })),
+    timed("tasks.total", () => prisma.task.count({ where: { workspaceId } })),
+    timed("tasks.open", () => prisma.task.count({ where: { workspaceId, status: { not: "DONE" } } })),
+    timed("tasks.urgent", () => prisma.task.count({
       where: {
         workspaceId,
-        ...(fyRange ? { dateCreated: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}),
+        status: { not: "DONE" },
+        OR: [{ dueDate: { lte: sevenDaysOut } }, { status: { contains: "URGENT" } }],
       },
-      include: { items: true },
-    }),
-    prisma.task.findMany({ where: { workspaceId } }),
-    prisma.serviceTemplate.count({ where: { workspaceId, showInShop: true } }),
-    prisma.product.count({ where: { workspaceId, OR: [{ status: "LOW_STOCK" }, { currentStock: { lte: 5 } }] } }),
-    prisma.purchaseOrder.count({ where: { workspaceId, status: { in: ["DRAFT", "SENT"] } } }),
-    prisma.inventoryMovement.findMany({ where: { workspaceId }, include: { product: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 5 }),
-    prisma.serviceOrder.findMany({
-      where: {
-        workspaceId,
-        ...(fyRange ? { createdAt: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}),
-      },
-      include: { serviceTemplate: { select: { name: true } } },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.serviceOrder.findMany({
-      where: {
-        workspaceId,
-        createdAt: { gte: thirtyDaysBack, lt: now },
-      },
-      include: { serviceTemplate: { select: { name: true } } },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.serviceOrder.findMany({
+    })),
+    timed("tasks.blocked", () => prisma.task.count({ where: { workspaceId, status: { contains: "BLOCK" } } })),
+    timed("services.published", () => prisma.serviceTemplate.count({ where: { workspaceId, showInShop: true } })),
+    timed("products.low_stock", () => prisma.product.count({ where: { workspaceId, OR: [{ status: "LOW_STOCK" }, { currentStock: { lte: 5 } }] } })),
+    timed("purchase_orders.open", () => prisma.purchaseOrder.count({ where: { workspaceId, status: { in: ["DRAFT", "SENT"] } } })),
+    timed("inventory.recent", () => prisma.inventoryMovement.findMany({ where: { workspaceId }, include: { product: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 5 })),
+    timed("orders.status_group", () => prisma.serviceOrder.groupBy({ where: { workspaceId }, by: ["status"], _count: { _all: true } })),
+    timed("orders.revenue_month", () => prisma.serviceOrder.aggregate({
+      where: { workspaceId, status: "PAID", createdAt: { gte: monthStart, lt: nextMonthStart } },
+      _sum: { amount: true },
+    })),
+    timed("orders.last_30d", () => prisma.serviceOrder.count({ where: { workspaceId, createdAt: { gte: thirtyDaysBack } } })),
+    timed("orders.top_services", () => prisma.serviceOrder.groupBy({ where: { workspaceId }, by: ["serviceTemplateId"], _count: { _all: true }, _sum: { amount: true } })),
+    timed("orders.recent", () => prisma.serviceOrder.findMany({
       where: { workspaceId },
       include: { serviceTemplate: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
       take: 5,
-    }),
-    prisma.accountingIntegrityRun.findMany({ where: { workspaceId }, orderBy: { startedAt: "desc" }, take: 1 }),
-    prisma.accountingViolationReport.findMany({ where: { workspaceId }, orderBy: { detectedAt: "desc" }, take: 30 }),
-    prisma.taxRateOverride.count({ where: { workspaceId, isActive: true } }),
-    prisma.taxDecisionAuditLog.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, take: 5 }),
-    prisma.fileImportAuditLog.count({ where: { workspaceId, status: { in: ["FAILED", "ERROR"] } } }),
-    prisma.appActivityLog.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, take: 8 }),
+    })),
+    timed("integrity.last_run", () => prisma.accountingIntegrityRun.findMany({ where: { workspaceId }, orderBy: { startedAt: "desc" }, take: 1 })),
+    timed("integrity.violations_total", () => prisma.accountingViolationReport.count({ where: { workspaceId } })),
+    timed("integrity.violations_critical", () => prisma.accountingViolationReport.count({ where: { workspaceId, severity: "CRITICAL" } })),
+    timed("tax.overrides", () => prisma.taxRateOverride.count({ where: { workspaceId, isActive: true } })),
+    timed("tax.audits_recent", () => prisma.taxDecisionAuditLog.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, take: 5 })),
+    timed("imports.failed", () => prisma.fileImportAuditLog.count({ where: { workspaceId, status: { in: ["FAILED", "ERROR"] } } })),
+    timed("activity.recent", () => prisma.appActivityLog.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, take: 8 })),
     userId
-      ? prisma.inAppNotification.count({ where: { userId, workspaceId, isRead: false, eventType: { in: CRITICAL_NOTIFICATION_TYPES } } })
+      ? timed("notifications.critical_unread", () => prisma.inAppNotification.count({ where: { userId, workspaceId, isRead: false, eventType: { in: CRITICAL_NOTIFICATION_TYPES } } }))
       : Promise.resolve(0),
   ]);
 
   const billedRevenue = sumInvoiceBilledAmount(invoices);
   const expensesTotal = expenses.reduce((sum, row) => sum.plus(toDecimal(row.amount)), new Prisma.Decimal(0));
-  const liquidAssets = investments.reduce((sum, row) => sum.plus(toDecimal(row.amount)), new Prisma.Decimal(0));
+  const liquidAssets = toDecimal(investmentAggregate._sum.amount ?? 0);
   const receivables = invoices.reduce((sum, inv) => {
     const billed = getInvoiceBilledAmount(inv);
     const received = new Prisma.Decimal(Number(inv.amountReceived ?? 0));
@@ -173,38 +202,37 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   const recurringRevenue = retainers.reduce((sum, ret) => sum.plus(toDecimal(ret.amount)), new Prisma.Decimal(0));
   const arr = recurringRevenue.mul(12);
 
-  const unreconciledTransactions = bankTransactions.filter((tx) => !tx.isReconciled).length;
-  const reconciliationProgress = asPct(bankTransactions.length - unreconciledTransactions, bankTransactions.length);
+  const totalBankTransactions = bankTransactionGroups.reduce((sum, row) => sum + row._count._all, 0);
+  const unreconciledTransactions = bankTransactionGroups
+    .filter((row) => !row.isReconciled)
+    .reduce((sum, row) => sum + row._count._all, 0);
+  const reconciliationProgress = asPct(totalBankTransactions - unreconciledTransactions, totalBankTransactions);
 
   const { overdueReceivables, outstandingReceivables } = summarizeReceivablesForAttention(attentionInvoices, now);
   const retainersDueSoon = retainers.filter((ret) => ret.nextBillingDate >= now && ret.nextBillingDate <= sevenDaysOut).length;
-  const acceptedUninvoicedProposals = proposalsFy.filter((proposal) => proposal.status === "ACCEPTED").length;
-  const urgentTasks = tasks.filter((task) => {
-    const due = task.dueDate ? new Date(task.dueDate) : null;
-    return task.status !== "DONE" && ((due && due <= sevenDaysOut) || String(task.status).toUpperCase().includes("URGENT"));
-  }).length;
-  const blockedTasks = tasks.filter((task) => String(task.status).toUpperCase().includes("BLOCK")).length;
+  const proposalCounts = proposalStatusGroups.reduce<Record<string, number>>((acc, group) => {
+    acc[String(group.status || "DRAFT").toUpperCase()] = group._count._all;
+    return acc;
+  }, {});
+  const acceptedUninvoicedProposals = proposalCounts.ACCEPTED ?? 0;
+  const urgentTasks = urgentTaskCount;
+  const blockedTasks = blockedTaskCount;
 
-  const criticalViolations = violationReports.filter((v) => String(v.severity).toUpperCase() === "CRITICAL").length;
-  const complianceIssues = violationReports.length + (criticalViolations > 0 ? 1 : 0);
+  const criticalViolations = criticalViolationCount;
+  const complianceIssues = violationCount + (criticalViolations > 0 ? 1 : 0);
 
-  const funnel = proposalsFy.reduce(
-    (acc, proposal) => {
-      const status = String(proposal.status || "DRAFT").toUpperCase();
-      if (status === "SENT") acc.sent += 1;
-      else if (status === "VIEWED") acc.viewed += 1;
-      else if (status === "ACCEPTED") acc.accepted += 1;
-      else if (status === "INVOICED") acc.invoiced += 1;
-      else if (status === "DECLINED") acc.declined += 1;
-      else acc.draft += 1;
-      return acc;
-    },
-    { draft: 0, sent: 0, viewed: 0, accepted: 0, invoiced: 0, declined: 0 },
-  );
+  const funnel = {
+    draft: proposalCounts.DRAFT ?? 0,
+    sent: proposalCounts.SENT ?? 0,
+    viewed: proposalCounts.VIEWED ?? 0,
+    accepted: acceptedUninvoicedProposals,
+    invoiced: proposalCounts.INVOICED ?? 0,
+    declined: proposalCounts.DECLINED ?? 0,
+  };
 
-  const serviceOrderByStatus = serviceOrdersFy.reduce<Record<string, number>>((acc, order) => {
-    const status = String(order.status || "PENDING").toUpperCase();
-    acc[status] = (acc[status] ?? 0) + 1;
+  const serviceOrderByStatus = serviceOrderStatusGroups.reduce<Record<string, number>>((acc, group) => {
+    const status = String(group.status || "PENDING").toUpperCase();
+    acc[status] = group._count._all;
     return acc;
   }, {});
 
@@ -213,22 +241,28 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   const failedOrders = serviceOrderByStatus.FAILED ?? 0;
   const conversion = asPct(paidOrders, Math.max(1, paidOrders + pendingOrders + failedOrders));
 
-  const topServicesMap = serviceOrdersFy.reduce<Record<string, { orderCount: number; revenue: Prisma.Decimal }>>((acc, order) => {
-    const name = order.serviceTemplate?.name ?? "Unknown service";
-    if (!acc[name]) acc[name] = { orderCount: 0, revenue: new Prisma.Decimal(0) };
-    acc[name].orderCount += 1;
-    acc[name].revenue = acc[name].revenue.plus(toDecimal(order.amount));
-    return acc;
-  }, {});
-  const topServices = Object.entries(topServicesMap)
-    .map(([serviceName, stats]) => ({ serviceName, orderCount: stats.orderCount, revenue: serializeMoney(stats.revenue) }))
-    .sort((a, b) => b.orderCount - a.orderCount)
-    .slice(0, 4);
+  const topServiceTemplateIds = topServiceOrderGroups
+    .filter((group) => Boolean(group.serviceTemplateId))
+    .sort((a, b) => b._count._all - a._count._all)
+    .slice(0, 4)
+    .map((group) => group.serviceTemplateId as string);
+  const topServiceTemplates = topServiceTemplateIds.length
+    ? await timed("orders.top_service_names", () => prisma.serviceTemplate.findMany({ where: { id: { in: topServiceTemplateIds } }, select: { id: true, name: true } }))
+    : [];
+  const topServiceNameById = new Map(topServiceTemplates.map((row) => [row.id, row.name]));
+  const topServices = topServiceOrderGroups
+    .sort((a, b) => b._count._all - a._count._all)
+    .slice(0, 4)
+    .map((group) => ({
+      serviceName: (group.serviceTemplateId && topServiceNameById.get(group.serviceTemplateId)) ?? "Unknown service",
+      orderCount: group._count._all,
+      revenue: serializeMoney(toDecimal(group._sum.amount ?? 0)),
+    }));
 
   const monthlySeries = buildMonthlyChartBuckets({
     revenueRows: invoices.map((inv) => ({ date: new Date(inv.invoiceDate), value: getInvoiceBilledAmount(inv) })),
     expenseRows: expenses.map((expense) => ({ date: new Date(expense.date), value: expense.amount })),
-    mrrRows: buildRetainerMrrRows(retainers, fyRange ?? undefined),
+    mrrRows: recurringRevenue.equals(0) ? [] : [{ date: now, value: recurringRevenue }],
   });
 
   const integrationReadiness = {
@@ -310,19 +344,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   ];
 
   const lastRun = integrityRuns[0];
-  const shopRevenueThisMonth = serviceOrdersRolling30d
-    .filter((order) => order.status === "PAID")
-    .reduce((sum, order) => sum.plus(toDecimal(order.amount)), new Prisma.Decimal(0));
-  const ordersLast30Days = serviceOrdersRolling30d.length;
-  const salesAndShopKpiPeriods = {
-    proposalFunnel: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
-    acceptedAwaitingInvoicing: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
-    publicShopOrders: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
-    serviceOrderConversion: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
-    topServices: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
-    shopRevenueThisMonth: describeKpiPeriod({ type: "ROLLING_30D", now, fy, fyRange }),
-    ordersLast30Days: describeKpiPeriod({ type: "ROLLING_30D", now, fy, fyRange }),
-  };
+  const shopRevenueThisMonth = toDecimal(paidOrderRevenueThisMonth._sum.amount ?? 0);
 
   return {
     health: {
@@ -368,7 +390,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       acceptedAwaitingInvoicing: acceptedUninvoicedProposals,
       shopEnabled: Boolean(profile?.shopEnabled),
       publicShopOrders: {
-        total: serviceOrdersFy.length,
+        total: Object.values(serviceOrderByStatus).reduce((sum, value) => sum + value, 0),
         paid: paidOrders,
         pending: pendingOrders,
         failed: failedOrders,
@@ -393,7 +415,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       })),
     },
     operations: {
-      hasOperationalData: lowStockProducts > 0 || openPurchaseOrders > 0 || tasks.length > 0,
+      hasOperationalData: lowStockProducts > 0 || openPurchaseOrders > 0 || taskCount > 0,
       lowStockCount: lowStockProducts,
       openPurchaseOrders,
       recentInventoryMovements: inventoryMovements.map((movement) => ({
@@ -403,13 +425,13 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
         type: movement.type,
         createdAt: movement.createdAt,
       })),
-      openTasks: tasks.filter((task) => task.status !== "DONE").length,
+      openTasks: openTaskCount,
       blockedTasks,
     },
     trust: {
       integrityStatus: lastRun?.status ?? "NOT_RUN",
       lastIntegrityRunAt: lastRun?.completedAt ?? lastRun?.startedAt ?? null,
-      violationCount: violationReports.length,
+      violationCount,
       criticalViolations,
       taxOverrideCount: taxOverrides,
       recentTaxAudits: taxAudits.map((audit) => ({
@@ -434,7 +456,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       recurringRevenue: monthlySeries.map((row) => ({ name: row.label, mrr: serializeMoney(row.mrr) })),
       receivablesAging,
       reconciliation: [
-        { name: "Bank feed", reconciled: bankTransactions.length - unreconciledTransactions, unreconciled: unreconciledTransactions },
+        { name: "Bank feed", reconciled: totalBankTransactions - unreconciledTransactions, unreconciled: unreconciledTransactions },
       ],
       proposalFunnel: [
         { stage: "Draft", value: funnel.draft },
@@ -453,6 +475,9 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       ...invoice,
       status: invoice.status || INVOICE_STATUS.PENDING,
     })),
+    telemetry: {
+      queryTimingsMs,
+    },
     countryCode: workspace?.countryCode ?? "IN",
   };
 }
