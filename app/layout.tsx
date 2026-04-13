@@ -195,9 +195,12 @@ export default async function RootLayout({
               <PWARegistration />
               <OfflineSyncBanner />
 
-              <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col transition-colors duration-300 relative overflow-x-hidden">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-indigo-500/5 blur-[120px] rounded-full pointer-events-none" />
-                <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-violet-600/5 blur-[100px] rounded-full pointer-events-none" />
+              <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex flex-col transition-colors duration-300 relative">
+                {/* Background decorative blob elements - wrapped to not break sticky */}
+                <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-indigo-500/5 blur-[120px] rounded-full" />
+                  <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-violet-600/5 blur-[100px] rounded-full" />
+                </div>
                 
                 <main className="flex-1 relative z-10">
                   {children}

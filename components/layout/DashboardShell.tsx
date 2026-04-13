@@ -18,7 +18,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
-          <main className="dashboard-motion-surface relative flex-1 overflow-x-hidden">
+          <main className="dashboard-motion-surface relative flex-1">
             <AuthModal />
             {children}
           </main>
