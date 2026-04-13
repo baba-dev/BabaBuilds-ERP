@@ -6,10 +6,13 @@ on:
     branches:
       - main
 
-jobs:
-  check-locales:
-    runs-on: runs-on: [self-hosted, linux, x64, erp-ci]
+concurrency:
+  group: deploy-production-${{ github.ref }}
+  cancel-in-progress: true
 
+jobs:
+  locales:
+    runs-on: [self-hosted, linux, x64, erp-ci]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
