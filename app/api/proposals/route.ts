@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
 import { calculateInvoiceTotals } from '@/lib/invoice/totals';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 
 export async function GET() {
   try {
@@ -164,6 +165,12 @@ export async function POST(request: Request) {
         amount: String(totalAmount),
       },
     }).catch(() => null);
+
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'proposal', action: 'create', error: String(error) });
+    }
 
     return NextResponse.json({ success: true, proposal: newProposal });
   } catch (error) {
