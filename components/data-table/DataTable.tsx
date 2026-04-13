@@ -179,9 +179,9 @@ export function DataTable<T>({
         <Table>
           <TableHeader className="bg-zinc-50 dark:bg-zinc-900/80">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="dark:border-zinc-800 hover:bg-transparent">
+              <TableRow key={headerGroup.id} className="border-zinc-200 dark:border-zinc-800/80 hover:bg-transparent">
                 {selectable && headerGroup.depth === 0 && (
-                  <TableHead className="w-10">
+                  <TableHead className="w-10 group">
                     <Checkbox
                       checked={table.getIsAllPageRowsSelected()}
                       onCheckedChange={(checked) => table.toggleAllPageRowsSelected(Boolean(checked))}
@@ -194,13 +194,13 @@ export function DataTable<T>({
                   const isPinned = header.column.getIsPinned();
                   const columnMeta = header.column.columnDef.meta as { headerClassName?: string } | undefined;
                   return (
-                    <TableHead key={header.id} className={String(columnMeta?.headerClassName ?? "")}>
+                    <TableHead key={header.id} className={`group ${String(columnMeta?.headerClassName ?? "")}`}>
                       <div className="flex items-center gap-1">
                         {canSort ? (
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="-ml-2 h-8 px-2"
+                            className="-ml-2 h-8 px-2 text-zinc-600 dark:text-zinc-300 font-medium tracking-wide hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors"
                             onClick={() => header.column.toggleSorting(sorted === "asc")}
                           >
                             {flexRender(header.column.columnDef.header, header.getContext())}
@@ -209,17 +209,19 @@ export function DataTable<T>({
                             ) : sorted === "desc" ? (
                               <ArrowDown className="ml-1 h-3.5 w-3.5" />
                             ) : (
-                              <ArrowUpDown className="ml-1 h-3.5 w-3.5 opacity-50" />
+                              <ArrowUpDown className="ml-1 h-3.5 w-3.5 opacity-0 group-hover:opacity-50 transition-opacity" />
                             )}
                           </Button>
                         ) : (
-                          flexRender(header.column.columnDef.header, header.getContext())
+                          <div className="py-2 text-zinc-600 dark:text-zinc-300 font-medium tracking-wide">
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                          </div>
                         )}
                         {header.column.getCanPin() && (
                           <Button
                             variant="ghost"
                             size="icon"
-                            className={`h-6 w-6 ${isPinned ? "text-indigo-600 dark:text-indigo-400" : "text-zinc-400"}`}
+                            className={`h-6 w-6 transition-all duration-200 ${isPinned ? "text-indigo-600 dark:text-indigo-400" : "text-zinc-400 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-zinc-700 dark:hover:text-zinc-200"}`}
                             onClick={() => header.column.pin(isPinned === "left" ? false : "left")}
                             aria-label="Pin column"
                           >
@@ -235,7 +237,7 @@ export function DataTable<T>({
           </TableHeader>
           <TableBody>
             {rowModel.rows.map((row) => (
-              <TableRow key={row.id} className="dark:border-zinc-800 transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
+              <TableRow key={row.id} className="border-zinc-100 dark:border-zinc-800/80 transition-colors hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 group/row">
                 {selectable && (
                   <TableCell className="w-10">
                     <Checkbox checked={row.getIsSelected()} onCheckedChange={(checked) => row.toggleSelected(Boolean(checked))} />
