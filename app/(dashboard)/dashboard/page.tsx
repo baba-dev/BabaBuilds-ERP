@@ -165,18 +165,25 @@ export default function Dashboard() {
       id: "invoice", 
       header: tr("table_invoice", "Invoice"), 
       accessor: (row) => row.invoiceNumber, 
-      cell: (row) => <span className="font-medium text-zinc-900 dark:text-zinc-100">{row.invoiceNumber}</span> 
+      cell: (row) => (
+        <div className="flex flex-col py-1">
+          <span className="font-bold text-zinc-900 dark:text-zinc-100 leading-tight">{row.invoiceNumber}</span>
+          <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium uppercase tracking-tighter sm:hidden">
+            {format(new Date(row.invoiceDate), "dd MMM yyyy")}
+          </span>
+        </div>
+      )
     },
     { 
       id: "client", 
       header: tr("table_client", "Client"), 
       accessor: (row) => row.clientName, 
-      cell: (row) => <span className="text-zinc-600 dark:text-zinc-300">{row.clientName}</span> 
+      cell: (row) => <span className="text-zinc-600 dark:text-zinc-300 font-medium">{row.clientName}</span> 
     },
     { 
       id: "date", 
       header: tr("table_date", "Date"), 
-      cell: (row) => <span className="text-zinc-500 dark:text-zinc-400">{format(new Date(row.invoiceDate), "dd MMM yyyy")}</span> 
+      cell: (row) => <span className="text-zinc-400 dark:text-zinc-500 text-xs tabular-nums">{format(new Date(row.invoiceDate), "dd MMM yyyy")}</span> 
     },
     {
       id: "status",
@@ -186,33 +193,37 @@ export default function Dashboard() {
         const key = getInvoiceStatusBadgeKey(status);
         const className =
           status === INVOICE_STATUS.PAID
-            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-500/20"
+            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
             : status === INVOICE_STATUS.PARTIALLY_PAID
-              ? "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 border-blue-200/60 dark:border-blue-500/20"
-              : "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border-amber-200/60 dark:border-amber-500/20";
-        return <Badge variant="outline" className={`font-medium ${className}`}>{tr(key, status)}</Badge>;
+              ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+              : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
+        return <Badge variant="outline" className={`h-5 text-[10px] font-bold uppercase tracking-wider ${className}`}>{tr(key, status)}</Badge>;
       },
     },
     { 
       id: "amount", 
-      header: <div className="text-right">{tr("table_amount", "Amount")}</div>, 
+      header: <div className="text-right pr-2">{tr("table_amount", "Amount")}</div>, 
       className: "text-right", 
-      cell: (row) => <span className="font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">{fCurrency(row.totalAmount)}</span> 
+      cell: (row) => <span className="font-bold text-zinc-900 dark:text-zinc-100 tabular-nums pr-2">{fCurrency(row.totalAmount)}</span> 
     },
     {
       id: "actions",
-      header: <div className="text-right">{tr("table_actions", "Actions")}</div>,
+      header: <div className="text-right pr-2">{tr("table_actions", "Actions")}</div>,
       className: "text-right p-0",
       cell: (row) =>
         islandsEnabled ? (
-          <div className="pr-4">
+          <div className="pr-2">
             <TableActions invoice={row} t={tr} onOpenPayModal={openPayModal} onResendEmail={handleResendEmail} resending={resendingId === row.id} />
           </div>
         ) : (
-          <div className="flex items-center justify-end gap-2 pr-4 opacity-100 sm:opacity-0 sm:group-hover/row:opacity-100 transition-opacity duration-200">
-            {!isPaidInvoiceStatus(row.status) && <Button size="sm" variant="outline" className="h-8 hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={() => openPayModal(row)}>{tr("record_payment", "Record payment")}</Button>}
-            <Button size="icon" variant="outline" className="h-8 w-8 hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={() => handleResendEmail(row)} disabled={resendingId === row.id}><Send className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" /></Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-zinc-100 dark:hover:bg-zinc-800" asChild><a href={getBustedUrl(row.pdfPath, row.updatedAt)} target="_blank" rel="noreferrer"><Download className="w-4 h-4 text-zinc-500 dark:text-zinc-400" /></a></Button>
+          <div className="flex items-center justify-end gap-2 pr-2">
+            {!isPaidInvoiceStatus(row.status) && (
+              <Button size="sm" variant="outline" className="h-7 px-2.5 text-[11px] font-semibold uppercase tracking-wider bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800" onClick={() => openPayModal(row)}>
+                {tr("record_payment", "Record payment")}
+              </Button>
+            )}
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-zinc-400" onClick={() => handleResendEmail(row)} disabled={resendingId === row.id}><Send className="w-3.5 h-3.5" /></Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-zinc-400" asChild><a href={getBustedUrl(row.pdfPath, row.updatedAt)} target="_blank" rel="noreferrer"><Download className="w-3.5 h-3.5" /></a></Button>
           </div>
         ),
     },
@@ -265,13 +276,16 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <Card className="border-0 shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-800/50 bg-white dark:bg-zinc-900/50 overflow-hidden">
-          <CardHeader className="border-b border-zinc-100 dark:border-zinc-800/50 bg-zinc-50/50 dark:bg-zinc-900/50 px-6 py-5 flex flex-row items-center justify-between relative overflow-hidden">
-            <div className="space-y-1 relative z-10">
-              <CardTitle className="text-base font-semibold">{tr("recent_ledger", "Recent ledger activity")}</CardTitle>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">{tr("recent_ledger_subtitle", "Your most recent billing and payment operations")}</p>
+        <Card className="border-0 shadow-xl shadow-zinc-200/20 dark:shadow-black/20 ring-1 ring-zinc-200 dark:ring-zinc-800/60 bg-white dark:bg-zinc-900/50 overflow-hidden">
+          <CardHeader className="border-b border-zinc-100 dark:border-zinc-800/50 bg-zinc-50/70 dark:bg-zinc-900/80 px-6 py-4 flex flex-row items-center justify-between relative overflow-hidden">
+            <div className="space-y-0.5 relative z-10">
+              <CardTitle className="text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-100 uppercase">{tr("recent_ledger", "Recent ledger activity")}</CardTitle>
+              <p className="text-[11px] font-medium text-zinc-400 dark:text-zinc-500">{tr("recent_ledger_subtitle", "Your most recent billing and payment operations")}</p>
             </div>
-            <div className="absolute right-0 top-0 bottom-0 w-64 bg-gradient-to-l from-zinc-100 dark:from-zinc-800/40 to-transparent z-0 opacity-50 pointer-events-none" />
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-white dark:bg-zinc-950 text-[10px] font-bold text-zinc-400 border-zinc-200/60 dark:border-zinc-800/60 uppercase">Live Feed</Badge>
+            </div>
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500" />
           </CardHeader>
           <CardContent className={isMobile ? "p-4 space-y-3" : "p-0"}>
             {isMobile ? (
@@ -282,26 +296,33 @@ export default function Dashboard() {
                   <div key={invoice.id} className="rounded-xl border border-zinc-200 dark:border-zinc-800/80 p-4 bg-white dark:bg-zinc-900/40 shadow-sm space-y-3 relative group">
                     <div className="flex items-start justify-between">
                       <div>
-                        <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{invoice.invoiceNumber}</p>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{invoice.clientName}</p>
+                        <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{invoice.invoiceNumber}</p>
+                        <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">{invoice.clientName}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{fCurrency(invoice.totalAmount)}</p>
+                        <p className="text-sm font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{fCurrency(invoice.totalAmount)}</p>
                         <div className="mt-1">
-                          <Badge variant="outline" className="text-[10px] uppercase py-0 px-1.5 font-medium tracking-wide">
+                          <Badge variant="outline" className="text-[10px] uppercase h-5 font-bold tracking-wider border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50">
                             {tr(getInvoiceStatusBadgeKey(toInvoiceStatus(invoice.status)), toInvoiceStatus(invoice.status))}
                           </Badge>
                         </div>
                       </div>
                     </div>
-                    <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                    <div className="pt-2.5 border-t border-zinc-100 dark:border-zinc-800/50">
                       <TableActions invoice={invoice} t={tr} onOpenPayModal={openPayModal} onResendEmail={handleResendEmail} resending={resendingId === invoice.id} />
                     </div>
                   </div>
                 ))
               )
             ) : (
-              <DataTable columns={columns} data={data.recentInvoices} rowId={(row) => row.id} emptyTitle={tr("no_recent_ledger", "No recent invoices")} emptyDescription={tr("recent_ledger_desc", "Recent billing activity will appear here.")} className="[&_table]:border-0" />
+              <DataTable 
+                columns={columns} 
+                data={data.recentInvoices} 
+                rowId={(row) => row.id} 
+                emptyTitle={tr("no_recent_ledger", "No recent invoices")} 
+                emptyDescription={tr("recent_ledger_desc", "Recent billing activity will appear here.")} 
+                className="[&_table]:border-0 [&_thead]:bg-zinc-50/50 dark:[&_thead]:bg-zinc-900/30" 
+              />
             )}
           </CardContent>
         </Card>

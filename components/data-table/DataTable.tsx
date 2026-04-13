@@ -193,44 +193,45 @@ export function DataTable<T>({
                   const sorted = header.column.getIsSorted();
                   const isPinned = header.column.getIsPinned();
                   const columnMeta = header.column.columnDef.meta as { headerClassName?: string } | undefined;
-                  return (
-                    <TableHead key={header.id} className={`group ${String(columnMeta?.headerClassName ?? "")}`}>
-                      <div className="flex items-center gap-1">
-                        {canSort ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="-ml-2 h-8 px-2 text-zinc-600 dark:text-zinc-300 font-medium tracking-wide hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors"
-                            onClick={() => header.column.toggleSorting(sorted === "asc")}
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {sorted === "asc" ? (
-                              <ArrowUp className="ml-1 h-3.5 w-3.5" />
-                            ) : sorted === "desc" ? (
-                              <ArrowDown className="ml-1 h-3.5 w-3.5" />
-                            ) : (
-                              <ArrowUpDown className="ml-1 h-3.5 w-3.5 opacity-0 group-hover:opacity-50 transition-opacity" />
-                            )}
-                          </Button>
-                        ) : (
-                          <div className="py-2 text-zinc-600 dark:text-zinc-300 font-medium tracking-wide">
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                          </div>
-                        )}
-                        {header.column.getCanPin() && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={`h-6 w-6 transition-all duration-200 ${isPinned ? "text-indigo-600 dark:text-indigo-400" : "text-zinc-400 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-zinc-700 dark:hover:text-zinc-200"}`}
-                            onClick={() => header.column.pin(isPinned === "left" ? false : "left")}
-                            aria-label="Pin column"
-                          >
-                            <Pin className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableHead>
-                  );
+                    const isRightAligned = String(columnMeta?.headerClassName ?? "").includes("text-right");
+                    return (
+                      <TableHead key={header.id} className={`h-10 py-0 ${String(columnMeta?.headerClassName ?? "")} group`}>
+                        <div className={`flex items-center gap-1 ${isRightAligned ? "justify-end" : "justify-start"}`}>
+                          {canSort ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={`h-8 px-2 text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-colors ${isRightAligned ? "-mr-2" : "-ml-2"}`}
+                              onClick={() => header.column.toggleSorting(sorted === "asc")}
+                            >
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                              {sorted === "asc" ? (
+                                <ArrowUp className="ml-1 h-3 w-3" />
+                              ) : sorted === "desc" ? (
+                                <ArrowDown className="ml-1 h-3 w-3" />
+                              ) : (
+                                <ArrowUpDown className="ml-1 h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+                              )}
+                            </Button>
+                          ) : (
+                            <div className="py-2 text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                            </div>
+                          )}
+                          {header.column.getCanPin() && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className={`h-6 w-6 transition-all duration-200 ${isPinned ? "text-indigo-600 dark:text-indigo-400" : "text-zinc-400 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-zinc-700 dark:hover:text-zinc-200"}`}
+                              onClick={() => header.column.pin(isPinned === "left" ? false : "left")}
+                              aria-label="Pin column"
+                            >
+                              <Pin className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableHead>
+                    );
                 })}
               </TableRow>
             ))}

@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import {
   Area,
   AreaChart,
@@ -29,7 +29,7 @@ import { withChartTokenColors } from "@/components/charts/chart-colors";
 import { Badge } from "@/components/ui/badge";
 import type { DashboardData } from "./types";
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -39,17 +39,18 @@ const containerVariants = {
   },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 20 },
   visible: { 
     opacity: 1, 
     y: 0,
     transition: {
       duration: 0.5,
-      ease: [0.21, 0.47, 0.32, 0.98]
+      ease: [0.21, 0.47, 0.32, 0.98] as const
     }
   },
 };
+
 
 export function ChartsIsland({
   charts,
