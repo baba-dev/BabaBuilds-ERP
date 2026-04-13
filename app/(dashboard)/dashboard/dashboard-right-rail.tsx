@@ -365,7 +365,7 @@ function SuggestedActionsSection({ data, tr, mood }: { data: DashboardData, tr: 
                 </span>
                 <ChevronRight className="w-4.5 h-4.5 text-zinc-300 dark:text-zinc-700 group-hover:translate-x-1.5 transition-transform" />
               </div>
-              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mt-1.5 lines-clamp-2 leading-normal">
+              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mt-1.5 line-clamp-2 leading-normal">
                 {action.desc}
               </p>
             </div>
