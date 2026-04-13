@@ -9,6 +9,7 @@ import { summarizeReceivablesForAttention } from "@/lib/dashboard/attention-rece
 import { getInvoiceBilledAmount, sumInvoiceBilledAmount } from "@/lib/invoice/totals";
 import { estimateTax } from "@/lib/tax/engine";
 import { getCurrentFinancialYear } from "@/lib/financial-year";
+import { buildMonthlyChartBuckets } from "./monthly-series";
 import {
   buildDashboardCacheKey,
   getDashboardCacheEntry,
@@ -25,8 +26,6 @@ const CRITICAL_NOTIFICATION_TYPES = ["TAX_ALERT", "DEADLINE_ALERT", "PAYMENT_REM
 type IntegrationStatus = "healthy" | "partial" | "missing";
 type SessionWithWorkspace = { workspaceId?: string | null; user?: { id?: string | null } | null };
 type IntegrationReadiness = { configured: boolean; status: IntegrationStatus };
-
-const monthKey = (date: Date) => date.toLocaleDateString("en-US", { month: "short" });
 
 const getIntegrationReadiness = (keys: Array<string | null | undefined>): IntegrationReadiness => {
   const presentKeys = keys.filter((value) => Boolean(value && value.trim())).length;
@@ -219,26 +218,11 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     .sort((a, b) => b.orderCount - a.orderCount)
     .slice(0, 4);
 
-  const monthly = invoices.reduce<Record<string, { revenue: Prisma.Decimal; expenses: Prisma.Decimal; mrr: Prisma.Decimal }>>((acc, inv) => {
-    const key = monthKey(new Date(inv.invoiceDate));
-    if (!acc[key]) acc[key] = { revenue: new Prisma.Decimal(0), expenses: new Prisma.Decimal(0), mrr: new Prisma.Decimal(0) };
-    acc[key].revenue = acc[key].revenue.plus(getInvoiceBilledAmount(inv));
-    return acc;
-  }, {});
-
-  expenses.forEach((expense) => {
-    const key = monthKey(new Date(expense.date));
-    if (!monthly[key]) monthly[key] = { revenue: new Prisma.Decimal(0), expenses: new Prisma.Decimal(0), mrr: new Prisma.Decimal(0) };
-    monthly[key].expenses = monthly[key].expenses.plus(toDecimal(expense.amount));
+  const monthlySeries = buildMonthlyChartBuckets({
+    revenueRows: invoices.map((inv) => ({ date: new Date(inv.invoiceDate), value: getInvoiceBilledAmount(inv) })),
+    expenseRows: expenses.map((expense) => ({ date: new Date(expense.date), value: expense.amount })),
+    mrrRows: retainers.map((ret) => ({ date: now, value: ret.amount })),
   });
-
-  retainers.forEach((ret) => {
-    const key = monthKey(now);
-    if (!monthly[key]) monthly[key] = { revenue: new Prisma.Decimal(0), expenses: new Prisma.Decimal(0), mrr: new Prisma.Decimal(0) };
-    monthly[key].mrr = monthly[key].mrr.plus(toDecimal(ret.amount));
-  });
-
-  const orderedMonths = Object.keys(monthly);
 
   const integrationReadiness = {
     groq: getIntegrationReadiness([profile?.groqApiKey]),
@@ -421,12 +405,12 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       actor: item.actorEmail ?? null,
     })),
     charts: {
-      revenueVsExpense: orderedMonths.map((name) => ({
-        name,
-        revenue: serializeMoney(monthly[name].revenue),
-        expenses: serializeMoney(monthly[name].expenses),
+      revenueVsExpense: monthlySeries.map((row) => ({
+        name: row.label,
+        revenue: serializeMoney(row.revenue),
+        expenses: serializeMoney(row.expenses),
       })),
-      recurringRevenue: orderedMonths.map((name) => ({ name, mrr: serializeMoney(monthly[name].mrr) })),
+      recurringRevenue: monthlySeries.map((row) => ({ name: row.label, mrr: serializeMoney(row.mrr) })),
       receivablesAging,
       reconciliation: [
         { name: "Bank feed", reconciled: bankTransactions.length - unreconciledTransactions, unreconciled: unreconciledTransactions },
