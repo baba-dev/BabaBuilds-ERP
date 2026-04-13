@@ -32,6 +32,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { DashboardData } from "./types";
+import { INTELLIGENCE_SUGGESTION_ROUTES } from "./intelligence-suggestion-routes";
 
 interface DashboardRightRailProps {
   data: DashboardData;
@@ -394,7 +395,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
     suggestions.push({
       label: tr("action_finish_onboarding", "Finalize Workspace Configuration"),
       desc: tr("action_finish_onboarding_desc", "A few remaining setup steps will unlock full automation and cleaner workstreams."),
-      href: "/settings",
+      href: INTELLIGENCE_SUGGESTION_ROUTES.finishOnboarding,
       icon: FilePlus2,
       tone: "indigo"
     });
@@ -404,7 +405,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
     suggestions.push({
       label: tr("action_optimize_receivables", "Review Outstanding Receivables"),
       desc: tr("action_optimize_receivables_desc", "Pending invoices identified. Strategic follow-up will optimize available cash."),
-      href: "/invoice",
+      href: INTELLIGENCE_SUGGESTION_ROUTES.reviewReceivables,
       icon: Receipt,
       tone: "amber"
     });
@@ -414,7 +415,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
     suggestions.push({
       label: tr("action_reconcile_books", "Execute Final Reconciliation"),
       desc: tr("action_reconcile_books_desc", "Unmatched bank entries detected. Reconcile to ensure ledger trust."),
-      href: "/reconciliation",
+      href: INTELLIGENCE_SUGGESTION_ROUTES.reconcileBooks,
       icon: ShieldEllipsis,
       tone: "indigo"
     });
@@ -435,7 +436,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
     suggestions.push({
       label: tr("action_scale_billing", "Focus on Revenue Generation"),
       desc: tr("action_scale_billing_desc", "Workspace state is stable. Now is the peak time to generate new growth signals."),
-      href: "/invoice",
+      href: INTELLIGENCE_SUGGESTION_ROUTES.scaleBilling,
       icon: Sparkles,
       tone: "indigo"
     });
