@@ -5,7 +5,6 @@ import {
   Activity, 
   ArrowRight, 
   Bell, 
-  BellRing, 
   CheckCircle2, 
   ChevronRight, 
   Clock3, 
@@ -13,7 +12,6 @@ import {
   FilePlus2, 
   FileWarning, 
   History, 
-  Lightbulb, 
   Receipt, 
   RefreshCw, 
   ShieldAlert, 
@@ -21,12 +19,17 @@ import {
   ShoppingBag, 
   Sparkles,
   AlertCircle,
-  ShieldEllipsis
+  ShieldEllipsis,
+  KeyRound,
+  Brain,
+  WandSparkles,
+  Bot
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { DashboardData } from "./types";
 
 interface DashboardRightRailProps {
@@ -35,6 +38,7 @@ interface DashboardRightRailProps {
 }
 
 type WorkspaceMood = 'critical' | 'warning' | 'opportunity' | 'healthy';
+type AIState = 'enabled' | 'locked_no_key' | 'fallback';
 
 export function DashboardRightRail({ data, fCurrency }: DashboardRightRailProps) {
   const t = useTranslations("Dashboard");
@@ -45,21 +49,24 @@ export function DashboardRightRail({ data, fCurrency }: DashboardRightRailProps)
   };
 
   const mood = deriveWorkspaceMood(data);
+  const aiState = deriveAIState(data);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-1000">
-      <Card className={`relative overflow-hidden border-zinc-200 dark:border-zinc-800 shadow-2xl shadow-zinc-200/20 dark:shadow-black/40 bg-white dark:bg-zinc-900/95 backdrop-blur-xl group transition-all duration-500`}>
-        {/* Intelligence Glow */}
-        <div className={`absolute top-0 right-0 w-64 h-64 opacity-[0.03] dark:opacity-[0.07] pointer-events-none -mr-32 -mt-32 rounded-full blur-3xl transition-colors duration-1000 ${
+      <Card className="relative overflow-hidden border-zinc-200 dark:border-zinc-800 shadow-2xl shadow-zinc-200/20 dark:shadow-black/60 bg-white dark:bg-zinc-900/95 backdrop-blur-xl group transition-all duration-700">
+        {/* Intelligence Glow - Reacts to AI and Mood */}
+        <div className={`absolute top-0 right-0 w-80 h-80 opacity-[0.05] dark:opacity-[0.12] pointer-events-none -mr-40 -mt-40 rounded-full blur-[80px] transition-colors duration-1000 ${
+          aiState === 'locked_no_key' ? 'bg-amber-500' :
           mood === 'critical' ? 'bg-rose-500' : 
           mood === 'warning' ? 'bg-amber-500' : 
           mood === 'opportunity' ? 'bg-indigo-500' : 
           'bg-emerald-500'
         }`} />
         
-        <RightRailHeader tr={tr} mood={mood} />
+        <RightRailHeader tr={tr} mood={mood} aiState={aiState} />
         
-        <div className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
+        <div className="divide-y divide-zinc-100 dark:divide-zinc-800/80">
+          <IntelligenceAssistantSection data={data} tr={tr} mood={mood} aiState={aiState} />
           <RecentActivitySection data={data} tr={tr} />
           <RecentNotificationsSection data={data} tr={tr} mood={mood} />
           <SuggestedActionsSection data={data} tr={tr} mood={mood} />
@@ -89,41 +96,133 @@ function deriveWorkspaceMood(data: DashboardData): WorkspaceMood {
   return 'healthy';
 }
 
-function RightRailHeader({ tr, mood }: { tr: any, mood: WorkspaceMood }) {
-  const getMoodBadge = () => {
-    switch (mood) {
-      case 'critical': return { label: tr("mood_critical", "Intervention Needed"), color: "text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20" };
-      case 'warning': return { label: tr("mood_warning", "Analysis Required"), color: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20" };
-      case 'opportunity': return { label: tr("mood_opportunity", "Growth Insight"), color: "text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 border-indigo-500/20" };
-      default: return { label: tr("mood_healthy", "Optimal Active"), color: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20" };
+function deriveAIState(data: DashboardData): AIState {
+  const isGroqConfigured = data.health.integrationReadiness.integrations.groq.configured;
+  if (!isGroqConfigured) return 'locked_no_key';
+  return 'enabled';
+}
+
+function RightRailHeader({ tr, mood, aiState }: { tr: any, mood: WorkspaceMood, aiState: AIState }) {
+  const getHeaderInfo = () => {
+    if (aiState === 'locked_no_key') {
+      return {
+        title: tr("intelligence_locked_title", "Unlock Intelligence"),
+        sub: tr("intelligence_locked_sub", "AI Workspace Analysis"),
+        icon: KeyRound,
+        badge: { label: tr("status_ready", "AI Ready"), color: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20" }
+      };
     }
+
+    const labels = {
+      critical: { label: tr("mood_critical", "Intervention Needed"), color: "text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20" },
+      warning: { label: tr("mood_warning", "Analysis Required"), color: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20" },
+      opportunity: { label: tr("mood_opportunity", "Growth Insight"), color: "text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 border-indigo-500/20" },
+      healthy: { label: tr("mood_healthy", "Optimal Active"), color: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20" }
+    };
+
+    return {
+      title: tr("intelligence_rail", "Workspace Intelligence"),
+      sub: tr("erp_ai_brain_sub", "Strategic Command Surface"),
+      icon: Sparkles,
+      badge: labels[mood]
+    };
   };
 
-  const badge = getMoodBadge();
+  const info = getHeaderInfo();
+  const Icon = info.icon;
 
   return (
-    <div className="px-5 py-5 bg-zinc-50/50 dark:bg-zinc-800/40 border-b border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between relative">
-      <div className="flex items-center gap-3">
-        <div className={`h-9 w-9 rounded-xl flex items-center justify-center transition-colors duration-500 ${
+    <div className="px-6 py-6 bg-zinc-50/80 dark:bg-zinc-800/60 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between relative group/header">
+      <div className="flex items-center gap-4">
+        <div className={`h-12 w-12 rounded-2xl flex items-center justify-center transition-all duration-700 shadow-sm ${
+          aiState === 'locked_no_key' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 rotate-12 group-hover/header:rotate-0' :
           mood === 'critical' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
           mood === 'warning' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
           mood === 'opportunity' ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' :
           'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
         }`}>
-          <Sparkles className="w-5 h-5 animate-pulse duration-3000" />
+          <Icon className={`w-6 h-6 ${aiState === 'enabled' ? 'animate-pulse' : ''}`} />
         </div>
         <div>
-          <h3 className="text-[13px] font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-tight">
-            {tr("intelligence_rail", "Intelligence Assistant")}
+          <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-tight">
+            {info.title}
           </h3>
-          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-0.5">
-            {tr("erp_ai_brain_sub", "Strategic Command Surface")}
+          <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-0.5">
+            {info.sub}
           </p>
         </div>
       </div>
-      <Badge variant="outline" className={`text-[10px] font-bold uppercase tracking-wider transition-all duration-500 ${badge.color}`}>
-        {badge.label}
+      <Badge variant="outline" className={`text-xs font-bold uppercase tracking-wider transition-all duration-500 h-6 px-2.5 ${info.badge.color}`}>
+        {info.badge.label}
       </Badge>
+    </div>
+  );
+}
+
+function IntelligenceAssistantSection({ data, tr, mood, aiState }: { data: DashboardData, tr: any, mood: WorkspaceMood, aiState: AIState }) {
+  if (aiState === 'locked_no_key') {
+    return (
+      <div className="p-6 bg-gradient-to-br from-amber-50/40 to-transparent dark:from-amber-500/5 dark:to-transparent">
+        <div className="flex gap-4 items-start">
+          <div className="h-10 w-10 shrink-0 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-sm">
+            <Brain className="w-5 h-5" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+              {tr("ai_locked_headline", "Enable Contextual Intelligence")}
+            </p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed mt-1.5 line-clamp-3">
+              {tr("ai_locked_body", "Add your Groq API key in Business Settings to unlock strategic suggestions, automated finance guidance, and deeper workspace analysis.")}
+            </p>
+            <Link href="/settings">
+              <Button size="sm" variant="outline" className="mt-4 h-9 bg-white dark:bg-zinc-900 border-amber-200 dark:border-amber-900/40 hover:bg-amber-50 dark:hover:bg-amber-900/10 text-amber-700 dark:text-amber-400 font-bold gap-2 text-xs uppercase tracking-wide px-4 transition-all">
+                <KeyRound className="w-3.5 h-3.5" />
+                {tr("ai_locked_cta", "Configure Groq Key")}
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const getStrategicGuidance = () => {
+    if (mood === 'critical') return tr("guide_critical", "Your workspace requires immediate operational intervention to restore financial integrity.");
+    if (mood === 'warning') return tr("guide_warning", "Analysis shows pending setup and reconciliation items. Finalizing these will unlock clearer cash signals.");
+    if (mood === 'opportunity') return tr("guide_opportunity", "Operational metrics are stable. Revenue conversion and storefront expansion are your clearest growth levers.");
+    return tr("guide_healthy", "Core systems are nominal. Strategic maintenance and growth-focused activity will yield the highest ROI right now.");
+  };
+
+  return (
+    <div className="p-6 bg-indigo-50/20 dark:bg-indigo-500/5">
+      <div className="flex gap-4 items-start">
+        <div className="h-10 w-10 shrink-0 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-sm">
+          <WandSparkles className="w-5 h-5" />
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+              {tr("ai_active_headline", "AI Core Analysis")}
+            </p>
+            <Badge className="h-4 px-1.5 text-[10px] bg-indigo-500 text-white border-none animate-pulse">LIVE</Badge>
+          </div>
+          <p className="text-sm text-zinc-600 dark:text-zinc-300 font-bold leading-relaxed mt-2 italic font-serif opacity-90 border-l-2 border-indigo-200 dark:border-indigo-800 pl-3">
+            "{getStrategicGuidance()}"
+          </p>
+          <div className="mt-4 flex items-center gap-3">
+             <div className="flex -space-x-2">
+               {[1,2,3].map(i => (
+                 <div key={i} className="h-6 w-6 rounded-full border-2 border-white dark:border-zinc-900 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shadow-sm">
+                    <Bot className="w-3.5 h-3.5 text-zinc-400" />
+                 </div>
+               ))}
+             </div>
+             <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
+               {tr("active_listeners", "3 Intelligent Observers active")}
+             </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -132,48 +231,53 @@ function RecentActivitySection({ data, tr }: { data: DashboardData, tr: any }) {
   const hasActivity = data.activity.length > 0;
 
   return (
-    <div className="p-5 space-y-4">
+    <div className="p-6 space-y-5">
       <div className="flex items-center justify-between">
-        <h4 className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest inline-flex items-center gap-1.5 transition-colors group-hover:text-zinc-500">
-          <History className="w-3 h-3" />
+        <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest inline-flex items-center gap-2">
+          <History className="w-4 h-4" />
           {tr("workspace_signals", "Workspace Stream")}
         </h4>
         {hasActivity && (
-          <Link href="/logs" className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase hover:underline opacity-80 hover:opacity-100 transition-all">
+          <Link href="/logs" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase hover:underline opacity-80 hover:opacity-100 transition-all tracking-tight inline-flex items-center gap-1 group">
             Audit Feed
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         )}
       </div>
 
       <div className="space-y-4">
         {!hasActivity ? (
-          <EmptyState 
-            icon={<Clock3 className="w-6 h-6 text-zinc-300 dark:text-zinc-700" />}
-            title={tr("activity_quiet_title", "Operational calm")}
-            description={tr("activity_quiet_desc", "Billing events, reconciliation, and workflow executions will manifest here as your workspace becomes active.")}
-          />
+          <div className="py-8 text-center flex flex-col items-center">
+            <Clock3 className="w-9 h-9 text-zinc-200 dark:text-zinc-800 mb-3" />
+            <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-tight">
+              {tr("activity_quiet_title", "Operational Calm")}
+            </p>
+            <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-1.5 max-w-[220px] leading-relaxed">
+              {tr("activity_quiet_desc", "Billing, reconciliation, and workflow events will appear here as your workspace becomes active.")}
+            </p>
+          </div>
         ) : (
           data.activity.slice(0, 3).map((item, idx) => (
             <div 
               key={item.id} 
-              className="group/item relative pl-4 border-l-2 border-zinc-100 dark:border-zinc-800 hover:border-indigo-500/50 transition-all animate-in fade-in slide-in-from-left-2"
+              className="group/item relative pl-5 border-l-2 border-zinc-100 dark:border-zinc-800/80 hover:border-indigo-500/50 transition-all animate-in fade-in slide-in-from-left-2"
               style={{ animationDelay: `${idx * 150}ms` }}
             >
-              <p className="text-sm font-bold text-zinc-700 dark:text-zinc-200 leading-tight group-hover/item:text-zinc-900 dark:group-hover/item:text-zinc-100 transition-colors">
+              <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 leading-tight group-hover/item:text-zinc-900 dark:group-hover/item:text-zinc-100 transition-colors">
                 {item.action}
               </p>
-              <div className="flex items-center gap-2 mt-1.5">
-                <span className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500">
+              <div className="flex items-center gap-2.5 mt-2">
+                <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500">
                   {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
                 </span>
                 <span className="w-1 h-1 rounded-full bg-zinc-200 dark:bg-zinc-800" />
-                <span className={`text-[9px] font-bold uppercase tracking-wider ${
+                <Badge variant="outline" className={`h-5 text-xs font-bold uppercase tracking-wider py-0 rounded-sm px-1.5 ${
                   item.status.toLowerCase().includes("fail") || item.status.toLowerCase().includes("err")
-                    ? "text-rose-500"
-                    : "text-emerald-500"
+                    ? "text-rose-500 border-rose-500/20 bg-rose-500/5"
+                    : "text-emerald-500 border-emerald-500/20 bg-emerald-500/5"
                 }`}>
                   {item.status}
-                </span>
+                </Badge>
               </div>
             </div>
           ))
@@ -192,44 +296,50 @@ function RecentNotificationsSection({ data, tr, mood }: { data: DashboardData, t
   const hasNotifications = notifications.length > 0;
 
   return (
-    <div className="p-5 space-y-4 bg-zinc-50/20 dark:bg-zinc-800/10">
-      <h4 className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest inline-flex items-center gap-1.5">
-        <Bell className="w-3 h-3" />
+    <div className="p-6 space-y-5 bg-zinc-50/30 dark:bg-zinc-800/20">
+      <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest inline-flex items-center gap-2">
+        <Bell className="w-4 h-4" />
         {tr("notifications_center", "Interruptions")}
       </h4>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {!hasNotifications ? (
-          <div className="py-2 px-4 rounded-2xl border border-zinc-100/80 dark:border-zinc-800/50 bg-white/50 dark:bg-zinc-900/30">
-             <p className="text-[11px] font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-tighter">
-               {tr("no_active_interruptions", "All Clear")}
-             </p>
-             <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium mt-0.5">
-               {tr("workspace_quiet_note", "No active notifications detected. Your workspace is operating without interruptions.")}
+          <div className="p-4 rounded-2xl border border-zinc-100/80 dark:border-zinc-800/50 bg-white/50 dark:bg-zinc-900/30">
+             <div className="flex items-center gap-2">
+               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+               <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                 {tr("no_active_interruptions", "Workspace Silent")}
+               </p>
+             </div>
+             <p className="text-sm text-zinc-400 dark:text-zinc-500 font-medium mt-1.5 leading-relaxed">
+               {tr("workspace_quiet_note", "No active interruptions. Your workspace is operating quietly right now.")}
              </p>
           </div>
         ) : (
           notifications.map((n, idx) => (
             <div 
               key={idx}
-              className={`flex gap-3.5 p-3.5 rounded-2xl border transition-all duration-300 hover:translate-x-0.5 ${
+              className={`flex gap-4 p-4 rounded-2xl border transition-all duration-300 hover:translate-x-1 ${
                 n.severity === 'critical' 
                   ? "bg-rose-50/60 border-rose-100 dark:bg-rose-500/5 dark:border-rose-500/10" 
-                  : "bg-amber-50/60 border-amber-100 dark:bg-amber-500/5 dark:border-amber-500/10"
+                  : "bg-amber-50/60 border-amber-100 dark:bg-amber-500/5 dark:border-amber-500/10 shadow-sm"
               }`}
             >
-              <div className={`mt-0.5 rounded-xl h-8 w-8 shrink-0 flex items-center justify-center ${
+              <div className={`mt-0.5 rounded-xl h-10 w-10 shrink-0 flex items-center justify-center ${
                 n.severity === 'critical' ? "bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400" : "bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400"
               }`}>
-                {n.severity === 'critical' ? <ShieldAlert className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                {n.severity === 'critical' ? <ShieldAlert className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
               </div>
               <div>
-                <p className="text-xs font-bold text-zinc-800 dark:text-zinc-100 leading-snug">{n.label}</p>
-                <Badge variant="outline" className={`mt-2 h-4 text-[9px] uppercase font-bold tracking-widest ${
-                   n.severity === 'critical' ? "border-rose-200 text-rose-600 dark:border-rose-800 dark:text-rose-500" : "border-amber-200 text-amber-600 dark:border-amber-800 dark:text-amber-500"
-                }`}>
-                  {n.severity} Signal
-                </Badge>
+                <p className="text-sm font-bold text-zinc-800 dark:text-zinc-100 leading-snug">{n.label}</p>
+                <div className="flex items-center gap-2.5 mt-2.5">
+                  <Badge variant="outline" className={`h-5 text-xs uppercase font-bold tracking-widest px-2 ${
+                     n.severity === 'critical' ? "border-rose-200 text-rose-600 dark:border-rose-800 dark:text-rose-500" : "border-amber-200 text-amber-600 dark:border-amber-800 dark:text-amber-500"
+                  }`}>
+                    {n.severity.toUpperCase()}
+                  </Badge>
+                  <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-tighter cursor-help hover:text-zinc-500 transition-colors">Action Required</span>
+                </div>
               </div>
             </div>
           ))
@@ -243,9 +353,9 @@ function SuggestedActionsSection({ data, tr, mood }: { data: DashboardData, tr: 
   const suggestions = deriveIntelligenceSuggestions(data, tr);
 
   return (
-    <div className="p-5 space-y-5">
-      <h4 className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest inline-flex items-center gap-1.5">
-        <Sparkles className="w-3 h-3" />
+    <div className="p-6 space-y-5">
+      <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest inline-flex items-center gap-2">
+        <Sparkles className="w-4 h-4" />
         {tr("intelligence_suggestions", "Contextual Guidance")}
       </h4>
 
@@ -254,29 +364,29 @@ function SuggestedActionsSection({ data, tr, mood }: { data: DashboardData, tr: 
           <Link 
             key={idx} 
             href={action.href}
-            className="group flex items-start gap-4 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/60 hover:border-indigo-500/40 hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-500 relative overflow-hidden"
+            className="group flex items-start gap-4 p-5 rounded-2xl border border-zinc-100 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 hover:border-indigo-500/40 hover:shadow-2xl hover:shadow-indigo-500/5 transition-all duration-500 relative overflow-hidden"
           >
-            {/* Contextual Glow based on suggestion tone */}
-            <div className={`absolute -right-4 -bottom-4 w-12 h-12 opacity-[0.05] rounded-full blur-xl transition-colors ${
+            {/* Contextual Glow */}
+            <div className={`absolute -right-6 -bottom-6 w-20 h-20 opacity-[0.08] rounded-full blur-2xl transition-colors ${
               action.tone === 'amber' ? 'bg-amber-500' : 
               action.tone === 'emerald' ? 'bg-emerald-500' : 'bg-indigo-500'
             }`} />
 
-            <div className={`mt-0.5 h-10 w-10 shrink-0 rounded-xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 ${
+            <div className={`mt-0.5 h-12 w-12 shrink-0 rounded-2xl flex items-center justify-center transition-all duration-700 shadow-sm group-hover:scale-110 group-hover:rotate-3 ${
               action.tone === 'amber' ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" :
               action.tone === 'emerald' ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" :
               "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
             }`}>
-              <action.icon className="w-5 h-5 transition-transform group-hover:rotate-12" />
+              <action.icon className="w-6 h-6 transition-transform duration-500 group-hover:scale-110" />
             </div>
             <div className="flex-1 relative z-10">
               <div className="flex items-center justify-between">
-                <span className="text-[13px] font-bold text-zinc-800 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                   {action.label}
                 </span>
-                <ChevronRight className="w-4 h-4 text-zinc-300 dark:text-zinc-700 group-hover:translate-x-1.5 transition-transform" />
+                <ChevronRight className="w-4.5 h-4.5 text-zinc-300 dark:text-zinc-700 group-hover:translate-x-1.5 transition-transform" />
               </div>
-              <p className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mt-1 lines-clamp-2 leading-relaxed">
+              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mt-1.5 lines-clamp-2 leading-normal">
                 {action.desc}
               </p>
             </div>
@@ -290,12 +400,11 @@ function SuggestedActionsSection({ data, tr, mood }: { data: DashboardData, tr: 
 function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
   const suggestions = [];
 
-  // Priorities: Critical Risls > Incomplete Setup > Opportunities > Healthy Maintenance
-
+  // Strategic Priority Logic
   if (data.attention.failedImports > 0) {
     suggestions.push({
-      label: tr("action_fix_imports", "Resolve Synchronization Gaps"),
-      desc: tr("action_fix_imports_desc", "Automated imports encountered anomalies. Manual resolution will fix reporting accuracy."),
+      label: tr("action_fix_imports", "Resolve Failed Data Syncs"),
+      desc: tr("action_fix_imports_desc", "Data import failures detected. Resolution is mandatory for statement accuracy."),
       href: "/settings/imports",
       icon: DatabaseZap,
       tone: "amber"
@@ -304,8 +413,8 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
 
   if (data.health.setupCompletion < 100) {
     suggestions.push({
-      label: tr("action_finish_onboarding", "Complete Automation Setup"),
-      desc: tr("action_finish_onboarding_desc", "Your workspace is partially configured. A few finishing steps will unlock full AI delegation."),
+      label: tr("action_finish_onboarding", "Finalize Workspace Configuration"),
+      desc: tr("action_finish_onboarding_desc", "A few remaining setup steps will unlock full automation and cleaner workstreams."),
       href: "/settings",
       icon: FilePlus2,
       tone: "indigo"
@@ -314,8 +423,8 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
 
   if (data.attention.pendingInvoices > 0) {
     suggestions.push({
-      label: tr("action_optimize_receivables", "Tighten Revenue Collections"),
-      desc: tr("action_optimize_receivables_desc", "Outstanding invoices are slowing cash velocity. Review receivables to keep capital fluid."),
+      label: tr("action_optimize_receivables", "Review Outstanding Receivables"),
+      desc: tr("action_optimize_receivables_desc", "Pending invoices identified. Strategic follow-up will optimize available cash."),
       href: "/invoice",
       icon: Receipt,
       tone: "amber"
@@ -324,8 +433,8 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
 
   if (data.financialPulse.reconciliationProgress < 100) {
     suggestions.push({
-      label: tr("action_reconcile_books", "Finalize Ledger Integrity"),
-      desc: tr("action_reconcile_books_desc", "Match recent banking signals to ensure your financial statements are auditor-ready."),
+      label: tr("action_reconcile_books", "Execute Final Reconciliation"),
+      desc: tr("action_reconcile_books_desc", "Unmatched bank entries detected. Reconcile to ensure ledger trust."),
       href: "/reconciliation",
       icon: ShieldEllipsis,
       tone: "indigo"
@@ -334,8 +443,8 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
 
   if (!data.salesAndShop.shopEnabled && data.salesAndShop.publishedServices > 0) {
     suggestions.push({
-      label: tr("action_launch_store", "Activate Service Catalogue"),
-      desc: tr("action_launch_store_desc", "Your services are ready for market. Enabling the public shop will capture passive traffic."),
+      label: tr("action_launch_store", "Enable Storefront Publicly"),
+      desc: tr("action_launch_store_desc", "Your published services are ready for public orders. Growth signal is active."),
       href: "/settings/shop",
       icon: ShoppingBag,
       tone: "emerald"
@@ -345,8 +454,8 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
   // Fallback: Growth Context
   if (suggestions.length < 2) {
     suggestions.push({
-      label: tr("action_scale_billing", "Expand Client Billing"),
-      desc: tr("action_scale_billing_desc", "Your workspace is healthy. Focus on generating new proposals or billable activity."),
+      label: tr("action_scale_billing", "Focus on Revenue Generation"),
+      desc: tr("action_scale_billing_desc", "Workspace state is stable. Now is the peak time to generate new growth signals."),
       href: "/invoice",
       icon: Sparkles,
       tone: "indigo"
@@ -363,30 +472,36 @@ function SystemSignalsSection({ data, tr, mood }: { data: DashboardData, tr: any
   const totalIntegrations = Object.keys(health.integrationReadiness.integrations).length;
 
   const getSystemInterpretation = () => {
-    if (mood === 'critical') return tr("sys_critical", "System stability compromised");
+    if (mood === 'critical') return tr("sys_critical", "Core systems compromised");
     if (mood === 'warning') return tr("sys_warning", "Operational readiness at risk");
-    if (mood === 'opportunity') return tr("sys_growth", "Automation readiness is high");
+    if (mood === 'opportunity') return tr("sys_growth", "Automation readiness high");
     return tr("sys_healthy", "Core systems are stable");
   };
 
   return (
-    <div className="p-5 space-y-4">
-      <h4 className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest inline-flex items-center gap-1.5">
-        <Activity className="w-3 h-3" />
+    <div className="p-6 space-y-5">
+      <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest inline-flex items-center gap-2">
+        <Activity className="w-4 h-4" />
         {tr("signals_interpretation", "Derived Signals")}
       </h4>
 
       <div className="space-y-4">
-        <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-2">
-          {mood === 'healthy' ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> : <AlertCircle className={`w-3.5 h-3.5 ${mood === 'critical' ? 'text-rose-500' : 'text-amber-500'}`} />}
-          {getSystemInterpretation()}
-        </p>
+        <div className="flex items-center justify-between">
+           <p className={`text-sm font-bold flex items-center gap-2.5 ${
+             mood === 'healthy' ? 'text-emerald-600 dark:text-emerald-400' :
+             mood === 'critical' ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'
+           }`}>
+            {mood === 'healthy' ? <CheckCircle2 className="w-4.5 h-4.5" /> : <ShieldAlert className="w-4.5 h-4.5" />}
+            {getSystemInterpretation()}
+          </p>
+          <Badge variant="outline" className="text-xs font-medium uppercase tracking-tighter opacity-60">Real-time</Badge>
+        </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <SignalPill label="Trust" value={trust.integrityStatus} tone={healthy ? 'emerald' : 'amber'} />
-          <SignalPill label="Config" value={`${integrationCount}/${totalIntegrations} Linkage`} tone={integrationCount === totalIntegrations ? 'emerald' : 'indigo'} />
-          <SignalPill label="Vault" value={tr("vault_secure", "Operational")} tone="emerald" />
-          <SignalPill label="Compliance" value={data.attention.complianceIssues > 0 ? tr("issues_found", "Issues") : tr("no_issues", "Nominal")} tone={data.attention.complianceIssues > 0 ? 'amber' : 'emerald'} />
+        <div className="grid grid-cols-2 gap-4">
+          <SignalPill label="Trust Index" value={trust.integrityStatus} tone={healthy ? 'emerald' : 'amber'} />
+          <SignalPill label="Linkage" value={`${integrationCount}/${totalIntegrations} Sync`} tone={integrationCount === totalIntegrations ? 'emerald' : 'indigo'} />
+          <SignalPill label="Operational" value={tr("vault_secure", "Active")} tone="emerald" />
+          <SignalPill label="Compliance" value={data.attention.complianceIssues > 0 ? tr("risk_detected", "Risk") : tr("nominal", "Nominal")} tone={data.attention.complianceIssues > 0 ? 'amber' : 'emerald'} />
         </div>
       </div>
     </div>
@@ -395,14 +510,14 @@ function SystemSignalsSection({ data, tr, mood }: { data: DashboardData, tr: any
 
 function SignalPill({ label, value, tone }: { label: string, value: string, tone: 'emerald' | 'amber' | 'indigo' }) {
   const colors = {
-    emerald: "text-emerald-600 dark:text-emerald-500 bg-emerald-500/5",
-    amber: "text-amber-600 dark:text-amber-500 bg-amber-500/5",
-    indigo: "text-indigo-600 dark:text-indigo-400 bg-indigo-500/5",
+    emerald: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+    amber: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20",
+    indigo: "text-indigo-600 dark:text-indigo-300 bg-indigo-500/10 border-indigo-500/20",
   };
   return (
-    <div className="p-3 rounded-2xl border border-zinc-100 dark:border-zinc-800/60 bg-white/50 dark:bg-zinc-950/20">
-      <p className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-tighter">{label}</p>
-      <p className={`text-[11px] font-bold mt-1 uppercase ${colors[tone]}`}>{value}</p>
+    <div className={`p-4 rounded-2xl border bg-white/50 dark:bg-zinc-950/20 transition-all hover:bg-white dark:hover:bg-zinc-900 shadow-sm ${colors[tone]}`}>
+      <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-tighter">{label}</p>
+      <p className="text-sm font-bold mt-2 uppercase tracking-wide truncate">{value}</p>
     </div>
   );
 }
@@ -411,54 +526,40 @@ function SyncImportHealthSection({ data, tr }: { data: DashboardData, tr: any })
   const hasFailures = data.attention.failedImports > 0;
   
   return (
-    <div className="p-5 space-y-4 bg-zinc-50/10 dark:bg-zinc-800/5">
-      <h4 className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest inline-flex items-center gap-1.5">
-        <DatabaseZap className="w-3 h-3" />
-        {tr("operational_confidence", "Operational Confidence")}
+    <div className="p-6 space-y-5 bg-zinc-50/20 dark:bg-zinc-800/20">
+      <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest inline-flex items-center gap-2">
+        <DatabaseZap className="w-4 h-4" />
+        {tr("operational_confidence", "Operational Pipeline")}
       </h4>
 
-      <div className={`p-4 rounded-2xl border transition-all duration-500 ${
+      <div className={`p-5 rounded-2xl border transition-all duration-700 shadow-sm ${
         hasFailures 
-          ? "bg-rose-50/50 border-rose-100/80 shadow-lg shadow-rose-500/5 dark:bg-rose-500/5 dark:border-rose-500/20" 
-          : "bg-emerald-50 text-emerald-600/50 border-emerald-100/80 dark:bg-emerald-500/5 dark:border-emerald-500/10"
+          ? "bg-rose-50/50 border-rose-100 dark:bg-rose-500/5 dark:border-rose-500/20" 
+          : "bg-emerald-50/50 border-emerald-100 dark:bg-emerald-500/5 dark:border-emerald-500/20"
       }`}>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className={`h-10 w-10 shrink-0 rounded-2xl flex items-center justify-center transition-all ${
+          <div className="flex items-center gap-5">
+            <div className={`h-12 w-12 shrink-0 rounded-2xl flex items-center justify-center transition-all shadow-sm ${
               hasFailures ? "bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 animate-pulse" : "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400"
             }`}>
-              {hasFailures ? <FileWarning className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
+              {hasFailures ? <FileWarning className="w-6 h-6" /> : <ShieldCheck className="w-6 h-6" />}
             </div>
             <div>
-              <p className="text-[13px] font-bold text-zinc-800 dark:text-zinc-100">
+              <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                 {hasFailures ? tr("failed_sync_detect", "Sync Anomalies Detected") : tr("sync_healthy_interpret", "Sync Pipeline Stable")}
               </p>
-              <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium mt-0.5">
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium mt-1.5 leading-normal">
                 {hasFailures 
                   ? tr("sync_fix_note", "Manual intervention required for {count} records", { count: data.attention.failedImports })
-                  : tr("reassurance_sync", "Infrastructure and data linkage look healthy.")}
+                  : tr("reassurance_sync", "Infrastructure and data linkage are nominal.")}
               </p>
             </div>
           </div>
-          <button className="h-8 w-8 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-indigo-600 hover:border-indigo-500/50 transition-all shadow-sm">
-            <RefreshCw className="w-4 h-4" />
+          <button className="h-10 w-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-indigo-600 hover:border-indigo-500/50 transition-all shadow-sm active:scale-90">
+            <RefreshCw className="w-5 h-5" />
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function EmptyState({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) {
-  return (
-    <div className="flex flex-col items-center text-center p-6 rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800/80 bg-zinc-50/30 dark:bg-zinc-900/10">
-      <div className="h-12 w-12 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center mb-4 shadow-sm">
-        {icon}
-      </div>
-      <p className="text-[11px] font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-widest">{title}</p>
-      <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-2 max-w-[200px] leading-relaxed font-medium">
-        {description}
-      </p>
     </div>
   );
 }
