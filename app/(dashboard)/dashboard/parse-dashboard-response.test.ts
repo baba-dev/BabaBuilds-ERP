@@ -52,7 +52,7 @@ const basePayload = {
     serviceOrderConversion: 66,
     shopRevenueThisMonth: "399.50",
     ordersLast30Days: 4,
-    publishedServicesInShop: 2,
+    publishedServices: 2,
     topServices: [{ serviceName: "SEO", orderCount: 2, revenue: "1000.99" }],
     recentServiceOrders: [{ id: "s1", serviceName: "SEO", buyerName: "Alex", amount: "200.00", status: "PAID", createdAt: "2026-04-01" }],
   },

@@ -66,7 +66,7 @@ export const parseDashboardResponse = (payload: unknown) => {
       serviceOrderConversion: asNumber(salesAndShop.serviceOrderConversion),
       shopRevenueThisMonth: parseApiMoney(salesAndShop.shopRevenueThisMonth as string | number),
       ordersLast30Days: asNumber(salesAndShop.ordersLast30Days),
-      publishedServicesInShop: asNumber(salesAndShop.publishedServicesInShop),
+      publishedServices: asNumber(salesAndShop.publishedServices as unknown),
       topServices: mapMoneyArray(topServices, "revenue"),
       recentServiceOrders: mapMoneyArray(recentServiceOrders, "amount"),
     },

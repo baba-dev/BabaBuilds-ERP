@@ -37,13 +37,13 @@ export function DashboardSalesAndShopPanel({
         <p className="text-sm font-semibold inline-flex items-center gap-2"><ShoppingBag className="w-4 h-4 text-indigo-500" /> {tr("public_shop_service_orders", "Public shop & service orders")} <DashboardTooltip label={tr("shop_conversion_help", "Conversion measures paid orders against pending/failed orders.")} /></p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Badge variant={salesAndShop.shopEnabled ? "default" : "secondary"}>{salesAndShop.shopEnabled ? tr("shop_live", "Shop live") : tr("shop_disabled", "Shop disabled")}</Badge>
-          {!salesAndShop.shopEnabled && salesAndShop.publishedServicesInShop > 0 && <Badge variant="outline">{salesAndShop.publishedServicesInShop} services published</Badge>}
-          <Badge variant="secondary">Paid {salesAndShop.publicShopOrders.paid}</Badge>
-          <Badge variant="secondary">Pending {salesAndShop.publicShopOrders.pending}</Badge>
-          <Badge variant="secondary">Failed {salesAndShop.publicShopOrders.failed}</Badge>
+          {!salesAndShop.shopEnabled && salesAndShop.publishedServices > 0 && <Badge variant="outline">{salesAndShop.publishedServices} {tr("services_published", "services published")}</Badge>}
+          <Badge variant="secondary">{tr("paid", "Paid")} {salesAndShop.publicShopOrders.paid}</Badge>
+          <Badge variant="secondary">{tr("pending", "Pending")} {salesAndShop.publicShopOrders.pending}</Badge>
+          <Badge variant="secondary">{tr("failed", "Failed")} {salesAndShop.publicShopOrders.failed}</Badge>
         </div>
         <p className="text-sm mt-3 inline-flex items-center gap-1">{tr("conversion_health", "Conversion health")}: <strong>{salesAndShop.serviceOrderConversion}%</strong> <DashboardTooltip label={tr("shop_conversion_help", "Conversion reflects paid orders versus pending/failed outcomes.")} /></p>
-        <p className="text-xs text-zinc-500 mt-1 inline-flex items-center gap-1">Orders in last 30 days: <strong>{salesAndShop.ordersLast30Days}</strong> · Shop revenue this month: <strong>{fCurrency(salesAndShop.shopRevenueThisMonth)}</strong> <DashboardTooltip label={tr("shop_revenue_help", "Revenue from PAID public service orders created this month.")} /></p>
+        <p className="text-xs text-zinc-500 mt-1 inline-flex items-center gap-1">{tr("orders_last_30_days", "Orders in last 30 days")}: <strong>{salesAndShop.ordersLast30Days}</strong> · {tr("shop_revenue_this_month", "Shop revenue this month")}: <strong>{fCurrency(salesAndShop.shopRevenueThisMonth)}</strong> <DashboardTooltip label={tr("shop_revenue_help", "Revenue from PAID public service orders created this month.")} /></p>
         <div className="mt-3 space-y-2">
           {salesAndShop.topServices.slice(0, 3).map((service) => (
             <div key={service.serviceName} className="flex justify-between text-sm">
@@ -60,8 +60,8 @@ export function DashboardSalesAndShopPanel({
           ))}
         </div>
         <div className="mt-3 flex gap-2">
-          <Button asChild variant="outline" size="sm"><Link href="/proposals">View proposals</Link></Button>
-          <Button asChild variant="outline" size="sm"><Link href="/shop">View shop orders</Link></Button>
+          <Button asChild variant="outline" size="sm"><Link href="/proposals">{tr("view_proposals", "View proposals")}</Link></Button>
+          <Button asChild variant="outline" size="sm"><Link href="/shop">{tr("view_shop_orders", "View shop orders")}</Link></Button>
         </div>
       </Card>
     </section>
