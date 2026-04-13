@@ -5,9 +5,11 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { INVOICE_STATUS } from "@/lib/invoice-status";
 import { serializeMoney, toDecimal } from "@/lib/money";
+import { summarizeReceivablesForAttention } from "@/lib/dashboard/attention-receivables";
 import { getInvoiceBilledAmount, sumInvoiceBilledAmount } from "@/lib/invoice/totals";
 import { estimateTax } from "@/lib/tax/engine";
 import { getCurrentFinancialYear } from "@/lib/financial-year";
+import { buildMonthlyChartBuckets } from "./monthly-series";
 import {
   buildDashboardCacheKey,
   getDashboardCacheEntry,
@@ -24,8 +26,6 @@ const CRITICAL_NOTIFICATION_TYPES = ["TAX_ALERT", "DEADLINE_ALERT", "PAYMENT_REM
 type IntegrationStatus = "healthy" | "partial" | "missing";
 type SessionWithWorkspace = { workspaceId?: string | null; user?: { id?: string | null } | null };
 type IntegrationReadiness = { configured: boolean; status: IntegrationStatus };
-
-const monthKey = (date: Date) => date.toLocaleDateString("en-US", { month: "short" });
 
 const getIntegrationReadiness = (keys: Array<string | null | undefined>): IntegrationReadiness => {
   const presentKeys = keys.filter((value) => Boolean(value && value.trim())).length;
@@ -47,6 +47,7 @@ const getFyDateRange = (fy: string): { start: Date; endExclusive: Date } | null 
   };
 };
 
+
 async function buildDashboardPayload(workspaceId: string, userId: string | null, fy: string) {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -61,6 +62,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     workspace,
     profile,
     invoices,
+    attentionInvoices,
     recentInvoices,
     investments,
     expenses,
@@ -100,6 +102,10 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       },
     }),
     prisma.invoice.findMany({ where: { workspaceId, financialYear: fy }, include: { client: true }, orderBy: { invoiceDate: "asc" } }),
+    prisma.invoice.findMany({
+      where: { workspaceId },
+      select: { status: true, invoiceDate: true, totalAmount: true, grandTotal: true, amountReceived: true },
+    }),
     prisma.invoice.findMany({ where: { workspaceId }, orderBy: { invoiceDate: "desc" }, take: 6, include: { client: true } }),
     prisma.investment.findMany({ where: { workspaceId } }),
     prisma.expense.findMany({
@@ -163,15 +169,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   const unreconciledTransactions = bankTransactions.filter((tx) => !tx.isReconciled).length;
   const reconciliationProgress = asPct(bankTransactions.length - unreconciledTransactions, bankTransactions.length);
 
-  const overdueInvoices = invoices.filter((inv) => {
-    const status = normalizeInvoiceStatus(inv.status);
-    if (status === "PAID") return false;
-    const dueDate = new Date(inv.invoiceDate);
-    dueDate.setDate(dueDate.getDate() + 30);
-    return dueDate < now;
-  }).length;
-
-  const pendingInvoices = invoices.filter((inv) => ["PENDING", "PARTIALLY_PAID"].includes(normalizeInvoiceStatus(inv.status))).length;
+  const { overdueReceivables, outstandingReceivables } = summarizeReceivablesForAttention(attentionInvoices, now);
   const retainersDueSoon = retainers.filter((ret) => ret.nextBillingDate >= now && ret.nextBillingDate <= sevenDaysOut).length;
   const acceptedUninvoicedProposals = proposals.filter((proposal) => proposal.status === "ACCEPTED").length;
   const urgentTasks = tasks.filter((task) => {
@@ -220,26 +218,11 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     .sort((a, b) => b.orderCount - a.orderCount)
     .slice(0, 4);
 
-  const monthly = invoices.reduce<Record<string, { revenue: Prisma.Decimal; expenses: Prisma.Decimal; mrr: Prisma.Decimal }>>((acc, inv) => {
-    const key = monthKey(new Date(inv.invoiceDate));
-    if (!acc[key]) acc[key] = { revenue: new Prisma.Decimal(0), expenses: new Prisma.Decimal(0), mrr: new Prisma.Decimal(0) };
-    acc[key].revenue = acc[key].revenue.plus(getInvoiceBilledAmount(inv));
-    return acc;
-  }, {});
-
-  expenses.forEach((expense) => {
-    const key = monthKey(new Date(expense.date));
-    if (!monthly[key]) monthly[key] = { revenue: new Prisma.Decimal(0), expenses: new Prisma.Decimal(0), mrr: new Prisma.Decimal(0) };
-    monthly[key].expenses = monthly[key].expenses.plus(toDecimal(expense.amount));
+  const monthlySeries = buildMonthlyChartBuckets({
+    revenueRows: invoices.map((inv) => ({ date: new Date(inv.invoiceDate), value: getInvoiceBilledAmount(inv) })),
+    expenseRows: expenses.map((expense) => ({ date: new Date(expense.date), value: expense.amount })),
+    mrrRows: retainers.map((ret) => ({ date: now, value: ret.amount })),
   });
-
-  retainers.forEach((ret) => {
-    const key = monthKey(now);
-    if (!monthly[key]) monthly[key] = { revenue: new Prisma.Decimal(0), expenses: new Prisma.Decimal(0), mrr: new Prisma.Decimal(0) };
-    monthly[key].mrr = monthly[key].mrr.plus(toDecimal(ret.amount));
-  });
-
-  const orderedMonths = Object.keys(monthly);
 
   const integrationReadiness = {
     groq: getIntegrationReadiness([profile?.groqApiKey]),
@@ -281,7 +264,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   const setupCompletion = asPct(setupSignals, 5);
 
   const attentionCards = [
-    { id: "overdue", title: "Overdue invoices", value: overdueInvoices, tone: "critical", href: "/invoice", helper: "Prioritize collections to improve cash flow." },
+    { id: "overdue", title: "Overdue receivables", value: overdueReceivables, tone: "critical", href: "/income", helper: "Follow up on overdue balances to protect cash flow." },
     { id: "bank", title: "Unreconciled transactions", value: unreconciledTransactions, tone: "warning", href: "/reconciliation", helper: "Match transactions to keep books accurate." },
     { id: "proposals", title: "Accepted, awaiting invoice", value: acceptedUninvoicedProposals, tone: "warning", href: "/proposals", helper: "Convert accepted proposals into billable invoices." },
     { id: "tasks", title: "Urgent tasks", value: urgentTasks, tone: "info", href: "/admin", helper: "Handle due tasks to avoid operational blockers." },
@@ -341,8 +324,10 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     },
     attention: {
       totalUrgent: attentionCards.reduce((sum, card) => sum + card.value, 0) + criticalViolations + notifications,
-      overdueInvoices,
-      pendingInvoices,
+      overdueInvoices: overdueReceivables,
+      pendingInvoices: outstandingReceivables,
+      overdueReceivables,
+      outstandingReceivables,
       unreconciledTransactions,
       retainersDueSoon,
       acceptedUninvoicedProposals,
@@ -420,12 +405,12 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       actor: item.actorEmail ?? null,
     })),
     charts: {
-      revenueVsExpense: orderedMonths.map((name) => ({
-        name,
-        revenue: serializeMoney(monthly[name].revenue),
-        expenses: serializeMoney(monthly[name].expenses),
+      revenueVsExpense: monthlySeries.map((row) => ({
+        name: row.label,
+        revenue: serializeMoney(row.revenue),
+        expenses: serializeMoney(row.expenses),
       })),
-      recurringRevenue: orderedMonths.map((name) => ({ name, mrr: serializeMoney(monthly[name].mrr) })),
+      recurringRevenue: monthlySeries.map((row) => ({ name: row.label, mrr: serializeMoney(row.mrr) })),
       receivablesAging,
       reconciliation: [
         { name: "Bank feed", reconciled: bankTransactions.length - unreconciledTransactions, unreconciled: unreconciledTransactions },

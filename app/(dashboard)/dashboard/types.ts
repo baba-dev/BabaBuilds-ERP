@@ -31,6 +31,8 @@ export type DashboardData = {
     totalUrgent: number;
     overdueInvoices: number;
     pendingInvoices: number;
+    overdueReceivables?: number;
+    outstandingReceivables?: number;
     unreconciledTransactions: number;
     retainersDueSoon: number;
     acceptedUninvoicedProposals: number;

@@ -153,6 +153,10 @@ export default function Dashboard() {
     }
   };
 
+  const handleRefreshSyncImportHealth = async () => {
+    await loadData(selectedFy);
+  };
+
   const fyOptions = Array.from({ length: 4 }).map((_, idx) => {
     const year = new Date().getFullYear() - 2 + idx;
     const yy = String(year).slice(-2);
@@ -270,7 +274,11 @@ export default function Dashboard() {
               </Card>
             )}
           </div>
-            <DashboardRightRail data={data} fCurrency={fCurrency} />
+            <DashboardRightRail
+              data={data}
+              fCurrency={fCurrency}
+              onRefreshSyncImportHealth={handleRefreshSyncImportHealth}
+            />
         </div>
 
         <Card className="border-0 shadow-xl shadow-zinc-200/20 dark:shadow-black/20 ring-1 ring-zinc-200 dark:ring-zinc-800/60 bg-white dark:bg-zinc-900/50 overflow-hidden">

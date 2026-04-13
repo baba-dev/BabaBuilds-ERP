@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { 
   Activity, 
   ArrowRight, 
@@ -36,12 +37,13 @@ import { INTELLIGENCE_SUGGESTION_ROUTES } from "./intelligence-suggestion-routes
 interface DashboardRightRailProps {
   data: DashboardData;
   fCurrency: (val: number | string) => string;
+  onRefreshSyncImportHealth?: () => Promise<void>;
 }
 
 type WorkspaceMood = 'critical' | 'warning' | 'opportunity' | 'healthy';
 type AIState = 'enabled' | 'locked_no_key' | 'fallback';
 
-export function DashboardRightRail({ data, fCurrency }: DashboardRightRailProps) {
+export function DashboardRightRail({ data, fCurrency, onRefreshSyncImportHealth }: DashboardRightRailProps) {
   const t = useTranslations("Dashboard");
   const tr = (key: string, fallback: string, values?: any) => {
     const translation = t(key as any, values);
@@ -72,7 +74,7 @@ export function DashboardRightRail({ data, fCurrency }: DashboardRightRailProps)
           <RecentNotificationsSection data={data} tr={tr} mood={mood} />
           <SuggestedActionsSection data={data} tr={tr} mood={mood} />
           <SystemSignalsSection data={data} tr={tr} mood={mood} />
-          <SyncImportHealthSection data={data} tr={tr} />
+          <SyncImportHealthSection data={data} tr={tr} onRefreshSyncImportHealth={onRefreshSyncImportHealth} />
         </div>
       </Card>
     </div>
@@ -216,7 +218,7 @@ function RecentActivitySection({ data, tr }: { data: DashboardData, tr: any }) {
           {tr("workspace_signals", "Workspace Stream")}
         </h4>
         {hasActivity && (
-          <Link href="/logs" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase hover:underline opacity-80 hover:opacity-100 transition-all tracking-tight inline-flex items-center gap-1 group">
+          <Link href="/admin" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase hover:underline opacity-80 hover:opacity-100 transition-all tracking-tight inline-flex items-center gap-1 group">
             Audit Feed
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
           </Link>
@@ -364,7 +366,7 @@ function SuggestedActionsSection({ data, tr, mood }: { data: DashboardData, tr: 
                 </span>
                 <ChevronRight className="w-4.5 h-4.5 text-zinc-300 dark:text-zinc-700 group-hover:translate-x-1.5 transition-transform" />
               </div>
-              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mt-1.5 lines-clamp-2 leading-normal">
+              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mt-1.5 line-clamp-2 leading-normal">
                 {action.desc}
               </p>
             </div>
@@ -382,8 +384,8 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
   if (data.attention.failedImports > 0) {
     suggestions.push({
       label: tr("action_fix_imports", "Resolve Failed Data Syncs"),
-      desc: tr("action_fix_imports_desc", "Failed statement imports need review. Open the import workspace to classify debit/credit rows with AI guidance."),
-      href: INTELLIGENCE_SUGGESTION_ROUTES.fixImports,
+      desc: tr("action_fix_imports_desc", "Data import failures detected. Resolution is mandatory for statement accuracy."),
+      href: "/inbox/import",
       icon: DatabaseZap,
       tone: "amber"
     });
@@ -422,8 +424,8 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
   if (!data.salesAndShop.shopEnabled && data.salesAndShop.publishedServices > 0) {
     suggestions.push({
       label: tr("action_launch_store", "Enable Storefront Publicly"),
-      desc: tr("action_launch_store_desc", "Published services are ready. Complete storefront settings and launch your public shop."),
-      href: INTELLIGENCE_SUGGESTION_ROUTES.launchStorefront,
+      desc: tr("action_launch_store_desc", "Your published services are ready for public orders. Growth signal is active."),
+      href: "/shop",
       icon: ShoppingBag,
       tone: "emerald"
     });
@@ -500,8 +502,27 @@ function SignalPill({ label, value, tone }: { label: string, value: string, tone
   );
 }
 
-function SyncImportHealthSection({ data, tr }: { data: DashboardData, tr: any }) {
+function SyncImportHealthSection({
+  data,
+  tr,
+  onRefreshSyncImportHealth,
+}: {
+  data: DashboardData;
+  tr: any;
+  onRefreshSyncImportHealth?: () => Promise<void>;
+}) {
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const hasFailures = data.attention.failedImports > 0;
+  
+  const handleRefresh = async () => {
+    if (!onRefreshSyncImportHealth || isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await onRefreshSyncImportHealth();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
   
   return (
     <div className="p-6 space-y-5 bg-zinc-50/20 dark:bg-zinc-800/20">
@@ -533,9 +554,22 @@ function SyncImportHealthSection({ data, tr }: { data: DashboardData, tr: any })
               </p>
             </div>
           </div>
-          <button className="h-10 w-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-indigo-600 hover:border-indigo-500/50 transition-all shadow-sm active:scale-90">
-            <RefreshCw className="w-5 h-5" />
-          </button>
+          {onRefreshSyncImportHealth ? (
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              aria-label={tr("refresh_sync_pipeline", "Refresh sync pipeline status")}
+              className="h-10 w-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-indigo-600 hover:border-indigo-500/50 transition-all shadow-sm active:scale-90 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:text-zinc-400 disabled:hover:border-zinc-100 dark:disabled:hover:border-zinc-800"
+            >
+              <RefreshCw className={`w-5 h-5 ${isRefreshing ? "animate-spin" : ""}`} />
+            </button>
+          ) : (
+            <div className="h-10 px-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center gap-2 text-zinc-400 cursor-default select-none">
+              <RefreshCw className="w-4 h-4" />
+              <span className="text-xs font-medium">{tr("sync_status_live", "Status updates live")}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
