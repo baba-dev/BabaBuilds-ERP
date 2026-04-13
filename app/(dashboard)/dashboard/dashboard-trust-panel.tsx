@@ -1,10 +1,19 @@
 "use client";
 
-import { ShieldAlert, ShieldCheck } from "lucide-react";
+import { motion } from "framer-motion";
+import { 
+  ShieldAlert, 
+  ShieldCheck, 
+  ScanSearch, 
+  FileWarning, 
+  AlertTriangle, 
+  ReceiptText 
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useTranslations } from "next-intl";
 import type { DashboardData } from "./types";
 import { DashboardTooltip } from "./dashboard-tooltip";
+import { cn } from "@/lib/utils";
 
 export function DashboardTrustPanel({ trust }: { trust: DashboardData["trust"] }) {
   const t = useTranslations("Dashboard");
