@@ -1,6 +1,7 @@
 "use client";
 
 import { BarChart3 } from "lucide-react";
+import { useSyncExternalStore } from "react";
 import {
   Area,
   AreaChart,
@@ -29,6 +30,17 @@ export function ChartsIsland({
   charts: DashboardData["charts"];
   fCurrency: (value: number) => string;
 }) {
+  const isMobile = useSyncExternalStore(
+    (onStoreChange) => {
+      if (typeof window === "undefined") return () => undefined;
+      const media = window.matchMedia("(max-width: 768px)");
+      const listener = () => onStoreChange();
+      media.addEventListener("change", listener);
+      return () => media.removeEventListener("change", listener);
+    },
+    () => (typeof window !== "undefined" ? window.matchMedia("(max-width: 768px)").matches : false),
+    () => false,
+  );
   const serviceOrderHealth = withChartTokenColors(
     charts.serviceOrderHealth.map((row) => ({ name: row.status, value: row.value })),
   );
@@ -66,7 +78,7 @@ export function ChartsIsland({
         </ResponsiveContainer>
       </ChartCard>
 
-      <ChartCard title="Proposal funnel" description="See where deals stall before invoicing." hasData={charts.proposalFunnel.length > 0} noDataLabel="No proposals" noDataHint="Proposal pipeline metrics will render once activity starts." noDataIcon={BarChart3}>
+      {!isMobile && <ChartCard title="Proposal funnel" description="See where deals stall before invoicing." hasData={charts.proposalFunnel.length > 0} noDataLabel="No proposals" noDataHint="Proposal pipeline metrics will render once activity starts." noDataIcon={BarChart3}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={charts.proposalFunnel} layout="vertical" margin={{ left: 16 }}>
             <CartesianGrid strokeDasharray="3 3" opacity={0.12} horizontal={false} />
@@ -76,7 +88,7 @@ export function ChartsIsland({
             <Bar dataKey="value" fill="var(--chart-3)" radius={[0, 6, 6, 0]} />
           </BarChart>
         </ResponsiveContainer>
-      </ChartCard>
+      </ChartCard>}
 
       <ChartCard title="Shop order health" description="Paid vs pending vs failed storefront orders." hasData={charts.serviceOrderHealth.length > 0} noDataLabel="No shop orders" noDataHint="Service order health appears after public shop activity." noDataIcon={BarChart3} chartClassName="relative pb-20">
         <ResponsiveContainer width="100%" height="100%">

@@ -1,18 +1,24 @@
+"use client";
+
 import { Boxes, AlertOctagon } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { useTranslations } from "next-intl";
 import type { DashboardData } from "./types";
+import { DashboardTooltip } from "./dashboard-tooltip";
 
 export function DashboardOperationsPanel({ operations }: { operations: DashboardData["operations"] }) {
+  const t = useTranslations("Dashboard");
+  const tr = (key: string, fallback: string) => { try { return t(key as any); } catch { return fallback; } };
   if (!operations.hasOperationalData) return null;
 
   return (
     <Card className="p-4 border-zinc-200 dark:border-zinc-800">
-      <p className="text-sm font-semibold inline-flex items-center gap-2"><Boxes className="w-4 h-4 text-indigo-500" /> Operations & inventory</p>
+      <p className="text-sm font-semibold inline-flex items-center gap-2"><Boxes className="w-4 h-4 text-indigo-500" /> {tr("operations_inventory", "Operations & inventory")}</p>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 text-sm">
-        <div><p className="text-zinc-500 text-xs">Low stock SKUs</p><p className="font-bold text-lg">{operations.lowStockCount}</p></div>
-        <div><p className="text-zinc-500 text-xs">Open purchase orders</p><p className="font-bold text-lg">{operations.openPurchaseOrders}</p></div>
-        <div><p className="text-zinc-500 text-xs">Open tasks</p><p className="font-bold text-lg">{operations.openTasks}</p></div>
-        <div><p className="text-zinc-500 text-xs">Blocked tasks</p><p className="font-bold text-lg">{operations.blockedTasks}</p></div>
+        <div><p className="text-zinc-500 text-xs inline-flex items-center gap-1">Low stock SKUs <DashboardTooltip label="Products at or below safety stock threshold." /></p><p className="font-bold text-lg">{operations.lowStockCount}</p></div>
+        <div><p className="text-zinc-500 text-xs inline-flex items-center gap-1">Open purchase orders <DashboardTooltip label="Draft or sent purchase orders pending completion." /></p><p className="font-bold text-lg">{operations.openPurchaseOrders}</p></div>
+        <div><p className="text-zinc-500 text-xs inline-flex items-center gap-1">Open tasks <DashboardTooltip label="Tasks not yet completed." /></p><p className="font-bold text-lg">{operations.openTasks}</p></div>
+        <div><p className="text-zinc-500 text-xs inline-flex items-center gap-1">Blocked tasks <DashboardTooltip label="Tasks currently stalled by dependencies." /></p><p className="font-bold text-lg">{operations.blockedTasks}</p></div>
       </div>
       <div className="mt-3 space-y-1">
         {operations.recentInventoryMovements.slice(0, 3).map((movement) => (

@@ -50,6 +50,9 @@ const basePayload = {
     shopEnabled: true,
     publicShopOrders: { total: 3, paid: 2, pending: 1, failed: 0 },
     serviceOrderConversion: 66,
+    shopRevenueThisMonth: "399.50",
+    ordersLast30Days: 4,
+    servicesReadyForShop: 2,
     topServices: [{ serviceName: "SEO", orderCount: 2, revenue: "1000.99" }],
     recentServiceOrders: [{ id: "s1", serviceName: "SEO", buyerName: "Alex", amount: "200.00", status: "PAID", createdAt: "2026-04-01" }],
   },
@@ -86,6 +89,7 @@ test("parses serialized money values from dashboard payload", () => {
 
   assert.ok(parsed);
   assert.equal(parsed?.financialPulse.billedRevenue, 1000.1);
+  assert.equal(parsed?.salesAndShop.shopRevenueThisMonth, 399.5);
   assert.equal(parsed?.salesAndShop.topServices[0].revenue, 1000.99);
   assert.equal(parsed?.charts.revenueVsExpense[0].revenue, 100);
 });

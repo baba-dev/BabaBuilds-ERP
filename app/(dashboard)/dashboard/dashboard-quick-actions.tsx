@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowRight, FilePlus2, Receipt, ShoppingBag, Shield } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { useTranslations } from "next-intl";
 
 const actions = [
   { href: "/invoices/new", label: "Create invoice", icon: FilePlus2 },
@@ -10,9 +13,11 @@ const actions = [
 ];
 
 export function DashboardQuickActions() {
+  const t = useTranslations("Dashboard");
+  const tr = (key: string, fallback: string) => { try { return t(key as any); } catch { return fallback; } };
   return (
     <Card className="p-4 border-zinc-200 dark:border-zinc-800">
-      <p className="text-sm font-semibold">Quick actions</p>
+      <p className="text-sm font-semibold">{tr("quick_actions", "Quick actions")}</p>
       <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
         {actions.map((action) => (
           <Link key={action.href} href={action.href} className="flex items-center justify-between rounded-md border border-zinc-200 dark:border-zinc-700 px-3 py-2 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors">

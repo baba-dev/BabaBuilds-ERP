@@ -38,8 +38,8 @@ const asPct = (num: number, den: number) => (den <= 0 ? 0 : Math.min(100, Math.r
 
 async function buildDashboardPayload(workspaceId: string, userId: string | null, fy: string) {
   const now = new Date();
-  const thirtyDaysOut = new Date(now);
-  thirtyDaysOut.setDate(now.getDate() + 30);
+  const thirtyDaysBack = new Date(now);
+  thirtyDaysBack.setDate(now.getDate() - 30);
   const sevenDaysOut = new Date(now);
   sevenDaysOut.setDate(now.getDate() + 7);
 
@@ -54,6 +54,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     retainers,
     proposals,
     tasks,
+    servicesReadyForShop,
     lowStockProducts,
     openPurchaseOrders,
     inventoryMovements,
@@ -91,6 +92,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     prisma.retainer.findMany({ where: { workspaceId, status: "ACTIVE" }, include: { client: true } }),
     prisma.proposal.findMany({ where: { workspaceId }, include: { items: true } }),
     prisma.task.findMany({ where: { workspaceId } }),
+    prisma.serviceTemplate.count({ where: { workspaceId, showInShop: true } }),
     prisma.product.count({ where: { workspaceId, OR: [{ status: "LOW_STOCK" }, { currentStock: { lte: 5 } }] } }),
     prisma.purchaseOrder.count({ where: { workspaceId, status: { in: ["DRAFT", "SENT"] } } }),
     prisma.inventoryMovement.findMany({ where: { workspaceId }, include: { product: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 5 }),
@@ -140,6 +142,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     const status = normalizeInvoiceStatus(inv.status);
     if (status === "PAID") return false;
     const dueDate = new Date(inv.invoiceDate);
+    dueDate.setDate(dueDate.getDate() + 30);
     return dueDate < now;
   }).length;
 
@@ -243,8 +246,14 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     { healthy: 0, partial: 0, missing: 0 },
   );
 
-  const setupSignals = [workspace?.isSetupComplete, integrationSummary.healthy >= 2, invoices.length > 0, serviceOrders.length > 0].filter(Boolean).length;
-  const setupCompletion = asPct(setupSignals, 4);
+  const setupSignals = [
+    workspace?.isSetupComplete,
+    integrationSummary.healthy >= 2,
+    invoices.length > 0,
+    profile?.shopEnabled,
+    taxOverrides > 0 || taxAudits.length > 0,
+  ].filter(Boolean).length;
+  const setupCompletion = asPct(setupSignals, 5);
 
   const attentionCards = [
     { id: "overdue", title: "Overdue invoices", value: overdueInvoices, tone: "critical", href: "/invoices", helper: "Prioritize collections to improve cash flow." },
@@ -253,10 +262,30 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     { id: "tasks", title: "Urgent tasks", value: urgentTasks, tone: "info", href: "/tasks", helper: "Handle due tasks to avoid operational blockers." },
   ] as const;
 
+  const receivablesAgingBuckets = invoices.reduce(
+    (acc, invoice) => {
+      const status = normalizeInvoiceStatus(invoice.status);
+      if (status === "PAID") return acc;
+
+      const outstanding = Prisma.Decimal.max(
+        new Prisma.Decimal(0),
+        getInvoiceBilledAmount(invoice).minus(new Prisma.Decimal(Number(invoice.amountReceived ?? 0))),
+      );
+      if (outstanding.equals(0)) return acc;
+
+      const ageDays = Math.max(0, Math.floor((now.getTime() - new Date(invoice.invoiceDate).getTime()) / (1000 * 60 * 60 * 24)));
+      if (ageDays <= 30) acc.current = acc.current.plus(outstanding);
+      else if (ageDays <= 60) acc.mid = acc.mid.plus(outstanding);
+      else acc.late = acc.late.plus(outstanding);
+      return acc;
+    },
+    { current: new Prisma.Decimal(0), mid: new Prisma.Decimal(0), late: new Prisma.Decimal(0) },
+  );
+
   const receivablesAging = [
-    { bucket: "0-30d", value: serializeMoney(receivables.mul(0.6)) },
-    { bucket: "31-60d", value: serializeMoney(receivables.mul(0.25)) },
-    { bucket: "61+d", value: serializeMoney(receivables.mul(0.15)) },
+    { bucket: "0-30d", value: serializeMoney(receivablesAgingBuckets.current) },
+    { bucket: "31-60d", value: serializeMoney(receivablesAgingBuckets.mid) },
+    { bucket: "61+d", value: serializeMoney(receivablesAgingBuckets.late) },
   ];
 
   const healthWarnings = [
@@ -266,6 +295,10 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   ];
 
   const lastRun = integrityRuns[0];
+  const shopRevenueThisMonth = serviceOrders
+    .filter((order) => order.status === "PAID" && new Date(order.createdAt).getMonth() === now.getMonth())
+    .reduce((sum, order) => sum.plus(toDecimal(order.amount)), new Prisma.Decimal(0));
+  const ordersLast30Days = serviceOrders.filter((order) => order.createdAt >= thirtyDaysBack).length;
 
   return {
     health: {
@@ -315,6 +348,9 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
         failed: failedOrders,
       },
       serviceOrderConversion: conversion,
+      shopRevenueThisMonth: serializeMoney(shopRevenueThisMonth),
+      ordersLast30Days,
+      servicesReadyForShop,
       topServices,
       recentServiceOrders: serviceOrders.slice(0, 5).map((order) => ({
         id: order.id,

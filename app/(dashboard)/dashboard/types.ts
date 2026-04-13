@@ -56,6 +56,9 @@ export type DashboardData = {
     shopEnabled: boolean;
     publicShopOrders: { total: number; paid: number; pending: number; failed: number };
     serviceOrderConversion: number;
+    shopRevenueThisMonth: number;
+    ordersLast30Days: number;
+    servicesReadyForShop: number;
     topServices: Array<{ serviceName: string; orderCount: number; revenue: number }>;
     recentServiceOrders: Array<{ id: string; serviceName: string; buyerName: string; amount: number; status: string; createdAt: string | Date }>;
   };
