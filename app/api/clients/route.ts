@@ -11,6 +11,7 @@ import { CLIENT_LOGO_INVALID_TYPE_ERROR, isAllowedClientLogoExtension } from '@/
 import { apiError } from '@/lib/api-error';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
 import { logActivity } from '@/lib/security/activity-log';
+import { FREE_TIER_CLIENT_LIMIT } from '@/lib/pricing';
 
 export async function GET(request: Request) {
   try {
@@ -96,10 +97,10 @@ export async function POST(request: Request) {
       return apiError(404, "Workspace not found", "WORKSPACE_NOT_FOUND");
     }
 
-    // The Rule: Free tier gets 3 clients max.
-    if (workspace.planTier === "FREE" && workspace._count.clients >= 3) {
+    // The Rule: Free tier gets FREE_TIER_CLIENT_LIMIT clients max.
+    if (workspace.planTier === "FREE" && workspace._count.clients >= FREE_TIER_CLIENT_LIMIT) {
       return apiError(403, "Upgrade Required", "PLAN_LIMIT_REACHED", {
-        message: "You have reached the limit of 3 clients on the Free plan. Upgrade to Pro for unlimited clients.",
+        message: `You have reached the limit of ${FREE_TIER_CLIENT_LIMIT} clients on the Free plan. Upgrade to Pro for unlimited clients.`,
         requiresUpgrade: true,
       });
     }

@@ -11,6 +11,7 @@ import {
   segmentedControlItemClass,
 } from "@/components/ui/segmented-control";
 import { cn } from "@/lib/utils";
+import { PRICING } from "@/lib/pricing";
 
 type Currency = {
   code: string;
@@ -103,14 +104,12 @@ export default function PricingSection() {
     if (tier.priceMonthly === 0) return "0";
 
     if (tier.name === "Professional" && currency.code === "INR") {
-      const base = tier.priceINR || 200;
-      const final = billingCycle === "annually" ? base * 10 : base;
+      const final = billingCycle === "annually" ? PRICING.YEARLY : PRICING.MONTHLY;
       return final.toLocaleString();
     }
 
     if (tier.name === "Team" && currency.code === "INR") {
-      const base = tier.priceINR || 400;
-      const final = billingCycle === "annually" ? 4500 : base;
+      const final = billingCycle === "annually" ? PRICING.TEAM_YEARLY : PRICING.TEAM_MONTHLY;
       return final.toLocaleString();
     }
 

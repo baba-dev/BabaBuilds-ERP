@@ -10,6 +10,7 @@ import {
   consumeFinancialIdempotency,
   releaseFinancialIdempotency,
 } from "@/lib/financial-idempotency";
+import { PRICING } from "@/lib/pricing";
 
 function getRazorpayClient() {
   const keyId = process.env.RAZORPAY_KEY_ID;
@@ -112,23 +113,23 @@ export async function POST(req: Request) {
     let verifiedTier = "PRO";
     const newExpirationDate = new Date(baseDate);
 
-    if (amountPaid >= 4500) {
-      verifiedInterval = "YEARLY";
+    if (amountPaid >= PRICING.TEAM_YEARLY) {
+      verifiedInterval = "TEAM_YEARLY";
       verifiedTier = "TEAM";
       newExpirationDate.setFullYear(newExpirationDate.getFullYear() + 1);
-    } else if (amountPaid >= 2300) {
+    } else if (amountPaid >= PRICING.YEARLY) {
       verifiedInterval = "YEARLY";
       verifiedTier = "PRO";
       newExpirationDate.setFullYear(newExpirationDate.getFullYear() + 1);
-    } else if (amountPaid >= 550) {
+    } else if (amountPaid >= PRICING.QUARTERLY) {
       verifiedInterval = "QUARTERLY";
       verifiedTier = "PRO";
       newExpirationDate.setMonth(newExpirationDate.getMonth() + 3);
-    } else if (amountPaid >= 400) {
-      verifiedInterval = "MONTHLY";
+    } else if (amountPaid >= PRICING.TEAM_MONTHLY) {
+      verifiedInterval = "TEAM_MONTHLY";
       verifiedTier = "TEAM";
       newExpirationDate.setMonth(newExpirationDate.getMonth() + 1);
-    } else if (amountPaid >= 200) {
+    } else if (amountPaid >= PRICING.MONTHLY) {
       verifiedInterval = "MONTHLY";
       verifiedTier = "PRO";
       newExpirationDate.setMonth(newExpirationDate.getMonth() + 1);
@@ -151,8 +152,14 @@ export async function POST(req: Request) {
             : (payment.vpa || "UPI/NetBanking"),
         },
       });
-      await tx.billingTransaction.create({
-        data: {
+      await tx.billingTransaction.upsert({
+        where: {
+          workspaceId_providerReference: {
+            workspaceId,
+            providerReference: razorpay_payment_id
+          }
+        },
+        create: {
           workspaceId,
           amount: amountPaid,
           status: "PAID",
@@ -160,6 +167,7 @@ export async function POST(req: Request) {
           providerReference: razorpay_payment_id,
           transactionDate: new Date(),
         },
+        update: {}
       });
     });
 

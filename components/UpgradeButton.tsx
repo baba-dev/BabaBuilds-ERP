@@ -3,10 +3,59 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { ShieldCheck, CheckCircle2, Sparkles, CreditCard } from "lucide-react";
+import { ShieldCheck, CheckCircle2, Sparkles, CreditCard, PartyPopper } from "lucide-react";
 import { toast } from "sonner";
 import { getCurrencySymbol } from "@/lib/currency";
 import { useSession } from "next-auth/react";
+import { PRICING } from "@/lib/pricing";
+import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+
+function SuccessUpgradeModal({ interval, onClose }: { interval: string, onClose: () => void }) {
+  const isTeam = interval.includes("TEAM");
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-sm"
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.9, opacity: 0, y: 20 }}
+          transition={{ type: "spring", stiffness: 300, damping: 25 }}
+          className="relative w-full max-w-md overflow-hidden bg-white border shadow-2xl rounded-3xl border-zinc-200 dark:border-zinc-800 dark:bg-zinc-900"
+        >
+          <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-br from-indigo-500 to-purple-600 dark:from-indigo-600 dark:to-purple-900 opacity-20 pointer-events-none" />
+          <div className="flex flex-col items-center p-8 text-center relative z-10">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1, rotate: [0, 10, -10, 0] }}
+              transition={{ delay: 0.2, type: "spring" }}
+              className="flex items-center justify-center w-20 h-20 mb-6 bg-indigo-100 rounded-full dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 shadow-inner"
+            >
+              <PartyPopper className="w-10 h-10" />
+            </motion.div>
+            <h2 className="mb-2 text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+              Welcome to {isTeam ? "Team" : "Pro"} Agency!
+            </h2>
+            <p className="mb-8 text-sm font-medium text-zinc-600 dark:text-zinc-400">
+              Your payment was successful. The workspace has been upgraded, unlocking all premium features and removing limits.
+            </p>
+            <Button
+              onClick={onClose}
+              className="w-full h-12 font-bold tracking-widest text-white uppercase bg-indigo-600 rounded-xl hover:bg-indigo-700 hover:scale-[1.02] transition-transform shadow-lg shadow-indigo-500/25"
+            >
+              Enter Workspace
+            </Button>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
 
 // Utility to inject the Razorpay script dynamically
 const loadRazorpayScript = () => {
@@ -25,16 +74,12 @@ const loadRazorpayScript = () => {
 
 export function ProUpgradeCard({ locale = "en-IN", currency = "INR" }: { locale?: string, currency?: string }) {
   const { data: session, update } = useSession();
-  const [interval, setInterval] = useState<"MONTHLY" | "QUARTERLY" | "YEARLY">("YEARLY");
+  const router = useRouter();
+  const [interval, setInterval] = useState<"MONTHLY" | "QUARTERLY" | "YEARLY" | "TEAM_MONTHLY" | "TEAM_YEARLY">("YEARLY");
   const [isLoading, setIsLoading] = useState(false);
+  const [isUpgradeSuccess, setIsUpgradeSuccess] = useState(false);
 
   const currencySymbol = getCurrencySymbol(currency, locale);
-
-  const pricing = {
-    MONTHLY: 200,
-    QUARTERLY: 550,
-    YEARLY: 2300
-  };
 
   const formatMoney = (amount: number) => {
     return new Intl.NumberFormat(locale, { 
@@ -74,7 +119,7 @@ export function ProUpgradeCard({ locale = "en-IN", currency = "INR" }: { locale?
         amount: orderData.amount,
         currency: orderData.currency,
         name: "BabaBuilds ERP",
-        description: `Pro Agency Plan (${interval})`,
+        description: interval.includes("TEAM") ? `Team Plan (${interval})` : `Pro Agency Plan (${interval})`,
         order_id: orderData.id,
         prefill: {
           name: session?.user?.name || "",
@@ -102,9 +147,9 @@ export function ProUpgradeCard({ locale = "en-IN", currency = "INR" }: { locale?
 
             toast.success("Payment successful! You are now a Pro user.", { id: verifyToastId });
             
-            // Force a session refresh and reload the page to show the new UI
+            // Force a session refresh and show the new UI
             await update();
-            window.location.reload();
+            setIsUpgradeSuccess(true);
 
           } catch (err: any) {
             toast.error(err.message || "Payment verification failed", { id: verifyToastId });
@@ -127,7 +172,17 @@ export function ProUpgradeCard({ locale = "en-IN", currency = "INR" }: { locale?
   };
 
   return (
-    <Card className="shadow-md border-indigo-200 dark:border-indigo-900 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/50 dark:to-zinc-900 overflow-hidden relative">
+    <>
+      {isUpgradeSuccess && (
+        <SuccessUpgradeModal 
+          interval={interval} 
+          onClose={() => {
+            setIsUpgradeSuccess(false);
+            router.refresh();
+          }} 
+        />
+      )}
+      <Card className="shadow-md border-indigo-200 dark:border-indigo-900 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/50 dark:to-zinc-900 overflow-hidden relative">
       <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
         <Sparkles className="w-32 h-32 text-indigo-900 dark:text-indigo-400" />
       </div>
@@ -163,6 +218,19 @@ export function ProUpgradeCard({ locale = "en-IN", currency = "INR" }: { locale?
             >
               12-Mo <span className="ml-1 text-emerald-600 dark:text-emerald-400 hidden sm:inline">(Save 5%)</span>
             </button>
+            <div className="w-[1px] bg-indigo-200/50 dark:bg-indigo-800/50 mx-1"></div>
+            <button 
+              onClick={() => setInterval("TEAM_MONTHLY")}
+              className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all ${interval === "TEAM_MONTHLY" ? "bg-white dark:bg-indigo-600 text-indigo-900 dark:text-white shadow-sm" : "text-indigo-600/70 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300"}`}
+            >
+              Team 1-Mo
+            </button>
+            <button 
+              onClick={() => setInterval("TEAM_YEARLY")}
+              className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all ${interval === "TEAM_YEARLY" ? "bg-white dark:bg-indigo-600 text-indigo-900 dark:text-white shadow-sm" : "text-indigo-600/70 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300"}`}
+            >
+              Team 12-Mo
+            </button>
           </div>
         </div>
       </CardHeader>
@@ -183,7 +251,7 @@ export function ProUpgradeCard({ locale = "en-IN", currency = "INR" }: { locale?
         </ul>
         <div className="w-full md:w-auto flex flex-col items-center md:items-end gap-3">
            <div className="text-center md:text-right">
-              <p className="text-3xl font-extrabold text-indigo-950 dark:text-zinc-50">{formatMoney(pricing[interval])}</p>
+              <p className="text-3xl font-extrabold text-indigo-950 dark:text-zinc-50">{formatMoney(PRICING[interval])}</p>
               <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
                 Billed {interval.toLowerCase()}
               </p>
@@ -202,5 +270,6 @@ export function ProUpgradeCard({ locale = "en-IN", currency = "INR" }: { locale?
         </div>
       </CardContent>
     </Card>
+    </>
   );
 }
