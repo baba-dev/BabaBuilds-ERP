@@ -1,0 +1,40 @@
+{
+  "entities": [
+    {
+      "entity": "proposal",
+      "kpiImpact": [
+        "accepted-uninvoiced-proposals",
+        "proposal-funnel-mix"
+      ],
+      "writeEndpoints": [
+        "app/api/proposals/route.ts",
+        "app/api/proposals/[id]/route.ts",
+        "app/api/proposals/[id]/status/route.ts"
+      ]
+    },
+    {
+      "entity": "expense",
+      "kpiImpact": [
+        "monthly-expense-total",
+        "net-cash-position"
+      ],
+      "writeEndpoints": [
+        "app/api/expenses/route.ts",
+        "app/api/expenses/[id]/route.ts"
+      ]
+    },
+    {
+      "entity": "inventory",
+      "kpiImpact": [
+        "inventory-stock-health",
+        "inventory-restock-expense-impact"
+      ],
+      "writeEndpoints": [
+        "app/api/inventory/products/route.ts",
+        "app/api/inventory/products/[id]/route.ts",
+        "app/api/inventory/adjust/route.ts",
+        "app/api/inventory/purchase-orders/[id]/receive/route.ts"
+      ]
+    }
+  ]
+}

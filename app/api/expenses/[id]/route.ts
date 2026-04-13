@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import fs from 'fs';
 import path from 'path';
 import { parseExpenseUpdatePayload } from '@/lib/types/business';
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 
 const getWorkspaceId = (session: unknown) => {
   if (!session || typeof session !== "object") return null;
@@ -63,6 +64,12 @@ export async function PATCH(
       return apiError(404, "Expense not found or unauthorized.", "EXPENSE_NOT_FOUND");
     }
 
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'expense', action: 'update', error: String(error) });
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Expense Update Error:", error);
@@ -111,6 +118,12 @@ export async function DELETE(
           console.error("Failed to delete receipt file:", e);
         }
       }
+    }
+
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'expense', action: 'delete', error: String(error) });
     }
 
     return NextResponse.json({ success: true });

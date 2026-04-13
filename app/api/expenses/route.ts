@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { scanBuffer } from '@/lib/security/clamav';
 import { apiError } from "@/lib/api-error";
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 
 // Fetch all expenses for the ledger (NOW PAGINATED)
 export async function GET(request: Request) {
@@ -125,6 +126,12 @@ export async function POST(request: Request) {
         receiptUrl,
       }
     });
+
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'expense', action: 'create', error: String(error) });
+    }
 
     return NextResponse.json({ success: true, expense: newExpense });
 

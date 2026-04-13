@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -22,6 +23,12 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     if (updated.count === 0) {
       return NextResponse.json({ error: "Proposal not found or unauthorized" }, { status: 404 });
+    }
+
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'proposal', action: 'status_update', error: String(error) });
     }
 
     return NextResponse.json({ success: true });

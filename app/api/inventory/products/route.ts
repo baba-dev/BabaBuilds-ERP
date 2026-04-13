@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 
 export async function GET(req: Request) {
   try {
@@ -120,6 +121,12 @@ export async function POST(req: Request) {
           reason: "Initial Stock Entry"
         }
       });
+    }
+
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'inventory_product', action: 'create', error: String(error) });
     }
 
     return NextResponse.json({ success: true, product: newProduct });
