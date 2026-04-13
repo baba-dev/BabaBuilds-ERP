@@ -1,5 +1,6 @@
 type DashboardCacheKeyParts = {
   workspaceId: string;
+  userId?: string | null;
   fy: string;
   locale?: string | null;
   currency?: string | null;
@@ -41,6 +42,10 @@ export function isDashboardCacheEnabled(): boolean {
 
 export function buildDashboardCacheKey(parts: DashboardCacheKeyParts): string {
   const segments = [`workspace:${parts.workspaceId}`, `fy:${parts.fy}`];
+  const userToken = normalizeToken(parts.userId);
+  if (userToken) {
+    segments.push(`user:${userToken}`);
+  }
 
   if (parts.localeCurrencyAffectsPayload) {
     const locale = normalizeToken(parts.locale);
