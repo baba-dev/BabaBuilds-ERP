@@ -186,42 +186,19 @@ function IntelligenceAssistantSection({ data, tr, mood, aiState }: { data: Dashb
     );
   }
 
-  const getStrategicGuidance = () => {
-    if (mood === 'critical') return tr("guide_critical", "Your workspace requires immediate operational intervention to restore financial integrity.");
-    if (mood === 'warning') return tr("guide_warning", "Analysis shows pending setup and reconciliation items. Finalizing these will unlock clearer cash signals.");
-    if (mood === 'opportunity') return tr("guide_opportunity", "Operational metrics are stable. Revenue conversion and storefront expansion are your clearest growth levers.");
-    return tr("guide_healthy", "Core systems are nominal. Strategic maintenance and growth-focused activity will yield the highest ROI right now.");
-  };
-
   return (
     <div className="p-6 bg-indigo-50/20 dark:bg-indigo-500/5">
-      <div className="flex gap-4 items-start">
-        <div className="h-10 w-10 shrink-0 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-sm">
-          <WandSparkles className="w-5 h-5" />
+      <div className="flex items-center gap-4">
+        <div className="flex -space-x-2">
+          {[1,2,3].map(i => (
+            <div key={i} className="h-7 w-7 rounded-full border-2 border-white dark:border-zinc-900 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shadow-sm">
+               <Bot className="w-4 h-4 text-zinc-400" />
+            </div>
+          ))}
         </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-              {tr("ai_active_headline", "AI Core Analysis")}
-            </p>
-            <Badge className="h-4 px-1.5 text-[10px] bg-indigo-500 text-white border-none animate-pulse">LIVE</Badge>
-          </div>
-          <p className="text-sm text-zinc-600 dark:text-zinc-300 font-bold leading-relaxed mt-2 italic font-serif opacity-90 border-l-2 border-indigo-200 dark:border-indigo-800 pl-3">
-            "{getStrategicGuidance()}"
-          </p>
-          <div className="mt-4 flex items-center gap-3">
-             <div className="flex -space-x-2">
-               {[1,2,3].map(i => (
-                 <div key={i} className="h-6 w-6 rounded-full border-2 border-white dark:border-zinc-900 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shadow-sm">
-                    <Bot className="w-3.5 h-3.5 text-zinc-400" />
-                 </div>
-               ))}
-             </div>
-             <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
-               {tr("active_listeners", "3 Intelligent Observers active")}
-             </p>
-          </div>
-        </div>
+        <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
+          {tr("active_observers", "3 Intelligent Observers active")}
+        </p>
       </div>
     </div>
   );
