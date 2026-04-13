@@ -14,7 +14,7 @@ export function TableActions({
   resending,
 }: {
   invoice: RecentInvoiceRow;
-  t: (key: string, fallback: string) => string;
+  t: (key: string, fallback: string, values?: any) => string;
   onOpenPayModal: (invoice: RecentInvoiceRow) => void;
   onResendEmail: (invoice: RecentInvoiceRow) => void;
   resending: boolean;

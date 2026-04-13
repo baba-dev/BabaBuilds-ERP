@@ -5,16 +5,22 @@ import { ArrowRight, FilePlus2, Receipt, ShoppingBag, Shield } from "lucide-reac
 import { Card } from "@/components/ui/card";
 import { useTranslations } from "next-intl";
 
-const actions = [
-  { href: "/invoice", label: "Create invoice", icon: FilePlus2 },
-  { href: "/proposals", label: "Draft proposal", icon: Receipt },
-  { href: "/shop", label: "Open shop", icon: ShoppingBag },
-  { href: "/reconciliation", label: "Run integrity check", icon: Shield },
-];
 
 export function DashboardQuickActions() {
   const t = useTranslations("Dashboard");
-  const tr = (key: string, fallback: string) => { try { return t(key as any); } catch { return fallback; } };
+  const tr = (key: string, fallback: string, values?: any) => {
+    const translation = t(key as any, values);
+    if (translation === key || translation === `Dashboard.${key}`) return fallback;
+    return translation;
+  };
+
+  const actions = [
+    { href: "/invoice", label: tr("action_create_invoice", "Create invoice"), icon: FilePlus2 },
+    { href: "/proposals", label: tr("action_draft_proposal", "Draft proposal"), icon: Receipt },
+    { href: "/shop", label: tr("action_open_shop", "Open shop"), icon: ShoppingBag },
+    { href: "/reconciliation", label: tr("action_integrity_check", "Run integrity check"), icon: Shield },
+  ];
+
   return (
     <Card className="p-4 border-zinc-200 dark:border-zinc-800">
       <p className="text-sm font-semibold">{tr("quick_actions", "Quick actions")}</p>

@@ -447,6 +447,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       ...invoice,
       status: invoice.status || INVOICE_STATUS.PENDING,
     })),
+    countryCode: workspace?.countryCode ?? "IN",
   };
 }
 

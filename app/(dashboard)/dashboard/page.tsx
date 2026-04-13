@@ -54,12 +54,10 @@ export default function Dashboard() {
 
   const { fCurrency, currency } = useFormat();
   const currencySymbol = getCurrencySymbol(currency);
-  const tr = (key: string, fallback: string) => {
-    try {
-      return t(key as any);
-    } catch {
-      return fallback;
-    }
+  const tr = (key: string, fallback: string, values?: any) => {
+    const translation = t(key as any, values);
+    if (translation === key || translation === `Dashboard.${key}`) return fallback;
+    return translation;
   };
   const isMobile = useSyncExternalStore(
     (onStoreChange) => {
@@ -210,7 +208,7 @@ export default function Dashboard() {
   return (
     <DashboardPageShell
       title={tr("financial_overview", "Business command center")}
-      description={tr("global_command_center", "Finance, compliance, shop, and operations in one decisive view.")}
+      description={tr("global_command_center", "Finance, compliance, shop, and operations in one decisive view.", { countryCode: data.countryCode })}
       icon={<LayoutDashboard className="w-5 h-5 text-indigo-500" />}
       secondaryActions={
         <Select value={selectedFy} onValueChange={setSelectedFy}>

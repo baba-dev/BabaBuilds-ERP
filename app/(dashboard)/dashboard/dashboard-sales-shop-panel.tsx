@@ -17,7 +17,11 @@ export function DashboardSalesAndShopPanel({
   fCurrency: (value: number) => string;
 }) {
   const t = useTranslations("Dashboard");
-  const tr = (key: string, fallback: string) => { try { return t(key as any); } catch { return fallback; } };
+  const tr = (key: string, fallback: string, values?: any) => {
+    const translation = t(key as any, values);
+    if (translation === key || translation === `Dashboard.${key}`) return fallback;
+    return translation;
+  };
   return (
     <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
       <Card className="p-4 border-zinc-200 dark:border-zinc-800">

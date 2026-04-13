@@ -10,8 +10,10 @@ import { DashboardTooltip } from "./dashboard-tooltip";
 
 export function DashboardHealthStrip({ health }: { health: DashboardData["health"] }) {
   const t = useTranslations("Dashboard");
-  const tr = (key: string, fallback: string) => {
-    try { return t(key as any); } catch { return fallback; }
+  const tr = (key: string, fallback: string, values?: any) => {
+    const translation = t(key as any, values);
+    if (translation === key || translation === `Dashboard.${key}`) return fallback;
+    return translation;
   };
   return (
     <Card className="p-4 md:p-5 border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-sm">

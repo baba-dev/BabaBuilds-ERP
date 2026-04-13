@@ -15,7 +15,11 @@ const toneClass: Record<DashboardData["attention"]["cards"][number]["tone"], str
 
 export function DashboardAttentionCenter({ attention }: { attention: DashboardData["attention"] }) {
   const t = useTranslations("Dashboard");
-  const tr = (key: string, fallback: string) => { try { return t(key as any); } catch { return fallback; } };
+  const tr = (key: string, fallback: string, values?: any) => {
+    const translation = t(key as any, values);
+    if (translation === key || translation === `Dashboard.${key}`) return fallback;
+    return translation;
+  };
   return (
     <Card className="p-5 md:p-6 border-zinc-200 dark:border-zinc-800 bg-gradient-to-br from-indigo-50/80 to-white dark:from-zinc-900 dark:to-zinc-950">
       <div className="flex items-start justify-between gap-4">

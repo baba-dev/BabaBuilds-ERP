@@ -107,5 +107,6 @@ export const parseDashboardResponse = (payload: unknown) => {
         };
       }),
     },
+    countryCode: (obj.countryCode as string) || "IN",
   };
 };

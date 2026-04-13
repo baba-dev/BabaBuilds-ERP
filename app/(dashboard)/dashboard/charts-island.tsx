@@ -32,8 +32,10 @@ export function ChartsIsland({
   fCurrency: (value: number) => string;
 }) {
   const t = useTranslations("Dashboard");
-  const tr = (key: string, fallback: string) => {
-    try { return t(key as any); } catch { return fallback; }
+  const tr = (key: string, fallback: string, values?: any) => {
+    const translation = t(key as any, values);
+    if (translation === key || translation === `Dashboard.${key}`) return fallback;
+    return translation;
   };
   const isMobile = useSyncExternalStore(
     (onStoreChange) => {

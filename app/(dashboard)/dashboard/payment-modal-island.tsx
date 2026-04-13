@@ -28,7 +28,7 @@ export function PaymentModalIsland({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (e: React.FormEvent) => Promise<void>;
-  t: (key: string, fallback: string) => string;
+  t: (key: string, fallback: string, values?: any) => string;
   currency: string;
   currencySymbol: string;
   amountReceived: string;

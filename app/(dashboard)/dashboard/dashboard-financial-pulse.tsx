@@ -14,8 +14,10 @@ export function DashboardFinancialPulse({
   fCurrency: (value: number) => string;
 }) {
   const t = useTranslations("Dashboard");
-  const tr = (key: string, fallback: string) => {
-    try { return t(key as any); } catch { return fallback; }
+  const tr = (key: string, fallback: string, values?: any) => {
+    const translation = t(key as any, values);
+    if (translation === key || translation === `Dashboard.${key}`) return fallback;
+    return translation;
   };
   const cards = [
     { label: tr("billed_revenue", "Billed revenue"), value: financialPulse.billedRevenue, help: tr("billed_revenue_help", "Revenue invoiced in the selected financial year.") },

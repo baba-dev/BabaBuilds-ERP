@@ -88,4 +88,5 @@ export type DashboardData = {
     serviceOrderHealth: Array<{ status: string; value: number }>;
   };
   recentInvoices: RecentInvoiceRow[];
+  countryCode: string;
 };
