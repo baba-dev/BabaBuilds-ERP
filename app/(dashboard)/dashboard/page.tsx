@@ -229,7 +229,16 @@ export default function Dashboard() {
             <DashboardSalesAndShopPanel salesAndShop={data.salesAndShop} fCurrency={fCurrency} />
             <DashboardOperationsPanel operations={data.operations} />
             <DashboardTrustPanel trust={data.trust} />
-            <ChartsIsland charts={data.charts} fCurrency={fCurrency} />
+            {islandsEnabled ? (
+              <ChartsIsland charts={data.charts} fCurrency={fCurrency} />
+            ) : (
+              <Card className="p-5 border-zinc-200 dark:border-zinc-800">
+                <CardTitle className="text-base">{tr("charts_disabled_title", "Charts are in fallback mode")}</CardTitle>
+                <p className="text-sm text-zinc-500 mt-2">
+                  {tr("charts_disabled_desc", "Runtime flag disabled dashboard islands. Financial and operational values remain available above.")}
+                </p>
+              </Card>
+            )}
           </div>
           <div className="space-y-6">
             <DashboardQuickActions />

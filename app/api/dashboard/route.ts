@@ -49,6 +49,8 @@ const getFyDateRange = (fy: string): { start: Date; endExclusive: Date } | null 
 
 async function buildDashboardPayload(workspaceId: string, userId: string | null, fy: string) {
   const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const thirtyDaysBack = new Date(now);
   thirtyDaysBack.setDate(now.getDate() - 30);
   const sevenDaysOut = new Date(now);
@@ -319,7 +321,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
 
   const lastRun = integrityRuns[0];
   const shopRevenueThisMonth = serviceOrders
-    .filter((order) => order.status === "PAID" && new Date(order.createdAt).getMonth() === now.getMonth())
+    .filter((order) => order.status === "PAID" && order.createdAt >= monthStart && order.createdAt < nextMonthStart)
     .reduce((sum, order) => sum.plus(toDecimal(order.amount)), new Prisma.Decimal(0));
   const ordersLast30Days = serviceOrders.filter((order) => order.createdAt >= thirtyDaysBack).length;
 
