@@ -274,7 +274,7 @@ export default function Dashboard() {
 
         <Card className="p-4 border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60">
           <p className="text-sm text-zinc-600 inline-flex items-center gap-1"><AlertCircle className="w-4 h-4" /> {tr("mobile_focus_note", "Mobile/PWA focus: urgent actions and health are intentionally above charts for faster launch scanning.")}</p>
-          <Button asChild variant="link" className="px-0 mt-1"><Link href="/notifications">{tr("review_notifications", "Review notifications")}</Link></Button>
+          <Button asChild variant="link" className="px-0 mt-1"><Link href="/settings">{tr("review_notifications", "Review notifications")}</Link></Button>
         </Card>
       </div>
 

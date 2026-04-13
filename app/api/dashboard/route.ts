@@ -284,7 +284,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     { id: "overdue", title: "Overdue invoices", value: overdueInvoices, tone: "critical", href: "/invoice", helper: "Prioritize collections to improve cash flow." },
     { id: "bank", title: "Unreconciled transactions", value: unreconciledTransactions, tone: "warning", href: "/reconciliation", helper: "Match transactions to keep books accurate." },
     { id: "proposals", title: "Accepted, awaiting invoice", value: acceptedUninvoicedProposals, tone: "warning", href: "/proposals", helper: "Convert accepted proposals into billable invoices." },
-    { id: "tasks", title: "Urgent tasks", value: urgentTasks, tone: "info", href: "/dashboard", helper: "Handle due tasks to avoid operational blockers." },
+    { id: "tasks", title: "Urgent tasks", value: urgentTasks, tone: "info", href: "/admin", helper: "Handle due tasks to avoid operational blockers." },
   ] as const;
 
   const receivablesAgingBuckets = invoices.reduce(
@@ -461,7 +461,10 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const fy = searchParams.get("fy") || getCurrentFinancialYear();
+    let fy = searchParams.get("fy") || getCurrentFinancialYear();
+    if (!getFyDateRange(fy)) {
+      fy = getCurrentFinancialYear();
+    }
     const locale = searchParams.get("locale");
     const currency = searchParams.get("currency");
 

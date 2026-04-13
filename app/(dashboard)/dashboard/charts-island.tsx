@@ -2,6 +2,7 @@
 
 import { BarChart3 } from "lucide-react";
 import { useSyncExternalStore } from "react";
+import { useTranslations } from "next-intl";
 import {
   Area,
   AreaChart,
@@ -30,6 +31,10 @@ export function ChartsIsland({
   charts: DashboardData["charts"];
   fCurrency: (value: number) => string;
 }) {
+  const t = useTranslations("Dashboard");
+  const tr = (key: string, fallback: string) => {
+    try { return t(key as any); } catch { return fallback; }
+  };
   const isMobile = useSyncExternalStore(
     (onStoreChange) => {
       if (typeof window === "undefined") return () => undefined;
@@ -47,7 +52,7 @@ export function ChartsIsland({
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-      <ChartCard title="Revenue vs expenses" description="Track margin direction month-over-month." hasData={charts.revenueVsExpense.length > 0} noDataLabel="No trend yet" noDataHint="Create invoices and expenses to unlock trend insights." noDataIcon={BarChart3}>
+      <ChartCard title={tr("chart_revenue_vs_expenses", "Revenue vs expenses")} description={tr("chart_revenue_vs_expenses_desc", "Track margin direction month-over-month.")} hasData={charts.revenueVsExpense.length > 0} noDataLabel={tr("chart_no_trend", "No trend yet")} noDataHint={tr("chart_no_trend_hint", "Create invoices and expenses to unlock trend insights.")} noDataIcon={BarChart3}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={charts.revenueVsExpense}>
             <defs>
@@ -66,7 +71,7 @@ export function ChartsIsland({
         </ResponsiveContainer>
       </ChartCard>
 
-      <ChartCard title="Receivables aging" description="Understand what cash is slowing down." hasData={charts.receivablesAging.length > 0} noDataLabel="No receivables" noDataHint="Outstanding receivables will appear here." noDataIcon={BarChart3}>
+      <ChartCard title={tr("chart_receivables_aging", "Receivables aging")} description={tr("chart_receivables_aging_desc", "Understand what cash is slowing down.")} hasData={charts.receivablesAging.length > 0} noDataLabel={tr("chart_no_receivables", "No receivables")} noDataHint={tr("chart_no_receivables_hint", "Outstanding receivables will appear here.")} noDataIcon={BarChart3}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={charts.receivablesAging}>
             <CartesianGrid strokeDasharray="3 3" opacity={0.12} vertical={false} />
@@ -78,7 +83,7 @@ export function ChartsIsland({
         </ResponsiveContainer>
       </ChartCard>
 
-      {!isMobile && <ChartCard title="Proposal funnel" description="See where deals stall before invoicing." hasData={charts.proposalFunnel.length > 0} noDataLabel="No proposals" noDataHint="Proposal pipeline metrics will render once activity starts." noDataIcon={BarChart3}>
+      {!isMobile && <ChartCard title={tr("chart_proposal_funnel", "Proposal funnel")} description={tr("chart_proposal_funnel_desc", "See where deals stall before invoicing.")} hasData={charts.proposalFunnel.length > 0} noDataLabel={tr("chart_no_proposals", "No proposals")} noDataHint={tr("chart_no_proposals_hint", "Proposal pipeline metrics will render once activity starts.")} noDataIcon={BarChart3}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={charts.proposalFunnel} layout="vertical" margin={{ left: 16 }}>
             <CartesianGrid strokeDasharray="3 3" opacity={0.12} horizontal={false} />
@@ -90,7 +95,7 @@ export function ChartsIsland({
         </ResponsiveContainer>
       </ChartCard>}
 
-      <ChartCard title="Shop order health" description="Paid vs pending vs failed storefront orders." hasData={charts.serviceOrderHealth.length > 0} noDataLabel="No shop orders" noDataHint="Service order health appears after public shop activity." noDataIcon={BarChart3} chartClassName="relative pb-20">
+      <ChartCard title={tr("chart_shop_order_health", "Shop order health")} description={tr("chart_shop_order_health_desc", "Paid vs pending vs failed storefront orders.")} hasData={charts.serviceOrderHealth.length > 0} noDataLabel={tr("chart_no_shop_orders", "No shop orders")} noDataHint={tr("chart_no_shop_orders_hint", "Service order health appears after public shop activity.")} noDataIcon={BarChart3} chartClassName="relative pb-20">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Tooltip content={<ChartTooltip />} />
