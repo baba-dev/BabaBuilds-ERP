@@ -344,8 +344,8 @@
     "no_recent_activity": "No recent activity yet.",
     "charts_disabled_title": "Charts are in fallback mode",
     "charts_disabled_desc": "Runtime flag disabled dashboard islands. Financial and operational values remain available above.",
-    "mobile_focus_note": "Mobile/PWA focus: urgent actions and health are intentionally above charts for faster launch scanning.",
-    "review_notifications": "Review notifications",
+    "mobile_focus_note": "نصيحة: يتم تثبيت التنبيهات ذات الأولوية وحالة مساحة العمل في الأعلى على الهاتف المحمول لسهولة المسح السريع.",
+    "review_notifications": "إدارة تنبيهات مساحة العمل",
     "chart_revenue_name": "Revenue",
     "actions": {
       "resend_invoice_title": "Resend Invoice to Client via Email",

@@ -3,7 +3,8 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { AlertCircle, Download, LayoutDashboard, Send } from "lucide-react";
+import { AlertCircle, Download, LayoutDashboard, Send, Sparkles, ArrowRight } from "lucide-react";
+import { motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -323,10 +324,30 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="p-4 border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/60">
-          <p className="text-sm text-zinc-600 inline-flex items-center gap-1"><AlertCircle className="w-4 h-4" /> {tr("mobile_focus_note", "Mobile/PWA focus: urgent actions and health are intentionally above charts for faster launch scanning.")}</p>
-          <Button asChild variant="link" className="px-0 mt-1"><Link href="/settings">{tr("review_notifications", "Review notifications")}</Link></Button>
-        </Card>
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          whileHover={{ y: -2 }}
+          className="group relative flex flex-col sm:flex-row items-center justify-between gap-4 p-3 px-5 rounded-2xl border border-zinc-200/50 dark:border-zinc-800/50 bg-white/50 dark:bg-zinc-900/30 backdrop-blur-sm transition-all hover:shadow-lg hover:shadow-indigo-500/5 hover:border-indigo-500/20"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0 p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 group-hover:scale-110 transition-transform duration-300">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400 leading-tight">
+              {tr("mobile_focus_note", "Tip: Priority alerts and workspace health are pinned to the top on mobile for faster scanning.")}
+            </p>
+          </div>
+          <Button asChild variant="ghost" size="sm" className="flex-shrink-0 h-8 text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100/50 dark:hover:bg-indigo-500/20 gap-2 border border-transparent hover:border-indigo-100 dark:hover:border-indigo-500/30">
+            <Link href="/settings" className="flex items-center gap-2">
+              {tr("review_notifications", "Manage workspace alerts")}
+              <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </Button>
+
+          {/* Subtle accent line */}
+          <div className="absolute left-0 top-1/4 bottom-1/4 w-0.5 rounded-full bg-indigo-500/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+        </motion.div>
       </div>
 
       <PaymentModalIsland

@@ -344,8 +344,8 @@
     "no_recent_activity": "No recent activity yet.",
     "charts_disabled_title": "Charts are in fallback mode",
     "charts_disabled_desc": "Runtime flag disabled dashboard islands. Financial and operational values remain available above.",
-    "mobile_focus_note": "Mobile/PWA focus: urgent actions and health are intentionally above charts for faster launch scanning.",
-    "review_notifications": "Review notifications",
+    "mobile_focus_note": "सुझाव: मोबाइल पर तेज़ी से स्कैनिंग के लिए मुख्य अलर्ट और हेल्थ आंकड़े सबसे ऊपर पिन किए गए हैं।",
+    "review_notifications": "वर्कस्पेस अलर्ट प्रबंधित करें",
     "chart_revenue_name": "राजस्व",
     "actions": {
       "resend_invoice_title": "Resend Invoice to Client via Email",
