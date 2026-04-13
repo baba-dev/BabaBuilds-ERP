@@ -32,8 +32,7 @@ import { DashboardFinancialPulse } from "./dashboard-financial-pulse";
 import { DashboardSalesAndShopPanel } from "./dashboard-sales-shop-panel";
 import { DashboardOperationsPanel } from "./dashboard-operations-panel";
 import { DashboardTrustPanel } from "./dashboard-trust-panel";
-import { DashboardActivityFeed } from "./dashboard-activity-feed";
-import { DashboardQuickActions } from "./dashboard-quick-actions";
+import { DashboardRightRail } from "./dashboard-right-rail";
 import type { DashboardData, RecentInvoiceRow } from "./types";
 
 export default function Dashboard() {
@@ -270,10 +269,7 @@ export default function Dashboard() {
               </Card>
             )}
           </div>
-          <div className="space-y-6">
-            <DashboardQuickActions />
-            <DashboardActivityFeed activity={data.activity} />
-          </div>
+            <DashboardRightRail data={data} fCurrency={fCurrency} />
         </div>
 
         <Card className="border-0 shadow-xl shadow-zinc-200/20 dark:shadow-black/20 ring-1 ring-zinc-200 dark:ring-zinc-800/60 bg-white dark:bg-zinc-900/50 overflow-hidden">
