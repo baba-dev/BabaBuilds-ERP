@@ -6,13 +6,9 @@ on:
     branches:
       - main
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   validate:
-    runs-on: runs-on: [self-hosted, linux, x64, erp-ci]
+    runs-on: [self-hosted, linux, x64, erp-ci]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
