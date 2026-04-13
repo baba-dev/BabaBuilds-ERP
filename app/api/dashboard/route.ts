@@ -35,6 +35,17 @@ const getIntegrationReadiness = (keys: Array<string | null | undefined>): Integr
 };
 
 const asPct = (num: number, den: number) => (den <= 0 ? 0 : Math.min(100, Math.round((num / den) * 100)));
+const getFyDateRange = (fy: string): { start: Date; endExclusive: Date } | null => {
+  const match = fy.match(/^(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const startYear = 2000 + Number(match[1]);
+  const endYear = 2000 + Number(match[2]);
+  if (!Number.isFinite(startYear) || !Number.isFinite(endYear) || endYear !== startYear + 1) return null;
+  return {
+    start: new Date(Date.UTC(startYear, 3, 1, 0, 0, 0)),
+    endExclusive: new Date(Date.UTC(endYear, 3, 1, 0, 0, 0)),
+  };
+};
 
 async function buildDashboardPayload(workspaceId: string, userId: string | null, fy: string) {
   const now = new Date();
@@ -42,6 +53,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   thirtyDaysBack.setDate(now.getDate() - 30);
   const sevenDaysOut = new Date(now);
   sevenDaysOut.setDate(now.getDate() + 7);
+  const fyRange = getFyDateRange(fy);
 
   const [
     workspace,
@@ -59,6 +71,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     openPurchaseOrders,
     inventoryMovements,
     serviceOrders,
+    recentServiceOrders,
     integrityRuns,
     violationReports,
     taxOverrides,
@@ -87,7 +100,12 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     prisma.invoice.findMany({ where: { workspaceId, financialYear: fy }, include: { client: true }, orderBy: { invoiceDate: "asc" } }),
     prisma.invoice.findMany({ where: { workspaceId }, orderBy: { invoiceDate: "desc" }, take: 6, include: { client: true } }),
     prisma.investment.findMany({ where: { workspaceId } }),
-    prisma.expense.findMany({ where: { workspaceId } }),
+    prisma.expense.findMany({
+      where: {
+        workspaceId,
+        ...(fyRange ? { date: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}),
+      },
+    }),
     prisma.bankTransaction.findMany({ where: { workspaceId } }),
     prisma.retainer.findMany({ where: { workspaceId, status: "ACTIVE" }, include: { client: true } }),
     prisma.proposal.findMany({ where: { workspaceId }, include: { items: true } }),
@@ -100,7 +118,12 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       where: { workspaceId },
       include: { serviceTemplate: { select: { name: true } } },
       orderBy: { createdAt: "desc" },
-      take: 40,
+    }),
+    prisma.serviceOrder.findMany({
+      where: { workspaceId },
+      include: { serviceTemplate: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 5,
     }),
     prisma.accountingIntegrityRun.findMany({ where: { workspaceId }, orderBy: { startedAt: "desc" }, take: 1 }),
     prisma.accountingViolationReport.findMany({ where: { workspaceId }, orderBy: { detectedAt: "desc" }, take: 30 }),
@@ -352,7 +375,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       ordersLast30Days,
       publishedServicesInShop,
       topServices,
-      recentServiceOrders: serviceOrders.slice(0, 5).map((order) => ({
+      recentServiceOrders: recentServiceOrders.map((order) => ({
         id: order.id,
         serviceName: order.serviceTemplate?.name ?? "Unknown service",
         buyerName: order.buyerName,
@@ -442,6 +465,7 @@ export async function GET(request: Request) {
 
     const cacheKey = buildDashboardCacheKey({
       workspaceId,
+      userId,
       fy,
       locale,
       currency,
