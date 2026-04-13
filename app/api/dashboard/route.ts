@@ -36,20 +36,10 @@ const getIntegrationReadiness = (keys: Array<string | null | undefined>): Integr
 };
 
 const asPct = (num: number, den: number) => (den <= 0 ? 0 : Math.min(100, Math.round((num / den) * 100)));
-const getFyDateRange = (fy: string): { start: Date; endExclusive: Date } | null => {
-  const match = fy.match(/^(\d{2})-(\d{2})$/);
-  if (!match) return null;
-  const startYear = 2000 + Number(match[1]);
-  const endYear = 2000 + Number(match[2]);
-  if (!Number.isFinite(startYear) || !Number.isFinite(endYear) || endYear !== startYear + 1) return null;
-  return {
-    start: new Date(Date.UTC(startYear, 3, 1, 0, 0, 0)),
-    endExclusive: new Date(Date.UTC(endYear, 3, 1, 0, 0, 0)),
-  };
-};
 
 
-export async function buildDashboardPayload(workspaceId: string, userId: string | null, fy: string) {
+
+async function buildDashboardPayload(workspaceId: string, userId: string | null, fy: string) {
   const queryTimingsMs: Record<string, number> = {};
   const timed = async <T,>(label: string, op: () => Promise<T>): Promise<T> => {
     const startedAt = performance.now();
@@ -67,6 +57,8 @@ export async function buildDashboardPayload(workspaceId: string, userId: string 
   sevenDaysOut.setDate(now.getDate() + 7);
   const sixtyDaysBack = new Date(now);
   sixtyDaysBack.setDate(now.getDate() - 60);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const fyRange = getFyDateRange(fy);
 
@@ -93,7 +85,9 @@ export async function buildDashboardPayload(workspaceId: string, userId: string 
     inventoryMovements,
     serviceOrderStatusGroups,
     paidOrderRevenueThisMonth,
+    paidOrderRevenuePreviousMonth,
     ordersLast30Days,
+    ordersPrior30Days,
     topServiceOrderGroups,
     recentServiceOrders,
     integrityRuns,
@@ -126,7 +120,7 @@ export async function buildDashboardPayload(workspaceId: string, userId: string 
         smtpFromEmail: true,
         shopEnabled: true,
       },
-    })),
+    }),
     timed("invoices.fy", () => prisma.invoice.findMany({
       where: { workspaceId, financialYear: fy },
       select: { status: true, invoiceDate: true, totalAmount: true, grandTotal: true, amountReceived: true },
@@ -167,7 +161,12 @@ export async function buildDashboardPayload(workspaceId: string, userId: string 
       where: { workspaceId, status: "PAID", createdAt: { gte: monthStart, lt: nextMonthStart } },
       _sum: { amount: true },
     })),
+    timed("orders.revenue_prev_month", () => prisma.serviceOrder.aggregate({
+      where: { workspaceId, status: "PAID", createdAt: { gte: previousMonthStart, lt: monthStart } },
+      _sum: { amount: true },
+    })),
     timed("orders.last_30d", () => prisma.serviceOrder.count({ where: { workspaceId, createdAt: { gte: thirtyDaysBack } } })),
+    timed("orders.prior_30d", () => prisma.serviceOrder.count({ where: { workspaceId, createdAt: { gte: sixtyDaysBack, lt: thirtyDaysBack } } })),
     timed("orders.top_services", () => prisma.serviceOrder.groupBy({ where: { workspaceId }, by: ["serviceTemplateId"], _count: { _all: true }, _sum: { amount: true } })),
     timed("orders.recent", () => prisma.serviceOrder.findMany({
       where: { workspaceId },
@@ -355,6 +354,23 @@ export async function buildDashboardPayload(workspaceId: string, userId: string 
 
   const lastRun = integrityRuns[0];
   const shopRevenueThisMonth = toDecimal(paidOrderRevenueThisMonth._sum.amount ?? 0);
+  const shopRevenuePreviousMonth = toDecimal(paidOrderRevenuePreviousMonth._sum.amount ?? 0);
+  const revenueDeltaPct = shopRevenuePreviousMonth.gt(0)
+    ? Number(shopRevenueThisMonth.minus(shopRevenuePreviousMonth).div(shopRevenuePreviousMonth).mul(100).toFixed(1))
+    : null;
+  const orderDeltaPct = ordersPrior30Days > 0
+    ? Number((((ordersLast30Days - ordersPrior30Days) / ordersPrior30Days) * 100).toFixed(1))
+    : null;
+
+  const salesAndShopKpiPeriods = {
+    proposalFunnel: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
+    acceptedAwaitingInvoicing: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
+    publicShopOrders: describeKpiPeriod({ type: "ALL_TIME", now, fy, fyRange }),
+    serviceOrderConversion: describeKpiPeriod({ type: "ALL_TIME", now, fy, fyRange }),
+    topServices: describeKpiPeriod({ type: "ALL_TIME", now, fy, fyRange }),
+    shopRevenueThisMonth: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
+    ordersLast30Days: describeKpiPeriod({ type: "ROLLING_30D", now, fy, fyRange }),
+  };
 
   return {
     health: {
