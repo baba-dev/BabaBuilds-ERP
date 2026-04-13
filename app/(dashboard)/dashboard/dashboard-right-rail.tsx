@@ -215,7 +215,7 @@ function RecentActivitySection({ data, tr }: { data: DashboardData, tr: any }) {
           {tr("workspace_signals", "Workspace Stream")}
         </h4>
         {hasActivity && (
-          <Link href="/logs" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase hover:underline opacity-80 hover:opacity-100 transition-all tracking-tight inline-flex items-center gap-1 group">
+          <Link href="/admin" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase hover:underline opacity-80 hover:opacity-100 transition-all tracking-tight inline-flex items-center gap-1 group">
             Audit Feed
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
           </Link>
@@ -382,7 +382,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
     suggestions.push({
       label: tr("action_fix_imports", "Resolve Failed Data Syncs"),
       desc: tr("action_fix_imports_desc", "Data import failures detected. Resolution is mandatory for statement accuracy."),
-      href: "/settings/imports",
+      href: "/inbox/import",
       icon: DatabaseZap,
       tone: "amber"
     });
@@ -422,7 +422,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
     suggestions.push({
       label: tr("action_launch_store", "Enable Storefront Publicly"),
       desc: tr("action_launch_store_desc", "Your published services are ready for public orders. Growth signal is active."),
-      href: "/settings/shop",
+      href: "/shop",
       icon: ShoppingBag,
       tone: "emerald"
     });
