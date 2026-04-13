@@ -42,6 +42,9 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   thirtyDaysBack.setDate(now.getDate() - 30);
   const sevenDaysOut = new Date(now);
   sevenDaysOut.setDate(now.getDate() + 7);
+  const sixtyDaysBack = new Date(now);
+  sixtyDaysBack.setDate(now.getDate() - 60);
+  const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const fyRange = getFyDateRange(fy);
 
   const [
@@ -225,7 +228,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   const monthlySeries = buildMonthlyChartBuckets({
     revenueRows: invoices.map((inv) => ({ date: new Date(inv.invoiceDate), value: getInvoiceBilledAmount(inv) })),
     expenseRows: expenses.map((expense) => ({ date: new Date(expense.date), value: expense.amount })),
-    mrrRows: retainers.map((ret) => ({ date: now, value: ret.amount })),
+    mrrRows: buildRetainerMrrRows(retainers, fyRange ?? undefined),
   });
 
   const integrationReadiness = {
@@ -372,7 +375,11 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       },
       serviceOrderConversion: conversion,
       shopRevenueThisMonth: serializeMoney(shopRevenueThisMonth),
+      shopRevenuePreviousMonth: serializeMoney(shopRevenuePreviousMonth),
+      revenueChangeVsPriorMonthPct: revenueDeltaPct,
       ordersLast30Days,
+      ordersPrior30Days,
+      orderChangeVsPrior30DaysPct: orderDeltaPct,
       publishedServices,
       topServices,
       kpiPeriods: salesAndShopKpiPeriods,
