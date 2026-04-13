@@ -109,10 +109,10 @@ function RightRailHeader({ tr, mood, aiState }: { tr: any, mood: WorkspaceMood, 
   const getHeaderInfo = () => {
     if (aiState === 'locked_no_key') {
       return {
-        title: tr("intelligence_locked_title", "Unlock Intelligence"),
-        sub: tr("intelligence_locked_sub", "AI Workspace Analysis"),
+        title: tr("intelligence_setup_incomplete_title", "Intelligence Setup Incomplete"),
+        sub: tr("intelligence_setup_incomplete_sub", "Groq Key Required"),
         icon: KeyRound,
-        badge: { label: tr("status_ready", "AI Ready"), color: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20" }
+        badge: { label: tr("status_setup_incomplete", "Setup Incomplete"), color: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20" }
       };
     }
 
@@ -172,10 +172,10 @@ function IntelligenceAssistantSection({ data, tr, mood, aiState }: { data: Dashb
           </div>
           <div className="flex-1">
             <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-              {tr("ai_locked_headline", "Enable Contextual Intelligence")}
+              {tr("ai_setup_incomplete_headline", "AI Setup Incomplete")}
             </p>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed mt-1.5 line-clamp-3">
-              {tr("ai_locked_body", "Add your Groq API key in Business Settings to unlock strategic suggestions, automated finance guidance, and deeper workspace analysis.")}
+              {tr("ai_setup_incomplete_body", "Add your Groq API key in Business Settings to complete setup and unlock strategic suggestions, automated finance guidance, and deeper workspace analysis.")}
             </p>
             <Link href="/settings">
               <Button size="sm" variant="outline" className="mt-4 h-9 bg-white dark:bg-zinc-900 border-amber-200 dark:border-amber-900/40 hover:bg-amber-50 dark:hover:bg-amber-900/10 text-amber-700 dark:text-amber-400 font-bold gap-2 text-xs uppercase tracking-wide px-4 transition-all">
