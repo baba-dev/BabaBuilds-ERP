@@ -72,6 +72,7 @@ export const parseDashboardResponse = (payload: unknown) => {
     },
     charts: {
       ...charts,
+      bucketTimeZone: typeof charts.bucketTimeZone === "string" && charts.bucketTimeZone ? charts.bucketTimeZone : "Asia/Kolkata",
       revenueVsExpense: revenueVsExpense.map((point) => {
         const row = asRecord(point);
         if (!row) return point;

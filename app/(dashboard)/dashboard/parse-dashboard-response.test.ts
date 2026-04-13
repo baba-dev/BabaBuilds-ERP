@@ -74,6 +74,7 @@ const basePayload = {
   },
   activity: [],
   charts: {
+    bucketTimeZone: "Asia/Kolkata",
     revenueVsExpense: [{ name: "Jan", revenue: "100", expenses: "50" }],
     recurringRevenue: [{ name: "Jan", mrr: "10" }],
     receivablesAging: [{ bucket: "0-30", value: "30" }],
@@ -100,6 +101,6 @@ test("preserves expanded dashboard response contract keys", () => {
   assert.ok(parsed);
   assert.deepEqual(
     Object.keys(parsed ?? {}).sort(),
-    ["activity", "attention", "charts", "financialPulse", "health", "operations", "recentInvoices", "salesAndShop", "trust"].sort(),
+    ["activity", "attention", "charts", "countryCode", "financialPulse", "health", "operations", "recentInvoices", "salesAndShop", "trust"].sort(),
   );
 });

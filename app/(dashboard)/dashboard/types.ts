@@ -82,6 +82,7 @@ export type DashboardData = {
   };
   activity: Array<{ id: string; action: string; status: string; createdAt: string | Date; actor: string | null }>;
   charts: {
+    bucketTimeZone: string;
     revenueVsExpense: Array<{ name: string; revenue: number; expenses: number }>;
     recurringRevenue: Array<{ name: string; mrr: number }>;
     receivablesAging: Array<{ bucket: string; value: number }>;

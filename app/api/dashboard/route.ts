@@ -9,7 +9,7 @@ import { summarizeReceivablesForAttention } from "@/lib/dashboard/attention-rece
 import { getInvoiceBilledAmount, sumInvoiceBilledAmount } from "@/lib/invoice/totals";
 import { estimateTax } from "@/lib/tax/engine";
 import { getCurrentFinancialYear } from "@/lib/financial-year";
-import { buildMonthlyChartBuckets } from "./monthly-series";
+import { buildMonthlyChartBuckets, resolveMonthlyBucketTimeZone } from "./monthly-series";
 import {
   buildDashboardCacheKey,
   getDashboardCacheEntry,
@@ -60,6 +60,8 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
 
   const [
     workspace,
+    workspaceOwner,
+    currentUser,
     profile,
     invoices,
     attentionInvoices,
@@ -85,6 +87,11 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     notifications,
   ] = await Promise.all([
     prisma.workspace.findUnique({ where: { id: workspaceId } }),
+    prisma.workspaceUser.findFirst({
+      where: { workspaceId, role: "OWNER" },
+      select: { user: { select: { timeZone: true } } },
+    }),
+    userId ? prisma.user.findUnique({ where: { id: userId }, select: { timeZone: true } }) : Promise.resolve(null),
     prisma.businessProfile.findUnique({
       where: { workspaceId },
       select: {
@@ -218,10 +225,13 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     .sort((a, b) => b.orderCount - a.orderCount)
     .slice(0, 4);
 
+  const bucketTimeZone = resolveMonthlyBucketTimeZone(workspaceOwner?.user?.timeZone ?? currentUser?.timeZone ?? null);
+
   const monthlySeries = buildMonthlyChartBuckets({
     revenueRows: invoices.map((inv) => ({ date: new Date(inv.invoiceDate), value: getInvoiceBilledAmount(inv) })),
     expenseRows: expenses.map((expense) => ({ date: new Date(expense.date), value: expense.amount })),
     mrrRows: retainers.map((ret) => ({ date: now, value: ret.amount })),
+    bucketTimeZone,
   });
 
   const integrationReadiness = {
@@ -405,6 +415,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       actor: item.actorEmail ?? null,
     })),
     charts: {
+      bucketTimeZone,
       revenueVsExpense: monthlySeries.map((row) => ({
         name: row.label,
         revenue: serializeMoney(row.revenue),
