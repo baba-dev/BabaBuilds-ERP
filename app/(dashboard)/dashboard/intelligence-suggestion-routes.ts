@@ -1,9 +1,9 @@
 export const INTELLIGENCE_SUGGESTION_ROUTES = {
-  fixImports: "/settings/imports",
+  fixImports: "/inbox/import",
   finishOnboarding: "/settings",
   reviewReceivables: "/invoice",
   reconcileBooks: "/reconciliation",
-  launchStorefront: "/settings/shop",
+  launchStorefront: "/shop",
   scaleBilling: "/invoice",
 } as const;
 

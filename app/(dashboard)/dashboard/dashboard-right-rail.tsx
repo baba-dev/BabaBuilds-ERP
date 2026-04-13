@@ -398,7 +398,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
     suggestions.push({
       label: tr("action_fix_imports", "Resolve Failed Data Syncs"),
       desc: tr("action_fix_imports_desc", "Data import failures detected. Resolution is mandatory for statement accuracy."),
-      href: "/inbox/import",
+      href: INTELLIGENCE_SUGGESTION_ROUTES.fixImports,
       icon: DatabaseZap,
       tone: "amber"
     });
@@ -438,7 +438,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
     suggestions.push({
       label: tr("action_launch_store", "Enable Storefront Publicly"),
       desc: tr("action_launch_store_desc", "Your published services are ready for public orders. Growth signal is active."),
-      href: "/shop",
+      href: INTELLIGENCE_SUGGESTION_ROUTES.launchStorefront,
       icon: ShoppingBag,
       tone: "emerald"
     });
