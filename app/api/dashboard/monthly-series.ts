@@ -3,6 +3,11 @@ import { toDecimal } from "@/lib/money";
 
 export type MonthlyChartRowInput = { date: Date; value: Prisma.Decimal | number | string | null | undefined };
 export type MonthlyChartBucket = { monthId: string; label: string; revenue: Prisma.Decimal; expenses: Prisma.Decimal; mrr: Prisma.Decimal };
+export type DateRange = { start: Date; endExclusive: Date };
+export type RetainerMrrInput = {
+  nextBillingDate: Date;
+  amount: Prisma.Decimal | number | string | null | undefined;
+};
 
 export const DEFAULT_BUCKET_TIME_ZONE = "Asia/Kolkata";
 
@@ -44,6 +49,17 @@ const monthLabelFromId = (monthId: string) => {
   const safeDate = new Date(Date.UTC(Number(year), Number(month) - 1, 1));
   return safeDate.toLocaleDateString("en-US", { month: "short" });
 };
+
+export const buildRetainerMrrRows = (retainers: RetainerMrrInput[], range?: DateRange): MonthlyChartRowInput[] =>
+  retainers
+    .filter((retainer) => {
+      if (!range) return true;
+      return retainer.nextBillingDate >= range.start && retainer.nextBillingDate < range.endExclusive;
+    })
+    .map((retainer) => ({
+      date: retainer.nextBillingDate,
+      value: retainer.amount,
+    }));
 
 export const buildMonthlyChartBuckets = ({
   revenueRows,

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 
 export async function GET(
   request: Request,
@@ -64,6 +65,12 @@ export async function DELETE(
     // 4. Verify something was actually deleted
     if (result.count === 0) {
       return NextResponse.json({ error: "Proposal not found or unauthorized to delete" }, { status: 404 });
+    }
+
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'proposal', action: 'delete', error: String(error) });
     }
 
     return NextResponse.json({ success: true, message: "Proposal deleted successfully" });
