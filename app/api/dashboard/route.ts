@@ -35,6 +35,10 @@ const getIntegrationReadiness = (keys: Array<string | null | undefined>): Integr
 };
 
 const asPct = (num: number, den: number) => (den <= 0 ? 0 : Math.min(100, Math.round((num / den) * 100)));
+const calculatePeriodDeltaPct = (current: number, previous: number): number | null => {
+  if (previous <= 0) return null;
+  return Number((((current - previous) / previous) * 100).toFixed(1));
+};
 const getFyDateRange = (fy: string): { start: Date; endExclusive: Date } | null => {
   const match = fy.match(/^(\d{2})-(\d{2})$/);
   if (!match) return null;
@@ -56,6 +60,9 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   thirtyDaysBack.setDate(now.getDate() - 30);
   const sevenDaysOut = new Date(now);
   sevenDaysOut.setDate(now.getDate() + 7);
+  const sixtyDaysBack = new Date(now);
+  sixtyDaysBack.setDate(now.getDate() - 60);
+  const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const fyRange = getFyDateRange(fy);
 
   const [
@@ -303,10 +310,19 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   ];
 
   const lastRun = integrityRuns[0];
-  const shopRevenueThisMonth = serviceOrders
-    .filter((order) => order.status === "PAID" && order.createdAt >= monthStart && order.createdAt < nextMonthStart)
+  const paidServiceOrders = serviceOrders.filter((order) => order.status === "PAID");
+  const shopRevenueThisMonth = paidServiceOrders
+    .filter((order) => order.createdAt >= monthStart && order.createdAt < nextMonthStart)
     .reduce((sum, order) => sum.plus(toDecimal(order.amount)), new Prisma.Decimal(0));
+  const shopRevenuePreviousMonth = paidServiceOrders
+    .filter((order) => order.createdAt >= previousMonthStart && order.createdAt < monthStart)
+    .reduce((sum, order) => sum.plus(toDecimal(order.amount)), new Prisma.Decimal(0));
+
   const ordersLast30Days = serviceOrders.filter((order) => order.createdAt >= thirtyDaysBack).length;
+  const ordersPrior30Days = serviceOrders.filter((order) => order.createdAt >= sixtyDaysBack && order.createdAt < thirtyDaysBack).length;
+
+  const orderDeltaPct = calculatePeriodDeltaPct(ordersLast30Days, ordersPrior30Days);
+  const revenueDeltaPct = calculatePeriodDeltaPct(Number(shopRevenueThisMonth), Number(shopRevenuePreviousMonth));
 
   return {
     health: {
@@ -359,7 +375,11 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       },
       serviceOrderConversion: conversion,
       shopRevenueThisMonth: serializeMoney(shopRevenueThisMonth),
+      shopRevenuePreviousMonth: serializeMoney(shopRevenuePreviousMonth),
+      revenueChangeVsPriorMonthPct: revenueDeltaPct,
       ordersLast30Days,
+      ordersPrior30Days,
+      orderChangeVsPrior30DaysPct: orderDeltaPct,
       publishedServices,
       topServices,
       recentServiceOrders: recentServiceOrders.map((order) => ({
