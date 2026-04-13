@@ -12,7 +12,7 @@ import {
   TrendingUp, 
   Store, 
   ArrowRight,
-  IndianRupee,
+  Wallet,
   ShoppingBasket
 } from "lucide-react";
 import Link from "next/link";
@@ -238,7 +238,7 @@ export function DashboardSalesAndShopPanel({
                 </div>
                 <div className="flex-1 p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800 shadow-tiny">
                   <div className="flex items-center gap-1.5 mb-1">
-                    <IndianRupee className="w-3 h-3 text-zinc-400" />
+                    <Wallet className="w-3 h-3 text-zinc-400" />
                     <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">{tr("shop_revenue", "Revenue")}</span>
                   </div>
                   <div className="flex items-center justify-between">
