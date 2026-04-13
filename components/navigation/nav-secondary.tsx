@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Pin, PinOff, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
 import { useSidebar } from "@/components/ui/sidebar";
 import { type UserPreferences } from "@/src/types/user-preferences";
 
@@ -22,9 +23,11 @@ export function NavSecondary({ preferences, onTogglePin, onNavigate }: Props) {
   const isPinned = preferences.pinnedIds.includes("settings");
 
   return (
-    <nav className="grid items-start gap-1 px-2 py-2 text-sm font-medium">
+    <nav className="grid items-start gap-1 px-2 py-0 text-sm font-medium">
       {(open || isMobile) && (
-        <p className="px-2 pb-1 text-[11px] uppercase tracking-wider text-zinc-400">System</p>
+        <div className="px-2 py-2">
+          <Separator className="bg-zinc-800/50" />
+        </div>
       )}
 
       <div className="group flex items-center gap-1">

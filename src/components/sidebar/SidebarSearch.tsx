@@ -137,41 +137,43 @@ export function SidebarSearch() {
         />
       </div>
 
-      <div className="mt-2 max-h-56 overflow-y-auto rounded-md border border-zinc-800/80 bg-zinc-900/40 p-1">
-        {shouldShowAskAI ? (
-          <button
-            type="button"
-            className={cn(
-              "w-full rounded-md px-3 py-2 text-left transition-colors",
-              activeIndex === 0 ? "bg-indigo-600/90 text-white" : "text-zinc-200 hover:bg-zinc-800",
-            )}
-            onMouseEnter={() => setSelectedIndex(0)}
-            onClick={() => openAIChat({ query: searchText })}
-          >
-            <p className="text-sm font-semibold">No matches found</p>
-            <div className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-indigo-200">
-              <Sparkles className="h-3.5 w-3.5" />
-              Ask Inhouse AI
-            </div>
-          </button>
-        ) : (
-          filteredItems.map((item, index) => (
+      {searchText.trim().length > 0 && (
+        <div className="mt-2 max-h-56 overflow-y-auto rounded-md border border-zinc-800/80 bg-zinc-900/40 p-1">
+          {shouldShowAskAI ? (
             <button
-              key={item.key}
               type="button"
-              onMouseEnter={() => setSelectedIndex(index)}
-              onClick={() => router.push(item.path)}
               className={cn(
-                "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors",
-                activeIndex === index ? "bg-indigo-600/90 text-white" : "text-zinc-200 hover:bg-zinc-800",
+                "w-full rounded-md px-3 py-2 text-left transition-colors",
+                activeIndex === 0 ? "bg-indigo-600/90 text-white" : "text-zinc-200 hover:bg-zinc-800",
               )}
+              onMouseEnter={() => setSelectedIndex(0)}
+              onClick={() => openAIChat({ query: searchText })}
             >
-              <span className="truncate">{t(item.key)}</span>
-              <span className="ml-2 shrink-0 text-xs text-zinc-300">{getGroupLabel(item.groupKey)}</span>
+              <p className="text-sm font-semibold">No matches found</p>
+              <div className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-indigo-200">
+                <Sparkles className="h-3.5 w-3.5" />
+                Ask Inhouse AI
+              </div>
             </button>
-          ))
-        )}
-      </div>
+          ) : (
+            filteredItems.map((item, index) => (
+              <button
+                key={item.key}
+                type="button"
+                onMouseEnter={() => setSelectedIndex(index)}
+                onClick={() => router.push(item.path)}
+                className={cn(
+                  "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors",
+                  activeIndex === index ? "bg-indigo-600/90 text-white" : "text-zinc-200 hover:bg-zinc-800",
+                )}
+              >
+                <span className="truncate">{t(item.key)}</span>
+                <span className="ml-2 shrink-0 text-xs text-zinc-300">{getGroupLabel(item.groupKey)}</span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }

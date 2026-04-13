@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Pin, PinOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
 import { useSidebar } from "@/components/ui/sidebar";
 import { appNavItems } from "@/components/navigation/nav-config";
 import { type SidebarItemId, type UserPreferences } from "@/src/types/user-preferences";
@@ -31,7 +32,8 @@ export function NavMain({ preferences, pinError, onTogglePin, onNavigate }: Prop
   const byKey = new Map(appNavItems.map((item) => [item.key, item] as const));
   const recentItems = recentIds
     .map((id) => byKey.get(id))
-    .filter((item): item is (typeof appNavItems)[number] => Boolean(item) && !pinnedSet.has((item?.key ?? "") as Exclude<SidebarItemId, "settings">));
+    .filter((item): item is (typeof appNavItems)[number] => Boolean(item) && !pinnedSet.has((item?.key ?? "") as Exclude<SidebarItemId, "settings">))
+    .slice(0, 3);
   const regularItems = (open || isMobile)
     ? appNavItems.filter((item) => !pinnedSet.has(item.key as Exclude<SidebarItemId, "settings">))
     : appNavItems;
@@ -93,6 +95,11 @@ export function NavMain({ preferences, pinError, onTogglePin, onNavigate }: Prop
         </div>
       )}
 
+      {(open || isMobile) && (pinnedItems.length > 0 || recentItems.length > 0) && (
+        <div className="py-1">
+          <Separator className="bg-zinc-800/50" />
+        </div>
+      )}
       <div className="space-y-1">{regularItems.map((item) => renderItem(item, "all"))}</div>
     </nav>
   );
