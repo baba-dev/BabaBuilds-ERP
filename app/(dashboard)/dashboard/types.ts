@@ -59,9 +59,17 @@ export type DashboardData = {
     publicShopOrders: { total: number; paid: number; pending: number; failed: number };
     serviceOrderConversion: number;
     shopRevenueThisMonth: number;
+    shopRevenuePreviousMonth: number;
+    revenueChangeVsPriorMonthPct: number | null;
     ordersLast30Days: number;
+    ordersPrior30Days: number;
+    orderChangeVsPrior30DaysPct: number | null;
     publishedServices: number;
     topServices: Array<{ serviceName: string; orderCount: number; revenue: number }>;
+    kpiPeriods: Record<
+      "proposalFunnel" | "acceptedAwaitingInvoicing" | "publicShopOrders" | "serviceOrderConversion" | "topServices" | "shopRevenueThisMonth" | "ordersLast30Days",
+      { type: "FY" | "ROLLING_30D" | "ALL_TIME"; period: string; start: string | null; endExclusive: string | null }
+    >;
     recentServiceOrders: Array<{ id: string; serviceName: string; buyerName: string; amount: number; status: string; createdAt: string | Date }>;
   };
   operations: {

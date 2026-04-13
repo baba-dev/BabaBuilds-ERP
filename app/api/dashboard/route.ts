@@ -10,6 +10,7 @@ import { getInvoiceBilledAmount, sumInvoiceBilledAmount } from "@/lib/invoice/to
 import { estimateTax } from "@/lib/tax/engine";
 import { getCurrentFinancialYear } from "@/lib/financial-year";
 import { buildMonthlyChartBuckets } from "./monthly-series";
+import { describeKpiPeriod, getFyDateRange } from "./sales-shop-kpi-periods";
 import {
   buildDashboardCacheKey,
   getDashboardCacheEntry,
@@ -60,12 +61,13 @@ export async function buildDashboardPayload(workspaceId: string, userId: string 
   };
 
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const thirtyDaysBack = new Date(now);
   thirtyDaysBack.setDate(now.getDate() - 30);
   const sevenDaysOut = new Date(now);
   sevenDaysOut.setDate(now.getDate() + 7);
+  const sixtyDaysBack = new Date(now);
+  sixtyDaysBack.setDate(now.getDate() - 60);
+  const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const fyRange = getFyDateRange(fy);
 
   const [
@@ -395,9 +397,14 @@ export async function buildDashboardPayload(workspaceId: string, userId: string 
       },
       serviceOrderConversion: conversion,
       shopRevenueThisMonth: serializeMoney(shopRevenueThisMonth),
+      shopRevenuePreviousMonth: serializeMoney(shopRevenuePreviousMonth),
+      revenueChangeVsPriorMonthPct: revenueDeltaPct,
       ordersLast30Days,
+      ordersPrior30Days,
+      orderChangeVsPrior30DaysPct: orderDeltaPct,
       publishedServices,
       topServices,
+      kpiPeriods: salesAndShopKpiPeriods,
       recentServiceOrders: recentServiceOrders.map((order) => ({
         id: order.id,
         serviceName: order.serviceTemplate?.name ?? "Unknown service",

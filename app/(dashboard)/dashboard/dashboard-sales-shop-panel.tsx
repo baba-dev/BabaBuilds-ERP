@@ -12,7 +12,7 @@ import {
   TrendingUp, 
   Store, 
   ArrowRight,
-  IndianRupee,
+  Wallet,
   ShoppingBasket
 } from "lucide-react";
 import Link from "next/link";
@@ -47,6 +47,32 @@ export function DashboardSalesAndShopPanel({
     { key: "invoiced", label: tr("funnel_invoiced", "Invoiced"), value: salesAndShop.proposalFunnel.invoiced, icon: ReceiptText, color: "text-teal-600", bg: "bg-teal-600/15", tooltip: tr("funnel_invoiced_help", "The goal: proposals converted into active invoices.") },
     { key: "declined", label: tr("funnel_declined", "Declined"), value: salesAndShop.proposalFunnel.declined, icon: CircleOff, color: "text-rose-500", bg: "bg-rose-500/10", tooltip: tr("funnel_declined_help", "Proposals that did not move forward.") },
   ];
+  const renderDeltaBadge = (deltaPct: number | null) => {
+    if (deltaPct === null) {
+      return (
+        <Badge variant="secondary" className="text-[9px] font-semibold text-zinc-600 dark:text-zinc-300">
+          {tr("no_baseline_yet", "No baseline yet")}
+        </Badge>
+      );
+    }
+
+    const isPositive = deltaPct >= 0;
+    const tone = isPositive
+      ? "text-emerald-500 bg-emerald-50 dark:bg-emerald-950/30"
+      : "text-rose-500 bg-rose-50 dark:bg-rose-950/30";
+
+    return (
+      <motion.div
+        animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        className={cn("flex items-center text-[10px] font-bold px-1 rounded", tone)}
+      >
+        <TrendingUp className={cn("w-2.5 h-2.5 mr-0.5", !isPositive && "rotate-180")} />
+        {isPositive ? "+" : ""}{deltaPct}%
+      </motion.div>
+    );
+  };
+
 
   return (
     <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -226,30 +252,18 @@ export function DashboardSalesAndShopPanel({
                   </div>
                   <div className="flex items-center justify-between">
                     <p className="text-lg font-bold tabular-nums">{salesAndShop.ordersLast30Days}</p>
-                    <motion.div 
-                      animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
-                      transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                      className="flex items-center text-[10px] text-emerald-500 font-bold bg-emerald-50 dark:bg-emerald-950/30 px-1 rounded"
-                    >
-                      <TrendingUp className="w-2.5 h-2.5 mr-0.5" /> 12%
-                    </motion.div>
+                    {renderDeltaBadge(salesAndShop.orderChangeVsPrior30DaysPct)}
                   </div>
                   <p className="text-[9px] text-zinc-400 mt-1">{tr("last_30_days", "Last 30 days")}</p>
                 </div>
                 <div className="flex-1 p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800 shadow-tiny">
                   <div className="flex items-center gap-1.5 mb-1">
-                    <IndianRupee className="w-3 h-3 text-zinc-400" />
+                    <Wallet className="w-3 h-3 text-zinc-400" />
                     <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">{tr("shop_revenue", "Revenue")}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <p className="text-lg font-bold tabular-nums truncate max-w-[80px]">{fCurrency(salesAndShop.shopRevenueThisMonth)}</p>
-                    <motion.div 
-                      animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
-                      transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-                      className="flex items-center text-[10px] text-emerald-500 font-bold bg-emerald-50 dark:bg-emerald-950/30 px-1 rounded"
-                    >
-                      <TrendingUp className="w-2.5 h-2.5 mr-0.5" /> 8%
-                    </motion.div>
+                    {renderDeltaBadge(salesAndShop.revenueChangeVsPriorMonthPct)}
                   </div>
                   <p className="text-[9px] text-zinc-400 mt-1">{tr("this_month", "This month")}</p>
                 </div>

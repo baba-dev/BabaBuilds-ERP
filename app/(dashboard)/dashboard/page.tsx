@@ -44,6 +44,8 @@ export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [syncHealthLoading, setSyncHealthLoading] = useState(false);
+  const [syncHealthError, setSyncHealthError] = useState<string | null>(null);
   const [islandsEnabled, setIslandsEnabled] = useState(false);
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<RecentInvoiceRow | null>(null);
@@ -82,17 +84,22 @@ export default function Dashboard() {
     loadFlags().catch(() => undefined);
   }, []);
 
+  const fetchDashboardData = async (fy: string) => {
+    const res = await fetch(`/api/dashboard?fy=${fy}`, { cache: "no-store" });
+    const json = await res.json();
+    if (!res.ok || json.error) {
+      throw new Error(json.error || tr("toast.error.load_dashboard", "Unable to load dashboard"));
+    }
+    const parsed = parseDashboardResponse(json) as DashboardData | null;
+    if (!parsed) throw new Error("Dashboard payload malformed");
+    return parsed;
+  };
+
   const loadData = async (fy: string) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/dashboard?fy=${fy}`, { cache: "no-store" });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || tr("toast.error.load_dashboard", "Unable to load dashboard"));
-      }
-      const parsed = parseDashboardResponse(json) as DashboardData | null;
-      if (!parsed) throw new Error("Dashboard payload malformed");
+      const parsed = await fetchDashboardData(fy);
       setData(parsed);
     } catch (e: any) {
       setError(e?.message ?? "Unable to load dashboard");
@@ -154,7 +161,25 @@ export default function Dashboard() {
   };
 
   const handleRefreshSyncImportHealth = async () => {
-    await loadData(selectedFy);
+    setSyncHealthLoading(true);
+    setSyncHealthError(null);
+    try {
+      const refreshed = await fetchDashboardData(selectedFy);
+      setData((prev) => {
+        if (!prev) return refreshed;
+        return {
+          ...prev,
+          attention: {
+            ...prev.attention,
+            failedImports: refreshed.attention.failedImports,
+          },
+        };
+      });
+    } catch (e: any) {
+      setSyncHealthError(e?.message ?? tr("toast.error.load_dashboard", "Unable to load dashboard"));
+    } finally {
+      setSyncHealthLoading(false);
+    }
   };
 
   const fyOptions = Array.from({ length: 4 }).map((_, idx) => {
@@ -278,6 +303,8 @@ export default function Dashboard() {
               data={data}
               fCurrency={fCurrency}
               onRefreshSyncImportHealth={handleRefreshSyncImportHealth}
+              syncImportHealthLoading={syncHealthLoading}
+              syncImportHealthError={syncHealthError}
             />
         </div>
 

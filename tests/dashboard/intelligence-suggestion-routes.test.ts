@@ -20,4 +20,24 @@ describe("INTELLIGENCE_SUGGESTION_ROUTES", () => {
       expect(routeHasPage(route)).toBe(true);
     }
   });
+
+  it("prevents hardcoded href route literals in deriveIntelligenceSuggestions", () => {
+    const filePath = path.join(
+      process.cwd(),
+      "app",
+      "(dashboard)",
+      "dashboard",
+      "dashboard-right-rail.tsx",
+    );
+    const source = fs.readFileSync(filePath, "utf8");
+    const deriveStart = source.indexOf("function deriveIntelligenceSuggestions");
+    const deriveEnd = source.indexOf("function SystemSignalsSection");
+
+    expect(deriveStart).toBeGreaterThan(-1);
+    expect(deriveEnd).toBeGreaterThan(deriveStart);
+
+    const deriveSource = source.slice(deriveStart, deriveEnd);
+
+    expect(deriveSource).not.toMatch(/href:\s*["'`]\/[^"'`]*["'`]/);
+  });
 });
