@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, Bell, CircleAlert, CheckCircle2, FileText } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -8,94 +9,151 @@ import type { DashboardData } from "./types";
 
 export function DashboardAttentionCenter({ attention }: { attention: DashboardData["attention"] }) {
   const t = useTranslations("Dashboard");
-  const tr = (key: string, fallback: string, values?: any) => {
-    const translation = t(key as any, values);
+  const tr = (key: string, fallback: string, values?: Record<string, unknown>) => {
+    const translation = t(key as never, values as never);
     if (translation === key || translation === `Dashboard.${key}`) return fallback;
     return translation;
   };
 
   const isUrgent = attention.totalUrgent > 0;
 
-  const getCardStyle = (tone: string, value: number) => {
-    if (value === 0) {
-      return "border-emerald-200/60 bg-emerald-50/40 dark:border-emerald-900/40 dark:bg-emerald-950/20";
-    }
-    if (tone === "critical") return "border-rose-200 bg-rose-50 dark:bg-rose-500/10 dark:border-rose-500/20";
-    if (tone === "warning") return "border-amber-200 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/20";
-    return "border-indigo-200 bg-indigo-50 dark:bg-indigo-500/10 dark:border-indigo-500/20";
+  const getTone = (tone: string, value: number) => {
+    if (value === 0) return "ok";
+    if (tone === "critical") return "critical";
+    if (tone === "warning") return "warning";
+    return "info";
   };
 
-  const getLabelStyle = (tone: string, value: number) => {
-    if (value === 0) return "text-emerald-700/70 dark:text-emerald-500/70 text-[11px]";
-    if (tone === "critical") return "text-rose-600 dark:text-rose-400 text-[11px]";
-    if (tone === "warning") return "text-amber-600 dark:text-amber-400 text-[11px]";
-    return "text-indigo-600 dark:text-indigo-400 text-[11px]";
+  const getGlowClass = (computedTone: "ok" | "critical" | "warning" | "info") => {
+    if (computedTone === "ok") return "bg-emerald-500/5 dark:bg-emerald-500/10 group-hover:bg-emerald-500/10 dark:group-hover:bg-emerald-500/20";
+    if (computedTone === "critical") return "bg-rose-500/5 dark:bg-rose-500/10 group-hover:bg-rose-500/10 dark:group-hover:bg-rose-500/20";
+    if (computedTone === "warning") return "bg-amber-500/5 dark:bg-amber-500/10 group-hover:bg-amber-500/10 dark:group-hover:bg-amber-500/20";
+    return "bg-indigo-500/5 dark:bg-indigo-500/10 group-hover:bg-indigo-500/10 dark:group-hover:bg-indigo-500/20";
+  };
+
+  const getIndicatorClass = (computedTone: "ok" | "critical" | "warning" | "info") => {
+    if (computedTone === "ok") return "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20";
+    if (computedTone === "critical") return "bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-500/20";
+    if (computedTone === "warning") return "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-500/20";
+    return "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-500/20";
   };
 
   return (
-    <Card className={`p-5 md:p-6 transition-colors duration-500 ${isUrgent ? "border-zinc-200 dark:border-zinc-800 bg-gradient-to-br from-indigo-50/80 to-white dark:from-zinc-900 dark:to-zinc-950" : "border-emerald-100 dark:border-emerald-900/30 bg-emerald-50/20 dark:bg-emerald-950/10 shadow-sm"}`}>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs tracking-[0.14em] uppercase font-semibold text-zinc-500 dark:text-zinc-400">
-            {tr("attention_center", "Attention center")}
-          </p>
-          <h2 className={`text-2xl md:text-3xl font-bold mt-1 ${isUrgent ? "text-zinc-900 dark:text-zinc-50" : "text-zinc-700 dark:text-zinc-300"}`}>
-            {isUrgent ? `${attention.totalUrgent} ${tr("items_need_action", "items need action")}` : tr("all_caught_up", "All caught up")}
-          </h2>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-            {isUrgent ? tr("attention_center_desc", "Prioritized by urgency across finance, compliance, and operations.") : tr("attention_center_zero_desc", "No urgent items requiring immediate action.")}
-          </p>
-        </div>
-        <div className={`inline-flex h-10 w-10 shrink-0 rounded-full items-center justify-center transition-colors duration-500 ${isUrgent ? "bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400" : "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-500"}`}>
-          {isUrgent ? <AlertTriangle className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
-        </div>
+    <section className="space-y-6">
+      <div className="flex items-center gap-2 px-1">
+        {isUrgent ? (
+          <AlertTriangle className="w-5 h-5 text-rose-500" />
+        ) : (
+          <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+        )}
+        <h3 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+          {tr("attention_center", "Attention center")}
+        </h3>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mt-6">
-        {attention.cards.map((card, i) => {
-          const isZero = card.value === 0;
-          return (
-            <div 
-              key={card.id} 
-              className={`group flex flex-col rounded-xl border p-4 transition-all duration-300 overflow-hidden relative ${getCardStyle(card.tone, card.value)} hover:-translate-y-0.5 ${isZero ? "" : "hover:shadow-md dark:hover:shadow-zinc-950/50"} animate-in fade-in slide-in-from-bottom-2`}
-              style={{ animationFillMode: "both", animationDelay: `${i * 75}ms` }}
-            >
-              <p className={`uppercase tracking-wider font-semibold ${getLabelStyle(card.tone, card.value)}`}>{card.title}</p>
-              <p className={`text-3xl font-bold mt-2 ${isZero ? "text-emerald-900/60 dark:text-emerald-100/60" : "text-zinc-900 dark:text-zinc-100"}`}>{card.value}</p>
-              <p className={`text-xs mt-1 ${isZero ? "text-emerald-700/60 dark:text-emerald-400/60" : "text-zinc-600 dark:text-zinc-400"}`}>{card.helper}</p>
-              
-              <div className="mt-auto pt-4">
-                {card.href ? (
-                  <Link href={card.href} className={`inline-flex items-center text-xs font-medium transition-colors ${isZero ? "text-zinc-400 hover:text-zinc-600 dark:text-zinc-600 dark:hover:text-zinc-400" : "text-zinc-900 hover:text-indigo-600 dark:text-zinc-300 dark:hover:text-indigo-400"}`}>
-                    Open <ArrowRight className="ml-1 w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5" />
-                  </Link>
-                ) : (
-                  <span className="inline-block h-4" />
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <Card
+        className={`group relative overflow-hidden p-6 border-zinc-200 dark:border-zinc-800/60 bg-white dark:bg-zinc-950/50 shadow-sm transition-all duration-500 ${
+          isUrgent ? "hover:shadow-md hover:-translate-y-1" : "hover:shadow-md"
+        }`}
+      >
+        <div
+          className={`absolute -top-12 -right-12 w-32 h-32 rounded-full blur-3xl transition-all duration-700 ${
+            isUrgent
+              ? "bg-rose-500/5 dark:bg-rose-500/10 group-hover:bg-rose-500/10 dark:group-hover:bg-rose-500/20"
+              : "bg-emerald-500/5 dark:bg-emerald-500/10 group-hover:bg-emerald-500/10 dark:group-hover:bg-emerald-500/20"
+          }`}
+        />
 
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 mt-6 pt-4 border-t border-zinc-200/80 dark:border-zinc-800/80 text-xs text-zinc-500 dark:text-zinc-400">
-        <span className="inline-flex items-center gap-1.5">
-          <FileText className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" /> 
-          {tr("receivables", "Receivables")}: <span className="font-medium text-zinc-700 dark:text-zinc-300">{attention.pendingInvoices}</span>
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <Bell className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" /> 
-          {tr("critical_notifications", "Critical notifications")}: <span className="font-medium text-zinc-700 dark:text-zinc-300">{attention.criticalNotifications}</span>
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <AlertTriangle className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" /> 
-          {tr("retainers_due_soon", "Retainers due soon")}: <span className="font-medium text-zinc-700 dark:text-zinc-300">{attention.retainersDueSoon}</span>
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <CircleAlert className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" /> 
-          {tr("failed_imports", "Failed imports")}: <span className="font-medium text-zinc-700 dark:text-zinc-300">{attention.failedImports}</span>
-        </span>
-      </div>
-    </Card>
+        <div className="relative z-10 flex items-start justify-between gap-6">
+          <div className="min-w-0">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold tracking-wider uppercase">
+              {isUrgent ? tr("items_need_action", "Items need action") : tr("all_caught_up", "All caught up")}
+            </p>
+            <p className={`mt-2 text-4xl font-light tracking-tight tabular-nums ${isUrgent ? "text-zinc-900 dark:text-white" : "text-zinc-800 dark:text-zinc-100"}`}>
+              {isUrgent ? attention.totalUrgent : 0}
+            </p>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2 leading-relaxed">
+              {isUrgent ? tr("attention_center_desc", "Prioritized by urgency across finance, compliance, and operations.") : tr("attention_center_zero_desc", "No urgent items requiring immediate action.")}
+            </p>
+          </div>
+
+          <div
+            className={`shrink-0 w-10 h-10 rounded-2xl border shadow-sm flex items-center justify-center transition-colors ${getIndicatorClass(
+              isUrgent ? "critical" : "ok",
+            )}`}
+          >
+            {isUrgent ? <AlertTriangle className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mt-6">
+          {attention.cards.map((card, i) => {
+            const isZero = card.value === 0;
+            const computedTone = getTone(card.tone, card.value);
+            return (
+              <Card
+                key={card.id}
+                className="group relative overflow-hidden p-4 border-zinc-200 dark:border-zinc-800/60 bg-white dark:bg-zinc-950/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-500 animate-in fade-in slide-in-from-bottom-2"
+                style={{ animationFillMode: "both", animationDelay: `${i * 75}ms` } as CSSProperties}
+              >
+                <div className={`absolute -top-10 -right-10 w-28 h-28 rounded-full blur-3xl transition-all duration-700 ${getGlowClass(computedTone)}`} />
+
+                <div className="relative z-10 flex flex-col h-full">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold tracking-wider uppercase">{card.title}</p>
+                  <p
+                    className={`mt-2 text-3xl font-light tracking-tight tabular-nums ${
+                      isZero ? "text-zinc-500 dark:text-zinc-400" : "text-zinc-900 dark:text-white"
+                    }`}
+                  >
+                    {card.value}
+                  </p>
+                  <p className="text-xs mt-1 text-zinc-600 dark:text-zinc-400 leading-relaxed">{card.helper}</p>
+
+                  <div className="mt-auto pt-4">
+                    {card.href ? (
+                      <Link
+                        href={card.href}
+                        className={`inline-flex items-center text-xs font-semibold transition-colors ${
+                          isZero
+                            ? "text-zinc-400 hover:text-zinc-600 dark:text-zinc-600 dark:hover:text-zinc-400"
+                            : "text-zinc-900 hover:text-indigo-600 dark:text-zinc-300 dark:hover:text-indigo-400"
+                        }`}
+                      >
+                        Open <ArrowRight className="ml-1 w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5" />
+                      </Link>
+                    ) : (
+                      <span className="inline-block h-4" />
+                    )}
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 mt-6 pt-5 border-t border-zinc-200/60 dark:border-zinc-800/60 text-xs text-zinc-500 dark:text-zinc-400">
+          <span className="inline-flex items-center gap-1.5">
+            <FileText className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />
+            {tr("receivables", "Receivables")}:{" "}
+            <span className="font-semibold text-zinc-700 dark:text-zinc-300 tabular-nums">{attention.pendingInvoices}</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <Bell className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />
+            {tr("critical_notifications", "Critical notifications")}:{" "}
+            <span className="font-semibold text-zinc-700 dark:text-zinc-300 tabular-nums">{attention.criticalNotifications}</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />
+            {tr("retainers_due_soon", "Retainers due soon")}:{" "}
+            <span className="font-semibold text-zinc-700 dark:text-zinc-300 tabular-nums">{attention.retainersDueSoon}</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <CircleAlert className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />
+            {tr("failed_imports", "Failed imports")}:{" "}
+            <span className="font-semibold text-zinc-700 dark:text-zinc-300 tabular-nums">{attention.failedImports}</span>
+          </span>
+        </div>
+      </Card>
+    </section>
   );
 }
