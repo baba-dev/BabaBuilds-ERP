@@ -61,7 +61,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Production requires Turnstile always. Development allows either Turnstile OR a configured agent key.
+    // Production requires Turnstile always.
+    // Development rules:
+    // - localhost: allow without Turnstile (faster local onboarding)
+    // - non-local: require a valid agent key (Cloud Agents / remote dev)
     if (!isDev) {
       if (!token) {
         return NextResponse.json({ error: "Security challenge failed: No token." }, { status: 400 });
@@ -81,7 +84,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Bot verification failed." }, { status: 403 });
       }
     } else {
-      if (!token && !hasValidAgentKey) {
+      if (!isLocal && !token && !hasValidAgentKey) {
         return NextResponse.json(
           {
             error:

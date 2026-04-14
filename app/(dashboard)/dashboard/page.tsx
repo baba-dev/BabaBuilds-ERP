@@ -312,7 +312,16 @@ export default function Dashboard() {
   }
 
   const d = data as DashboardData;
-  const isReady = useMemo(() => Boolean(d.health && d.attention && d.financialPulse && d.salesAndShop && d.operations && d.trust && d.charts && d.recentInvoices), [d]);
+  const isReady = Boolean(
+    d.health &&
+      d.attention &&
+      d.financialPulse &&
+      d.salesAndShop &&
+      d.operations &&
+      d.trust &&
+      d.charts &&
+      d.recentInvoices,
+  );
 
   const selectedInvoiceBilled = Number(selectedInvoice?.totalAmount ?? 0);
   const selectedInvoiceReceived = Number(selectedInvoice?.amountReceived ?? 0);
