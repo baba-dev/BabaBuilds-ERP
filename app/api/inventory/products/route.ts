@@ -22,9 +22,9 @@ export async function GET(req: Request) {
         ? {
             workspaceId,
             OR: [
-              { name: { contains: q, mode: "insensitive" } },
-              { sku: { contains: q, mode: "insensitive" } },
-              { barcode: { contains: q, mode: "insensitive" } },
+              { name: { contains: q } },
+              { sku: { contains: q } },
+              { barcode: { contains: q } },
             ],
           }
         : { workspaceId },
