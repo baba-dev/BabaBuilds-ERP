@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -87,11 +86,15 @@ export function HelpFeedback({ slug, pagePath }: Props) {
       </div>
 
       <div className="mt-5">
-        <Textarea
+        <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           placeholder="Optional: tell us what was missing, confusing, or inaccurate…"
-          className="min-h-24 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
+          className={cn(
+            "min-h-24 w-full rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800",
+            "px-3 py-2 text-sm text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-500 dark:placeholder:text-zinc-400",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
+          )}
         />
         <div className="mt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
