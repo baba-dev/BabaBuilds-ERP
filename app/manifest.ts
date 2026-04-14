@@ -192,10 +192,6 @@ export default async function manifest(): Promise<
         protocol: 'web+erp',
         url: '/launch?url=%s',
       },
-      {
-        protocol: 'web+bababuilds-erp',
-        url: '/launch?url=%s',
-      },
     ],
   };
 
