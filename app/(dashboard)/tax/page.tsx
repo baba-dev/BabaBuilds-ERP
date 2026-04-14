@@ -124,10 +124,9 @@ export default function WealthAndTaxPlanner() {
       const invData = await invRes.json();
       const nextInvestments = Array.isArray(invData) ? invData : [];
 
-      const revRes = await fetch('/api/invoices');
+      const revRes = await fetch('/api/finance/summary');
       const revData = await revRes.json();
-      const invoiceRows = Array.isArray(revData?.data) ? revData.data : Array.isArray(revData) ? revData : [];
-      const nextRevenue = invoiceRows.reduce((sum: number, inv: any) => sum + toSafeNumber(inv?.totalAmount), 0);
+      const nextRevenue = toSafeNumber(revData?.data?.totalRevenue);
       setInvestments(nextInvestments);
       setTotalRevenue(nextRevenue);
       await fetchTaxAuditLogs(1);

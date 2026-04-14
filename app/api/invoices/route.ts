@@ -3,9 +3,8 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { INVOICE_STATUS, isOpenInvoiceStatus, isPaidInvoiceStatus } from '@/lib/invoice-status';
+import { INVOICE_STATUS } from '@/lib/invoice-status';
 import { serializeMoney, toDecimal } from '@/lib/money';
-import { getInvoiceBilledAmount, sumInvoiceBilledAmount } from '@/lib/invoice/totals';
 
 const isPaidStatus = (status: unknown) => String(status).toUpperCase() === "PAID";
 
@@ -23,31 +22,33 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get('limit') || '15');
     const skip = (page - 1) * limit;
 
-    const [invoices, totalInvoices, allInvoicesForKpis] = await Promise.all([
+    const [invoices, totalInvoices, invoiceAggregates] = await Promise.all([
       prisma.invoice.findMany({ where: whereClause, orderBy: { invoiceDate: 'desc' }, skip, take: limit }),
       prisma.invoice.count({ where: whereClause }),
-      prisma.invoice.findMany({
+      prisma.invoice.groupBy({
         where: whereClause,
-        select: { totalAmount: true, grandTotal: true, status: true, amountReceived: true },
+        by: ["status"],
+        _sum: { grandTotal: true, totalAmount: true, amountReceived: true },
       }),
     ]);
 
-    const totalRevenueDecimal = sumInvoiceBilledAmount(allInvoicesForKpis);
+    const totalRevenueDecimal = invoiceAggregates.reduce((sum, row) => {
+      const billed = toDecimal(row._sum.grandTotal ?? row._sum.totalAmount ?? 0);
+      return sum.plus(billed);
+    }, new Prisma.Decimal(0));
 
-    const outstandingDecimal = allInvoicesForKpis
-      .filter(inv => !isPaidStatus(inv.status))
-      .reduce((sum, inv) => {
-        const billed = getInvoiceBilledAmount(inv);
-        const received = toDecimal(inv.amountReceived);
-        return sum.plus(billed.minus(received));
-      }, new Prisma.Decimal(0));
+    const realizedRevenueDecimal = invoiceAggregates.reduce((sum, row) => {
+      if (!isPaidStatus(row.status)) return sum;
+      const realized = toDecimal(row._sum.amountReceived ?? row._sum.grandTotal ?? row._sum.totalAmount ?? 0);
+      return sum.plus(realized);
+    }, new Prisma.Decimal(0));
 
-    const realizedRevenueDecimal = allInvoicesForKpis
-      .filter(inv => isPaidStatus(inv.status))
-      .reduce((sum, inv) => {
-        const realized = inv.amountReceived ?? getInvoiceBilledAmount(inv);
-        return sum.plus(toDecimal(realized));
-      }, new Prisma.Decimal(0));
+    const outstandingDecimal = invoiceAggregates.reduce((sum, row) => {
+      if (isPaidStatus(row.status)) return sum;
+      const billed = toDecimal(row._sum.grandTotal ?? row._sum.totalAmount ?? 0);
+      const received = toDecimal(row._sum.amountReceived ?? 0);
+      return sum.plus(Prisma.Decimal.max(new Prisma.Decimal(0), billed.minus(received)));
+    }, new Prisma.Decimal(0));
 
     const presumptiveIncomeDecimal = realizedRevenueDecimal.mul(0.5);
 

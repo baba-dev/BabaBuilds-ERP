@@ -29,6 +29,8 @@ export default function InventoryHub() {
 
   const [products, setProducts] = useState<any[]>([]);
   const [globalFilter, setGlobalFilter] = useState("");
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
   
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
   const [selectedProductForAdjust, setSelectedProductForAdjust] = useState<any>(null);
@@ -40,15 +42,29 @@ export default function InventoryHub() {
   const [viewMode, setViewMode] = useState<'list'|'grid'>('list');
 
   useEffect(() => {
-    fetchProducts();
+    fetchProducts({ mode: 'reset' });
   }, [view]);
 
-  const fetchProducts = async () => {
+  const fetchProducts = async ({ mode }: { mode: 'reset' | 'more' } = { mode: 'reset' }) => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/inventory/products');
+      const limit = 200;
+      const cursor = mode === 'more' ? nextCursor : null;
+      const q = globalFilter.trim();
+      const url = new URL('/api/inventory/products', window.location.origin);
+      url.searchParams.set('limit', String(limit));
+      if (cursor) url.searchParams.set('cursor', cursor);
+      if (q) url.searchParams.set('q', q);
+
+      const res = await fetch(url.toString());
       const data = await res.json();
-      setProducts(Array.isArray(data) ? data : []);
+      const cursorHeader = res.headers.get('X-Next-Cursor');
+
+      const rows = Array.isArray(data) ? data : [];
+      setProducts((prev) => (mode === 'more' ? [...prev, ...rows] : rows));
+      const next = cursorHeader && cursorHeader.length > 0 ? cursorHeader : null;
+      setNextCursor(next);
+      setHasMore(Boolean(next) && rows.length > 0);
     } catch (err) {
       console.error("Failed to load inventory data", err);
       toast.error("Failed to load inventory. Please refresh.");
@@ -56,6 +72,13 @@ export default function InventoryHub() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      fetchProducts({ mode: 'reset' }).catch(() => undefined);
+    }, 250);
+    return () => window.clearTimeout(id);
+  }, [globalFilter]);
 
   const openAdjustModal = (product: any) => {
     setSelectedProductForAdjust(product);
@@ -72,15 +95,7 @@ export default function InventoryHub() {
   const outOfStockCount = products.filter(p => p.currentStock === 0).length;
   const lowStockCount = products.filter(p => p.currentStock > 0 && p.currentStock <= p.safetyStock).length;
 
-  const filteredProducts = useMemo(() => {
-    if (!globalFilter) return products;
-    const lower = globalFilter.toLowerCase();
-    return products.filter(p => 
-      p.name.toLowerCase().includes(lower) || 
-      p.sku.toLowerCase().includes(lower) || 
-      (p.barcode && p.barcode.toLowerCase().includes(lower))
-    );
-  }, [products, globalFilter]);
+  const filteredProducts = useMemo(() => products, [products]);
 
   const productColumns: { id: string; header: any; accessor?: (p: any) => any; className?: string; sortable?: boolean; sortAccessor?: (p: any) => any; cell?: (p: any) => any }[] = [
     {
@@ -285,7 +300,7 @@ export default function InventoryHub() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
-                  {filteredProducts.map(p => (
+            {filteredProducts.map(p => (
                     <tr key={p.id} className={`hover:bg-zinc-50/80 dark:hover:bg-zinc-900/50 transition-colors ${p.currentStock === 0 ? 'bg-rose-50/40 dark:bg-rose-500/5' : ''}`}>
                       {productColumns.map(col => (
                         <td key={col.id as string} className={col.className}>
@@ -294,6 +309,20 @@ export default function InventoryHub() {
                       ))}
                     </tr>
                   ))}
+            {hasMore && (
+              <tr>
+                <td colSpan={7} className="px-6 py-5 text-center">
+                  <Button
+                    variant="outline"
+                    className="text-xs font-bold uppercase tracking-widest"
+                    disabled={isLoading}
+                    onClick={() => fetchProducts({ mode: 'more' })}
+                  >
+                    {isLoading ? "Loading..." : "Load more"}
+                  </Button>
+                </td>
+              </tr>
+            )}
                   {filteredProducts.length === 0 && !isLoading && (
                     <tr>
                       <td colSpan={7} className="p-0 border-none">

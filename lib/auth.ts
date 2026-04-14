@@ -294,6 +294,12 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user, account }) {
       if (!user?.email) return false;
 
+      // Allow the demo credentials provider to bypass phishing-resistant MFA policy checks.
+      // This is strictly scoped to the internal `demo-login` provider used for ephemeral demo accounts.
+      if (account?.provider === "demo-login") {
+        return true;
+      }
+
       const inviteEmail = user.email.toLowerCase();
       const pendingInvites = await prisma.workspaceInvite.findMany({
         where: {

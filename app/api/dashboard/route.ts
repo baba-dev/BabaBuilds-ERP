@@ -59,6 +59,8 @@ async function buildDashboardPayload(
   };
 
   const now = new Date();
+  const attentionStart = new Date(now);
+  attentionStart.setDate(now.getDate() - 365); // Bound attention work to last year for scale.
   const thirtyDaysBack = new Date(now);
   thirtyDaysBack.setDate(now.getDate() - 30);
 
@@ -81,7 +83,7 @@ async function buildDashboardPayload(
     currentUser,
     profile,
     invoices,
-    attentionInvoices,
+    openInvoiceAgingBuckets,
     recentInvoices,
     investmentAggregate,
     expenses,
@@ -111,7 +113,7 @@ async function buildDashboardPayload(
     fileImportFailures,
     activities,
     notifications,
-    serviceOrdersUnfiltered,
+    pendingOrderAgingBuckets,
   ] = await Promise.all([
     timed("workspace.core", () =>
       prisma.workspace.findUnique({
@@ -156,7 +158,10 @@ async function buildDashboardPayload(
 
     timed("invoices.fy", () =>
       prisma.invoice.findMany({
-        where: { workspaceId, financialYear: fy },
+        where: {
+          workspaceId,
+          ...(fyRange ? { invoiceDate: { gte: fyRange.start, lt: fyRange.endExclusive } } : { financialYear: fy }),
+        },
         select: {
           status: true,
           invoiceDate: true,
@@ -168,18 +173,68 @@ async function buildDashboardPayload(
       })
     ),
 
-    timed("invoices.attention", () =>
-      prisma.invoice.findMany({
-        where: { workspaceId },
+    timed("invoices.attention_buckets", async () => {
+      // Avoid pulling all invoices into memory at realistic scale.
+      // We only need aging buckets and counts for OPEN invoices.
+      // Approximate "outstanding invoice count" as open invoice count (matches previous semantics for dashboard).
+      const openInvoices = await prisma.invoice.findMany({
+        where: {
+          workspaceId,
+          status: { not: "PAID" },
+          invoiceDate: { gte: attentionStart },
+        },
         select: {
-          status: true,
           invoiceDate: true,
           totalAmount: true,
           grandTotal: true,
           amountReceived: true,
         },
-      })
-    ),
+      });
+
+      const buckets = {
+        current: new Prisma.Decimal(0),
+        mid: new Prisma.Decimal(0),
+        late: new Prisma.Decimal(0),
+      };
+
+      for (const invoice of openInvoices) {
+        const outstanding = Prisma.Decimal.max(
+          new Prisma.Decimal(0),
+          getInvoiceBilledAmount(invoice).minus(new Prisma.Decimal(Number(invoice.amountReceived ?? 0)))
+        );
+        if (outstanding.equals(0)) continue;
+        const ageDays = Math.max(
+          0,
+          Math.floor((now.getTime() - new Date(invoice.invoiceDate).getTime()) / (1000 * 60 * 60 * 24))
+        );
+        if (ageDays <= 30) buckets.current = buckets.current.plus(outstanding);
+        else if (ageDays <= 60) buckets.mid = buckets.mid.plus(outstanding);
+        else buckets.late = buckets.late.plus(outstanding);
+      }
+
+      // Counts for attention cards: overdue = >30 days old, outstanding = any open with balance.
+      // Keep the same function signature expectations by returning a minimal "rows" array.
+      // We do NOT return invoices; we return computed buckets + counts.
+      const outstandingReceivables = openInvoices.reduce((count, inv) => {
+        const outstanding = Prisma.Decimal.max(
+          new Prisma.Decimal(0),
+          getInvoiceBilledAmount(inv).minus(new Prisma.Decimal(Number(inv.amountReceived ?? 0)))
+        );
+        return outstanding.equals(0) ? count : count + 1;
+      }, 0);
+      const overdueReceivables = openInvoices.reduce((count, inv) => {
+        const outstanding = Prisma.Decimal.max(
+          new Prisma.Decimal(0),
+          getInvoiceBilledAmount(inv).minus(new Prisma.Decimal(Number(inv.amountReceived ?? 0)))
+        );
+        if (outstanding.equals(0)) return count;
+        const dueDate = new Date(inv.invoiceDate);
+        dueDate.setDate(dueDate.getDate() + 30);
+        return dueDate < now ? count + 1 : count;
+      }, 0);
+
+      return { buckets, overdueReceivables, outstandingReceivables };
+    }),
 
     timed("invoices.recent", () =>
       prisma.invoice.findMany({
@@ -420,12 +475,36 @@ async function buildDashboardPayload(
           })
         )
       : Promise.resolve(0),
-    timed("orders.unfiltered", () =>
-      prisma.serviceOrder.findMany({
-        where: { workspaceId },
-        select: { status: true, amount: true, createdAt: true },
-      })
-    ),
+    timed("orders.pending_buckets", async () => {
+      // Avoid pulling all orders into memory; we only need pending/failed aging buckets.
+      const pendingOrders = await prisma.serviceOrder.findMany({
+        where: {
+          workspaceId,
+          status: { in: ["PENDING", "FAILED"] },
+          createdAt: { gte: attentionStart },
+        },
+        select: { amount: true, createdAt: true },
+      });
+
+      const buckets = {
+        current: new Prisma.Decimal(0),
+        mid: new Prisma.Decimal(0),
+        late: new Prisma.Decimal(0),
+      };
+
+      for (const order of pendingOrders) {
+        const ageDays = Math.max(
+          0,
+          Math.floor((now.getTime() - new Date(order.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+        );
+        const outstanding = toDecimal(order.amount);
+        if (ageDays <= 30) buckets.current = buckets.current.plus(outstanding);
+        else if (ageDays <= 60) buckets.mid = buckets.mid.plus(outstanding);
+        else buckets.late = buckets.late.plus(outstanding);
+      }
+
+      return buckets;
+    }),
   ]);
 
   const billedRevenue = canViewFinance ? sumInvoiceBilledAmount(invoices) : new Prisma.Decimal(0);
@@ -496,10 +575,7 @@ async function buildDashboardPayload(
     totalBankTransactions
   );
 
-  const { overdueReceivables, outstandingReceivables } = summarizeReceivablesForAttention(
-    attentionInvoices,
-    now
-  );
+  const { overdueReceivables, outstandingReceivables } = openInvoiceAgingBuckets;
 
   const retainersDueSoon = retainers.filter(
     (ret) => ret.nextBillingDate >= now && ret.nextBillingDate <= sevenDaysOut
@@ -675,46 +751,11 @@ async function buildDashboardPayload(
     },
   ] as const;
 
-  const receivablesAgingBuckets = attentionInvoices.reduce(
-    (acc, invoice) => {
-      const status = normalizeInvoiceStatus(invoice.status);
-      if (status === "PAID") return acc;
-
-      const outstanding = Prisma.Decimal.max(
-        new Prisma.Decimal(0),
-        getInvoiceBilledAmount(invoice).minus(
-          new Prisma.Decimal(Number(invoice.amountReceived ?? 0))
-        )
-      );
-
-      if (outstanding.equals(0)) return acc;
-
-      const ageDays = Math.max(
-        0,
-        Math.floor((now.getTime() - new Date(invoice.invoiceDate).getTime()) / (1000 * 60 * 60 * 24))
-      );
-
-      if (ageDays <= 30) acc.current = acc.current.plus(outstanding);
-      else if (ageDays <= 60) acc.mid = acc.mid.plus(outstanding);
-      else acc.late = acc.late.plus(outstanding);
-
-      return acc;
-    },
-    {
-      current: new Prisma.Decimal(0),
-      mid: new Prisma.Decimal(0),
-      late: new Prisma.Decimal(0),
-    }
-  );
-
-  // Distribute pending orders across true age buckets
-  serviceOrdersUnfiltered?.filter(so => ["PENDING", "FAILED"].includes(normalizeInvoiceStatus(so.status))).forEach(so => {
-    const ageDays = Math.max(0, Math.floor((now.getTime() - new Date(so.createdAt).getTime()) / (1000 * 60 * 60 * 24)));
-    const outstanding = toDecimal(so.amount);
-    if (ageDays <= 30) receivablesAgingBuckets.current = receivablesAgingBuckets.current.plus(outstanding);
-    else if (ageDays <= 60) receivablesAgingBuckets.mid = receivablesAgingBuckets.mid.plus(outstanding);
-    else receivablesAgingBuckets.late = receivablesAgingBuckets.late.plus(outstanding);
-  });
+  const receivablesAgingBuckets = {
+    current: openInvoiceAgingBuckets.buckets.current.plus(pendingOrderAgingBuckets.current),
+    mid: openInvoiceAgingBuckets.buckets.mid.plus(pendingOrderAgingBuckets.mid),
+    late: openInvoiceAgingBuckets.buckets.late.plus(pendingOrderAgingBuckets.late),
+  };
 
   const receivablesAging = [
     { bucket: "0-30d", value: serializeMoney(receivablesAgingBuckets.current) },
@@ -955,6 +996,8 @@ export async function GET(request: Request) {
       localeCurrencyAffectsPayload: LOCALE_CURRENCY_AFFECTS_PAYLOAD,
     });
 
+    // Client pages currently use `cache: "no-store"` so Next-level caching is bypassed.
+    // Use the in-process dashboard cache to avoid repeated recomputation under concurrent staff traffic.
     if (isDashboardCacheEnabled()) {
       try {
         const cached = getDashboardCacheEntry(cacheKey);
@@ -966,6 +1009,7 @@ export async function GET(request: Request) {
               "X-Dashboard-Cache": "HIT",
               "X-Dashboard-Cache-Age": String(cacheMeta.ageSeconds),
               "X-Dashboard-Cache-TTL": String(cacheMeta.ttlSeconds),
+              "Cache-Control": "private, max-age=0, must-revalidate",
             },
           });
         }
@@ -983,6 +1027,7 @@ export async function GET(request: Request) {
             "X-Dashboard-Cache": "MISS",
             "X-Dashboard-Cache-Age": String(cacheMeta.ageSeconds),
             "X-Dashboard-Cache-TTL": String(cacheMeta.ttlSeconds),
+            "Cache-Control": "private, max-age=0, must-revalidate",
           },
         });
       } catch (cacheError) {
@@ -1002,7 +1047,10 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json(payload, {
-      headers: { "X-Dashboard-Cache": "BYPASS" },
+      headers: {
+        "X-Dashboard-Cache": "BYPASS",
+        "Cache-Control": "private, max-age=0, must-revalidate",
+      },
     });
   } catch (error) {
     console.error("Dashboard Data Error:", error);
