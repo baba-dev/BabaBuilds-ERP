@@ -6,7 +6,6 @@ on:
 
 concurrency:
   group: deploy-production-${{ github.ref }}
-  cancel-in-progress: true
   
 jobs:
   deploy:
