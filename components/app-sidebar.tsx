@@ -9,8 +9,9 @@ import { NavMain } from "@/components/navigation/nav-main";
 import { NavSecondary } from "@/components/navigation/nav-secondary";
 import { NavUser } from "@/components/navigation/nav-user";
 import { SidebarOnboardingChecklist } from "@/components/onboarding/SidebarOnboardingChecklist";
-import { Sidebar, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { Sidebar, useSidebar } from "@/components/ui/sidebar";
 import { SidebarSearch } from "@/src/components/sidebar/SidebarSearch";
+import { getCurrentFinancialYear } from "@/lib/financial-year";
 import {
   DEFAULT_USER_PREFERENCES,
   MAX_PINNED_ITEMS,
@@ -21,6 +22,9 @@ import {
 function SidebarBrand() {
   const t = useTranslations("Sidebar");
   const { open, isMobile } = useSidebar();
+  const fy = getCurrentFinancialYear();
+  const fyParts = fy.split("-");
+  const ay = `${parseInt(fyParts[0]) + 1}-${parseInt(fyParts[1]) + 1}`;
 
   return (
     <div className="flex h-16 items-center justify-between border-b border-zinc-800/30 px-4 shrink-0">
@@ -29,12 +33,16 @@ function SidebarBrand() {
           <Box className="h-5 w-5 text-white" />
         </div>
         {(open || isMobile) && (
-          <span className="truncate text-lg tracking-tight text-white transition-colors hover:text-indigo-400">
-            {t("bababuilds_erp")}
-          </span>
+          <div className="flex flex-col min-w-0">
+            <span className="truncate text-lg tracking-tight text-white transition-colors hover:text-indigo-400">
+              {t("bababuilds_erp")}
+            </span>
+            <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">
+              FY {fy} • AY {ay}
+            </span>
+          </div>
         )}
       </Link>
-      <SidebarTrigger className="hidden text-zinc-200 hover:bg-white/10 hover:text-white md:inline-flex" />
     </div>
   );
 }
@@ -91,12 +99,12 @@ export function AppSidebar() {
 
   useEffect(() => {
     setSidebarWidth(preferences.sidebarWidth);
-    const nextOpen = !preferences.sidebarCollapsed;
+    const nextOpen = true; // Always open on desktop
     if (open !== nextOpen) {
       skipNextOpenSyncRef.current = true;
       setOpen(nextOpen);
     }
-  }, [preferences.sidebarCollapsed, preferences.sidebarWidth, open, setOpen, setSidebarWidth]);
+  }, [preferences.sidebarWidth, open, setOpen, setSidebarWidth]);
 
   const updatePreferencesOptimistically = useCallback(
     (

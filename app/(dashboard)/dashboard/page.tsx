@@ -3,7 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { Download, LayoutDashboard, Send, Sparkles, ArrowRight, Users, Briefcase, ReceiptText, X } from "lucide-react";
+import { Download, LayoutDashboard, Send, Sparkles, ArrowRight, Users, Briefcase, ReceiptText, X, Building } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -63,6 +63,7 @@ export default function Dashboard() {
   const [dateReceived, setDateReceived] = useState(format(new Date(), "yyyy-MM-dd"));
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
+  const [orgName, setOrgName] = useState<string | null>(null);
   const [gettingStartedDismissed, setGettingStartedDismissed] = useState(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("erp_getting_started_dismissed") === "1";
@@ -98,6 +99,15 @@ export default function Dashboard() {
       }
     };
     loadFlags().catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/settings", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d: { companyName?: string }) => {
+        if (d.companyName) setOrgName(d.companyName);
+      })
+      .catch(() => undefined);
   }, []);
 
   const fetchDashboardData = async (fy: string) => {
@@ -228,8 +238,9 @@ export default function Dashboard() {
     }
   };
 
+  const baseYear = new Date().getMonth() >= 3 ? new Date().getFullYear() : new Date().getFullYear() - 1;
   const fyOptions = Array.from({ length: 4 }).map((_, idx) => {
-    const year = new Date().getFullYear() - 2 + idx;
+    const year = baseYear - 3 + idx;
     const yy = String(year).slice(-2);
     const n = String(year + 1).slice(-2);
     return `${yy}-${n}`;
@@ -562,11 +573,16 @@ export default function Dashboard() {
         >
           <div className="flex items-center gap-3">
             <div className="flex-shrink-0 p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 group-hover:scale-110 transition-transform duration-300">
-              <Sparkles className="w-4 h-4" />
+              <Building className="w-4 h-4" />
             </div>
-            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400 leading-tight">
-              {tr("mobile_focus_note", "Tip: Priority alerts and workspace health are pinned to the top on mobile for faster scanning.")}
-            </p>
+            <div className="flex flex-col">
+              <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 leading-tight">
+                {orgName ?? "Organisation"}
+              </p>
+              <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                Premium Enterprise Workspace
+              </p>
+            </div>
           </div>
           <Button
             asChild
@@ -574,8 +590,8 @@ export default function Dashboard() {
             size="sm"
             className="flex-shrink-0 h-8 text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100/50 dark:hover:bg-indigo-500/20 gap-2 border border-transparent hover:border-indigo-100 dark:hover:border-indigo-500/30"
           >
-            <Link href="/settings" className="flex items-center gap-2">
-              {tr("review_notifications", "Manage workspace alerts")}
+            <Link href="https://erp.bababuilds.com/settings/profile" className="flex items-center gap-2">
+              User Session Settings
               <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
             </Link>
           </Button>

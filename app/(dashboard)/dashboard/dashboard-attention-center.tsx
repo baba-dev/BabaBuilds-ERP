@@ -18,7 +18,7 @@ export function DashboardAttentionCenter({ attention }: { attention: DashboardDa
 
   const getCardStyle = (tone: string, value: number) => {
     if (value === 0) {
-      return "border-zinc-200/50 bg-zinc-50/50 dark:border-zinc-800/40 dark:bg-zinc-900/20";
+      return "border-emerald-200/60 bg-emerald-50/40 dark:border-emerald-900/40 dark:bg-emerald-950/20";
     }
     if (tone === "critical") return "border-rose-200 bg-rose-50 dark:bg-rose-500/10 dark:border-rose-500/20";
     if (tone === "warning") return "border-amber-200 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/20";
@@ -26,14 +26,14 @@ export function DashboardAttentionCenter({ attention }: { attention: DashboardDa
   };
 
   const getLabelStyle = (tone: string, value: number) => {
-    if (value === 0) return "text-zinc-500 dark:text-zinc-500 text-[11px]";
+    if (value === 0) return "text-emerald-700/70 dark:text-emerald-500/70 text-[11px]";
     if (tone === "critical") return "text-rose-600 dark:text-rose-400 text-[11px]";
     if (tone === "warning") return "text-amber-600 dark:text-amber-400 text-[11px]";
     return "text-indigo-600 dark:text-indigo-400 text-[11px]";
   };
 
   return (
-    <Card className={`p-5 md:p-6 transition-colors duration-500 ${isUrgent ? "border-zinc-200 dark:border-zinc-800 bg-gradient-to-br from-indigo-50/80 to-white dark:from-zinc-900 dark:to-zinc-950" : "border-zinc-100 dark:border-zinc-800/50 bg-zinc-50/50 dark:bg-zinc-950/30 shadow-none"}`}>
+    <Card className={`p-5 md:p-6 transition-colors duration-500 ${isUrgent ? "border-zinc-200 dark:border-zinc-800 bg-gradient-to-br from-indigo-50/80 to-white dark:from-zinc-900 dark:to-zinc-950" : "border-emerald-100 dark:border-emerald-900/30 bg-emerald-50/20 dark:bg-emerald-950/10 shadow-sm"}`}>
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs tracking-[0.14em] uppercase font-semibold text-zinc-500 dark:text-zinc-400">
@@ -61,8 +61,8 @@ export function DashboardAttentionCenter({ attention }: { attention: DashboardDa
               style={{ animationFillMode: "both", animationDelay: `${i * 75}ms` }}
             >
               <p className={`uppercase tracking-wider font-semibold ${getLabelStyle(card.tone, card.value)}`}>{card.title}</p>
-              <p className={`text-3xl font-bold mt-2 ${isZero ? "text-zinc-400 dark:text-zinc-600" : "text-zinc-900 dark:text-zinc-100"}`}>{card.value}</p>
-              <p className={`text-xs mt-1 ${isZero ? "text-zinc-400 dark:text-zinc-500" : "text-zinc-600 dark:text-zinc-400"}`}>{card.helper}</p>
+              <p className={`text-3xl font-bold mt-2 ${isZero ? "text-emerald-900/60 dark:text-emerald-100/60" : "text-zinc-900 dark:text-zinc-100"}`}>{card.value}</p>
+              <p className={`text-xs mt-1 ${isZero ? "text-emerald-700/60 dark:text-emerald-400/60" : "text-zinc-600 dark:text-zinc-400"}`}>{card.helper}</p>
               
               <div className="mt-auto pt-4">
                 {card.href ? (

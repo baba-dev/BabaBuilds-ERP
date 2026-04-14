@@ -121,7 +121,7 @@ export default function CAPortal() {
   };
   
   // --- STATE ---
-  const [fy, setFy] = useState(getCurrentFinancialYear(new Date(), 'local')); 
+  const [fy, setFy] = useState("25-26"); 
   const [data, setData] = useState<CAPortalPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isExportingCSV, setIsExportingCSV] = useState(false);
