@@ -41,7 +41,7 @@ const getIntegrationReadiness = (keys: Array<string | null | undefined>): Integr
 const asPct = (num: number, den: number) =>
   den <= 0 ? 0 : Math.min(100, Math.round((num / den) * 100));
 
-export async function buildDashboardPayload(
+async function buildDashboardPayload(
   workspaceId: string,
   userId: string | null,
   fy: string,
