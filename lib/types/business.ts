@@ -137,7 +137,8 @@ export type MailAttachment = {
 };
 
 export type MailOptions = {
-  profile: BusinessProfileDto;
+  route?: "user" | "system";
+  profile?: BusinessProfileDto | null;
   to: string;
   subject: string;
   html?: string;

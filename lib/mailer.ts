@@ -43,6 +43,7 @@ export async function resolveSafeIp(host: string): Promise<string | null> {
 }
 
 export async function sendEmail({
+  route = 'user',
   profile,
   to,
   subject,
@@ -50,42 +51,72 @@ export async function sendEmail({
   text,
   attachments
 }: MailOptions) {
-  if (!profile || !profile.smtpHost || !profile.smtpUser || !profile.smtpPassword) {
-    throw new Error('SMTP Server not configured in Business Settings.');
-  }
+  let transporter;
+  let fromAddress;
 
-  const safeIp = await resolveSafeIp(profile.smtpHost);
-  if (!safeIp) {
-    throw new Error('Invalid or internal SMTP Host blocked by security policy.');
-  }
+  if (route === 'system') {
+    const host = process.env.EMAIL_SERVER_HOST;
+    const port = Number(process.env.EMAIL_SERVER_PORT) || 587;
+    const user = process.env.EMAIL_SERVER_USER;
+    const pass = process.env.EMAIL_SERVER_PASSWORD;
+    const from = process.env.EMAIL_FROM || '"BabaBuilds ERP" <no-reply@bababuilds.com>';
 
-  const transporter = nodemailer.createTransport({
-    host: safeIp,
-    port: profile.smtpPort || 587,
-    secure: profile.smtpPort === 465,
-    tls: {
-      servername: profile.smtpHost,
-      minVersion: 'TLSv1.2',
-      rejectUnauthorized: true,
-      ciphers: 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256',
-      honorCipherOrder: true,
-    },
-    auth: {
-      user: profile.smtpUser,
-      pass: getRuntimeSmtpPassword(profile.smtpPassword),
-    },
-  });
+    if (!host || !user || !pass) {
+      console.warn('[System Mailer] System SMTP is missing. Cannot send system email.');
+      // The dispatcher won't log errors, but in API routes missing system SMTP should show logic.
+      throw new Error('MISSING_SYSTEM_SMTP');
+    }
+
+    transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass },
+    });
+
+    fromAddress = from;
+
+  } else {
+    // User route
+    if (!profile || !profile.smtpHost || !profile.smtpUser || !profile.smtpPassword) {
+      throw new Error('MISSING_USER_SMTP');
+    }
+
+    const safeIp = await resolveSafeIp(profile.smtpHost);
+    if (!safeIp) {
+      throw new Error('Invalid or internal SMTP Host blocked by security policy.');
+    }
+
+    transporter = nodemailer.createTransport({
+      host: safeIp,
+      port: profile.smtpPort || 587,
+      secure: profile.smtpPort === 465,
+      tls: {
+        servername: profile.smtpHost,
+        minVersion: 'TLSv1.2',
+        rejectUnauthorized: true,
+        ciphers: 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256',
+        honorCipherOrder: true,
+      },
+      auth: {
+        user: profile.smtpUser,
+        pass: getRuntimeSmtpPassword(profile.smtpPassword),
+      },
+    });
+
+    fromAddress = `"${profile.companyName}" <${profile.smtpFromEmail || profile.smtpUser}>`;
+  }
 
   const mailOptions = {
-    from: `"${profile.companyName}" <${profile.smtpFromEmail || profile.smtpUser}>`,
+    from: fromAddress,
     to,
     subject,
     html,
     text,
     attachments: attachments?.map(att => ({
-      filename: att.filename,
-      path: att.path,
-      contentType: att.contentType
+        filename: att.filename,
+        path: att.path,
+        contentType: att.contentType
     }))
   };
 

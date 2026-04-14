@@ -41,7 +41,7 @@ const getIntegrationReadiness = (keys: Array<string | null | undefined>): Integr
 const asPct = (num: number, den: number) =>
   den <= 0 ? 0 : Math.min(100, Math.round((num / den) * 100));
 
-async function buildDashboardPayload(
+export async function buildDashboardPayload(
   workspaceId: string,
   userId: string | null,
   fy: string,
@@ -226,7 +226,7 @@ async function buildDashboardPayload(
       prisma.proposal.groupBy({
         where: { 
           workspaceId,
-          ...(fyRange ? { createdAt: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}),
+          ...(fyRange ? { dateCreated: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}),
         },
         by: ["status"],
         _count: { _all: true },

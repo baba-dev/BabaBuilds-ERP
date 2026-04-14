@@ -32,7 +32,7 @@ function logoTag(appUrl: string): string {
 // ---------------------------------------------------------------------------
 // MASTER LAYOUT
 // ---------------------------------------------------------------------------
-function layout(opts: {
+export function layout(opts: {
   appUrl: string;
   companyName: string;
   emoji: string;
@@ -44,14 +44,21 @@ function layout(opts: {
   accentColor?: string;
 }): string {
   const accent = opts.accentColor ?? BRAND_PURPLE;
+  
   const cta = opts.ctaLabel && opts.ctaUrl
     ? `
-      <div style="text-align:center;margin:32px 0;">
-        <a href="${opts.ctaUrl}"
-           style="display:inline-block;padding:14px 32px;background:${accent};color:#fff;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;letter-spacing:0.02em;">
-          ${opts.ctaLabel}
-        </a>
-      </div>`
+      <a href="${opts.ctaUrl}" target="_blank" style="display: inline-block; background-color: ${accent}; color: #ffffff; padding: 14px 32px; border-radius: 8px; font-size: 16px; font-weight: 600; text-decoration: none; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+        ${opts.ctaLabel}
+      </a>
+      <p style="margin: 32px 0 0 0; color: #71717a; font-size: 13px;">
+        For your security, this action may require signing in to your account.
+      </p>
+      <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 40px 0 24px 0;" />
+      <p style="margin: 0 0 8px 0; color: #a1a1aa; font-size: 11px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Trouble clicking?</p>
+      <p style="margin: 0; color: #71717a; font-size: 12px; word-break: break-all;">
+        Copy and paste this URL into your browser:<br/>
+        <a href="${opts.ctaUrl}" style="color: ${accent}; text-decoration: underline;">${opts.ctaUrl}</a>
+      </p>`
     : '';
 
   return `<!DOCTYPE html>
@@ -61,35 +68,33 @@ function layout(opts: {
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>${opts.headline}</title>
 </head>
-<body style="margin:0;padding:0;background:${BRAND_LIGHT};font-family:${FONT_STACK};-webkit-font-smoothing:antialiased;">
-  <div style="max-width:600px;margin:40px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);">
+<body style="background-color: ${BRAND_LIGHT}; font-family: ${FONT_STACK}; padding: 60px 20px; margin: 0; -webkit-font-smoothing: antialiased;">
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);">
+    <tr>
+      <td style="padding: 48px 40px; text-align: center;">
+        
+        <!-- Header Image or Icon -->
+        <h1 style="margin: 0; color: #09090b; font-size: 28px; font-weight: 900; letter-spacing: -0.5px;">${opts.emoji} ${opts.headline}</h1>
+        <p style="margin: 4px 0 0 0; color: ${accent}; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">${opts.subheadline}</p>
+        
+        <div style="margin: 40px 0 32px 0; color: #52525b; font-size: 15px; line-height: 24px; text-align: left;">
+          ${opts.body}
+        </div>
+        
+        ${cta}
 
-    <!-- Header -->
-    <div style="background:${BRAND_DARK};padding:28px 40px;display:flex;align-items:center;justify-content:space-between;">
-      ${logoTag(opts.appUrl)}
-      <span style="font-size:30px;line-height:1;">${opts.emoji}</span>
-    </div>
-
-    <!-- Accent bar -->
-    <div style="height:4px;background:linear-gradient(90deg,${accent},#a5b4fc);"></div>
-
-    <!-- Body -->
-    <div style="padding:40px 40px 32px;">
-      <h1 style="margin:0 0 8px;font-size:22px;font-weight:800;color:${BRAND_DARK};">${opts.headline}</h1>
-      <p style="margin:0 0 20px;font-size:14px;color:#71717a;">${opts.subheadline}</p>
-      <hr style="border:none;border-top:1px solid #e4e4e7;margin:0 0 24px;" />
-      <div style="font-size:15px;line-height:1.7;color:#3f3f46;">${opts.body}</div>
-      ${cta}
-    </div>
-
-    <!-- Footer -->
-    <div style="background:${BRAND_LIGHT};padding:20px 40px;border-top:1px solid #e4e4e7;text-align:center;">
-      <p style="margin:0;font-size:12px;color:#a1a1aa;">
-        Sent by <strong>${opts.companyName}</strong> via BabaBuilds ERP &middot;
-        <a href="${opts.appUrl}/settings/notifications" style="color:${accent};text-decoration:none;">Manage Notifications</a>
-      </p>
-    </div>
-  </div>
+      </td>
+    </tr>
+    <tr>
+      <td style="background-color: #fafafa; padding: 24px 40px; text-align: center; border-top: 1px solid #e4e4e7;">
+        <p style="margin: 0; color: #a1a1aa; font-size: 12px; line-height: 18px;">
+          Sent by <strong>${opts.companyName}</strong> via BabaBuilds ERP
+          <br/><br/>
+          &copy; ${new Date().getFullYear()} ${opts.companyName}. All rights reserved.
+        </p>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`;
 }
@@ -373,9 +378,64 @@ export function buildEmailTemplate(
       };
     }
 
+    case 'RETAINER_CREATED': {
+      const client = escapeHtml(data.clientName);
+      const service = escapeHtml(data.serviceName);
+      const amount = escapeHtml(data.amount);
+      return {
+        subject: `📋 New retainer created for ${client}`,
+        html: layout({
+          appUrl, companyName, emoji: '📋',
+          headline: 'Retainer Established',
+          subheadline: `New recurring service for ${client}`,
+          body: `<p>A new retainer for <strong>${service}</strong> has been successfully created for <strong>${client}</strong> at <strong>${amount}</strong>.</p>`,
+          ctaLabel: 'View Retainers',
+          ctaUrl: `${appUrl}/retainers`,
+        }),
+        text: `New retainer created for ${client} (${service} - ${amount}).`,
+      };
+    }
+
+    case 'PROPOSAL_ACCEPTED': {
+      const proposal = escapeHtml(data.proposalNo);
+      const client = escapeHtml(data.clientName);
+      return {
+        subject: `🎉 Proposal ${proposal} accepted by ${client}!`,
+        html: layout({
+          appUrl, companyName, emoji: '🎉',
+          headline: 'Proposal Accepted',
+          subheadline: `Great news! ${client} accepted your proposal`,
+          accentColor: '#22c55e',
+          body: `<p><strong>${client}</strong> has digitally signed and accepted proposal <strong>${proposal}</strong>.</p>
+                 <p>You can now convert it to an invoice and begin work.</p>`,
+          ctaLabel: 'View Proposal',
+          ctaUrl: `${appUrl}/proposals`,
+        }),
+        text: `Proposal ${proposal} was accepted by ${client}.`,
+      };
+    }
+
+    case 'SETTINGS_UPDATED': {
+      const section = escapeHtml(data.section);
+      const updatedBy = escapeHtml(data.updatedBy);
+      return {
+        subject: `⚙️ Workspace settings updated: ${section}`,
+        html: layout({
+          appUrl, companyName, emoji: '⚙️',
+          headline: 'Settings Updated',
+          subheadline: `${section} settings modified`,
+          body: `<p>Important workspace settings in the <strong>${section}</strong> section were updated by <strong>${updatedBy}</strong>.</p>
+                 <p>If you did not authorize this, please review your workspace audit logs immediately.</p>`,
+          ctaLabel: 'Review Settings',
+          ctaUrl: `${appUrl}/settings`,
+        }),
+        text: `Workspace settings (${section}) were updated by ${updatedBy}.`,
+      };
+    }
+
     default:
       return {
-        subject: 'BabaBuilds ERP — Notification',
+        subject: 'Notification from BabaBuilds ERP',
         html: layout({
           appUrl, companyName, emoji: '🔔',
           headline: 'New Notification',

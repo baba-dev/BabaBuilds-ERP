@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import { sendEmail } from "@/lib/mailer";
+import { layout } from "@/lib/notifications/email-templates";
 import { canInviteMembers, getMaxUsersForPlan, Role } from "@/lib/permissions";
 import { logActivity } from "@/lib/activity-log";
 import { alertElevatedPrivilegeGrant, HIGH_RISK_ROLES } from "@/lib/security/access-risk";
@@ -99,16 +100,20 @@ export async function POST(req: Request) {
       const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/invite/${token}`;
       try {
          await sendEmail({
-           profile,
+           route: 'system',
            to: normalizedEmail,
            subject: `You have been invited to join ${workspace.name} on BabaERP`,
-           html: `
-             <h2>You're invited!</h2>
-             <p>${session.user.name} has invited you to join the workspace <strong>${workspace.name}</strong> as a ${role}.</p>
-             <p>Click the link below to accept the invitation:</p>
-             <a href="${inviteUrl}">${inviteUrl}</a>
-             <p>This link will expire in 7 days.</p>
-           `
+           html: layout({
+             appUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+             companyName: workspace.name,
+             emoji: '👋',
+             headline: "You're Invited!",
+             subheadline: `Join ${workspace.name} as a ${role}`,
+             body: `<p><strong>${session.user.name}</strong> has invited you to collaborate in their workspace on BabaBuilds ERP.</p>
+                    <p>By accepting this invitation, you will gain access to tools and data for <strong>${workspace.name}</strong>.</p>`,
+             ctaLabel: 'Accept Invitation',
+             ctaUrl: inviteUrl,
+           }),
          });
       } catch (err: any) {
          console.error("Failed to send email", err);
