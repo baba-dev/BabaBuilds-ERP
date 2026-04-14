@@ -996,6 +996,8 @@ export async function GET(request: Request) {
       localeCurrencyAffectsPayload: LOCALE_CURRENCY_AFFECTS_PAYLOAD,
     });
 
+    // Client pages currently use `cache: "no-store"` so Next-level caching is bypassed.
+    // Use the in-process dashboard cache to avoid repeated recomputation under concurrent staff traffic.
     if (isDashboardCacheEnabled()) {
       try {
         const cached = getDashboardCacheEntry(cacheKey);
@@ -1007,6 +1009,7 @@ export async function GET(request: Request) {
               "X-Dashboard-Cache": "HIT",
               "X-Dashboard-Cache-Age": String(cacheMeta.ageSeconds),
               "X-Dashboard-Cache-TTL": String(cacheMeta.ttlSeconds),
+              "Cache-Control": "private, max-age=0, must-revalidate",
             },
           });
         }
@@ -1024,6 +1027,7 @@ export async function GET(request: Request) {
             "X-Dashboard-Cache": "MISS",
             "X-Dashboard-Cache-Age": String(cacheMeta.ageSeconds),
             "X-Dashboard-Cache-TTL": String(cacheMeta.ttlSeconds),
+            "Cache-Control": "private, max-age=0, must-revalidate",
           },
         });
       } catch (cacheError) {
@@ -1043,7 +1047,10 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json(payload, {
-      headers: { "X-Dashboard-Cache": "BYPASS" },
+      headers: {
+        "X-Dashboard-Cache": "BYPASS",
+        "Cache-Control": "private, max-age=0, must-revalidate",
+      },
     });
   } catch (error) {
     console.error("Dashboard Data Error:", error);
