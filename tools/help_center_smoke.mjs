@@ -16,7 +16,7 @@ async function main() {
   const page = await context.newPage();
 
   // /help landing
-  await page.goto(url("/help"), { waitUntil: "networkidle" });
+  await page.goto(url("/help"), { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${artifactsDir}/help_landing.png`, fullPage: true });
 
@@ -41,12 +41,12 @@ async function main() {
   }
 
   // category page
-  await page.goto(url("/help/category/getting-started"), { waitUntil: "networkidle" });
+  await page.goto(url("/help/category/getting-started"), { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${artifactsDir}/help_category_getting_started.png`, fullPage: true });
 
   // in-app hub (public route)
-  await page.goto(url("/help-hub"), { waitUntil: "networkidle" });
+  await page.goto(url("/help-hub"), { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${artifactsDir}/help_hub.png`, fullPage: true });
 
