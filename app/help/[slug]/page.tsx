@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getDocBySlug, getAllDocs } from "@/lib/docs";
+import { categoryToSlug, getDocBySlug, getAllDocs } from "@/lib/docs";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import Link from "next/link";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { typography } from "@/lib/ui/typography";
 import { 
@@ -14,16 +15,62 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
+function slugifyHeading(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+type TocItem = { id: string; title: string; level: 2 | 3 };
+
+function buildToc(markdown: string): TocItem[] {
+  const lines = markdown.split("\n");
+  const toc: TocItem[] = [];
+  const used = new Map<string, number>();
+
+  for (const line of lines) {
+    const m = /^(#{2,3})\s+(.+?)\s*$/.exec(line);
+    if (!m) continue;
+    const level = m[1].length as 2 | 3;
+    const title = m[2].replace(/\s+#\s*$/, "").trim();
+    if (!title) continue;
+
+    const base = slugifyHeading(title);
+    if (!base) continue;
+    const count = used.get(base) ?? 0;
+    used.set(base, count + 1);
+    const id = count === 0 ? base : `${base}-${count + 1}`;
+
+    toc.push({ id, title, level });
+  }
+
+  return toc;
+}
+
 // PREMIUM MDX COMPONENTS
 const components = {
-  h2: ({ children, ...props }: any) => (
-    <h2 {...props} className={cn(typography.sectionHeader, "mt-12 mb-5 pb-2.5 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-2 group")}>
+  h2: ({ children, id, ...props }: any) => (
+    <h2
+      {...props}
+      id={typeof id === "string" && id.length ? id : slugifyHeading(String(children))}
+      className={cn(
+        typography.sectionHeader,
+        "mt-12 mb-5 pb-2.5 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-2 group scroll-mt-24",
+      )}
+    >
       <span className="w-1.5 h-6 bg-indigo-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity -ml-3.5 mr-2"></span>
       {children}
     </h2>
   ),
-  h3: ({ children, ...props }: any) => (
-    <h3 {...props} className={cn(typography.sectionHeader, "text-base sm:text-lg mt-8 mb-4")}>
+  h3: ({ children, id, ...props }: any) => (
+    <h3
+      {...props}
+      id={typeof id === "string" && id.length ? id : slugifyHeading(String(children))}
+      className={cn(typography.sectionHeader, "text-base sm:text-lg mt-8 mb-4 scroll-mt-24")}
+    >
       {children}
     </h3>
   ),
@@ -100,7 +147,59 @@ const components = {
         </div>
       </div>
     );
-  }
+  },
+  Steps: ({ children }: { children: React.ReactNode }) => (
+    <ol className="my-8 space-y-4">
+      {children}
+    </ol>
+  ),
+  Step: ({
+    title,
+    children,
+  }: {
+    title?: string;
+    children: React.ReactNode;
+  }) => (
+    <li className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 shadow-sm">
+      {title ? (
+        <p className="text-sm font-black text-zinc-900 dark:text-zinc-50 mb-2">{title}</p>
+      ) : null}
+      <div className="text-[14px] leading-relaxed text-zinc-700 dark:text-zinc-300">{children}</div>
+    </li>
+  ),
+  HelpImage: ({
+    src,
+    alt,
+    caption,
+    width = 1600,
+    height = 900,
+    priority,
+  }: {
+    src: string;
+    alt: string;
+    caption?: string;
+    width?: number;
+    height?: number;
+    priority?: boolean;
+  }) => (
+    <figure className="my-8">
+      <div className="overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
+        <Image
+          src={src}
+          alt={alt}
+          width={width}
+          height={height}
+          priority={priority}
+          className="w-full h-auto"
+        />
+      </div>
+      {caption ? (
+        <figcaption className="mt-3 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+          {caption}
+        </figcaption>
+      ) : null}
+    </figure>
+  ),
 };
 
 // Pre-generate all known doc pages at build time
@@ -178,11 +277,38 @@ export default async function DocPage({ params }: Props) {
     notFound();
   }
 
-  // Prev/Next navigation
+  const toc = buildToc(doc.content);
+
+  // Prev/Next navigation (category-aware first)
   const allDocs = getAllDocs();
-  const currentIndex = allDocs.findIndex((d) => d.slug === slug);
-  const prevDoc = currentIndex > 0 ? allDocs[currentIndex - 1] : null;
-  const nextDoc = currentIndex < allDocs.length - 1 ? allDocs[currentIndex + 1] : null;
+  const normalizedCategory = doc.category?.trim() || undefined;
+  const inCategory = normalizedCategory ? allDocs.filter((d) => (d.category?.trim() || "") === normalizedCategory) : [];
+  const categoryDocs = inCategory.length ? [...inCategory].sort((a, b) => a.order - b.order) : [];
+  const categoryIndex = categoryDocs.findIndex((d) => d.slug === slug);
+
+  const globalIndex = allDocs.findIndex((d) => d.slug === slug);
+
+  const prevDoc =
+    categoryIndex >= 0
+      ? categoryIndex > 0
+        ? categoryDocs[categoryIndex - 1]
+        : globalIndex > 0
+          ? allDocs[globalIndex - 1]
+          : null
+      : globalIndex > 0
+        ? allDocs[globalIndex - 1]
+        : null;
+
+  const nextDoc =
+    categoryIndex >= 0
+      ? categoryIndex < categoryDocs.length - 1
+        ? categoryDocs[categoryIndex + 1]
+        : globalIndex < allDocs.length - 1
+          ? allDocs[globalIndex + 1]
+          : null
+      : globalIndex < allDocs.length - 1
+        ? allDocs[globalIndex + 1]
+        : null;
 
   // ── Article JSON-LD for each help doc ──
   const articleJsonLd = {
@@ -224,21 +350,90 @@ export default async function DocPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
       />
-      <div className="pb-6 border-b border-zinc-200 dark:border-zinc-800">
-        <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-3">
-          Guide #{doc.order}
-        </p>
-        <h1 className={cn(typography.pageTitle, "mb-4 bg-gradient-to-r from-zinc-900 to-zinc-500 dark:from-zinc-50 dark:to-zinc-500 bg-clip-text text-transparent")}>
-          {doc.title}
-        </h1>
-        <p className={cn(typography.bodyCopy, "text-base sm:text-lg font-medium max-w-3xl")}>
-          {doc.description}
-        </p>
+      <div className="pb-6 border-b border-zinc-200 dark:border-zinc-800 space-y-4">
+        <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-zinc-500 dark:text-zinc-400">
+          <Link
+            href="/help"
+            className="inline-flex items-center gap-2 rounded-xl px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900/40 transition-colors"
+          >
+            Help Center
+            <ChevronRight className="w-3.5 h-3.5 text-zinc-300 dark:text-zinc-700" />
+          </Link>
+          {normalizedCategory ? (
+            <Link
+              href={`/help/category/${categoryToSlug(normalizedCategory)}`}
+              className="inline-flex items-center gap-2 rounded-xl px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900/40 transition-colors"
+            >
+              {normalizedCategory}
+              <ChevronRight className="w-3.5 h-3.5 text-zinc-300 dark:text-zinc-700" />
+            </Link>
+          ) : null}
+          <span className="px-3 py-2">{doc.title}</span>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
+            Guide #{doc.order}
+          </p>
+          <h1
+            className={cn(
+              typography.pageTitle,
+              "bg-gradient-to-r from-zinc-900 to-zinc-500 dark:from-zinc-50 dark:to-zinc-500 bg-clip-text text-transparent",
+            )}
+          >
+            {doc.title}
+          </h1>
+          <p className={cn(typography.bodyCopy, "text-base sm:text-lg font-medium max-w-3xl")}>{doc.description}</p>
+          <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+            {normalizedCategory ? (
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
+                {normalizedCategory}
+              </span>
+            ) : null}
+            {typeof doc.estimatedMinutes === "number" ? (
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
+                {doc.estimatedMinutes} min read
+              </span>
+            ) : null}
+            {doc.dateModified ? (
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950">
+                Updated {doc.dateModified}
+              </span>
+            ) : null}
+          </div>
+        </div>
       </div>
 
-      {/* Markdown content rendered via MDXRemote with custom components */}
-      <div className={cn(typography.richContent, "max-w-3xl")}>
-        <MDXRemote source={doc.content} components={components as any} />
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_260px] gap-10">
+        {/* Markdown content rendered via MDXRemote with custom components */}
+        <div className={cn(typography.richContent, "max-w-3xl lg:max-w-none")}>
+          <MDXRemote source={doc.content} components={components as any} />
+        </div>
+
+        {/* Table of contents */}
+        {toc.length > 0 ? (
+          <aside className="hidden lg:block">
+            <div className="sticky top-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
+                On this page
+              </p>
+              <nav className="mt-3 space-y-2">
+                {toc.map((item) => (
+                  <a
+                    key={item.id}
+                    href={`#${item.id}`}
+                    className={cn(
+                      "block rounded-lg px-2 py-1.5 text-sm font-semibold text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-950/40 transition-colors",
+                      item.level === 3 && "pl-5 text-[13px] font-medium",
+                    )}
+                  >
+                    {item.title}
+                  </a>
+                ))}
+              </nav>
+            </div>
+          </aside>
+        ) : null}
       </div>
 
       {/* Prev/Next navigation */}
