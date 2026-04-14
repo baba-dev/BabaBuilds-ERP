@@ -2,11 +2,17 @@
 title: "Getting Started with BabaBuilds ERP"
 description: "A quick introduction to your ERP — what it does, how to log in, and how to set up your first profile."
 order: 1
+category: "Getting Started"
+tags: ["onboarding", "setup", "workspace"]
+estimatedMinutes: 6
+isFeatured: true
+icon: "Rocket"
+dateModified: "2026-04-14"
 ---
 
 # Getting Started with BabaBuilds ERP
 
-Welcome to **BabaBuilds ERP** — your all-in-one financial command center for agency owners. This guide will help you get set up in under 5 minutes.
+Welcome to **BabaBuilds ERP** — your all‑in‑one financial command center for modern agencies.\n+\n+<Callout type=\"tip\">If you’re setting up a new workspace, start here, then jump to <a href=\"/help/settings-guide\">Configuring Your Business Profile</a>.</Callout>
 
 ---
 
@@ -22,17 +28,25 @@ BabaBuilds ERP is a tool built for freelancers and agency owners to:
 
 ---
 
-## Step 1: Log In
+## 1) Log in
 
-1. Visit your ERP at **erp.bababuilds.com**
-2. Click **Sign in with Google**
-3. Use the Google account you wish to associate with this workspace
+<Steps>
+<Step title="Open the ERP">
+Visit **erp.bababuilds.com**.\n+\n<HelpImage src="/help/diagrams/erp_entrypoint.svg" alt="Entry points into BabaBuilds ERP" caption="You can start from the landing site or go straight to your ERP workspace." />
+</Step>
+<Step title="Sign in">
+Click **Sign in** and choose the account you want to associate with the workspace.
+</Step>
+<Step title="Confirm you’re in the right workspace">
+If you manage multiple brands/teams, make sure you’re using the correct workspace before adding clients and billing.
+</Step>
+</Steps>
 
 > Your workspace is isolated from all other users. No one else can see your data.
 
 ---
 
-## Step 2: Complete Your Business Profile
+## 2) Complete your business profile (required)
 
 After signing in for the first time, you will be taken to the **Settings Wizard**. This is the most important first step.
 
@@ -49,7 +63,7 @@ Click **Save Configuration** when done.
 
 ---
 
-## Step 3: Add Your First Client
+## 3) Add your first client
 
 Navigate to **Client CRM** in the sidebar. Click **Add New Client** and fill in:
 
@@ -60,12 +74,12 @@ Navigate to **Client CRM** in the sidebar. Click **Add New Client** and fill in:
 
 ---
 
-## Step 4: Generate Your First Invoice
+## 4) Generate your first invoice
 
 Go to **New Invoice** in the sidebar. Select your client, choose the billing month, add your services, and click **Generate Invoice**. Your PDF will be available for download and email delivery instantly.
 
 ---
 
-## Need Help?
+## If you get stuck
 
 If you run into any issues, reach out to our team at **admin@bababuilds.com** and we will get back to you within one business day.

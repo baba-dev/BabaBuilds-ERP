@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="440" viewBox="0 0 1200 440" role="img" aria-label="Invoice workflow diagram">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#EEF2FF"/>
+      <stop offset="1" stop-color="#ECFDF5"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F8FAFC"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0F172A" flood-opacity="0.12"/>
+    </filter>
+    <style>
+      .title{font:700 26px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;fill:#0F172A}
+      .sub{font:600 14px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;fill:#475569}
+      .chip{font:700 12px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;fill:#334155;letter-spacing:.08em}
+      .h{font:800 16px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;fill:#0F172A}
+      .p{font:600 13px ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;fill:#475569}
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="440" rx="28" fill="url(#bg)"/>
+  <rect x="28" y="28" width="1144" height="384" rx="24" fill="rgba(255,255,255,0.55)" stroke="rgba(15,23,42,0.08)"/>
+
+  <text x="64" y="86" class="title">Invoice workflow</text>
+  <text x="64" y="114" class="sub">From draft ’ PDF ’ delivery ’ payment ’ reconciliation.</text>
+
+  <!-- Nodes -->
+  <g filter="url(#shadow)">
+    <rect x="64" y="164" width="230" height="130" rx="20" fill="url(#card)" stroke="rgba(15,23,42,0.10)"/>
+    <text x="92" y="198" class="chip">STEP 1</text>
+    <text x="92" y="226" class="h">Create draft</text>
+    <text x="92" y="252" class="p">Client + billing period</text>
+    <text x="92" y="274" class="p">Line items + taxes</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="332" y="164" width="230" height="130" rx="20" fill="url(#card)" stroke="rgba(15,23,42,0.10)"/>
+    <text x="360" y="198" class="chip">STEP 2</text>
+    <text x="360" y="226" class="h">Generate PDF</text>
+    <text x="360" y="252" class="p">Invoice number assigned</text>
+    <text x="360" y="274" class="p">Theme + compliance blocks</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="600" y="164" width="230" height="130" rx="20" fill="url(#card)" stroke="rgba(15,23,42,0.10)"/>
+    <text x="628" y="198" class="chip">STEP 3</text>
+    <text x="628" y="226" class="h">Deliver</text>
+    <text x="628" y="252" class="p">Download or email</text>
+    <text x="628" y="274" class="p">Payment link (optional)</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="868" y="164" width="268" height="130" rx="20" fill="url(#card)" stroke="rgba(15,23,42,0.10)"/>
+    <text x="896" y="198" class="chip">STEP 4</text>
+    <text x="896" y="226" class="h">Get paid + reconcile</text>
+    <text x="896" y="252" class="p">Mark paid / capture webhooks</text>
+    <text x="896" y="274" class="p">Match bank statement entries</text>
+  </g>
+
+  <!-- Arrows -->
+  <g fill="none" stroke="#6366F1" stroke-opacity="0.9" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M294 229 H324"/>
+    <path d="M562 229 H592"/>
+    <path d="M830 229 H860"/>
+  </g>
+  <g fill="#6366F1">
+    <path d="M324 229 l-12 -8 v16 z"/>
+    <path d="M592 229 l-12 -8 v16 z"/>
+    <path d="M860 229 l-12 -8 v16 z"/>
+  </g>
+
+  <!-- Footer note -->
+  <text x="64" y="364" class="sub">Tip: Share public docs links with your team to standardize your billing operations.</text>
+</svg>

@@ -2,13 +2,18 @@
 title: "Generating & Sending Invoices"
 description: "Step-by-step guide to creating professional tax invoices, sending them by email, and downloading PDFs."
 order: 2
+category: "Invoicing"
+tags: ["invoice", "pdf", "email", "smtp", "numbering"]
+estimatedMinutes: 7
+isFeatured: true
+icon: "ReceiptText"
 ---
 
 # Generating & Sending Invoices
 
 BabaBuilds ERP generates legally compliant **Tax Invoices** (or **Export of Services** invoices for international clients) as beautifully formatted PDFs.
 
----
+<HelpImage src="/help/diagrams/invoice_workflow.svg" alt="Invoice workflow diagram" caption="From draft → PDF → email → payment link." />
 
 ## Before You Begin
 
@@ -51,10 +56,20 @@ Two designs are available (configurable in **Settings**):
 
 Click **Generate Invoice**. The system will:
 
-1. Assign a sequential invoice number (e.g., `INV/25-26/001`)
-2. Generate the PDF and save it to your workspace
-3. Embed a clickable **payment link** (if you have Razorpay or Stripe connected — PRO only)
-4. Save the record to your ledger
+<Steps>
+  <Step title="Assign a unique invoice number">
+    Example: `INV/25-26/001` (invoice 1 in Financial Year 2025–26).
+  </Step>
+  <Step title="Generate the PDF">
+    The PDF is generated and stored in your workspace for download and re-sending.
+  </Step>
+  <Step title="Embed a payment link (optional)">
+    If you connected Razorpay or Stripe, a clickable payment link appears in the PDF.
+  </Step>
+  <Step title="Post to your ledger">
+    The invoice is stored and contributes to revenue and receivables reporting.
+  </Step>
+</Steps>
 
 ---
 
@@ -62,7 +77,9 @@ Click **Generate Invoice**. The system will:
 
 Enable the **Send Invoice via Email** toggle before clicking Generate. The invoice PDF will be attached and sent to your client's email address using your configured SMTP server.
 
-> **Tip:** Configure your SMTP settings in **Settings → Email Server** to enable this feature.
+<Callout type="tip">
+  Configure SMTP in **Settings → Email Server** to enable this feature.
+</Callout>
 
 ---
 
