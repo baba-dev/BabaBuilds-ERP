@@ -34,7 +34,9 @@ export default function TeamSettings() {
           setPlanTier(data.planTier);
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.warn("Failed to load plan tier from settings", err);
+      });
   }, []);
 
   const isTeamPlan = planTier === "TEAM" || planTier === "ENTERPRISE"; // Safety fallback

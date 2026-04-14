@@ -87,7 +87,9 @@ export default function Dashboard() {
         setIslandsEnabled(Boolean(runtimeFlags.dashboardIslands));
       }
     };
-    loadFlags().catch(() => undefined);
+    loadFlags().catch((e) => {
+      console.warn("Failed to load runtime flags", e);
+    });
   }, []);
 
   useEffect(() => {
@@ -96,7 +98,9 @@ export default function Dashboard() {
       .then((d: { companyName?: string }) => {
         if (d.companyName) setOrgName(d.companyName);
       })
-      .catch(() => undefined);
+      .catch((e) => {
+        console.warn("Failed to load org name", e);
+      });
   }, []);
 
   const fetchDashboardData = async (fy: string) => {

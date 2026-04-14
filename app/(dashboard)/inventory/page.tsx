@@ -304,7 +304,7 @@ export default function InventoryHub() {
                     <tr key={p.id} className={`hover:bg-zinc-50/80 dark:hover:bg-zinc-900/50 transition-colors ${p.currentStock === 0 ? 'bg-rose-50/40 dark:bg-rose-500/5' : ''}`}>
                       {productColumns.map(col => (
                         <td key={col.id as string} className={col.className}>
-                          {col.cell ? col.cell(p) : (p as any)[col.accessor as any]}
+                          {col.cell ? col.cell(p) : col.accessor ? col.accessor(p) : null}
                         </td>
                       ))}
                     </tr>

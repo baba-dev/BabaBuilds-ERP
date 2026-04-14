@@ -70,7 +70,10 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSuccess }: Pr
           setTaxCodes(data);
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error("Failed to load tax codes", err);
+        toast.error("Failed to load tax codes. Please refresh.");
+      });
   }, []);
 
   const mappedNicCodeId = useMemo(() => {

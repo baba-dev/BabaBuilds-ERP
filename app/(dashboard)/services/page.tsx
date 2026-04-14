@@ -61,7 +61,10 @@ export default function ServiceCatalog() {
         if (d.shopSlug) setShopSlug(d.shopSlug);
         setPlanTier((d.planTier as PlanTier) || "FREE");
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.warn("Failed to load settings for services page", err);
+        toast.error("Failed to load workspace settings.");
+      });
   }, [fetchData]);
 
   const openAddDialog = () => {
