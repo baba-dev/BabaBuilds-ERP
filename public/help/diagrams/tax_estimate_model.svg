@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="540" viewBox="0 0 1200 540">
+  <defs>
+    <style>
+      .bg { fill: #0b1220; }
+      .card { fill: #0f1a2e; stroke: #22314f; stroke-width: 2; }
+      .muted { fill: #9fb2d6; font: 600 18px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+      .title { fill: #e7efff; font: 800 30px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+      .label { fill: #cfe0ff; font: 800 18px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; letter-spacing: .08em; text-transform: uppercase; }
+      .mono { fill: #e7efff; font: 700 18px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+      .pill { fill: #122443; stroke: #2a3a5c; stroke-width: 2; }
+      .accent { fill: #7aa7ff; }
+      .good { fill: #34d399; }
+      .warn { fill: #fbbf24; }
+      .line { stroke: #2a3a5c; stroke-width: 3; fill: none; }
+      .arrow { stroke: #7aa7ff; stroke-width: 3; fill: none; marker-end: url(#arrowHead); }
+    </style>
+    <marker id="arrowHead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#7aa7ff"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="540" rx="28"/>
+
+  <text class="title" x="60" y="90">Tax estimate model (high-level)</text>
+  <text class="muted" x="60" y="122">How the dashboard KPI is derived from your ledger inputs.</text>
+
+  <rect class="card" x="60" y="170" width="360" height="140" rx="20"/>
+  <text class="label" x="90" y="208">Revenue</text>
+  <text class="muted" x="90" y="240">Paid invoices (realized)</text>
+  <text class="mono" x="90" y="276">£ invoices_paid</text>
+
+  <rect class="card" x="60" y="340" width="360" height="140" rx="20"/>
+  <text class="label" x="90" y="378">Expenses</text>
+  <text class="muted" x="90" y="410">Logged business expenses</text>
+  <text class="mono" x="90" y="446">£ expenses</text>
+
+  <path class="arrow" d="M 420 240 C 520 240, 520 240, 620 240"/>
+  <path class="arrow" d="M 420 410 C 520 410, 520 410, 620 300"/>
+
+  <rect class="card" x="620" y="210" width="520" height="240" rx="24"/>
+  <text class="label" x="650" y="248">Taxable income</text>
+  <text class="muted" x="650" y="282">Computed</text>
+
+  <rect class="pill" x="650" y="310" width="460" height="56" rx="18"/>
+  <text class="mono" x="680" y="347">Taxable = Revenue  Expenses  Deductions</text>
+
+  <rect class="pill" x="650" y="380" width="460" height="56" rx="18"/>
+  <text class="mono" x="680" y="417">Estimated tax = Taxable × Rate</text>
+
+  <circle cx="1120" cy="240" r="8" class="good"/>
+  <text class="muted" x="650" y="470">Note: This is an estimate; confirm with your CA for filing.</text>
+</svg>

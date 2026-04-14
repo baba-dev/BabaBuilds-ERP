@@ -13,6 +13,7 @@ export type SidebarItemId =
   | "ai_reconciliation"
   | "invoices_and_earnings"
   | "ca_compliance"
+  | "help_center"
   | "settings";
 
 export type UserPreferences = {
@@ -42,6 +43,7 @@ const ALLOWED_IDS = new Set<SidebarItemId>([
   "ai_reconciliation",
   "invoices_and_earnings",
   "ca_compliance",
+  "help_center",
   "settings",
 ]);
 

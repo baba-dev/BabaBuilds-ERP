@@ -2,6 +2,10 @@
 title: "Managing Your Client CRM"
 description: "How to add, edit, and organize your clients, and understand what each client field means on your invoices."
 order: 3
+category: "Clients"
+tags: ["CRM", "clients", "export", "GSTIN", "billing"]
+estimatedMinutes: 7
+isFeatured: true
 ---
 
 # Managing Your Client CRM
@@ -12,9 +16,21 @@ The **Client CRM** is the single source of truth for all your client relationshi
 
 ## Adding a New Client
 
-1. Navigate to **Client CRM** in the sidebar
-2. Click **Add New Client**
-3. Fill in the required details:
+<Callout type="tip">
+Keep client data clean. Your invoices auto-fill from CRM, so a correct address/country/tax ID prevents rework later.
+</Callout>
+
+<Steps>
+  <Step title="Open Client CRM">
+    Navigate to <strong>Client CRM</strong> in the sidebar.
+  </Step>
+  <Step title="Create a new client">
+    Click <strong>Add New Client</strong>.
+  </Step>
+  <Step title="Fill required fields">
+    Use the table below as a quick reference.
+  </Step>
+</Steps>
 
 | Field | Required | Notes |
 |---|---|---|
@@ -36,6 +52,12 @@ When you toggle **Export Client** on:
 - A statutory declaration regarding international supply is added to the invoice footer
 
 Leave this off for Indian domestic clients.
+
+<HelpImage
+  src="/help/diagrams/clients_export_vs_domestic.svg"
+  alt="Diagram comparing export vs domestic client invoicing behavior"
+  caption="Export vs domestic: what changes on the invoice when you enable “Export Client”."
+/>
 
 ---
 

@@ -2,11 +2,16 @@
 title: "Setting Up Retainers & MRR"
 description: "How to create recurring retainer contracts and track your Monthly Recurring Revenue (MRR) on the dashboard."
 order: 4
+category: "Retainers"
+tags: ["retainers", "mrr", "arr", "recurring", "billing"]
+icon: "Box"
+estimatedMinutes: 8
+isFeatured: true
 ---
 
 # Setting Up Retainers & MRR
 
-**Retainers** are recurring billing agreements with clients. When you set up a retainer, BabaBuilds ERP tracks it as part of your **Monthly Recurring Revenue (MRR)** — the most important number for agency health.
+**Retainers** are recurring billing agreements with clients. BabaBuilds ERP tracks them as part of your **Monthly Recurring Revenue (MRR)** — the clearest signal of agency stability.
 
 ---
 
@@ -16,11 +21,19 @@ MRR (Monthly Recurring Revenue) is the total predictable revenue you receive eac
 
 ---
 
-## Creating a Retainer
+## Create a retainer
 
-1. Navigate to **Retainers Hub** in the sidebar
-2. Click **New Retainer**
-3. Fill in the details:
+<Steps>
+  <Step title="Open Retainers Hub">
+    Navigate to <strong>Retainers Hub</strong> in the sidebar.\n\nTip: You can also ask BabaBot: <em>\"Show me all active retainers\"</em>.
+  </Step>
+  <Step title="Create a new retainer">
+    Click <strong>New Retainer</strong>.
+  </Step>
+  <Step title="Enter the contract details">
+    Fill in the details below.
+  </Step>
+</Steps>
 
 | Field | Description |
 |---|---|
@@ -30,9 +43,7 @@ MRR (Monthly Recurring Revenue) is the total predictable revenue you receive eac
 | **Frequency** | Monthly, Quarterly, or Annually |
 | **Next Billing Date** | When the retainer kicks in |
 
-4. Click **Create Retainer**
-
-The retainer is now **ACTIVE** and will appear in your MRR dashboard widget.
+Click <strong>Create Retainer</strong>. The retainer becomes <strong>ACTIVE</strong> and appears in your MRR widget.
 
 ---
 
@@ -56,13 +67,13 @@ On the Dashboard's **Retainer Radar** widget, each retainer shows a health indic
 
 ---
 
-## Pausing or Cancelling a Retainer
+## Pause or cancel a retainer
 
 From the Retainers Hub, click the status dropdown on any retainer to change it to **Paused** or **Cancelled**. A paused retainer is excluded from MRR calculations.
 
 ---
 
-## Generating an Invoice from a Retainer
+## Generate an invoice from a retainer
 
 Retainers do not auto-generate invoices. When the billing date arrives:
 

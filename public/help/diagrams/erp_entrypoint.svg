@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-label="Entry points into BabaBuilds ERP">
+  <defs>
+    <style>
+      .bg { fill: #ffffff; }
+      .card { fill: #f8fafc; stroke: #e2e8f0; stroke-width: 2; }
+      .title { font: 700 28px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill: #0f172a; }
+      .text { font: 600 18px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill: #334155; }
+      .muted { font: 500 16px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill: #64748b; }
+      .pill { fill: #eef2ff; stroke: #c7d2fe; stroke-width: 2; }
+      .pillText { font: 700 14px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; fill: #4338ca; letter-spacing: 0.08em; }
+      .arrow { stroke: #6366f1; stroke-width: 4; fill: none; }
+      .arrowHead { fill: #6366f1; }
+    </style>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1200" height="420" />
+
+  <text x="60" y="70" class="title">How users enter BabaBuilds ERP</text>
+  <text x="60" y="105" class="muted">Both paths take you into the same workspace experience.</text>
+
+  <!-- Left: Landing -->
+  <rect class="card" x="60" y="150" width="380" height="210" rx="20" />
+  <rect class="pill" x="90" y="180" width="140" height="36" rx="18" />
+  <text x="104" y="204" class="pillText">PUBLIC</text>
+  <text x="90" y="255" class="text">Landing site</text>
+  <text x="90" y="285" class="muted">Learn features " Pricing " Docs</text>
+  <text x="90" y="315" class="muted">Then click Go to dashboard</text>
+
+  <!-- Right: Direct -->
+  <rect class="card" x="760" y="150" width="380" height="210" rx="20" />
+  <rect class="pill" x="790" y="180" width="160" height="36" rx="18" />
+  <text x="804" y="204" class="pillText">DIRECT</text>
+  <text x="790" y="255" class="text">ERP sign-in</text>
+  <text x="790" y="285" class="muted">Go straight to invoices, CRM, etc.</text>
+  <text x="790" y="315" class="muted">Login ’ workspace ’ dashboard</text>
+
+  <!-- Center: Workspace -->
+  <rect class="card" x="470" y="170" width="260" height="170" rx="22" />
+  <text x="505" y="235" class="text">Workspace</text>
+  <text x="505" y="268" class="muted">Your data, team, settings</text>
+  <text x="505" y="301" class="muted">Invoices " Clients " Tax</text>
+
+  <!-- Arrows -->
+  <path class="arrow" d="M440 255 C470 255, 460 255, 470 255" />
+  <polygon class="arrowHead" points="468,255 452,246 452,264" />
+
+  <path class="arrow" d="M760 255 C730 255, 740 255, 730 255" />
+  <polygon class="arrowHead" points="732,255 748,246 748,264" />
+</svg>
+
