@@ -158,23 +158,28 @@ export default function RetainersHub() {
     try {
       if (view === 'list') {
         const res = await fetch('/api/retainers');
-        const data = await res.json();
-        setRetainers(Array.isArray(data) ? data : []);
+        const payload = await res.json().catch(() => null);
+        if (!res.ok) {
+          throw new Error((payload as any)?.error || "Failed to load retainers");
+        }
+        setRetainers(Array.isArray(payload) ? payload : []);
       } else {
         const [clientRes, catRes] = await Promise.all([
           fetch('/api/clients?limit=100'),
           fetch('/api/services?limit=100')
         ]);
-        const clientData = await clientRes.json();
-        const catData = await catRes.json();
-        const parsedClients = Array.isArray(clientData) ? clientData : clientData?.data;
-        const parsedCatalog = Array.isArray(catData) ? catData : catData?.data;
+        const clientData = await clientRes.json().catch(() => null);
+        const catData = await catRes.json().catch(() => null);
+        if (!clientRes.ok) throw new Error((clientData as any)?.error || "Failed to load clients");
+        if (!catRes.ok) throw new Error((catData as any)?.error || "Failed to load services");
+        const parsedClients = Array.isArray(clientData) ? clientData : (clientData as any)?.data;
+        const parsedCatalog = Array.isArray(catData) ? catData : (catData as any)?.data;
         setClients(Array.isArray(parsedClients) ? parsedClients : []);
         setCatalog(Array.isArray(parsedCatalog) ? parsedCatalog : []);
       }
-    } catch {
-      console.error("Failed to load retainer data");
-      toast.error("Failed to load retainer configurations. Please refresh.");
+    } catch (err: unknown) {
+      console.error("Failed to load retainer data", err);
+      toast.error(err instanceof Error ? err.message : "Failed to load retainer configurations. Please refresh.");
     } finally {
       setIsLoading(false);
     }

@@ -103,16 +103,20 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
         }),
       });
 
-      if (res.ok) {
-        // Optimistic UI Update
-        setProposal({ ...proposal, status: 'REVISION_REQUESTED' });
-        setIsDeclineModalOpen(false);
-        toast.success("Feedback sent! We'll review and get back to you shortly.");
-      } else {
-        toast.error("Failed to submit feedback. Please try again.");
+      const payload = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        const message = (payload as any)?.error || (payload as any)?.message || "Failed to submit feedback. Please try again.";
+        throw new Error(message);
       }
-    } catch (error) {
-      toast.error("A network error occurred.");
+
+      // Optimistic UI Update
+      setProposal({ ...proposal, status: 'REVISION_REQUESTED' });
+      setIsDeclineModalOpen(false);
+      toast.success("Feedback sent! We'll review and get back to you shortly.");
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "A network error occurred.";
+      toast.error(msg);
     } finally {
       setIsSubmittingDecline(false);
     }

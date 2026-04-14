@@ -73,7 +73,7 @@ async function revalidateCorePages() {
       try {
         await fetch(url, { cache: 'reload' });
       } catch {
-        // Silently ignore failed refresh attempts.
+        // Service workers can be offline / backgrounded. Avoid noisy logs/UX.
       }
     }),
   );

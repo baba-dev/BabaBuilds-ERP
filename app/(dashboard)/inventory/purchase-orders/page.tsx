@@ -25,7 +25,10 @@ export default function PurchaseOrdersHub() {
     setIsLoading(true);
     try {
       const res = await fetch("/api/inventory/purchase-orders");
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error((data as any)?.error || "Failed to load Purchase Orders");
+      }
       setPos(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
