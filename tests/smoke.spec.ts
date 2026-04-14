@@ -1,19 +1,66 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Smoke Test', () => {
-  test('should load the homepage and check for key elements', async ({ page }) => {
-    // Navigate to the homepage
-    await page.goto('/');
+  test('public landing loads without console errors', async ({ page }) => {
+    const consoleMessages: string[] = [];
+    const pageErrors: string[] = [];
+    const failedRequests: string[] = [];
 
-    // Check if the title exists (adjust based on your app's actual title)
-    // For now, we'll check for "BabaBuilds" or "ERP" as a placeholder
-    const content = await page.textContent('body');
-    // We expect the app to load something. 
-    // Since we don't know the exact content yet, we'll check if the body is not empty.
-    expect(content?.length).toBeGreaterThan(0);
-    
-    // Check if common elements are present, like a login button or heading
-    // This is a minimal smoke test.
-    console.log('Successfully loaded homepage');
+    page.on('console', (msg) => {
+      const type = msg.type();
+      if (type === 'error') consoleMessages.push(msg.text());
+    });
+    page.on('pageerror', (err) => pageErrors.push(err.message));
+    page.on('requestfailed', (req) => {
+      const failure = req.failure();
+      failedRequests.push(`${req.method()} ${req.url()} ${failure?.errorText ?? ''}`.trim());
+    });
+
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('body')).toBeVisible();
+    await expect(page).toHaveTitle(/BabaBuilds|ERP/i);
+
+    // Allow any late client-side errors to surface
+    await page.waitForTimeout(500);
+
+    expect(pageErrors, `Page errors:\n${pageErrors.join('\n')}`).toEqual([]);
+    expect(consoleMessages, `Console errors:\n${consoleMessages.join('\n')}`).toEqual([]);
+    expect(failedRequests, `Failed requests:\n${failedRequests.join('\n')}`).toEqual([]);
+  });
+
+  test('can reach login page', async ({ page }) => {
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('body')).toBeVisible();
+  });
+
+  test('demo auth endpoint works', async ({ request }) => {
+    const res = await request.post('/api/auth/demo', { data: {} });
+    expect(res.ok()).toBeTruthy();
+    const data = await res.json();
+    expect(data).toHaveProperty('email');
+    expect(data).toHaveProperty('password');
+  });
+
+  test('demo account can sign in via UI', async ({ page }) => {
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('body')).toBeVisible();
+
+    // Expand demo section and click the CTA that provisions a demo account and calls next-auth signIn("demo-login").
+    await expect(page.getByText(/bababuilds erp/i)).toBeVisible();
+
+    const demoSummary = page.getByText(/need a sandbox instead\\?/i).first();
+    await demoSummary.scrollIntoViewIfNeeded();
+    await demoSummary.click();
+
+    const demoButton = page.getByRole('button', { name: /try interactive demo|provisioning|demo/i }).first();
+    await demoButton.click();
+
+    // Post-login routes can vary; allow `/dashboard` or `/setup` (if workspace context is missing).
+    await page.waitForURL(
+      (url) =>
+        url.origin === 'http://localhost:3000' &&
+        (url.pathname.startsWith('/dashboard') || url.pathname.startsWith('/setup')),
+      { timeout: 20000 }
+    );
   });
 });

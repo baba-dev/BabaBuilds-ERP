@@ -104,7 +104,10 @@ export async function POST(request: Request) {
       }
     });
 
-    if (recentDemos > 10) {
+    const configuredThreshold = Number(process.env.DEMO_CIRCUIT_BREAKER_THRESHOLD ?? "10");
+    const threshold = Number.isFinite(configuredThreshold) ? configuredThreshold : 10;
+
+    if (recentDemos > threshold) {
       return NextResponse.json({ error: "High volume. Try in 15 mins." }, { status: 429 });
     }
 
