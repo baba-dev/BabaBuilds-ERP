@@ -14,6 +14,11 @@ async function main() {
     recordVideo: { dir: artifactsDir },
   });
   const page = await context.newPage();
+  page.on("console", (msg) => {
+    // Keep the smoke test resilient; log for debugging only.
+    // eslint-disable-next-line no-console
+    console.log(`[browser:${msg.type()}] ${msg.text()}`);
+  });
 
   // /help landing
   await page.goto(url("/help"), { waitUntil: "domcontentloaded" });
@@ -24,11 +29,12 @@ async function main() {
   await page.getByLabel("Search Help Center articles").fill("invoice");
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${artifactsDir}/help_search_dropdown.png`, fullPage: false });
-  const firstResult = page.locator('a[href^="/help/"]').first();
-  await firstResult.click();
+  // Click a deterministic result (avoids picking /help/category/*)
+  const resultLink = page.getByRole("link", { name: /Generating & Sending Invoices/i }).first();
+  await resultLink.click();
 
   // article page
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("domcontentloaded");
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${artifactsDir}/help_article.png`, fullPage: true });
 
@@ -38,6 +44,14 @@ async function main() {
     await tocLink.click();
     await page.waitForTimeout(300);
     await page.screenshot({ path: `${artifactsDir}/help_article_after_toc_click.png`, fullPage: false });
+  }
+
+  // diagram visible
+  const diagram = page.locator('img[src*="/help/diagrams/"], img[alt*="workflow"]').first();
+  if (await diagram.count()) {
+    await diagram.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: `${artifactsDir}/help_article_diagram.png`, fullPage: false });
   }
 
   // category page

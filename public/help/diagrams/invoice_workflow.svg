@@ -24,7 +24,7 @@
   <rect x="28" y="28" width="1144" height="384" rx="24" fill="rgba(255,255,255,0.55)" stroke="rgba(15,23,42,0.08)"/>
 
   <text x="64" y="86" class="title">Invoice workflow</text>
-  <text x="64" y="114" class="sub">From draft ’ PDF ’ delivery ’ payment ’ reconciliation.</text>
+  <text x="64" y="114" class="sub">From draft ? PDF ? delivery ? payment ? reconciliation.</text>
 
   <!-- Nodes -->
   <g filter="url(#shadow)">
