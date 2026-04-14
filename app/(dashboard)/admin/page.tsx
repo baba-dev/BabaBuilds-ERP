@@ -419,7 +419,7 @@ export default function SuperAdminPortal() {
           <button
             key={tName}
             onClick={() => setTab(tName as "OVERVIEW" | "ACCOUNTS" | "DIAGNOSTICS" | "SECURITY" | "MAINTENANCE" | "BACKUP" | "LOGS")}
-            className={`px-4 py-2 text-sm font-bold uppercase tracking-widest rounded-t-lg transition-all flex items-center gap-1.5 ${
+            className={`px-4 py-2 min-h-[44px] md:min-h-0 text-sm font-bold uppercase tracking-widest rounded-t-lg transition-all flex items-center gap-1.5 ${
               tab === tName 
               ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-md" 
               : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100"

@@ -54,6 +54,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const pdfFilename = invoice.pdfPath.split('/').pop() || `${invoice.invoiceNumber.replace(/\//g, '_')}.pdf`;
 
     await sendEmail({
+      route: 'user',
       profile,
       to: invoice.client.email,
       subject: `Invoice ${invoice.invoiceNumber} from ${profile.companyName}`,

@@ -39,7 +39,22 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
     companyName: "",
     proprietorName: "",
     email: "",
-    address: ""
+    address: "",
+    smtpHost: "",
+    smtpPort: 465,
+    smtpUser: "",
+    smtpPassword: "",
+    smtpFromEmail: "",
+    groqApiKey: "",
+    defaultGateway: "RAZORPAY",
+    razorpayKeyId: "",
+    razorpayKeySecret: "",
+    stripePublishableKey: "",
+    stripeSecretKey: "",
+    shopEnabled: false,
+    shopSlug: "",
+    shopTagline: "",
+    shopAccentColor: "#6366f1"
   });
 
   // Smart Suggestion Logic
@@ -112,14 +127,14 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
       {/* PROGRESS TRACKER */}
       <div className="max-w-md w-full mb-8 space-y-4">
         <div className="flex justify-between items-center px-2">
-          {[1, 2, 3, 4].map((i) => (
+          {[1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className={`h-1.5 flex-1 mx-1 rounded-full transition-all duration-500 ${step >= i ? "bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.4)]" : "bg-zinc-200 dark:bg-zinc-800"}`} />
           ))}
         </div>
         <p className="text-center text-xs uppercase font-black tracking-widest text-zinc-400 dark:text-zinc-600">
           {t('step_indicator', { 
             current: step, 
-            name: step === 1 ? t('step_geo') : step === 2 ? t('step_finance') : step === 3 ? t('step_compliance') : t('step_identity')
+            name: step === 1 ? t('step_geo') : step === 2 ? t('step_finance') : step === 3 ? t('step_compliance') : step === 4 ? t('step_identity') : step === 5 ? t('step_integrations') : t('step_shop')
           })}
         </p>
       </div>
@@ -304,6 +319,111 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
             </div>
           )}
 
+          {/* STEP 5: INTEGRATIONS */}
+          {step === 5 && (
+            <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+              <CardHeader className="text-center pb-8 border-b dark:border-zinc-800">
+                <div className="mx-auto w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center mb-4">
+                  <Zap className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <CardTitle className="text-2xl font-black dark:text-zinc-50">{t('step5_title')}</CardTitle>
+                <CardDescription className="dark:text-zinc-400">{t('step5_desc')}</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-8 space-y-6">
+                
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2 dark:text-zinc-300">
+                      {t('api_groq_label')}
+                      <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-xs text-indigo-500 hover:underline">{t('groq_link_text')}</a>
+                    </Label>
+                    <Input value={form.groqApiKey} onChange={e => setForm({...form, groqApiKey: e.target.value})} placeholder={t('api_groq_ph')} className="h-12 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('api_groq_tooltip')}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <Label className="dark:text-zinc-300">{t('gateway_label')}</Label>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 -mt-2 mb-2">{t('payment_tooltip')}</p>
+                  <Select value={form.defaultGateway} onValueChange={val => setForm({...form, defaultGateway: val})}>
+                    <SelectTrigger className="h-12 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
+                      <SelectItem value="RAZORPAY">{t('razorpay_label')}</SelectItem>
+                      <SelectItem value="STRIPE">{t('stripe_label')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {form.defaultGateway === 'RAZORPAY' ? (
+                    <div className="grid grid-cols-2 gap-4 p-4 border rounded-md dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
+                       <div className="col-span-2 flex justify-end"><a href="https://dashboard.razorpay.com/app/keys" target="_blank" rel="noreferrer" className="text-xs text-indigo-500 hover:underline">{t('razorpay_link_text')}</a></div>
+                       <Input value={form.razorpayKeyId} onChange={e => setForm({...form, razorpayKeyId: e.target.value})} placeholder="Key ID" className="dark:bg-zinc-950" />
+                       <Input type="password" value={form.razorpayKeySecret} onChange={e => setForm({...form, razorpayKeySecret: e.target.value})} placeholder="Key Secret" className="dark:bg-zinc-950" />
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4 p-4 border rounded-md dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
+                       <div className="col-span-2 flex justify-end"><a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noreferrer" className="text-xs text-indigo-500 hover:underline">{t('stripe_link_text')}</a></div>
+                       <Input value={form.stripePublishableKey} onChange={e => setForm({...form, stripePublishableKey: e.target.value})} placeholder="Publishable Key" className="dark:bg-zinc-950" />
+                       <Input type="password" value={form.stripeSecretKey} onChange={e => setForm({...form, stripeSecretKey: e.target.value})} placeholder="Secret Key" className="dark:bg-zinc-950" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <Label className="dark:text-zinc-300">SMTP Email Server (Optional)</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input value={form.smtpHost} onChange={e => setForm({...form, smtpHost: e.target.value})} placeholder={t('smtp_ph_host')} className="dark:bg-zinc-950" />
+                    <Input type="number" value={form.smtpPort} onChange={e => setForm({...form, smtpPort: parseInt(e.target.value) || 465})} placeholder="465" className="dark:bg-zinc-950" />
+                    <Input value={form.smtpUser} onChange={e => setForm({...form, smtpUser: e.target.value})} placeholder="User" className="dark:bg-zinc-950" />
+                    <Input type="password" value={form.smtpPassword} onChange={e => setForm({...form, smtpPassword: e.target.value})} placeholder="Password" className="dark:bg-zinc-950" />
+                    <Input value={form.smtpFromEmail} onChange={e => setForm({...form, smtpFromEmail: e.target.value})} placeholder="from@acme.com" className="col-span-2 dark:bg-zinc-950" />
+                  </div>
+                </div>
+
+              </CardContent>
+            </div>
+          )}
+
+          {/* STEP 6: STORE / SHOP */}
+          {step === 6 && (
+            <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+              <CardHeader className="text-center pb-8 border-b dark:border-zinc-800">
+                <div className="mx-auto w-12 h-12 bg-pink-100 dark:bg-pink-900/30 rounded-xl flex items-center justify-center mb-4">
+                   <Globe className="w-6 h-6 text-pink-600 dark:text-pink-400" />
+                </div>
+                <CardTitle className="text-2xl font-black dark:text-zinc-50">{t('step6_title')}</CardTitle>
+                <CardDescription className="dark:text-zinc-400">{t('step6_desc')}</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-8 space-y-6">
+                 <div className="flex items-center justify-between p-4 border rounded-xl dark:border-zinc-800">
+                   <Label className="text-base font-bold dark:text-zinc-200">{t('enable_shop')}</Label>
+                   <div className="flex items-center gap-2">
+                     <input type="checkbox" checked={form.shopEnabled} onChange={e => setForm({...form, shopEnabled: e.target.checked})} className="w-5 h-5 accent-indigo-600" />
+                   </div>
+                 </div>
+                 {form.shopEnabled && (
+                   <div className="space-y-4 animate-in fade-in zoom-in-95">
+                     <div className="space-y-2">
+                       <Label className="dark:text-zinc-300">{t('shop_slug')}</Label>
+                       <div className="flex items-center gap-2">
+                         <span className="text-zinc-500 text-sm">https://erp.com/store/</span>
+                         <Input value={form.shopSlug} onChange={e => setForm({...form, shopSlug: e.target.value})} placeholder={t('shop_slug_ph')} className="flex-1 dark:bg-zinc-950" />
+                       </div>
+                     </div>
+                     <div className="space-y-2">
+                       <Label className="dark:text-zinc-300">{t('shop_tagline')}</Label>
+                       <Input value={form.shopTagline} onChange={e => setForm({...form, shopTagline: e.target.value})} placeholder="Welcome to our store!" className="dark:bg-zinc-950" />
+                     </div>
+                     <div className="space-y-2">
+                       <Label className="dark:text-zinc-300">{t('shop_color')}</Label>
+                       <Input type="color" value={form.shopAccentColor} onChange={e => setForm({...form, shopAccentColor: e.target.value})} className="w-full h-12 p-1 dark:bg-zinc-950" />
+                     </div>
+                   </div>
+                 )}
+              </CardContent>
+            </div>
+          )}
+
           <CardFooter className="bg-zinc-50 dark:bg-zinc-950/50 p-6 border-t dark:border-zinc-800 flex justify-between gap-4">
             <Button 
               variant="ghost" 
@@ -314,7 +434,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
               <ArrowLeft className="w-4 h-4 mr-2" /> {t('back')}
             </Button>
             
-            {step < 4 ? (
+            {step < 6 ? (
               <Button onClick={nextStep} className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[120px]">
                 {t('continue')} <ArrowRight className="w-4 h-4 ml-2" />
               </Button>

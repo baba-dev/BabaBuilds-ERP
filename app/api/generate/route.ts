@@ -569,35 +569,19 @@ export async function POST(request: Request) {
       } else if (!profile.smtpHost || !profile.smtpUser || !profile.smtpPassword) {
         emailStatus = "Failed: SMTP Server not configured in Settings.";
       } else {
-        const safeIp = await resolveSafeIp(profile.smtpHost);
-
-        if (!safeIp) {
-          emailStatus = "Failed: Invalid or internal SMTP Host blocked by security policy.";
-          console.error(`Blocked SSRF attempt in SMTP configuration: ${profile.smtpHost}`);
-        } else {
-          try {
-            const transporter = nodemailer.createTransport({
-              host: safeIp,
-              port: profile.smtpPort || 587,
-              secure: profile.smtpPort === 465,
-              tls: { servername: profile.smtpHost },
-              auth: { user: profile.smtpUser, pass: getRuntimeSmtpPassword(profile.smtpPassword) },
-            });
-
-            const mailOptions = {
-              from: `"${profile.companyName}" <${profile.smtpFromEmail || profile.smtpUser}>`,
-              to: client.email,
-              subject: `Invoice ${currentInvoiceNumber} from ${profile.companyName}`,
-              text: `Dear ${client.name},\n\nPlease find attached the invoice ${currentInvoiceNumber} for the billing month of ${billingMonth}.\n\nTotal Amount Billed: ${baseCurrency} ${formattedTotal}\n\nThank you for your business.\n\nBest Regards,\n${profile.companyName}`,
-              attachments: [{ filename: finalPdfFilename, path: finalPdfPath }],
-            };
-
-            await transporter.sendMail(mailOptions);
-            emailStatus = "Success";
-          } catch (emailErr: any) {
-            console.error("Email Error:", emailErr);
-            emailStatus = `Failed: ${emailErr.message}`;
-          }
+        try {
+          await sendEmail({
+            route: 'user',
+            profile,
+            to: client.email,
+            subject: `Invoice ${currentInvoiceNumber} from ${profile.companyName}`,
+            text: `Dear ${client.name},\n\nPlease find attached the invoice ${currentInvoiceNumber} for the billing month of ${billingMonth}.\n\nTotal Amount Billed: ${baseCurrency} ${formattedTotal}\n\nThank you for your business.\n\nBest Regards,\n${profile.companyName}`,
+            attachments: [{ filename: finalPdfFilename, path: finalPdfPath }],
+          });
+          emailStatus = "Success";
+        } catch (emailErr: any) {
+          console.error("Email Error:", emailErr);
+          emailStatus = `Failed: ${emailErr.message}`;
         }
       }
     }

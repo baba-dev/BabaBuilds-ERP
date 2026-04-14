@@ -111,6 +111,24 @@ function buildPushAndInAppContent(
         body: `${d.buyerName} order changed from ${d.oldStatus} to ${d.newStatus}`,
         actionUrl: '/shop',
       };
+    case 'RETAINER_CREATED':
+      return {
+        title: `📋 New Retainer Created`,
+        body: `A new retainer for ${d.serviceName} was created for ${d.clientName}`,
+        actionUrl: '/retainers',
+      };
+    case 'PROPOSAL_ACCEPTED':
+      return {
+        title: `🎉 Proposal Accepted`,
+        body: `${d.clientName} has accepted Proposal ${d.proposalNo}`,
+        actionUrl: '/proposals',
+      };
+    case 'SETTINGS_UPDATED':
+      return {
+        title: `⚙️ Settings Updated`,
+        body: `${d.section} settings were updated by ${d.updatedBy}`,
+        actionUrl: '/settings',
+      };
     default:
       return { title: 'BabaBuilds ERP', body: 'You have a new notification', actionUrl: '/dashboard' };
   }
@@ -165,14 +183,57 @@ export async function dispatchNotification(payload: NotificationPayload): Promis
           }
 
           // ── 4b. EMAIL ────────────────────────────────────────────────────
-          if (user.notifyEmail && user.transactionalAlerts && profile?.smtpHost && user.email) {
-            await sendEmail({
-              profile,
-              to: user.email,
-              subject,
-              html: emailHtml,
-              text: emailText,
-            }).catch((err) => console.error('[notify] email failed:', err));
+          if (user.notifyEmail && user.transactionalAlerts && user.email) {
+            
+            // Events that are sent via the user's SMTP settings.
+            // Even though these notify the workspace owner, they are "transactional" in nature.
+            // System events relate to infra/admin (invites, security, settings, billing).
+            const isSystemEvent = [
+              'CLIENT_ADDED', 'SERVICE_CREATED', 'RENEWAL_ALERT', 
+              'DEADLINE_ALERT', 'TAX_ALERT', 'SHOP_ORDER_CREATED', 
+              'SETTINGS_UPDATED', 'RETAINER_CREATED', 'PROPOSAL_ACCEPTED'
+            ].includes(event);
+            
+            const route = isSystemEvent ? 'system' : 'user';
+
+            // For user routes, profile SMTP is required.
+            if (route === 'user' && (!profile || !profile.smtpHost)) {
+              console.warn(`[notify] Skipped email for event ${event}: User SMTP not configured.`);
+              // Create an in-app notification to warn the user about missing SMTP setup.
+              await prisma.inAppNotification.create({
+                data: {
+                  userId: user.id,
+                  workspaceId,
+                  eventType: 'SETTINGS_UPDATED',
+                  title: '⚠️ Email Delivery Failed',
+                  body: 'Please configure your SMTP settings to receive this alert.',
+                  actionUrl: '/settings',
+                },
+              }).catch(() => null);
+            } else {
+              await sendEmail({
+                route,
+                profile: profile ?? null,
+                to: user.email,
+                subject,
+                html: emailHtml,
+                text: emailText,
+              }).catch((err) => {
+                console.error(`[notify] email failed to route ${route}:`, err);
+                if (route === 'system') {
+                  prisma.inAppNotification.create({
+                    data: {
+                      userId: user.id,
+                      workspaceId,
+                      eventType: 'SETTINGS_UPDATED',
+                      title: '⚠️ System Email Failed',
+                      body: 'The server could not dispatch a critical alert. Contact support.',
+                      actionUrl: '/settings',
+                    },
+                  }).catch(() => null);
+                }
+              });
+            }
           }
 
           // ── 4c. PUSH ─────────────────────────────────────────────────────

@@ -14,6 +14,25 @@ type SetupPayload = {
   proprietorName?: string;
   email?: string;
   address?: string;
+  
+  smtpHost?: string;
+  smtpPort?: number;
+  smtpUser?: string;
+  smtpPassword?: string;
+  smtpFromEmail?: string;
+  
+  groqApiKey?: string;
+  
+  defaultGateway?: string;
+  razorpayKeyId?: string;
+  razorpayKeySecret?: string;
+  stripePublishableKey?: string;
+  stripeSecretKey?: string;
+  
+  shopEnabled?: boolean;
+  shopSlug?: string;
+  shopTagline?: string;
+  shopAccentColor?: string;
 };
 
 function isValidEmail(email: string) {
@@ -88,6 +107,22 @@ export async function POST(req: Request) {
           accountNumber: "0000",
           ifscCode: "0000",
           panNumber: "PENDING",
+
+          smtpHost: body.smtpHost,
+          smtpPort: body.smtpPort,
+          smtpUser: body.smtpUser,
+          smtpPassword: body.smtpPassword,
+          smtpFromEmail: body.smtpFromEmail,
+          groqApiKey: body.groqApiKey,
+          defaultGateway: body.defaultGateway,
+          razorpayKeyId: body.razorpayKeyId,
+          razorpayKeySecret: body.razorpayKeySecret,
+          stripePublishableKey: body.stripePublishableKey,
+          stripeSecretKey: body.stripeSecretKey,
+          shopEnabled: body.shopEnabled ?? false,
+          shopSlug: body.shopSlug,
+          shopTagline: body.shopTagline,
+          shopAccentColor: body.shopAccentColor,
         },
         update: {
           companyName: body.companyName!.trim(),
@@ -97,6 +132,22 @@ export async function POST(req: Request) {
           taxLabel: body.taxLabel,
           taxIdLabel: body.taxIdLabel,
           routingLabel: body.routingLabel,
+
+          smtpHost: body.smtpHost,
+          smtpPort: body.smtpPort,
+          smtpUser: body.smtpUser,
+          smtpPassword: body.smtpPassword,
+          smtpFromEmail: body.smtpFromEmail,
+          groqApiKey: body.groqApiKey,
+          defaultGateway: body.defaultGateway,
+          razorpayKeyId: body.razorpayKeyId,
+          razorpayKeySecret: body.razorpayKeySecret,
+          stripePublishableKey: body.stripePublishableKey,
+          stripeSecretKey: body.stripeSecretKey,
+          shopEnabled: body.shopEnabled ?? false,
+          shopSlug: body.shopSlug,
+          shopTagline: body.shopTagline,
+          shopAccentColor: body.shopAccentColor,
         },
       });
 
