@@ -300,6 +300,7 @@
     "table_invoice": "चालान",
     "table_client": "ग्राहक",
     "table_status": "स्थिति",
+    "table_amount": "राशि",
     "table_billed": "बिल ({currency})",
     "table_actions": "कार्रवाई",
     "status_paid": "भुगतान",

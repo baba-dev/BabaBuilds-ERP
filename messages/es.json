@@ -300,6 +300,7 @@
     "table_invoice": "Factura",
     "table_client": "Cliente",
     "table_status": "Estado",
+    "table_amount": "Importe",
     "table_billed": "Facturado ({currency})",
     "table_actions": "Acciones",
     "status_paid": "Pagado",

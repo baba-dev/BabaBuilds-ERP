@@ -301,6 +301,7 @@
     "table_client": "Client",
     "table_status": "Status",
     "table_billed": "Billed ({currency})",
+    "table_amount": "Amount",
     "table_actions": "Actions",
     "status_paid": "Paid",
     "status_partial": "Partial",
