@@ -11,10 +11,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check-locales:
-    runs-on: [self-hosted, linux, x64, erp-ci]
-
-jobs:
   locales:
     runs-on: [self-hosted, linux, x64, erp-ci]
     steps:
