@@ -76,22 +76,22 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
     setIsLoadingServices(true);
     Promise.all([
       fetch("/api/clients?limit=100").then((res) => res.json()).catch(() => ({ data: [] })),
-      fetch("/api/invoices").then((res) => res.json()).catch(() => []),
+      fetch("/api/invoices/billing-months?limit=1000").then((res) => res.json()).catch(() => ({ data: [] })),
       fetch("/api/services?limit=100").then((res) => res.json()).catch(() => ({ data: [] })),
       fetch("/api/inventory/products?limit=100").then((res) => res.json()).catch(() => []),
     ]).then(([clientsResult, invoicesResult, servicesResult, productsResult]) => {
       const parsedClients = Array.isArray(clientsResult) ? clientsResult : clientsResult?.data;
       if (Array.isArray(parsedClients)) setClients(parsedClients);
 
-      const parsedInvoices = Array.isArray(invoicesResult) ? invoicesResult : invoicesResult?.data;
-      if (Array.isArray(parsedInvoices)) {
+      const parsedBillingMonths = Array.isArray(invoicesResult)
+        ? invoicesResult
+        : (invoicesResult as any)?.data;
+      if (Array.isArray(parsedBillingMonths)) {
         setExistingInvoices(
-          parsedInvoices
-            .filter((inv: any) => typeof inv?.billingMonth === "string")
-            .map((inv: any) => ({
-              billingMonth: inv.billingMonth,
-              clientId: inv?.clientId ? String(inv.clientId) : null,
-            })),
+          parsedBillingMonths.map((row: any) => ({
+            billingMonth: String(row?.billingMonth || ""),
+            clientId: row?.clientId ? String(row.clientId) : null,
+          })),
         );
       }
 

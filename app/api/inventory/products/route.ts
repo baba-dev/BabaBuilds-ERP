@@ -15,16 +15,30 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get('limit') || '100', 10);
     const cursor = searchParams.get('cursor');
+    const q = (searchParams.get('q') || '').trim();
 
     const products = await prisma.product.findMany({
-      where: { workspaceId },
+      where: q
+        ? {
+            workspaceId,
+            OR: [
+              { name: { contains: q, mode: "insensitive" } },
+              { sku: { contains: q, mode: "insensitive" } },
+              { barcode: { contains: q, mode: "insensitive" } },
+            ],
+          }
+        : { workspaceId },
       take: limit,
       skip: cursor ? 1 : 0,
       ...(cursor ? { cursor: { id: cursor } } : {}),
       orderBy: { currentStock: 'asc' } // Show low stock first
     });
 
-    return NextResponse.json(products);
+    return NextResponse.json(products, {
+      headers: {
+        "X-Next-Cursor": products.length > 0 ? String(products[products.length - 1].id) : "",
+      },
+    });
   } catch (error: any) {
     console.error("[INVENTORY_PRODUCTS_GET]", error);
     return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });

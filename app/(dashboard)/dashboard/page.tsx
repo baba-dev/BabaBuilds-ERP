@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Download, LayoutDashboard, Send, Sparkles, ArrowRight, Users, Briefcase, ReceiptText, X, Building } from "lucide-react";
@@ -41,17 +41,6 @@ export default function Dashboard() {
   const searchParams = useSearchParams();
   const [selectedFy, setSelectedFy] = useState(getCurrentFinancialYear(new Date(), "local"));
   const [data, setData] = useState<Partial<DashboardData>>({});
-  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({
-    finance: true,
-    ops: true,
-    sales: true,
-    trust: true,
-    ledger: true,
-    activity: true,
-    attention: true,
-    health: true,
-    charts: true,
-  });
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [syncHealthLoading, setSyncHealthLoading] = useState(false);
@@ -121,36 +110,20 @@ export default function Dashboard() {
     return parsed;
   };
 
-  const loadSegment = async (fy: string, segment: string, signal?: AbortSignal) => {
-    setLoadingStates((prev) => ({ ...prev, [segment]: true }));
-    try {
-      const res = await fetch(`/api/dashboard?fy=${fy}&segment=${segment}`, { cache: "no-store", signal });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || `Failed to load ${segment}`);
-      }
-
-      const parsed = parseDashboardResponse(json) as Partial<DashboardData> | null;
-      if (!parsed) throw new Error(`Dashboard ${segment} payload malformed`);
-
-      setData((prev) => ({ ...prev, ...parsed }));
-    } catch (e: any) {
-      if (e.name === "AbortError") return;
-      console.error(`Error loading segment ${segment}:`, e);
-      throw e;
-    } finally {
-      setLoadingStates((prev) => ({ ...prev, [segment]: false }));
-    }
-  };
-
   const loadAllData = async (fy: string, signal?: AbortSignal) => {
     setError(null);
     setIsInitialLoad(true);
 
-    const segments = ["finance", "ops", "sales", "trust", "ledger", "activity", "attention", "health", "charts"];
-
     try {
-      await Promise.all(segments.map((s) => loadSegment(fy, s, signal)));
+      const res = await fetch(`/api/dashboard?fy=${fy}`, { cache: "no-store", signal });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || tr("toast.error.load_dashboard", "Unable to load dashboard"));
+      }
+      const parsed = parseDashboardResponse(json) as DashboardData | null;
+      if (!parsed) throw new Error("Dashboard payload malformed");
+      if (signal?.aborted) return;
+      setData(parsed);
       if (signal?.aborted) return;
       setIsInitialLoad(false);
     } catch (e: any) {
@@ -326,7 +299,7 @@ export default function Dashboard() {
     },
   ];
 
-  if (isInitialLoad && Object.values(loadingStates).every((v) => v)) {
+  if (isInitialLoad) {
     return <PageLoadingState title={tr("loading", "Loading dashboard")} description={tr("loading_desc", "Preparing command center")} className="min-h-screen" />;
   }
 
@@ -335,6 +308,7 @@ export default function Dashboard() {
   }
 
   const d = data as DashboardData;
+  const isReady = useMemo(() => Boolean(d.health && d.attention && d.financialPulse && d.salesAndShop && d.operations && d.trust && d.charts && d.recentInvoices), [d]);
 
   const selectedInvoiceBilled = Number(selectedInvoice?.totalAmount ?? 0);
   const selectedInvoiceReceived = Number(selectedInvoice?.amountReceived ?? 0);
@@ -437,13 +411,9 @@ export default function Dashboard() {
           </div>
         )}
 
-        {loadingStates.health || !d.health ? (
-          <SkeletonBlock className="h-12 w-full" />
-        ) : (
-          <DashboardHealthStrip health={d.health} />
-        )}
+        {!d.health ? <SkeletonBlock className="h-12 w-full" /> : <DashboardHealthStrip health={d.health} />}
 
-        {loadingStates.attention || !d.attention ? (
+        {!d.attention ? (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map((i) => (
               <SkeletonBlock key={i} className="h-24" />
@@ -453,33 +423,17 @@ export default function Dashboard() {
           <DashboardAttentionCenter attention={d.attention} />
         )}
 
-        {loadingStates.finance || !d.financialPulse ? (
-          <SkeletonBlock className="h-32" />
-        ) : (
-          <DashboardFinancialPulse financialPulse={d.financialPulse} fCurrency={fCurrency} />
-        )}
+        {!d.financialPulse ? <SkeletonBlock className="h-32" /> : <DashboardFinancialPulse financialPulse={d.financialPulse} fCurrency={fCurrency} />}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
           <div className="lg:col-span-1 2xl:col-span-2 space-y-6">
-            {loadingStates.sales || !d.salesAndShop ? (
-              <SkeletonBlock className="h-64" />
-            ) : (
-              <DashboardSalesAndShopPanel salesAndShop={d.salesAndShop} fCurrency={fCurrency} />
-            )}
+            {!d.salesAndShop ? <SkeletonBlock className="h-64" /> : <DashboardSalesAndShopPanel salesAndShop={d.salesAndShop} fCurrency={fCurrency} />}
 
-            {loadingStates.ops || !d.operations ? (
-              <SkeletonBlock className="h-48" />
-            ) : (
-              <DashboardOperationsPanel operations={d.operations} />
-            )}
+            {!d.operations ? <SkeletonBlock className="h-48" /> : <DashboardOperationsPanel operations={d.operations} />}
 
-            {loadingStates.trust || !d.trust ? (
-              <SkeletonBlock className="h-48" />
-            ) : (
-              <DashboardTrustPanel trust={d.trust} />
-            )}
+            {!d.trust ? <SkeletonBlock className="h-48" /> : <DashboardTrustPanel trust={d.trust} />}
 
-            {loadingStates.charts || !d.charts ? (
+            {!d.charts ? (
               <SkeletonBlock className="h-80" />
             ) : islandsEnabled ? (
               <ChartsIsland charts={d.charts} fCurrency={fCurrency} />
@@ -493,7 +447,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          {loadingStates.health || loadingStates.attention || !d.health ? (
+          {!d.health || !d.attention ? (
             <SkeletonBlock className="h-[600px]" />
           ) : (
             <DashboardRightRail
@@ -520,7 +474,7 @@ export default function Dashboard() {
             <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500" />
           </CardHeader>
           <CardContent className={isMobile ? "p-4 space-y-3" : "p-0"}>
-            {loadingStates.ledger || !d.recentInvoices ? (
+            {!d.recentInvoices ? (
               <div className="p-8 space-y-4">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="h-12 w-full rounded-lg bg-zinc-100 dark:bg-zinc-800 animate-pulse" />

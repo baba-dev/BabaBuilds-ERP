@@ -98,14 +98,12 @@ export default function ExpenseTracker() {
       setTotalPages(meta.totalPages);
       setCurrentPage(meta.currentPage);
 
-      // Fetch all invoices for revenue calculation (as per original logic)
-      const invRes = await fetch('/api/invoices');
-      const invData = (await invRes.json()) as { data?: InvoiceDto[]; error?: string } | InvoiceDto[];
-      // NOTE: This is fetching all invoices. To make KPIs truly scalable, this would also need a summary API.
-      if (Array.isArray(invData)) {
-         setTotalRevenue(calculateRevenueTotal(invData));
-      } else if (!invData.error && Array.isArray(invData.data)) {
-         setTotalRevenue(calculateRevenueTotal(invData.data));
+      // Avoid loading all invoices to compute revenue (realistic scale).
+      // Use the server-side finance summary aggregates instead.
+      const summaryRes = await fetch("/api/finance/summary");
+      const payload = await summaryRes.json().catch(() => null);
+      if (summaryRes.ok) {
+        setTotalRevenue(toSafeNumber(payload?.data?.totalRevenue));
       }
     } catch (err) {
       console.error("Failed to load expenses", err);
