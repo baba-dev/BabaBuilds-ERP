@@ -6,6 +6,17 @@ import { encrypt } from "@/lib/encryption";
 
 // --- HELPERS ---
 
+function isLocalhostRequest(request: Request): boolean {
+  const host = request.headers.get("host")?.toLowerCase() ?? "";
+  if (host.startsWith("localhost") || host.startsWith("127.0.0.1")) return true;
+
+  const forwardedHost = request.headers.get("x-forwarded-host")?.toLowerCase() ?? "";
+  if (forwardedHost.startsWith("localhost") || forwardedHost.startsWith("127.0.0.1")) return true;
+
+  // Best-effort: only trust local development usage; don't rely on x-forwarded-for for security.
+  return false;
+}
+
 const getDateOffset = (days: number) => {
   const date = new Date();
   date.setDate(date.getDate() + days);
@@ -29,9 +40,29 @@ export async function POST(request: Request) {
 
     // --- 🚨 SECURITY LAYER 0: TURNSTILE VERIFICATION ---
     const isDev = process.env.NODE_ENV === "development";
+    const isLocal = isLocalhostRequest(request);
 
-    // Bypass Turnstile only if on Localhost AND no token is provided
-    if (!isDev || token) {
+    const agentKeyFromHeader = request.headers.get("x-demo-agent-key")?.trim() || null;
+    const configuredAgentKey = process.env.DEMO_AGENT_KEY?.trim() || null;
+    const hasValidAgentKey =
+      Boolean(configuredAgentKey) &&
+      Boolean(agentKeyFromHeader) &&
+      agentKeyFromHeader === configuredAgentKey;
+
+    // In development we allow non-local callers (e.g. Cloud Agents) ONLY if they present a valid agent key.
+    // Without the key, dev access is limited to localhost to reduce accidental exposure.
+    if (isDev && !isLocal && !hasValidAgentKey) {
+      return NextResponse.json(
+        {
+          error:
+            "Demo provisioning in development is only allowed from localhost unless a valid x-demo-agent-key is provided.",
+        },
+        { status: 403 },
+      );
+    }
+
+    // Production requires Turnstile always. Development allows either Turnstile OR a configured agent key.
+    if (!isDev) {
       if (!token) {
         return NextResponse.json({ error: "Security challenge failed: No token." }, { status: 400 });
       }
@@ -48,6 +79,16 @@ export async function POST(request: Request) {
       const verifyData = await verifyRes.json();
       if (!verifyData.success) {
         return NextResponse.json({ error: "Bot verification failed." }, { status: 403 });
+      }
+    } else {
+      if (!token && !hasValidAgentKey) {
+        return NextResponse.json(
+          {
+            error:
+              "Demo provisioning in development requires either a Turnstile token or a valid x-demo-agent-key header.",
+          },
+          { status: 400 },
+        );
       }
     }
 

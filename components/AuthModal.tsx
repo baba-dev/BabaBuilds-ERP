@@ -64,6 +64,7 @@ export default function AuthModal({
 }: AuthModalProps) {
   const t = useTranslations("AuthModal");
   const { status } = useSession();
+  const isProd = process.env.NODE_ENV === "production";
 
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -245,7 +246,7 @@ export default function AuthModal({
   };
 
   const handleDemoSignIn = async () => {
-    if (!turnstileToken && process.env.NODE_ENV === "production") {
+    if (!turnstileToken && isProd) {
       toast.error(t("alerts.completeSecurityCheck"));
       return;
     }
@@ -459,7 +460,7 @@ export default function AuthModal({
             </summary>
 
             <div className="mt-3 space-y-3">
-              {!isDemoLoading && (
+              {!isDemoLoading && isProd && (
                 <div className="flex justify-center py-2 scale-90">
                   <Turnstile
                     siteKey="0x4AAAAAACvSwAyJa3nVFu2n"
@@ -477,7 +478,7 @@ export default function AuthModal({
                 disabled={
                   isLoading ||
                   isDemoLoading ||
-                  (!turnstileToken && process.env.NODE_ENV === "production")
+                  (!turnstileToken && isProd)
                 }
                 className="w-full flex items-center justify-between group bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 text-zinc-300 px-4 py-3 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
               >
