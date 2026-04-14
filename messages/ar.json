@@ -300,6 +300,7 @@
     "table_invoice": "الفاتورة",
     "table_client": "العميل",
     "table_status": "الحالة",
+    "table_amount": "المبلغ",
     "table_billed": "المفوتر ({currency})",
     "table_actions": "الإجراءات",
     "status_paid": "مدفوع",
