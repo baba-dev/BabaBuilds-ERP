@@ -12,7 +12,12 @@ dateModified: "2026-04-14"
 
 # Getting Started with BabaBuilds ERP
 
-Welcome to **BabaBuilds ERP** — your all‑in‑one financial command center for modern agencies.\n+\n+<Callout type=\"tip\">If you’re setting up a new workspace, start here, then jump to <a href=\"/help/settings-guide\">Configuring Your Business Profile</a>.</Callout>
+Welcome to **BabaBuilds ERP** — your all‑in‑one financial command center for modern agencies.
+
+<Callout type="tip">
+  If you’re setting up a new workspace, start here, then jump to{" "}
+  <a href="/help/settings-guide">Configuring Your Business Profile</a>.
+</Callout>
 
 ---
 
@@ -32,7 +37,13 @@ BabaBuilds ERP is a tool built for freelancers and agency owners to:
 
 <Steps>
 <Step title="Open the ERP">
-Visit **erp.bababuilds.com**.\n+\n<HelpImage src="/help/diagrams/erp_entrypoint.svg" alt="Entry points into BabaBuilds ERP" caption="You can start from the landing site or go straight to your ERP workspace." />
+Visit **erp.bababuilds.com**.
+
+<HelpImage
+  src="/help/diagrams/erp_entrypoint.svg"
+  alt="Entry points into BabaBuilds ERP"
+  caption="You can start from the landing site or go straight to your ERP workspace."
+/>
 </Step>
 <Step title="Sign in">
 Click **Sign in** and choose the account you want to associate with the workspace.
