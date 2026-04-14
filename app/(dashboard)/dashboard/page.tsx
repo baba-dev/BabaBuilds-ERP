@@ -3,7 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { Download, LayoutDashboard, Send, Sparkles, ArrowRight } from "lucide-react";
+import { Download, LayoutDashboard, Send, Sparkles, ArrowRight, Users, Briefcase, ReceiptText, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -63,6 +63,10 @@ export default function Dashboard() {
   const [dateReceived, setDateReceived] = useState(format(new Date(), "yyyy-MM-dd"));
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
+  const [gettingStartedDismissed, setGettingStartedDismissed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("erp_getting_started_dismissed") === "1";
+  });
 
   const { fCurrency, currency } = useFormat();
   const currencySymbol = getCurrencySymbol(currency);
@@ -329,6 +333,18 @@ export default function Dashboard() {
     <div className={`rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse ${className}`} />
   );
 
+  // 2.3 FIX: show a getting-started checklist for new workspaces (zero revenue = fresh account)
+  const showGettingStarted =
+    !gettingStartedDismissed &&
+    !isInitialLoad &&
+    (d.financialPulse?.billedRevenue ?? 1) === 0 &&
+    (d.recentInvoices?.length ?? 1) === 0;
+
+  const dismissGettingStarted = () => {
+    localStorage.setItem("erp_getting_started_dismissed", "1");
+    setGettingStartedDismissed(true);
+  };
+
   return (
     <DashboardPageShell
       title={tr("financial_overview", "Business command center")}
@@ -350,6 +366,66 @@ export default function Dashboard() {
       }
     >
       <div className="space-y-6">
+        {/* 2.3 FIX — Getting Started checklist: shows for brand-new workspaces with zero activity */}
+        {showGettingStarted && (
+          <div className="relative rounded-2xl border border-indigo-200 dark:border-indigo-800/50 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/30 dark:to-zinc-900/60 p-5 shadow-sm animate-in fade-in slide-in-from-top-2 duration-500">
+            <button
+              type="button"
+              onClick={dismissGettingStarted}
+              className="absolute top-3 right-3 p-1 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
+              aria-label="Dismiss getting started guide"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="w-4 h-4 text-indigo-500" />
+              <p className="text-xs font-extrabold uppercase tracking-widest text-indigo-700 dark:text-indigo-400">
+                {tr("getting_started_title", "Get started — 3 steps to your first invoice")}
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                {
+                  icon: <Users className="w-4 h-4" />,
+                  label: tr("step_add_client", "Add a client"),
+                  desc: tr("step_add_client_desc", "Who will you bill?"),
+                  href: "/clients",
+                  color: "indigo",
+                },
+                {
+                  icon: <Briefcase className="w-4 h-4" />,
+                  label: tr("step_add_service", "Add a service"),
+                  desc: tr("step_add_service_desc", "What will you charge for?"),
+                  href: "/services",
+                  color: "violet",
+                },
+                {
+                  icon: <ReceiptText className="w-4 h-4" />,
+                  label: tr("step_create_invoice", "Create your first invoice"),
+                  desc: tr("step_create_invoice_desc", "Generate and send a PDF invoice."),
+                  href: "/income",
+                  color: "emerald",
+                },
+              ].map((step, i) => (
+                <Link
+                  key={i}
+                  href={step.href}
+                  className="flex items-start gap-3 p-3.5 rounded-xl bg-white dark:bg-zinc-900/60 border border-zinc-100 dark:border-zinc-800/60 hover:border-indigo-200 dark:hover:border-indigo-700/50 hover:shadow-md transition-all group"
+                >
+                  <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0 group-hover:scale-110 transition-transform">
+                    {step.icon}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-zinc-800 dark:text-zinc-200 leading-tight">{step.label}</p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 font-medium">{step.desc}</p>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-zinc-300 dark:text-zinc-600 shrink-0 mt-1 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-all ml-auto" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
         {loadingStates.health || !d.health ? (
           <SkeletonBlock className="h-12 w-full" />
         ) : (

@@ -240,8 +240,12 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
   };
 
   useEffect(() => {
+    // 5.1 FIX: auto-enable email delivery when a client with an email is selected;
+    // auto-disable when the client has no email on file.
     if (selectedClient && !selectedClient.email) {
       setSendEmail(false);
+    } else if (selectedClient && selectedClient.email) {
+      setSendEmail(true);
     }
   }, [selectedClient]);
 

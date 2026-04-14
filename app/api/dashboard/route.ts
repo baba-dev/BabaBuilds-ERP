@@ -111,6 +111,7 @@ async function buildDashboardPayload(
     fileImportFailures,
     activities,
     notifications,
+    serviceOrdersUnfiltered,
   ] = await Promise.all([
     timed("workspace.core", () =>
       prisma.workspace.findUnique({
@@ -217,13 +218,16 @@ async function buildDashboardPayload(
     timed("retainers.active", () =>
       prisma.retainer.findMany({
         where: { workspaceId, status: "ACTIVE" },
-        select: { amount: true, nextBillingDate: true },
+        select: { amount: true, nextBillingDate: true, createdAt: true },
       })
     ),
 
     timed("proposals.grouped", () =>
       prisma.proposal.groupBy({
-        where: { workspaceId },
+        where: { 
+          workspaceId,
+          ...(fyRange ? { createdAt: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}),
+        },
         by: ["status"],
         _count: { _all: true },
       })
@@ -289,7 +293,10 @@ async function buildDashboardPayload(
 
     timed("orders.status_group", () =>
       prisma.serviceOrder.groupBy({
-        where: { workspaceId },
+        where: { 
+          workspaceId,
+          ...(fyRange ? { createdAt: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}),
+        },
         by: ["status"],
         _count: { _all: true },
       })
@@ -334,7 +341,10 @@ async function buildDashboardPayload(
 
     timed("orders.top_services", () =>
       prisma.serviceOrder.groupBy({
-        where: { workspaceId },
+        where: { 
+          workspaceId,
+          ...(fyRange ? { createdAt: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}),
+        },
         by: ["serviceTemplateId"],
         _count: { _all: true },
         _sum: { amount: true },
@@ -410,6 +420,12 @@ async function buildDashboardPayload(
           })
         )
       : Promise.resolve(0),
+    timed("orders.unfiltered", () =>
+      prisma.serviceOrder.findMany({
+        where: { workspaceId },
+        select: { status: true, amount: true, createdAt: true },
+      })
+    ),
   ]);
 
   const billedRevenue = canViewFinance ? sumInvoiceBilledAmount(invoices) : new Prisma.Decimal(0);
@@ -544,6 +560,29 @@ async function buildDashboardPayload(
     workspaceOwner?.user?.timeZone ?? currentUser?.timeZone ?? null
   );
 
+  const ensure12Months: { date: Date; value: number }[] = [];
+  if (fyRange) {
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(fyRange.start);
+      d.setMonth(d.getMonth() + i);
+      ensure12Months.push({ date: d, value: 0 });
+    }
+  }
+
+  const generatedMrrRows = retainers.flatMap((ret) => {
+    if (!fyRange || !ret.createdAt) return [{ date: now, value: ret.amount }];
+    const activeMonths = [];
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(fyRange.start);
+      d.setMonth(fyRange.start.getMonth() + i);
+      const isStartMonth = d.getFullYear() === new Date(ret.createdAt).getFullYear() && d.getMonth() === new Date(ret.createdAt).getMonth();
+      if (isStartMonth || new Date(ret.createdAt) < fyRange.start) {
+        activeMonths.push({ date: d, value: ret.amount });
+      }
+    }
+    return activeMonths;
+  });
+
   const monthlySeries = buildMonthlyChartBuckets({
     revenueRows: invoices.map((inv) => ({
       date: new Date(inv.invoiceDate),
@@ -553,7 +592,7 @@ async function buildDashboardPayload(
       date: new Date(expense.date),
       value: expense.amount,
     })),
-    mrrRows: retainers.map((ret) => ({ date: now, value: ret.amount })),
+    mrrRows: [...ensure12Months, ...generatedMrrRows],
     bucketTimeZone,
   });
 
@@ -667,6 +706,15 @@ async function buildDashboardPayload(
       late: new Prisma.Decimal(0),
     }
   );
+
+  // Distribute pending orders across true age buckets
+  serviceOrdersUnfiltered?.filter(so => ["PENDING", "FAILED"].includes(normalizeInvoiceStatus(so.status))).forEach(so => {
+    const ageDays = Math.max(0, Math.floor((now.getTime() - new Date(so.createdAt).getTime()) / (1000 * 60 * 60 * 24)));
+    const outstanding = toDecimal(so.amount);
+    if (ageDays <= 30) receivablesAgingBuckets.current = receivablesAgingBuckets.current.plus(outstanding);
+    else if (ageDays <= 60) receivablesAgingBuckets.mid = receivablesAgingBuckets.mid.plus(outstanding);
+    else receivablesAgingBuckets.late = receivablesAgingBuckets.late.plus(outstanding);
+  });
 
   const receivablesAging = [
     { bucket: "0-30d", value: serializeMoney(receivablesAgingBuckets.current) },

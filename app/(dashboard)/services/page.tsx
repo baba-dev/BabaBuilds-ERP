@@ -181,7 +181,11 @@ export default function ServiceCatalog() {
           <div className="p-6">
             <AlertDialogHeader>
               <AlertDialogTitle className="font-bold tracking-tight text-lg">Remove Service?</AlertDialogTitle>
-              <AlertDialogDescription className="text-sm font-medium mt-2 leading-relaxed">This will permanently remove this service from your catalogue. Past invoices using this service will not be affected.</AlertDialogDescription>
+              {/* 9.1 FIX: stronger warning about downstream impact */}
+              <AlertDialogDescription className="text-sm font-medium mt-2 leading-relaxed">
+                This permanently removes the service from your catalogue and from the auto-fill dropdown on future invoices, proposals, and retainers.
+                Existing records that already use this service are <span className="font-bold text-zinc-800 dark:text-zinc-200">not</span> affected, but you won&apos;t be able to select it again.
+              </AlertDialogDescription>
             </AlertDialogHeader>
           </div>
           <div className="px-6 py-4 bg-zinc-50/80 dark:bg-zinc-900/40 border-t border-zinc-100 dark:border-zinc-800 flex justify-end gap-3">

@@ -79,9 +79,10 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  let session: any = null;
   try {
     // 1. SECURITY LOCK
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     if (!session || !session.workspaceId) {
       return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
     }

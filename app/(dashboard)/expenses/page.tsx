@@ -230,6 +230,8 @@ export default function ExpenseTracker() {
       if (data.description) setDescription(data.description);
     } catch (err: unknown) {
       console.error("Scan error:", err);
+      // 7.2 FIX: surface scan failure to the user instead of silently failing
+      toast.error(t("toast.error.ai_read_receipt"));
     } finally {
       setIsScanning(false);
     }
@@ -472,6 +474,17 @@ export default function ExpenseTracker() {
                       <span className="absolute left-3 top-2.5 text-zinc-500 dark:text-zinc-400 font-medium">{currencySymbol}</span>
                       <Input type="number" step="0.01" min="1" placeholder={t("amount_placeholder")} value={amount} onChange={(e) => setAmount(e.target.value)} required className="pl-7 bg-white dark:bg-zinc-950 dark:border-zinc-800 font-medium dark:text-zinc-100" />
                     </div>
+                  </div>
+
+                  {/* 7.1 FIX — Description field added to create form (was only in edit form before) */}
+                  <div className="space-y-2">
+                    <Label className="dark:text-zinc-300">{t('edit_description')}</Label>
+                    <Input
+                      placeholder="Optional notes (e.g. invoice #, project name)"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100"
+                    />
                   </div>
 
                 </CardContent>

@@ -60,6 +60,40 @@ interface AdminDiagnostics {
   status?: string;
 }
 
+interface ActivityLog {
+  id: string;
+  workspaceId: string | null;
+  actorUserId: string | null;
+  actorEmail: string | null;
+  action: string;
+  entityType: string | null;
+  entityId: string | null;
+  status: string;
+  metadata: any;
+  ipAddress: string | null;
+  userAgent: string | null;
+  correlationId: string | null;
+  createdAt: Date | string;
+  workspace?: { name: string } | null;
+}
+
+interface TaxAuditLog {
+  id: string;
+  workspaceId: string;
+  action: string;
+  decisionSource: string;
+  scopeType: string;
+  scopeRef: string | null;
+  rate: number | null;
+  effectiveFrom: Date | string | null;
+  effectiveTo: Date | string | null;
+  reason: string | null;
+  actorEmail: string | null;
+  prevHash: string | null;
+  entryHash: string;
+  createdAt: Date | string;
+}
+
 export default function SuperAdminPortal() {
   const t = useTranslations('Admin');
   const { fCurrency } = useFormat();
@@ -78,7 +112,7 @@ export default function SuperAdminPortal() {
 
   // --- LOGS TAB STATE ---
   const [logType, setLogType] = useState<"activity" | "tax_audit">("activity");
-  const [logs, setLogs] = useState<Array<Record<string, unknown>>>([]);
+  const [logs, setLogs] = useState<Array<ActivityLog | TaxAuditLog>>([]);
   const [logsTotal, setLogsTotal] = useState(0);
   const [logsPage, setLogsPage] = useState(1);
   const [logsPages, setLogsPages] = useState(1);
@@ -1024,7 +1058,7 @@ export default function SuperAdminPortal() {
                             <p className="text-xs mt-1">Activity will appear here as users interact with the platform.</p>
                           </td>
                         </tr>
-                      ) : logs.map((log) => (
+                      ) : (logs as ActivityLog[]).map((log) => (
                         <>
                           <tr
                             key={String(log.id)}
@@ -1054,7 +1088,7 @@ export default function SuperAdminPortal() {
                               )}
                               {!['SUCCESS','FAILURE','WARNING','INFO'].includes(String(log.status)) && (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
-                                  {log.status}
+                                  {String(log.status)}
                                 </span>
                               )}
                             </td>
@@ -1155,7 +1189,7 @@ export default function SuperAdminPortal() {
                             <p className="text-xs mt-1">Tax rate overrides will appear here with a cryptographic chain.</p>
                           </td>
                         </tr>
-                      ) : logs.map((log) => {
+                      ) : (logs as TaxAuditLog[]).map((log) => {
                         const isViolation = logIntegrity?.violations?.some((v) => v.id === log.id);
                         return (
                           <>

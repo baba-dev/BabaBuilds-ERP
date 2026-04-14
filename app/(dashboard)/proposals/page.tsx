@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { format, addDays } from "date-fns";
 import { FileText, Plus, Trash2, ArrowLeft, Send, Copy, CheckCircle2, Building2, Briefcase, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -101,6 +102,7 @@ export default function ProposalsEngine() {
   const [proposalToConvert, setProposalToConvert] = useState<Proposal | null>(null);
   const [conversionMonth, setConversionMonth] = useState("");
   const [conversionDate, setConversionDate] = useState("");
+  const [createRetainerOnConvert, setCreateRetainerOnConvert] = useState(false);
   const [taxRateModalOpen, setTaxRateModalOpen] = useState(false);
   const [taxRateInput, setTaxRateInput] = useState("");
   const [taxRateMeta, setTaxRateMeta] = useState<{ taxLabel?: string; countryCode?: string; candidates?: number[] }>({});
@@ -358,6 +360,14 @@ export default function ProposalsEngine() {
     setProposalToConvert(prop);
     setConversionMonth(format(new Date(), "MMMM yyyy")); 
     setConversionDate(format(new Date(), 'yyyy-MM-dd'));
+    // Pre-detect recurring items to pre-check the opt-in checkbox
+    const hasRecurring = prop.items.some(item =>
+      ['monthly', 'retainer', 'subscription'].some(kw =>
+        item.title.toLowerCase().includes(kw) ||
+        (item.description && item.description.toLowerCase().includes(kw))
+      )
+    );
+    setCreateRetainerOnConvert(hasRecurring);
   };
 
     const confirmConversion = async () => {
@@ -411,7 +421,7 @@ export default function ProposalsEngine() {
         (item.description && item.description.toLowerCase().includes('retainer'))
       );
 
-      if (recurringItems.length > 0) {
+      if (createRetainerOnConvert && recurringItems.length > 0) {
         const retainerAmount = recurringItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
         const retainerServiceName = recurringItems.map((i) => i.title).join(' + ');
         
@@ -509,18 +519,28 @@ export default function ProposalsEngine() {
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="proposal-client" className="text-zinc-500 dark:text-zinc-400 font-bold uppercase text-xs tracking-widest">{t('prepared_for')}</Label>
-                      <SearchableCombobox
-                        value={clientId}
-                        onChange={setClientId}
-                        placeholder={t('select_client')}
-                        options={clients.map((c) => ({
-                          value: c.id,
-                          label: c.name,
-                          description: c.isExport ? t('export') : undefined,
-                          keywords: [c.country || "", c.email || ""],
-                        }))}
-                        className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 dark:text-zinc-50 h-12 font-bold shadow-sm transition-all focus:ring-indigo-500/30 focus:border-indigo-500"
-                      />
+                      {clients.length === 0 ? (
+                        <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-800/40 rounded-xl">
+                          <Building2 className="w-5 h-5 text-amber-500 shrink-0" />
+                          <div className="text-xs">
+                            <p className="font-bold text-amber-800 dark:text-amber-300 mb-0.5">No clients in your CRM yet</p>
+                            <a href="/clients" className="text-indigo-600 dark:text-indigo-400 underline font-bold hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors">Add your first client →</a>
+                          </div>
+                        </div>
+                      ) : (
+                        <SearchableCombobox
+                          value={clientId}
+                          onChange={setClientId}
+                          placeholder={t('select_client')}
+                          options={clients.map((c) => ({
+                            value: c.id,
+                            label: c.name,
+                            description: c.isExport ? t('export') : undefined,
+                            keywords: [c.country || "", c.email || ""],
+                          }))}
+                          className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 dark:text-zinc-50 h-12 font-bold shadow-sm transition-all focus:ring-indigo-500/30 focus:border-indigo-500"
+                        />
+                      )}
                     </div>
                   </FormSection>
                   
@@ -631,6 +651,15 @@ export default function ProposalsEngine() {
                     ))}
                   </div>
 
+                  {catalog.length === 0 && (
+                    <div className="flex items-center gap-3 p-3.5 bg-indigo-50/80 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-800/40 rounded-xl">
+                      <Briefcase className="w-4 h-4 text-indigo-500 shrink-0" />
+                      <p className="text-xs text-indigo-700 dark:text-indigo-400 font-medium leading-relaxed">
+                        No service catalog — you&apos;re adding items manually.{" "}
+                        <a href="/services" className="font-bold underline hover:text-indigo-900 dark:hover:text-indigo-200 transition-colors">Set up catalog first →</a>
+                      </p>
+                    </div>
+                  )}
                   <Button type="button" variant="outline" onClick={handleAddItem} className="w-full border-dashed border-2 text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 border-zinc-200 hover:border-indigo-200 dark:hover:border-indigo-800/60 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/10 bg-zinc-50/50 dark:bg-zinc-900/30 dark:border-zinc-800 text-xs font-bold uppercase tracking-widest mt-4 h-12 transition-all active:scale-[0.99]">
                     <Plus className="w-4 h-4 mr-2" /> {t('add_item')}
                   </Button>
@@ -712,14 +741,21 @@ export default function ProposalsEngine() {
 
                 <CardHeader className="pb-4 pt-5 px-6 border-b border-zinc-100 dark:border-zinc-800/80">
                   <div className="flex justify-between items-start mb-3 pr-8">
-                    <Badge variant="outline" className={`text-xs font-bold uppercase tracking-widest border shadow-none px-2 py-0.5 ${
-                      prop.status === 'ACCEPTED' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50' : 
-                      prop.status === 'INVOICED' ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700' : 
-                      prop.status === 'DRAFT' ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/50' :
-                      'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800/50'
-                    }`}>
-                      {prop.status}
-                    </Badge>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge variant="outline" className={`text-xs font-bold uppercase tracking-widest border shadow-none px-2 py-0.5 ${
+                        prop.status === 'ACCEPTED' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50' : 
+                        prop.status === 'INVOICED' ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700' : 
+                        prop.status === 'DRAFT' ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/50' :
+                        'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800/50'
+                      }`}>
+                        {prop.status}
+                      </Badge>
+                      {prop.status !== 'INVOICED' && new Date(prop.validUntil) < new Date() && (
+                        <Badge variant="outline" className="text-xs font-bold uppercase tracking-widest border shadow-none px-2 py-0.5 bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800/50">
+                          Expired
+                        </Badge>
+                      )}
+                    </div>
                     <span className="text-xs font-bold tracking-widest uppercase text-zinc-400 dark:text-zinc-500 bg-zinc-50 dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-800">{prop.proposalNo}</span>
                   </div>
                   <CardTitle className="text-lg font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50 line-clamp-1 pr-8 transition-colors group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
@@ -872,6 +908,31 @@ export default function ProposalsEngine() {
                     ))}
                   </div>
                 </div>
+
+                {/* 4.2 FIX — Retainer opt-in: only show when recurring items detected */}
+                {proposalToConvert.items.some(item =>
+                  ['monthly', 'retainer', 'subscription'].some(kw =>
+                    item.title.toLowerCase().includes(kw) ||
+                    (item.description && item.description.toLowerCase().includes(kw))
+                  )
+                ) && (
+                  <div className="flex items-start gap-3 p-4 bg-indigo-50/80 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-800/40 rounded-xl">
+                    <Checkbox
+                      id="create-retainer-toggle"
+                      checked={createRetainerOnConvert}
+                      onCheckedChange={(v) => setCreateRetainerOnConvert(Boolean(v))}
+                      className="mt-0.5 shrink-0"
+                    />
+                    <div>
+                      <label htmlFor="create-retainer-toggle" className="text-xs font-bold text-indigo-900 dark:text-indigo-300 cursor-pointer leading-tight block">
+                        Auto-create monthly retainer
+                      </label>
+                      <p className="text-xs text-indigo-600/80 dark:text-indigo-400/80 mt-0.5 leading-relaxed">
+                        Recurring items detected. Uncheck to skip automatic retainer setup.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
         </ResponsiveDialog>

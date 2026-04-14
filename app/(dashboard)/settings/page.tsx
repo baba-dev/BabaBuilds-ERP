@@ -164,6 +164,13 @@ export default function SettingsWizard() {
   }, []);
 
   const handleGatewayTabChange = (tab: "RAZORPAY" | "STRIPE") => {
+    // 11.3 FIX: switching the view tab only changes which credentials panel is visible.
+    // It does NOT auto-mutate the stored defaultGateway preference.
+    // The defaultGateway is only updated if the user explicitly clicks "Set as Default".
+    setActiveGatewayTab(tab);
+  };
+
+  const handleSetDefaultGateway = (tab: "RAZORPAY" | "STRIPE") => {
     setActiveGatewayTab(tab);
     setFormData(prev => ({ ...prev, defaultGateway: tab }));
   };
@@ -616,8 +623,9 @@ export default function SettingsWizard() {
             </CardHeader>
             <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
-                <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">{t('pan_number')} <span className="text-red-500">*</span></Label>
-                <Input required className="h-10 uppercase dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold tracking-widest" value={formData.panNumber} onChange={e => setFormData({...formData, panNumber: e.target.value.toUpperCase()})} />
+                {/* 11.5 FIX: PAN is India-specific — only required for IN workspaces */}
+                <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">{t('pan_number')} {isIndian && <span className="text-red-500">*</span>}</Label>
+                <Input required={isIndian} className="h-10 uppercase dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold tracking-widest" value={formData.panNumber} onChange={e => setFormData({...formData, panNumber: e.target.value.toUpperCase()})} />
               </div>
               <div className="space-y-2">
                 <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">{t('udyam_reg')}</Label>
@@ -659,8 +667,9 @@ export default function SettingsWizard() {
                 <p className="text-xs text-zinc-400 dark:text-zinc-500">{t('account_number_hint')}</p>
               </div>
               <div className="space-y-2">
-                <Label className="dark:text-zinc-300">{t('ifsc_code')} <span className="text-red-500">*</span></Label>
-                <Input required className="uppercase dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" value={formData.ifscCode} onChange={e => setFormData({...formData, ifscCode: e.target.value.toUpperCase()})} />
+                {/* 11.5 FIX: IFSC is India-specific — only required for IN workspaces */}
+                <Label className="dark:text-zinc-300">{t('ifsc_code')} {isIndian && <span className="text-red-500">*</span>}</Label>
+                <Input required={isIndian} className="uppercase dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" value={formData.ifscCode} onChange={e => setFormData({...formData, ifscCode: e.target.value.toUpperCase()})} />
               </div>
             </CardContent>
           </Card>
@@ -917,9 +926,22 @@ export default function SettingsWizard() {
                       <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("payment.razorpay.caption")}</p>
                     </div>
                   </div>
-                  {activeGatewayTab === "RAZORPAY" && (
-                    <span className="text-xs font-bold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-1 rounded-full">{t("payment.active")}</span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {formData.defaultGateway === "RAZORPAY" && (
+                      <span className="text-xs font-bold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-1 rounded-full">
+                        {t("payment.active")}
+                      </span>
+                    )}
+                    {formData.defaultGateway !== "RAZORPAY" && isIndian && planTier !== "FREE" && (
+                      <button
+                        type="button"
+                        onClick={() => handleSetDefaultGateway("RAZORPAY")}
+                        className="text-xs font-medium text-indigo-600 dark:text-indigo-400 underline hover:text-indigo-800 dark:hover:text-indigo-200 transition-colors"
+                      >
+                        Set as default
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Non-Indian warning */}
@@ -967,9 +989,22 @@ export default function SettingsWizard() {
                       <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("payment.stripe.caption")}</p>
                     </div>
                   </div>
-                  {activeGatewayTab === "STRIPE" && (
-                    <span className="text-xs font-bold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 px-2 py-1 rounded-full">{t("payment.active")}</span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {formData.defaultGateway === "STRIPE" && (
+                      <span className="text-xs font-bold bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 px-2 py-1 rounded-full">
+                        {t("payment.active")}
+                      </span>
+                    )}
+                    {formData.defaultGateway !== "STRIPE" && planTier !== "FREE" && (
+                      <button
+                        type="button"
+                        onClick={() => handleSetDefaultGateway("STRIPE")}
+                        className="text-xs font-medium text-violet-600 dark:text-violet-400 underline hover:text-violet-800 dark:hover:text-violet-200 transition-colors"
+                      >
+                        Set as default
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Indian user informational note */}
