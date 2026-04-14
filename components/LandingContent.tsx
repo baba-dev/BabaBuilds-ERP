@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { LazyMotion, domAnimation, m, motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import {
   ArrowRight,
@@ -31,13 +30,10 @@ import PricingSection from "@/components/PricingSection";
 import LandingFooter from "@/components/LandingFooter";
 import { cn } from "@/lib/utils";
 
-const HeroMotionDecor = dynamic(() => import("@/components/landing/HeroMotionDecor"), {
-  ssr: false,
-  loading: () => null,
-});
-const SocialProofHero = dynamic(() => import("@/components/landing/SocialProofHero"));
-const RotatorText = dynamic(() => import("@/components/landing/RotatorText"), { ssr: false });
-const AnimatedChartDecor = dynamic(() => import("@/components/landing/AnimatedChartDecor"), { ssr: false });
+import HeroMotionDecor from "@/components/landing/HeroMotionDecor";
+import SocialProofHero from "@/components/landing/SocialProofHero";
+import RotatorText from "@/components/landing/RotatorText";
+import AnimatedChartDecor from "@/components/landing/AnimatedChartDecor";
 
 export default function LandingContent() {
   const t = useTranslations("Landing");
