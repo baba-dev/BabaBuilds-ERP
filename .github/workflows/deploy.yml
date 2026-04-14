@@ -7,11 +7,7 @@ on:
 concurrency:
   group: deploy-production-${{ github.ref }}
   cancel-in-progress: true
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
+  
 jobs:
   deploy:
     runs-on: [self-hosted, linux, x64, erp-ci]
