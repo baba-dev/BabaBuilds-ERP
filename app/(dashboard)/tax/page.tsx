@@ -48,7 +48,15 @@ const toSafeNumber = (value: unknown): number => {
 };
 
 export default function WealthAndTaxPlanner() {
-  const t = useTranslations('Tax');
+  const t = useTranslations("Tax");
+  const tr = (key: string, fallback: string, values?: any) => {
+    if (typeof (t as any).has === "function" && !(t as any).has(key)) return fallback;
+    try {
+      return t(key as any, values);
+    } catch {
+      return fallback;
+    }
+  };
   const [investments, setInvestments] = useState<any[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -232,15 +240,15 @@ export default function WealthAndTaxPlanner() {
 
   if (isLoading) {
     return (
-      <DashboardPageShell title={t('title')} description={t('description', { taxLabel })} animated={false}>
-        <PageLoadingState title={t('loading')} description="Crunching your wealth and tax signals…" />
+      <DashboardPageShell title={tr("title", "Savings & Tax")} description={tr("description", "Plan your {taxLabel} and savings.", { taxLabel })} animated={false}>
+        <PageLoadingState title={tr("loading", "Loading")} description="Crunching your wealth and tax signals…" />
       </DashboardPageShell>
     );
   }
 
   if (fetchError && investments.length === 0 && totalRevenue === 0) {
     return (
-      <DashboardPageShell title={t('title')} description={t('description', { taxLabel })} animated={false}>
+      <DashboardPageShell title={tr("title", "Savings & Tax")} description={tr("description", "Plan your {taxLabel} and savings.", { taxLabel })} animated={false}>
         <PageErrorState
           title="Tax planner sync issue"
           description={fetchError}
@@ -287,8 +295,8 @@ export default function WealthAndTaxPlanner() {
 
   return (
     <DashboardPageShell
-      title={t('title')}
-      description={t('description', { taxLabel })}
+      title={tr("title", "Savings & Tax")}
+      description={tr("description", "Plan your {taxLabel} and savings.", { taxLabel })}
       animated={false}
     >
 

@@ -9,6 +9,7 @@ import { DashboardTooltip } from "./dashboard-tooltip";
 export function DashboardOperationsPanel({ operations }: { operations: DashboardData["operations"] }) {
   const t = useTranslations("Dashboard");
   const tr = (key: string, fallback: string, values?: any) => {
+    if (!t.has(key as any)) return fallback;
     const translation = t(key as any, values);
     if (translation === key || translation === `Dashboard.${key}`) return fallback;
     return translation;

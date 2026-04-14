@@ -9,9 +9,14 @@ import { useTranslations } from "next-intl";
 export function DashboardQuickActions() {
   const t = useTranslations("Dashboard");
   const tr = (key: string, fallback: string, values?: any) => {
-    const translation = t(key as any, values);
-    if (translation === key || translation === `Dashboard.${key}`) return fallback;
-    return translation;
+    if (typeof (t as any).has === "function" && !(t as any).has(key)) return fallback;
+    try {
+      const translation = t(key as any, values);
+      if (translation === key || translation === `Dashboard.${key}`) return fallback;
+      return translation;
+    } catch {
+      return fallback;
+    }
   };
 
   const actions = [

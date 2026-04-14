@@ -134,6 +134,7 @@ function SubscriptionSection({
 export function DashboardHealthStrip({ health }: { health: DashboardData["health"] }) {
   const t = useTranslations("Dashboard");
   const tr = (key: string, fallback: string, values?: Record<string, unknown>) => {
+    if (typeof t.has === "function" && !t.has(key as never)) return fallback;
     const translation = t(key as never, values as never);
     if (translation === key || translation === `Dashboard.${key}`) return fallback;
     return translation;

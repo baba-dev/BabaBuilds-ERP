@@ -53,9 +53,12 @@ export function DashboardRightRail({
 }: DashboardRightRailProps) {
   const t = useTranslations("Dashboard");
   const tr = (key: string, fallback: string, values?: any) => {
-    const translation = t(key as any, values);
-    if (translation === key || translation === `Dashboard.${key}`) return fallback;
-    return translation;
+    if (typeof (t as any).has === "function" && !(t as any).has(key)) return fallback;
+    try {
+      return t(key as any, values);
+    } catch {
+      return fallback;
+    }
   };
 
   const mood = useMemo(() => deriveWorkspaceMood(data), [data]);
