@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Building2, Landmark, ShieldCheck, Image as ImageIcon, CheckCircle2,
@@ -23,6 +23,7 @@ import { FormFieldMessages, FormSection, FormSubmitBar } from "@/components/form
 import { PWASettings } from "@/components/settings/pwa-settings";
 import { cn } from "@/lib/utils";
 import { typography } from "@/lib/ui/typography";
+import { Badge } from "@/components/ui/badge";
 
 export default function SettingsWizard() {
   /**
@@ -79,6 +80,47 @@ export default function SettingsWizard() {
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
 
   const isIndian = countryCode === "IN";
+  const isTeamPlan = planTier === "TEAM" || planTier === "ENTERPRISE";
+
+  type TeamMemberRow = {
+    id: string;
+    role: string;
+    userId: string;
+    user: { name: string | null; email: string | null; image: string | null };
+  };
+  type TeamInviteRow = { id: string; email: string; role: string; createdAt: string; expiresAt: string };
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [teamError, setTeamError] = useState<string | null>(null);
+  const [teamMembers, setTeamMembers] = useState<TeamMemberRow[]>([]);
+  const [teamInvites, setTeamInvites] = useState<TeamInviteRow[]>([]);
+
+  const fetchTeam = useCallback(async () => {
+    setTeamLoading(true);
+    setTeamError(null);
+    try {
+      const res = await fetch("/api/team/members", { cache: "no-store" });
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(payload?.error || "Failed to load team");
+      }
+      const data = payload?.data ?? {};
+      setTeamMembers(Array.isArray(data.members) ? data.members : []);
+      setTeamInvites(Array.isArray(data.invites) ? data.invites : []);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to load team";
+      setTeamError(message);
+    } finally {
+      setTeamLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Always attempt to load team data so we can show accurate placeholder states,
+    // even if the user is not on a Team plan (invites will still be 403 from server).
+    void fetchTeam();
+  }, [fetchTeam]);
+
+  const owner = useMemo(() => teamMembers.find((m) => m.role === "OWNER") ?? null, [teamMembers]);
 
   useEffect(() => {
     fetch('/api/settings')
@@ -175,8 +217,6 @@ export default function SettingsWizard() {
     setFormData(prev => ({ ...prev, defaultGateway: tab }));
   };
 
-  const isTeamPlan = planTier === "TEAM" || planTier === "ENTERPRISE";
-
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isTeamPlan) return;
@@ -193,10 +233,28 @@ export default function SettingsWizard() {
       toast.success("Team member successfully invited", { id: toastId });
       setInviteEmail("");
       setIsInviteOpen(false);
+      void fetchTeam();
     } catch (err: any) {
       toast.error(err.message, { id: toastId });
     } finally {
       setInviteLoading(false);
+    }
+  };
+
+  const cancelInvite = async (inviteId: string) => {
+    const toastId = toast.loading("Cancelling invite...");
+    try {
+      const res = await fetch("/api/team/remove", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inviteId }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || "Failed to cancel invite");
+      toast.success("Invite cancelled", { id: toastId });
+      void fetchTeam();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to cancel invite", { id: toastId });
     }
   };
 
@@ -1147,15 +1205,48 @@ export default function SettingsWizard() {
                     <Users className="w-4 h-4" /> Active Seats
                   </h3>
                   <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden relative">
-                    <div className="p-5 text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 bg-zinc-50/30 dark:bg-zinc-900/30 min-h-[140px]">
-                      <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                        <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                    {!isTeamPlan && (
+                      <div className="absolute inset-0 z-10 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-[2px] flex items-center justify-center">
+                        <Button variant="outline" className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 font-bold shadow-lg">
+                          <Sparkles className="w-4 h-4 text-amber-500 mr-2" /> Upgrade to Team
+                        </Button>
                       </div>
-                      <div>
-                        <p className="font-bold text-zinc-900 dark:text-zinc-100">You are the Owner</p>
-                        <p className="text-xs text-zinc-500 mt-1 max-w-[200px]">Any additional accepted members will dynamically populate here.</p>
+                    )}
+                    {teamLoading ? (
+                      <div className="p-5 text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 bg-zinc-50/30 dark:bg-zinc-900/30 min-h-[140px]">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">Loading team</p>
                       </div>
-                    </div>
+                    ) : teamError ? (
+                      <div className="p-5 text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 bg-zinc-50/30 dark:bg-zinc-900/30 min-h-[140px]">
+                        <p className="font-bold text-zinc-900 dark:text-zinc-100">Unable to load members</p>
+                        <p className="text-xs text-zinc-500 mt-1 max-w-[260px]">{teamError}</p>
+                        <Button type="button" size="sm" variant="outline" onClick={() => void fetchTeam()}>
+                          Retry
+                        </Button>
+                      </div>
+                    ) : teamMembers.length === 0 ? (
+                      <div className="p-5 text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 bg-zinc-50/30 dark:bg-zinc-900/30 min-h-[140px]">
+                        <p className="font-bold text-zinc-900 dark:text-zinc-100">No members found</p>
+                        <p className="text-xs text-zinc-500 mt-1 max-w-[200px]">This workspace currently has no active seats.</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                        {teamMembers.map((m) => (
+                          <div key={m.id} className="p-4 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                                {m.user?.name || m.user?.email || "Member"}
+                              </p>
+                              {m.user?.email && <p className="text-xs text-zinc-500 truncate">{m.user.email}</p>}
+                            </div>
+                            <Badge variant="secondary" className="uppercase tracking-widest text-[10px] font-bold">
+                              {m.role}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1165,15 +1256,56 @@ export default function SettingsWizard() {
                     <Mail className="w-4 h-4" /> Transit Tokens
                   </h3>
                   <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden relative">
-                    <div className="p-5 text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 bg-zinc-50/30 dark:bg-zinc-900/30 min-h-[140px]">
-                      <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-                        <Clock className="w-5 h-5 text-zinc-400" />
+                    {!isTeamPlan && (
+                      <div className="absolute inset-0 z-10 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-[2px]" />
+                    )}
+                    {teamLoading ? (
+                      <div className="p-5 text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 bg-zinc-50/30 dark:bg-zinc-900/30 min-h-[140px]">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">Loading invites</p>
                       </div>
-                      <div>
-                        <p className="font-bold text-zinc-900 dark:text-zinc-100">No Pending Invites</p>
-                        <p className="text-xs text-zinc-500 mt-1 max-w-[200px]">Invited users who haven&apos;t accepted will visibly hang here.</p>
+                    ) : teamError ? (
+                      <div className="p-5 text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 bg-zinc-50/30 dark:bg-zinc-900/30 min-h-[140px]">
+                        <p className="font-bold text-zinc-900 dark:text-zinc-100">Unable to load invites</p>
+                        <p className="text-xs text-zinc-500 mt-1 max-w-[260px]">{teamError}</p>
+                        <Button type="button" size="sm" variant="outline" onClick={() => void fetchTeam()}>
+                          Retry
+                        </Button>
                       </div>
-                    </div>
+                    ) : teamInvites.length === 0 ? (
+                      <div className="p-5 text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 bg-zinc-50/30 dark:bg-zinc-900/30 min-h-[140px]">
+                        <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                          <Clock className="w-5 h-5 text-zinc-400" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-zinc-900 dark:text-zinc-100">No Pending Invites</p>
+                          <p className="text-xs text-zinc-500 mt-1 max-w-[200px]">Invited users who haven&apos;t accepted will appear here.</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                        {teamInvites.map((inv) => (
+                          <div key={inv.id} className="p-4 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">{inv.email}</p>
+                              <p className="text-xs text-zinc-500">
+                                Role: <span className="font-semibold">{inv.role}</span> · Expires{" "}
+                                {new Date(inv.expiresAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                            {isTeamPlan && owner?.userId ? (
+                              <Button type="button" size="sm" variant="outline" onClick={() => void cancelInvite(inv.id)}>
+                                Cancel
+                              </Button>
+                            ) : (
+                              <Badge variant="secondary" className="uppercase tracking-widest text-[10px] font-bold">
+                                Pending
+                              </Badge>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
