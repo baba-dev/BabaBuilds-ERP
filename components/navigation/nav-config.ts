@@ -2,6 +2,7 @@ import {
   Archive,
   Box,
   Briefcase,
+  CircleHelp,
   FileSignature,
   Landmark,
   LayoutDashboard,
@@ -34,6 +35,7 @@ export const appNavItems: AppNavItem[] = [
   { key: "ai_reconciliation", path: "/reconciliation", icon: Sparkles, badge: "AI" },
   { key: "invoices_and_earnings", path: "/income", icon: ReceiptText },
   { key: "ca_compliance", path: "/ca-portal", icon: Landmark },
+  { key: "help_center", path: "/help", icon: CircleHelp },
 ];
 
 export function filterAppNavItems(items: AppNavItem[]) {
