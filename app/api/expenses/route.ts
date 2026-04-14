@@ -8,6 +8,12 @@ import { scanBuffer } from '@/lib/security/clamav';
 import { apiError } from "@/lib/api-error";
 import { logActivity } from '@/lib/security/activity-log';
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
+import {
+  ensureDir,
+  sniffAllowedContent,
+  uniqueStoredName,
+  buildPrivatePath,
+} from '@/lib/uploads/private-storage';
 
 // Fetch all expenses for the ledger (NOW PAGINATED)
 export async function GET(request: Request) {
@@ -103,16 +109,21 @@ export async function POST(request: Request) {
         return apiError(400, "Malware detected in uploaded file.", "MALWARE_DETECTED");
       }
 
-      // 2. NAMESPACED UPLOADS: Save to a workspace-specific folder
-      const receiptsDir = path.join(process.cwd(), 'public', 'receipts', workspaceId);
-      if (!fs.existsSync(receiptsDir)) fs.mkdirSync(receiptsDir, { recursive: true });
+      const sniffed = sniffAllowedContent(buffer);
+      if (!sniffed || (sniffed !== 'pdf' && sniffed !== 'png' && sniffed !== 'jpeg' && sniffed !== 'webp' && sniffed !== 'gif')) {
+        return apiError(415, "Unsupported or unsafe receipt content.", "INVALID_FILE_TYPE");
+      }
+      if (sniffed === 'pdf' && ext !== '.pdf') {
+        return apiError(415, "Receipt content did not match expected PDF type.", "INVALID_FILE_TYPE");
+      }
 
-      const safeFilename = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-      const uniqueFilename = `${Date.now()}-${safeFilename}`;
-      const filepath = path.join(receiptsDir, uniqueFilename);
+      const receiptsDir = buildPrivatePath('receipts', [workspaceId]);
+      await ensureDir(receiptsDir);
+      const storedName = uniqueStoredName('receipt', ext);
+      const filepath = path.join(receiptsDir, storedName);
 
-      fs.writeFileSync(filepath, buffer);
-      receiptUrl = `/receipts/${workspaceId}/${uniqueFilename}`;
+      await fs.promises.writeFile(filepath, buffer, { mode: 0o600 });
+      receiptUrl = `/receipts/${workspaceId}/${storedName}`;
     }
 
     // 3. SECURE CREATION: Link expense to the workspace

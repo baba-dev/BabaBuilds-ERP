@@ -1,4 +1,3 @@
-import { promises as fs } from 'fs';
 import path from 'path';
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
@@ -7,6 +6,13 @@ import { prisma } from '@/lib/prisma';
 import { apiError } from '@/lib/api-error';
 import { scanBuffer } from '@/lib/security/clamav';
 import { logActivity } from '@/lib/security/activity-log';
+import {
+  ensureDir,
+  sanitizeFilename,
+  sniffAllowedContent,
+  uniqueStoredName,
+} from '@/lib/uploads/private-storage';
+import { buildPrivatePath } from '@/lib/uploads/private-storage';
 
 type ImportFlow = 'expenses' | 'invoices' | 'reconciliation';
 type ImportStatus = 'IMPORTED' | 'UNSUPPORTED' | 'PERMISSION_DENIED' | 'FAILED';
@@ -244,13 +250,29 @@ export async function POST(request: Request) {
     }
 
     if (flow === 'expenses') {
-      const receiptsDir = path.join(process.cwd(), 'public', 'receipts', workspaceId);
-      await fs.mkdir(receiptsDir, { recursive: true });
+      const guessed = sniffAllowedContent(buffer);
+      if (!guessed || (guessed !== 'pdf' && guessed !== 'png' && guessed !== 'jpeg' && guessed !== 'webp')) {
+        await logAudit({
+          workspaceId,
+          request,
+          actorUserId: actor?.userId,
+          actorEmail: actor?.email,
+          fileName: file.name,
+          mimeType: file.type,
+          fileSize: file.size,
+          flow,
+          status: 'UNSUPPORTED',
+          reason: 'Receipt content did not match supported formats (pdf/png/jpeg/webp)',
+        });
+        return apiError(415, 'Unsupported receipt content.', 'UNSUPPORTED_FILE');
+      }
 
-      const safeFilename = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-      const uniqueFilename = `${Date.now()}-${safeFilename}`;
-      const filepath = path.join(receiptsDir, uniqueFilename);
-      await fs.writeFile(filepath, buffer);
+      const safeBase = sanitizeFilename(path.basename(file.name, path.extname(file.name) || ''));
+      const ext = guessed === 'jpeg' ? '.jpg' : guessed === 'pdf' ? '.pdf' : guessed === 'png' ? '.png' : '.webp';
+      const storedName = uniqueStoredName(`receipt-${safeBase || 'upload'}`, ext);
+      const filepath = buildPrivatePath('receipts', [workspaceId, storedName]);
+      await ensureDir(path.dirname(filepath));
+      await (await import('fs/promises')).writeFile(filepath, buffer, { mode: 0o600 });
 
       const importedExpense = await prisma.expense.create({
         data: {
@@ -260,7 +282,7 @@ export async function POST(request: Request) {
           vendor: 'File Import',
           amount: 0,
           description: `Imported from launched file: ${file.name}`,
-          receiptUrl: `/receipts/${workspaceId}/${uniqueFilename}`,
+          receiptUrl: `/receipts/${workspaceId}/${storedName}`,
         },
       });
 

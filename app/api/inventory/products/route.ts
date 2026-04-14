@@ -49,6 +49,7 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { scanBuffer } from '@/lib/security/clamav';
+import { buildPrivatePath, ensureDir, sniffAllowedContent, uniqueStoredName } from '@/lib/uploads/private-storage';
 
 function isAllowedProductImageExtension(ext: string) {
   return ['.jpg', '.jpeg', '.png', '.webp'].includes(ext.toLowerCase());
@@ -95,13 +96,20 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Malware detected in uploaded file." }, { status: 400 });
       }
 
-      const dir = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'products', workspaceId); 
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      const sniffed = sniffAllowedContent(buffer);
+      if (!sniffed || (sniffed !== 'png' && sniffed !== 'jpeg' && sniffed !== 'webp')) {
+        return NextResponse.json({ error: "Unsupported or unsafe image content." }, { status: 415 });
+      }
+      if (sniffed === 'jpeg' && ext !== '.jpg' && ext !== '.jpeg') {
+        return NextResponse.json({ error: "Image content did not match expected JPEG type." }, { status: 415 });
+      }
 
-      const filename = `product-${Date.now()}-${uuidv4()}${ext}`;
-      const filepath = path.join(dir, filename);
-      fs.writeFileSync(filepath, buffer);
-      imageUrl = `/products/${workspaceId}/${filename}`;
+      const dir = buildPrivatePath('products', [workspaceId]);
+      await ensureDir(dir);
+      const storedName = uniqueStoredName(`product-${uuidv4()}`, ext);
+      const filepath = path.join(dir, storedName);
+      fs.writeFileSync(filepath, buffer, { mode: 0o600 });
+      imageUrl = `/products/${workspaceId}/${storedName}`;
     }
 
     const status = currentStock === 0 ? "OUT_OF_STOCK" : (currentStock <= safetyStock ? "LOW_STOCK" : "IN_STOCK");

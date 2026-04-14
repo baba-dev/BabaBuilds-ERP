@@ -5,7 +5,7 @@ import {
   hasTraversal,
   isWorkspaceNamespaced,
   logDeniedAssetAccess,
-  serveAssetFromPublic,
+  servePrivateAsset,
 } from '@/lib/security/private-asset';
 
 export async function GET(request: Request, { params }: { params: Promise<{ path: string[] }> }) {
@@ -52,5 +52,5 @@ export async function GET(request: Request, { params }: { params: Promise<{ path
     return new NextResponse('Forbidden', { status: 403 });
   }
 
-  return serveAssetFromPublic('receipts', filePathArray);
+  return servePrivateAsset('receipts', filePathArray);
 }

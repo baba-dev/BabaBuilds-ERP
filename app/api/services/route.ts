@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import fs from 'fs';
 import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
 import { logActivity } from '@/lib/activity-log';
 import { apiError } from '@/lib/api-error';
+import { scanBuffer } from '@/lib/security/clamav';
+import { buildPrivatePath, ensureDir, sniffAllowedContent, uniqueStoredName } from '@/lib/uploads/private-storage';
 
 type SessionContext = {
   workspaceId?: string;
@@ -79,10 +79,21 @@ export async function POST(request: Request) {
       }
       const bytes = await imageFile.arrayBuffer();
       const buffer = Buffer.from(bytes);
-      const dir = path.join(process.cwd(), 'public', 'uploads', 'service-hero', workspaceId);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      const filename = `hero-${Date.now()}-${uuidv4()}${ext}`;
-      fs.writeFileSync(path.join(dir, filename), buffer);
+
+      const isSafe = await scanBuffer(buffer);
+      if (!isSafe) {
+        return apiError(400, "Malware detected in uploaded file.", "MALWARE_DETECTED");
+      }
+
+      const sniffed = sniffAllowedContent(buffer);
+      if (!sniffed || (sniffed !== 'png' && sniffed !== 'jpeg' && sniffed !== 'webp')) {
+        return NextResponse.json({ error: "Unsupported or unsafe image content." }, { status: 415 });
+      }
+
+      const dir = buildPrivatePath('service-hero', [workspaceId]);
+      await ensureDir(dir);
+      const filename = uniqueStoredName('hero', ext);
+      await (await import('fs/promises')).writeFile(path.join(dir, filename), buffer, { mode: 0o600 });
       imageUrl = `/uploads/service-hero/${workspaceId}/${filename}`;
     }
 

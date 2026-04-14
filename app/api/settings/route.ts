@@ -8,6 +8,13 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { scanBuffer } from '@/lib/security/clamav';
+import {
+  ensureDir,
+  sanitizeFilename,
+  sniffAllowedContent,
+  uniqueStoredName,
+  buildPrivatePath,
+} from '@/lib/uploads/private-storage';
 import { isSupportedLocale } from '@/i18n/locales';
 import { getTaxFeatureFlags } from '@/lib/tax/feature-flags';
 import { logActivity } from '@/lib/security/activity-log';
@@ -178,47 +185,54 @@ export async function POST(request: Request) {
 
     if (file && file.size > 0) {
       const ext = path.extname(file.name).toLowerCase();
-      const allowedExtensions = ['.png', '.jpg', '.jpeg', '.webp']; 
+      const allowedExtensions = ['.png', '.jpg', '.jpeg', '.webp'];
       if (!allowedExtensions.includes(ext)) {
-        return NextResponse.json({ error: "Invalid file type. Only images are allowed." }, { status: 400 });
+        return NextResponse.json({ error: "Invalid file type. Only PNG, JPG, or WEBP allowed." }, { status: 400 });
       }
-      const bytes  = await file.arrayBuffer();
+      const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
-      
+
+      const detected = sniffAllowedContent(buffer);
+      if (!detected || !['png', 'jpeg', 'webp', 'gif'].includes(detected)) {
+        return NextResponse.json({ error: "Invalid image data. Please upload a real PNG/JPG/WEBP." }, { status: 400 });
+      }
+
       const isSafe = await scanBuffer(buffer);
       if (!isSafe) {
         return NextResponse.json({ error: "Malware detected in uploaded file." }, { status: 400 });
       }
 
-      const dir      = path.join(process.cwd(), 'public', 'logos', workspaceId);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      const filename = `logo-${Date.now()}-${uuidv4()}${ext}`;
-      const filepath = path.join(dir, filename);
-      fs.writeFileSync(filepath, buffer);
-      logoUrl = `/logos/${workspaceId}/${filename}`;
+      const storedName = uniqueStoredName('logo', ext);
+      const absPath = buildPrivatePath('logos', [workspaceId, storedName]);
+      await ensureDir(path.dirname(absPath));
+      await fs.promises.writeFile(absPath, buffer, { mode: 0o600 });
+      logoUrl = `/logos/${workspaceId}/${storedName}`;
     }
 
     if (signatureFile && signatureFile.size > 0) {
       const ext = path.extname(signatureFile.name).toLowerCase();
-      // Enforce transparent-friendly formats
-      const allowedExtensions = ['.png', '.webp']; 
+      const allowedExtensions = ['.png', '.webp'];
       if (!allowedExtensions.includes(ext)) {
-        return NextResponse.json({ error: "Invalid signature type. Only transparent PNG or WEBP allowed." }, { status: 400 });
+        return NextResponse.json({ error: "Invalid signature type. Only PNG or WEBP allowed." }, { status: 400 });
       }
-      const bytes  = await signatureFile.arrayBuffer();
+      const bytes = await signatureFile.arrayBuffer();
       const buffer = Buffer.from(bytes);
-      
+
+      const detected = sniffAllowedContent(buffer);
+      if (!detected || !['png', 'webp'].includes(detected)) {
+        return NextResponse.json({ error: "Invalid signature image data. Please upload a real PNG/WEBP." }, { status: 400 });
+      }
+
       const isSafe = await scanBuffer(buffer);
       if (!isSafe) {
         return NextResponse.json({ error: "Malware detected in uploaded signature." }, { status: 400 });
       }
 
-      const dir      = path.join(process.cwd(), 'public', 'signatures', workspaceId);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      const filename = `signature-${Date.now()}-${uuidv4()}${ext}`;
-      const filepath = path.join(dir, filename);
-      fs.writeFileSync(filepath, buffer);
-      signatureUrl = `/signatures/${workspaceId}/${filename}`;
+      const storedName = uniqueStoredName('signature', ext);
+      const absPath = buildPrivatePath('signatures', [workspaceId, storedName]);
+      await ensureDir(path.dirname(absPath));
+      await fs.promises.writeFile(absPath, buffer, { mode: 0o600 });
+      signatureUrl = `/signatures/${workspaceId}/${storedName}`;
     }
 
     // ── Build update payload (no secrets yet) ─────────────────────────────────

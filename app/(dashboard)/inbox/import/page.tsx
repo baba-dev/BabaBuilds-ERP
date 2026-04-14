@@ -40,7 +40,19 @@ async function loadSharedPayload(workspaceId: string, shareId: string): Promise<
 
   try {
     const raw = fs.readFileSync(payloadPath, 'utf-8');
-    return JSON.parse(raw) as SharedImportPayload;
+    const parsed = JSON.parse(raw) as SharedImportPayload;
+    // Ensure previews always hit the protected route even if older payloads used a public path.
+    const files = Array.isArray(parsed.files)
+      ? parsed.files.map((file) => {
+          const url = typeof file.publicUrl === 'string' ? file.publicUrl : '';
+          if (url.startsWith('/uploads/share-target/')) return file;
+          if (typeof (file as any).relativePath === 'string' && (file as any).relativePath.startsWith('/uploads/share-target/')) {
+            return { ...file, publicUrl: (file as any).relativePath };
+          }
+          return file;
+        })
+      : [];
+    return { ...parsed, files };
   } catch {
     return null;
   }
