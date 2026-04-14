@@ -123,7 +123,7 @@ export function ChartsIsland({
         return {
           name: segment.name,
           value: segment.value,
-          color: (segment as { name: string; value: number; color: string }).color,
+          color: (segment as any).color,
           dashArray,
           dashOffset,
           rotationDeg: (rotation / dashArray) * 360

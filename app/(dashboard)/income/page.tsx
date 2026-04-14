@@ -207,6 +207,17 @@ export default function InvoicesAndEarnings() {
     e.preventDefault();
     if (!selectedInvoice) return;
 
+    // 6.1 FIX: validate amount doesn't exceed remaining balance
+    const amt = Number(amountReceived);
+    if (amt <= 0) {
+      toast.error("Amount must be greater than zero.");
+      return;
+    }
+    if (selectedInvoiceRemaining > 0 && amt > selectedInvoiceRemaining + 0.01) {
+      toast.error(`Amount exceeds remaining balance of ${fCurrency(selectedInvoiceRemaining)}.`);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const res = await fetch(`/api/invoices/${selectedInvoice.id}/pay`, {
@@ -562,11 +573,9 @@ export default function InvoicesAndEarnings() {
             <InvoiceGeneratorForm
               inModal
               onSuccess={() => {
-                // Refresh the table after a short delay so the user can see the success banner
-                setTimeout(() => {
-                  setNewInvoiceModalOpen(false);
-                  fetchInvoices(currentPage);
-                }, 2500);
+                // 5.3 FIX: Refresh ledger immediately but do NOT auto-close the modal.
+                // The user sees the success banner with Download PDF and closes manually via the X button.
+                fetchInvoices(currentPage);
               }}
             />
           </div>
@@ -591,6 +600,7 @@ export default function InvoicesAndEarnings() {
                   <Input
                     type="number"
                     step="0.01"
+                    max={selectedInvoiceRemaining > 0 ? selectedInvoiceRemaining.toString() : undefined}
                     className="pl-8 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold"
                     value={amountReceived}
                     onChange={(e) => setAmountReceived(e.target.value)}

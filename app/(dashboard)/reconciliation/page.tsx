@@ -530,7 +530,8 @@ export default function ReconciliationWizard() {
                             <p className="text-xs text-zinc-500 dark:text-zinc-400">{row.date}</p>
                             <p className="font-mono text-xs font-medium text-zinc-700 dark:text-zinc-300 line-through">{row.description}</p>
                           </TableCell>
-                          <TableCell className="text-right font-medium dark:text-zinc-300">₹{row.amount.toLocaleString()}</TableCell>
+                          {/* 10.4 FIX: was hardcoded ₹ — now uses workspace-aware fCurrency() */}
+                          <TableCell className="text-right font-medium dark:text-zinc-300">{fCurrency(row.amount)}</TableCell>
                           <TableCell className="text-right">
                             <Button variant="outline" size="sm" onClick={() => dispatch({ type: 'RESTORE_ITEM', payload: row })} className="dark:border-zinc-700 dark:hover:bg-zinc-800">{t('btn_restore')}</Button>
                           </TableCell>

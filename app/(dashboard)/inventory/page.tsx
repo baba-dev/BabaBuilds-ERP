@@ -295,7 +295,32 @@ export default function InventoryHub() {
                     </tr>
                   ))}
                   {filteredProducts.length === 0 && !isLoading && (
-                    <tr><td colSpan={7} className="text-center py-12 text-zinc-500 font-bold uppercase tracking-widest text-sm">No products match your search</td></tr>
+                    <tr>
+                      <td colSpan={7} className="p-0 border-none">
+                        {/* 8.2 FIX: differentiate empty inventory vs empty search results */}
+                        {products.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center py-20 text-center">
+                            <div className="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:bg-zinc-800 flex items-center justify-center mb-4 shadow-sm">
+                              <Package className="w-7 h-7 text-zinc-400 dark:text-zinc-500" />
+                            </div>
+                            <p className="font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-widest text-sm">Inventory is empty</p>
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2 font-medium max-w-sm leading-relaxed">
+                              Add your first product to start tracking stock levels, costs, and valuation.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setFormModalOpen(true)}
+                              className="mt-5 px-5 py-2 text-xs font-bold uppercase tracking-widest bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-50 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 rounded-lg transition-all active:scale-95 shadow-sm"
+                            >
+                              <Plus className="inline w-3.5 h-3.5 mr-1.5 -mt-0.5" />
+                              New Product
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-center py-12 text-zinc-500 font-bold uppercase tracking-widest text-sm">No products match your search</p>
+                        )}
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>

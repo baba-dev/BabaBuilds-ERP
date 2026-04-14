@@ -5,7 +5,7 @@ export type AttentionReceivableRow = {
   invoiceDate: Date;
   totalAmount: Prisma.Decimal | number | string;
   grandTotal: Prisma.Decimal | number | string | null;
-  amountReceived: number | null;
+  amountReceived: Prisma.Decimal | number | string | null;
 };
 
 export function summarizeReceivablesForAttention(rows: AttentionReceivableRow[], now: Date = new Date()) {
