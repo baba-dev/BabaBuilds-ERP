@@ -65,13 +65,24 @@ export const parseDashboardResponse = (payload: unknown) => {
       ...salesAndShop,
       serviceOrderConversion: asNumber(salesAndShop.serviceOrderConversion),
       shopRevenueThisMonth: parseApiMoney(salesAndShop.shopRevenueThisMonth as string | number),
+      shopRevenuePreviousMonth: parseApiMoney(salesAndShop.shopRevenuePreviousMonth as string | number),
+      revenueChangeVsPriorMonthPct:
+        typeof salesAndShop.revenueChangeVsPriorMonthPct === "number" && Number.isFinite(salesAndShop.revenueChangeVsPriorMonthPct)
+          ? salesAndShop.revenueChangeVsPriorMonthPct
+          : null,
       ordersLast30Days: asNumber(salesAndShop.ordersLast30Days),
+      ordersPrior30Days: asNumber(salesAndShop.ordersPrior30Days),
+      orderChangeVsPrior30DaysPct:
+        typeof salesAndShop.orderChangeVsPrior30DaysPct === "number" && Number.isFinite(salesAndShop.orderChangeVsPrior30DaysPct)
+          ? salesAndShop.orderChangeVsPrior30DaysPct
+          : null,
       publishedServices: asNumber(salesAndShop.publishedServices as unknown),
       topServices: mapMoneyArray(topServices, "revenue"),
       recentServiceOrders: mapMoneyArray(recentServiceOrders, "amount"),
     },
     charts: {
       ...charts,
+      bucketTimeZone: typeof charts.bucketTimeZone === "string" && charts.bucketTimeZone ? charts.bucketTimeZone : "Asia/Kolkata",
       revenueVsExpense: revenueVsExpense.map((point) => {
         const row = asRecord(point);
         if (!row) return point;

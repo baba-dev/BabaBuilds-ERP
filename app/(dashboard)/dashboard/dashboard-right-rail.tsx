@@ -31,16 +31,26 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { DashboardData } from "./types";
+import { INTELLIGENCE_SUGGESTION_ROUTES } from "./intelligence-suggestion-routes";
 
 interface DashboardRightRailProps {
   data: DashboardData;
   fCurrency: (val: number | string) => string;
+  onRefreshSyncImportHealth?: () => Promise<void>;
+  syncImportHealthLoading?: boolean;
+  syncImportHealthError?: string | null;
 }
 
 type WorkspaceMood = 'critical' | 'warning' | 'opportunity' | 'healthy';
 type AIState = 'enabled' | 'locked_no_key' | 'fallback';
 
-export function DashboardRightRail({ data, fCurrency }: DashboardRightRailProps) {
+export function DashboardRightRail({
+  data,
+  fCurrency,
+  onRefreshSyncImportHealth,
+  syncImportHealthLoading = false,
+  syncImportHealthError = null,
+}: DashboardRightRailProps) {
   const t = useTranslations("Dashboard");
   const tr = (key: string, fallback: string, values?: any) => {
     const translation = t(key as any, values);
@@ -71,7 +81,13 @@ export function DashboardRightRail({ data, fCurrency }: DashboardRightRailProps)
           <RecentNotificationsSection data={data} tr={tr} mood={mood} />
           <SuggestedActionsSection data={data} tr={tr} mood={mood} />
           <SystemSignalsSection data={data} tr={tr} mood={mood} />
-          <SyncImportHealthSection data={data} tr={tr} />
+          <SyncImportHealthSection
+            data={data}
+            tr={tr}
+            onRefreshSyncImportHealth={onRefreshSyncImportHealth}
+            isRefreshing={syncImportHealthLoading}
+            error={syncImportHealthError}
+          />
         </div>
       </Card>
     </div>
@@ -108,10 +124,10 @@ function RightRailHeader({ tr, mood, aiState }: { tr: any, mood: WorkspaceMood, 
   const getHeaderInfo = () => {
     if (aiState === 'locked_no_key') {
       return {
-        title: tr("intelligence_locked_title", "Unlock Intelligence"),
-        sub: tr("intelligence_locked_sub", "AI Workspace Analysis"),
+        title: tr("intelligence_setup_incomplete_title", "Intelligence Setup Incomplete"),
+        sub: tr("intelligence_setup_incomplete_sub", "Groq Key Required"),
         icon: KeyRound,
-        badge: { label: tr("status_ready", "AI Ready"), color: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20" }
+        badge: { label: tr("status_setup_incomplete", "Setup Incomplete"), color: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20" }
       };
     }
 
@@ -171,10 +187,10 @@ function IntelligenceAssistantSection({ data, tr, mood, aiState }: { data: Dashb
           </div>
           <div className="flex-1">
             <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-              {tr("ai_locked_headline", "Enable Contextual Intelligence")}
+              {tr("ai_setup_incomplete_headline", "AI Setup Incomplete")}
             </p>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed mt-1.5 line-clamp-3">
-              {tr("ai_locked_body", "Add your Groq API key in Business Settings to unlock strategic suggestions, automated finance guidance, and deeper workspace analysis.")}
+              {tr("ai_setup_incomplete_body", "Add your Groq API key in Business Settings to complete setup and unlock strategic suggestions, automated finance guidance, and deeper workspace analysis.")}
             </p>
             <Link href="/settings">
               <Button size="sm" variant="outline" className="mt-4 h-9 bg-white dark:bg-zinc-900 border-amber-200 dark:border-amber-900/40 hover:bg-amber-50 dark:hover:bg-amber-900/10 text-amber-700 dark:text-amber-400 font-bold gap-2 text-xs uppercase tracking-wide px-4 transition-all">
@@ -385,7 +401,7 @@ function SuggestedActionsSection({ data, tr, mood }: { data: DashboardData, tr: 
                 </span>
                 <ChevronRight className="w-4.5 h-4.5 text-zinc-300 dark:text-zinc-700 group-hover:translate-x-1.5 transition-transform" />
               </div>
-              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mt-1.5 lines-clamp-2 leading-normal">
+              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mt-1.5 line-clamp-2 leading-normal">
                 {action.desc}
               </p>
             </div>
@@ -404,7 +420,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
     suggestions.push({
       label: tr("action_fix_imports", "Resolve Failed Data Syncs"),
       desc: tr("action_fix_imports_desc", "Data import failures detected. Resolution is mandatory for statement accuracy."),
-      href: "/settings/imports",
+      href: INTELLIGENCE_SUGGESTION_ROUTES.fixImports,
       icon: DatabaseZap,
       tone: "amber"
     });
@@ -414,7 +430,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
     suggestions.push({
       label: tr("action_finish_onboarding", "Finalize Workspace Configuration"),
       desc: tr("action_finish_onboarding_desc", "A few remaining setup steps will unlock full automation and cleaner workstreams."),
-      href: "/settings",
+      href: INTELLIGENCE_SUGGESTION_ROUTES.finishOnboarding,
       icon: FilePlus2,
       tone: "indigo"
     });
@@ -424,7 +440,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
     suggestions.push({
       label: tr("action_optimize_receivables", "Review Outstanding Receivables"),
       desc: tr("action_optimize_receivables_desc", "Pending invoices identified. Strategic follow-up will optimize available cash."),
-      href: "/invoice",
+      href: INTELLIGENCE_SUGGESTION_ROUTES.reviewReceivables,
       icon: Receipt,
       tone: "amber"
     });
@@ -434,7 +450,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
     suggestions.push({
       label: tr("action_reconcile_books", "Execute Final Reconciliation"),
       desc: tr("action_reconcile_books_desc", "Unmatched bank entries detected. Reconcile to ensure ledger trust."),
-      href: "/reconciliation",
+      href: INTELLIGENCE_SUGGESTION_ROUTES.reconcileBooks,
       icon: ShieldEllipsis,
       tone: "indigo"
     });
@@ -444,7 +460,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
     suggestions.push({
       label: tr("action_launch_store", "Enable Storefront Publicly"),
       desc: tr("action_launch_store_desc", "Your published services are ready for public orders. Growth signal is active."),
-      href: "/settings/shop",
+      href: INTELLIGENCE_SUGGESTION_ROUTES.launchStorefront,
       icon: ShoppingBag,
       tone: "emerald"
     });
@@ -455,7 +471,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
     suggestions.push({
       label: tr("action_scale_billing", "Focus on Revenue Generation"),
       desc: tr("action_scale_billing_desc", "Workspace state is stable. Now is the peak time to generate new growth signals."),
-      href: "/invoice",
+      href: INTELLIGENCE_SUGGESTION_ROUTES.scaleBilling,
       icon: Sparkles,
       tone: "indigo"
     });
@@ -521,8 +537,25 @@ function SignalPill({ label, value, tone }: { label: string, value: string, tone
   );
 }
 
-function SyncImportHealthSection({ data, tr }: { data: DashboardData, tr: any }) {
+function SyncImportHealthSection({
+  data,
+  tr,
+  onRefreshSyncImportHealth,
+  isRefreshing,
+  error,
+}: {
+  data: DashboardData;
+  tr: any;
+  onRefreshSyncImportHealth?: () => Promise<void>;
+  isRefreshing: boolean;
+  error: string | null;
+}) {
   const hasFailures = data.attention.failedImports > 0;
+  
+  const handleRefresh = async () => {
+    if (!onRefreshSyncImportHealth || isRefreshing) return;
+    await onRefreshSyncImportHealth();
+  };
   
   return (
     <div className="p-6 space-y-5 bg-zinc-50/20 dark:bg-zinc-800/20">
@@ -552,11 +585,29 @@ function SyncImportHealthSection({ data, tr }: { data: DashboardData, tr: any })
                   ? tr("sync_fix_note", "Manual intervention required for {count} records", { count: data.attention.failedImports })
                   : tr("reassurance_sync", "Infrastructure and data linkage are nominal.")}
               </p>
+              {error ? (
+                <p className="text-xs font-semibold text-rose-600 dark:text-rose-400 mt-2">
+                  {error}
+                </p>
+              ) : null}
             </div>
           </div>
-          <button className="h-10 w-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-indigo-600 hover:border-indigo-500/50 transition-all shadow-sm active:scale-90">
-            <RefreshCw className="w-5 h-5" />
-          </button>
+          {onRefreshSyncImportHealth ? (
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              aria-label={tr("refresh_sync_pipeline", "Refresh sync pipeline status")}
+              className="h-10 w-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-indigo-600 hover:border-indigo-500/50 transition-all shadow-sm active:scale-90 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:text-zinc-400 disabled:hover:border-zinc-100 dark:disabled:hover:border-zinc-800"
+            >
+              <RefreshCw className={`w-5 h-5 ${isRefreshing ? "animate-spin" : ""}`} />
+            </button>
+          ) : (
+            <div className="h-10 px-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center gap-2 text-zinc-400 cursor-default select-none">
+              <RefreshCw className="w-4 h-4" />
+              <span className="text-xs font-medium">{tr("sync_status_live", "Status updates live")}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

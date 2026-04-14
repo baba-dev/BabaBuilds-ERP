@@ -1,9 +1,12 @@
 name: Deploy ERP to Production
 
-# This tells GitHub to run this script ONLY when you push to the "main" branch
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
+
+concurrency:
+  group: deploy-production-${{ github.ref }}
+  cancel-in-progress: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -22,48 +25,32 @@ jobs:
           script: |
             source ~/.bashrc
             export PATH=$PATH:/usr/bin:/usr/local/bin
-            
-            # 1. Go to project folder
+
             cd /var/www/bababuilds-erp
-            
-            # 2. Pull code and install (Fetch and Hard Reset to clear manual conflicts)
+
             git fetch origin main
             git reset --hard origin/main
             git clean -fd components/ui/ 2>/dev/null || true
             npm install --legacy-peer-deps
-            
-            # 3. Database schema and Build
+
             npx prisma generate
             npx prisma db push
             npm run build
-            
-            # ==========================================
-            # 4. PERMISSIONS LOCKDOWN
-            # ==========================================
-            
-            # A. Set Ownership
-            # NOTE: If PM2 was started by 'root', change 'www-data:www-data' to 'root:root'
+
             chown -R root:root .
-            
-            # B. Standard Folder & File Permissions (Optimized to skip node_modules to save time)
+
             find . -path ./node_modules -prune -o -type d -exec chmod 755 {} +
             find . -path ./node_modules -prune -o -type f -exec chmod 644 {} +
-            
-            # C. Lockdown Sensitive Files (Using || true so it doesn't crash if file doesn't exist yet)
+
             chmod 600 .env* 2>/dev/null || true
             chmod 700 deploy.sh 2>/dev/null || true
-            
-            # D. Special Handling for SQLite
+
             chmod 775 prisma
             chmod 664 prisma/*.db 2>/dev/null || true
-            
-            # E. Access for Uploads (Ensure folders exist first, then permission them)
+
             mkdir -p public/logos public/receipts public/invoices
             chmod -R 775 public/logos
             chmod -R 775 public/receipts
             chmod -R 775 public/invoices
-            
-            # ==========================================
-            
-            # 5. Restart PM2
+
             npx pm2 restart erp || npx pm2 start npm --name "erp" -- start

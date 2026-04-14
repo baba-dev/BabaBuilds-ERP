@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 
 export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -86,6 +87,12 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     }
 
     await prisma.$transaction(transactionTasks);
+
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'purchase_order', action: 'receive', error: String(error) });
+    }
 
     return NextResponse.json({ success: true, message: `PO #${po.poNumber} Received Successfully` });
   } catch (error: any) {

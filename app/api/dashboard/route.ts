@@ -5,9 +5,12 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { INVOICE_STATUS } from "@/lib/invoice-status";
 import { serializeMoney, toDecimal } from "@/lib/money";
+import { summarizeReceivablesForAttention } from "@/lib/dashboard/attention-receivables";
 import { getInvoiceBilledAmount, sumInvoiceBilledAmount } from "@/lib/invoice/totals";
 import { estimateTax } from "@/lib/tax/engine";
 import { getCurrentFinancialYear } from "@/lib/financial-year";
+import { buildMonthlyChartBuckets, resolveMonthlyBucketTimeZone } from "./monthly-series";
+import { describeKpiPeriod, getFyDateRange } from "./sales-shop-kpi-periods";
 import {
   buildDashboardCacheKey,
   getDashboardCacheEntry,
@@ -19,13 +22,14 @@ import {
 
 const normalizeInvoiceStatus = (status: unknown) => String(status).toUpperCase();
 const LOCALE_CURRENCY_AFFECTS_PAYLOAD = false;
-const CRITICAL_NOTIFICATION_TYPES = ["TAX_ALERT", "DEADLINE_ALERT", "PAYMENT_REMINDER"];
+const CRITICAL_NOTIFICATION_TYPES = ["TAX_ALERT", "DEADLINE_ALERT", "PAYMENT_REMINDER"] as const;
 
 type IntegrationStatus = "healthy" | "partial" | "missing";
-type SessionWithWorkspace = { workspaceId?: string | null; user?: { id?: string | null } | null };
+type SessionWithWorkspace = {
+  workspaceId?: string | null;
+  user?: { id?: string | null } | null;
+};
 type IntegrationReadiness = { configured: boolean; status: IntegrationStatus };
-
-const monthKey = (date: Date) => date.toLocaleDateString("en-US", { month: "short" });
 
 const getIntegrationReadiness = (keys: Array<string | null | undefined>): IntegrationReadiness => {
   const presentKeys = keys.filter((value) => Boolean(value && value.trim())).length;
@@ -34,299 +38,532 @@ const getIntegrationReadiness = (keys: Array<string | null | undefined>): Integr
   return { configured: false, status: "missing" };
 };
 
-const asPct = (num: number, den: number) => (den <= 0 ? 0 : Math.min(100, Math.round((num / den) * 100)));
-const getFyDateRange = (fy: string): { start: Date; endExclusive: Date } | null => {
-  const match = fy.match(/^(\d{2})-(\d{2})$/);
-  if (!match) return null;
-  const startYear = 2000 + Number(match[1]);
-  const endYear = 2000 + Number(match[2]);
-  if (!Number.isFinite(startYear) || !Number.isFinite(endYear) || endYear !== startYear + 1) return null;
-  return {
-    start: new Date(Date.UTC(startYear, 3, 1, 0, 0, 0)),
-    endExclusive: new Date(Date.UTC(endYear, 3, 1, 0, 0, 0)),
-  };
-};
+const asPct = (num: number, den: number) =>
+  den <= 0 ? 0 : Math.min(100, Math.round((num / den) * 100));
 
-async function buildDashboardPayload(workspaceId: string, userId: string | null, fy: string, options: { canViewFinance?: boolean, segment?: string | null } = {}) {
+async function buildDashboardPayload(
+  workspaceId: string,
+  userId: string | null,
+  fy: string,
+  options: { canViewFinance?: boolean; segment?: string | null } = {}
+) {
+  const queryTimingsMs: Record<string, number> = {};
+
+  const timed = async <T,>(label: string, op: () => Promise<T>): Promise<T> => {
+    const startedAt = performance.now();
+    try {
+      return await op();
+    } finally {
+      queryTimingsMs[label] = Number((performance.now() - startedAt).toFixed(2));
+    }
+  };
+
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const thirtyDaysBack = new Date(now);
   thirtyDaysBack.setDate(now.getDate() - 30);
+
   const sevenDaysOut = new Date(now);
   sevenDaysOut.setDate(now.getDate() + 7);
+
+  const sixtyDaysBack = new Date(now);
+  sixtyDaysBack.setDate(now.getDate() - 60);
+
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const fyRange = getFyDateRange(fy);
-  const { segment } = options;
+
+  const { canViewFinance = true } = options;
 
   const [
     workspace,
+    workspaceOwner,
+    currentUser,
     profile,
-    fyInvoices,
-    allUnpaidInvoices,
+    invoices,
+    attentionInvoices,
     recentInvoices,
-    investments,
+    investmentAggregate,
     expenses,
-    bankTransactions,
+    bankTransactionGroups,
     retainers,
-    proposals,
-    tasks,
+    proposalStatusGroups,
+    taskCount,
+    openTaskCount,
+    urgentTaskCount,
+    blockedTaskCount,
     publishedServices,
     lowStockProducts,
     openPurchaseOrders,
     inventoryMovements,
-    serviceOrders,
+    serviceOrderStatusGroups,
+    paidOrderRevenueThisMonth,
+    paidOrderRevenuePreviousMonth,
+    ordersLast30Days,
+    ordersPrior30Days,
+    topServiceOrderGroups,
     recentServiceOrders,
     integrityRuns,
-    violationReports,
+    violationCount,
+    criticalViolationCount,
     taxOverrides,
     taxAudits,
     fileImportFailures,
     activities,
     notifications,
   ] = await Promise.all([
-    // Core always fetched for metadata
-    prisma.workspace.findUnique({ where: { id: workspaceId }, select: { countryCode: true, isSetupComplete: true, subscriptionStatus: true, subscriptionEndsAt: true, planTier: true } }),
-    prisma.businessProfile.findUnique({
-      where: { workspaceId },
-      select: {
-        groqApiKey: true, razorpayKeyId: true, razorpayKeySecret: true,
-        stripePublishableKey: true, stripeSecretKey: true,
-        smtpHost: true, smtpPort: true, smtpUser: true, smtpPassword: true, smtpFromEmail: true,
-        shopEnabled: true,
-      },
-    }),
-    
-    // Conditional Segments
-    (!segment || segment === 'finance' || segment === 'sales' || segment === 'charts')
-      ? prisma.invoice.findMany({ 
-          where: { workspaceId, financialYear: fy }, 
-          select: { id: true, invoiceNumber: true, invoiceDate: true, status: true, totalAmount: true, grandTotal: true, amountReceived: true, items: true, client: { select: { id: true, name: true } } }, 
-          orderBy: { invoiceDate: "asc" } 
-        })
-      : Promise.resolve([]),
+    timed("workspace.core", () =>
+      prisma.workspace.findUnique({
+        where: { id: workspaceId },
+      })
+    ),
 
-    (!segment || segment === 'finance' || segment === 'sales' || segment === 'charts' || segment === 'attention')
-      ? prisma.invoice.findMany({ 
-          where: { workspaceId, status: { not: "PAID" } }, 
-          select: { id: true, invoiceNumber: true, invoiceDate: true, status: true, totalAmount: true, grandTotal: true, amountReceived: true, items: true, client: { select: { id: true, name: true } } }
-        })
-      : Promise.resolve([]),
-      
-    (!segment || segment === 'ledger')
-      ? prisma.invoice.findMany({ 
-          where: { workspaceId }, 
-          select: { id: true, invoiceNumber: true, invoiceDate: true, status: true, totalAmount: true, amountReceived: true, pdfPath: true, client: { select: { name: true } } }, 
-          orderBy: { invoiceDate: "desc" }, 
-          take: 6 
-        })
-      : Promise.resolve([]),
+    timed("workspace.owner", () =>
+      prisma.workspaceUser.findFirst({
+        where: { workspaceId, role: "OWNER" },
+        select: { user: { select: { timeZone: true } } },
+      })
+    ),
 
-    (!segment || segment === 'finance')
-      ? prisma.investment.findMany({ where: { workspaceId }, select: { amount: true } })
-      : Promise.resolve([]),
+    userId
+      ? timed("user.current", () =>
+          prisma.user.findUnique({
+            where: { id: userId },
+            select: { timeZone: true },
+          })
+        )
+      : Promise.resolve(null),
 
-    (!segment || segment === 'finance' || segment === 'charts')
-      ? prisma.expense.findMany({
-          where: { workspaceId, ...(fyRange ? { date: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}) },
-          select: { amount: true, date: true }
-        })
-      : Promise.resolve([]),
+    timed("profile.business", () =>
+      prisma.businessProfile.findUnique({
+        where: { workspaceId },
+        select: {
+          groqApiKey: true,
+          razorpayKeyId: true,
+          razorpayKeySecret: true,
+          stripePublishableKey: true,
+          stripeSecretKey: true,
+          smtpHost: true,
+          smtpPort: true,
+          smtpUser: true,
+          smtpPassword: true,
+          smtpFromEmail: true,
+          shopEnabled: true,
+        },
+      })
+    ),
 
-    (!segment || segment === 'finance' || segment === 'charts')
-      ? prisma.bankTransaction.findMany({ where: { workspaceId }, select: { isReconciled: true, id: true } })
-      : Promise.resolve([]),
+    timed("invoices.fy", () =>
+      prisma.invoice.findMany({
+        where: { workspaceId, financialYear: fy },
+        select: {
+          status: true,
+          invoiceDate: true,
+          totalAmount: true,
+          grandTotal: true,
+          amountReceived: true,
+        },
+        orderBy: { invoiceDate: "asc" },
+      })
+    ),
 
-    (!segment || segment === 'finance' || segment === 'charts')
-      ? prisma.retainer.findMany({ where: { workspaceId, status: "ACTIVE" }, select: { amount: true, nextBillingDate: true } })
-      : Promise.resolve([]),
+    timed("invoices.attention", () =>
+      prisma.invoice.findMany({
+        where: { workspaceId },
+        select: {
+          status: true,
+          invoiceDate: true,
+          totalAmount: true,
+          grandTotal: true,
+          amountReceived: true,
+        },
+      })
+    ),
 
-    (!segment || segment === 'sales' || segment === 'charts' || segment === 'attention')
-      ? prisma.proposal.findMany({ where: { workspaceId }, select: { status: true, items: { select: { total: true } } } })
-      : Promise.resolve([]),
+    timed("invoices.recent", () =>
+      prisma.invoice.findMany({
+        where: { workspaceId },
+        orderBy: { invoiceDate: "desc" },
+        take: 6,
+        include: { client: true },
+      })
+    ),
 
-    (!segment || segment === 'ops' || segment === 'attention')
-      ? prisma.task.findMany({ where: { workspaceId }, select: { status: true, dueDate: true } })
-      : Promise.resolve([]),
+    timed("investments.sum", () =>
+      prisma.investment.aggregate({
+        where: { workspaceId },
+        _sum: { amount: true },
+      })
+    ),
 
-    (!segment || segment === 'ops')
-      ? prisma.serviceTemplate.count({ where: { workspaceId, showInShop: true } })
-      : Promise.resolve(0),
+    timed("expenses.fy", () =>
+      prisma.expense.findMany({
+        where: {
+          workspaceId,
+          ...(fyRange ? { date: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}),
+        },
+        select: { date: true, amount: true },
+      })
+    ),
 
-    (!segment || segment === 'ops')
-      ? prisma.product.count({ where: { workspaceId, OR: [{ status: "LOW_STOCK" }, { currentStock: { lte: 5 } }] } })
-      : Promise.resolve(0),
+    timed("bank.grouped", () =>
+      prisma.bankTransaction.groupBy({
+        where: { workspaceId },
+        by: ["isReconciled"],
+        _count: { _all: true },
+      })
+    ),
 
-    (!segment || segment === 'ops')
-      ? prisma.product.count({ where: { workspaceId, status: { in: ["DRAFT", "SENT"] } } })
-      : Promise.resolve(0), // Wait, this was purchase order in original? Let's check original.
+    timed("retainers.active", () =>
+      prisma.retainer.findMany({
+        where: { workspaceId, status: "ACTIVE" },
+        select: { amount: true, nextBillingDate: true },
+      })
+    ),
 
-    (!segment || segment === 'ops')
-      ? prisma.inventoryMovement.findMany({ where: { workspaceId }, select: { id: true, quantity: true, type: true, createdAt: true, product: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 5 })
-      : Promise.resolve([]),
+    timed("proposals.grouped", () =>
+      prisma.proposal.groupBy({
+        where: { workspaceId },
+        by: ["status"],
+        _count: { _all: true },
+      })
+    ),
 
-    (!segment || segment === 'sales' || segment === 'charts')
-      ? prisma.serviceOrder.findMany({
-          where: { workspaceId },
-          select: { id: true, status: true, amount: true, createdAt: true, buyerName: true, serviceTemplate: { select: { name: true } } },
-          orderBy: { createdAt: "desc" },
-        })
-      : Promise.resolve([]),
+    timed("tasks.total", () =>
+      prisma.task.count({
+        where: { workspaceId },
+      })
+    ),
 
-    (!segment || segment === 'sales')
-      ? prisma.serviceOrder.findMany({
-          where: { workspaceId },
-          select: { id: true, status: true, amount: true, createdAt: true, buyerName: true, serviceTemplate: { select: { name: true } } },
-          orderBy: { createdAt: "desc" },
-          take: 5,
-        })
-      : Promise.resolve([]),
+    timed("tasks.open", () =>
+      prisma.task.count({
+        where: { workspaceId, status: { not: "DONE" } },
+      })
+    ),
 
-    (!segment || segment === 'trust')
-      ? prisma.accountingIntegrityRun.findMany({ where: { workspaceId }, select: { status: true, startedAt: true, completedAt: true }, orderBy: { startedAt: "desc" }, take: 1 })
-      : Promise.resolve([]),
+    timed("tasks.urgent", () =>
+      prisma.task.count({
+        where: {
+          workspaceId,
+          status: { not: "DONE" },
+          OR: [{ dueDate: { lte: sevenDaysOut } }, { status: { contains: "URGENT" } }],
+        },
+      })
+    ),
 
-    (!segment || segment === 'trust' || segment === 'attention')
-      ? prisma.accountingViolationReport.findMany({ where: { workspaceId }, select: { id: true, severity: true, detectedAt: true }, orderBy: { detectedAt: "desc" }, take: 30 })
-      : Promise.resolve([]),
+    timed("tasks.blocked", () =>
+      prisma.task.count({
+        where: { workspaceId, status: { contains: "BLOCK" } },
+      })
+    ),
 
-    (!segment || segment === 'trust')
-      ? prisma.taxRateOverride.count({ where: { workspaceId, isActive: true } })
-      : Promise.resolve(0),
+    timed("services.published", () =>
+      prisma.serviceTemplate.count({
+        where: { workspaceId, showInShop: true },
+      })
+    ),
 
-    (!segment || segment === 'trust')
-      ? prisma.taxDecisionAuditLog.findMany({ where: { workspaceId }, select: { id: true, resolutionSource: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 5 })
-      : Promise.resolve([]),
+    timed("products.low_stock", () =>
+      prisma.product.count({
+        where: {
+          workspaceId,
+          OR: [{ status: "LOW_STOCK" }, { currentStock: { lte: 5 } }],
+        },
+      })
+    ),
 
-    (!segment || segment === 'attention')
-      ? prisma.fileImportAuditLog.count({ where: { workspaceId, status: { in: ["FAILED", "ERROR"] } } })
-      : Promise.resolve(0),
+    timed("purchase_orders.open", () =>
+      prisma.purchaseOrder.count({
+        where: { workspaceId, status: { in: ["DRAFT", "SENT"] } },
+      })
+    ),
 
-    (!segment || segment === 'activity')
-      ? prisma.appActivityLog.findMany({ where: { workspaceId }, select: { id: true, action: true, status: true, createdAt: true, actorEmail: true }, orderBy: { createdAt: "desc" }, take: 8 })
-      : Promise.resolve([]),
+    timed("inventory.recent", () =>
+      prisma.inventoryMovement.findMany({
+        where: { workspaceId },
+        include: { product: { select: { name: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      })
+    ),
 
-    (userId && (!segment || segment === 'attention'))
-      ? prisma.inAppNotification.count({ where: { userId, workspaceId, isRead: false, eventType: { in: CRITICAL_NOTIFICATION_TYPES } } })
+    timed("orders.status_group", () =>
+      prisma.serviceOrder.groupBy({
+        where: { workspaceId },
+        by: ["status"],
+        _count: { _all: true },
+      })
+    ),
+
+    timed("orders.revenue_month", () =>
+      prisma.serviceOrder.aggregate({
+        where: {
+          workspaceId,
+          status: "PAID",
+          createdAt: { gte: monthStart, lt: nextMonthStart },
+        },
+        _sum: { amount: true },
+      })
+    ),
+
+    timed("orders.revenue_prev_month", () =>
+      prisma.serviceOrder.aggregate({
+        where: {
+          workspaceId,
+          status: "PAID",
+          createdAt: { gte: previousMonthStart, lt: monthStart },
+        },
+        _sum: { amount: true },
+      })
+    ),
+
+    timed("orders.last_30d", () =>
+      prisma.serviceOrder.count({
+        where: { workspaceId, createdAt: { gte: thirtyDaysBack } },
+      })
+    ),
+
+    timed("orders.prior_30d", () =>
+      prisma.serviceOrder.count({
+        where: {
+          workspaceId,
+          createdAt: { gte: sixtyDaysBack, lt: thirtyDaysBack },
+        },
+      })
+    ),
+
+    timed("orders.top_services", () =>
+      prisma.serviceOrder.groupBy({
+        where: { workspaceId },
+        by: ["serviceTemplateId"],
+        _count: { _all: true },
+        _sum: { amount: true },
+      })
+    ),
+
+    timed("orders.recent", () =>
+      prisma.serviceOrder.findMany({
+        where: { workspaceId },
+        include: { serviceTemplate: { select: { name: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      })
+    ),
+
+    timed("integrity.last_run", () =>
+      prisma.accountingIntegrityRun.findMany({
+        where: { workspaceId },
+        orderBy: { startedAt: "desc" },
+        take: 1,
+      })
+    ),
+
+    timed("integrity.violations_total", () =>
+      prisma.accountingViolationReport.count({
+        where: { workspaceId },
+      })
+    ),
+
+    timed("integrity.violations_critical", () =>
+      prisma.accountingViolationReport.count({
+        where: { workspaceId, severity: "CRITICAL" },
+      })
+    ),
+
+    timed("tax.overrides", () =>
+      prisma.taxRateOverride.count({
+        where: { workspaceId, isActive: true },
+      })
+    ),
+
+    timed("tax.audits_recent", () =>
+      prisma.taxDecisionAuditLog.findMany({
+        where: { workspaceId },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      })
+    ),
+
+    timed("imports.failed", () =>
+      prisma.fileImportAuditLog.count({
+        where: { workspaceId, status: { in: ["FAILED", "ERROR"] } },
+      })
+    ),
+
+    timed("activity.recent", () =>
+      prisma.appActivityLog.findMany({
+        where: { workspaceId },
+        orderBy: { createdAt: "desc" },
+        take: 8,
+      })
+    ),
+
+    userId
+      ? timed("notifications.critical_unread", () =>
+          prisma.inAppNotification.count({
+            where: {
+              userId,
+              workspaceId,
+              isRead: false,
+              eventType: { in: CRITICAL_NOTIFICATION_TYPES as unknown as string[] },
+            },
+          })
+        )
       : Promise.resolve(0),
   ]);
 
-  // Intermediate computations
-  const billedRevenue = (options.canViewFinance) ? sumInvoiceBilledAmount(fyInvoices) : new Prisma.Decimal(0);
-  const expensesTotal = expenses.reduce((sum, row) => sum.plus(toDecimal(row.amount)), new Prisma.Decimal(0));
-  const liquidAssets = (options.canViewFinance) ? investments.reduce((sum, row) => sum.plus(toDecimal(row.amount)), new Prisma.Decimal(0)) : new Prisma.Decimal(0);
-  
-  const pendingOrdersCount = serviceOrders.filter(so => ["PENDING", "FAILED"].includes(normalizeInvoiceStatus(so.status))).length;
+  const billedRevenue = canViewFinance ? sumInvoiceBilledAmount(invoices) : new Prisma.Decimal(0);
 
-  const receivables = allUnpaidInvoices.reduce((sum, inv) => {
-    const billed = getInvoiceBilledAmount(inv);
-    const received = new Prisma.Decimal(Number(inv.amountReceived ?? 0));
-    return sum.plus(Prisma.Decimal.max(new Prisma.Decimal(0), billed.minus(received)));
-  }, new Prisma.Decimal(0)).plus(
-    serviceOrders.filter(so => ["PENDING", "FAILED"].includes(normalizeInvoiceStatus(so.status)))
-      .reduce((sum, so) => sum.plus(toDecimal(so.amount)), new Prisma.Decimal(0))
+  const expensesTotal = expenses.reduce(
+    (sum, row) => sum.plus(toDecimal(row.amount)),
+    new Prisma.Decimal(0)
   );
 
-  const presumptiveIncome = billedRevenue.mul(0.5);
-  const taxEstimate = (options.canViewFinance) ? estimateTax({
-    countryCode: workspace?.countryCode ?? "IN",
-    revenue: presumptiveIncome,
-    deductions: new Prisma.Decimal(0),
-    serviceScope: "dashboard_summary",
-    customerScope: "workspace",
-    asOfDate: now,
-  }) : { amount: serializeMoney(0) };
+  const liquidAssets = canViewFinance
+    ? toDecimal(investmentAggregate._sum.amount ?? 0)
+    : new Prisma.Decimal(0);
 
-  const recurringRevenue = retainers.reduce((sum, ret) => sum.plus(toDecimal(ret.amount)), new Prisma.Decimal(0));
-  const arr = recurringRevenue.mul(12);
-
-  const unreconciledTransactions = bankTransactions.filter((tx) => !tx.isReconciled).length;
-  const reconciliationProgress = asPct(bankTransactions.length - unreconciledTransactions, bankTransactions.length);
-
-  const overdueInvoices = allUnpaidInvoices.filter((inv) => {
-    const status = normalizeInvoiceStatus(inv.status);
-    if (status === "PAID") return false;
-    const dueDate = new Date(inv.invoiceDate);
-    dueDate.setDate(dueDate.getDate() + 30);
-    return dueDate < now;
-  }).length;
-
-  const pendingInvoices = allUnpaidInvoices.length;
-  const totalPendingReceivables = pendingInvoices + pendingOrdersCount;
-
-  const retainersDueSoon = retainers.filter((ret) => ret.nextBillingDate >= now && ret.nextBillingDate <= sevenDaysOut).length;
-  const acceptedUninvoicedProposals = proposals.filter((proposal) => proposal.status === "ACCEPTED").length;
-  const urgentTasks = tasks.filter((task) => {
-    const due = task.dueDate ? new Date(task.dueDate) : null;
-    return task.status !== "DONE" && ((due && due <= sevenDaysOut) || String(task.status).toUpperCase().includes("URGENT"));
-  }).length;
-  const blockedTasks = tasks.filter((task) => String(task.status).toUpperCase().includes("BLOCK")).length;
-
-  const criticalViolations = violationReports.filter((v) => String(v.severity).toUpperCase() === "CRITICAL").length;
-  const complianceIssues = violationReports.length + (criticalViolations > 0 ? 1 : 0);
-
-  const funnel = proposals.reduce(
-    (acc, proposal) => {
-      const status = String(proposal.status || "DRAFT").toUpperCase();
-      if (status === "SENT") acc.sent += 1;
-      else if (status === "VIEWED") acc.viewed += 1;
-      else if (status === "ACCEPTED") acc.accepted += 1;
-      else if (status === "INVOICED") acc.invoiced += 1;
-      else if (status === "DECLINED") acc.declined += 1;
-      else acc.draft += 1;
+  const serviceOrderByStatus = serviceOrderStatusGroups.reduce<Record<string, number>>(
+    (acc, group) => {
+      const status = String(group.status || "PENDING").toUpperCase();
+      acc[status] = group._count._all;
       return acc;
     },
-    { draft: 0, sent: 0, viewed: 0, accepted: 0, invoiced: 0, declined: 0 },
+    {}
   );
-
-  const serviceOrderByStatus = serviceOrders.reduce<Record<string, number>>((acc, order) => {
-    const status = String(order.status || "PENDING").toUpperCase();
-    acc[status] = (acc[status] ?? 0) + 1;
-    return acc;
-  }, {});
 
   const paidOrders = serviceOrderByStatus.PAID ?? 0;
   const pendingOrders = serviceOrderByStatus.PENDING ?? 0;
   const failedOrders = serviceOrderByStatus.FAILED ?? 0;
+  const pendingOrdersCount = pendingOrders + failedOrders;
+
+  const receivables = (canViewFinance
+    ? invoices.reduce((sum, inv) => {
+        const billed = getInvoiceBilledAmount(inv);
+        const received = new Prisma.Decimal(Number(inv.amountReceived ?? 0));
+        return sum.plus(Prisma.Decimal.max(new Prisma.Decimal(0), billed.minus(received)));
+      }, new Prisma.Decimal(0))
+    : new Prisma.Decimal(0)
+  ).plus(
+    pendingOrdersCount > 0
+      ? toDecimal(0)
+      : new Prisma.Decimal(0)
+  );
+
+  const presumptiveIncome = billedRevenue.mul(0.5);
+  const taxEstimate = canViewFinance
+    ? estimateTax({
+        countryCode: workspace?.countryCode ?? "IN",
+        revenue: presumptiveIncome,
+        deductions: new Prisma.Decimal(0),
+        serviceScope: "dashboard_summary",
+        customerScope: "workspace",
+        asOfDate: now,
+      })
+    : { amount: serializeMoney(0) };
+
+  const recurringRevenue = retainers.reduce(
+    (sum, ret) => sum.plus(toDecimal(ret.amount)),
+    new Prisma.Decimal(0)
+  );
+  const arr = recurringRevenue.mul(12);
+
+  const totalBankTransactions = bankTransactionGroups.reduce(
+    (sum, row) => sum + row._count._all,
+    0
+  );
+  const unreconciledTransactions = bankTransactionGroups
+    .filter((row) => !row.isReconciled)
+    .reduce((sum, row) => sum + row._count._all, 0);
+  const reconciliationProgress = asPct(
+    totalBankTransactions - unreconciledTransactions,
+    totalBankTransactions
+  );
+
+  const { overdueReceivables, outstandingReceivables } = summarizeReceivablesForAttention(
+    attentionInvoices,
+    now
+  );
+
+  const retainersDueSoon = retainers.filter(
+    (ret) => ret.nextBillingDate >= now && ret.nextBillingDate <= sevenDaysOut
+  ).length;
+
+  const proposalCounts = proposalStatusGroups.reduce<Record<string, number>>((acc, group) => {
+    acc[String(group.status || "DRAFT").toUpperCase()] = group._count._all;
+    return acc;
+  }, {});
+
+  const acceptedUninvoicedProposals = proposalCounts.ACCEPTED ?? 0;
+  const urgentTasks = urgentTaskCount;
+  const blockedTasks = blockedTaskCount;
+
+  const criticalViolations = criticalViolationCount;
+  const complianceIssues = violationCount + (criticalViolations > 0 ? 1 : 0);
+
+  const funnel = {
+    draft: proposalCounts.DRAFT ?? 0,
+    sent: proposalCounts.SENT ?? 0,
+    viewed: proposalCounts.VIEWED ?? 0,
+    accepted: acceptedUninvoicedProposals,
+    invoiced: proposalCounts.INVOICED ?? 0,
+    declined: proposalCounts.DECLINED ?? 0,
+  };
+
   const conversion = asPct(paidOrders, Math.max(1, paidOrders + pendingOrders + failedOrders));
 
-  const topServicesMap = serviceOrders.reduce<Record<string, { orderCount: number; revenue: Prisma.Decimal }>>((acc, order) => {
-    const name = order.serviceTemplate?.name ?? "Unknown service";
-    if (!acc[name]) acc[name] = { orderCount: 0, revenue: new Prisma.Decimal(0) };
-    acc[name].orderCount += 1;
-    acc[name].revenue = acc[name].revenue.plus(toDecimal(order.amount));
-    return acc;
-  }, {});
-  const topServices = Object.entries(topServicesMap)
-    .map(([serviceName, stats]) => ({ serviceName, orderCount: stats.orderCount, revenue: serializeMoney(stats.revenue) }))
-    .sort((a, b) => b.orderCount - a.orderCount)
-    .slice(0, 4);
+  const topServiceTemplateIds = topServiceOrderGroups
+    .filter((group) => Boolean(group.serviceTemplateId))
+    .sort((a, b) => b._count._all - a._count._all)
+    .slice(0, 4)
+    .map((group) => group.serviceTemplateId as string);
 
-  const monthly = fyInvoices.reduce<Record<string, { revenue: Prisma.Decimal; expenses: Prisma.Decimal; mrr: Prisma.Decimal }>>((acc, inv) => {
-    const key = monthKey(new Date(inv.invoiceDate));
-    if (!acc[key]) acc[key] = { revenue: new Prisma.Decimal(0), expenses: new Prisma.Decimal(0), mrr: new Prisma.Decimal(0) };
-    acc[key].revenue = acc[key].revenue.plus(getInvoiceBilledAmount(inv));
-    return acc;
-  }, {});
+  const topServiceTemplates = topServiceTemplateIds.length
+    ? await timed("orders.top_service_names", () =>
+        prisma.serviceTemplate.findMany({
+          where: { id: { in: topServiceTemplateIds } },
+          select: { id: true, name: true },
+        })
+      )
+    : [];
 
-  expenses.forEach((expense) => {
-    const key = monthKey(new Date(expense.date));
-    if (!monthly[key]) monthly[key] = { revenue: new Prisma.Decimal(0), expenses: new Prisma.Decimal(0), mrr: new Prisma.Decimal(0) };
-    monthly[key].expenses = monthly[key].expenses.plus(toDecimal(expense.amount));
+  const topServiceNameById = new Map(topServiceTemplates.map((row) => [row.id, row.name]));
+
+  const topServices = topServiceOrderGroups
+    .sort((a, b) => b._count._all - a._count._all)
+    .slice(0, 4)
+    .map((group) => ({
+      serviceName:
+        (group.serviceTemplateId && topServiceNameById.get(group.serviceTemplateId)) ??
+        "Unknown service",
+      orderCount: group._count._all,
+      revenue: serializeMoney(toDecimal(group._sum.amount ?? 0)),
+    }));
+
+  const bucketTimeZone = resolveMonthlyBucketTimeZone(
+    workspaceOwner?.user?.timeZone ?? currentUser?.timeZone ?? null
+  );
+
+  const monthlySeries = buildMonthlyChartBuckets({
+    revenueRows: invoices.map((inv) => ({
+      date: new Date(inv.invoiceDate),
+      value: getInvoiceBilledAmount(inv),
+    })),
+    expenseRows: expenses.map((expense) => ({
+      date: new Date(expense.date),
+      value: expense.amount,
+    })),
+    mrrRows: retainers.map((ret) => ({ date: now, value: ret.amount })),
+    bucketTimeZone,
   });
-
-  retainers.forEach((ret) => {
-    const key = monthKey(now);
-    if (!monthly[key]) monthly[key] = { revenue: new Prisma.Decimal(0), expenses: new Prisma.Decimal(0), mrr: new Prisma.Decimal(0) };
-    monthly[key].mrr = monthly[key].mrr.plus(toDecimal(ret.amount));
-  });
-
-  const orderedMonths = Object.keys(monthly);
 
   const integrationReadiness = {
     groq: getIntegrationReadiness([profile?.groqApiKey]),
     payment:
-      getIntegrationReadiness([profile?.razorpayKeyId, profile?.razorpayKeySecret]).status === "healthy" ||
-      getIntegrationReadiness([profile?.stripePublishableKey, profile?.stripeSecretKey]).status === "healthy"
+      getIntegrationReadiness([profile?.razorpayKeyId, profile?.razorpayKeySecret]).status ===
+        "healthy" ||
+      getIntegrationReadiness([profile?.stripePublishableKey, profile?.stripeSecretKey]).status ===
+        "healthy"
         ? { configured: true, status: "healthy" as IntegrationStatus }
         : getIntegrationReadiness([
             profile?.razorpayKeyId,
@@ -341,7 +578,9 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       profile?.smtpPassword,
       profile?.smtpFromEmail,
     ]),
-    shop: profile?.shopEnabled ? { configured: true, status: "healthy" as IntegrationStatus } : { configured: false, status: "missing" as IntegrationStatus },
+    shop: profile?.shopEnabled
+      ? { configured: true, status: "healthy" as IntegrationStatus }
+      : { configured: false, status: "missing" as IntegrationStatus },
   };
 
   const integrationSummary = Object.values(integrationReadiness).reduce(
@@ -349,49 +588,85 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       acc[item.status] += 1;
       return acc;
     },
-    { healthy: 0, partial: 0, missing: 0 },
+    { healthy: 0, partial: 0, missing: 0 }
   );
 
   const setupSignals = [
     workspace?.isSetupComplete,
     integrationSummary.healthy >= 2,
-    fyInvoices.length > 0,
+    invoices.length > 0,
     profile?.shopEnabled,
     taxOverrides > 0 || taxAudits.length > 0,
   ].filter(Boolean).length;
+
   const setupCompletion = asPct(setupSignals, 5);
 
   const attentionCards = [
-    { id: "overdue", title: "Overdue receivables", value: overdueInvoices, tone: "critical", href: "/invoice", helper: "Prioritize collections to improve cash flow." },
-    { id: "bank", title: "Unreconciled transactions", value: unreconciledTransactions, tone: "warning", href: "/reconciliation", helper: "Match transactions to keep books accurate." },
-    { id: "proposals", title: "Accepted, awaiting invoice", value: acceptedUninvoicedProposals, tone: "warning", href: "/proposals", helper: "Convert accepted proposals into billable invoices." },
-    { id: "tasks", title: "Urgent tasks", value: urgentTasks, tone: "info", href: "/admin", helper: "Handle due tasks to avoid operational blockers." },
+    {
+      id: "overdue",
+      title: "Overdue receivables",
+      value: overdueReceivables,
+      tone: "critical",
+      href: "/income",
+      helper: "Follow up on overdue balances to protect cash flow.",
+    },
+    {
+      id: "bank",
+      title: "Unreconciled transactions",
+      value: unreconciledTransactions,
+      tone: "warning",
+      href: "/reconciliation",
+      helper: "Match transactions to keep books accurate.",
+    },
+    {
+      id: "proposals",
+      title: "Accepted, awaiting invoice",
+      value: acceptedUninvoicedProposals,
+      tone: "warning",
+      href: "/proposals",
+      helper: "Convert accepted proposals into billable invoices.",
+    },
+    {
+      id: "tasks",
+      title: "Urgent tasks",
+      value: urgentTasks,
+      tone: "info",
+      href: "/admin",
+      helper: "Handle due tasks to avoid operational blockers.",
+    },
   ] as const;
 
-  const receivablesAgingBuckets = allUnpaidInvoices.reduce(
+  const receivablesAgingBuckets = attentionInvoices.reduce(
     (acc, invoice) => {
       const status = normalizeInvoiceStatus(invoice.status);
       if (status === "PAID") return acc;
 
       const outstanding = Prisma.Decimal.max(
         new Prisma.Decimal(0),
-        getInvoiceBilledAmount(invoice).minus(new Prisma.Decimal(Number(invoice.amountReceived ?? 0))),
+        getInvoiceBilledAmount(invoice).minus(
+          new Prisma.Decimal(Number(invoice.amountReceived ?? 0))
+        )
       );
+
       if (outstanding.equals(0)) return acc;
 
-      const ageDays = Math.max(0, Math.floor((now.getTime() - new Date(invoice.invoiceDate).getTime()) / (1000 * 60 * 60 * 24)));
+      const ageDays = Math.max(
+        0,
+        Math.floor((now.getTime() - new Date(invoice.invoiceDate).getTime()) / (1000 * 60 * 60 * 24))
+      );
+
       if (ageDays <= 30) acc.current = acc.current.plus(outstanding);
       else if (ageDays <= 60) acc.mid = acc.mid.plus(outstanding);
       else acc.late = acc.late.plus(outstanding);
+
       return acc;
     },
-    { current: new Prisma.Decimal(0), mid: new Prisma.Decimal(0), late: new Prisma.Decimal(0) },
+    {
+      current: new Prisma.Decimal(0),
+      mid: new Prisma.Decimal(0),
+      late: new Prisma.Decimal(0),
+    }
   );
-
-  // Add pending/failed service orders to 0-30d aging bucket (treated as current)
-  serviceOrders.filter(so => ["PENDING", "FAILED"].includes(normalizeInvoiceStatus(so.status))).forEach(so => {
-    receivablesAgingBuckets.current = receivablesAgingBuckets.current.plus(toDecimal(so.amount));
-  });
 
   const receivablesAging = [
     { bucket: "0-30d", value: serializeMoney(receivablesAgingBuckets.current) },
@@ -400,24 +675,52 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   ];
 
   const healthWarnings = [
-    ...(integrationSummary.missing > 0 ? [{ label: "Missing integrations", severity: "warning" as const }] : []),
-    ...(criticalViolations > 0 ? [{ label: "Critical accounting violations", severity: "critical" as const }] : []),
-    ...(fileImportFailures > 0 ? [{ label: "Failed imports require review", severity: "warning" as const }] : []),
+    ...(integrationSummary.missing > 0
+      ? [{ label: "Missing integrations", severity: "warning" as const }]
+      : []),
+    ...(criticalViolations > 0
+      ? [{ label: "Critical accounting violations", severity: "critical" as const }]
+      : []),
+    ...(fileImportFailures > 0
+      ? [{ label: "Failed imports require review", severity: "warning" as const }]
+      : []),
   ];
 
   const lastRun = integrityRuns[0];
-  const shopRevenueThisMonth = serviceOrders
-    .filter((order) => order.status === "PAID" && order.createdAt >= monthStart && order.createdAt < nextMonthStart)
-    .reduce((sum, order) => sum.plus(toDecimal(order.amount)), new Prisma.Decimal(0));
-  const ordersLast30Days = serviceOrders.filter((order) => order.createdAt >= thirtyDaysBack).length;
+  const shopRevenueThisMonth = toDecimal(paidOrderRevenueThisMonth._sum.amount ?? 0);
+  const shopRevenuePreviousMonth = toDecimal(paidOrderRevenuePreviousMonth._sum.amount ?? 0);
+
+  const revenueDeltaPct = shopRevenuePreviousMonth.gt(0)
+    ? Number(
+        shopRevenueThisMonth
+          .minus(shopRevenuePreviousMonth)
+          .div(shopRevenuePreviousMonth)
+          .mul(100)
+          .toFixed(1)
+      )
+    : null;
+
+  const orderDeltaPct =
+    ordersPrior30Days > 0
+      ? Number((((ordersLast30Days - ordersPrior30Days) / ordersPrior30Days) * 100).toFixed(1))
+      : null;
+
+  const salesAndShopKpiPeriods = {
+    proposalFunnel: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
+    acceptedAwaitingInvoicing: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
+    publicShopOrders: describeKpiPeriod({ type: "ALL_TIME", now, fy, fyRange }),
+    serviceOrderConversion: describeKpiPeriod({ type: "ALL_TIME", now, fy, fyRange }),
+    topServices: describeKpiPeriod({ type: "ALL_TIME", now, fy, fyRange }),
+    shopRevenueThisMonth: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
+    ordersLast30Days: describeKpiPeriod({ type: "ROLLING_30D", now, fy, fyRange }),
+  };
 
   return {
     health: {
       setupCompletion,
       onboardingProgress: setupCompletion,
       setupComplete: Boolean(workspace?.isSetupComplete),
-      subscriptionStatus: workspace?.isSetupComplete ? "ACTIVE" : "PENDING", // Corrected field
-      subscriptionState: workspace?.subscriptionStatus ?? "FREE",
+      subscriptionStatus: workspace?.subscriptionStatus ?? "FREE",
       trialEndsAt: workspace?.subscriptionEndsAt?.toISOString() ?? null,
       planTier: workspace?.planTier ?? "FREE",
       integrationReadiness: {
@@ -426,10 +729,16 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       },
       complianceWarnings: healthWarnings,
     },
+
     attention: {
-      totalUrgent: attentionCards.reduce((sum, card) => sum + card.value, 0) + criticalViolations + notifications,
-      overdueInvoices,
-      pendingInvoices: totalPendingReceivables,
+      totalUrgent:
+        attentionCards.reduce((sum, card) => sum + card.value, 0) +
+        criticalViolations +
+        notifications,
+      overdueInvoices: overdueReceivables,
+      pendingInvoices: outstandingReceivables,
+      overdueReceivables,
+      outstandingReceivables,
       unreconciledTransactions,
       retainersDueSoon,
       acceptedUninvoicedProposals,
@@ -439,6 +748,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       failedImports: fileImportFailures,
       cards: attentionCards,
     },
+
     financialPulse: {
       billedRevenue: serializeMoney(billedRevenue),
       receivables: serializeMoney(receivables),
@@ -449,21 +759,27 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       arr: serializeMoney(arr),
       reconciliationProgress,
     },
+
     salesAndShop: {
       proposalFunnel: funnel,
       acceptedAwaitingInvoicing: acceptedUninvoicedProposals,
       shopEnabled: Boolean(profile?.shopEnabled),
       publicShopOrders: {
-        total: serviceOrders.length,
+        total: Object.values(serviceOrderByStatus).reduce((sum, value) => sum + value, 0),
         paid: paidOrders,
         pending: pendingOrders,
         failed: failedOrders,
       },
       serviceOrderConversion: conversion,
       shopRevenueThisMonth: serializeMoney(shopRevenueThisMonth),
+      shopRevenuePreviousMonth: serializeMoney(shopRevenuePreviousMonth),
+      revenueChangeVsPriorMonthPct: revenueDeltaPct,
       ordersLast30Days,
+      ordersPrior30Days,
+      orderChangeVsPrior30DaysPct: orderDeltaPct,
       publishedServices,
       topServices,
+      kpiPeriods: salesAndShopKpiPeriods,
       recentServiceOrders: recentServiceOrders.map((order) => ({
         id: order.id,
         serviceName: order.serviceTemplate?.name ?? "Unknown service",
@@ -473,8 +789,9 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
         createdAt: order.createdAt,
       })),
     },
+
     operations: {
-      hasOperationalData: lowStockProducts > 0 || openPurchaseOrders > 0 || tasks.length > 0,
+      hasOperationalData: lowStockProducts > 0 || openPurchaseOrders > 0 || taskCount > 0,
       lowStockCount: lowStockProducts,
       openPurchaseOrders,
       recentInventoryMovements: inventoryMovements.map((movement) => ({
@@ -484,13 +801,14 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
         type: movement.type,
         createdAt: movement.createdAt,
       })),
-      openTasks: tasks.filter((task) => task.status !== "DONE").length,
+      openTasks: openTaskCount,
       blockedTasks,
     },
+
     trust: {
       integrityStatus: lastRun?.status ?? "NOT_RUN",
       lastIntegrityRunAt: lastRun?.completedAt ?? lastRun?.startedAt ?? null,
-      violationCount: violationReports.length,
+      violationCount,
       criticalViolations,
       taxOverrideCount: taxOverrides,
       recentTaxAudits: taxAudits.map((audit) => ({
@@ -499,6 +817,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
         createdAt: audit.createdAt,
       })),
     },
+
     activity: activities.map((item) => ({
       id: item.id,
       action: item.action,
@@ -506,16 +825,25 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       createdAt: item.createdAt,
       actor: item.actorEmail ?? null,
     })),
+
     charts: {
-      revenueVsExpense: orderedMonths.map((name) => ({
-        name,
-        revenue: (options.canViewFinance) ? serializeMoney(monthly[name].revenue) : 0,
-        expenses: serializeMoney(monthly[name].expenses),
+      bucketTimeZone,
+      revenueVsExpense: monthlySeries.map((row) => ({
+        name: row.label,
+        revenue: canViewFinance ? serializeMoney(row.revenue) : 0,
+        expenses: serializeMoney(row.expenses),
       })),
-      recurringRevenue: orderedMonths.map((name) => ({ name, mrr: (options.canViewFinance) ? serializeMoney(monthly[name].mrr) : 0 })),
+      recurringRevenue: monthlySeries.map((row) => ({
+        name: row.label,
+        mrr: canViewFinance ? serializeMoney(row.mrr) : 0,
+      })),
       receivablesAging,
       reconciliation: [
-        { name: "Bank feed", reconciled: bankTransactions.length - unreconciledTransactions, unreconciled: unreconciledTransactions },
+        {
+          name: "Bank feed",
+          reconciled: totalBankTransactions - unreconciledTransactions,
+          unreconciled: unreconciledTransactions,
+        },
       ],
       proposalFunnel: [
         { stage: "Draft", value: funnel.draft },
@@ -531,10 +859,16 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
         { status: "Failed", value: failedOrders },
       ],
     },
+
     recentInvoices: recentInvoices.map((invoice) => ({
       ...invoice,
       status: invoice.status || INVOICE_STATUS.PENDING,
     })),
+
+    telemetry: {
+      queryTimingsMs,
+    },
+
     countryCode: workspace?.countryCode ?? "IN",
   };
 }
@@ -546,14 +880,19 @@ export async function GET(request: Request) {
     const userId = (session as SessionWithWorkspace | null)?.user?.id ?? null;
 
     if (!workspaceId) {
-      return NextResponse.json({ error: "Unauthorized", code: "AUTH_UNAUTHORIZED" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Unauthorized", code: "AUTH_UNAUTHORIZED" },
+        { status: 401 }
+      );
     }
 
     const { searchParams } = new URL(request.url);
     let fy = searchParams.get("fy") || getCurrentFinancialYear();
+
     if (!getFyDateRange(fy)) {
       fy = getCurrentFinancialYear();
     }
+
     const locale = searchParams.get("locale");
     const currency = searchParams.get("currency");
     const segment = searchParams.get("segment");
@@ -571,6 +910,7 @@ export async function GET(request: Request) {
     if (isDashboardCacheEnabled()) {
       try {
         const cached = getDashboardCacheEntry(cacheKey);
+
         if (cached) {
           const cacheMeta = getDashboardCacheMeta(cached);
           return NextResponse.json(cached.payload, {
@@ -582,7 +922,11 @@ export async function GET(request: Request) {
           });
         }
 
-        const payload = await buildDashboardPayload(workspaceId, userId, fy, { canViewFinance: true, segment });
+        const payload = await buildDashboardPayload(workspaceId, userId, fy, {
+          canViewFinance: true,
+          segment,
+        });
+
         const entry = setDashboardCacheEntry(cacheKey, payload);
         const cacheMeta = getDashboardCacheMeta(entry);
 
@@ -594,15 +938,32 @@ export async function GET(request: Request) {
           },
         });
       } catch (cacheError) {
-        noteDashboardCacheIncident("cacheErrors", { workspaceId, fy, cacheKey, error: String(cacheError) });
+        noteDashboardCacheIncident("cacheErrors", {
+          workspaceId,
+          fy,
+          cacheKey,
+          error: String(cacheError),
+        });
         console.error("Dashboard cache error:", cacheError);
       }
     }
 
-    const payload = await buildDashboardPayload(workspaceId, userId, fy, { canViewFinance: true, segment }); // Role check would go here
-    return NextResponse.json(payload, { headers: { "X-Dashboard-Cache": "BYPASS" } });
+    const payload = await buildDashboardPayload(workspaceId, userId, fy, {
+      canViewFinance: true,
+      segment,
+    });
+
+    return NextResponse.json(payload, {
+      headers: { "X-Dashboard-Cache": "BYPASS" },
+    });
   } catch (error) {
     console.error("Dashboard Data Error:", error);
-    return NextResponse.json({ error: "Failed to aggregate dashboard data", code: "DASHBOARD_AGGREGATION_FAILED" }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "Failed to aggregate dashboard data",
+        code: "DASHBOARD_AGGREGATION_FAILED",
+      },
+      { status: 500 }
+    );
   }
 }

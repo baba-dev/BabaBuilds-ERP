@@ -15,6 +15,7 @@ type ProposalItemInput = {
   quantity: number;
   unitPrice: number;
 };
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 
 export async function GET() {
   try {
@@ -186,14 +187,25 @@ export async function POST(request: Request) {
       },
     }).catch(() => null);
 
-    logActivity({
-      action: "proposal_created",
-      status: "SUCCESS",
-      workspaceId,
-      actor: { userId: session.user?.id, email: session.user?.email },
-      entity: { type: "proposal", id: newProposal.id },
-      request,
-    });
+logActivity({
+  action: "proposal_created",
+  status: "SUCCESS",
+  workspaceId,
+  actor: { userId: session.user?.id, email: session.user?.email },
+  entity: { type: "proposal", id: newProposal.id },
+  request,
+});
+
+try {
+  invalidateDashboardCacheForWorkspace(workspaceId);
+} catch (error) {
+  noteDashboardCacheIncident("invalidationFailures", {
+    workspaceId,
+    entity: "proposal",
+    action: "create",
+    error: String(error),
+  });
+}
 
     return NextResponse.json({ success: true, proposal: newProposal });
   } catch (error) {

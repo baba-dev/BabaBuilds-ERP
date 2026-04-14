@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
@@ -112,6 +113,12 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
       data: dataToUpdate
     });
 
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'inventory_product', action: 'update', error: String(error) });
+    }
+
     return NextResponse.json({ success: true, product: updated });
   } catch (error: unknown) {
     if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
@@ -141,6 +148,12 @@ export async function DELETE(req: Request, context: { params: Promise<{ id: stri
     }
 
     await prisma.product.delete({ where: { id } });
+
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'inventory_product', action: 'delete', error: String(error) });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
