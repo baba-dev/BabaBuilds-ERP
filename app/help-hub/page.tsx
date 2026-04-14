@@ -1,9 +1,12 @@
-import { redirect } from "next/navigation";
+import { getAllDocs, getFeaturedDocs, groupDocsByCategory } from "@/lib/docs";
+import { InAppHelpHubClient } from "../(dashboard)/dashboard/help/InAppHelpHubClient";
 
-// Public alias to the in-app help hub.
-// The actual hub UI lives under the authenticated dashboard shell, but the
-// content it links to is public (/help/*).
-export default function HelpHubAliasPage() {
-  redirect("/login?callbackUrl=/help-hub");
+// Public, shareable Help Hub that links to public `/help/*` articles.
+export default function HelpHubPublicPage() {
+  const docs = getAllDocs();
+  const featured = getFeaturedDocs(docs, 9);
+  const groups = groupDocsByCategory(docs);
+
+  return <InAppHelpHubClient docs={docs} featured={featured} groups={groups} />;
 }
 
