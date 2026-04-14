@@ -455,7 +455,10 @@ export default function AuthModal({
           </button>
 
           <details className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3 group">
-            <summary className="cursor-pointer list-none text-sm text-zinc-300 group-open:text-zinc-100">
+            <summary
+              data-testid="demo-auth-section"
+              className="cursor-pointer list-none text-sm text-zinc-300 group-open:text-zinc-100"
+            >
               {t("actions.demoSection")}
             </summary>
 
@@ -474,6 +477,7 @@ export default function AuthModal({
               )}
 
               <button
+                data-testid="demo-auth-button"
                 onClick={handleDemoSignIn}
                 disabled={
                   isLoading ||
