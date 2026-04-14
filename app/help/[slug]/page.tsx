@@ -10,9 +10,84 @@ import {
   ArrowLeft, ArrowRight, Mail, Info, 
   Lightbulb, AlertCircle, CheckCircle2, ChevronRight 
 } from "lucide-react";
+import { HelpFeedback } from "../_components/HelpFeedback";
 
 interface Props {
   params: Promise<{ slug: string }>;
+}
+
+function HelpfulWidget({ slug }: { slug: string }) {
+  return (
+    <div className="mt-10 rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6">
+      <p className="text-sm font-black text-zinc-900 dark:text-zinc-50">Was this helpful?</p>
+      <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+        Your feedback helps us improve these docs.
+      </p>
+      <div className="mt-4 flex flex-col sm:flex-row gap-3">
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              await fetch("/api/help/feedback", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ slug, helpful: true }),
+              });
+            } catch {
+              // no-op
+            }
+          }}
+          className="px-5 py-3 rounded-2xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-500 active:scale-[0.98] transition-all"
+        >
+          Yes
+        </button>
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              await fetch("/api/help/feedback", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ slug, helpful: false }),
+              });
+            } catch {
+              // no-op
+            }
+          }}
+          className="px-5 py-3 rounded-2xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold text-sm hover:bg-zinc-800 dark:hover:bg-zinc-200 active:scale-[0.98] transition-all"
+        >
+          Not really
+        </button>
+      </div>
+      <div className="mt-4">
+        <label className="block text-xs font-bold uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">
+          Optional comment
+        </label>
+        <textarea
+          rows={3}
+          className="mt-2 w-full rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-4 py-3 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/60"
+          placeholder="What was missing or unclear?"
+          onBlur={async (e) => {
+            const comment = e.currentTarget.value.trim();
+            if (!comment) return;
+            try {
+              await fetch("/api/help/feedback", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ slug, comment }),
+              });
+              e.currentTarget.value = "";
+            } catch {
+              // no-op
+            }
+          }}
+        />
+        <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+          Tip: type your note and click outside to submit.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 function slugifyHeading(raw: string): string {
@@ -408,6 +483,7 @@ export default async function DocPage({ params }: Props) {
         {/* Markdown content rendered via MDXRemote with custom components */}
         <div className={cn(typography.richContent, "max-w-3xl lg:max-w-none")}>
           <MDXRemote source={doc.content} components={components as any} />
+          <HelpfulWidget slug={slug} />
         </div>
 
         {/* Table of contents */}
@@ -474,6 +550,7 @@ export default async function DocPage({ params }: Props) {
       </div>
 
       {/* Contact footer */}
+      <HelpFeedback slug={slug} />
       <div className="flex flex-col sm:flex-row items-center justify-between gap-5 p-8 rounded-3xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-xl overflow-hidden relative group">
         <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
           <Mail className="w-24 h-24 -mr-8 -mt-8" />
