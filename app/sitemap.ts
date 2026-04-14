@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { MetadataRoute } from 'next';
 import { prisma } from '@/lib/prisma';
-import { getAllDocs } from '@/lib/docs';
+import { getAllDocs, groupDocsByCategory } from '@/lib/docs';
 
 const BASE_URL = 'https://erp.bababuilds.com';
 const BUILD_DATE = new Date();
@@ -57,6 +57,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
+  const categories = groupDocsByCategory(docs).map((g) => g.category.slug);
+  const categoryRoutes: MetadataRoute.Sitemap = categories.map((categorySlug) => ({
+    url: `${BASE_URL}/help/category/${categorySlug}`,
+    lastModified: BUILD_DATE,
+    changeFrequency: 'weekly',
+    priority: 0.75,
+  }));
+
   let shops: Array<{ slug: string; updatedAt: Date }> = [];
 
   try {
@@ -72,5 +80,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  return [...staticRoutes, ...docRoutes, ...shopRoutes] satisfies MetadataRoute.Sitemap;
+  return [...staticRoutes, ...categoryRoutes, ...docRoutes, ...shopRoutes] satisfies MetadataRoute.Sitemap;
 }
