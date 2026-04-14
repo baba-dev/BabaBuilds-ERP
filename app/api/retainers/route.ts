@@ -10,10 +10,10 @@ export async function GET() {
   try {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
 
     // 2. FETCH RETAINERS (Include Client data for the UI)
     const retainers = await prisma.retainer.findMany({
@@ -37,10 +37,10 @@ export async function POST(request: Request) {
   try {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
 
     const body = await request.json();
     const { clientId, serviceName, amount, frequency, autoAppendMonth, nextBillingDate, serviceTemplateId, taxRateOverride } = body;
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       countryCode: profile?.workspace?.countryCode || "IN",
       isTaxExempt: Boolean(client.isExport),
       serviceTaxRates: [serviceTemplate?.sacCode?.igstRate ?? null],
-      workspaceDefaultTaxRate: (profile as any)?.defaultTaxRate ?? null,
+      workspaceDefaultTaxRate: profile?.defaultTaxRate ?? null,
       taxRateOverride,
     });
 
@@ -101,9 +101,9 @@ export async function POST(request: Request) {
         autoAppendMonth: Boolean(autoAppendMonth),
         nextBillingDate: new Date(nextBillingDate),
         status: "ACTIVE", // Automatically starts running
-        sacCode: body.sacCode || serviceTemplate?.sacCode?.code || null, // Optional: inherited from profile if blank
+        sacCode: (body.sacCode as string) || serviceTemplate?.sacCode?.code || null, // Optional: inherited from profile if blank
         taxRate: taxResolution.taxRate,
-      } as any
+      }
     });
 
 
@@ -117,7 +117,7 @@ export async function POST(request: Request) {
       action: "retainer_created",
       status: "SUCCESS",
       workspaceId,
-      actor: { userId: (session as any).user?.id, email: (session as any).user?.email },
+      actor: { userId: session.user?.id, email: session.user?.email },
       entity: { type: "retainer", id: newRetainer.id },
       request,
     });
@@ -128,7 +128,7 @@ export async function POST(request: Request) {
     logActivity({
       action: "retainer_created",
       status: "FAILURE",
-      workspaceId: (await getServerSession(authOptions) as any)?.workspaceId ?? null,
+      workspaceId: null,
       request,
       metadata: { error: String(error) },
     });

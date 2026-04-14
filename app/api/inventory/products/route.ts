@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 
 export async function GET(req: Request) {
   try {
@@ -110,6 +111,7 @@ export async function POST(req: Request) {
       }
     });
 
+    // Record the initial stock entry as an inventory movement for full audit trail.
     if (currentStock > 0) {
       await prisma.inventoryMovement.create({
         data: {
@@ -117,9 +119,16 @@ export async function POST(req: Request) {
           productId: newProduct.id,
           type: "IN",
           quantity: currentStock,
-          reason: "Initial Stock Entry"
-        }
+          reason: "Initial Stock Entry",
+        },
       });
+    }
+
+    // New products affect operations.lowStockCount on the dashboard.
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (err) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'product', action: 'create', error: String(err) });
     }
 
     return NextResponse.json({ success: true, product: newProduct });

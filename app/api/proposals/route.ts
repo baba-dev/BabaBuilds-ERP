@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
@@ -7,13 +8,21 @@ import { calculateInvoiceTotals } from '@/lib/invoice/totals';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
 import { logActivity } from '@/lib/security/activity-log';
 
+type ProposalItemInput = {
+  serviceTemplateId?: string;
+  title: string;
+  description?: string;
+  quantity: number;
+  unitPrice: number;
+};
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
 
     const proposals = await prisma.proposal.findMany({
       where: { workspaceId: workspaceId },
@@ -31,13 +40,19 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
 
     const body = await request.json();
-    const { clientId, title, validUntil, items, taxRateOverride } = body;
+    const { clientId, title, validUntil, items, taxRateOverride } = body as {
+      clientId: string;
+      title: string;
+      validUntil: string;
+      items: ProposalItemInput[];
+      taxRateOverride?: number;
+    };
 
     const client = await prisma.client.findFirst({ 
       where: { id: clientId, workspaceId } 
@@ -76,11 +91,11 @@ export async function POST(request: Request) {
       include: { workspace: true }
     });
     const countryCode = profile?.workspace?.countryCode || "IN";
-    const defaultTaxRate = (profile as any)?.defaultTaxRate ?? null;
+    const defaultTaxRate = (profile as Record<string, unknown> | null)?.defaultTaxRate as number | null ?? null;
 
     const serviceTemplateIds = items
-      .map((item: any) => item.serviceTemplateId)
-      .filter((id: any) => typeof id === 'string' && id.length > 0);
+      .map((item) => item.serviceTemplateId)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0);
 
     const templates = serviceTemplateIds.length
       ? await prisma.serviceTemplate.findMany({
@@ -90,8 +105,8 @@ export async function POST(request: Request) {
       : [];
     const templateMap = new Map(templates.map((template) => [template.id, template]));
     const serviceTaxRates = items
-      .map((item: any) => templateMap.get(item.serviceTemplateId)?.sacCode?.igstRate ?? null)
-      .filter((rate: any) => rate !== null && rate !== undefined);
+      .map((item) => templateMap.get(item.serviceTemplateId || "")?.sacCode?.igstRate ?? null)
+      .filter((rate): rate is number => rate !== null && rate !== undefined);
 
     const taxResolution = resolveTaxRate({
       countryCode,
@@ -112,14 +127,14 @@ export async function POST(request: Request) {
       }, { status: 422 });
     }
 
-    if (taxResolution.source === 'override' && taxRateOverride !== undefined && taxRateOverride !== null && taxRateOverride !== '' && profile) {
+    if (taxResolution.source === 'override' && taxRateOverride !== undefined && taxRateOverride !== null && profile) {
       await prisma.businessProfile.update({
         where: { workspaceId },
         data: { defaultTaxRate: taxResolution.taxRate },
       });
     }
 
-    const pricedLines = items.map((item: any) => ({
+    const pricedLines = items.map((item) => ({
       amount: Number(item.quantity) * Number(item.unitPrice)
     }));
     const totals = calculateInvoiceTotals({
@@ -143,14 +158,19 @@ export async function POST(request: Request) {
         totalAmount,
         status: "SENT",
         items: {
-          create: items.map((item: any) => ({
-            serviceTemplateId: item.serviceTemplateId || null,
-            title: item.title,
-            description: item.description || null,
-            quantity: Number(item.quantity),
-            unitPrice: Number(item.unitPrice),
-            total: Number(item.quantity) * Number(item.unitPrice)
-          }))
+          create: items.map((item) => {
+            const qty = new Prisma.Decimal(Number(item.quantity));
+            const unitPriceD = new Prisma.Decimal(Number(item.unitPrice));
+            const lineTotal = qty.mul(unitPriceD).toDecimalPlaces(2);
+            return {
+              serviceTemplateId: templateMap.has(item.serviceTemplateId || "") ? item.serviceTemplateId : null,
+              title: item.title,
+              description: item.description || null,
+              quantity: Number(item.quantity),
+              unitPrice: unitPriceD.toNumber(),
+              total: lineTotal.toNumber()
+            };
+          })
         }
       }
     });
@@ -170,7 +190,7 @@ export async function POST(request: Request) {
       action: "proposal_created",
       status: "SUCCESS",
       workspaceId,
-      actor: { userId: (session as any).user?.id, email: (session as any).user?.email },
+      actor: { userId: session.user?.id, email: session.user?.email },
       entity: { type: "proposal", id: newProposal.id },
       request,
     });
@@ -181,7 +201,7 @@ export async function POST(request: Request) {
     logActivity({
       action: "proposal_created",
       status: "FAILURE",
-      workspaceId: (await getServerSession(authOptions) as any)?.workspaceId ?? null,
+      workspaceId: null,
       request,
       metadata: { error: String(error) },
     });

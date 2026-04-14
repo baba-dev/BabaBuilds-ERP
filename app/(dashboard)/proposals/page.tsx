@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { format, addDays } from "date-fns";
 import { FileText, Plus, Trash2, ArrowLeft, Send, Copy, CheckCircle2, Building2, Briefcase, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -12,14 +12,10 @@ import { toast } from "sonner";
 import { DatePickerField } from "@/components/forms/date-picker-field";
 import { SearchableCombobox } from "@/components/forms/searchable-combobox";
 import { FormFieldMessages, FormSection, FormSubmitBar } from "@/components/forms/form-primitives";
-import { 
-  Dialog, DialogContent, DialogHeader, DialogTitle, 
-  DialogDescription, DialogFooter 
-} from "@/components/ui/dialog";
 import { ResponsiveDialog } from "@/components/ResponsiveDialog";
 import { 
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle 
+  AlertDialogDescription, AlertDialogHeader, AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
 
 // MISSION CRITICAL: Globalization Imports
@@ -29,13 +25,52 @@ import { getCurrencySymbol } from "@/lib/currency";
 import { TaxRateModal } from "@/components/invoice/tax-rate-modal";
 import { useSearchParams } from "next/navigation";
 
+interface Client {
+  id: string;
+  name: string;
+  email: string | null;
+  country?: string | null;
+  isExport?: boolean;
+}
+
+interface ServiceTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  defaultPrice: number;
+}
+
+interface ProposalItem {
+  id?: string;
+  serviceTemplateId: string;
+  title: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+interface Proposal {
+  id: string;
+  proposalNo: string;
+  title: string;
+  clientId: string;
+  client?: Client;
+  validUntil: string;
+  subtotal: number;
+  estimatedTax: number;
+  totalAmount: number;
+  status: 'DRAFT' | 'SENT' | 'ACCEPTED' | 'INVOICED';
+  items: ProposalItem[];
+  publicToken?: string;
+}
+
 export default function ProposalsEngine() {
   const t = useTranslations('Proposals');
   const searchParams = useSearchParams();
   const [view, setView] = useState<'list' | 'builder'>('list');
-  const [proposals, setProposals] = useState<any[]>([]);
-  const [clients, setClients] = useState<any[]>([]);
-  const [catalog, setCatalog] = useState<any[]>([]);
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [catalog, setCatalog] = useState<ServiceTemplate[]>([]);
 
   // --- GLOBALIZATION ENGINE ---
   const { 
@@ -53,7 +88,7 @@ export default function ProposalsEngine() {
   const [title, setTitle] = useState("");
   const [clientId, setClientId] = useState("");
   const [validUntil, setValidUntil] = useState(format(addDays(new Date(), 14), 'yyyy-MM-dd')); 
-  const [items, setItems] = useState<{serviceTemplateId: string, title: string, description: string, quantity: number, unitPrice: number}[]>([]);
+  const [items, setItems] = useState<ProposalItem[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,7 +98,7 @@ export default function ProposalsEngine() {
   const [proposalToDelete, setProposalToDelete] = useState<string | null>(null);
 
   // Conversion Modal State
-  const [proposalToConvert, setProposalToConvert] = useState<any | null>(null);
+  const [proposalToConvert, setProposalToConvert] = useState<Proposal | null>(null);
   const [conversionMonth, setConversionMonth] = useState("");
   const [conversionDate, setConversionDate] = useState("");
   const [taxRateModalOpen, setTaxRateModalOpen] = useState(false);
@@ -72,9 +107,45 @@ export default function ProposalsEngine() {
   const [protocolFocusedProposalId, setProtocolFocusedProposalId] = useState<string | null>(null);
   const [hasHandledProtocolRecord, setHasHandledProtocolRecord] = useState(false);
 
+  const fetchData = useCallback(async () => {
+    try {
+      if (view === 'list') {
+        const [propRes, clientRes] = await Promise.all([
+          fetch('/api/proposals'),
+          fetch('/api/clients')
+        ]);
+        if (!propRes.ok) throw new Error(`Proposals API failed with status: ${propRes.status}`);
+        const propData = await propRes.json();
+        setProposals(Array.isArray(propData) ? propData : []);
+        // Always load clients so the AI payload consumer can fuzzy-match on initial load
+        const clientData = await clientRes.json();
+        setClients(clientData.data && Array.isArray(clientData.data) ? clientData.data : []);
+      } else {
+        const clientRes = await fetch('/api/clients');
+        if (!clientRes.ok) throw new Error(`Clients API failed with status: ${clientRes.status}`);
+        const clientData = await clientRes.json();
+        setClients(clientData.data && Array.isArray(clientData.data) ? clientData.data : []);
+
+        const catRes = await fetch('/api/services');
+        if (!catRes.ok) throw new Error(`Services API failed with status: ${catRes.status}`);
+        const catData = await catRes.json();
+        setCatalog(Array.isArray(catData) ? catData : []);
+        
+        if (items.length === 0) setItems(prev => [...prev, { serviceTemplateId: "", title: "", description: "", quantity: 1, unitPrice: 0 }]);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Data load failed";
+      console.error("🚨 Detailed Fetch Error:", msg);
+      toast.error(`Data load failed: ${msg}`);
+    } finally {
+      setIsLoading(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view]);
+
   useEffect(() => {
     fetchData();
-  }, [view]);
+  }, [view, fetchData]);
 
   useEffect(() => {
     const protocolRecord = searchParams.get("protocolRecord");
@@ -101,7 +172,7 @@ export default function ProposalsEngine() {
         toast.error("Could not open deep-linked proposal.");
       }
     })();
-  }, [hasHandledProtocolRecord, searchParams]);
+  }, [hasHandledProtocolRecord, searchParams, fetchData]);
 
   useEffect(() => {
     if (!protocolFocusedProposalId || proposals.length === 0 || view !== "list") {
@@ -114,39 +185,7 @@ export default function ProposalsEngine() {
     }
   }, [proposals, protocolFocusedProposalId, view]);
 
-  const fetchData = async () => {
-    try {
-      if (view === 'list') {
-        const [propRes, clientRes] = await Promise.all([
-          fetch('/api/proposals'),
-          fetch('/api/clients')
-        ]);
-        if (!propRes.ok) throw new Error(`Proposals API failed with status: ${propRes.status}`);
-        const propData = await propRes.json();
-        setProposals(Array.isArray(propData) ? propData : []);
-        // Always load clients so the AI payload consumer can fuzzy-match on initial load
-        const clientData = await clientRes.json();
-        setClients(clientData.data && Array.isArray(clientData.data) ? clientData.data : []);
-      } else {
-        const clientRes = await fetch('/api/clients');
-        if (!clientRes.ok) throw new Error(`Clients API failed with status: ${clientRes.status}`);
-        const clientData = await clientRes.json();
-        setClients(clientData.data && Array.isArray(clientData.data) ? clientData.data : []);
 
-        const catRes = await fetch('/api/services');
-        if (!catRes.ok) throw new Error(`Services API failed with status: ${catRes.status}`);
-        const catData = await catRes.json();
-        setCatalog(Array.isArray(catData) ? catData : []);
-        
-        if (items.length === 0) handleAddItem();
-      }
-    } catch (err: any) {
-      console.error("🚨 Detailed Fetch Error:", err.message || err);
-      toast.error(`Data load failed: ${err.message || "Unknown error"}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // --- Bug 7 Fix: SMART AI AUTO-FILL for Proposals ---
   // The AI's draft_proposal tool stores a payload in sessionStorage then navigates here.
@@ -165,7 +204,7 @@ export default function ProposalsEngine() {
         setView('builder');
         if (data.title) setTitle(data.title);
         if (Array.isArray(data.items) && data.items.length > 0) {
-          setItems(data.items.map((item: any) => ({
+          setItems(data.items.map((item: ProposalItem) => ({
             serviceTemplateId: typeof item.serviceTemplateId === 'string' ? item.serviceTemplateId : '',
             title: item.title || '',
             description: item.description || '',
@@ -174,15 +213,14 @@ export default function ProposalsEngine() {
           })));
         }
         if (data.clientName) {
-          const matched = clients.find((c: any) =>
+          const matched = clients.find((c) =>
             c.name.toLowerCase().includes(data.clientName.toLowerCase())
           );
           if (matched) setClientId(matched.id);
         }
       }
       sessionStorage.removeItem('erp_ai_payload');
-    } catch (e) {
-      console.error("Failed to parse AI payload for Proposals:", e);
+    } catch {
       sessionStorage.removeItem('erp_ai_payload');
     }
   }, [clients]);
@@ -202,7 +240,7 @@ export default function ProposalsEngine() {
       const res = await fetch(`/api/proposals/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error("Failed to delete");
       toast.success("Proposal permanently removed", { id: toastId });
-    } catch (err) {
+    } catch {
       setProposals(previousProposals); 
       toast.error("An error occurred while deleting.", { id: toastId });
     }
@@ -217,10 +255,13 @@ export default function ProposalsEngine() {
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const updateItem = (index: number, field: string, value: any) => {
+  const updateItem = (index: number, field: keyof ProposalItem, value: string | number) => {
     const newItems = [...items];
-    (newItems[index] as any)[field] = value;
-    setItems(newItems);
+    const item = newItems[index];
+    if (item) {
+      (item as unknown as Record<string, string | number>)[field] = value;
+      setItems(newItems);
+    }
   };
 
   const handleCatalogSelect = (index: number, templateId: string) => {
@@ -280,7 +321,7 @@ export default function ProposalsEngine() {
       } else {
         toast.error(payload?.error || "Failed to save proposal.", { id: toastId });
       }
-    } catch (err) {
+    } catch {
       toast.error("A network error occurred.", { id: toastId });
     } finally {
       setIsSubmitting(false);
@@ -304,15 +345,16 @@ export default function ProposalsEngine() {
       setTaxRateInput("");
       setView('list');
       setTitle(""); setClientId(""); setItems([]);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to save proposal.", { id: toastId });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to save proposal";
+      toast.error(msg, { id: toastId });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   // --- SMART CONVERSION LOGIC ---
-  const openConversionModal = (prop: any) => {
+  const openConversionModal = (prop: Proposal) => {
     setProposalToConvert(prop);
     setConversionMonth(format(new Date(), "MMMM yyyy")); 
     setConversionDate(format(new Date(), 'yyyy-MM-dd'));
@@ -341,7 +383,7 @@ export default function ProposalsEngine() {
           clientId: prop.clientId,
           billingMonth: conversionMonth, 
           sacCode: "As per Proposal", 
-          services: prop.items.map((item: any) => ({
+          services: prop.items.map((item) => ({
             title: `${item.title} ${item.quantity > 1 ? `(Qty: ${item.quantity})` : ''}`,
             nicDetails: item.description || "Agreed Deliverable",
             amount: item.quantity * item.unitPrice 
@@ -361,7 +403,7 @@ export default function ProposalsEngine() {
       });
       
       // --- AUTO-RETAINER PIPELINE ---
-      const recurringItems = prop.items.filter((item: any) => 
+      const recurringItems = prop.items.filter((item) => 
         item.title.toLowerCase().includes('monthly') || 
         item.title.toLowerCase().includes('retainer') ||
         item.title.toLowerCase().includes('subscription') ||
@@ -370,8 +412,8 @@ export default function ProposalsEngine() {
       );
 
       if (recurringItems.length > 0) {
-        const retainerAmount = recurringItems.reduce((sum: number, item: any) => sum + (item.quantity * item.unitPrice), 0);
-        const retainerServiceName = recurringItems.map((i: any) => i.title).join(' + ');
+        const retainerAmount = recurringItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+        const retainerServiceName = recurringItems.map((i) => i.title).join(' + ');
         
         const nextDate = new Date(conversionDate);
         nextDate.setMonth(nextDate.getMonth() + 1);
@@ -399,8 +441,9 @@ export default function ProposalsEngine() {
       }
 
       fetchData();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to convert to invoice.", { id: toastId });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to convert to invoice";
+      toast.error(msg, { id: toastId });
     } finally {
       // Release the lock
       setConvertingId(null);
@@ -526,7 +569,7 @@ export default function ProposalsEngine() {
                                 options={catalog.map((cat) => ({
                                   value: cat.id,
                                   label: cat.name,
-                                  description: cat.description,
+                                  description: cat.description || undefined,
                                 }))}
                                 className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 dark:text-zinc-100 font-bold text-xs h-10 shadow-sm focus:ring-indigo-500/30"
                               />
@@ -816,7 +859,7 @@ export default function ProposalsEngine() {
                     <Briefcase className="w-3.5 h-3.5" /> {t('items_invoiced')}
                   </p>
                   <div className="space-y-3 max-h-40 overflow-y-auto px-1 custom-scrollbar">
-                    {proposalToConvert.items.map((item: any, i: number) => (
+                    {proposalToConvert.items.map((item, i) => (
                       <div key={i} className="flex justify-between items-start text-xs border-b border-zinc-200 dark:border-zinc-800/80 pb-3 last:border-0 last:pb-0">
                         <span className="text-zinc-700 dark:text-zinc-300 pr-4 font-bold leading-relaxed">
                           {item.title} 

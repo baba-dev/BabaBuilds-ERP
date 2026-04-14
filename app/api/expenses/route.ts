@@ -7,16 +7,17 @@ import path from 'path';
 import { scanBuffer } from '@/lib/security/clamav';
 import { apiError } from "@/lib/api-error";
 import { logActivity } from '@/lib/security/activity-log';
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 
 // Fetch all expenses for the ledger (NOW PAGINATED)
 export async function GET(request: Request) {
   try {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
     const whereClause = { workspaceId: workspaceId };
 
     // 2. GET PAGINATION PARAMS
@@ -57,10 +58,10 @@ export async function POST(request: Request) {
   try {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
 
     const formData = await request.formData();
     
@@ -131,10 +132,17 @@ export async function POST(request: Request) {
       action: "expense_created",
       status: "SUCCESS",
       workspaceId,
-      actor: { userId: (session as any).user?.id, email: (session as any).user?.email },
+      actor: { userId: session.user?.id, email: session.user?.email },
       entity: { type: "expense", id: newExpense.id },
       request,
     });
+
+    // Expense totals feed directly into financialPulse.expenses on the dashboard.
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'expense', action: 'create' });
+    }
 
     return NextResponse.json({ success: true, expense: newExpense });
 
@@ -143,7 +151,7 @@ export async function POST(request: Request) {
     logActivity({
       action: "expense_created",
       status: "FAILURE",
-      workspaceId: (await getServerSession(authOptions) as any)?.workspaceId ?? null,
+      workspaceId: null,
       request,
       metadata: { error: String(error) },
     });

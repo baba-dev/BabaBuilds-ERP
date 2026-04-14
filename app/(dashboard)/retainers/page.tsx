@@ -31,6 +31,35 @@ import { useTranslations } from "next-intl";
 import { TaxRateModal } from "@/components/invoice/tax-rate-modal";
 import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 
+interface Retainer {
+  id: string;
+  clientId: string;
+  serviceName: string;
+  amount: number;
+  frequency: string;
+  autoAppendMonth: boolean;
+  nextBillingDate: string;
+  status: string;
+  client?: {
+    name: string;
+    email: string;
+  };
+}
+
+interface Client {
+  id: string;
+  name: string;
+  email: string;
+  isExport?: boolean;
+}
+
+interface CatalogItem {
+  id: string;
+  name: string;
+  defaultPrice: number;
+}
+
+
 export default function RetainersHub() {
   const t = useTranslations('Retainers');
   const [view, setView] = useState<'list' | 'wizard'>('list');
@@ -48,9 +77,9 @@ export default function RetainersHub() {
   const currencySymbol = getCurrencySymbol(currency, locale);
 
   // Data States
-  const [retainers, setRetainers] = useState<any[]>([]);
-  const [clients, setClients] = useState<any[]>([]);
-  const [catalog, setCatalog] = useState<any[]>([]);
+  const [retainers, setRetainers] = useState<Retainer[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
 
   // Wizard Form States
   const [clientId, setClientId] = useState("");
@@ -64,7 +93,7 @@ export default function RetainersHub() {
 
   // Edit State
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [retainerToEdit, setRetainerToEdit] = useState<any>(null);
+  const [retainerToEdit, setRetainerToEdit] = useState<Retainer | null>(null);
   const [editServiceName, setEditServiceName] = useState("");
   const [editAmount, setEditAmount] = useState("");
   const [editFrequency, setEditFrequency] = useState("MONTHLY");
@@ -118,7 +147,7 @@ export default function RetainersHub() {
       }
       setView('wizard');
       sessionStorage.removeItem('erp_ai_payload');
-    } catch (e) {
+    } catch {
       console.error("Failed to parse AI payload");
       sessionStorage.removeItem('erp_ai_payload');
     }
@@ -143,8 +172,8 @@ export default function RetainersHub() {
         setClients(Array.isArray(parsedClients) ? parsedClients : []);
         setCatalog(Array.isArray(parsedCatalog) ? parsedCatalog : []);
       }
-    } catch (err) {
-      console.error("Failed to load retainer data", err);
+    } catch {
+      console.error("Failed to load retainer data");
       toast.error("Failed to load retainer configurations. Please refresh.");
     } finally {
       setIsLoading(false);
@@ -198,7 +227,7 @@ export default function RetainersHub() {
     }
   };
 
-  const openEditModal = (ret: any) => {
+  const openEditModal = (ret: Retainer) => {
     setRetainerToEdit(ret);
     setEditServiceName(ret.serviceName);
     setEditAmount(ret.amount.toString());
@@ -235,7 +264,7 @@ export default function RetainersHub() {
 
       toast.success("Retainer updated successfully.", { id: toastId });
       setEditModalOpen(false);
-    } catch (err) {
+    } catch {
       setRetainers(previousRetainers);
       toast.error("Failed to update retainer.", { id: toastId });
     } finally {
@@ -501,7 +530,7 @@ export default function RetainersHub() {
     const amountValue = Number(r.amount ?? 0);
     return sum + (Number.isFinite(amountValue) ? amountValue : 0);
   }, 0);
-  const retainerColumns: DataTableColumnDef<any>[] = [
+  const retainerColumns: DataTableColumnDef<Retainer>[] = [
     {
       id: "client_service",
       header: t('col_client_service'),

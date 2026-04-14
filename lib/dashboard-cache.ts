@@ -4,6 +4,7 @@ type DashboardCacheKeyParts = {
   fy: string;
   locale?: string | null;
   currency?: string | null;
+  segment?: string | null;
   localeCurrencyAffectsPayload?: boolean;
 };
 
@@ -53,6 +54,10 @@ export function buildDashboardCacheKey(parts: DashboardCacheKeyParts): string {
 
     if (locale) segments.push(`locale:${locale.toLowerCase()}`);
     if (currency) segments.push(`currency:${currency.toUpperCase()}`);
+  }
+
+  if (parts.segment) {
+    segments.push(`segment:${parts.segment}`);
   }
 
   return segments.join('|');

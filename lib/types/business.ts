@@ -121,3 +121,26 @@ export const parseInvoicePaymentPayload = (payload: unknown): InvoicePaymentPayl
 
   return { amountReceived, dateReceived };
 };
+export type BusinessProfileDto = {
+  companyName: string;
+  smtpHost: string | null;
+  smtpPort: number | null;
+  smtpUser: string | null;
+  smtpPassword: string | null;
+  smtpFromEmail: string | null;
+};
+
+export type MailAttachment = {
+  filename: string;
+  path: string;
+  contentType?: string;
+};
+
+export type MailOptions = {
+  profile: BusinessProfileDto;
+  to: string;
+  subject: string;
+  html?: string;
+  text?: string;
+  attachments?: MailAttachment[];
+};

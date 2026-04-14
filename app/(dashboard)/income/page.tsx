@@ -113,7 +113,7 @@ export default function InvoicesAndEarnings() {
           }
         }
         sessionStorage.removeItem("erp_ai_payload");
-      } catch (e) {
+      } catch {
         console.error("Failed to parse AI payload");
         toast.warning(t("toast.warning.ai_autofill_failed"));
       }
@@ -157,7 +157,7 @@ export default function InvoicesAndEarnings() {
       setTotalPages(parsed.meta.totalPages);
       setCurrentPage(parsed.meta.currentPage);
 
-    } catch (error) {
+    } catch {
       console.error("Failed to load ledger");
       toast.error(t("toast.error.load_data"));
       setInvoices([]);
@@ -223,7 +223,7 @@ export default function InvoicesAndEarnings() {
         const errorData = await res.json();
         toast.error(errorData.error || t("toast.error.log_payment"));
       }
-    } catch (error) {
+    } catch {
       console.error("Payment logging failed");
       toast.error(t("toast.error.network"));
     } finally {
@@ -243,7 +243,7 @@ export default function InvoicesAndEarnings() {
       } else {
         toast.error(data.error || t("toast.error.send_email"), { id: toastId });
       }
-    } catch (error) {
+    } catch {
       toast.error(t("toast.error.network"), { id: toastId });
     } finally {
       setResendingId(null);

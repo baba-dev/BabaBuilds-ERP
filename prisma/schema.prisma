@@ -498,14 +498,18 @@ model Invoice {
   createdAt   DateTime @default(now())
 
   status         InvoiceStatus @default(PENDING)
-  amountReceived Float?
+  amountReceived Decimal?
   dateReceived   DateTime?
+
+  providerGateway       String? // "RAZORPAY" or "STRIPE"
+  providerPaymentLinkId String? // The ID of the generated payment link
 
   clientId             String?
   client               Client?               @relation(fields: [clientId], references: [id])
   idempotencyRecords   InvoiceIdempotency[]
   taxDecisionAuditLogs TaxDecisionAuditLog[]
   items                InvoiceItem[]
+  linkedServiceOrders  ServiceOrder[]        @relation("ServiceOrderLinkedInvoice")
 
   // Security: Two different workspaces can use invoice number "001"
   @@unique([invoiceNumber, workspaceId])
@@ -732,7 +736,7 @@ model ProposalItem {
   proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
 
   serviceTemplateId String?
-  serviceTemplate   ServiceTemplate? @relation(fields: [serviceTemplateId], references: [id])
+  serviceTemplate   ServiceTemplate? @relation(fields: [serviceTemplateId], references: [id], onDelete: SetNull)
 
   title       String // Copied from template so it can be edited per-proposal
   description String?
@@ -744,7 +748,7 @@ model ProposalItem {
 model Retainer {
   id          String    @id @default(uuid())
   workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   clientId String
   client   Client @relation(fields: [clientId], references: [id])
@@ -1053,8 +1057,9 @@ model ServiceOrder {
   // Status lifecycle
   status String @default("PENDING") // PENDING | PAID | FAILED | REFUNDED
 
-  // Linked ERP invoice (auto-generated on payment success)
+  // Linked ERP invoice (auto-generated on payment success, nulled if invoice deleted)
   linkedInvoiceId String?
+  linkedInvoice   Invoice? @relation("ServiceOrderLinkedInvoice", fields: [linkedInvoiceId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

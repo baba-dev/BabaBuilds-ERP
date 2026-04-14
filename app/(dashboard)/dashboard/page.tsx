@@ -3,7 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { AlertCircle, Download, LayoutDashboard, Send, Sparkles, ArrowRight } from "lucide-react";
+import { Download, LayoutDashboard, Send, Sparkles, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
-import { PageEmptyState } from "@/components/states/PageEmptyState";
 import { PageErrorState } from "@/components/states/PageErrorState";
 import { PageLoadingState } from "@/components/states/PageLoadingState";
 import { getInvoiceStatusBadgeKey, INVOICE_STATUS, isPaidInvoiceStatus, toInvoiceStatus } from "@/lib/invoice-status";
@@ -58,7 +57,7 @@ export default function Dashboard() {
 
   const { fCurrency, currency } = useFormat();
   const currencySymbol = getCurrencySymbol(currency);
-  const tr = (key: string, fallback: string, values?: any) => {
+  const tr = (key: string, fallback: string, values?: Record<string, any>) => {
     const translation = t(key as any, values);
     if (translation === key || translation === `Dashboard.${key}`) return fallback;
     return translation;
@@ -362,7 +361,7 @@ const SkeletonBlock = ({ className }: { className?: string }) => <div className=
               d.recentInvoices.length === 0 ? (
                 <p className="text-sm text-zinc-500">{tr("no_recent_ledger", "No recent invoices")}</p>
               ) : (
-                data.recentInvoices.slice(0, 5).map((invoice) => (
+                d.recentInvoices.slice(0, 5).map((invoice) => (
                   <div key={invoice.id} className="rounded-xl border border-zinc-200 dark:border-zinc-800/80 p-4 bg-white dark:bg-zinc-900/40 shadow-sm space-y-3 relative group">
                     <div className="flex items-start justify-between">
                       <div>
@@ -387,7 +386,7 @@ const SkeletonBlock = ({ className }: { className?: string }) => <div className=
             ) : (
               <DataTable 
                 columns={columns} 
-                data={data.recentInvoices} 
+                data={d.recentInvoices} 
                 rowId={(row) => row.id} 
                 emptyTitle={tr("no_recent_ledger", "No recent invoices")} 
                 emptyDescription={tr("recent_ledger_desc", "Recent billing activity will appear here.")} 

@@ -17,11 +17,11 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
     }
 
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
     const params = await props.params;
     const clientId = params.id;
 
@@ -51,10 +51,10 @@ export async function DELETE(
   try {
     // SECURITY LOCK
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
     
     // Await the params object (Next.js 15 strict mode)
     const params = await props.params;
@@ -102,15 +102,15 @@ export async function DELETE(
 
     try {
       invalidateDashboardCacheForWorkspace(workspaceId);
-    } catch (error) {
-      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'client', action: 'delete', error: String(error) });
+    } catch {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'client', action: 'delete' });
     }
 
     logActivity({
       action: "client_deleted",
       status: "SUCCESS",
       workspaceId,
-      actor: { userId: (session as any).user?.id, email: (session as any).user?.email },
+      actor: { userId: session.user?.id, email: session.user?.email },
       entity: { type: "client", id: clientId },
       request,
     });
@@ -121,7 +121,7 @@ export async function DELETE(
     logActivity({
       action: "client_deleted",
       status: "FAILURE",
-      workspaceId: (await getServerSession(authOptions) as any)?.workspaceId ?? null,
+      workspaceId: null,
       request,
       metadata: { error: String(error) },
     });
@@ -135,10 +135,10 @@ export async function PATCH(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
     const params = await props.params;
     const clientId = params.id;
 
@@ -195,9 +195,9 @@ export async function PATCH(
         try {
           await fs.promises.access(oldPath);
           await fs.promises.unlink(oldPath);
-        } catch (e) {
+        } catch {
           // If file doesn't exist or deletion fails, we log and continue
-          console.error("Failed to delete old logo:", e);
+          console.error("Failed to delete old logo");
         }
       }
 
@@ -224,15 +224,15 @@ export async function PATCH(
 
     try {
       invalidateDashboardCacheForWorkspace(workspaceId);
-    } catch (error) {
-      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'client', action: 'update', error: String(error) });
+    } catch {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'client', action: 'update' });
     }
 
     logActivity({
       action: "client_updated",
       status: "SUCCESS",
       workspaceId,
-      actor: { userId: (session as any).user?.id, email: (session as any).user?.email },
+      actor: { userId: session.user?.id, email: session.user?.email },
       entity: { type: "client", id: updatedClient.id },
       request,
     });
@@ -243,7 +243,7 @@ export async function PATCH(
     logActivity({
       action: "client_updated",
       status: "FAILURE",
-      workspaceId: (await getServerSession(authOptions) as any)?.workspaceId ?? null,
+      workspaceId: null,
       request,
       metadata: { error: String(error) },
     });

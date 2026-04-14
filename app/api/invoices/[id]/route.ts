@@ -13,10 +13,10 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
     const resolvedParams = await params;
     const invoiceId = resolvedParams.id;
 
@@ -41,10 +41,10 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
     const resolvedParams = await params;
     const invoiceId = resolvedParams.id;
 
@@ -80,23 +80,23 @@ export async function DELETE(
       } else if (fs.existsSync(candidateResolvedPath)) {
         try {
           fs.unlinkSync(candidateResolvedPath);
-        } catch (e) {
-          console.error("Failed to delete PDF file:", e);
+        } catch {
+          console.error("Failed to delete PDF file");
         }
       }
     }
 
     try {
       invalidateDashboardCacheForWorkspace(workspaceId);
-    } catch (error) {
-      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'invoice', action: 'delete', error: String(error) });
+    } catch {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'invoice', action: 'delete' });
     }
 
     logActivity({
       action: "invoice_deleted",
       status: "SUCCESS",
       workspaceId,
-      actor: { userId: (session as any).user?.id, email: (session as any).user?.email },
+      actor: { userId: session.user?.id, email: session.user?.email },
       entity: { type: "invoice", id: invoiceId },
       request,
     });
@@ -107,7 +107,7 @@ export async function DELETE(
     logActivity({
       action: "invoice_deleted",
       status: "FAILURE",
-      workspaceId: (await getServerSession(authOptions) as any)?.workspaceId ?? null,
+      workspaceId: null,
       request,
       metadata: { error: String(error) },
     });

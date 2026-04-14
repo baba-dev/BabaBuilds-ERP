@@ -7,6 +7,21 @@ import Papa from 'papaparse';
 import { scanBuffer } from '@/lib/security/clamav';
 import { decrypt } from '@/lib/encryption';
 
+interface Transaction {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  type: 'DEBIT' | 'CREDIT';
+}
+
+interface GroqSuggestion {
+  id: string;
+  aiCategory: string;
+  aiVendor: string;
+  reason: string;
+}
+
 // HELPER: Sanitize PII from bank descriptions before sending to LLM
 const sanitizeDescription = (desc: string) => {
   if (!desc) return "Unknown";
@@ -18,7 +33,7 @@ const robustJsonParse = (text: string) => {
   try {
     // Attempt 1: Standard parse
     return JSON.parse(text);
-  } catch (error) {
+  } catch {
     try {
       // Attempt 2: Strip Markdown and conversational wrappers
       const cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
@@ -30,15 +45,15 @@ const robustJsonParse = (text: string) => {
         return JSON.parse(extracted);
       }
       return null;
-    } catch (fallbackError) {
+    } catch {
       // Attempt 3: If it was cut off due to max_tokens, salvage the array
       console.warn("Attempting to salvage truncated JSON...");
       const match = text.match(/\[([\s\S]*)\]/); // Try to grab the array contents
       if (match) {
          try {
            // Force close the array and JSON wrapper
-           return JSON.parse(`{"suggestions": [${match[1].replace(/,\s*$/, '')}]}`);
-         } catch(e) { return null; }
+            return JSON.parse(`{"suggestions": [${match[1].replace(/,\s*$/, '')}]}`);
+          } catch { return null; }
       }
       return null;
     }
@@ -49,10 +64,10 @@ export async function POST(request: Request) {
   try {
     // 1. SECURITY LOCK & BYOK FETCH
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
 
     const profile = await prisma.businessProfile.findUnique({ 
       where: { workspaceId } 
@@ -64,8 +79,7 @@ export async function POST(request: Request) {
     if (userApiKeyEncrypted) {
       try {
         userApiKey = decrypt(userApiKeyEncrypted);
-      } catch (e) {
-        console.error("Failed to decrypt Groq API key:", e);
+      } catch {
         userApiKey = userApiKeyEncrypted;
       }
     }
@@ -91,9 +105,9 @@ export async function POST(request: Request) {
     // Parse CSV
     const parsed = Papa.parse(fileText, { header: true, skipEmptyLines: true });
     
-    let rawTransactions: any[] = [];
-    parsed.data.forEach((row: any, index: number) => {
-      const cleanAmount = (val: any) => parseFloat(String(val || '0').replace(/,/g, ''));
+    const rawTransactions: Transaction[] = [];
+    (parsed.data as Record<string, string>[]).forEach((row, index) => {
+      const cleanAmount = (val: string | number | undefined) => parseFloat(String(val || '0').replace(/,/g, ''));
       const debit = cleanAmount(row['Debit'] || row['Withdrawal'] || row['Paid Out']);
       const credit = cleanAmount(row['Credit'] || row['Deposit'] || row['Paid In']);
       
@@ -120,8 +134,8 @@ export async function POST(request: Request) {
       where: { workspaceId, status: { in: ['PENDING'] } }
     });
 
-    const autoMatched: any[] = [];
-    const unresolvedTransactions: any[] = [];
+    const autoMatched: Array<Transaction & { matchType: string; matchId: string; confidence: number }> = [];
+    const unresolvedTransactions: Transaction[] = [];
 
     // PASS 1: THE EXACT MATH MATCHER
     for (const txn of rawTransactions) {
@@ -148,7 +162,7 @@ export async function POST(request: Request) {
     }
 
     // 4. PASS 2: GROQ AI SEMANTIC MATCHING
-    let aiSuggestions: any[] = [];
+    let aiSuggestions: Array<Transaction & Partial<GroqSuggestion>> = [];
 
     if (unresolvedTransactions.length > 0) {
       const groq = new Groq({ apiKey: userApiKey });
@@ -178,7 +192,7 @@ export async function POST(request: Request) {
 
       // BATCHING: Fixes the critical slice(0, 50) data loss issue
       const CHUNK_SIZE = 40; 
-      let allGroqSuggestions: any[] = [];
+      let allGroqSuggestions: GroqSuggestion[] = [];
       const MAX_RETRIES = 1; // Retry once per chunk if parsing or network fails
 
       for (let i = 0; i < unresolvedTransactions.length; i += CHUNK_SIZE) {
@@ -235,7 +249,7 @@ export async function POST(request: Request) {
 
       // GRACEFUL FALLBACK: Map everything back. If AI failed/skipped a row, it defaults to Uncategorized instead of disappearing
       aiSuggestions = unresolvedTransactions.map(txn => {
-        const suggestion = allGroqSuggestions.find((s: any) => s.id === txn.id);
+        const suggestion = allGroqSuggestions.find(s => s.id === txn.id);
         return suggestion 
           ? { ...txn, ...suggestion } 
           : { 
@@ -254,8 +268,7 @@ export async function POST(request: Request) {
       ignored: [] 
     });
 
-  } catch (error: any) {
-    console.error("Reconciliation Error:", error);
+  } catch {
     // SECURITY FIX: Prevent leaking raw Groq SDK errors/API keys to the client
     return NextResponse.json({ 
       error: 'Failed to process bank statement securely. Please check your data or API key.' 

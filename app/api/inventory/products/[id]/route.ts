@@ -14,7 +14,7 @@ function isAllowedProductImageExtension(ext: string) {
 export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
-    const workspaceId = (session as any)?.workspaceId;
+    const workspaceId = session?.workspaceId;
     if (!session || !workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = await context.params;
@@ -29,7 +29,7 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
     if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
 
     return NextResponse.json(product);
-  } catch (error: any) {
+  } catch (error) {
     console.error("[INVENTORY_PRODUCT_GET]", error);
     return NextResponse.json({ error: "Failed to fetch product" }, { status: 500 });
   }
@@ -38,7 +38,7 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
 export async function PUT(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
-    const workspaceId = (session as any)?.workspaceId;
+    const workspaceId = session?.workspaceId;
     if (!session || !workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = await context.params;
@@ -61,7 +61,7 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
     const barcode = formData.get('barcode') as string;
     const location = formData.get('location') as string;
 
-    const dataToUpdate: any = {};
+    const dataToUpdate: Record<string, unknown> = {};
     if (sku !== null) dataToUpdate.sku = sku;
     if (name !== null) dataToUpdate.name = name;
     if (description !== null) dataToUpdate.description = description;
@@ -113,8 +113,10 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
     });
 
     return NextResponse.json({ success: true, product: updated });
-  } catch (error: any) {
-    if (error.code === 'P2002') return NextResponse.json({ error: "SKU already exists" }, { status: 409 });
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
+      return NextResponse.json({ error: "SKU already exists" }, { status: 409 });
+    }
     console.error("[INVENTORY_PRODUCT_PUT]", error);
     return NextResponse.json({ error: "Failed to update product" }, { status: 500 });
   }
@@ -123,7 +125,7 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
 export async function DELETE(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
-    const workspaceId = (session as any)?.workspaceId;
+    const workspaceId = session?.workspaceId;
     if (!session || !workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = await context.params;
@@ -134,14 +136,14 @@ export async function DELETE(req: Request, context: { params: Promise<{ id: stri
     if (existing.imageUrl) {
       const oldFile = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', existing.imageUrl);
       if (fs.existsSync(oldFile)) {
-        try { fs.unlinkSync(oldFile) } catch (e) {}
+        try { fs.unlinkSync(oldFile) } catch { /* Ignore cleanup errors */ }
       }
     }
 
     await prisma.product.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
     console.error("[INVENTORY_PRODUCT_DELETE]", error);
     return NextResponse.json({ error: "Failed to delete product. Ensure it's not tied to invoices." }, { status: 500 });
   }

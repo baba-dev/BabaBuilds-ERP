@@ -17,10 +17,10 @@ export async function GET(request: Request) {
   try {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
     const whereClause = { workspaceId: workspaceId };
 
     // 2. PAGINATION PARAMETERS
@@ -82,10 +82,10 @@ export async function POST(request: Request) {
   try {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
 
     // --- 🚨 SAAS MONETIZATION BARRICADE START ---
     const workspace = await prisma.workspace.findUnique({
@@ -163,15 +163,15 @@ export async function POST(request: Request) {
 
     try {
       invalidateDashboardCacheForWorkspace(workspaceId);
-    } catch (error) {
-      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'client', action: 'create', error: String(error) });
+    } catch {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'client', action: 'create' });
     }
 
     logActivity({
       action: "client_created",
       status: "SUCCESS",
       workspaceId,
-      actor: { userId: (session as any).user?.id, email: (session as any).user?.email },
+      actor: { userId: session.user?.id, email: session.user?.email },
       entity: { type: "client", id: newClient.id },
       request,
     });
@@ -182,7 +182,7 @@ export async function POST(request: Request) {
     logActivity({
       action: "client_created",
       status: "FAILURE",
-      workspaceId: (await getServerSession(authOptions) as any)?.workspaceId ?? "UNKNOWN",
+      workspaceId: session?.workspaceId ?? "UNKNOWN",
       request,
       metadata: { error: String(error) },
     });

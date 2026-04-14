@@ -10,18 +10,18 @@ import { v4 as uuidv4 } from 'uuid';
 import { scanBuffer } from '@/lib/security/clamav';
 import { isSupportedLocale } from '@/i18n/locales';
 import { getTaxFeatureFlags } from '@/lib/tax/feature-flags';
-import { logActivity } from '@/lib/activity-log';
+import { logActivity } from '@/lib/security/activity-log';
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const workspaceId = (session as any).workspaceId;
-    const locale = (session as any).locale || "en-IN";
+    const workspaceId = session.workspaceId;
+    const locale = session.locale || "en-IN";
 
     const profile = await prisma.businessProfile.findUnique({ 
       where: { workspaceId },
@@ -33,19 +33,19 @@ export async function GET() {
       profile.smtpPassword  = "";
       
       if (profile.groqApiKey) {
-        (profile as any).groqApiKey = "SET";
+        (profile as Record<string, unknown>).groqApiKey = "SET";
       }
 
       // Return a boolean-like masked string so the UI knows a secret is set
       if (profile.razorpayKeySecret) {
-        (profile as any).razorpayKeySecret = "SET";
+        (profile as Record<string, unknown>).razorpayKeySecret = "SET";
       }
-      if ((profile as any).stripeSecretKey) {
-        (profile as any).stripeSecretKey = "SET";
+      if ((profile as Record<string, unknown>).stripeSecretKey) {
+        (profile as Record<string, unknown>).stripeSecretKey = "SET";
       }
     }
     
-    const workspace = (profile as any)?.workspace;
+    const workspace = profile?.workspace;
     const planTier    = workspace?.planTier    ?? "FREE";
     const countryCode = workspace?.countryCode ?? "IN";
     const taxFeatureFlags = getTaxFeatureFlags({
@@ -54,10 +54,12 @@ export async function GET() {
     });
 
     // Strip the nested workspace object before returning (cleaner payload)
-    const { workspace: _ws, ...safeProfile } = (profile as any) ?? {};
+    const { workspace: _workspace, ...safeProfile } = (profile as Record<string, unknown> & { workspace: unknown }) ?? {};
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _ignore = _workspace; 
 
     return NextResponse.json({ ...safeProfile, locale, planTier, countryCode, taxFeatureFlags });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
   }
 }
@@ -70,13 +72,13 @@ export async function POST(request: Request) {
 
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    workspaceId = (session as any).workspaceId;
-    actorId = (session as any)?.user?.id ?? null;
-    actorEmail = (session as any)?.user?.email ?? null;
+    workspaceId = session.workspaceId;
+    actorId = session.user?.id ?? null;
+    actorEmail = session.user?.email ?? null;
     const formData = await request.formData();
 
     const hasField = (field: string) => formData.has(field);
@@ -220,7 +222,7 @@ export async function POST(request: Request) {
     }
 
     // ── Build update payload (no secrets yet) ─────────────────────────────────
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       companyName, proprietorName, address, email, phone, website,
       panNumber, udyamNumber, gstin,
       bankName, accountName, accountNumber, ifscCode,
@@ -365,15 +367,15 @@ export async function POST(request: Request) {
 
     if (profile) {
       // Re-scrub before returning to frontend
-      profile.smtpPassword               = "";
-      (profile as any).groqApiKey        = profile.groqApiKey ? "SET" : "";
-      (profile as any).razorpayKeySecret = profile.razorpayKeySecret ? "SET" : "";
-      (profile as any).stripeSecretKey   = (profile as any).stripeSecretKey ? "SET" : "";
+      (profile as Record<string, unknown>).smtpPassword = "";
+      (profile as Record<string, unknown>).groqApiKey = profile.groqApiKey ? "SET" : "";
+      (profile as Record<string, unknown>).razorpayKeySecret = profile.razorpayKeySecret ? "SET" : "";
+      (profile as Record<string, unknown>).stripeSecretKey = (profile as Record<string, unknown>).stripeSecretKey ? "SET" : "";
     }
 
     // ── Locale update ─────────────────────────────────────────────────────────
     if (clientLocale) {
-      const userId = (session?.user as any)?.id;
+      const userId = session?.user?.id;
       if (userId) {
         await prisma.user.update({
           where: { id: userId },
@@ -386,8 +388,8 @@ export async function POST(request: Request) {
 
     try {
       invalidateDashboardCacheForWorkspace(workspaceId);
-    } catch (error) {
-      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'businessProfile', action: 'update', error: String(error) });
+    } catch {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'businessProfile', action: 'update' });
     }
 
     changedFieldNames = Object.keys(updateData).sort();
@@ -397,16 +399,15 @@ export async function POST(request: Request) {
 
     logActivity({
       action: "settings_update",
-      outcome: "success",
-      entityType: "workspace_settings",
-      entityId: workspaceId,
+      status: "SUCCESS",
       workspaceId,
-      actorId,
-      actorEmail,
+      actor: { userId: actorId, email: actorEmail },
+      entity: { type: "workspace_settings", id: workspaceId },
       metadata: {
         changedFieldNames,
         changedFieldCount: changedFieldNames.length,
       },
+      request,
     });
 
     return NextResponse.json({ success: true, profile });
@@ -414,16 +415,16 @@ export async function POST(request: Request) {
     console.error(error);
     logActivity({
       action: "settings_update",
-      outcome: "error",
-      entityType: "workspace_settings",
-      entityId: workspaceId || null,
+      status: "FAILURE",
       workspaceId: workspaceId || null,
-      actorId,
-      actorEmail,
+      actor: { userId: actorId, email: actorEmail },
+      entity: { type: "workspace_settings", id: workspaceId || null },
       metadata: {
         changedFieldNames,
         changedFieldCount: changedFieldNames.length,
+        error: String(error)
       },
+      request,
     });
     return NextResponse.json({ error: 'Failed to save business profile' }, { status: 500 });
   }

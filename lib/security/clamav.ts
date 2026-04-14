@@ -1,10 +1,10 @@
 import NodeClam from 'clamscan';
 import { Readable } from 'stream';
 
-let clamScanPromise: Promise<any> | null = null;
+let clamScanPromise: Promise<unknown> | null = null;
 
 function getClamScan() {
-  if (clamScanPromise) return clamScanPromise;
+  if (clamScanPromise) return clamScanPromise as Promise<any>;
 
   const isLinux = process.platform === 'linux';
   const isProd = process.env.NODE_ENV === 'production';

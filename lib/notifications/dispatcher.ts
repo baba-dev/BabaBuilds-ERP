@@ -69,6 +69,12 @@ function buildPushAndInAppContent(
         body: `${d.serviceName} renews on ${d.renewalDate} (${d.amount})`,
         actionUrl: '/retainers',
       };
+    case 'BILLING_FAILED':
+      return {
+        title: `⚠️ Billing Failed — ${d.clientName}`,
+        body: `${d.message}`,
+        actionUrl: '/retainers',
+      };
     case 'DEADLINE_ALERT':
       return {
         title: `⚠️ Deadline: ${d.title}`,

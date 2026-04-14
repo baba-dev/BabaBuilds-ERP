@@ -129,10 +129,19 @@ export async function runAccountingIntegrityChecks(workspaceId: string): Promise
     });
   }
 
-  const reportView = await prisma.invoice.aggregate({
+  // Compare dashboard-reported revenue against ledger revenue using the same
+  // field-preference as `getInvoiceBilledAmount()` (grandTotal ?? totalAmount)
+  // so we don't generate spurious violations for invoices where the two fields
+  // diverged during schema migrations.
+  const allInvoices = await prisma.invoice.findMany({
     where: { workspaceId },
-    _sum: { totalAmount: true },
+    select: { grandTotal: true, totalAmount: true },
   });
+
+  const reportRevenue = allInvoices.reduce((sum, inv) => {
+    const billed = toDecimal(inv.grandTotal ?? inv.totalAmount ?? 0);
+    return sum.plus(billed);
+  }, toDecimal(0));
 
   const ledgerRevenue = await prisma.accountingEntry.aggregate({
     where: {
@@ -144,7 +153,6 @@ export async function runAccountingIntegrityChecks(workspaceId: string): Promise
     _sum: { amount: true },
   });
 
-  const reportRevenue = toDecimal(reportView._sum.totalAmount ?? 0);
   const ledgerRevenueValue = toDecimal(ledgerRevenue._sum.amount ?? 0);
   if (!reportRevenue.equals(ledgerRevenueValue)) {
     violations.push({

@@ -11,6 +11,7 @@ export type NotificationEventType =
   | 'PROPOSAL_CREATED'
   | 'SERVICE_CREATED'
   | 'RENEWAL_ALERT'
+  | 'BILLING_FAILED'
   | 'DEADLINE_ALERT'
   | 'TAX_ALERT'
   | 'SHOP_ORDER_CREATED'

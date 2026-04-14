@@ -100,7 +100,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     (!segment || segment === 'finance' || segment === 'sales' || segment === 'charts')
       ? prisma.invoice.findMany({ 
           where: { workspaceId, financialYear: fy }, 
-          select: { id: true, invoiceNumber: true, invoiceDate: true, status: true, amountReceived: true, items: true, client: { select: { id: true, name: true } } }, 
+          select: { id: true, invoiceNumber: true, invoiceDate: true, status: true, totalAmount: true, grandTotal: true, amountReceived: true, items: true, client: { select: { id: true, name: true } } }, 
           orderBy: { invoiceDate: "asc" } 
         })
       : Promise.resolve([]),
@@ -108,14 +108,14 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     (!segment || segment === 'finance' || segment === 'sales' || segment === 'charts' || segment === 'attention')
       ? prisma.invoice.findMany({ 
           where: { workspaceId, status: { not: "PAID" } }, 
-          select: { id: true, invoiceNumber: true, invoiceDate: true, status: true, amountReceived: true, items: true, client: { select: { id: true, name: true } } }
+          select: { id: true, invoiceNumber: true, invoiceDate: true, status: true, totalAmount: true, grandTotal: true, amountReceived: true, items: true, client: { select: { id: true, name: true } } }
         })
       : Promise.resolve([]),
       
     (!segment || segment === 'ledger')
       ? prisma.invoice.findMany({ 
           where: { workspaceId }, 
-          select: { id: true, invoiceNumber: true, invoiceDate: true, status: true, totalAmount: true, amountReceived: true, updatedAt: true, pdfPath: true, client: { select: { name: true } } }, 
+          select: { id: true, invoiceNumber: true, invoiceDate: true, status: true, totalAmount: true, amountReceived: true, pdfPath: true, client: { select: { name: true } } }, 
           orderBy: { invoiceDate: "desc" }, 
           take: 6 
         })
@@ -141,7 +141,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       : Promise.resolve([]),
 
     (!segment || segment === 'sales' || segment === 'charts' || segment === 'attention')
-      ? prisma.proposal.findMany({ where: { workspaceId }, select: { status: true, items: { select: { amount: true } } } })
+      ? prisma.proposal.findMany({ where: { workspaceId }, select: { status: true, items: { select: { total: true } } } })
       : Promise.resolve([]),
 
     (!segment || segment === 'ops' || segment === 'attention')
