@@ -117,6 +117,22 @@
   --motion-ease-linear: linear;
   --motion-hover-lift-y: -2px;
   --motion-press-scale: 0.985;
+
+  /* ── Auth / Login ambient background tokens ──────────────────────────── */
+  /* Light theme (subtle, low-contrast). Tune these first for the login page. */
+  --login-bg-0: oklch(0.995 0.004 260);
+  --login-bg-1: oklch(0.985 0.008 260);
+  --login-bg-2: oklch(0.97 0.012 275);
+  --login-spot: oklch(0.93 0.03 275 / 70%);
+  --login-aurora-1: oklch(0.86 0.06 275 / 40%);
+  --login-aurora-2: oklch(0.86 0.05 255 / 36%);
+  --login-aurora-3: oklch(0.88 0.045 300 / 28%);
+  --login-vine-1: oklch(0.64 0.13 275 / 26%);
+  --login-vine-2: oklch(0.62 0.12 255 / 18%);
+  --login-vine-3: oklch(0.66 0.12 300 / 16%);
+  --login-particle: oklch(0.62 0.1 265 / 24%);
+  --login-vignette: oklch(0.99 0 0 / 0%);
+  --login-ambient-intensity: 0.85;
 }
 
 .dark {
@@ -160,6 +176,114 @@
   --danger-soft: oklch(0.31 0.08 24);
   --focus-ring: oklch(0.7 0.17 279);
 
+  /* ── Auth / Login ambient background tokens (dark) ───────────────────── */
+  --login-bg-0: oklch(0.16 0.015 265);
+  --login-bg-1: oklch(0.14 0.02 270);
+  --login-bg-2: oklch(0.13 0.02 255);
+  --login-spot: oklch(0.26 0.08 275 / 32%);
+  --login-aurora-1: oklch(0.55 0.18 275 / 16%);
+  --login-aurora-2: oklch(0.56 0.17 255 / 14%);
+  --login-aurora-3: oklch(0.58 0.16 300 / 12%);
+  --login-vine-1: oklch(0.62 0.18 275 / 22%);
+  --login-vine-2: oklch(0.6 0.16 255 / 16%);
+  --login-vine-3: oklch(0.62 0.16 300 / 14%);
+  --login-particle: oklch(0.65 0.16 270 / 18%);
+  --login-vignette: oklch(0.05 0 0 / 38%);
+  --login-ambient-intensity: 1;
+
+}
+
+/* ── Login ambient background implementation ───────────────────────────── */
+@layer utilities {
+  .login-ambient-base {
+    background:
+      radial-gradient(1200px 800px at 50% 35%, color-mix(in oklab, var(--login-spot) 85%, transparent) 0%, transparent 62%),
+      radial-gradient(900px 560px at 18% 18%, color-mix(in oklab, var(--login-aurora-2) 70%, transparent) 0%, transparent 60%),
+      radial-gradient(820px 540px at 82% 24%, color-mix(in oklab, var(--login-aurora-3) 62%, transparent) 0%, transparent 62%),
+      linear-gradient(180deg, var(--login-bg-0), var(--login-bg-1) 55%, var(--login-bg-2));
+    opacity: var(--login-ambient-intensity);
+  }
+
+  .login-ambient-spotlight {
+    background: radial-gradient(620px 420px at 50% 42%, var(--login-spot), transparent 70%);
+    opacity: 0.95;
+  }
+
+  .login-ambient-aurora {
+    opacity: calc(0.75 * var(--login-ambient-intensity));
+    filter: blur(42px) saturate(1.05);
+    transform: translateZ(0);
+    will-change: transform, opacity;
+    background:
+      radial-gradient(420px 320px at 42% 46%, var(--login-aurora-1), transparent 70%),
+      radial-gradient(520px 360px at 56% 40%, var(--login-aurora-2), transparent 72%),
+      radial-gradient(560px 420px at 52% 58%, var(--login-aurora-3), transparent 72%);
+    animation: login-aurora-drift 18s var(--motion-ease-standard) 0.8s infinite alternate;
+  }
+
+  .login-ambient-vines {
+    opacity: calc(0.7 * var(--login-ambient-intensity));
+    filter: blur(0px);
+    transform: translateZ(0);
+  }
+
+  .login-ambient-vines-motion {
+    will-change: transform, opacity;
+    animation: login-vines-float 22s var(--motion-ease-standard) 1.2s infinite alternate;
+  }
+
+  .login-vine-stroke {
+    opacity: 0.9;
+    animation: login-vine-dash 14s var(--motion-ease-linear) 1.1s infinite;
+  }
+
+  .login-vine-a { animation-duration: 15s; }
+  .login-vine-b { animation-duration: 17s; }
+  .login-vine-c { animation-duration: 19s; }
+
+  .login-ambient-particles {
+    opacity: calc(0.5 * var(--login-ambient-intensity));
+    will-change: transform, opacity;
+    animation: login-particles-drift 26s var(--motion-ease-standard) 1.6s infinite alternate;
+  }
+
+  .login-particle { transform-origin: center; }
+  .login-particle-0 { animation: login-particle-twinkle 8s ease-in-out 2.2s infinite; }
+  .login-particle-1 { animation: login-particle-twinkle 9s ease-in-out 1.7s infinite; }
+  .login-particle-2 { animation: login-particle-twinkle 10s ease-in-out 2.9s infinite; }
+  .login-particle-3 { animation: login-particle-twinkle 11s ease-in-out 1.3s infinite; }
+
+  .login-ambient-vignette {
+    background:
+      radial-gradient(900px 620px at 50% 42%, transparent 0%, transparent 58%, var(--login-vignette) 100%),
+      radial-gradient(1200px 900px at 50% 50%, transparent 0%, transparent 64%, var(--login-vignette) 100%);
+    opacity: 1;
+  }
+
+  @keyframes login-aurora-drift {
+    from { transform: translate3d(-0.6%, -0.3%, 0) scale(1.02); opacity: calc(0.68 * var(--login-ambient-intensity)); }
+    to   { transform: translate3d(0.8%, 0.6%, 0) scale(1.06);  opacity: calc(0.78 * var(--login-ambient-intensity)); }
+  }
+
+  @keyframes login-vines-float {
+    from { transform: translate3d(0, -0.4%, 0) scale(1); opacity: calc(0.62 * var(--login-ambient-intensity)); }
+    to   { transform: translate3d(0, 0.6%, 0) scale(1.01); opacity: calc(0.7 * var(--login-ambient-intensity)); }
+  }
+
+  @keyframes login-vine-dash {
+    from { stroke-dashoffset: 0; }
+    to   { stroke-dashoffset: -120; }
+  }
+
+  @keyframes login-particles-drift {
+    from { transform: translate3d(-0.3%, 0.1%, 0); }
+    to   { transform: translate3d(0.4%, -0.2%, 0); }
+  }
+
+  @keyframes login-particle-twinkle {
+    0%, 100% { opacity: 0.18; }
+    50%      { opacity: 0.45; }
+  }
 }
 
 @layer base {
