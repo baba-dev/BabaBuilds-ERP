@@ -123,10 +123,14 @@ export default function ShopDashboardPage() {
       ]);
 
       const [ordersData, servicesData, settingsData] = await Promise.all([
-        ordersRes.json(),
-        servicesRes.json(),
-        settingsRes.json(),
+        ordersRes.json().catch(() => null),
+        servicesRes.json().catch(() => null),
+        settingsRes.json().catch(() => null),
       ]);
+
+      if (!ordersRes.ok) throw new Error((ordersData as any)?.error || "Failed to load orders.");
+      if (!servicesRes.ok) throw new Error((servicesData as any)?.error || "Failed to load services.");
+      if (!settingsRes.ok) throw new Error((settingsData as any)?.error || "Failed to load shop settings.");
 
       setOrders(Array.isArray(ordersData.orders) ? ordersData.orders : []);
       setShopOverview(ordersData.overview ?? { totalOrders: 0, statusCounts: { PAID: 0, PENDING: 0, FAILED: 0, REFUNDED: 0 }, paidRevenue: 0 });
@@ -144,8 +148,9 @@ export default function ShopDashboardPage() {
       const accent = settingsData?.shopAccentColor || "#6366f1";
       setShopAccentColor(accent);
       setAccentDraft(accent);
-    } catch {
-      toast.error("Failed to load shop details.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to load shop details.";
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
