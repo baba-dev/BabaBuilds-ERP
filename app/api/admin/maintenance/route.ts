@@ -7,6 +7,7 @@ import { exec } from "child_process";
 import util from "util";
 import { decimalToNumber } from "@/lib/money";
 import { sendActivityAlert } from '@/lib/security/alert-hooks';
+import { buildPrivatePath, ensureDir, getPrivateUploadsRoot } from '@/lib/uploads/private-storage';
 
 const execPromise = util.promisify(exec);
 
@@ -42,41 +43,60 @@ export async function POST(req: Request) {
         let orphanedCount = 0;
         
         // 1. Collect all valid file paths from DB for O(1) lookup
-        const [expenses, invoices, profiles] = await Promise.all([
+        const [expenses, invoices, profiles, clients, products, services] = await Promise.all([
           prisma.expense.findMany({ select: { receiptUrl: true }, where: { receiptUrl: { not: null } } }),
           prisma.invoice.findMany({ select: { pdfPath: true } }),
-          prisma.businessProfile.findMany({ select: { logoUrl: true }, where: { logoUrl: { not: null } } })
+          prisma.businessProfile.findMany({
+            select: { logoUrl: true, signatureUrl: true },
+            where: { OR: [{ logoUrl: { not: null } }, { signatureUrl: { not: null } }] }
+          }),
+          prisma.client.findMany({ select: { logoUrl: true }, where: { logoUrl: { not: null } } }),
+          prisma.product.findMany({ select: { imageUrl: true }, where: { imageUrl: { not: null } } }),
+          prisma.serviceTemplate.findMany({ select: { imageUrl: true }, where: { imageUrl: { not: null } } }),
         ]);
 
         const validPaths = new Set([
           ...expenses.map(e => e.receiptUrl),
           ...invoices.map(i => i.pdfPath),
-          ...profiles.map(p => p.logoUrl)
+          ...profiles.map(p => p.logoUrl),
+          ...profiles.map(p => p.signatureUrl),
+          ...clients.map(c => c.logoUrl),
+          ...products.map(p => p.imageUrl),
+          ...services.map(s => s.imageUrl),
         ].filter(Boolean) as string[]);
 
-        // 2. Define target root directories
-        const scanDirs = ['receipts', 'invoices', 'logos'];
-        const publicRoot = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public');
+        const privateRoot = getPrivateUploadsRoot();
+        await ensureDir(privateRoot);
 
-        for (const dirName of scanDirs) {
-          const dirPath = path.join(publicRoot, dirName);
+        // 2. Define target private directories (workspace-namespaced)
+        const scanKinds = ['receipts', 'invoices', 'logos', 'signatures', 'products', 'service-hero'];
+
+        for (const kind of scanKinds) {
+          const dirPath = path.join(privateRoot, kind);
           try {
             await fs.promises.access(dirPath);
           } catch {
             continue;
           }
 
-          // Workspace-level subdirectories
           const workspaces = await fs.promises.readdir(dirPath);
           for (const workspaceId of workspaces) {
             const workspacePath = path.join(dirPath, workspaceId);
-            const stats = await fs.promises.stat(workspacePath);
+            let stats: fs.Stats;
+            try {
+              stats = await fs.promises.stat(workspacePath);
+            } catch {
+              continue;
+            }
             if (!stats.isDirectory()) continue;
 
             const files = await fs.promises.readdir(workspacePath);
             for (const file of files) {
               const fullFilePath = path.join(workspacePath, file);
-              const relativePath = `/${dirName}/${workspaceId}/${file}`;
+              const relativePath =
+                kind === 'service-hero'
+                  ? `/uploads/service-hero/${workspaceId}/${file}`
+                  : `/${kind}/${workspaceId}/${file}`;
 
               if (!validPaths.has(relativePath)) {
                 try {
@@ -89,6 +109,47 @@ export async function POST(req: Request) {
               }
             }
           }
+        }
+
+        // 3. Best-effort cleanup for share-target uploads older than 30 days.
+        // These are staged imports and not yet modeled in the DB.
+        const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+        const shareTargetRoot = path.join(privateRoot, 'share-target');
+        try {
+          const workspaceDirs = await fs.promises.readdir(shareTargetRoot);
+          for (const workspaceId of workspaceDirs) {
+            const wsRoot = path.join(shareTargetRoot, workspaceId);
+            let wsStats: fs.Stats;
+            try {
+              wsStats = await fs.promises.stat(wsRoot);
+            } catch {
+              continue;
+            }
+            if (!wsStats.isDirectory()) continue;
+
+            const uploadIds = await fs.promises.readdir(wsRoot);
+            for (const uploadId of uploadIds) {
+              const uploadPath = path.join(wsRoot, uploadId);
+              let uploadStats: fs.Stats;
+              try {
+                uploadStats = await fs.promises.stat(uploadPath);
+              } catch {
+                continue;
+              }
+              if (!uploadStats.isDirectory()) continue;
+              if (uploadStats.mtimeMs > cutoff) continue;
+
+              try {
+                await fs.promises.rm(uploadPath, { recursive: true, force: true });
+                orphanedCount++;
+                console.log(`🧹 Pruned share-target upload folder: /uploads/share-target/${workspaceId}/${uploadId}`);
+              } catch (err) {
+                console.error(`Failed to delete share-target folder ${uploadPath}:`, err);
+              }
+            }
+          }
+        } catch {
+          // ignore if share-target doesn't exist
         }
         
         return NextResponse.json({ 

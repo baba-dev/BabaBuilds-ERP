@@ -1,6 +1,7 @@
 import { PDFDocument, PDFPage, PDFArray, PDFName, PDFString, rgb, StandardFonts, degrees } from 'pdf-lib';
 import fs from 'fs';
 import path from 'path';
+import { buildPrivatePath } from '@/lib/uploads/private-storage';
 import type { InvoiceTotals } from '@/lib/invoice/totals';
 
 export interface PDFProfile {
@@ -198,7 +199,11 @@ export async function generateInvoicePDF({
     try {
       const cleanUrl = logoUrl.split('?')[0];
       const relativeLogoPath = cleanUrl.startsWith('/') ? cleanUrl.substring(1) : cleanUrl;
-      const fullPath = path.join(process.cwd(), 'public', relativeLogoPath);
+      // Private storage: translate URL path to on-disk private_uploads/<kind>/...
+      const parts = relativeLogoPath.split('/').filter(Boolean);
+      const kind = parts.shift();
+      if (!kind) return;
+      const fullPath = buildPrivatePath(kind as any, parts);
       if (fs.existsSync(fullPath)) {
         const imageData = fs.readFileSync(fullPath);
         let image;

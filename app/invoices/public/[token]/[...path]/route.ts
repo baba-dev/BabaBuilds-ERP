@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import {
   hasTraversal,
   logDeniedAssetAccess,
-  serveAssetFromPublic,
+  servePrivateAsset,
 } from '@/lib/security/private-asset';
 import { verifySignedAssetToken } from '@/lib/security/signed-links';
 
@@ -49,5 +49,5 @@ export async function GET(
     return new NextResponse('Forbidden', { status: 403 });
   }
 
-  return serveAssetFromPublic('invoices', filePathArray);
+  return servePrivateAsset('invoices', filePathArray);
 }

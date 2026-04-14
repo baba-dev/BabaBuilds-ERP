@@ -12,6 +12,7 @@ import { apiError } from '@/lib/api-error';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
 import { logActivity } from '@/lib/security/activity-log';
 import { FREE_TIER_CLIENT_LIMIT } from '@/lib/pricing';
+import { buildPrivatePath, ensureDir, sniffAllowedContent, uniqueStoredName } from '@/lib/uploads/private-storage';
 
 export async function GET(request: Request) {
   try {
@@ -132,14 +133,17 @@ export async function POST(request: Request) {
         return apiError(400, "Malware detected in uploaded file.", "MALWARE_DETECTED");
       }
 
-      const dir = path.join(process.cwd(), 'public', 'logos', workspaceId); 
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      const sniffed = sniffAllowedContent(buffer);
+      if (!sniffed || (sniffed !== 'png' && sniffed !== 'jpeg' && sniffed !== 'webp' && sniffed !== 'gif')) {
+        return apiError(415, "Unsupported or unsafe logo content.", "INVALID_FILE_TYPE");
+      }
 
-      const filename = `client-${Date.now()}-${uuidv4()}${ext}`;
-
-      const filepath = path.join(dir, filename);
-      fs.writeFileSync(filepath, buffer);
-      logoUrl = `/logos/${workspaceId}/${filename}`;
+      const dir = buildPrivatePath('logos', [workspaceId]);
+      await ensureDir(dir);
+      const storedName = uniqueStoredName(`client-${Date.now()}-${uuidv4()}`, ext);
+      const filepath = path.join(dir, storedName);
+      fs.writeFileSync(filepath, buffer, { mode: 0o600 });
+      logoUrl = `/logos/${workspaceId}/${storedName}`;
     }
 
     // 3. CREATE WITH WORKSPACE ID

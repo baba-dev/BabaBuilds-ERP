@@ -6,6 +6,7 @@ import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from
 import fs from 'fs';
 import path from 'path';
 import { logActivity } from '@/lib/security/activity-log';
+import { buildPrivatePath } from '@/lib/uploads/private-storage';
 
 export async function GET(
   request: Request,
@@ -65,21 +66,10 @@ export async function DELETE(
     // 3. Cleanup Orphaned PDF File
     if (invoice.pdfPath) {
       const normalizedRelativePath = invoice.pdfPath.replace(/^[/\\]+/, '');
-      const candidatePath = path.join(process.cwd(), 'public', normalizedRelativePath);
-      const allowedBaseDir = path.resolve(process.cwd(), 'public', 'invoices');
-      const candidateResolvedPath = path.resolve(candidatePath);
-      const confinedBasePrefix = `${allowedBaseDir}${path.sep}`;
-      const isConfined =
-        candidateResolvedPath === allowedBaseDir ||
-        candidateResolvedPath.startsWith(confinedBasePrefix);
-
-      if (!isConfined) {
-        console.warn(
-          `Security warning: Skipping invoice PDF deletion outside allowed directory. invoiceId=${invoiceId}, pdfPath=${invoice.pdfPath}`
-        );
-      } else if (fs.existsSync(candidateResolvedPath)) {
+      const privatePath = buildPrivatePath('invoices', normalizedRelativePath.split(path.sep));
+      if (fs.existsSync(privatePath)) {
         try {
-          fs.unlinkSync(candidateResolvedPath);
+          fs.unlinkSync(privatePath);
         } catch {
           console.error("Failed to delete PDF file");
         }

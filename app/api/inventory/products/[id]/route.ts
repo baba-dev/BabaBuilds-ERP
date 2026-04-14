@@ -3,10 +3,10 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
-import fs from 'fs';
 import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
 import { scanBuffer } from '@/lib/security/clamav';
+import { buildPrivatePath, ensureDir, sniffAllowedContent, uniqueStoredName } from '@/lib/uploads/private-storage';
+import fs from 'fs';
 
 function isAllowedProductImageExtension(ext: string) {
   return ['.jpg', '.jpeg', '.png', '.webp'].includes(ext.toLowerCase());
@@ -92,19 +92,40 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
         return NextResponse.json({ error: "Malware detected in uploaded file." }, { status: 400 });
       }
 
-      const dir = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'products', workspaceId); 
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      const sniffed = sniffAllowedContent(buffer);
+      if (!sniffed || (sniffed !== 'png' && sniffed !== 'jpeg' && sniffed !== 'webp')) {
+        return NextResponse.json({ error: "Unsupported or unsafe image content." }, { status: 415 });
+      }
+      if (sniffed === 'jpeg' && (ext !== '.jpg' && ext !== '.jpeg')) {
+        return NextResponse.json({ error: "Image content did not match expected JPEG type." }, { status: 415 });
+      }
+      if (sniffed === 'png' && ext !== '.png') {
+        return NextResponse.json({ error: "Image content did not match expected PNG type." }, { status: 415 });
+      }
+      if (sniffed === 'webp' && ext !== '.webp') {
+        return NextResponse.json({ error: "Image content did not match expected WEBP type." }, { status: 415 });
+      }
 
-      const filename = `product-${Date.now()}-${uuidv4()}${ext}`;
+      const dir = buildPrivatePath('products', [workspaceId]);
+      await ensureDir(dir);
+
+      const filename = uniqueStoredName('product', ext);
       const filepath = path.join(dir, filename);
-      fs.writeFileSync(filepath, buffer);
-      
+      await fs.promises.writeFile(filepath, buffer, { mode: 0o600 });
+
       dataToUpdate.imageUrl = `/products/${workspaceId}/${filename}`;
-      
-      // Cleanup old image if exists
-      if (existing.imageUrl) {
-        const oldFile = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', existing.imageUrl);
-        if (fs.existsSync(oldFile)) fs.unlinkSync(oldFile);
+
+      // Cleanup old image if exists (best effort)
+      if (existing.imageUrl?.startsWith('/products/')) {
+        const oldName = existing.imageUrl.split('/').pop();
+        if (oldName) {
+          const oldFile = buildPrivatePath('products', [workspaceId, oldName]);
+          try {
+            await fs.promises.unlink(oldFile);
+          } catch {
+            // ignore
+          }
+        }
       }
     }
 

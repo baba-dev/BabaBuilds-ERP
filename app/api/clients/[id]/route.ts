@@ -10,6 +10,7 @@ import { scanBuffer } from '@/lib/security/clamav';
 import { CLIENT_LOGO_INVALID_TYPE_ERROR, isAllowedClientLogoExtension } from '@/lib/uploads/client-logo';
 import { apiError } from '@/lib/api-error';
 import { logActivity } from '@/lib/security/activity-log';
+import { buildPrivatePath, ensureDir, sniffAllowedContent, uniqueStoredName } from '@/lib/uploads/private-storage';
 
 export async function GET(
   request: Request,
@@ -178,20 +179,19 @@ export async function PATCH(
         return apiError(400, "Malware detected in uploaded file.", "MALWARE_DETECTED");
       }
 
-      const dir = path.join(process.cwd(), 'public', 'logos', workspaceId);
-      try {
-        await fs.promises.access(dir);
-      } catch {
-        await fs.promises.mkdir(dir, { recursive: true });
+      const sniffed = sniffAllowedContent(buffer);
+      if (!sniffed || (sniffed !== 'png' && sniffed !== 'jpeg' && sniffed !== 'webp' && sniffed !== 'gif')) {
+        return apiError(415, "Unsupported or unsafe logo content.", "INVALID_FILE_TYPE");
       }
 
-      const filename = `client-${Date.now()}-${uuidv4()}${ext}`;
-      const filepath = path.join(dir, filename);
-      await fs.promises.writeFile(filepath, buffer);
+      const filepath = buildPrivatePath('logos', [workspaceId, uniqueStoredName('client', ext)]);
+      await ensureDir(path.dirname(filepath));
+      await fs.promises.writeFile(filepath, buffer, { mode: 0o600 });
       
       // Optional: Delete old logo file if it was internal
       if (existingClient.logoUrl && existingClient.logoUrl.startsWith('/logos/')) {
-        const oldPath = path.join(process.cwd(), 'public', existingClient.logoUrl);
+        const oldSegments = existingClient.logoUrl.replace(/^\/logos\//, '').split('/').filter(Boolean);
+        const oldPath = buildPrivatePath('logos', oldSegments);
         try {
           await fs.promises.access(oldPath);
           await fs.promises.unlink(oldPath);
@@ -201,7 +201,7 @@ export async function PATCH(
         }
       }
 
-      logoUrl = `/logos/${workspaceId}/${filename}`;
+      logoUrl = `/logos/${workspaceId}/${path.basename(filepath)}`;
     }
 
     // 2. Perform Update

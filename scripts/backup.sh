@@ -23,8 +23,15 @@ fi
 # 2. Uploaded Files Backup
 echo "Backing up uploaded files..."
 mkdir -p "$BACKUP_PATH/uploads"
-# Compress only the folders that exist to save space and time
-for folder in "public/logos" "public/receipts" "public/invoices"; do
+
+# Private uploads root (preferred). Mirrors PRIVATE_UPLOADS_DIR default.
+PRIVATE_UPLOADS_DIR="${PRIVATE_UPLOADS_DIR:-private_uploads}"
+if [ -d "$PRIVATE_UPLOADS_DIR" ]; then
+    tar -czf "$BACKUP_PATH/uploads/private_uploads.tar.gz" "$PRIVATE_UPLOADS_DIR"
+fi
+
+# Legacy public upload folders (for older deployments).
+for folder in "public/logos" "public/receipts" "public/invoices" "public/signatures" "public/products" "public/uploads"; do
     if [ -d "$folder" ]; then
         tar -czf "$BACKUP_PATH/uploads/$(basename $folder).tar.gz" "$folder"
     fi

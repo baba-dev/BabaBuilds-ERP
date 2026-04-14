@@ -17,6 +17,7 @@ import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
 import { decimalToNumber, toDecimal } from '@/lib/money';
 import { isCronAuthorized, unauthorizedCronResponse } from '@/lib/security/cron-auth';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
+import { buildPrivatePath, ensureDir } from '@/lib/uploads/private-storage';
 
 // Helper for Indian Financial Year
 const getFY = (date: Date) => {
@@ -163,7 +164,9 @@ async function generateRetainerPDF(
   const loadLogo = async (logoUrl: string | null, x: number, y: number, maxWidth: number, maxHeight: number, align = 'left') => {
     if (!logoUrl) return;
     try {
-      const fullPath = path.join(process.cwd(), 'public', logoUrl);
+      const cleanUrl = logoUrl.split('?')[0];
+      const relativeLogoPath = cleanUrl.startsWith('/') ? cleanUrl.substring(1) : cleanUrl;
+      const fullPath = buildPrivatePath('logos', [relativeLogoPath.split('/').slice(1).join('/')]);
       if (fs.existsSync(fullPath)) {
         const image = await pdfDoc.embedPng(fs.readFileSync(fullPath));
         const dims = image.scaleToFit(maxWidth, maxHeight);
@@ -444,15 +447,14 @@ async function generateRetainerPDF(
     drawText(contactString, width / 2, height - 20, 9, false, 'center', white);
   }
 
-  // Save PDF to isolated folder
-  const invoicesDir = path.join(process.cwd(), 'public', 'invoices', workspaceId);
-  if (!fs.existsSync(invoicesDir)) fs.mkdirSync(invoicesDir, { recursive: true });
-  
+  const invoicesDir = buildPrivatePath('invoices', [workspaceId]);
+  await ensureDir(invoicesDir);
+
   const pdfFilename = `${invoiceNumber.replace(/\//g, '_')}.pdf`;
   const pdfPath = path.join(invoicesDir, pdfFilename);
-  
+
   const pdfBytes = await pdfDoc.save();
-  fs.writeFileSync(pdfPath, pdfBytes);
+  fs.writeFileSync(pdfPath, pdfBytes, { mode: 0o600 });
 
   return `/invoices/${workspaceId}/${pdfFilename}`;
 }

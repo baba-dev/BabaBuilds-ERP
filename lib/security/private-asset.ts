@@ -1,8 +1,9 @@
-import fs from 'fs';
 import path from 'path';
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { promises as fs } from 'fs';
+import { buildPrivatePath, type PrivateAssetKind } from '@/lib/uploads/private-storage';
 
 export type AssetKind = 'receipts' | 'logos' | 'invoices';
 
@@ -59,31 +60,31 @@ export function getFileContentType(filePath: string) {
   if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
   if (ext === '.webp') return 'image/webp';
   if (ext === '.gif') return 'image/gif';
-  if (ext === '.svg') return 'image/svg+xml';
   if (ext === '.pdf') return 'application/pdf';
   return 'application/octet-stream';
 }
 
-export function serveAssetFromPublic(kind: AssetKind, pathSegments: string[]) {
-  const filePath = path.join(
-    /*turbopackIgnore: true*/ process.cwd(),
-    'public',
-    kind,
-    ...pathSegments
-  );
+export async function servePrivateAsset(kind: AssetKind, pathSegments: string[]) {
+  // kind is aligned with our private storage kinds.
+  const filePath = buildPrivatePath(kind satisfies PrivateAssetKind, pathSegments);
 
-  if (!fs.existsSync(filePath)) {
+  try {
+    const fileBuffer = await fs.readFile(filePath);
+    return new NextResponse(fileBuffer, {
+      headers: {
+        'Content-Type': getFileContentType(filePath),
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        Pragma: 'no-cache',
+        Expires: '0',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    });
+  } catch (err) {
+    const code = err && typeof err === 'object' && 'code' in err ? (err as { code?: string }).code : undefined;
+    if (code === 'ENOENT') {
+      return new NextResponse('Not Found', { status: 404 });
+    }
+    console.error('Failed to read private asset', { kind, pathSegments, error: err });
     return new NextResponse('Not Found', { status: 404 });
   }
-
-  const fileBuffer = fs.readFileSync(filePath);
-
-  return new NextResponse(fileBuffer, {
-    headers: {
-      'Content-Type': getFileContentType(filePath),
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      Pragma: 'no-cache',
-      Expires: '0',
-    },
-  });
 }
