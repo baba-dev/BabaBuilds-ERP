@@ -41,7 +41,12 @@ const getIntegrationReadiness = (keys: Array<string | null | undefined>): Integr
 const asPct = (num: number, den: number) =>
   den <= 0 ? 0 : Math.min(100, Math.round((num / den) * 100));
 
-async function buildDashboardPayload(workspaceId: string, userId: string | null, fy: string) {
+async function buildDashboardPayload(
+  workspaceId: string,
+  userId: string | null,
+  fy: string,
+  options: { canViewFinance?: boolean; segment?: string | null } = {}
+) {
   const queryTimingsMs: Record<string, number> = {};
 
   const timed = async <T,>(label: string, op: () => Promise<T>): Promise<T> => {
@@ -67,6 +72,8 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
   const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const fyRange = getFyDateRange(fy);
+
+  const { canViewFinance = true } = options;
 
   const [
     workspace,
@@ -105,38 +112,46 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     activities,
     notifications,
   ] = await Promise.all([
-    prisma.workspace.findUnique({
-      where: { id: workspaceId },
-    }),
+    timed("workspace.core", () =>
+      prisma.workspace.findUnique({
+        where: { id: workspaceId },
+      })
+    ),
 
-    prisma.workspaceUser.findFirst({
-      where: { workspaceId, role: "OWNER" },
-      select: { user: { select: { timeZone: true } } },
-    }),
+    timed("workspace.owner", () =>
+      prisma.workspaceUser.findFirst({
+        where: { workspaceId, role: "OWNER" },
+        select: { user: { select: { timeZone: true } } },
+      })
+    ),
 
     userId
-      ? prisma.user.findUnique({
-          where: { id: userId },
-          select: { timeZone: true },
-        })
+      ? timed("user.current", () =>
+          prisma.user.findUnique({
+            where: { id: userId },
+            select: { timeZone: true },
+          })
+        )
       : Promise.resolve(null),
 
-    prisma.businessProfile.findUnique({
-      where: { workspaceId },
-      select: {
-        groqApiKey: true,
-        razorpayKeyId: true,
-        razorpayKeySecret: true,
-        stripePublishableKey: true,
-        stripeSecretKey: true,
-        smtpHost: true,
-        smtpPort: true,
-        smtpUser: true,
-        smtpPassword: true,
-        smtpFromEmail: true,
-        shopEnabled: true,
-      },
-    }),
+    timed("profile.business", () =>
+      prisma.businessProfile.findUnique({
+        where: { workspaceId },
+        select: {
+          groqApiKey: true,
+          razorpayKeyId: true,
+          razorpayKeySecret: true,
+          stripePublishableKey: true,
+          stripeSecretKey: true,
+          smtpHost: true,
+          smtpPort: true,
+          smtpUser: true,
+          smtpPassword: true,
+          smtpFromEmail: true,
+          shopEnabled: true,
+        },
+      })
+    ),
 
     timed("invoices.fy", () =>
       prisma.invoice.findMany({
@@ -397,28 +412,55 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       : Promise.resolve(0),
   ]);
 
-  const billedRevenue = sumInvoiceBilledAmount(invoices);
+  const billedRevenue = canViewFinance ? sumInvoiceBilledAmount(invoices) : new Prisma.Decimal(0);
+
   const expensesTotal = expenses.reduce(
     (sum, row) => sum.plus(toDecimal(row.amount)),
     new Prisma.Decimal(0)
   );
-  const liquidAssets = toDecimal(investmentAggregate._sum.amount ?? 0);
 
-  const receivables = invoices.reduce((sum, inv) => {
-    const billed = getInvoiceBilledAmount(inv);
-    const received = new Prisma.Decimal(Number(inv.amountReceived ?? 0));
-    return sum.plus(Prisma.Decimal.max(new Prisma.Decimal(0), billed.minus(received)));
-  }, new Prisma.Decimal(0));
+  const liquidAssets = canViewFinance
+    ? toDecimal(investmentAggregate._sum.amount ?? 0)
+    : new Prisma.Decimal(0);
+
+  const serviceOrderByStatus = serviceOrderStatusGroups.reduce<Record<string, number>>(
+    (acc, group) => {
+      const status = String(group.status || "PENDING").toUpperCase();
+      acc[status] = group._count._all;
+      return acc;
+    },
+    {}
+  );
+
+  const paidOrders = serviceOrderByStatus.PAID ?? 0;
+  const pendingOrders = serviceOrderByStatus.PENDING ?? 0;
+  const failedOrders = serviceOrderByStatus.FAILED ?? 0;
+  const pendingOrdersCount = pendingOrders + failedOrders;
+
+  const receivables = (canViewFinance
+    ? invoices.reduce((sum, inv) => {
+        const billed = getInvoiceBilledAmount(inv);
+        const received = new Prisma.Decimal(Number(inv.amountReceived ?? 0));
+        return sum.plus(Prisma.Decimal.max(new Prisma.Decimal(0), billed.minus(received)));
+      }, new Prisma.Decimal(0))
+    : new Prisma.Decimal(0)
+  ).plus(
+    pendingOrdersCount > 0
+      ? toDecimal(0)
+      : new Prisma.Decimal(0)
+  );
 
   const presumptiveIncome = billedRevenue.mul(0.5);
-  const taxEstimate = estimateTax({
-    countryCode: workspace?.countryCode ?? "IN",
-    revenue: presumptiveIncome,
-    deductions: new Prisma.Decimal(0),
-    serviceScope: "dashboard_summary",
-    customerScope: "workspace",
-    asOfDate: now,
-  });
+  const taxEstimate = canViewFinance
+    ? estimateTax({
+        countryCode: workspace?.countryCode ?? "IN",
+        revenue: presumptiveIncome,
+        deductions: new Prisma.Decimal(0),
+        serviceScope: "dashboard_summary",
+        customerScope: "workspace",
+        asOfDate: now,
+      })
+    : { amount: serializeMoney(0) };
 
   const recurringRevenue = retainers.reduce(
     (sum, ret) => sum.plus(toDecimal(ret.amount)),
@@ -468,18 +510,6 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     declined: proposalCounts.DECLINED ?? 0,
   };
 
-  const serviceOrderByStatus = serviceOrderStatusGroups.reduce<Record<string, number>>(
-    (acc, group) => {
-      const status = String(group.status || "PENDING").toUpperCase();
-      acc[status] = group._count._all;
-      return acc;
-    },
-    {}
-  );
-
-  const paidOrders = serviceOrderByStatus.PAID ?? 0;
-  const pendingOrders = serviceOrderByStatus.PENDING ?? 0;
-  const failedOrders = serviceOrderByStatus.FAILED ?? 0;
   const conversion = asPct(paidOrders, Math.max(1, paidOrders + pendingOrders + failedOrders));
 
   const topServiceTemplateIds = topServiceOrderGroups
@@ -606,7 +636,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
     },
   ] as const;
 
-  const receivablesAgingBuckets = invoices.reduce(
+  const receivablesAgingBuckets = attentionInvoices.reduce(
     (acc, invoice) => {
       const status = normalizeInvoiceStatus(invoice.status);
       if (status === "PAID") return acc;
@@ -690,7 +720,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       setupCompletion,
       onboardingProgress: setupCompletion,
       setupComplete: Boolean(workspace?.isSetupComplete),
-      subscriptionState: workspace?.subscriptionStatus ?? "FREE",
+      subscriptionStatus: workspace?.subscriptionStatus ?? "FREE",
       trialEndsAt: workspace?.subscriptionEndsAt?.toISOString() ?? null,
       planTier: workspace?.planTier ?? "FREE",
       integrationReadiness: {
@@ -800,12 +830,12 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
       bucketTimeZone,
       revenueVsExpense: monthlySeries.map((row) => ({
         name: row.label,
-        revenue: serializeMoney(row.revenue),
+        revenue: canViewFinance ? serializeMoney(row.revenue) : 0,
         expenses: serializeMoney(row.expenses),
       })),
       recurringRevenue: monthlySeries.map((row) => ({
         name: row.label,
-        mrr: serializeMoney(row.mrr),
+        mrr: canViewFinance ? serializeMoney(row.mrr) : 0,
       })),
       receivablesAging,
       reconciliation: [
@@ -821,6 +851,7 @@ async function buildDashboardPayload(workspaceId: string, userId: string | null,
         { stage: "Viewed", value: funnel.viewed },
         { stage: "Accepted", value: funnel.accepted },
         { stage: "Invoiced", value: funnel.invoiced },
+        { stage: "Declined", value: funnel.declined },
       ],
       serviceOrderHealth: [
         { status: "Paid", value: paidOrders },
@@ -864,6 +895,7 @@ export async function GET(request: Request) {
 
     const locale = searchParams.get("locale");
     const currency = searchParams.get("currency");
+    const segment = searchParams.get("segment");
 
     const cacheKey = buildDashboardCacheKey({
       workspaceId,
@@ -871,6 +903,7 @@ export async function GET(request: Request) {
       fy,
       locale,
       currency,
+      segment: segment || "full",
       localeCurrencyAffectsPayload: LOCALE_CURRENCY_AFFECTS_PAYLOAD,
     });
 
@@ -889,7 +922,11 @@ export async function GET(request: Request) {
           });
         }
 
-        const payload = await buildDashboardPayload(workspaceId, userId, fy);
+        const payload = await buildDashboardPayload(workspaceId, userId, fy, {
+          canViewFinance: true,
+          segment,
+        });
+
         const entry = setDashboardCacheEntry(cacheKey, payload);
         const cacheMeta = getDashboardCacheMeta(entry);
 
@@ -911,7 +948,11 @@ export async function GET(request: Request) {
       }
     }
 
-    const payload = await buildDashboardPayload(workspaceId, userId, fy);
+    const payload = await buildDashboardPayload(workspaceId, userId, fy, {
+      canViewFinance: true,
+      segment,
+    });
+
     return NextResponse.json(payload, {
       headers: { "X-Dashboard-Cache": "BYPASS" },
     });

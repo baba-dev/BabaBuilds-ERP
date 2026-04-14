@@ -11,7 +11,7 @@ import {
   ArrowUpRight,
   Sparkles
 } from "lucide-react";
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { motion, type Variants } from "framer-motion";
 import {
@@ -60,7 +60,7 @@ export function ChartsIsland({
   fCurrency: (value: number) => string;
 }) {
   const t = useTranslations("Dashboard");
-  const tr = (key: string, fallback: string, values?: any) => {
+  const tr = (key: string, fallback: string, values?: Record<string, any>) => {
     const translation = t(key as any, values);
     if (translation === key || translation === `Dashboard.${key}`) return fallback;
     return translation;
@@ -78,23 +78,59 @@ export function ChartsIsland({
     () => false,
   );
 
-  // Proposal Pipeline Logic
-  const pipelineOrder = ["draft", "sent", "viewed", "accepted", "invoiced"];
-  const funnelData = pipelineOrder.map(stage => {
-    const found = charts.proposalFunnel.find(f => f.stage.toLowerCase() === stage);
-    return { name: tr(`funnel_${stage}`, stage.charAt(0).toUpperCase() + stage.slice(1)), value: found?.value ?? 0, key: stage };
-  });
-  const hasProposalData = funnelData.some(d => d.value > 0);
+  // Proposal Pipeline Logic - Memoized
+  const funnelData = useMemo(() => {
+    const pipelineOrder = ["draft", "sent", "viewed", "accepted", "invoiced"];
+    return pipelineOrder.map(stage => {
+      const found = charts.proposalFunnel.find(f => f.stage.toLowerCase() === stage);
+      return { 
+        name: tr(`funnel_${stage}`, stage.charAt(0).toUpperCase() + stage.slice(1)), 
+        value: found?.value ?? 0, 
+        key: stage 
+      };
+    });
+  }, [charts.proposalFunnel, tr]);
 
-  // Order Health Logic
-  const serviceOrderHealth = withChartTokenColors(
+  const hasProposalData = useMemo(() => funnelData.some(d => d.value > 0), [funnelData]);
+
+  // Order Health Logic - Memoized
+  const serviceOrderHealth = useMemo(() => withChartTokenColors(
     charts.serviceOrderHealth.map((row) => ({ name: row.status, value: row.value })),
-  );
-  const totalOrders = serviceOrderHealth.reduce((acc, curr) => acc + curr.value, 0);
+  ), [charts.serviceOrderHealth]);
+
+  const totalOrders = useMemo(() => serviceOrderHealth.reduce((acc, curr) => acc + curr.value, 0), [serviceOrderHealth]);
   const hasOrderData = totalOrders > 0;
 
-  // Aging Logic
-  const totalReceivables = charts.receivablesAging.reduce((acc, curr) => acc + curr.value, 0);
+  // Aging Logic - Memoized
+  const totalReceivables = useMemo(() => charts.receivablesAging.reduce((acc, curr) => acc + curr.value, 0), [charts.receivablesAging]);
+
+  // SVG Properties - Memoized for Ring Chart
+  type RingSegment = { name: string; value: number; color: string; dashArray: number; dashOffset: number; rotationDeg: number };
+  const ringSegments = useMemo((): RingSegment[] => {
+    if (!hasOrderData) return [];
+    let cumulativePercentage = 0;
+    const dashArray = 2 * Math.PI * 42;
+    
+    return serviceOrderHealth
+      .map((segment): RingSegment | null => {
+        const percentage = (segment.value / totalOrders) * 100;
+        if (percentage === 0) return null;
+        
+        const dashOffset = dashArray - (dashArray * percentage) / 100;
+        const rotation = (cumulativePercentage / 100) * dashArray;
+        cumulativePercentage += percentage;
+
+        return {
+          name: segment.name,
+          value: segment.value,
+          color: (segment as { name: string; value: number; color: string }).color,
+          dashArray,
+          dashOffset,
+          rotationDeg: (rotation / dashArray) * 360
+        };
+      })
+      .filter((s): s is RingSegment => s !== null);
+  }, [serviceOrderHealth, totalOrders, hasOrderData]);
 
   return (
     <motion.div 
@@ -149,7 +185,7 @@ export function ChartsIsland({
                 tick={{ fontSize: 10 }} 
                 className="text-zinc-400 dark:text-zinc-500 font-medium"
                 tickFormatter={(v) => v === 0 ? "0" : `${Math.round(v / 1000)}k`}
-                hide={charts.revenueVsExpense.every(d => d.revenue === 0 && d.expenses === 0)}
+                hide={charts.revenueVsExpense.every((d: { revenue: number; expenses: number }) => d.revenue === 0 && d.expenses === 0)}
               />
               <Tooltip content={<ChartTooltip formatterValue={fCurrency} />} cursor={{ stroke: 'var(--chart-1)', strokeWidth: 1, strokeDasharray: '4 4' }} />
               <Area 
@@ -266,7 +302,7 @@ export function ChartsIsland({
           >
             <div className="h-full flex flex-col justify-center gap-3 py-4">
               {funnelData.map((stage, i) => {
-                const maxValue = Math.max(...funnelData.map(d => d.value));
+                const maxValue = Math.max(...funnelData.map((d: { value: number }) => d.value));
                 const width = maxValue > 0 ? (stage.value / maxValue) * 100 : 0;
                 const opacity = 1 - (i * 0.12);
                 
@@ -322,38 +358,27 @@ export function ChartsIsland({
                   <circle cx="50" cy="50" r="42" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-zinc-100 dark:text-zinc-800/60" />
                   
                   {/* Dynamic Segments */}
-                  {(() => {
-                    let cumulativePercentage = 0;
-                    return serviceOrderHealth.map((segment, i) => {
-                      const percentage = (segment.value / totalOrders) * 100;
-                      if (percentage === 0) return null;
-                      
-                      const dashArray = 2 * Math.PI * 42;
-                      const dashOffset = dashArray - (dashArray * percentage) / 100;
-                      const rotation = (cumulativePercentage / 100) * dashArray;
-                      cumulativePercentage += percentage;
-
-                      return (
-                        <motion.circle
-                          key={i}
-                          cx="50"
-                          cy="50"
-                          r="42"
-                          stroke={segment.color}
-                          strokeWidth="8"
-                          fill="transparent"
-                          strokeDasharray={dashArray}
-                          strokeDashoffset={dashArray}
-                          animate={{ strokeDashoffset: dashOffset }}
-                          transition={{ duration: 1.5, delay: 0.2, ease: "circOut" }}
-                          style={{ 
-                            transform: `rotate(${(rotation / dashArray) * 360}deg)`,
-                            transformOrigin: '50px 50px'
-                          }}
-                        />
-                      );
-                    });
-                  })()}
+                  {ringSegments.map((segment, i: number) => {
+                    return (
+                      <motion.circle
+                        key={i}
+                        cx="50"
+                        cy="50"
+                        r="42"
+                        stroke={segment.color}
+                        strokeWidth="8"
+                        fill="transparent"
+                        strokeDasharray={segment.dashArray}
+                        strokeDashoffset={segment.dashArray}
+                        animate={{ strokeDashoffset: segment.dashOffset }}
+                        transition={{ duration: 1.5, delay: 0.2, ease: "circOut" }}
+                        style={{ 
+                          transform: `rotate(${segment.rotationDeg}deg)`,
+                          transformOrigin: '50px 50px'
+                        } as React.CSSProperties}
+                      />
+                    );
+                  })}
                </svg>
                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                   <span className="text-2xl font-black text-zinc-900 dark:text-white tracking-widest">{totalOrders}</span>
@@ -362,7 +387,7 @@ export function ChartsIsland({
             </div>
 
             <div className="mt-8 grid grid-cols-3 w-full gap-2">
-              {serviceOrderHealth.map((segment, i) => (
+              {serviceOrderHealth.map((segment, i: number) => (
                 <div key={i} className="flex flex-col items-center">
                   <div className="flex items-center gap-1.5 mb-1">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: segment.color }} />

@@ -10,15 +10,17 @@ import { scanBuffer } from '@/lib/security/clamav';
 import { CLIENT_LOGO_INVALID_TYPE_ERROR, isAllowedClientLogoExtension } from '@/lib/uploads/client-logo';
 import { apiError } from '@/lib/api-error';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
+import { logActivity } from '@/lib/security/activity-log';
+import { FREE_TIER_CLIENT_LIMIT } from '@/lib/pricing';
 
 export async function GET(request: Request) {
   try {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
     const whereClause = { workspaceId: workspaceId };
 
     // 2. PAGINATION PARAMETERS
@@ -80,10 +82,10 @@ export async function POST(request: Request) {
   try {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
 
     // --- 🚨 SAAS MONETIZATION BARRICADE START ---
     const workspace = await prisma.workspace.findUnique({
@@ -95,10 +97,10 @@ export async function POST(request: Request) {
       return apiError(404, "Workspace not found", "WORKSPACE_NOT_FOUND");
     }
 
-    // The Rule: Free tier gets 3 clients max.
-    if (workspace.planTier === "FREE" && workspace._count.clients >= 3) {
+    // The Rule: Free tier gets FREE_TIER_CLIENT_LIMIT clients max.
+    if (workspace.planTier === "FREE" && workspace._count.clients >= FREE_TIER_CLIENT_LIMIT) {
       return apiError(403, "Upgrade Required", "PLAN_LIMIT_REACHED", {
-        message: "You have reached the limit of 3 clients on the Free plan. Upgrade to Pro for unlimited clients.",
+        message: `You have reached the limit of ${FREE_TIER_CLIENT_LIMIT} clients on the Free plan. Upgrade to Pro for unlimited clients.`,
         requiresUpgrade: true,
       });
     }
@@ -161,13 +163,29 @@ export async function POST(request: Request) {
 
     try {
       invalidateDashboardCacheForWorkspace(workspaceId);
-    } catch (error) {
-      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'client', action: 'create', error: String(error) });
+    } catch {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'client', action: 'create' });
     }
+
+    logActivity({
+      action: "client_created",
+      status: "SUCCESS",
+      workspaceId,
+      actor: { userId: session.user?.id, email: session.user?.email },
+      entity: { type: "client", id: newClient.id },
+      request,
+    });
 
     return NextResponse.json({ success: true, client: newClient });
   } catch (error) {
     console.error(error);
+    logActivity({
+      action: "client_created",
+      status: "FAILURE",
+      workspaceId: session?.workspaceId ?? "UNKNOWN",
+      request,
+      metadata: { error: String(error) },
+    });
     return apiError(500, "Failed to create client", "CLIENT_CREATE_FAILED");
   }
 }

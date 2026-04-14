@@ -16,6 +16,7 @@ import { ProUpgradeCard } from "@/components/UpgradeButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
+import { PRICING, FREE_TIER_CLIENT_LIMIT } from "@/lib/pricing";
 
 type WorkspaceSummary = {
   planInterval: string | null;
@@ -100,7 +101,7 @@ export default function BillingSettingsClient({
 
   const isPro = workspace.subscriptionStatus === "PRO" && !subscriptionCancelled;
   const clientCount = workspace._count.clients;
-  const clientLimit = 3;
+  const clientLimit = FREE_TIER_CLIENT_LIMIT;
   const usagePercentage = Math.min((clientCount / clientLimit) * 100, 100);
 
   const formatMoney = useCallback(
@@ -116,9 +117,11 @@ export default function BillingSettingsClient({
 
   const { activePrice, intervalText } = useMemo(() => {
     if (!isPro) return { activePrice: 0, intervalText: "Forever" };
-    if (workspace.planInterval === "MONTHLY") return { activePrice: 200, intervalText: "Per Month" };
-    if (workspace.planInterval === "QUARTERLY") return { activePrice: 550, intervalText: "Per Quarter" };
-    return { activePrice: 2300, intervalText: "Per Year" };
+    if (workspace.planInterval === "MONTHLY") return { activePrice: PRICING.MONTHLY, intervalText: "Per Month" };
+    if (workspace.planInterval === "QUARTERLY") return { activePrice: PRICING.QUARTERLY, intervalText: "Per Quarter" };
+    if (workspace.planInterval === "TEAM_MONTHLY") return { activePrice: PRICING.TEAM_MONTHLY, intervalText: "Per Month (Team)" };
+    if (workspace.planInterval === "TEAM_YEARLY") return { activePrice: PRICING.TEAM_YEARLY, intervalText: "Per Year (Team)" };
+    return { activePrice: PRICING.YEARLY, intervalText: "Per Year" };
   }, [isPro, workspace.planInterval]);
 
   const fetchBillingHistory = useCallback(async () => {

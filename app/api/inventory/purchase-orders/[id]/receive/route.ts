@@ -43,7 +43,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
 
     // 2. Add Stock and Movement for each item
     for (const item of po.items) {
-      const product = await prisma.product.findUnique({ where: { id: item.productId } });
+      const product = await prisma.product.findFirst({ where: { id: item.productId, workspaceId } });
       if (product) {
         const newStock = product.currentStock + item.quantity;
         transactionTasks.push(

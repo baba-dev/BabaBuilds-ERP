@@ -4,15 +4,16 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
+import { logActivity } from '@/lib/security/activity-log';
 
 export async function GET() {
   try {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
 
     // 2. FETCH RETAINERS (Include Client data for the UI)
     const retainers = await prisma.retainer.findMany({
@@ -36,10 +37,10 @@ export async function POST(request: Request) {
   try {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
 
     const body = await request.json();
     const { clientId, serviceName, amount, frequency, autoAppendMonth, nextBillingDate, serviceTemplateId, taxRateOverride } = body;
@@ -67,7 +68,7 @@ export async function POST(request: Request) {
       countryCode: profile?.workspace?.countryCode || "IN",
       isTaxExempt: Boolean(client.isExport),
       serviceTaxRates: [serviceTemplate?.sacCode?.igstRate ?? null],
-      workspaceDefaultTaxRate: (profile as any)?.defaultTaxRate ?? null,
+      workspaceDefaultTaxRate: profile?.defaultTaxRate ?? null,
       taxRateOverride,
     });
 
@@ -100,9 +101,9 @@ export async function POST(request: Request) {
         autoAppendMonth: Boolean(autoAppendMonth),
         nextBillingDate: new Date(nextBillingDate),
         status: "ACTIVE", // Automatically starts running
-        sacCode: body.sacCode || serviceTemplate?.sacCode?.code || null, // Optional: inherited from profile if blank
+        sacCode: (body.sacCode as string) || serviceTemplate?.sacCode?.code || null, // Optional: inherited from profile if blank
         taxRate: taxResolution.taxRate,
-      } as any
+      }
     });
 
 
@@ -112,9 +113,25 @@ export async function POST(request: Request) {
       noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'retainer', action: 'create', error: String(error) });
     }
 
+    logActivity({
+      action: "retainer_created",
+      status: "SUCCESS",
+      workspaceId,
+      actor: { userId: session.user?.id, email: session.user?.email },
+      entity: { type: "retainer", id: newRetainer.id },
+      request,
+    });
+
     return NextResponse.json({ success: true, retainer: newRetainer });
   } catch (error) {
     console.error("Retainer Creation Error:", error);
+    logActivity({
+      action: "retainer_created",
+      status: "FAILURE",
+      workspaceId: null,
+      request,
+      metadata: { error: String(error) },
+    });
     return NextResponse.json({ error: 'Failed to configure retainer engine' }, { status: 500 });
   }
 }

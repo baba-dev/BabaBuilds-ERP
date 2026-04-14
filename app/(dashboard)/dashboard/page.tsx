@@ -3,7 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { AlertCircle, Download, LayoutDashboard, Send, Sparkles, ArrowRight } from "lucide-react";
+import { Download, LayoutDashboard, Send, Sparkles, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
-import { PageEmptyState } from "@/components/states/PageEmptyState";
 import { PageErrorState } from "@/components/states/PageErrorState";
 import { PageLoadingState } from "@/components/states/PageLoadingState";
 import { getInvoiceStatusBadgeKey, INVOICE_STATUS, isPaidInvoiceStatus, toInvoiceStatus } from "@/lib/invoice-status";
@@ -41,8 +40,19 @@ export default function Dashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedFy, setSelectedFy] = useState(getCurrentFinancialYear(new Date(), "local"));
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<Partial<DashboardData>>({});
+  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({
+    finance: true,
+    ops: true,
+    sales: true,
+    trust: true,
+    ledger: true,
+    activity: true,
+    attention: true,
+    health: true,
+    charts: true,
+  });
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [syncHealthLoading, setSyncHealthLoading] = useState(false);
   const [syncHealthError, setSyncHealthError] = useState<string | null>(null);
@@ -56,11 +66,13 @@ export default function Dashboard() {
 
   const { fCurrency, currency } = useFormat();
   const currencySymbol = getCurrencySymbol(currency);
-  const tr = (key: string, fallback: string, values?: any) => {
+
+  const tr = (key: string, fallback: string, values?: Record<string, any>) => {
     const translation = t(key as any, values);
     if (translation === key || translation === `Dashboard.${key}`) return fallback;
     return translation;
   };
+
   const isMobile = useSyncExternalStore(
     (onStoreChange) => {
       if (typeof window === "undefined") return () => undefined;
@@ -95,22 +107,50 @@ export default function Dashboard() {
     return parsed;
   };
 
-  const loadData = async (fy: string) => {
-    setLoading(true);
-    setError(null);
+  const loadSegment = async (fy: string, segment: string, signal?: AbortSignal) => {
+    setLoadingStates((prev) => ({ ...prev, [segment]: true }));
     try {
-      const parsed = await fetchDashboardData(fy);
-      setData(parsed);
+      const res = await fetch(`/api/dashboard?fy=${fy}&segment=${segment}`, { cache: "no-store", signal });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || `Failed to load ${segment}`);
+      }
+
+      const parsed = parseDashboardResponse(json) as Partial<DashboardData> | null;
+      if (!parsed) throw new Error(`Dashboard ${segment} payload malformed`);
+
+      setData((prev) => ({ ...prev, ...parsed }));
     } catch (e: any) {
+      if (e.name === "AbortError") return;
+      console.error(`Error loading segment ${segment}:`, e);
+      throw e;
+    } finally {
+      setLoadingStates((prev) => ({ ...prev, [segment]: false }));
+    }
+  };
+
+  const loadAllData = async (fy: string, signal?: AbortSignal) => {
+    setError(null);
+    setIsInitialLoad(true);
+
+    const segments = ["finance", "ops", "sales", "trust", "ledger", "activity", "attention", "health", "charts"];
+
+    try {
+      await Promise.all(segments.map((s) => loadSegment(fy, s, signal)));
+      if (signal?.aborted) return;
+      setIsInitialLoad(false);
+    } catch (e: any) {
+      if (e.name === "AbortError") return;
       setError(e?.message ?? "Unable to load dashboard");
       toast.error(tr("toast.error.load_dashboard_refresh", "Failed to load dashboard"));
-    } finally {
-      setLoading(false);
+      setIsInitialLoad(false);
     }
   };
 
   useEffect(() => {
-    loadData(selectedFy);
+    const controller = new AbortController();
+    loadAllData(selectedFy, controller.signal);
+    return () => controller.abort();
   }, [selectedFy]);
 
   useEffect(() => {
@@ -152,7 +192,7 @@ export default function Dashboard() {
       if (!res.ok) throw new Error();
       toast.success(tr("toast.success.payment_logged", "Payment logged"));
       setPayModalOpen(false);
-      loadData(selectedFy);
+      loadAllData(selectedFy);
     } catch {
       toast.error(tr("toast.error.log_payment", "Unable to log payment"));
     } finally {
@@ -165,16 +205,18 @@ export default function Dashboard() {
     setSyncHealthError(null);
     try {
       const refreshed = await fetchDashboardData(selectedFy);
-      setData((prev) => {
-        if (!prev) return refreshed;
-        return {
-          ...prev,
-          attention: {
-            ...prev.attention,
-            failedImports: refreshed.attention.failedImports,
-          },
-        };
-      });
+      setData((prev) => ({
+        ...prev,
+        ...refreshed,
+        attention: {
+          ...prev.attention,
+          ...refreshed.attention,
+        },
+        health: {
+          ...prev.health,
+          ...refreshed.health,
+        },
+      }));
     } catch (e: any) {
       setSyncHealthError(e?.message ?? tr("toast.error.load_dashboard", "Unable to load dashboard"));
     } finally {
@@ -190,29 +232,29 @@ export default function Dashboard() {
   });
 
   const columns: DataTableColumnDef<RecentInvoiceRow>[] = [
-    { 
-      id: "invoice", 
-      header: tr("table_invoice", "Invoice"), 
-      accessor: (row) => row.invoiceNumber, 
+    {
+      id: "invoice",
+      header: tr("table_invoice", "Invoice"),
+      accessor: (row) => row.invoiceNumber,
       cell: (row) => (
         <div className="flex flex-col py-1">
           <span className="font-bold text-zinc-900 dark:text-zinc-100 leading-tight">{row.invoiceNumber}</span>
-          <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium uppercase tracking-tighter sm:hidden">
+          <span className="text-xxs text-zinc-400 dark:text-zinc-500 font-medium uppercase tracking-tighter sm:hidden">
             {format(new Date(row.invoiceDate), "dd MMM yyyy")}
           </span>
         </div>
-      )
+      ),
     },
-    { 
-      id: "client", 
-      header: tr("table_client", "Client"), 
-      accessor: (row) => row.clientName, 
-      cell: (row) => <span className="text-zinc-600 dark:text-zinc-300 font-medium">{row.clientName}</span> 
+    {
+      id: "client",
+      header: tr("table_client", "Client"),
+      accessor: (row) => row.clientName,
+      cell: (row) => <span className="text-zinc-600 dark:text-zinc-300 font-medium">{row.clientName}</span>,
     },
-    { 
-      id: "date", 
-      header: tr("table_date", "Date"), 
-      cell: (row) => <span className="text-zinc-400 dark:text-zinc-500 text-xs tabular-nums">{format(new Date(row.invoiceDate), "dd MMM yyyy")}</span> 
+    {
+      id: "date",
+      header: tr("table_date", "Date"),
+      cell: (row) => <span className="text-zinc-400 dark:text-zinc-500 text-xs tabular-nums">{format(new Date(row.invoiceDate), "dd MMM yyyy")}</span>,
     },
     {
       id: "status",
@@ -226,14 +268,14 @@ export default function Dashboard() {
             : status === INVOICE_STATUS.PARTIALLY_PAID
               ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
               : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
-        return <Badge variant="outline" className={`h-5 text-[10px] font-bold uppercase tracking-wider ${className}`}>{tr(key, status)}</Badge>;
+        return <Badge variant="outline" className={`h-5 text-xxs font-bold uppercase tracking-wider ${className}`}>{tr(key, status)}</Badge>;
       },
     },
-    { 
-      id: "amount", 
-      header: <div className="text-right pr-2">{tr("table_amount", "Amount")}</div>, 
-      className: "text-right", 
-      cell: (row) => <span className="font-bold text-zinc-900 dark:text-zinc-100 tabular-nums pr-2">{fCurrency(row.totalAmount)}</span> 
+    {
+      id: "amount",
+      header: <div className="text-right pr-2">{tr("table_amount", "Amount")}</div>,
+      className: "text-right",
+      cell: (row) => <span className="font-bold text-zinc-900 dark:text-zinc-100 tabular-nums pr-2">{fCurrency(row.totalAmount)}</span>,
     },
     {
       id: "actions",
@@ -247,24 +289,45 @@ export default function Dashboard() {
         ) : (
           <div className="flex items-center justify-end gap-2 pr-2">
             {!isPaidInvoiceStatus(row.status) && (
-              <Button size="sm" variant="outline" className="h-7 px-2.5 text-[11px] font-semibold uppercase tracking-wider bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800" onClick={() => openPayModal(row)}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2.5 text-xxs font-semibold uppercase tracking-wider bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
+                onClick={() => openPayModal(row)}
+              >
                 {tr("record_payment", "Record payment")}
               </Button>
             )}
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-zinc-400" onClick={() => handleResendEmail(row)} disabled={resendingId === row.id}><Send className="w-3.5 h-3.5" /></Button>
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-zinc-400" asChild><a href={getBustedUrl(row.pdfPath, row.updatedAt)} target="_blank" rel="noreferrer"><Download className="w-3.5 h-3.5" /></a></Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-zinc-400" onClick={() => handleResendEmail(row)} disabled={resendingId === row.id}>
+              <Send className="w-3.5 h-3.5" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-zinc-400" asChild>
+              <a href={getBustedUrl(row.pdfPath, row.updatedAt)} target="_blank" rel="noreferrer">
+                <Download className="w-3.5 h-3.5" />
+              </a>
+            </Button>
           </div>
         ),
     },
   ];
 
-  if (loading) return <PageLoadingState title={tr("loading", "Loading dashboard")} description={tr("loading_desc", "Preparing command center")} className="min-h-screen" />;
-  if (error && !data) return <PageErrorState title={tr("sync_issue_title", "Dashboard unavailable")} description={error} className="min-h-screen" onRetry={() => loadData(selectedFy)} />;
-  if (!data) return <PageEmptyState title={tr("empty_title", "No dashboard data")} description={tr("empty_desc", "Start by creating invoices, proposals, or service orders.")} className="min-h-screen" />;
+  if (isInitialLoad && Object.values(loadingStates).every((v) => v)) {
+    return <PageLoadingState title={tr("loading", "Loading dashboard")} description={tr("loading_desc", "Preparing command center")} className="min-h-screen" />;
+  }
+
+  if (error && Object.keys(data).length === 0) {
+    return <PageErrorState title={tr("sync_issue_title", "Dashboard unavailable")} description={error} className="min-h-screen" onRetry={() => loadAllData(selectedFy)} />;
+  }
+
+  const d = data as DashboardData;
 
   const selectedInvoiceBilled = Number(selectedInvoice?.totalAmount ?? 0);
   const selectedInvoiceReceived = Number(selectedInvoice?.amountReceived ?? 0);
   const selectedInvoiceRemaining = Math.max(0, selectedInvoiceBilled - selectedInvoiceReceived);
+
+  const SkeletonBlock = ({ className }: { className?: string }) => (
+    <div className={`rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse ${className}`} />
+  );
 
   return (
     <DashboardPageShell
@@ -273,23 +336,66 @@ export default function Dashboard() {
       icon={<LayoutDashboard className="w-5 h-5 text-indigo-500" />}
       secondaryActions={
         <Select value={selectedFy} onValueChange={setSelectedFy}>
-          <SelectTrigger className="w-[120px] h-9"><SelectValue /></SelectTrigger>
-          <SelectContent>{fyOptions.map((fy) => <SelectItem key={fy} value={fy}>FY 20{fy}</SelectItem>)}</SelectContent>
+          <SelectTrigger className="w-[120px] h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {fyOptions.map((fy) => (
+              <SelectItem key={fy} value={fy}>
+                FY 20{fy}
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
       }
     >
       <div className="space-y-6">
-        <DashboardHealthStrip health={data.health} />
-        <DashboardAttentionCenter attention={data.attention} />
-        <DashboardFinancialPulse financialPulse={data.financialPulse} fCurrency={fCurrency} />
+        {loadingStates.health || !d.health ? (
+          <SkeletonBlock className="h-12 w-full" />
+        ) : (
+          <DashboardHealthStrip health={d.health} />
+        )}
 
-        <div className="grid grid-cols-1 2xl:grid-cols-3 gap-6">
-          <div className="2xl:col-span-2 space-y-6">
-            <DashboardSalesAndShopPanel salesAndShop={data.salesAndShop} fCurrency={fCurrency} />
-            <DashboardOperationsPanel operations={data.operations} />
-            <DashboardTrustPanel trust={data.trust} />
-            {islandsEnabled ? (
-              <ChartsIsland charts={data.charts} fCurrency={fCurrency} />
+        {loadingStates.attention || !d.attention ? (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <SkeletonBlock key={i} className="h-24" />
+            ))}
+          </div>
+        ) : (
+          <DashboardAttentionCenter attention={d.attention} />
+        )}
+
+        {loadingStates.finance || !d.financialPulse ? (
+          <SkeletonBlock className="h-32" />
+        ) : (
+          <DashboardFinancialPulse financialPulse={d.financialPulse} fCurrency={fCurrency} />
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
+          <div className="lg:col-span-1 2xl:col-span-2 space-y-6">
+            {loadingStates.sales || !d.salesAndShop ? (
+              <SkeletonBlock className="h-64" />
+            ) : (
+              <DashboardSalesAndShopPanel salesAndShop={d.salesAndShop} fCurrency={fCurrency} />
+            )}
+
+            {loadingStates.ops || !d.operations ? (
+              <SkeletonBlock className="h-48" />
+            ) : (
+              <DashboardOperationsPanel operations={d.operations} />
+            )}
+
+            {loadingStates.trust || !d.trust ? (
+              <SkeletonBlock className="h-48" />
+            ) : (
+              <DashboardTrustPanel trust={d.trust} />
+            )}
+
+            {loadingStates.charts || !d.charts ? (
+              <SkeletonBlock className="h-80" />
+            ) : islandsEnabled ? (
+              <ChartsIsland charts={d.charts} fCurrency={fCurrency} />
             ) : (
               <Card className="p-5 border-zinc-200 dark:border-zinc-800">
                 <CardTitle className="text-base">{tr("charts_disabled_title", "Charts are in fallback mode")}</CardTitle>
@@ -299,32 +405,45 @@ export default function Dashboard() {
               </Card>
             )}
           </div>
+
+          {loadingStates.health || loadingStates.attention || !d.health ? (
+            <SkeletonBlock className="h-[600px]" />
+          ) : (
             <DashboardRightRail
-              data={data}
+              data={d}
               fCurrency={fCurrency}
               onRefreshSyncImportHealth={handleRefreshSyncImportHealth}
               syncImportHealthLoading={syncHealthLoading}
               syncImportHealthError={syncHealthError}
             />
+          )}
         </div>
 
         <Card className="border-0 shadow-xl shadow-zinc-200/20 dark:shadow-black/20 ring-1 ring-zinc-200 dark:ring-zinc-800/60 bg-white dark:bg-zinc-900/50 overflow-hidden">
           <CardHeader className="border-b border-zinc-100 dark:border-zinc-800/50 bg-zinc-50/70 dark:bg-zinc-900/80 px-6 py-4 flex flex-row items-center justify-between relative overflow-hidden">
             <div className="space-y-0.5 relative z-10">
               <CardTitle className="text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-100 uppercase">{tr("recent_ledger", "Recent ledger activity")}</CardTitle>
-              <p className="text-[11px] font-medium text-zinc-400 dark:text-zinc-500">{tr("recent_ledger_subtitle", "Your most recent billing and payment operations")}</p>
+              <p className="text-xxs font-medium text-zinc-400 dark:text-zinc-500">{tr("recent_ledger_subtitle", "Your most recent billing and payment operations")}</p>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="bg-white dark:bg-zinc-950 text-[10px] font-bold text-zinc-400 border-zinc-200/60 dark:border-zinc-800/60 uppercase">Live Feed</Badge>
+              <Badge variant="outline" className="bg-white dark:bg-zinc-950 text-[10px] font-bold text-zinc-400 border-zinc-200/60 dark:border-zinc-800/60 uppercase">
+                Live Feed
+              </Badge>
             </div>
             <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500" />
           </CardHeader>
           <CardContent className={isMobile ? "p-4 space-y-3" : "p-0"}>
-            {isMobile ? (
-              data.recentInvoices.length === 0 ? (
+            {loadingStates.ledger || !d.recentInvoices ? (
+              <div className="p-8 space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-12 w-full rounded-lg bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
+                ))}
+              </div>
+            ) : isMobile ? (
+              d.recentInvoices.length === 0 ? (
                 <p className="text-sm text-zinc-500">{tr("no_recent_ledger", "No recent invoices")}</p>
               ) : (
-                data.recentInvoices.slice(0, 5).map((invoice) => (
+                d.recentInvoices.slice(0, 5).map((invoice) => (
                   <div key={invoice.id} className="rounded-xl border border-zinc-200 dark:border-zinc-800/80 p-4 bg-white dark:bg-zinc-900/40 shadow-sm space-y-3 relative group">
                     <div className="flex items-start justify-between">
                       <div>
@@ -347,19 +466,19 @@ export default function Dashboard() {
                 ))
               )
             ) : (
-              <DataTable 
-                columns={columns} 
-                data={data.recentInvoices} 
-                rowId={(row) => row.id} 
-                emptyTitle={tr("no_recent_ledger", "No recent invoices")} 
-                emptyDescription={tr("recent_ledger_desc", "Recent billing activity will appear here.")} 
-                className="[&_table]:border-0 [&_thead]:bg-zinc-50/50 dark:[&_thead]:bg-zinc-900/30" 
+              <DataTable
+                columns={columns}
+                data={d.recentInvoices}
+                rowId={(row) => row.id}
+                emptyTitle={tr("no_recent_ledger", "No recent invoices")}
+                emptyDescription={tr("recent_ledger_desc", "Recent billing activity will appear here.")}
+                className="[&_table]:border-0 [&_thead]:bg-zinc-50/50 dark:[&_thead]:bg-zinc-900/30"
               />
             )}
           </CardContent>
         </Card>
 
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           whileHover={{ y: -2 }}
@@ -373,14 +492,18 @@ export default function Dashboard() {
               {tr("mobile_focus_note", "Tip: Priority alerts and workspace health are pinned to the top on mobile for faster scanning.")}
             </p>
           </div>
-          <Button asChild variant="ghost" size="sm" className="flex-shrink-0 h-8 text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100/50 dark:hover:bg-indigo-500/20 gap-2 border border-transparent hover:border-indigo-100 dark:hover:border-indigo-500/30">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="flex-shrink-0 h-8 text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100/50 dark:hover:bg-indigo-500/20 gap-2 border border-transparent hover:border-indigo-100 dark:hover:border-indigo-500/30"
+          >
             <Link href="/settings" className="flex items-center gap-2">
               {tr("review_notifications", "Manage workspace alerts")}
               <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
             </Link>
           </Button>
 
-          {/* Subtle accent line */}
           <div className="absolute left-0 top-1/4 bottom-1/4 w-0.5 rounded-full bg-indigo-500/50 opacity-0 group-hover:opacity-100 transition-opacity" />
         </motion.div>
       </div>

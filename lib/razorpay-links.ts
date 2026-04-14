@@ -34,7 +34,7 @@ export interface PaymentLinkParams {
  */
 export async function generateTenantPaymentLink(
   params: PaymentLinkParams
-): Promise<string | null> {
+): Promise<{ url: string; linkId: string } | null> {
   // Guard: Razorpay only supports INR
   if (params.currency !== 'INR') {
     console.warn(
@@ -70,7 +70,7 @@ export async function generateTenantPaymentLink(
 }
 
 /** Internal: calls the Razorpay SDK */
-async function _createLink(params: PaymentLinkParams): Promise<string | null> {
+async function _createLink(params: PaymentLinkParams): Promise<{ url: string; linkId: string } | null> {
   const rzp = new Razorpay({
     key_id: params.tenantKeyId,
     key_secret: params.tenantKeySecret,
@@ -89,7 +89,7 @@ async function _createLink(params: PaymentLinkParams): Promise<string | null> {
     currency: params.currency,
     description: params.description,
     expire_by: expireBy,
-    callback_url: 'https://erp.bababuilds.com/api/razorpay/webhook',
+    callback_url: 'https://erp.bababuilds.com/api/payments/verify-redirect',
     callback_method: 'get',
   };
 
@@ -112,5 +112,8 @@ async function _createLink(params: PaymentLinkParams): Promise<string | null> {
     return null;
   }
 
-  return shortUrl as string;
+  return { 
+    url: shortUrl as string, 
+    linkId: (link?.id as string) || ''
+  };
 }

@@ -1,0 +1,29 @@
+name: Nightly Backup
+
+on:
+  schedule:
+    - cron: '0 1 * * *' # Daily at 1 AM
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backup:
+    name: Perform Backup
+    runs-on: [self-hosted, linux, x64, erp-ci]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Ensure Scripts are Executable
+        run: chmod +x scripts/backup.sh
+        
+      - name: Run Backup Script
+        run: ./scripts/backup.sh
+        
+      - name: Verify Backup Result
+        run: |
+          BACKUP_DIR="/c/Users/123/Desktop/BabaERP/backups"
+          echo "Current backups in $BACKUP_DIR:"
+          ls -lh "$BACKUP_DIR"

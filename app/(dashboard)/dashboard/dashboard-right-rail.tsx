@@ -22,11 +22,11 @@ import {
   ShieldEllipsis,
   KeyRound,
   Brain,
-  WandSparkles,
   Bot
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useTranslations } from "next-intl";
+import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -58,8 +58,8 @@ export function DashboardRightRail({
     return translation;
   };
 
-  const mood = deriveWorkspaceMood(data);
-  const aiState = deriveAIState(data);
+  const mood = useMemo(() => deriveWorkspaceMood(data), [data]);
+  const aiState = useMemo(() => deriveAIState(data), [data]);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-1000">
@@ -94,6 +94,7 @@ export function DashboardRightRail({
   );
 }
 
+
 function deriveWorkspaceMood(data: DashboardData): WorkspaceMood {
   const { attention, trust, health } = data;
   
@@ -115,6 +116,7 @@ function deriveWorkspaceMood(data: DashboardData): WorkspaceMood {
 function deriveAIState(data: DashboardData): AIState {
   const isGroqConfigured = data.health.integrationReadiness.integrations.groq.configured;
   if (!isGroqConfigured) return 'locked_no_key';
+  if (data.health.integrationReadiness.integrations.groq.status !== 'healthy') return 'fallback';
   return 'enabled';
 }
 
@@ -202,6 +204,26 @@ function IntelligenceAssistantSection({ data, tr, mood, aiState }: { data: Dashb
     );
   }
 
+  if (aiState === 'fallback') {
+    return (
+      <div className="p-6 bg-zinc-50/50 dark:bg-zinc-800/20">
+        <div className="flex gap-4 items-start">
+          <div className="h-10 w-10 shrink-0 rounded-xl bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 dark:text-zinc-400 shadow-sm">
+            <Bot className="w-5 h-5" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+              {tr("ai_fallback_headline", "Standard Intelligence Active")}
+            </p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium mt-1.5 line-clamp-2">
+              {tr("ai_fallback_body", "Using baseline rules instead of neural models due to connection limits.")}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 bg-indigo-50/20 dark:bg-indigo-500/5">
       <div className="flex items-center gap-4">
@@ -231,8 +253,8 @@ function RecentActivitySection({ data, tr }: { data: DashboardData, tr: any }) {
           {tr("workspace_signals", "Workspace Stream")}
         </h4>
         {hasActivity && (
-          <Link href="/admin" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase hover:underline opacity-80 hover:opacity-100 transition-all tracking-tight inline-flex items-center gap-1 group">
-            Audit Feed
+          <Link href="/logs" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase hover:underline opacity-80 hover:opacity-100 transition-all tracking-tight inline-flex items-center gap-1 group">
+            {tr("audit_feed", "Audit Feed")}
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         )}
@@ -331,7 +353,7 @@ function RecentNotificationsSection({ data, tr, mood }: { data: DashboardData, t
                   }`}>
                     {n.severity.toUpperCase()}
                   </Badge>
-                  <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-tighter cursor-help hover:text-zinc-500 transition-colors">Action Required</span>
+                  <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-tighter cursor-help hover:text-zinc-500 transition-colors">{tr("action_required", "Action Required")}</span>
                 </div>
               </div>
             </div>
@@ -343,7 +365,7 @@ function RecentNotificationsSection({ data, tr, mood }: { data: DashboardData, t
 }
 
 function SuggestedActionsSection({ data, tr, mood }: { data: DashboardData, tr: any, mood: WorkspaceMood }) {
-  const suggestions = deriveIntelligenceSuggestions(data, tr);
+  const suggestions = useMemo(() => deriveIntelligenceSuggestions(data, tr), [data, tr]);
 
   return (
     <div className="p-6 space-y-5">
@@ -487,14 +509,14 @@ function SystemSignalsSection({ data, tr, mood }: { data: DashboardData, tr: any
             {mood === 'healthy' ? <CheckCircle2 className="w-4.5 h-4.5" /> : <ShieldAlert className="w-4.5 h-4.5" />}
             {getSystemInterpretation()}
           </p>
-          <Badge variant="outline" className="text-xs font-medium uppercase tracking-tighter opacity-60">Real-time</Badge>
+          <Badge variant="outline" className="text-xs font-medium uppercase tracking-tighter opacity-60">{tr("real_time", "Real-time")}</Badge>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <SignalPill label="Trust Index" value={trust.integrityStatus} tone={healthy ? 'emerald' : 'amber'} />
-          <SignalPill label="Linkage" value={`${integrationCount}/${totalIntegrations} Sync`} tone={integrationCount === totalIntegrations ? 'emerald' : 'indigo'} />
-          <SignalPill label="Operational" value={tr("vault_secure", "Active")} tone="emerald" />
-          <SignalPill label="Compliance" value={data.attention.complianceIssues > 0 ? tr("risk_detected", "Risk") : tr("nominal", "Nominal")} tone={data.attention.complianceIssues > 0 ? 'amber' : 'emerald'} />
+          <SignalPill label={tr("trust_index", "Trust Index")} value={trust.integrityStatus} tone={healthy ? 'emerald' : 'amber'} />
+          <SignalPill label={tr("linkage", "Linkage")} value={`${integrationCount}/${totalIntegrations} Sync`} tone={integrationCount === totalIntegrations ? 'emerald' : 'indigo'} />
+          <SignalPill label={tr("operational", "Operational")} value={tr("vault_secure", "Active")} tone="emerald" />
+          <SignalPill label={tr("compliance", "Compliance")} value={data.attention.complianceIssues > 0 ? tr("risk_detected", "Risk") : tr("nominal", "Nominal")} tone={data.attention.complianceIssues > 0 ? 'amber' : 'emerald'} />
         </div>
       </div>
     </div>

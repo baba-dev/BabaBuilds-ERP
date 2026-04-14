@@ -3,6 +3,8 @@ import dns from 'dns';
 import { promisify } from 'util';
 import { decrypt } from '@/lib/encryption';
 
+import { MailOptions } from '@/lib/types/business';
+
 const lookupAsync = promisify(dns.lookup);
 
 export function getRuntimeSmtpPassword(smtpPassword: string): string {
@@ -35,7 +37,7 @@ export async function resolveSafeIp(host: string): Promise<string | null> {
     if (address.toLowerCase().startsWith('fe80:')) return null;
 
     return address; 
-  } catch (e) {
+  } catch {
     return null; 
   }
 }
@@ -45,14 +47,9 @@ export async function sendEmail({
   to,
   subject,
   html,
-  text
-}: {
-  profile: any;
-  to: string;
-  subject: string;
-  html?: string;
-  text?: string;
-}) {
+  text,
+  attachments
+}: MailOptions) {
   if (!profile || !profile.smtpHost || !profile.smtpUser || !profile.smtpPassword) {
     throw new Error('SMTP Server not configured in Business Settings.');
   }
@@ -85,7 +82,13 @@ export async function sendEmail({
     subject,
     html,
     text,
+    attachments: attachments?.map(att => ({
+      filename: att.filename,
+      path: att.path,
+      contentType: att.contentType
+    }))
   };
 
   return transporter.sendMail(mailOptions);
 }
+

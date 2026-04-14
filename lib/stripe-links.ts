@@ -56,7 +56,7 @@ export interface StripePaymentLinkParams {
  */
 export async function generateStripePaymentLink(
   params: StripePaymentLinkParams
-): Promise<string | null> {
+): Promise<{ url: string; linkId: string } | null> {
   // Guard: required fields
   if (!params.tenantSecretKey) {
     console.warn('[stripe-links] Skipping — tenant secret key is missing.');
@@ -92,7 +92,7 @@ export async function generateStripePaymentLink(
 }
 
 /** Internal: executes the 3-step Stripe API chain */
-async function _createStripeLink(params: StripePaymentLinkParams): Promise<string | null> {
+async function _createStripeLink(params: StripePaymentLinkParams): Promise<{ url: string; linkId: string } | null> {
   const stripe = new Stripe(params.tenantSecretKey, {
     // Use the latest stable API version
     apiVersion: '2026-03-25.dahlia',
@@ -126,6 +126,12 @@ async function _createStripeLink(params: StripePaymentLinkParams): Promise<strin
     metadata: {
       invoiceNumber: params.invoiceNumber,
     },
+    after_completion: {
+      type: 'redirect',
+      redirect: {
+        url: 'https://erp.bababuilds.com/api/payments/verify-redirect?session_id={CHECKOUT_SESSION_ID}&gateway=stripe',
+      },
+    },
   });
 
   const url = paymentLink.url ?? null;
@@ -135,5 +141,8 @@ async function _createStripeLink(params: StripePaymentLinkParams): Promise<strin
     return null;
   }
 
-  return url;
+  return {
+    url,
+    linkId: paymentLink.id,
+  };
 }

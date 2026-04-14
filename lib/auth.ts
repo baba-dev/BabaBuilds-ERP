@@ -17,8 +17,28 @@ import {
   isPhishingResistantSignIn,
 } from "@/lib/security/access-risk";
 
-const CANONICAL_DASHBOARD_ROUTE = "/dashboard";
 const LOGIN_ROUTE = "/login";
+const CANONICAL_DASHBOARD_ROUTE = "/dashboard";
+
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      currencyFormat?: string;
+      role?: string;
+    };
+    workspaceId: string;
+    baseCurrency: string;
+    isSetupComplete: boolean;
+    countryCode: string;
+    locale: string;
+    role: string;
+  }
+}
+
 
 function isAuthErrorRoute(candidate: string) {
   return candidate === LOGIN_ROUTE || candidate.startsWith(`${LOGIN_ROUTE}?`) || candidate.startsWith(`${LOGIN_ROUTE}#`);
@@ -113,12 +133,15 @@ function normalizeEmailUrl(value: string) {
 
 function inferProviderFromMetadata(metadata: Record<string, unknown> | undefined) {
   if (!metadata) return "unknown";
-  const m = metadata as any;
+  const m = metadata as Record<string, unknown>;
+  const account = m.account as Record<string, unknown> | undefined;
+  const cause = m.cause as Record<string, unknown> | undefined;
+
   return (
-    m.provider ??
-    m.providerId ??
-    m.account?.provider ??
-    m.cause?.providerId ??
+    (m.provider as string | undefined) ??
+    (m.providerId as string | undefined) ??
+    (account?.provider as string | undefined) ??
+    (cause?.providerId as string | undefined) ??
     "unknown"
   );
 }
@@ -129,7 +152,7 @@ export const authOptions: NextAuthOptions = {
   jwt: { maxAge: 60 * 60 * 8 },
   logger: {
     error(code, metadata) {
-      const provider = inferProviderFromMetadata(metadata as Record<string, any> | undefined);
+      const provider = inferProviderFromMetadata(metadata as Record<string, unknown> | undefined);
       const reason = String(code || "UNKNOWN_NEXTAUTH_ERROR");
       console.error(`[NextAuth][error] provider=${provider} code=${reason}`, metadata);
       recordAuthFailure({ reason, provider, code: reason });
@@ -410,17 +433,18 @@ export const authOptions: NextAuthOptions = {
 
     async session({ session, token }) {
       if (token && session.user) {
-        (session.user as any).id = token.id;
-        (session as any).workspaceId = token.workspaceId;
-        (session as any).baseCurrency = token.baseCurrency;
-        (session as any).isSetupComplete = token.isSetupComplete;
-        (session as any).countryCode = token.countryCode;
-        (session as any).locale = token.locale;
-        (session.user as any).currencyFormat = token.currencyFormat;
-        (session.user as any).role = token.role;
+        session.user.id = token.id as string;
+        session.workspaceId = token.workspaceId as string;
+        session.baseCurrency = token.baseCurrency as string;
+        session.isSetupComplete = token.isSetupComplete as boolean;
+        session.countryCode = token.countryCode as string;
+        session.locale = token.locale as string;
+        session.user.currencyFormat = token.currencyFormat as string;
+        session.user.role = token.role as string;
       }
       return session;
     },
+
   },
   events: {
     async createUser({ user }) {

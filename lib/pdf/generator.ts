@@ -285,7 +285,7 @@ export async function generateInvoicePDF({
     page.drawLine({ start: { x: leftMargin, y: height - (tableY + 12) }, end: { x: rightMargin, y: height - (tableY + 12) }, thickness: 1, color: black });
 
     tableY += 30;
-    services.forEach((service: any) => {
+    services.forEach((service: PDFService) => {
       const lineAmt = service.amount.toLocaleString(userLocale, { minimumFractionDigits: 2 });
       drawText(service.title, leftMargin, tableY, 9, false, 'left', black);
       drawText(`${service.nicDetails || "Billing period"}: ${billingMonth}`, leftMargin, tableY + 14, 8, false, 'left', textDark);
@@ -429,7 +429,7 @@ export async function generateInvoicePDF({
     }
     const safeSac = displaySac && displaySac.length > 25 ? displaySac.substring(0, 23) + '...' : (displaySac || 'N/A');
 
-    services.forEach((service: any) => {
+    services.forEach((service: PDFService) => {
       const lineAmt = service.amount.toLocaleString(userLocale, { minimumFractionDigits: 2 });
       drawText(safeSac,       50,        currentY,      10, false, 'left',  textDark);
       drawText(service.title, 180,       currentY,      10, true,  'left',  black);

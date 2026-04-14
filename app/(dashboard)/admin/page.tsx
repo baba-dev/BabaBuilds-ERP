@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { 
   ShieldAlert, Users, Activity, CreditCard,
   ArrowUpCircle, Ban, RefreshCcw, Trash2,
-  Server, HardDrive, Cpu, Clock, DollarSign, FileText, Database, ShieldCheck, Download,
+  Server, HardDrive, Cpu, Clock, FileText, Database, ShieldCheck, Download,
   Wrench, Zap, FileWarning, RotateCcw, ScrollText, ChevronLeft, ChevronRight,
   CheckCircle2, XCircle, AlertTriangle, Info, Search, Filter, Shield, Hash
 } from "lucide-react";
@@ -21,15 +21,54 @@ import { useFormat } from "@/hooks/use-format";
 import { Banknote } from "lucide-react";
 import { ColumnVisibilityToggle, DataTable, DataTableToolbar, RowActionsMenu, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
 
+interface AdminBackup {
+  filename: string;
+  size: number;
+  createdAt: string;
+}
+
+interface AdminUser {
+  id: string;
+  name: string | null;
+  email: string | null;
+  workspaceName: string | null;
+  subscriptionStatus: string;
+  invoiceCount: number;
+}
+
+interface AdminMetrics {
+  mrr: number;
+  activeSubscriptions: number;
+  totalWorkspaces: number;
+  totalDocuments: number;
+  platformGmv: number;
+  authFailureCount: number;
+  authFailureByReason: { reason: string; count: number }[];
+}
+
+interface LogIntegrity {
+  valid: boolean;
+  checked: number;
+  violations: Array<{ id: string; workspaceId: string; reason: string }>;
+}
+
+interface AdminDiagnostics {
+  memory?: { percent: number; used: string; total: string };
+  cpu?: { coreCount: number; model: string; loadAverage: string; cores: number };
+  databaseLatency?: string;
+  uptime?: string;
+  status?: string;
+}
+
 export default function SuperAdminPortal() {
   const t = useTranslations('Admin');
   const { fCurrency } = useFormat();
   
   const [tab, setTab] = useState<"OVERVIEW" | "ACCOUNTS" | "DIAGNOSTICS" | "SECURITY" | "MAINTENANCE" | "BACKUP" | "LOGS">("OVERVIEW");
-  const [backups, setBackups] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [diagnostics, setDiagnostics] = useState<any>(null);
-  const [metrics, setMetrics] = useState<any>(null);
+  const [backups, setBackups] = useState<AdminBackup[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [diagnostics, setDiagnostics] = useState<AdminDiagnostics | null>(null); // Diagnostics payload is complex and dynamic
+  const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userVisibleColumns, setUserVisibleColumns] = useState<string[]>(["user", "workspace", "status", "data", "actions"]);
   const [backupVisibleColumns, setBackupVisibleColumns] = useState<string[]>(["timestamp", "filename", "size", "actions"]);
@@ -39,14 +78,14 @@ export default function SuperAdminPortal() {
 
   // --- LOGS TAB STATE ---
   const [logType, setLogType] = useState<"activity" | "tax_audit">("activity");
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<Array<Record<string, unknown>>>([]);
   const [logsTotal, setLogsTotal] = useState(0);
   const [logsPage, setLogsPage] = useState(1);
   const [logsPages, setLogsPages] = useState(1);
   const [logsSearch, setLogsSearch] = useState("");
   const [logsStatus, setLogsStatus] = useState("ALL");
   const [logsLoading, setLogsLoading] = useState(false);
-  const [logIntegrity, setLogIntegrity] = useState<{ checked: number; valid: boolean; violations: any[] } | null>(null);
+  const [logIntegrity, setLogIntegrity] = useState<LogIntegrity | null>(null);
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const [purgingLogs, setPurgingLogs] = useState(false);
   const [purgeDialogOpen, setPurgeDialogOpen] = useState(false);
@@ -71,7 +110,7 @@ export default function SuperAdminPortal() {
       setLogsPages(data.pages ?? 1);
       if (data.integrity) setLogIntegrity(data.integrity);
       else setLogIntegrity(null);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load logs.");
     } finally {
       setLogsLoading(false);
@@ -87,8 +126,8 @@ export default function SuperAdminPortal() {
       toast.success(`Purged ${data.purged} log entries.`);
       fetchLogs(1, logsSearch, logsStatus, logType);
       setPurgeDialogOpen(false);
-    } catch (err: any) {
-      toast.error(err.message || 'Purge failed');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to purge logs");
     } finally {
       setPurgingLogs(false);
     }
@@ -96,10 +135,83 @@ export default function SuperAdminPortal() {
 
   useEffect(() => {
     if (tab === 'LOGS') {
-      fetchLogs(1, logsSearch, logsStatus, logType);
+      fetchLogs(logsPage, logsSearch, logsStatus, logType);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, logType]);
+  }, [tab, logType, fetchLogs, logsPage, logsSearch, logsStatus]);
+
+
+
+  const fetchBackups = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/backups');
+      if (res.ok) setBackups(await res.json());
+    } catch (err: unknown) {
+      console.error(err);
+    }
+  }, []);
+
+  const fetchAdminData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/admin/users');
+      if (!res.ok) throw new Error("Unauthorized or Server Error");
+      const data = await res.json();
+      setUsers(data);
+    } catch {
+      toast.error("Failed to load users data.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const handleMaintenanceAction = async (action: string) => {
+    const toastId = toast.loading(`Executing maintenance task...`);
+    try {
+      const res = await fetch('/api/admin/maintenance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Action failed");
+      toast.success(data.message || `Task completed successfully.`, { id: toastId });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Maintenance task failed";
+      toast.error(msg, { id: toastId });
+    }
+  };
+
+  const handleCreateBackup = async () => {
+    const toastId = toast.loading("Creating smart backup...");
+    try {
+      const res = await fetch('/api/admin/backups', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Backup failed");
+      toast.success(`Backup created: ${data.filename}`, { id: toastId });
+      fetchBackups();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to create backup";
+      toast.error(msg, { id: toastId });
+    }
+  };
+
+  const fetchDiagnostics = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/diagnostics');
+      if (res.ok) setDiagnostics(await res.json());
+    } catch (err: unknown) {
+      console.error(err);
+    }
+  }, []);
+
+  const fetchMetrics = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/metrics');
+      if (res.ok) setMetrics(await res.json());
+    } catch (err: unknown) {
+      console.error(err);
+    }
+  }, []);
 
   useEffect(() => {
     fetchAdminData();
@@ -110,48 +222,7 @@ export default function SuperAdminPortal() {
     // Poll diagnostics every 10 seconds
     const interval = setInterval(fetchDiagnostics, 10000);
     return () => clearInterval(interval);
-  }, []);
-
-  const fetchBackups = async () => {
-    try {
-      const res = await fetch('/api/admin/backups');
-      if (res.ok) setBackups(await res.json());
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const fetchAdminData = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch('/api/admin/users');
-      if (!res.ok) throw new Error("Unauthorized or Server Error");
-      const data = await res.json();
-      setUsers(data);
-    } catch (err) {
-      toast.error("Failed to load users data.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchDiagnostics = async () => {
-    try {
-      const res = await fetch('/api/admin/diagnostics');
-      if (res.ok) setDiagnostics(await res.json());
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const fetchMetrics = async () => {
-    try {
-      const res = await fetch('/api/admin/metrics');
-      if (res.ok) setMetrics(await res.json());
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  }, [fetchAdminData, fetchDiagnostics, fetchMetrics, fetchBackups]);
 
   const handleAction = async (userId: string, action: 'UPGRADE_PRO' | 'UPGRADE_TEAM' | 'SUSPEND' | 'REACTIVATE' | 'DELETE') => {
     const toastId = toast.loading(`Executing ${action}...`);
@@ -166,37 +237,8 @@ export default function SuperAdminPortal() {
       
       toast.success(`User successfully updated.`, { id: toastId });
       fetchAdminData(); 
-    } catch (error) {
+    } catch {
       toast.error(`Failed to ${action} user.`, { id: toastId });
-    }
-  };
-
-  const handleMaintenanceAction = async (action: string) => {
-    const toastId = toast.loading(`Executing maintenance task...`);
-    try {
-      const res = await fetch('/api/admin/maintenance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Action failed");
-      toast.success(data.message || `Task completed successfully.`, { id: toastId });
-    } catch (error: any) {
-      toast.error(error.message || `Maintenance task failed.`, { id: toastId });
-    }
-  };
-
-  const handleCreateBackup = async () => {
-    const toastId = toast.loading("Creating smart backup...");
-    try {
-      const res = await fetch('/api/admin/backups', { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Backup failed");
-      toast.success(`Backup created: ${data.filename}`, { id: toastId });
-      fetchBackups();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create backup", { id: toastId });
     }
   };
 
@@ -246,19 +288,20 @@ export default function SuperAdminPortal() {
       toast.success("Backup deleted", { id: toastId });
       fetchBackups();
       setBackupToDelete(null);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete backup", { id: toastId });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to delete backup";
+      toast.error(msg, { id: toastId });
     } finally {
       setDeletingBackup(false);
     }
   };
 
-  const filteredUsers = users.filter((u: any) => 
+  const filteredUsers = users.filter((u: AdminUser) => 
     u.email?.toLowerCase().includes(userTableState.search.toLowerCase()) || 
     u.name?.toLowerCase().includes(userTableState.search.toLowerCase())
   );
   const filteredBackups = backups.filter((b) => b.filename.toLowerCase().includes(backupTableState.search.toLowerCase()));
-  const userColumns: DataTableColumnDef<any>[] = [
+  const userColumns: DataTableColumnDef<AdminUser>[] = [
     {
       id: "user",
       header: t("col_user") || "User",
@@ -303,14 +346,14 @@ export default function SuperAdminPortal() {
               user.subscriptionStatus === "SUSPENDED"
                 ? { label: "Reactivate", onClick: (u) => handleAction(u.id, "REACTIVATE"), icon: <RefreshCcw className="mr-2 h-4 w-4" /> }
                 : { label: "Suspend", onClick: (u) => handleAction(u.id, "SUSPEND"), icon: <Ban className="mr-2 h-4 w-4" /> },
-              { label: "Delete", onClick: (u) => setUserToDelete({ id: u.id, name: u.name || "Unnamed", email: u.email }), variant: "danger", icon: <Trash2 className="mr-2 h-4 w-4" /> },
+              { label: "Delete", onClick: (u) => setUserToDelete({ id: u.id, name: u.name || "Unnamed", email: u.email || "" }), variant: "danger", icon: <Trash2 className="mr-2 h-4 w-4" /> },
             ]}
           />
         </div>
       ),
     },
   ];
-  const backupColumns: DataTableColumnDef<any>[] = [
+  const backupColumns: DataTableColumnDef<AdminBackup>[] = [
     { id: "timestamp", header: "Timestamp", sortable: true, sortAccessor: (row) => new Date(row.createdAt).getTime(), cell: (row) => <span className="text-xs font-medium text-zinc-500">{new Date(row.createdAt).toLocaleString()}</span>, hideable: true },
     { id: "filename", header: "File Name", accessor: (row) => row.filename, sortable: true, cell: (row) => <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">{row.filename}</span>, hideable: true },
     { id: "size", header: "Size", sortable: true, sortAccessor: (row) => row.size, cell: (row) => <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">{(row.size / 1024 / 1024).toFixed(2)} MB</span>, hideable: true },
@@ -341,7 +384,7 @@ export default function SuperAdminPortal() {
         {["OVERVIEW", "ACCOUNTS", "DIAGNOSTICS", "SECURITY", "MAINTENANCE", "BACKUP", "LOGS"].map((tName) => (
           <button
             key={tName}
-            onClick={() => setTab(tName as any)}
+            onClick={() => setTab(tName as "OVERVIEW" | "ACCOUNTS" | "DIAGNOSTICS" | "SECURITY" | "MAINTENANCE" | "BACKUP" | "LOGS")}
             className={`px-4 py-2 text-sm font-bold uppercase tracking-widest rounded-t-lg transition-all flex items-center gap-1.5 ${
               tab === tName 
               ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-md" 
@@ -557,7 +600,7 @@ export default function SuperAdminPortal() {
                             <Button variant="outline" size="sm" onClick={() => handleAction(user.id, user.subscriptionStatus === "SUSPENDED" ? "REACTIVATE" : "SUSPEND")}>
                               {user.subscriptionStatus === "SUSPENDED" ? "Reactivate" : "Suspend"}
                             </Button>
-                            <Button variant="destructive" size="sm" onClick={() => setUserToDelete({ id: user.id, name: user.name || "Unnamed", email: user.email })}>Delete</Button>
+                            <Button variant="destructive" size="sm" onClick={() => setUserToDelete({ id: user.id, name: user.name || "Unnamed", email: user.email || "" })}>Delete</Button>
                           </div>
                         </details>
                       </CardContent>
@@ -708,7 +751,7 @@ export default function SuperAdminPortal() {
                     <CardTitle className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Retro-Stamp Paid Invoices</CardTitle>
                     <ShieldCheck className="w-4 h-4 text-emerald-500" />
                   </div>
-                  <CardDescription className="text-xs">Applies missing 'PAID' watermarks and receipt dates to historical invoices.</CardDescription>
+                  <CardDescription className="text-xs">Applies missing &apos;PAID&apos; watermarks and receipt dates to historical invoices.</CardDescription>
                 </CardHeader>
               </Card>
 
@@ -981,11 +1024,11 @@ export default function SuperAdminPortal() {
                             <p className="text-xs mt-1">Activity will appear here as users interact with the platform.</p>
                           </td>
                         </tr>
-                      ) : logs.map((log: any) => (
+                      ) : logs.map((log) => (
                         <>
                           <tr
-                            key={log.id}
-                            onClick={() => setExpandedLogId(expandedLogId === log.id ? null : log.id)}
+                            key={String(log.id)}
+                            onClick={() => setExpandedLogId(expandedLogId === String(log.id) ? null : String(log.id))}
                             className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition-colors"
                           >
                             <td className="px-4 py-3">
@@ -1009,7 +1052,7 @@ export default function SuperAdminPortal() {
                                   <Info className="w-3 h-3" />INFO
                                 </span>
                               )}
-                              {!['SUCCESS','FAILURE','WARNING','INFO'].includes(log.status) && (
+                              {!['SUCCESS','FAILURE','WARNING','INFO'].includes(String(log.status)) && (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
                                   {log.status}
                                 </span>
@@ -1112,8 +1155,8 @@ export default function SuperAdminPortal() {
                             <p className="text-xs mt-1">Tax rate overrides will appear here with a cryptographic chain.</p>
                           </td>
                         </tr>
-                      ) : logs.map((log: any) => {
-                        const isViolation = logIntegrity?.violations?.some((v: any) => v.id === log.id);
+                      ) : logs.map((log) => {
+                        const isViolation = logIntegrity?.violations?.some((v) => v.id === log.id);
                         return (
                           <>
                             <tr

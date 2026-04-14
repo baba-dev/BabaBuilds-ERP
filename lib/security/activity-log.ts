@@ -127,7 +127,7 @@ export type ActivityStatus = 'SUCCESS' | 'FAILURE' | 'WARNING' | 'INFO' | (strin
 export type LogActivityParams = {
   action: string;
   status: ActivityStatus;
-  workspaceId: string;
+  workspaceId?: string | null;
   actor?: {
     userId?: string | null;
     email?: string | null;
@@ -300,7 +300,7 @@ export const logActivity = async (params: LogActivityParams): Promise<string | n
 
     const created = await prisma.appActivityLog.create({
       data: {
-        workspaceId: params.workspaceId,
+        workspaceId: params.workspaceId ?? null,
         action: sanitizeString(params.action),
         status: sanitizeString(params.status),
         actorUserId: params.actor?.userId ?? null,

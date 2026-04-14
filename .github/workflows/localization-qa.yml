@@ -7,8 +7,12 @@ on:
       - main
 
 concurrency:
-  group: deploy-production-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+jobs:
+  check-locales:
+    runs-on: [self-hosted, linux, x64, erp-ci]
 
 jobs:
   locales:

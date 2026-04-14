@@ -117,6 +117,49 @@ async function generateRetainerPDF(
     page.drawRectangle({ x, y: height - y - h, width: w, height: h, color, borderColor: borderColor || undefined, borderWidth: borderColor ? 1 : 0 });
   };
 
+  const wrapTextByWidth = (text: string, maxWidth: number, fontSize: number): string[] => {
+    if (!text) return [];
+
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    const pushCurrentLine = () => {
+      if (currentLine) lines.push(currentLine);
+      currentLine = '';
+    };
+
+    for (const word of words) {
+      const candidate = currentLine ? `${currentLine} ${word}` : word;
+      if (font.widthOfTextAtSize(candidate, fontSize) <= maxWidth) {
+        currentLine = candidate;
+        continue;
+      }
+
+      if (currentLine) pushCurrentLine();
+
+      if (font.widthOfTextAtSize(word, fontSize) <= maxWidth) {
+        currentLine = word;
+        continue;
+      }
+
+      let segment = '';
+      for (const char of word) {
+        const testSegment = `${segment}${char}`;
+        if (font.widthOfTextAtSize(testSegment, fontSize) <= maxWidth) {
+          segment = testSegment;
+        } else {
+          if (segment) lines.push(segment);
+          segment = char;
+        }
+      }
+      currentLine = segment;
+    }
+
+    pushCurrentLine();
+    return lines;
+  };
+
   const loadLogo = async (logoUrl: string | null, x: number, y: number, maxWidth: number, maxHeight: number, align = 'left') => {
     if (!logoUrl) return;
     try {
@@ -329,19 +372,52 @@ async function generateRetainerPDF(
     drawText(`${safeRoutingLabel}: ${profile.ifscCode}`, 40, bankY + 65, 9, false, 'left', textDark);
 
     drawText(`For ${profile.companyName}`, width - 40, bankY + 20, 10, true, 'right', black);
+    if (profile.signatureUrl) {
+      await loadLogo(profile.signatureUrl, width - 40, bankY + 30, 140, 35, 'right');
+    }
     page.drawLine({ start: { x: width - 180, y: height - (bankY + 70) }, end: { x: width - 40, y: height - (bankY + 70) }, thickness: 1, color: black });
     drawText('Authorized Signatory', width - 40, bankY + 85, 9, false, 'right', textMuted);
 
     // --- DESIGN_1: Payment link rendering ---
     if (paymentLink) {
-      const linkText  = `Pay securely online: ${paymentLink}`;
-      const linkTextWidth = font.widthOfTextAtSize(linkText, 9);
-      const linkDisplayY = bankY + 100;
-      drawText(linkText, 40, linkDisplayY, 9, false, 'left', cfLinkBlue);
-      addLinkAnnotation(pdfDoc, page, 40, height - linkDisplayY - 1, linkTextWidth, 10, paymentLink);
+      const normalizedPaymentLink = String(paymentLink).trim();
+      if (normalizedPaymentLink) {
+        const linkLabel = "Pay Online via UPI / Card / Net Banking / Apple Pay:";
+        const leftStartX = 40;
+        const maxUrlWidth = width - 40 - 220;
+        const urlFontSize = 9;
+        const lineHeight = 12;
+        const wrappedUrlLines = wrapTextByWidth(normalizedPaymentLink, maxUrlWidth, urlFontSize);
+        const urlBottomY = bankY - 10;
+        const urlLinesToDraw = wrappedUrlLines.length > 0 ? wrappedUrlLines : [normalizedPaymentLink];
+
+        const urlLineYs: number[] = [];
+        urlLinesToDraw.forEach((line, index) => {
+          const lineY = urlBottomY - ((urlLinesToDraw.length - 1 - index) * lineHeight);
+          urlLineYs.push(lineY);
+          drawText(line, leftStartX, lineY, urlFontSize, false, 'left', cfLinkBlue);
+        });
+
+        const topUrlLineY = Math.min(...urlLineYs);
+        const labelY = topUrlLineY - lineHeight;
+        drawText(linkLabel, leftStartX, labelY, 9, true, 'left', black);
+
+        const maxRenderedLineWidth = Math.max(...urlLinesToDraw.map((line) => font.widthOfTextAtSize(line, urlFontSize)));
+        const urlBlockHeight = lineHeight * urlLinesToDraw.length;
+
+        addLinkAnnotation(
+          pdfDoc,
+          page,
+          leftStartX,
+          height - (topUrlLineY + urlBlockHeight),
+          maxRenderedLineWidth,
+          urlBlockHeight,
+          normalizedPaymentLink
+        );
+      }
     }
 
-    const decY = bankY + 115 + (paymentLink ? 16 : 0);
+    const decY = bankY + 95 + (paymentLink ? 15 : 0);
     drawRect(40, decY, width - 80, 105, bgLight, borderGray);
     drawText('Statutory Declarations:', 55, decY + 20, 9, true, 'left', black);
     drawText("1. GST Exemption: We hereby declare that our aggregate turnover is below the statutory registration threshold", 55, decY + 35, 8, false, 'left', textDark);
@@ -417,8 +493,8 @@ export async function GET(request: Request) {
 
     // 3. PROCESS EACH RETAINER INDIVIDUALLY (Sequential to maintain safe invoice numbering)
     for (const retainer of dueRetainers) {
+      const workspaceId = retainer.workspaceId;
       try {
-        const workspaceId = retainer.workspaceId;
         const fy = getFY(today);
         const billingMonth = format(retainer.nextBillingDate, "MMMM yyyy");
 
@@ -429,179 +505,229 @@ export async function GET(request: Request) {
           throw new Error("Business profile missing. Cannot generate PDF.");
         }
 
-        // A. AUTO-SEQUENCE THE INVOICE NUMBER (Fixed: orderBy createdAt)
-        const lastInvoice = await prisma.invoice.findFirst({
-          where: { workspaceId, financialYear: fy },
-          orderBy: { createdAt: 'desc' }
-        });
+        // A. AUTO-SEQUENCE THE INVOICE NUMBER (Optimistic Concurrency)
+        let attempts = 0;
+        const MAX_ATTEMPTS = 5;
+        let success = false;
+        // Track the last generated PDF so we can clean it up if the DB transaction
+        // fails and we must retry with a new invoice number.
+        let lastGeneratedPdfPath: string | null = null;
+        
+        while (attempts < MAX_ATTEMPTS && !success) {
+          try {
+            const lastInvoice = await prisma.invoice.findFirst({
+              where: { workspaceId, financialYear: fy },
+              orderBy: { createdAt: 'desc' }
+            });
 
-        let sequence = 1;
-        if (lastInvoice && lastInvoice.invoiceNumber) {
-          // Fixed: Aligning cron split logic with manual generator ("/")
-          const parts = lastInvoice.invoiceNumber.split('/');
-          if (parts.length === 3 && !isNaN(parseInt(parts[2]))) {
-            sequence = parseInt(parts[2]) + 1;
-          }
-        }
-        // Fixed: Aligning cron format with manual generator
-        const invoiceNumber = `INV/${fy}/${sequence.toString().padStart(3, '0')}`;
-
-        // B. THE MAGIC TOGGLE (Smart Naming)
-        let finalDescription = retainer.serviceName;
-        if (retainer.autoAppendMonth) {
-          finalDescription = `${retainer.serviceName} (${billingMonth})`;
-        }
-
-        const taxResolution = resolveTaxRate({
-          countryCode: profile.workspace?.countryCode || "IN",
-          isTaxExempt: Boolean(retainer.client.isExport),
-          serviceTaxRates: [(retainer as any).taxRate ?? null],
-          workspaceDefaultTaxRate: (profile as any).defaultTaxRate ?? null,
-        });
-        if (taxResolution.requiresUserInput) {
-          throw new Error(
-            `Missing tax rate configuration for retainer ${retainer.id}. Please set a workspace default tax rate from UI.`
-          );
-        }
-        const totals = calculateInvoiceTotals({
-          services: [{ amount: decimalToNumber(retainer.amount) }],
-          isTaxExempt: Boolean(retainer.client.isExport),
-          defaultTaxRate: taxResolution.taxRate,
-        });
-
-        // --- PAYMENT LINK GENERATION (PRO ONLY) ---
-        let paymentLink: string | null = null;
-        const isProPlan = profile.workspace?.planTier === "PRO";
-        const baseCurrency = profile.workspace?.baseCurrency || 'INR';
-        const dueDate = new Date(today);
-        dueDate.setDate(dueDate.getDate() + 7);
-
-        if (isProPlan) {
-          const defaultGateway = (profile as any).defaultGateway || 'RAZORPAY';
-
-          if (
-            defaultGateway === 'RAZORPAY' &&
-            baseCurrency === 'INR' &&
-            (profile as any).razorpayKeyId &&
-            (profile as any).razorpayKeySecret
-          ) {
-            try {
-              const { decrypt }                   = await import('@/lib/encryption');
-              const { generateTenantPaymentLink } = await import('@/lib/razorpay-links');
-              const decryptedSecret = decrypt((profile as any).razorpayKeySecret);
-
-              paymentLink = await generateTenantPaymentLink({
-                amount:          totals.total,
-                currency:        baseCurrency,
-                description:     `Invoice ${invoiceNumber}`,
-                invoiceDueDate:  dueDate,
-                customerDetails: {
-                  name:  retainer.client.name,
-                  email: retainer.client.email ?? undefined,
-                },
-                tenantKeyId:     (profile as any).razorpayKeyId,
-                tenantKeySecret: decryptedSecret,
-              });
-            } catch (rzpErr) {
-              console.error('[cron] Razorpay link failed:', rzpErr);
+            let sequence = 1;
+            if (lastInvoice && lastInvoice.invoiceNumber) {
+              const parts = lastInvoice.invoiceNumber.split('/');
+              if (parts.length === 3 && !isNaN(parseInt(parts[2]))) {
+                sequence = parseInt(parts[2]) + 1;
+              }
             }
-          } else if (
-            defaultGateway === 'STRIPE' &&
-            (profile as any).stripePublishableKey &&
-            (profile as any).stripeSecretKey
-          ) {
-            try {
-              const { decrypt }                   = await import('@/lib/encryption');
-              const { generateStripePaymentLink } = await import('@/lib/stripe-links');
-              const decryptedSecret = decrypt((profile as any).stripeSecretKey);
+            const invoiceNumber = `INV/${fy}/${sequence.toString().padStart(3, '0')}`;
 
-              paymentLink = await generateStripePaymentLink({
-                amount:          totals.total,
-                currency:        baseCurrency,
-                description:     `Invoice ${invoiceNumber}`,
-                invoiceNumber,
-                tenantSecretKey: decryptedSecret,
-              });
-            } catch (stripeErr) {
-              console.error('[cron] Stripe link failed:', stripeErr);
+            // B. THE MAGIC TOGGLE (Smart Naming)
+            let finalDescription = retainer.serviceName;
+            if (retainer.autoAppendMonth) {
+              finalDescription = `${retainer.serviceName} (${billingMonth})`;
             }
-          }
-        }
 
-        // C. GENERATE PHYSICAL PDF (Fixes Ghost PDF Issue)
-        const relativePdfPath = await generateRetainerPDF(
-          workspaceId, 
-          retainer, 
-          profile, 
-          invoiceNumber, 
-          billingMonth, 
-          finalDescription,
-          totals,
-          paymentLink
-        );
+            const taxResolution = resolveTaxRate({
+              countryCode: profile.workspace?.countryCode || "IN",
+              isTaxExempt: Boolean(retainer.client.isExport),
+              serviceTaxRates: [(retainer as any).taxRate ?? null],
+              workspaceDefaultTaxRate: (profile as any).defaultTaxRate ?? null,
+            });
+            if (taxResolution.requiresUserInput) {
+              throw new Error(`Missing tax rate configuration for retainer. Please set a workspace default tax rate from UI.`);
+            }
+            const totals = calculateInvoiceTotals({
+              services: [{ amount: decimalToNumber(retainer.amount) }],
+              isTaxExempt: Boolean(retainer.client.isExport),
+              defaultTaxRate: taxResolution.taxRate,
+            });
 
-        // D. EXECUTE DATABASE TRANSACTION
-        await prisma.$transaction(async (tx) => {
-          
-          // Create the Invoice pointing to the real generated PDF
-          await tx.invoice.create({
-            data: {
+            // --- PAYMENT LINK GENERATION (PRO ONLY) ---
+            let paymentLink: string | null = null;
+            let providerPaymentLinkId: string | null = null;
+            let providerGateway: string | null = null;
+
+            const isProPlan = profile.workspace?.planTier === "PRO";
+            const baseCurrency = profile.workspace?.baseCurrency || 'INR';
+            const dueDate = new Date(today);
+            dueDate.setDate(dueDate.getDate() + 7);
+
+            if (isProPlan) {
+              const defaultGateway = (profile as any).defaultGateway || 'RAZORPAY';
+
+              if (
+                defaultGateway === 'RAZORPAY' &&
+                baseCurrency === 'INR' &&
+                (profile as any).razorpayKeyId &&
+                (profile as any).razorpayKeySecret
+              ) {
+                try {
+                  const { decrypt }                   = await import('@/lib/encryption');
+                  const { generateTenantPaymentLink } = await import('@/lib/razorpay-links');
+                  const decryptedSecret = decrypt((profile as any).razorpayKeySecret);
+
+                  const linkResult = await generateTenantPaymentLink({
+                    amount:          totals.total,
+                    currency:        baseCurrency,
+                    description:     `Invoice ${invoiceNumber}`,
+                    invoiceDueDate:  dueDate,
+                    customerDetails: {
+                      name:  retainer.client.name,
+                      email: retainer.client.email ?? undefined,
+                    },
+                    tenantKeyId:     (profile as any).razorpayKeyId,
+                    tenantKeySecret: decryptedSecret,
+                  });
+
+                  if (linkResult) {
+                    paymentLink = linkResult.url;
+                    providerPaymentLinkId = linkResult.linkId;
+                    providerGateway = 'RAZORPAY';
+                  }
+                } catch (rzpErr) {
+                  console.error('[cron] Razorpay link failed:', rzpErr);
+                }
+              } else if (
+                defaultGateway === 'STRIPE' &&
+                (profile as any).stripePublishableKey &&
+                (profile as any).stripeSecretKey
+              ) {
+                try {
+                  const { decrypt }                   = await import('@/lib/encryption');
+                  const { generateStripePaymentLink } = await import('@/lib/stripe-links');
+                  const decryptedSecret = decrypt((profile as any).stripeSecretKey);
+
+                  const linkResult = await generateStripePaymentLink({
+                    amount:          totals.total,
+                    currency:        baseCurrency,
+                    description:     `Invoice ${invoiceNumber}`,
+                    invoiceNumber,
+                    tenantSecretKey: decryptedSecret,
+                  });
+
+                  if (linkResult) {
+                    paymentLink = linkResult.url;
+                    providerPaymentLinkId = linkResult.linkId;
+                    providerGateway = 'STRIPE';
+                  }
+                } catch (stripeErr) {
+                  console.error('[cron] Stripe link failed:', stripeErr);
+                }
+              }
+            }
+
+            // C. GENERATE PHYSICAL PDF
+            const relativePdfPath = await generateRetainerPDF(
+              workspaceId, 
+              retainer, 
+              profile, 
+              invoiceNumber, 
+              billingMonth, 
+              finalDescription,
+              totals,
+              paymentLink
+            );
+            // Track for cleanup in case the DB transaction below fails and we
+            // must retry with a new (different) invoice number.
+            lastGeneratedPdfPath = relativePdfPath;
+
+            // D. EXECUTE DATABASE TRANSACTION
+            await prisma.$transaction(async (tx) => {
+              await tx.invoice.create({
+                data: {
+                  workspaceId,
+                  clientId: retainer.clientId,
+                  invoiceNumber,
+                  financialYear: fy,
+                  billingMonth,
+                  invoiceDate: today,
+                  clientName: retainer.client.name,
+                  sacCode: retainer.sacCode,
+                  serviceDescription: finalDescription,
+                  subtotal: toDecimal(totals.subtotal).toDecimalPlaces(2),
+                  taxRate: totals.taxRate,
+                  taxAmount: toDecimal(totals.taxAmount).toDecimalPlaces(2),
+                  grandTotal: toDecimal(totals.total).toDecimalPlaces(2),
+                  taxMode: totals.taxMode,
+                  totalAmount: toDecimal(totals.total).toDecimalPlaces(2),
+                  status: "PENDING",
+                  pdfPath: relativePdfPath, 
+                  providerGateway,
+                  providerPaymentLinkId,
+                } as any
+              });
+
+              let nextDate = new Date(retainer.nextBillingDate);
+              const wasLastDay = isLastDayOfMonth(nextDate);
+
+              if (retainer.frequency === 'MONTHLY') nextDate = addMonths(nextDate, 1);
+              else if (retainer.frequency === 'QUARTERLY') nextDate = addMonths(nextDate, 3);
+              else if (retainer.frequency === 'ANNUALLY') nextDate = addYears(nextDate, 1);
+
+              if (wasLastDay) nextDate = endOfMonth(nextDate);
+              if (isWeekend(nextDate)) nextDate = previousFriday(nextDate);          
+              
+              await tx.retainer.update({
+                where: { id: retainer.id },
+                data: { nextBillingDate: nextDate }
+              });
+            });
+
+            success = true;
+
+            results.successful++;
+            results.logs.push(`Successfully billed ${retainer.client.name} for ${finalDescription}`);
+
+            dispatchNotification({
+              event: 'INVOICE_GENERATED',
               workspaceId,
-              clientId: retainer.clientId,
-              invoiceNumber,
-              financialYear: fy,
-              billingMonth,
-              invoiceDate: today,
-              clientName: retainer.client.name,
-              sacCode: retainer.sacCode,
-              serviceDescription: finalDescription,
-              subtotal: toDecimal(totals.subtotal).toDecimalPlaces(2),
-              taxRate: totals.taxRate,
-              taxAmount: toDecimal(totals.taxAmount).toDecimalPlaces(2),
-              grandTotal: toDecimal(totals.total).toDecimalPlaces(2),
-              taxMode: totals.taxMode,
-              totalAmount: toDecimal(totals.total).toDecimalPlaces(2),
-              status: "PENDING",
-              pdfPath: relativePdfPath, 
-            } as any
-          });
+              data: {
+                invoiceNumber,
+                clientName: retainer.client.name,
+                amount: `${profile.workspace?.baseCurrency || 'INR'} ${totals.total.toFixed(2)}`,
+                pdfUrl: relativePdfPath,
+              },
+            }).catch(() => null);
 
-          // --- SMART DATE LOGIC ---
-          let nextDate = new Date(retainer.nextBillingDate);
-          const wasLastDay = isLastDayOfMonth(nextDate);
-
-          if (retainer.frequency === 'MONTHLY') nextDate = addMonths(nextDate, 1);
-          else if (retainer.frequency === 'QUARTERLY') nextDate = addMonths(nextDate, 3);
-          else if (retainer.frequency === 'ANNUALLY') nextDate = addYears(nextDate, 1);
-
-          if (wasLastDay) nextDate = endOfMonth(nextDate);
-          if (isWeekend(nextDate)) nextDate = previousFriday(nextDate);          
-          
-          await tx.retainer.update({
-            where: { id: retainer.id },
-            data: { nextBillingDate: nextDate }
-          });
-        });
-
-        results.successful++;
-        results.logs.push(`Successfully billed ${retainer.client.name} for ${finalDescription}`);
-
-        // Fire INVOICE_GENERATED notification (fire-and-forget)
-        dispatchNotification({
-          event: 'INVOICE_GENERATED',
-          workspaceId,
-          data: {
-            invoiceNumber,
-            clientName: retainer.client.name,
-            amount: `${profile.workspace?.baseCurrency || 'INR'} ${totals.total.toFixed(2)}`,
-            pdfUrl: relativePdfPath,
-          },
-        }).catch(() => null);
-
+          } catch (err: any) {
+            // Delete the PDF we just generated — it will be orphaned if we retry
+            // with a new invoice number, or if we give up after MAX_ATTEMPTS.
+            if (lastGeneratedPdfPath) {
+              const fullOrphanPath = require('path').join(process.cwd(), 'public', lastGeneratedPdfPath.replace(/^\//, ''));
+              try { require('fs').unlinkSync(fullOrphanPath); } catch (_) { /* ignore */ }
+              lastGeneratedPdfPath = null;
+            }
+            if (err.code === 'P2002') {
+              attempts++;
+              if (attempts >= MAX_ATTEMPTS) {
+                throw new Error("Unable to generate invoice. Please try again later.");
+              }
+              continue;
+            }
+            throw err;
+          }
+        }
 
       } catch (err: any) {
         console.error(`Failed to process retainer ${retainer.id}:`, err);
         results.failed++;
+        results.logs.push(`FAILED: ${retainer.client.name} - ${err.message}`);
+        dispatchNotification({
+          event: "BILLING_FAILED",
+          workspaceId: retainer.workspaceId,
+          data: {
+            clientName: retainer.client.name,
+            message: err.message || "An unexpected error occurred during automated billing.",
+          }
+        }).catch(() => null);
         results.logs.push(`FAILED: ${retainer.client.name} - ${err.message}`);
       }
     }

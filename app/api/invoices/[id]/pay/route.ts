@@ -6,12 +6,13 @@ import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from
 import fs from 'fs';
 import path from 'path';
 import { INVOICE_STATUS, toInvoiceStatus, type InvoiceStatusValue } from '@/lib/invoice-status';
-import {
+import { 
   acquireFinancialIdempotency,
   buildRequestHash,
   consumeFinancialIdempotency,
   releaseFinancialIdempotency,
 } from '@/lib/financial-idempotency';
+import { toDecimal } from '@/lib/money';
 
 import { 
   getWorkspaceId,
@@ -87,9 +88,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         return { kind: 'not_found' as const };
       }
 
-      const existingReceived = Number(existingInvoice.amountReceived ?? 0);
-      const newCumulativeReceived = existingReceived + incomingPayment;
-      const invoiceGrandTotal = Number(existingInvoice.grandTotal ?? existingInvoice.totalAmount);
+      // Use Prisma.Decimal for all cumulative arithmetic to avoid IEEE 754 drift.
+      const existingReceived = toDecimal(existingInvoice.amountReceived ?? 0);
+      const newCumulativeReceived = existingReceived.plus(toDecimal(incomingPayment)).toDecimalPlaces(2);
+      const invoiceGrandTotal = toDecimal(existingInvoice.grandTotal ?? existingInvoice.totalAmount);
 
       const businessRuleValidation = validatePaymentBusinessRules({
         invoiceStatus: existingInvoice.status,
@@ -110,7 +112,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         },
         data: {
           status: toInvoiceStatus(newStatus),
-          amountReceived: newCumulativeReceived,
+          amountReceived: newCumulativeReceived.toNumber(),
           dateReceived: new Date(dateReceived),
         },
       });
@@ -125,9 +127,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       if (becamePaidNow && existingInvoice.items && existingInvoice.items.length > 0) {
         for (const item of existingInvoice.items) {
           if (item.productId) {
-            const product = await tx.product.findUnique({ where: { id: item.productId } });
+            const product = await tx.product.findFirst({ where: { id: item.productId, workspaceId } });
             if (product) {
-              const newStock = product.currentStock - item.quantity;
+              // Clamp to 0 — stock cannot go negative. The movement log still records
+              // the full quantity so over-shipments are visible in inventory history.
+              const newStock = Math.max(0, product.currentStock - item.quantity);
               await tx.product.update({
                 where: { id: item.productId },
                 data: {
@@ -140,7 +144,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
                   workspaceId,
                   productId: item.productId,
                   type: "OUT",
-                  quantity: -item.quantity,
+                  quantity: -item.quantity, // record actual quantity even if it exceeded stock
                   reason: `Invoice #${updatedInvoice.invoiceNumber} Payment`,
                   referenceId: updatedInvoice.id,
                 },

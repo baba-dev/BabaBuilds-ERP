@@ -231,6 +231,12 @@ export async function POST(request: Request) {
       );
     }
 
+    const unverifiedProductIds = sanitizedServices.map((s: { productId?: string }) => s.productId).filter((id: unknown): id is string => typeof id === 'string' && id.length > 0);
+    const validProducts = unverifiedProductIds.length > 0 
+      ? await prisma.product.findMany({ where: { workspaceId, id: { in: unverifiedProductIds } }, select: { id: true } })
+      : [];
+    const validProductIds = new Set(validProducts.map((p: { id: string }) => p.id));
+
     const date = parsedCustomDate ?? new Date();
     if (isNaN(date.getTime())) {
       return NextResponse.json(
@@ -391,6 +397,8 @@ export async function POST(request: Request) {
 
         // ── SMART PAYMENT GATEWAY ROUTER (PRO only) ────────────────────────────
         let paymentLink: string | null = null;
+        let providerPaymentLinkId: string | null = null;
+        let providerGateway: string | null = null;
 
         if (isProPlan) {
           const defaultGateway = (profile as any).defaultGateway || 'RAZORPAY';
@@ -407,7 +415,7 @@ export async function POST(request: Request) {
 
               const decryptedSecret = decrypt((profile as any).razorpayKeySecret);
 
-              paymentLink = await generateTenantPaymentLink({
+              const linkResult = await generateTenantPaymentLink({
                 amount: toDecimal(totals.total).toNumber(),
                 currency: baseCurrency,
                 description: `Invoice ${invoiceNumber}`,
@@ -419,10 +427,15 @@ export async function POST(request: Request) {
                 tenantKeyId: (profile as any).razorpayKeyId,
                 tenantKeySecret: decryptedSecret,
               });
+
+              if (linkResult) {
+                paymentLink = linkResult.url;
+                providerPaymentLinkId = linkResult.linkId;
+                providerGateway = 'RAZORPAY';
+              }
             } catch (rzpErr) {
               // Non-fatal — PDF still generates without the link
               console.error('[generate] Razorpay link generation failed (non-fatal):', rzpErr);
-              paymentLink = null;
             }
 
           } else if (
@@ -436,17 +449,22 @@ export async function POST(request: Request) {
 
               const decryptedSecret = decrypt((profile as any).stripeSecretKey);
 
-              paymentLink = await generateStripePaymentLink({
+              const linkResult = await generateStripePaymentLink({
                 amount: toDecimal(totals.total).toNumber(),    // in major units — service converts to smallest unit internally
                 currency: baseCurrency,   // passes locale currency accurately for correct unit math
                 description: `Invoice ${invoiceNumber}`,
                 invoiceNumber,
                 tenantSecretKey: decryptedSecret,
               });
+
+              if (linkResult) {
+                paymentLink = linkResult.url;
+                providerPaymentLinkId = linkResult.linkId;
+                providerGateway = 'STRIPE';
+              }
             } catch (stripeErr) {
               // Non-fatal — PDF still generates without the link
               console.error('[generate] Stripe link generation failed (non-fatal):', stripeErr);
-              paymentLink = null;
             }
           }
         }
@@ -488,13 +506,15 @@ export async function POST(request: Request) {
             totalAmount: toDecimal(totals.total).toDecimalPlaces(2),
             pdfPath: relativePdfPath,
             status: normalizedStatus,
+            providerGateway,
+            providerPaymentLinkId,
             items: {
               create: sanitizedServices.map((s: any) => ({
-                productId: s.productId || null,
+                productId: validProductIds.has(s.productId) ? s.productId : null,
                 description: s.title,
                 quantity: s.quantity || 1,
                 unitPrice: toDecimal(s.unitPrice || s.amount).toDecimalPlaces(2),
-                taxRate: 0,
+                taxRate: taxResolution.taxRate,
                 totalAmount: toDecimal(s.amount).toDecimalPlaces(2)
               }))
             }

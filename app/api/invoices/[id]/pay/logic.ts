@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { INVOICE_STATUS, type InvoiceStatusValue } from '@/lib/invoice-status';
 import { parseInvoicePaymentPayload } from '@/lib/types/business';
 
@@ -28,19 +29,30 @@ export const getWorkspaceId = (session: unknown) => {
   return typeof workspaceId === "string" ? workspaceId : null;
 };
 
+/**
+ * Determines the invoice payment status using Prisma.Decimal arithmetic to
+ * avoid IEEE 754 floating-point errors on cumulative partial payments.
+ *
+ * A 1-paisa (0.005) tolerance is applied when comparing cumulative received
+ * against the grand total — this handles legacy Float storage imprecision in
+ * the amountReceived column without allowing meaningful overpayment.
+ */
 export const determineInvoicePaymentStatus = (
-  paymentAmount: number,
-  invoiceGrandTotal: number
+  cumulativeReceived: Prisma.Decimal,
+  invoiceGrandTotal: Prisma.Decimal
 ): InvoiceStatusValue => {
-  if (paymentAmount > 0 && paymentAmount < invoiceGrandTotal) {
-    return INVOICE_STATUS.PARTIALLY_PAID;
-  }
-
-  if (paymentAmount === 0) {
+  if (cumulativeReceived.lte(0)) {
     return INVOICE_STATUS.PENDING;
   }
 
-  return INVOICE_STATUS.PAID;
+  // 1-paisa tolerance: if the shortfall is less than half a paisa, treat as fully paid.
+  const ONE_PAISA = new Prisma.Decimal('0.005');
+  const shortfall = invoiceGrandTotal.minus(cumulativeReceived);
+  if (shortfall.lte(ONE_PAISA)) {
+    return INVOICE_STATUS.PAID;
+  }
+
+  return INVOICE_STATUS.PARTIALLY_PAID;
 };
 
 export const validatePayInvoicePayload = (
@@ -69,6 +81,10 @@ export const validatePayInvoicePayload = (
   return { ok: true, data: { amountReceived, dateReceived } };
 };
 
+/**
+ * Validates business rules using Prisma.Decimal to avoid float-equality issues
+ * when checking whether a payment would exceed the invoice total.
+ */
 export const validatePaymentBusinessRules = ({
   invoiceStatus,
   cumulativeAmountReceived,
@@ -76,8 +92,8 @@ export const validatePaymentBusinessRules = ({
   allowOverpayment = false,
 }: {
   invoiceStatus: string;
-  cumulativeAmountReceived: number;
-  invoiceGrandTotal: number;
+  cumulativeAmountReceived: Prisma.Decimal;
+  invoiceGrandTotal: Prisma.Decimal;
   allowOverpayment?: boolean;
 }): ValidationResult<undefined, 'INVOICE_STATUS_NOT_PAYABLE' | 'OVERPAYMENT_NOT_ALLOWED'> => {
   const payableStatuses = new Set<string>([INVOICE_STATUS.PENDING, INVOICE_STATUS.PARTIALLY_PAID]);
@@ -88,7 +104,9 @@ export const validatePaymentBusinessRules = ({
     };
   }
 
-  if (!allowOverpayment && cumulativeAmountReceived > invoiceGrandTotal) {
+  // Allow a 1-paisa tolerance — compare strictly: overpayment means cumulative > total + 0.005
+  const ONE_PAISA = new Prisma.Decimal('0.005');
+  if (!allowOverpayment && cumulativeAmountReceived.gt(invoiceGrandTotal.plus(ONE_PAISA))) {
     return {
       ok: false,
       error: { code: 'OVERPAYMENT_NOT_ALLOWED', message: 'Overpayment is not allowed.' },

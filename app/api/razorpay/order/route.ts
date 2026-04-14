@@ -17,13 +17,7 @@ function getRazorpayClient() {
   });
 }
 
-const PRICING = {
-  MONTHLY: 200,
-  QUARTERLY: 550,
-  YEARLY: 2300,
-  TEAM_MONTHLY: 400,
-  TEAM_YEARLY: 4500,
-};
+import { PRICING } from "@/lib/pricing";
 
 export async function POST(req: Request) {
   try {
