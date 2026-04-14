@@ -49,8 +49,8 @@ export function DashboardAIPromptBar() {
 
   return (
     <div className="relative group">
-      {/* Background Glow Effect */}
-      <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-indigo-500/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+      {/* Background Glow Effect (focus-driven, not hover-driven) */}
+      <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/15 via-purple-500/15 to-indigo-500/15 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 motion-reduce:transition-none transition-opacity duration-500 pointer-events-none" />
       
       <div className="relative space-y-3">
         {/* Header Label */}

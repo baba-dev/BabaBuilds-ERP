@@ -58,7 +58,6 @@ export function DashboardAttentionCenter({ attention }: { attention: DashboardDa
     if (computedTone === "warning") return "text-amber-600 dark:text-amber-400";
     return "text-indigo-600 dark:text-indigo-400";
   };
-
   return (
     <section className="space-y-6">
       <div className="flex items-center gap-2 px-1">
