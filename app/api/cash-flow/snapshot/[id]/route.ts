@@ -47,6 +47,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
         totalProjectedInflows: snapshot.totalProjectedInflows,
         totalProjectedOutflows: snapshot.totalProjectedOutflows,
         confidenceScore: snapshot.confidenceScore,
+        assumptionsJson: snapshot.assumptionsJson,
         generatedBy: snapshot.generatedBy,
         periods: snapshot.periods.map((p) => ({
           id: p.id,
@@ -72,6 +73,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
           scenarioTag: l.scenarioTag,
           classification: l.classification,
           title: l.title,
+          metadataJson: l.metadataJson,
           explanation: l.explanation,
         })),
       },

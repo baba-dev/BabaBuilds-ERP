@@ -15,6 +15,7 @@ export type SnapshotListItem = {
   totalProjectedInflows: Prisma.Decimal | string | number;
   totalProjectedOutflows: Prisma.Decimal | string | number;
   confidenceScore: number | null;
+  assumptionsJson?: unknown | null;
   generatedBy: string;
 };
 
@@ -43,6 +44,7 @@ export type SnapshotLineItem = {
   scenarioTag: CashFlowScenarioTag;
   classification: "ACTUAL" | "COMMITTED" | "EXPECTED" | "PREDICTED" | "MANUAL";
   title: string;
+  metadataJson?: unknown | null;
   explanation: string | null;
 };
 

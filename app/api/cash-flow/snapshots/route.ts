@@ -50,6 +50,7 @@ export async function GET(request: Request) {
       totalProjectedInflows: true,
       totalProjectedOutflows: true,
       confidenceScore: true,
+      assumptionsJson: true,
       generatedBy: true,
       createdAt: true,
     },
