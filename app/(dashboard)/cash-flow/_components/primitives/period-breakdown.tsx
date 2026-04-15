@@ -36,12 +36,14 @@ export function CashFlowPeriodBreakdown({
   currencyFormatter,
   defaultOpenPeriodId,
   className,
+  showTimingOverlay = true,
 }: {
   snapshot: SnapshotDetail;
   direction: "INFLOW" | "OUTFLOW";
   currencyFormatter: (n: number) => string;
   defaultOpenPeriodId?: string | null;
   className?: string;
+  showTimingOverlay?: boolean;
 }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
 
@@ -72,6 +74,20 @@ export function CashFlowPeriodBreakdown({
     return map;
   }, [snapshot]);
 
+  const overlayColors = useMemo(() => {
+    // Intent: consistent, restrained tokens that work in dark mode.
+    const committed = "bg-amber-500/80 dark:bg-amber-400/80";
+    const expected = "bg-zinc-400/70 dark:bg-zinc-500/60";
+    const predicted = "bg-zinc-300/80 dark:bg-zinc-600/50";
+    const actual = "bg-indigo-500/80 dark:bg-indigo-400/80";
+    const manual = "bg-emerald-500/75 dark:bg-emerald-400/70";
+    return { committed, expected, predicted, actual, manual };
+  }, []);
+
+  const overlayHelp = direction === "OUTFLOW"
+    ? "Timing overlay shows how much of this period’s outflow is committed vs projected. Use it to spot what can be reviewed or deferred."
+    : "Timing overlay shows how much of this period’s inflow is expected vs predicted vs actual. Use it to spot risk and collection focus.";
+
   return (
     <div className={cn("space-y-2", className)}>
       <div className="flex items-center justify-between">
@@ -80,6 +96,11 @@ export function CashFlowPeriodBreakdown({
           <CashFlowHelp label="Periods">
             Each period summarizes cash movement and risk level, with top drivers. Expand a period to see the largest line items.
           </CashFlowHelp>
+          {showTimingOverlay ? (
+            <CashFlowHelp label="Timing overlay">
+              {overlayHelp}
+            </CashFlowHelp>
+          ) : null}
         </div>
       </div>
 
@@ -89,6 +110,15 @@ export function CashFlowPeriodBreakdown({
         const isOpen = Boolean(open[p.id]);
         const projected = direction === "INFLOW" ? Number(p.projectedInflows ?? 0) : Number(p.projectedOutflows ?? 0);
         const actual = direction === "INFLOW" ? Number(p.actualInflows ?? 0) : Number(p.actualOutflows ?? 0);
+        const totalsByClass = all.reduce(
+          (acc, it) => {
+            const cls = it.classification;
+            acc[cls] = (acc[cls] ?? 0) + Number(it.amount ?? 0);
+            return acc;
+          },
+          {} as Record<SnapshotLineItem["classification"], number>,
+        );
+        const overlayTotal = Object.values(totalsByClass).reduce((a, b) => a + b, 0) || 0;
 
         return (
           <div key={p.id} className={cn("rounded-2xl border p-3 shadow-sm backdrop-blur-sm", periodTone(p.riskLevel))}>
@@ -96,6 +126,8 @@ export function CashFlowPeriodBreakdown({
               type="button"
               className="w-full text-left"
               onClick={() => setOpen((prev) => ({ ...prev, [p.id]: !prev[p.id] }))}
+              aria-expanded={isOpen}
+              aria-controls={`cashflow-period-${p.id}`}
             >
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
@@ -107,6 +139,51 @@ export function CashFlowPeriodBreakdown({
                     <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       Projected {money(projected, currencyFormatter)} · Actual {money(actual, currencyFormatter)}
                     </p>
+                    {showTimingOverlay && overlayTotal > 0 ? (
+                      <div className="mt-2">
+                        <div
+                          className="h-2 w-full overflow-hidden rounded-full bg-zinc-200/60 dark:bg-zinc-800/60"
+                          role="img"
+                          aria-label={`Timing overlay: ${Object.entries(totalsByClass)
+                            .filter(([, v]) => (v ?? 0) > 0)
+                            .map(([k, v]) => `${labelForClassification(k as any)} ${currencyFormatter(v ?? 0)}`)
+                            .join(", ")}`}
+                        >
+                          <div className="flex h-full w-full">
+                            {totalsByClass.COMMITTED ? (
+                              <div
+                                className={overlayColors.committed}
+                                style={{ width: `${(totalsByClass.COMMITTED / overlayTotal) * 100}%` }}
+                              />
+                            ) : null}
+                            {totalsByClass.EXPECTED ? (
+                              <div
+                                className={overlayColors.expected}
+                                style={{ width: `${(totalsByClass.EXPECTED / overlayTotal) * 100}%` }}
+                              />
+                            ) : null}
+                            {totalsByClass.PREDICTED ? (
+                              <div
+                                className={overlayColors.predicted}
+                                style={{ width: `${(totalsByClass.PREDICTED / overlayTotal) * 100}%` }}
+                              />
+                            ) : null}
+                            {totalsByClass.ACTUAL ? (
+                              <div
+                                className={overlayColors.actual}
+                                style={{ width: `${(totalsByClass.ACTUAL / overlayTotal) * 100}%` }}
+                              />
+                            ) : null}
+                            {totalsByClass.MANUAL ? (
+                              <div
+                                className={overlayColors.manual}
+                                style={{ width: `${(totalsByClass.MANUAL / overlayTotal) * 100}%` }}
+                              />
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -119,7 +196,7 @@ export function CashFlowPeriodBreakdown({
             </button>
 
             {isOpen ? (
-              <div className="mt-3 border-t border-zinc-200/40 dark:border-zinc-800/50 pt-3 space-y-2">
+              <div id={`cashflow-period-${p.id}`} className="mt-3 border-t border-zinc-200/40 dark:border-zinc-800/50 pt-3 space-y-2">
                 {drivers.length === 0 ? (
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">No drivers for this period.</p>
                 ) : (

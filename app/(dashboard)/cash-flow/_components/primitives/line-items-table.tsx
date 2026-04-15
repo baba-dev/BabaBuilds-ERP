@@ -41,6 +41,8 @@ export function CashFlowLineItemsTable({
   currencyFormatter,
   defaultLowConfidenceThreshold = 0.6,
   enableSourceLinks = true,
+  rowTone,
+  onPlanChange,
   className,
 }: {
   items: SnapshotLineItem[];
@@ -48,6 +50,8 @@ export function CashFlowLineItemsTable({
   currencyFormatter: (n: number) => string;
   defaultLowConfidenceThreshold?: number;
   enableSourceLinks?: boolean;
+  rowTone?: (item: SnapshotLineItem) => "default" | "muted" | "warning" | "danger" | "success";
+  onPlanChange?: (itemId: string, next: { status: "open" | "deferred" | "resolved" }) => void;
   className?: string;
 }) {
   const [query, setQuery] = useState("");
@@ -218,10 +222,21 @@ export function CashFlowLineItemsTable({
                 const amount = Number(i.amount ?? 0);
                 const tone = toneForVariance(amount >= 0 ? 1 : -1);
                 const href = enableSourceLinks ? sourceRecordHref(i) : null;
+                const planTone = rowTone?.(i) ?? "default";
+                const rowClass =
+                  planTone === "muted"
+                    ? "opacity-60"
+                    : planTone === "warning"
+                      ? "bg-amber-50/40 dark:bg-amber-950/10"
+                      : planTone === "danger"
+                        ? "bg-rose-50/40 dark:bg-rose-950/10"
+                        : planTone === "success"
+                          ? "bg-emerald-50/40 dark:bg-emerald-950/10"
+                          : "";
                 return (
                   <TableRow
                     key={i.id}
-                    className="cursor-pointer"
+                    className={cn("cursor-pointer", rowClass)}
                     onClick={() => setSelected(i)}
                     data-state={selected?.id === i.id ? "selected" : undefined}
                   >
@@ -264,6 +279,36 @@ export function CashFlowLineItemsTable({
                       <Badge variant="outline">{labelForClassification(i.classification)}</Badge>
                     </TableCell>
                     <TableCell className="text-right">
+                      {onPlanChange ? (
+                        <div className="inline-flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 text-zinc-500"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              onPlanChange(i.id, { status: "deferred" });
+                            }}
+                          >
+                            Defer
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 text-zinc-500"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              onPlanChange(i.id, { status: "resolved" });
+                            }}
+                          >
+                            Resolve
+                          </Button>
+                        </div>
+                      ) : null}
                       {href ? (
                         <Button
                           type="button"

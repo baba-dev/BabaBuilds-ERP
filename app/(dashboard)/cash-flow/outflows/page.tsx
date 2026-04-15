@@ -10,6 +10,7 @@ import { useCashFlowContextFromUrl, updateCashFlowContextInUrl } from "../_compo
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { Button } from "@/components/ui/button";
 import { useFormat } from "@/hooks/use-format";
+import { Textarea } from "@/components/ui/textarea";
 import { CashFlowNav } from "../_components/cash-flow-nav";
 import { fetchCashFlowSnapshotWithPeriods, refreshCashForecast } from "../_components/api";
 import type { CashFlowHorizonType, CashFlowScenarioTag, SnapshotDetail } from "../_components/types";
@@ -89,6 +90,23 @@ export default function CashFlowOutflowsPage() {
   const committed = useMemo(() => outflows.filter((i) => i.classification === "COMMITTED"), [outflows]);
   const expected = useMemo(() => outflows.filter((i) => i.classification === "EXPECTED" || i.classification === "PREDICTED"), [outflows]);
   const actual = useMemo(() => outflows.filter((i) => i.classification === "ACTUAL"), [outflows]);
+  const [plan, setPlan] = useState<Record<string, { status: "open" | "deferred" | "resolved"; note?: string }>>({});
+  const [plannerOpen, setPlannerOpen] = useState(false);
+  const [plannerItemId, setPlannerItemId] = useState<string | null>(null);
+  const [timingOverlay, setTimingOverlay] = useState<"none" | "deferred-only" | "hide-resolved">("none");
+
+  const visibleOutflows = useMemo(() => {
+    if (timingOverlay === "none") return outflows;
+    if (timingOverlay === "deferred-only") return outflows.filter((i) => plan[i.id]?.status === "deferred");
+    return outflows.filter((i) => plan[i.id]?.status !== "resolved");
+  }, [outflows, plan, timingOverlay]);
+
+  const plannerItem = useMemo(() => {
+    if (!plannerItemId) return null;
+    return outflows.find((i) => i.id === plannerItemId) ?? null;
+  }, [outflows, plannerItemId]);
+
+  const plannerState = useMemo(() => (plannerItemId ? plan[plannerItemId] ?? { status: "open" as const } : null), [plan, plannerItemId]);
 
   const nearTermRisk = useMemo(() => {
     const now = Date.now();
@@ -167,10 +185,64 @@ export default function CashFlowOutflowsPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div className="lg:col-span-2">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                    Overlay: mark items as deferred/resolved to simulate timing decisions (local only).
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={timingOverlay === "none" ? "secondary" : "outline"}
+                      className="h-8"
+                      onClick={() => setTimingOverlay("none")}
+                    >
+                      All
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={timingOverlay === "hide-resolved" ? "secondary" : "outline"}
+                      className="h-8"
+                      onClick={() => setTimingOverlay("hide-resolved")}
+                    >
+                      Hide resolved
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={timingOverlay === "deferred-only" ? "secondary" : "outline"}
+                      className="h-8"
+                      onClick={() => setTimingOverlay("deferred-only")}
+                    >
+                      Deferred only
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8"
+                      onClick={() => {
+                        setPlannerItemId(visibleOutflows[0]?.id ?? null);
+                        setPlannerOpen(true);
+                      }}
+                      disabled={visibleOutflows.length === 0}
+                    >
+                      Open planner
+                    </Button>
+                  </div>
+                </div>
                 <CashFlowLineItemsTable
-                  items={outflows}
+                  items={visibleOutflows}
                   directionLabel="Outflow drivers"
                   currencyFormatter={(n) => fCurrency(n)}
+                  rowTone={(item) => {
+                    const st = plan[item.id]?.status ?? "open";
+                    if (st === "resolved") return "success";
+                    if (st === "deferred") return "warning";
+                    return "default";
+                  }}
+                  onPlanChange={(itemId, next) => setPlan((prev) => ({ ...prev, [itemId]: { ...(prev[itemId] ?? { status: "open" }), status: next.status } }))}
                 />
               </div>
               <div className="space-y-4">
@@ -237,6 +309,76 @@ export default function CashFlowOutflowsPage() {
                 />
           </>
         )}
+      </div>
+
+      <div
+        className={`fixed inset-0 z-40 ${plannerOpen ? "" : "pointer-events-none opacity-0"} transition-opacity`}
+        aria-hidden={!plannerOpen}
+      >
+        <button
+          type="button"
+          className="absolute inset-0 bg-black/20 dark:bg-black/40"
+          onClick={() => setPlannerOpen(false)}
+          aria-label="Close planner"
+        />
+        <div className="absolute right-0 top-0 h-full w-full sm:w-[420px] border-l border-zinc-200/60 dark:border-zinc-800/60 bg-white/80 dark:bg-zinc-950/70 backdrop-blur-xl p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Timing planner</div>
+              <div className="mt-1 text-sm font-black tracking-tight text-zinc-900 dark:text-zinc-100 truncate">
+                {plannerItem?.title ?? "Select an item"}
+              </div>
+              {plannerItem ? (
+                <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  {plannerItem.sourceType} · Expected {new Date(plannerItem.expectedDate).toLocaleDateString()} · {fCurrency(Number(plannerItem.amount ?? 0))}
+                </div>
+              ) : null}
+            </div>
+            <Button size="sm" variant="ghost" className="h-8 text-zinc-500" onClick={() => setPlannerOpen(false)}>
+              Close
+            </Button>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {(["open", "deferred", "resolved"] as const).map((s) => (
+                <Button
+                  key={s}
+                  type="button"
+                  size="sm"
+                  variant={plannerState?.status === s ? "secondary" : "outline"}
+                  className="h-8"
+                  disabled={!plannerItemId}
+                  onClick={() => {
+                    if (!plannerItemId) return;
+                    setPlan((prev) => ({ ...prev, [plannerItemId]: { ...(prev[plannerItemId] ?? { status: "open" }), status: s } }));
+                  }}
+                >
+                  {s === "open" ? "Open" : s === "deferred" ? "Deferred" : "Resolved"}
+                </Button>
+              ))}
+            </div>
+
+            <div>
+              <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Note</div>
+              <Textarea
+                value={plannerState?.note ?? ""}
+                onChange={(e) => {
+                  if (!plannerItemId) return;
+                  const note = e.target.value;
+                  setPlan((prev) => ({ ...prev, [plannerItemId]: { ...(prev[plannerItemId] ?? { status: "open" }), note } }));
+                }}
+                placeholder="Why defer/resolve? Capture the decision so you can revisit later."
+                className="mt-2 min-h-[96px]"
+                disabled={!plannerItemId}
+              />
+            </div>
+
+            <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 p-3 text-sm text-zinc-600 dark:text-zinc-300">
+              This planner is a lightweight overlay to help you reason about timing. It doesn’t change the forecast engine yet—use it to identify what to renegotiate, phase, or delay before the runway window.
+            </div>
+          </div>
+        </div>
       </div>
     </DashboardPageShell>
   );

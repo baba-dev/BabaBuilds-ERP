@@ -157,6 +157,25 @@ export default function CashFlowVariancePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
+                <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-950/10 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">How to read this</p>
+                      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                        “Projected” is the snapshot model output for the period. “Actual” comes from observed cash events. Net variance is \(actual\_net - projected\_net\).
+                        Use drilldowns to see whether the gap is collections timing, missed inflows, or early/extra spend.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button size="sm" variant="outline" asChild className="h-8">
+                        <Link href={`/cash-flow/inflows?${q}`}>Open inflows</Link>
+                      </Button>
+                      <Button size="sm" variant="outline" asChild className="h-8">
+                        <Link href={`/cash-flow/outflows?${q}`}>Open outflows</Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
                 {!variance ? (
                   <p className="text-sm text-zinc-500">No variance data yet. Refresh to generate a snapshot.</p>
                 ) : variance.periods.length === 0 ? (
@@ -177,6 +196,8 @@ export default function CashFlowVariancePage() {
                           type="button"
                           className="w-full text-left"
                           onClick={() => setOpen((prev) => ({ ...prev, [p.id]: !prev[p.id] }))}
+                          aria-expanded={isOpen}
+                          aria-controls={`variance-period-${p.id}`}
                         >
                           <div className="flex items-center justify-between gap-4">
                             <div className="min-w-0">
@@ -219,7 +240,8 @@ export default function CashFlowVariancePage() {
                         </button>
 
                         {isOpen ? (
-                          <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 border-t border-zinc-200/40 dark:border-zinc-800/50 pt-3">
+                          <div id={`variance-period-${p.id}`} className="mt-3 space-y-3 border-t border-zinc-200/40 dark:border-zinc-800/50 pt-3">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <div className="rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 p-3">
                               <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Projected</div>
                               <div className="mt-1 text-sm font-semibold tabular-nums">{fCurrency(projectedNet)}</div>
@@ -231,6 +253,23 @@ export default function CashFlowVariancePage() {
                             <div className="rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 p-3">
                               <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Net variance</div>
                               <div className="mt-1 text-sm font-semibold tabular-nums">{fCurrency(varianceNet)}</div>
+                            </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Button size="sm" variant="outline" asChild className="h-8">
+                                <Link href={`/cash-flow/inflows?${q}&periodId=${encodeURIComponent(p.id)}`}>
+                                  Drill into inflows
+                                </Link>
+                              </Button>
+                              <Button size="sm" variant="outline" asChild className="h-8">
+                                <Link href={`/cash-flow/outflows?${q}&periodId=${encodeURIComponent(p.id)}`}>
+                                  Drill into outflows
+                                </Link>
+                              </Button>
+                              <Button size="sm" variant="ghost" asChild className="h-8 text-zinc-500">
+                                <Link href={`/cash-flow/alerts?${q}`}>Check alerts</Link>
+                              </Button>
                             </div>
                           </div>
                         ) : null}
