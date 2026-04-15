@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useSyncExternalStore } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useTheme } from "next-themes";
 import { 
   MessageSquare, X, Send, Bot, User, Loader2, 
   Trash2, Maximize2, Minimize2, Sparkles, ArrowRight, BookOpen
@@ -46,6 +47,7 @@ export default function AIChatbot() {
   const router = useRouter();
   const pathname = usePathname();
   const { data: session, status } = useSession(); 
+  const { setTheme } = useTheme();
   
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -60,6 +62,7 @@ export default function AIChatbot() {
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
   const sendInFlightRef = useRef(false);
+  const lastAutoSubmitRequestIdRef = useRef<number | null>(null);
   const aiChatStoreState = useSyncExternalStore(subscribeToAIChatStore, getAIChatStoreSnapshot, getAIChatStoreSnapshot);
 
   const workspaceId = (session as any)?.workspaceId;
@@ -161,6 +164,16 @@ export default function AIChatbot() {
           setIsExpanded(false); 
         }
 
+        if (data.action && data.action.type === 'SET_THEME') {
+          const next = String(data.action.theme || "").toLowerCase();
+          if (next === "light" || next === "dark" || next === "system") {
+            setTheme(next);
+            actionMsg = `Theme updated to ${next}.`;
+          } else {
+            actionMsg = "Theme change requested, but the requested mode was invalid.";
+          }
+        }
+
         setMessages(prev => [...prev, { 
           role: 'assistant', 
           content: data.reply,
@@ -173,7 +186,7 @@ export default function AIChatbot() {
       sendInFlightRef.current = false;
       setIsLoading(false);
     }
-  }, [isLoading, pathname, router]);
+  }, [isLoading, pathname, router, setTheme]);
 
   useEffect(() => {
     if (!aiChatStoreState.requestId) return;
@@ -182,6 +195,8 @@ export default function AIChatbot() {
       setIsOpen(true);
       const q = aiChatStoreState.payload?.query ?? "";
       if (aiChatStoreState.payload?.autoSubmit && q.trim()) {
+        if (lastAutoSubmitRequestIdRef.current === aiChatStoreState.requestId) return;
+        lastAutoSubmitRequestIdRef.current = aiChatStoreState.requestId;
         queueMicrotask(() => {
           void sendMessage(q.trim());
         });
