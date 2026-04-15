@@ -18,7 +18,7 @@ const SAMPLE_PROMPTS = [
 ];
 
 const THEME_CHIP_QUERY =
-  "Change my UI between light mode and dark mode. I can also do this manually: open Settings → Profile, in the Regional & Display section use the UI Theme dropdown (/settings/profile).";
+  "Switch my UI theme to dark mode (or light mode). You can do this instantly, or manually via Settings → Profile → Regional & Display → UI Theme (/settings/profile).";
 
 const SUGGESTION_CHIPS = [
   { label: "Overdue receivables", icon: <Wallet className="w-3 h-3" /> },

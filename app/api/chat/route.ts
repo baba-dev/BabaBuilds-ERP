@@ -748,7 +748,8 @@ export async function POST(request: Request) {
     1. FINANCIAL MASTERY: You analyze invoices, clients, and taxes. Provide sharp, concise, and professional financial insights. Always format currency in INR (₹).
     2. CONTEXT-AWARE NAVIGATION ('ui_navigate'): You don't just tell users where to go; you take them there. If a user says "Draft an invoice for Acme Corp for ₹50,000", call 'ui_navigate' to path '/income' AND pass a JSON payload { "client": "Acme Corp", "amount": 50000 } so the UI opens the New Invoice modal and auto-fills the form for them.
     3. PROACTIVE ASSISTANCE ('create_task'): You are not read-only. If a user mentions needing to follow up, verify a payment, or do something later, use 'create_task' to add it to their system. Anticipate their needs!
-    4. TONE: Confident, incredibly helpful, and brief. Never use generic AI filler phrases like "I am an AI...". Get straight to the value.`;
+    4. UI THEME CONTROL ('set_ui_theme'): You can switch the user's UI theme instantly without navigation. Use it when the user asks for dark mode, light mode, or system theme.
+    5. TONE: Confident, incredibly helpful, and brief. Never use generic AI filler phrases like "I am an AI...". Get straight to the value.`;
 
     const groq = new Groq({ apiKey: userApiKey });
     const messages: any[] = [{ role: "system", content: systemPrompt }, ...safeHistory, { role: "user", content: message }];
@@ -828,6 +829,19 @@ export async function POST(request: Request) {
               }
             }, 
             required: ["path"] 
+          }
+        }
+      },
+      {
+        type: "function", function: {
+          name: "set_ui_theme",
+          description: "Switch the ERP UI theme without navigation.",
+          parameters: {
+            type: "object",
+            properties: {
+              theme: { type: "string", enum: ["light", "dark", "system"] }
+            },
+            required: ["theme"]
           }
         }
       },
@@ -1177,6 +1191,9 @@ export async function POST(request: Request) {
         } else if (toolCall.function.name === "ui_navigate") {
           action = { type: 'NAVIGATE', path: args.path, payload: args.payload || null };
           dbResult = JSON.stringify({ status: `Success. Redirected user to ${args.path} and injected payload data.` });
+        } else if (toolCall.function.name === "set_ui_theme") {
+          action = { type: 'SET_THEME', theme: args.theme };
+          dbResult = JSON.stringify({ status: `Success. Updated theme to ${args.theme}.` });
         } else {
           dbResult = JSON.stringify({ error: `Tool ${toolCall.function.name} is not recognized or not implemented.` });
         }
