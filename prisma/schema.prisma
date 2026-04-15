@@ -245,6 +245,7 @@ model Workspace {
   cashForecastSnapshots      CashForecastSnapshot[]
   cashForecastAssumptions    CashForecastAssumption[]
   cashForecastAdjustments    CashForecastManualAdjustment[]
+  clientPaymentBehaviors     ClientPaymentBehavior[]
 
   // IMS Relations
 
@@ -525,9 +526,32 @@ model Client {
   invoices  Invoice[]
   proposals Proposal[]
   retainers Retainer[]
+  paymentBehavior ClientPaymentBehavior?
 
   @@unique([name, workspaceId])
   @@index([workspaceId])
+}
+
+model ClientPaymentBehavior {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  clientId String  @unique
+  client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  avgDaysToPay        Float?
+  medianDaysToPay     Float?
+  onTimeRate          Float?
+  lateRate            Float?
+  partialPaymentRate  Float?
+  sampleInvoicesCount Int      @default(0)
+  lastComputedAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, lastComputedAt(sort: Desc)])
 }
 
 model Invoice {
