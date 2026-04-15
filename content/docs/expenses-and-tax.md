@@ -2,6 +2,12 @@
 title: "Tracking Expenses & Tax Savings"
 description: "How to log business expenses, track tax-saving investments (80C/80D), and use BabaBot to estimate your tax liability."
 order: 7
+category: "Tax & Compliance"
+tags: ["expenses", "tax", "80c", "80d", "gst", "deductions", "bababot"]
+icon: "shield-check"
+estimatedMinutes: 7
+isFeatured: false
+dateModified: "2026-04-14"
 ---
 
 # Tracking Expenses & Tax Savings
@@ -12,9 +18,17 @@ BabaBuilds ERP helps you track your **business expenses** and **tax-saving inves
 
 ## Logging Expenses
 
-1. Navigate to **Expenses & Margins** in the sidebar
-2. Click **Add Expense**
-3. Fill in:
+<Steps>
+  <Step title="Open Expenses & Margins">
+    Navigate to <strong>Expenses & Margins</strong> in the sidebar.
+  </Step>
+  <Step title="Create an expense">
+    Click <strong>Add Expense</strong>.
+  </Step>
+  <Step title="Fill the fields and save">
+    Use the guide below for what each field means.
+  </Step>
+</Steps>
 
 | Field | Description |
 |---|---|
@@ -35,6 +49,10 @@ You can log expenses by voice-style commands:
 - *"Show me my expenses by category"*
 
 BabaBot will categorize and save it automatically.
+
+<Callout type="tip">
+  If you want more accurate tax estimates, be consistent with categories. “Software”, “Travel”, and “Professional Services” are the biggest sources of reporting clarity.
+</Callout>
 
 ---
 
@@ -84,6 +102,12 @@ BabaBot uses this formula:
 Taxable Income = Revenue − Expenses − (80C + 80D deductions)
 Estimated Tax  = Taxable Income × 30%
 ```
+
+<HelpImage
+  src="/help/diagrams/tax_estimate_model.svg"
+  alt="Tax estimate model showing revenue, expenses, deductions, taxable income, and estimated tax"
+  caption="A simple model of how the ERP estimates taxable income (you can always override with your CA’s guidance)."
+/>
 
 ---
 

@@ -49,9 +49,8 @@ export function DashboardFinancialPulse({
 }) {
   const t = useTranslations("Dashboard");
   const tr = (key: string, fallback: string, values?: any) => {
-    const translation = t(key as any, values);
-    if (translation === key || translation === `Dashboard.${key}`) return fallback;
-    return translation;
+    if (!t.has(key as any)) return fallback;
+    return t(key as any, values);
   };
 
   const {

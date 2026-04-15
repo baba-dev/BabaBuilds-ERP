@@ -2,11 +2,20 @@
 title: "Connecting Razorpay & Stripe"
 description: "PRO feature: How to connect your payment gateway and start collecting online payments directly from your invoice PDFs."
 order: 5
+category: "Payments"
+tags:
+  - "Stripe"
+  - "Razorpay"
+  - "Payments"
+  - "Invoice payments"
+icon: "CreditCard"
+estimatedMinutes: 8
+isFeatured: true
 ---
 
 # Connecting Razorpay & Stripe
 
-> **This is a PRO feature.** Upgrade your plan to enable payment gateway integration.
+<Callout type="warn">This is a PRO feature. Upgrade your plan to enable payment gateway integration.</Callout>
 
 Once connected, BabaBuilds ERP automatically embeds a **clickable payment link** in every invoice PDF you generate. Your clients can pay directly from the PDF — no extra steps.
 
@@ -25,13 +34,17 @@ Once connected, BabaBuilds ERP automatically embeds a **clickable payment link**
 
 ## Connecting Razorpay (Indian Users)
 
-1. Log in to your [Razorpay Dashboard](https://dashboard.razorpay.com/)
-2. Go to **Settings → API Keys → Generate Key**
-3. Copy your **Key ID** and **Key Secret**
-4. In BabaBuilds ERP, go to **Settings → Payment Gateway**
-5. Select the **Razorpay** tab
-6. Enter your **Key ID** and **Key Secret**
-7. Click **Save Configuration**
+<Steps>
+  <Step title="Get your Razorpay API keys">
+    1. Log in to your [Razorpay Dashboard](https://dashboard.razorpay.com/)\n    2. Go to **Settings → API Keys → Generate Key**\n    3. Copy your **Key ID** and **Key Secret**
+  </Step>
+  <Step title="Connect Razorpay inside BabaBuilds ERP">
+    1. Go to **Settings → Payment Gateway**\n    2. Select the **Razorpay** tab\n    3. Enter your **Key ID** and **Key Secret**\n    4. Click **Save Configuration**
+  </Step>
+  <Step title="Verify the result">
+    Generate a test invoice and confirm a **Pay securely online** link appears in the PDF.
+  </Step>
+</Steps>
 
 Your Key Secret is encrypted with **AES-256-GCM** before storage and is never visible again after saving. Only the last 4 characters of the Key ID are shown.
 
@@ -39,13 +52,17 @@ Your Key Secret is encrypted with **AES-256-GCM** before storage and is never vi
 
 ## Connecting Stripe (Global Users)
 
-1. Log in to your [Stripe Dashboard](https://dashboard.stripe.com/)
-2. Go to **Developers → API Keys**
-3. Copy your **Publishable Key** (starts with `pk_live_`) and **Secret Key** (starts with `sk_live_`)
-4. In BabaBuilds ERP, go to **Settings → Payment Gateway**
-5. Select the **Stripe** tab
-6. Enter both keys
-7. Click **Save Configuration**
+<Steps>
+  <Step title="Get your Stripe API keys">
+    1. Log in to your [Stripe Dashboard](https://dashboard.stripe.com/)\n    2. Go to **Developers → API Keys**\n    3. Copy your **Publishable Key** (starts with `pk_`) and **Secret Key** (starts with `sk_`)
+  </Step>
+  <Step title="Connect Stripe inside BabaBuilds ERP">
+    1. Go to **Settings → Payment Gateway**\n    2. Select the **Stripe** tab\n    3. Enter both keys\n    4. Click **Save Configuration**
+  </Step>
+  <Step title="Verify the result">
+    Generate a test invoice and confirm a payment link appears in the PDF.\n\n    <Callout type="tip">Use test keys in a non-production Stripe account first.</Callout>
+  </Step>
+</Steps>
 
 ---
 
@@ -62,6 +79,8 @@ After connecting a gateway, every new invoice PDF will contain a line like:
 > `Pay securely online: https://rzp.io/i/xxxxxx`
 
 This text is a real, clickable hyperlink in PDF viewers. Clients can click it to pay instantly.
+
+<HelpImage src="/help/diagrams/invoice_workflow.svg" alt="Invoice workflow diagram" caption="Invoice workflow: draft → generate PDF → send → get paid → reconcile." />
 
 ---
 

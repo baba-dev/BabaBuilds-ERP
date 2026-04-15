@@ -2,6 +2,8 @@ import {
   Archive,
   Box,
   Briefcase,
+  CircleHelp,
+  HandCoins,
   FileSignature,
   Landmark,
   LayoutDashboard,
@@ -32,10 +34,12 @@ export const appNavItems: AppNavItem[] = [
   { key: "quotes_proposals", path: "/proposals", icon: FileSignature },
   { key: "retainers_hub", path: "/retainers", icon: Box },
   { key: "expenses_margins", path: "/expenses", icon: Receipt },
+  { key: "cash_flow", path: "/cash-flow/overview", icon: HandCoins, badge: "New" },
   { key: "savings_tax", path: "/tax", icon: ShieldCheck },
   { key: "ai_reconciliation", path: "/reconciliation", icon: Sparkles, badge: "AI" },
   { key: "invoices_and_earnings", path: "/income", icon: ReceiptText },
   { key: "ca_compliance", path: "/ca-portal", icon: Landmark },
+  { key: "help_center", path: "/dashboard/help", icon: CircleHelp },
 ];
 
 export function filterAppNavItems(items: AppNavItem[]) {

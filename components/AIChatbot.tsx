@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect, useSyncExternalStore } from "react";
+import { useState, useRef, useEffect, useCallback, useSyncExternalStore } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useTheme } from "next-themes";
 import { 
   MessageSquare, X, Send, Bot, User, Loader2, 
   Trash2, Maximize2, Minimize2, Sparkles, ArrowRight, BookOpen
@@ -42,21 +43,73 @@ const DEFAULT_GREETING = {
   content: "Hello! I am your Executive AI Assistant. I'm connected to your ERP. How can I help you today?" 
 };
 
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  actionExecuted?: string;
+  retryText?: string;
+};
+
+function getFriendlyChatError(payload: any, status: number): { content: string; canRetry: boolean } {
+  const code = String(payload?.code || "").toUpperCase();
+  const raw = typeof payload?.error === "string" ? payload.error : "";
+
+  if (code === "GROQ_API_KEY_MISSING" || status === 400) {
+    return {
+      content:
+        raw ||
+        "AI Assistant needs a Groq API key. Add it in **Settings → AI Assistant** (`/settings`) and try again.",
+      canRetry: false,
+    };
+  }
+
+  if (code === "GROQ_API_KEY_INVALID") {
+    return {
+      content:
+        raw ||
+        "Your Groq API key looks invalid/expired. Update it in **Settings → AI Assistant** (`/settings`).",
+      canRetry: false,
+    };
+  }
+
+  if (code === "GROQ_RATE_LIMITED" || status === 429) {
+    return { content: raw || "The AI provider is rate-limiting requests. Please wait a moment and retry.", canRetry: true };
+  }
+
+  if (code === "GROQ_TIMEOUT" || status === 504) {
+    return { content: raw || "The AI request timed out. Please retry.", canRetry: true };
+  }
+
+  if (status >= 500) {
+    return {
+      content: raw || "The AI service had a temporary problem. Please retry in a moment.",
+      canRetry: true,
+    };
+  }
+
+  return { content: raw || "Something went wrong. Please try again.", canRetry: true };
+}
+
 export default function AIChatbot() {
   const router = useRouter();
   const pathname = usePathname();
   const { data: session, status } = useSession(); 
+  const { setTheme } = useTheme();
   
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<{role: 'user' | 'assistant', content: string, actionExecuted?: string}[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+  const sendInFlightRef = useRef(false);
+  const lastAutoSubmitRequestIdRef = useRef<number | null>(null);
   const aiChatStoreState = useSyncExternalStore(subscribeToAIChatStore, getAIChatStoreSnapshot, getAIChatStoreSnapshot);
 
   const workspaceId = (session as any)?.workspaceId;
@@ -97,18 +150,6 @@ export default function AIChatbot() {
     }
   }, [isOpen, isLoading, isExpanded]);
 
-  useEffect(() => {
-    if (!aiChatStoreState.requestId) return;
-
-    if (aiChatStoreState.isOpen) {
-      setIsOpen(true);
-      setInput(aiChatStoreState.payload?.query ?? "");
-    } else {
-      setIsOpen(false);
-      setTimeout(() => setIsExpanded(false), 300);
-    }
-  }, [aiChatStoreState]);
-
   const clearChat = () => {
     setMessages([DEFAULT_GREETING]);
     if (storageKey) localStorage.removeItem(storageKey);
@@ -121,8 +162,9 @@ export default function AIChatbot() {
     setTimeout(() => setIsExpanded(false), 300);
   };
 
-  const sendMessage = async (text: string) => {
-    if (!text.trim() || isLoading) return;
+  const sendMessage = useCallback(async (text: string) => {
+    if (!text.trim() || isLoading || sendInFlightRef.current) return;
+    sendInFlightRef.current = true;
 
     setInput(""); 
     setMessages(prev => [...prev, { role: 'user', content: text }]);
@@ -136,7 +178,7 @@ export default function AIChatbot() {
           message: text, 
           // Bug 8 fix: filter by content instead of slicing by position (slice(1) silently
           // drops the first real message if localStorage didn't start with the greeting).
-          history: messages.filter(
+          history: messagesRef.current.filter(
             m => !(m.role === 'assistant' && m.content === DEFAULT_GREETING.content)
           ).slice(-10),
           context: {
@@ -149,7 +191,15 @@ export default function AIChatbot() {
       const data = await res.json();
       
       if (!res.ok) {
-        setMessages(prev => [...prev, { role: 'assistant', content: `**Error:** ${data.error}` }]);
+        const friendly = getFriendlyChatError(data, res.status);
+        setMessages(prev => [
+          ...prev,
+          {
+            role: "assistant",
+            content: `**Error:** ${friendly.content}`,
+            retryText: friendly.canRetry ? text : undefined,
+          },
+        ]);
       } else {
         let actionMsg = "";
 
@@ -169,6 +219,16 @@ export default function AIChatbot() {
           setIsExpanded(false); 
         }
 
+        if (data.action && data.action.type === 'SET_THEME') {
+          const next = String(data.action.theme || "").toLowerCase();
+          if (next === "light" || next === "dark" || next === "system") {
+            setTheme(next);
+            actionMsg = `Theme updated to ${next}.`;
+          } else {
+            actionMsg = "Theme change requested, but the requested mode was invalid.";
+          }
+        }
+
         setMessages(prev => [...prev, { 
           role: 'assistant', 
           content: data.reply,
@@ -176,11 +236,40 @@ export default function AIChatbot() {
         }]);
       }
     } catch (err) {
-      setMessages(prev => [...prev, { role: 'assistant', content: "**Network error occurred.** Please try again." }]);
+      setMessages(prev => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "**Network error occurred.** Please try again.",
+          retryText: text,
+        },
+      ]);
     } finally {
+      sendInFlightRef.current = false;
       setIsLoading(false);
     }
-  };
+  }, [isLoading, pathname, router, setTheme]);
+
+  useEffect(() => {
+    if (!aiChatStoreState.requestId) return;
+
+    if (aiChatStoreState.isOpen) {
+      setIsOpen(true);
+      const q = aiChatStoreState.payload?.query ?? "";
+      if (aiChatStoreState.payload?.autoSubmit && q.trim()) {
+        if (lastAutoSubmitRequestIdRef.current === aiChatStoreState.requestId) return;
+        lastAutoSubmitRequestIdRef.current = aiChatStoreState.requestId;
+        queueMicrotask(() => {
+          void sendMessage(q.trim());
+        });
+      } else {
+        setInput(q);
+      }
+    } else {
+      setIsOpen(false);
+      setTimeout(() => setIsExpanded(false), 300);
+    }
+  }, [aiChatStoreState, sendMessage]);
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -258,6 +347,20 @@ export default function AIChatbot() {
                   <div className="flex items-center gap-2 mt-1 px-2 py-1.5 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-900/50 rounded-lg text-xs font-medium text-purple-700 dark:text-purple-300 animate-in fade-in slide-in-from-top-2">
                     <ArrowRight className="w-3 h-3" />
                     {msg.actionExecuted}
+                  </div>
+                )}
+
+                {msg.retryText && !isLoading && (
+                  <div className="ml-0 mt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => sendMessage(msg.retryText!)}
+                      className="h-8 text-xs border-purple-200 dark:border-purple-900/50 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                    >
+                      Retry
+                    </Button>
                   </div>
                 )}
               </div>

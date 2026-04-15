@@ -147,6 +147,7 @@
   "Sidebar": {
     "dashboard": "Panel principal",
     "service_catalog": "Catálogo de servicios",
+    "cash_flow": "Flujo de caja",
     "shop": "Shop",
     "inventory": "Inventario",
     "client_crm": "CRM de clientes",
@@ -300,6 +301,7 @@
     "table_invoice": "Factura",
     "table_client": "Cliente",
     "table_status": "Estado",
+    "table_amount": "Importe",
     "table_billed": "Facturado ({currency})",
     "table_actions": "Acciones",
     "status_paid": "Pagado",

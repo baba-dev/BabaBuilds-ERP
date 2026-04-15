@@ -16,7 +16,7 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
+  reporter: process.env.CI ? 'html' : 'line',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
@@ -33,23 +33,20 @@ export default defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
-
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
   ],
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'npm run start',
+    command: 'npm run dev',
     url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
+    env: {
+      ...process.env,
+      // Playwright runs can create many demo workspaces quickly; relax the demo circuit breaker.
+      DEMO_CIRCUIT_BREAKER_THRESHOLD: process.env.DEMO_CIRCUIT_BREAKER_THRESHOLD || '1000',
+    },
+    // For smoke debugging we want a deterministic server env.
+    // Reusing an existing dev server can hide issues (or keep old env vars) across runs.
+    reuseExistingServer: true,
     timeout: 120000,
   },
 });

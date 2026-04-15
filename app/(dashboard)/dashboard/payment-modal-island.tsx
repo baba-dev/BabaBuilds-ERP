@@ -56,7 +56,7 @@ export function PaymentModalIsland({
 
         <form onSubmit={onSubmit} className="space-y-4 p-6">
           <div className="space-y-2">
-            <Label htmlFor="amount-received">{t("actual_received", "Amount received")} ({currency})</Label>
+            <Label htmlFor="amount-received">{t("actual_received", "Amount received", { currency })}</Label>
             <div className="relative">
               <span className="absolute left-3 top-2.5 text-zinc-500 text-sm">{currencySymbol}</span>
               <Input id="amount-received" type="number" step="0.01" className="pl-8 h-11 bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800" value={amountReceived} onChange={(e) => setAmountReceived(e.target.value)} required />

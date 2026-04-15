@@ -281,30 +281,32 @@ export default function AuthModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-zinc-950/80 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-300">
-      <div className="w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden animate-in sm:zoom-in-95 slide-in-from-bottom duration-300 max-h-[90vh] sm:max-h-none overflow-y-auto">
-        <div className="p-6 sm:p-8 text-center space-y-4 border-b border-zinc-800/50 bg-zinc-900/20">
+    <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-background/65 backdrop-blur-md p-0 sm:p-4 animate-in fade-in duration-300">
+      <div className="w-full max-w-md bg-card text-card-foreground border border-border rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden animate-in sm:zoom-in-95 slide-in-from-bottom duration-300 max-h-[90vh] sm:max-h-none overflow-y-auto">
+        <div className="p-6 sm:p-8 text-center space-y-4 border-b border-border bg-background/40">
           <div className="mx-auto w-12 h-12 bg-indigo-600 rounded-xl shadow-inner shadow-indigo-400/20 flex items-center justify-center">
             <Box className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h2 className="text-2xl font-black text-white tracking-tight">{t("title")}</h2>
-            <p className="text-sm text-zinc-400 mt-1">{t("subtitle")}</p>
+            <h2 className="text-2xl font-black tracking-tight">{t("title")}</h2>
+            <p className="text-sm text-muted-foreground mt-1">{t("subtitle")}</p>
           </div>
         </div>
 
         <div className="p-6 sm:p-8 space-y-5">
           <form onSubmit={handleEmailSignIn} className="space-y-3">
             {emailStatus === "success" && (
-              <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 text-center space-y-2 animate-in fade-in">
-                <CheckCircle2 className="w-8 h-8 text-indigo-400 mx-auto" />
-                <p className="text-sm font-medium text-indigo-300">{t("emailSent.title")}</p>
-                <p className="text-xs text-zinc-400">{t("emailSent.description", { email })}</p>
+              <div className="bg-indigo-500/10 border border-indigo-500/25 rounded-xl p-4 text-center space-y-2 animate-in fade-in">
+                <CheckCircle2 className="w-8 h-8 text-indigo-500 mx-auto" />
+                <p className="text-sm font-medium text-indigo-600 dark:text-indigo-300">
+                  {t("emailSent.title")}
+                </p>
+                <p className="text-xs text-muted-foreground">{t("emailSent.description", { email })}</p>
               </div>
             )}
 
             <div className="relative">
-              <Mail className="absolute left-3 top-3 w-5 h-5 text-zinc-500" />
+              <Mail className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
               <input
                 ref={emailInputRef}
                 type="email"
@@ -323,18 +325,18 @@ export default function AuthModal({
                   }
                 }}
                 onBlur={verifyMagicLinkPolicy}
-                className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-xl pl-10 pr-4 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 transition-all placeholder:text-zinc-600"
+                className="w-full bg-background border border-input text-foreground rounded-xl pl-10 pr-4 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all placeholder:text-muted-foreground/70"
               />
             </div>
 
             {magicLinkPolicyMessage && (
-              <p className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+              <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/25 rounded-lg px-3 py-2">
                 {magicLinkPolicyMessage}
               </p>
             )}
 
             {cooldownMessage && (
-              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200 flex items-start gap-2">
+              <div className="rounded-lg border border-amber-500/35 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
                 <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0" />
                 <div>
                   <p className="font-semibold">{cooldownMessage}</p>
@@ -355,7 +357,7 @@ export default function AuthModal({
                 !isMagicLinkAllowed ||
                 isPolicyChecking
               }
-              className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 disabled:opacity-50 disabled:pointer-events-none disabled:hover:bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm active:scale-95"
+              className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 disabled:pointer-events-none disabled:hover:bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm active:scale-95"
             >
               {isLoading || isPolicyChecking ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -374,27 +376,27 @@ export default function AuthModal({
                   emailStatus === "error"
                     ? "bg-red-500/10 border-red-500/30"
                     : emailStatus === "loading"
-                      ? "bg-zinc-900 border-zinc-700"
+                      ? "bg-muted border-border"
                       : "bg-indigo-500/10 border-indigo-500/20"
                 }`}
               >
                 {emailStatus === "loading" && (
-                  <p className="text-xs text-zinc-300">{t("status.sending")}</p>
+                  <p className="text-xs text-muted-foreground">{t("status.sending")}</p>
                 )}
 
                 {emailStatus === "success" && (
                   <>
-                    <p className="text-xs text-indigo-300">{t("status.sent")}</p>
+                    <p className="text-xs text-indigo-600 dark:text-indigo-300">{t("status.sent")}</p>
                     <div className="flex items-center justify-between gap-3">
                       <button
                         type="button"
                         onClick={handleResend}
                         disabled={isLoading || resendCooldown > 0}
-                        className="text-xs text-indigo-200 hover:text-white disabled:text-zinc-500 disabled:cursor-not-allowed"
+                        className="text-xs text-indigo-600 hover:text-indigo-700 dark:text-indigo-200 dark:hover:text-white disabled:text-muted-foreground disabled:cursor-not-allowed"
                       >
                         {t("actions.resendLink")}
                       </button>
-                      <p className="text-[11px] text-zinc-400">
+                      <p className="text-[11px] text-muted-foreground">
                         {resendCooldown > 0
                           ? t("status.resendCooldown", { seconds: resendCooldown })
                           : t("status.resendReady")}
@@ -405,23 +407,23 @@ export default function AuthModal({
 
                 {emailStatus === "error" && (
                   <>
-                    <p className="text-xs font-medium text-red-300">
+                    <p className="text-xs font-medium text-red-700 dark:text-red-300">
                       {cooldownMessage
                         ? cooldownMessage
                         : t(`errors.${emailErrorCase || "GENERIC"}`)}
                     </p>
-                    <p className="text-[11px] text-zinc-400">{t("status.support")}</p>
+                    <p className="text-[11px] text-muted-foreground">{t("status.support")}</p>
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
                         onClick={handleResend}
-                        className="text-xs text-red-200 hover:text-white"
+                        className="text-xs text-red-700 hover:text-red-800 dark:text-red-200 dark:hover:text-white"
                       >
                         {t("actions.retry")}
                       </button>
                       <a
                         href="mailto:support@bababuilds.com"
-                        className="text-xs text-zinc-300 hover:text-white underline"
+                        className="text-xs text-muted-foreground hover:text-foreground underline"
                       >
                         {t("actions.contactSupport")}
                       </a>
@@ -433,17 +435,17 @@ export default function AuthModal({
           </form>
 
           <div className="relative flex items-center py-1">
-            <div className="flex-grow border-t border-zinc-800"></div>
-            <span className="flex-shrink-0 mx-4 text-xs font-medium text-zinc-600 uppercase tracking-widest">
+            <div className="flex-grow border-t border-border"></div>
+            <span className="flex-shrink-0 mx-4 text-xs font-medium text-muted-foreground uppercase tracking-widest">
               {t("or")}
             </span>
-            <div className="flex-grow border-t border-zinc-800"></div>
+            <div className="flex-grow border-t border-border"></div>
           </div>
 
           <button
             onClick={() => signIn("google", { callbackUrl })}
             disabled={isLoading || isDemoLoading}
-            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 text-zinc-900 px-4 py-2.5 rounded-xl font-bold transition-colors shadow-sm active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+            className="w-full flex items-center justify-center gap-3 bg-background hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-foreground px-4 py-2.5 rounded-xl font-bold transition-colors shadow-sm active:scale-95 disabled:opacity-50 disabled:pointer-events-none border border-input"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -454,10 +456,10 @@ export default function AuthModal({
             {t("actions.continueWithGoogle")}
           </button>
 
-          <details className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-3 group">
+          <details className="rounded-xl border border-border bg-muted/40 p-3 group">
             <summary
               data-testid="demo-auth-section"
-              className="cursor-pointer list-none text-sm text-zinc-300 group-open:text-zinc-100"
+              className="cursor-pointer list-none text-sm text-muted-foreground group-open:text-foreground"
             >
               {t("actions.demoSection")}
             </summary>
@@ -484,7 +486,7 @@ export default function AuthModal({
                   isDemoLoading ||
                   (!turnstileToken && isProd)
                 }
-                className="w-full flex items-center justify-between group bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 text-zinc-300 px-4 py-3 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+                className="w-full flex items-center justify-between group bg-background hover:bg-muted border border-input hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-muted-foreground hover:text-foreground px-4 py-3 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
               >
                 <div className="flex items-center gap-3">
                   {isDemoLoading ? (
@@ -499,7 +501,7 @@ export default function AuthModal({
                   </span>
                 </div>
                 {!isDemoLoading && (
-                  <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
+                  <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                 )}
               </button>
             </div>

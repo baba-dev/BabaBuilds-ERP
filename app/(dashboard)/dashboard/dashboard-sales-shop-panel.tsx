@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { DashboardData } from "./types";
 import { DashboardTooltip } from "./dashboard-tooltip";
+import { dashboardTypography as ty } from "./dashboard-typography";
 
 export function DashboardSalesAndShopPanel({
   salesAndShop,
@@ -34,10 +35,12 @@ export function DashboardSalesAndShopPanel({
 }) {
   const t = useTranslations("Dashboard");
   const tr = (key: string, fallback: string, values?: any) => {
-    const translation = t(key as any, values);
-    if (translation === key || translation === `Dashboard.${key}`) return fallback;
-    return translation;
+    if (!t.has(key as any)) return fallback;
+    return t(key as any, values);
   };
+
+  const panelCardClass =
+    "group relative overflow-hidden h-full flex flex-col p-6 border-zinc-200 dark:border-zinc-800/60 bg-white dark:bg-zinc-950/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-500";
 
   const funnelStages = [
     { key: "draft", label: tr("funnel_draft", "Draft"), value: salesAndShop.proposalFunnel.draft, icon: FileText, color: "text-slate-500", bg: "bg-slate-500/10", tooltip: tr("funnel_draft_help", "Drafts you're still working on.") },
@@ -65,7 +68,7 @@ export function DashboardSalesAndShopPanel({
       <motion.div
         animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
         transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-        className={cn("flex items-center text-[10px] font-bold px-1 rounded", tone)}
+        className={cn("flex items-center text-[10px] font-bold px-1 rounded uppercase tracking-wider", tone)}
       >
         <TrendingUp className={cn("w-2.5 h-2.5 mr-0.5", !isPositive && "rotate-180")} />
         {isPositive ? "+" : ""}{deltaPct}%
@@ -82,14 +85,23 @@ export function DashboardSalesAndShopPanel({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: "easeOut" }}
       >
-        <Card className="p-5 h-full flex flex-col border-zinc-200/80 dark:border-zinc-800/80 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
-          <div className="flex justify-between items-start mb-6">
+        <Card className={cn(panelCardClass, "animate-in fade-in slide-in-from-bottom-3")}>
+          <div className="absolute -top-16 -right-16 w-40 h-40 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/10 dark:group-hover:bg-indigo-500/20 transition-all duration-700" />
+          <div className="relative z-10 flex items-start justify-between gap-4 mb-6">
             <div className="space-y-1">
-              <h3 className="text-sm font-bold flex items-center gap-2 text-zinc-800 dark:text-zinc-100 uppercase tracking-tight">
-                <FileCheck2 className="w-4 h-4 text-indigo-500" /> 
-                {tr("proposal_funnel", "Proposal funnel")}
-              </h3>
-              <p className="text-[11px] text-zinc-500 leading-none">{tr("proposal_funnel_subtitle", "Conversion lifecycle of your deals")}</p>
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center border border-indigo-100 dark:border-indigo-500/20 shadow-sm">
+                  <FileCheck2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className={cn(ty.sectionTitle, "leading-tight")}>
+                    {tr("proposal_funnel", "Proposal funnel")}
+                  </h3>
+                  <p className={ty.cardSubtitle}>
+                    {tr("proposal_funnel_subtitle", "Conversion lifecycle of your deals")}
+                  </p>
+                </div>
+              </div>
             </div>
             <DashboardTooltip label={tr("proposal_funnel_help", "Shows movement from draft proposals to invoiced deals.")} />
           </div>
@@ -97,18 +109,18 @@ export function DashboardSalesAndShopPanel({
           {/* Pipeline Visualization */}
           <div className="relative flex-1">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {funnelStages.map((stage, idx) => {
+              {funnelStages.map((stage) => {
                 const isDeclined = stage.key === "declined";
                 const isInvoiced = stage.key === "invoiced";
                 
                 return (
                   <div key={stage.key} className="group relative">
                     <div className={cn(
-                      "relative z-10 p-3 rounded-xl border transition-all duration-300",
-                      "border-zinc-100 dark:border-zinc-800",
-                      "bg-white dark:bg-zinc-900 shadow-sm group-hover:shadow-md",
+                      "relative z-10 p-4 rounded-2xl border transition-all duration-500",
+                      "border-zinc-200/70 dark:border-zinc-800/70",
+                      "bg-white/80 dark:bg-zinc-950/30 backdrop-blur-sm shadow-sm group-hover:shadow-md",
                       isDeclined ? "opacity-70 group-hover:opacity-100" : "",
-                      isInvoiced ? "ring-2 ring-emerald-500/40 dark:ring-emerald-400/30 bg-emerald-50/10 dark:bg-emerald-950/20" : ""
+                      isInvoiced ? "ring-1 ring-emerald-500/30 dark:ring-emerald-400/20 bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200/60 dark:border-emerald-900/40" : ""
                     )}>
                       <div className="flex items-center justify-between mb-2">
                         <div className={cn("p-1.5 rounded-lg relative", stage.bg)}>
@@ -126,16 +138,18 @@ export function DashboardSalesAndShopPanel({
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-1.5">
                           <p className={cn(
-                            "uppercase text-[9px] font-bold tracking-widest",
+                            "text-xs font-semibold tracking-tight",
                             isDeclined ? "text-zinc-400" : "text-zinc-500"
                           )}>{stage.label}</p>
                           {isInvoiced && (
-                            <span className="text-[7px] font-black bg-emerald-500 text-white px-1 rounded-sm tracking-tighter shadow-sm">GOAL</span>
+                            <span className="text-[9px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-900/50">
+                              {tr("goal", "Goal")}
+                            </span>
                           )}
                         </div>
                         <p className={cn(
-                          "text-xl font-extrabold tracking-tight tabular-nums",
-                          isInvoiced ? "text-emerald-600 dark:text-emerald-400" : ""
+                          ty.value2xlLight,
+                          isInvoiced ? "text-emerald-700 dark:text-emerald-400" : ""
                         )}>
                           {stage.value}
                         </p>
@@ -151,29 +165,35 @@ export function DashboardSalesAndShopPanel({
 
           {/* Highlighted Insight Row */}
           {salesAndShop.acceptedAwaitingInvoicing > 0 ? (
-            <div className="mt-6 p-3 rounded-xl bg-orange-50/50 dark:bg-orange-950/20 border border-orange-100/50 dark:border-orange-900/30 flex items-center justify-between group animate-pulse-subtle">
+            <div className="mt-6 p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40 flex items-center justify-between gap-4 group animate-pulse-subtle">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center">
-                  <TrendingUp className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center border border-amber-200/70 dark:border-amber-800/60 shadow-sm">
+                  <TrendingUp className="w-4 h-4 text-amber-700 dark:text-amber-300" />
                 </div>
                 <div>
-                  <p className="text-[11px] font-semibold text-orange-800 dark:text-orange-300 uppercase tracking-wider">
+                  <p className="text-xs font-semibold text-amber-900 dark:text-amber-200 tracking-tight uppercase">
                     {tr("revenue_opportunity", "Revenue Opportunity")}
                   </p>
-                  <p className="text-xs text-orange-600 dark:text-orange-400/80">
+                  <p className={cn(ty.helper, "text-amber-800/90 dark:text-amber-200/80")}>
                     <strong>{salesAndShop.acceptedAwaitingInvoicing}</strong> {tr("proposals_ready_to_invoice", "proposals ready for invoicing")}
                   </p>
                 </div>
               </div>
-              <Button asChild variant="ghost" size="sm" className="h-8 text-orange-700 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/50">
-                <Link href="/proposals?status=accepted" className="flex items-center gap-1.5 text-[10px] font-bold">
-                  {tr("view_ready", "VIEW")} <ArrowRight className="w-3 h-3" />
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="h-9 px-3 rounded-xl text-amber-800 dark:text-amber-200 hover:bg-amber-100/70 dark:hover:bg-amber-900/40 border border-transparent hover:border-amber-200/70 dark:hover:border-amber-800/60"
+              >
+                <Link href="/proposals?status=accepted" className="flex items-center gap-2 text-xs font-semibold">
+                  {tr("view_ready", "View")}
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </Button>
             </div>
           ) : (
-            <div className="mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800/50">
-              <p className="text-[11px] text-zinc-400 italic text-center">
+            <div className="mt-6 pt-5 border-t border-zinc-200/60 dark:border-zinc-800/60">
+              <p className={cn(ty.helper, "text-center")}>
                 {tr("funnel_operational", "Funnel is operational and healthy")}
               </p>
             </div>
@@ -187,32 +207,42 @@ export function DashboardSalesAndShopPanel({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
       >
-        <Card className="p-5 h-full flex flex-col border-zinc-200/80 dark:border-zinc-800/80 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-300">
-          <div className="flex justify-between items-start mb-6">
-            <div className="space-y-1">
-              <h3 className="text-sm font-bold flex items-center gap-2 text-zinc-800 dark:text-zinc-100 uppercase tracking-tight">
-                <ShoppingBag className="w-4 h-4 text-indigo-500" /> 
-                {tr("commerce_pulse", "Commerce pulse")}
-              </h3>
-              <p className="text-[11px] text-zinc-500 leading-none">{tr("commerce_pulse_subtitle", "Public shop & service performance")}</p>
+        <Card className={cn(panelCardClass, "animate-in fade-in slide-in-from-bottom-3 delay-100 fill-mode-both")}>
+          <div className="absolute -top-16 -right-16 w-40 h-40 bg-violet-500/5 dark:bg-violet-500/10 rounded-full blur-3xl group-hover:bg-violet-500/10 dark:group-hover:bg-violet-500/20 transition-all duration-700" />
+          <div className="relative z-10 flex items-start justify-between gap-4 mb-6">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-violet-50 dark:bg-violet-500/10 flex items-center justify-center border border-violet-100 dark:border-violet-500/20 shadow-sm shrink-0">
+                <ShoppingBag className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+              </div>
+              <div className="min-w-0">
+                <h3 className={cn(ty.sectionTitle, "leading-tight")}>
+                  {tr("commerce_pulse", "Commerce pulse")}
+                </h3>
+                <p className={ty.cardSubtitle}>
+                  {tr("commerce_pulse_subtitle", "Public shop & service performance")}
+                </p>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className={cn(
-                "flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider",
-                salesAndShop.shopEnabled 
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/50" 
-                  : "bg-zinc-50 text-zinc-500 border-zinc-200 dark:bg-zinc-900 dark:text-zinc-500 dark:border-zinc-800"
-              )}>
-                <span className={cn("w-1.5 h-1.5 rounded-full", salesAndShop.shopEnabled ? "bg-emerald-500 animate-pulse" : "bg-zinc-400")} />
+
+            <div className="flex items-center gap-2 shrink-0">
+              <div
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-semibold tracking-tight",
+                  salesAndShop.shopEnabled
+                    ? "bg-emerald-50/70 text-emerald-700 border-emerald-200/60 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900/40"
+                    : "bg-zinc-50 text-zinc-600 border-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-800"
+                )}
+              >
+                <span className={cn("w-2 h-2 rounded-full", salesAndShop.shopEnabled ? "bg-emerald-500 animate-pulse" : "bg-zinc-400")} />
                 {salesAndShop.shopEnabled ? tr("shop_live", "Shop live") : tr("shop_disabled", "Shop disabled")}
               </div>
               <DashboardTooltip label={tr("shop_status_help", "Indicates if your public commerce shop is reachable by clients.")} />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
             {/* Conversion Hero */}
-            <div className="md:col-span-2 flex flex-col items-center justify-center p-4 rounded-2xl bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/20 dark:to-zinc-900 border border-indigo-100/50 dark:border-indigo-900/30">
+            <div className="lg:col-span-2 flex flex-col items-center justify-center p-5 rounded-2xl bg-gradient-to-br from-violet-50/80 to-white dark:from-violet-950/20 dark:to-zinc-950/40 border border-violet-200/60 dark:border-violet-900/40">
               <div className="relative">
                 <svg className="w-24 h-24 transform -rotate-90">
                   <circle
@@ -229,75 +259,100 @@ export function DashboardSalesAndShopPanel({
                     initial={{ strokeDashoffset: 251.2 }}
                     animate={{ strokeDashoffset: 251.2 - (251.2 * salesAndShop.serviceOrderConversion) / 100 }}
                     transition={{ duration: 1, ease: "easeOut", delay: 0.5 }}
-                    className="text-indigo-500"
+                    className="text-violet-500"
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
-                  <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">{salesAndShop.serviceOrderConversion}%</span>
-                  <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-tighter mt-0.5">{tr("conversion", "Conversion")}</span>
+                  <span className="text-2xl font-semibold text-violet-700 dark:text-violet-300 tabular-nums">{salesAndShop.serviceOrderConversion}%</span>
+                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-1">{tr("conversion", "Conversion")}</span>
                 </div>
               </div>
-              <p className="mt-2 text-[10px] font-medium text-indigo-800 dark:text-indigo-300 flex items-center gap-1">
+              <p className="mt-3 text-sm font-medium text-violet-900/90 dark:text-violet-200/90 flex items-center gap-2">
                 {tr("healthy_funnel", "Healthy funnel")} <DashboardTooltip label={tr("shop_conversion_help", "Conversion measures paid orders against pending/failed orders.")} />
               </p>
             </div>
 
             {/* Metrics Breakdown */}
-            <div className="md:col-span-3 space-y-4">
-              <div className="flex gap-2">
-                <div className="flex-1 p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800 shadow-tiny">
+            <div className="lg:col-span-3 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-4 rounded-2xl bg-zinc-50/70 dark:bg-zinc-900/40 border border-zinc-200/60 dark:border-zinc-800/60 shadow-sm">
                   <div className="flex items-center gap-1.5 mb-1">
                     <ShoppingBasket className="w-3 h-3 text-zinc-400" />
-                    <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">{tr("total_orders", "Orders")}</span>
+                    <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">{tr("total_orders", "Orders")}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <p className="text-lg font-bold tabular-nums">{salesAndShop.ordersLast30Days}</p>
+                    <p className="text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{salesAndShop.ordersLast30Days}</p>
                     {renderDeltaBadge(salesAndShop.orderChangeVsPrior30DaysPct)}
                   </div>
-                  <p className="text-[9px] text-zinc-400 mt-1">{tr("last_30_days", "Last 30 days")}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{tr("last_30_days", "Last 30 days")}</p>
                 </div>
-                <div className="flex-1 p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800 shadow-tiny">
+                <div className="p-4 rounded-2xl bg-zinc-50/70 dark:bg-zinc-900/40 border border-zinc-200/60 dark:border-zinc-800/60 shadow-sm">
                   <div className="flex items-center gap-1.5 mb-1">
                     <Wallet className="w-3 h-3 text-zinc-400" />
-                    <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">{tr("shop_revenue", "Revenue")}</span>
+                    <span className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">{tr("shop_revenue", "Revenue")}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <p className="text-lg font-bold tabular-nums truncate max-w-[80px]">{fCurrency(salesAndShop.shopRevenueThisMonth)}</p>
+                    <p className="text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-100 truncate max-w-[180px]">
+                      {fCurrency(salesAndShop.shopRevenueThisMonth)}
+                    </p>
                     {renderDeltaBadge(salesAndShop.revenueChangeVsPriorMonthPct)}
                   </div>
-                  <p className="text-[9px] text-zinc-400 mt-1">{tr("this_month", "This month")}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{tr("this_month", "This month")}</p>
                 </div>
               </div>
 
               {/* Order States */}
-              <div className="flex items-center gap-4 px-1">
-                <div className="flex-1 flex flex-col border-r border-zinc-100 dark:border-zinc-800 last:border-0">
-                  <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-500 uppercase">{tr("paid", "Paid")}</span>
-                  <span className="text-sm font-bold tabular-nums">{salesAndShop.publicShopOrders.paid}</span>
-                </div>
-                <div className="flex-1 flex flex-col border-r border-zinc-100 dark:border-zinc-800 last:border-0">
-                  <span className="text-[9px] font-bold text-amber-600 dark:text-amber-500 uppercase">{tr("pending", "Pending")}</span>
-                  <span className="text-sm font-bold tabular-nums">{salesAndShop.publicShopOrders.pending}</span>
-                </div>
-                <div className="flex-1 flex flex-col">
-                  <span className="text-[9px] font-bold text-rose-600 dark:text-rose-500 uppercase">{tr("failed", "Failed")}</span>
-                  <span className="text-sm font-bold tabular-nums">{salesAndShop.publicShopOrders.failed}</span>
-                </div>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  {
+                    key: "paid",
+                    label: tr("paid", "Paid"),
+                    value: salesAndShop.publicShopOrders.paid,
+                    tone: "text-emerald-700 dark:text-emerald-400 border-emerald-200/60 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/15",
+                  },
+                  {
+                    key: "pending",
+                    label: tr("pending", "Pending"),
+                    value: salesAndShop.publicShopOrders.pending,
+                    tone: "text-amber-700 dark:text-amber-400 border-amber-200/60 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/15",
+                  },
+                  {
+                    key: "failed",
+                    label: tr("failed", "Failed"),
+                    value: salesAndShop.publicShopOrders.failed,
+                    tone: "text-rose-700 dark:text-rose-400 border-rose-200/60 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/15",
+                  },
+                ].map((s) => (
+                  <div key={s.key} className={cn("rounded-2xl border p-4", s.tone)}>
+                    <p className="text-xs font-semibold">{s.label}</p>
+                    <p className="text-2xl font-semibold tabular-nums mt-1 text-zinc-900 dark:text-zinc-100">{s.value}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
 
           <div className="mt-auto pt-6 flex gap-2">
-            <Button asChild variant="outline" size="sm" className="flex-1 h-9 rounded-xl border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900 group">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="flex-1 h-10 rounded-2xl border-zinc-200/70 dark:border-zinc-800/70 hover:bg-zinc-50 dark:hover:bg-zinc-900 group transition-all"
+            >
               <Link href="/proposals" className="flex items-center justify-center gap-2">
                 <FileCheck2 className="w-3.5 h-3.5 text-zinc-500 group-hover:text-indigo-500 transition-colors" />
-                <span className="text-xs font-semibold">{tr("view_proposals", "Proposals")}</span>
+                <span className="text-sm font-semibold">{tr("view_proposals", "Proposals")}</span>
               </Link>
             </Button>
-            <Button asChild variant="outline" size="sm" className="flex-1 h-9 rounded-xl border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900 group">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="flex-1 h-10 rounded-2xl border-zinc-200/70 dark:border-zinc-800/70 hover:bg-zinc-50 dark:hover:bg-zinc-900 group transition-all"
+            >
               <Link href="/shop" className="flex items-center justify-center gap-2">
                 <Store className="w-3.5 h-3.5 text-zinc-500 group-hover:text-indigo-500 transition-colors" />
-                <span className="text-xs font-semibold">{tr("view_shop_orders", "Shop orders")}</span>
+                <span className="text-sm font-semibold">{tr("view_shop_orders", "Shop orders")}</span>
               </Link>
             </Button>
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Download, LayoutDashboard, Send, Sparkles, ArrowRight, Users, Briefcase, ReceiptText, X, Building } from "lucide-react";
@@ -29,10 +29,12 @@ import { ChartsIsland } from "./charts-island";
 import { DashboardHealthStrip } from "./dashboard-health-strip";
 import { DashboardAttentionCenter } from "./dashboard-attention-center";
 import { DashboardFinancialPulse } from "./dashboard-financial-pulse";
+import { DashboardCashFlowSummary } from "./dashboard-cash-flow-summary";
 import { DashboardSalesAndShopPanel } from "./dashboard-sales-shop-panel";
 import { DashboardOperationsPanel } from "./dashboard-operations-panel";
 import { DashboardTrustPanel } from "./dashboard-trust-panel";
 import { DashboardRightRail } from "./dashboard-right-rail";
+import { dashboardTypography as ty } from "./dashboard-typography";
 import type { DashboardData, RecentInvoiceRow } from "./types";
 
 export default function Dashboard() {
@@ -41,17 +43,6 @@ export default function Dashboard() {
   const searchParams = useSearchParams();
   const [selectedFy, setSelectedFy] = useState(getCurrentFinancialYear(new Date(), "local"));
   const [data, setData] = useState<Partial<DashboardData>>({});
-  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({
-    finance: true,
-    ops: true,
-    sales: true,
-    trust: true,
-    ledger: true,
-    activity: true,
-    attention: true,
-    health: true,
-    charts: true,
-  });
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [syncHealthLoading, setSyncHealthLoading] = useState(false);
@@ -73,9 +64,14 @@ export default function Dashboard() {
   const currencySymbol = getCurrencySymbol(currency);
 
   const tr = (key: string, fallback: string, values?: Record<string, any>) => {
-    const translation = t(key as any, values);
-    if (translation === key || translation === `Dashboard.${key}`) return fallback;
-    return translation;
+    if (typeof (t as any).has === "function" && !(t as any).has(key)) return fallback;
+    try {
+      const translation = t(key as any, values);
+      if (translation === key || translation === `Dashboard.${key}`) return fallback;
+      return translation;
+    } catch {
+      return fallback;
+    }
   };
 
   const isMobile = useSyncExternalStore(
@@ -98,7 +94,9 @@ export default function Dashboard() {
         setIslandsEnabled(Boolean(runtimeFlags.dashboardIslands));
       }
     };
-    loadFlags().catch(() => undefined);
+    loadFlags().catch((e) => {
+      console.warn("Failed to load runtime flags", e);
+    });
   }, []);
 
   useEffect(() => {
@@ -107,7 +105,9 @@ export default function Dashboard() {
       .then((d: { companyName?: string }) => {
         if (d.companyName) setOrgName(d.companyName);
       })
-      .catch(() => undefined);
+      .catch((e) => {
+        console.warn("Failed to load org name", e);
+      });
   }, []);
 
   const fetchDashboardData = async (fy: string) => {
@@ -121,36 +121,20 @@ export default function Dashboard() {
     return parsed;
   };
 
-  const loadSegment = async (fy: string, segment: string, signal?: AbortSignal) => {
-    setLoadingStates((prev) => ({ ...prev, [segment]: true }));
-    try {
-      const res = await fetch(`/api/dashboard?fy=${fy}&segment=${segment}`, { cache: "no-store", signal });
-      const json = await res.json();
-      if (!res.ok || json.error) {
-        throw new Error(json.error || `Failed to load ${segment}`);
-      }
-
-      const parsed = parseDashboardResponse(json) as Partial<DashboardData> | null;
-      if (!parsed) throw new Error(`Dashboard ${segment} payload malformed`);
-
-      setData((prev) => ({ ...prev, ...parsed }));
-    } catch (e: any) {
-      if (e.name === "AbortError") return;
-      console.error(`Error loading segment ${segment}:`, e);
-      throw e;
-    } finally {
-      setLoadingStates((prev) => ({ ...prev, [segment]: false }));
-    }
-  };
-
   const loadAllData = async (fy: string, signal?: AbortSignal) => {
     setError(null);
     setIsInitialLoad(true);
 
-    const segments = ["finance", "ops", "sales", "trust", "ledger", "activity", "attention", "health", "charts"];
-
     try {
-      await Promise.all(segments.map((s) => loadSegment(fy, s, signal)));
+      const res = await fetch(`/api/dashboard?fy=${fy}`, { cache: "no-store", signal });
+      const json = await res.json();
+      if (!res.ok || json.error) {
+        throw new Error(json.error || tr("toast.error.load_dashboard", "Unable to load dashboard"));
+      }
+      const parsed = parseDashboardResponse(json) as DashboardData | null;
+      if (!parsed) throw new Error("Dashboard payload malformed");
+      if (signal?.aborted) return;
+      setData(parsed);
       if (signal?.aborted) return;
       setIsInitialLoad(false);
     } catch (e: any) {
@@ -253,8 +237,8 @@ export default function Dashboard() {
       accessor: (row) => row.invoiceNumber,
       cell: (row) => (
         <div className="flex flex-col py-1">
-          <span className="font-bold text-zinc-900 dark:text-zinc-100 leading-tight">{row.invoiceNumber}</span>
-          <span className="text-xxs text-zinc-400 dark:text-zinc-500 font-medium uppercase tracking-tighter sm:hidden">
+          <span className={ty.cardTitle}>{row.invoiceNumber}</span>
+          <span className={`${ty.labelUpper} sm:hidden`}>
             {format(new Date(row.invoiceDate), "dd MMM yyyy")}
           </span>
         </div>
@@ -283,14 +267,18 @@ export default function Dashboard() {
             : status === INVOICE_STATUS.PARTIALLY_PAID
               ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
               : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
-        return <Badge variant="outline" className={`h-5 text-xxs font-bold uppercase tracking-wider ${className}`}>{tr(key, status)}</Badge>;
+        return (
+          <Badge variant="outline" className={`${ty.kpiBadge} ${className}`}>
+            {tr(key, status)}
+          </Badge>
+        );
       },
     },
     {
       id: "amount",
       header: <div className="text-right pr-2">{tr("table_amount", "Amount")}</div>,
       className: "text-right",
-      cell: (row) => <span className="font-bold text-zinc-900 dark:text-zinc-100 tabular-nums pr-2">{fCurrency(row.totalAmount)}</span>,
+      cell: (row) => <span className={`${ty.valueSmBold} pr-2`}>{fCurrency(row.totalAmount)}</span>,
     },
     {
       id: "actions",
@@ -307,7 +295,7 @@ export default function Dashboard() {
               <Button
                 size="sm"
                 variant="outline"
-                className="h-7 px-2.5 text-xxs font-semibold uppercase tracking-wider bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
+                className="h-7 px-2.5 text-[11px] font-semibold tracking-tight bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
                 onClick={() => openPayModal(row)}
               >
                 {tr("record_payment", "Record payment")}
@@ -326,7 +314,7 @@ export default function Dashboard() {
     },
   ];
 
-  if (isInitialLoad && Object.values(loadingStates).every((v) => v)) {
+  if (isInitialLoad) {
     return <PageLoadingState title={tr("loading", "Loading dashboard")} description={tr("loading_desc", "Preparing command center")} className="min-h-screen" />;
   }
 
@@ -335,6 +323,16 @@ export default function Dashboard() {
   }
 
   const d = data as DashboardData;
+  const isReady = Boolean(
+    d.health &&
+      d.attention &&
+      d.financialPulse &&
+      d.salesAndShop &&
+      d.operations &&
+      d.trust &&
+      d.charts &&
+      d.recentInvoices,
+  );
 
   const selectedInvoiceBilled = Number(selectedInvoice?.totalAmount ?? 0);
   const selectedInvoiceReceived = Number(selectedInvoice?.amountReceived ?? 0);
@@ -390,7 +388,7 @@ export default function Dashboard() {
             </button>
             <div className="flex items-center gap-2 mb-4">
               <Sparkles className="w-4 h-4 text-indigo-500" />
-              <p className="text-xs font-extrabold uppercase tracking-widest text-indigo-700 dark:text-indigo-400">
+              <p className={`${ty.labelUpperStrong} text-indigo-700 dark:text-indigo-400`}>
                 {tr("getting_started_title", "Get started — 3 steps to your first invoice")}
               </p>
             </div>
@@ -427,8 +425,8 @@ export default function Dashboard() {
                     {step.icon}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-zinc-800 dark:text-zinc-200 leading-tight">{step.label}</p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 font-medium">{step.desc}</p>
+                    <p className={`${ty.cardTitle} leading-tight`}>{step.label}</p>
+                    <p className={`${ty.helperXs} mt-0.5`}>{step.desc}</p>
                   </div>
                   <ArrowRight className="w-3.5 h-3.5 text-zinc-300 dark:text-zinc-600 shrink-0 mt-1 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-all ml-auto" />
                 </Link>
@@ -437,13 +435,9 @@ export default function Dashboard() {
           </div>
         )}
 
-        {loadingStates.health || !d.health ? (
-          <SkeletonBlock className="h-12 w-full" />
-        ) : (
-          <DashboardHealthStrip health={d.health} />
-        )}
+        {!d.health ? <SkeletonBlock className="h-12 w-full" /> : <DashboardHealthStrip health={d.health} />}
 
-        {loadingStates.attention || !d.attention ? (
+        {!d.attention ? (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map((i) => (
               <SkeletonBlock key={i} className="h-24" />
@@ -453,47 +447,35 @@ export default function Dashboard() {
           <DashboardAttentionCenter attention={d.attention} />
         )}
 
-        {loadingStates.finance || !d.financialPulse ? (
-          <SkeletonBlock className="h-32" />
-        ) : (
-          <DashboardFinancialPulse financialPulse={d.financialPulse} fCurrency={fCurrency} />
-        )}
+        {!d.financialPulse ? <SkeletonBlock className="h-32" /> : <DashboardFinancialPulse financialPulse={d.financialPulse} fCurrency={fCurrency} />}
+
+        <DashboardCashFlowSummary />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
           <div className="lg:col-span-1 2xl:col-span-2 space-y-6">
-            {loadingStates.sales || !d.salesAndShop ? (
-              <SkeletonBlock className="h-64" />
-            ) : (
-              <DashboardSalesAndShopPanel salesAndShop={d.salesAndShop} fCurrency={fCurrency} />
-            )}
+            {!d.salesAndShop ? <SkeletonBlock className="h-64" /> : <DashboardSalesAndShopPanel salesAndShop={d.salesAndShop} fCurrency={fCurrency} />}
 
-            {loadingStates.ops || !d.operations ? (
-              <SkeletonBlock className="h-48" />
-            ) : (
-              <DashboardOperationsPanel operations={d.operations} />
-            )}
+            {!d.operations ? <SkeletonBlock className="h-48" /> : <DashboardOperationsPanel operations={d.operations} />}
 
-            {loadingStates.trust || !d.trust ? (
-              <SkeletonBlock className="h-48" />
-            ) : (
-              <DashboardTrustPanel trust={d.trust} />
-            )}
+            {!d.trust ? <SkeletonBlock className="h-48" /> : <DashboardTrustPanel trust={d.trust} />}
 
-            {loadingStates.charts || !d.charts ? (
+            {!d.charts ? (
               <SkeletonBlock className="h-80" />
             ) : islandsEnabled ? (
               <ChartsIsland charts={d.charts} fCurrency={fCurrency} />
             ) : (
               <Card className="p-5 border-zinc-200 dark:border-zinc-800">
-                <CardTitle className="text-base">{tr("charts_disabled_title", "Charts are in fallback mode")}</CardTitle>
-                <p className="text-sm text-zinc-500 mt-2">
+                <CardTitle className={ty.sectionTitle}>
+                  {tr("charts_disabled_title", "Charts are in fallback mode")}
+                </CardTitle>
+                <p className={`mt-2 ${ty.helper}`}>
                   {tr("charts_disabled_desc", "Runtime flag disabled dashboard islands. Financial and operational values remain available above.")}
                 </p>
               </Card>
             )}
           </div>
 
-          {loadingStates.health || loadingStates.attention || !d.health ? (
+          {!d.health || !d.attention ? (
             <SkeletonBlock className="h-[600px]" />
           ) : (
             <DashboardRightRail
@@ -509,18 +491,18 @@ export default function Dashboard() {
         <Card className="border-0 shadow-xl shadow-zinc-200/20 dark:shadow-black/20 ring-1 ring-zinc-200 dark:ring-zinc-800/60 bg-white dark:bg-zinc-900/50 overflow-hidden">
           <CardHeader className="border-b border-zinc-100 dark:border-zinc-800/50 bg-zinc-50/70 dark:bg-zinc-900/80 px-6 py-4 flex flex-row items-center justify-between relative overflow-hidden">
             <div className="space-y-0.5 relative z-10">
-              <CardTitle className="text-sm font-bold tracking-tight text-zinc-900 dark:text-zinc-100 uppercase">{tr("recent_ledger", "Recent ledger activity")}</CardTitle>
-              <p className="text-xxs font-medium text-zinc-400 dark:text-zinc-500">{tr("recent_ledger_subtitle", "Your most recent billing and payment operations")}</p>
+              <CardTitle className={ty.sectionTitle}>{tr("recent_ledger", "Recent ledger activity")}</CardTitle>
+              <p className={ty.labelUpper}>{tr("recent_ledger_subtitle", "Your most recent billing and payment operations")}</p>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="bg-white dark:bg-zinc-950 text-[10px] font-bold text-zinc-400 border-zinc-200/60 dark:border-zinc-800/60 uppercase">
+              <Badge variant="outline" className={`bg-white dark:bg-zinc-950 text-zinc-400 border-zinc-200/60 dark:border-zinc-800/60 ${ty.kpiBadge}`}>
                 Live Feed
               </Badge>
             </div>
             <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500" />
           </CardHeader>
           <CardContent className={isMobile ? "p-4 space-y-3" : "p-0"}>
-            {loadingStates.ledger || !d.recentInvoices ? (
+            {!d.recentInvoices ? (
               <div className="p-8 space-y-4">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="h-12 w-full rounded-lg bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
@@ -528,19 +510,19 @@ export default function Dashboard() {
               </div>
             ) : isMobile ? (
               d.recentInvoices.length === 0 ? (
-                <p className="text-sm text-zinc-500">{tr("no_recent_ledger", "No recent invoices")}</p>
+                <p className={ty.helper}>{tr("no_recent_ledger", "No recent invoices")}</p>
               ) : (
                 d.recentInvoices.slice(0, 5).map((invoice) => (
                   <div key={invoice.id} className="rounded-xl border border-zinc-200 dark:border-zinc-800/80 p-4 bg-white dark:bg-zinc-900/40 shadow-sm space-y-3 relative group">
                     <div className="flex items-start justify-between">
                       <div>
-                        <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{invoice.invoiceNumber}</p>
-                        <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">{invoice.clientName}</p>
+                        <p className={ty.cardTitle}>{invoice.invoiceNumber}</p>
+                        <p className={`${ty.labelUpper} mt-0.5`}>{invoice.clientName}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-bold tabular-nums text-zinc-900 dark:text-zinc-100">{fCurrency(invoice.totalAmount)}</p>
+                        <p className={ty.valueSmBold}>{fCurrency(invoice.totalAmount)}</p>
                         <div className="mt-1">
-                          <Badge variant="outline" className="text-[10px] uppercase h-5 font-bold tracking-wider border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50">
+                          <Badge variant="outline" className={`border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 ${ty.kpiBadge}`}>
                             {tr(getInvoiceStatusBadgeKey(toInvoiceStatus(invoice.status)), toInvoiceStatus(invoice.status))}
                           </Badge>
                         </div>
@@ -588,7 +570,7 @@ export default function Dashboard() {
             asChild
             variant="ghost"
             size="sm"
-            className="flex-shrink-0 h-8 text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100/50 dark:hover:bg-indigo-500/20 gap-2 border border-transparent hover:border-indigo-100 dark:hover:border-indigo-500/30"
+            className={`flex-shrink-0 h-8 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100/50 dark:hover:bg-indigo-500/20 gap-2 border border-transparent hover:border-indigo-100 dark:hover:border-indigo-500/30 ${ty.labelUpperStrong}`}
           >
             <Link href="https://erp.bababuilds.com/settings/profile" className="flex items-center gap-2">
               User Session Settings

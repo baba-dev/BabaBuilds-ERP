@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import JSZip from 'jszip';
 import fs from 'fs/promises';
 import path from 'path';
+import { buildPrivatePath } from '@/lib/uploads/private-storage';
 
 function getFinancialYearDates(fyString: string) {
   const parts = fyString.split('-');
@@ -57,22 +58,17 @@ export async function GET(request: Request) {
       if (inv.pdfPath) {
         try {
           const normalizedRelativePath = inv.pdfPath.replace(/^[/\\]+/, '');
-          const candidatePath = path.join(process.cwd(), 'public', normalizedRelativePath);
-          const allowedBaseDir = path.resolve(process.cwd(), 'public', 'invoices');
-          const candidateResolvedPath = path.resolve(candidatePath);
-          const confinedBasePrefix = `${allowedBaseDir}${path.sep}`;
-          const isConfined =
-            candidateResolvedPath === allowedBaseDir ||
-            candidateResolvedPath.startsWith(confinedBasePrefix);
+          const parts = normalizedRelativePath.split('/').filter(Boolean);
+          // Expect: invoices/<workspaceId>/<filename>
+          const fileBuffer =
+            parts[0] === 'invoices' && parts[1] === workspaceId
+              ? await fs.readFile(buildPrivatePath('invoices', [parts[1], parts.slice(2).join('/')]))
+              : null;
 
-          if (!isConfined) {
-            console.warn(
-              `Security warning: Skipping invoice PDF read outside allowed directory. invoiceId=${inv.id}, pdfPath=${inv.pdfPath}`
-            );
+          if (!fileBuffer) {
+            console.warn(`Skipping unexpected invoice path. invoiceId=${inv.id}, pdfPath=${inv.pdfPath}`);
             continue;
           }
-
-          const fileBuffer = await fs.readFile(candidateResolvedPath);
           
           // Name the file cleanly for the CA: "INV-24-001_ClientName.pdf"
           const safeClientName = inv.clientName.replace(/[^a-z0-9]/gi, '_');
@@ -91,8 +87,18 @@ export async function GET(request: Request) {
     for (const exp of expenses) {
       if (exp.receiptUrl) {
         try {
-          const filePath = path.join(process.cwd(), 'public', exp.receiptUrl);
-          const fileBuffer = await fs.readFile(filePath);
+          const normalized = exp.receiptUrl.replace(/^[/\\]+/, '');
+          const parts = normalized.split('/').filter(Boolean);
+          // Expect: receipts/<workspaceId>/<filename>
+          const fileBuffer =
+            parts[0] === 'receipts' && parts[1] === workspaceId
+              ? await fs.readFile(buildPrivatePath('receipts', [parts[1], parts.slice(2).join('/')]))
+              : null;
+
+          if (!fileBuffer) {
+            console.warn(`Skipping unexpected receipt path. expenseId=${exp.id}, receiptUrl=${exp.receiptUrl}`);
+            continue;
+          }
           
           // Identify the extension (.pdf, .png, .jpg)
           const ext = path.extname(exp.receiptUrl) || '.pdf';

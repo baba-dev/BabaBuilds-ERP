@@ -4,6 +4,8 @@ import { randomUUID } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { authOptions } from '@/lib/auth';
+import { buildPrivatePath, ensureDir, sanitizeFilename, sniffAllowedContent } from '@/lib/uploads/private-storage';
+import { scanBuffer } from '@/lib/security/clamav';
 
 export const runtime = 'nodejs';
 
@@ -28,8 +30,6 @@ type SharedImportPayload = {
   files: SharedFileMeta[];
 };
 
-const sanitizeFilename = (value: string) => value.replace(/[^a-zA-Z0-9._-]/g, '_');
-
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   const workspaceId = (session as { workspaceId?: string } | null)?.workspaceId;
@@ -44,10 +44,10 @@ export async function POST(request: Request) {
   const sharedUrl = formData.get('url');
 
   const uploadId = randomUUID();
-  const uploadRoot = path.join(process.cwd(), 'public', 'uploads', 'share-target', workspaceId, uploadId);
+  const uploadRoot = buildPrivatePath('share-target', [workspaceId, uploadId]);
   const metadataRoot = path.join(process.cwd(), 'tmp', 'share-target', workspaceId);
 
-  fs.mkdirSync(uploadRoot, { recursive: true });
+  await ensureDir(uploadRoot);
   fs.mkdirSync(metadataRoot, { recursive: true });
 
   const files: SharedFileMeta[] = [];
@@ -66,7 +66,17 @@ export async function POST(request: Request) {
     const absolutePath = path.join(uploadRoot, storedName);
     const bytes = await value.arrayBuffer();
 
-    fs.writeFileSync(absolutePath, Buffer.from(bytes));
+    const buffer = Buffer.from(bytes);
+    const isSafe = await scanBuffer(buffer);
+    if (!isSafe) continue;
+
+    // Content-sniff to avoid trusting filename or MIME type.
+    const sniffed = sniffAllowedContent(buffer);
+    if (!sniffed) continue;
+    if (isPdf && sniffed !== 'pdf') continue;
+    if (isImage && sniffed === 'pdf') continue;
+
+    fs.writeFileSync(absolutePath, buffer, { mode: 0o600 });
 
     const relativePath = `/uploads/share-target/${workspaceId}/${uploadId}/${storedName}`;
 

@@ -28,6 +28,7 @@ import { ChartTooltip } from "@/components/charts/ChartTooltip";
 import { withChartTokenColors } from "@/components/charts/chart-colors";
 import { Badge } from "@/components/ui/badge";
 import type { DashboardData } from "./types";
+import { dashboardTypography as ty } from "./dashboard-typography";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -60,11 +61,8 @@ export function ChartsIsland({
   fCurrency: (value: number) => string;
 }) {
   const t = useTranslations("Dashboard");
-  const tr = (key: string, fallback: string, values?: Record<string, any>) => {
-    const translation = t(key as any, values);
-    if (translation === key || translation === `Dashboard.${key}`) return fallback;
-    return translation;
-  };
+  const tr = (key: string, fallback: string, values?: Record<string, any>) =>
+    t.has(key as any) ? t(key as any, values) : fallback;
 
   const isMobile = useSyncExternalStore(
     (onStoreChange) => {
@@ -228,8 +226,9 @@ export function ChartsIsland({
                 {tr("chart_healthy_badge", "All Settled")}
               </Badge>
             ) : (
-              <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider tabular-nums">
-                {tr("total_due", "Total Due")}: <span className="text-zinc-900 dark:text-zinc-100">{fCurrency(totalReceivables)}</span>
+              <div className={`${ty.labelUpper} tabular-nums`}>
+                {tr("total_due", "Total Due")}:{" "}
+                <span className="text-zinc-900 dark:text-zinc-100">{fCurrency(totalReceivables)}</span>
               </div>
             )
           }
@@ -344,7 +343,7 @@ export function ChartsIsland({
           icon={Activity}
           headerAction={
             hasOrderData && (
-              <Badge variant="outline" className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 font-bold tabular-nums py-0.5">
+              <Badge variant="outline" className={`bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 tabular-nums py-0.5 ${ty.kpiBadge}`}>
                 {totalOrders} {tr("total_count", "Total")}
               </Badge>
             )
@@ -381,8 +380,8 @@ export function ChartsIsland({
                   })}
                </svg>
                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                  <span className="text-2xl font-black text-zinc-900 dark:text-white tracking-widest">{totalOrders}</span>
-                  <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">{tr("orders", "Orders")}</span>
+                  <span className={ty.value2xlLight}>{totalOrders}</span>
+                  <span className={ty.labelUpper}>{tr("orders", "Orders")}</span>
                </div>
             </div>
 
@@ -391,9 +390,9 @@ export function ChartsIsland({
                 <div key={i} className="flex flex-col items-center">
                   <div className="flex items-center gap-1.5 mb-1">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: segment.color }} />
-                    <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tighter truncate max-w-[60px]">{segment.name}</span>
+                    <span className={`${ty.labelUpper} truncate max-w-[60px]`}>{segment.name}</span>
                   </div>
-                  <span className="text-xs font-black text-zinc-900 dark:text-zinc-100 tabular-nums">{segment.value}</span>
+                  <span className={ty.valueSmBold}>{segment.value}</span>
                 </div>
               ))}
             </div>

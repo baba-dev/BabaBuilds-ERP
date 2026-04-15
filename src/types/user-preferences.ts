@@ -8,11 +8,13 @@ export type SidebarItemId =
   | "client_crm"
   | "quotes_proposals"
   | "retainers_hub"
+  | "cash_flow"
   | "expenses_margins"
   | "savings_tax"
   | "ai_reconciliation"
   | "invoices_and_earnings"
   | "ca_compliance"
+  | "help_center"
   | "settings";
 
 export type UserPreferences = {
@@ -37,11 +39,13 @@ const ALLOWED_IDS = new Set<SidebarItemId>([
   "client_crm",
   "quotes_proposals",
   "retainers_hub",
+  "cash_flow",
   "expenses_margins",
   "savings_tax",
   "ai_reconciliation",
   "invoices_and_earnings",
   "ca_compliance",
+  "help_center",
   "settings",
 ]);
 

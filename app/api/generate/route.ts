@@ -18,6 +18,7 @@ import { toDecimal } from '@/lib/money';
 import { getRuntimeSmtpPassword } from '@/lib/mailer';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
 import { logActivity } from '@/lib/activity-log';
+import { buildPrivatePath, ensureDir } from '@/lib/uploads/private-storage';
 
 const lookupAsync = promisify(dns.lookup);
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
@@ -384,13 +385,13 @@ export async function POST(request: Request) {
         const invoiceNumber = `INV/${fy}/${sequence.toString().padStart(3, '0')}`;
         currentInvoiceNumber = invoiceNumber;
 
-        // 5. NAMESPACED PDF STORAGE
-        const invoicesDir = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'invoices', workspaceId);
-        if (!fs.existsSync(invoicesDir)) fs.mkdirSync(invoicesDir, { recursive: true });
+        // 5. NAMESPACED PDF STORAGE (private)
+        const invoicesDir = buildPrivatePath('invoices', [workspaceId]);
+        await ensureDir(invoicesDir);
 
         const pdfFilename = `${invoiceNumber.replace(/\//g, '_')}.pdf`;
         finalPdfFilename = pdfFilename;
-        const pdfPath = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', 'invoices', workspaceId, pdfFilename);
+        const pdfPath = buildPrivatePath('invoices', [workspaceId, pdfFilename]);
         finalPdfPath = pdfPath;
         generatedPdfPath = pdfPath;
         const relativePdfPath = `/invoices/${workspaceId}/${pdfFilename}`;
@@ -488,7 +489,7 @@ export async function POST(request: Request) {
           status: normalizedStatus
         });
 
-        fs.writeFileSync(pdfPath, pdfBytes);
+        await fs.promises.writeFile(pdfPath, pdfBytes, { mode: 0o600 });
 
         // 6. SAVE TO DB
         newInvoice = await prisma.invoice.create({

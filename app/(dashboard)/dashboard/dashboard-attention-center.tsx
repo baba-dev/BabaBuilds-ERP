@@ -6,13 +6,13 @@ import { AlertTriangle, ArrowRight, Bell, CircleAlert, CheckCircle2, FileText } 
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import type { DashboardData } from "./types";
+import { dashboardTypography as ty } from "./dashboard-typography";
 
 export function DashboardAttentionCenter({ attention }: { attention: DashboardData["attention"] }) {
   const t = useTranslations("Dashboard");
   const tr = (key: string, fallback: string, values?: Record<string, unknown>) => {
-    const translation = t(key as never, values as never);
-    if (translation === key || translation === `Dashboard.${key}`) return fallback;
-    return translation;
+    if (!(t as any).has?.(key)) return fallback;
+    return t(key as never, values as never);
   };
 
   const isUrgent = attention.totalUrgent > 0;
@@ -66,9 +66,7 @@ export function DashboardAttentionCenter({ attention }: { attention: DashboardDa
         ) : (
           <CheckCircle2 className="w-5 h-5 text-emerald-500" />
         )}
-        <h3 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          {tr("attention_center", "Attention center")}
-        </h3>
+        <h3 className={ty.sectionTitle}>{tr("attention_center", "Attention center")}</h3>
       </div>
 
       <Card
@@ -92,13 +90,13 @@ export function DashboardAttentionCenter({ attention }: { attention: DashboardDa
 
         <div className="relative z-10 flex items-start justify-between gap-6">
           <div className="min-w-0">
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold tracking-wider uppercase">
+            <p className={ty.labelUpper}>
               {isUrgent ? tr("items_need_action", "Items need action") : tr("all_caught_up", "All caught up")}
             </p>
-            <p className={`mt-2 text-4xl font-light tracking-tight tabular-nums ${isUrgent ? "text-zinc-900 dark:text-white" : "text-zinc-800 dark:text-zinc-100"}`}>
+            <p className={`mt-2 ${ty.value4xlLight} ${isUrgent ? "" : "text-zinc-800 dark:text-zinc-100"}`}>
               {isUrgent ? attention.totalUrgent : 0}
             </p>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2 leading-relaxed">
+            <p className={`mt-2 ${ty.helper}`}>
               {isUrgent ? tr("attention_center_desc", "Prioritized by urgency across finance, compliance, and operations.") : tr("attention_center_zero_desc", "No urgent items requiring immediate action.")}
             </p>
           </div>
@@ -131,23 +129,21 @@ export function DashboardAttentionCenter({ attention }: { attention: DashboardDa
                 <div className={`absolute left-0 top-0 h-0.5 w-full ${getTopBarClass(computedTone)}`} />
 
                 <div className="relative z-10 flex flex-col h-full">
-                  <p className={`text-xs font-semibold tracking-wider uppercase ${isZero ? "text-zinc-500 dark:text-zinc-400" : getTextAccentClass(computedTone)}`}>
+                  <p className={`${ty.labelUpper} ${isZero ? "" : getTextAccentClass(computedTone)}`}>
                     {card.title}
                   </p>
                   <p
-                    className={`mt-2 text-3xl font-light tracking-tight tabular-nums ${
-                      isZero ? "text-zinc-500 dark:text-zinc-400" : "text-zinc-900 dark:text-white"
-                    }`}
+                    className={`mt-2 ${ty.value3xlLight} ${isZero ? "text-zinc-500 dark:text-zinc-400" : ""}`}
                   >
                     {card.value}
                   </p>
-                  <p className="text-xs mt-1 text-zinc-600 dark:text-zinc-300 leading-relaxed">{card.helper}</p>
+                  <p className={`mt-1 ${ty.helperXs} text-zinc-600 dark:text-zinc-300`}>{card.helper}</p>
 
                   <div className="mt-auto pt-4">
                     {card.href ? (
                       <Link
                         href={card.href}
-                        className={`inline-flex items-center text-xs font-semibold transition-colors ${
+                        className={`inline-flex items-center ${ty.helperXs} font-semibold transition-colors ${
                           isZero
                             ? "text-zinc-400 hover:text-zinc-600 dark:text-zinc-600 dark:hover:text-zinc-400"
                             : "text-zinc-900 hover:text-indigo-600 dark:text-zinc-300 dark:hover:text-indigo-400"

@@ -22,15 +22,18 @@ export default async function DashboardLayout({
   const session = await getServerSession(authOptions);
   const workspaceId = (session as any)?.workspaceId;
 
-  if (!session || !workspaceId) {
-    if (!workspaceId) {
-      console.warn(
-        "[DashboardLayout] Missing workspace context on authenticated session; redirecting to recovery route."
-      );
-    }
-    const nextUrl = requestHeaders.get('next-url');
-    const callbackUrl = normalizeLaunchDestination(nextUrl || '/dashboard');
+  if (!session) {
+    const nextUrl = requestHeaders.get("next-url");
+    const callbackUrl = normalizeLaunchDestination(nextUrl || "/dashboard");
     redirect(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+  }
+
+  // Break potential redirect loops for authenticated users missing workspace context.
+  // This can happen for legacy accounts or partial bootstrap failures. NextAuth's JWT callback
+  // will attempt to auto-provision on the next request, but if it still fails we must not
+  // bounce endlessly between /login and /dashboard.
+  if (!workspaceId) {
+    redirect("/login?error=WORKSPACE_CONTEXT_MISSING");
   }
 
   return (

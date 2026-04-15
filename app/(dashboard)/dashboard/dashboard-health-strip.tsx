@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import type { DashboardData } from "./types";
 import { DashboardAIPromptBar } from "./dashboard-ai-prompt-bar";
 import { DashboardTooltip } from "./dashboard-tooltip";
+import { dashboardTypography as ty } from "./dashboard-typography";
 
 // --- Subcomponents ---
 
@@ -134,6 +135,7 @@ function SubscriptionSection({
 export function DashboardHealthStrip({ health }: { health: DashboardData["health"] }) {
   const t = useTranslations("Dashboard");
   const tr = (key: string, fallback: string, values?: Record<string, unknown>) => {
+    if (typeof t.has === "function" && !t.has(key as never)) return fallback;
     const translation = t(key as never, values as never);
     if (translation === key || translation === `Dashboard.${key}`) return fallback;
     return translation;
@@ -143,9 +145,7 @@ export function DashboardHealthStrip({ health }: { health: DashboardData["health
     <section className="space-y-6">
       <div className="flex items-center gap-2 px-1">
         <Zap className="w-5 h-5 text-indigo-500" />
-        <h3 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          {tr("dashboard_status", "Dashboard status")}
-        </h3>
+        <h3 className={ty.sectionTitle}>{tr("dashboard_status", "Dashboard status")}</h3>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr_2fr] gap-5">

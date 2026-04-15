@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Users, Mail, CheckCircle, Clock, Lock, Sparkles, Building2, UserPlus, ArrowRight } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { Users, Mail, CheckCircle, Clock, Lock, Sparkles, Building2, UserPlus, ArrowRight, Trash2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,12 +19,33 @@ import {
 import { m, LazyMotion, domAnimation } from "framer-motion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+type TeamMember = {
+  id: string;
+  role: string;
+  userId: string;
+  user: { name: string | null; email: string | null; image: string | null };
+};
+
+type TeamInvite = {
+  id: string;
+  email: string;
+  role: string;
+  expiresAt: string;
+  createdAt: string;
+};
+
 export default function TeamSettings() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("MEMBER");
   const [loading, setLoading] = useState(false);
   const [planTier, setPlanTier] = useState("FREE");
   const [isOpen, setIsOpen] = useState(false);
+  const [teamLoading, setTeamLoading] = useState(true);
+  const [teamError, setTeamError] = useState<string | null>(null);
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [invites, setInvites] = useState<TeamInvite[]>([]);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/settings')
@@ -34,10 +55,38 @@ export default function TeamSettings() {
           setPlanTier(data.planTier);
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.warn("Failed to load plan tier from settings", err);
+      });
   }, []);
 
   const isTeamPlan = planTier === "TEAM" || planTier === "ENTERPRISE"; // Safety fallback
+
+  const canManageMembers = useMemo(() => currentUserRole === "OWNER" || currentUserRole === "ADMIN", [currentUserRole]);
+
+  const fetchTeam = async () => {
+    setTeamLoading(true);
+    setTeamError(null);
+    try {
+      const res = await fetch("/api/team/members", { cache: "no-store" });
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(payload?.error || "Failed to load team members");
+      setMembers(Array.isArray(payload?.data?.members) ? payload.data.members : []);
+      setInvites(Array.isArray(payload?.data?.invites) ? payload.data.invites : []);
+      setCurrentUserRole(payload?.data?.currentUserRole ?? null);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to load team members";
+      setTeamError(message);
+      setMembers([]);
+      setInvites([]);
+    } finally {
+      setTeamLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void fetchTeam();
+  }, []);
   
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,11 +106,53 @@ export default function TeamSettings() {
       toast.success("Team member successfully invited", { id: toastId });
       setEmail("");
       setIsOpen(false);
-      // refetch pending invites...
+      void fetchTeam();
     } catch (err: any) {
       toast.error(err.message, { id: toastId });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const cancelInvite = async (inviteId: string) => {
+    if (!canManageMembers) return;
+    setRemovingId(inviteId);
+    const toastId = toast.loading("Cancelling invite...");
+    try {
+      const res = await fetch("/api/team/remove", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inviteId }),
+      });
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(payload?.error || "Failed to cancel invite");
+      toast.success("Invite cancelled.", { id: toastId });
+      void fetchTeam();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to cancel invite", { id: toastId });
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
+  const removeMember = async (targetUserId: string) => {
+    if (!canManageMembers) return;
+    setRemovingId(targetUserId);
+    const toastId = toast.loading("Removing member...");
+    try {
+      const res = await fetch("/api/team/remove", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUserId }),
+      });
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(payload?.error || "Failed to remove member");
+      toast.success("Member removed.", { id: toastId });
+      void fetchTeam();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to remove member", { id: toastId });
+    } finally {
+      setRemovingId(null);
     }
   };
 
@@ -181,14 +272,57 @@ export default function TeamSettings() {
                         </Button>
                       </div>
                     )}
-                    <div className="p-5 text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 bg-zinc-50/30 dark:bg-zinc-900/30 min-h-[160px]">
-                      <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                        <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-zinc-900 dark:text-zinc-100">You are the Owner</p>
-                        <p className="text-xs text-zinc-500 mt-1 max-w-[200px]">Any additional accepted members will dynamically populate here.</p>
-                      </div>
+                    <div className="p-5 bg-zinc-50/30 dark:bg-zinc-900/30 min-h-[160px]">
+                      {teamLoading ? (
+                        <div className="text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 min-h-[140px]">
+                          <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center animate-pulse" />
+                          <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">Loading members…</p>
+                        </div>
+                      ) : teamError ? (
+                        <div className="text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 min-h-[140px]">
+                          <p className="font-bold text-zinc-900 dark:text-zinc-100">Unable to load members</p>
+                          <p className="text-xs text-zinc-500 max-w-[240px]">{teamError}</p>
+                          <Button variant="outline" size="sm" onClick={fetchTeam}>Retry</Button>
+                        </div>
+                      ) : members.length === 0 ? (
+                        <div className="text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 min-h-[140px]">
+                          <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                            <Users className="w-5 h-5 text-zinc-400" />
+                          </div>
+                          <p className="font-bold text-zinc-900 dark:text-zinc-100">No members found</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {members.map((m) => (
+                            <div key={m.id} className="flex items-center justify-between gap-3 rounded-lg bg-white/70 dark:bg-zinc-950/30 border border-zinc-200/60 dark:border-zinc-800/60 px-3 py-2">
+                              <div className="min-w-0">
+                                <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                                  {m.user?.name || m.user?.email || "Unnamed"}
+                                </p>
+                                <p className="text-xs text-zinc-500 truncate">{m.user?.email || "—"}</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-widest">
+                                  {m.role}
+                                </Badge>
+                                {canManageMembers && m.userId !== undefined && m.userId !== "" && m.userId !== (null as any) && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                                    onClick={() => removeMember(m.userId)}
+                                    disabled={removingId === m.userId}
+                                    title="Remove member"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                  </div>
                </div>
@@ -202,14 +336,58 @@ export default function TeamSettings() {
                     {!isTeamPlan && (
                       <div className="absolute inset-0 z-10 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-[2px]"></div>
                     )}
-                    <div className="p-5 text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 bg-zinc-50/30 dark:bg-zinc-900/30 min-h-[160px]">
-                      <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-                        <Clock className="w-5 h-5 text-zinc-400" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-zinc-900 dark:text-zinc-100">No Pending Invites</p>
-                        <p className="text-xs text-zinc-500 mt-1 max-w-[200px]">Invited users who haven't accepted will visibly hang here.</p>
-                      </div>
+                    <div className="p-5 bg-zinc-50/30 dark:bg-zinc-900/30 min-h-[160px]">
+                      {teamLoading ? (
+                        <div className="text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 min-h-[140px]">
+                          <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center animate-pulse" />
+                          <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">Loading invites…</p>
+                        </div>
+                      ) : teamError ? (
+                        <div className="text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 min-h-[140px]">
+                          <p className="font-bold text-zinc-900 dark:text-zinc-100">Unable to load invites</p>
+                          <p className="text-xs text-zinc-500 max-w-[240px]">{teamError}</p>
+                          <Button variant="outline" size="sm" onClick={fetchTeam}>Retry</Button>
+                        </div>
+                      ) : invites.length === 0 ? (
+                        <div className="text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 min-h-[140px]">
+                          <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                            <Clock className="w-5 h-5 text-zinc-400" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-zinc-900 dark:text-zinc-100">No Pending Invites</p>
+                            <p className="text-xs text-zinc-500 mt-1 max-w-[200px]">Invited users who haven't accepted will appear here.</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {invites.map((inv) => (
+                            <div key={inv.id} className="flex items-center justify-between gap-3 rounded-lg bg-white/70 dark:bg-zinc-950/30 border border-zinc-200/60 dark:border-zinc-800/60 px-3 py-2">
+                              <div className="min-w-0">
+                                <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">{inv.email}</p>
+                                <p className="text-xs text-zinc-500 truncate">Expires {new Date(inv.expiresAt).toLocaleDateString()}</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-widest">
+                                  {inv.role}
+                                </Badge>
+                                {canManageMembers && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                                    onClick={() => cancelInvite(inv.id)}
+                                    disabled={removingId === inv.id}
+                                    title="Cancel invite"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                  </div>
                </div>

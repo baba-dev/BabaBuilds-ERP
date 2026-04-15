@@ -14,10 +14,12 @@ import { useTranslations } from "next-intl";
 import type { DashboardData } from "./types";
 import { DashboardTooltip } from "./dashboard-tooltip";
 import { cn } from "@/lib/utils";
+import { dashboardTypography as ty } from "./dashboard-typography";
 
 export function DashboardTrustPanel({ trust }: { trust: DashboardData["trust"] }) {
   const t = useTranslations("Dashboard");
   const tr = (key: string, fallback: string, values?: any) => {
+    if (!t.has(key as any)) return fallback;
     const translation = t(key as any, values);
     if (translation === key || translation === `Dashboard.${key}`) return fallback;
     return translation;
@@ -84,10 +86,10 @@ export function DashboardTrustPanel({ trust }: { trust: DashboardData["trust"] }
               <status.icon className={cn("w-6 h-6", status.color)} />
             </div>
             <div className="space-y-0.5">
-              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-none">
+              <p className="text-xs font-semibold tracking-wider uppercase text-zinc-500 leading-none">
                 {tr("integrity_status", "Integrity status")}
               </p>
-              <h4 className={cn("text-lg font-black tracking-tight", status.color)}>
+              <h4 className={cn(ty.sectionTitle, status.color)}>
                 {status.label}
               </h4>
             </div>
@@ -113,8 +115,8 @@ export function DashboardTrustPanel({ trust }: { trust: DashboardData["trust"] }
                     <DashboardTooltip label={metric.help} />
                   </div>
                   <div className="space-y-0.5">
-                    <p className="text-xl font-black tabular-nums tracking-tighter">{metric.value}</p>
-                    <p className="text-[10px] font-bold uppercase tracking-wider truncate opacity-80">{metric.label}</p>
+                    <p className={ty.value2xlLight}>{metric.value}</p>
+                    <p className={`${ty.labelUpper} truncate opacity-80`}>{metric.label}</p>
                   </div>
                 </div>
               );

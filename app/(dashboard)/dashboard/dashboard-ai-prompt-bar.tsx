@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Sparkles, Send, Command, ArrowRight, Zap, ShieldCheck, Wallet } from "lucide-react";
+import { Sparkles, Send, Command, Zap, ShieldCheck, Wallet, SunMoon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,10 +17,18 @@ const SAMPLE_PROMPTS = [
   "Show unreconciled transactions needing attention"
 ];
 
+const THEME_CHIP_QUERY =
+  "Switch my UI theme to dark mode (or light mode). You can do this instantly, or manually via Settings → Profile → Regional & Display → UI Theme (/settings/profile).";
+
 const SUGGESTION_CHIPS = [
   { label: "Overdue receivables", icon: <Wallet className="w-3 h-3" /> },
   { label: "Cash flow summary", icon: <Zap className="w-3 h-3" /> },
   { label: "Tax compliance", icon: <ShieldCheck className="w-3 h-3" /> },
+  {
+    label: "Change to dark mode / light mode",
+    query: THEME_CHIP_QUERY,
+    icon: <SunMoon className="w-3 h-3" />,
+  },
 ];
 
 export function DashboardAIPromptBar() {
@@ -39,12 +47,12 @@ export function DashboardAIPromptBar() {
     e?.preventDefault();
     if (!prompt.trim()) return;
     
-    openAIChat({ query: prompt.trim() });
+    openAIChat({ query: prompt.trim(), autoSubmit: true });
     setPrompt("");
   };
 
-  const handleChipClick = (label: string) => {
-    openAIChat({ query: label });
+  const handleChipClick = (chip: (typeof SUGGESTION_CHIPS)[number]) => {
+    openAIChat({ query: chip.query ?? chip.label, autoSubmit: true });
   };
 
   return (
@@ -122,7 +130,7 @@ export function DashboardAIPromptBar() {
           {SUGGESTION_CHIPS.map((chip) => (
             <button
               key={chip.label}
-              onClick={() => handleChipClick(chip.label)}
+              onClick={() => handleChipClick(chip)}
               className={cn(
                 "flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-bold uppercase tracking-wider transition-all duration-200",
                 "bg-white dark:bg-zinc-900/50 border-zinc-200/60 dark:border-zinc-800/60 text-zinc-500",
@@ -133,8 +141,8 @@ export function DashboardAIPromptBar() {
               {chip.label}
             </button>
           ))}
-          <div className="ml-auto flex items-center gap-1 text-[9px] font-bold text-zinc-400/60 uppercase tracking-tighter">
-            Press <span className="px-1 rounded bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/50">Enter</span> to query
+          <div className="ml-auto text-[9px] font-bold text-zinc-400/60 uppercase tracking-tighter">
+            Query runs automatically
           </div>
         </div>
       </div>
