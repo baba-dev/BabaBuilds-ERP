@@ -11,6 +11,7 @@ export type InvoiceDto = {
   amountReceived: number | null;
   dateReceived: string | Date | null;
   pdfPath?: string;
+  sourceProposalId?: string | null;
 };
 
 export type ExpenseDto = {
