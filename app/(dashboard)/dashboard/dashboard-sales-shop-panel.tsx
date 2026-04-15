@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { DashboardData } from "./types";
 import { DashboardTooltip } from "./dashboard-tooltip";
+import { dashboardTypography as ty } from "./dashboard-typography";
 
 export function DashboardSalesAndShopPanel({
   salesAndShop,
@@ -68,7 +69,7 @@ export function DashboardSalesAndShopPanel({
       <motion.div
         animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
         transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-        className={cn("flex items-center text-[10px] font-bold px-1 rounded", tone)}
+        className={cn("flex items-center text-[10px] font-bold px-1 rounded uppercase tracking-wider", tone)}
       >
         <TrendingUp className={cn("w-2.5 h-2.5 mr-0.5", !isPositive && "rotate-180")} />
         {isPositive ? "+" : ""}{deltaPct}%
@@ -94,10 +95,10 @@ export function DashboardSalesAndShopPanel({
                   <FileCheck2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 leading-tight">
+                  <h3 className={cn(ty.sectionTitle, "leading-tight")}>
                     {tr("proposal_funnel", "Proposal funnel")}
                   </h3>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-tight">
+                  <p className={ty.cardSubtitle}>
                     {tr("proposal_funnel_subtitle", "Conversion lifecycle of your deals")}
                   </p>
                 </div>
@@ -138,7 +139,7 @@ export function DashboardSalesAndShopPanel({
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-1.5">
                           <p className={cn(
-                            "text-[11px] font-semibold tracking-tight",
+                            "text-xs font-semibold tracking-tight",
                             isDeclined ? "text-zinc-400" : "text-zinc-500"
                           )}>{stage.label}</p>
                           {isInvoiced && (
@@ -148,7 +149,7 @@ export function DashboardSalesAndShopPanel({
                           )}
                         </div>
                         <p className={cn(
-                          "text-2xl font-semibold tracking-tight tabular-nums text-zinc-900 dark:text-zinc-100",
+                          ty.value2xlLight,
                           isInvoiced ? "text-emerald-700 dark:text-emerald-400" : ""
                         )}>
                           {stage.value}
@@ -171,10 +172,10 @@ export function DashboardSalesAndShopPanel({
                   <TrendingUp className="w-4 h-4 text-amber-700 dark:text-amber-300" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-amber-900 dark:text-amber-200 tracking-tight">
+                  <p className="text-xs font-semibold text-amber-900 dark:text-amber-200 tracking-tight uppercase">
                     {tr("revenue_opportunity", "Revenue Opportunity")}
                   </p>
-                  <p className="text-sm text-amber-800/90 dark:text-amber-200/80">
+                  <p className={cn(ty.helper, "text-amber-800/90 dark:text-amber-200/80")}>
                     <strong>{salesAndShop.acceptedAwaitingInvoicing}</strong> {tr("proposals_ready_to_invoice", "proposals ready for invoicing")}
                   </p>
                 </div>
@@ -193,7 +194,7 @@ export function DashboardSalesAndShopPanel({
             </div>
           ) : (
             <div className="mt-6 pt-5 border-t border-zinc-200/60 dark:border-zinc-800/60">
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center">
+              <p className={cn(ty.helper, "text-center")}>
                 {tr("funnel_operational", "Funnel is operational and healthy")}
               </p>
             </div>
@@ -215,10 +216,10 @@ export function DashboardSalesAndShopPanel({
                 <ShoppingBag className="w-4 h-4 text-violet-600 dark:text-violet-400" />
               </div>
               <div className="min-w-0">
-                <h3 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 leading-tight">
+                <h3 className={cn(ty.sectionTitle, "leading-tight")}>
                   {tr("commerce_pulse", "Commerce pulse")}
                 </h3>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-tight">
+                <p className={ty.cardSubtitle}>
                   {tr("commerce_pulse_subtitle", "Public shop & service performance")}
                 </p>
               </div>

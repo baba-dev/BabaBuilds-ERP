@@ -32,6 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { DashboardData } from "./types";
 import { INTELLIGENCE_SUGGESTION_ROUTES } from "./intelligence-suggestion-routes";
+import { dashboardTypography as ty } from "./dashboard-typography";
 
 interface DashboardRightRailProps {
   data: DashboardData;
@@ -162,15 +163,15 @@ function RightRailHeader({ tr, mood, aiState }: { tr: any, mood: WorkspaceMood, 
           <Icon className={`w-6 h-6 ${aiState === 'enabled' ? 'animate-pulse' : ''}`} />
         </div>
         <div>
-          <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-tight">
+          <h3 className={ty.cardTitle}>
             {info.title}
           </h3>
-          <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mt-0.5">
+          <p className={`${ty.labelUpper} mt-0.5`}>
             {info.sub}
           </p>
         </div>
       </div>
-      <Badge variant="outline" className={`text-xs font-bold uppercase tracking-wider transition-all duration-500 h-6 px-2.5 ${info.badge.color}`}>
+      <Badge variant="outline" className={`${ty.labelUpper} transition-all duration-500 h-6 px-2.5 ${info.badge.color}`}>
         {info.badge.label}
       </Badge>
     </div>
@@ -186,10 +187,10 @@ function IntelligenceAssistantSection({ data, tr, mood, aiState }: { data: Dashb
             <Brain className="w-5 h-5" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+            <p className={ty.cardTitle}>
               {tr("ai_setup_incomplete_headline", "AI Setup Incomplete")}
             </p>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed mt-1.5 line-clamp-3">
+            <p className={`${ty.helper} mt-1.5 line-clamp-3`}>
               {tr("ai_setup_incomplete_body", "Add your Groq API key in Business Settings to complete setup and unlock strategic suggestions, automated finance guidance, and deeper workspace analysis.")}
             </p>
             <Link href="/settings">
@@ -212,10 +213,10 @@ function IntelligenceAssistantSection({ data, tr, mood, aiState }: { data: Dashb
             <Bot className="w-5 h-5" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+            <p className={ty.cardTitle}>
               {tr("ai_fallback_headline", "Standard Intelligence Active")}
             </p>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium mt-1.5 line-clamp-2">
+            <p className={`${ty.helper} mt-1.5 line-clamp-2`}>
               {tr("ai_fallback_body", "Using baseline rules instead of neural models due to connection limits.")}
             </p>
           </div>
@@ -234,7 +235,7 @@ function IntelligenceAssistantSection({ data, tr, mood, aiState }: { data: Dashb
             </div>
           ))}
         </div>
-        <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
+        <p className={ty.labelUpper}>
           {tr("active_observers", "3 Intelligent Observers active")}
         </p>
       </div>
@@ -248,12 +249,12 @@ function RecentActivitySection({ data, tr }: { data: DashboardData, tr: any }) {
   return (
     <div className="p-6 space-y-5">
       <div className="flex items-center justify-between">
-        <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest inline-flex items-center gap-2">
+        <h4 className={`${ty.labelUpper} inline-flex items-center gap-2`}>
           <History className="w-4 h-4" />
           {tr("workspace_signals", "Workspace Stream")}
         </h4>
         {hasActivity && (
-          <Link href="/logs" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase hover:underline opacity-80 hover:opacity-100 transition-all tracking-tight inline-flex items-center gap-1 group">
+          <Link href="/logs" className={`${ty.labelUpper} text-indigo-600 dark:text-indigo-400 hover:underline opacity-80 hover:opacity-100 transition-all inline-flex items-center gap-1 group`}>
             {tr("audit_feed", "Audit Feed")}
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
           </Link>
@@ -264,10 +265,10 @@ function RecentActivitySection({ data, tr }: { data: DashboardData, tr: any }) {
         {!hasActivity ? (
           <div className="py-8 text-center flex flex-col items-center">
             <Clock3 className="w-9 h-9 text-zinc-200 dark:text-zinc-800 mb-3" />
-            <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-tight">
+            <p className={ty.cardTitle}>
               {tr("activity_quiet_title", "Operational Calm")}
             </p>
-            <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-1.5 max-w-[220px] leading-relaxed">
+            <p className={`${ty.helper} mt-1.5 max-w-[220px]`}>
               {tr("activity_quiet_desc", "Billing, reconciliation, and workflow events will appear here as your workspace becomes active.")}
             </p>
           </div>
@@ -278,7 +279,7 @@ function RecentActivitySection({ data, tr }: { data: DashboardData, tr: any }) {
               className="group/item relative pl-5 border-l-2 border-zinc-100 dark:border-zinc-800/80 hover:border-indigo-500/50 transition-all animate-in fade-in slide-in-from-left-2"
               style={{ animationDelay: `${idx * 150}ms` }}
             >
-              <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 leading-tight group-hover/item:text-zinc-900 dark:group-hover/item:text-zinc-100 transition-colors">
+              <p className={`${ty.cardTitle} leading-tight group-hover/item:text-zinc-900 dark:group-hover/item:text-zinc-100 transition-colors`}>
                 {item.action}
               </p>
               <div className="flex items-center gap-2.5 mt-2">
@@ -286,7 +287,7 @@ function RecentActivitySection({ data, tr }: { data: DashboardData, tr: any }) {
                   {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
                 </span>
                 <span className="w-1 h-1 rounded-full bg-zinc-200 dark:bg-zinc-800" />
-                <Badge variant="outline" className={`h-5 text-xs font-bold uppercase tracking-wider py-0 rounded-sm px-1.5 ${
+                <Badge variant="outline" className={`${ty.kpiBadge} py-0 rounded-sm px-1.5 ${
                   item.status.toLowerCase().includes("fail") || item.status.toLowerCase().includes("err")
                     ? "text-rose-500 border-rose-500/20 bg-rose-500/5"
                     : "text-emerald-500 border-emerald-500/20 bg-emerald-500/5"
@@ -312,7 +313,7 @@ function RecentNotificationsSection({ data, tr, mood }: { data: DashboardData, t
 
   return (
     <div className="p-6 space-y-5 bg-zinc-50/30 dark:bg-zinc-800/20">
-      <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest inline-flex items-center gap-2">
+      <h4 className={`${ty.labelUpper} inline-flex items-center gap-2`}>
         <Bell className="w-4 h-4" />
         {tr("notifications_center", "Interruptions")}
       </h4>
@@ -322,11 +323,11 @@ function RecentNotificationsSection({ data, tr, mood }: { data: DashboardData, t
           <div className="p-4 rounded-2xl border border-zinc-100/80 dark:border-zinc-800/50 bg-white/50 dark:bg-zinc-900/30">
              <div className="flex items-center gap-2">
                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-               <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+               <p className={ty.cardTitle}>
                  {tr("no_active_interruptions", "Workspace Silent")}
                </p>
              </div>
-             <p className="text-sm text-zinc-400 dark:text-zinc-500 font-medium mt-1.5 leading-relaxed">
+             <p className={`${ty.helper} mt-1.5`}>
                {tr("workspace_quiet_note", "No active interruptions. Your workspace is operating quietly right now.")}
              </p>
           </div>
@@ -346,14 +347,14 @@ function RecentNotificationsSection({ data, tr, mood }: { data: DashboardData, t
                 {n.severity === 'critical' ? <ShieldAlert className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
               </div>
               <div>
-                <p className="text-sm font-bold text-zinc-800 dark:text-zinc-100 leading-snug">{n.label}</p>
+                <p className={`${ty.cardTitle} leading-snug`}>{n.label}</p>
                 <div className="flex items-center gap-2.5 mt-2.5">
-                  <Badge variant="outline" className={`h-5 text-xs uppercase font-bold tracking-widest px-2 ${
+                  <Badge variant="outline" className={`${ty.kpiBadge} px-2 ${
                      n.severity === 'critical' ? "border-rose-200 text-rose-600 dark:border-rose-800 dark:text-rose-500" : "border-amber-200 text-amber-600 dark:border-amber-800 dark:text-amber-500"
                   }`}>
                     {n.severity.toUpperCase()}
                   </Badge>
-                  <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-tighter cursor-help hover:text-zinc-500 transition-colors">{tr("action_required", "Action Required")}</span>
+                  <span className={`${ty.labelUpper} cursor-help hover:text-zinc-500 transition-colors`}>{tr("action_required", "Action Required")}</span>
                 </div>
               </div>
             </div>
@@ -369,7 +370,7 @@ function SuggestedActionsSection({ data, tr, mood }: { data: DashboardData, tr: 
 
   return (
     <div className="p-6 space-y-5">
-      <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest inline-flex items-center gap-2">
+      <h4 className={`${ty.labelUpper} inline-flex items-center gap-2`}>
         <Sparkles className="w-4 h-4" />
         {tr("intelligence_suggestions", "Contextual Guidance")}
       </h4>
@@ -396,12 +397,12 @@ function SuggestedActionsSection({ data, tr, mood }: { data: DashboardData, tr: 
             </div>
             <div className="flex-1 relative z-10">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                <span className={`${ty.cardTitle} group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors`}>
                   {action.label}
                 </span>
                 <ChevronRight className="w-4.5 h-4.5 text-zinc-300 dark:text-zinc-700 group-hover:translate-x-1.5 transition-transform" />
               </div>
-              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 mt-1.5 line-clamp-2 leading-normal">
+              <p className={`${ty.helper} mt-1.5 line-clamp-2 leading-normal`}>
                 {action.desc}
               </p>
             </div>
@@ -495,21 +496,21 @@ function SystemSignalsSection({ data, tr, mood }: { data: DashboardData, tr: any
 
   return (
     <div className="p-6 space-y-5">
-      <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest inline-flex items-center gap-2">
+      <h4 className={`${ty.labelUpper} inline-flex items-center gap-2`}>
         <Activity className="w-4 h-4" />
         {tr("signals_interpretation", "Derived Signals")}
       </h4>
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-           <p className={`text-sm font-bold flex items-center gap-2.5 ${
+           <p className={`${ty.cardTitle} flex items-center gap-2.5 ${
              mood === 'healthy' ? 'text-emerald-600 dark:text-emerald-400' :
              mood === 'critical' ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'
            }`}>
             {mood === 'healthy' ? <CheckCircle2 className="w-4.5 h-4.5" /> : <ShieldAlert className="w-4.5 h-4.5" />}
             {getSystemInterpretation()}
           </p>
-          <Badge variant="outline" className="text-xs font-medium uppercase tracking-tighter opacity-60">{tr("real_time", "Real-time")}</Badge>
+          <Badge variant="outline" className={`${ty.labelUpper} opacity-60`}>{tr("real_time", "Real-time")}</Badge>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -531,8 +532,8 @@ function SignalPill({ label, value, tone }: { label: string, value: string, tone
   };
   return (
     <div className={`p-4 rounded-2xl border bg-white/50 dark:bg-zinc-950/20 transition-all hover:bg-white dark:hover:bg-zinc-900 shadow-sm ${colors[tone]}`}>
-      <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-tighter">{label}</p>
-      <p className="text-sm font-bold mt-2 uppercase tracking-wide truncate">{value}</p>
+      <p className={ty.labelUpper}>{label}</p>
+      <p className={`mt-2 ${ty.cardTitle} truncate`}>{value}</p>
     </div>
   );
 }
@@ -559,7 +560,7 @@ function SyncImportHealthSection({
   
   return (
     <div className="p-6 space-y-5 bg-zinc-50/20 dark:bg-zinc-800/20">
-      <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest inline-flex items-center gap-2">
+      <h4 className={`${ty.labelUpper} inline-flex items-center gap-2`}>
         <DatabaseZap className="w-4 h-4" />
         {tr("operational_confidence", "Operational Pipeline")}
       </h4>
@@ -577,10 +578,10 @@ function SyncImportHealthSection({
               {hasFailures ? <FileWarning className="w-6 h-6" /> : <ShieldCheck className="w-6 h-6" />}
             </div>
             <div>
-              <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+              <p className={ty.cardTitle}>
                 {hasFailures ? tr("failed_sync_detect", "Sync Anomalies Detected") : tr("sync_healthy_interpret", "Sync Pipeline Stable")}
               </p>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium mt-1.5 leading-normal">
+              <p className={`${ty.helper} mt-1.5 leading-normal`}>
                 {hasFailures 
                   ? tr("sync_fix_note", "Manual intervention required for {count} records", { count: data.attention.failedImports })
                   : tr("reassurance_sync", "Infrastructure and data linkage are nominal.")}
