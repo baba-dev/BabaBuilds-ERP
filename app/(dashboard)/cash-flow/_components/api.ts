@@ -166,3 +166,35 @@ export async function updateAlertPreferences(input: Partial<Omit<AlertPreference
   return (json as { data?: unknown } | null)?.data ?? null;
 }
 
+export type AssumptionProfileRow = {
+  id: string;
+  name: string;
+  scenarioTag: CashFlowScenarioTag;
+  valueJson: unknown;
+  isDefault: boolean;
+  updatedAt: string;
+};
+
+export async function listAssumptionProfiles(): Promise<AssumptionProfileRow[]> {
+  const res = await fetch("/api/cash-flow/assumption-profiles", { cache: "no-store" });
+  const json = (await res.json().catch(() => null)) as unknown;
+  if (!res.ok) throw new Error((json as { error?: string } | null)?.error ?? "Failed to load assumption profiles");
+  return (((json as { data?: unknown } | null)?.data ?? []) as AssumptionProfileRow[]) ?? [];
+}
+
+export async function upsertAssumptionProfile(input: {
+  name: string;
+  scenarioTag: CashFlowScenarioTag;
+  valueJson: unknown;
+  isDefault?: boolean;
+}) {
+  const res = await fetch("/api/cash-flow/assumption-profiles", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const json = (await res.json().catch(() => null)) as unknown;
+  if (!res.ok) throw new Error((json as { error?: string } | null)?.error ?? "Failed to save assumption profile");
+  return (json as { data?: unknown } | null)?.data ?? null;
+}
+

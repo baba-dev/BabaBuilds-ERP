@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverHeader, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import { CashFlowNav } from "@/app/(dashboard)/cash-flow/_components/cash-flow-nav";
 import type { CashFlowScenarioTag, CashFlowHorizonType } from "@/app/(dashboard)/cash-flow/_components/types";
-import { listAssumptions, upsertAssumption } from "@/app/(dashboard)/cash-flow/_components/api";
+import { listAssumptions, upsertAssumption, listAssumptionProfiles, upsertAssumptionProfile } from "@/app/(dashboard)/cash-flow/_components/api";
 import { CashFlowHelp } from "../_components/primitives/help";
 import { buildCashFlowContextQuery, getCashFlowContextFromSearchParams, updateCashFlowContextInUrl } from "../_components/context";
 
