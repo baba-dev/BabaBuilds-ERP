@@ -3,6 +3,18 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+type StalenessSignal = {
+  key:
+    | "invoices"
+    | "purchaseOrders"
+    | "retainers"
+    | "bankTransactions"
+    | "manualAdjustments"
+    | "assumptions";
+  label: string;
+  lastUpdatedAt: Date | null;
+};
+
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
   const workspaceId = (session as any)?.workspaceId as string | undefined;
@@ -31,7 +43,68 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const lineItems = snapshot.periods.flatMap((p) => p.lineItems);
+  const lineItems = snapshot.periods.flatMap((p) => p.lineItems.map((l) => ({ ...l, periodId: p.id })));
+
+  const [
+    invoiceStamp,
+    poStamp,
+    retainerStamp,
+    bankTxStamp,
+    manualAdjStamp,
+    assumptionsStamp,
+  ] = await Promise.all([
+    prisma.invoice.findFirst({
+      where: { workspaceId },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    }),
+    prisma.purchaseOrder.findFirst({
+      where: { workspaceId },
+      orderBy: { updatedAt: "desc" },
+      select: { updatedAt: true },
+    }),
+    prisma.retainer.findFirst({
+      where: { workspaceId },
+      orderBy: { updatedAt: "desc" },
+      select: { updatedAt: true },
+    }),
+    prisma.bankTransaction.findFirst({
+      where: { workspaceId },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    }),
+    prisma.cashForecastManualAdjustment.findFirst({
+      where: { workspaceId },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    }),
+    prisma.cashForecastAssumption.findFirst({
+      where: { workspaceId, isActive: true },
+      orderBy: { updatedAt: "desc" },
+      select: { updatedAt: true },
+    }),
+  ]);
+
+  const signals: StalenessSignal[] = [
+    // Invoice doesn't have updatedAt; createdAt is a useful “new invoices since snapshot” signal.
+    { key: "invoices", label: "Invoices", lastUpdatedAt: invoiceStamp?.createdAt ?? null },
+    { key: "purchaseOrders", label: "Purchase orders", lastUpdatedAt: poStamp?.updatedAt ?? null },
+    { key: "retainers", label: "Retainers", lastUpdatedAt: retainerStamp?.updatedAt ?? null },
+    // BankTransaction doesn't have updatedAt; createdAt captures new imports since snapshot.
+    { key: "bankTransactions", label: "Bank transactions", lastUpdatedAt: bankTxStamp?.createdAt ?? null },
+    // Manual adjustments do not currently track updatedAt. createdAt is a good enough signal for “changed since snapshot”.
+    { key: "manualAdjustments", label: "Manual adjustments", lastUpdatedAt: manualAdjStamp?.createdAt ?? null },
+    { key: "assumptions", label: "Assumptions", lastUpdatedAt: assumptionsStamp?.updatedAt ?? null },
+  ];
+
+  const generatedAt = snapshot.generatedAt;
+  const changedSinceSnapshot = signals
+    .filter((s) => (s.lastUpdatedAt ? s.lastUpdatedAt.getTime() > generatedAt.getTime() : false))
+    .map((s) => ({
+      key: s.key,
+      label: s.label,
+      lastUpdatedAt: s.lastUpdatedAt!.toISOString(),
+    }));
 
   return NextResponse.json(
     {
@@ -47,7 +120,20 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
         totalProjectedInflows: snapshot.totalProjectedInflows,
         totalProjectedOutflows: snapshot.totalProjectedOutflows,
         confidenceScore: snapshot.confidenceScore,
+        assumptionsJson: snapshot.assumptionsJson,
         generatedBy: snapshot.generatedBy,
+        stalenessSignals: {
+          generatedAt: generatedAt.toISOString(),
+          stamps: {
+            invoices: invoiceStamp?.createdAt?.toISOString?.() ?? null,
+            purchaseOrders: poStamp?.updatedAt?.toISOString?.() ?? null,
+            retainers: retainerStamp?.updatedAt?.toISOString?.() ?? null,
+            bankTransactions: bankTxStamp?.createdAt?.toISOString?.() ?? null,
+            manualAdjustments: manualAdjStamp?.createdAt?.toISOString?.() ?? null,
+            assumptions: assumptionsStamp?.updatedAt?.toISOString?.() ?? null,
+          },
+          changedSinceSnapshot,
+        },
         periods: snapshot.periods.map((p) => ({
           id: p.id,
           periodStart: p.periodStart,
@@ -63,6 +149,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
         })),
         lineItems: lineItems.map((l) => ({
           id: l.id,
+          periodId: l.periodId,
           direction: l.direction,
           sourceType: l.sourceType,
           sourceId: l.sourceId,
@@ -72,6 +159,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
           scenarioTag: l.scenarioTag,
           classification: l.classification,
           title: l.title,
+          metadataJson: l.metadataJson,
           explanation: l.explanation,
         })),
       },

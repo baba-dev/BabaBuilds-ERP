@@ -113,6 +113,41 @@ const sumBy = (lines: ForecastLineDraft[], predicate: (l: ForecastLineDraft) => 
 
 const makeDriverKey = (line: ForecastLineDraft) => `${line.sourceType}:${line.sourceId ?? line.title}`;
 
+const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+
+function computeConfidenceScore(lines: ForecastLineDraft[]): number | null {
+  const projected = lines.filter((l) => !isActualLine(l));
+  if (projected.length === 0) return null;
+
+  // Weight by absolute amount so large items drive the signal.
+  let weightedSum = 0;
+  let weightTotal = 0;
+  let knownWeight = 0;
+
+  for (const l of projected) {
+    const w = Number(toDecimal(l.amount).abs().toString());
+    if (!Number.isFinite(w) || w <= 0) continue;
+    weightTotal += w;
+
+    const c = l.confidence;
+    if (c == null || !Number.isFinite(c)) continue;
+    const cc = clamp01(Number(c));
+    weightedSum += cc * w;
+    knownWeight += w;
+  }
+
+  if (!Number.isFinite(weightTotal) || weightTotal <= 0) return null;
+  if (knownWeight <= 0) return null;
+
+  const base = weightedSum / knownWeight; // average over known confidences
+  const coverage = clamp01(knownWeight / weightTotal);
+
+  // Mild penalty for unknown confidence coverage so "unknown-heavy" snapshots read less certain.
+  // Keeps the score stable and interpretable without needing a full probabilistic model (v1).
+  const penalty = (1 - coverage) * 0.12;
+  return clamp01(base - penalty);
+}
+
 export async function computeCashForecastSnapshot(
   input: ForecastEngineInput,
   deps?: { loadSources?: (args: { workspaceId: string; startDate: Date; endDate: Date; now: Date }) => Promise<ForecastSourceData> }
@@ -223,7 +258,7 @@ export async function computeCashForecastSnapshot(
     closingCash,
     totalProjectedInflows,
     totalProjectedOutflows,
-    confidenceScore: null,
+    confidenceScore: computeConfidenceScore(lines),
     assumptions,
     periods,
     lineItems: lines,
