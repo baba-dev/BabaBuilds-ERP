@@ -9,6 +9,7 @@ import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useFormat } from "@/hooks/use-format";
 import { getCashFlowContextFromSearchParams, updateCashFlowContextInUrl } from "../_components/context";
 import { CashFlowNav } from "../_components/cash-flow-nav";
 import { fetchCashFlowSnapshotWithPeriods, refreshCashForecast } from "../_components/api";
@@ -17,10 +18,11 @@ import { CashFlowActionBar } from "../_components/primitives/action-bar";
 import { CashFlowMetricCard } from "../_components/primitives/metric-card";
 import { CashFlowErrorState, CashFlowNoSnapshotState } from "../_components/primitives/state";
 import { CashFlowLineItemsTable } from "../_components/primitives/line-items-table";
-import { getStaleStatus, isConfidenceLow, sumLineItems, topDrivers } from "../_components/primitives/utils";
+import { getStaleStatus, isConfidenceLow, isLatePayerRisk, rollupByConfidence, sumLineItems, topDrivers } from "../_components/primitives/utils";
 import { buildCashFlowContextQuery } from "../_components/context";
 
 export default function CashFlowInflowsPage() {
+  const { fCurrency } = useFormat();
   const search = useSearchParams();
   const urlCtx = useMemo(() => getCashFlowContextFromSearchParams(search), [search]);
   const [horizonType, setHorizonType] = useState<CashFlowHorizonType>(urlCtx.horizonType);
@@ -80,6 +82,11 @@ export default function CashFlowInflowsPage() {
   const inflows = useMemo(() => (snapshot?.lineItems ?? []).filter((i) => i.direction === "INFLOW"), [snapshot]);
 
   const lowConfidence = useMemo(() => inflows.filter((i) => isConfidenceLow(i, 0.6)), [inflows]);
+  const latePayer = useMemo(
+    () => inflows.filter((i) => i.sourceType === "INVOICE" && isLatePayerRisk(i, 7)),
+    [inflows],
+  );
+  const confidenceRollup = useMemo(() => rollupByConfidence(inflows), [inflows]);
   const nearTermRisk = useMemo(() => {
     const now = Date.now();
     const horizonMs = 21 * 24 * 60 * 60 * 1000;
@@ -149,29 +156,23 @@ export default function CashFlowInflowsPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <CashFlowMetricCard
                 label="Projected inflows"
-                value={Intl.NumberFormat(undefined, { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(
-                  sumLineItems(inflows),
-                )}
+                value={fCurrency(sumLineItems(inflows))}
                 subtext="Total of line items"
                 tone="positive"
                 indicator={<TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />}
               />
               <CashFlowMetricCard
                 label="Low-confidence inflows"
-                value={Intl.NumberFormat(undefined, { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(
-                  sumLineItems(lowConfidence),
-                )}
+                value={fCurrency(sumLineItems(lowConfidence))}
                 subtext={`${lowConfidence.length} drivers under 60%`}
                 tone={lowConfidence.length > 0 ? "warning" : "default"}
                 indicator={<TriangleAlert className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
               />
               <CashFlowMetricCard
-                label="Near-term risk"
-                value={Intl.NumberFormat(undefined, { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(
-                  sumLineItems(nearTermRisk),
-                )}
-                subtext="Low confidence within ~3 weeks"
-                tone={nearTermRisk.length > 0 ? "warning" : "default"}
+                label="Late-payer exposure"
+                value={fCurrency(sumLineItems(latePayer))}
+                subtext={`${latePayer.length} invoices with ≥7d behavior delay`}
+                tone={latePayer.length > 0 ? "warning" : "default"}
               />
             </div>
 
@@ -184,12 +185,40 @@ export default function CashFlowInflowsPage() {
                   <CashFlowLineItemsTable
                     items={inflows}
                     directionLabel="Inflows"
-                    currencyFormatter={(n) => Intl.NumberFormat(undefined, { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n)}
+                    currencyFormatter={(n) => fCurrency(n)}
                   />
                 </CardContent>
               </Card>
 
               <div className="space-y-4">
+                <Card className="rounded-2xl border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 shadow-sm backdrop-blur-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-black tracking-tight">Confidence rollup</CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 bg-white/40 dark:bg-zinc-900/30 p-3">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">High (≥80%)</div>
+                      <div className="mt-1 font-black tabular-nums">{fCurrency(confidenceRollup.high.amount)}</div>
+                      <div className="text-[11px] text-zinc-500 tabular-nums">{confidenceRollup.high.count} items</div>
+                    </div>
+                    <div className="rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 bg-white/40 dark:bg-zinc-900/30 p-3">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Medium (60–79%)</div>
+                      <div className="mt-1 font-black tabular-nums">{fCurrency(confidenceRollup.medium.amount)}</div>
+                      <div className="text-[11px] text-zinc-500 tabular-nums">{confidenceRollup.medium.count} items</div>
+                    </div>
+                    <div className="rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 bg-white/40 dark:bg-zinc-900/30 p-3">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Low (&lt;60%)</div>
+                      <div className="mt-1 font-black tabular-nums text-amber-700 dark:text-amber-300">{fCurrency(confidenceRollup.low.amount)}</div>
+                      <div className="text-[11px] text-zinc-500 tabular-nums">{confidenceRollup.low.count} items</div>
+                    </div>
+                    <div className="rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 bg-white/40 dark:bg-zinc-900/30 p-3">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Unknown</div>
+                      <div className="mt-1 font-black tabular-nums">{fCurrency(confidenceRollup.unknown.amount)}</div>
+                      <div className="text-[11px] text-zinc-500 tabular-nums">{confidenceRollup.unknown.count} items</div>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <Card className="rounded-2xl border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 shadow-sm backdrop-blur-sm">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-black tracking-tight flex items-center justify-between">
@@ -220,7 +249,7 @@ export default function CashFlowInflowsPage() {
                             </div>
                           </div>
                           <div className="text-right shrink-0">
-                            <div className="text-sm font-black tabular-nums">{Intl.NumberFormat(undefined, { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(Number(d.amount ?? 0))}</div>
+                            <div className="text-sm font-black tabular-nums">{fCurrency(Number(d.amount ?? 0))}</div>
                             <div className="text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums">
                               {d.confidence == null ? "—" : `${Math.round(d.confidence * 100)}%`}
                             </div>

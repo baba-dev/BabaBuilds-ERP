@@ -1,4 +1,4 @@
-import { differenceInHours } from "date-fns";
+import { differenceInDays, differenceInHours } from "date-fns";
 import type { SnapshotDetail, SnapshotLineItem, SnapshotPeriod } from "../types";
 
 export type CashFlowTone = "default" | "positive" | "warning" | "danger";
@@ -150,5 +150,87 @@ export function deriveCrunchSignal(snapshot: SnapshotDetail | null): CrunchSigna
     closingCash: worst.closing,
     tone: toneForRiskLevel(worst.p.riskLevel),
   };
+}
+
+export type SnapshotAssumptions = {
+  minimumCashThreshold?: number;
+  collectionsDelayDays?: number;
+  inflowHaircutPercent?: number;
+  outflowIncreasePercent?: number;
+  movePOEarlierLaterDays?: number;
+  defaultInvoicePaymentTermsDays?: number;
+};
+
+export function getSnapshotAssumptions(snapshot: SnapshotDetail | null): SnapshotAssumptions | null {
+  const raw = snapshot?.assumptionsJson;
+  if (!raw || typeof raw !== "object") return null;
+  return raw as SnapshotAssumptions;
+}
+
+export type RunwayResult = {
+  kind: "none" | "threshold" | "negative";
+  periodId: string;
+  bucketLabel: string;
+  daysUntil: number | null;
+  closingCash: number;
+};
+
+export function computeRunway(snapshot: SnapshotDetail | null): RunwayResult | null {
+  if (!snapshot?.periods?.length) return null;
+  const assumptions = getSnapshotAssumptions(snapshot);
+  const threshold = Number(assumptions?.minimumCashThreshold ?? 0);
+  const thresholdOk = Number.isFinite(threshold) ? threshold : 0;
+
+  for (const p of snapshot.periods) {
+    const closing = Number(p.closingCash ?? 0);
+    const start = new Date(p.periodStart);
+    const daysUntil = Number.isFinite(start.getTime()) ? Math.max(0, differenceInDays(start, new Date())) : null;
+    if (closing < 0) {
+      return { kind: "negative", periodId: p.id, bucketLabel: p.bucketLabel, daysUntil, closingCash: closing };
+    }
+    if (closing <= thresholdOk) {
+      return { kind: "threshold", periodId: p.id, bucketLabel: p.bucketLabel, daysUntil, closingCash: closing };
+    }
+  }
+  const last = snapshot.periods[snapshot.periods.length - 1]!;
+  return { kind: "none", periodId: last.id, bucketLabel: last.bucketLabel, daysUntil: null, closingCash: Number(last.closingCash ?? 0) };
+}
+
+export type ConfidenceBand = "high" | "medium" | "low" | "unknown";
+
+export function confidenceBand(conf: number | null | undefined): ConfidenceBand {
+  if (conf == null || !Number.isFinite(conf)) return "unknown";
+  if (conf >= 0.8) return "high";
+  if (conf >= 0.6) return "medium";
+  return "low";
+}
+
+export function rollupByConfidence(items: SnapshotLineItem[]) {
+  const out = {
+    high: { count: 0, amount: 0 },
+    medium: { count: 0, amount: 0 },
+    low: { count: 0, amount: 0 },
+    unknown: { count: 0, amount: 0 },
+  } as const;
+  for (const it of items) {
+    const b = confidenceBand(it.confidence);
+    (out as any)[b].count += 1;
+    (out as any)[b].amount += Number(it.amount ?? 0);
+  }
+  return out;
+}
+
+export function invoiceBehaviorDelayDays(item: SnapshotLineItem): number | null {
+  const raw = item.metadataJson;
+  if (!raw || typeof raw !== "object") return null;
+  const val = (raw as any).behaviorDelayDays;
+  const n = Number(val);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function isLatePayerRisk(item: SnapshotLineItem, thresholdDays = 7): boolean {
+  const d = invoiceBehaviorDelayDays(item);
+  if (d == null) return false;
+  return d >= thresholdDays;
 }
 

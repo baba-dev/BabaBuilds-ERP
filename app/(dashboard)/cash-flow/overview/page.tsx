@@ -19,7 +19,7 @@ import { CashFlowActionBar } from "../_components/primitives/action-bar";
 import { CashFlowInsightCard } from "../_components/primitives/insight-card";
 import { CashFlowMetricCard } from "../_components/primitives/metric-card";
 import { CashFlowErrorState, CashFlowNoSnapshotState } from "../_components/primitives/state";
-import { clamp01, deriveCrunchSignal, getStaleStatus, toneForRiskLevel, topDrivers } from "../_components/primitives/utils";
+import { clamp01, computeRunway, deriveCrunchSignal, getSnapshotAssumptions, getStaleStatus, toneForRiskLevel, topDrivers } from "../_components/primitives/utils";
 
 export default function CashFlowOverviewPage() {
   const { fCurrency } = useFormat();
@@ -92,6 +92,9 @@ export default function CashFlowOverviewPage() {
 
   const stale = useMemo(() => getStaleStatus(snapshot?.generatedAt ?? null, 24), [snapshot?.generatedAt]);
   const crunch = useMemo(() => deriveCrunchSignal(snapshot), [snapshot]);
+  const runway = useMemo(() => computeRunway(snapshot), [snapshot]);
+  const minCash = useMemo(() => Number(getSnapshotAssumptions(snapshot)?.minimumCashThreshold ?? 0), [snapshot]);
+  const minCashLabel = useMemo(() => fCurrency(minCash), [fCurrency, minCash]);
 
   const inflowDrivers = useMemo(() => {
     if (!snapshot) return [];
@@ -293,7 +296,15 @@ export default function CashFlowOverviewPage() {
               <CashFlowMetricCard
                 label="Closing cash"
                 value={summary.closing}
-                subtext={crunch ? `Worst period: ${crunch.bucketLabel}` : "End of horizon estimate"}
+                subtext={
+                  runway?.kind === "negative"
+                    ? `Runway: ${runway.bucketLabel}`
+                    : runway?.kind === "threshold"
+                      ? `Runway: ${runway.bucketLabel} (≤ min cash)`
+                      : crunch
+                        ? `Worst period: ${crunch.bucketLabel}`
+                        : "End of horizon estimate"
+                }
                 tone={crunch?.tone ?? "default"}
               />
             </div>
@@ -302,15 +313,19 @@ export default function CashFlowOverviewPage() {
               <CashFlowInsightCard
                 title="Runway & crunch windows"
                 icon={<Wand2 className="h-4 w-4" />}
-                tone={crunch?.tone ?? "default"}
+                tone={runway?.kind === "negative" ? "danger" : runway?.kind === "threshold" ? "warning" : crunch?.tone ?? "default"}
                 description={
-                  crunch
-                    ? `Lowest projected closing cash occurs in ${crunch.bucketLabel}. This is the best window to review collections risk and commitments timing.`
-                    : "No crunch window detected yet for this snapshot."
+                  runway?.kind === "negative"
+                    ? `Forecast crosses below zero in ${runway.bucketLabel}. Treat this as a forcing function: accelerate collections and revisit commitments before this window.`
+                    : runway?.kind === "threshold"
+                      ? `Forecast crosses below your minimum cash threshold (${minCashLabel}) in ${runway.bucketLabel}. Review receivables risk and commitment timing.`
+                      : crunch
+                        ? `Lowest projected closing cash occurs in ${crunch.bucketLabel}. This is the best window to review collections risk and commitments timing.`
+                        : "No crunch window detected yet for this snapshot."
                 }
                 ctas={[
-                  { label: "Review commitments", href: `/cash-flow/outflows?${q}`, variant: "default" },
-                  { label: "Review receivables", href: `/cash-flow/inflows?${q}`, variant: "outline" },
+                  { label: "Review commitments", href: `/cash-flow/outflows?${q}${runway?.periodId ? `&periodId=${encodeURIComponent(runway.periodId)}` : ""}`, variant: "default" },
+                  { label: "Review receivables", href: `/cash-flow/inflows?${q}${runway?.periodId ? `&periodId=${encodeURIComponent(runway.periodId)}` : ""}`, variant: "outline" },
                 ]}
               />
 
