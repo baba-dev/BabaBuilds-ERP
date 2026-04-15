@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
-import { ArrowUpDown, Filter, Search, X } from "lucide-react";
+import { ArrowUpDown, ExternalLink, Filter, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 import type { SnapshotLineItem } from "../types";
 import { CashFlowHelp } from "./help";
-import { labelForClassification, sumLineItems, toneForVariance } from "./utils";
+import { labelForClassification, sourceRecordHref, sumLineItems, toneForVariance } from "./utils";
 
 type SortKey = "expectedDate" | "amount" | "confidence";
 type SortDir = "asc" | "desc";
@@ -40,12 +40,14 @@ export function CashFlowLineItemsTable({
   directionLabel,
   currencyFormatter,
   defaultLowConfidenceThreshold = 0.6,
+  enableSourceLinks = true,
   className,
 }: {
   items: SnapshotLineItem[];
   directionLabel: string;
   currencyFormatter: (n: number) => string;
   defaultLowConfidenceThreshold?: number;
+  enableSourceLinks?: boolean;
   className?: string;
 }) {
   const [query, setQuery] = useState("");
@@ -201,12 +203,13 @@ export function CashFlowLineItemsTable({
                 </span>
               </TableHead>
               <TableHead>Class</TableHead>
+              <TableHead className="w-[1%] text-right"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {sorted.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-10 text-center text-sm text-zinc-500">
+                <TableCell colSpan={7} className="py-10 text-center text-sm text-zinc-500">
                   No items match these filters.
                 </TableCell>
               </TableRow>
@@ -214,6 +217,7 @@ export function CashFlowLineItemsTable({
               sorted.map((i) => {
                 const amount = Number(i.amount ?? 0);
                 const tone = toneForVariance(amount >= 0 ? 1 : -1);
+                const href = enableSourceLinks ? sourceRecordHref(i) : null;
                 return (
                   <TableRow
                     key={i.id}
@@ -259,6 +263,24 @@ export function CashFlowLineItemsTable({
                     <TableCell>
                       <Badge variant="outline">{labelForClassification(i.classification)}</Badge>
                     </TableCell>
+                    <TableCell className="text-right">
+                      {href ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-zinc-400 hover:text-indigo-600"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.open(href, "_self");
+                          }}
+                          aria-label="Open source record"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      ) : null}
+                    </TableCell>
                   </TableRow>
                 );
               })
@@ -294,6 +316,15 @@ export function CashFlowLineItemsTable({
                   <div className="mt-1 text-sm font-semibold text-zinc-900 dark:text-zinc-100">{selected.sourceType}</div>
                   {selected.sourceId ? (
                     <div className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">Record id: {selected.sourceId}</div>
+                  ) : null}
+                  {enableSourceLinks && sourceRecordHref(selected) ? (
+                    <div className="mt-2">
+                      <Button variant="outline" size="sm" className="h-8 gap-2" asChild>
+                        <a href={sourceRecordHref(selected) ?? "#"}>
+                          Open source <ExternalLink className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    </div>
                   ) : null}
                 </div>
 
