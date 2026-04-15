@@ -13,6 +13,76 @@ import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from
 
 const lookupAsync = promisify(dns.lookup);
 
+function isProbablyGroqKey(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  // Groq keys typically look like `gsk_...` (per docs + UI help text).
+  if (!trimmed.startsWith("gsk_")) return false;
+  // Block known demo placeholder keys so we fail fast with an actionable message.
+  if (trimmed.includes("demo_bypass_key_placeholder")) return false;
+  return true;
+}
+
+function groqErrorToHttp(error: any): { status: number; code: string; message: string } {
+  const status = Number(error?.status) || Number(error?.response?.status) || 0;
+  const upstreamCode =
+    error?.error?.code ||
+    error?.code ||
+    error?.name ||
+    error?.type ||
+    "unknown_error";
+
+  // Invalid/unauthorized key.
+  if (status === 401 || upstreamCode === "invalid_api_key") {
+    return {
+      status: 400,
+      code: "GROQ_API_KEY_INVALID",
+      message:
+        "Your Groq API key is invalid or expired. Update it in **Settings → AI Assistant** (`/settings`).",
+    };
+  }
+
+  // Rate limiting from Groq.
+  if (status === 429 || upstreamCode === "rate_limit_exceeded" || upstreamCode === "RateLimitError") {
+    return {
+      status: 429,
+      code: "GROQ_RATE_LIMITED",
+      message: "The AI provider is rate-limiting requests. Please wait a moment and try again.",
+    };
+  }
+
+  // Timeouts / connectivity.
+  if (upstreamCode === "APIConnectionTimeoutError") {
+    return {
+      status: 504,
+      code: "GROQ_TIMEOUT",
+      message: "The AI request timed out. Please try again.",
+    };
+  }
+  if (upstreamCode === "APIConnectionError") {
+    return {
+      status: 502,
+      code: "GROQ_CONNECTION_ERROR",
+      message: "Could not reach the AI provider. Please try again.",
+    };
+  }
+
+  // Other upstream errors.
+  if (status >= 500) {
+    return {
+      status: 502,
+      code: "GROQ_UPSTREAM_ERROR",
+      message: "The AI provider returned an error. Please try again shortly.",
+    };
+  }
+
+  return {
+    status: 500,
+    code: "AI_UNKNOWN_ERROR",
+    message: "Failed to communicate with the AI. Please try again later.",
+  };
+}
+
 async function resolveSafeIp(host: string): Promise<string | null> {
   try {
     if (host.toLowerCase() === 'localhost') return null;
@@ -726,10 +796,23 @@ export async function POST(request: Request) {
       }
     }
 
-    if (!userApiKey) {
-      return NextResponse.json({ 
-        error: 'AI Assistant requires your own API Key. Please go to Business Settings and add your Groq API Key to enable this feature.' 
-      }, { status: 400 });
+    // Development fallback: allow a server-provided key to make demos usable without storing a key in DB.
+    // This is ONLY used when the workspace key is missing/placeholder/invalid format.
+    const envGroqKey = process.env.GROQ_API_KEY?.trim() || "";
+    const shouldUseEnvFallback =
+      process.env.NODE_ENV === "development" &&
+      isProbablyGroqKey(envGroqKey) &&
+      !isProbablyGroqKey(userApiKey);
+
+    if (!isProbablyGroqKey(userApiKey) && !shouldUseEnvFallback) {
+      return NextResponse.json(
+        {
+          code: "GROQ_API_KEY_MISSING",
+          error:
+            "AI Assistant requires a Groq API key. Add it in **Settings → AI Assistant** (`/settings`).",
+        },
+        { status: 400 },
+      );
     }
 
     const revenueAggregation = await prisma.invoice.aggregate({
@@ -751,7 +834,12 @@ export async function POST(request: Request) {
     4. UI THEME CONTROL ('set_ui_theme'): You can switch the user's UI theme instantly without navigation. Use it when the user asks for dark mode, light mode, or system theme.
     5. TONE: Confident, incredibly helpful, and brief. Never use generic AI filler phrases like "I am an AI...". Get straight to the value.`;
 
-    const groq = new Groq({ apiKey: userApiKey });
+    const groq = new Groq({
+      apiKey: shouldUseEnvFallback ? envGroqKey : userApiKey,
+      // Keep chat snappy; the SDK retries some transient errors automatically.
+      timeout: 12_000,
+      maxRetries: 2,
+    });
     const messages: any[] = [{ role: "system", content: systemPrompt }, ...safeHistory, { role: "user", content: message }];
 
     const tools = [
@@ -1118,9 +1206,16 @@ export async function POST(request: Request) {
       }
     ];
 
-    const initialResponse = await groq.chat.completions.create({
-      messages, model: "llama-3.1-8b-instant", temperature: 0.2, tools: tools as any, tool_choice: "auto",
-    });
+    const initialResponse = await groq.chat.completions.create(
+      {
+        messages,
+        model: "llama-3.1-8b-instant",
+        temperature: 0.2,
+        tools: tools as any,
+        tool_choice: "auto",
+      },
+      { timeout: 12_000, maxRetries: 2 },
+    );
 
     const responseMessage = initialResponse.choices[0]?.message;
     let actionPayload = null; 
@@ -1214,9 +1309,14 @@ export async function POST(request: Request) {
         messages.push({ role: result.role, tool_call_id: result.tool_call_id, name: result.name, content: result.content });
       }
 
-      const finalResponse = await groq.chat.completions.create({
-        messages, model: "llama-3.1-8b-instant", temperature: 0.5,
-      });
+      const finalResponse = await groq.chat.completions.create(
+        {
+          messages,
+          model: "llama-3.1-8b-instant",
+          temperature: 0.5,
+        },
+        { timeout: 12_000, maxRetries: 2 },
+      );
 
       return NextResponse.json({ 
         reply: finalResponse.choices[0]?.message?.content,
@@ -1228,9 +1328,7 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error("Chat Error Server Log:", error); 
-    return NextResponse.json(
-      { error: 'Failed to communicate with the AI securely. Please verify your Groq API key or try again later.' }, 
-      { status: 500 }
-    );
+    const mapped = groqErrorToHttp(error);
+    return NextResponse.json({ code: mapped.code, error: mapped.message }, { status: mapped.status });
   }
 }
