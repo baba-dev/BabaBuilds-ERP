@@ -43,6 +43,53 @@ const DEFAULT_GREETING = {
   content: "Hello! I am your Executive AI Assistant. I'm connected to your ERP. How can I help you today?" 
 };
 
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  actionExecuted?: string;
+  retryText?: string;
+};
+
+function getFriendlyChatError(payload: any, status: number): { content: string; canRetry: boolean } {
+  const code = String(payload?.code || "").toUpperCase();
+  const raw = typeof payload?.error === "string" ? payload.error : "";
+
+  if (code === "GROQ_API_KEY_MISSING" || status === 400) {
+    return {
+      content:
+        raw ||
+        "AI Assistant needs a Groq API key. Add it in **Settings → AI Assistant** (`/settings`) and try again.",
+      canRetry: false,
+    };
+  }
+
+  if (code === "GROQ_API_KEY_INVALID") {
+    return {
+      content:
+        raw ||
+        "Your Groq API key looks invalid/expired. Update it in **Settings → AI Assistant** (`/settings`).",
+      canRetry: false,
+    };
+  }
+
+  if (code === "GROQ_RATE_LIMITED" || status === 429) {
+    return { content: raw || "The AI provider is rate-limiting requests. Please wait a moment and retry.", canRetry: true };
+  }
+
+  if (code === "GROQ_TIMEOUT" || status === 504) {
+    return { content: raw || "The AI request timed out. Please retry.", canRetry: true };
+  }
+
+  if (status >= 500) {
+    return {
+      content: raw || "The AI service had a temporary problem. Please retry in a moment.",
+      canRetry: true,
+    };
+  }
+
+  return { content: raw || "Something went wrong. Please try again.", canRetry: true };
+}
+
 export default function AIChatbot() {
   const router = useRouter();
   const pathname = usePathname();
@@ -52,7 +99,7 @@ export default function AIChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<{role: 'user' | 'assistant', content: string, actionExecuted?: string}[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
@@ -144,7 +191,15 @@ export default function AIChatbot() {
       const data = await res.json();
       
       if (!res.ok) {
-        setMessages(prev => [...prev, { role: 'assistant', content: `**Error:** ${data.error}` }]);
+        const friendly = getFriendlyChatError(data, res.status);
+        setMessages(prev => [
+          ...prev,
+          {
+            role: "assistant",
+            content: `**Error:** ${friendly.content}`,
+            retryText: friendly.canRetry ? text : undefined,
+          },
+        ]);
       } else {
         let actionMsg = "";
 
@@ -181,7 +236,14 @@ export default function AIChatbot() {
         }]);
       }
     } catch (err) {
-      setMessages(prev => [...prev, { role: 'assistant', content: "**Network error occurred.** Please try again." }]);
+      setMessages(prev => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "**Network error occurred.** Please try again.",
+          retryText: text,
+        },
+      ]);
     } finally {
       sendInFlightRef.current = false;
       setIsLoading(false);
@@ -285,6 +347,20 @@ export default function AIChatbot() {
                   <div className="flex items-center gap-2 mt-1 px-2 py-1.5 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-900/50 rounded-lg text-xs font-medium text-purple-700 dark:text-purple-300 animate-in fade-in slide-in-from-top-2">
                     <ArrowRight className="w-3 h-3" />
                     {msg.actionExecuted}
+                  </div>
+                )}
+
+                {msg.retryText && !isLoading && (
+                  <div className="ml-0 mt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => sendMessage(msg.retryText!)}
+                      className="h-8 text-xs border-purple-200 dark:border-purple-900/50 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20"
+                    >
+                      Retry
+                    </Button>
                   </div>
                 )}
               </div>
