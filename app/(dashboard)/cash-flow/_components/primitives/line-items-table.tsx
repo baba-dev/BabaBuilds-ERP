@@ -29,10 +29,9 @@ function confidenceLabel(conf: number | null) {
   return `${Math.round(conf * 100)}%`;
 }
 
-function confidenceTone(conf: number | null) {
+function confidenceTone(conf: number | null): "default" | "secondary" | "outline" {
   if (conf == null || !Number.isFinite(conf)) return "default";
   if (conf >= 0.8) return "secondary";
-  if (conf >= 0.6) return "outline";
   return "outline";
 }
 
@@ -165,9 +164,9 @@ export function CashFlowLineItemsTable({
             variant={classification === c ? "secondary" : "outline"}
             size="sm"
             className="h-8"
-            onClick={() => setClassification(c as any)}
+            onClick={() => setClassification(c)}
           >
-            {c === "ALL" ? "All" : labelForClassification(c as any)}
+            {c === "ALL" ? "All" : labelForClassification(c)}
             {c !== "ALL" ? (
               <span className="ml-2 text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums">
                 {currencyFormatter(totals.byClass.get(c) ?? 0)}
@@ -253,7 +252,7 @@ export function CashFlowLineItemsTable({
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Badge variant={confidenceTone(i.confidence) as any} className="tabular-nums">
+                      <Badge variant={confidenceTone(i.confidence)} className="tabular-nums">
                         {confidenceLabel(i.confidence)}
                       </Badge>
                     </TableCell>
