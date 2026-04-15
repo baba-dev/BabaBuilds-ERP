@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import type { SnapshotLineItem } from "../types";
-import { labelForClassification, labelForDirection } from "./utils";
+import { sourceRecordHref, labelForClassification, labelForDirection } from "./utils";
 
 export function CashFlowLineItemDetailSheet({
   open,
@@ -19,6 +19,7 @@ export function CashFlowLineItemDetailSheet({
   item: SnapshotLineItem | null;
 }) {
   const confidencePct = item?.confidence == null ? null : Math.round(item.confidence * 100);
+  const sourceHref = item ? sourceRecordHref(item) : null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -84,9 +85,9 @@ export function CashFlowLineItemDetailSheet({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              {item.sourceId ? (
+              {sourceHref ? (
                 <Button variant="outline" size="sm" className="gap-2" asChild>
-                  <a href="#" onClick={(e) => e.preventDefault()}>
+                  <a href={sourceHref}>
                     Open source record <ExternalLink className="h-4 w-4" />
                   </a>
                 </Button>

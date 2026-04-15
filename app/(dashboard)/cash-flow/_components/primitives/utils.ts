@@ -106,6 +106,27 @@ export function groupBySourceType(items: SnapshotLineItem[]) {
   return map;
 }
 
+export function sourceRecordHref(item: SnapshotLineItem): string | null {
+  if (!item.sourceId) return null;
+  // Source types are emitted by the forecast engine (see `lib/cash-flow/sources.ts`)
+  switch (item.sourceType) {
+    case "INVOICE":
+      // Canonical invoice list + generator live under Income/Invoice.
+      // We deep-link to invoice detail API-backed view when available; fallback to Income list for now.
+      return `/income?invoiceId=${encodeURIComponent(item.sourceId)}`;
+    case "RETAINER":
+      return `/retainers?retainerId=${encodeURIComponent(item.sourceId)}`;
+    case "PURCHASE_ORDER":
+      return `/inventory/purchase-orders?poId=${encodeURIComponent(item.sourceId)}`;
+    case "BANK_TRANSACTION":
+      return `/reconciliation?txId=${encodeURIComponent(item.sourceId)}`;
+    case "MANUAL":
+      return `/cash-flow/overview?focus=manualAdjustments&manualId=${encodeURIComponent(item.sourceId)}`;
+    default:
+      return null;
+  }
+}
+
 export type CrunchSignal = {
   periodId: string;
   bucketLabel: string;
