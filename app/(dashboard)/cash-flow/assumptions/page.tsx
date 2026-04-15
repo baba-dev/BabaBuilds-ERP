@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Settings2, Save, RotateCcw } from "lucide-react";
+import Link from "next/link";
+import { Settings2, Save, RotateCcw, Wand2 } from "lucide-react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
@@ -17,6 +18,7 @@ import { CashFlowNav } from "@/app/(dashboard)/cash-flow/_components/cash-flow-n
 import type { CashFlowScenarioTag, CashFlowHorizonType } from "@/app/(dashboard)/cash-flow/_components/types";
 import { listAssumptions, upsertAssumption } from "@/app/(dashboard)/cash-flow/_components/api";
 import { CashFlowHelp } from "../_components/primitives/help";
+import { buildCashFlowContextQuery, getCashFlowContextFromSearchParams, updateCashFlowContextInUrl } from "../_components/context";
 
 const numeric = z.coerce.number().finite();
 
@@ -30,13 +32,79 @@ type AssumptionsForm = {
 };
 
 const defaultForm: AssumptionsForm = {
-  defaultInvoicePaymentTermsDays: 15,
+  defaultInvoicePaymentTermsDays: 30,
   minimumCashThreshold: 0,
   collectionsDelayDays: 0,
   inflowHaircutPercent: 0,
   outflowIncreasePercent: 0,
   movePOEarlierLaterDays: 0,
 };
+
+const scenarioDefaults: Record<CashFlowScenarioTag, AssumptionsForm> = {
+  BASE: {
+    defaultInvoicePaymentTermsDays: 30,
+    minimumCashThreshold: 0,
+    collectionsDelayDays: 0,
+    inflowHaircutPercent: 0,
+    outflowIncreasePercent: 0,
+    movePOEarlierLaterDays: 0,
+  },
+  BEST_CASE: {
+    defaultInvoicePaymentTermsDays: 30,
+    minimumCashThreshold: 0,
+    collectionsDelayDays: -3,
+    inflowHaircutPercent: 0,
+    outflowIncreasePercent: -2,
+    movePOEarlierLaterDays: 3,
+  },
+  WORST_CASE: {
+    defaultInvoicePaymentTermsDays: 30,
+    minimumCashThreshold: 0,
+    collectionsDelayDays: 10,
+    inflowHaircutPercent: 8,
+    outflowIncreasePercent: 10,
+    movePOEarlierLaterDays: -7,
+  },
+};
+
+const curatedPresets: Array<{
+  id: string;
+  label: string;
+  description: string;
+  tone: "default" | "warning" | "positive";
+  apply: (base: AssumptionsForm) => AssumptionsForm;
+}> = [
+  {
+    id: "engine-default",
+    label: "Engine default",
+    description: "Reset to the scenario’s built-in baseline defaults.",
+    tone: "default",
+    apply: (_base) => ({ ...scenarioDefaults.BASE }),
+  },
+  {
+    id: "conservative",
+    label: "Conservative",
+    description: "Assume slower collections + higher outflows to stress-test runway.",
+    tone: "warning",
+    apply: (base) => ({
+      ...base,
+      collectionsDelayDays: Math.max(0, base.collectionsDelayDays + 7),
+      inflowHaircutPercent: Math.max(base.inflowHaircutPercent, 5),
+      outflowIncreasePercent: Math.max(base.outflowIncreasePercent, 8),
+    }),
+  },
+  {
+    id: "collections-push",
+    label: "Collections push",
+    description: "Assume faster receipts (good for “best case” planning).",
+    tone: "positive",
+    apply: (base) => ({
+      ...base,
+      collectionsDelayDays: Math.min(0, base.collectionsDelayDays - 3),
+      inflowHaircutPercent: Math.max(0, Math.min(base.inflowHaircutPercent, 2)),
+    }),
+  },
+];
 
 const formSections: Array<{
   key: string;
@@ -116,8 +184,9 @@ const formSections: Array<{
 
 export default function CashFlowAssumptionsPage() {
   const search = useSearchParams();
-  const [horizonType, setHorizonType] = useState<CashFlowHorizonType>("WEEKLY_13");
-  const [scenarioTag, setScenarioTag] = useState<CashFlowScenarioTag>("BASE");
+  const urlCtx = useMemo(() => getCashFlowContextFromSearchParams(search), [search]);
+  const [horizonType, setHorizonType] = useState<CashFlowHorizonType>(urlCtx.horizonType);
+  const [scenarioTag, setScenarioTag] = useState<CashFlowScenarioTag>(urlCtx.scenarioTag);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [rows, setRows] = useState<Array<{ key: string; valueJson: unknown }>>([]);
@@ -127,12 +196,9 @@ export default function CashFlowAssumptionsPage() {
   const assumptionKey = useMemo(() => `cashForecast.scenario.${scenarioTag}`, [scenarioTag]);
 
   useEffect(() => {
-    const h = search.get("horizonType");
-    const s = search.get("scenarioTag");
-    if (h === "DAILY_30" || h === "WEEKLY_13" || h === "MONTHLY_12") setHorizonType(h);
-    if (s === "BASE" || s === "BEST_CASE" || s === "WORST_CASE") setScenarioTag(s);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    setHorizonType(urlCtx.horizonType);
+    setScenarioTag(urlCtx.scenarioTag);
+  }, [urlCtx.horizonType, urlCtx.scenarioTag]);
 
   useEffect(() => {
     const run = async () => {
@@ -141,7 +207,8 @@ export default function CashFlowAssumptionsPage() {
         const data = await listAssumptions();
         setRows(data);
         const match = data.find((r: { key: string; valueJson: unknown }) => r.key === assumptionKey);
-        const next = { ...defaultForm, ...(match?.valueJson ?? {}) };
+        const base = scenarioDefaults[scenarioTag] ?? defaultForm;
+        const next = { ...base, ...(match?.valueJson ?? {}) };
         // best-effort sanitize
         const sanitized = {
           defaultInvoicePaymentTermsDays: numeric.parse(next.defaultInvoicePaymentTermsDays ?? defaultForm.defaultInvoicePaymentTermsDays),
@@ -160,7 +227,7 @@ export default function CashFlowAssumptionsPage() {
       }
     };
     run();
-  }, [assumptionKey]);
+  }, [assumptionKey, scenarioTag]);
 
   const onSave = async () => {
     setSaving(true);
@@ -179,7 +246,7 @@ export default function CashFlowAssumptionsPage() {
 
   const isDirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(loadedForm), [form, loadedForm]);
 
-  const resetAll = () => setForm(defaultForm);
+  const resetAll = () => setForm(scenarioDefaults[scenarioTag] ?? defaultForm);
   const resetToLoaded = () => setForm(loadedForm);
 
   const resetSection = (sectionKey: string) => {
@@ -232,7 +299,14 @@ export default function CashFlowAssumptionsPage() {
       icon={<Settings2 className="h-5 w-5 text-indigo-500" />}
       secondaryActions={
         <div className="flex items-center gap-2">
-          <Select value={horizonType} onValueChange={(v) => setHorizonType(v as CashFlowHorizonType)}>
+          <Select
+            value={horizonType}
+            onValueChange={(v) => {
+              const next = v as CashFlowHorizonType;
+              setHorizonType(next);
+              updateCashFlowContextInUrl({ horizonType: next, scenarioTag });
+            }}
+          >
             <SelectTrigger className="h-9 w-[140px]">
               <SelectValue />
             </SelectTrigger>
@@ -242,7 +316,14 @@ export default function CashFlowAssumptionsPage() {
               <SelectItem value="MONTHLY_12">12 months</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={scenarioTag} onValueChange={(v) => setScenarioTag(v as CashFlowScenarioTag)}>
+          <Select
+            value={scenarioTag}
+            onValueChange={(v) => {
+              const next = v as CashFlowScenarioTag;
+              setScenarioTag(next);
+              updateCashFlowContextInUrl({ horizonType, scenarioTag: next });
+            }}
+          >
             <SelectTrigger className="h-9 w-[140px]">
               <SelectValue />
             </SelectTrigger>
@@ -314,6 +395,53 @@ export default function CashFlowAssumptionsPage() {
               </div>
             ) : (
               <div className="space-y-6">
+                <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/50 dark:bg-zinc-950/10 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-black tracking-tight text-zinc-900 dark:text-zinc-100">Presets</p>
+                      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                        Apply a starting point, then tweak with evidence from Variance and Drivers.
+                      </p>
+                    </div>
+                    <Button size="sm" variant="outline" className="h-8 gap-2" asChild>
+                      <Link href={`/cash-flow/scenarios?${buildCashFlowContextQuery({ horizonType, scenarioTag })}`}>
+                        <Wand2 className="h-4 w-4" />
+                        See scenario diffs
+                      </Link>
+                    </Button>
+                  </div>
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-2">
+                    {curatedPresets.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className="text-left rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 p-3 hover:border-indigo-200 dark:hover:border-indigo-800/50 hover:shadow-sm transition"
+                        onClick={() => {
+                          setForm((prev) => p.apply(prev));
+                          toast.message(`Applied preset: ${p.label}`);
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{p.label}</div>
+                          <Badge
+                            variant="outline"
+                            className={
+                              p.tone === "positive"
+                                ? "border-emerald-200 text-emerald-700 dark:border-emerald-900/40 dark:text-emerald-300"
+                                : p.tone === "warning"
+                                  ? "border-amber-200 text-amber-700 dark:border-amber-900/40 dark:text-amber-300"
+                                  : "text-zinc-500"
+                            }
+                          >
+                            Apply
+                          </Badge>
+                        </div>
+                        <div className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">{p.description}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {formSections.map((section) => (
                   <div key={section.key} className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/50 dark:bg-zinc-950/10 p-4">
                     <div className="flex items-start justify-between gap-3">

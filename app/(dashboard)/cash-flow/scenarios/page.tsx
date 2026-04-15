@@ -16,7 +16,7 @@ import { CashFlowActionBar } from "../_components/primitives/action-bar";
 import { CashFlowMetricCard } from "../_components/primitives/metric-card";
 import { CashFlowHelp } from "../_components/primitives/help";
 import { CashFlowErrorState, CashFlowNoSnapshotState } from "../_components/primitives/state";
-import { deriveCrunchSignal, getStaleStatus, labelForScenarioTag, topDrivers } from "../_components/primitives/utils";
+import { deriveCrunchSignal, getSnapshotAssumptions, getStaleStatus, labelForScenarioTag, topDrivers } from "../_components/primitives/utils";
 import {
   buildCashFlowContextQuery,
   CASH_FLOW_DEFAULT_HORIZON,
@@ -24,6 +24,23 @@ import {
   useCashFlowContextFromUrl,
   updateCashFlowContextInUrl,
 } from "../_components/context";
+
+type Knob = { key: string; label: string; unit?: string; description: string };
+
+const knobs: Knob[] = [
+  { key: "collectionsDelayDays", label: "Collections delay", unit: "days", description: "Shifts expected receipts earlier/later." },
+  { key: "inflowHaircutPercent", label: "Inflow haircut", unit: "%", description: "Conservatism applied to non-actual inflows." },
+  { key: "outflowIncreasePercent", label: "Outflow increase", unit: "%", description: "Stress multiplier on projected outflows." },
+  { key: "movePOEarlierLaterDays", label: "PO timing shift", unit: "days", description: "Moves PO timing earlier/later." },
+  { key: "minimumCashThreshold", label: "Minimum cash threshold", unit: "", description: "Runway/alerts buffer floor." },
+  { key: "defaultInvoicePaymentTermsDays", label: "Default invoice terms", unit: "days", description: "Fallback when invoice terms are missing." },
+];
+
+function knobVal(s: SnapshotDetail | null, key: string) {
+  const a = getSnapshotAssumptions(s);
+  const n = Number((a as any)?.[key]);
+  return Number.isFinite(n) ? n : null;
+}
 
 export default function CashFlowScenariosPage() {
   const { fCurrency } = useFormat();
