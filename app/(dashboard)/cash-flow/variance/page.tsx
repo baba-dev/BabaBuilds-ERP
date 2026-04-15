@@ -185,6 +185,8 @@ export default function CashFlowVariancePage() {
                     const projectedNet = Number(p.projectedInflows) - Number(p.projectedOutflows);
                     const actualNet = Number(p.actualInflows) - Number(p.actualOutflows);
                     const varianceNet = Number(p.varianceNet);
+                    const inflowDelta = Number(p.deltas?.deltaInflows ?? 0);
+                    const outflowDelta = Number(p.deltas?.deltaOutflows ?? 0);
                     const tone = toneForVariance(varianceNet);
                     const isOpen = Boolean(open[p.id]);
                     return (
@@ -255,6 +257,83 @@ export default function CashFlowVariancePage() {
                               <div className="mt-1 text-sm font-semibold tabular-nums">{fCurrency(varianceNet)}</div>
                             </div>
                             </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <div className="rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 p-3">
+                                <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Inflow delta</div>
+                                <div className="mt-1 text-sm font-semibold tabular-nums">{fCurrency(inflowDelta)}</div>
+                                <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                                  Actual inflows − projected inflows
+                                </p>
+                              </div>
+                              <div className="rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 p-3">
+                                <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Outflow delta</div>
+                                <div className="mt-1 text-sm font-semibold tabular-nums">{fCurrency(outflowDelta)}</div>
+                                <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                                  Projected outflows − actual outflows
+                                </p>
+                              </div>
+                            </div>
+
+                            {((p.topInflowDrivers?.length ?? 0) > 0 || (p.topOutflowDrivers?.length ?? 0) > 0) ? (
+                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                                <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-950/10 p-4">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Top inflow contributors</p>
+                                    <Button size="sm" variant="ghost" asChild className="h-8 text-zinc-500">
+                                      <Link href={`/cash-flow/inflows?${q}&periodId=${encodeURIComponent(p.id)}`}>Open inflows</Link>
+                                    </Button>
+                                  </div>
+                                  <div className="mt-3 space-y-2">
+                                    {(p.topInflowDrivers ?? []).slice(0, 5).map((d) => (
+                                      <div key={d.key} className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 bg-white/40 dark:bg-zinc-900/30 px-3 py-2">
+                                        <div className="min-w-0">
+                                          <div className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">{d.title}</div>
+                                          <div className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{d.sourceType}</div>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                          <div className="text-sm font-black tabular-nums">{fCurrency(Number(d.delta ?? 0))}</div>
+                                          <div className="text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums">
+                                            proj {fCurrency(Number(d.projectedAmount ?? 0))} · act {fCurrency(Number(d.actualAmount ?? 0))}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                    {(p.topInflowDrivers ?? []).length === 0 ? (
+                                      <p className="text-xs text-zinc-500 dark:text-zinc-400">No inflow contributors recorded for this period.</p>
+                                    ) : null}
+                                  </div>
+                                </div>
+
+                                <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-950/10 p-4">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Top outflow contributors</p>
+                                    <Button size="sm" variant="ghost" asChild className="h-8 text-zinc-500">
+                                      <Link href={`/cash-flow/outflows?${q}&periodId=${encodeURIComponent(p.id)}`}>Open outflows</Link>
+                                    </Button>
+                                  </div>
+                                  <div className="mt-3 space-y-2">
+                                    {(p.topOutflowDrivers ?? []).slice(0, 5).map((d) => (
+                                      <div key={d.key} className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 bg-white/40 dark:bg-zinc-900/30 px-3 py-2">
+                                        <div className="min-w-0">
+                                          <div className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">{d.title}</div>
+                                          <div className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{d.sourceType}</div>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                          <div className="text-sm font-black tabular-nums">{fCurrency(Number(d.delta ?? 0))}</div>
+                                          <div className="text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums">
+                                            proj {fCurrency(Number(d.projectedAmount ?? 0))} · act {fCurrency(Number(d.actualAmount ?? 0))}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                    {(p.topOutflowDrivers ?? []).length === 0 ? (
+                                      <p className="text-xs text-zinc-500 dark:text-zinc-400">No outflow contributors recorded for this period.</p>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              </div>
+                            ) : null}
 
                             <div className="flex flex-wrap items-center gap-2">
                               <Button size="sm" variant="outline" asChild className="h-8">

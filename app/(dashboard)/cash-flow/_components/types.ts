@@ -89,9 +89,56 @@ export type VarianceResponse = {
     openingCash: Prisma.Decimal | string | number;
     closingCash: Prisma.Decimal | string | number;
   } | null;
+  attribution?: {
+    totals: {
+      projectedInflows: number;
+      projectedOutflows: number;
+      actualInflows: number;
+      actualOutflows: number;
+      deltaInflows: number;
+      deltaOutflows: number;
+      varianceNet: number;
+    };
+    topInflowDrivers: Array<{
+      key: string;
+      sourceType: string;
+      title: string;
+      projectedAmount: number;
+      actualAmount: number;
+      delta: number;
+    }>;
+    topOutflowDrivers: Array<{
+      key: string;
+      sourceType: string;
+      title: string;
+      projectedAmount: number;
+      actualAmount: number;
+      delta: number;
+    }>;
+  } | null;
   periods: Array<
     SnapshotPeriod & {
       varianceNet: number;
+      deltas?: {
+        deltaInflows: number;
+        deltaOutflows: number;
+      };
+      topInflowDrivers?: Array<{
+        key: string;
+        sourceType: string;
+        title: string;
+        projectedAmount: number;
+        actualAmount: number;
+        delta: number;
+      }>;
+      topOutflowDrivers?: Array<{
+        key: string;
+        sourceType: string;
+        title: string;
+        projectedAmount: number;
+        actualAmount: number;
+        delta: number;
+      }>;
     }
   >;
 };
