@@ -31,7 +31,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const lineItems = snapshot.periods.flatMap((p) => p.lineItems);
+  const lineItems = snapshot.periods.flatMap((p) => p.lineItems.map((l) => ({ ...l, periodId: p.id })));
 
   return NextResponse.json(
     {
@@ -64,6 +64,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
         })),
         lineItems: lineItems.map((l) => ({
           id: l.id,
+          periodId: l.periodId,
           direction: l.direction,
           sourceType: l.sourceType,
           sourceId: l.sourceId,

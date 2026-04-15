@@ -35,6 +35,7 @@ export type SnapshotPeriod = {
 
 export type SnapshotLineItem = {
   id: string;
+  periodId?: string | null;
   direction: "INFLOW" | "OUTFLOW";
   sourceType: string;
   sourceId: string | null;

@@ -59,7 +59,15 @@ export function CashFlowPeriodBreakdown({
     const map = new Map<string, SnapshotLineItem[]>();
     for (const p of snapshot.periods) map.set(p.id, []);
     for (const li of snapshot.lineItems) {
-      // snapshot lineItems don't include periodId; infer by expectedDate bucket overlap
+      // Prefer explicit periodId when available (newer snapshots). Fall back to expectedDate bucketing for older snapshots.
+      const explicit = li.periodId;
+      if (explicit && map.has(explicit)) {
+        const arr = map.get(explicit) ?? [];
+        arr.push(li);
+        map.set(explicit, arr);
+        continue;
+      }
+
       const date = new Date(li.expectedDate).getTime();
       const match = snapshot.periods.find((p) => {
         const start = new Date(p.periodStart).getTime();
