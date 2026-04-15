@@ -1,20 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { attachPageTelemetry, dumpTelemetryOnFailure } from './helpers/telemetry';
 
 test.describe('Smoke Test', () => {
   test('public landing loads without console errors', async ({ page }) => {
-    const consoleMessages: string[] = [];
-    const pageErrors: string[] = [];
-    const failedRequests: string[] = [];
-
-    page.on('console', (msg) => {
-      const type = msg.type();
-      if (type === 'error') consoleMessages.push(msg.text());
-    });
-    page.on('pageerror', (err) => pageErrors.push(err.message));
-    page.on('requestfailed', (req) => {
-      const failure = req.failure();
-      failedRequests.push(`${req.method()} ${req.url()} ${failure?.errorText ?? ''}`.trim());
-    });
+    const telemetry = attachPageTelemetry(page);
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('body')).toBeVisible();
@@ -23,9 +12,15 @@ test.describe('Smoke Test', () => {
     // Allow any late client-side errors to surface
     await page.waitForTimeout(500);
 
-    expect(pageErrors, `Page errors:\n${pageErrors.join('\n')}`).toEqual([]);
-    expect(consoleMessages, `Console errors:\n${consoleMessages.join('\n')}`).toEqual([]);
-    expect(failedRequests, `Failed requests:\n${failedRequests.join('\n')}`).toEqual([]);
+    try {
+      expect(telemetry.pageErrors, `Page errors:\n${telemetry.pageErrors.join('\n')}`).toEqual([]);
+      expect(telemetry.consoleErrors, `Console errors:\n${telemetry.consoleErrors.join('\n')}`).toEqual([]);
+      expect(telemetry.failedRequests, `Failed requests:\n${telemetry.failedRequests.join('\n')}`).toEqual([]);
+    } finally {
+      // Attach on failure for easier debugging in Playwright HTML report.
+      // (No-op when the test passes.)
+      await dumpTelemetryOnFailure(test.info(), telemetry);
+    }
   });
 
   test('can reach login page', async ({ page }) => {

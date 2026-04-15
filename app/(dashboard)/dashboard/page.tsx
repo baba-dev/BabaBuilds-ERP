@@ -63,9 +63,14 @@ export default function Dashboard() {
   const currencySymbol = getCurrencySymbol(currency);
 
   const tr = (key: string, fallback: string, values?: Record<string, any>) => {
-    const translation = t(key as any, values);
-    if (translation === key || translation === `Dashboard.${key}`) return fallback;
-    return translation;
+    if (typeof (t as any).has === "function" && !(t as any).has(key)) return fallback;
+    try {
+      const translation = t(key as any, values);
+      if (translation === key || translation === `Dashboard.${key}`) return fallback;
+      return translation;
+    } catch {
+      return fallback;
+    }
   };
 
   const isMobile = useSyncExternalStore(

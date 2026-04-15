@@ -11,9 +11,8 @@ import { dashboardTypography as ty } from "./dashboard-typography";
 export function DashboardAttentionCenter({ attention }: { attention: DashboardData["attention"] }) {
   const t = useTranslations("Dashboard");
   const tr = (key: string, fallback: string, values?: Record<string, unknown>) => {
-    const translation = t(key as never, values as never);
-    if (translation === key || translation === `Dashboard.${key}`) return fallback;
-    return translation;
+    if (!(t as any).has?.(key)) return fallback;
+    return t(key as never, values as never);
   };
 
   const isUrgent = attention.totalUrgent > 0;

@@ -18,8 +18,12 @@ export default function SetupGatekeeper() {
       return;
     }
 
+    const email = (session as any)?.user?.email as string | undefined;
+    const role = (session as any)?.user?.role as string | undefined;
+    const isDemoUser = role === "DEMO" || (typeof email === "string" && email.endsWith("@bababuilds.demo"));
+
     // Only show if authenticated and setup is strictly false
-    if (status === "authenticated" && (session as any)?.isSetupComplete === false) {
+    if (!isDemoUser && status === "authenticated" && (session as any)?.isSetupComplete === false) {
       setIsOpen(true);
     } else {
       setIsOpen(false);

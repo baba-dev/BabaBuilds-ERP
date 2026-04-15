@@ -9,7 +9,9 @@ import { dashboardTypography as ty } from "./dashboard-typography";
 export function DashboardActivityFeed({ activity }: { activity: DashboardData["activity"] }) {
   const t = useTranslations("Dashboard");
   const tr = (key: string, fallback: string, values?: any) => {
-    const translation = t(key as any, values);
+    const translationKey = key as any;
+    if (!t.has(translationKey)) return fallback;
+    const translation = t(translationKey, values);
     if (translation === key || translation === `Dashboard.${key}`) return fallback;
     return translation;
   };
