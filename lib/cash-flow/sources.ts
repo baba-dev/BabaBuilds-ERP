@@ -19,6 +19,7 @@ export function invoiceToForecastLines(args: {
     dueDate: Date | null;
     expectedPaymentDate: Date | null;
     paymentTermsDays: number | null;
+    clientId: string | null;
     status: "PENDING" | "PARTIALLY_PAID" | "PAID";
     totalAmount: Prisma.Decimal;
     amountReceived: number | null;
@@ -26,11 +27,18 @@ export function invoiceToForecastLines(args: {
   workspaceDefaults: {
     paymentTermsDays: number;
   };
+  paymentBehavior?: {
+    avgDaysToPay: number | null;
+    medianDaysToPay: number | null;
+    onTimeRate: number | null;
+    lateRate: number | null;
+    partialPaymentRate: number | null;
+  } | null;
   scenarioTag: CashForecastScenarioTag;
   collectionsDelayDays: number;
   inflowHaircutPercent: number;
 }): ForecastLineDraft[] {
-  const { invoice, workspaceDefaults, scenarioTag, collectionsDelayDays, inflowHaircutPercent } = args;
+  const { invoice, workspaceDefaults, scenarioTag, collectionsDelayDays, inflowHaircutPercent, paymentBehavior } = args;
   if (invoice.status === "PAID") return [];
 
   const received = toDecimal(invoice.amountReceived ?? 0);
@@ -39,7 +47,17 @@ export function invoiceToForecastLines(args: {
 
   const termsDays = invoice.paymentTermsDays ?? workspaceDefaults.paymentTermsDays;
   const baseDate = invoice.expectedPaymentDate ?? invoice.dueDate ?? addDays(invoice.invoiceDate, termsDays);
-  const expectedDate = addDays(baseDate, collectionsDelayDays);
+  const behaviorAvgDays = paymentBehavior?.avgDaysToPay ?? null;
+  const behaviorDelay = behaviorAvgDays !== null ? Math.max(0, Math.round(behaviorAvgDays - termsDays)) : 0;
+  const expectedDate = addDays(baseDate, collectionsDelayDays + behaviorDelay);
+
+  // v2 confidence heuristic: on-time rate drives confidence, with mild penalty for partial-payment behavior.
+  const onTimeRate = paymentBehavior?.onTimeRate ?? null;
+  const partialPaymentRate = paymentBehavior?.partialPaymentRate ?? null;
+  const confidence =
+    onTimeRate !== null
+      ? Math.max(0.05, Math.min(0.98, onTimeRate - (partialPaymentRate ?? 0) * 0.25))
+      : undefined;
 
   const line: ForecastLineDraft = {
     direction: "INFLOW" as CashForecastDirection,
@@ -47,7 +65,7 @@ export function invoiceToForecastLines(args: {
     sourceId: invoice.id,
     amount: remaining,
     expectedDate,
-    confidence: undefined,
+    confidence,
     scenarioTag,
     classification: "EXPECTED" as CashForecastClassification,
     title: `Invoice ${invoice.invoiceNumber} · ${invoice.clientName}`,
@@ -56,6 +74,8 @@ export function invoiceToForecastLines(args: {
       clientName: invoice.clientName,
       status: invoice.status,
       remaining: remaining.toFixed(2),
+      clientId: invoice.clientId,
+      behaviorDelayDays: behaviorDelay,
     },
     explanation: invoice.expectedPaymentDate
       ? "Expected on invoice expected payment date."
@@ -235,7 +255,7 @@ export async function loadForecastSourceData(args: {
 }): Promise<ForecastSourceData> {
   const { workspaceId, startDate, endDate } = args;
 
-  const [accounts, bankTransactions, invoices, retainers, purchaseOrders, manualAdjustments] = await Promise.all([
+  const [accounts, bankTransactions, invoices, retainers, purchaseOrders, manualAdjustments, paymentBehaviors] = await Promise.all([
     prisma.bankAccount.findMany({
       where: { workspaceId },
       select: { id: true, openingBalance: true, openingBalanceDate: true },
@@ -254,6 +274,7 @@ export async function loadForecastSourceData(args: {
         dueDate: true,
         expectedPaymentDate: true,
         paymentTermsDays: true,
+        clientId: true,
         status: true,
         totalAmount: true,
         amountReceived: true,
@@ -270,6 +291,10 @@ export async function loadForecastSourceData(args: {
     prisma.cashForecastManualAdjustment.findMany({
       where: { workspaceId, date: { gte: startDate, lte: endDate } },
       select: { id: true, date: true, amount: true, direction: true, reason: true, category: true },
+    }),
+    prisma.clientPaymentBehavior.findMany({
+      where: { workspaceId },
+      select: { clientId: true, avgDaysToPay: true, medianDaysToPay: true, onTimeRate: true, lateRate: true, partialPaymentRate: true, lastComputedAt: true },
     }),
   ]);
 
@@ -297,6 +322,18 @@ export async function loadForecastSourceData(args: {
     openingCash,
     bankTransactions,
     invoices: invoices as any,
+    clientPaymentBehavior: Object.fromEntries(
+      (paymentBehaviors ?? []).map((b) => [
+        b.clientId,
+        {
+          avgDaysToPay: b.avgDaysToPay,
+          medianDaysToPay: b.medianDaysToPay,
+          onTimeRate: b.onTimeRate,
+          lateRate: b.lateRate,
+          partialPaymentRate: b.partialPaymentRate,
+        },
+      ])
+    ),
     retainers: retainers.map((r) => ({
       id: r.id,
       clientName: r.client.name,
@@ -338,6 +375,7 @@ export function buildForecastLinesFromSources(args: {
   };
 
   const lines: ForecastLineDraft[] = [];
+  const behaviorByClientId = sources.clientPaymentBehavior ?? {};
 
   for (const tx of sources.bankTransactions) {
     lines.push(bankTransactionToForecastLine({ tx, scenarioTag }));
@@ -348,6 +386,7 @@ export function buildForecastLinesFromSources(args: {
       ...invoiceToForecastLines({
         invoice: inv,
         workspaceDefaults,
+        paymentBehavior: inv.clientId ? (behaviorByClientId[inv.clientId] ?? null) : null,
         scenarioTag,
         collectionsDelayDays: assumptions.collectionsDelayDays,
         inflowHaircutPercent: assumptions.inflowHaircutPercent,

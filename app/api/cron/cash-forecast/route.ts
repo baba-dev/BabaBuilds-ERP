@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isCronAuthorized, unauthorizedCronResponse } from "@/lib/security/cron-auth";
 import { refreshCashForecastSnapshotsForWorkspace } from "@/lib/cash-flow/persist";
+import { recomputeClientPaymentBehavior } from "@/lib/cash-flow/payment-behavior";
 
 export async function GET(request: Request) {
   if (!isCronAuthorized(request)) {
@@ -23,6 +24,7 @@ export async function GET(request: Request) {
     const logs: Array<{ workspaceId: string; ok: boolean; error?: string }> = [];
     for (const ws of workspaces) {
       try {
+        await recomputeClientPaymentBehavior({ workspaceId: ws.id, now: new Date() });
         await refreshCashForecastSnapshotsForWorkspace({ workspaceId: ws.id, now: new Date(), replaceLatest: true });
         logs.push({ workspaceId: ws.id, ok: true });
       } catch (err: unknown) {

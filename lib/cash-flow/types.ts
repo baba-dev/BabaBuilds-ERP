@@ -53,7 +53,18 @@ export type ForecastSourceData = {
     status: "PENDING" | "PARTIALLY_PAID" | "PAID";
     totalAmount: Decimal;
     amountReceived: number | null;
+    clientId: string | null;
   }>;
+  clientPaymentBehavior: Record<
+    string,
+    {
+      avgDaysToPay: number | null;
+      medianDaysToPay: number | null;
+      onTimeRate: number | null;
+      lateRate: number | null;
+      partialPaymentRate: number | null;
+    }
+  >;
   retainers: Array<{
     id: string;
     clientName: string;
