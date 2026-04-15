@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Settings2, Save, RotateCcw } from "lucide-react";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -114,6 +115,7 @@ const formSections: Array<{
 ];
 
 export default function CashFlowAssumptionsPage() {
+  const search = useSearchParams();
   const [horizonType, setHorizonType] = useState<CashFlowHorizonType>("WEEKLY_13");
   const [scenarioTag, setScenarioTag] = useState<CashFlowScenarioTag>("BASE");
   const [loading, setLoading] = useState(true);
@@ -123,6 +125,14 @@ export default function CashFlowAssumptionsPage() {
   const [loadedForm, setLoadedForm] = useState<AssumptionsForm>(defaultForm);
 
   const assumptionKey = useMemo(() => `cashForecast.scenario.${scenarioTag}`, [scenarioTag]);
+
+  useEffect(() => {
+    const h = search.get("horizonType");
+    const s = search.get("scenarioTag");
+    if (h === "DAILY_30" || h === "WEEKLY_13" || h === "MONTHLY_12") setHorizonType(h);
+    if (s === "BASE" || s === "BEST_CASE" || s === "WORST_CASE") setScenarioTag(s);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const run = async () => {

@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CashFlowNav } from "../_components/cash-flow-nav";
 import { fetchLatestSnapshot, refreshCashForecast, fetchVariance } from "../_components/api";
 import type { CashFlowHorizonType, CashFlowScenarioTag, SnapshotListItem, VarianceResponse } from "../_components/types";
-import { buildCashFlowContextQuery } from "../_components/context";
+import { buildCashFlowContextQuery, useCashFlowContextFromUrl, updateCashFlowContextInUrl } from "../_components/context";
 import { CashFlowActionBar } from "../_components/primitives/action-bar";
 import { CashFlowHelp } from "../_components/primitives/help";
 import { CashFlowMetricCard } from "../_components/primitives/metric-card";
@@ -22,14 +22,20 @@ import { getStaleStatus, toneForVariance } from "../_components/primitives/utils
 
 export default function CashFlowVariancePage() {
   const { fCurrency } = useFormat();
-  const [horizonType, setHorizonType] = useState<CashFlowHorizonType>("WEEKLY_13");
-  const [scenarioTag, setScenarioTag] = useState<CashFlowScenarioTag>("BASE");
+  const urlContext = useCashFlowContextFromUrl();
+  const [horizonType, setHorizonType] = useState<CashFlowHorizonType>(urlContext.horizonType);
+  const [scenarioTag, setScenarioTag] = useState<CashFlowScenarioTag>(urlContext.scenarioTag);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [snapshot, setSnapshot] = useState<SnapshotListItem | null>(null);
   const [variance, setVariance] = useState<VarianceResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    setHorizonType(urlContext.horizonType);
+    setScenarioTag(urlContext.scenarioTag);
+  }, [urlContext.horizonType, urlContext.scenarioTag]);
 
   const load = async () => {
     setLoading(true);
@@ -93,6 +99,7 @@ export default function CashFlowVariancePage() {
         <CashFlowActionBar
           context={{ horizonType, scenarioTag }}
           onChange={(next) => {
+            updateCashFlowContextInUrl(next);
             setHorizonType(next.horizonType);
             setScenarioTag(next.scenarioTag);
           }}

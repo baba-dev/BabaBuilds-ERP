@@ -5,6 +5,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { ReceiptText, TrendingDown, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
+import { useCashFlowContextFromUrl, updateCashFlowContextInUrl } from "../_components/context";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { Button } from "@/components/ui/button";
 import { useFormat } from "@/hooks/use-format";
@@ -17,12 +18,18 @@ import { CashFlowErrorState, CashFlowNoSnapshotState } from "../_components/prim
 import { CashFlowLineItemsTable } from "../_components/primitives/line-items-table";
 import { CashFlowPeriodBreakdown } from "../_components/primitives/period-breakdown";
 import { getStaleStatus, isConfidenceLow, sumLineItems, topDrivers } from "../_components/primitives/utils";
-import { buildCashFlowContextQuery } from "../_components/context";
+import { buildCashFlowContextQuery, useCashFlowUrlContext } from "../_components/context";
 
 export default function CashFlowOutflowsPage() {
   const { fCurrency } = useFormat();
-  const [horizonType, setHorizonType] = useState<CashFlowHorizonType>("WEEKLY_13");
-  const [scenarioTag, setScenarioTag] = useState<CashFlowScenarioTag>("BASE");
+  const ctx = useCashFlowContextFromUrl();
+  const [horizonType, setHorizonType] = useState<CashFlowHorizonType>(ctx.horizonType);
+  const [scenarioTag, setScenarioTag] = useState<CashFlowScenarioTag>(ctx.scenarioTag);
+
+  useEffect(() => {
+    setHorizonType(ctx.horizonType);
+    setScenarioTag(ctx.scenarioTag);
+  }, [ctx.horizonType, ctx.scenarioTag]);
   const [snapshot, setSnapshot] = useState<SnapshotDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -97,6 +104,7 @@ export default function CashFlowOutflowsPage() {
         <CashFlowActionBar
           context={{ horizonType, scenarioTag }}
           onChange={(next) => {
+            updateCashFlowContextInUrl({ horizonType: next.horizonType, scenarioTag: next.scenarioTag });
             setHorizonType(next.horizonType);
             setScenarioTag(next.scenarioTag);
           }}

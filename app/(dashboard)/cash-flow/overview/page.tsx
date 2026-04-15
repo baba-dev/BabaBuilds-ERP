@@ -13,7 +13,7 @@ import { useFormat } from "@/hooks/use-format";
 import { CashFlowNav } from "../_components/cash-flow-nav";
 import { fetchCashFlowAlerts, fetchCashFlowSnapshotWithPeriods, refreshCashForecast } from "../_components/api";
 import type { CashFlowHorizonType, CashFlowScenarioTag, SnapshotDetail } from "../_components/types";
-import { buildCashFlowContextQuery } from "../_components/context";
+import { buildCashFlowContextQuery, readCashFlowContextFromUrl, writeCashFlowContextToUrl } from "../_components/context";
 import { CashFlowActionBar } from "../_components/primitives/action-bar";
 import { CashFlowInsightCard } from "../_components/primitives/insight-card";
 import { CashFlowMetricCard } from "../_components/primitives/metric-card";
@@ -22,8 +22,8 @@ import { deriveCrunchSignal, getStaleStatus, topDrivers } from "../_components/p
 
 export default function CashFlowOverviewPage() {
   const { fCurrency } = useFormat();
-  const [horizonType, setHorizonType] = useState<CashFlowHorizonType>("WEEKLY_13");
-  const [scenarioTag, setScenarioTag] = useState<CashFlowScenarioTag>("BASE");
+  const [horizonType, setHorizonType] = useState<CashFlowHorizonType>(() => readCashFlowContextFromUrl().horizonType);
+  const [scenarioTag, setScenarioTag] = useState<CashFlowScenarioTag>(() => readCashFlowContextFromUrl().scenarioTag);
   const [snapshot, setSnapshot] = useState<SnapshotDetail | null>(null);
   const [alerts, setAlerts] = useState<Array<{ severity: "info" | "warning" | "critical"; title: string; body: string }>>(
     [],
@@ -31,6 +31,12 @@ export default function CashFlowOverviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    const next = readCashFlowContextFromUrl();
+    setHorizonType(next.horizonType);
+    setScenarioTag(next.scenarioTag);
+  }, []);
 
   const load = async () => {
     setLoading(true);
@@ -115,6 +121,7 @@ export default function CashFlowOverviewPage() {
           onChange={(next) => {
             setHorizonType(next.horizonType);
             setScenarioTag(next.scenarioTag);
+            writeCashFlowContextToUrl(next);
           }}
           generatedAtLabel={summary?.generatedAt ?? null}
           loading={loading}

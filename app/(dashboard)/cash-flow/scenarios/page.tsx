@@ -17,12 +17,22 @@ import { CashFlowMetricCard } from "../_components/primitives/metric-card";
 import { CashFlowHelp } from "../_components/primitives/help";
 import { CashFlowErrorState, CashFlowNoSnapshotState } from "../_components/primitives/state";
 import { deriveCrunchSignal, getStaleStatus, labelForScenarioTag, topDrivers } from "../_components/primitives/utils";
-import { buildCashFlowContextQuery } from "../_components/context";
+import {
+  buildCashFlowContextQuery,
+  CASH_FLOW_DEFAULT_HORIZON,
+  CASH_FLOW_DEFAULT_SCENARIO,
+  useCashFlowContextFromUrl,
+  updateCashFlowContextInUrl,
+} from "../_components/context";
 
 export default function CashFlowScenariosPage() {
   const { fCurrency } = useFormat();
-  const [horizonType, setHorizonType] = useState<CashFlowHorizonType>("WEEKLY_13");
-  const [selected, setSelected] = useState<CashFlowScenarioTag>("BASE");
+  const urlCtx = useCashFlowContextFromUrl({
+    horizonType: CASH_FLOW_DEFAULT_HORIZON,
+    scenarioTag: CASH_FLOW_DEFAULT_SCENARIO,
+  });
+  const [horizonType, setHorizonType] = useState<CashFlowHorizonType>(urlCtx.horizonType);
+  const [selected, setSelected] = useState<CashFlowScenarioTag>(urlCtx.scenarioTag);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,8 +61,15 @@ export default function CashFlowScenariosPage() {
   };
 
   useEffect(() => {
+    if (urlCtx.horizonType !== horizonType) setHorizonType(urlCtx.horizonType);
+    if (urlCtx.scenarioTag !== selected) setSelected(urlCtx.scenarioTag);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlCtx.horizonType, urlCtx.scenarioTag]);
+
+  useEffect(() => {
     void load();
-  }, [horizonType]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [horizonType, selected]);
 
   const base = snapshotsByScenario.BASE;
   const best = snapshotsByScenario.BEST_CASE;
@@ -178,6 +195,7 @@ export default function CashFlowScenariosPage() {
           onChange={(next) => {
             setHorizonType(next.horizonType);
             setSelected(next.scenarioTag);
+            updateCashFlowContextInUrl({ horizonType: next.horizonType, scenarioTag: next.scenarioTag });
           }}
           generatedAtLabel={selectedSnapshot ? format(new Date(selectedSnapshot.generatedAt), "dd MMM yyyy, HH:mm") : null}
           loading={loading}

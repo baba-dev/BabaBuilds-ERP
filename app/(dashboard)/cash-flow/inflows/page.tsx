@@ -4,10 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { ReceiptText, TrendingUp, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
+import { useSearchParams } from "next/navigation";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { getCashFlowContextFromSearchParams, updateCashFlowContextInUrl } from "../_components/context";
 import { CashFlowNav } from "../_components/cash-flow-nav";
 import { fetchCashFlowSnapshotWithPeriods, refreshCashForecast } from "../_components/api";
 import type { CashFlowHorizonType, CashFlowScenarioTag, SnapshotDetail } from "../_components/types";
@@ -19,12 +21,20 @@ import { getStaleStatus, isConfidenceLow, sumLineItems, topDrivers } from "../_c
 import { buildCashFlowContextQuery } from "../_components/context";
 
 export default function CashFlowInflowsPage() {
-  const [horizonType, setHorizonType] = useState<CashFlowHorizonType>("WEEKLY_13");
-  const [scenarioTag, setScenarioTag] = useState<CashFlowScenarioTag>("BASE");
+  const search = useSearchParams();
+  const urlCtx = useMemo(() => getCashFlowContextFromSearchParams(search), [search]);
+  const [horizonType, setHorizonType] = useState<CashFlowHorizonType>(urlCtx.horizonType);
+  const [scenarioTag, setScenarioTag] = useState<CashFlowScenarioTag>(urlCtx.scenarioTag);
   const [snapshot, setSnapshot] = useState<SnapshotDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setHorizonType(urlCtx.horizonType);
+    setScenarioTag(urlCtx.scenarioTag);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlCtx.horizonType, urlCtx.scenarioTag]);
 
   const load = async () => {
     setLoading(true);
@@ -102,6 +112,7 @@ export default function CashFlowInflowsPage() {
         <CashFlowActionBar
           context={{ horizonType, scenarioTag }}
           onChange={(next) => {
+            updateCashFlowContextInUrl(next);
             setHorizonType(next.horizonType);
             setScenarioTag(next.scenarioTag);
           }}

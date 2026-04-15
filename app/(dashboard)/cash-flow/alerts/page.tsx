@@ -15,10 +15,12 @@ import { buildCashFlowContextQuery } from "../_components/context";
 import { CashFlowActionBar } from "../_components/primitives/action-bar";
 import { CashFlowInsightCard } from "../_components/primitives/insight-card";
 import { CashFlowErrorState, CashFlowNoSnapshotState } from "../_components/primitives/state";
+import { useCashFlowContextFromUrl, updateCashFlowContextInUrl } from "../_components/context";
 
 export default function CashFlowAlertsPage() {
-  const [horizonType, setHorizonType] = useState<CashFlowHorizonType>("WEEKLY_13");
-  const [scenarioTag, setScenarioTag] = useState<CashFlowScenarioTag>("BASE");
+  const urlCtx = useCashFlowContextFromUrl();
+  const [horizonType, setHorizonType] = useState<CashFlowHorizonType>(urlCtx.horizonType);
+  const [scenarioTag, setScenarioTag] = useState<CashFlowScenarioTag>(urlCtx.scenarioTag);
   const [alerts, setAlerts] = useState<CashFlowAlertDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -177,6 +179,7 @@ export default function CashFlowAlertsPage() {
           onChange={(next) => {
             setHorizonType(next.horizonType);
             setScenarioTag(next.scenarioTag);
+            updateCashFlowContextInUrl(next, { replace: true });
           }}
           loading={loading}
           refreshing={refreshing}
