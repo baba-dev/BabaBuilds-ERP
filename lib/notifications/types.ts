@@ -20,6 +20,7 @@ export type NotificationEventType =
   | 'SHOP_ORDER_STATUS_CHANGED'
   | 'RETAINER_CREATED'
   | 'PROPOSAL_ACCEPTED'
+  | 'PROPOSAL_VIEWED'
   | 'SETTINGS_UPDATED';
 
 export interface NotificationPayload {

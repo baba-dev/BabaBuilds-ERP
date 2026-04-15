@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { FileText, Clock, Download, AlertTriangle, FilePlus, Send, Banknote, Trash2, ReceiptText, X } from "lucide-react";
@@ -323,7 +325,18 @@ export default function InvoicesAndEarnings() {
   }, [currentPage, hasHandledProtocolRecord, searchParams, tableState]);
 
   const invoiceColumns: DataTableColumnDef<InvoiceDto>[] = [
-    { id: "invoice", header: t("col_invoice_no"), accessor: (row) => row.invoiceNumber, sortable: true, cell: (row) => <span className="font-bold dark:text-zinc-200 text-sm">{row.invoiceNumber}</span>, hideable: true },
+    { id: "invoice", header: t("col_invoice_no"), accessor: (row) => row.invoiceNumber, sortable: true, cell: (row) => (
+      <div>
+        <span className="font-bold dark:text-zinc-200 text-sm">{row.invoiceNumber}</span>
+        {row.sourceProposalId && (
+          <div className="mt-1 flex items-center">
+             <Link href={`/proposals/${row.sourceProposalId}`} className="text-[10px] uppercase font-bold tracking-widest text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-1 transition-colors">
+               <FileText className="w-3 h-3" /> Origin
+             </Link>
+          </div>
+        )}
+      </div>
+    ), hideable: true },
     { id: "date", header: t("col_date"), sortable: true, sortAccessor: (row) => new Date(row.invoiceDate).getTime(), cell: (row) => <span className="dark:text-zinc-400 text-xs font-medium">{format(new Date(row.invoiceDate), safeDateFormat)}</span>, hideable: true },
     { id: "billed", header: t("col_billed"), sortable: true, sortAccessor: (row) => row.totalAmount, cell: (row) => <span className="dark:text-zinc-300 font-bold text-sm">{fCurrency(row.totalAmount)}</span>, hideable: true },
     {
@@ -479,6 +492,11 @@ export default function InvoicesAndEarnings() {
                     <div>
                       <p className="text-xs text-zinc-500">{t("col_invoice_no")}</p>
                       <p className="font-bold text-zinc-900 dark:text-zinc-100">{invoice.invoiceNumber}</p>
+                      {invoice.sourceProposalId && (
+                        <Link href={`/proposals/${invoice.sourceProposalId}`} className="mt-1 text-[10px] uppercase font-bold tracking-widest text-indigo-500 hover:text-indigo-600 block">
+                          From Proposal
+                        </Link>
+                      )}
                     </div>
                     <Badge className="text-[10px] uppercase tracking-widest">{invoice.status}</Badge>
                   </div>
