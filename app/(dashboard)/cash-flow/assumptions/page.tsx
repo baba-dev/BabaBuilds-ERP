@@ -30,6 +30,27 @@ type AssumptionsForm = {
   movePOEarlierLaterDays: number;
 };
 
+function fmtSignedNumber(n: number) {
+  if (!Number.isFinite(n)) return "—";
+  return `${n >= 0 ? "+" : ""}${n}`;
+}
+
+function summarizeAssumptions(key: string, valueJson: unknown) {
+  const v = (valueJson ?? {}) as Partial<AssumptionsForm>;
+  const num = (x: unknown) => {
+    const n = Number(x);
+    return Number.isFinite(n) ? n : null;
+  };
+  const summary = [
+    { label: "Collections delay", value: num(v.collectionsDelayDays), suffix: "d" },
+    { label: "Inflow haircut", value: num(v.inflowHaircutPercent), suffix: "%" },
+    { label: "Outflow increase", value: num(v.outflowIncreasePercent), suffix: "%" },
+    { label: "PO timing", value: num(v.movePOEarlierLaterDays), suffix: "d" },
+  ].filter((x) => x.value != null);
+
+  return { key, summary };
+}
+
 const defaultForm: AssumptionsForm = {
   defaultInvoicePaymentTermsDays: 30,
   minimumCashThreshold: 0,
@@ -507,9 +528,26 @@ export default function CashFlowAssumptionsPage() {
                       <PopoverHeader>
                         <PopoverTitle className="truncate">{r.key}</PopoverTitle>
                       </PopoverHeader>
-                      <pre className="mt-2 text-[11px] text-zinc-600 dark:text-zinc-300 overflow-auto max-h-60 bg-zinc-50 dark:bg-zinc-950/40 rounded-xl p-3">
-                        {JSON.stringify(r.valueJson, null, 2)}
-                      </pre>
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {Object.entries((r.valueJson ?? {}) as Record<string, unknown>)
+                          .slice(0, 10)
+                          .map(([k, v]) => (
+                            <div
+                              key={k}
+                              className="rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/50 dark:bg-zinc-950/20 p-3"
+                            >
+                              <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                                {k.replaceAll(/([A-Z])/g, " $1").trim()}
+                              </div>
+                              <div className="mt-1 text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+                                {typeof v === "number" ? v.toLocaleString() : String(v)}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                      <p className="mt-3 text-[11px] text-zinc-500 dark:text-zinc-400">
+                        Showing up to 10 keys from <code className="font-mono">valueJson</code>.
+                      </p>
                     </PopoverContent>
                   </Popover>
                 ))}

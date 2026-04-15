@@ -94,6 +94,8 @@ export default function CashFlowVariancePage() {
   const stale = useMemo(() => getStaleStatus(snapshot?.generatedAt ?? null, 24), [snapshot?.generatedAt]);
   const q = useMemo(() => buildCashFlowContextQuery({ horizonType, scenarioTag }), [horizonType, scenarioTag]);
 
+  const fmtSigned = (n: number) => `${n >= 0 ? "+" : ""}${fCurrency(n)}`;
+
   return (
     <CashFlowPageShell
       title="Variance"
@@ -186,6 +188,9 @@ export default function CashFlowVariancePage() {
                     const outflowDelta = Number(p.deltas?.deltaOutflows ?? 0);
                     const tone = toneForVariance(varianceNet);
                     const isOpen = Boolean(open[p.id]);
+                    const inflowTone = toneForVariance(inflowDelta);
+                    // deltaOutflows is projected_outflows - actual_outflows (positive means you spent less than forecast)
+                    const outflowFavorable = outflowDelta >= 0;
                     return (
                       <div
                         key={p.id}
@@ -258,16 +263,34 @@ export default function CashFlowVariancePage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                               <div className="rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 p-3">
                                 <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Inflow delta</div>
-                                <div className="mt-1 text-sm font-semibold tabular-nums">{fCurrency(inflowDelta)}</div>
+                                <div
+                                  className={
+                                    inflowTone === "positive"
+                                      ? "mt-1 text-sm font-semibold tabular-nums text-emerald-700 dark:text-emerald-300"
+                                      : inflowTone === "danger"
+                                        ? "mt-1 text-sm font-semibold tabular-nums text-rose-700 dark:text-rose-300"
+                                        : "mt-1 text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-100"
+                                  }
+                                >
+                                  {fmtSigned(inflowDelta)}
+                                </div>
                                 <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
                                   Actual inflows − projected inflows
                                 </p>
                               </div>
                               <div className="rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 p-3">
                                 <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Outflow delta</div>
-                                <div className="mt-1 text-sm font-semibold tabular-nums">{fCurrency(outflowDelta)}</div>
+                                <div
+                                  className={
+                                    outflowFavorable
+                                      ? "mt-1 text-sm font-semibold tabular-nums text-emerald-700 dark:text-emerald-300"
+                                      : "mt-1 text-sm font-semibold tabular-nums text-rose-700 dark:text-rose-300"
+                                  }
+                                >
+                                  {fmtSigned(outflowDelta)}
+                                </div>
                                 <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
-                                  Projected outflows − actual outflows
+                                  Projected outflows − actual outflows (positive = spent less than forecast)
                                 </p>
                               </div>
                             </div>

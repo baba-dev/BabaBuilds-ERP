@@ -19,6 +19,7 @@ import { CashFlowInsightCard } from "../_components/primitives/insight-card";
 import { CashFlowMetricCard } from "../_components/primitives/metric-card";
 import { CashFlowErrorState, CashFlowNoSnapshotState } from "../_components/primitives/state";
 import { clamp01, computeRunway, deriveCrunchSignal, getSnapshotAssumptions, getStaleReasons, getStaleStatus, toneForRiskLevel, topDrivers } from "../_components/primitives/utils";
+import { dt, cashFlowTypography } from "../_components/cash-flow-typography";
 
 export default function CashFlowOverviewPage() {
   const { fCurrency } = useFormat();
@@ -185,6 +186,79 @@ export default function CashFlowOverviewPage() {
           <CashFlowNoSnapshotState onGenerate={handleRefresh} />
         ) : (
           <>
+            <div className="relative overflow-hidden rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/50 dark:bg-zinc-900/30 shadow-sm backdrop-blur-sm">
+              <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-indigo-500/5 dark:bg-indigo-500/10 blur-3xl" />
+              <div className="pointer-events-none absolute -bottom-28 -left-28 h-72 w-72 rounded-full bg-emerald-500/5 dark:bg-emerald-500/10 blur-3xl" />
+              <div className="relative p-5 sm:p-6">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0">
+                    <div className={dt(cashFlowTypography.labelUpperStrong, "text-zinc-500 dark:text-zinc-400")}>
+                      Executive snapshot
+                    </div>
+                    <div className={dt("mt-2", cashFlowTypography.value3xlLight)}>
+                      {runway?.kind === "negative"
+                        ? `Runway ends in ${runway.bucketLabel}`
+                        : runway?.kind === "threshold"
+                          ? `Below min cash in ${runway.bucketLabel}`
+                          : crunch
+                            ? `Lowest cash in ${crunch.bucketLabel}`
+                            : "No crunch window detected"}
+                    </div>
+                    <div className={dt("mt-1 max-w-2xl", cashFlowTypography.helperXs)}>
+                      {runway?.kind === "negative"
+                        ? "Treat this as a forcing function: accelerate collections and revisit commitments before this window."
+                        : runway?.kind === "threshold"
+                          ? `This crosses your minimum cash threshold (${minCashLabel}). Review receivables risk and commitment timing.`
+                          : crunch
+                            ? "This is the window to review collections risk and commitment timing."
+                            : "Refresh after major invoice/PO changes to keep decisions reliable."}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button size="sm" asChild className="gap-2">
+                      <Link href={`/cash-flow/inflows?${q}${runway?.periodId ? `&periodId=${encodeURIComponent(runway.periodId)}` : ""}`}>
+                        Review receivables <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button size="sm" variant="outline" asChild className="gap-2">
+                      <Link href={`/cash-flow/outflows?${q}${runway?.periodId ? `&periodId=${encodeURIComponent(runway.periodId)}` : ""}`}>
+                        Review commitments <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button size="sm" variant="ghost" asChild className="gap-2 text-zinc-500">
+                      <Link href={`/cash-flow/assumptions?${q}`}>Tune assumptions</Link>
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/60 dark:bg-zinc-950/20 p-4">
+                    <div className={dt(cashFlowTypography.labelUpperStrong)}>Opening cash</div>
+                    <div className={dt("mt-2", cashFlowTypography.value2xlLight)}>{summary.opening}</div>
+                    <div className={dt("mt-1", cashFlowTypography.helperXs)}>Start of horizon</div>
+                  </div>
+                  <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/60 dark:bg-zinc-950/20 p-4">
+                    <div className={dt(cashFlowTypography.labelUpperStrong)}>Projected inflows</div>
+                    <div className={dt("mt-2", cashFlowTypography.value2xlLight)}>{summary.inflows}</div>
+                    <div className={dt("mt-1", cashFlowTypography.helperXs)}>Invoices + retainers</div>
+                  </div>
+                  <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/60 dark:bg-zinc-950/20 p-4">
+                    <div className={dt(cashFlowTypography.labelUpperStrong)}>Projected outflows</div>
+                    <div className={dt("mt-2", cashFlowTypography.value2xlLight)}>{summary.outflows}</div>
+                    <div className={dt("mt-1", cashFlowTypography.helperXs)}>Commitments + spend</div>
+                  </div>
+                  <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/60 dark:bg-zinc-950/20 p-4">
+                    <div className={dt(cashFlowTypography.labelUpperStrong)}>Closing cash</div>
+                    <div className={dt("mt-2", cashFlowTypography.value2xlLight)}>{summary.closing}</div>
+                    <div className={dt("mt-1", cashFlowTypography.helperXs)}>
+                      {summary.confidence == null ? "Confidence —" : `Confidence ${summary.confidence}%`}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <Card className="lg:col-span-2 rounded-2xl border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 shadow-sm backdrop-blur-sm overflow-hidden">
                 <CardHeader className="pb-3">

@@ -166,6 +166,11 @@ export default function CashFlowAlertsPage() {
           "If you can’t move timing, stress-test assumptions (collections delay / haircut) and refresh the forecast.",
           "Use Variance to validate whether the model is consistently optimistic or pessimistic.",
         ],
+        ctas: [
+          { label: "Open commitments", href: `/cash-flow/outflows?${q}${a.periodId ? `&periodId=${encodeURIComponent(a.periodId)}` : ""}` },
+          { label: "Open receivables", href: `/cash-flow/inflows?${q}${a.periodId ? `&periodId=${encodeURIComponent(a.periodId)}` : ""}` },
+          { label: "Tune assumptions", href: `/cash-flow/assumptions?${q}` },
+        ],
       };
     }
     if (a.type === "CASH_LOW") {
@@ -176,6 +181,11 @@ export default function CashFlowAlertsPage() {
           "Review committed outflows in this period and identify what can be phased or deferred.",
           "If this happens repeatedly, raise your minimum cash threshold and tune scenarios.",
         ],
+        ctas: [
+          { label: "Review commitments", href: `/cash-flow/outflows?${q}${a.periodId ? `&periodId=${encodeURIComponent(a.periodId)}` : ""}` },
+          { label: "Review receivables", href: `/cash-flow/inflows?${q}${a.periodId ? `&periodId=${encodeURIComponent(a.periodId)}` : ""}` },
+          { label: "Raise buffer", href: `/cash-flow/assumptions?${q}` },
+        ],
       };
     }
     return {
@@ -183,6 +193,11 @@ export default function CashFlowAlertsPage() {
       bullets: [
         "Open the period to review drivers and validate the cause.",
         "If drivers look correct, tune assumptions and refresh.",
+      ],
+      ctas: [
+        ...(a.periodId ? [{ label: "Review period", href: `/cash-flow/outflows?${q}&periodId=${encodeURIComponent(a.periodId)}` }] : []),
+        { label: "Validate in variance", href: `/cash-flow/variance?${q}${a.periodId ? `&periodId=${encodeURIComponent(a.periodId)}` : ""}` },
+        { label: "Tune assumptions", href: `/cash-flow/assumptions?${q}` },
       ],
     };
   };
@@ -209,80 +224,78 @@ export default function CashFlowAlertsPage() {
           <CardTitle className="text-sm font-black tracking-tight">{title}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {items.map((a, idx) => (
+          {items.map((a, idx) => {
+            const playbook = remediation(a);
+            return (
             <div
               key={`${a.type}-${a.periodId ?? "na"}-${idx}`}
-              className="flex items-start justify-between gap-3 rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 p-4"
+              className="flex flex-col gap-4 rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 p-4 transition-all duration-300 hover:shadow-md"
             >
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="mt-0.5">
-                  <AlertTriangle
-                    className={
-                      a.severity === "critical"
-                        ? "h-4 w-4 text-rose-600 dark:text-rose-400"
-                        : a.severity === "warning"
-                          ? "h-4 w-4 text-amber-600 dark:text-amber-400"
-                          : "h-4 w-4 text-zinc-500"
-                    }
-                  />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">{a.title}</p>
-                    <Badge variant="outline" className="text-[11px]">
-                      {a.severity}
-                    </Badge>
-                    {a.periodStart ? (
-                      <Badge variant="outline" className="text-[11px] text-zinc-500">
-                        {new Date(a.periodStart).toLocaleDateString()}
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="mt-0.5">
+                    <AlertTriangle
+                      className={
+                        a.severity === "critical"
+                          ? "h-4 w-4 text-rose-600 dark:text-rose-400"
+                          : a.severity === "warning"
+                            ? "h-4 w-4 text-amber-600 dark:text-amber-400"
+                            : "h-4 w-4 text-zinc-500"
+                      }
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">{a.title}</p>
+                      <Badge variant="outline" className="text-[11px]">
+                        {a.severity}
                       </Badge>
-                    ) : null}
-                  </div>
-                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">{a.body}</p>
-                  <div className="mt-2 rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-950/10 p-3">
-                    <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                      {remediation(a).title}
+                      {a.periodStart ? (
+                        <Badge variant="outline" className="text-[11px] text-zinc-500">
+                          {new Date(a.periodStart).toLocaleDateString()}
+                        </Badge>
+                      ) : null}
                     </div>
-                    <ul className="mt-2 space-y-1 text-xs text-zinc-600 dark:text-zinc-300">
-                      {remediation(a).bullets.map((b, i) => (
-                        <li key={i} className="flex gap-2">
-                          <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-zinc-400/70 dark:bg-zinc-600/70" aria-hidden="true" />
-                          <span className="min-w-0">{b}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">{a.body}</p>
                   </div>
                 </div>
-              </div>
-              <div className="shrink-0 flex flex-col items-end gap-2">
-                {a.periodId ? (
+
+                <div className="shrink-0">
                   <Button size="sm" variant="outline" asChild className="h-8 gap-2">
-                    <Link href={`/cash-flow/outflows?${q}&periodId=${encodeURIComponent(a.periodId)}`}>
-                      Review period <ArrowRight className="h-4 w-4" />
+                    <Link href={`/cash-flow/overview?${q}`}>
+                      Open command center <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-950/10 p-3">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                  {playbook.title}
+                </div>
+                <ul className="mt-2 space-y-1 text-xs text-zinc-600 dark:text-zinc-300">
+                  {playbook.bullets.map((b, i) => (
+                    <li key={i} className="flex gap-2">
+                      <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-zinc-400/70 dark:bg-zinc-600/70" aria-hidden="true" />
+                      <span className="min-w-0">{b}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {"ctas" in playbook && playbook.ctas?.length ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {playbook.ctas.slice(0, 3).map((cta: { label: string; href: string }) => (
+                      <Button key={cta.href} size="sm" variant="outline" asChild className="h-8 gap-2">
+                        <Link href={cta.href}>
+                          {cta.label} <ArrowRight className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    ))}
+                  </div>
                 ) : null}
-                <Button size="sm" variant="outline" asChild className="h-8 gap-2">
-                  <Link href={`/cash-flow/inflows?${q}${a.periodId ? `&periodId=${encodeURIComponent(a.periodId)}` : ""}`}>
-                    Review receivables <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button size="sm" variant="outline" asChild className="h-8 gap-2">
-                  <Link href={`/cash-flow/overview?${q}`}>
-                    Open command center <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button size="sm" variant="ghost" asChild className="h-8 text-zinc-500">
-                  <Link href={`/cash-flow/variance?${q}${a.periodId ? `&periodId=${encodeURIComponent(a.periodId)}` : ""}`}>
-                    Validate in variance
-                  </Link>
-                </Button>
-                <Button size="sm" variant="ghost" asChild className="h-8 text-zinc-500">
-                  <Link href={`/cash-flow/assumptions?${q}`}>Tune assumptions</Link>
-                </Button>
               </div>
             </div>
-          ))}
+          )})}
         </CardContent>
       </Card>
     );

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { SnapshotDetail, SnapshotLineItem, SnapshotPeriod } from "../types";
 import { CashFlowHelp } from "./help";
+import { cashFlowTypography, dt } from "../cash-flow-typography";
 import { labelForClassification, sumLineItems, toneForRiskLevel, topDrivers } from "./utils";
 
 function money(n: unknown, fmt: (n: number) => string) {
@@ -46,6 +47,7 @@ export function CashFlowPeriodBreakdown({
   showTimingOverlay?: boolean;
 }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  const toggle = (periodId: string) => setOpen((prev) => ({ ...prev, [periodId]: !prev[periodId] }));
 
   // Open a focused period when deep-linked.
   // We keep this client-only and local to avoid forcing state into parent pages.
@@ -100,7 +102,7 @@ export function CashFlowPeriodBreakdown({
     <div className={cn("space-y-2", className)}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-black tracking-tight text-zinc-900 dark:text-zinc-100">Period breakdown</p>
+          <p className={dt(cashFlowTypography.cardTitle, "tracking-tight")}>Period breakdown</p>
           <CashFlowHelp label="Periods">
             Each period summarizes cash movement and risk level, with top drivers. Expand a period to see the largest line items.
           </CashFlowHelp>
@@ -129,11 +131,23 @@ export function CashFlowPeriodBreakdown({
         const overlayTotal = Object.values(totalsByClass).reduce((a, b) => a + b, 0) || 0;
 
         return (
-          <div key={p.id} className={cn("rounded-2xl border p-3 shadow-sm backdrop-blur-sm", periodTone(p.riskLevel))}>
+          <div
+            key={p.id}
+            className={cn(
+              "rounded-2xl border p-3 shadow-sm backdrop-blur-sm transition-all duration-300 hover:shadow-md",
+              periodTone(p.riskLevel),
+            )}
+          >
             <button
               type="button"
-              className="w-full text-left"
-              onClick={() => setOpen((prev) => ({ ...prev, [p.id]: !prev[p.id] }))}
+              className="w-full text-left rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              onClick={() => toggle(p.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  toggle(p.id);
+                }
+              }}
               aria-expanded={isOpen}
               aria-controls={`cashflow-period-${p.id}`}
             >
@@ -143,8 +157,8 @@ export function CashFlowPeriodBreakdown({
                     {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">{p.bucketLabel}</p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    <p className={dt(cashFlowTypography.cardTitle, "truncate")}>{p.bucketLabel}</p>
+                    <p className={dt(cashFlowTypography.helperXs)}>
                       Projected {money(projected, currencyFormatter)} · Actual {money(actual, currencyFormatter)}
                     </p>
                     {showTimingOverlay && overlayTotal > 0 ? (
@@ -211,14 +225,14 @@ export function CashFlowPeriodBreakdown({
                   drivers.map((d) => (
                     <div key={d.id} className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200/50 dark:border-zinc-800/50 bg-white/40 dark:bg-zinc-900/30 px-3 py-2">
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">{d.title}</div>
-                        <div className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                        <div className={dt(cashFlowTypography.cardTitle, "truncate text-sm")}>{d.title}</div>
+                        <div className={dt(cashFlowTypography.helperXs, "mt-0.5")}>
                           {d.sourceType} · {labelForClassification(d.classification)}
                         </div>
                       </div>
                       <div className="text-right shrink-0">
-                        <div className="text-sm font-black tabular-nums">{currencyFormatter(Number(d.amount ?? 0))}</div>
-                        <div className="text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums">
+                        <div className={dt(cashFlowTypography.valueSmBold, "tabular-nums")}>{currencyFormatter(Number(d.amount ?? 0))}</div>
+                        <div className={dt(cashFlowTypography.labelUpper, "tabular-nums")}>
                           {d.confidence == null ? "—" : `${Math.round(d.confidence * 100)}%`}
                         </div>
                       </div>
