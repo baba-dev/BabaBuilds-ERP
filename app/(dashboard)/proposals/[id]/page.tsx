@@ -95,7 +95,7 @@ export default async function ProposalDetailPage({ params }: { params: { id: str
             <TimelineItem active={!!proposal.firstConvertedAt} icon={DollarSign} title="Converted" date={proposal.firstConvertedAt} />
 
             {proposal.firstConvertedAt && proposal.generatedInvoices.length > 0 && proposal.generatedInvoices.every((i: any) => i.status === 'PAID' || i.status === 'Paid') && (
-              <TimelineItem active={true} icon={CheckCircle2} title="Reconciled" date={proposal.generatedInvoices[0].updatedAt} subtitle="Revenue secured" />
+              <TimelineItem active={true} icon={CheckCircle2} title="Reconciled" date={proposal.generatedInvoices[0].dateReceived ?? proposal.generatedInvoices[0].createdAt} subtitle="Revenue secured" />
             )}
           </div>
         </div>
