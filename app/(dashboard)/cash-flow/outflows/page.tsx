@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { useFormat } from "@/hooks/use-format";
 import { Textarea } from "@/components/ui/textarea";
 import { CashFlowNav } from "../_components/cash-flow-nav";
-import { fetchCashFlowSnapshotWithPeriods, refreshCashForecast } from "../_components/api";
+import { fetchCashFlowSnapshotWithPeriods, fetchPlanner, refreshCashForecast, upsertPlannerRow } from "../_components/api";
 import type { CashFlowHorizonType, CashFlowScenarioTag, SnapshotDetail } from "../_components/types";
 import { CashFlowActionBar } from "../_components/primitives/action-bar";
 import { CashFlowMetricCard } from "../_components/primitives/metric-card";
@@ -39,6 +39,7 @@ export default function CashFlowOutflowsPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [plannerLoading, setPlannerLoading] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -57,6 +58,33 @@ export default function CashFlowOutflowsPage() {
 
   useEffect(() => {
     void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [horizonType, scenarioTag]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPlannerLoading(true);
+    fetchPlanner({ horizonType, scenarioTag })
+      .then((rows) => {
+        if (cancelled) return;
+        setPlan((prev) => {
+          const next = { ...prev };
+          for (const r of rows) {
+            next[r.planKey] = { status: r.status, note: r.note ?? undefined };
+          }
+          return next;
+        });
+      })
+      .catch((e: unknown) => {
+        console.error(e);
+        if (!cancelled) toast.error("Failed to load planner");
+      })
+      .finally(() => {
+        if (!cancelled) setPlannerLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [horizonType, scenarioTag]);
 
@@ -107,6 +135,21 @@ export default function CashFlowOutflowsPage() {
   }, [outflows, plannerItemId]);
 
   const plannerState = useMemo(() => (plannerItemId ? plan[plannerItemId] ?? { status: "open" as const } : null), [plan, plannerItemId]);
+
+  const persistPlannerRow = async (lineItemId: string, next: { status: "open" | "deferred" | "resolved"; note?: string }) => {
+    try {
+      await upsertPlannerRow({
+        horizonType,
+        scenarioTag,
+        planKey: lineItemId,
+        status: next.status,
+        note: next.note ?? null,
+      });
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to save planner");
+    }
+  };
 
   const nearTermRisk = useMemo(() => {
     const now = Date.now();

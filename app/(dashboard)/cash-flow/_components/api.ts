@@ -107,3 +107,62 @@ export async function fetchVariance(input: { horizonType: CashFlowHorizonType; s
   return ((json as { data?: unknown } | null)?.data ?? null) as VarianceResponse;
 }
 
+export type CashFlowPlannerStatus = "open" | "deferred" | "resolved";
+
+export type PlannerRow = {
+  planKey: string;
+  status: CashFlowPlannerStatus;
+  note: string | null;
+  updatedAt: string;
+};
+
+export async function fetchPlanner(input: { horizonType: CashFlowHorizonType; scenarioTag: CashFlowScenarioTag }): Promise<PlannerRow[]> {
+  const qs = new URLSearchParams({ horizonType: input.horizonType, scenarioTag: input.scenarioTag });
+  const res = await fetch(`/api/cash-flow/planner?${qs.toString()}`, { cache: "no-store" });
+  const json = (await res.json().catch(() => null)) as unknown;
+  if (!res.ok) throw new Error((json as { error?: string } | null)?.error ?? "Failed to load planner");
+  return (((json as { data?: unknown } | null)?.data ?? []) as PlannerRow[]) ?? [];
+}
+
+export async function upsertPlannerRow(input: {
+  horizonType: CashFlowHorizonType;
+  scenarioTag: CashFlowScenarioTag;
+  planKey: string;
+  status: CashFlowPlannerStatus;
+  note?: string | null;
+}) {
+  const res = await fetch("/api/cash-flow/planner", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const json = (await res.json().catch(() => null)) as unknown;
+  if (!res.ok) throw new Error((json as { error?: string } | null)?.error ?? "Failed to save planner row");
+  return (json as { data?: unknown } | null)?.data ?? null;
+}
+
+export type AlertPreferencesRow = {
+  criticalEnabled: boolean;
+  warningEnabled: boolean;
+  infoEnabled: boolean;
+  updatedAt: string;
+};
+
+export async function fetchAlertPreferences(): Promise<AlertPreferencesRow | null> {
+  const res = await fetch("/api/cash-flow/alert-preferences", { cache: "no-store" });
+  const json = (await res.json().catch(() => null)) as unknown;
+  if (!res.ok) throw new Error((json as { error?: string } | null)?.error ?? "Failed to load alert preferences");
+  return (((json as { data?: unknown } | null)?.data ?? null) as AlertPreferencesRow | null) ?? null;
+}
+
+export async function updateAlertPreferences(input: Partial<Omit<AlertPreferencesRow, "updatedAt">>) {
+  const res = await fetch("/api/cash-flow/alert-preferences", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  const json = (await res.json().catch(() => null)) as unknown;
+  if (!res.ok) throw new Error((json as { error?: string } | null)?.error ?? "Failed to save alert preferences");
+  return (json as { data?: unknown } | null)?.data ?? null;
+}
+

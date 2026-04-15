@@ -245,6 +245,8 @@ model Workspace {
   cashForecastSnapshots      CashForecastSnapshot[]
   cashForecastAssumptions    CashForecastAssumption[]
   cashForecastAdjustments    CashForecastManualAdjustment[]
+  cashForecastLineItemPlans  CashForecastLineItemPlan[]
+  cashForecastAlertPreferences CashForecastAlertPreference[]
   clientPaymentBehaviors     ClientPaymentBehavior[]
 
   // IMS Relations
@@ -857,6 +859,44 @@ model CashForecastManualAdjustment {
 
   @@index([workspaceId, date])
   @@index([workspaceId, direction])
+}
+
+model CashForecastLineItemPlan {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  horizonType CashForecastHorizonType
+  scenarioTag CashForecastScenarioTag @default(BASE)
+
+  // Stable identifier for a forecast driver across snapshots.
+  // Typically derived from {sourceType, sourceId} (fallback to title hash).
+  planKey String
+
+  status String  @default("open") // "open" | "deferred" | "resolved"
+  note   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, horizonType, scenarioTag])
+  @@unique([workspaceId, horizonType, scenarioTag, planKey])
+}
+
+model CashForecastAlertPreference {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  // Keep this scoped and minimal in v1. Later: quiet hours, channels, per-alert thresholds.
+  criticalEnabled Boolean @default(true)
+  warningEnabled  Boolean @default(true)
+  infoEnabled     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId])
 }
 
 model Investment {

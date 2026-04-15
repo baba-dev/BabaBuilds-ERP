@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { CashFlowNav } from "../_components/cash-flow-nav";
 import type { CashFlowHorizonType, CashFlowScenarioTag, CashFlowAlertDto } from "../_components/types";
-import { fetchCashFlowAlerts, listAssumptions, refreshCashForecast, upsertAssumption } from "../_components/api";
+import { fetchAlertPreferences, fetchCashFlowAlerts, refreshCashForecast, updateAlertPreferences } from "../_components/api";
 import { buildCashFlowContextQuery } from "../_components/context";
 import { CashFlowActionBar } from "../_components/primitives/action-bar";
 import { CashFlowInsightCard } from "../_components/primitives/insight-card";
@@ -46,21 +46,18 @@ export default function CashFlowAlertsPage() {
   const [prefsSaving, setPrefsSaving] = useState(false);
   const [prefs, setPrefs] = useState<AlertPreferences>(defaultAlertPrefs);
 
-  const prefsKey = "cashForecast.alertPrefs.v1";
-
   useEffect(() => {
     let cancelled = false;
     setPrefsLoading(true);
-    listAssumptions()
-      .then((rows) => {
+    fetchAlertPreferences()
+      .then((row) => {
         if (cancelled) return;
-        const row = rows.find((r) => r.key === prefsKey);
-        const raw = (row?.valueJson ?? null) as Partial<AlertPreferences> | null;
+        const raw = row ?? null;
         const next: AlertPreferences = {
-          showInfo: Boolean(raw?.showInfo ?? defaultAlertPrefs.showInfo),
-          showWarnings: Boolean(raw?.showWarnings ?? defaultAlertPrefs.showWarnings),
-          showCritical: Boolean(raw?.showCritical ?? defaultAlertPrefs.showCritical),
-          highlightNearRunway: Boolean(raw?.highlightNearRunway ?? defaultAlertPrefs.highlightNearRunway),
+          showInfo: Boolean(raw?.infoEnabled ?? defaultAlertPrefs.showInfo),
+          showWarnings: Boolean(raw?.warningEnabled ?? defaultAlertPrefs.showWarnings),
+          showCritical: Boolean(raw?.criticalEnabled ?? defaultAlertPrefs.showCritical),
+          highlightNearRunway: Boolean(defaultAlertPrefs.highlightNearRunway),
         };
         setPrefs(next);
       })
@@ -81,7 +78,11 @@ export default function CashFlowAlertsPage() {
     setPrefs(next);
     setPrefsSaving(true);
     try {
-      await upsertAssumption({ key: prefsKey, valueJson: next, isActive: true });
+      await updateAlertPreferences({
+        infoEnabled: next.showInfo,
+        warningEnabled: next.showWarnings,
+        criticalEnabled: next.showCritical,
+      });
       toast.success("Alert preferences saved");
     } catch (e) {
       console.error(e);
