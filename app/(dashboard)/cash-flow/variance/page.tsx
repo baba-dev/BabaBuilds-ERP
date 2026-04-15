@@ -10,8 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CashFlowNav } from "../_components/cash-flow-nav";
-import { fetchLatestSnapshot, refreshCashForecast } from "../_components/api";
-import type { CashFlowHorizonType, CashFlowScenarioTag, SnapshotListItem } from "../_components/types";
+import { fetchLatestSnapshot, refreshCashForecast, fetchVariance } from "../_components/api";
+import type { CashFlowHorizonType, CashFlowScenarioTag, SnapshotListItem, VarianceResponse } from "../_components/types";
 
 export default function CashFlowVariancePage() {
   const { fCurrency } = useFormat();
@@ -20,12 +20,15 @@ export default function CashFlowVariancePage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [snapshot, setSnapshot] = useState<SnapshotListItem | null>(null);
+  const [variance, setVariance] = useState<VarianceResponse | null>(null);
 
   const load = async () => {
     setLoading(true);
     try {
       const s = await fetchLatestSnapshot({ horizonType, scenarioTag });
       setSnapshot(s);
+      const v = await fetchVariance({ horizonType, scenarioTag });
+      setVariance(v);
     } catch (e) {
       console.error(e);
       toast.error("Failed to load variance data");
@@ -115,17 +118,40 @@ export default function CashFlowVariancePage() {
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="coming_soon">
+        <Tabs defaultValue="variance">
           <TabsList variant="line" className="gap-2">
-            <TabsTrigger value="coming_soon" className="gap-2">
+            <TabsTrigger value="variance" className="gap-2">
               <AreaChart className="h-4 w-4" />
-              Forecast vs Actual (coming soon)
+              Forecast vs Actual
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="coming_soon">
+          <TabsContent value="variance">
             <Card className="border-zinc-200 dark:border-zinc-800">
-              <CardContent className="py-6 text-sm text-zinc-600 dark:text-zinc-400">
-                v1 stores snapshots; v2 will add period-level backtesting to compute variance and highlight forecast misses by source.\n              </CardContent>
+              <CardContent className="py-6">
+                {!variance ? (
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">No variance data yet. Refresh to generate a snapshot.</p>
+                ) : variance.periods.length === 0 ? (
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">No periods available for variance comparison.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {variance.periods.map((p) => (
+                      <div key={p.id} className="flex items-center justify-between rounded-xl border border-zinc-200/70 dark:border-zinc-800/70 px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold truncate">{p.bucketLabel}</p>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                            Projected net {fCurrency(Number(p.projectedInflows) - Number(p.projectedOutflows))} · Actual net{" "}
+                            {fCurrency(Number(p.actualInflows) - Number(p.actualOutflows))}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-black">{fCurrency(Number(p.varianceNet))}</p>
+                          <p className="text-[11px] text-zinc-500 dark:text-zinc-400">variance</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
             </Card>
           </TabsContent>
         </Tabs>

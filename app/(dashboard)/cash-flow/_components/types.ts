@@ -63,5 +63,23 @@ export type AlertsResponse = {
   }>;
 };
 
+export type VarianceResponse = {
+  horizonType: CashFlowHorizonType;
+  scenarioTag: CashFlowScenarioTag;
+  snapshot: {
+    id: string;
+    generatedAt: string;
+    startDate: string;
+    endDate: string;
+    openingCash: Prisma.Decimal | string | number;
+    closingCash: Prisma.Decimal | string | number;
+  } | null;
+  periods: Array<
+    SnapshotPeriod & {
+      varianceNet: number;
+    }
+  >;
+};
+
 export type CashFlowAlertDto = AlertsResponse["alerts"][number];
 

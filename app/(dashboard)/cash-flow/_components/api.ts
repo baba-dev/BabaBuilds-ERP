@@ -1,4 +1,4 @@
-import type { AlertsResponse, CashFlowHorizonType, CashFlowScenarioTag, SnapshotDetail, SnapshotListItem } from "./types";
+import type { AlertsResponse, CashFlowHorizonType, CashFlowScenarioTag, SnapshotDetail, SnapshotListItem, VarianceResponse } from "./types";
 
 export async function refreshCashForecast(input: {
   horizonType: CashFlowHorizonType;
@@ -96,5 +96,13 @@ export function formatMoney(value: unknown, currency = "INR", locale = "en-IN") 
   } catch {
     return `${currency} ${n.toFixed(2)}`;
   }
+}
+
+export async function fetchVariance(input: { horizonType: CashFlowHorizonType; scenarioTag: CashFlowScenarioTag }) {
+  const qs = new URLSearchParams({ horizonType: input.horizonType, scenarioTag: input.scenarioTag });
+  const res = await fetch(`/api/cash-flow/variance?${qs.toString()}`, { cache: "no-store" });
+  const json = (await res.json().catch(() => null)) as any;
+  if (!res.ok) throw new Error(json?.error ?? "Failed to load variance");
+  return json?.data as VarianceResponse;
 }
 

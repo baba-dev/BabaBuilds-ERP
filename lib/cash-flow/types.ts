@@ -37,7 +37,46 @@ export type ForecastAssumptions = {
   movePOEarlierLaterDays: number;
   minimumCashThreshold: number;
   defaultInvoicePaymentTermsDays: number;
+  recurringOutflows?: Array<{
+    title: string;
+    amount: number;
+    dayOfMonth: number; // 1-31
+    category?: string;
+  }>;
 };
+
+export async function getForecastAssumptionsForWorkspace(args: {
+  workspaceId: string;
+  scenarioTag: CashForecastScenarioTag;
+}): Promise<ForecastAssumptions> {
+  // v2: load latest active scenario assumption; fallback to engine defaults.
+  // Kept here as a lightweight helper; callers may override with their own assumption sources later.
+  const { prisma } = await import("@/lib/prisma");
+  const { getScenarioDefaults } = await import("@/lib/cash-flow/scenario");
+
+  const base = getScenarioDefaults(args.scenarioTag);
+  const key = `cashForecast.scenario.${args.scenarioTag}`;
+
+  const row = await prisma.cashForecastAssumption.findFirst({
+    where: { workspaceId: args.workspaceId, key, isActive: true },
+    orderBy: { updatedAt: "desc" },
+    select: { valueJson: true },
+  });
+
+  const value = (row?.valueJson ?? {}) as Partial<ForecastAssumptions>;
+  return {
+    ...base,
+    ...value,
+    // ensure required fields stay present
+    collectionsDelayDays: Number(value.collectionsDelayDays ?? base.collectionsDelayDays),
+    inflowHaircutPercent: Number(value.inflowHaircutPercent ?? base.inflowHaircutPercent),
+    outflowIncreasePercent: Number(value.outflowIncreasePercent ?? base.outflowIncreasePercent),
+    movePOEarlierLaterDays: Number(value.movePOEarlierLaterDays ?? base.movePOEarlierLaterDays),
+    minimumCashThreshold: Number(value.minimumCashThreshold ?? base.minimumCashThreshold),
+    defaultInvoicePaymentTermsDays: Number(value.defaultInvoicePaymentTermsDays ?? base.defaultInvoicePaymentTermsDays),
+    recurringOutflows: Array.isArray(value.recurringOutflows) ? value.recurringOutflows : base.recurringOutflows,
+  };
+}
 
 export type ForecastSourceData = {
   openingCash: Decimal;
