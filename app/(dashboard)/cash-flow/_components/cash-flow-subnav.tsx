@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { AreaChart, Bell, SlidersHorizontal, TrendingDown, TrendingUp, Wand2, BarChart3, Settings2 } from "lucide-react";
+import type { SegmentedControlOption } from "@/components/ui/segmented-control";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
@@ -39,8 +39,8 @@ export function CashFlowSubnav({ className }: { className?: string }) {
 
   const linkFor = (href: string) => `${href}${qs ? `?${qs}` : ""}`;
 
-  const options = nav.map((n) => ({
-    value: n.key,
+  const options: SegmentedControlOption<NavItem["key"]>[] = nav.map((n) => ({
+    value: n.key as NavItem["key"],
     label: (
       <span className="inline-flex items-center gap-2">
         <n.icon className="h-4 w-4" />
@@ -63,14 +63,14 @@ export function CashFlowSubnav({ className }: { className?: string }) {
     <div className={cn("w-full", className)}>
       {/* Desktop segmented nav */}
       <div className="hidden md:block">
-        <SegmentedControl
-          value={active as any}
+        <SegmentedControl<NavItem["key"]>
+          value={active as NavItem["key"]}
           onValueChange={(next) => {
             const item = nav.find((n) => n.key === next);
             if (!item) return;
             window.location.href = linkFor(item.href);
           }}
-          options={options as any}
+          options={options}
           listClassName="gap-1.5"
           itemClassName="basis-[7.5rem] grow-0"
         />

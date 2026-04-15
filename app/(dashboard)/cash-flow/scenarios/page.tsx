@@ -42,9 +42,9 @@ export default function CashFlowScenariosPage() {
         fetchCashFlowSnapshotWithPeriods({ horizonType, scenarioTag: "WORST_CASE" }),
       ]);
       setSnapshotsByScenario({ BEST_CASE: best, BASE: base, WORST_CASE: worst });
-    } catch (e: any) {
+    } catch (e: unknown) {
       setSnapshotsByScenario({ BEST_CASE: null, BASE: null, WORST_CASE: null });
-      setError(e?.message ?? "Failed to load scenarios");
+      setError(e instanceof Error ? e.message : "Failed to load scenarios");
     } finally {
       setLoading(false);
     }
@@ -125,8 +125,8 @@ export default function CashFlowScenariosPage() {
       await refreshCashForecast({ horizonType, scenarioTag: selected });
       toast.success("Scenario refreshed");
       await load();
-    } catch (e: any) {
-      toast.error(e?.message ?? "Failed to refresh scenario");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to refresh scenario");
     } finally {
       setRefreshing(false);
     }
@@ -140,8 +140,8 @@ export default function CashFlowScenariosPage() {
       await refreshCashForecast({ horizonType, scenarioTag: "WORST_CASE" });
       toast.success("Scenarios refreshed");
       await load();
-    } catch (e: any) {
-      toast.error(e?.message ?? "Failed to refresh scenarios");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to refresh scenarios");
     } finally {
       setRefreshing(false);
     }

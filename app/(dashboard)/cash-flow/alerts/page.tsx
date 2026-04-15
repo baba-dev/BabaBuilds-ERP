@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, RefreshCw, ShieldAlert } from "lucide-react";
+import { AlertTriangle, ArrowRight, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,9 +35,9 @@ export default function CashFlowAlertsPage() {
         setAlerts(res.alerts);
         setHasSnapshot(Boolean(res.snapshot));
       })
-      .catch((e: any) => {
+      .catch((e: unknown) => {
         if (cancelled) return;
-        setError(e?.message ?? "Failed to load alerts");
+        setError(e instanceof Error ? e.message : "Failed to load alerts");
         setAlerts([]);
         setHasSnapshot(true);
       })

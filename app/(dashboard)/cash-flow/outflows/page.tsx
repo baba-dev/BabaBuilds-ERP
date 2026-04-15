@@ -54,9 +54,9 @@ export default function CashFlowOutflowsPage() {
       await refreshCashForecast({ horizonType, scenarioTag });
       await load();
       toast.success("Forecast refreshed");
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
-      toast.error(e?.message ?? "Failed to refresh forecast");
+      toast.error(e instanceof Error ? e.message : "Failed to refresh forecast");
     } finally {
       setRefreshing(false);
     }

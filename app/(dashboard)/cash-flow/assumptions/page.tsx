@@ -143,7 +143,7 @@ export default function CashFlowAssumptionsPage() {
         } satisfies AssumptionsForm;
         setForm(sanitized);
         setLoadedForm(sanitized);
-      } catch (e) {
+      } catch {
         toast.error("Failed to load assumptions");
       } finally {
         setLoading(false);
@@ -160,8 +160,8 @@ export default function CashFlowAssumptionsPage() {
       const data = await listAssumptions();
       setRows(data);
       setLoadedForm(form);
-    } catch (e: any) {
-      toast.error(e?.message ?? "Failed to save assumptions");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save assumptions");
     } finally {
       setSaving(false);
     }

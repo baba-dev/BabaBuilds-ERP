@@ -68,18 +68,18 @@ export function DashboardCashFlowSummary({
         `/api/cash-flow/snapshots?horizonType=${defaultHorizonType}&scenarioTag=${defaultScenarioTag}&limit=1`,
         { cache: "no-store" },
       );
-      const listJson = (await listRes.json().catch(() => null)) as any;
-      if (!listRes.ok) throw new Error(listJson?.error ?? "Failed to load cash flow snapshot");
-      const head = (listJson?.data ?? [])[0] as { id?: string } | undefined;
+      const listJson = (await listRes.json().catch(() => null)) as unknown;
+      if (!listRes.ok) throw new Error((listJson as { error?: string } | null)?.error ?? "Failed to load cash flow snapshot");
+      const head = (((listJson as { data?: unknown } | null)?.data ?? []) as Array<{ id?: string }>)[0];
       if (!head?.id) {
         setSnapshot(null);
         return;
       }
 
       const snapRes = await fetch(`/api/cash-flow/snapshot/${head.id}`, { cache: "no-store" });
-      const snapJson = (await snapRes.json().catch(() => null)) as any;
-      if (!snapRes.ok) throw new Error(snapJson?.error ?? "Failed to load cash flow details");
-      setSnapshot(snapJson?.data ?? null);
+      const snapJson = (await snapRes.json().catch(() => null)) as unknown;
+      if (!snapRes.ok) throw new Error((snapJson as { error?: string } | null)?.error ?? "Failed to load cash flow details");
+      setSnapshot(((snapJson as { data?: unknown } | null)?.data ?? null) as SnapshotDetail | null);
     } catch (e) {
       console.warn(e);
       setSnapshot(null);
@@ -102,8 +102,8 @@ export function DashboardCashFlowSummary({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ horizonType: defaultHorizonType, scenarioTag: defaultScenarioTag }),
       });
-      const json = (await res.json().catch(() => null)) as any;
-      if (!res.ok) throw new Error(json?.error ?? "Failed to refresh forecast");
+      const json = (await res.json().catch(() => null)) as unknown;
+      if (!res.ok) throw new Error((json as { error?: string } | null)?.error ?? "Failed to refresh forecast");
       await load();
     } catch (e) {
       console.warn(e);
