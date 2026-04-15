@@ -9,6 +9,7 @@ import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { useFormat } from "@/hooks/use-format";
 import { CashFlowNav } from "../_components/cash-flow-nav";
 import { fetchCashFlowAlerts, fetchCashFlowSnapshotWithPeriods, refreshCashForecast } from "../_components/api";
@@ -18,7 +19,7 @@ import { CashFlowActionBar } from "../_components/primitives/action-bar";
 import { CashFlowInsightCard } from "../_components/primitives/insight-card";
 import { CashFlowMetricCard } from "../_components/primitives/metric-card";
 import { CashFlowErrorState, CashFlowNoSnapshotState } from "../_components/primitives/state";
-import { deriveCrunchSignal, getStaleStatus, topDrivers } from "../_components/primitives/utils";
+import { clamp01, deriveCrunchSignal, getStaleStatus, toneForRiskLevel, topDrivers } from "../_components/primitives/utils";
 
 export default function CashFlowOverviewPage() {
   const { fCurrency } = useFormat();
@@ -107,6 +108,21 @@ export default function CashFlowOverviewPage() {
   const criticalCount = useMemo(() => alerts.filter((a) => a.severity === "critical").length, [alerts]);
   const warningCount = useMemo(() => alerts.filter((a) => a.severity === "warning").length, [alerts]);
 
+  const trajectory = useMemo(() => {
+    if (!snapshot?.periods?.length) return null;
+    const points = snapshot.periods.map((p) => ({
+      id: p.id,
+      bucketLabel: p.bucketLabel,
+      closing: Number(p.closingCash ?? 0),
+      riskLevel: p.riskLevel,
+    }));
+    const min = Math.min(...points.map((p) => p.closing));
+    const max = Math.max(...points.map((p) => p.closing));
+    const minPoint = points.reduce((acc, p) => (p.closing < acc.closing ? p : acc), points[0]!);
+    const range = max - min || 1;
+    return { points, min, max, range, minPoint };
+  }, [snapshot?.periods]);
+
   return (
     <DashboardPageShell
       title="Cash Flow Command Center"
@@ -167,24 +183,72 @@ export default function CashFlowOverviewPage() {
                   <CardTitle className="text-sm font-black tracking-tight">Trajectory</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                    {snapshot.periods.slice(0, 4).map((p) => (
-                      <div key={p.id} className="rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/30 p-3">
-                        <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                          {p.bucketLabel}
+                  {!trajectory ? (
+                    <p className="text-sm text-zinc-500">No periods available yet.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-zinc-500">
+                            Min: {fCurrency(trajectory.minPoint.closing)} · {trajectory.minPoint.bucketLabel}
+                          </Badge>
+                          <Badge
+                            variant="outline"
+                            className={
+                              trajectory.minPoint.riskLevel === "CRITICAL"
+                                ? "border-rose-200 text-rose-700 dark:border-rose-900/50 dark:text-rose-300"
+                                : trajectory.minPoint.riskLevel === "HIGH"
+                                  ? "border-amber-200 text-amber-700 dark:border-amber-900/50 dark:text-amber-300"
+                                  : "border-zinc-200 text-zinc-600 dark:border-zinc-800 dark:text-zinc-300"
+                            }
+                          >
+                            {trajectory.minPoint.riskLevel}
+                          </Badge>
                         </div>
-                        <div className="mt-2 text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
-                          {fCurrency(Number(p.closingCash ?? 0))}
-                        </div>
-                        <div className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
-                          risk: {p.riskLevel}
-                        </div>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                          Hover a period to read values. Click to open the period in Outflows.
+                        </p>
                       </div>
-                    ))}
-                  </div>
-                  <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
-                    A richer chart view will land soon; this shell keeps the trajectory visible without adding chart dependencies.
-                  </p>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {trajectory.points.slice(0, 10).map((p) => {
+                          const pct = clamp01(((p.closing - trajectory.min) / trajectory.range) * 100);
+                          const tone = toneForRiskLevel(p.riskLevel);
+                          const barClass =
+                            tone === "danger"
+                              ? "bg-rose-500"
+                              : tone === "warning"
+                                ? "bg-amber-500"
+                                : "bg-indigo-500";
+                          return (
+                            <Link
+                              key={p.id}
+                              href={`/cash-flow/outflows?${q}&periodId=${encodeURIComponent(p.id)}`}
+                              className="group rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 px-3 py-2 hover:bg-white/60 dark:hover:bg-zinc-900/30 transition-colors"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 truncate">
+                                    {p.bucketLabel}
+                                  </div>
+                                  <div className="mt-1 text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+                                    {fCurrency(p.closing)}
+                                  </div>
+                                </div>
+                                <Badge variant="outline" className="text-[11px] shrink-0">
+                                  {p.riskLevel}
+                                </Badge>
+                              </div>
+                              <div className="mt-2">
+                                <Progress value={pct} className="h-1.5 bg-zinc-200/60 dark:bg-zinc-800/60" />
+                                <div className={`-mt-1.5 h-1.5 rounded-full ${barClass}`} style={{ width: `${pct}%` }} />
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
