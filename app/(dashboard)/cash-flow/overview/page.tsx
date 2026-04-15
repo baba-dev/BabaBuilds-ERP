@@ -5,13 +5,12 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { AreaChart, ArrowRight, Bell, TrendingDown, TrendingUp, Wand2 } from "lucide-react";
 import { toast } from "sonner";
-import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useFormat } from "@/hooks/use-format";
-import { CashFlowNav } from "../_components/cash-flow-nav";
+import { CashFlowPageShell } from "../_components/cash-flow-page-shell";
 import { fetchCashFlowAlerts, fetchCashFlowSnapshotWithPeriods, refreshCashForecast } from "../_components/api";
 import type { CashFlowHorizonType, CashFlowScenarioTag, SnapshotDetail } from "../_components/types";
 import { buildCashFlowContextQuery, readCashFlowContextFromUrl, writeCashFlowContextToUrl } from "../_components/context";
@@ -135,12 +134,10 @@ export default function CashFlowOverviewPage() {
   }, [snapshot?.periods]);
 
   return (
-    <DashboardPageShell
+    <CashFlowPageShell
       title="Cash Flow Command Center"
       description="Runway, crunch windows, drivers, and actions — backed by traceable snapshots."
       icon={<AreaChart className="h-5 w-5 text-indigo-500" />}
-      secondaryActions={<CashFlowNav />}
-      animated={false}
     >
       <div className="space-y-6">
         <CashFlowActionBar
@@ -477,7 +474,7 @@ export default function CashFlowOverviewPage() {
           </>
         )}
       </div>
-    </DashboardPageShell>
+    </CashFlowPageShell>
   );
 }
 

@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import type { SnapshotLineItem } from "../types";
 import { CashFlowHelp } from "./help";
 import { labelForClassification, sourceRecordHref, sumLineItems, toneForVariance } from "./utils";
+import { cashFlowTypography, dt } from "../cash-flow-typography";
 
 type SortKey = "expectedDate" | "amount" | "confidence";
 type SortDir = "asc" | "desc";
@@ -265,7 +266,10 @@ export function CashFlowLineItemsTable({
                 return (
                   <TableRow
                     key={i.id}
-                    className={cn("cursor-pointer", rowClass)}
+                    className={cn(
+                      "cursor-pointer transition-colors hover:bg-zinc-50/60 dark:hover:bg-zinc-900/40 focus-within:bg-zinc-50/60 dark:focus-within:bg-zinc-900/40",
+                      rowClass,
+                    )}
                     onClick={() => setSelected(i)}
                     data-state={selected?.id === i.id ? "selected" : undefined}
                   >
@@ -376,12 +380,12 @@ export function CashFlowLineItemsTable({
               <div className="px-4 space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl border border-zinc-200/70 dark:border-zinc-800/70 p-3">
-                    <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Amount</div>
-                    <div className="mt-1 text-lg font-black tabular-nums">{currencyFormatter(Number(selected.amount ?? 0))}</div>
+                    <div className={dt(cashFlowTypography.labelUpperStrong)}>Amount</div>
+                    <div className={dt("mt-1", cashFlowTypography.value2xlLight)}>{currencyFormatter(Number(selected.amount ?? 0))}</div>
                   </div>
                   <div className="rounded-xl border border-zinc-200/70 dark:border-zinc-800/70 p-3">
-                    <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Confidence</div>
-                    <div className="mt-1 text-lg font-black tabular-nums">{confidenceLabel(selected.confidence)}</div>
+                    <div className={dt(cashFlowTypography.labelUpperStrong)}>Confidence</div>
+                    <div className={dt("mt-1", cashFlowTypography.value2xlLight)}>{confidenceLabel(selected.confidence)}</div>
                   </div>
                 </div>
 

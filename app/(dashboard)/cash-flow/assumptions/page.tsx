@@ -6,7 +6,6 @@ import Link from "next/link";
 import { Settings2, Save, RotateCcw, Wand2 } from "lucide-react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverHeader, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
-import { CashFlowNav } from "@/app/(dashboard)/cash-flow/_components/cash-flow-nav";
+import { CashFlowPageShell } from "@/app/(dashboard)/cash-flow/_components/cash-flow-page-shell";
 import type { CashFlowScenarioTag, CashFlowHorizonType } from "@/app/(dashboard)/cash-flow/_components/types";
 import { listAssumptions, upsertAssumption, listAssumptionProfiles, upsertAssumptionProfile } from "@/app/(dashboard)/cash-flow/_components/api";
 import { CashFlowHelp } from "../_components/primitives/help";
@@ -293,12 +292,12 @@ export default function CashFlowAssumptionsPage() {
   };
 
   return (
-    <DashboardPageShell
+    <CashFlowPageShell
       title="Cash Flow Assumptions"
       description="Scenario tuning with clear defaults, explainers, and quick resets — designed for trust and speed."
       icon={<Settings2 className="h-5 w-5 text-indigo-500" />}
-      secondaryActions={
-        <div className="flex items-center gap-2">
+      actions={
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <Select
             value={horizonType}
             onValueChange={(v) => {
@@ -366,10 +365,7 @@ export default function CashFlowAssumptionsPage() {
           </Button>
         </div>
       }
-      animated={false}
     >
-      <CashFlowNav />
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 rounded-2xl border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 shadow-sm backdrop-blur-sm">
           <CardHeader>
@@ -522,7 +518,7 @@ export default function CashFlowAssumptionsPage() {
           </CardContent>
         </Card>
       </div>
-    </DashboardPageShell>
+    </CashFlowPageShell>
   );
 }
 

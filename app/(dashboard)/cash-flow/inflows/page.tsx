@@ -5,13 +5,12 @@ import { format } from "date-fns";
 import { ReceiptText, TrendingUp, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
-import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useFormat } from "@/hooks/use-format";
 import { getCashFlowContextFromSearchParams, updateCashFlowContextInUrl } from "../_components/context";
-import { CashFlowNav } from "../_components/cash-flow-nav";
+import { CashFlowPageShell } from "../_components/cash-flow-page-shell";
 import { fetchCashFlowSnapshotWithPeriods, refreshCashForecast } from "../_components/api";
 import type { CashFlowHorizonType, CashFlowScenarioTag, SnapshotDetail } from "../_components/types";
 import { CashFlowActionBar } from "../_components/primitives/action-bar";
@@ -108,12 +107,10 @@ export default function CashFlowInflowsPage() {
   }, []);
 
   return (
-    <DashboardPageShell
+    <CashFlowPageShell
       title="Cash Flow · Inflows"
       description={description}
       icon={<ReceiptText className="h-5 w-5 text-indigo-500" />}
-      animated={false}
-      secondaryActions={<CashFlowNav />}
     >
       <div className="space-y-6">
         <CashFlowActionBar
@@ -285,7 +282,7 @@ export default function CashFlowInflowsPage() {
           </>
         )}
       </div>
-    </DashboardPageShell>
+    </CashFlowPageShell>
   );
 }
 

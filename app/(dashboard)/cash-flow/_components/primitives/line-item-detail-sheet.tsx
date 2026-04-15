@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { cn } from "@/lib/utils";
 import type { SnapshotLineItem } from "../types";
 import { sourceRecordHref, labelForClassification, labelForDirection } from "./utils";
+import { cashFlowTypography } from "../cash-flow-typography";
 
 export function CashFlowLineItemDetailSheet({
   open,
@@ -48,8 +49,8 @@ export function CashFlowLineItemDetailSheet({
         {!item ? (
           <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-zinc-50/40 dark:bg-zinc-900/20 p-6 text-center">
             <Sparkles className="mx-auto h-6 w-6 text-indigo-500" />
-            <p className="mt-3 text-sm font-semibold text-zinc-900 dark:text-zinc-100">Pick a driver</p>
-            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            <p className={cn("mt-3", cashFlowTypography.cardTitle)}>Pick a driver</p>
+            <p className={cn("mt-1", cashFlowTypography.helperXs)}>
               Row details explain why this line item exists and what to do next.
             </p>
           </div>
@@ -57,28 +58,34 @@ export function CashFlowLineItemDetailSheet({
           <div className="space-y-5 px-1">
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-zinc-200/70 dark:border-zinc-800/70 bg-white/50 dark:bg-zinc-900/40 p-4">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                <div className={cashFlowTypography.labelUpperStrong}>
                   Amount
                 </div>
-                <div className="mt-2 text-lg font-black tabular-nums text-zinc-900 dark:text-zinc-50">
+                <div className={cn("mt-2", cashFlowTypography.value2xlLight)}>
                   {Number(item.amount).toLocaleString()}
                 </div>
               </div>
               <div className="rounded-2xl border border-zinc-200/70 dark:border-zinc-800/70 bg-white/50 dark:bg-zinc-900/40 p-4">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                <div className={cashFlowTypography.labelUpperStrong}>
                   Confidence
                 </div>
-                <div className={cn("mt-2 text-lg font-black tabular-nums", confidencePct != null && confidencePct < 60 ? "text-amber-600 dark:text-amber-400" : "text-zinc-900 dark:text-zinc-50")}>
+                <div
+                  className={cn(
+                    "mt-2 tabular-nums",
+                    cashFlowTypography.value2xlLight,
+                    confidencePct != null && confidencePct < 60 ? "text-amber-600 dark:text-amber-400" : "text-zinc-900 dark:text-zinc-50",
+                  )}
+                >
                   {confidencePct == null ? "—" : `${confidencePct}%`}
                 </div>
               </div>
             </div>
 
             <div className="rounded-2xl border border-zinc-200/70 dark:border-zinc-800/70 bg-white/50 dark:bg-zinc-900/40 p-4">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              <div className={cashFlowTypography.labelUpperStrong}>
                 Explanation
               </div>
-              <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-200 leading-relaxed">
+              <p className={cn("mt-2", cashFlowTypography.helper)}>
                 {item.explanation ??
                   "This driver is included based on your current books and assumptions. If it looks off, tune assumptions or review source records."}
               </p>

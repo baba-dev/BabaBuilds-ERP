@@ -6,12 +6,11 @@ import Link from "next/link";
 import { BarChart3, ChevronRight, RefreshCw, Scale } from "lucide-react";
 import { toast } from "sonner";
 import { useFormat } from "@/hooks/use-format";
-import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSearchParams } from "next/navigation";
-import { CashFlowNav } from "../_components/cash-flow-nav";
+import { CashFlowPageShell } from "../_components/cash-flow-page-shell";
 import { fetchLatestSnapshot, refreshCashForecast, fetchVariance } from "../_components/api";
 import type { CashFlowHorizonType, CashFlowScenarioTag, SnapshotListItem, VarianceResponse } from "../_components/types";
 import { buildCashFlowContextQuery, useCashFlowContextFromUrl, updateCashFlowContextInUrl } from "../_components/context";
@@ -96,12 +95,10 @@ export default function CashFlowVariancePage() {
   const q = useMemo(() => buildCashFlowContextQuery({ horizonType, scenarioTag }), [horizonType, scenarioTag]);
 
   return (
-    <DashboardPageShell
+    <CashFlowPageShell
       title="Variance"
       description="Build trust by measuring forecast vs actual, then tune assumptions with evidence."
       icon={<BarChart3 className="h-5 w-5 text-indigo-500" />}
-      secondaryActions={<CashFlowNav />}
-      animated={false}
     >
       <div className="space-y-6">
         <CashFlowActionBar
@@ -378,7 +375,7 @@ export default function CashFlowVariancePage() {
           </>
         )}
       </div>
-    </DashboardPageShell>
+    </CashFlowPageShell>
   );
 }
 

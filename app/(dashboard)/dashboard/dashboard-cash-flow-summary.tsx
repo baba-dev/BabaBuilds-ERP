@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useFormat } from "@/hooks/use-format";
+import { dt, dashboardTypography } from "./dashboard-typography";
 import { cn } from "@/lib/utils";
 
 type CashFlowHorizonType = "DAILY_30" | "WEEKLY_13" | "MONTHLY_12";
@@ -136,8 +137,8 @@ export function DashboardCashFlowSummary({
               <AreaChart className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-tight">Cash flow</p>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              <p className={dt(dashboardTypography.cardTitle, "leading-tight")}>Cash flow</p>
+              <p className={dt(dashboardTypography.labelUpperStrong)}>
                 {defaultHorizonType.replace("_", " ")} · {defaultScenarioTag.replace("_", " ")}
               </p>
             </div>
@@ -171,13 +172,13 @@ export function DashboardCashFlowSummary({
         ) : error ? (
           <div className="rounded-2xl border border-rose-200/60 dark:border-rose-900/40 bg-rose-50/40 dark:bg-rose-950/15 p-4">
             <p className="text-sm font-semibold text-rose-700 dark:text-rose-300">Cash flow unavailable</p>
-            <p className="mt-1 text-xs text-rose-700/80 dark:text-rose-300/80">{error}</p>
+            <p className={dt(dashboardTypography.helperXs, "mt-1 text-rose-700/80 dark:text-rose-300/80")}>{error}</p>
           </div>
         ) : !snapshot ? (
           <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-zinc-50/40 dark:bg-zinc-900/20 p-4 flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Generate your first forecast</p>
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              <p className={dt(dashboardTypography.cardTitle)}>Generate your first forecast</p>
+              <p className={dt(dashboardTypography.helperXs, "mt-1")}>
                 Unlock runway, crunch windows, alerts, and drivers.
               </p>
             </div>
@@ -190,18 +191,18 @@ export function DashboardCashFlowSummary({
           <>
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/60 dark:bg-zinc-900/40 p-4">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Worst window</p>
-                <p className="mt-2 text-sm font-black text-zinc-900 dark:text-zinc-50 truncate">
+                <p className={dt(dashboardTypography.labelUpperStrong)}>Worst window</p>
+                <p className={dt(dashboardTypography.value2xlLight, "mt-2 truncate text-base")}>
                   {crunch ? crunch.period.bucketLabel : "—"}
                 </p>
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
+                <p className={dt(dashboardTypography.helperXs, "mt-1 tabular-nums")}>
                   {crunch ? fCurrency(crunch.minClosing) : "No periods"}
                 </p>
               </div>
               <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/60 dark:bg-zinc-900/40 p-4">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Confidence</p>
-                <p className="mt-2 text-sm font-black text-zinc-900 dark:text-zinc-50 tabular-nums">{confidenceLabel}</p>
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                <p className={dt(dashboardTypography.labelUpperStrong)}>Confidence</p>
+                <p className={dt(dashboardTypography.value2xlLight, "mt-2 text-base tabular-nums")}>{confidenceLabel}</p>
+                <p className={dt(dashboardTypography.helperXs, "mt-1")}>
                   {generatedAtLabel ? `Updated ${generatedAtLabel}` : "—"}
                 </p>
               </div>
@@ -213,8 +214,8 @@ export function DashboardCashFlowSummary({
                   <ShieldAlert className="h-4 w-4" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">Go from insight → action</p>
-                  <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400 truncate">
+                  <p className={dt(dashboardTypography.cardTitle, "truncate")}>Go from insight → action</p>
+                  <p className={dt(dashboardTypography.helperXs, "mt-0.5 truncate")}>
                     Review drivers, commitments, and scenario assumptions in one place.
                   </p>
                 </div>

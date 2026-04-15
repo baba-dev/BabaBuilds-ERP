@@ -8,8 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
-import { CashFlowNav } from "../_components/cash-flow-nav";
+import { CashFlowPageShell } from "../_components/cash-flow-page-shell";
 import type { CashFlowHorizonType, CashFlowScenarioTag, SnapshotDetail } from "../_components/types";
 import { fetchCashFlowSnapshotWithPeriods, refreshCashForecast } from "../_components/api";
 import { useFormat } from "@/hooks/use-format";
@@ -212,20 +211,18 @@ export default function CashFlowScenariosPage() {
   }, [selectedSnapshot]);
 
   return (
-    <DashboardPageShell
+    <CashFlowPageShell
       title="Cash Flow · Scenarios"
       description="Compare best/base/worst outcomes and their deltas — then drill in without leaving cash-flow."
       icon={<SlidersHorizontal className="h-5 w-5 text-indigo-500" />}
-      secondaryActions={<CashFlowNav />}
-      animated={false}
     >
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {card("BEST_CASE", "positive")}
-        {card("BASE", "default")}
-        {card("WORST_CASE", "warning")}
-      </div>
-
       <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {card("BEST_CASE", "positive")}
+          {card("BASE", "default")}
+          {card("WORST_CASE", "warning")}
+        </div>
+
         <Card className="rounded-2xl border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 shadow-sm backdrop-blur-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-black tracking-tight">Trajectory overlay</CardTitle>
@@ -424,7 +421,7 @@ export default function CashFlowScenariosPage() {
           </>
         )}
       </div>
-    </DashboardPageShell>
+    </CashFlowPageShell>
   );
 }
 

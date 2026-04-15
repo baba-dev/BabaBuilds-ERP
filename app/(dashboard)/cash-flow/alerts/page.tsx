@@ -4,13 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
-import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { CashFlowNav } from "../_components/cash-flow-nav";
+import { CashFlowPageShell } from "../_components/cash-flow-page-shell";
 import type { CashFlowHorizonType, CashFlowScenarioTag, CashFlowAlertDto } from "../_components/types";
 import { fetchAlertPreferences, fetchCashFlowAlerts, refreshCashForecast, updateAlertPreferences } from "../_components/api";
 import { buildCashFlowContextQuery } from "../_components/context";
@@ -290,12 +289,10 @@ export default function CashFlowAlertsPage() {
   };
 
   return (
-    <DashboardPageShell
+    <CashFlowPageShell
       title="Cash Flow Alerts"
       description="Proactive warnings derived from your latest forecast snapshot."
       icon={<ShieldAlert className="h-5 w-5 text-indigo-500" />}
-      secondaryActions={<CashFlowNav />}
-      animated={false}
     >
       <div className="space-y-6">
         <CashFlowActionBar
@@ -424,7 +421,7 @@ export default function CashFlowAlertsPage() {
           </>
         )}
       </div>
-    </DashboardPageShell>
+    </CashFlowPageShell>
   );
 }
 
