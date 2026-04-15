@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useState, useEffect, useMemo } from "react";
 import { format, addMonths } from "date-fns";
 import {
@@ -40,6 +42,7 @@ interface Retainer {
   autoAppendMonth: boolean;
   nextBillingDate: string;
   status: string;
+  sourceProposalId?: string;
   client?: {
     name: string;
     email: string;
@@ -543,6 +546,11 @@ export default function RetainersHub() {
             {ret.serviceName}
             {ret.autoAppendMonth && <span title="Smart Naming Enabled"><Sparkles className="w-3 h-3 text-purple-500 ml-1" /></span>}
           </div>
+          {ret.sourceProposalId && (
+            <Link href={`/proposals/${ret.sourceProposalId}`} className="mt-1 flex items-center text-[10px] uppercase font-bold tracking-widest text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+              <Sparkles className="w-3 h-3 mr-1" /> Origin
+            </Link>
+          )}
         </>
       ),
     },
