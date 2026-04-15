@@ -41,6 +41,10 @@ export function CashFlowLineItemsTable({
   currencyFormatter,
   defaultLowConfidenceThreshold = 0.6,
   enableSourceLinks = true,
+  defaultQuery = "",
+  defaultLowConfidenceOnly = false,
+  defaultClassification = "ALL",
+  defaultSelectedItemId = null,
   rowTone,
   onPlanChange,
   className,
@@ -50,16 +54,29 @@ export function CashFlowLineItemsTable({
   currencyFormatter: (n: number) => string;
   defaultLowConfidenceThreshold?: number;
   enableSourceLinks?: boolean;
+  defaultQuery?: string;
+  defaultLowConfidenceOnly?: boolean;
+  defaultClassification?: SnapshotLineItem["classification"] | "ALL";
+  defaultSelectedItemId?: string | null;
   rowTone?: (item: SnapshotLineItem) => "default" | "muted" | "warning" | "danger" | "success";
   onPlanChange?: (itemId: string, next: { status: "open" | "deferred" | "resolved" }) => void;
   className?: string;
 }) {
-  const [query, setQuery] = useState("");
-  const [lowConfidenceOnly, setLowConfidenceOnly] = useState(false);
-  const [classification, setClassification] = useState<SnapshotLineItem["classification"] | "ALL">("ALL");
+  const [query, setQuery] = useState(defaultQuery);
+  const [lowConfidenceOnly, setLowConfidenceOnly] = useState(defaultLowConfidenceOnly);
+  const [classification, setClassification] = useState<SnapshotLineItem["classification"] | "ALL">(defaultClassification);
   const [sortKey, setSortKey] = useState<SortKey>("expectedDate");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [selected, setSelected] = useState<SnapshotLineItem | null>(null);
+
+  // If deep-linked, auto-open the sheet to the requested item id (best-effort).
+  useMemo(() => {
+    if (!defaultSelectedItemId) return;
+    const found = items.find((i) => i.id === defaultSelectedItemId) ?? null;
+    if (!found) return;
+    setSelected(found);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultSelectedItemId]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -188,23 +205,35 @@ export function CashFlowLineItemsTable({
             <TableRow className="bg-zinc-50/60 dark:bg-zinc-900/60">
               <TableHead className="w-[36%]">Title</TableHead>
               <TableHead>Source</TableHead>
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("expectedDate")}>
-                <span className="inline-flex items-center gap-1.5">
+              <TableHead className="select-none">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-md px-1 py-0.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
+                  onClick={() => toggleSort("expectedDate")}
+                >
                   Expected
                   <ArrowUpDown className="h-3.5 w-3.5 text-zinc-400" />
-                </span>
+                </button>
               </TableHead>
-              <TableHead className="cursor-pointer select-none text-right" onClick={() => toggleSort("amount")}>
-                <span className="inline-flex items-center gap-1.5">
+              <TableHead className="select-none text-right">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-md px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
+                  onClick={() => toggleSort("amount")}
+                >
                   Amount
                   <ArrowUpDown className="h-3.5 w-3.5 text-zinc-400" />
-                </span>
+                </button>
               </TableHead>
-              <TableHead className="cursor-pointer select-none text-right" onClick={() => toggleSort("confidence")}>
-                <span className="inline-flex items-center gap-1.5">
+              <TableHead className="select-none text-right">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-md px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
+                  onClick={() => toggleSort("confidence")}
+                >
                   Confidence
                   <ArrowUpDown className="h-3.5 w-3.5 text-zinc-400" />
-                </span>
+                </button>
               </TableHead>
               <TableHead>Class</TableHead>
               <TableHead className="w-[1%] text-right"></TableHead>

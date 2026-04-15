@@ -67,7 +67,14 @@ export function clamp01(n: number) {
 export function getStaleStatus(generatedAtIso?: string | null, staleAfterHours = 24) {
   if (!generatedAtIso) return { isStale: false, hours: null as number | null };
   const hours = differenceInHours(new Date(), new Date(generatedAtIso));
-  return { isStale: hours >= staleAfterHours, hours };
+  const label = Number.isFinite(hours)
+    ? hours < 1
+      ? "Just now"
+      : hours < 24
+        ? `${hours}h ago`
+        : `${Math.floor(hours / 24)}d ago`
+    : null;
+  return { isStale: hours >= staleAfterHours, hours, label };
 }
 
 export function sumLineItems(items: SnapshotLineItem[]) {
