@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { AreaChart, Bell, SlidersHorizontal, TrendingDown, TrendingUp, Wand2, BarChart3, Settings2 } from "lucide-react";
+import { AreaChart, Bell, SlidersHorizontal, TrendingDown, TrendingUp, Wand2, BarChart3, Settings2, PencilRuler } from "lucide-react";
 import type { SegmentedControlOption } from "@/components/ui/segmented-control";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,6 +22,7 @@ const nav: NavItem[] = [
   { key: "outflows", href: "/cash-flow/outflows", label: "Outflows", group: "ops", icon: TrendingDown },
   { key: "variance", href: "/cash-flow/variance", label: "Variance", group: "ops", icon: BarChart3 },
   { key: "alerts", href: "/cash-flow/alerts", label: "Alerts", group: "ops", icon: Bell },
+  { key: "manual-adjustments", href: "/cash-flow/manual-adjustments", label: "Adjustments", group: "ops", icon: PencilRuler },
   { key: "scenarios", href: "/cash-flow/scenarios", label: "Scenarios", group: "model", icon: SlidersHorizontal },
   { key: "assumptions", href: "/cash-flow/assumptions", label: "Assumptions", group: "model", icon: Settings2 },
 ];
