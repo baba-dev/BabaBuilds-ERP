@@ -19,7 +19,7 @@ import { CashFlowActionBar } from "../_components/primitives/action-bar";
 import { CashFlowInsightCard } from "../_components/primitives/insight-card";
 import { CashFlowMetricCard } from "../_components/primitives/metric-card";
 import { CashFlowErrorState, CashFlowNoSnapshotState } from "../_components/primitives/state";
-import { clamp01, computeRunway, deriveCrunchSignal, getSnapshotAssumptions, getStaleStatus, toneForRiskLevel, topDrivers } from "../_components/primitives/utils";
+import { clamp01, computeRunway, deriveCrunchSignal, getSnapshotAssumptions, getStaleReasons, getStaleStatus, toneForRiskLevel, topDrivers } from "../_components/primitives/utils";
 
 export default function CashFlowOverviewPage() {
   const { fCurrency } = useFormat();
@@ -91,6 +91,14 @@ export default function CashFlowOverviewPage() {
   }, [snapshot, fCurrency]);
 
   const stale = useMemo(() => getStaleStatus(snapshot?.generatedAt ?? null, 24), [snapshot?.generatedAt]);
+  const staleReasons = useMemo(
+    () =>
+      getStaleReasons({
+        generatedAtIso: snapshot?.generatedAt ?? null,
+        stamps: snapshot?.sourcesUpdatedAt ?? {},
+      }),
+    [snapshot?.generatedAt, snapshot?.sourcesUpdatedAt],
+  );
   const crunch = useMemo(() => deriveCrunchSignal(snapshot), [snapshot]);
   const runway = useMemo(() => computeRunway(snapshot), [snapshot]);
   const minCash = useMemo(() => Number(getSnapshotAssumptions(snapshot)?.minimumCashThreshold ?? 0), [snapshot]);
@@ -267,7 +275,10 @@ export default function CashFlowOverviewPage() {
                     Generated {summary.generatedAt}
                   </p>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    Refresh after invoice, retainer, or PO changes to keep decisions reliable.
+                    {stale.label ? `${stale.label}.` : null}{" "}
+                    {stale.isStale && staleReasons.length
+                      ? `Likely stale because ${staleReasons.slice(0, 2).map((r) => r.shortLabel.toLowerCase()).join(" and ")} changed since generation.`
+                      : "Refresh after invoice, retainer, or PO changes to keep decisions reliable."}
                   </p>
                 </CardContent>
               </Card>

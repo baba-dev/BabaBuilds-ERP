@@ -16,6 +16,14 @@ export type SnapshotListItem = {
   totalProjectedOutflows: Prisma.Decimal | string | number;
   confidenceScore: number | null;
   assumptionsJson?: unknown | null;
+  sourcesUpdatedAt?: {
+    invoices?: string | null;
+    purchaseOrders?: string | null;
+    retainers?: string | null;
+    bankTransactions?: string | null;
+    manualAdjustments?: string | null;
+    assumptions?: string | null;
+  } | null;
   generatedBy: string;
 };
 
@@ -52,6 +60,10 @@ export type SnapshotLineItem = {
 export type SnapshotDetail = SnapshotListItem & {
   periods: SnapshotPeriod[];
   lineItems: SnapshotLineItem[];
+  stalenessSignals?: {
+    generatedAt: string;
+    changedSinceSnapshot: Array<{ key: string; label: string; lastUpdatedAt: string }>;
+  };
 };
 
 export type AlertsResponse = {

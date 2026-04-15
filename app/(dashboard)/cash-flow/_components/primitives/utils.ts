@@ -77,6 +77,48 @@ export function getStaleStatus(generatedAtIso?: string | null, staleAfterHours =
   return { isStale: hours >= staleAfterHours, hours, label };
 }
 
+export type SnapshotStaleReason =
+  | { type: "INVOICES_UPDATED"; label: string; shortLabel: string; updatedAt: string }
+  | { type: "PURCHASE_ORDERS_UPDATED"; label: string; shortLabel: string; updatedAt: string }
+  | { type: "RETAINERS_UPDATED"; label: string; shortLabel: string; updatedAt: string }
+  | { type: "BANK_TRANSACTIONS_UPDATED"; label: string; shortLabel: string; updatedAt: string }
+  | { type: "MANUAL_ADJUSTMENTS_UPDATED"; label: string; shortLabel: string; updatedAt: string }
+  | { type: "ASSUMPTIONS_UPDATED"; label: string; shortLabel: string; updatedAt: string };
+
+export function staleReasonsLabel(reasons: SnapshotStaleReason[]) {
+  if (!reasons.length) return null;
+  const head = reasons[0]!;
+  const rest = reasons.length - 1;
+  return rest > 0 ? `${head.label} (+${rest} more)` : head.label;
+}
+
+export function getStaleReasons(input: { generatedAtIso: string | null | undefined; stamps: Record<string, string | null | undefined> }) {
+  const generatedAtIso = input.generatedAtIso;
+  if (!generatedAtIso) return [] as SnapshotStaleReason[];
+  const generatedAt = new Date(generatedAtIso).getTime();
+  if (!Number.isFinite(generatedAt)) return [] as SnapshotStaleReason[];
+
+  const mk = (key: string, type: SnapshotStaleReason["type"], label: string, shortLabel: string) => {
+    const iso = input.stamps[key];
+    if (!iso) return null;
+    const t = new Date(iso).getTime();
+    if (!Number.isFinite(t)) return null;
+    if (t <= generatedAt) return null;
+    return { type, label, shortLabel, updatedAt: iso } as SnapshotStaleReason;
+  };
+
+  const reasons = [
+    mk("invoices", "INVOICES_UPDATED", "Invoices changed", "Invoices"),
+    mk("purchaseOrders", "PURCHASE_ORDERS_UPDATED", "Purchase orders changed", "POs"),
+    mk("retainers", "RETAINERS_UPDATED", "Retainers changed", "Retainers"),
+    mk("bankTransactions", "BANK_TRANSACTIONS_UPDATED", "Bank transactions changed", "Bank tx"),
+    mk("manualAdjustments", "MANUAL_ADJUSTMENTS_UPDATED", "Manual adjustments changed", "Manual"),
+    mk("assumptions", "ASSUMPTIONS_UPDATED", "Assumptions changed", "Assumptions"),
+  ].filter(Boolean) as SnapshotStaleReason[];
+
+  return reasons.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+}
+
 export function sumLineItems(items: SnapshotLineItem[]) {
   return items.reduce((acc, i) => acc + Number(i.amount ?? 0), 0);
 }
