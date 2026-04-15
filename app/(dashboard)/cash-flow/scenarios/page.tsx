@@ -7,6 +7,7 @@ import { RefreshCcw, SlidersHorizontal, TrendingDown, TrendingUp } from "lucide-
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { CashFlowNav } from "../_components/cash-flow-nav";
 import type { CashFlowHorizonType, CashFlowScenarioTag, SnapshotDetail } from "../_components/types";
@@ -108,6 +109,24 @@ export default function CashFlowScenariosPage() {
     };
   }, [base, best, worst]);
 
+  const trajectory = useMemo(() => {
+    const mk = (s: SnapshotDetail | null) => {
+      if (!s?.periods?.length) return null;
+      return s.periods.map((p) => ({ id: p.id, label: p.bucketLabel, closing: Number(p.closingCash ?? 0) }));
+    };
+    const series = { BEST_CASE: mk(best), BASE: mk(base), WORST_CASE: mk(worst) } as const;
+    const all = [series.BEST_CASE, series.BASE, series.WORST_CASE].flatMap((x) => x ?? []);
+    if (!all.length) return { series, min: 0, max: 0, range: 1 };
+    const min = Math.min(...all.map((p) => p.closing));
+    const max = Math.max(...all.map((p) => p.closing));
+    return { series, min, max, range: max - min || 1 };
+  }, [best, base, worst]);
+
+  const percent = (n: number) => {
+    const v = ((n - trajectory.min) / trajectory.range) * 100;
+    return Math.max(0, Math.min(100, Number.isFinite(v) ? v : 0));
+  };
+
   const card = (tag: CashFlowScenarioTag, tone: "default" | "positive" | "warning") => {
     const s = snapshotsByScenario[tag];
     const isActive = selected === tag;
@@ -207,6 +226,55 @@ export default function CashFlowScenariosPage() {
       </div>
 
       <div className="space-y-6">
+        <Card className="rounded-2xl border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 shadow-sm backdrop-blur-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-black tracking-tight">Trajectory overlay</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {(["BEST_CASE", "BASE", "WORST_CASE"] as const).map((tag) => {
+                const s = trajectory.series[tag];
+                const label = labelForScenarioTag(tag);
+                const tint =
+                  tag === "BEST_CASE"
+                    ? "text-emerald-700 dark:text-emerald-300"
+                    : tag === "WORST_CASE"
+                      ? "text-amber-700 dark:text-amber-300"
+                      : "text-indigo-700 dark:text-indigo-300";
+                return (
+                  <div key={tag} className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-950/10 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className={`text-xs font-bold uppercase tracking-wider ${tint}`}>{label}</div>
+                        <div className="mt-1 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                          {snapshotsByScenario[tag] ? fCurrency(Number(snapshotsByScenario[tag]?.closingCash ?? 0)) : "—"}
+                        </div>
+                      </div>
+                      <div className="text-[11px] text-zinc-500 dark:text-zinc-400">closing</div>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {(s ?? []).slice(0, 10).map((p) => (
+                        <div key={p.id} className="flex items-center gap-3">
+                          <div className="w-[96px] truncate text-[11px] text-zinc-500 dark:text-zinc-400">{p.label}</div>
+                          <div className="flex-1">
+                            <Progress value={percent(p.closing)} className="h-1.5 bg-zinc-200/60 dark:bg-zinc-800/60" />
+                          </div>
+                          <div className="w-[92px] text-right text-[11px] tabular-nums text-zinc-600 dark:text-zinc-300">
+                            {fCurrency(p.closing)}
+                          </div>
+                        </div>
+                      ))}
+                      {(s ?? []).length === 0 ? (
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">No periods yet.</p>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
         <CashFlowActionBar
           context={{ horizonType, scenarioTag: selected }}
           onChange={(next) => {
