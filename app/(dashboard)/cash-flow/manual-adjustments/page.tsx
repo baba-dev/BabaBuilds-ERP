@@ -5,7 +5,6 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { Plus, SlidersHorizontal, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
-import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CashFlowNav } from "../_components/cash-flow-nav";
+import { CashFlowPageShell } from "../_components/cash-flow-page-shell";
 import type { CashFlowScenarioTag, CashFlowHorizonType } from "../_components/types";
 import { CashFlowActionBar } from "../_components/primitives/action-bar";
 import { CashFlowHelp } from "../_components/primitives/help";
@@ -124,12 +123,10 @@ export default function CashFlowManualAdjustmentsPage() {
   }, [rows]);
 
   return (
-    <DashboardPageShell
+    <CashFlowPageShell
       title="Cash Flow · Manual adjustments"
       description="High-trust, auditable overrides for exceptional cash events."
       icon={<SlidersHorizontal className="h-5 w-5 text-indigo-500" />}
-      secondaryActions={<CashFlowNav />}
-      animated={false}
     >
       <div className="space-y-6">
         <CashFlowActionBar
@@ -337,7 +334,7 @@ export default function CashFlowManualAdjustmentsPage() {
           </Card>
         )}
       </div>
-    </DashboardPageShell>
+    </CashFlowPageShell>
   );
 }
 

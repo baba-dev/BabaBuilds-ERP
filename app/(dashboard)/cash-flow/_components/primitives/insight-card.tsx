@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { dt, cashFlowTypography } from "../cash-flow-typography";
 
 export type CashFlowInsightTone = "default" | "positive" | "warning" | "danger";
 
@@ -32,23 +33,21 @@ export function CashFlowInsightCard(props: {
   return (
     <div
       className={cn(
-        "rounded-2xl border p-4 shadow-sm backdrop-blur-sm transition-colors",
+        "rounded-2xl border p-4 shadow-sm backdrop-blur-sm transition-all duration-300 motion-reduce:transition-none hover:shadow-md hover:-translate-y-[1px]",
         toneClasses[tone],
         props.className,
       )}
     >
       <div className="flex items-start gap-3">
         {props.icon ? (
-          <div className="mt-0.5 rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/60 dark:bg-zinc-950/20 p-2 text-zinc-700 dark:text-zinc-200">
+          <div className="mt-0.5 rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/60 dark:bg-zinc-950/20 p-2 text-zinc-700 dark:text-zinc-200 shadow-sm">
             {props.icon}
           </div>
         ) : null}
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            {props.title}
-          </div>
+          <div className={dt(cashFlowTypography.cardTitle)}>{props.title}</div>
           {props.description ? (
-            <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
+            <div className={dt("mt-1", cashFlowTypography.helper)}>
               {props.description}
             </div>
           ) : null}

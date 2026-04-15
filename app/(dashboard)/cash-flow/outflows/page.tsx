@@ -7,11 +7,9 @@ import { ReceiptText, TrendingDown, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
 import { useCashFlowContextFromUrl, updateCashFlowContextInUrl } from "../_components/context";
-import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { Button } from "@/components/ui/button";
 import { useFormat } from "@/hooks/use-format";
 import { Textarea } from "@/components/ui/textarea";
-import { CashFlowNav } from "../_components/cash-flow-nav";
 import { fetchCashFlowSnapshotWithPeriods, fetchPlanner, refreshCashForecast, upsertPlannerRow } from "../_components/api";
 import type { CashFlowHorizonType, CashFlowScenarioTag, SnapshotDetail } from "../_components/types";
 import { CashFlowActionBar } from "../_components/primitives/action-bar";
@@ -21,6 +19,7 @@ import { CashFlowLineItemsTable } from "../_components/primitives/line-items-tab
 import { CashFlowPeriodBreakdown } from "../_components/primitives/period-breakdown";
 import { getStaleStatus, isConfidenceLow, sumLineItems, topDrivers } from "../_components/primitives/utils";
 import { buildCashFlowContextQuery, useCashFlowUrlContext } from "../_components/context";
+import { CashFlowPageShell } from "../_components/cash-flow-page-shell";
 
 export default function CashFlowOutflowsPage() {
   const { fCurrency } = useFormat();
@@ -163,14 +162,11 @@ export default function CashFlowOutflowsPage() {
   const largestCommitments = useMemo(() => topDrivers(committed, 5), [committed]);
 
   return (
-    <DashboardPageShell
+    <CashFlowPageShell
       title="Cash Flow · Outflows"
       description="Committed, expected, and actual outflows — with timing and risk context."
       icon={<ReceiptText className="h-5 w-5 text-indigo-500" />}
-      animated={false}
-      secondaryActions={<CashFlowNav />}
     >
-      <div className="space-y-6">
         <CashFlowActionBar
           context={{ horizonType, scenarioTag }}
           onChange={(next) => {
@@ -352,7 +348,6 @@ export default function CashFlowOutflowsPage() {
                 />
           </>
         )}
-      </div>
 
       <div
         className={`fixed inset-0 z-40 ${plannerOpen ? "" : "pointer-events-none opacity-0"} transition-opacity`}
@@ -423,7 +418,7 @@ export default function CashFlowOutflowsPage() {
           </div>
         </div>
       </div>
-    </DashboardPageShell>
+    </CashFlowPageShell>
   );
 }
  

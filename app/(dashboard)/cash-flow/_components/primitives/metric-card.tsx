@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { cashFlowTypography, dt } from "../cash-flow-typography";
 
 export type MetricTone = "default" | "positive" | "warning" | "danger";
 
@@ -20,21 +21,21 @@ export function CashFlowMetricCard(props: {
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-2xl border p-4 shadow-sm backdrop-blur-sm transition-colors",
+        "group relative overflow-hidden rounded-2xl border p-4 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-[1px] hover:shadow-md",
         toneClassName[props.tone ?? "default"],
         props.className,
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
+          <div className={dt(cashFlowTypography.labelUpperStrong)}>
             {props.label}
           </div>
-          <div className="mt-2 text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 tabular-nums">
+          <div className={dt("mt-2", cashFlowTypography.value2xlLight)}>
             {props.value}
           </div>
           {props.subtext ? (
-            <div className="mt-1.5 text-xs font-medium text-zinc-500 dark:text-zinc-400">{props.subtext}</div>
+            <div className={dt("mt-1.5", cashFlowTypography.helperXs)}>{props.subtext}</div>
           ) : null}
         </div>
         {props.indicator ? <div className="shrink-0">{props.indicator}</div> : null}
