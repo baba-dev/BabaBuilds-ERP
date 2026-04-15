@@ -8,14 +8,30 @@ import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { CashFlowNav } from "../_components/cash-flow-nav";
 import type { CashFlowHorizonType, CashFlowScenarioTag, CashFlowAlertDto } from "../_components/types";
-import { fetchCashFlowAlerts, refreshCashForecast } from "../_components/api";
+import { fetchCashFlowAlerts, listAssumptions, refreshCashForecast, upsertAssumption } from "../_components/api";
 import { buildCashFlowContextQuery } from "../_components/context";
 import { CashFlowActionBar } from "../_components/primitives/action-bar";
 import { CashFlowInsightCard } from "../_components/primitives/insight-card";
 import { CashFlowErrorState, CashFlowNoSnapshotState } from "../_components/primitives/state";
 import { useCashFlowContextFromUrl, updateCashFlowContextInUrl } from "../_components/context";
+
+type AlertPreferences = {
+  showInfo: boolean;
+  showWarnings: boolean;
+  showCritical: boolean;
+  highlightNearRunway: boolean;
+};
+
+const defaultAlertPrefs: AlertPreferences = {
+  showInfo: true,
+  showWarnings: true,
+  showCritical: true,
+  highlightNearRunway: true,
+};
 
 export default function CashFlowAlertsPage() {
   const urlCtx = useCashFlowContextFromUrl();
@@ -26,6 +42,54 @@ export default function CashFlowAlertsPage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [hasSnapshot, setHasSnapshot] = useState<boolean>(true);
+  const [prefsLoading, setPrefsLoading] = useState(true);
+  const [prefsSaving, setPrefsSaving] = useState(false);
+  const [prefs, setPrefs] = useState<AlertPreferences>(defaultAlertPrefs);
+
+  const prefsKey = "cashForecast.alertPrefs.v1";
+
+  useEffect(() => {
+    let cancelled = false;
+    setPrefsLoading(true);
+    listAssumptions()
+      .then((rows) => {
+        if (cancelled) return;
+        const row = rows.find((r) => r.key === prefsKey);
+        const raw = (row?.valueJson ?? null) as Partial<AlertPreferences> | null;
+        const next: AlertPreferences = {
+          showInfo: Boolean(raw?.showInfo ?? defaultAlertPrefs.showInfo),
+          showWarnings: Boolean(raw?.showWarnings ?? defaultAlertPrefs.showWarnings),
+          showCritical: Boolean(raw?.showCritical ?? defaultAlertPrefs.showCritical),
+          highlightNearRunway: Boolean(raw?.highlightNearRunway ?? defaultAlertPrefs.highlightNearRunway),
+        };
+        setPrefs(next);
+      })
+      .catch(() => {
+        // Non-fatal: preferences are optional. Keep defaults and allow user to save later.
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setPrefsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const savePrefs = async (next: AlertPreferences) => {
+    setPrefs(next);
+    setPrefsSaving(true);
+    try {
+      await upsertAssumption({ key: prefsKey, valueJson: next, isActive: true });
+      toast.success("Alert preferences saved");
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to save preferences");
+    } finally {
+      setPrefsSaving(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -74,23 +138,53 @@ export default function CashFlowAlertsPage() {
     return counts;
   }, [alerts]);
 
+  const visibleAlerts = useMemo(() => {
+    return alerts.filter((a) => {
+      if (a.severity === "critical") return prefs.showCritical;
+      if (a.severity === "warning") return prefs.showWarnings;
+      if (a.severity === "info") return prefs.showInfo;
+      return true;
+    });
+  }, [alerts, prefs.showCritical, prefs.showWarnings, prefs.showInfo]);
+
   const grouped = useMemo(() => {
-    const critical = alerts.filter((a) => a.severity === "critical");
-    const warning = alerts.filter((a) => a.severity === "warning");
-    const info = alerts.filter((a) => a.severity === "info");
+    const critical = visibleAlerts.filter((a) => a.severity === "critical");
+    const warning = visibleAlerts.filter((a) => a.severity === "warning");
+    const info = visibleAlerts.filter((a) => a.severity === "info");
     return { critical, warning, info };
-  }, [alerts]);
+  }, [visibleAlerts]);
 
   const q = useMemo(() => buildCashFlowContextQuery({ horizonType, scenarioTag }), [horizonType, scenarioTag]);
 
-  const explain = (a: CashFlowAlertDto) => {
+  const remediation = (a: CashFlowAlertDto) => {
+    const runwayHint = a.severity === "critical" ? "Act immediately." : "Act before this window.";
     if (a.type === "CASH_NEGATIVE") {
-      return "Cash going negative is a forcing function. Prioritize collections, consider delaying discretionary spend, and validate assumptions.";
+      return {
+        title: "Remediation playbook",
+        bullets: [
+          `${runwayHint} Start with the largest collections risks in Inflows, then the largest commitments in Outflows.`,
+          "If you can’t move timing, stress-test assumptions (collections delay / haircut) and refresh the forecast.",
+          "Use Variance to validate whether the model is consistently optimistic or pessimistic.",
+        ],
+      };
     }
     if (a.type === "CASH_LOW") {
-      return "Low cash reduces flexibility. Review large commitments and high-risk inflows for this window.";
+      return {
+        title: "Remediation playbook",
+        bullets: [
+          "Prioritize high-risk receivables and late-payer exposure in Inflows.",
+          "Review committed outflows in this period and identify what can be phased or deferred.",
+          "If this happens repeatedly, raise your minimum cash threshold and tune scenarios.",
+        ],
+      };
     }
-    return "This alert highlights a risk signal derived from your snapshot. Use drivers to confirm the cause and decide next actions.";
+    return {
+      title: "Next best actions",
+      bullets: [
+        "Open the period to review drivers and validate the cause.",
+        "If drivers look correct, tune assumptions and refresh.",
+      ],
+    };
   };
 
   const SeveritySection = ({
@@ -145,7 +239,19 @@ export default function CashFlowAlertsPage() {
                     ) : null}
                   </div>
                   <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">{a.body}</p>
-                  <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">{explain(a)}</p>
+                  <div className="mt-2 rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-950/10 p-3">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                      {remediation(a).title}
+                    </div>
+                    <ul className="mt-2 space-y-1 text-xs text-zinc-600 dark:text-zinc-300">
+                      {remediation(a).bullets.map((b, i) => (
+                        <li key={i} className="flex gap-2">
+                          <span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-zinc-400/70 dark:bg-zinc-600/70" aria-hidden="true" />
+                          <span className="min-w-0">{b}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               </div>
               <div className="shrink-0 flex flex-col items-end gap-2">
@@ -157,6 +263,11 @@ export default function CashFlowAlertsPage() {
                   </Button>
                 ) : null}
                 <Button size="sm" variant="outline" asChild className="h-8 gap-2">
+                  <Link href={`/cash-flow/inflows?${q}${a.periodId ? `&periodId=${encodeURIComponent(a.periodId)}` : ""}`}>
+                    Review receivables <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button size="sm" variant="outline" asChild className="h-8 gap-2">
                   <Link href={`/cash-flow/overview?${q}`}>
                     Open command center <ArrowRight className="h-4 w-4" />
                   </Link>
@@ -165,6 +276,9 @@ export default function CashFlowAlertsPage() {
                   <Link href={`/cash-flow/variance?${q}${a.periodId ? `&periodId=${encodeURIComponent(a.periodId)}` : ""}`}>
                     Validate in variance
                   </Link>
+                </Button>
+                <Button size="sm" variant="ghost" asChild className="h-8 text-zinc-500">
+                  <Link href={`/cash-flow/assumptions?${q}`}>Tune assumptions</Link>
                 </Button>
               </div>
             </div>
@@ -252,13 +366,51 @@ export default function CashFlowAlertsPage() {
                     </Badge>
                   </CardContent>
                 </Card>
+
+                <Card className="rounded-2xl border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 shadow-sm backdrop-blur-sm">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-black tracking-tight">Preferences</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <Label className="text-sm text-zinc-700 dark:text-zinc-200">Show critical</Label>
+                      <Switch
+                        checked={prefs.showCritical}
+                        onCheckedChange={(v) => void savePrefs({ ...prefs, showCritical: Boolean(v) })}
+                        disabled={prefsLoading || prefsSaving}
+                        className="data-[state=checked]:bg-rose-600"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <Label className="text-sm text-zinc-700 dark:text-zinc-200">Show warnings</Label>
+                      <Switch
+                        checked={prefs.showWarnings}
+                        onCheckedChange={(v) => void savePrefs({ ...prefs, showWarnings: Boolean(v) })}
+                        disabled={prefsLoading || prefsSaving}
+                        className="data-[state=checked]:bg-amber-600"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <Label className="text-sm text-zinc-700 dark:text-zinc-200">Show info</Label>
+                      <Switch
+                        checked={prefs.showInfo}
+                        onCheckedChange={(v) => void savePrefs({ ...prefs, showInfo: Boolean(v) })}
+                        disabled={prefsLoading || prefsSaving}
+                        className="data-[state=checked]:bg-indigo-600"
+                      />
+                    </div>
+                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                      Preferences are saved to your workspace. They don’t change the forecast engine—only what you see here.
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
             </div>
 
-            {alerts.length === 0 ? (
+            {visibleAlerts.length === 0 ? (
               <Card className="rounded-2xl border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 shadow-sm backdrop-blur-sm">
                 <CardContent className="py-10 text-center text-sm text-zinc-500">
-                  No alerts for this selection.
+                  No alerts for this selection (or they’re hidden by preferences).
                 </CardContent>
               </Card>
             ) : (
