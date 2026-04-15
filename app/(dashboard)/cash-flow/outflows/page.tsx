@@ -5,6 +5,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { ReceiptText, TrendingDown, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
+import { useSearchParams } from "next/navigation";
 import { useCashFlowContextFromUrl, updateCashFlowContextInUrl } from "../_components/context";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,9 @@ export default function CashFlowOutflowsPage() {
   const ctx = useCashFlowContextFromUrl();
   const [horizonType, setHorizonType] = useState<CashFlowHorizonType>(ctx.horizonType);
   const [scenarioTag, setScenarioTag] = useState<CashFlowScenarioTag>(ctx.scenarioTag);
+  const search = useSearchParams();
+  const focusPeriodId = useMemo(() => search.get("periodId"), [search]);
+  const [openPeriod, setOpenPeriod] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setHorizonType(ctx.horizonType);
@@ -54,6 +58,11 @@ export default function CashFlowOutflowsPage() {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [horizonType, scenarioTag]);
+
+  useEffect(() => {
+    if (!focusPeriodId) return;
+    setOpenPeriod((prev) => ({ ...prev, [focusPeriodId]: true }));
+  }, [focusPeriodId]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -220,7 +229,12 @@ export default function CashFlowOutflowsPage() {
               </div>
             </div>
 
-            <CashFlowPeriodBreakdown snapshot={snapshot} direction="OUTFLOW" currencyFormatter={(n) => fCurrency(n)} />
+                <CashFlowPeriodBreakdown
+                  snapshot={snapshot}
+                  direction="OUTFLOW"
+                  currencyFormatter={(n) => fCurrency(n)}
+                  defaultOpenPeriodId={focusPeriodId}
+                />
           </>
         )}
       </div>

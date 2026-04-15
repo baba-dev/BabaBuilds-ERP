@@ -121,7 +121,7 @@ export function sourceRecordHref(item: SnapshotLineItem): string | null {
     case "BANK_TRANSACTION":
       return `/reconciliation?txId=${encodeURIComponent(item.sourceId)}`;
     case "MANUAL":
-      return `/cash-flow/overview?focus=manualAdjustments&manualId=${encodeURIComponent(item.sourceId)}`;
+      return `/cash-flow/manual-adjustments?adjustmentId=${encodeURIComponent(item.sourceId)}`;
     default:
       return null;
   }

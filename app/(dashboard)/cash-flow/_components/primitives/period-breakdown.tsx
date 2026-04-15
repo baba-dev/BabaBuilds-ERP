@@ -34,14 +34,24 @@ export function CashFlowPeriodBreakdown({
   snapshot,
   direction,
   currencyFormatter,
+  defaultOpenPeriodId,
   className,
 }: {
   snapshot: SnapshotDetail;
   direction: "INFLOW" | "OUTFLOW";
   currencyFormatter: (n: number) => string;
+  defaultOpenPeriodId?: string | null;
   className?: string;
 }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
+
+  // Open a focused period when deep-linked.
+  // We keep this client-only and local to avoid forcing state into parent pages.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useMemo(() => {
+    if (!defaultOpenPeriodId) return;
+    setOpen((prev) => (prev[defaultOpenPeriodId] ? prev : { ...prev, [defaultOpenPeriodId]: true }));
+  }, [defaultOpenPeriodId]);
 
   const lineItemsByPeriod = useMemo(() => {
     const map = new Map<string, SnapshotLineItem[]>();

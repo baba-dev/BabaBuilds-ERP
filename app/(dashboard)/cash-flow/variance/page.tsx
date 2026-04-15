@@ -10,6 +10,7 @@ import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useSearchParams } from "next/navigation";
 import { CashFlowNav } from "../_components/cash-flow-nav";
 import { fetchLatestSnapshot, refreshCashForecast, fetchVariance } from "../_components/api";
 import type { CashFlowHorizonType, CashFlowScenarioTag, SnapshotListItem, VarianceResponse } from "../_components/types";
@@ -23,6 +24,8 @@ import { getStaleStatus, toneForVariance } from "../_components/primitives/utils
 export default function CashFlowVariancePage() {
   const { fCurrency } = useFormat();
   const urlContext = useCashFlowContextFromUrl();
+  const search = useSearchParams();
+  const focusPeriodId = useMemo(() => search.get("periodId"), [search]);
   const [horizonType, setHorizonType] = useState<CashFlowHorizonType>(urlContext.horizonType);
   const [scenarioTag, setScenarioTag] = useState<CashFlowScenarioTag>(urlContext.scenarioTag);
   const [loading, setLoading] = useState(true);
@@ -36,6 +39,11 @@ export default function CashFlowVariancePage() {
     setHorizonType(urlContext.horizonType);
     setScenarioTag(urlContext.scenarioTag);
   }, [urlContext.horizonType, urlContext.scenarioTag]);
+
+  useEffect(() => {
+    if (!focusPeriodId) return;
+    setOpen((prev) => ({ ...prev, [focusPeriodId]: true }));
+  }, [focusPeriodId]);
 
   const load = async () => {
     setLoading(true);

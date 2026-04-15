@@ -149,13 +149,22 @@ export default function CashFlowAlertsPage() {
                 </div>
               </div>
               <div className="shrink-0 flex flex-col items-end gap-2">
+                {a.periodId ? (
+                  <Button size="sm" variant="outline" asChild className="h-8 gap-2">
+                    <Link href={`/cash-flow/outflows?${q}&periodId=${encodeURIComponent(a.periodId)}`}>
+                      Review period <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                ) : null}
                 <Button size="sm" variant="outline" asChild className="h-8 gap-2">
                   <Link href={`/cash-flow/overview?${q}`}>
                     Open command center <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
                 <Button size="sm" variant="ghost" asChild className="h-8 text-zinc-500">
-                  <Link href={`/cash-flow/variance?${q}`}>Validate in variance</Link>
+                  <Link href={`/cash-flow/variance?${q}${a.periodId ? `&periodId=${encodeURIComponent(a.periodId)}` : ""}`}>
+                    Validate in variance
+                  </Link>
                 </Button>
               </div>
             </div>
