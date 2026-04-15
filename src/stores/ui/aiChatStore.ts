@@ -1,5 +1,7 @@
 export type AIChatPayload = {
   query: string;
+  /** When true, the chat panel sends this query immediately (no second Send). */
+  autoSubmit?: boolean;
 };
 
 type AIChatStoreState = {

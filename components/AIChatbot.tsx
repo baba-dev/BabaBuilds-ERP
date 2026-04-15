@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useSyncExternalStore } from "react";
+import { useState, useRef, useEffect, useCallback, useSyncExternalStore } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { 
@@ -57,6 +57,9 @@ export default function AIChatbot() {
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+  const sendInFlightRef = useRef(false);
   const aiChatStoreState = useSyncExternalStore(subscribeToAIChatStore, getAIChatStoreSnapshot, getAIChatStoreSnapshot);
 
   const workspaceId = (session as any)?.workspaceId;
@@ -97,18 +100,6 @@ export default function AIChatbot() {
     }
   }, [isOpen, isLoading, isExpanded]);
 
-  useEffect(() => {
-    if (!aiChatStoreState.requestId) return;
-
-    if (aiChatStoreState.isOpen) {
-      setIsOpen(true);
-      setInput(aiChatStoreState.payload?.query ?? "");
-    } else {
-      setIsOpen(false);
-      setTimeout(() => setIsExpanded(false), 300);
-    }
-  }, [aiChatStoreState]);
-
   const clearChat = () => {
     setMessages([DEFAULT_GREETING]);
     if (storageKey) localStorage.removeItem(storageKey);
@@ -121,8 +112,9 @@ export default function AIChatbot() {
     setTimeout(() => setIsExpanded(false), 300);
   };
 
-  const sendMessage = async (text: string) => {
-    if (!text.trim() || isLoading) return;
+  const sendMessage = useCallback(async (text: string) => {
+    if (!text.trim() || isLoading || sendInFlightRef.current) return;
+    sendInFlightRef.current = true;
 
     setInput(""); 
     setMessages(prev => [...prev, { role: 'user', content: text }]);
@@ -136,7 +128,7 @@ export default function AIChatbot() {
           message: text, 
           // Bug 8 fix: filter by content instead of slicing by position (slice(1) silently
           // drops the first real message if localStorage didn't start with the greeting).
-          history: messages.filter(
+          history: messagesRef.current.filter(
             m => !(m.role === 'assistant' && m.content === DEFAULT_GREETING.content)
           ).slice(-10),
           context: {
@@ -178,9 +170,29 @@ export default function AIChatbot() {
     } catch (err) {
       setMessages(prev => [...prev, { role: 'assistant', content: "**Network error occurred.** Please try again." }]);
     } finally {
+      sendInFlightRef.current = false;
       setIsLoading(false);
     }
-  };
+  }, [isLoading, pathname, router]);
+
+  useEffect(() => {
+    if (!aiChatStoreState.requestId) return;
+
+    if (aiChatStoreState.isOpen) {
+      setIsOpen(true);
+      const q = aiChatStoreState.payload?.query ?? "";
+      if (aiChatStoreState.payload?.autoSubmit && q.trim()) {
+        queueMicrotask(() => {
+          void sendMessage(q.trim());
+        });
+      } else {
+        setInput(q);
+      }
+    } else {
+      setIsOpen(false);
+      setTimeout(() => setIsExpanded(false), 300);
+    }
+  }, [aiChatStoreState, sendMessage]);
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();

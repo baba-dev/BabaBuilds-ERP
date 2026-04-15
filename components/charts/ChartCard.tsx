@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { dashboardTypography as ty } from "@/app/(dashboard)/dashboard/dashboard-typography";
 
 type ChartCardProps = {
   title: string;
@@ -42,11 +43,15 @@ export function ChartCard({
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             {Icon && <Icon className="w-4 h-4 text-zinc-400 dark:text-zinc-500" strokeWidth={2.5} />}
-            <CardTitle className="text-xs font-bold uppercase tracking-[0.1em] text-zinc-800 dark:text-zinc-100">
+            <CardTitle className={ty.labelUpperStrong}>
               {title}
             </CardTitle>
           </div>
-          {description ? <CardDescription className="text-[11px] sm:text-xs dark:text-zinc-400 font-medium leading-relaxed">{description}</CardDescription> : null}
+          {description ? (
+            <CardDescription className="text-sm text-zinc-500 dark:text-zinc-400 leading-tight">
+              {description}
+            </CardDescription>
+          ) : null}
         </div>
         {headerAction && <div className="flex-shrink-0">{headerAction}</div>}
       </CardHeader>
@@ -61,8 +66,8 @@ export function ChartCard({
                   <NoDataIcon className="h-4 w-4 opacity-50 text-zinc-400" />
                 </div>
               ) : null}
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-400 dark:text-zinc-500">{noDataLabel}</p>
-              {noDataHint ? <p className="mt-1 text-[11px] font-medium text-zinc-400/80 dark:text-zinc-500/80 max-w-[200px]">{noDataHint}</p> : null}
+              <p className={ty.labelUpperStrong}>{noDataLabel}</p>
+              {noDataHint ? <p className={`mt-1 max-w-[200px] ${ty.helperXs}`}>{noDataHint}</p> : null}
             </div>
           )}
         </div>
