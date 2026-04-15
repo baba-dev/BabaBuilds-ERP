@@ -8,6 +8,7 @@ export type SidebarItemId =
   | "client_crm"
   | "quotes_proposals"
   | "retainers_hub"
+  | "cash_flow"
   | "expenses_margins"
   | "savings_tax"
   | "ai_reconciliation"
@@ -38,6 +39,7 @@ const ALLOWED_IDS = new Set<SidebarItemId>([
   "client_crm",
   "quotes_proposals",
   "retainers_hub",
+  "cash_flow",
   "expenses_margins",
   "savings_tax",
   "ai_reconciliation",

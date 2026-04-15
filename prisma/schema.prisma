@@ -13,6 +13,57 @@ enum InvoiceStatus {
   PAID
 }
 
+enum CashForecastHorizonType {
+  DAILY_30
+  WEEKLY_13
+  MONTHLY_12
+}
+
+enum CashForecastScenarioTag {
+  BASE
+  BEST_CASE
+  WORST_CASE
+}
+
+enum CashForecastDirection {
+  INFLOW
+  OUTFLOW
+}
+
+enum CashForecastSourceType {
+  INVOICE
+  RETAINER
+  EXPENSE
+  PURCHASE_ORDER
+  BANK_TRANSACTION
+  MANUAL
+  SERVICE_ORDER
+  TAX
+  PAYROLL
+}
+
+enum CashForecastClassification {
+  ACTUAL
+  COMMITTED
+  EXPECTED
+  PREDICTED
+  MANUAL
+}
+
+enum CashForecastGeneratedBy {
+  SYSTEM
+  USER
+  RULE_CHANGE
+  DATA_IMPORT
+}
+
+enum CashForecastRiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
 enum WorkspaceTaxMode {
   AUTO
   AUTO_WITH_OVERRIDE
@@ -172,6 +223,7 @@ model Workspace {
   billingTransactions        BillingTransaction[]
   expenses                   Expense[]
   bankTransactions           BankTransaction[]
+  bankAccounts               BankAccount[]
   investments                Investment[]
   serviceTemplates           ServiceTemplate[]
   proposals                  Proposal[]
@@ -190,6 +242,10 @@ model Workspace {
   accountingTransactions     AccountingTransaction[]
   accountingIntegrityRuns    AccountingIntegrityRun[]
   accountingViolationReports AccountingViolationReport[]
+  cashForecastSnapshots      CashForecastSnapshot[]
+  cashForecastAssumptions    CashForecastAssumption[]
+  cashForecastAdjustments    CashForecastManualAdjustment[]
+  clientPaymentBehaviors     ClientPaymentBehavior[]
 
   // IMS Relations
 
@@ -470,9 +526,32 @@ model Client {
   invoices  Invoice[]
   proposals Proposal[]
   retainers Retainer[]
+  paymentBehavior ClientPaymentBehavior?
 
   @@unique([name, workspaceId])
   @@index([workspaceId])
+}
+
+model ClientPaymentBehavior {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  clientId String  @unique
+  client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  avgDaysToPay        Float?
+  medianDaysToPay     Float?
+  onTimeRate          Float?
+  lateRate            Float?
+  partialPaymentRate  Float?
+  sampleInvoicesCount Int      @default(0)
+  lastComputedAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, lastComputedAt(sort: Desc)])
 }
 
 model Invoice {
@@ -484,6 +563,12 @@ model Invoice {
   financialYear      String
   billingMonth       String   @default("Unknown")
   invoiceDate        DateTime
+  dueDate            DateTime?
+  paymentTermsDays   Int?
+  expectedPaymentDate DateTime?
+  collectionRiskScore Float?
+  lastReminderSentAt  DateTime?
+  followUpStatus      String?
   clientName         String
   sacCode            String? // Removed the hardcoded @default("998313")
   serviceDescription String
@@ -515,6 +600,7 @@ model Invoice {
   @@unique([invoiceNumber, workspaceId])
   @@index([financialYear])
   @@index([workspaceId])
+  @@index([workspaceId, status, dueDate])
 }
 
 model WorkspaceTaxPreference {
@@ -607,10 +693,17 @@ model BankTransaction {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  accountId String?
+  account   BankAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
   date        DateTime
   description String
   amount      Decimal // Positive for deposits, negative for withdrawals
   referenceId String?
+  transactionType String?
+  isInternalTransfer Boolean @default(false)
+  reconciliationConfidence Float?
+  category String?
 
   // Reconciliation state
   isReconciled     Boolean @default(false)
@@ -620,7 +713,150 @@ model BankTransaction {
   createdAt DateTime @default(now())
 
   @@index([workspaceId])
+  @@index([accountId])
   @@index([date])
+}
+
+model BankAccount {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name                String
+  bankName            String?
+  maskedAccountNumber String?
+  currency            String @default("INR")
+
+  openingBalance     Decimal  @default(0)
+  openingBalanceDate DateTime @default(now())
+
+  // Optional cached value; source of truth is openingBalance + transactions.
+  currentBalance Decimal?
+
+  transactions BankTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId])
+  @@unique([workspaceId, name])
+}
+
+model CashForecastSnapshot {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  generatedAt DateTime @default(now())
+  horizonType CashForecastHorizonType
+  scenarioTag CashForecastScenarioTag @default(BASE)
+
+  startDate DateTime
+  endDate   DateTime
+
+  openingCash            Decimal @default(0)
+  closingCash            Decimal @default(0)
+  totalProjectedInflows  Decimal @default(0)
+  totalProjectedOutflows Decimal @default(0)
+
+  confidenceScore Float?
+  assumptionsJson Json?
+  generatedBy     CashForecastGeneratedBy @default(SYSTEM)
+
+  createdAt DateTime @default(now())
+
+  periods CashForecastPeriod[]
+
+  @@index([workspaceId, horizonType, scenarioTag, generatedAt(sort: Desc)])
+  @@index([workspaceId, startDate, endDate])
+}
+
+model CashForecastPeriod {
+  id         String              @id @default(cuid())
+  snapshotId String
+  snapshot   CashForecastSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  periodStart DateTime
+  periodEnd   DateTime
+  bucketLabel String
+
+  openingCash Decimal @default(0)
+
+  actualInflows     Decimal @default(0)
+  projectedInflows  Decimal @default(0)
+  actualOutflows    Decimal @default(0)
+  projectedOutflows Decimal @default(0)
+
+  closingCash Decimal @default(0)
+
+  riskLevel              CashForecastRiskLevel @default(LOW)
+  varianceFromPriorForecast Decimal?
+  notesJson              Json?
+
+  lineItems CashForecastLineItem[]
+
+  @@index([snapshotId, periodStart])
+  @@index([snapshotId, riskLevel])
+}
+
+model CashForecastLineItem {
+  id       String            @id @default(cuid())
+  periodId String
+  period   CashForecastPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  direction      CashForecastDirection
+  sourceType     CashForecastSourceType
+  sourceId       String?
+  amount         Decimal
+  expectedDate   DateTime
+  confidence     Float?
+  scenarioTag    CashForecastScenarioTag @default(BASE)
+  classification CashForecastClassification
+  title          String
+  metadataJson   Json?
+  explanation    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([periodId, expectedDate])
+  @@index([sourceType, sourceId])
+  @@index([classification])
+}
+
+model CashForecastAssumption {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  key          String
+  valueJson    Json
+  effectiveFrom DateTime?
+  isActive     Boolean @default(true)
+  updatedBy    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, isActive, key])
+  @@unique([workspaceId, key, isActive])
+}
+
+model CashForecastManualAdjustment {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  date      DateTime
+  amount    Decimal
+  direction CashForecastDirection
+  reason    String
+  category  String?
+  createdBy String?
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, date])
+  @@index([workspaceId, direction])
 }
 
 model Investment {
@@ -1000,6 +1236,10 @@ model PurchaseOrder {
   status   String @default("DRAFT") // "DRAFT", "SENT", "DELIVERED", "CANCELLED"
 
   expectedDate DateTime?
+  paymentTermsDays Int?
+  expectedPaymentDate DateTime?
+  receivedAt DateTime?
+  committedCashImpact Decimal?
   totalAmount  Decimal   @default(0)
 
   items PurchaseOrderItem[]

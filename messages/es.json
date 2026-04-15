@@ -147,6 +147,7 @@
   "Sidebar": {
     "dashboard": "Panel principal",
     "service_catalog": "Catálogo de servicios",
+    "cash_flow": "Flujo de caja",
     "shop": "Shop",
     "inventory": "Inventario",
     "client_crm": "CRM de clientes",
