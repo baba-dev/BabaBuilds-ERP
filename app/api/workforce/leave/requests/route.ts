@@ -107,7 +107,15 @@ export async function POST(req: NextRequest) {
 
     const startDate = new Date(body.startDate);
     const endDate = new Date(body.endDate);
-    const days = body.days ?? Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000) + 1;
+    if (!Number.isFinite(startDate.getTime()) || !Number.isFinite(endDate.getTime())) {
+      return NextResponse.json({ error: 'Invalid startDate or endDate' }, { status: 400 });
+    }
+    if (endDate.getTime() < startDate.getTime()) {
+      return NextResponse.json({ error: 'endDate must be on or after startDate' }, { status: 400 });
+    }
+    const computedDays = Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000) + 1;
+    const daysRaw = body.days ?? computedDays;
+    const days = Math.max(1, Math.min(366, Math.floor(daysRaw)));
 
     const leaveRequest = await prisma.leaveRequest.create({
       data: {
