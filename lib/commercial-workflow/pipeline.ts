@@ -202,7 +202,6 @@ export function getProposalPipelineSummary(rows: PipelineRow[]): PipelineSummary
   let totalAcceptanceDays = 0;
   let acceptancesCount = 0;
   let wonCount = 0;
-  let finishedCount = 0; // Exclude drafts/sent/viewed for win rate calculation if needed, but standard is (Won / Total Closed)
   let totalClosedCount = 0;
 
   const nowMs = new Date().getTime();

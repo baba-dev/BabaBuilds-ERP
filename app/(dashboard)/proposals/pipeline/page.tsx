@@ -2,15 +2,89 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getProposalPipelineRows, getProposalPipelineSummary, PipelineStage, PipelineRow } from "@/lib/commercial-workflow/pipeline";
+import {
+  getProposalPipelineRows,
+  getProposalPipelineSummary,
+} from "@/lib/commercial-workflow/pipeline";
 import { formatCurrency } from "@/lib/currency";
 import { DollarSign, Clock, AlertTriangle, TrendingUp, CheckCircle2, ChevronRight, FileText } from "lucide-react";
 import Link from "next/link";
-import { addDays, format } from "date-fns";
+import { createCommercialActionTask } from "@/lib/commercial-workflow/tasks";
+import { revalidatePath } from "next/cache";
+
+type InsightCardProps = {
+  title: string;
+  value: string;
+  subtitle?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  colorClass: string;
+  highlight?: boolean;
+  href: string;
+};
 
 export default async function PipelineDashboardPage({ searchParams }: { searchParams: { filter?: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.workspaceId) redirect("/login");
+
+  async function generateStalledTasks(formData: FormData) {
+    "use server";
+
+    const session = await getServerSession(authOptions);
+    if (!session?.workspaceId) redirect("/login");
+
+    const filter = String(formData.get("filter") || "stalled");
+
+    const proposals = await prisma.proposal.findMany({
+      where: { workspaceId: session.workspaceId },
+      include: {
+        client: true,
+        conversions: {
+          include: { invoice: true, retainer: true, serviceOrder: true },
+        },
+      },
+      orderBy: { dateCreated: "desc" },
+    });
+
+    const pipelineRows = getProposalPipelineRows(proposals as any);
+
+    const targetRows = pipelineRows.filter((row) => {
+      if (filter === "stalled") return row.isStalled;
+      if (filter === "accepted-not-converted")
+        return (
+          row.stage === "ACCEPTED" && row.stalledReason === "ACCEPTED_UNCONVERTED"
+        );
+      if (filter === "converted-unpaid")
+        return (
+          ["CONVERTED", "AWAITING_PAYMENT"].includes(row.stage) &&
+          row.paymentState === "UNPAID"
+        );
+      if (filter === "viewed-not-accepted") return row.stage === "VIEWED";
+      return row.isStalled;
+    });
+
+    for (const row of targetRows) {
+      const action =
+        row.nextBestAction === "CHASE_PAYMENT"
+          ? "CHASE_PAYMENT"
+          : row.nextBestAction === "CONVERT_TO_INVOICE"
+            ? "CONVERT_TO_INVOICE"
+            : row.nextBestAction === "SEND_REMINDER" ||
+                row.nextBestAction === "FOLLOW_UP_VIEW"
+              ? "SEND_REMINDER"
+              : null;
+
+      if (!action) continue;
+
+      await createCommercialActionTask(
+        session.workspaceId,
+        row.proposal.id,
+        row.proposal.title,
+        action,
+      );
+    }
+
+    revalidatePath("/proposals/pipeline");
+  }
 
   // Load all proposals with downstream linking
   const proposals = await prisma.proposal.findMany({
@@ -40,7 +114,15 @@ export default async function PipelineDashboardPage({ searchParams }: { searchPa
 
   const formatMoney = (amount: number) => formatCurrency(amount, "INR", "en-IN");
 
-  const InsightCard = ({ title, value, subtitle, icon: Icon, colorClass, highlight, href }: any) => (
+  const InsightCard = ({
+    title,
+    value,
+    subtitle,
+    icon: Icon,
+    colorClass,
+    highlight,
+    href,
+  }: InsightCardProps) => (
     <Link href={href} className="block hover:-translate-y-1 transition-transform">
       <div className={`p-5 rounded-2xl border bg-white dark:bg-zinc-900 shadow-sm relative overflow-hidden \${
         highlight ? 'border-indigo-500 ring-1 ring-indigo-500/20' : 'border-zinc-200 dark:border-zinc-800'
@@ -49,7 +131,7 @@ export default async function PipelineDashboardPage({ searchParams }: { searchPa
           <Icon className="w-5 h-5" />
         </div>
         <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{title}</p>
-        <p className="text-2xl font-black text-zinc-900 dark:text-锌-50 mt-1">{value}</p>
+        <p className="text-2xl font-black text-zinc-900 dark:text-zinc-50 mt-1">{value}</p>
         {subtitle && <p className="text-xs font-medium text-zinc-500 mt-2">{subtitle}</p>}
       </div>
     </Link>
@@ -64,9 +146,20 @@ export default async function PipelineDashboardPage({ searchParams }: { searchPa
             <h1 className="text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight">Revenue Pipeline</h1>
             <p className="text-sm text-zinc-500 font-medium">Track operational commercial workflow and unblock stalled revenue.</p>
           </div>
-          <Link href="/proposals" className="bg-indigo-600 px-4 py-2 text-white font-bold text-xs uppercase tracking-widest rounded-lg shadow-sm hover:bg-indigo-700 transition-colors">
-            Proposal Builder
-          </Link>
+          <div className="flex items-center gap-2">
+            <form action={generateStalledTasks}>
+              <input type="hidden" name="filter" value={filter} />
+              <button
+                type="submit"
+                className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-2 text-zinc-900 dark:text-zinc-50 font-bold text-xs uppercase tracking-widest rounded-lg shadow-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+              >
+                Create Tasks (Deduped)
+              </button>
+            </form>
+            <Link href="/proposals" className="bg-indigo-600 px-4 py-2 text-white font-bold text-xs uppercase tracking-widest rounded-lg shadow-sm hover:bg-indigo-700 transition-colors">
+              Proposal Builder
+            </Link>
+          </div>
         </div>
 
         {/* Executive Summary */}
