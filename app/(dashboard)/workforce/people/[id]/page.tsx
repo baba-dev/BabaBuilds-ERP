@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { StatusBadge, EmployeeAvatar } from "@/components/workforce/StatusBadge";
+import { WorkforcePageShell } from "@/components/workforce/WorkforceLayout";
 import { format } from "date-fns";
 
 type Employee = {
@@ -103,31 +104,36 @@ export default function EmployeeProfilePage() {
     : null;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
-      {/* Back button */}
-      <Button
-        id="back-to-people"
-        variant="ghost"
-        size="sm"
-        onClick={() => router.push("/workforce/people")}
-        className="h-8 text-xs text-zinc-400 hover:text-zinc-200 -ml-2"
-      >
-        <ArrowLeft className="h-3.5 w-3.5 mr-1.5" /> People Directory
-      </Button>
-
-      {/* Profile Header */}
-      <div className="rounded-2xl border border-white/5 bg-zinc-900/50 p-6">
+    <WorkforcePageShell
+      title={`${employee.firstName} ${employee.lastName}`}
+      description={employee.designation?.title ?? undefined}
+      actions={
+        <Button
+          id="back-to-people"
+          variant="outline"
+          size="sm"
+          onClick={() => router.push("/workforce/people")}
+          className="h-8 gap-2"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          People Directory
+        </Button>
+      }
+    >
+      <div className="max-w-5xl mx-auto space-y-6">
+        {/* Profile Header */}
+        <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 p-6 shadow-sm backdrop-blur-sm">
         <div className="flex flex-col sm:flex-row items-start gap-5">
           <EmployeeAvatar firstName={employee.firstName} lastName={employee.lastName} avatarUrl={employee.avatarUrl} size="xl" />
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div>
                 <div className="flex items-center gap-3 flex-wrap">
-                  <h2 className="text-2xl font-bold text-zinc-50">{employee.firstName} {employee.lastName}</h2>
+                  <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{employee.firstName} {employee.lastName}</h2>
                   <StatusBadge status={employee.status} variant="employment" />
                 </div>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-sm text-zinc-400">
-                  {employee.designation && <span className="font-medium text-zinc-300">{employee.designation.title}</span>}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-sm text-zinc-600 dark:text-zinc-300">
+                  {employee.designation && <span className="font-medium text-zinc-700 dark:text-zinc-200">{employee.designation.title}</span>}
                   {employee.department && <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5" />{employee.department.name}</span>}
                   {employee.location && <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{employee.location}</span>}
                 </div>
@@ -142,7 +148,7 @@ export default function EmployeeProfilePage() {
                 size="sm"
                 variant={editing ? "ghost" : "outline"}
                 onClick={() => { if (editing) { setEditing(false); setEditForm(employee); } else setEditing(true); }}
-                className="h-8 text-xs border-white/10"
+                className="h-8 text-xs"
               >
                 {editing ? <><X className="h-3.5 w-3.5 mr-1" /> Cancel</> : <><Edit2 className="h-3.5 w-3.5 mr-1" /> Edit</>}
               </Button>
@@ -153,7 +159,7 @@ export default function EmployeeProfilePage() {
 
       {/* Tabs */}
       <Tabs defaultValue="overview">
-        <TabsList className="bg-zinc-900/50 border border-white/5 h-9">
+        <TabsList className="bg-white/50 dark:bg-zinc-900/20 border border-zinc-200/60 dark:border-zinc-800/60 h-9">
           {["overview", "attendance", "leave"].map((tab) => (
             <TabsTrigger key={tab} value={tab} className="text-xs capitalize data-[state=active]:bg-teal-600 data-[state=active]:text-white">
               {tab}
@@ -165,36 +171,36 @@ export default function EmployeeProfilePage() {
         <TabsContent value="overview" className="mt-4 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Contact */}
-            <div className="rounded-xl border border-white/5 bg-zinc-900/40 p-5 space-y-4">
+            <div className="rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 p-5 space-y-4 shadow-sm backdrop-blur-sm">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Contact Information</h3>
               {editing ? (
                 <div className="space-y-3">
                   <div className="space-y-1"><Label className="text-xs text-zinc-400">Email</Label>
-                    <Input id="edit-email" value={editForm.email ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} className="h-8 bg-zinc-950 border-white/10 text-sm" /></div>
+                    <Input id="edit-email" value={editForm.email ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} className="h-8 text-sm" /></div>
                   <div className="space-y-1"><Label className="text-xs text-zinc-400">Phone</Label>
-                    <Input id="edit-phone" value={editForm.phone ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} className="h-8 bg-zinc-950 border-white/10 text-sm" /></div>
+                    <Input id="edit-phone" value={editForm.phone ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} className="h-8 text-sm" /></div>
                   <div className="space-y-1"><Label className="text-xs text-zinc-400">Location</Label>
-                    <Input id="edit-location" value={editForm.location ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, location: e.target.value }))} className="h-8 bg-zinc-950 border-white/10 text-sm" /></div>
+                    <Input id="edit-location" value={editForm.location ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, location: e.target.value }))} className="h-8 text-sm" /></div>
                 </div>
               ) : (
                 <div className="space-y-3 text-sm">
-                  {employee.email && <div className="flex items-center gap-2 text-zinc-300"><Mail className="h-4 w-4 text-zinc-600" />{employee.email}</div>}
-                  {employee.phone && <div className="flex items-center gap-2 text-zinc-300"><Phone className="h-4 w-4 text-zinc-600" />{employee.phone}</div>}
-                  {employee.location && <div className="flex items-center gap-2 text-zinc-300"><MapPin className="h-4 w-4 text-zinc-600" />{employee.location}</div>}
+                  {employee.email && <div className="flex items-center gap-2 text-zinc-700 dark:text-zinc-200"><Mail className="h-4 w-4 text-zinc-500" />{employee.email}</div>}
+                  {employee.phone && <div className="flex items-center gap-2 text-zinc-700 dark:text-zinc-200"><Phone className="h-4 w-4 text-zinc-500" />{employee.phone}</div>}
+                  {employee.location && <div className="flex items-center gap-2 text-zinc-700 dark:text-zinc-200"><MapPin className="h-4 w-4 text-zinc-500" />{employee.location}</div>}
                   {!employee.email && !employee.phone && <p className="text-zinc-600 text-xs">No contact info</p>}
                 </div>
               )}
             </div>
 
             {/* Manager + Direct Reports */}
-            <div className="rounded-xl border border-white/5 bg-zinc-900/40 p-5 space-y-4">
+            <div className="rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 p-5 space-y-4 shadow-sm backdrop-blur-sm">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Reporting Structure</h3>
               {employee.manager ? (
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-zinc-600 mb-1.5">Reports To</p>
                   <div className="flex items-center gap-2 text-sm">
-                    <User className="h-4 w-4 text-zinc-600" />
-                    <span className="text-zinc-300 font-medium">{employee.manager.firstName} {employee.manager.lastName}</span>
+                    <User className="h-4 w-4 text-zinc-500" />
+                    <span className="text-zinc-800 dark:text-zinc-200 font-medium">{employee.manager.firstName} {employee.manager.lastName}</span>
                     {employee.manager.designation && <span className="text-zinc-500">· {employee.manager.designation.title}</span>}
                   </div>
                 </div>
@@ -204,7 +210,7 @@ export default function EmployeeProfilePage() {
                   <p className="text-[10px] uppercase tracking-wider text-zinc-600 mb-1.5">Direct Reports ({employee.directReports.length})</p>
                   <div className="space-y-1">
                     {employee.directReports.slice(0, 4).map((r) => (
-                      <div key={r.id} className="flex items-center gap-2 text-xs text-zinc-400">
+                      <div key={r.id} className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
                         <div className="h-1.5 w-1.5 rounded-full bg-teal-500" />
                         {r.firstName} {r.lastName}{r.designation ? ` · ${r.designation.title}` : ""}
                       </div>
@@ -228,14 +234,14 @@ export default function EmployeeProfilePage() {
 
         {/* Attendance Tab */}
         <TabsContent value="attendance" className="mt-4">
-          <div className="rounded-xl border border-white/5 bg-zinc-900/40 p-5">
+          <div className="rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 p-5 shadow-sm backdrop-blur-sm">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-4">Last 30 Days</h3>
             {employee.attendanceRecords && employee.attendanceRecords.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {employee.attendanceRecords.map((rec) => (
                   <div key={rec.id} className="group relative">
                     <div className={`h-7 w-7 rounded-md ${ATTENDANCE_CELL_COLORS[rec.status] ?? "bg-zinc-700"} opacity-80 hover:opacity-100 transition-opacity cursor-default`} />
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:flex items-center gap-1 bg-zinc-800 border border-white/10 rounded px-2 py-1 text-[10px] text-zinc-300 whitespace-nowrap z-10 shadow-lg">
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:flex items-center gap-1 bg-white border border-zinc-200 rounded px-2 py-1 text-[10px] text-zinc-700 whitespace-nowrap z-10 shadow-lg dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-200">
                       {format(new Date(rec.date), "MMM d")} · {rec.status}
                     </div>
                   </div>
@@ -244,7 +250,7 @@ export default function EmployeeProfilePage() {
             ) : (
               <p className="text-zinc-600 text-sm">No attendance records for this period.</p>
             )}
-            <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-white/5">
+            <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t border-zinc-200/60 dark:border-zinc-800/60">
               {Object.entries(ATTENDANCE_CELL_COLORS).map(([key, color]) => (
                 <div key={key} className="flex items-center gap-1.5">
                   <div className={`h-3 w-3 rounded-sm ${color}`} />
@@ -261,9 +267,9 @@ export default function EmployeeProfilePage() {
           {employee.leaveBalances && employee.leaveBalances.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {employee.leaveBalances.map((b) => (
-                <div key={b.id} className="rounded-xl border border-white/5 bg-zinc-900/40 p-4">
+                <div key={b.id} className="rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 p-4 shadow-sm backdrop-blur-sm">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2">{b.leaveType.name}</p>
-                  <p className="text-2xl font-bold text-zinc-100">{b.remaining}<span className="text-sm font-normal text-zinc-500">/{b.entitled}</span></p>
+                  <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{b.remaining}<span className="text-sm font-normal text-zinc-500">/{b.entitled}</span></p>
                   <p className="text-xs text-zinc-600 mt-1">days remaining</p>
                 </div>
               ))}
@@ -271,12 +277,12 @@ export default function EmployeeProfilePage() {
           )}
           {/* Leave History */}
           {employee.leaveRequests && (
-            <div className="rounded-xl border border-white/5 bg-zinc-900/40 overflow-hidden">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 px-5 py-4 border-b border-white/5">Leave History</h3>
+            <div className="rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 overflow-hidden shadow-sm backdrop-blur-sm">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 px-5 py-4 border-b border-zinc-200/60 dark:border-zinc-800/60">Leave History</h3>
               {employee.leaveRequests.length === 0 ? (
                 <p className="text-zinc-600 text-sm px-5 py-8">No leave requests yet.</p>
               ) : (
-                <div className="divide-y divide-white/5">
+                <div className="divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
                   {employee.leaveRequests.map((req) => (
                     <div key={req.id} className="flex items-center justify-between px-5 py-3">
                       <div className="flex items-center gap-3">
@@ -294,6 +300,7 @@ export default function EmployeeProfilePage() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </WorkforcePageShell>
   );
 }

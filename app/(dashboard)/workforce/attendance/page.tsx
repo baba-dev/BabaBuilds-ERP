@@ -122,11 +122,11 @@ export default function AttendancePage() {
             variant="ghost"
             size="sm"
             onClick={() => setCurrentDate((d) => { const n = new Date(d); n.setMonth(n.getMonth() - 1); return n; })}
-            className="h-8 w-8 p-0 text-zinc-400"
+            className="h-8 w-8 p-0 text-muted-foreground"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-sm font-semibold text-zinc-200 min-w-[120px] text-center">
+          <span className="text-sm font-semibold text-foreground min-w-[120px] text-center">
             {format(currentDate, "MMMM yyyy")}
           </span>
           <Button
@@ -134,16 +134,16 @@ export default function AttendancePage() {
             variant="ghost"
             size="sm"
             onClick={() => setCurrentDate((d) => { const n = new Date(d); n.setMonth(n.getMonth() + 1); return n; })}
-            className="h-8 w-8 p-0 text-zinc-400"
+            className="h-8 w-8 p-0 text-muted-foreground"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
         <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-          <SelectTrigger className="h-8 w-48 bg-zinc-900 border-white/10 text-sm">
+          <SelectTrigger className="h-8 w-48 text-sm">
             <SelectValue placeholder="All employees" />
           </SelectTrigger>
-          <SelectContent className="bg-zinc-900 border-white/10">
+          <SelectContent>
             <SelectItem value="ALL">All Employees</SelectItem>
             {employees.map((e) => (
               <SelectItem key={e.id} value={e.id}>{e.firstName} {e.lastName}</SelectItem>
@@ -156,22 +156,22 @@ export default function AttendancePage() {
           {Object.entries(STATUS_COLORS).map(([key, color]) => (
             <div key={key} className="flex items-center gap-1">
               <div className={`h-2.5 w-2.5 rounded-sm ${color.split(" ")[0]}`} />
-              <span className="text-[10px] text-zinc-500 capitalize">{key.replace("_", " ")}</span>
+              <span className="text-[10px] text-muted-foreground capitalize">{key.replace("_", " ")}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* Grid */}
-      <div className="rounded-xl border border-white/5 overflow-x-auto">
+      <div className="rounded-xl border border-border overflow-x-auto">
         <table className="w-full text-xs border-collapse">
           <thead>
-            <tr className="bg-zinc-900/60 border-b border-white/5">
-              <th className="px-4 py-3 text-left font-semibold text-zinc-500 w-48 sticky left-0 bg-zinc-900/60">Employee</th>
+            <tr className="bg-muted/40 border-b border-border">
+              <th className="px-4 py-3 text-left font-semibold text-muted-foreground w-48 sticky left-0 bg-muted/40">Employee</th>
               {days.map((day) => (
                 <th
                   key={day.toISOString()}
-                  className={`px-1 py-3 text-center font-medium min-w-[36px] ${isToday(day) ? "text-teal-400" : "text-zinc-600"}`}
+                  className={`px-1 py-3 text-center font-medium min-w-[36px] ${isToday(day) ? "text-teal-600 dark:text-teal-400" : "text-muted-foreground"}`}
                 >
                   <div>{format(day, "d")}</div>
                   <div className="text-[9px]">{format(day, "EEE")}</div>
@@ -179,34 +179,34 @@ export default function AttendancePage() {
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5">
+          <tbody className="divide-y divide-border">
             {isLoading ? (
               Array.from({ length: 4 }).map((_, i) => (
                 <tr key={i} className="animate-pulse">
-                  <td className="px-4 py-3 sticky left-0 bg-zinc-950">
+                  <td className="px-4 py-3 sticky left-0 bg-background">
                     <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-full bg-zinc-800" />
-                      <div className="h-3 w-24 rounded bg-zinc-800" />
+                      <div className="h-7 w-7 rounded-full bg-muted" />
+                      <div className="h-3 w-24 rounded bg-muted" />
                     </div>
                   </td>
                   {days.map((d) => (
                     <td key={d.toISOString()} className="px-1 py-3">
-                      <div className="h-6 w-6 rounded bg-zinc-800/40 mx-auto" />
+                      <div className="h-6 w-6 rounded bg-muted/60 mx-auto" />
                     </td>
                   ))}
                 </tr>
               ))
             ) : displayEmployees.length === 0 ? (
-              <tr><td colSpan={days.length + 1} className="text-center py-12 text-zinc-600">No employees to display</td></tr>
+              <tr><td colSpan={days.length + 1} className="text-center py-12 text-muted-foreground">No employees to display</td></tr>
             ) : (
               displayEmployees.map((emp) => {
                 const empRecords = lookup.get(emp.id) ?? new Map();
                 return (
                   <tr key={emp.id} className="hover:bg-zinc-900/30 transition-colors">
-                    <td className="px-4 py-3 sticky left-0 bg-zinc-950 hover:bg-zinc-900/30">
+                    <td className="px-4 py-3 sticky left-0 bg-background hover:bg-muted/30">
                       <div className="flex items-center gap-2">
                         <EmployeeAvatar firstName={emp.firstName} lastName={emp.lastName} avatarUrl={emp.avatarUrl} size="sm" />
-                        <span className="font-medium text-zinc-300 truncate max-w-[120px]">{emp.firstName} {emp.lastName}</span>
+                        <span className="font-medium text-foreground truncate max-w-[120px]">{emp.firstName} {emp.lastName}</span>
                       </div>
                     </td>
                     {days.map((day) => {
@@ -217,7 +217,7 @@ export default function AttendancePage() {
                           <div
                             title={status ?? "No record"}
                             className={`h-6 w-6 rounded-md mx-auto transition-all cursor-default ${
-                              status ? `${STATUS_COLORS[status] ?? "bg-zinc-700"} cursor-pointer` : isToday(day) ? "border-2 border-dashed border-zinc-700" : "bg-zinc-800/20"
+                              status ? `${STATUS_COLORS[status] ?? "bg-zinc-700"} cursor-pointer` : isToday(day) ? "border-2 border-dashed border-border" : "bg-muted/30"
                             }`}
                           />
                         </td>

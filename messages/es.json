@@ -223,6 +223,7 @@
   },
   "Sidebar": {
     "dashboard": "Panel principal",
+    "revenue_pipeline": "Pipeline de ingresos",
     "service_catalog": "Catálogo de servicios",
     "cash_flow": "Flujo de caja",
     "shop": "Shop",
@@ -235,6 +236,7 @@
     "ai_reconciliation": "Reconciliación IA",
     "invoices_and_earnings": "Facturas y Ganancias",
     "ca_compliance": "Cumplimiento CA",
+    "workforce": "Workforce",
     "settings": "Ajustes",
     "soon": "Pronto",
     "sign_in_google": "Iniciar sesión con Google",

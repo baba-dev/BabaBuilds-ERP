@@ -1,47 +1,99 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import * as React from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Users2, Clock, CalendarDays, BarChart3, Settings2, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
+import type { SegmentedControlOption } from "@/components/ui/segmented-control";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { ReactNode } from "react";
 
-const WORKFORCE_NAV = [
-  { href: "/workforce",            label: "Overview",    icon: LayoutDashboard, exact: true },
-  { href: "/workforce/people",     label: "People",      icon: Users2 },
-  { href: "/workforce/attendance", label: "Attendance",  icon: Clock },
-  { href: "/workforce/leave",      label: "Leave",       icon: CalendarDays },
-  { href: "/workforce/reports",    label: "Reports",     icon: BarChart3 },
-  { href: "/workforce/settings",   label: "Settings",    icon: Settings2 },
+type WorkforceNavItem = {
+  key: "overview" | "people" | "attendance" | "leave" | "reports" | "settings";
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+};
+
+const WORKFORCE_NAV: WorkforceNavItem[] = [
+  { key: "overview", href: "/workforce", label: "Overview", icon: LayoutDashboard },
+  { key: "people", href: "/workforce/people", label: "People", icon: Users2 },
+  { key: "attendance", href: "/workforce/attendance", label: "Attendance", icon: Clock },
+  { key: "leave", href: "/workforce/leave", label: "Leave", icon: CalendarDays },
+  { key: "reports", href: "/workforce/reports", label: "Reports", icon: BarChart3 },
+  { key: "settings", href: "/workforce/settings", label: "Settings", icon: Settings2 },
 ];
+
+function activeKeyForPath(pathname: string | null) {
+  if (!pathname) return "overview";
+  return WORKFORCE_NAV.find((n) => pathname === n.href || (n.href !== "/workforce" && pathname.startsWith(n.href)))?.key ?? "overview";
+}
 
 export function WorkforceSubNav() {
   const pathname = usePathname();
+  const search = useSearchParams();
+  const qs = search.toString();
+  const active = activeKeyForPath(pathname);
+
+  const linkFor = (href: string) => `${href}${qs ? `?${qs}` : ""}`;
+
+  const options: SegmentedControlOption<WorkforceNavItem["key"]>[] = WORKFORCE_NAV.map((n) => ({
+    value: n.key,
+    label: (
+      <span className="inline-flex items-center gap-2">
+        <n.icon className="h-4 w-4" />
+        <span>{n.label}</span>
+      </span>
+    ),
+  }));
+
+  const groupedLabel = (item: WorkforceNavItem) => (
+    <span className="inline-flex items-center gap-2">
+      <item.icon className="h-4 w-4" />
+      <span>{item.label}</span>
+    </span>
+  );
 
   return (
-    <nav className="flex items-center gap-1 overflow-x-auto border-b border-white/5 px-6 pb-0 pt-0 no-scrollbar">
-      {WORKFORCE_NAV.map(({ href, label, icon: Icon, exact }) => {
-        const isActive = exact ? pathname === href : pathname.startsWith(href) && href !== "/workforce";
-        const isOverview = href === "/workforce" && pathname === "/workforce";
-        const active = isActive || isOverview;
+    <div className={cn("w-full", "pt-1")}>
+      <div className="hidden md:block">
+        <SegmentedControl<WorkforceNavItem["key"]>
+          value={active}
+          onValueChange={(next) => {
+            const item = WORKFORCE_NAV.find((n) => n.key === next);
+            if (!item) return;
+            window.location.href = linkFor(item.href);
+          }}
+          options={options}
+          listClassName="gap-1.5"
+          itemClassName="basis-[7.5rem] grow-0"
+        />
+      </div>
 
-        return (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              "relative flex items-center gap-2 border-b-2 px-3 py-3 text-sm font-medium transition-all whitespace-nowrap",
-              active
-                ? "border-teal-500 text-teal-400"
-                : "border-transparent text-zinc-400 hover:text-zinc-200 hover:border-zinc-600",
-            )}
-          >
-            <Icon className="h-4 w-4 shrink-0" />
-            {label}
-          </Link>
-        );
-      })}
-    </nav>
+      <div className="md:hidden">
+        <Select
+          value={active}
+          onValueChange={(next) => {
+            const item = WORKFORCE_NAV.find((n) => n.key === next);
+            if (!item) return;
+            window.location.href = linkFor(item.href);
+          }}
+        >
+          <SelectTrigger className="h-10 rounded-2xl">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {WORKFORCE_NAV.map((n) => (
+              <SelectItem key={n.key} value={n.key}>
+                {groupedLabel(n)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
   );
 }
 
@@ -52,17 +104,17 @@ export function WorkforcePageShell({ children, title, description, actions }: {
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col h-full min-h-0">
-      <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4">
-        <div>
-          <h1 className="text-xl font-bold text-zinc-50 tracking-tight">{title}</h1>
-          {description && <p className="text-sm text-zinc-400 mt-0.5">{description}</p>}
-        </div>
-        {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
+    <DashboardPageShell
+      title={title}
+      description={description}
+      icon={<Users2 className="h-5 w-5 text-teal-600 dark:text-teal-400" />}
+      animated={false}
+      pageActions={actions}
+    >
+      <div className="space-y-6">
+        <WorkforceSubNav />
+        <div>{children}</div>
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
-        {children}
-      </div>
-    </div>
+    </DashboardPageShell>
   );
 }
