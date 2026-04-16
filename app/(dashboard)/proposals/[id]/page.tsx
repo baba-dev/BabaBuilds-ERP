@@ -15,11 +15,16 @@ import {
 } from "./actions";
 import { getTranslations } from "next-intl/server";
 
-export default async function ProposalDetailPage({ params }: { params: { id: string } }) {
+export default async function ProposalDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const session = await getServerSession(authOptions);
   if (!session?.workspaceId) redirect("/login");
 
   const t = await getTranslations("ProposalDetail");
+  const { id } = await params;
 
   const serviceTemplates = await prisma.serviceTemplate.findMany({
     where: { workspaceId: session.workspaceId },
@@ -29,7 +34,7 @@ export default async function ProposalDetailPage({ params }: { params: { id: str
 
   const proposal = await prisma.proposal.findUnique({
     where: { 
-      id: params.id,
+      id,
       workspaceId: session.workspaceId 
     },
     include: {
