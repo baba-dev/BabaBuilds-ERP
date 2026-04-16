@@ -52,18 +52,25 @@ export function AppSidebar() {
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_USER_PREFERENCES);
   const [pinError, setPinError] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [enabledModules, setEnabledModules] = useState<Set<string>>(new Set());
   const skipNextOpenSyncRef = useRef(false);
 
   const loadPreferences = useCallback(async () => {
     try {
-      const res = await fetch("/api/user-preferences");
-      if (!res.ok) {
-        setIsHydrated(true);
-        return;
+      const [prefRes, modulesRes] = await Promise.all([
+        fetch("/api/user-preferences"),
+        fetch("/api/workspace/modules"),
+      ]);
+
+      if (prefRes.ok) {
+        const payload = (await prefRes.json()) as UserPreferences;
+        setPreferences(payload);
       }
 
-      const payload = (await res.json()) as UserPreferences;
-      setPreferences(payload);
+      if (modulesRes.ok) {
+        const { modules } = (await modulesRes.json()) as { modules: string[] };
+        setEnabledModules(new Set(modules));
+      }
     } catch {
       // no-op: defaults still render
     } finally {
@@ -200,6 +207,7 @@ export function AppSidebar() {
           <NavMain
             preferences={preferences}
             pinError={pinError}
+            enabledModules={enabledModules}
             onTogglePin={onTogglePin}
             onNavigate={onNavigate}
           />

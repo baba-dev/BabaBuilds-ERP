@@ -13,14 +13,20 @@ import { type SidebarItemId, type UserPreferences } from "@/src/types/user-prefe
 type Props = {
   preferences: UserPreferences;
   pinError: string | null;
+  enabledModules: Set<string>;
   onTogglePin: (itemId: Exclude<SidebarItemId, "settings">, shouldPin: boolean) => void;
   onNavigate: (itemId: Exclude<SidebarItemId, "settings">) => void;
 };
 
-export function NavMain({ preferences, pinError, onTogglePin, onNavigate }: Props) {
+export function NavMain({ preferences, pinError, enabledModules, onTogglePin, onNavigate }: Props) {
   const pathname = usePathname();
   const t = useTranslations("Sidebar");
   const { open, isMobile } = useSidebar();
+
+  // Filter items that require a module that is not enabled
+  const visibleNavItems = appNavItems.filter(
+    (item) => !item.requiresModule || enabledModules.has(item.requiresModule)
+  );
 
   const recentIds = preferences.recentItems.filter((id): id is Exclude<SidebarItemId, "settings"> => id !== "settings");
   const pinnedIds = preferences.pinnedIds.filter((id): id is Exclude<SidebarItemId, "settings"> => id !== "settings");
@@ -28,15 +34,15 @@ export function NavMain({ preferences, pinError, onTogglePin, onNavigate }: Prop
   const pinnedSet = new Set(pinnedIds);
   const recentSet = new Set(recentIds);
 
-  const pinnedItems = appNavItems.filter((item) => pinnedSet.has(item.key as Exclude<SidebarItemId, "settings">));
-  const byKey = new Map(appNavItems.map((item) => [item.key, item] as const));
+  const pinnedItems = visibleNavItems.filter((item) => pinnedSet.has(item.key as Exclude<SidebarItemId, "settings">));
+  const byKey = new Map(visibleNavItems.map((item) => [item.key, item] as const));
   const recentItems = recentIds
     .map((id) => byKey.get(id))
-    .filter((item): item is (typeof appNavItems)[number] => Boolean(item) && !pinnedSet.has((item?.key ?? "") as Exclude<SidebarItemId, "settings">))
+    .filter((item): item is (typeof visibleNavItems)[number] => Boolean(item) && !pinnedSet.has((item?.key ?? "") as Exclude<SidebarItemId, "settings">))
     .slice(0, 3);
   const regularItems = (open || isMobile)
-    ? appNavItems.filter((item) => !pinnedSet.has(item.key as Exclude<SidebarItemId, "settings">))
-    : appNavItems;
+    ? visibleNavItems.filter((item) => !pinnedSet.has(item.key as Exclude<SidebarItemId, "settings">))
+    : visibleNavItems;
 
   const renderItem = (item: (typeof appNavItems)[number], area: "pinned" | "recent" | "all") => {
     const Icon = item.icon;
