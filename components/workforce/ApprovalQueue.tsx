@@ -68,9 +68,9 @@ export function ApprovalQueue({ requests, onRefresh, canApprove }: ApprovalQueue
   if (requests.length === 0) {
     return (
       <div className="flex flex-col items-center gap-2 py-10">
-        <CheckCircle2 className="h-8 w-8 text-zinc-700" />
-        <p className="text-sm text-zinc-500 font-medium">All clear</p>
-        <p className="text-xs text-zinc-600">No pending leave requests.</p>
+        <CheckCircle2 className="h-8 w-8 text-zinc-300 dark:text-zinc-700" />
+        <p className="text-sm text-zinc-700 dark:text-zinc-200 font-semibold">All clear</p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">No pending leave requests.</p>
       </div>
     );
   }
@@ -85,7 +85,7 @@ export function ApprovalQueue({ requests, onRefresh, canApprove }: ApprovalQueue
         return (
           <div
             key={req.id}
-            className="group rounded-xl border border-white/5 bg-zinc-900/50 p-4 hover:border-white/10 transition-all"
+            className="group rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/30 p-4 hover:bg-white/60 dark:hover:bg-zinc-900/40 transition-colors"
           >
             <div className="flex items-start gap-3">
               <EmployeeAvatar
@@ -97,17 +97,17 @@ export function ApprovalQueue({ requests, onRefresh, canApprove }: ApprovalQueue
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="text-sm font-semibold text-zinc-100">
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                       {req.employee.firstName} {req.employee.lastName}
                     </p>
                     {req.employee.department && (
-                      <p className="text-[11px] text-zinc-500">{req.employee.department.name}</p>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{req.employee.department.name}</p>
                     )}
                   </div>
                   <StatusBadge status={req.status} variant="leave" className="shrink-0" />
                 </div>
 
-                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-400">
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-600 dark:text-zinc-300">
                   <span className="flex items-center gap-1">
                     <span className={`h-2 w-2 rounded-full ${dotColor}`} />
                     {req.leaveType.name}
@@ -123,7 +123,7 @@ export function ApprovalQueue({ requests, onRefresh, canApprove }: ApprovalQueue
                 </div>
 
                 {req.reason && (
-                  <p className="mt-2 text-xs text-zinc-500 flex items-start gap-1">
+                  <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400 flex items-start gap-1">
                     <FileText className="h-3 w-3 mt-0.5 shrink-0" />
                     {req.reason}
                   </p>
@@ -147,7 +147,7 @@ export function ApprovalQueue({ requests, onRefresh, canApprove }: ApprovalQueue
                       variant="ghost"
                       disabled={isApprovingThis || isRejectingThis}
                       onClick={() => handleAction(req.id, "REJECT")}
-                      className="h-7 px-3 text-[11px] font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10"
+                      className="h-7 px-3 text-[11px] font-bold text-rose-700 hover:text-rose-900 hover:bg-rose-500/10 dark:text-rose-300 dark:hover:text-rose-200"
                     >
                       <X className="h-3 w-3 mr-1" />
                       {isRejectingThis ? "Rejecting..." : "Reject"}

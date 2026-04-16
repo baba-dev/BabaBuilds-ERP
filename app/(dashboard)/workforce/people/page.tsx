@@ -94,7 +94,7 @@ export default function PeoplePage() {
         description="Manage your employee roster, profiles, and org structure."
         actions={
           <>
-            <Button id="refresh-employees" variant="ghost" size="sm" onClick={fetchEmployees} className="h-8 w-8 p-0 text-zinc-400 hover:text-zinc-200">
+            <Button id="refresh-employees" variant="ghost" size="sm" onClick={fetchEmployees} className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
               <RefreshCw className="h-4 w-4" />
             </Button>
             <Button id="add-employee-people" size="sm" onClick={() => setShowAddDialog(true)} className="h-8 px-3 text-xs bg-teal-600 hover:bg-teal-500 text-white border-none">
@@ -114,63 +114,63 @@ export default function PeoplePage() {
 
       {/* Add Employee Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="sm:max-w-md bg-zinc-950 border-white/10">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-zinc-50">Add Employee</DialogTitle>
-            <DialogDescription className="text-zinc-400">Create a new employee profile in your workspace.</DialogDescription>
+            <DialogTitle>Add Employee</DialogTitle>
+            <DialogDescription>Create a new employee profile in your workspace.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">First Name *</Label>
+                <Label className="text-xs text-muted-foreground">First Name *</Label>
                 <Input
                   id="add-emp-firstname"
                   value={addForm.firstName}
                   onChange={(e) => setAddForm((f) => ({ ...f, firstName: e.target.value }))}
-                  className="h-9 bg-zinc-900 border-white/10 text-sm"
+                  className="h-9 text-sm"
                   placeholder="First name"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Last Name *</Label>
+                <Label className="text-xs text-muted-foreground">Last Name *</Label>
                 <Input
                   id="add-emp-lastname"
                   value={addForm.lastName}
                   onChange={(e) => setAddForm((f) => ({ ...f, lastName: e.target.value }))}
-                  className="h-9 bg-zinc-900 border-white/10 text-sm"
+                  className="h-9 text-sm"
                   placeholder="Last name"
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs text-zinc-400">Email</Label>
+              <Label className="text-xs text-muted-foreground">Email</Label>
               <Input
                 id="add-emp-email"
                 type="email"
                 value={addForm.email}
                 onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))}
-                className="h-9 bg-zinc-900 border-white/10 text-sm"
+                className="h-9 text-sm"
                 placeholder="employee@company.com"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Phone</Label>
+                <Label className="text-xs text-muted-foreground">Phone</Label>
                 <Input
                   id="add-emp-phone"
                   value={addForm.phone}
                   onChange={(e) => setAddForm((f) => ({ ...f, phone: e.target.value }))}
-                  className="h-9 bg-zinc-900 border-white/10 text-sm"
+                  className="h-9 text-sm"
                   placeholder="+91 9800..."
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs text-zinc-400">Department</Label>
+                <Label className="text-xs text-muted-foreground">Department</Label>
                 <Select value={addForm.departmentId} onValueChange={(v) => setAddForm((f) => ({ ...f, departmentId: v }))}>
-                  <SelectTrigger id="add-emp-dept" className="h-9 bg-zinc-900 border-white/10 text-sm">
+                  <SelectTrigger id="add-emp-dept" className="h-9 text-sm">
                     <SelectValue placeholder="Select dept." />
                   </SelectTrigger>
-                  <SelectContent className="bg-zinc-900 border-white/10">
+                  <SelectContent>
                     {departments.map((d) => (
                       <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                     ))}
@@ -179,18 +179,18 @@ export default function PeoplePage() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs text-zinc-400">Location / Office</Label>
+              <Label className="text-xs text-muted-foreground">Location / Office</Label>
               <Input
                 id="add-emp-location"
                 value={addForm.location}
                 onChange={(e) => setAddForm((f) => ({ ...f, location: e.target.value }))}
-                className="h-9 bg-zinc-900 border-white/10 text-sm"
+                className="h-9 text-sm"
                 placeholder="e.g. Mumbai HQ, Remote"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowAddDialog(false)} className="text-zinc-400">Cancel</Button>
+            <Button variant="ghost" onClick={() => setShowAddDialog(false)} className="text-muted-foreground">Cancel</Button>
             <Button
               id="confirm-add-employee"
               onClick={handleAddEmployee}

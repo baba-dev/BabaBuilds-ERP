@@ -223,6 +223,7 @@
   },
   "Sidebar": {
     "dashboard": "لوحة القيادة",
+    "revenue_pipeline": "مسار الإيرادات",
     "service_catalog": "كتالوج الخدمات",
     "cash_flow": "التدفق النقدي",
     "shop": "Shop",
@@ -235,6 +236,7 @@
     "ai_reconciliation": "التسوية بالذكاء الاصطناعي",
     "invoices_and_earnings": "الفواتير والأرباح",
     "ca_compliance": "امتثال المحاسب القانوني",
+    "workforce": "القوى العاملة",
     "settings": "الإعدادات",
     "soon": "قريباً",
     "sign_in_google": "تسجيل الدخول مع جوجل",

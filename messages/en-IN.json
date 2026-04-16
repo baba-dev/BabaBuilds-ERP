@@ -223,6 +223,7 @@
   },
   "Sidebar": {
     "dashboard": "Dashboard",
+    "revenue_pipeline": "Revenue Pipeline",
     "service_catalog": "Service Catalog",
     "shop": "Shop",
     "inventory": "Inventory Hub",
@@ -235,6 +236,7 @@
     "ai_reconciliation": "AI Reconciliation",
     "invoices_and_earnings": "Invoices & Earnings",
     "ca_compliance": "CA Compliance",
+    "workforce": "Workforce",
     "help_center": "Help Center",
     "settings": "Settings",
     "soon": "Soon",
