@@ -86,8 +86,29 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       }
     }
 
-    const employee = await prisma.employee.update({
+    const existing = await prisma.employee.findFirst({
       where: { id, workspaceId: wid },
+      select: { id: true },
+    });
+    if (!existing) return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
+
+    // Validate workspace-scoped foreign keys (prevent cross-workspace links)
+    if (typeof data.departmentId === 'string' && data.departmentId) {
+      const ok = await prisma.department.findFirst({ where: { id: data.departmentId, workspaceId: wid }, select: { id: true } });
+      if (!ok) return NextResponse.json({ error: 'Invalid departmentId' }, { status: 400 });
+    }
+    if (typeof data.designationId === 'string' && data.designationId) {
+      const ok = await prisma.designation.findFirst({ where: { id: data.designationId, workspaceId: wid }, select: { id: true } });
+      if (!ok) return NextResponse.json({ error: 'Invalid designationId' }, { status: 400 });
+    }
+    if (typeof data.managerId === 'string' && data.managerId) {
+      if (data.managerId === id) return NextResponse.json({ error: 'managerId cannot be self' }, { status: 400 });
+      const ok = await prisma.employee.findFirst({ where: { id: data.managerId, workspaceId: wid }, select: { id: true } });
+      if (!ok) return NextResponse.json({ error: 'Invalid managerId' }, { status: 400 });
+    }
+
+    const employee = await prisma.employee.update({
+      where: { id },
       data: data as Parameters<typeof prisma.employee.update>[0]['data'],
       include: { department: true, designation: true },
     });
@@ -116,9 +137,15 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
       throw e;
     }
 
+    const existing = await prisma.employee.findFirst({
+      where: { id, workspaceId: wid },
+      select: { id: true },
+    });
+    if (!existing) return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
+
     // Soft deactivate, never hard delete
     await prisma.employee.update({
-      where: { id, workspaceId: wid },
+      where: { id },
       data: { status: 'INACTIVE', exitDate: new Date() },
     });
 

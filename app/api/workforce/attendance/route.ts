@@ -45,12 +45,20 @@ export async function GET(req: NextRequest) {
       scopedEmployeeId = emp?.id ?? '__none__';
     }
 
+    const fromDate = from ? new Date(from) : null;
+    if (fromDate) fromDate.setHours(0, 0, 0, 0);
+    const toDateExclusive = to ? new Date(to) : null;
+    if (toDateExclusive) {
+      toDateExclusive.setHours(0, 0, 0, 0);
+      toDateExclusive.setDate(toDateExclusive.getDate() + 1);
+    }
+
     const records = await prisma.attendanceRecord.findMany({
       where: {
         workspaceId: wid,
         ...(scopedEmployeeId ? { employeeId: scopedEmployeeId } : {}),
-        ...(from ? { date: { gte: new Date(from) } } : {}),
-        ...(to ? { date: { lte: new Date(to) } } : {}),
+        ...(fromDate ? { date: { gte: fromDate } } : {}),
+        ...(toDateExclusive ? { date: { lt: toDateExclusive } } : {}),
       },
       include: { employee: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } } },
       orderBy: [{ date: 'desc' }, { employee: { firstName: 'asc' } }],
@@ -71,9 +79,14 @@ export async function POST(req: NextRequest) {
     const wid = await getWid(session.user.id);
     if (!wid) return NextResponse.json({ error: 'No workspace' }, { status: 400 });
 
-    try { await requireModule(wid, 'WORKFORCE'); }
+    try {
+      await requireModule(wid, 'WORKFORCE');
+      // Require baseline attendance access for all writes (self-service included)
+      await requirePermission(session.user.id, wid, 'workforce.attendance.view');
+    }
     catch (e) {
       if (e instanceof ModuleDisabledError) return NextResponse.json({ error: 'Module disabled' }, { status: 403 });
+      if (e instanceof RbacDeniedError) return rbacDeniedResponse(e);
       throw e;
     }
 
@@ -95,6 +108,13 @@ export async function POST(req: NextRequest) {
 
     const dateObj = new Date(body.date);
     dateObj.setHours(0, 0, 0, 0);
+
+    // Validate that employee belongs to this workspace (prevents cross-workspace writes)
+    const employee = await prisma.employee.findFirst({
+      where: { id: targetEmployeeId, workspaceId: wid },
+      select: { id: true },
+    });
+    if (!employee) return NextResponse.json({ error: 'Invalid employeeId' }, { status: 400 });
 
     const record = await prisma.attendanceRecord.upsert({
       where: { employeeId_date: { employeeId: targetEmployeeId, date: dateObj } },

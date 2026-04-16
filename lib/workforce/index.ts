@@ -38,11 +38,11 @@ const DEFAULT_LEAVE_TYPES = [
   { name: 'Unpaid Leave', code: 'UL', description: 'Leave without pay', color: 'zinc', defaultDays: 0, isPaid: false },
 ];
 
-const DEFAULT_HOLIDAYS = [
-  { name: 'Republic Day', date: new Date('2026-01-26') },
-  { name: 'Independence Day', date: new Date('2026-08-15') },
-  { name: 'Gandhi Jayanti', date: new Date('2026-10-02') },
-  { name: 'Christmas Day', date: new Date('2026-12-25') },
+const DEFAULT_HOLIDAYS: Array<{ name: string; month: number; day: number }> = [
+  { name: 'Republic Day', month: 1, day: 26 },
+  { name: 'Independence Day', month: 8, day: 15 },
+  { name: 'Gandhi Jayanti', month: 10, day: 2 },
+  { name: 'Christmas Day', month: 12, day: 25 },
 ];
 
 /**
@@ -91,10 +91,25 @@ export async function initializeWorkforceDefaults(workspaceId: string): Promise<
     })
     .catch(() => {});
 
+  // Seed recurring holidays for the current year (idempotent).
+  // Note: WorkforceHoliday doesn't have a uniqueness constraint, so we guard manually.
+  const year = new Date().getFullYear();
   for (const holiday of DEFAULT_HOLIDAYS) {
+    const date = new Date(Date.UTC(year, holiday.month - 1, holiday.day, 0, 0, 0, 0));
+    const exists = await prisma.workforceHoliday.findFirst({
+      where: {
+        workspaceId,
+        name: holiday.name,
+        isRecurring: true,
+        year: null,
+        date,
+      },
+      select: { id: true },
+    });
+    if (exists) continue;
     await prisma.workforceHoliday
-      .create({ data: { workspaceId, ...holiday, isRecurring: true } })
-      .catch(() => {}); // ignore duplicate
+      .create({ data: { workspaceId, name: holiday.name, date, isRecurring: true } })
+      .catch(() => {});
   }
 }
 
@@ -169,6 +184,19 @@ export async function getEmployeeByUserId(
  * Generates the next employee code in sequence (EMP-001, EMP-002 ...).
  */
 export async function generateEmployeeCode(workspaceId: string): Promise<string> {
-  const count = await prisma.employee.count({ where: { workspaceId } });
-  return `EMP-${String(count + 1).padStart(3, '0')}`;
+  // Use a sortable, zero-padded numeric suffix so lexical ordering matches numeric ordering.
+  // (EMP-000001, EMP-000002, ...)
+  const last = await prisma.employee.findFirst({
+    where: {
+      workspaceId,
+      employeeCode: { startsWith: 'EMP-' },
+    },
+    select: { employeeCode: true },
+    orderBy: { employeeCode: 'desc' },
+  });
+
+  const suffix = last?.employeeCode?.slice(4) ?? '';
+  const n = Number.parseInt(suffix, 10);
+  const next = Number.isFinite(n) ? n + 1 : 1;
+  return `EMP-${String(next).padStart(6, '0')}`;
 }
