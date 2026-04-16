@@ -101,6 +101,13 @@ enum AccountingLineSide {
   CREDIT
 }
 
+enum ProposalConversionType {
+  ONE_TIME_INVOICE
+  RETAINER
+  SERVICE_ORDER
+  MILESTONE_BILLING
+}
+
 // ==========================================
 // 1. AUTHENTICATION (NextAuth Standard)
 // ==========================================
@@ -227,6 +234,8 @@ model Workspace {
   investments                Investment[]
   serviceTemplates           ServiceTemplate[]
   proposals                  Proposal[]
+  proposalConversions        ProposalConversion[]
+  billingMilestones          BillingMilestone[]
   retainers                  Retainer[]
   tasks                      Task[]
   invoiceIdempotencies       InvoiceIdempotency[]
@@ -597,6 +606,11 @@ model Invoice {
   taxDecisionAuditLogs TaxDecisionAuditLog[]
   items                InvoiceItem[]
   linkedServiceOrders  ServiceOrder[]        @relation("ServiceOrderLinkedInvoice")
+
+  sourceProposalId    String?
+  sourceProposal      Proposal?             @relation("ProposalToInvoice", fields: [sourceProposalId], references: [id])
+  proposalConversions ProposalConversion[]
+  billingMilestones   BillingMilestone[]
 
   // Security: Two different workspaces can use invoice number "001"
   @@unique([invoiceNumber, workspaceId])
@@ -991,11 +1005,27 @@ model Proposal {
   // The Public Link token (e.g., bababuilds.com/p/abc123xyz)
   publicToken String @unique @default(cuid())
 
-  // E-Signature Data
-  acceptedAt DateTime?
-  clientIp   String?
+  // E-Signature & Lifecycle Data
+  acceptedAt     DateTime?
+  clientIp       String?
+  acceptedByName String?
+
+  sentAt           DateTime?
+  sentByUserId     String?
+  firstViewedAt    DateTime?
+  lastViewedAt     DateTime?
+  viewCount        Int       @default(0)
+  declinedAt       DateTime?
+  declineReason    String?
+  firstConvertedAt DateTime?
+  expiredAt        DateTime?
 
   items ProposalItem[]
+  conversions ProposalConversion[]
+  billingMilestones BillingMilestone[]
+  generatedInvoices Invoice[] @relation("ProposalToInvoice")
+  generatedRetainers Retainer[] @relation("ProposalToRetainer")
+  generatedServiceOrders ServiceOrder[] @relation("ProposalToServiceOrder")
 
   subtotal     Decimal
   estimatedTax Decimal @default(0)
@@ -1042,6 +1072,10 @@ model Retainer {
   serviceName String
   sacCode     String?
   taxRate     Float?
+
+  sourceProposalId    String?
+  sourceProposal      Proposal?             @relation("ProposalToRetainer", fields: [sourceProposalId], references: [id])
+  proposalConversions ProposalConversion[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1341,6 +1375,10 @@ model ServiceOrder {
   linkedInvoiceId String?
   linkedInvoice   Invoice? @relation("ServiceOrderLinkedInvoice", fields: [linkedInvoiceId], references: [id], onDelete: SetNull)
 
+  sourceProposalId    String?
+  sourceProposal      Proposal?             @relation("ProposalToServiceOrder", fields: [sourceProposalId], references: [id])
+  proposalConversions ProposalConversion[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1356,6 +1394,56 @@ model UserPreference {
   data      Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model ProposalConversion {
+  id                String    @id @default(cuid())
+  workspaceId       String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  proposalId        String
+  proposal          Proposal  @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  
+  conversionType    ProposalConversionType
+  
+  invoiceId         String?
+  invoice           Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  
+  retainerId        String?
+  retainer          Retainer? @relation(fields: [retainerId], references: [id], onDelete: SetNull)
+  
+  serviceOrderId    String?
+  serviceOrder      ServiceOrder? @relation(fields: [serviceOrderId], references: [id], onDelete: SetNull)
+
+  convertedAt       DateTime  @default(now())
+  convertedByUserId String?   
+
+  @@index([workspaceId, proposalId])
+  @@index([conversionType])
+}
+
+model BillingMilestone {
+  id             String    @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  proposalId     String
+  proposal       Proposal  @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  
+  title          String
+  description    String?
+  amount         Decimal
+  dueDate        DateTime?
+  status         String    @default("PENDING") // PENDING, INVOICED, PARTIALLY_PAID, PAID
+  
+  // When invoiced, it links to the actual standard invoice
+  invoiceId      String?
+  invoice        Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([workspaceId, proposalId])
 }
 
 model HelpFeedback {

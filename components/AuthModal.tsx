@@ -457,7 +457,10 @@ export default function AuthModal({
           </button>
 
           <details className="rounded-xl border border-border bg-muted/40 p-3 group">
-            <summary className="cursor-pointer list-none text-sm text-muted-foreground group-open:text-foreground">
+            <summary
+              data-testid="demo-auth-section"
+              className="cursor-pointer list-none text-sm text-muted-foreground group-open:text-foreground"
+            >
               {t("actions.demoSection")}
             </summary>
 
@@ -476,6 +479,7 @@ export default function AuthModal({
               )}
 
               <button
+                data-testid="demo-auth-button"
                 onClick={handleDemoSignIn}
                 disabled={
                   isLoading ||

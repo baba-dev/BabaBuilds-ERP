@@ -1,79 +1,301 @@
-import { Proposal, Client, Invoice, Retainer } from '@prisma/client';
-import { evaluateProposalStallStatus, StalledReason } from './metrics';
+import {
+  Invoice,
+  Proposal,
+  ProposalConversion,
+  Retainer,
+  ServiceOrder,
+} from "@prisma/client";
 
-export type PipelineStage = 'DRAFT' | 'SENT' | 'VIEWED' | 'EXPIRED' | 'DECLINED' | 'ACCEPTED' | 'CONVERTED' | 'PARTIALLY_PAID' | 'PAID' | 'RECONCILED';
-export type NextBestAction = 'NONE' | 'REVIEW_AND_SEND' | 'FOLLOW_UP_VIEWED' | 'CONVERT_TO_INVOICE' | 'CHASE_PAYMENT' | 'RENEW_PROPOSAL';
+export type PipelineStage =
+  | "DRAFT"
+  | "SENT"
+  | "VIEWED"
+  | "ACCEPTED"
+  | "CONVERTED"
+  | "AWAITING_PAYMENT"
+  | "PARTIALLY_PAID"
+  | "PAID"
+  | "RECONCILED"
+  | "EXPIRED"
+  | "DECLINED";
+
+export type StalledReason =
+  | "SENT_UNTOUCHED"
+  | "VIEWED_UNACCEPTED"
+  | "ACCEPTED_UNCONVERTED"
+  | "CONVERTED_UNPAID"
+  | null;
+
+export type NextBestAction =
+  | "SEND_REMINDER"
+  | "FOLLOW_UP_VIEW"
+  | "CONVERT_TO_INVOICE"
+  | "CHASE_PAYMENT"
+  | "RECONCILE_PAYMENT"
+  | "NONE";
+
+type ConversionWithArtifacts = ProposalConversion & {
+  invoice?: Invoice | null;
+  retainer?: Retainer | null;
+  serviceOrder?: ServiceOrder | null;
+};
 
 export interface PipelineRow {
   proposal: Proposal;
-  client: Client;
   stage: PipelineStage;
+  ageInStageDays: number;
   stalledReason: StalledReason;
   isStalled: boolean;
+  paymentState: "UNPAID" | "PARTIAL" | "PAID" | "NA";
   nextBestAction: NextBestAction;
-  ageInStageDays: number;
+  linkedArtifacts: ConversionWithArtifacts[];
   traceabilityId: string;
+  clientName: string;
+  totalValue: number;
 }
 
-export function derivePipelineStage(proposal: Proposal, invoices: Invoice[]): PipelineStage {
-  const linkedInvoices = invoices.filter(i => i.sourceProposalId === proposal.id);
-  
-  // Reconciled/Paid logic
-  if (proposal.firstConvertedAt && linkedInvoices.length > 0) {
-    if (linkedInvoices.every(i => ['PAID', 'Paid'].includes(String(i.status)))) return 'RECONCILED'; // or 'PAID'
-    if (linkedInvoices.some(i => ['PAID', 'PARTIALLY_PAID', 'Paid', 'Partially Paid'].includes(String(i.status)))) return 'PARTIALLY_PAID';
-    return 'CONVERTED';
+export function evaluateProposalStallStatus(
+  stage: PipelineStage,
+  proposal: Proposal,
+  linkedArtifacts: ConversionWithArtifacts[],
+): StalledReason {
+  const now = new Date().getTime();
+  const daysSince = (date?: Date | null) =>
+    date ? (now - date.getTime()) / (1000 * 60 * 60 * 24) : 0;
+
+  if (stage === "SENT" && daysSince(proposal.sentAt) > 3)
+    return "SENT_UNTOUCHED";
+  if (stage === "VIEWED" && daysSince(proposal.lastViewedAt) > 5)
+    return "VIEWED_UNACCEPTED";
+  if (stage === "ACCEPTED" && daysSince(proposal.acceptedAt) > 2)
+    return "ACCEPTED_UNCONVERTED";
+
+  if (["AWAITING_PAYMENT", "PARTIALLY_PAID", "CONVERTED"].includes(stage)) {
+    const invoices = linkedArtifacts
+      .map((a) => a.invoice)
+      .filter(Boolean) as Invoice[];
+    const hasUnpaidOver7Days = invoices.some(
+      (inv) =>
+        ["PENDING", "PARTIALLY_PAID"].includes(String(inv.status)) &&
+        daysSince(inv.createdAt) > 7,
+    );
+    if (hasUnpaidOver7Days) return "CONVERTED_UNPAID";
   }
 
-  // Pre-conversion logic
-  if (proposal.firstConvertedAt) return 'CONVERTED';
-  if (proposal.status === 'DECLINED') return 'DECLINED';
-  if (proposal.status === 'EXPIRED') return 'EXPIRED';
-  if (proposal.acceptedAt) return 'ACCEPTED';
-  if (proposal.firstViewedAt) return 'VIEWED';
-  if (proposal.sentAt) return 'SENT';
-  return 'DRAFT';
+  return null;
 }
 
-export function deriveNextBestAction(stage: PipelineStage, stalledReason: StalledReason): NextBestAction {
-  if (stalledReason === 'CONVERTED_UNPAID') return 'CHASE_PAYMENT';
-  if (stalledReason === 'ACCEPTED_UNCONVERTED') return 'CONVERT_TO_INVOICE';
-  if (stalledReason === 'VIEWED_UNACCEPTED') return 'FOLLOW_UP_VIEWED';
-  if (stalledReason === 'SENT_UNTOUCHED') return 'FOLLOW_UP_VIEWED';
-  if (stage === 'EXPIRED') return 'RENEW_PROPOSAL';
-  if (stage === 'DRAFT') return 'REVIEW_AND_SEND';
-  return 'NONE';
+function derivePaymentState(
+  linkedArtifacts: ConversionWithArtifacts[],
+): "UNPAID" | "PARTIAL" | "PAID" | "NA" {
+  const invoices = linkedArtifacts
+    .map((a) => a.invoice)
+    .filter(Boolean) as Invoice[];
+  if (invoices.length === 0) return "NA";
+
+  const hasPaid = invoices.some((i) => String(i.status) === "PAID");
+  const hasUnpaid = invoices.some((i) =>
+    ["PENDING", "PARTIALLY_PAID", "DRAFT"].includes(String(i.status)),
+  );
+
+  if (hasPaid && hasUnpaid) return "PARTIAL";
+  if (hasPaid && !hasUnpaid) return "PAID";
+  return "UNPAID";
+}
+
+function determineNextBestAction(
+  stage: PipelineStage,
+  isStalled: boolean,
+): NextBestAction {
+  if (isStalled) {
+    if (stage === "SENT") return "SEND_REMINDER";
+    if (stage === "VIEWED") return "FOLLOW_UP_VIEW";
+    if (stage === "ACCEPTED") return "CONVERT_TO_INVOICE";
+    if (["AWAITING_PAYMENT", "PARTIALLY_PAID", "CONVERTED"].includes(stage))
+      return "CHASE_PAYMENT";
+  }
+
+  if (stage === "PAID") return "RECONCILE_PAYMENT";
+  if (stage === "ACCEPTED") return "CONVERT_TO_INVOICE";
+
+  return "NONE";
+}
+
+export function deriveCommercialPipelineStage(
+  proposal: Proposal,
+  linkedArtifacts: ConversionWithArtifacts[],
+): PipelineStage {
+  const now = new Date();
+
+  if (proposal.validUntil < now && !proposal.acceptedAt && !proposal.firstConvertedAt) {
+    return "EXPIRED";
+  }
+
+  if (proposal.declinedAt || String(proposal.status) === "DECLINED") {
+    return "DECLINED";
+  }
+
+  if (proposal.firstConvertedAt && linkedArtifacts.length > 0) {
+    const paymentState = derivePaymentState(linkedArtifacts);
+
+    if (paymentState === "PAID") return "PAID";
+    if (paymentState === "PARTIAL") return "PARTIALLY_PAID";
+    if (paymentState === "UNPAID") return "AWAITING_PAYMENT";
+
+    return "CONVERTED";
+  }
+
+  if (proposal.acceptedAt) return "ACCEPTED";
+  if (proposal.firstViewedAt) return "VIEWED";
+  if (proposal.sentAt) return "SENT";
+
+  return "DRAFT";
 }
 
 export function getProposalPipelineRows(
-  proposals: (Proposal & { client: Client })[],
-  invoices: Invoice[]
+  proposals: (Proposal & {
+    client: { name: string };
+    conversions: ConversionWithArtifacts[];
+  })[],
 ): PipelineRow[] {
   const now = new Date().getTime();
-  const getAgeInDays = (date: Date) => Math.floor((now - date.getTime()) / (1000 * 60 * 60 * 24));
 
-  return proposals.map(p => {
-    const stage = derivePipelineStage(p, invoices);
-    const stalledReason = evaluateProposalStallStatus(p, invoices);
-    const nextBestAction = deriveNextBestAction(stage, stalledReason);
-    
-    // Determine age based on current stage
-    let age = 0;
-    if (stage === 'DRAFT') age = getAgeInDays(p.dateCreated);
-    else if (stage === 'SENT') age = p.sentAt ? getAgeInDays(p.sentAt) : 0;
-    else if (stage === 'VIEWED') age = p.lastViewedAt ? getAgeInDays(p.lastViewedAt) : 0;
-    else if (stage === 'ACCEPTED') age = p.acceptedAt ? getAgeInDays(p.acceptedAt) : 0;
-    else if (stage === 'CONVERTED') age = p.firstConvertedAt ? getAgeInDays(p.firstConvertedAt) : 0;
+  return proposals.map((proposal) => {
+    const stage = deriveCommercialPipelineStage(proposal, proposal.conversions);
+
+    let stageAnchor = proposal.dateCreated;
+    if (stage === "SENT") stageAnchor = proposal.sentAt || stageAnchor;
+    if (stage === "VIEWED") stageAnchor = proposal.lastViewedAt || stageAnchor;
+    if (stage === "ACCEPTED") stageAnchor = proposal.acceptedAt || stageAnchor;
+    if (
+      ["CONVERTED", "AWAITING_PAYMENT", "PARTIALLY_PAID", "PAID"].includes(stage)
+    ) {
+      stageAnchor = proposal.firstConvertedAt || stageAnchor;
+    }
+    const ageInStageDays = Math.max(
+      0,
+      Math.floor((now - stageAnchor.getTime()) / (1000 * 60 * 60 * 24)),
+    );
+
+    const stalledReason = evaluateProposalStallStatus(
+      stage,
+      proposal,
+      proposal.conversions,
+    );
+    const paymentState = derivePaymentState(proposal.conversions);
 
     return {
-      proposal: p,
-      client: p.client,
+      proposal,
       stage,
+      ageInStageDays,
       stalledReason,
       isStalled: stalledReason !== null,
-      nextBestAction,
-      ageInStageDays: age,
-      traceabilityId: p.proposalNo
+      paymentState,
+      nextBestAction: determineNextBestAction(stage, stalledReason !== null),
+      linkedArtifacts: proposal.conversions,
+      traceabilityId: proposal.proposalNo,
+      clientName: proposal.client?.name || "Unknown",
+      totalValue: Number(proposal.totalAmount || 0),
     };
   });
+}
+
+export interface PipelineSummary {
+  counts: Record<PipelineStage, number>;
+  values: Record<PipelineStage, number>;
+  totalPipelineValue: number;
+  acceptedNotConvertedValue: number;
+  convertedUnpaidValue: number;
+  paidThisMonthValue: number;
+  stalledCount: number;
+  stalledValue: number;
+  averageDaysToAccept: number | null;
+  winRatePct: number;
+}
+
+export function getProposalPipelineSummary(rows: PipelineRow[]): PipelineSummary {
+  const counts = {} as Record<PipelineStage, number>;
+  const values = {} as Record<PipelineStage, number>;
+
+  let stalledCount = 0;
+  let stalledValue = 0;
+  let acceptedNotConvertedValue = 0;
+  let convertedUnpaidValue = 0;
+  let paidThisMonthValue = 0;
+
+  let totalAcceptanceDays = 0;
+  let acceptancesCount = 0;
+  let wonCount = 0;
+  let totalClosedCount = 0;
+
+  const nowMs = new Date().getTime();
+  const thirtyDaysAgo = nowMs - 30 * 24 * 60 * 60 * 1000;
+
+  rows.forEach((row) => {
+    counts[row.stage] = (counts[row.stage] || 0) + 1;
+    values[row.stage] = (values[row.stage] || 0) + row.totalValue;
+
+    if (row.isStalled) {
+      stalledCount++;
+      stalledValue += row.totalValue;
+    }
+
+    if (row.stage === "ACCEPTED") {
+      acceptedNotConvertedValue += row.totalValue;
+    }
+
+    if (["AWAITING_PAYMENT", "PARTIALLY_PAID", "CONVERTED"].includes(row.stage)) {
+      convertedUnpaidValue += row.totalValue;
+    }
+
+    if (["PAID", "RECONCILED"].includes(row.stage)) {
+      if (
+        row.proposal.firstConvertedAt &&
+        row.proposal.firstConvertedAt.getTime() >= thirtyDaysAgo
+      ) {
+        paidThisMonthValue += row.totalValue;
+      }
+    }
+
+    if (row.proposal.acceptedAt && row.proposal.sentAt) {
+      const days =
+        (row.proposal.acceptedAt.getTime() - row.proposal.sentAt.getTime()) /
+        (1000 * 60 * 60 * 24);
+      totalAcceptanceDays += Math.max(0, days);
+      acceptancesCount++;
+    }
+
+    if (["DECLINED", "EXPIRED"].includes(row.stage)) {
+      totalClosedCount++;
+    } else if (
+      [
+        "ACCEPTED",
+        "CONVERTED",
+        "AWAITING_PAYMENT",
+        "PARTIALLY_PAID",
+        "PAID",
+        "RECONCILED",
+      ].includes(row.stage)
+    ) {
+      wonCount++;
+      totalClosedCount++;
+    }
+  });
+
+  const totalPipelineValue = rows.reduce((sum, row) => sum + row.totalValue, 0);
+
+  return {
+    counts,
+    values,
+    totalPipelineValue,
+    acceptedNotConvertedValue,
+    convertedUnpaidValue,
+    paidThisMonthValue,
+    stalledCount,
+    stalledValue,
+    averageDaysToAccept:
+      acceptancesCount > 0 ? totalAcceptanceDays / acceptancesCount : null,
+    winRatePct:
+      totalClosedCount > 0 ? Math.round((wonCount / totalClosedCount) * 100) : 0,
+  };
 }

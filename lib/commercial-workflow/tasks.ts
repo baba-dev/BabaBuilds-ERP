@@ -6,6 +6,7 @@ export async function createCommercialActionTask(
   proposalTitle: string,
   actionType: 'CHASE_PAYMENT' | 'CONVERT_TO_INVOICE' | 'SEND_REMINDER'
 ) {
+  // Defensive deduplication check to prevent noisy tasks
   const existingTask = await prisma.task.findFirst({
     where: {
       workspaceId,
@@ -18,7 +19,7 @@ export async function createCommercialActionTask(
   });
 
   if (existingTask) {
-    return existingTask; 
+    return existingTask; // Don't create duplicate operational tasks
   }
 
   let title = '';
