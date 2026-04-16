@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { requirePermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
+import { requirePermission, checkPermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
 import { requireModule, ModuleDisabledError } from '@/lib/modules';
 import { getEmployeeByUserId } from '@/lib/workforce/index';
 
@@ -36,7 +36,15 @@ export async function GET(req: NextRequest) {
     const employeeIdParam = searchParams.get('employeeId');
 
     let employeeId: string | null = employeeIdParam;
-    if (!employeeId) {
+    if (employeeId) {
+      // Only elevated roles can view arbitrary employees' balances
+      const canViewOthers = await checkPermission(session.user.id, wid, 'workforce.leave.manage')
+        || await checkPermission(session.user.id, wid, 'workforce.leave.approve');
+      if (!canViewOthers) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+      const ok = await prisma.employee.findFirst({ where: { id: employeeId, workspaceId: wid }, select: { id: true } });
+      if (!ok) return NextResponse.json({ error: 'Invalid employeeId' }, { status: 400 });
+    } else {
       const emp = await getEmployeeByUserId(wid, session.user.id);
       employeeId = emp?.id ?? null;
     }

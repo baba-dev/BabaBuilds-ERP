@@ -10,6 +10,11 @@ import { prisma } from '@/lib/prisma';
 import { requirePermission, checkPermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
 import { requireModule, ModuleDisabledError } from '@/lib/modules';
 import { getEmployeeByUserId } from '@/lib/workforce/index';
+import {
+  DEFAULT_ROLE_PERMISSIONS,
+  isValidBusinessRole,
+  legacyRoleToBusinessRole,
+} from '@/lib/permissions';
 
 async function getWid(userId: string) {
   const wu = await prisma.workspaceUser.findFirst({ where: { userId, isActive: true }, select: { workspaceId: true } });
@@ -94,6 +99,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'leaveTypeId, startDate, endDate are required' }, { status: 400 });
     }
 
+    const leaveType = await prisma.leaveType.findFirst({
+      where: { id: body.leaveTypeId, workspaceId: wid, isActive: true },
+      select: { id: true },
+    });
+    if (!leaveType) return NextResponse.json({ error: 'Invalid leaveTypeId' }, { status: 400 });
+
     const startDate = new Date(body.startDate);
     const endDate = new Date(body.endDate);
     const days = body.days ?? Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000) + 1;
@@ -115,13 +126,20 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Create in-app notification for managers/admins with leave.approve permission
+    // Create in-app notification for members with leave.approve permission
     // (best-effort, non-blocking)
-    const managersToNotify = await prisma.workspaceUser.findMany({
+    const members = await prisma.workspaceUser.findMany({
       where: { workspaceId: wid, isActive: true },
-      select: { userId: true },
+      select: { userId: true, role: true, businessRole: true },
     });
-    const notifyUserIds = managersToNotify.map((m) => m.userId).filter(Boolean);
+    const notifyUserIds = members
+      .filter((m) => {
+        const raw = m.businessRole ?? m.role;
+        const role = isValidBusinessRole(raw) ? raw : legacyRoleToBusinessRole(m.role);
+        return (DEFAULT_ROLE_PERMISSIONS[role] as readonly string[]).includes('workforce.leave.approve');
+      })
+      .map((m) => m.userId)
+      .filter(Boolean);
     if (notifyUserIds.length > 0) {
       await prisma.inAppNotification.createMany({
         data: notifyUserIds.map((uid) => ({

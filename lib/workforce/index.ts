@@ -169,6 +169,19 @@ export async function getEmployeeByUserId(
  * Generates the next employee code in sequence (EMP-001, EMP-002 ...).
  */
 export async function generateEmployeeCode(workspaceId: string): Promise<string> {
-  const count = await prisma.employee.count({ where: { workspaceId } });
-  return `EMP-${String(count + 1).padStart(3, '0')}`;
+  // Use a sortable, zero-padded numeric suffix so lexical ordering matches numeric ordering.
+  // (EMP-000001, EMP-000002, ...)
+  const last = await prisma.employee.findFirst({
+    where: {
+      workspaceId,
+      employeeCode: { startsWith: 'EMP-' },
+    },
+    select: { employeeCode: true },
+    orderBy: { employeeCode: 'desc' },
+  });
+
+  const suffix = last?.employeeCode?.slice(4) ?? '';
+  const n = Number.parseInt(suffix, 10);
+  const next = Number.isFinite(n) ? n + 1 : 1;
+  return `EMP-${String(next).padStart(6, '0')}`;
 }

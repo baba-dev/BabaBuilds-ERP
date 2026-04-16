@@ -43,10 +43,10 @@ export async function GET(req: NextRequest) {
       workspaceId: wid,
       ...(search ? {
         OR: [
-          { firstName: { contains: search } },
-          { lastName: { contains: search } },
-          { email: { contains: search } },
-          { employeeCode: { contains: search } },
+          { firstName: { contains: search, mode: 'insensitive' } },
+          { lastName: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+          { employeeCode: { contains: search, mode: 'insensitive' } },
         ],
       } : {}),
       ...(department ? { departmentId: department } : {}),
@@ -98,6 +98,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'firstName and lastName are required' }, { status: 400 });
     }
 
+    const deptId = departmentId ? String(departmentId) : null;
+    const desigId = designationId ? String(designationId) : null;
+    const mgrId = managerId ? String(managerId) : null;
+    const linkUid = linkedUserId ? String(linkedUserId) : null;
+
+    // Validate workspace-scoped foreign keys (prevent cross-workspace links)
+    if (deptId) {
+      const ok = await prisma.department.findFirst({ where: { id: deptId, workspaceId: wid }, select: { id: true } });
+      if (!ok) return NextResponse.json({ error: 'Invalid departmentId' }, { status: 400 });
+    }
+    if (desigId) {
+      const ok = await prisma.designation.findFirst({ where: { id: desigId, workspaceId: wid }, select: { id: true } });
+      if (!ok) return NextResponse.json({ error: 'Invalid designationId' }, { status: 400 });
+    }
+    if (mgrId) {
+      const ok = await prisma.employee.findFirst({ where: { id: mgrId, workspaceId: wid }, select: { id: true } });
+      if (!ok) return NextResponse.json({ error: 'Invalid managerId' }, { status: 400 });
+    }
+    if (linkUid) {
+      const ok = await prisma.workspaceUser.findFirst({ where: { userId: linkUid, workspaceId: wid, isActive: true }, select: { id: true } });
+      if (!ok) return NextResponse.json({ error: 'Invalid userId for this workspace' }, { status: 400 });
+    }
+
     const employeeCode = await generateEmployeeCode(wid);
     const employee = await prisma.employee.create({
       data: {
@@ -106,12 +129,12 @@ export async function POST(req: NextRequest) {
         lastName: String(lastName),
         email: email ? String(email) : undefined,
         phone: phone ? String(phone) : undefined,
-        departmentId: departmentId ? String(departmentId) : undefined,
-        designationId: designationId ? String(designationId) : undefined,
-        managerId: managerId ? String(managerId) : undefined,
+        departmentId: deptId ?? undefined,
+        designationId: desigId ?? undefined,
+        managerId: mgrId ?? undefined,
         joinDate: joinDate ? new Date(String(joinDate)) : undefined,
         location: location ? String(location) : undefined,
-        userId: linkedUserId ? String(linkedUserId) : undefined,
+        userId: linkUid ?? undefined,
         notes: notes ? String(notes) : undefined,
         employeeCode,
       },
