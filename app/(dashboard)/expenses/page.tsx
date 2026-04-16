@@ -20,6 +20,7 @@ import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { ColumnVisibilityToggle, DataTable, DataTablePagination, DataTableToolbar, RowActionsMenu, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
 import type { ApiEnvelope, ExpenseDto, InvoiceDto } from "@/lib/types/business";
 import { getConflictPolicy, queueOfflineMutation } from "@/lib/offline-sync";
+import { RecordDocumentsDialog } from "@/components/documents/RecordDocumentsDialog";
 
 const isLikelyOfflineError = (error: unknown) => {
   if (typeof navigator !== 'undefined' && !navigator.onLine) return true;
@@ -197,6 +198,7 @@ export default function ExpenseTracker() {
               </a>
             </Button>
           )}
+          <RecordDocumentsDialog targetType="EXPENSE" targetId={row.id} />
           <RowActionsMenu
             row={row}
             actions={[
