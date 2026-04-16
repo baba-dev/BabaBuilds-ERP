@@ -13,6 +13,24 @@ enum InvoiceStatus {
   PAID
 }
 
+/**
+ * BusinessRoleEnum — authoritative ERP role type at the schema level.
+ * Validated by Prisma ORM; stored as TEXT in SQLite.
+ * The old `role` String field is kept for JWT/session compatibility.
+ * Server-side enforcement uses `businessRole` via a fresh DB lookup.
+ */
+enum BusinessRoleEnum {
+  OWNER
+  ADMIN
+  FINANCE_MANAGER
+  ACCOUNTANT
+  SALES_MANAGER
+  OPERATIONS_MANAGER
+  INVENTORY_MANAGER
+  STAFF
+  VIEWER
+}
+
 enum CashForecastHorizonType {
   DAILY_30
   WEEKLY_13
@@ -213,8 +231,9 @@ model Workspace {
   // --- EXISTING BILLING ---
   subscriptionStatus   String    @default("FREE") // "TRIALING", "PRO", "FREE", "SUSPENDED"
   subscriptionEndsAt   DateTime?
-  planTier             String    @default("FREE") // "FREE", "PRO"
+  planTier             String    @default("FREE") // "FREE", "PRO", "TEAM", "ENTERPRISE"
   currentMonthInvoices Int       @default(0)
+  seatAddonCount       Int       @default(0)      // future: purchased additional seats
 
   planInterval      String? // "MONTHLY", "QUARTERLY", "YEARLY"
   paymentMethodMask String? // e.g., "•••• 4242" or "user@upi"
@@ -257,6 +276,7 @@ model Workspace {
   cashForecastLineItemPlans  CashForecastLineItemPlan[]
   cashForecastAlertPreferences CashForecastAlertPreference[]
   clientPaymentBehaviors     ClientPaymentBehavior[]
+  rbacAuditLogs              RbacAuditLog[]
 
   // IMS Relations
 
@@ -427,19 +447,43 @@ model WorkspaceUser {
   id          String @id @default(cuid())
   userId      String
   workspaceId String
+
+  /// Legacy role field — kept for JWT/session compatibility.
+  /// Server-side enforcement uses `businessRole` via fresh DB lookup in lib/rbac.ts.
   role        String @default("OWNER") // "OWNER", "MEMBER"
+
+  /// ERP business role — Prisma-enum-validated, authoritative for permissions.
+  /// Null means the role has not been migrated yet; lib/rbac.ts falls back to `role`.
+  businessRole BusinessRoleEnum? @default(OWNER)
+
+  /// Whether this member currently has active workspace access.
+  /// Deactivated members retain their record for audit trail but cannot access the workspace.
+  /// Deactivated members do NOT count toward the seat limit.
+  isActive    Boolean  @default(true)
+
+  /// When this member joined (accepted invite or was auto-provisioned).
+  joinedAt    DateTime @default(now())
+
+  /// Last time this member was seen active (updated by auth callbacks).
+  lastActiveAt DateTime?
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([userId, workspaceId])
+  @@index([workspaceId, isActive])
+  @@index([workspaceId, businessRole])
 }
 
 model WorkspaceInvite {
   id          String   @id @default(cuid())
   workspaceId String
   email       String
-  role        String   @default("MEMBER") // "OWNER", "ADMIN", "MEMBER", "VIEWER"
+
+  /// The ERP business role this invite will grant upon acceptance.
+  role        String   @default("STAFF") // legacy — kept for email template compatibility
+  businessRole BusinessRoleEnum @default(STAFF)
+
   token       String   @unique
   expiresAt   DateTime
   createdAt   DateTime @default(now())
@@ -447,6 +491,7 @@ model WorkspaceInvite {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, email])
+  @@index([workspaceId, expiresAt])
 }
 
 // ==========================================
@@ -1471,4 +1516,53 @@ model HelpFeedback {
   @@index([docSlug, createdAt(sort: Desc)])
   @@index([workspaceId, createdAt(sort: Desc)])
   @@index([userId, createdAt(sort: Desc)])
+}
+
+// ==========================================
+// RBAC AUDIT LOG
+// ==========================================
+
+/**
+ * RbacAuditLog — structured RBAC-specific event table.
+ *
+ * Dual-write strategy: every RBAC event writes to BOTH this table AND AppActivityLog.
+ * - RbacAuditLog → powers the "Access Activity" UI tab with structured, filterable data
+ * - AppActivityLog → unified compliance/audit trail for all app events
+ *
+ * Both writes happen through logRbacEvent() in lib/rbac.ts (single write path).
+ * This table is NEVER written to directly — always via logRbacEvent().
+ *
+ * Event types:
+ *   invite_sent, invite_accepted, invite_cancelled,
+ *   role_changed, member_removed, member_deactivated, member_reactivated,
+ *   seat_limit_hit, rbac_access_denied, owner_safeguard_blocked
+ */
+model RbacAuditLog {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  /// The type of RBAC event. Stored as String for forward compatibility.
+  eventType   String
+
+  actorUserId  String?
+  actorEmail   String?
+  targetUserId String?
+  targetEmail  String?
+
+  /// For role_changed events: the role before the change.
+  previousRole String?
+
+  /// For role_changed / invite_sent events: the new or invited role.
+  newRole      String?
+
+  /// Additional structured metadata (e.g., denial reason, seat count at time of event).
+  metadata     Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([workspaceId, eventType, createdAt(sort: Desc)])
+  @@index([workspaceId, actorUserId])
+  @@index([workspaceId, targetUserId])
 }

@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { INVOICE_STATUS } from '@/lib/invoice-status';
 import { serializeMoney, toDecimal } from '@/lib/money';
+import { withPermission } from '@/lib/rbac';
 
 const isPaidStatus = (status: unknown) => String(status).toUpperCase() === "PAID";
 
@@ -15,6 +16,13 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' }, { status: 401 });
     }
     const workspaceId = (session as any).workspaceId;
+    const userId = (session as any).user?.id as string | undefined;
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    // RBAC: viewing invoices requires invoices.view permission
+    const perm = await withPermission(userId, workspaceId, 'invoices.view');
+    if (!perm.granted) return perm.response;
+
     const whereClause = { workspaceId };
 
     const { searchParams } = new URL(request.url);

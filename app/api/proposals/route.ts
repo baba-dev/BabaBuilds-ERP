@@ -7,6 +7,7 @@ import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
 import { calculateInvoiceTotals } from '@/lib/invoice/totals';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
 import { logActivity } from '@/lib/security/activity-log';
+import { withPermission } from '@/lib/rbac';
 
 type ProposalItemInput = {
   serviceTemplateId?: string;
@@ -45,6 +46,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const workspaceId = session.workspaceId;
+    const userId = (session as any).user?.id as string | undefined;
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    // RBAC: creating a proposal requires proposals.create permission
+    const perm = await withPermission(userId, workspaceId, 'proposals.create');
+    if (!perm.granted) return perm.response;
 
     const body = await request.json();
     const { clientId, title, validUntil, items, taxRateOverride } = body as {
