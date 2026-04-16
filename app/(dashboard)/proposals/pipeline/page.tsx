@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import {
   getProposalPipelineRows,
   getProposalPipelineSummary,
@@ -11,12 +12,13 @@ import { DollarSign, Clock, AlertTriangle, TrendingUp, CheckCircle2, ChevronRigh
 import Link from "next/link";
 import { createCommercialActionTask } from "@/lib/commercial-workflow/tasks";
 import { revalidatePath } from "next/cache";
+import type { ComponentType } from "react";
 
 type InsightCardProps = {
   title: string;
   value: string;
   subtitle?: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: ComponentType<{ className?: string }>;
   colorClass: string;
   highlight?: boolean;
   href: string;
@@ -25,6 +27,7 @@ type InsightCardProps = {
 export default async function PipelineDashboardPage({ searchParams }: { searchParams: { filter?: string } }) {
   const session = await getServerSession(authOptions);
   if (!session?.workspaceId) redirect("/login");
+  const t = await getTranslations("Pipeline");
 
   async function generateStalledTasks(formData: FormData) {
     "use server";
@@ -143,8 +146,8 @@ export default async function PipelineDashboardPage({ searchParams }: { searchPa
         
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight">Revenue Pipeline</h1>
-            <p className="text-sm text-zinc-500 font-medium">Track operational commercial workflow and unblock stalled revenue.</p>
+            <h1 className="text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight">{t("title")}</h1>
+            <p className="text-sm text-zinc-500 font-medium">{t("subtitle")}</p>
           </div>
           <div className="flex items-center gap-2">
             <form action={generateStalledTasks}>
@@ -153,11 +156,11 @@ export default async function PipelineDashboardPage({ searchParams }: { searchPa
                 type="submit"
                 className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-2 text-zinc-900 dark:text-zinc-50 font-bold text-xs uppercase tracking-widest rounded-lg shadow-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
               >
-                Create Tasks (Deduped)
+                {t("actions.createTasks")}
               </button>
             </form>
             <Link href="/proposals" className="bg-indigo-600 px-4 py-2 text-white font-bold text-xs uppercase tracking-widest rounded-lg shadow-sm hover:bg-indigo-700 transition-colors">
-              Proposal Builder
+              {t("proposalBuilderCta")}
             </Link>
           </div>
         </div>
@@ -165,35 +168,35 @@ export default async function PipelineDashboardPage({ searchParams }: { searchPa
         {/* Executive Summary */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <InsightCard 
-            title="Total Pipeline" 
+            title={t("cards.totalPipeline")}
             value={formatMoney(summary.totalPipelineValue)}
-            subtitle={`${pipelineRows.length} active documents`}
+            subtitle={t("cards.activeDocuments", { count: pipelineRows.length })}
             icon={DollarSign}
             colorClass="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400"
             href="?filter=all"
           />
           <InsightCard 
-            title="Accepted & Awaiting Invoice" 
+            title={t("cards.acceptedAwaitingInvoice")}
             value={formatMoney(summary.acceptedNotConvertedValue)}
-            subtitle={`${summary.counts['ACCEPTED'] || 0} proposals`}
+            subtitle={t("cards.proposalsCount", { count: summary.counts["ACCEPTED"] || 0 })}
             icon={TrendingUp}
             colorClass="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400"
             highlight={summary.acceptedNotConvertedValue > 0}
             href="?filter=accepted-not-converted"
           />
           <InsightCard 
-            title="Converted, Unpaid" 
+            title={t("cards.convertedUnpaid")}
             value={formatMoney(summary.convertedUnpaidValue)}
-            subtitle="Missing cash flow"
+            subtitle={t("cards.missingCashFlow")}
             icon={Clock}
             colorClass="bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400"
             highlight={summary.convertedUnpaidValue > 0}
             href="?filter=converted-unpaid"
           />
           <InsightCard 
-            title="Stalled Pipeline" 
+            title={t("cards.stalledPipeline")}
             value={formatMoney(summary.stalledValue)}
-            subtitle={`${summary.stalledCount} items requiring attention`}
+            subtitle={t("cards.itemsRequiringAttention", { count: summary.stalledCount })}
             icon={AlertTriangle}
             colorClass="bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-400"
             highlight={summary.stalledCount > 0}
@@ -204,11 +207,11 @@ export default async function PipelineDashboardPage({ searchParams }: { searchPa
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm overflow-hidden">
           <div className="border-b border-zinc-200 dark:border-zinc-800 p-4 bg-zinc-50 dark:bg-zinc-950 flex flex-wrap gap-2">
             {[
-              { id: 'all', label: 'All' },
-              { id: 'stalled', label: '🚨 Stalled Action Required' },
-              { id: 'accepted-not-converted', label: 'Accepted Not Converted' },
-              { id: 'converted-unpaid', label: 'Converted Unpaid' },
-              { id: 'viewed-not-accepted', label: 'Viewed Not Accepted' },
+              { id: 'all', label: t("filters.all") },
+              { id: 'stalled', label: t("filters.stalled") },
+              { id: 'accepted-not-converted', label: t("filters.acceptedNotConverted") },
+              { id: 'converted-unpaid', label: t("filters.convertedUnpaid") },
+              { id: 'viewed-not-accepted', label: t("filters.viewedNotAccepted") },
             ].map(f => (
               <Link 
                 key={f.id} 
@@ -226,12 +229,12 @@ export default async function PipelineDashboardPage({ searchParams }: { searchPa
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead className="bg-zinc-50 dark:bg-zinc-950/50 text-zinc-500 text-xs font-bold uppercase tracking-widest border-b border-zinc-200 dark:border-zinc-800">
                 <tr>
-                  <th className="p-4">Proposal</th>
-                  <th className="p-4">Client</th>
-                  <th className="p-4">Stage</th>
-                  <th className="p-4">Payment</th>
-                  <th className="p-4 text-right">Value</th>
-                  <th className="p-4">Next Action</th>
+                  <th className="p-4">{t("table.proposal")}</th>
+                  <th className="p-4">{t("table.client")}</th>
+                  <th className="p-4">{t("table.stage")}</th>
+                  <th className="p-4">{t("table.payment")}</th>
+                  <th className="p-4 text-right">{t("table.value")}</th>
+                  <th className="p-4">{t("table.nextAction")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">

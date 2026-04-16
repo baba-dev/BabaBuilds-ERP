@@ -274,3 +274,171 @@ export async function convertProposalToInvoiceFormAction(formData: FormData) {
   return convertAcceptedProposalToInvoiceAction(formData);
 }
 
+export async function convertProposalToRetainerAction(formData: FormData) {
+  const session = await getServerSession(authOptions);
+  if (!session?.workspaceId) redirect("/login");
+
+  const workspaceId = session.workspaceId;
+  const actorUserId = session.user?.id ?? null;
+
+  const proposalId = String(formData.get("proposalId") || "");
+  const frequency = String(formData.get("frequency") || "MONTHLY").toUpperCase();
+  const amountRaw = String(formData.get("amount") || "");
+  const amount = Number(amountRaw);
+  const serviceName = String(formData.get("serviceName") || "").trim();
+
+  if (!proposalId) redirect("/proposals");
+
+  const proposal = await prisma.proposal.findFirst({
+    where: { id: proposalId, workspaceId },
+    include: { client: true },
+  });
+  if (!proposal) redirect("/proposals");
+
+  // Basic guards
+  if (!Number.isFinite(amount) || amount <= 0) redirect(`/proposals/${proposal.id}`);
+  const freq = ["MONTHLY", "QUARTERLY", "ANNUALLY"].includes(frequency)
+    ? frequency
+    : "MONTHLY";
+
+  // Idempotency: only one retainer conversion per proposal (for now).
+  const existing = await prisma.retainer.findFirst({
+    where: { workspaceId, sourceProposalId: proposal.id },
+    orderBy: { createdAt: "desc" },
+  });
+  if (existing) {
+    revalidatePath(`/proposals/${proposal.id}`);
+    redirect(`/retainers`);
+  }
+
+  const nextBillingDate = new Date();
+  if (freq === "MONTHLY") nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+  if (freq === "QUARTERLY") nextBillingDate.setMonth(nextBillingDate.getMonth() + 3);
+  if (freq === "ANNUALLY") nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1);
+
+  const retainer = await prisma.$transaction(async (tx) => {
+    const created = await tx.retainer.create({
+      data: {
+        workspaceId,
+        clientId: proposal.clientId,
+        amount: toDecimal(amount).toDecimalPlaces(2),
+        frequency: freq,
+        status: "ACTIVE",
+        nextBillingDate,
+        autoAppendMonth: true,
+        serviceName: serviceName || proposal.title,
+        sacCode: null,
+        taxRate: null,
+        sourceProposalId: proposal.id,
+      } as any,
+    });
+
+    await tx.proposal.update({
+      where: { id: proposal.id },
+      data: {
+        firstConvertedAt: proposal.firstConvertedAt || new Date(),
+        status: "INVOICED",
+      },
+    });
+
+    return created;
+  });
+
+  await createProposalConversion({
+    workspaceId,
+    proposalId: proposal.id,
+    conversionType: "RETAINER",
+    actorUserId,
+    retainerId: retainer.id,
+  });
+
+  revalidatePath(`/proposals/${proposal.id}`);
+  redirect(`/retainers`);
+}
+
+export async function convertProposalToRetainerFormAction(formData: FormData) {
+  return convertProposalToRetainerAction(formData);
+}
+
+export async function convertProposalToServiceOrderAction(formData: FormData) {
+  const session = await getServerSession(authOptions);
+  if (!session?.workspaceId) redirect("/login");
+
+  const workspaceId = session.workspaceId;
+  const actorUserId = session.user?.id ?? null;
+
+  const proposalId = String(formData.get("proposalId") || "");
+  const serviceTemplateId = String(formData.get("serviceTemplateId") || "");
+  const buyerNote = String(formData.get("buyerNote") || "").trim();
+  const buyerEmailOverride = String(formData.get("buyerEmail") || "").trim();
+
+  if (!proposalId) redirect("/proposals");
+
+  const proposal = await prisma.proposal.findFirst({
+    where: { id: proposalId, workspaceId },
+    include: { client: true, items: true },
+  });
+  if (!proposal) redirect("/proposals");
+
+  // Idempotency: only one service order per proposal (for now).
+  const existing = await prisma.serviceOrder.findFirst({
+    where: { workspaceId, sourceProposalId: proposal.id },
+    orderBy: { createdAt: "desc" },
+  });
+  if (existing) {
+    revalidatePath(`/proposals/${proposal.id}`);
+    redirect(`/shop`); // best-effort; there is no service-order dashboard page yet
+  }
+
+  if (!serviceTemplateId) redirect(`/proposals/${proposal.id}`);
+
+  const buyerName = proposal.client.name;
+  const buyerEmail = buyerEmailOverride || proposal.client.email || "";
+  if (!buyerEmail) redirect(`/proposals/${proposal.id}`);
+
+  const amount = Number(proposal.totalAmount || 0);
+  if (!Number.isFinite(amount) || amount <= 0) redirect(`/proposals/${proposal.id}`);
+
+  const order = await prisma.$transaction(async (tx) => {
+    const created = await tx.serviceOrder.create({
+      data: {
+        workspaceId,
+        serviceTemplateId,
+        buyerName,
+        buyerEmail,
+        buyerPhone: null,
+        buyerNote: buyerNote || null,
+        amount: toDecimal(amount).toDecimalPlaces(2),
+        currency: "INR",
+        status: "PENDING",
+        sourceProposalId: proposal.id,
+      } as any,
+    });
+
+    await tx.proposal.update({
+      where: { id: proposal.id },
+      data: {
+        firstConvertedAt: proposal.firstConvertedAt || new Date(),
+        status: "INVOICED",
+      },
+    });
+
+    return created;
+  });
+
+  await createProposalConversion({
+    workspaceId,
+    proposalId: proposal.id,
+    conversionType: "SERVICE_ORDER",
+    actorUserId,
+    serviceOrderId: order.id,
+  });
+
+  revalidatePath(`/proposals/${proposal.id}`);
+  redirect(`/shop`);
+}
+
+export async function convertProposalToServiceOrderFormAction(formData: FormData) {
+  return convertProposalToServiceOrderAction(formData);
+}
+

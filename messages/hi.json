@@ -1,4 +1,81 @@
 {
+  "Pipeline": {
+    "title": "Revenue Pipeline",
+    "subtitle": "Track operational commercial workflow and unblock stalled revenue.",
+    "proposalBuilderCta": "Proposal Builder",
+    "cards": {
+      "totalPipeline": "Total Pipeline",
+      "acceptedAwaitingInvoice": "Accepted & Awaiting Invoice",
+      "convertedUnpaid": "Converted, Unpaid",
+      "stalledPipeline": "Stalled Pipeline",
+      "activeDocuments": "{count} active documents",
+      "proposalsCount": "{count} proposals",
+      "missingCashFlow": "Missing cash flow",
+      "itemsRequiringAttention": "{count} items requiring attention"
+    },
+    "filters": {
+      "all": "All",
+      "stalled": "Stalled Action Required",
+      "acceptedNotConverted": "Accepted Not Converted",
+      "convertedUnpaid": "Converted Unpaid",
+      "viewedNotAccepted": "Viewed Not Accepted"
+    },
+    "table": {
+      "proposal": "Proposal",
+      "client": "Client",
+      "stage": "Stage",
+      "payment": "Payment",
+      "value": "Value",
+      "nextAction": "Next Action",
+      "daysInStage": "{days}d in stage",
+      "empty": "No proposals match this operational filter."
+    },
+    "actions": {
+      "createTasks": "Create tasks for stalled",
+      "creating": "Creating…"
+    }
+  },
+  "ProposalDetail": {
+    "back": "Back",
+    "preparedFor": "Prepared for {clientName}",
+    "valueLabel": "Value",
+    "lifecycleTimeline": "Lifecycle Timeline",
+    "downstreamArtifacts": "Downstream Conversion Artifacts",
+    "noDownstreamArtifacts": "No downstream artifacts yet.",
+    "convertedViaNonInvoice": "Converted via Retainer/Order only.",
+    "readyForConversion": "Ready for Conversion",
+    "readyForConversionDesc": "This proposal was accepted. Convert it into a live revenue artifact.",
+    "convertToInvoice": "Convert to Invoice",
+    "convertToRetainer": "Convert to Retainer",
+    "convertToServiceOrder": "Convert to Service Order",
+    "serviceOrderRequiresEmail": "Client email is required to create a Service Order.",
+    "clientDetails": "Client Details",
+    "publicUrl": "Public URL",
+    "timeline": {
+      "drafted": "Drafted",
+      "sent": "Sent",
+      "viewed": "Viewed",
+      "requestedChanges": "Requested Changes",
+      "accepted": "Accepted",
+      "converted": "Converted",
+      "reconciled": "Reconciled",
+      "revenueSecured": "Revenue secured",
+      "views": "{count} views"
+    },
+    "artifact": {
+      "invoice": "Invoice {invoiceNumber}",
+      "retainer": "Retainer",
+      "serviceOrder": "Service Order",
+      "conversion": "Conversion"
+    },
+    "retainerForm": {
+      "frequency": "Frequency",
+      "amount": "Amount"
+    },
+    "serviceOrderForm": {
+      "serviceTemplate": "Service Template"
+    }
+  },
   "Settings": {
     "title": "मास्टर सेटिंग्स",
     "description": "अपनी व्यावसायिक प्रोफ़ाइल, वैश्विक अनुपालन पहचानकर्ताओं और ईआरपी कॉन्फ़िगरेशन का प्रबंधन करें।",
