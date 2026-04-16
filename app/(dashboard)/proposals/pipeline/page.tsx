@@ -24,10 +24,15 @@ type InsightCardProps = {
   href: string;
 };
 
-export default async function PipelineDashboardPage({ searchParams }: { searchParams: { filter?: string } }) {
+export default async function PipelineDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
   const session = await getServerSession(authOptions);
   if (!session?.workspaceId) redirect("/login");
   const t = await getTranslations("Pipeline");
+  const { filter = "all" } = await searchParams;
 
   async function generateStalledTasks(formData: FormData) {
     "use server";
@@ -103,7 +108,6 @@ export default async function PipelineDashboardPage({ searchParams }: { searchPa
 
   const pipelineRows = getProposalPipelineRows(proposals as any);
   const summary = getProposalPipelineSummary(pipelineRows);
-  const { filter = 'all' } = searchParams;
 
   const filteredRows = pipelineRows.filter((row) => {
     if (filter === 'stalled') return row.isStalled;
