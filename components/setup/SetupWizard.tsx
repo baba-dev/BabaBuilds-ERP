@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { 
   Globe, ShieldCheck, Building2, 
   ArrowRight, ArrowLeft, CheckCircle2, Sparkles,
-  Zap, Wallet
+  Zap, Wallet, Users2, Calendar, ClipboardList
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,7 +54,8 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
     shopEnabled: false,
     shopSlug: "",
     shopTagline: "",
-    shopAccentColor: "#6366f1"
+    shopAccentColor: "#6366f1",
+    enableWorkforce: false,
   });
 
   // Smart Suggestion Logic
@@ -127,14 +128,14 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
       {/* PROGRESS TRACKER */}
       <div className="max-w-md w-full mb-8 space-y-4">
         <div className="flex justify-between items-center px-2">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
+          {[1, 2, 3, 4, 5, 6, 7].map((i) => (
             <div key={i} className={`h-1.5 flex-1 mx-1 rounded-full transition-all duration-500 ${step >= i ? "bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.4)]" : "bg-zinc-200 dark:bg-zinc-800"}`} />
           ))}
         </div>
         <p className="text-center text-xs uppercase font-black tracking-widest text-zinc-400 dark:text-zinc-600">
           {t('step_indicator', { 
             current: step, 
-            name: step === 1 ? t('step_geo') : step === 2 ? t('step_finance') : step === 3 ? t('step_compliance') : step === 4 ? t('step_identity') : step === 5 ? t('step_integrations') : t('step_shop')
+            name: step === 1 ? t('step_geo') : step === 2 ? t('step_finance') : step === 3 ? t('step_compliance') : step === 4 ? t('step_identity') : step === 5 ? t('step_integrations') : step === 6 ? t('step_shop') : 'Modules'
           })}
         </p>
       </div>
@@ -424,6 +425,77 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
             </div>
           )}
 
+          {/* STEP 7: MODULE SELECTION */}
+          {step === 7 && (
+            <div className="animate-in fade-in slide-in-from-right-4 duration-500">
+              <CardHeader className="text-center pb-8 border-b dark:border-zinc-800">
+                <div className="mx-auto w-12 h-12 bg-teal-100 dark:bg-teal-900/30 rounded-xl flex items-center justify-center mb-4">
+                  <Users2 className="w-6 h-6 text-teal-600 dark:text-teal-400" />
+                </div>
+                <CardTitle className="text-2xl font-black dark:text-zinc-50">Optional Modules</CardTitle>
+                <CardDescription className="dark:text-zinc-400">
+                  Enable powerful subsystems for your workspace. You can change these anytime from Settings.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-8 space-y-4">
+                <div
+                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
+                    form.enableWorkforce
+                      ? 'border-teal-500 bg-teal-50/50 dark:bg-teal-950/20'
+                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
+                  }`}
+                  onClick={() => setForm({ ...form, enableWorkforce: !form.enableWorkforce })}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
+                        form.enableWorkforce ? 'bg-teal-500 shadow-lg shadow-teal-500/20' : 'bg-zinc-100 dark:bg-zinc-800'
+                      }`}>
+                        <Users2 className={`h-5 w-5 ${form.enableWorkforce ? 'text-white' : 'text-zinc-500 dark:text-zinc-400'}`} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Workforce</p>
+                          {form.enableWorkforce && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-teal-100 dark:bg-teal-900/40 px-2 py-0.5 text-[10px] font-bold text-teal-700 dark:text-teal-300 uppercase tracking-wider">
+                              <CheckCircle2 className="h-2.5 w-2.5" /> Enabled
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                          HR, attendance, leave management &amp; approvals — integrated with your ERP.
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                          {[
+                            { icon: Users2, text: 'Employee directory & profiles' },
+                            { icon: Calendar, text: 'Leave requests & approvals' },
+                            { icon: ClipboardList, text: 'Daily attendance tracking' },
+                            { icon: Sparkles, text: 'Role-aware HR dashboards' },
+                          ].map(({ icon: Icon, text }) => (
+                            <div key={text} className="flex items-center gap-1.5">
+                              <Icon className={`h-3 w-3 shrink-0 ${form.enableWorkforce ? 'text-teal-500' : 'text-zinc-400'}`} />
+                              <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{text}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                      form.enableWorkforce ? 'bg-teal-500' : 'bg-zinc-300 dark:bg-zinc-700'
+                    }`}>
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        form.enableWorkforce ? 'translate-x-5' : 'translate-x-0'
+                      }`} />
+                    </div>
+                  </div>
+                </div>
+                <p className="text-center text-xs text-zinc-400 dark:text-zinc-600 pt-2">
+                  More modules (Payroll, Time Tracking) coming soon.
+                </p>
+              </CardContent>
+            </div>
+          )}
+
           <CardFooter className="bg-zinc-50 dark:bg-zinc-950/50 p-6 border-t dark:border-zinc-800 flex justify-between gap-4">
             <Button 
               variant="ghost" 
@@ -434,7 +506,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
               <ArrowLeft className="w-4 h-4 mr-2" /> {t('back')}
             </Button>
             
-            {step < 6 ? (
+            {step < 7 ? (
               <Button onClick={nextStep} className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[120px]">
                 {t('continue')} <ArrowRight className="w-4 h-4 ml-2" />
               </Button>

@@ -279,12 +279,23 @@ model Workspace {
   rbacAuditLogs              RbacAuditLog[]
 
   // IMS Relations
-
   products           Product[]
   inventoryMovements InventoryMovement[]
   purchaseOrders     PurchaseOrder[]
   accountingEntries  AccountingEntry[]
   serviceOrders      ServiceOrder[]
+
+  // Workforce Module
+  workspaceModules   WorkspaceModule[]
+  employees          Employee[]
+  departments        Department[]
+  designations       Designation[]
+  attendanceRecords  AttendanceRecord[]
+  leaveTypes         LeaveType[]
+  leaveRequests      LeaveRequest[]
+  leaveBalances      LeaveBalance[]
+  workforceHolidays  WorkforceHoliday[]
+  workSchedules      WorkSchedule[]
 }
 
 model AppActivityLog {
@@ -1565,4 +1576,308 @@ model RbacAuditLog {
   @@index([workspaceId, eventType, createdAt(sort: Desc)])
   @@index([workspaceId, actorUserId])
   @@index([workspaceId, targetUserId])
+}
+
+// ==========================================
+// 10. OPTIONAL WORKSPACE MODULES
+// ==========================================
+
+/**
+ * WorkspaceModule — Registry for optional ERP modules.
+ *
+ * Each workspace can independently enable/disable optional modules.
+ * Disabling a module hides it from navigation, dashboard, and routes
+ * but preserves all underlying data (non-destructive).
+ *
+ * Current modules: WORKFORCE
+ * Future modules: PAYROLL, TIME_TRACKING, ASSETS
+ */
+model WorkspaceModule {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  /// Module identifier: "WORKFORCE" | "PAYROLL" | etc.
+  moduleKey   String
+
+  isEnabled   Boolean  @default(true)
+
+  /// Module-specific configuration (JSON)
+  configJson  Json?
+
+  enabledAt         DateTime  @default(now())
+  disabledAt        DateTime?
+  enabledByUserId   String?
+  disabledByUserId  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, moduleKey])
+  @@index([workspaceId, isEnabled])
+  @@index([workspaceId, moduleKey])
+}
+
+// ==========================================
+// 11. WORKFORCE MODULE
+// ==========================================
+
+enum EmploymentStatus {
+  ACTIVE
+  ON_LEAVE
+  INACTIVE
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  HALF_DAY
+  HOLIDAY
+  REMOTE
+}
+
+enum LeaveRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model Department {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  headId      String?  // Optional: Employee ID of department head
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employees Employee[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+}
+
+model Designation {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  title       String
+  level       Int?      // Seniority level for hierarchy (1 = entry, 5 = senior)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employees Employee[]
+
+  @@unique([workspaceId, title])
+  @@index([workspaceId])
+}
+
+/**
+ * Employee — Core workforce entity.
+ *
+ * userId is optional: if set, this employee has a workspace user account
+ * and can self-service their own attendance/leave.
+ * If null, the employee is HR-managed only (contractors, external staff).
+ */
+model Employee {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  /// Optional link to workspace user for self-service
+  userId      String?   // links to User.id
+
+  // Core identity
+  firstName   String
+  lastName    String
+  email       String?
+  phone       String?
+  avatarUrl   String?
+
+  // Employment details
+  employeeCode  String?  // e.g., "EMP-001"
+  status        EmploymentStatus @default(ACTIVE)
+  joinDate      DateTime?
+  exitDate      DateTime?
+  location      String?
+
+  // Organizational structure
+  departmentId  String?
+  department    Department?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  designationId String?
+  designation   Designation? @relation(fields: [designationId], references: [id], onDelete: SetNull)
+
+  managerId     String?      // Self-referential: another Employee.id
+  manager       Employee?    @relation("EmployeeReports", fields: [managerId], references: [id], onDelete: SetNull)
+  directReports Employee[]   @relation("EmployeeReports")
+
+  // Emergency contact
+  emergencyName     String?
+  emergencyPhone    String?
+  emergencyRelation String?
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attendanceRecords AttendanceRecord[]
+  leaveRequests     LeaveRequest[]
+  leaveBalances     LeaveBalance[]
+
+  @@unique([workspaceId, employeeCode])
+  @@index([workspaceId, status])
+  @@index([workspaceId, departmentId])
+  @@index([workspaceId, managerId])
+  @@index([userId])
+}
+
+model AttendanceRecord {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  date        DateTime  // Date of attendance (day-level)
+  status      AttendanceStatus @default(PRESENT)
+
+  checkInAt   DateTime?
+  checkOutAt  DateTime?
+  notes       String?
+
+  /// Whether this record was entered by the employee (self) or by HR/manager
+  isManagerEntered Boolean @default(false)
+  managedByUserId  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([employeeId, date])
+  @@index([workspaceId, date])
+  @@index([workspaceId, employeeId, date])
+  @@index([workspaceId, status])
+}
+
+model LeaveType {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name        String    // "Annual Leave", "Sick Leave", "Casual Leave"
+  code        String    // "AL", "SL", "CL"
+  description String?
+  color       String    @default("indigo") // Tailwind color name for calendar dots
+  defaultDays Int       @default(0)       // Default annual entitlement
+  isActive    Boolean   @default(true)
+  isPaid      Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leaveRequests LeaveRequest[]
+  leaveBalances LeaveBalance[]
+
+  @@unique([workspaceId, code])
+  @@index([workspaceId, isActive])
+}
+
+model LeaveRequest {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  leaveTypeId String
+  leaveType   LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Restrict)
+
+  startDate   DateTime
+  endDate     DateTime
+  days        Float     @default(1)  // Supports 0.5 for half-day
+  reason      String?
+
+  status      LeaveRequestStatus @default(PENDING)
+
+  approvedByUserId  String?
+  approvedAt        DateTime?
+  rejectionReason   String?
+
+  /// Task record ID for approval queue integration
+  taskId      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, employeeId, status])
+  @@index([workspaceId, startDate, endDate])
+  @@index([workspaceId, status])
+  @@index([workspaceId, leaveTypeId])
+}
+
+model LeaveBalance {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  leaveTypeId String
+  leaveType   LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+
+  year        Int       // e.g., 2026
+  entitled    Float     @default(0)
+  used        Float     @default(0)
+  pending     Float     @default(0)  // Submitted but not yet approved
+  remaining   Float     @default(0)  // Computed: entitled - used - pending
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([employeeId, leaveTypeId, year])
+  @@index([workspaceId, year])
+  @@index([workspaceId, employeeId])
+}
+
+model WorkforceHoliday {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name        String
+  date        DateTime
+  isRecurring Boolean   @default(true)   // true = repeats every year on same date
+  year        Int?      // null if isRecurring, else specific year
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, date])
+  @@index([workspaceId, year])
+}
+
+model WorkSchedule {
+  id          String    @id @default(cuid())
+  workspaceId String    @unique
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  /// JSON array of working days: ["MON","TUE","WED","THU","FRI"]
+  workingDays   String    @default("[\"MON\",\"TUE\",\"WED\",\"THU\",\"FRI\"]")
+  workStartTime String    @default("09:00")
+  workEndTime   String    @default("18:00")
+  timeZone      String    @default("Asia/Kolkata")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

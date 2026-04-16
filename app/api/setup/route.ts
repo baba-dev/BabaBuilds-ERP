@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { enableModule } from "@/lib/modules";
 
 type SetupPayload = {
   countryCode?: string;
@@ -33,6 +34,7 @@ type SetupPayload = {
   shopSlug?: string;
   shopTagline?: string;
   shopAccentColor?: string;
+  enableWorkforce?: boolean;
 };
 
 function isValidEmail(email: string) {
@@ -157,7 +159,14 @@ export async function POST(req: Request) {
       });
     });
 
-    return NextResponse.json({ success: true });
+    // Post-transaction: enable optional modules (non-blocking)
+    if (body.enableWorkforce === true) {
+      await enableModule(workspaceId, 'WORKFORCE', userId).catch((e) =>
+        console.error('[setup] Workforce module init failed (non-blocking):', e)
+      );
+    }
+
+    return NextResponse.json({ success: true, workspaceId });
   } catch (err) {
     console.error("Setup Error:", err);
     return NextResponse.json({ error: "Could not finalize setup" }, { status: 500 });
