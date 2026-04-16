@@ -25,8 +25,6 @@ export async function GET(req: NextRequest) {
       // This is a bootstrap problem: we need the secret key to fetch the session, 
       // but we need the session to know the paymentLinkId to find the workspace!
       
-      // FIX: Append `?session_id={CHECKOUT_SESSION_ID}&gateway=stripe&link_id=plink_xxx` in `lib/stripe-links.ts`!
-      
       const linkId = url.searchParams.get("link_id");
       if (!linkId) {
         return NextResponse.redirect(new URL("/payments/failure?reason=missing_link_id", req.url));

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/currency";
+import { convertProposalToInvoiceFormAction } from "./actions";
 
 export default async function ProposalDetailPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -106,19 +107,39 @@ export default async function ProposalDetailPage({ params }: { params: { id: str
               <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-4 border-b pb-2">Downstream Conversion Artifacts</h2>
               {proposal.firstConvertedAt ? (
                  <div className="space-y-4">
-                   {proposal.generatedInvoices.map((inv: any) => (
-                      <div key={inv.id} className="p-4 border rounded-lg flex justify-between items-center bg-zinc-50 dark:bg-zinc-950">
-                        <div className="flex items-center gap-3">
-                          <Receipt className="text-indigo-500 w-5 h-5"/>
-                          <div>
-                            <p className="font-bold text-sm">Invoice {inv.invoiceNumber}</p>
-                            <p className="text-xs text-zinc-500">{formatMoney(inv.totalAmount)}</p>
+                   {proposal.conversions.map((conv: any) => (
+                      <div key={conv.id} className="p-4 border rounded-lg bg-zinc-50 dark:bg-zinc-950 space-y-2">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <Receipt className="text-indigo-500 w-5 h-5"/>
+                            <div>
+                              <p className="font-bold text-sm">
+                                {conv.invoice ? `Invoice ${conv.invoice.invoiceNumber}` : conv.retainer ? `Retainer` : conv.serviceOrder ? `Service Order` : `Conversion`}
+                              </p>
+                              <p className="text-xs text-zinc-500">
+                                {conv.invoice ? formatMoney(conv.invoice.totalAmount) : conv.retainer ? formatMoney(conv.retainer.amount) : conv.serviceOrder ? formatMoney(conv.serviceOrder.totalAmount ?? 0) : ""}
+                              </p>
+                            </div>
                           </div>
+                          <span className="px-2 py-1 bg-zinc-200 text-xs font-bold rounded">
+                            {conv.invoice?.status || conv.retainer?.status || conv.serviceOrder?.status || conv.conversionType}
+                          </span>
                         </div>
-                        <span className="px-2 py-1 bg-zinc-200 text-xs font-bold rounded">{inv.status}</span>
+                        <div className="flex flex-wrap gap-2 text-xs">
+                          {conv.invoice && (
+                            <Link href={`/income?search=${encodeURIComponent(conv.invoice.invoiceNumber)}`} className="text-indigo-600 font-bold hover:underline">
+                              Open invoice
+                            </Link>
+                          )}
+                          {conv.retainer && (
+                            <Link href={`/retainers`} className="text-indigo-600 font-bold hover:underline">
+                              Open retainers
+                            </Link>
+                          )}
+                        </div>
                       </div>
                    ))}
-                   {proposal.generatedInvoices.length === 0 && <p className="text-sm text-zinc-500">Converted via Retainer/Order only.</p>}
+                   {proposal.conversions.length === 0 && <p className="text-sm text-zinc-500">No conversion records found yet.</p>}
                  </div>
               ) : (
                 <div className="flex flex-col items-center justify-center p-8 text-zinc-400">
@@ -134,11 +155,16 @@ export default async function ProposalDetailPage({ params }: { params: { id: str
                 <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
                 <h3 className="font-bold text-emerald-900 dark:text-emerald-400 mb-1">Ready for Conversion</h3>
                 <p className="text-xs text-emerald-700/80 mb-4 tracking-wide leading-relaxed">This proposal was accepted. Convert it into a live revenue artifact.</p>
-                
-                {/* Note: In a complete implementation, this button would trigger ConversionWizard.tsx */}
-                <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold tracking-widest uppercase text-xs h-10 rounded shadow-md transition-all">
-                  Convert Workspace
-                </button>
+
+                <form action={convertProposalToInvoiceFormAction}>
+                  <input type="hidden" name="proposalId" value={proposal.id} />
+                  <button
+                    type="submit"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold tracking-widest uppercase text-xs h-10 rounded shadow-md transition-all"
+                  >
+                    Convert to Invoice
+                  </button>
+                </form>
               </div>
             )}
             

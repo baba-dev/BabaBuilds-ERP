@@ -129,10 +129,30 @@ async function _createStripeLink(params: StripePaymentLinkParams): Promise<{ url
     after_completion: {
       type: 'redirect',
       redirect: {
+        // NOTE: We must include `link_id` to let verify-redirect bootstrap the workspace secret.
+        // PaymentLink ID isn't available until after creation, so we patch the URL in a follow-up update.
         url: 'https://erp.bababuilds.com/api/payments/verify-redirect?session_id={CHECKOUT_SESSION_ID}&gateway=stripe',
       },
     },
   });
+
+  // Patch the redirect URL with link_id so verification can find the invoice/workspace.
+  try {
+    await stripe.paymentLinks.update(paymentLink.id, {
+      after_completion: {
+        type: 'redirect',
+        redirect: {
+          url: `https://erp.bababuilds.com/api/payments/verify-redirect?session_id={CHECKOUT_SESSION_ID}&gateway=stripe&link_id=${paymentLink.id}`,
+        },
+      },
+    });
+  } catch (err) {
+    // Non-fatal: cron sync can still mark invoice paid later.
+    console.error(
+      '[stripe-links] Failed to patch redirect URL with link_id (non-fatal):',
+      err instanceof Error ? err.message : String(err)
+    );
+  }
 
   const url = paymentLink.url ?? null;
 
