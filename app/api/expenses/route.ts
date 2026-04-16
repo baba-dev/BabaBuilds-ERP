@@ -14,6 +14,7 @@ import {
   uniqueStoredName,
   buildPrivatePath,
 } from '@/lib/uploads/private-storage';
+import { withPermission } from '@/lib/rbac';
 
 // Fetch all expenses for the ledger (NOW PAGINATED)
 export async function GET(request: Request) {
@@ -68,6 +69,12 @@ export async function POST(request: Request) {
       return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
     }
     const workspaceId = session.workspaceId;
+    const userId = (session as any).user?.id as string | undefined;
+    if (!userId) return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
+
+    // RBAC: creating an expense requires expenses.create permission
+    const perm = await withPermission(userId, workspaceId, 'expenses.create');
+    if (!perm.granted) return perm.response as any;
 
     const formData = await request.formData();
     

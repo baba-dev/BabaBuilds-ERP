@@ -19,6 +19,7 @@ import { isSupportedLocale } from '@/i18n/locales';
 import { getTaxFeatureFlags } from '@/lib/tax/feature-flags';
 import { logActivity } from '@/lib/security/activity-log';
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
+import { withPermission } from '@/lib/rbac';
 
 export async function GET() {
   try {
@@ -86,6 +87,13 @@ export async function POST(request: Request) {
     workspaceId = session.workspaceId;
     actorId = session.user?.id ?? null;
     actorEmail = session.user?.email ?? null;
+
+    // RBAC: changing workspace settings requires workspace.manage_settings permission
+    if (actorId) {
+      const perm = await withPermission(actorId, workspaceId, 'workspace.manage_settings');
+      if (!perm.granted) return perm.response;
+    }
+
     const formData = await request.formData();
 
     const hasField = (field: string) => formData.has(field);

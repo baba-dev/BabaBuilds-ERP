@@ -36,6 +36,13 @@ declare module "next-auth" {
     countryCode: string;
     locale: string;
     role: string;
+    /**
+     * ERP business role for the active workspace.
+     * Populated from WorkspaceUser.businessRole (fresh DB lookup on each JWT refresh).
+     * NOTE: This is for UI hints only. Server-side enforcement always uses
+     * requirePermission() from lib/rbac.ts which does its own fresh DB lookup.
+     */
+    businessRole: string;
   }
 }
 
@@ -356,11 +363,28 @@ export const authOptions: NextAuthOptions = {
 
       await prisma.$transaction(async (tx) => {
         for (const invite of pendingInvites) {
-          await tx.workspaceUser.createMany({
-            data: {
+          const fullInvite = await tx.workspaceInvite.findUnique({
+            where: { id: invite.id },
+            select: { businessRole: true, role: true },
+          });
+          await tx.workspaceUser.upsert({
+            where: {
+              userId_workspaceId: {
+                userId: user.id,
+                workspaceId: invite.workspaceId,
+              },
+            },
+            create: {
               userId: user.id,
               workspaceId: invite.workspaceId,
               role: invite.role,
+              businessRole: fullInvite?.businessRole ?? undefined,
+              joinedAt: new Date(),
+            },
+            update: {
+              role: invite.role,
+              businessRole: fullInvite?.businessRole ?? undefined,
+              isActive: true,
             },
           });
         }
@@ -436,6 +460,7 @@ export const authOptions: NextAuthOptions = {
             take: 1,
             select: {
               role: true,
+              businessRole: true,
               workspace: {
                 select: {
                   id: true,
@@ -465,6 +490,7 @@ export const authOptions: NextAuthOptions = {
             where: { userId, workspaceId },
             select: {
               role: true,
+              businessRole: true,
               workspace: {
                 select: {
                   id: true,
@@ -482,6 +508,7 @@ export const authOptions: NextAuthOptions = {
             token.isSetupComplete = membership.workspace.isSetupComplete;
             token.countryCode = membership.workspace.countryCode;
             token.role = membership.role;
+            token.businessRole = membership.businessRole ?? "OWNER";
           }
         } catch (error: any) {
           logActivity({
@@ -505,6 +532,8 @@ export const authOptions: NextAuthOptions = {
         token.isSetupComplete = ws.isSetupComplete;
         token.countryCode = ws.countryCode;
         token.role = workspaceMembership.role;
+        // businessRole is for UI hints only — enforcement uses fresh DB lookup in lib/rbac.ts
+        token.businessRole = workspaceMembership.businessRole ?? workspaceMembership.role;
       }
 
       token.locale = dbUser.locale;
@@ -549,6 +578,8 @@ export const authOptions: NextAuthOptions = {
         session.locale = token.locale as string;
         session.user.currencyFormat = token.currencyFormat as string;
         session.user.role = token.role as string;
+        // UI hint only — server enforcement in lib/rbac.ts always does a fresh DB lookup
+        session.businessRole = (token.businessRole ?? token.role) as string;
       }
       return session;
     },

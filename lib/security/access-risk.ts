@@ -1,13 +1,21 @@
 import type { Account } from "next-auth";
 import { sendActivityAlert } from "@/lib/security/alert-hooks";
+import { HIGH_RISK_BUSINESS_ROLES } from "@/lib/permissions";
 
 const DEFAULT_PHISHING_RESISTANT_PROVIDERS = ["google", "azure-ad", "okta"];
 const DEFAULT_MAGIC_LINK_EXCEPTION_EMAILS = ["admin@bababuilds.com"];
 
-export const HIGH_RISK_ROLES = new Set(["OWNER", "ADMIN"]);
+// HIGH_RISK_ROLES now references the authoritative set from lib/permissions.
+// OWNER, ADMIN, and FINANCE_MANAGER require phishing-resistant authentication.
+export const HIGH_RISK_ROLES = new Set([
+  ...HIGH_RISK_BUSINESS_ROLES,
+  // Also include legacy role strings for backward compatibility with session tokens
+  "OWNER",
+  "ADMIN",
+]);
 export const HIGH_RISK_MAGIC_LINK_ERROR_CODE = "HIGH_RISK_MAGIC_LINK_BLOCKED";
 export const HIGH_RISK_MAGIC_LINK_REASON =
-  "Email magic links are disabled for OWNER/ADMIN accounts. Use Google or your configured enterprise SSO provider.";
+  "Email magic links are disabled for high-privilege accounts (Owner, Admin, Finance Manager). Use Google or your configured enterprise SSO provider.";
 
 export function getPhishingResistantProviders(): Set<string> {
   const configured = process.env.PHISHING_RESISTANT_PROVIDERS
@@ -60,7 +68,7 @@ export async function alertElevatedPrivilegeGrant(input: {
     type: "ELEVATED_PRIVILEGE_GRANTED",
     severity: "critical",
     dedupeKey: `priv-grant:${input.workspaceId}:${input.targetEmail}:${input.targetRole}`,
-    message: `High-privilege role ${input.targetRole} granted to ${input.targetEmail}.`,
+    message: `High-privilege ERP role '${input.targetRole}' granted to ${input.targetEmail} in workspace ${input.workspaceId}.`,
     details: input,
   });
 }

@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { parseExpenseUpdatePayload } from '@/lib/types/business';
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
+import { withPermission } from '@/lib/rbac';
 
 const getWorkspaceId = (session: unknown) => {
   if (!session || typeof session !== "object") return null;
@@ -24,9 +25,13 @@ export async function PATCH(
   try {
     const session = await getServerSession(authOptions);
     const workspaceId = getWorkspaceId(session);
-    if (!workspaceId) {
+    const userId = (session as any)?.user?.id as string | undefined;
+    if (!workspaceId || !userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    // RBAC: editing an expense requires expenses.create permission
+    const perm = await withPermission(userId, workspaceId, 'expenses.create');
+    if (!perm.granted) return perm.response;
     const resolvedParams = await params;
     const expenseId = resolvedParams.id;
 
@@ -85,9 +90,13 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions);
     const workspaceId = getWorkspaceId(session);
-    if (!workspaceId) {
+    const userId = (session as any)?.user?.id as string | undefined;
+    if (!workspaceId || !userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    // RBAC: deleting an expense requires expenses.delete permission
+    const perm = await withPermission(userId, workspaceId, 'expenses.delete');
+    if (!perm.granted) return perm.response;
     const resolvedParams = await params;
     const expenseId = resolvedParams.id;
 

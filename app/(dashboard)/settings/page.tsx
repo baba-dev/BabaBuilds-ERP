@@ -82,46 +82,6 @@ export default function SettingsWizard() {
   const isIndian = countryCode === "IN";
   const isTeamPlan = planTier === "TEAM" || planTier === "ENTERPRISE";
 
-  type TeamMemberRow = {
-    id: string;
-    role: string;
-    userId: string;
-    user: { name: string | null; email: string | null; image: string | null };
-  };
-  type TeamInviteRow = { id: string; email: string; role: string; createdAt: string; expiresAt: string };
-  const [teamLoading, setTeamLoading] = useState(false);
-  const [teamError, setTeamError] = useState<string | null>(null);
-  const [teamMembers, setTeamMembers] = useState<TeamMemberRow[]>([]);
-  const [teamInvites, setTeamInvites] = useState<TeamInviteRow[]>([]);
-
-  const fetchTeam = useCallback(async () => {
-    setTeamLoading(true);
-    setTeamError(null);
-    try {
-      const res = await fetch("/api/team/members", { cache: "no-store" });
-      const payload = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(payload?.error || "Failed to load team");
-      }
-      const data = payload?.data ?? {};
-      setTeamMembers(Array.isArray(data.members) ? data.members : []);
-      setTeamInvites(Array.isArray(data.invites) ? data.invites : []);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to load team";
-      setTeamError(message);
-    } finally {
-      setTeamLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    // Always attempt to load team data so we can show accurate placeholder states,
-    // even if the user is not on a Team plan (invites will still be 403 from server).
-    void fetchTeam();
-  }, [fetchTeam]);
-
-  const owner = useMemo(() => teamMembers.find((m) => m.role === "OWNER") ?? null, [teamMembers]);
-
   useEffect(() => {
     fetch('/api/settings')
       .then(res => res.json())
@@ -217,46 +177,6 @@ export default function SettingsWizard() {
     setFormData(prev => ({ ...prev, defaultGateway: tab }));
   };
 
-  const handleInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isTeamPlan) return;
-    setInviteLoading(true);
-    const toastId = toast.loading("Sending secure invite...");
-    try {
-      const res = await fetch("/api/team/invite", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: inviteEmail, role: inviteRole })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to dispatch invite");
-      toast.success("Team member successfully invited", { id: toastId });
-      setInviteEmail("");
-      setIsInviteOpen(false);
-      void fetchTeam();
-    } catch (err: any) {
-      toast.error(err.message, { id: toastId });
-    } finally {
-      setInviteLoading(false);
-    }
-  };
-
-  const cancelInvite = async (inviteId: string) => {
-    const toastId = toast.loading("Cancelling invite...");
-    try {
-      const res = await fetch("/api/team/remove", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ inviteId }),
-      });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(data?.error || "Failed to cancel invite");
-      toast.success("Invite cancelled", { id: toastId });
-      void fetchTeam();
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to cancel invite", { id: toastId });
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1099,230 +1019,33 @@ export default function SettingsWizard() {
             </CardContent>
           </Card>
 
-          {/* TEAM COLLABORATION */}
-          <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
-            <CardHeader className="bg-zinc-50/50 dark:bg-zinc-950/50 border-b dark:border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <CardTitle className={cn(typography.sectionHeader, "text-lg flex items-center gap-2")}>
-                  <Users className="w-5 h-5 text-indigo-600" /> Team Collaboration
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="w-4 h-4 text-zinc-400 cursor-help hover:text-indigo-500 transition-colors" />
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-[220px] text-xs">
-                        <p className="font-bold text-indigo-200 mb-1">Team Plan Required</p>
-                        <p>Upgrade to the Team plan to invite collaborators, assign roles, and manage workspace members. Free and Pro users can view this section but cannot use team features.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </CardTitle>
-                <CardDescription className={typography.bodyCopy}>Invite partners and accountants to collaborate on your workspace.</CardDescription>
-              </div>
-              {isTeamPlan ? (
-                <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/20 font-bold gap-2 rounded-xl">
-                      <UserPlus className="w-4 h-4" /> Invite Member
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-2xl">
-                    <div className="bg-gradient-to-br from-indigo-50 dark:from-indigo-950/40 to-white dark:to-zinc-950 p-6 px-8 border-b border-zinc-100 dark:border-zinc-800/60">
-                      <DialogHeader>
-                        <DialogTitle className="text-xl font-extrabold flex items-center gap-2 text-zinc-900 dark:text-zinc-50">
-                          <UserPlus className="w-5 h-5 text-indigo-500" /> Add to Workspace
-                        </DialogTitle>
-                        <DialogDescription className="font-medium">
-                          Send a secure, tokenized email link to a new participant.
-                        </DialogDescription>
-                      </DialogHeader>
-                    </div>
-                    <form onSubmit={handleInvite} className="p-8 space-y-6">
-                      <div className="space-y-3">
-                        <Label className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Team Member Email</Label>
-                        <Input
-                          type="email"
-                          required
-                          placeholder="colleague@example.com"
-                          value={inviteEmail}
-                          onChange={(e) => setInviteEmail(e.target.value)}
-                          className="h-11 bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 transition-all focus:bg-white dark:focus:bg-zinc-950 px-4 focus-visible:ring-indigo-500"
-                        />
-                      </div>
-                      <div className="space-y-3">
-                        <Label className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Assign Role Focus</Label>
-                        <Select value={inviteRole} onValueChange={setInviteRole}>
-                          <SelectTrigger className="h-11 bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
-                            <SelectValue placeholder="Select a role" />
-                          </SelectTrigger>
-                          <SelectContent className="border-zinc-200 dark:border-zinc-800">
-                            <SelectItem value="MEMBER">
-                              <div className="flex flex-col">
-                                <span className="font-bold text-zinc-900 dark:text-zinc-100">Member</span>
-                                <span className="text-xs text-zinc-500 dark:text-zinc-400">Can view and create invoices natively</span>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="VIEWER">
-                              <div className="flex flex-col">
-                                <span className="font-bold text-indigo-600 dark:text-indigo-400">Accountant / Viewer</span>
-                                <span className="text-xs text-zinc-500 dark:text-zinc-400">Strictly read-only access for auditing</span>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="ADMIN">
-                              <div className="flex flex-col">
-                                <span className="font-bold text-rose-600 dark:text-rose-400">Admin</span>
-                                <span className="text-xs text-zinc-500 dark:text-zinc-400">Full control over settings and data</span>
-                              </div>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <Button
-                        disabled={inviteLoading}
-                        type="submit"
-                        className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl mt-4 relative overflow-hidden group"
-                      >
-                        <span className="relative z-10 flex items-center justify-center gap-2">
-                          {inviteLoading ? "Dispatching..." : "Send Invitation"} <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                        </span>
-                      </Button>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              ) : (
-                <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 px-4 py-2 rounded-xl text-sm font-semibold">
-                  <Lock className="w-4 h-4 shrink-0" />
-                  Team tools require Team Plan
+          {/* TEAM COLLABORATION → link to dedicated Team & Access page */}
+          <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+            <CardContent className="pt-6 pb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl flex items-center justify-center flex-shrink-0 border border-indigo-200 dark:border-indigo-900/40">
+                  <Users className="w-6 h-6 text-indigo-600" />
                 </div>
-              )}
-            </CardHeader>
-
-            <CardContent className="pt-6">
-              <div className={`grid grid-cols-1 md:grid-cols-2 gap-8 ${!isTeamPlan ? "opacity-50 pointer-events-none select-none" : ""}`}>
-                {/* ACTIVE MEMBERS */}
-                <div className="space-y-4">
-                  <h3 className="font-black text-sm tracking-[0.2em] text-zinc-400 dark:text-zinc-500 uppercase flex items-center gap-2">
-                    <Users className="w-4 h-4" /> Active Seats
+                <div className="flex-1 min-w-0">
+                  <h3 className={cn(typography.sectionHeader, "text-base flex items-center gap-2")}>
+                    Team &amp; Access Management
                   </h3>
-                  <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden relative">
-                    {!isTeamPlan && (
-                      <div className="absolute inset-0 z-10 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-[2px] flex items-center justify-center">
-                        <Button variant="outline" className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 font-bold shadow-lg">
-                          <Sparkles className="w-4 h-4 text-amber-500 mr-2" /> Upgrade to Team
-                        </Button>
-                      </div>
-                    )}
-                    {teamLoading ? (
-                      <div className="p-5 text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 bg-zinc-50/30 dark:bg-zinc-900/30 min-h-[140px]">
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">Loading team</p>
-                      </div>
-                    ) : teamError ? (
-                      <div className="p-5 text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 bg-zinc-50/30 dark:bg-zinc-900/30 min-h-[140px]">
-                        <p className="font-bold text-zinc-900 dark:text-zinc-100">Unable to load members</p>
-                        <p className="text-xs text-zinc-500 mt-1 max-w-[260px]">{teamError}</p>
-                        <Button type="button" size="sm" variant="outline" onClick={() => void fetchTeam()}>
-                          Retry
-                        </Button>
-                      </div>
-                    ) : teamMembers.length === 0 ? (
-                      <div className="p-5 text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 bg-zinc-50/30 dark:bg-zinc-900/30 min-h-[140px]">
-                        <p className="font-bold text-zinc-900 dark:text-zinc-100">No members found</p>
-                        <p className="text-xs text-zinc-500 mt-1 max-w-[200px]">This workspace currently has no active seats.</p>
-                      </div>
-                    ) : (
-                      <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                        {teamMembers.map((m) => (
-                          <div key={m.id} className="p-4 flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                                {m.user?.name || m.user?.email || "Member"}
-                              </p>
-                              {m.user?.email && <p className="text-xs text-zinc-500 truncate">{m.user.email}</p>}
-                            </div>
-                            <Badge variant="secondary" className="uppercase tracking-widest text-[10px] font-bold">
-                              {m.role}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <p className={cn(typography.bodyCopy, "mt-0.5")}>
+                    Invite members, assign business roles, manage seats, view access activity, and review governance readiness.
+                  </p>
                 </div>
-
-                {/* PENDING INVITES */}
-                <div className="space-y-4">
-                  <h3 className="font-black text-sm tracking-[0.2em] text-zinc-400 dark:text-zinc-500 uppercase flex items-center gap-2">
-                    <Mail className="w-4 h-4" /> Transit Tokens
-                  </h3>
-                  <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden relative">
-                    {!isTeamPlan && (
-                      <div className="absolute inset-0 z-10 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-[2px]" />
-                    )}
-                    {teamLoading ? (
-                      <div className="p-5 text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 bg-zinc-50/30 dark:bg-zinc-900/30 min-h-[140px]">
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        <p className="text-xs font-bold uppercase tracking-widest text-zinc-400">Loading invites</p>
-                      </div>
-                    ) : teamError ? (
-                      <div className="p-5 text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 bg-zinc-50/30 dark:bg-zinc-900/30 min-h-[140px]">
-                        <p className="font-bold text-zinc-900 dark:text-zinc-100">Unable to load invites</p>
-                        <p className="text-xs text-zinc-500 mt-1 max-w-[260px]">{teamError}</p>
-                        <Button type="button" size="sm" variant="outline" onClick={() => void fetchTeam()}>
-                          Retry
-                        </Button>
-                      </div>
-                    ) : teamInvites.length === 0 ? (
-                      <div className="p-5 text-sm text-zinc-500 flex flex-col items-center justify-center text-center gap-3 bg-zinc-50/30 dark:bg-zinc-900/30 min-h-[140px]">
-                        <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-                          <Clock className="w-5 h-5 text-zinc-400" />
-                        </div>
-                        <div>
-                          <p className="font-bold text-zinc-900 dark:text-zinc-100">No Pending Invites</p>
-                          <p className="text-xs text-zinc-500 mt-1 max-w-[200px]">Invited users who haven&apos;t accepted will appear here.</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                        {teamInvites.map((inv) => (
-                          <div key={inv.id} className="p-4 flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">{inv.email}</p>
-                              <p className="text-xs text-zinc-500">
-                                Role: <span className="font-semibold">{inv.role}</span> · Expires{" "}
-                                {new Date(inv.expiresAt).toLocaleDateString()}
-                              </p>
-                            </div>
-                            {isTeamPlan && owner?.userId ? (
-                              <Button type="button" size="sm" variant="outline" onClick={() => void cancelInvite(inv.id)}>
-                                Cancel
-                              </Button>
-                            ) : (
-                              <Badge variant="secondary" className="uppercase tracking-widest text-[10px] font-bold">
-                                Pending
-                              </Badge>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <a
+                  href="/settings/team"
+                  className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors shadow-sm shadow-indigo-600/20"
+                >
+                  <Users className="w-4 h-4" />
+                  Manage Team
+                  <ArrowRight className="w-4 h-4" />
+                </a>
               </div>
-
-              {!isTeamPlan && (
-                <div className="mt-6 flex items-start gap-3 p-4 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/50">
-                  <Sparkles className="w-5 h-5 text-indigo-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm font-semibold text-indigo-800 dark:text-indigo-300">Unlock Team Collaboration</p>
-                    <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5">
-                      Upgrade to the <strong>Team Plan</strong> to invite accountants, assign roles (Member, Viewer, Admin), and collaborate in real-time on your workspace.
-                    </p>
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
+
 
           <PWASettings />
 

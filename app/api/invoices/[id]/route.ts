@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { logActivity } from '@/lib/security/activity-log';
 import { buildPrivatePath } from '@/lib/uploads/private-storage';
+import { withPermission } from '@/lib/rbac';
 
 export async function GET(
   request: Request,
@@ -18,6 +19,11 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const workspaceId = session.workspaceId;
+    const userId = (session as any).user?.id as string | undefined;
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // RBAC: viewing an invoice requires invoices.view
+    const perm = await withPermission(userId, workspaceId, 'invoices.view');
+    if (!perm.granted) return perm.response;
     const resolvedParams = await params;
     const invoiceId = resolvedParams.id;
 
@@ -46,6 +52,11 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const workspaceId = session.workspaceId;
+    const userId = (session as any).user?.id as string | undefined;
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // RBAC: deleting an invoice requires invoices.delete
+    const perm = await withPermission(userId, workspaceId, 'invoices.delete');
+    if (!perm.granted) return perm.response;
     const resolvedParams = await params;
     const invoiceId = resolvedParams.id;
 
