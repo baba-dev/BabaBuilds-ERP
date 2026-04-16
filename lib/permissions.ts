@@ -173,6 +173,21 @@ export const PERMISSION_KEYS = [
   'workforce.leave.approve',         // Approve or reject leave requests
   'workforce.reports.view',          // View workforce analytics & reports
   'workforce.settings.manage',       // Manage departments, designations, holidays
+
+  // Documents (only surfaced when Documents module is enabled)
+  'documents.view',
+  'documents.upload',
+  'documents.manage',
+  'documents.archive',
+  'documents.restore',
+  'documents.delete',
+  'documents.link',
+  'documents.ocr.review',
+  'documents.compliance.view',
+  'documents.compliance.manage',
+  'documents.personal.view',
+  'documents.personal.manage',
+  'documents.settings.manage',
 ] as const;
 
 export type Permission = (typeof PERMISSION_KEYS)[number];
@@ -214,6 +229,25 @@ export const PERMISSION_MODULE_GROUPS: { module: string; label: string; keys: Pe
       'workforce.settings.manage',
     ],
   },
+  {
+    module: 'documents',
+    label: 'Documents',
+    keys: [
+      'documents.view',
+      'documents.upload',
+      'documents.manage',
+      'documents.link',
+      'documents.ocr.review',
+      'documents.archive',
+      'documents.restore',
+      'documents.delete',
+      'documents.compliance.view',
+      'documents.compliance.manage',
+      'documents.personal.view',
+      'documents.personal.manage',
+      'documents.settings.manage',
+    ],
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -253,6 +287,21 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'workforce.attendance.view', 'workforce.attendance.manage',
     'workforce.leave.view', 'workforce.leave.manage', 'workforce.leave.approve',
     'workforce.reports.view', 'workforce.settings.manage',
+
+    // Documents — full access
+    'documents.view',
+    'documents.upload',
+    'documents.manage',
+    'documents.link',
+    'documents.ocr.review',
+    'documents.archive',
+    'documents.restore',
+    'documents.delete',
+    'documents.compliance.view',
+    'documents.compliance.manage',
+    'documents.personal.view',
+    'documents.personal.manage',
+    'documents.settings.manage',
   ],
 
   ADMIN: [
@@ -277,6 +326,21 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'workforce.attendance.view', 'workforce.attendance.manage',
     'workforce.leave.view', 'workforce.leave.manage', 'workforce.leave.approve',
     'workforce.reports.view', 'workforce.settings.manage',
+
+    // Documents — admin operations
+    'documents.view',
+    'documents.upload',
+    'documents.manage',
+    'documents.link',
+    'documents.ocr.review',
+    'documents.archive',
+    'documents.restore',
+    'documents.delete',
+    'documents.compliance.view',
+    'documents.compliance.manage',
+    'documents.personal.view',
+    'documents.personal.manage',
+    'documents.settings.manage',
   ],
 
   FINANCE_MANAGER: [
@@ -296,6 +360,16 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     // Workforce — view-only (payroll cost oversight)
     'workforce.view', 'workforce.people.view',
     'workforce.attendance.view', 'workforce.leave.view', 'workforce.reports.view',
+
+    // Documents — finance intake + review + linking
+    'documents.view',
+    'documents.upload',
+    'documents.manage',
+    'documents.link',
+    'documents.ocr.review',
+    'documents.archive',
+    'documents.restore',
+    'documents.compliance.view',
   ],
 
   ACCOUNTANT: [
@@ -315,6 +389,10 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     // Workforce — view-only
     'workforce.view', 'workforce.people.view', 'workforce.attendance.view',
     'workforce.leave.view', 'workforce.reports.view',
+
+    // Documents — view (audit evidence)
+    'documents.view',
+    'documents.compliance.view',
   ],
 
   SALES_MANAGER: [
@@ -342,6 +420,14 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'workforce.attendance.view', 'workforce.attendance.manage',
     'workforce.leave.view', 'workforce.leave.approve',
     'workforce.reports.view',
+
+    // Documents — operational intake + linking
+    'documents.view',
+    'documents.upload',
+    'documents.manage',
+    'documents.link',
+    'documents.archive',
+    'documents.restore',
   ],
 
   INVENTORY_MANAGER: [
@@ -364,6 +450,11 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'workforce.view', 'workforce.people.view',
     'workforce.attendance.view',
     'workforce.leave.view',
+
+    // Documents — upload + view + link (no delete/settings)
+    'documents.view',
+    'documents.upload',
+    'documents.link',
   ],
 
   VIEWER: [
@@ -374,6 +465,10 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'expenses.view',
     'clients.view',
     // NOT: any write, any export, any admin
+
+    // Documents — view-only for audits (no personal docs)
+    'documents.view',
+    'documents.compliance.view',
   ],
 };
 

@@ -15,6 +15,7 @@ import {
   Users,
   Users2,
   Target,
+  FileText,
   type LucideIcon,
 } from "lucide-react";
 
@@ -41,6 +42,7 @@ export const appNavItems: AppNavItem[] = [
   { key: "ai_reconciliation", path: "/reconciliation", icon: Sparkles, badge: "AI" },
   { key: "invoices_and_earnings", path: "/income", icon: ReceiptText },
   { key: "ca_compliance", path: "/ca-portal", icon: Landmark },
+  { key: "documents", path: "/documents", icon: FileText, requiresModule: "DOCUMENTS" },
   { key: "workforce", path: "/workforce", icon: Users2, requiresModule: "WORKFORCE" },
   { key: "help_center", path: "/dashboard/help", icon: CircleHelp },
 ];

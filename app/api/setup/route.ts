@@ -35,6 +35,7 @@ type SetupPayload = {
   shopTagline?: string;
   shopAccentColor?: string;
   enableWorkforce?: boolean;
+  enableDocuments?: boolean;
 };
 
 function isValidEmail(email: string) {
@@ -163,6 +164,12 @@ export async function POST(req: Request) {
     if (body.enableWorkforce === true) {
       await enableModule(workspaceId, 'WORKFORCE', userId).catch((e) =>
         console.error('[setup] Workforce module init failed (non-blocking):', e)
+      );
+    }
+
+    if (body.enableDocuments === true) {
+      await enableModule(workspaceId, 'DOCUMENTS', userId).catch((e) =>
+        console.error('[setup] Documents module init failed (non-blocking):', e)
       );
     }
 

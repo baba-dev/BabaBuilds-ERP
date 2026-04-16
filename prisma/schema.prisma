@@ -296,6 +296,15 @@ model Workspace {
   leaveBalances      LeaveBalance[]
   workforceHolidays  WorkforceHoliday[]
   workSchedules      WorkSchedule[]
+
+  // Document Vault (optional module)
+  documents               Document[]
+  documentFiles           DocumentFile[]
+  documentOcrJobs          DocumentOcrJob[]
+  documentExtractedFields  DocumentExtractedField[]
+  documentLinks            DocumentLink[]
+  documentAuditEvents      DocumentAuditEvent[]
+  documentStorage          WorkspaceDocumentStorage?
 }
 
 model AppActivityLog {
@@ -1619,7 +1628,220 @@ model WorkspaceModule {
 }
 
 // ==========================================
-// 11. WORKFORCE MODULE
+// 11. DOCUMENT VAULT (OPTIONAL MODULE)
+// ==========================================
+
+/**
+ * Document — ERP-native document record.
+ *
+ * Notes:
+ * - Workspace-scoped
+ * - Archive is organizational (non-destructive) and does not remove bytes
+ * - Sensitivity/scope is enforced at the query/API layer (RBAC + personal rules)
+ */
+model Document {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  title       String
+  category    String // Stored as String for forward compatibility
+  scope       String // WORKSPACE_BUSINESS | ACCOUNTING | COMPLIANCE | PERSONAL_USER | GENERAL_ATTACHMENT (code enum)
+  status      String @default("INBOX") // INBOX|PROCESSING|READY|LINKED|FAILED|ARCHIVED (code enum)
+
+  isArchived  Boolean  @default(false)
+  archivedAt  DateTime?
+  archivedByUserId String?
+
+  source      String? // upload_center|share_target|email (future)
+  uploadedByUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  files       DocumentFile[]
+  links       DocumentLink[]
+  ocrJobs     DocumentOcrJob[]
+  fields      DocumentExtractedField[]
+  events      DocumentAuditEvent[]
+
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([workspaceId, status, createdAt(sort: Desc)])
+  @@index([workspaceId, category, createdAt(sort: Desc)])
+  @@index([workspaceId, scope, createdAt(sort: Desc)])
+  @@index([workspaceId, isArchived, createdAt(sort: Desc)])
+}
+
+/**
+ * DocumentFile — concrete stored bytes (supports versioning).
+ * storedPath is a private serving route path like /documents/<workspaceId>/...
+ */
+model DocumentFile {
+  id          String   @id @default(cuid())
+  documentId  String
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  isCurrent   Boolean  @default(true)
+
+  mimeType    String
+  originalName String
+  storedPath  String
+  sha256      String?
+  byteSize    Int
+
+  pageCount   Int?
+  imageWidth  Int?
+  imageHeight Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ocrJobs    DocumentOcrJob[]
+  fields     DocumentExtractedField[]
+  events     DocumentAuditEvent[]
+
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([workspaceId, documentId])
+  @@index([workspaceId, storedPath])
+  @@index([documentId, isCurrent])
+}
+
+/**
+ * DocumentOcrJob — async OCR/parsing job.
+ */
+model DocumentOcrJob {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  documentId    String
+  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  documentFileId String
+  documentFile  DocumentFile @relation(fields: [documentFileId], references: [id], onDelete: Cascade)
+
+  kind          String @default("GENERIC") // RECEIPT|INVOICE|STATEMENT|TAX|GENERIC
+  status        String @default("QUEUED")  // QUEUED|RUNNING|SUCCEEDED|FAILED
+  provider      String @default("UNCONFIGURED") // LOCAL_TESSERACT|GOOGLE_VISION|AWS_TEXTRACT|...
+
+  attemptCount  Int    @default(0)
+  errorCode     String?
+  errorMessage  String?
+
+  queuedAt   DateTime @default(now())
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, status, queuedAt(sort: Desc)])
+  @@index([workspaceId, documentId])
+  @@index([workspaceId, documentFileId])
+}
+
+/**
+ * DocumentExtractedField — OCR-suggested or user-corrected fields.
+ * Multiple revisions are represented as separate rows; the UI picks the latest/approved row per fieldKey.
+ */
+model DocumentExtractedField {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  documentId    String
+  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  documentFileId String
+  documentFile  DocumentFile @relation(fields: [documentFileId], references: [id], onDelete: Cascade)
+
+  fieldKey     String // vendorName|totalAmount|taxAmount|invoiceNumber|dueDate|statementPeriodStart|...
+  valueText    String?
+  valueNumber  Float?
+  valueDate    DateTime?
+  confidence   Float?
+
+  source       String @default("OCR") // OCR|USER
+  isApproved   Boolean @default(false)
+  approvedByUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, documentId, fieldKey, createdAt(sort: Desc)])
+  @@index([workspaceId, documentFileId])
+}
+
+/**
+ * DocumentLink — polymorphic link from Document to ERP records.
+ */
+model DocumentLink {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  documentId  String
+  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  targetType  String // EXPENSE|INVOICE|BANK_TRANSACTION|CLIENT|PROPOSAL|RETAINER|SERVICE_ORDER|PURCHASE_ORDER|...
+  targetId    String
+  relation    String @default("ATTACHMENT") // ATTACHMENT|EVIDENCE|SOURCE_DOC
+
+  createdByUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([documentId, targetType, targetId])
+  @@index([workspaceId, targetType, targetId])
+  @@index([workspaceId, documentId])
+}
+
+/**
+ * WorkspaceDocumentStorage — cached totals for quota checks.
+ * bytesUsedTotal includes archived. bytesUsedActive excludes archived (optional UX metric).
+ */
+model WorkspaceDocumentStorage {
+  id          String   @id @default(cuid())
+  workspaceId String   @unique
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  bytesUsedTotal  BigInt @default(0)
+  bytesUsedActive BigInt @default(0)
+
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * DocumentAuditEvent — document-specific trust and audit trail.
+ */
+model DocumentAuditEvent {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  documentId  String?
+  document    Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  documentFileId String?
+  documentFile  DocumentFile? @relation(fields: [documentFileId], references: [id], onDelete: SetNull)
+
+  eventType   String
+  actorUserId String?
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([workspaceId, eventType, createdAt(sort: Desc)])
+  @@index([workspaceId, documentId])
+}
+
+// ==========================================
+// 12. WORKFORCE MODULE
 // ==========================================
 
 enum EmploymentStatus {

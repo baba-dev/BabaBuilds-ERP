@@ -19,7 +19,7 @@ import { Prisma } from '@prisma/client';
 // MODULE REGISTRY
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const MODULE_KEYS = ['WORKFORCE'] as const;
+export const MODULE_KEYS = ['WORKFORCE', 'DOCUMENTS'] as const;
 export type ModuleKey = (typeof MODULE_KEYS)[number];
 
 export function isValidModuleKey(key: unknown): key is ModuleKey {
@@ -28,11 +28,14 @@ export function isValidModuleKey(key: unknown): key is ModuleKey {
 
 export const MODULE_LABELS: Record<ModuleKey, string> = {
   WORKFORCE: 'Workforce',
+  DOCUMENTS: 'Document Vault',
 };
 
 export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
   WORKFORCE:
     'Employee directory, attendance tracking, leave management, and HR approvals — fully integrated with your ERP.',
+  DOCUMENTS:
+    'Secure document storage with OCR ingestion, extracted-field review, and ERP-native record linking for accounting and compliance.',
 };
 
 export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
@@ -43,6 +46,13 @@ export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
     'Department & designation management',
     'Role-aware HR dashboards',
     'Approval queue with notifications',
+  ],
+  DOCUMENTS: [
+    'Upload Center (Inbox) with triage states',
+    'OCR extraction with review & correction',
+    'Link documents to expenses, invoices, and more',
+    'Archive without deletion (audit preserved)',
+    'Storage usage meter with plan-based limits',
   ],
 };
 
@@ -156,6 +166,7 @@ export async function enableModule(
       const { initializeWorkforceDefaults } = await import('@/lib/workforce/index');
       await initializeWorkforceDefaults(workspaceId);
     }
+    // DOCUMENTS: no initializer yet (schema-only); keep hook reserved for future defaults.
   }
 }
 
