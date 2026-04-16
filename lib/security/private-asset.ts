@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { promises as fs } from 'fs';
 import { buildPrivatePath, type PrivateAssetKind } from '@/lib/uploads/private-storage';
 
-export type AssetKind = 'receipts' | 'logos' | 'invoices';
+export type AssetKind = 'receipts' | 'logos' | 'invoices' | 'documents';
 
 type DeniedReason =
   | 'unauthorized'

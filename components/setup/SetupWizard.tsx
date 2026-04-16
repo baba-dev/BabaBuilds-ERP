@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { 
   Globe, ShieldCheck, Building2, 
   ArrowRight, ArrowLeft, CheckCircle2, Sparkles,
-  Zap, Wallet, Users2, Calendar, ClipboardList
+  Zap, Wallet, Users2, Calendar, ClipboardList, FileText
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
     shopTagline: "",
     shopAccentColor: "#6366f1",
     enableWorkforce: false,
+    enableDocuments: false,
   });
 
   // Smart Suggestion Logic
@@ -485,6 +486,58 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                     }`}>
                       <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
                         form.enableWorkforce ? 'translate-x-5' : 'translate-x-0'
+                      }`} />
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
+                    form.enableDocuments
+                      ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20'
+                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
+                  }`}
+                  onClick={() => setForm({ ...form, enableDocuments: !form.enableDocuments })}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
+                        form.enableDocuments ? 'bg-indigo-600 shadow-lg shadow-indigo-500/20' : 'bg-zinc-100 dark:bg-zinc-800'
+                      }`}>
+                        <FileText className={`h-5 w-5 ${form.enableDocuments ? 'text-white' : 'text-zinc-500 dark:text-zinc-400'}`} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Document Vault</p>
+                          {form.enableDocuments && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2 py-0.5 text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
+                              <CheckCircle2 className="h-2.5 w-2.5" /> Enabled
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                          Secure storage with OCR, extracted-field review, and ERP-native linking for accounting &amp; compliance.
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                          {[
+                            { icon: FileText, text: 'Upload Center (Inbox) with triage states' },
+                            { icon: Sparkles, text: 'OCR extraction with review & correction' },
+                            { icon: ShieldCheck, text: 'Compliance evidence vault & reminders' },
+                            { icon: Zap, text: 'Suggested linking to expenses & invoices' },
+                          ].map(({ icon: Icon, text }) => (
+                            <div key={text} className="flex items-center gap-1.5">
+                              <Icon className={`h-3 w-3 shrink-0 ${form.enableDocuments ? 'text-indigo-500' : 'text-zinc-400'}`} />
+                              <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{text}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                      form.enableDocuments ? 'bg-indigo-600' : 'bg-zinc-300 dark:bg-zinc-700'
+                    }`}>
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        form.enableDocuments ? 'translate-x-5' : 'translate-x-0'
                       }`} />
                     </div>
                   </div>

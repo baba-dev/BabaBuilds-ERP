@@ -10,7 +10,8 @@ export type PrivateAssetKind =
   | 'signatures'
   | 'products'
   | 'service-hero'
-  | 'share-target';
+  | 'share-target'
+  | 'documents';
 
 const DEFAULT_ROOT = path.join(process.cwd(), 'private_uploads');
 

@@ -24,6 +24,7 @@ import { getBustedUrl } from "@/lib/cache-buster";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { ColumnVisibilityToggle, DataTable, DataTablePagination, DataTableToolbar, RowActionsMenu, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
 import type { InvoiceDto } from "@/lib/types/business";
+import { RecordDocumentsDialog } from "@/components/documents/RecordDocumentsDialog";
 import {
   DEFAULT_LEDGER_META,
   parseLedgerInvoicesResponse,
@@ -383,6 +384,7 @@ export default function InvoicesAndEarnings() {
               <Download className="h-3.5 w-3.5 dark:text-zinc-200" />
             </a>
           </Button>
+          <RecordDocumentsDialog targetType="INVOICE" targetId={row.id} />
           <RowActionsMenu row={row} actions={[{ label: t("actions.delete"), onClick: (r) => setInvoiceToDelete(r.id), variant: "danger", icon: <Trash2 className="mr-2 h-4 w-4" /> }]} />
         </div>
       ),
