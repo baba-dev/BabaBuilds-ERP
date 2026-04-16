@@ -13,6 +13,7 @@ import {
   Sparkles,
   Store,
   Users,
+  Users2,
   Target,
   type LucideIcon,
 } from "lucide-react";
@@ -22,6 +23,7 @@ export type AppNavItem = {
   path: string;
   icon: LucideIcon;
   badge?: "New" | "AI";
+  requiresModule?: string; // Module key required to show this item (e.g., 'WORKFORCE')
 };
 
 export const appNavItems: AppNavItem[] = [
@@ -39,6 +41,7 @@ export const appNavItems: AppNavItem[] = [
   { key: "ai_reconciliation", path: "/reconciliation", icon: Sparkles, badge: "AI" },
   { key: "invoices_and_earnings", path: "/income", icon: ReceiptText },
   { key: "ca_compliance", path: "/ca-portal", icon: Landmark },
+  { key: "workforce", path: "/workforce", icon: Users2, requiresModule: "WORKFORCE" },
   { key: "help_center", path: "/dashboard/help", icon: CircleHelp },
 ];
 

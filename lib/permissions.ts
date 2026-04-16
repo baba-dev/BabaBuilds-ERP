@@ -161,6 +161,18 @@ export const PERMISSION_KEYS = [
 
   // Billing
   'billing.manage',        // High-risk: owner-only payment/subscription management
+
+  // Workforce (only surfaced when Workforce module is enabled)
+  'workforce.view',                  // Access the Workforce module overview
+  'workforce.people.view',           // View employee directory & profiles
+  'workforce.people.manage',         // Create/edit/deactivate employees
+  'workforce.attendance.view',       // View attendance records
+  'workforce.attendance.manage',     // Mark/edit attendance (HR/manager)
+  'workforce.leave.view',            // View leave requests & calendar
+  'workforce.leave.manage',          // Manage leave types, balances, policies
+  'workforce.leave.approve',         // Approve or reject leave requests
+  'workforce.reports.view',          // View workforce analytics & reports
+  'workforce.settings.manage',       // Manage departments, designations, holidays
 ] as const;
 
 export type Permission = (typeof PERMISSION_KEYS)[number];
@@ -186,6 +198,22 @@ export const PERMISSION_MODULE_GROUPS: { module: string; label: string; keys: Pe
   { module: 'clients',         label: 'Clients',          keys: ['clients.view', 'clients.manage'] },
   { module: 'workspace',       label: 'Workspace Admin',  keys: ['workspace.manage_members', 'workspace.manage_roles', 'workspace.manage_settings'] },
   { module: 'billing',         label: 'Billing',          keys: ['billing.manage'] },
+  {
+    module: 'workforce',
+    label: 'Workforce',
+    keys: [
+      'workforce.view',
+      'workforce.people.view',
+      'workforce.people.manage',
+      'workforce.attendance.view',
+      'workforce.attendance.manage',
+      'workforce.leave.view',
+      'workforce.leave.manage',
+      'workforce.leave.approve',
+      'workforce.reports.view',
+      'workforce.settings.manage',
+    ],
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -220,6 +248,11 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'clients.view', 'clients.manage',
     'workspace.manage_members', 'workspace.manage_roles', 'workspace.manage_settings',
     'billing.manage',
+    // Workforce — full access
+    'workforce.view', 'workforce.people.view', 'workforce.people.manage',
+    'workforce.attendance.view', 'workforce.attendance.manage',
+    'workforce.leave.view', 'workforce.leave.manage', 'workforce.leave.approve',
+    'workforce.reports.view', 'workforce.settings.manage',
   ],
 
   ADMIN: [
@@ -239,6 +272,11 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'clients.view', 'clients.manage',
     'workspace.manage_members', 'workspace.manage_roles', 'workspace.manage_settings',
     // NOT: billing.manage
+    // Workforce — full access
+    'workforce.view', 'workforce.people.view', 'workforce.people.manage',
+    'workforce.attendance.view', 'workforce.attendance.manage',
+    'workforce.leave.view', 'workforce.leave.manage', 'workforce.leave.approve',
+    'workforce.reports.view', 'workforce.settings.manage',
   ],
 
   FINANCE_MANAGER: [
@@ -255,6 +293,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'reports.view', 'reports.export',
     'clients.view',
     // NOT: accounting.post, tax.manage, billing.manage, workspace.manage_*
+    // Workforce — view-only (payroll cost oversight)
+    'workforce.view', 'workforce.people.view',
+    'workforce.attendance.view', 'workforce.leave.view', 'workforce.reports.view',
   ],
 
   ACCOUNTANT: [
@@ -271,6 +312,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'reports.view',            // view reports but NOT bulk export
     'clients.view',
     // NOT: any write, any export, any admin
+    // Workforce — view-only
+    'workforce.view', 'workforce.people.view', 'workforce.attendance.view',
+    'workforce.leave.view', 'workforce.reports.view',
   ],
 
   SALES_MANAGER: [
@@ -293,6 +337,11 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'clients.view',
     'reports.view',
     // NOT: invoices admin, proposals, accounting, tax, cash flow assumptions
+    // Workforce — team management + approvals
+    'workforce.view', 'workforce.people.view',
+    'workforce.attendance.view', 'workforce.attendance.manage',
+    'workforce.leave.view', 'workforce.leave.approve',
+    'workforce.reports.view',
   ],
 
   INVENTORY_MANAGER: [
@@ -311,6 +360,10 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'expenses.view', 'expenses.create',
     'service_orders.view',
     // NOT: any admin, any financial management, any sensitive data
+    // Workforce — self-service only
+    'workforce.view', 'workforce.people.view',
+    'workforce.attendance.view',
+    'workforce.leave.view',
   ],
 
   VIEWER: [

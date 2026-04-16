@@ -14,6 +14,8 @@ export type SidebarItemId =
   | "ai_reconciliation"
   | "invoices_and_earnings"
   | "ca_compliance"
+  | "revenue_pipeline"
+  | "workforce"
   | "help_center"
   | "settings";
 
@@ -45,6 +47,8 @@ const ALLOWED_IDS = new Set<SidebarItemId>([
   "ai_reconciliation",
   "invoices_and_earnings",
   "ca_compliance",
+  "revenue_pipeline",
+  "workforce",
   "help_center",
   "settings",
 ]);
