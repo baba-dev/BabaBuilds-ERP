@@ -211,6 +211,37 @@ export function manualAdjustmentToForecastLine(args: {
   };
 }
 
+export function payrollOutflowToForecastLine(args: {
+  posting: {
+    accountingTransactionId: string;
+    payrollRunId: string;
+    postedAt: Date;
+    amount: Prisma.Decimal;
+    currency: string;
+    sourceRef: string | null;
+  };
+  scenarioTag: CashForecastScenarioTag;
+}): ForecastLineDraft {
+  const { posting, scenarioTag } = args;
+  return {
+    direction: "OUTFLOW",
+    sourceType: "PAYROLL",
+    sourceId: posting.payrollRunId,
+    amount: toDecimal(posting.amount).abs(),
+    expectedDate: posting.postedAt,
+    confidence: 1,
+    scenarioTag,
+    classification: "ACTUAL",
+    title: `Payroll run · ${posting.payrollRunId}`,
+    metadataJson: {
+      accountingTransactionId: posting.accountingTransactionId,
+      currency: posting.currency,
+      sourceRef: posting.sourceRef,
+    },
+    explanation: "Actual payroll cash outflow from posted payroll accounting transaction.",
+  };
+}
+
 function addDays(date: Date, days: number) {
   const d = new Date(date);
   d.setDate(d.getDate() + days);
@@ -255,7 +286,7 @@ export async function loadForecastSourceData(args: {
 }): Promise<ForecastSourceData> {
   const { workspaceId, startDate, endDate } = args;
 
-  const [accounts, bankTransactions, invoices, retainers, purchaseOrders, manualAdjustments, paymentBehaviors] = await Promise.all([
+  const [accounts, bankTransactions, invoices, retainers, purchaseOrders, manualAdjustments, paymentBehaviors, payrollTransactions] = await Promise.all([
     prisma.bankAccount.findMany({
       where: { workspaceId },
       select: { id: true, openingBalance: true, openingBalanceDate: true },
@@ -295,6 +326,24 @@ export async function loadForecastSourceData(args: {
     prisma.clientPaymentBehavior.findMany({
       where: { workspaceId },
       select: { clientId: true, avgDaysToPay: true, medianDaysToPay: true, onTimeRate: true, lateRate: true, partialPaymentRate: true, lastComputedAt: true },
+    }),
+    prisma.accountingTransaction.findMany({
+      where: {
+        workspaceId,
+        sourceTable: 'PAYROLL_RUN',
+        postedAt: { gte: startDate, lte: endDate },
+      },
+      select: {
+        id: true,
+        sourceId: true,
+        sourceRef: true,
+        postedAt: true,
+        postingCurrency: true,
+        entries: {
+          where: { accountCode: '1005_CASH_BANK_CLEARING', side: 'CREDIT' },
+          select: { amount: true },
+        },
+      },
     }),
   ]);
 
@@ -345,6 +394,14 @@ export async function loadForecastSourceData(args: {
     })),
     purchaseOrders,
     manualAdjustments,
+    payrollOutflows: payrollTransactions.map((row) => ({
+      accountingTransactionId: row.id,
+      payrollRunId: row.sourceId,
+      postedAt: row.postedAt,
+      amount: row.entries.reduce((sum, entry) => sum.plus(toDecimal(entry.amount)), new Prisma.Decimal(0)),
+      currency: row.postingCurrency,
+      sourceRef: row.sourceRef,
+    })),
     workspaceDefaults: {
       invoicePaymentTermsDays: 15,
       minimumCashThreshold: 0,
@@ -419,6 +476,10 @@ export function buildForecastLinesFromSources(args: {
 
   for (const adj of sources.manualAdjustments) {
     lines.push(manualAdjustmentToForecastLine({ adj, scenarioTag }));
+  }
+
+  for (const posting of sources.payrollOutflows ?? []) {
+    lines.push(payrollOutflowToForecastLine({ posting, scenarioTag }));
   }
 
   // Filter to horizon range.

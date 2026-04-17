@@ -17,9 +17,13 @@ import { Prisma } from '@prisma/client';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODULE REGISTRY
+//
+// Dependency policy:
+// - PAYROLL runs standalone.
+// - WORKFORCE enhances PAYROLL input quality.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const MODULE_KEYS = ['WORKFORCE', 'DOCUMENTS', 'PAYROLL'] as const;
+export const MODULE_KEYS = ['WORKFORCE', 'PAYROLL', 'DOCUMENTS'] as const;
 export type ModuleKey = (typeof MODULE_KEYS)[number];
 
 export function isValidModuleKey(key: unknown): key is ModuleKey {
@@ -28,17 +32,17 @@ export function isValidModuleKey(key: unknown): key is ModuleKey {
 
 export const MODULE_LABELS: Record<ModuleKey, string> = {
   WORKFORCE: 'Workforce',
-  DOCUMENTS: 'Document Vault',
   PAYROLL: 'Payroll',
+  DOCUMENTS: 'Document Vault',
 };
 
 export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
   WORKFORCE:
-    'Employee directory, attendance tracking, leave management, and HR approvals — fully integrated with your ERP.',
+    'Employee directory, attendance tracking, leave management, and HR approvals — improves payroll input quality and accuracy.',
+  PAYROLL:
+    'Payroll runs, posting, liabilities, and compliance exports with onboarding, readiness checks, and staged rollout before go-live.',
   DOCUMENTS:
     'Secure document storage with OCR ingestion, extracted-field review, and ERP-native record linking for accounting and compliance.',
-  PAYROLL:
-    'Payroll onboarding, run readiness checks, and staged rollout controls before enabling accounting posting and exports.',
 };
 
 export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
@@ -50,13 +54,6 @@ export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
     'Role-aware HR dashboards',
     'Approval queue with notifications',
   ],
-  DOCUMENTS: [
-    'Upload Center (Inbox) with triage states',
-    'OCR extraction with review & correction',
-    'Link documents to expenses, invoices, and more',
-    'Archive without deletion (audit preserved)',
-    'Storage usage meter with plan-based limits',
-  ],
   PAYROLL: [
     'Standalone payroll setup workflow',
     'Workforce-linked setup workflow',
@@ -64,6 +61,18 @@ export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
     'Execution phase controls (Phase 0 → GA)',
     'Read-only preview mode during internal alpha',
     'Posting/export safeguards for controlled rollout',
+    'Payroll runs with period-level controls',
+    'Payroll posting to ERP ledgers',
+    'Liability tracking and settlement workflows',
+    'Compliance-ready payroll exports',
+    'Labor-cost analytics by team and period',
+  ],
+  DOCUMENTS: [
+    'Upload Center (Inbox) with triage states',
+    'OCR extraction with review & correction',
+    'Link documents to expenses, invoices, and more',
+    'Archive without deletion (audit preserved)',
+    'Storage usage meter with plan-based limits',
   ],
 };
 
@@ -113,7 +122,11 @@ export async function getEnabledModules(workspaceId: string): Promise<Set<Module
 
 /**
  * Throws ModuleDisabledError if the module is not enabled.
- * Use in route handlers and Server Components to guard Workforce routes.
+ * Use in route handlers and Server Components to guard module routes.
+ *
+ * Dependency policy:
+ * - PAYROLL runs standalone (no module dependency required).
+ * - WORKFORCE is optional and enhances PAYROLL input quality.
  */
 export async function requireModule(
   workspaceId: string,

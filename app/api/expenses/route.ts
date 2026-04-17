@@ -16,6 +16,9 @@ import {
 } from '@/lib/uploads/private-storage';
 import { withPermission } from '@/lib/rbac';
 import { computeWithheldAmount, defaultDepositDueDate, deriveReturnPeriodKey } from '@/lib/tax/withholding';
+import { determineAndPersistTax } from '@/src/server/tax/service';
+import { createPrismaTaxPersistence } from '@/lib/tax/prisma-tax-persistence';
+import { appendTaxAuditEvent, newTaxCorrelationId } from '@/lib/tax/audit';
 
 // Fetch all expenses for the ledger (NOW PAGINATED)
 export async function GET(request: Request) {
@@ -218,6 +221,35 @@ export async function POST(request: Request) {
           withholdingDepositedAt: parsedWithholdingDepositedAt,
           withholdingDepositDueAt: depositDueAt,
         }
+      });
+
+      const ws = await tx.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { countryCode: true },
+      });
+      const countryCode = (ws?.countryCode ?? 'IN').trim().toUpperCase() || 'IN';
+
+      await determineAndPersistTax(createPrismaTaxPersistence(tx), {
+        source: {
+          kind: 'expense',
+          entityId: created.id,
+          workspaceId,
+          taxableAmount: parsedAmount,
+          originCountryCode: countryCode,
+          destinationCountryCode: countryCode,
+          occurredAt: parsedDate,
+        },
+        actorUserId: userId,
+      });
+
+      await appendTaxAuditEvent(tx, {
+        workspaceId,
+        eventType: 'DETERMINATION',
+        correlationId: newTaxCorrelationId(),
+        actorUserId: userId,
+        entityType: 'Expense',
+        entityId: created.id,
+        payload: { vendor, category, amount: parsedAmount },
       });
 
       if (deductedAt && computedWithholdingAmount && computedWithholdingAmount.gt(0)) {

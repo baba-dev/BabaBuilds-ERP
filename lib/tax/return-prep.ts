@@ -6,6 +6,8 @@ import {
   TaxReturnStatus,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { serializeMoney, toDecimal } from "@/lib/money";
+import { appendTaxAuditEvent } from "@/lib/tax/audit";
 
 const INDIA_MVP_FAMILY = TaxReturnFamily.INDIA_TDS_QTR;
 const INDIA_MVP_FORM_CODE = "FORM_24Q";
@@ -158,16 +160,18 @@ async function derivePrefillFacts(workspaceId: string, startDate: Date, endDate:
     }),
   ]);
 
-  const totalLedgerAmount = Number(ledgerAgg._sum.amount ?? 0);
-  const totalInvoiceTax = Number(invoiceAgg._sum.taxAmount ?? 0);
-  const totalInvoiceAmount = Number(invoiceAgg._sum.totalAmount ?? 0);
-  const totalBankDebit = Math.abs(Number(bankDebits._sum.amount ?? 0));
+  const totalLedgerAmount = toDecimal(ledgerAgg._sum.amount ?? 0).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+  const totalInvoiceTax = toDecimal(invoiceAgg._sum.taxAmount ?? 0).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+  const totalInvoiceAmount = toDecimal(invoiceAgg._sum.totalAmount ?? 0).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+  const totalBankDebit = toDecimal(bankDebits._sum.amount ?? 0)
+    .abs()
+    .toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
 
   return [
     {
       fieldKey: "withholding.totalLedgerAmount",
       fieldLabel: "Total withholding from ledger",
-      value: totalLedgerAmount,
+      value: serializeMoney(totalLedgerAmount),
       sourceType: "LEDGER",
       sourceRef: `accountingEntry:TDS:*:${ledgerAgg._count._all}`,
       confidenceScore: ledgerAgg._count._all > 0 ? 0.95 : 0.25,
@@ -175,7 +179,7 @@ async function derivePrefillFacts(workspaceId: string, startDate: Date, endDate:
     {
       fieldKey: "withholding.totalInvoiceTax",
       fieldLabel: "Total invoice tax within period",
-      value: totalInvoiceTax,
+      value: serializeMoney(totalInvoiceTax),
       sourceType: "TAX_FACT",
       sourceRef: `invoice:taxAmount:${invoiceAgg._count._all}`,
       confidenceScore: invoiceAgg._count._all > 0 ? 0.85 : 0.2,
@@ -183,7 +187,7 @@ async function derivePrefillFacts(workspaceId: string, startDate: Date, endDate:
     {
       fieldKey: "withholding.totalInvoiceAmount",
       fieldLabel: "Total invoice amount within period",
-      value: totalInvoiceAmount,
+      value: serializeMoney(totalInvoiceAmount),
       sourceType: "TAX_FACT",
       sourceRef: `invoice:totalAmount:${invoiceAgg._count._all}`,
       confidenceScore: invoiceAgg._count._all > 0 ? 0.85 : 0.2,
@@ -199,7 +203,7 @@ async function derivePrefillFacts(workspaceId: string, startDate: Date, endDate:
     {
       fieldKey: "withholding.bankDebitTotal",
       fieldLabel: "Total bank debits in period",
-      value: totalBankDebit,
+      value: serializeMoney(totalBankDebit),
       sourceType: "LEDGER",
       sourceRef: `bankTransaction:debits:${bankDebits._count._all}`,
       confidenceScore: bankDebits._count._all > 0 ? 0.7 : 0.2,
@@ -207,35 +211,35 @@ async function derivePrefillFacts(workspaceId: string, startDate: Date, endDate:
   ];
 }
 
-function evaluateReadinessChecks(prefillByKey: Map<string, number>): ReadinessRuleEvaluation[] {
-  const ledgerAmount = prefillByKey.get("withholding.totalLedgerAmount") ?? 0;
-  const invoiceTax = prefillByKey.get("withholding.totalInvoiceTax") ?? 0;
-  const vendorPayments = prefillByKey.get("withholding.vendorPaymentCount") ?? 0;
+function evaluateReadinessChecks(prefillByKey: Map<string, Prisma.Decimal>): ReadinessRuleEvaluation[] {
+  const ledgerAmount = prefillByKey.get("withholding.totalLedgerAmount") ?? new Prisma.Decimal(0);
+  const invoiceTax = prefillByKey.get("withholding.totalInvoiceTax") ?? new Prisma.Decimal(0);
+  const vendorPayments = prefillByKey.get("withholding.vendorPaymentCount") ?? new Prisma.Decimal(0);
 
   return [
     {
       checkCode: "WITHHOLDING_LEDGER_COVERAGE",
-      passed: ledgerAmount > 0,
+      passed: ledgerAmount.gt(0),
       title: "Withholding ledger entries captured",
-      details: ledgerAmount > 0 ? "Ledger withholding exists." : "No TDS-prefixed ledger entries were found.",
+      details: ledgerAmount.gt(0) ? "Ledger withholding exists." : "No TDS-prefixed ledger entries were found.",
       severity: TaxReadinessSeverity.CRITICAL,
-      facts: { ledgerAmount },
+      facts: { ledgerAmount: serializeMoney(ledgerAmount) },
     },
     {
       checkCode: "WITHHOLDING_FACTS_PRESENT",
-      passed: invoiceTax > 0,
+      passed: invoiceTax.gt(0),
       title: "Withholding summary can be computed",
-      details: invoiceTax > 0 ? "Invoice tax facts are available." : "No invoice tax amount found for the selected period.",
+      details: invoiceTax.gt(0) ? "Invoice tax facts are available." : "No invoice tax amount found for the selected period.",
       severity: TaxReadinessSeverity.WARNING,
-      facts: { invoiceTax },
+      facts: { invoiceTax: serializeMoney(invoiceTax) },
     },
     {
       checkCode: "VENDOR_BASELINE_PRESENT",
-      passed: vendorPayments > 0,
+      passed: vendorPayments.gt(0),
       title: "Vendor payment baseline exists",
-      details: vendorPayments > 0 ? "Vendor payments were found." : "No vendor payments found in expenses for this period.",
+      details: vendorPayments.gt(0) ? "Vendor payments were found." : "No vendor payments found in expenses for this period.",
       severity: TaxReadinessSeverity.WARNING,
-      facts: { vendorPayments },
+      facts: { vendorPayments: vendorPayments.toNumber() },
     },
   ];
 }
@@ -369,8 +373,13 @@ async function syncBlockersToTasks(params: {
   }
 }
 
-export async function runIndiaTaxReturnPrep(input: { workspaceId: string; taxPeriodId: string }) {
-  const { workspaceId, taxPeriodId } = input;
+export async function runIndiaTaxReturnPrep(input: {
+  workspaceId: string;
+  taxPeriodId: string;
+  correlationId?: string | null;
+  actorUserId?: string | null;
+}) {
+  const { workspaceId, taxPeriodId, correlationId, actorUserId } = input;
 
   const [period, form, checks] = await Promise.all([
     prisma.taxPeriod.findFirst({ where: { id: taxPeriodId, workspaceId } }),
@@ -434,7 +443,7 @@ export async function runIndiaTaxReturnPrep(input: { workspaceId: string; taxPer
   );
 
   const prefillLookup = new Map(
-    prefillFacts.map((fact) => [fact.fieldKey, typeof fact.value === "number" ? fact.value : Number(fact.value ?? 0)])
+    prefillFacts.map((fact) => [fact.fieldKey, toDecimal(fact.value as string | number | null | undefined)]),
   );
 
   const ruleEvaluations = evaluateReadinessChecks(prefillLookup);
@@ -489,6 +498,21 @@ export async function runIndiaTaxReturnPrep(input: { workspaceId: string; taxPer
       title: item.title,
       details: item.details,
     })),
+  });
+
+  await appendTaxAuditEvent(prisma, {
+    workspaceId,
+    eventType: 'READINESS_RUN',
+    correlationId: correlationId ?? undefined,
+    actorUserId: actorUserId ?? undefined,
+    entityType: 'TaxReturn',
+    entityId: updatedReturn.id,
+    payload: {
+      taxPeriodId,
+      status: updatedReturn.status,
+      readinessScore: updatedReturn.readinessScore,
+      openBlockersCount: openBlockers.length,
+    },
   });
 
   return {

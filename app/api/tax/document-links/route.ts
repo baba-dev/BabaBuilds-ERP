@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { apiError } from '@/lib/api-error';
 import { requirePermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
+import { appendTaxAuditEvent, newTaxCorrelationId } from '@/lib/tax/audit';
 
 const ENTITY_TYPES = ['RETURN_ACKNOWLEDGMENT', 'WITHHOLDING_CERTIFICATE', 'TAX_PAYMENT_PROOF'] as const;
 const RELATIONS = ['ACKNOWLEDGMENT', 'CERTIFICATE', 'PROOF', 'EVIDENCE'] as const;
@@ -157,6 +158,17 @@ export async function POST(req: Request) {
     },
   });
 
+  const correlationId = newTaxCorrelationId();
+  await appendTaxAuditEvent(prisma, {
+    workspaceId,
+    eventType: 'DOCUMENT_LINK',
+    correlationId,
+    actorUserId: userId,
+    entityType: 'TaxDocumentLink',
+    entityId: link.id,
+    payload: { documentId, entityType, entityKey, relation },
+  });
+
   return NextResponse.json({
     ok: true,
     acknowledgment: {
@@ -208,6 +220,17 @@ export async function DELETE(req: Request) {
         entityKey: existing.entityKey,
       },
     },
+  });
+
+  const correlationId = newTaxCorrelationId();
+  await appendTaxAuditEvent(prisma, {
+    workspaceId,
+    eventType: 'DOCUMENT_LINK',
+    correlationId,
+    actorUserId: userId,
+    entityType: 'TaxDocumentLink',
+    entityId: existing.id,
+    payload: { action: 'DELETE', documentId: existing.documentId, entityType: existing.entityType, entityKey: existing.entityKey },
   });
 
   return NextResponse.json({

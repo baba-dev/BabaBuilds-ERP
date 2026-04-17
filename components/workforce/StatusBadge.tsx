@@ -55,7 +55,7 @@ export function StatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider",
+        "motion-feedback-fast inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider motion-reduce:transition-none",
         colorMap[status] ?? "bg-zinc-100 text-zinc-500 border border-zinc-200",
         className,
       )}

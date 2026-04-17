@@ -13,6 +13,7 @@ import { WorkforcePageShell } from "@/components/workforce/WorkforceLayout";
 import { cn } from "@/lib/utils";
 
 type Summary = {
+  enabled?: boolean;
   totalEmployees: number;
   activeEmployees: number;
   presentToday: number;
@@ -31,6 +32,7 @@ type RecentEmployee = {
   id: string; firstName: string; lastName: string; avatarUrl?: string | null;
   status: string; designation?: { title: string } | null; department?: { name: string } | null;
 };
+const GLASS_CARD_CLASS = "rounded-2xl border border-zinc-200/60 bg-white/55 shadow-sm backdrop-blur-sm dark:border-zinc-700/50 dark:bg-zinc-950/40 dark:shadow-black/30";
 
 export default function WorkforceOverviewPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -38,6 +40,7 @@ export default function WorkforceOverviewPage() {
   const [recent, setRecent] = useState<RecentEmployee[]>([]);
   const [canApprove, setCanApprove] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [syncBadgeLabel, setSyncBadgeLabel] = useState("Standalone payroll mode");
 
   const fetchData = useCallback(async () => {
     try {
@@ -50,6 +53,7 @@ export default function WorkforceOverviewPage() {
       if (summaryRes.ok) {
         const data = await summaryRes.json() as Summary;
         setSummary(data);
+        setSyncBadgeLabel(data.enabled ? "Workforce sync active" : "Standalone payroll mode");
       }
       if (leaveRes.ok) {
         const { requests } = await leaveRes.json() as { requests: LeaveRequest[] };
@@ -79,6 +83,18 @@ export default function WorkforceOverviewPage() {
     <WorkforcePageShell
       title="Workforce"
       description="People directory, attendance, leave, and approvals — scoped per-workspace."
+      actions={
+        <span
+          className={cn(
+            "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+            syncBadgeLabel === "Workforce sync active"
+              ? "border-teal-500/30 bg-teal-500/10 text-teal-700 dark:text-teal-300"
+              : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+          )}
+        >
+          {syncBadgeLabel}
+        </span>
+      }
     >
       <div className="space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -86,8 +102,8 @@ export default function WorkforceOverviewPage() {
             <div
               key={label}
               className={cn(
-                "rounded-2xl border p-4 shadow-sm backdrop-blur-sm transition-transform",
-                "border-zinc-200/60 dark:border-zinc-800/60 bg-white/50 dark:bg-zinc-900/30",
+                "motion-feedback rounded-2xl border p-4 shadow-sm backdrop-blur-sm motion-reduce:transition-none",
+                "border-zinc-200/60 bg-white/55 dark:border-zinc-700/50 dark:bg-zinc-950/45",
                 bg,
               )}
             >
@@ -96,14 +112,14 @@ export default function WorkforceOverviewPage() {
                 <Icon className={cn("h-4 w-4 shrink-0", color)} />
               </div>
               <p className={cn("text-2xl font-black tabular-nums", color)}>
-                {loading ? <span className="animate-pulse text-zinc-400 dark:text-zinc-600">—</span> : value}
+                {loading ? <span className="animate-pulse motion-reduce:animate-none text-zinc-400 dark:text-zinc-600">—</span> : value}
               </p>
             </div>
           ))}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 shadow-sm backdrop-blur-sm overflow-hidden">
+          <div className={`lg:col-span-2 ${GLASS_CARD_CLASS} overflow-hidden`}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200/60 dark:border-zinc-800/60">
               <div className="flex items-center gap-2">
                 <Users2 className="h-4 w-4 text-teal-600 dark:text-teal-400" />
@@ -130,7 +146,7 @@ export default function WorkforceOverviewPage() {
             <div className="divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
               {loading ? (
                 Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="px-5 py-3 flex items-center gap-3 animate-pulse">
+                  <div key={i} className="px-5 py-3 flex items-center gap-3 animate-pulse motion-reduce:animate-none">
                     <div className="h-9 w-9 rounded-full bg-zinc-200 dark:bg-zinc-800" />
                     <div className="flex-1 space-y-1.5">
                       <div className="h-3 w-32 rounded bg-zinc-200 dark:bg-zinc-800" />
@@ -153,7 +169,7 @@ export default function WorkforceOverviewPage() {
                   <Link
                     key={emp.id}
                     href={`/workforce/people/${emp.id}`}
-                    className="flex items-center gap-3 px-5 py-3 hover:bg-white/60 dark:hover:bg-zinc-900/30 transition-colors group"
+                    className="motion-row-hover flex items-center gap-3 px-5 py-3 hover:bg-white/70 motion-reduce:transition-none dark:hover:bg-zinc-900/50 group"
                   >
                     <EmployeeAvatar firstName={emp.firstName} lastName={emp.lastName} avatarUrl={emp.avatarUrl} size="md" />
                     <div className="flex-1 min-w-0">
@@ -162,14 +178,14 @@ export default function WorkforceOverviewPage() {
                         {emp.designation?.title ?? "—"} {emp.department ? `· ${emp.department.name}` : ""}
                       </p>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-zinc-300 group-hover:text-zinc-500 dark:text-zinc-700 dark:group-hover:text-zinc-400 transition-colors shrink-0" />
+                    <ChevronRight className="motion-feedback-fast h-4 w-4 text-zinc-300 group-hover:text-zinc-500 motion-reduce:transition-none dark:text-zinc-700 dark:group-hover:text-zinc-400 shrink-0" />
                   </Link>
                 ))
               )}
             </div>
           </div>
 
-          <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 shadow-sm backdrop-blur-sm overflow-hidden">
+          <div className={`${GLASS_CARD_CLASS} overflow-hidden`}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-200/60 dark:border-zinc-800/60">
               <div className="flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
@@ -195,7 +211,7 @@ export default function WorkforceOverviewPage() {
               {loading ? (
                 <div className="space-y-3">
                   {[1, 2].map((i) => (
-                    <div key={i} className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/30 p-4 animate-pulse">
+                    <div key={i} className="rounded-2xl border border-zinc-200/60 bg-white/55 p-4 animate-pulse motion-reduce:animate-none dark:border-zinc-700/50 dark:bg-zinc-950/45">
                       <div className="flex gap-3">
                         <div className="h-9 w-9 rounded-full bg-zinc-200 dark:bg-zinc-800 shrink-0" />
                         <div className="flex-1 space-y-2">
@@ -213,7 +229,7 @@ export default function WorkforceOverviewPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 shadow-sm backdrop-blur-sm p-5">
+        <div className={`${GLASS_CARD_CLASS} p-5`}>
           <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-3">Quick Actions</h3>
           <div className="flex flex-wrap gap-2">
             <Link href="/workforce/people">
