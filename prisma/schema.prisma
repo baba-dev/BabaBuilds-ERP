@@ -354,6 +354,9 @@ model Workspace {
   documentOcrJobs         DocumentOcrJob[]
   documentExtractedFields DocumentExtractedField[]
   documentLinks           DocumentLink[]
+  taxDocumentLinks        TaxDocumentLink[]
+  taxImportBatches        TaxImportBatch[]
+  taxImportRows           TaxImportRow[]
   documentAuditEvents     DocumentAuditEvent[]
   documentStorage         WorkspaceDocumentStorage?
   taxRegistrations        WorkspaceTaxRegistration[]
@@ -2090,6 +2093,7 @@ model Document {
 
   files           DocumentFile[]
   links           DocumentLink[]
+  taxLinks        TaxDocumentLink[]
   ocrJobs         DocumentOcrJob[]
   fields          DocumentExtractedField[]
   events          DocumentAuditEvent[]
@@ -2228,6 +2232,81 @@ model DocumentLink {
   @@unique([documentId, targetType, targetId])
   @@index([workspaceId, targetType, targetId])
   @@index([workspaceId, documentId])
+}
+
+/**
+ * TaxDocumentLink — scoped link from Document vault records to tax compliance entities.
+ */
+model TaxDocumentLink {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  documentId  String
+  document    Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  entityType  String // RETURN_ACKNOWLEDGMENT | WITHHOLDING_CERTIFICATE | TAX_PAYMENT_PROOF
+  entityKey   String // return period, certificate number, challan/proof id, etc.
+  relation    String  @default("EVIDENCE") // ACKNOWLEDGMENT | CERTIFICATE | PROOF | EVIDENCE
+
+  notes       String?
+  createdByUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, documentId, entityType, entityKey])
+  @@index([workspaceId, entityType, entityKey, createdAt(sort: Desc)])
+  @@index([workspaceId, documentId, createdAt(sort: Desc)])
+}
+
+model TaxImportBatch {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  templateType  String // WITHHOLDING_CERTIFICATES | FOREIGN_TAX_PAID | PRIOR_PERIOD_BALANCES
+  sourceName    String?
+  status        String   @default("COMPLETED") // COMPLETED | COMPLETED_WITH_ERRORS | FAILED
+
+  submittedByUserId String?
+  rowCount      Int      @default(0)
+  successCount  Int      @default(0)
+  warningCount  Int      @default(0)
+  errorCount    Int      @default(0)
+
+  metadata      Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rows TaxImportRow[]
+
+  @@index([workspaceId, templateType, createdAt(sort: Desc)])
+  @@index([workspaceId, status, createdAt(sort: Desc)])
+}
+
+model TaxImportRow {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  batchId       String
+  batch         TaxImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  rowNumber     Int
+  status        String // SUCCESS | WARNING | ERROR
+  code          String? // VALIDATION_* | PARSE_* | BUSINESS_*
+  message       String?
+  fieldName     String?
+
+  rawData       Json?
+  normalizedData Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, batchId, rowNumber])
+  @@index([workspaceId, status, createdAt(sort: Desc)])
 }
 
 /**
