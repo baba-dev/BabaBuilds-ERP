@@ -24,6 +24,7 @@ import { PageLoadingState } from "@/components/states/PageLoadingState";
 import { PageErrorState } from "@/components/states/PageErrorState";
 import { ColumnVisibilityToggle, DataTable, DataTableToolbar, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
 import { TaxOverrideModal, type TaxOverrideWindow } from "@/components/tax/tax-override-modal";
+import { TaxComplianceOps } from "@/components/tax/tax-compliance-ops";
 
 
 
@@ -586,6 +587,8 @@ export default function WealthAndTaxPlanner() {
             </Card>
           </div>
         </div>
+
+        <TaxComplianceOps />
 
         <Card className="mt-8 shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <CardHeader className="border-b border-zinc-200 dark:border-zinc-800">
