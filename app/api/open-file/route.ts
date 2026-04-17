@@ -13,8 +13,9 @@ import {
   uniqueStoredName,
 } from '@/lib/uploads/private-storage';
 import { buildPrivatePath } from '@/lib/uploads/private-storage';
+import { checkPermission } from '@/lib/rbac';
 
-type ImportFlow = 'expenses' | 'invoices' | 'reconciliation';
+type ImportFlow = 'expenses' | 'invoices' | 'reconciliation' | 'withholding_certificates';
 type ImportStatus = 'IMPORTED' | 'UNSUPPORTED' | 'PERMISSION_DENIED' | 'FAILED';
 type ImportErrorCode =
   | 'PERMISSION_DENIED'
@@ -180,7 +181,7 @@ export async function POST(request: Request) {
     }
 
     const ext = normalizeExt(file.name);
-    const flow = (requestedFlow && ['expenses', 'invoices', 'reconciliation'].includes(String(requestedFlow))
+    const flow = (requestedFlow && ['expenses', 'invoices', 'reconciliation', 'withholding_certificates'].includes(String(requestedFlow))
       ? String(requestedFlow)
       : EXTENSION_TO_FLOW[ext]) as ImportFlow | undefined;
 
@@ -247,6 +248,153 @@ export async function POST(request: Request) {
         'UNSUPPORTED_FOR_FLOW',
         { flow, receivedExtension: ext }
       );
+    }
+
+
+    if (flow === 'withholding_certificates') {
+      if (!actor?.userId) {
+        await logAudit({
+          workspaceId,
+          request,
+          status: 'PERMISSION_DENIED',
+          reason: 'Missing user context for withholding certificate ingestion',
+        });
+        return apiError(403, 'Permission denied for withholding certificate import.', 'PERMISSION_DENIED');
+      }
+
+      const [canIngest, canUpload] = await Promise.all([
+        checkPermission(actor.userId, workspaceId, 'tax.withholding.ingest'),
+        checkPermission(actor.userId, workspaceId, 'documents.upload'),
+      ]);
+      if (!canIngest || !canUpload) {
+        await logAudit({
+          workspaceId,
+          request,
+          actorUserId: actor.userId,
+          actorEmail: actor.email,
+          fileName: file.name,
+          mimeType: file.type,
+          fileSize: file.size,
+          flow,
+          status: 'PERMISSION_DENIED',
+          reason: 'Insufficient permissions for withholding certificate ingestion',
+        });
+        return apiError(403, 'Permission denied for withholding certificate import.', 'PERMISSION_DENIED');
+      }
+
+      const guessed = sniffAllowedContent(buffer);
+      if (!guessed || (guessed !== 'pdf' && guessed !== 'png' && guessed !== 'jpeg' && guessed !== 'webp')) {
+        await logAudit({
+          workspaceId,
+          request,
+          actorUserId: actor?.userId,
+          actorEmail: actor?.email,
+          fileName: file.name,
+          mimeType: file.type,
+          fileSize: file.size,
+          flow,
+          status: 'UNSUPPORTED',
+          reason: 'Withholding certificate content must be pdf/png/jpeg/webp',
+        });
+        return apiError(415, 'Unsupported withholding certificate content.', 'UNSUPPORTED_FILE');
+      }
+
+      const safeBase = sanitizeFilename(path.basename(file.name, path.extname(file.name) || ''));
+      const ext = guessed === 'jpeg' ? '.jpg' : guessed === 'pdf' ? '.pdf' : guessed === 'png' ? '.png' : '.webp';
+      const storedName = uniqueStoredName(`withholding-${safeBase || 'certificate'}`, ext);
+      const filepath = buildPrivatePath('documents', [workspaceId, storedName]);
+      await ensureDir(path.dirname(filepath));
+      await (await import('fs/promises')).writeFile(filepath, buffer, { mode: 0o600 });
+
+      const grossAmountRaw = Number(formData.get('grossAmount') ?? 0);
+      const creditedAmountRaw = Number(formData.get('creditedAmount') ?? 0);
+      const withheldAmountRaw = Number(formData.get('withheldAmount') ?? creditedAmountRaw);
+      const certificateNumber = String(formData.get('certificateNumber') ?? '').trim() || null;
+      const counterpartyName = String(formData.get('counterpartyName') ?? '').trim() || null;
+      const returnPeriodKey = String(formData.get('returnPeriodKey') ?? '').trim() || null;
+      const certificateIssuedAtRaw = String(formData.get('certificateIssuedAt') ?? '').trim();
+      const certificateIssuedAt = certificateIssuedAtRaw ? new Date(certificateIssuedAtRaw) : null;
+
+      const importedCredit = await prisma.$transaction(async (tx) => {
+        const document = await tx.document.create({
+          data: {
+            workspaceId,
+            title: file.name,
+            category: 'WITHHOLDING_CERTIFICATE',
+            scope: 'COMPLIANCE',
+            status: 'READY',
+            source: 'upload_center',
+            uploadedByUserId: actor?.userId ?? null,
+          },
+        });
+
+        await tx.documentFile.create({
+          data: {
+            documentId: document.id,
+            workspaceId,
+            isCurrent: true,
+            mimeType: file.type || 'application/octet-stream',
+            originalName: file.name,
+            storedPath: `/documents/${workspaceId}/${storedName}`,
+            byteSize: file.size,
+          },
+        });
+
+        const creditEvent = await tx.taxCreditEvent.create({
+          data: {
+            workspaceId,
+            sourceType: 'WITHHOLDING_CERTIFICATE',
+            sourceId: document.id,
+            documentId: document.id,
+            creditType: 'WITHHOLDING',
+            counterpartyName,
+            certificateNumber,
+            grossAmount: Number.isFinite(grossAmountRaw) && grossAmountRaw > 0 ? grossAmountRaw : null,
+            creditedAmount: Number.isFinite(creditedAmountRaw) && creditedAmountRaw > 0 ? creditedAmountRaw : 0,
+            withheldAmount: Number.isFinite(withheldAmountRaw) && withheldAmountRaw > 0 ? withheldAmountRaw : null,
+            certificateIssuedAt: certificateIssuedAt && !Number.isNaN(certificateIssuedAt.getTime()) ? certificateIssuedAt : null,
+            returnPeriodKey,
+            createdByUserId: actor?.userId ?? null,
+          },
+        });
+
+        await tx.taxCreditLedgerEntry.create({
+          data: {
+            workspaceId,
+            taxCreditEventId: creditEvent.id,
+            entryType: 'CREDIT',
+            amount: Number.isFinite(creditedAmountRaw) && creditedAmountRaw > 0 ? creditedAmountRaw : 0,
+            entryDate: certificateIssuedAt && !Number.isNaN(certificateIssuedAt.getTime()) ? certificateIssuedAt : new Date(),
+            returnPeriodKey,
+            createdByUserId: actor?.userId ?? null,
+            notes: 'Auto-posted from withholding certificate ingestion',
+          },
+        });
+
+        return { documentId: document.id, creditEventId: creditEvent.id };
+      });
+
+      await logAudit({
+        workspaceId,
+        request,
+        actorUserId: actor?.userId,
+        actorEmail: actor?.email,
+        fileName: file.name,
+        mimeType: file.type,
+        fileSize: file.size,
+        flow,
+        status: 'IMPORTED',
+        reason: `Tax credit posted from certificate ${importedCredit.creditEventId}`,
+      });
+
+      return NextResponse.json({
+        success: true,
+        flow,
+        message: 'Withholding certificate ingested and credit posted to ledger.',
+        redirectTo: '/ca-portal',
+        documentId: importedCredit.documentId,
+        taxCreditEventId: importedCredit.creditEventId,
+      });
     }
 
     if (flow === 'expenses') {

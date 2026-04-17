@@ -92,7 +92,12 @@ const parseBadge = (key: SidebarModuleKey, payload: unknown): SidebarBadge | nul
     case "ca_compliance": {
       const invoices = toObjectArray(safePayload.invoices);
       const pending = invoices.filter((invoice) => OPEN_INVOICE_STATUSES.has(normalizeStatus(invoice.status))).length;
-      return pending > 0 ? { variant: "new" } : null;
+      const readiness = (safePayload.readiness as JsonRecord | undefined) ?? {};
+      const blockerCount = Array.isArray(readiness.blockers) ? readiness.blockers.length : 0;
+      const warningCount = Array.isArray(readiness.warnings) ? readiness.warnings.length : 0;
+      if (blockerCount > 0 || pending > 0) return { variant: "new" };
+      if (warningCount > 0) return { variant: "dot" };
+      return null;
     }
     default:
       return null;

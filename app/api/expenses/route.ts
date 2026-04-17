@@ -15,6 +15,7 @@ import {
   buildPrivatePath,
 } from '@/lib/uploads/private-storage';
 import { withPermission } from '@/lib/rbac';
+import { computeWithheldAmount, defaultDepositDueDate, deriveReturnPeriodKey } from '@/lib/tax/withholding';
 
 // Fetch all expenses for the ledger (NOW PAGINATED)
 export async function GET(request: Request) {
@@ -84,6 +85,12 @@ export async function POST(request: Request) {
     const vendor = formData.get('vendor') as string;
     const amount = formData.get('amount') as string;
     const description = formData.get('description') as string;
+    const withholdingRatePercentRaw = formData.get('withholdingRatePercent') as string | null;
+    const withholdingAmountRaw = formData.get('withholdingAmount') as string | null;
+    const withholdingDeductedAtRaw = formData.get('withholdingDeductedAt') as string | null;
+    const withholdingDepositedAtRaw = formData.get('withholdingDepositedAt') as string | null;
+    const withholdingDepositDueAtRaw = formData.get('withholdingDepositDueAt') as string | null;
+    const returnPeriodKeyRaw = formData.get('returnPeriodKey') as string | null;
     
     // --- 🚨 SECURITY PATCH: Prevent NaN Poisoning & Invalid Dates ---
     const parsedAmount = Number(amount);
@@ -96,6 +103,54 @@ export async function POST(request: Request) {
       return apiError(400, "Invalid date format.", "INVALID_DATE");
     }
     // ----------------------------------------------------------------
+
+
+    const parsedWithholdingRate = withholdingRatePercentRaw && withholdingRatePercentRaw.trim() !== ''
+      ? Number(withholdingRatePercentRaw)
+      : null;
+    if (parsedWithholdingRate !== null && (!Number.isFinite(parsedWithholdingRate) || parsedWithholdingRate < 0 || parsedWithholdingRate > 100)) {
+      return apiError(400, "Invalid withholding rate percent.", "INVALID_WITHHOLDING_RATE");
+    }
+
+    const parsedWithholdingAmount = withholdingAmountRaw && withholdingAmountRaw.trim() !== ''
+      ? Number(withholdingAmountRaw)
+      : null;
+    if (parsedWithholdingAmount !== null && (!Number.isFinite(parsedWithholdingAmount) || parsedWithholdingAmount < 0)) {
+      return apiError(400, "Invalid withholding amount.", "INVALID_WITHHOLDING_AMOUNT");
+    }
+
+    const parsedWithholdingDeductedAt = withholdingDeductedAtRaw && withholdingDeductedAtRaw.trim() !== ''
+      ? new Date(withholdingDeductedAtRaw)
+      : null;
+    if (parsedWithholdingDeductedAt && Number.isNaN(parsedWithholdingDeductedAt.getTime())) {
+      return apiError(400, "Invalid withholding deduction date.", "INVALID_WITHHOLDING_DATE");
+    }
+
+    const parsedWithholdingDepositedAt = withholdingDepositedAtRaw && withholdingDepositedAtRaw.trim() !== ''
+      ? new Date(withholdingDepositedAtRaw)
+      : null;
+    if (parsedWithholdingDepositedAt && Number.isNaN(parsedWithholdingDepositedAt.getTime())) {
+      return apiError(400, "Invalid withholding deposited date.", "INVALID_WITHHOLDING_DATE");
+    }
+
+    const parsedWithholdingDepositDueAt = withholdingDepositDueAtRaw && withholdingDepositDueAtRaw.trim() !== ''
+      ? new Date(withholdingDepositDueAtRaw)
+      : null;
+    if (parsedWithholdingDepositDueAt && Number.isNaN(parsedWithholdingDepositDueAt.getTime())) {
+      return apiError(400, "Invalid withholding due date.", "INVALID_WITHHOLDING_DATE");
+    }
+
+    const hasWithholdingPayload =
+      (withholdingRatePercentRaw && withholdingRatePercentRaw.trim() !== '') ||
+      (withholdingAmountRaw && withholdingAmountRaw.trim() !== '') ||
+      (withholdingDeductedAtRaw && withholdingDeductedAtRaw.trim() !== '') ||
+      (withholdingDepositedAtRaw && withholdingDepositedAtRaw.trim() !== '') ||
+      (withholdingDepositDueAtRaw && withholdingDepositDueAtRaw.trim() !== '') ||
+      (returnPeriodKeyRaw && returnPeriodKeyRaw.trim() !== '');
+    if (hasWithholdingPayload) {
+      const whPerm = await withPermission(userId, workspaceId, 'tax.withholding.record');
+      if (!whPerm.granted) return whPerm.response as any;
+    }
 
     // Extract the file
     const file = formData.get('receipt') as File | null;
@@ -133,17 +188,59 @@ export async function POST(request: Request) {
       receiptUrl = `/receipts/${workspaceId}/${storedName}`;
     }
 
+    const deductedAt = parsedWithholdingDeductedAt ?? null;
+    const computedWithholdingAmount = deductedAt
+      ? computeWithheldAmount({
+          grossAmount: parsedAmount,
+          ratePercent: parsedWithholdingRate,
+          explicitWithheldAmount: parsedWithholdingAmount,
+          deductedAt,
+        })
+      : null;
+    const depositDueAt = deductedAt
+      ? (parsedWithholdingDepositDueAt ?? defaultDepositDueDate(deductedAt))
+      : null;
+
     // 3. SECURE CREATION: Link expense to the workspace
-    const newExpense = await prisma.expense.create({
-      data: {
-        workspaceId: workspaceId,
-        date: parsedDate,
-        category,
-        vendor,
-        amount: parsedAmount,
-        description: description || null,
-        receiptUrl,
+    const newExpense = await prisma.$transaction(async (tx) => {
+      const created = await tx.expense.create({
+        data: {
+          workspaceId: workspaceId,
+          date: parsedDate,
+          category,
+          vendor,
+          amount: parsedAmount,
+          description: description || null,
+          receiptUrl,
+          withholdingRatePercent: parsedWithholdingRate,
+          withholdingAmount: computedWithholdingAmount,
+          withholdingDeductedAt: deductedAt,
+          withholdingDepositedAt: parsedWithholdingDepositedAt,
+          withholdingDepositDueAt: depositDueAt,
+        }
+      });
+
+      if (deductedAt && computedWithholdingAmount && computedWithholdingAmount.gt(0)) {
+        await tx.withholdingEvent.create({
+          data: {
+            workspaceId,
+            sourceType: 'EXPENSE_PAYMENT',
+            sourceId: created.id,
+            expenseId: created.id,
+            counterpartyName: vendor || null,
+            grossAmount: parsedAmount,
+            withheldAmount: computedWithholdingAmount,
+            withholdingRatePercent: parsedWithholdingRate,
+            deductedAt,
+            depositedAt: parsedWithholdingDepositedAt,
+            depositDueAt,
+            returnPeriodKey: deriveReturnPeriodKey(deductedAt, returnPeriodKeyRaw),
+            createdByUserId: userId,
+          },
+        });
       }
+
+      return created;
     });
 
     logActivity({
