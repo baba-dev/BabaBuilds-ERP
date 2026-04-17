@@ -1,4 +1,10 @@
-import { Prisma, TaxReadinessSeverity, TaxReturnFamily } from "@prisma/client";
+import {
+  Prisma,
+  TaxReadinessBlockerStatus,
+  TaxReadinessSeverity,
+  TaxReturnFamily,
+  TaxReturnStatus,
+} from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 const INDIA_MVP_FAMILY = TaxReturnFamily.INDIA_TDS_QTR;
@@ -248,10 +254,10 @@ async function upsertBlockerForCheck(params: {
         workspaceId,
         taxReturnId,
         blockerCode: evaluation.checkCode,
-        status: "OPEN",
+        status: TaxReadinessBlockerStatus.OPEN,
       },
       data: {
-        status: "RESOLVED",
+        status: TaxReadinessBlockerStatus.RESOLVED,
         resolvedAt: new Date(),
         details: evaluation.details,
         factsJson: evaluation.facts ?? Prisma.JsonNull,
@@ -276,7 +282,7 @@ async function upsertBlockerForCheck(params: {
       title: evaluation.title,
       details: evaluation.details,
       severity: evaluation.severity,
-      status: "OPEN",
+      status: TaxReadinessBlockerStatus.OPEN,
       factsJson: evaluation.facts ?? Prisma.JsonNull,
       detectedAt: new Date(),
     },
@@ -285,7 +291,7 @@ async function upsertBlockerForCheck(params: {
       title: evaluation.title,
       details: evaluation.details,
       severity: evaluation.severity,
-      status: "OPEN",
+      status: TaxReadinessBlockerStatus.OPEN,
       resolvedAt: null,
       factsJson: evaluation.facts ?? Prisma.JsonNull,
       detectedAt: new Date(),
@@ -306,30 +312,37 @@ async function syncBlockersToTasks(params: {
   const markerPrefix = `[TAX_RETURN:${taxReturnId}]`;
   const openCodes = new Set(openBlockers.map((item) => item.blockerCode));
 
+  const existingOpenTasks = await prisma.task.findMany({
+    where: {
+      workspaceId,
+      description: { contains: markerPrefix },
+      status: { not: "DONE" },
+    },
+    select: { id: true, title: true, description: true },
+  });
+
+  const markerCodeRegex = /\[TAX_RETURN:[^\]]+\]\[([^\]]+)\]/;
+  const existingByCode = new Map<string, (typeof existingOpenTasks)[number]>();
+  for (const task of existingOpenTasks) {
+    const desc = task.description ?? "";
+    const match = desc.match(markerCodeRegex);
+    if (!match) continue;
+    const code = match[1];
+    if (openCodes.has(code)) existingByCode.set(code, task);
+  }
+
   for (const blocker of openBlockers) {
     const marker = `${markerPrefix}[${blocker.blockerCode}]`;
-    const existing = await prisma.task.findFirst({
-      where: {
+    if (existingByCode.has(blocker.blockerCode)) continue;
+
+    await prisma.task.create({
+      data: {
         workspaceId,
         title: `Tax readiness: ${blocker.title}`,
-        description: {
-          contains: marker,
-        },
-        status: { not: "DONE" },
+        description: `${marker}\n${blocker.details ?? "Resolve tax readiness blocker to continue filing."}`,
+        status: "PENDING",
       },
-      select: { id: true },
     });
-
-    if (!existing) {
-      await prisma.task.create({
-        data: {
-          workspaceId,
-          title: `Tax readiness: ${blocker.title}`,
-          description: `${marker}\n${blocker.details ?? "Resolve tax readiness blocker to continue filing."}`,
-          status: "PENDING",
-        },
-      });
-    }
   }
 
   const staleTasks = await prisma.task.findMany({
@@ -345,8 +358,9 @@ async function syncBlockersToTasks(params: {
 
   for (const staleTask of staleTasks) {
     const description = staleTask.description ?? "";
-    const matchedCode = Array.from(openCodes).find((code) => description.includes(`[${code}]`));
-    if (matchedCode) continue;
+    const markerMatch = description.match(markerCodeRegex);
+    const codeFromMarker = markerMatch?.[1];
+    if (codeFromMarker && openCodes.has(codeFromMarker)) continue;
 
     await prisma.task.update({
       where: { id: staleTask.id },
@@ -380,7 +394,7 @@ export async function runIndiaTaxReturnPrep(input: { workspaceId: string; taxPer
       workspaceId,
       taxPeriodId: period.id,
       taxFormId: form.id,
-      status: "DRAFT",
+      status: TaxReturnStatus.DRAFT,
     },
     update: {},
   });
@@ -442,7 +456,7 @@ export async function runIndiaTaxReturnPrep(input: { workspaceId: string; taxPer
     where: {
       workspaceId,
       taxReturnId: taxReturn.id,
-      status: "OPEN",
+      status: TaxReadinessBlockerStatus.OPEN,
     },
   });
 
@@ -452,10 +466,10 @@ export async function runIndiaTaxReturnPrep(input: { workspaceId: string; taxPer
   );
 
   const status = openBlockers.some((item) => item.severity === TaxReadinessSeverity.CRITICAL)
-    ? "BLOCKED"
+    ? TaxReturnStatus.BLOCKED
     : openBlockers.length > 0
-      ? "NEEDS_REVIEW"
-      : "READY";
+      ? TaxReturnStatus.NEEDS_REVIEW
+      : TaxReturnStatus.READY;
 
   const updatedReturn = await prisma.taxReturn.update({
     where: { id: taxReturn.id },
@@ -494,7 +508,25 @@ export async function runIndiaTaxReturnPrep(input: { workspaceId: string; taxPer
   };
 }
 
-export async function getTaxReadinessSummary(workspaceId: string) {
+export async function getTaxReadinessSummary(
+  workspaceId: string,
+  options: { includeSummary?: boolean } = {},
+) {
+  const { includeSummary = true } = options;
+  if (!includeSummary) {
+    return {
+      hasReturns: false,
+      totalOpenBlockers: 0,
+      openBlockersBySeverity: {
+        INFO: 0,
+        WARNING: 0,
+        CRITICAL: 0,
+      } as Record<TaxReadinessSeverity, number>,
+      nextReturn: null,
+      recentReturns: [],
+    };
+  }
+
   const [latestReturns, openBlockersBySeverity, openBlockersCount] = await Promise.all([
     prisma.taxReturn.findMany({
       where: { workspaceId },
@@ -521,11 +553,11 @@ export async function getTaxReadinessSummary(workspaceId: string) {
       by: ["severity"],
       where: {
         workspaceId,
-        status: "OPEN",
+        status: TaxReadinessBlockerStatus.OPEN,
       },
       _count: { _all: true },
     }),
-    prisma.taxReadinessBlocker.count({ where: { workspaceId, status: "OPEN" } }),
+    prisma.taxReadinessBlocker.count({ where: { workspaceId, status: TaxReadinessBlockerStatus.OPEN } }),
   ]);
 
   const severityCounts = {

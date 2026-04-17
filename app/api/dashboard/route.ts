@@ -10,6 +10,7 @@ import { getInvoiceBilledAmount, sumInvoiceBilledAmount } from "@/lib/invoice/to
 import { estimateTax } from "@/lib/tax/engine";
 import { getCurrentFinancialYear } from "@/lib/financial-year";
 import { getTaxReadinessSummary } from "@/lib/tax/return-prep";
+import { checkPermission } from "@/lib/rbac";
 import { buildMonthlyChartBuckets, resolveMonthlyBucketTimeZone } from "./monthly-series";
 import { describeKpiPeriod, getFyDateRange } from "./sales-shop-kpi-periods";
 import {
@@ -77,6 +78,9 @@ async function buildDashboardPayload(
   const fyRange = getFyDateRange(fy);
 
   const { canViewFinance = true } = options;
+
+  const canViewTaxReadiness =
+    Boolean(userId) && (await checkPermission(userId!, workspaceId, "tax.readiness.view"));
 
   const [
     workspace,
@@ -507,7 +511,9 @@ async function buildDashboardPayload(
 
       return buckets;
     }),
-    timed("tax.readiness_summary", () => getTaxReadinessSummary(workspaceId)),
+    timed("tax.readiness_summary", () =>
+      getTaxReadinessSummary(workspaceId, { includeSummary: canViewTaxReadiness }),
+    ),
   ]);
 
   const billedRevenue = canViewFinance ? sumInvoiceBilledAmount(invoices) : new Prisma.Decimal(0);

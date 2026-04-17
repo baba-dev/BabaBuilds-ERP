@@ -114,6 +114,19 @@ enum TaxReadinessSeverity {
   CRITICAL
 }
 
+enum TaxReturnStatus {
+  DRAFT
+  BLOCKED
+  NEEDS_REVIEW
+  READY
+  FILED
+}
+
+enum TaxReadinessBlockerStatus {
+  OPEN
+  RESOLVED
+}
+
 enum AccountingEventType {
   INVOICE_CREATED
   PAYMENT_CAPTURED
@@ -807,7 +820,7 @@ model TaxReturn {
   taxFormId String
   taxForm   TaxForm @relation(fields: [taxFormId], references: [id], onDelete: Cascade)
 
-  status                 String   @default("DRAFT")
+  status                 TaxReturnStatus @default(DRAFT)
   readinessScore         Int      @default(0)
   lastReadinessCheckedAt DateTime?
   prefillCompletedAt     DateTime?
@@ -821,6 +834,7 @@ model TaxReturn {
   @@unique([workspaceId, taxPeriodId, taxFormId])
   @@index([workspaceId, status])
   @@index([workspaceId, lastReadinessCheckedAt])
+  @@index([workspaceId, updatedAt(sort: Desc)])
 }
 
 model TaxReturnFieldValue {
@@ -883,7 +897,7 @@ model TaxReadinessBlocker {
   title       String
   details     String?
   severity    TaxReadinessSeverity @default(WARNING)
-  status      String               @default("OPEN")
+  status      TaxReadinessBlockerStatus @default(OPEN)
   factsJson   Json?
 
   detectedAt DateTime  @default(now())
@@ -894,6 +908,7 @@ model TaxReadinessBlocker {
   @@unique([taxReturnId, blockerCode])
   @@index([workspaceId, status, severity])
   @@index([workspaceId, taxReturnId])
+  @@index([workspaceId, status, severity, updatedAt(sort: Desc)])
 }
 
 model InvoiceIdempotency {
