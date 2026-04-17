@@ -130,6 +130,14 @@ export type ForecastSourceData = {
     reason: string;
     category: string | null;
   }>;
+  payrollOutflows: Array<{
+    accountingTransactionId: string;
+    payrollRunId: string;
+    postedAt: Date;
+    amount: Decimal;
+    currency: string;
+    sourceRef: string | null;
+  }>;
   workspaceDefaults: {
     invoicePaymentTermsDays: number;
     minimumCashThreshold: number;
