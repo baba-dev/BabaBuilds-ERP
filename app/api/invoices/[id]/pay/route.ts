@@ -15,6 +15,7 @@ import {
 import { toDecimal } from '@/lib/money';
 import { computeWithheldAmount, defaultDepositDueDate, deriveReturnPeriodKey } from '@/lib/tax/withholding';
 import { withPermission } from '@/lib/rbac';
+import { appendTaxAuditEvent, newTaxCorrelationId } from '@/lib/tax/audit';
 
 import { 
   getWorkspaceId,
@@ -170,7 +171,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       const depositDueAt = deductedAt ? (withholdingDepositDueAt ?? defaultDepositDueDate(deductedAt)) : null;
 
       if (deductedAt && computedWithheldAmount && computedWithheldAmount.gt(0)) {
-        await tx.withholdingEvent.create({
+        const wh = await tx.withholdingEvent.create({
           data: {
             workspaceId,
             sourceType: 'INVOICE_PAYMENT',
@@ -185,6 +186,20 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
             depositDueAt,
             returnPeriodKey: deriveReturnPeriodKey(deductedAt, returnPeriodKey),
             createdByUserId: (session?.user as any)?.id ?? null,
+          },
+        });
+
+        await appendTaxAuditEvent(tx, {
+          workspaceId,
+          eventType: 'WITHHOLDING_RECORDED',
+          correlationId: newTaxCorrelationId(),
+          actorUserId: userId,
+          entityType: 'WithholdingEvent',
+          entityId: wh.id,
+          payload: {
+            invoiceId: existingInvoice.id,
+            returnPeriodKey: wh.returnPeriodKey,
+            withheldAmount: wh.withheldAmount.toString(),
           },
         });
 

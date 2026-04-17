@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { estimateTax } from '@/lib/tax/engine';
+import { checkPermission } from '@/lib/rbac';
+import { resolveTaxJurisdictionForWorkspace } from '@/lib/tax/policy';
+import { prisma } from '@/lib/prisma';
 
 type TaxEstimateScenarioPayload = {
   country?: string | null;
@@ -19,20 +22,30 @@ type TaxEstimateScenarioPayload = {
 
 type SessionWithWorkspace = {
   workspaceId?: string | null;
+  user?: { id?: string | null };
 };
 
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     const workspaceId = (session as SessionWithWorkspace | null)?.workspaceId;
-    if (!workspaceId) {
+    const userId = session?.user?.id as string | undefined;
+    if (!workspaceId || !userId) {
       return NextResponse.json({ error: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' }, { status: 401 });
+    }
+
+    const canView = await checkPermission(userId, workspaceId, 'tax.view');
+    if (!canView) {
+      return NextResponse.json({ error: 'Forbidden', code: 'RBAC_PERMISSION_DENIED' }, { status: 403 });
     }
 
     const payload = (await request.json()) as TaxEstimateScenarioPayload;
 
+    const jurisdiction = await resolveTaxJurisdictionForWorkspace(prisma, workspaceId);
+    const countryForEstimate = (payload.country ?? jurisdiction.workspaceCountryCode).trim() || 'IN';
+
     const taxEstimate = estimateTax({
-      countryCode: payload.country,
+      countryCode: countryForEstimate,
       revenue: payload.revenue,
       deductions: payload.deductions,
       serviceScope: payload.serviceScope,

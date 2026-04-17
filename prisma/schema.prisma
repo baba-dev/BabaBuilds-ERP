@@ -309,6 +309,12 @@ model Workspace {
   taxRateOverrides             TaxRateOverride[]
   taxRateOverrideAuditLogs     TaxRateOverrideAuditLog[]
   taxDecisionAuditLogs         TaxDecisionAuditLog[]
+  taxableEvents                TaxableEvent[]
+  taxDeterminations            TaxDetermination[]
+  taxComponentLines            TaxComponentLine[]
+  taxAuditEvents               TaxAuditEvent[]
+  taxOperationIdempotencies    TaxOperationIdempotency[]
+  taxReferenceEntries          TaxReferenceEntry[]
   taxPeriods                   TaxPeriod[]
   taxForms                     TaxForm[]
   taxReturns                   TaxReturn[]
@@ -735,6 +741,7 @@ model Invoice {
   client               Client?               @relation(fields: [clientId], references: [id])
   idempotencyRecords   InvoiceIdempotency[]
   taxDecisionAuditLogs TaxDecisionAuditLog[]
+  taxableEvents        TaxableEvent[]
   items                InvoiceItem[]
   linkedServiceOrders  ServiceOrder[]        @relation("ServiceOrderLinkedInvoice")
 
@@ -798,6 +805,145 @@ model TaxDecisionAuditLog {
 
   @@index([workspaceId])
   @@index([invoiceId])
+}
+
+/**
+ * TaxableEvent — persisted source row for a tax determination (invoice or expense).
+ */
+model TaxableEvent {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  sourceEntityKind String // invoice | expense
+  sourceEntityId   String
+  taxableAmount    Decimal
+  originCountryCode      String @default("")
+  destinationCountryCode String @default("")
+  occurredAt       DateTime
+
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  expenseId String?
+  expense   Expense? @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  determination TaxDetermination?
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, sourceEntityKind, sourceEntityId])
+  @@index([workspaceId, occurredAt])
+}
+
+model TaxDetermination {
+  id              String    @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  taxableEventId String    @unique
+  taxableEvent   TaxableEvent @relation(fields: [taxableEventId], references: [id], onDelete: Cascade)
+
+  ratePercent       Float
+  taxAmount         Decimal
+  totalAmount       Decimal
+  resolutionSource  String // MANUAL_OVERRIDE | WORKSPACE_RULE | FALLBACK
+  resolutionReason  String
+  overrideId        String?
+
+  componentLines TaxComponentLine[]
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId])
+}
+
+model TaxComponentLine {
+  id                 String           @id @default(cuid())
+  workspaceId        String
+  workspace          Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  taxDeterminationId String
+  taxDetermination   TaxDetermination @relation(fields: [taxDeterminationId], references: [id], onDelete: Cascade)
+
+  componentKey  String
+  ratePercent   Float
+  taxableAmount Decimal
+  taxAmount     Decimal
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, taxDeterminationId])
+}
+
+/**
+ * TaxAuditEvent — append-only audit trail for tax operations (correlation-friendly).
+ */
+model TaxAuditEvent {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  eventType     String // DETERMINATION | READINESS_RUN | IMPORT_BATCH | DOCUMENT_LINK | RETURN_PERIOD_FILED
+  correlationId String?
+  actorUserId   String?
+  entityType    String?
+  entityId      String?
+  payloadJson   Json
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([workspaceId, correlationId])
+  @@index([workspaceId, eventType, createdAt(sort: Desc)])
+}
+
+/**
+ * TaxOperationIdempotency — dedupe readiness runs and import batches per workspace + key.
+ */
+model TaxOperationIdempotency {
+  id            String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  operation   String // TAX_READINESS_RUN | TAX_IMPORT_BATCH
+  idempotencyKey String
+  requestHash    String
+  responseBody   Json?
+  status         String   @default("CONSUMED") // PENDING | CONSUMED
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([workspaceId, operation, idempotencyKey])
+  @@index([workspaceId, expiresAt])
+}
+
+/**
+ * TaxReferenceEntry — global India compliance catalog (seeded reference data).
+ */
+model TaxReferenceEntry {
+  id          String    @id @default(cuid())
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  entryType   String // TAX_TYPE | FILING_FREQUENCY | CORE_FORM | BASELINE_RATE | CALENDAR_RULE
+  countryCode String   @default("IN")
+  code        String
+  label       String?
+  payloadJson Json
+  effectiveFrom DateTime?
+  effectiveTo   DateTime?
+
+  sourceDocumentRef Json?
+  verificationLevel String?
+  reviewStatus      String?
+  legalCertaintyRequired Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([entryType, countryCode, code])
+  @@index([workspaceId, entryType])
+  @@index([countryCode, entryType])
 }
 
 model TaxPeriod {
@@ -986,6 +1132,7 @@ model Expense {
   withholdingReminderSentAt DateTime?
 
   withholdingEvents WithholdingEvent[]
+  taxableEvents     TaxableEvent[]
 
   @@index([date])
   @@index([category])

@@ -19,6 +19,9 @@ import { getRuntimeSmtpPassword } from '@/lib/mailer';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
 import { logActivity } from '@/lib/activity-log';
 import { buildPrivatePath, ensureDir } from '@/lib/uploads/private-storage';
+import { determineAndPersistTax } from '@/src/server/tax/service';
+import { createPrismaTaxPersistence } from '@/lib/tax/prisma-tax-persistence';
+import { appendTaxAuditEvent, newTaxCorrelationId } from '@/lib/tax/audit';
 
 const lookupAsync = promisify(dns.lookup);
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
@@ -491,35 +494,74 @@ export async function POST(request: Request) {
 
         await fs.promises.writeFile(pdfPath, pdfBytes, { mode: 0o600 });
 
-        // 6. SAVE TO DB
-        newInvoice = await prisma.invoice.create({
-          data: {
+        // 6. SAVE TO DB + persisted tax determination (same transaction)
+        const correlationId = newTaxCorrelationId();
+        newInvoice = await prisma.$transaction(async (tx) => {
+          const inv = await tx.invoice.create({
+            data: {
+              workspaceId,
+              invoiceNumber,
+              financialYear: fy,
+              billingMonth,
+              invoiceDate,
+              clientName: client.name,
+              clientId: client.id,
+              sacCode: typeof sacCode === 'string' ? sacCode : JSON.stringify(sacCode),
+              serviceDescription: serviceDesc,
+              subtotal: toDecimal(totals.subtotal).toDecimalPlaces(2),
+              taxRate: totals.taxRate,
+              taxAmount: toDecimal(totals.taxAmount).toDecimalPlaces(2),
+              grandTotal: toDecimal(totals.total).toDecimalPlaces(2),
+              taxMode: totals.taxMode,
+              totalAmount: toDecimal(totals.total).toDecimalPlaces(2),
+              pdfPath: relativePdfPath,
+              status: normalizedStatus,
+              providerGateway,
+              providerPaymentLinkId,
+              items: {
+                create: sanitizedServices.map((s: any) => ({
+                  productId: validProductIds.has(s.productId) ? s.productId : null,
+                  description: s.title,
+                  quantity: s.quantity || 1,
+                  unitPrice: toDecimal(s.unitPrice || s.amount).toDecimalPlaces(2),
+                  taxRate: taxResolution.taxRate,
+                  totalAmount: toDecimal(s.amount).toDecimalPlaces(2),
+                })),
+              },
+            } as any,
+          });
+
+          await determineAndPersistTax(createPrismaTaxPersistence(tx), {
+            source: {
+              kind: 'invoice',
+              entityId: inv.id,
+              workspaceId,
+              taxableAmount: totals.subtotal,
+              originCountryCode: countryCode,
+              destinationCountryCode: countryCode,
+              clientId: client.id,
+              occurredAt: invoiceDate,
+              isTaxExempt: Boolean(client.isExport),
+            },
+            actorUserId: actorId ?? 'system',
+          });
+
+          await appendTaxAuditEvent(tx, {
             workspaceId,
-            invoiceNumber, financialYear: fy, billingMonth, invoiceDate,
-            clientName: client.name, clientId: client.id,
-            sacCode: typeof sacCode === 'string' ? sacCode : JSON.stringify(sacCode),
-            serviceDescription: serviceDesc,
-            subtotal: toDecimal(totals.subtotal).toDecimalPlaces(2),
-            taxRate: totals.taxRate,
-            taxAmount: toDecimal(totals.taxAmount).toDecimalPlaces(2),
-            grandTotal: toDecimal(totals.total).toDecimalPlaces(2),
-            taxMode: totals.taxMode,
-            totalAmount: toDecimal(totals.total).toDecimalPlaces(2),
-            pdfPath: relativePdfPath,
-            status: normalizedStatus,
-            providerGateway,
-            providerPaymentLinkId,
-            items: {
-              create: sanitizedServices.map((s: any) => ({
-                productId: validProductIds.has(s.productId) ? s.productId : null,
-                description: s.title,
-                quantity: s.quantity || 1,
-                unitPrice: toDecimal(s.unitPrice || s.amount).toDecimalPlaces(2),
-                taxRate: taxResolution.taxRate,
-                totalAmount: toDecimal(s.amount).toDecimalPlaces(2)
-              }))
-            }
-          } as any,
+            eventType: 'DETERMINATION',
+            correlationId,
+            actorUserId: actorId,
+            entityType: 'Invoice',
+            entityId: inv.id,
+            payload: {
+              invoiceNumber,
+              clientId: client.id,
+              subtotal: totals.subtotal,
+              engineTaxAmount: totals.taxAmount,
+            },
+          });
+
+          return inv;
         });
         createdInvoiceId = newInvoice.id;
 
