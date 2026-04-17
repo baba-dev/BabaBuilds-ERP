@@ -13,6 +13,7 @@ import {
   releaseFinancialIdempotency,
 } from '@/lib/financial-idempotency';
 import { toDecimal } from '@/lib/money';
+import { computeWithheldAmount, defaultDepositDueDate, deriveReturnPeriodKey } from '@/lib/tax/withholding';
 
 import { 
   getWorkspaceId,
@@ -44,6 +45,28 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     }
     const { amountReceived, dateReceived } = payloadValidation.data;
     const incomingPayment = amountReceived;
+    const withholdingRatePercent = typeof body?.withholdingRatePercent === 'number' ? body.withholdingRatePercent : null;
+    const withholdingAmount = typeof body?.withholdingAmount === 'number' ? body.withholdingAmount : null;
+    const withholdingDeductedAt = body?.withholdingDeductedAt ? new Date(body.withholdingDeductedAt) : null;
+    const withholdingDepositedAt = body?.withholdingDepositedAt ? new Date(body.withholdingDepositedAt) : null;
+    const withholdingDepositDueAt = body?.withholdingDepositDueAt ? new Date(body.withholdingDepositDueAt) : null;
+    const returnPeriodKey = typeof body?.returnPeriodKey === 'string' ? body.returnPeriodKey : null;
+
+    if (withholdingRatePercent !== null && (!Number.isFinite(withholdingRatePercent) || withholdingRatePercent < 0 || withholdingRatePercent > 100)) {
+      return NextResponse.json({ success: false, error: { code: 'INVALID_WITHHOLDING_RATE', message: 'Withholding rate percent must be between 0 and 100.' } }, { status: 400 });
+    }
+    if (withholdingAmount !== null && (!Number.isFinite(withholdingAmount) || withholdingAmount < 0)) {
+      return NextResponse.json({ success: false, error: { code: 'INVALID_WITHHOLDING_AMOUNT', message: 'Withholding amount must be non-negative.' } }, { status: 400 });
+    }
+    if (withholdingDeductedAt && Number.isNaN(withholdingDeductedAt.getTime())) {
+      return NextResponse.json({ success: false, error: { code: 'INVALID_WITHHOLDING_DATE', message: 'Invalid withholding deduction date.' } }, { status: 400 });
+    }
+    if (withholdingDepositedAt && Number.isNaN(withholdingDepositedAt.getTime())) {
+      return NextResponse.json({ success: false, error: { code: 'INVALID_WITHHOLDING_DATE', message: 'Invalid withholding deposited date.' } }, { status: 400 });
+    }
+    if (withholdingDepositDueAt && Number.isNaN(withholdingDepositDueAt.getTime())) {
+      return NextResponse.json({ success: false, error: { code: 'INVALID_WITHHOLDING_DATE', message: 'Invalid withholding due date.' } }, { status: 400 });
+    }
     const operation = 'INVOICE_PAYMENT_CAPTURE';
     const idempotencyKey =
       request.headers.get('Idempotency-Key')?.trim() ||
@@ -118,6 +141,48 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       });
       if (updateResult.count === 0) {
         return { kind: 'write_conflict' as const };
+      }
+
+      const deductedAt = withholdingDeductedAt ?? null;
+      const computedWithheldAmount = deductedAt
+        ? computeWithheldAmount({
+            grossAmount: incomingPayment,
+            ratePercent: withholdingRatePercent,
+            explicitWithheldAmount: withholdingAmount,
+            deductedAt,
+          })
+        : null;
+      const depositDueAt = deductedAt ? (withholdingDepositDueAt ?? defaultDepositDueDate(deductedAt)) : null;
+
+      if (deductedAt && computedWithheldAmount && computedWithheldAmount.gt(0)) {
+        await tx.withholdingEvent.create({
+          data: {
+            workspaceId,
+            sourceType: 'INVOICE_PAYMENT',
+            sourceId: existingInvoice.id,
+            invoiceId: existingInvoice.id,
+            counterpartyName: existingInvoice.clientName,
+            grossAmount: incomingPayment,
+            withheldAmount: computedWithheldAmount,
+            withholdingRatePercent,
+            deductedAt,
+            depositedAt: withholdingDepositedAt,
+            depositDueAt,
+            returnPeriodKey: deriveReturnPeriodKey(deductedAt, returnPeriodKey),
+            createdByUserId: (session?.user as any)?.id ?? null,
+          },
+        });
+
+        await tx.invoice.update({
+          where: { id: existingInvoice.id },
+          data: {
+            withholdingRatePercent,
+            withholdingAmount: computedWithheldAmount,
+            withholdingDeductedAt: deductedAt,
+            withholdingDepositedAt: withholdingDepositedAt,
+            withholdingDepositDueAt: depositDueAt,
+          },
+        });
       }
 
       const updatedInvoice = await tx.invoice.findUniqueOrThrow({ where: { id: invoiceId } });

@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import type { CAExpenseRow, CAInvoiceRow, CAPortalPayload } from "@/lib/ca-portal/types";
 import { decimalToNumber, toDecimal } from "@/lib/money";
 import { getCurrentFinancialYear } from '@/lib/financial-year';
+import { reconcileWithholdingForPeriod } from '@/lib/tax/withholding';
 
 const isPaidStatus = (status: unknown) => String(status).toUpperCase() === "PAID";
 const isReceiptStatus = (status: unknown) => {
@@ -12,49 +13,40 @@ const isReceiptStatus = (status: unknown) => {
   return normalizedStatus === "PAID" || normalizedStatus === "PARTIALLY_PAID";
 };
 
-// Helper function to calculate exact UTC boundaries for an Indian Financial Year
 function getFinancialYearDates(fyString: string) {
-  // fyString format expected: "25-26"
   const parts = fyString.split('-');
   if (parts.length !== 2) throw new Error("Invalid FY format");
 
   const startYear = 2000 + parseInt(parts[0]);
   const endYear = 2000 + parseInt(parts[1]);
 
-  // April 1st of Start Year (00:00:00)
-  const startDate = new Date(Date.UTC(startYear, 3, 1, 0, 0, 0)); 
-  
-  // March 31st of End Year (23:59:59)
-  const endDate = new Date(Date.UTC(endYear, 2, 31, 23, 59, 59, 999)); 
+  const startDate = new Date(Date.UTC(startYear, 3, 1, 0, 0, 0));
+  const endDate = new Date(Date.UTC(endYear, 2, 31, 23, 59, 59, 999));
 
   return { startDate, endDate };
 }
 
 export async function GET(request: Request) {
   try {
-    // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
     if (!session || !(session as any).workspaceId) {
       return NextResponse.json({ error: "Unauthorized", code: "AUTH_UNAUTHORIZED" }, { status: 401 });
     }
     const workspaceId = (session as any).workspaceId;
 
-    // 2. PARSE FINANCIAL YEAR
     const { searchParams } = new URL(request.url);
     const fy = searchParams.get('fy') || getCurrentFinancialYear();
-    
+
     let dateFilter;
     try {
       const { startDate, endDate } = getFinancialYearDates(fy);
       dateFilter = { gte: startDate, lte: endDate };
-    } catch (e) {
+    } catch {
       return NextResponse.json({ error: "Invalid Financial Year parameter", code: "INVALID_FINANCIAL_YEAR" }, { status: 400 });
     }
 
-    // 3. FETCH ALL DATA CONCURRENTLY (Massive performance boost)
-    const [invoices, receiptInvoices, expenses, investments, profile] = await Promise.all([
+    const [invoices, receiptInvoices, expenses, investments, profile, withholdingEvents, taxCreditEvents, returnPeriods] = await Promise.all([
       prisma.invoice.findMany({
-
         where: { workspaceId, invoiceDate: dateFilter },
         orderBy: { invoiceDate: 'asc' }
       }),
@@ -69,53 +61,60 @@ export async function GET(request: Request) {
         where: { workspaceId, date: dateFilter },
         orderBy: { date: 'asc' }
       }),
-      prisma.investment.findMany({
-        where: { workspaceId, date: dateFilter }
+      prisma.investment.findMany({ where: { workspaceId, date: dateFilter } }),
+      prisma.businessProfile.findUnique({ where: { workspaceId } }),
+      prisma.withholdingEvent.findMany({
+        where: { workspaceId, deductedAt: dateFilter },
+        select: { returnPeriodKey: true, withheldAmount: true, deductedAt: true, depositDueAt: true, depositedAt: true },
       }),
-      prisma.businessProfile.findUnique({
-        where: { workspaceId }
-      })
+      prisma.taxCreditEvent.findMany({
+        where: {
+          workspaceId,
+          OR: [
+            { certificateIssuedAt: dateFilter },
+            { createdAt: dateFilter },
+          ],
+        },
+        select: { returnPeriodKey: true, creditedAmount: true, certificateIssuedAt: true, createdAt: true },
+      }),
+      prisma.taxReturnPeriod.findMany({
+        where: {
+          workspaceId,
+          OR: [
+            { periodStart: dateFilter },
+            { periodEnd: dateFilter },
+            { dueDate: dateFilter },
+          ],
+        },
+        orderBy: { periodStart: 'asc' },
+      }),
     ]);
 
-
-    // 4. CALCULATE ITR-4 SUMMARY METRICS
-    // Tax basis assumption: summary metrics follow cash/receipt basis (not accrual).
-    // Therefore, gross receipts only include collections whose dateReceived falls within the selected FY.
     const grossReceipts = decimalToNumber(
       receiptInvoices.reduce((sum, inv) => {
         if (!isReceiptStatus(inv.status)) return sum;
-
-        // Prefer the explicit collected amount; only use billed totals for legacy PAID rows missing amountReceived.
         const realizedAmount = inv.amountReceived ?? (isPaidStatus(inv.status) ? (inv.grandTotal ?? inv.totalAmount) : null);
         if (realizedAmount === null) return sum;
-
         return sum.plus(toDecimal(realizedAmount));
       }, toDecimal(0))
     );
-    
-    // Presumptive income is strictly 50% of gross receipts
-    const presumptiveIncome = grossReceipts * 0.5;
 
+    const presumptiveIncome = grossReceipts * 0.5;
     const totalExpenses = decimalToNumber(expenses.reduce((sum, exp) => sum.plus(toDecimal(exp.amount)), toDecimal(0)));
 
-    // Calculate Section 80C & 80D Deductions (Capped at legal limits)
     const raw80C = decimalToNumber(investments.filter(i => i.category.includes('80C')).reduce((sum, i) => sum.plus(toDecimal(i.amount)), toDecimal(0)));
     const deductions80C = Math.min(raw80C, 150000);
 
     const raw80D = decimalToNumber(investments.filter(i => i.category.includes('80D')).reduce((sum, i) => sum.plus(toDecimal(i.amount)), toDecimal(0)));
-    const deductions80D = Math.min(raw80D, 25000); // Using base self-limit for simplicity
+    const deductions80D = Math.min(raw80D, 25000);
 
-    // 5. DATA FORMATTING FOR THE UI
-    // Ensure the data exactly matches the datatable columns in the UI
     const formattedInvoices: CAInvoiceRow[] = invoices.map(inv => ({
       id: inv.id,
       invoiceDate: inv.invoiceDate.toISOString(),
       invoiceNumber: inv.invoiceNumber,
       clientName: inv.clientName,
-      sacCode: inv.sacCode || (profile as any)?.defaultSacCode || "998313", // Dynamic Fallback
+      sacCode: inv.sacCode || (profile as any)?.defaultSacCode || "998313",
       totalAmount: decimalToNumber(inv.totalAmount),
-
-
       amountReceived: inv.amountReceived === null ? null : decimalToNumber(inv.amountReceived),
       status: inv.status,
       pdfPath: inv.pdfPath
@@ -131,7 +130,67 @@ export async function GET(request: Request) {
       receiptUrl: exp.receiptUrl
     }));
 
-    // 6. RETURN THE PAYLOAD
+    const withheldByPeriod = new Map<string, ReturnType<typeof toDecimal>>();
+    const creditedByPeriod = new Map<string, ReturnType<typeof toDecimal>>();
+
+    const fallbackPeriodKey = (date: Date) => `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+
+    for (const event of withholdingEvents) {
+      const key = event.returnPeriodKey || fallbackPeriodKey(event.deductedAt);
+      withheldByPeriod.set(key, (withheldByPeriod.get(key) ?? toDecimal(0)).plus(toDecimal(event.withheldAmount)));
+    }
+
+    for (const credit of taxCreditEvents) {
+      const sourceDate = credit.certificateIssuedAt ?? credit.createdAt;
+      const key = credit.returnPeriodKey || fallbackPeriodKey(sourceDate);
+      creditedByPeriod.set(key, (creditedByPeriod.get(key) ?? toDecimal(0)).plus(toDecimal(credit.creditedAmount)));
+    }
+
+    const keys = new Set<string>([
+      ...Array.from(withheldByPeriod.keys()),
+      ...Array.from(creditedByPeriod.keys()),
+      ...returnPeriods.map((period) => period.periodKey),
+    ]);
+
+    const now = new Date();
+    const warnings: CAPortalPayload['readiness']['warnings'] = [];
+    const blockers: CAPortalPayload['readiness']['blockers'] = [];
+
+    const withholdingReconciliation = Array.from(keys)
+      .sort((a, b) => a.localeCompare(b))
+      .map((periodKey) => {
+        const period = returnPeriods.find((entry) => entry.periodKey === periodKey);
+        const withheldAmount = (withheldByPeriod.get(periodKey) ?? toDecimal(0)).toDecimalPlaces(2);
+        const creditedAmount = (creditedByPeriod.get(periodKey) ?? toDecimal(0)).toDecimalPlaces(2);
+        const deltaAmount = withheldAmount.minus(creditedAmount).toDecimalPlaces(2);
+
+        const dueDate = period?.dueDate ?? new Date(now);
+        const periodIssues = reconcileWithholdingForPeriod({
+          periodKey,
+          dueDate,
+          filedAt: period?.filedAt ?? null,
+          withheldAmount,
+          creditedAmount,
+        }, now);
+
+        for (const issue of periodIssues) {
+          if (issue.severity === 'blocker') {
+            blockers.push(issue);
+          } else {
+            warnings.push(issue);
+          }
+        }
+
+        return {
+          periodKey,
+          dueDate: dueDate.toISOString(),
+          filedAt: period?.filedAt ? period.filedAt.toISOString() : null,
+          withheldAmount: decimalToNumber(withheldAmount),
+          creditedAmount: decimalToNumber(creditedAmount),
+          deltaAmount: decimalToNumber(deltaAmount),
+        };
+      });
+
     const payload: CAPortalPayload = {
       summary: {
         grossReceipts,
@@ -141,7 +200,12 @@ export async function GET(request: Request) {
         deductions80D
       },
       invoices: formattedInvoices,
-      expenses: formattedExpenses
+      expenses: formattedExpenses,
+      withholdingReconciliation,
+      readiness: {
+        warnings,
+        blockers,
+      },
     };
 
     return NextResponse.json(payload);
