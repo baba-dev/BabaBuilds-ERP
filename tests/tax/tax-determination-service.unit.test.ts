@@ -39,8 +39,17 @@ class InMemoryTaxPersistence implements TaxPersistencePort {
     return created;
   }
 
-  async findActiveTaxRateOverrides(): Promise<TaxRateOverrideRecord[]> {
-    return this.overrides;
+  async findActiveTaxRateOverrides(input: {
+    workspaceId: string;
+    asOf: Date;
+  }): Promise<TaxRateOverrideRecord[]> {
+    const asOfMs = input.asOf.getTime();
+    return this.overrides.filter((override) => {
+      if (override.workspaceId !== input.workspaceId || !override.isActive) return false;
+      if (override.effectiveFrom.getTime() > asOfMs) return false;
+      if (override.effectiveTo && override.effectiveTo.getTime() < asOfMs) return false;
+      return true;
+    });
   }
 
   async createTaxDecisionAuditLog(input: Omit<TaxDecisionAuditLogRecord, 'id'>): Promise<TaxDecisionAuditLogRecord> {

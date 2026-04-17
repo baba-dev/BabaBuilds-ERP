@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { Prisma } from '@prisma/client';
 import { COUNTRY_DEFAULT_TAX_RATES } from '@/lib/tax/rules';
 
 export type TaxSourceEntityKind = 'invoice' | 'expense';
@@ -171,7 +172,7 @@ export async function determineAndPersistTax(
       resolutionReason = 'OVERRIDE_APPLIED';
       overrideId = applicableOverride.id;
     } else if (originCountryCode !== '' && originCountryCode === destinationCountryCode) {
-      ratePercent = (COUNTRY_DEFAULT_TAX_RATES[originCountryCode] ?? 0) * 100;
+      ratePercent = new Prisma.Decimal(COUNTRY_DEFAULT_TAX_RATES[originCountryCode] ?? 0).mul(100).toNumber();
       resolutionSource = 'WORKSPACE_RULE';
       resolutionReason = 'SAME_COUNTRY_STANDARD_RATE';
     } else {
@@ -181,8 +182,13 @@ export async function determineAndPersistTax(
     }
   }
 
-  const taxAmount = Number((source.taxableAmount * (ratePercent / 100)).toFixed(2));
-  const totalAmount = Number((source.taxableAmount + taxAmount).toFixed(2));
+  const taxableBase = new Prisma.Decimal(source.taxableAmount);
+  const rateDecimal = new Prisma.Decimal(ratePercent);
+  const taxAmountDecimal = taxableBase.mul(rateDecimal).div(100).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+  const totalAmountDecimal = taxableBase.plus(taxAmountDecimal).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+
+  const taxAmount = taxAmountDecimal.toNumber();
+  const totalAmount = totalAmountDecimal.toNumber();
 
   const determination = await persistence.createTaxDetermination({
     workspaceId: source.workspaceId,
