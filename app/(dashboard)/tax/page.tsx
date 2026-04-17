@@ -25,6 +25,8 @@ import { PageErrorState } from "@/components/states/PageErrorState";
 import { ColumnVisibilityToggle, DataTable, DataTableToolbar, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
 import { TaxOverrideModal, type TaxOverrideWindow } from "@/components/tax/tax-override-modal";
 import { TaxComplianceOps } from "@/components/tax/tax-compliance-ops";
+import { TaxHubOverview } from "@/components/tax/tax-hub-overview";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 
@@ -300,7 +302,27 @@ export default function WealthAndTaxPlanner() {
       description={tr("description", "Plan your {taxLabel} and savings.", { taxLabel })}
       animated={false}
     >
+      <Tabs defaultValue="overview" className="w-full space-y-6">
+        <TabsList className="flex w-full flex-wrap justify-start gap-1 bg-zinc-100/80 p-1 dark:bg-zinc-900/80">
+          <TabsTrigger value="overview" className="text-xs font-semibold">
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="planner" className="text-xs font-semibold">
+            Savings & planner
+          </TabsTrigger>
+          <TabsTrigger value="compliance" className="text-xs font-semibold">
+            Compliance & imports
+          </TabsTrigger>
+          <TabsTrigger value="audit" className="text-xs font-semibold">
+            Overrides & audit
+          </TabsTrigger>
+        </TabsList>
 
+        <TabsContent value="overview" className="mt-0 outline-none">
+          <TaxHubOverview />
+        </TabsContent>
+
+        <TabsContent value="planner" className="mt-0 space-y-6 outline-none">
         {/* TOP ROW: WEALTH & DEDUCTIONS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="shadow-sm border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/30 dark:bg-indigo-950/20">
@@ -587,10 +609,14 @@ export default function WealthAndTaxPlanner() {
             </Card>
           </div>
         </div>
+        </TabsContent>
 
+        <TabsContent value="compliance" className="mt-0 outline-none">
         <TaxComplianceOps />
+        </TabsContent>
 
-        <Card className="mt-8 shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+        <TabsContent value="audit" className="mt-0 outline-none">
+        <Card className="mt-0 shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <CardHeader className="border-b border-zinc-200 dark:border-zinc-800">
             <CardTitle className="dark:text-zinc-50 text-sm font-bold uppercase tracking-wider">Tax Decision History</CardTitle>
             <CardDescription className="dark:text-zinc-400 text-xs font-medium">
@@ -727,6 +753,8 @@ export default function WealthAndTaxPlanner() {
             </div>
           </CardContent>
         </Card>
+        </TabsContent>
+      </Tabs>
 
     </DashboardPageShell>
   );

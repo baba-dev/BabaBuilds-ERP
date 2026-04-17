@@ -50,6 +50,9 @@ export default function SettingsWizard() {
   const [workforceEnabled, setWorkforceEnabled] = useState(false);
   const [workforceLoading, setWorkforceLoading] = useState(false);
   const [showDisableConfirm, setShowDisableConfirm] = useState(false);
+  const [payrollEnabled, setPayrollEnabled] = useState(false);
+  const [payrollLoading, setPayrollLoading] = useState(false);
+  const [showDisablePayrollConfirm, setShowDisablePayrollConfirm] = useState(false);
   const [documentsEnabled, setDocumentsEnabled] = useState(false);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [showDisableDocumentsConfirm, setShowDisableDocumentsConfirm] = useState(false);
@@ -96,6 +99,7 @@ export default function SettingsWizard() {
       .then((d: { modules?: string[] }) => {
         if (Array.isArray(d.modules)) {
           setWorkforceEnabled(d.modules.includes('WORKFORCE'));
+          setPayrollEnabled(d.modules.includes('PAYROLL'));
           setDocumentsEnabled(d.modules.includes('DOCUMENTS'));
         }
       })
@@ -1152,6 +1156,89 @@ export default function SettingsWizard() {
                 </div>
               </div>
 
+              {/* Payroll Module Card */}
+              <div className={cn(
+                "rounded-xl border-2 p-5 transition-all duration-200",
+                payrollEnabled
+                  ? "border-emerald-500/50 bg-emerald-50/30 dark:bg-emerald-950/10"
+                  : "border-zinc-200 dark:border-zinc-800"
+              )}>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className={cn(
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all",
+                      payrollEnabled ? "bg-emerald-600 shadow-lg shadow-emerald-500/20" : "bg-zinc-100 dark:bg-zinc-800"
+                    )}>
+                      <Landmark className={cn("h-5 w-5", payrollEnabled ? "text-white" : "text-zinc-500")} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Payroll</p>
+                        <Badge variant="outline" className={cn(
+                          "text-[10px] font-bold uppercase",
+                          payrollEnabled
+                            ? "border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                            : "border-zinc-300 dark:border-zinc-700 text-zinc-500"
+                        )}>
+                          {payrollEnabled ? "Enabled" : "Disabled"}
+                        </Badge>
+                        <Badge variant="secondary" className="text-[10px] font-semibold">
+                          Standalone
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2 max-w-sm">
+                        Payroll runs, posting, liabilities, compliance exports, and labor-cost analytics with ERP-native controls.
+                      </p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                        {[
+                          "Payroll runs with period-level controls",
+                          "Payroll posting to ERP ledgers",
+                          "Liability tracking and settlement workflows",
+                          "Compliance-ready payroll exports",
+                          "Labor-cost analytics by team and period",
+                        ].map((f) => (
+                          <p key={f} className="text-[11px] text-zinc-500 flex items-center gap-1">
+                            <span className={cn("h-1 w-1 rounded-full shrink-0", payrollEnabled ? "bg-emerald-600" : "bg-zinc-400")} />
+                            {f}
+                          </p>
+                        ))}
+                      </div>
+                      <p className="mt-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+                        Workforce is optional and improves payroll input quality.
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="payroll-module-toggle"
+                    checked={payrollEnabled}
+                    disabled={payrollLoading}
+                    onCheckedChange={async (checked) => {
+                      if (!checked) {
+                        setShowDisablePayrollConfirm(true);
+                        return;
+                      }
+                      setPayrollLoading(true);
+                      try {
+                        const res = await fetch('/api/workspace/modules', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ moduleKey: 'PAYROLL', enabled: true }),
+                        });
+                        if (res.ok) {
+                          setPayrollEnabled(true);
+                          toast.success('Payroll module enabled');
+                        } else {
+                          toast.error('Failed to enable module');
+                        }
+                      } finally {
+                        setPayrollLoading(false);
+                      }
+                    }}
+                    className="data-[state=checked]:bg-emerald-600 shrink-0 mt-1"
+                  />
+                </div>
+              </div>
+
               {/* Document Vault module card */}
               <div className={cn(
                 "rounded-xl border-2 p-5 transition-all duration-200",
@@ -1230,7 +1317,7 @@ export default function SettingsWizard() {
               </div>
 
               <p className="text-xs text-zinc-400 dark:text-zinc-600">
-                More modules (Payroll, Time Tracking, Asset Management) coming soon.
+                More modules (Time Tracking, Asset Management) coming soon.
               </p>
             </CardContent>
           </Card>
@@ -1274,6 +1361,50 @@ export default function SettingsWizard() {
                   className="bg-rose-600 hover:bg-rose-500 text-white border-none"
                 >
                   {workforceLoading ? 'Disabling...' : 'Disable Workforce'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Disable Payroll Confirmation Dialog */}
+          <Dialog open={showDisablePayrollConfirm} onOpenChange={setShowDisablePayrollConfirm}>
+            <DialogContent className="sm:max-w-md bg-zinc-950 border-white/10">
+              <DialogHeader>
+                <DialogTitle className="text-zinc-50 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-400" /> Disable Payroll?
+                </DialogTitle>
+                <DialogDescription className="text-zinc-400">
+                  Payroll runs, postings, and liability history will be <strong className="text-zinc-200">preserved</strong>.
+                  Payroll will be hidden from navigation and route access until re-enabled.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="ghost" onClick={() => setShowDisablePayrollConfirm(false)} className="text-zinc-400">Cancel</Button>
+                <Button
+                  id="confirm-disable-payroll"
+                  disabled={payrollLoading}
+                  onClick={async () => {
+                    setPayrollLoading(true);
+                    try {
+                      const res = await fetch('/api/workspace/modules', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ moduleKey: 'PAYROLL', enabled: false }),
+                      });
+                      if (res.ok) {
+                        setPayrollEnabled(false);
+                        setShowDisablePayrollConfirm(false);
+                        toast.success('Payroll module disabled');
+                      } else {
+                        toast.error('Failed to disable module');
+                      }
+                    } finally {
+                      setPayrollLoading(false);
+                    }
+                  }}
+                  className="bg-rose-600 hover:bg-rose-500 text-white border-none"
+                >
+                  {payrollLoading ? 'Disabling...' : 'Disable Payroll'}
                 </Button>
               </div>
             </DialogContent>

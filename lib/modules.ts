@@ -17,9 +17,13 @@ import { Prisma } from '@prisma/client';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODULE REGISTRY
+//
+// Dependency policy:
+// - PAYROLL runs standalone.
+// - WORKFORCE enhances PAYROLL input quality.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const MODULE_KEYS = ['WORKFORCE', 'DOCUMENTS'] as const;
+export const MODULE_KEYS = ['WORKFORCE', 'PAYROLL', 'DOCUMENTS'] as const;
 export type ModuleKey = (typeof MODULE_KEYS)[number];
 
 export function isValidModuleKey(key: unknown): key is ModuleKey {
@@ -28,12 +32,15 @@ export function isValidModuleKey(key: unknown): key is ModuleKey {
 
 export const MODULE_LABELS: Record<ModuleKey, string> = {
   WORKFORCE: 'Workforce',
+  PAYROLL: 'Payroll',
   DOCUMENTS: 'Document Vault',
 };
 
 export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
   WORKFORCE:
-    'Employee directory, attendance tracking, leave management, and HR approvals — fully integrated with your ERP.',
+    'Employee directory, attendance tracking, leave management, and HR approvals — improves payroll input quality and accuracy.',
+  PAYROLL:
+    'Payroll runs, posting, liabilities, compliance exports, and labor-cost analytics with ERP-native controls.',
   DOCUMENTS:
     'Secure document storage with OCR ingestion, extracted-field review, and ERP-native record linking for accounting and compliance.',
 };
@@ -46,6 +53,13 @@ export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
     'Department & designation management',
     'Role-aware HR dashboards',
     'Approval queue with notifications',
+  ],
+  PAYROLL: [
+    'Payroll runs with period-level controls',
+    'Payroll posting to ERP ledgers',
+    'Liability tracking and settlement workflows',
+    'Compliance-ready payroll exports',
+    'Labor-cost analytics by team and period',
   ],
   DOCUMENTS: [
     'Upload Center (Inbox) with triage states',
@@ -102,7 +116,11 @@ export async function getEnabledModules(workspaceId: string): Promise<Set<Module
 
 /**
  * Throws ModuleDisabledError if the module is not enabled.
- * Use in route handlers and Server Components to guard Workforce routes.
+ * Use in route handlers and Server Components to guard module routes.
+ *
+ * Dependency policy:
+ * - PAYROLL runs standalone (no module dependency required).
+ * - WORKFORCE is optional and enhances PAYROLL input quality.
  */
 export async function requireModule(
   workspaceId: string,

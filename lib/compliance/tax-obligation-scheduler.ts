@@ -26,6 +26,9 @@ type SchedulerOptions = {
   asOf?: Date;
   workspaceId?: string;
   dueTaskWindowDays?: number;
+  /** Optional cron sharding: only workspaces where hash(id) mod total === index */
+  shardIndex?: number;
+  shardTotal?: number;
 };
 
 type SchedulerResult = {
@@ -41,7 +44,10 @@ type SchedulerResult = {
     readyToFiled: number;
     openToFiled: number;
   };
+  /** Net-new compliance tasks inserted in this run */
   tasksCreated: number;
+  /** Compliance tasks updated or touched via upsert (already existed) */
+  tasksUpserted: number;
 };
 
 const DEFAULT_TASK_WINDOW_DAYS = 14;
@@ -151,16 +157,37 @@ function shouldSetReadyAt(params: { asOf: Date; periodEnd: Date; status: TaxObli
   return params.asOf.getTime() >= params.periodEnd.getTime();
 }
 
+function stableWorkspaceShard(id: string, total: number): number {
+  let hash = 0;
+  for (let i = 0; i < id.length; i += 1) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  return hash % total;
+}
+
 export async function runTaxObligationScheduler(
   options: SchedulerOptions = {},
 ): Promise<SchedulerResult> {
   const asOf = options.asOf ?? new Date();
   const taskWindowDays = options.dueTaskWindowDays ?? DEFAULT_TASK_WINDOW_DAYS;
 
-  const workspaces = await prisma.workspace.findMany({
+  const shardTotal = options.shardTotal;
+  const shardIndex = options.shardIndex;
+  const useSharding =
+    typeof shardTotal === 'number' &&
+    shardTotal > 0 &&
+    typeof shardIndex === 'number' &&
+    shardIndex >= 0 &&
+    shardIndex < shardTotal;
+
+  const workspacesAll = await prisma.workspace.findMany({
     where: options.workspaceId ? { id: options.workspaceId } : undefined,
     select: { id: true },
   });
+
+  const workspaces = useSharding
+    ? workspacesAll.filter((w) => stableWorkspaceShard(w.id, shardTotal!) === shardIndex)
+    : workspacesAll;
 
   const result: SchedulerResult = {
     processedWorkspaces: workspaces.length,
@@ -176,6 +203,7 @@ export async function runTaxObligationScheduler(
       openToFiled: 0,
     },
     tasksCreated: 0,
+    tasksUpserted: 0,
   };
 
   for (const workspace of workspaces) {
@@ -361,7 +389,20 @@ export async function runTaxObligationScheduler(
       },
     });
 
+    // Regenerates obligations from calendar rules; OPEN/READY/OVERDUE rows for future periods may be
+    // deleted and recreated — do not treat compliance task upserts as all "creates".
     for (const obligation of upcomingObligations) {
+      const existingTask = await prisma.complianceTask.findUnique({
+        where: {
+          workspaceId_obligationId_dueDate: {
+            workspaceId: workspace.id,
+            obligationId: obligation.id,
+            dueDate: obligation.dueDate,
+          },
+        },
+        select: { id: true },
+      });
+
       await prisma.complianceTask.upsert({
         where: {
           workspaceId_obligationId_dueDate: {
@@ -382,7 +423,12 @@ export async function runTaxObligationScheduler(
           status: COMPLIANCE_TASK_STATUS.PENDING,
         },
       });
-      result.tasksCreated += 1;
+
+      if (existingTask) {
+        result.tasksUpserted += 1;
+      } else {
+        result.tasksCreated += 1;
+      }
     }
   }
 
