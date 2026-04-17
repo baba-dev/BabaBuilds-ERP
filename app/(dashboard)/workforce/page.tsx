@@ -13,6 +13,7 @@ import { WorkforcePageShell } from "@/components/workforce/WorkforceLayout";
 import { cn } from "@/lib/utils";
 
 type Summary = {
+  enabled?: boolean;
   totalEmployees: number;
   activeEmployees: number;
   presentToday: number;
@@ -38,6 +39,7 @@ export default function WorkforceOverviewPage() {
   const [recent, setRecent] = useState<RecentEmployee[]>([]);
   const [canApprove, setCanApprove] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [syncBadgeLabel, setSyncBadgeLabel] = useState("Standalone payroll mode");
 
   const fetchData = useCallback(async () => {
     try {
@@ -50,6 +52,7 @@ export default function WorkforceOverviewPage() {
       if (summaryRes.ok) {
         const data = await summaryRes.json() as Summary;
         setSummary(data);
+        setSyncBadgeLabel(data.enabled ? "Workforce sync active" : "Standalone payroll mode");
       }
       if (leaveRes.ok) {
         const { requests } = await leaveRes.json() as { requests: LeaveRequest[] };
@@ -79,6 +82,18 @@ export default function WorkforceOverviewPage() {
     <WorkforcePageShell
       title="Workforce"
       description="People directory, attendance, leave, and approvals — scoped per-workspace."
+      actions={
+        <span
+          className={cn(
+            "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+            syncBadgeLabel === "Workforce sync active"
+              ? "border-teal-500/30 bg-teal-500/10 text-teal-700 dark:text-teal-300"
+              : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+          )}
+        >
+          {syncBadgeLabel}
+        </span>
+      }
     >
       <div className="space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
