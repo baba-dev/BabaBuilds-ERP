@@ -6,6 +6,7 @@ import type { CAExpenseRow, CAInvoiceRow, CAPortalPayload } from "@/lib/ca-porta
 import { decimalToNumber, toDecimal } from "@/lib/money";
 import { getCurrentFinancialYear } from '@/lib/financial-year';
 import { reconcileWithholdingForPeriod } from '@/lib/tax/withholding';
+import { checkPermission } from '@/lib/rbac';
 
 const isPaidStatus = (status: unknown) => String(status).toUpperCase() === "PAID";
 const isReceiptStatus = (status: unknown) => {
@@ -33,6 +34,15 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized", code: "AUTH_UNAUTHORIZED" }, { status: 401 });
     }
     const workspaceId = (session as any).workspaceId;
+    const userId = (session as { user?: { id?: string | null } }).user?.id as string | undefined;
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized", code: "AUTH_UNAUTHORIZED" }, { status: 401 });
+    }
+
+    const canViewTax = await checkPermission(userId, workspaceId, 'tax.view');
+    if (!canViewTax) {
+      return NextResponse.json({ error: "Forbidden", code: "RBAC_PERMISSION_DENIED" }, { status: 403 });
+    }
 
     const { searchParams } = new URL(request.url);
     const fy = searchParams.get('fy') || getCurrentFinancialYear();
@@ -152,6 +162,8 @@ export async function GET(request: Request) {
       ...returnPeriods.map((period) => period.periodKey),
     ]);
 
+    const returnPeriodByKey = new Map(returnPeriods.map((period) => [period.periodKey, period]));
+
     const now = new Date();
     const warnings: CAPortalPayload['readiness']['warnings'] = [];
     const blockers: CAPortalPayload['readiness']['blockers'] = [];
@@ -159,7 +171,7 @@ export async function GET(request: Request) {
     const withholdingReconciliation = Array.from(keys)
       .sort((a, b) => a.localeCompare(b))
       .map((periodKey) => {
-        const period = returnPeriods.find((entry) => entry.periodKey === periodKey);
+        const period = returnPeriodByKey.get(periodKey);
         const withheldAmount = (withheldByPeriod.get(periodKey) ?? toDecimal(0)).toDecimalPlaces(2);
         const creditedAmount = (creditedByPeriod.get(periodKey) ?? toDecimal(0)).toDecimalPlaces(2);
         const deltaAmount = withheldAmount.minus(creditedAmount).toDecimalPlaces(2);

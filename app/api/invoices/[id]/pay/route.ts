@@ -14,6 +14,7 @@ import {
 } from '@/lib/financial-idempotency';
 import { toDecimal } from '@/lib/money';
 import { computeWithheldAmount, defaultDepositDueDate, deriveReturnPeriodKey } from '@/lib/tax/withholding';
+import { withPermission } from '@/lib/rbac';
 
 import { 
   getWorkspaceId,
@@ -28,7 +29,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   try {
     const session = await getServerSession(authOptions);
     const workspaceId = getWorkspaceId(session);
-    if (!workspaceId) {
+    const userId = (session?.user as { id?: string | null } | undefined)?.id as string | undefined;
+    if (!workspaceId || !userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -67,6 +69,19 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     if (withholdingDepositDueAt && Number.isNaN(withholdingDepositDueAt.getTime())) {
       return NextResponse.json({ success: false, error: { code: 'INVALID_WITHHOLDING_DATE', message: 'Invalid withholding due date.' } }, { status: 400 });
     }
+
+    const hasWithholdingPayload =
+      withholdingRatePercent !== null ||
+      withholdingAmount !== null ||
+      Boolean(withholdingDeductedAt) ||
+      Boolean(withholdingDepositedAt) ||
+      Boolean(withholdingDepositDueAt) ||
+      Boolean(returnPeriodKey);
+    if (hasWithholdingPayload) {
+      const whPerm = await withPermission(userId, workspaceId, 'tax.withholding.record');
+      if (!whPerm.granted) return whPerm.response;
+    }
+
     const operation = 'INVOICE_PAYMENT_CAPTURE';
     const idempotencyKey =
       request.headers.get('Idempotency-Key')?.trim() ||

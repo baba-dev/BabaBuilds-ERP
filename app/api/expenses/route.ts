@@ -140,6 +140,18 @@ export async function POST(request: Request) {
       return apiError(400, "Invalid withholding due date.", "INVALID_WITHHOLDING_DATE");
     }
 
+    const hasWithholdingPayload =
+      (withholdingRatePercentRaw && withholdingRatePercentRaw.trim() !== '') ||
+      (withholdingAmountRaw && withholdingAmountRaw.trim() !== '') ||
+      (withholdingDeductedAtRaw && withholdingDeductedAtRaw.trim() !== '') ||
+      (withholdingDepositedAtRaw && withholdingDepositedAtRaw.trim() !== '') ||
+      (withholdingDepositDueAtRaw && withholdingDepositDueAtRaw.trim() !== '') ||
+      (returnPeriodKeyRaw && returnPeriodKeyRaw.trim() !== '');
+    if (hasWithholdingPayload) {
+      const whPerm = await withPermission(userId, workspaceId, 'tax.withholding.record');
+      if (!whPerm.granted) return whPerm.response as any;
+    }
+
     // Extract the file
     const file = formData.get('receipt') as File | null;
     let receiptUrl = null;

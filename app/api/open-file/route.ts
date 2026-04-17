@@ -13,6 +13,7 @@ import {
   uniqueStoredName,
 } from '@/lib/uploads/private-storage';
 import { buildPrivatePath } from '@/lib/uploads/private-storage';
+import { checkPermission } from '@/lib/rbac';
 
 type ImportFlow = 'expenses' | 'invoices' | 'reconciliation' | 'withholding_certificates';
 type ImportStatus = 'IMPORTED' | 'UNSUPPORTED' | 'PERMISSION_DENIED' | 'FAILED';
@@ -251,6 +252,36 @@ export async function POST(request: Request) {
 
 
     if (flow === 'withholding_certificates') {
+      if (!actor?.userId) {
+        await logAudit({
+          workspaceId,
+          request,
+          status: 'PERMISSION_DENIED',
+          reason: 'Missing user context for withholding certificate ingestion',
+        });
+        return apiError(403, 'Permission denied for withholding certificate import.', 'PERMISSION_DENIED');
+      }
+
+      const [canIngest, canUpload] = await Promise.all([
+        checkPermission(actor.userId, workspaceId, 'tax.withholding.ingest'),
+        checkPermission(actor.userId, workspaceId, 'documents.upload'),
+      ]);
+      if (!canIngest || !canUpload) {
+        await logAudit({
+          workspaceId,
+          request,
+          actorUserId: actor.userId,
+          actorEmail: actor.email,
+          fileName: file.name,
+          mimeType: file.type,
+          fileSize: file.size,
+          flow,
+          status: 'PERMISSION_DENIED',
+          reason: 'Insufficient permissions for withholding certificate ingestion',
+        });
+        return apiError(403, 'Permission denied for withholding certificate import.', 'PERMISSION_DENIED');
+      }
+
       const guessed = sniffAllowedContent(buffer);
       if (!guessed || (guessed !== 'pdf' && guessed !== 'png' && guessed !== 'jpeg' && guessed !== 'webp')) {
         await logAudit({
