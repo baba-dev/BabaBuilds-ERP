@@ -19,7 +19,7 @@ import { Prisma } from '@prisma/client';
 // MODULE REGISTRY
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const MODULE_KEYS = ['WORKFORCE', 'DOCUMENTS'] as const;
+export const MODULE_KEYS = ['WORKFORCE', 'DOCUMENTS', 'PAYROLL'] as const;
 export type ModuleKey = (typeof MODULE_KEYS)[number];
 
 export function isValidModuleKey(key: unknown): key is ModuleKey {
@@ -29,6 +29,7 @@ export function isValidModuleKey(key: unknown): key is ModuleKey {
 export const MODULE_LABELS: Record<ModuleKey, string> = {
   WORKFORCE: 'Workforce',
   DOCUMENTS: 'Document Vault',
+  PAYROLL: 'Payroll',
 };
 
 export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
@@ -36,6 +37,8 @@ export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
     'Employee directory, attendance tracking, leave management, and HR approvals — fully integrated with your ERP.',
   DOCUMENTS:
     'Secure document storage with OCR ingestion, extracted-field review, and ERP-native record linking for accounting and compliance.',
+  PAYROLL:
+    'Payroll onboarding, run readiness checks, and staged rollout controls before enabling accounting posting and exports.',
 };
 
 export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
@@ -53,6 +56,14 @@ export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
     'Link documents to expenses, invoices, and more',
     'Archive without deletion (audit preserved)',
     'Storage usage meter with plan-based limits',
+  ],
+  PAYROLL: [
+    'Standalone payroll setup workflow',
+    'Workforce-linked setup workflow',
+    'Data health checks with go-live readiness checklist',
+    'Execution phase controls (Phase 0 → GA)',
+    'Read-only preview mode during internal alpha',
+    'Posting/export safeguards for controlled rollout',
   ],
 };
 

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { 
   Globe, ShieldCheck, Building2, 
   ArrowRight, ArrowLeft, CheckCircle2, Sparkles,
-  Zap, Wallet, Users2, Calendar, ClipboardList, FileText
+  Zap, Wallet, Users2, Calendar, ClipboardList, FileText, Route, CheckSquare2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,16 @@ interface SetupWizardProps {
   isModal?: boolean;
   onComplete?: () => void;
 }
+
+type PayrollReadinessResponse = {
+  executionPhases: Array<{ id: string; title: string; summary: string }>;
+  readiness: {
+    score: number;
+    postingEnabled: boolean;
+    postingStatusLabel: string;
+    checklist: Array<{ id: string; label: string; status: "pass" | "warn"; detail: string }>;
+  };
+};
 
 export default function SetupWizard({ isModal = false, onComplete }: SetupWizardProps) {
   const router = useRouter();
@@ -57,7 +67,10 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
     shopAccentColor: "#6366f1",
     enableWorkforce: false,
     enableDocuments: false,
+    enablePayroll: false,
+    payrollSetupPath: "STANDALONE" as "STANDALONE" | "WORKFORCE_LINKED",
   });
+  const [payrollReadiness, setPayrollReadiness] = useState<PayrollReadinessResponse | null>(null);
 
   // Smart Suggestion Logic
   const handleCountryChange = (code: string) => {
@@ -85,6 +98,27 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
 
   const nextStep = () => setStep(s => s + 1);
   const prevStep = () => setStep(s => s - 1);
+
+  useEffect(() => {
+    if (step !== 7) return;
+    let active = true;
+
+    const loadPayrollReadiness = async () => {
+      try {
+        const res = await fetch("/api/payroll/onboarding/readiness", { cache: "no-store" });
+        if (!res.ok) return;
+        const payload = (await res.json()) as PayrollReadinessResponse;
+        if (active) setPayrollReadiness(payload);
+      } catch {
+        // Non-blocking by design: wizard should still be usable without readiness telemetry.
+      }
+    };
+
+    loadPayrollReadiness();
+    return () => {
+      active = false;
+    };
+  }, [step]);
 
   const finishSetup = async () => {
     setIsSubmitting(true);
@@ -116,7 +150,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
           toast.error(errorBody?.error || "Setup failed. Please check your fields.", { id: toastId });
         }
       }
-    } catch (_err) {
+    } catch {
       toast.error("Network error during setup.", { id: toastId });
     } finally {
       setIsSubmitting(false);
@@ -543,8 +577,124 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                   </div>
                 </div>
                 <p className="text-center text-xs text-zinc-400 dark:text-zinc-600 pt-2">
-                  More modules (Payroll, Time Tracking) coming soon.
+                  More modules (Time Tracking, Asset Registry) coming soon.
                 </p>
+
+                <div
+                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
+                    form.enablePayroll
+                      ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20'
+                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
+                  }`}
+                  onClick={() => setForm({ ...form, enablePayroll: !form.enablePayroll })}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
+                        form.enablePayroll ? 'bg-emerald-600 shadow-lg shadow-emerald-500/20' : 'bg-zinc-100 dark:bg-zinc-800'
+                      }`}>
+                        <Wallet className={`h-5 w-5 ${form.enablePayroll ? 'text-white' : 'text-zinc-500 dark:text-zinc-400'}`} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Payroll (Execution staged)</p>
+                          {form.enablePayroll && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
+                              <CheckCircle2 className="h-2.5 w-2.5" /> Enabled
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                          Stand up payroll safely with phased rollout controls, read-only previews, and go-live readiness checks.
+                        </p>
+
+                        <div className="space-y-2 mb-3">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Execution phases</p>
+                          <div className="space-y-1.5">
+                            {(payrollReadiness?.executionPhases ?? []).map((phase) => (
+                              <div key={phase.id} className="flex items-start gap-2">
+                                <Route className="h-3 w-3 shrink-0 mt-0.5 text-emerald-500" />
+                                <p className="text-[11px] text-zinc-600 dark:text-zinc-300">
+                                  <span className="font-semibold">{phase.title}:</span> {phase.summary}
+                                </p>
+                              </div>
+                            ))}
+                            {!payrollReadiness?.executionPhases?.length && (
+                              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Load payroll phases after module selection.</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {form.enablePayroll && (
+                          <div className="rounded-xl border border-emerald-200/70 dark:border-emerald-900/60 bg-white/80 dark:bg-zinc-950/60 p-3 space-y-3 animate-in fade-in zoom-in-95">
+                            <div className="space-y-2">
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Setup path</p>
+                              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                {[
+                                  {
+                                    key: "STANDALONE" as const,
+                                    title: "Standalone payroll setup",
+                                    desc: "Configure payroll independently from Workforce.",
+                                  },
+                                  {
+                                    key: "WORKFORCE_LINKED" as const,
+                                    title: "Workforce-linked setup",
+                                    desc: "Derive payroll context from Workforce employees + attendance.",
+                                  },
+                                ].map((option) => (
+                                  <button
+                                    key={option.key}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setForm({ ...form, payrollSetupPath: option.key });
+                                    }}
+                                    className={`text-left rounded-lg border px-3 py-2 transition ${
+                                      form.payrollSetupPath === option.key
+                                        ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30"
+                                        : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
+                                    }`}
+                                  >
+                                    <p className="text-[11px] font-semibold text-zinc-800 dark:text-zinc-100">{option.title}</p>
+                                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">{option.desc}</p>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Go-live readiness checklist</p>
+                              <div className="space-y-1.5">
+                                {(payrollReadiness?.readiness.checklist ?? []).map((item) => (
+                                  <div key={item.id} className="flex items-start gap-2">
+                                    <CheckSquare2 className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${item.status === "pass" ? "text-emerald-500" : "text-amber-500"}`} />
+                                    <div>
+                                      <p className="text-[11px] font-medium text-zinc-700 dark:text-zinc-200">{item.label}</p>
+                                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{item.detail}</p>
+                                    </div>
+                                  </div>
+                                ))}
+                                {payrollReadiness && (
+                                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 pt-1">
+                                    Readiness score: <span className="font-semibold">{payrollReadiness.readiness.score}%</span> · Posting:{" "}
+                                    <span className="font-semibold">{payrollReadiness.readiness.postingStatusLabel}</span>
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                      form.enablePayroll ? 'bg-emerald-600' : 'bg-zinc-300 dark:bg-zinc-700'
+                    }`}>
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        form.enablePayroll ? 'translate-x-5' : 'translate-x-0'
+                      }`} />
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </div>
           )}
