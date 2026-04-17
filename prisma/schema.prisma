@@ -353,6 +353,8 @@ model Workspace {
   leaveBalances     LeaveBalance[]
   workforceHolidays WorkforceHoliday[]
   workSchedules     WorkSchedule[]
+  payrollSettings   PayrollSettings?
+  payComponents     PayrollPayComponent[]
   payrollPeriods    PayrollPeriod[]
   payrollRuns       PayrollRun[]
   payrollPostings   PayrollPosting[]
@@ -2525,6 +2527,19 @@ enum LeaveRequestStatus {
   CANCELLED
 }
 
+enum PayrollInputMode {
+  STANDALONE
+  WORKFORCE_LINKED
+}
+
+enum PayComponentCategory {
+  BASE_SALARY
+  ALLOWANCE
+  VARIABLE_PAY
+  DEDUCTION
+  EMPLOYER_CONTRIBUTION
+}
+
 enum PayrollPeriodStatus {
   OPEN
   PROCESSING
@@ -2954,4 +2969,42 @@ model WorkSchedule {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model PayrollSettings {
+  id          String    @id @default(cuid())
+  workspaceId String    @unique
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  inputMode PayrollInputMode @default(STANDALONE)
+
+  statutoryRulesJson        Json?
+  paymentScheduleJson       Json?
+  defaultCostAllocationJson Json?
+  standaloneConfigJson      Json?
+  workforceLinkedConfigJson Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PayrollPayComponent {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name     String
+  code     String
+  category PayComponentCategory
+
+  isTaxable Boolean @default(true)
+  isActive  Boolean @default(true)
+
+  metadataJson Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, code])
+  @@index([workspaceId, category])
 }
