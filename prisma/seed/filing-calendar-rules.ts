@@ -1,0 +1,58 @@
+import type { FilingCalendarRuleSeedRow } from './types';
+
+export const indiaFilingCalendarRules: FilingCalendarRuleSeedRow[] = [
+  {
+    id: 'in-rule-gstr1-monthly-due11',
+    countryCode: 'IN',
+    code: 'GSTR1_MONTHLY_DUE_11',
+    appliesToFormCode: 'GSTR-1',
+    description: 'Monthly GSTR-1 due on 11th of the succeeding month for regular taxpayers.',
+    dueDayRule: 'DUE_DAY=11;OFFSET=+1_MONTH',
+    lateFeeRule: 'LATE_FEE_APPLIES_PER_DAY_SUBJECT_TO_CAP',
+    effectiveFrom: '2021-01-01',
+    sourceDocumentRef: {
+      authority: 'CBIC',
+      documentName: 'Return due date notifications',
+      citation: 'Subject to periodic extension notifications',
+    },
+    verificationLevel: 'PARTIALLY_VERIFIED',
+    reviewStatus: 'PENDING_REVIEW',
+    legalCertaintyRequired: true,
+  },
+  {
+    id: 'in-rule-gstr3b-monthly-due20',
+    countryCode: 'IN',
+    code: 'GSTR3B_MONTHLY_DUE_20',
+    appliesToFormCode: 'GSTR-3B',
+    description: 'Monthly GSTR-3B due date baseline set to 20th of the succeeding month.',
+    dueDayRule: 'DUE_DAY=20;OFFSET=+1_MONTH',
+    lateFeeRule: 'INTEREST_AND_LATE_FEE_IF_DELAYED',
+    effectiveFrom: '2021-01-01',
+    sourceDocumentRef: {
+      authority: 'CBIC',
+      documentName: 'GSTR-3B due-date framework',
+      citation: 'State-cluster variants may apply',
+    },
+    verificationLevel: 'PARTIALLY_VERIFIED',
+    reviewStatus: 'DRAFT',
+    legalCertaintyRequired: true,
+  },
+  {
+    id: 'in-rule-gstr9-annual-due-dec31',
+    countryCode: 'IN',
+    code: 'GSTR9_ANNUAL_DUE_DEC31',
+    appliesToFormCode: 'GSTR-9',
+    description: 'Annual return due by 31 December following the financial year end (baseline rule).',
+    dueDayRule: 'DUE_DAY=31;DUE_MONTH=12;OFFSET=+1_FINANCIAL_YEAR',
+    lateFeeRule: 'LATE_FEE_PER_DAY_WITH_STATUTORY_CAP',
+    effectiveFrom: '2018-04-01',
+    sourceDocumentRef: {
+      authority: 'CBIC',
+      documentName: 'Section 44 annual return deadline',
+      citation: 'Often modified via extension notifications',
+    },
+    verificationLevel: 'UNVERIFIED',
+    reviewStatus: 'DRAFT',
+    legalCertaintyRequired: true,
+  },
+];

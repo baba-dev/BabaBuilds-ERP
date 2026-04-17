@@ -1,9 +1,14 @@
 import { PrismaClient } from '@prisma/client';
+import { getIndiaStarterComplianceReadinessSummary } from './seed/index';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('Seeding compliance dictionaries...');
+
+
+  const complianceReadinessSummary = getIndiaStarterComplianceReadinessSummary();
+  console.log('India starter compliance seed metadata loaded:', complianceReadinessSummary);
 
   // 1. Core SAC Codes for Services
   const sacCodes = [
