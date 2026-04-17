@@ -289,6 +289,10 @@ model Workspace {
   invoices                     Invoice[]
   billingTransactions          BillingTransaction[]
   expenses                     Expense[]
+  withholdingEvents            WithholdingEvent[]
+  taxCreditEvents              TaxCreditEvent[]
+  taxCreditLedgerEntries       TaxCreditLedgerEntry[]
+  taxReturnPeriods             TaxReturnPeriod[]
   bankTransactions             BankTransaction[]
   bankAccounts                 BankAccount[]
   investments                  Investment[]
@@ -714,6 +718,13 @@ model Invoice {
   amountReceived Decimal?
   dateReceived   DateTime?
 
+  withholdingRatePercent    Decimal?
+  withholdingAmount         Decimal?
+  withholdingDeductedAt     DateTime?
+  withholdingDepositedAt    DateTime?
+  withholdingDepositDueAt   DateTime?
+  withholdingReminderSentAt DateTime?
+
   providerGateway       String? // "RAZORPAY" or "STRIPE"
   providerPaymentLinkId String? // The ID of the generated payment link
 
@@ -728,6 +739,7 @@ model Invoice {
   sourceProposal      Proposal?            @relation("ProposalToInvoice", fields: [sourceProposalId], references: [id])
   proposalConversions ProposalConversion[]
   billingMilestones   BillingMilestone[]
+  withholdingEvents   WithholdingEvent[]
 
   // Security: Two different workspaces can use invoice number "001"
   @@unique([invoiceNumber, workspaceId])
@@ -963,9 +975,140 @@ model Expense {
   receiptUrl  String?
   createdAt   DateTime @default(now())
 
+  withholdingRatePercent    Decimal?
+  withholdingAmount         Decimal?
+  withholdingDeductedAt     DateTime?
+  withholdingDepositedAt    DateTime?
+  withholdingDepositDueAt   DateTime?
+  withholdingReminderSentAt DateTime?
+
+  withholdingEvents WithholdingEvent[]
+
   @@index([date])
   @@index([category])
   @@index([workspaceId])
+}
+
+model WithholdingEvent {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  sourceType String // INVOICE_PAYMENT|EXPENSE_PAYMENT|MANUAL
+  sourceId   String?
+  invoiceId  String?
+  invoice    Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  expenseId  String?
+  expense    Expense? @relation(fields: [expenseId], references: [id], onDelete: SetNull)
+
+  counterpartyName String?
+  sectionCode      String?
+
+  grossAmount            Decimal
+  withheldAmount         Decimal
+  withholdingRatePercent Decimal?
+
+  deductedAt     DateTime
+  depositedAt    DateTime?
+  depositDueAt   DateTime?
+  reminderSentAt DateTime?
+
+  returnPeriodKey String?
+  notes           String?
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([workspaceId, deductedAt])
+  @@index([workspaceId, returnPeriodKey])
+  @@index([workspaceId, sourceType, sourceId])
+}
+
+model TaxCreditEvent {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  sourceType String // WITHHOLDING_CERTIFICATE|MANUAL|IMPORT
+  sourceId   String?
+
+  documentId String?
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  creditType        String  @default("WITHHOLDING") // WITHHOLDING|ADVANCE_TAX|OTHER
+  counterpartyName  String?
+  certificateNumber String?
+
+  grossAmount    Decimal?
+  creditedAmount Decimal
+  withheldAmount Decimal?
+
+  certificateIssuedAt DateTime?
+  periodStart         DateTime?
+  periodEnd           DateTime?
+  returnPeriodKey     String?
+
+  status String  @default("POSTED") // POSTED|REVERSED|PENDING_REVIEW
+  notes  String?
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  ledgerEntries TaxCreditLedgerEntry[]
+
+  @@index([workspaceId, returnPeriodKey])
+  @@index([workspaceId, periodStart, periodEnd])
+  @@index([workspaceId, documentId])
+}
+
+model TaxCreditLedgerEntry {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  taxCreditEventId String
+  taxCreditEvent   TaxCreditEvent @relation(fields: [taxCreditEventId], references: [id], onDelete: Cascade)
+
+  entryType       String // CREDIT|REVERSAL|ADJUSTMENT
+  amount          Decimal
+  entryDate       DateTime
+  returnPeriodKey String?
+  notes           String?
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@index([workspaceId, entryDate])
+  @@index([workspaceId, returnPeriodKey])
+  @@index([workspaceId, taxCreditEventId])
+}
+
+model TaxReturnPeriod {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  periodKey   String
+  periodStart DateTime
+  periodEnd   DateTime
+
+  dueDate DateTime
+  filedAt DateTime?
+
+  expectedWithheldAmount   Decimal @default(0)
+  reconciledWithheldAmount Decimal @default(0)
+
+  status String  @default("OPEN") // OPEN|FILED|OVERDUE
+  notes  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, periodKey])
+  @@index([workspaceId, dueDate])
+  @@index([workspaceId, periodStart, periodEnd])
 }
 
 model BankTransaction {
@@ -1945,11 +2088,12 @@ model Document {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  files   DocumentFile[]
-  links   DocumentLink[]
-  ocrJobs DocumentOcrJob[]
-  fields  DocumentExtractedField[]
-  events  DocumentAuditEvent[]
+  files           DocumentFile[]
+  links           DocumentLink[]
+  ocrJobs         DocumentOcrJob[]
+  fields          DocumentExtractedField[]
+  events          DocumentAuditEvent[]
+  taxCreditEvents TaxCreditEvent[]
 
   @@index([workspaceId, createdAt(sort: Desc)])
   @@index([workspaceId, status, createdAt(sort: Desc)])

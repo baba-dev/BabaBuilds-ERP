@@ -147,6 +147,8 @@ export const PERMISSION_KEYS = [
   'tax.manage',            // High-risk: changes tax configuration
   'tax.readiness.view',    // read tax return readiness summaries
   'tax.readiness.run',     // run tax return readiness / prefill pipelines
+  'tax.withholding.record', // record withholding on payments/expenses (creates WithholdingEvent)
+  'tax.withholding.ingest', // ingest withholding certificates / post tax credits from uploads
 
   // Reports
   'reports.view',
@@ -213,7 +215,14 @@ export const PERMISSION_MODULE_GROUPS: { module: string; label: string; keys: Pe
   {
     module: 'tax',
     label: 'Tax',
-    keys: ['tax.view', 'tax.manage', 'tax.readiness.view', 'tax.readiness.run'],
+    keys: [
+      'tax.view',
+      'tax.manage',
+      'tax.readiness.view',
+      'tax.readiness.run',
+      'tax.withholding.record',
+      'tax.withholding.ingest',
+    ],
   },
   { module: 'reports',         label: 'Reports',          keys: ['reports.view', 'reports.export'] },
   { module: 'clients',         label: 'Clients',          keys: ['clients.view', 'clients.manage'] },
@@ -283,7 +292,12 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'service_orders.view', 'service_orders.manage',
     'cash_flow.view', 'cash_flow.manage_assumptions',
     'accounting.view', 'accounting.post',
-    'tax.view', 'tax.manage', 'tax.readiness.view', 'tax.readiness.run',
+    'tax.view',
+    'tax.manage',
+    'tax.readiness.view',
+    'tax.readiness.run',
+    'tax.withholding.record',
+    'tax.withholding.ingest',
     'reports.view', 'reports.export',
     'clients.view', 'clients.manage',
     'workspace.manage_members', 'workspace.manage_roles', 'workspace.manage_settings',
@@ -322,7 +336,12 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'service_orders.view', 'service_orders.manage',
     'cash_flow.view', 'cash_flow.manage_assumptions',
     'accounting.view', 'accounting.post',
-    'tax.view', 'tax.manage', 'tax.readiness.view', 'tax.readiness.run',
+    'tax.view',
+    'tax.manage',
+    'tax.readiness.view',
+    'tax.readiness.run',
+    'tax.withholding.record',
+    'tax.withholding.ingest',
     'reports.view', 'reports.export',
     'clients.view', 'clients.manage',
     'workspace.manage_members', 'workspace.manage_roles', 'workspace.manage_settings',
@@ -362,6 +381,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'tax.view',           // can view but NOT manage
     'tax.readiness.view',
     'tax.readiness.run',
+    'tax.withholding.record',
+    'tax.withholding.ingest',
     'reports.view', 'reports.export',
     'clients.view',
     // NOT: accounting.post, tax.manage, billing.manage, workspace.manage_*
@@ -408,6 +429,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'dashboard.view',
     'proposals.view', 'proposals.create', 'proposals.edit', 'proposals.send', 'proposals.convert',
     'invoices.view', 'invoices.create',
+    'tax.withholding.record',
     'retainers.view',
     'service_orders.view',
     'reports.view',
@@ -420,6 +442,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'service_orders.view', 'service_orders.manage',
     'purchase_orders.view', 'purchase_orders.create',
     'expenses.view', 'expenses.create',
+    'tax.withholding.record',
+    'tax.withholding.ingest',
     'inventory.view',
     'clients.view',
     'reports.view',
@@ -453,6 +477,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'clients.view',
     'invoices.view',
     'expenses.view', 'expenses.create',
+    'tax.withholding.record',
     'service_orders.view',
     // NOT: any admin, any financial management, any sensitive data
     // Workforce — self-service only
