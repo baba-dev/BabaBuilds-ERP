@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { getIndiaStarterComplianceReadinessSummary } from './seed/index';
+import { upsertIndiaTaxReferenceCatalog } from './seed/tax-reference-persistence';
 
 const prisma = new PrismaClient();
 
@@ -9,6 +10,9 @@ async function main() {
 
   const complianceReadinessSummary = getIndiaStarterComplianceReadinessSummary();
   console.log('India starter compliance seed metadata loaded:', complianceReadinessSummary);
+
+  await upsertIndiaTaxReferenceCatalog(prisma);
+  console.log('India tax reference catalog (TaxReferenceEntry) upserted.');
 
   // 1. Core SAC Codes for Services
   const sacCodes = [

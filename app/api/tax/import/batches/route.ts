@@ -6,6 +6,8 @@ import { prisma } from '@/lib/prisma';
 import { apiError } from '@/lib/api-error';
 import { requirePermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
 import { isTaxImportTemplateType, TAX_IMPORT_TEMPLATES, type TaxImportTemplateType } from '@/lib/tax/import-templates';
+import { buildTaxRequestHash, consumeTaxIdempotency } from '@/lib/tax/idempotency';
+import { appendTaxAuditEvent, newTaxCorrelationId } from '@/lib/tax/audit';
 
 type ImportRowPayload = {
   rowNumber?: number;
@@ -86,63 +88,101 @@ export async function POST(req: Request) {
     };
   });
 
-  const successCount = diagnostics.filter((d) => d.status === 'SUCCESS').length;
-  const warningCount = diagnostics.filter((d) => d.status === 'WARNING').length;
-  const errorCount = diagnostics.filter((d) => d.status === 'ERROR').length;
+  const idempotencyKey = req.headers.get('Idempotency-Key')?.trim() || null;
+  const requestHash = buildTaxRequestHash({ templateType, sourceName, rows });
 
-  const status = errorCount > 0 ? 'COMPLETED_WITH_ERRORS' : 'COMPLETED';
+  const outcome = await consumeTaxIdempotency({
+    db: prisma,
+    workspaceId,
+    operation: 'TAX_IMPORT_BATCH',
+    idempotencyKey,
+    requestHash,
+    execute: async () => {
+      const successCount = diagnostics.filter((d) => d.status === 'SUCCESS').length;
+      const warningCount = diagnostics.filter((d) => d.status === 'WARNING').length;
+      const errorCount = diagnostics.filter((d) => d.status === 'ERROR').length;
 
-  const batch = await prisma.taxImportBatch.create({
-    data: {
-      workspaceId,
-      templateType,
-      sourceName,
-      status,
-      submittedByUserId: userId,
-      rowCount: diagnostics.length,
-      successCount,
-      warningCount,
-      errorCount,
-      metadata: {
-        templateColumns: TAX_IMPORT_TEMPLATES[templateType].columns,
-      },
-    },
-    select: {
-      id: true,
-      templateType: true,
-      status: true,
-      rowCount: true,
-      successCount: true,
-      warningCount: true,
-      errorCount: true,
-      createdAt: true,
+      const status = errorCount > 0 ? 'COMPLETED_WITH_ERRORS' : 'COMPLETED';
+
+      const batch = await prisma.taxImportBatch.create({
+        data: {
+          workspaceId,
+          templateType,
+          sourceName,
+          status,
+          submittedByUserId: userId,
+          rowCount: diagnostics.length,
+          successCount,
+          warningCount,
+          errorCount,
+          metadata: {
+            templateColumns: TAX_IMPORT_TEMPLATES[templateType].columns,
+          },
+        },
+        select: {
+          id: true,
+          templateType: true,
+          status: true,
+          rowCount: true,
+          successCount: true,
+          warningCount: true,
+          errorCount: true,
+          createdAt: true,
+        },
+      });
+
+      await prisma.taxImportRow.createMany({
+        data: diagnostics.map((diag) => ({
+          workspaceId,
+          batchId: batch.id,
+          rowNumber: diag.rowNumber,
+          status: diag.status,
+          code: diag.code,
+          message: diag.message,
+          fieldName: diag.fieldName,
+          rawData: diag.rawData as Prisma.InputJsonValue,
+          normalizedData:
+            diag.normalizedData === null
+              ? Prisma.JsonNull
+              : (diag.normalizedData as Prisma.InputJsonValue),
+        })),
+      });
+
+      const correlationId = newTaxCorrelationId();
+      await appendTaxAuditEvent(prisma, {
+        workspaceId,
+        eventType: 'IMPORT_BATCH',
+        correlationId,
+        actorUserId: userId,
+        entityType: 'TaxImportBatch',
+        entityId: batch.id,
+        payload: {
+          templateType,
+          sourceName,
+          rowCount: batch.rowCount,
+          status: batch.status,
+        },
+      });
+
+      return {
+        ok: true as const,
+        acknowledgment: {
+          message: 'Tax import diagnostics persisted.',
+          batch,
+          acknowledgedAt: new Date().toISOString(),
+        },
+        diagnostics,
+      };
     },
   });
 
-  await prisma.taxImportRow.createMany({
-    data: diagnostics.map((diag) => ({
-      workspaceId,
-      batchId: batch.id,
-      rowNumber: diag.rowNumber,
-      status: diag.status,
-      code: diag.code,
-      message: diag.message,
-      fieldName: diag.fieldName,
-      rawData: diag.rawData as Prisma.InputJsonValue,
-      normalizedData:
-        diag.normalizedData === null
-          ? Prisma.JsonNull
-          : (diag.normalizedData as Prisma.InputJsonValue),
-    })),
-  });
+  if (outcome.kind === 'conflict') {
+    return apiError(409, 'Idempotency-Key reuse with different request payload is not allowed.', 'IDEMPOTENCY_CONFLICT');
+  }
 
-  return NextResponse.json({
-    ok: true,
-    acknowledgment: {
-      message: 'Tax import diagnostics persisted.',
-      batch,
-      acknowledgedAt: new Date().toISOString(),
-    },
-    diagnostics,
-  });
+  if (outcome.kind === 'replay') {
+    return NextResponse.json({ ...outcome.body, replayed: true });
+  }
+
+  return NextResponse.json(outcome.body);
 }
