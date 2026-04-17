@@ -40,7 +40,7 @@ export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
   WORKFORCE:
     'Employee directory, attendance tracking, leave management, and HR approvals — improves payroll input quality and accuracy.',
   PAYROLL:
-    'Payroll runs, posting, liabilities, compliance exports, and labor-cost analytics with ERP-native controls.',
+    'Payroll runs, posting, liabilities, and compliance exports with onboarding, readiness checks, and staged rollout before go-live.',
   DOCUMENTS:
     'Secure document storage with OCR ingestion, extracted-field review, and ERP-native record linking for accounting and compliance.',
 };
@@ -55,6 +55,12 @@ export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
     'Approval queue with notifications',
   ],
   PAYROLL: [
+    'Standalone payroll setup workflow',
+    'Workforce-linked setup workflow',
+    'Data health checks with go-live readiness checklist',
+    'Execution phase controls (Phase 0 → GA)',
+    'Read-only preview mode during internal alpha',
+    'Posting/export safeguards for controlled rollout',
     'Payroll runs with period-level controls',
     'Payroll posting to ERP ledgers',
     'Liability tracking and settlement workflows',

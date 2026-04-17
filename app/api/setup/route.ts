@@ -36,6 +36,8 @@ type SetupPayload = {
   shopAccentColor?: string;
   enableWorkforce?: boolean;
   enableDocuments?: boolean;
+  enablePayroll?: boolean;
+  payrollSetupPath?: "STANDALONE" | "WORKFORCE_LINKED";
 };
 
 function isValidEmail(email: string) {
@@ -44,8 +46,9 @@ function isValidEmail(email: string) {
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  const workspaceId = (session as any)?.workspaceId;
-  const userId = (session as any)?.user?.id;
+  const typedSession = session as { workspaceId?: string; user?: { id?: string } } | null;
+  const workspaceId = typedSession?.workspaceId;
+  const userId = typedSession?.user?.id;
 
   if (!workspaceId || !userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -170,6 +173,19 @@ export async function POST(req: Request) {
     if (body.enableDocuments === true) {
       await enableModule(workspaceId, 'DOCUMENTS', userId).catch((e) =>
         console.error('[setup] Documents module init failed (non-blocking):', e)
+      );
+    }
+
+    if (body.enablePayroll === true) {
+      await enableModule(workspaceId, 'PAYROLL', userId, {
+        onboardingPath: body.payrollSetupPath ?? 'STANDALONE',
+        executionPhase: 'PHASE_1',
+        previewMode: true,
+        postingEnabled: false,
+        exportsEnabled: false,
+        createdFrom: 'setup_wizard',
+      }).catch((e) =>
+        console.error('[setup] Payroll module init failed (non-blocking):', e)
       );
     }
 
