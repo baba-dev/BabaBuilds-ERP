@@ -4,6 +4,10 @@ export interface CAPortalSummary {
   totalExpenses: number;
   deductions80C: number;
   deductions80D: number;
+  periodsDueSoon: number;
+  readinessPassRate: number;
+  unresolvedBlockers: number;
+  lateWithholdingDeposits: number;
 }
 
 export interface CAInvoiceRow {

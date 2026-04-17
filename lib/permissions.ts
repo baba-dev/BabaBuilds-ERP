@@ -13,7 +13,7 @@
  *   The ORM-level Prisma enum (`BusinessRoleEnum`) enforces type safety.
  *
  * - Default templates are CONSERVATIVE: start restrictive, expand deliberately.
- *   Sensitive surfaces (accounting.post, tax.manage, billing.manage,
+ *   Sensitive surfaces (accounting.post, tax.edit, tax.approve, tax.file, billing.manage,
  *   reports.export, cash_flow.manage_assumptions) require explicit permission.
  *
  * - Seat semantics are explicit (see PLAN_SEAT_LIMITS and SEAT_SEMANTICS):
@@ -144,7 +144,9 @@ export const PERMISSION_KEYS = [
 
   // Tax
   'tax.view',
-  'tax.manage',            // High-risk: changes tax configuration
+  'tax.edit',              // High-risk: changes tax configuration
+  'tax.approve',           // High-risk: maker-checker approvals for tax actions
+  'tax.file',              // High-risk: tax filing / submission actions
 
   // Reports
   'reports.view',
@@ -208,7 +210,7 @@ export const PERMISSION_MODULE_GROUPS: { module: string; label: string; keys: Pe
   { module: 'service_orders',  label: 'Service Orders',   keys: ['service_orders.view', 'service_orders.manage'] },
   { module: 'cash_flow',       label: 'Cash Flow',        keys: ['cash_flow.view', 'cash_flow.manage_assumptions'] },
   { module: 'accounting',      label: 'Accounting',       keys: ['accounting.view', 'accounting.post'] },
-  { module: 'tax',             label: 'Tax',              keys: ['tax.view', 'tax.manage'] },
+  { module: 'tax',             label: 'Tax',              keys: ['tax.view', 'tax.edit', 'tax.approve', 'tax.file'] },
   { module: 'reports',         label: 'Reports',          keys: ['reports.view', 'reports.export'] },
   { module: 'clients',         label: 'Clients',          keys: ['clients.view', 'clients.manage'] },
   { module: 'workspace',       label: 'Workspace Admin',  keys: ['workspace.manage_members', 'workspace.manage_roles', 'workspace.manage_settings'] },
@@ -261,7 +263,7 @@ type PermissionSet = ReadonlyArray<Permission>;
  * built-in role. These are code-defined and auditable in git.
  *
  * Design principle: grant the MINIMUM permissions needed for the role's job.
- * Sensitive permissions (accounting.post, tax.manage, billing.manage,
+ * Sensitive permissions (accounting.post, tax.edit, tax.approve, tax.file, billing.manage,
  * reports.export, cash_flow.manage_assumptions) are granted sparingly.
  */
 export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
@@ -277,7 +279,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'service_orders.view', 'service_orders.manage',
     'cash_flow.view', 'cash_flow.manage_assumptions',
     'accounting.view', 'accounting.post',
-    'tax.view', 'tax.manage',
+    'tax.view', 'tax.edit', 'tax.approve', 'tax.file',
     'reports.view', 'reports.export',
     'clients.view', 'clients.manage',
     'workspace.manage_members', 'workspace.manage_roles', 'workspace.manage_settings',
@@ -316,7 +318,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'service_orders.view', 'service_orders.manage',
     'cash_flow.view', 'cash_flow.manage_assumptions',
     'accounting.view', 'accounting.post',
-    'tax.view', 'tax.manage',
+    'tax.view', 'tax.edit', 'tax.approve', 'tax.file',
     'reports.view', 'reports.export',
     'clients.view', 'clients.manage',
     'workspace.manage_members', 'workspace.manage_roles', 'workspace.manage_settings',
@@ -353,10 +355,10 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'service_orders.view',
     'cash_flow.view', 'cash_flow.manage_assumptions',
     'accounting.view',    // can view but NOT post
-    'tax.view',           // can view but NOT manage
+    'tax.view', 'tax.edit', 'tax.file', // can view/edit/file but NOT approve
     'reports.view', 'reports.export',
     'clients.view',
-    // NOT: accounting.post, tax.manage, billing.manage, workspace.manage_*
+    // NOT: accounting.post, tax.approve, billing.manage, workspace.manage_*
     // Workforce — view-only (payroll cost oversight)
     'workforce.view', 'workforce.people.view',
     'workforce.attendance.view', 'workforce.leave.view', 'workforce.reports.view',
@@ -382,7 +384,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'service_orders.view',
     'cash_flow.view',
     'accounting.view',         // view only, NOT post
-    'tax.view',
+    'tax.view', 'tax.file',
     'reports.view',            // view reports but NOT bulk export
     'clients.view',
     // NOT: any write, any export, any admin
