@@ -103,6 +103,48 @@ enum TaxResolutionSource {
   FALLBACK
 }
 
+enum TaxReturnFamily {
+  INDIA_TDS_QTR
+}
+
+enum TaxReadinessSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum TaxReturnStatus {
+  DRAFT
+  BLOCKED
+  NEEDS_REVIEW
+  READY
+  FILED
+}
+
+enum TaxReadinessBlockerStatus {
+  OPEN
+  RESOLVED
+}
+
+enum FilingFrequency {
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+}
+
+enum TaxObligationStatus {
+  OPEN
+  READY
+  OVERDUE
+  FILED
+}
+
+enum ComplianceTaskStatus {
+  PENDING
+  COMPLETED
+  DISMISSED
+}
+
 enum AccountingEventType {
   INVOICE_CREATED
   PAYMENT_CAPTURED
@@ -165,17 +207,16 @@ model User {
   userPreference     UserPreference?
 }
 
-
 model UserOnboarding {
-  id             String   @id @default(cuid())
-  userId         String   @unique
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  isFirstLogin   Boolean  @default(true)
-  completedSteps String   @default("[]")
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isFirstLogin   Boolean   @default(true)
+  completedSteps String    @default("[]")
   dismissedAt    DateTime?
   completedAt    DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([isFirstLogin])
 }
@@ -233,7 +274,7 @@ model Workspace {
   subscriptionEndsAt   DateTime?
   planTier             String    @default("FREE") // "FREE", "PRO", "TEAM", "ENTERPRISE"
   currentMonthInvoices Int       @default(0)
-  seatAddonCount       Int       @default(0)      // future: purchased additional seats
+  seatAddonCount       Int       @default(0) // future: purchased additional seats
 
   planInterval      String? // "MONTHLY", "QUARTERLY", "YEARLY"
   paymentMethodMask String? // e.g., "•••• 4242" or "user@upi"
@@ -242,45 +283,51 @@ model Workspace {
   updatedAt DateTime @default(now()) @updatedAt
 
   // RELATIONS
-  users                      WorkspaceUser[]
-  businessProfile            BusinessProfile?
-  clients                    Client[]
-  invoices                   Invoice[]
-  billingTransactions        BillingTransaction[]
-  expenses                   Expense[]
-  withholdingEvents          WithholdingEvent[]
-  taxCreditEvents            TaxCreditEvent[]
-  taxCreditLedgerEntries     TaxCreditLedgerEntry[]
-  taxReturnPeriods           TaxReturnPeriod[]
-  bankTransactions           BankTransaction[]
-  bankAccounts               BankAccount[]
-  investments                Investment[]
-  serviceTemplates           ServiceTemplate[]
-  proposals                  Proposal[]
-  proposalConversions        ProposalConversion[]
-  billingMilestones          BillingMilestone[]
-  retainers                  Retainer[]
-  tasks                      Task[]
-  invoiceIdempotencies       InvoiceIdempotency[]
-  financialOperationLocks    FinancialOperationIdempotency[]
-  taxPreference              WorkspaceTaxPreference?
-  workspaceTaxOverrides      WorkspaceTaxOverride[]
-  taxRateOverrides           TaxRateOverride[]
-  taxRateOverrideAuditLogs   TaxRateOverrideAuditLog[]
-  taxDecisionAuditLogs       TaxDecisionAuditLog[]
-  fileImportAuditLogs        FileImportAuditLog[]
-  appActivityLogs            AppActivityLog[]
-  workspaceInvites           WorkspaceInvite[]
-  accountingTransactions     AccountingTransaction[]
-  accountingIntegrityRuns    AccountingIntegrityRun[]
-  accountingViolationReports AccountingViolationReport[]
-  cashForecastSnapshots      CashForecastSnapshot[]
-  cashForecastAssumptions    CashForecastAssumption[]
-  cashForecastAdjustments    CashForecastManualAdjustment[]
-  cashForecastLineItemPlans  CashForecastLineItemPlan[]
+  users                        WorkspaceUser[]
+  businessProfile              BusinessProfile?
+  clients                      Client[]
+  invoices                     Invoice[]
+  billingTransactions          BillingTransaction[]
+  expenses                     Expense[]
+  withholdingEvents            WithholdingEvent[]
+  taxCreditEvents              TaxCreditEvent[]
+  taxCreditLedgerEntries       TaxCreditLedgerEntry[]
+  taxReturnPeriods             TaxReturnPeriod[]
+  bankTransactions             BankTransaction[]
+  bankAccounts                 BankAccount[]
+  investments                  Investment[]
+  serviceTemplates             ServiceTemplate[]
+  proposals                    Proposal[]
+  proposalConversions          ProposalConversion[]
+  billingMilestones            BillingMilestone[]
+  retainers                    Retainer[]
+  tasks                        Task[]
+  invoiceIdempotencies         InvoiceIdempotency[]
+  financialOperationLocks      FinancialOperationIdempotency[]
+  taxPreference                WorkspaceTaxPreference?
+  workspaceTaxOverrides        WorkspaceTaxOverride[]
+  taxRateOverrides             TaxRateOverride[]
+  taxRateOverrideAuditLogs     TaxRateOverrideAuditLog[]
+  taxDecisionAuditLogs         TaxDecisionAuditLog[]
+  taxPeriods                   TaxPeriod[]
+  taxForms                     TaxForm[]
+  taxReturns                   TaxReturn[]
+  taxReturnFieldValues         TaxReturnFieldValue[]
+  taxReadinessChecks           TaxReadinessCheck[]
+  taxReadinessBlockers         TaxReadinessBlocker[]
+  fileImportAuditLogs          FileImportAuditLog[]
+  appActivityLogs              AppActivityLog[]
+  workspaceInvites             WorkspaceInvite[]
+  accountingTransactions       AccountingTransaction[]
+  accountingIntegrityRuns      AccountingIntegrityRun[]
+  accountingViolationReports   AccountingViolationReport[]
+  cashForecastSnapshots        CashForecastSnapshot[]
+  cashForecastAssumptions      CashForecastAssumption[]
+  cashForecastAdjustments      CashForecastManualAdjustment[]
+  cashForecastLineItemPlans    CashForecastLineItemPlan[]
   cashForecastAlertPreferences CashForecastAlertPreference[]
-  clientPaymentBehaviors     ClientPaymentBehavior[]
-  rbacAuditLogs              RbacAuditLog[]
+  clientPaymentBehaviors       ClientPaymentBehavior[]
+  rbacAuditLogs                RbacAuditLog[]
 
   // IMS Relations
   products           Product[]
@@ -290,25 +337,30 @@ model Workspace {
   serviceOrders      ServiceOrder[]
 
   // Workforce Module
-  workspaceModules   WorkspaceModule[]
-  employees          Employee[]
-  departments        Department[]
-  designations       Designation[]
-  attendanceRecords  AttendanceRecord[]
-  leaveTypes         LeaveType[]
-  leaveRequests      LeaveRequest[]
-  leaveBalances      LeaveBalance[]
-  workforceHolidays  WorkforceHoliday[]
-  workSchedules      WorkSchedule[]
+  workspaceModules  WorkspaceModule[]
+  employees         Employee[]
+  departments       Department[]
+  designations      Designation[]
+  attendanceRecords AttendanceRecord[]
+  leaveTypes        LeaveType[]
+  leaveRequests     LeaveRequest[]
+  leaveBalances     LeaveBalance[]
+  workforceHolidays WorkforceHoliday[]
+  workSchedules     WorkSchedule[]
 
   // Document Vault (optional module)
   documents               Document[]
   documentFiles           DocumentFile[]
-  documentOcrJobs          DocumentOcrJob[]
-  documentExtractedFields  DocumentExtractedField[]
-  documentLinks            DocumentLink[]
-  documentAuditEvents      DocumentAuditEvent[]
-  documentStorage          WorkspaceDocumentStorage?
+  documentOcrJobs         DocumentOcrJob[]
+  documentExtractedFields DocumentExtractedField[]
+  documentLinks           DocumentLink[]
+  documentAuditEvents     DocumentAuditEvent[]
+  documentStorage         WorkspaceDocumentStorage?
+  taxRegistrations        WorkspaceTaxRegistration[]
+  filingCalendarRules     FilingCalendarRule[]
+  taxObligations          TaxObligation[]
+  taxObligationPeriods    TaxObligationPeriod[]
+  complianceTasks         ComplianceTask[]
 }
 
 model AppActivityLog {
@@ -474,7 +526,7 @@ model WorkspaceUser {
 
   /// Legacy role field — kept for JWT/session compatibility.
   /// Server-side enforcement uses `businessRole` via fresh DB lookup in lib/rbac.ts.
-  role        String @default("OWNER") // "OWNER", "MEMBER"
+  role String @default("OWNER") // "OWNER", "MEMBER"
 
   /// ERP business role — Prisma-enum-validated, authoritative for permissions.
   /// Null means the role has not been migrated yet; lib/rbac.ts falls back to `role`.
@@ -483,10 +535,10 @@ model WorkspaceUser {
   /// Whether this member currently has active workspace access.
   /// Deactivated members retain their record for audit trail but cannot access the workspace.
   /// Deactivated members do NOT count toward the seat limit.
-  isActive    Boolean  @default(true)
+  isActive Boolean @default(true)
 
   /// When this member joined (accepted invite or was auto-provisioned).
-  joinedAt    DateTime @default(now())
+  joinedAt DateTime @default(now())
 
   /// Last time this member was seen active (updated by auth callbacks).
   lastActiveAt DateTime?
@@ -500,17 +552,17 @@ model WorkspaceUser {
 }
 
 model WorkspaceInvite {
-  id          String   @id @default(cuid())
+  id          String @id @default(cuid())
   workspaceId String
   email       String
 
   /// The ERP business role this invite will grant upon acceptance.
-  role        String   @default("STAFF") // legacy — kept for email template compatibility
+  role         String           @default("STAFF") // legacy — kept for email template compatibility
   businessRole BusinessRoleEnum @default(STAFF)
 
-  token       String   @unique
-  expiresAt   DateTime
-  createdAt   DateTime @default(now())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
@@ -602,10 +654,10 @@ model Client {
   // "isExport" becomes "isTaxExempt" in global context
   isExport Boolean @default(true)
 
-  createdAt DateTime   @default(now())
-  invoices  Invoice[]
-  proposals Proposal[]
-  retainers Retainer[]
+  createdAt       DateTime               @default(now())
+  invoices        Invoice[]
+  proposals       Proposal[]
+  retainers       Retainer[]
   paymentBehavior ClientPaymentBehavior?
 
   @@unique([name, workspaceId])
@@ -617,15 +669,15 @@ model ClientPaymentBehavior {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  clientId String  @unique
-  client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId String @unique
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   avgDaysToPay        Float?
   medianDaysToPay     Float?
   onTimeRate          Float?
   lateRate            Float?
   partialPaymentRate  Float?
-  sampleInvoicesCount Int      @default(0)
+  sampleInvoicesCount Int       @default(0)
   lastComputedAt      DateTime?
 
   createdAt DateTime @default(now())
@@ -639,19 +691,19 @@ model Invoice {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  invoiceNumber      String
-  financialYear      String
-  billingMonth       String   @default("Unknown")
-  invoiceDate        DateTime
-  dueDate            DateTime?
-  paymentTermsDays   Int?
+  invoiceNumber       String
+  financialYear       String
+  billingMonth        String    @default("Unknown")
+  invoiceDate         DateTime
+  dueDate             DateTime?
+  paymentTermsDays    Int?
   expectedPaymentDate DateTime?
   collectionRiskScore Float?
   lastReminderSentAt  DateTime?
   followUpStatus      String?
-  clientName         String
-  sacCode            String? // Removed the hardcoded @default("998313")
-  serviceDescription String
+  clientName          String
+  sacCode             String? // Removed the hardcoded @default("998313")
+  serviceDescription  String
 
   subtotal    Decimal  @default(0)
   taxRate     Float    @default(0)
@@ -666,11 +718,11 @@ model Invoice {
   amountReceived Decimal?
   dateReceived   DateTime?
 
-  withholdingRatePercent Decimal?
-  withholdingAmount      Decimal?
-  withholdingDeductedAt  DateTime?
-  withholdingDepositedAt DateTime?
-  withholdingDepositDueAt DateTime?
+  withholdingRatePercent    Decimal?
+  withholdingAmount         Decimal?
+  withholdingDeductedAt     DateTime?
+  withholdingDepositedAt    DateTime?
+  withholdingDepositDueAt   DateTime?
   withholdingReminderSentAt DateTime?
 
   providerGateway       String? // "RAZORPAY" or "STRIPE"
@@ -684,10 +736,10 @@ model Invoice {
   linkedServiceOrders  ServiceOrder[]        @relation("ServiceOrderLinkedInvoice")
 
   sourceProposalId    String?
-  sourceProposal      Proposal?             @relation("ProposalToInvoice", fields: [sourceProposalId], references: [id])
+  sourceProposal      Proposal?            @relation("ProposalToInvoice", fields: [sourceProposalId], references: [id])
   proposalConversions ProposalConversion[]
   billingMilestones   BillingMilestone[]
-  withholdingEvents    WithholdingEvent[]
+  withholdingEvents   WithholdingEvent[]
 
   // Security: Two different workspaces can use invoice number "001"
   @@unique([invoiceNumber, workspaceId])
@@ -745,6 +797,153 @@ model TaxDecisionAuditLog {
   @@index([invoiceId])
 }
 
+model TaxPeriod {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  countryCode String    @default("IN")
+  periodCode  String
+  periodType  String    @default("QUARTER")
+  fiscalYear  String
+  startDate   DateTime
+  endDate     DateTime
+  dueDate     DateTime?
+  isClosed    Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  taxReturns TaxReturn[]
+
+  @@unique([workspaceId, periodCode])
+  @@index([workspaceId, startDate, endDate])
+}
+
+model TaxForm {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  countryCode  String          @default("IN")
+  returnFamily TaxReturnFamily
+  formCode     String
+  version      String          @default("1.0")
+  title        String?
+  schemaJson   Json?
+  isActive     Boolean         @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  taxReturns TaxReturn[]
+
+  @@unique([workspaceId, formCode, version])
+  @@index([workspaceId, countryCode, returnFamily, isActive])
+}
+
+model TaxReturn {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  taxPeriodId String
+  taxPeriod   TaxPeriod @relation(fields: [taxPeriodId], references: [id], onDelete: Cascade)
+
+  taxFormId String
+  taxForm   TaxForm @relation(fields: [taxFormId], references: [id], onDelete: Cascade)
+
+  status                 TaxReturnStatus @default(DRAFT)
+  readinessScore         Int             @default(0)
+  lastReadinessCheckedAt DateTime?
+  prefillCompletedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fieldValues TaxReturnFieldValue[]
+  blockers    TaxReadinessBlocker[]
+
+  @@unique([workspaceId, taxPeriodId, taxFormId])
+  @@index([workspaceId, status])
+  @@index([workspaceId, lastReadinessCheckedAt])
+  @@index([workspaceId, updatedAt(sort: Desc)])
+}
+
+model TaxReturnFieldValue {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  taxReturnId String
+  taxReturn   TaxReturn @relation(fields: [taxReturnId], references: [id], onDelete: Cascade)
+
+  fieldKey        String
+  fieldLabel      String?
+  valueJson       Json
+  sourceType      String
+  sourceRef       String?
+  confidenceScore Float?
+  isManual        Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  @@unique([taxReturnId, fieldKey])
+  @@index([workspaceId, taxReturnId])
+}
+
+model TaxReadinessCheck {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  countryCode    String               @default("IN")
+  returnFamily   TaxReturnFamily
+  checkCode      String
+  title          String
+  description    String?
+  severity       TaxReadinessSeverity @default(WARNING)
+  ruleConfigJson Json?
+  isActive       Boolean              @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  blockers TaxReadinessBlocker[]
+
+  @@unique([workspaceId, returnFamily, checkCode])
+  @@index([workspaceId, returnFamily, isActive])
+}
+
+model TaxReadinessBlocker {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  taxReturnId String
+  taxReturn   TaxReturn @relation(fields: [taxReturnId], references: [id], onDelete: Cascade)
+
+  checkId String?
+  check   TaxReadinessCheck? @relation(fields: [checkId], references: [id], onDelete: SetNull)
+
+  blockerCode String
+  title       String
+  details     String?
+  severity    TaxReadinessSeverity      @default(WARNING)
+  status      TaxReadinessBlockerStatus @default(OPEN)
+  factsJson   Json?
+
+  detectedAt DateTime  @default(now())
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([taxReturnId, blockerCode])
+  @@index([workspaceId, status, severity])
+  @@index([workspaceId, taxReturnId])
+  @@index([workspaceId, status, severity, updatedAt(sort: Desc)])
+}
+
 model InvoiceIdempotency {
   id             String    @id @default(cuid())
   workspaceId    String
@@ -776,11 +975,11 @@ model Expense {
   receiptUrl  String?
   createdAt   DateTime @default(now())
 
-  withholdingRatePercent Decimal?
-  withholdingAmount      Decimal?
-  withholdingDeductedAt  DateTime?
-  withholdingDepositedAt DateTime?
-  withholdingDepositDueAt DateTime?
+  withholdingRatePercent    Decimal?
+  withholdingAmount         Decimal?
+  withholdingDeductedAt     DateTime?
+  withholdingDepositedAt    DateTime?
+  withholdingDepositDueAt   DateTime?
   withholdingReminderSentAt DateTime?
 
   withholdingEvents WithholdingEvent[]
@@ -790,37 +989,36 @@ model Expense {
   @@index([workspaceId])
 }
 
-
 model WithholdingEvent {
   id          String    @id @default(cuid())
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  sourceType  String // INVOICE_PAYMENT|EXPENSE_PAYMENT|MANUAL
-  sourceId    String?
-  invoiceId   String?
-  invoice     Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  expenseId   String?
-  expense     Expense?  @relation(fields: [expenseId], references: [id], onDelete: SetNull)
+  sourceType String // INVOICE_PAYMENT|EXPENSE_PAYMENT|MANUAL
+  sourceId   String?
+  invoiceId  String?
+  invoice    Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  expenseId  String?
+  expense    Expense? @relation(fields: [expenseId], references: [id], onDelete: SetNull)
 
   counterpartyName String?
   sectionCode      String?
 
-  grossAmount      Decimal
-  withheldAmount   Decimal
+  grossAmount            Decimal
+  withheldAmount         Decimal
   withholdingRatePercent Decimal?
 
-  deductedAt       DateTime
-  depositedAt      DateTime?
-  depositDueAt     DateTime?
-  reminderSentAt   DateTime?
+  deductedAt     DateTime
+  depositedAt    DateTime?
+  depositDueAt   DateTime?
+  reminderSentAt DateTime?
 
-  returnPeriodKey  String?
-  notes            String?
+  returnPeriodKey String?
+  notes           String?
 
-  createdByUserId  String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([workspaceId, deductedAt])
   @@index([workspaceId, returnPeriodKey])
@@ -832,31 +1030,31 @@ model TaxCreditEvent {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  sourceType  String // WITHHOLDING_CERTIFICATE|MANUAL|IMPORT
-  sourceId    String?
+  sourceType String // WITHHOLDING_CERTIFICATE|MANUAL|IMPORT
+  sourceId   String?
 
-  documentId  String?
-  document    Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  documentId String?
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
 
-  creditType  String @default("WITHHOLDING") // WITHHOLDING|ADVANCE_TAX|OTHER
-  counterpartyName String?
+  creditType        String  @default("WITHHOLDING") // WITHHOLDING|ADVANCE_TAX|OTHER
+  counterpartyName  String?
   certificateNumber String?
 
-  grossAmount      Decimal?
-  creditedAmount   Decimal
-  withheldAmount   Decimal?
+  grossAmount    Decimal?
+  creditedAmount Decimal
+  withheldAmount Decimal?
 
   certificateIssuedAt DateTime?
-  periodStart      DateTime?
-  periodEnd        DateTime?
-  returnPeriodKey  String?
+  periodStart         DateTime?
+  periodEnd           DateTime?
+  returnPeriodKey     String?
 
-  status           String @default("POSTED") // POSTED|REVERSED|PENDING_REVIEW
-  notes            String?
+  status String  @default("POSTED") // POSTED|REVERSED|PENDING_REVIEW
+  notes  String?
 
-  createdByUserId  String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   ledgerEntries TaxCreditLedgerEntry[]
 
@@ -873,14 +1071,14 @@ model TaxCreditLedgerEntry {
   taxCreditEventId String
   taxCreditEvent   TaxCreditEvent @relation(fields: [taxCreditEventId], references: [id], onDelete: Cascade)
 
-  entryType    String // CREDIT|REVERSAL|ADJUSTMENT
-  amount       Decimal
-  entryDate    DateTime
+  entryType       String // CREDIT|REVERSAL|ADJUSTMENT
+  amount          Decimal
+  entryDate       DateTime
   returnPeriodKey String?
-  notes        String?
+  notes           String?
 
   createdByUserId String?
-  createdAt    DateTime @default(now())
+  createdAt       DateTime @default(now())
 
   @@index([workspaceId, entryDate])
   @@index([workspaceId, returnPeriodKey])
@@ -896,17 +1094,17 @@ model TaxReturnPeriod {
   periodStart DateTime
   periodEnd   DateTime
 
-  dueDate     DateTime
-  filedAt     DateTime?
+  dueDate DateTime
+  filedAt DateTime?
 
-  expectedWithheldAmount Decimal @default(0)
+  expectedWithheldAmount   Decimal @default(0)
   reconciledWithheldAmount Decimal @default(0)
 
-  status      String @default("OPEN") // OPEN|FILED|OVERDUE
-  notes       String?
+  status String  @default("OPEN") // OPEN|FILED|OVERDUE
+  notes  String?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([workspaceId, periodKey])
   @@index([workspaceId, dueDate])
@@ -921,14 +1119,14 @@ model BankTransaction {
   accountId String?
   account   BankAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
-  date        DateTime
-  description String
-  amount      Decimal // Positive for deposits, negative for withdrawals
-  referenceId String?
-  transactionType String?
-  isInternalTransfer Boolean @default(false)
+  date                     DateTime
+  description              String
+  amount                   Decimal // Positive for deposits, negative for withdrawals
+  referenceId              String?
+  transactionType          String?
+  isInternalTransfer       Boolean  @default(false)
   reconciliationConfidence Float?
-  category String?
+  category                 String?
 
   // Reconciliation state
   isReconciled     Boolean @default(false)
@@ -950,7 +1148,7 @@ model BankAccount {
   name                String
   bankName            String?
   maskedAccountNumber String?
-  currency            String @default("INR")
+  currency            String  @default("INR")
 
   openingBalance     Decimal  @default(0)
   openingBalanceDate DateTime @default(now())
@@ -963,8 +1161,8 @@ model BankAccount {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([workspaceId])
   @@unique([workspaceId, name])
+  @@index([workspaceId])
 }
 
 model CashForecastSnapshot {
@@ -972,7 +1170,7 @@ model CashForecastSnapshot {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  generatedAt DateTime @default(now())
+  generatedAt DateTime                @default(now())
   horizonType CashForecastHorizonType
   scenarioTag CashForecastScenarioTag @default(BASE)
 
@@ -997,7 +1195,7 @@ model CashForecastSnapshot {
 }
 
 model CashForecastPeriod {
-  id         String              @id @default(cuid())
+  id         String               @id @default(cuid())
   snapshotId String
   snapshot   CashForecastSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
 
@@ -1014,9 +1212,9 @@ model CashForecastPeriod {
 
   closingCash Decimal @default(0)
 
-  riskLevel              CashForecastRiskLevel @default(LOW)
+  riskLevel                 CashForecastRiskLevel @default(LOW)
   varianceFromPriorForecast Decimal?
-  notesJson              Json?
+  notesJson                 Json?
 
   lineItems CashForecastLineItem[]
 
@@ -1025,7 +1223,7 @@ model CashForecastPeriod {
 }
 
 model CashForecastLineItem {
-  id       String            @id @default(cuid())
+  id       String             @id @default(cuid())
   periodId String
   period   CashForecastPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
 
@@ -1035,7 +1233,7 @@ model CashForecastLineItem {
   amount         Decimal
   expectedDate   DateTime
   confidence     Float?
-  scenarioTag    CashForecastScenarioTag @default(BASE)
+  scenarioTag    CashForecastScenarioTag    @default(BASE)
   classification CashForecastClassification
   title          String
   metadataJson   Json?
@@ -1053,17 +1251,17 @@ model CashForecastAssumption {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  key          String
-  valueJson    Json
+  key           String
+  valueJson     Json
   effectiveFrom DateTime?
-  isActive     Boolean @default(true)
-  updatedBy    String?
+  isActive      Boolean   @default(true)
+  updatedBy     String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([workspaceId, isActive, key])
   @@unique([workspaceId, key, isActive])
+  @@index([workspaceId, isActive, key])
 }
 
 model CashForecastManualAdjustment {
@@ -1102,8 +1300,8 @@ model CashForecastLineItemPlan {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([workspaceId, horizonType, scenarioTag])
   @@unique([workspaceId, horizonType, scenarioTag, planKey])
+  @@index([workspaceId, horizonType, scenarioTag])
 }
 
 model CashForecastAlertPreference {
@@ -1229,12 +1427,12 @@ model Proposal {
   firstConvertedAt DateTime?
   expiredAt        DateTime?
 
-  items ProposalItem[]
-  conversions ProposalConversion[]
-  billingMilestones BillingMilestone[]
-  generatedInvoices Invoice[] @relation("ProposalToInvoice")
-  generatedRetainers Retainer[] @relation("ProposalToRetainer")
-  generatedServiceOrders ServiceOrder[] @relation("ProposalToServiceOrder")
+  items                  ProposalItem[]
+  conversions            ProposalConversion[]
+  billingMilestones      BillingMilestone[]
+  generatedInvoices      Invoice[]            @relation("ProposalToInvoice")
+  generatedRetainers     Retainer[]           @relation("ProposalToRetainer")
+  generatedServiceOrders ServiceOrder[]       @relation("ProposalToServiceOrder")
 
   subtotal     Decimal
   estimatedTax Decimal @default(0)
@@ -1283,7 +1481,7 @@ model Retainer {
   taxRate     Float?
 
   sourceProposalId    String?
-  sourceProposal      Proposal?             @relation("ProposalToRetainer", fields: [sourceProposalId], references: [id])
+  sourceProposal      Proposal?            @relation("ProposalToRetainer", fields: [sourceProposalId], references: [id])
   proposalConversions ProposalConversion[]
 
   createdAt DateTime @default(now())
@@ -1301,6 +1499,99 @@ model Task {
   createdAt   DateTime  @default(now())
 
   @@index([workspaceId])
+}
+
+model WorkspaceTaxRegistration {
+  id                 String          @id @default(cuid())
+  workspaceId        String
+  workspace          Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  taxType            String
+  jurisdictionCode   String
+  registrationNumber String
+  frequency          FilingFrequency
+  effectiveFrom      DateTime
+  effectiveTo        DateTime?
+  isActive           Boolean         @default(true)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  filingCalendarRules FilingCalendarRule[]
+  taxObligations      TaxObligation[]
+
+  @@index([workspaceId, isActive])
+  @@index([workspaceId, taxType, jurisdictionCode])
+}
+
+model FilingCalendarRule {
+  id                String                   @id @default(cuid())
+  workspaceId       String
+  workspace         Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  taxRegistrationId String
+  taxRegistration   WorkspaceTaxRegistration @relation(fields: [taxRegistrationId], references: [id], onDelete: Cascade)
+  dueDayOfMonth     Int
+  dueMonthOfYear    Int?
+  lookaheadPeriods  Int                      @default(12)
+  isActive          Boolean                  @default(true)
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  taxObligations TaxObligation[]
+
+  @@index([workspaceId, taxRegistrationId, isActive])
+}
+
+model TaxObligationPeriod {
+  id           String              @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  obligationId String              @unique
+  obligation   TaxObligation       @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  periodStart  DateTime
+  periodEnd    DateTime
+  status       TaxObligationStatus @default(OPEN)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@index([workspaceId, periodStart, periodEnd])
+}
+
+model TaxObligation {
+  id                String                   @id @default(cuid())
+  workspaceId       String
+  workspace         Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  taxRegistrationId String
+  taxRegistration   WorkspaceTaxRegistration @relation(fields: [taxRegistrationId], references: [id], onDelete: Cascade)
+  filingRuleId      String
+  filingRule        FilingCalendarRule       @relation(fields: [filingRuleId], references: [id], onDelete: Cascade)
+  dueDate           DateTime
+  status            TaxObligationStatus      @default(OPEN)
+  readyAt           DateTime?
+  filedAt           DateTime?
+  periodKey         String
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  period          TaxObligationPeriod?
+  complianceTasks ComplianceTask[]
+
+  @@unique([workspaceId, taxRegistrationId, periodKey])
+  @@index([workspaceId, status, dueDate])
+}
+
+model ComplianceTask {
+  id           String               @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  obligationId String
+  obligation   TaxObligation        @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  title        String
+  dueDate      DateTime
+  status       ComplianceTaskStatus @default(PENDING)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  @@unique([workspaceId, obligationId, dueDate])
+  @@index([workspaceId, status, dueDate])
 }
 
 model TaxRateOverride {
@@ -1518,12 +1809,12 @@ model PurchaseOrder {
   supplier String
   status   String @default("DRAFT") // "DRAFT", "SENT", "DELIVERED", "CANCELLED"
 
-  expectedDate DateTime?
-  paymentTermsDays Int?
+  expectedDate        DateTime?
+  paymentTermsDays    Int?
   expectedPaymentDate DateTime?
-  receivedAt DateTime?
+  receivedAt          DateTime?
   committedCashImpact Decimal?
-  totalAmount  Decimal   @default(0)
+  totalAmount         Decimal   @default(0)
 
   items PurchaseOrderItem[]
 
@@ -1585,7 +1876,7 @@ model ServiceOrder {
   linkedInvoice   Invoice? @relation("ServiceOrderLinkedInvoice", fields: [linkedInvoiceId], references: [id], onDelete: SetNull)
 
   sourceProposalId    String?
-  sourceProposal      Proposal?             @relation("ProposalToServiceOrder", fields: [sourceProposalId], references: [id])
+  sourceProposal      Proposal?            @relation("ProposalToServiceOrder", fields: [sourceProposalId], references: [id])
   proposalConversions ProposalConversion[]
 
   createdAt DateTime @default(now())
@@ -1606,51 +1897,51 @@ model UserPreference {
 }
 
 model ProposalConversion {
-  id                String    @id @default(cuid())
-  workspaceId       String
-  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  
-  proposalId        String
-  proposal          Proposal  @relation(fields: [proposalId], references: [id], onDelete: Cascade)
-  
-  conversionType    ProposalConversionType
-  
-  invoiceId         String?
-  invoice           Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  
-  retainerId        String?
-  retainer          Retainer? @relation(fields: [retainerId], references: [id], onDelete: SetNull)
-  
-  serviceOrderId    String?
-  serviceOrder      ServiceOrder? @relation(fields: [serviceOrderId], references: [id], onDelete: SetNull)
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  convertedAt       DateTime  @default(now())
-  convertedByUserId String?   
+  proposalId String
+  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  conversionType ProposalConversionType
+
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  retainerId String?
+  retainer   Retainer? @relation(fields: [retainerId], references: [id], onDelete: SetNull)
+
+  serviceOrderId String?
+  serviceOrder   ServiceOrder? @relation(fields: [serviceOrderId], references: [id], onDelete: SetNull)
+
+  convertedAt       DateTime @default(now())
+  convertedByUserId String?
 
   @@index([workspaceId, proposalId])
   @@index([conversionType])
 }
 
 model BillingMilestone {
-  id             String    @id @default(cuid())
-  workspaceId    String
-  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  
-  proposalId     String
-  proposal       Proposal  @relation(fields: [proposalId], references: [id], onDelete: Cascade)
-  
-  title          String
-  description    String?
-  amount         Decimal
-  dueDate        DateTime?
-  status         String    @default("PENDING") // PENDING, INVOICED, PARTIALLY_PAID, PAID
-  
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  proposalId String
+  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  amount      Decimal
+  dueDate     DateTime?
+  status      String    @default("PENDING") // PENDING, INVOICED, PARTIALLY_PAID, PAID
+
   // When invoiced, it links to the actual standard invoice
-  invoiceId      String?
-  invoice        Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
-  
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([workspaceId, proposalId])
 }
@@ -1688,18 +1979,15 @@ model HelpFeedback {
 
 /**
  * RbacAuditLog — structured RBAC-specific event table.
- *
  * Dual-write strategy: every RBAC event writes to BOTH this table AND AppActivityLog.
  * - RbacAuditLog → powers the "Access Activity" UI tab with structured, filterable data
  * - AppActivityLog → unified compliance/audit trail for all app events
- *
  * Both writes happen through logRbacEvent() in lib/rbac.ts (single write path).
  * This table is NEVER written to directly — always via logRbacEvent().
- *
  * Event types:
- *   invite_sent, invite_accepted, invite_cancelled,
- *   role_changed, member_removed, member_deactivated, member_reactivated,
- *   seat_limit_hit, rbac_access_denied, owner_safeguard_blocked
+ * invite_sent, invite_accepted, invite_cancelled,
+ * role_changed, member_removed, member_deactivated, member_reactivated,
+ * seat_limit_hit, rbac_access_denied, owner_safeguard_blocked
  */
 model RbacAuditLog {
   id          String    @id @default(cuid())
@@ -1707,7 +1995,7 @@ model RbacAuditLog {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   /// The type of RBAC event. Stored as String for forward compatibility.
-  eventType   String
+  eventType String
 
   actorUserId  String?
   actorEmail   String?
@@ -1718,10 +2006,10 @@ model RbacAuditLog {
   previousRole String?
 
   /// For role_changed / invite_sent events: the new or invited role.
-  newRole      String?
+  newRole String?
 
   /// Additional structured metadata (e.g., denial reason, seat count at time of event).
-  metadata     Json?
+  metadata Json?
 
   createdAt DateTime @default(now())
 
@@ -1737,11 +2025,9 @@ model RbacAuditLog {
 
 /**
  * WorkspaceModule — Registry for optional ERP modules.
- *
  * Each workspace can independently enable/disable optional modules.
  * Disabling a module hides it from navigation, dashboard, and routes
  * but preserves all underlying data (non-destructive).
- *
  * Current modules: WORKFORCE
  * Future modules: PAYROLL, TIME_TRACKING, ASSETS
  */
@@ -1751,17 +2037,17 @@ model WorkspaceModule {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   /// Module identifier: "WORKFORCE" | "PAYROLL" | etc.
-  moduleKey   String
+  moduleKey String
 
-  isEnabled   Boolean  @default(true)
+  isEnabled Boolean @default(true)
 
   /// Module-specific configuration (JSON)
-  configJson  Json?
+  configJson Json?
 
-  enabledAt         DateTime  @default(now())
-  disabledAt        DateTime?
-  enabledByUserId   String?
-  disabledByUserId  String?
+  enabledAt        DateTime  @default(now())
+  disabledAt       DateTime?
+  enabledByUserId  String?
+  disabledByUserId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1777,7 +2063,6 @@ model WorkspaceModule {
 
 /**
  * Document — ERP-native document record.
- *
  * Notes:
  * - Workspace-scoped
  * - Archive is organizational (non-destructive) and does not remove bytes
@@ -1788,26 +2073,26 @@ model Document {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  title       String
-  category    String // Stored as String for forward compatibility
-  scope       String // WORKSPACE_BUSINESS | ACCOUNTING | COMPLIANCE | PERSONAL_USER | GENERAL_ATTACHMENT (code enum)
-  status      String @default("INBOX") // INBOX|PROCESSING|READY|LINKED|FAILED|ARCHIVED (code enum)
+  title    String
+  category String // Stored as String for forward compatibility
+  scope    String // WORKSPACE_BUSINESS | ACCOUNTING | COMPLIANCE | PERSONAL_USER | GENERAL_ATTACHMENT (code enum)
+  status   String @default("INBOX") // INBOX|PROCESSING|READY|LINKED|FAILED|ARCHIVED (code enum)
 
-  isArchived  Boolean  @default(false)
-  archivedAt  DateTime?
+  isArchived       Boolean   @default(false)
+  archivedAt       DateTime?
   archivedByUserId String?
 
-  source      String? // upload_center|share_target|email (future)
+  source           String? // upload_center|share_target|email (future)
   uploadedByUserId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  files       DocumentFile[]
-  links       DocumentLink[]
-  ocrJobs     DocumentOcrJob[]
-  fields      DocumentExtractedField[]
-  events      DocumentAuditEvent[]
+  files           DocumentFile[]
+  links           DocumentLink[]
+  ocrJobs         DocumentOcrJob[]
+  fields          DocumentExtractedField[]
+  events          DocumentAuditEvent[]
   taxCreditEvents TaxCreditEvent[]
 
   @@index([workspaceId, createdAt(sort: Desc)])
@@ -1822,20 +2107,20 @@ model Document {
  * storedPath is a private serving route path like /documents/<workspaceId>/...
  */
 model DocumentFile {
-  id          String   @id @default(cuid())
-  documentId  String
-  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  isCurrent   Boolean  @default(true)
+  isCurrent Boolean @default(true)
 
-  mimeType    String
+  mimeType     String
   originalName String
-  storedPath  String
-  sha256      String?
-  byteSize    Int
+  storedPath   String
+  sha256       String?
+  byteSize     Int
 
   pageCount   Int?
   imageWidth  Int?
@@ -1844,9 +2129,9 @@ model DocumentFile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  ocrJobs    DocumentOcrJob[]
-  fields     DocumentExtractedField[]
-  events     DocumentAuditEvent[]
+  ocrJobs DocumentOcrJob[]
+  fields  DocumentExtractedField[]
+  events  DocumentAuditEvent[]
 
   @@index([workspaceId, createdAt(sort: Desc)])
   @@index([workspaceId, documentId])
@@ -1858,25 +2143,25 @@ model DocumentFile {
  * DocumentOcrJob — async OCR/parsing job.
  */
 model DocumentOcrJob {
-  id            String   @id @default(cuid())
-  workspaceId   String
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  documentId    String
-  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   documentFileId String
-  documentFile  DocumentFile @relation(fields: [documentFileId], references: [id], onDelete: Cascade)
+  documentFile   DocumentFile @relation(fields: [documentFileId], references: [id], onDelete: Cascade)
 
-  kind          String @default("GENERIC") // RECEIPT|INVOICE|STATEMENT|TAX|GENERIC
-  status        String @default("QUEUED")  // QUEUED|RUNNING|SUCCEEDED|FAILED
-  provider      String @default("UNCONFIGURED") // LOCAL_TESSERACT|GOOGLE_VISION|AWS_TEXTRACT|...
+  kind     String @default("GENERIC") // RECEIPT|INVOICE|STATEMENT|TAX|GENERIC
+  status   String @default("QUEUED") // QUEUED|RUNNING|SUCCEEDED|FAILED
+  provider String @default("UNCONFIGURED") // LOCAL_TESSERACT|GOOGLE_VISION|AWS_TEXTRACT|...
 
-  attemptCount  Int    @default(0)
-  errorCode     String?
-  errorMessage  String?
+  attemptCount Int     @default(0)
+  errorCode    String?
+  errorMessage String?
 
-  queuedAt   DateTime @default(now())
+  queuedAt   DateTime  @default(now())
   startedAt  DateTime?
   finishedAt DateTime?
 
@@ -1893,24 +2178,24 @@ model DocumentOcrJob {
  * Multiple revisions are represented as separate rows; the UI picks the latest/approved row per fieldKey.
  */
 model DocumentExtractedField {
-  id            String   @id @default(cuid())
-  workspaceId   String
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  documentId    String
-  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   documentFileId String
-  documentFile  DocumentFile @relation(fields: [documentFileId], references: [id], onDelete: Cascade)
+  documentFile   DocumentFile @relation(fields: [documentFileId], references: [id], onDelete: Cascade)
 
-  fieldKey     String // vendorName|totalAmount|taxAmount|invoiceNumber|dueDate|statementPeriodStart|...
-  valueText    String?
-  valueNumber  Float?
-  valueDate    DateTime?
-  confidence   Float?
+  fieldKey    String // vendorName|totalAmount|taxAmount|invoiceNumber|dueDate|statementPeriodStart|...
+  valueText   String?
+  valueNumber Float?
+  valueDate   DateTime?
+  confidence  Float?
 
-  source       String @default("OCR") // OCR|USER
-  isApproved   Boolean @default(false)
+  source           String  @default("OCR") // OCR|USER
+  isApproved       Boolean @default(false)
   approvedByUserId String?
 
   createdAt DateTime @default(now())
@@ -1924,16 +2209,16 @@ model DocumentExtractedField {
  * DocumentLink — polymorphic link from Document to ERP records.
  */
 model DocumentLink {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  documentId  String
-  document    Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
-  targetType  String // EXPENSE|INVOICE|BANK_TRANSACTION|CLIENT|PROPOSAL|RETAINER|SERVICE_ORDER|PURCHASE_ORDER|...
-  targetId    String
-  relation    String @default("ATTACHMENT") // ATTACHMENT|EVIDENCE|SOURCE_DOC
+  targetType String // EXPENSE|INVOICE|BANK_TRANSACTION|CLIENT|PROPOSAL|RETAINER|SERVICE_ORDER|PURCHASE_ORDER|...
+  targetId   String
+  relation   String @default("ATTACHMENT") // ATTACHMENT|EVIDENCE|SOURCE_DOC
 
   createdByUserId String?
 
@@ -1950,8 +2235,8 @@ model DocumentLink {
  * bytesUsedTotal includes archived. bytesUsedActive excludes archived (optional UX metric).
  */
 model WorkspaceDocumentStorage {
-  id          String   @id @default(cuid())
-  workspaceId String   @unique
+  id          String    @id @default(cuid())
+  workspaceId String    @unique
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   bytesUsedTotal  BigInt @default(0)
@@ -1964,15 +2249,15 @@ model WorkspaceDocumentStorage {
  * DocumentAuditEvent — document-specific trust and audit trail.
  */
 model DocumentAuditEvent {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  documentId  String?
-  document    Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  documentId String?
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
 
   documentFileId String?
-  documentFile  DocumentFile? @relation(fields: [documentFileId], references: [id], onDelete: SetNull)
+  documentFile   DocumentFile? @relation(fields: [documentFileId], references: [id], onDelete: SetNull)
 
   eventType   String
   actorUserId String?
@@ -2018,7 +2303,7 @@ model Department {
 
   name        String
   description String?
-  headId      String?  // Optional: Employee ID of department head
+  headId      String? // Optional: Employee ID of department head
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2034,8 +2319,8 @@ model Designation {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  title       String
-  level       Int?      // Seniority level for hierarchy (1 = entry, 5 = senior)
+  title String
+  level Int? // Seniority level for hierarchy (1 = entry, 5 = senior)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2048,7 +2333,6 @@ model Designation {
 
 /**
  * Employee — Core workforce entity.
- *
  * userId is optional: if set, this employee has a workspace user account
  * and can self-service their own attendance/leave.
  * If null, the employee is HR-managed only (contractors, external staff).
@@ -2059,32 +2343,32 @@ model Employee {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   /// Optional link to workspace user for self-service
-  userId      String?   // links to User.id
+  userId String? // links to User.id
 
   // Core identity
-  firstName   String
-  lastName    String
-  email       String?
-  phone       String?
-  avatarUrl   String?
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+  avatarUrl String?
 
   // Employment details
-  employeeCode  String?  // e.g., "EMP-001"
-  status        EmploymentStatus @default(ACTIVE)
-  joinDate      DateTime?
-  exitDate      DateTime?
-  location      String?
+  employeeCode String? // e.g., "EMP-001"
+  status       EmploymentStatus @default(ACTIVE)
+  joinDate     DateTime?
+  exitDate     DateTime?
+  location     String?
 
   // Organizational structure
-  departmentId  String?
-  department    Department?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
 
   designationId String?
   designation   Designation? @relation(fields: [designationId], references: [id], onDelete: SetNull)
 
-  managerId     String?      // Self-referential: another Employee.id
-  manager       Employee?    @relation("EmployeeReports", fields: [managerId], references: [id], onDelete: SetNull)
-  directReports Employee[]   @relation("EmployeeReports")
+  managerId     String? // Self-referential: another Employee.id
+  manager       Employee?  @relation("EmployeeReports", fields: [managerId], references: [id], onDelete: SetNull)
+  directReports Employee[] @relation("EmployeeReports")
 
   // Emergency contact
   emergencyName     String?
@@ -2112,15 +2396,15 @@ model AttendanceRecord {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  employeeId  String
-  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
-  date        DateTime  // Date of attendance (day-level)
-  status      AttendanceStatus @default(PRESENT)
+  date   DateTime // Date of attendance (day-level)
+  status AttendanceStatus @default(PRESENT)
 
-  checkInAt   DateTime?
-  checkOutAt  DateTime?
-  notes       String?
+  checkInAt  DateTime?
+  checkOutAt DateTime?
+  notes      String?
 
   /// Whether this record was entered by the employee (self) or by HR/manager
   isManagerEntered Boolean @default(false)
@@ -2140,13 +2424,13 @@ model LeaveType {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  name        String    // "Annual Leave", "Sick Leave", "Casual Leave"
-  code        String    // "AL", "SL", "CL"
+  name        String // "Annual Leave", "Sick Leave", "Casual Leave"
+  code        String // "AL", "SL", "CL"
   description String?
-  color       String    @default("indigo") // Tailwind color name for calendar dots
-  defaultDays Int       @default(0)       // Default annual entitlement
-  isActive    Boolean   @default(true)
-  isPaid      Boolean   @default(true)
+  color       String  @default("indigo") // Tailwind color name for calendar dots
+  defaultDays Int     @default(0) // Default annual entitlement
+  isActive    Boolean @default(true)
+  isPaid      Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2163,25 +2447,25 @@ model LeaveRequest {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  employeeId  String
-  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   leaveTypeId String
   leaveType   LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Restrict)
 
-  startDate   DateTime
-  endDate     DateTime
-  days        Float     @default(1)  // Supports 0.5 for half-day
-  reason      String?
+  startDate DateTime
+  endDate   DateTime
+  days      Float    @default(1) // Supports 0.5 for half-day
+  reason    String?
 
-  status      LeaveRequestStatus @default(PENDING)
+  status LeaveRequestStatus @default(PENDING)
 
-  approvedByUserId  String?
-  approvedAt        DateTime?
-  rejectionReason   String?
+  approvedByUserId String?
+  approvedAt       DateTime?
+  rejectionReason  String?
 
   /// Task record ID for approval queue integration
-  taskId      String?
+  taskId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2197,17 +2481,17 @@ model LeaveBalance {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  employeeId  String
-  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   leaveTypeId String
   leaveType   LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
 
-  year        Int       // e.g., 2026
-  entitled    Float     @default(0)
-  used        Float     @default(0)
-  pending     Float     @default(0)  // Submitted but not yet approved
-  remaining   Float     @default(0)  // Computed: entitled - used - pending
+  year      Int // e.g., 2026
+  entitled  Float @default(0)
+  used      Float @default(0)
+  pending   Float @default(0) // Submitted but not yet approved
+  remaining Float @default(0) // Computed: entitled - used - pending
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2224,8 +2508,8 @@ model WorkforceHoliday {
 
   name        String
   date        DateTime
-  isRecurring Boolean   @default(true)   // true = repeats every year on same date
-  year        Int?      // null if isRecurring, else specific year
+  isRecurring Boolean  @default(true) // true = repeats every year on same date
+  year        Int? // null if isRecurring, else specific year
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2240,10 +2524,10 @@ model WorkSchedule {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   /// JSON array of working days: ["MON","TUE","WED","THU","FRI"]
-  workingDays   String    @default("[\"MON\",\"TUE\",\"WED\",\"THU\",\"FRI\"]")
-  workStartTime String    @default("09:00")
-  workEndTime   String    @default("18:00")
-  timeZone      String    @default("Asia/Kolkata")
+  workingDays   String @default("[\"MON\",\"TUE\",\"WED\",\"THU\",\"FRI\"]")
+  workStartTime String @default("09:00")
+  workEndTime   String @default("18:00")
+  timeZone      String @default("Asia/Kolkata")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
