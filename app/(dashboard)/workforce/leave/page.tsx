@@ -32,6 +32,7 @@ const BALANCE_DOT_MAP: Record<string, string> = {
   emerald: "bg-emerald-500", rose: "bg-rose-500", amber: "bg-amber-500",
   zinc: "bg-zinc-500", indigo: "bg-indigo-500", blue: "bg-blue-500",
 };
+const GLASS_PANEL_CLASS = "rounded-xl border border-zinc-200/60 bg-white/55 shadow-sm backdrop-blur-sm dark:border-zinc-700/50 dark:bg-zinc-950/40 dark:shadow-black/30";
 
 export default function LeavePage() {
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
@@ -142,7 +143,7 @@ export default function LeavePage() {
                   const pct = b.entitled > 0 ? (b.used / b.entitled) * 100 : 0;
                   const dotColor = BALANCE_DOT_MAP[b.leaveType.color] ?? "bg-zinc-500";
                   return (
-                    <div key={b.id} className="rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 p-4 shadow-sm backdrop-blur-sm">
+                    <div key={b.id} className={`${GLASS_PANEL_CLASS} motion-feedback p-4 motion-reduce:transition-none`}>
                       <div className="flex items-center gap-2 mb-3">
                         <div className={`h-2.5 w-2.5 rounded-full ${dotColor}`} />
                         <p className="text-[11px] font-semibold text-muted-foreground">{b.leaveType.name}</p>
@@ -153,7 +154,7 @@ export default function LeavePage() {
                       </p>
                       <p className="text-[10px] text-muted-foreground mt-1">days remaining</p>
                       <div className="mt-3 h-1 rounded-full bg-zinc-200/60 dark:bg-zinc-800/60 overflow-hidden">
-                        <div className={`h-full rounded-full ${dotColor} transition-all`} style={{ width: `${Math.min(100, pct)}%` }} />
+                        <div className={`motion-feedback-fast h-full rounded-full ${dotColor} motion-reduce:transition-none`} style={{ width: `${Math.min(100, pct)}%` }} />
                       </div>
                       {b.pending > 0 && <p className="text-[10px] text-amber-500 mt-1">{b.pending} pending</p>}
                     </div>
@@ -185,20 +186,20 @@ export default function LeavePage() {
               {isLoading ? (
                 <div className="space-y-2">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-16 rounded-xl bg-zinc-100 dark:bg-zinc-800 animate-pulse border border-zinc-200/60 dark:border-zinc-800/60" />
+                    <div key={i} className="h-16 rounded-xl border border-zinc-200/60 bg-zinc-100 animate-pulse motion-reduce:animate-none dark:border-zinc-700/50 dark:bg-zinc-900/60" />
                   ))}
                 </div>
               ) : requests.length === 0 ? (
-                <div className="rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 py-12 text-center shadow-sm backdrop-blur-sm">
+                <div className={`${GLASS_PANEL_CLASS} py-12 text-center`}>
                   <p className="text-muted-foreground text-sm">No leave requests found.</p>
                 </div>
               ) : (
-                <div className="rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 overflow-hidden bg-white/40 dark:bg-zinc-900/20 shadow-sm backdrop-blur-sm">
+                <div className={`${GLASS_PANEL_CLASS} overflow-hidden`}>
                   <div className="divide-y divide-zinc-200/50 dark:divide-zinc-800/50">
                     {requests.map((req) => {
                       const dotColor = BALANCE_DOT_MAP[req.leaveType.color] ?? "bg-zinc-500";
                       return (
-                        <div key={req.id} className="flex items-center justify-between px-4 py-3 hover:bg-zinc-100/60 dark:hover:bg-zinc-900/30 transition-colors">
+                        <div key={req.id} className="motion-row-hover flex items-center justify-between px-4 py-3 hover:bg-zinc-100/60 active:bg-zinc-100/80 motion-reduce:transition-none dark:hover:bg-zinc-900/45 dark:active:bg-zinc-900/55">
                           <div className="flex items-start gap-3 min-w-0">
                             <div className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${dotColor}`} />
                             <div className="min-w-0">
@@ -221,7 +222,7 @@ export default function LeavePage() {
             </div>
 
             {/* Pending Approvals */}
-            <div className="rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 overflow-hidden shadow-sm backdrop-blur-sm">
+            <div className={`${GLASS_PANEL_CLASS} overflow-hidden`}>
               <div className="flex items-center gap-2 px-5 py-4 border-b border-zinc-200/50 dark:border-zinc-800/50">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pending Approval</h3>
                 {pendingRequests.length > 0 && (

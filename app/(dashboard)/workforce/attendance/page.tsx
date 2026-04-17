@@ -182,7 +182,7 @@ export default function AttendancePage() {
           <tbody className="divide-y divide-border">
             {isLoading ? (
               Array.from({ length: 4 }).map((_, i) => (
-                <tr key={i} className="animate-pulse">
+                <tr key={i} className="animate-pulse motion-reduce:animate-none">
                   <td className="px-4 py-3 sticky left-0 bg-background">
                     <div className="flex items-center gap-2">
                       <div className="h-7 w-7 rounded-full bg-muted" />
@@ -202,7 +202,7 @@ export default function AttendancePage() {
               displayEmployees.map((emp) => {
                 const empRecords = lookup.get(emp.id) ?? new Map();
                 return (
-                  <tr key={emp.id} className="hover:bg-zinc-900/30 transition-colors">
+                  <tr key={emp.id} className="motion-row-hover hover:bg-zinc-100/70 motion-reduce:transition-none dark:hover:bg-zinc-900/40">
                     <td className="px-4 py-3 sticky left-0 bg-background hover:bg-muted/30">
                       <div className="flex items-center gap-2">
                         <EmployeeAvatar firstName={emp.firstName} lastName={emp.lastName} avatarUrl={emp.avatarUrl} size="sm" />
@@ -216,7 +216,7 @@ export default function AttendancePage() {
                         <td key={key} className="px-1 py-3">
                           <div
                             title={status ?? "No record"}
-                            className={`h-6 w-6 rounded-md mx-auto transition-all cursor-default ${
+                            className={`motion-feedback-fast h-6 w-6 rounded-md mx-auto motion-reduce:transition-none cursor-default ${
                               status ? `${STATUS_COLORS[status] ?? "bg-zinc-700"} cursor-pointer` : isToday(day) ? "border-2 border-dashed border-border" : "bg-muted/30"
                             }`}
                           />
