@@ -103,6 +103,25 @@ enum TaxResolutionSource {
   FALLBACK
 }
 
+enum FilingFrequency {
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+}
+
+enum TaxObligationStatus {
+  OPEN
+  READY
+  OVERDUE
+  FILED
+}
+
+enum ComplianceTaskStatus {
+  PENDING
+  COMPLETED
+  DISMISSED
+}
+
 enum AccountingEventType {
   INVOICE_CREATED
   PAYMENT_CAPTURED
@@ -305,6 +324,11 @@ model Workspace {
   documentLinks            DocumentLink[]
   documentAuditEvents      DocumentAuditEvent[]
   documentStorage          WorkspaceDocumentStorage?
+  taxRegistrations         WorkspaceTaxRegistration[]
+  filingCalendarRules      FilingCalendarRule[]
+  taxObligations           TaxObligation[]
+  taxPeriods               TaxPeriod[]
+  complianceTasks          ComplianceTask[]
 }
 
 model AppActivityLog {
@@ -1157,6 +1181,99 @@ model Task {
   createdAt   DateTime  @default(now())
 
   @@index([workspaceId])
+}
+
+model WorkspaceTaxRegistration {
+  id                 String          @id @default(cuid())
+  workspaceId        String
+  workspace          Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  taxType            String
+  jurisdictionCode   String
+  registrationNumber String
+  frequency          FilingFrequency
+  effectiveFrom      DateTime
+  effectiveTo        DateTime?
+  isActive           Boolean         @default(true)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  filingCalendarRules FilingCalendarRule[]
+  taxObligations      TaxObligation[]
+
+  @@index([workspaceId, isActive])
+  @@index([workspaceId, taxType, jurisdictionCode])
+}
+
+model FilingCalendarRule {
+  id                String                   @id @default(cuid())
+  workspaceId       String
+  workspace         Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  taxRegistrationId String
+  taxRegistration   WorkspaceTaxRegistration @relation(fields: [taxRegistrationId], references: [id], onDelete: Cascade)
+  dueDayOfMonth     Int
+  dueMonthOfYear    Int?
+  lookaheadPeriods  Int                      @default(12)
+  isActive          Boolean                  @default(true)
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  taxObligations TaxObligation[]
+
+  @@index([workspaceId, taxRegistrationId, isActive])
+}
+
+model TaxPeriod {
+  id            String             @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  obligationId  String             @unique
+  obligation    TaxObligation      @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  periodStart   DateTime
+  periodEnd     DateTime
+  status        TaxObligationStatus @default(OPEN)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([workspaceId, periodStart, periodEnd])
+}
+
+model TaxObligation {
+  id                String                   @id @default(cuid())
+  workspaceId       String
+  workspace         Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  taxRegistrationId String
+  taxRegistration   WorkspaceTaxRegistration @relation(fields: [taxRegistrationId], references: [id], onDelete: Cascade)
+  filingRuleId      String
+  filingRule        FilingCalendarRule       @relation(fields: [filingRuleId], references: [id], onDelete: Cascade)
+  dueDate           DateTime
+  status            TaxObligationStatus      @default(OPEN)
+  readyAt           DateTime?
+  filedAt           DateTime?
+  periodKey         String
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  period          TaxPeriod?
+  complianceTasks ComplianceTask[]
+
+  @@unique([workspaceId, taxRegistrationId, periodKey])
+  @@index([workspaceId, status, dueDate])
+}
+
+model ComplianceTask {
+  id            String               @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  obligationId  String
+  obligation    TaxObligation        @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  title         String
+  dueDate       DateTime
+  status        ComplianceTaskStatus @default(PENDING)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@unique([workspaceId, obligationId, dueDate])
+  @@index([workspaceId, status, dueDate])
 }
 
 model TaxRateOverride {
