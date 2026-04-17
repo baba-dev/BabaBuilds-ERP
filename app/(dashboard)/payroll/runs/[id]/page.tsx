@@ -1,14 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ChevronDown, ChevronRight, ClipboardList, FileBarChart2, Settings2, Sparkles } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  ClipboardList,
+  FileBarChart2,
+  Loader2,
+  Settings2,
+  Sparkles,
+} from "lucide-react";
+import { toast } from "sonner";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { PayrollRunDetailDto, PayrollRunStatusDto } from "@/lib/payroll/types";
+
+type TransitionAction = "submit_review" | "approve" | "return_draft" | "return_review";
 
 const RUN_STAGES: PayrollRunStatusDto[] = ["DRAFT", "REVIEW", "APPROVED", "POSTED"];
 
@@ -43,35 +54,74 @@ export default function PayrollRunCockpitPage() {
   const [error, setError] = useState<string | null>(null);
   const [run, setRun] = useState<PayrollRunDetailDto | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const loadRun = useCallback(async () => {
+    if (!params.id) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/payroll/runs/${params.id}`, { cache: "no-store" });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(j.error || `Failed (${res.status})`);
+      }
+      const data = (await res.json()) as PayrollRunDetailDto;
+      setRun(data);
+      const first = data.lineItems[0]?.id;
+      if (first) setExpanded({ [first]: true });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load run");
+    } finally {
+      setLoading(false);
+    }
+  }, [params.id]);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!params.id) return;
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(`/api/payroll/runs/${params.id}`, { cache: "no-store" });
-        if (!res.ok) {
-          const j = (await res.json().catch(() => ({}))) as { error?: string };
-          throw new Error(j.error || `Failed (${res.status})`);
-        }
-        const data = (await res.json()) as PayrollRunDetailDto;
-        if (!cancelled) {
-          setRun(data);
-          const first = data.lineItems[0]?.id;
-          if (first) setExpanded({ [first]: true });
-        }
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load run");
-      } finally {
-        if (!cancelled) setLoading(false);
+    void loadRun();
+  }, [loadRun]);
+
+  const runTransition = async (action: TransitionAction) => {
+    if (!params.id) return;
+    setActionLoading(action);
+    try {
+      const res = await fetch(`/api/payroll/runs/${params.id}/transition`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
+      if (!res.ok) {
+        toast.error(data.error || "Transition failed");
+        return;
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [params.id]);
+      toast.success("Run updated");
+      await loadRun();
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const postToLedger = async () => {
+    if (!params.id) return;
+    setActionLoading("post");
+    try {
+      const res = await fetch(`/api/payroll/runs/${params.id}/post`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        toast.error(data.error || "Posting failed");
+        return;
+      }
+      toast.success("Posted to ledger");
+      await loadRun();
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   const fmt = useMemo(
     () =>
@@ -94,6 +144,8 @@ export default function PayrollRunCockpitPage() {
   }, [run]);
 
   const currentStage = run?.status ?? "DRAFT";
+  const cap = run?.capabilities;
+  const busy = actionLoading !== null;
 
   return (
     <DashboardPageShell
@@ -101,7 +153,45 @@ export default function PayrollRunCockpitPage() {
       description="Review payroll line-level explainability, stage progression, and posting readiness."
       icon={<FileBarChart2 className="h-5 w-5 text-indigo-500" />}
       headerTone="transparent"
-      primaryAction={<Button disabled>Advance stage (API pending)</Button>}
+      primaryAction={
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {cap?.canSubmitReview ? (
+            <Button
+              size="sm"
+              className="gap-1.5 bg-indigo-600 hover:bg-indigo-700"
+              disabled={busy}
+              onClick={() => void runTransition("submit_review")}
+            >
+              {actionLoading === "submit_review" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Submit for review
+            </Button>
+          ) : null}
+          {cap?.canReturnDraft ? (
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => void runTransition("return_draft")}>
+              {actionLoading === "return_draft" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Return to draft
+            </Button>
+          ) : null}
+          {cap?.canApprove ? (
+            <Button size="sm" className="gap-1.5 bg-emerald-600 hover:bg-emerald-700" disabled={busy} onClick={() => void runTransition("approve")}>
+              {actionLoading === "approve" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Approve
+            </Button>
+          ) : null}
+          {cap?.canReturnReview ? (
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => void runTransition("return_review")}>
+              {actionLoading === "return_review" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Send back to review
+            </Button>
+          ) : null}
+          {cap?.canPost ? (
+            <Button size="sm" className="gap-1.5 bg-violet-600 hover:bg-violet-700" disabled={busy} onClick={() => void postToLedger()}>
+              {actionLoading === "post" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Post to ledger
+            </Button>
+          ) : null}
+        </div>
+      }
       secondaryActions={
         <Button variant="outline" asChild>
           <Link href="/payroll/settings">Rules & settings</Link>

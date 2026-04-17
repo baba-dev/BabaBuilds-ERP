@@ -6,6 +6,7 @@ import { isModuleEnabled } from '@/lib/modules';
 import { getWorkspaceIdForUser } from '@/lib/payroll/settings';
 import { RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
 import { requirePayrollPermission } from '@/lib/security/payroll-policy';
+import { getPayrollRunActionCapabilities } from '@/app/api/payroll/_context';
 import type { PayrollRunDetailDto, PayrollRunStatusDto } from '@/lib/payroll/types';
 
 function mapRunStatus(s: string): PayrollRunStatusDto {
@@ -62,18 +63,28 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
       return NextResponse.json({ error: 'Payroll run not found.', code: 'NOT_FOUND' }, { status: 404 });
     }
 
+    const isPostedFinancially = run.posting?.postingStatus === 'POSTED' || run.status === 'POSTED';
+    const capabilities = await getPayrollRunActionCapabilities(
+      userId,
+      workspaceId,
+      run.status,
+      isPostedFinancially,
+    );
+
     const payload: PayrollRunDetailDto = {
       id: run.id,
       workspaceId: run.workspaceId,
       periodId: run.periodId,
       version: run.version,
       status: mapRunStatus(run.status),
+      preparedByUserId: run.generatedByUserId,
       totalEarnings: run.totalEarnings.toFixed(2),
       totalDeductions: run.totalDeductions.toFixed(2),
       totalEmployerCosts: run.totalEmployerCosts.toFixed(2),
       totalNetPay: run.totalNetPay.toFixed(2),
       generatedAt: run.generatedAt.toISOString(),
       approvedAt: run.approvedAt?.toISOString() ?? null,
+      capabilities,
       period: {
         id: run.period.id,
         startDate: run.period.startDate.toISOString(),

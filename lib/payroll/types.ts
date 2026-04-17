@@ -63,18 +63,28 @@ export type PayrollLineItemDto = {
   };
 };
 
+export type PayrollRunCapabilitiesDto = {
+  canSubmitReview: boolean;
+  canApprove: boolean;
+  canReturnDraft: boolean;
+  canReturnReview: boolean;
+  canPost: boolean;
+};
+
 export type PayrollRunDetailDto = {
   id: string;
   workspaceId: string;
   periodId: string;
   version: number;
   status: PayrollRunStatusDto;
+  preparedByUserId: string | null;
   totalEarnings: string;
   totalDeductions: string;
   totalEmployerCosts: string;
   totalNetPay: string;
   generatedAt: string;
   approvedAt: string | null;
+  capabilities: PayrollRunCapabilitiesDto;
   period: {
     id: string;
     startDate: string;
