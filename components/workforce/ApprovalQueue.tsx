@@ -39,6 +39,7 @@ const LEAVE_TYPE_DOT_COLORS: Record<string, string> = {
   indigo:  "bg-indigo-500",
   blue:    "bg-blue-500",
 };
+const APPROVAL_PANEL_CLASS = "rounded-2xl border border-zinc-200/60 bg-white/55 p-4 shadow-sm backdrop-blur-sm dark:border-zinc-700/50 dark:bg-zinc-950/45 dark:shadow-black/30";
 
 export function ApprovalQueue({ requests, onRefresh, canApprove }: ApprovalQueueProps) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -85,7 +86,7 @@ export function ApprovalQueue({ requests, onRefresh, canApprove }: ApprovalQueue
         return (
           <div
             key={req.id}
-            className="group rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/30 p-4 hover:bg-white/60 dark:hover:bg-zinc-900/40 transition-colors"
+            className={`${APPROVAL_PANEL_CLASS} group motion-feedback hover:bg-white/70 active:bg-white/80 motion-reduce:transition-none dark:hover:bg-zinc-900/60 dark:active:bg-zinc-900/70`}
           >
             <div className="flex items-start gap-3">
               <EmployeeAvatar
@@ -136,7 +137,7 @@ export function ApprovalQueue({ requests, onRefresh, canApprove }: ApprovalQueue
                       size="sm"
                       disabled={isApprovingThis || isRejectingThis}
                       onClick={() => handleAction(req.id, "APPROVE")}
-                      className="h-7 px-3 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white border-none"
+                      className="h-7 px-3 text-[11px] font-bold bg-emerald-600 text-white border-none"
                     >
                       <CheckCircle2 className="h-3 w-3 mr-1" />
                       {isApprovingThis ? "Approving..." : "Approve"}
@@ -147,7 +148,7 @@ export function ApprovalQueue({ requests, onRefresh, canApprove }: ApprovalQueue
                       variant="ghost"
                       disabled={isApprovingThis || isRejectingThis}
                       onClick={() => handleAction(req.id, "REJECT")}
-                      className="h-7 px-3 text-[11px] font-bold text-rose-700 hover:text-rose-900 hover:bg-rose-500/10 dark:text-rose-300 dark:hover:text-rose-200"
+                      className="h-7 px-3 text-[11px] font-bold text-rose-700 hover:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-300/10"
                     >
                       <X className="h-3 w-3 mr-1" />
                       {isRejectingThis ? "Rejecting..." : "Reject"}
