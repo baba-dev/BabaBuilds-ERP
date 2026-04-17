@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import {
   Building2, Landmark, ShieldCheck, Image as ImageIcon, CheckCircle2,
   Mailbox, Bot, Trash2, CreditCard, Lock, Globe, AlertTriangle,
-  Loader2, Info, Users, Mail, Clock, UserPlus, ArrowRight, Sparkles, Users2
+  Loader2, Info, Users, Mail, Clock, UserPlus, ArrowRight, Sparkles, Users2, FileText
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -50,6 +50,9 @@ export default function SettingsWizard() {
   const [workforceEnabled, setWorkforceEnabled] = useState(false);
   const [workforceLoading, setWorkforceLoading] = useState(false);
   const [showDisableConfirm, setShowDisableConfirm] = useState(false);
+  const [documentsEnabled, setDocumentsEnabled] = useState(false);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [showDisableDocumentsConfirm, setShowDisableDocumentsConfirm] = useState(false);
   // Team invite state
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("MEMBER");
@@ -91,7 +94,10 @@ export default function SettingsWizard() {
     void fetch('/api/workspace/modules')
       .then((r) => r.json())
       .then((d: { modules?: string[] }) => {
-        if (Array.isArray(d.modules)) setWorkforceEnabled(d.modules.includes('WORKFORCE'));
+        if (Array.isArray(d.modules)) {
+          setWorkforceEnabled(d.modules.includes('WORKFORCE'));
+          setDocumentsEnabled(d.modules.includes('DOCUMENTS'));
+        }
       })
       .catch(() => {});
 
@@ -1146,6 +1152,83 @@ export default function SettingsWizard() {
                 </div>
               </div>
 
+              {/* Document Vault module card */}
+              <div className={cn(
+                "rounded-xl border-2 p-5 transition-all duration-200",
+                documentsEnabled
+                  ? "border-indigo-500/50 bg-indigo-50/30 dark:bg-indigo-950/10"
+                  : "border-zinc-200 dark:border-zinc-800"
+              )}>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className={cn(
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all",
+                      documentsEnabled ? "bg-indigo-600 shadow-lg shadow-indigo-500/20" : "bg-zinc-100 dark:bg-zinc-800"
+                    )}>
+                      <FileText className={cn("h-5 w-5", documentsEnabled ? "text-white" : "text-zinc-500")} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Document Vault</p>
+                        <Badge variant="outline" className={cn(
+                          "text-[10px] font-bold uppercase",
+                          documentsEnabled
+                            ? "border-indigo-500/30 text-indigo-600 dark:text-indigo-400"
+                            : "border-zinc-300 dark:border-zinc-700 text-zinc-500"
+                        )}>
+                          {documentsEnabled ? "Enabled" : "Disabled"}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2 max-w-sm">
+                        Secure document storage with OCR ingestion, extracted-field review, and ERP-native record linking for accounting and compliance.
+                      </p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                        {[
+                          "Upload Center (Inbox) with triage states",
+                          "OCR extraction with review & correction",
+                          "Link documents to expenses, invoices, and more",
+                          "Archive without deletion (audit preserved)",
+                          "Storage usage meter with plan-based limits",
+                        ].map((f) => (
+                          <p key={f} className="text-[11px] text-zinc-500 flex items-center gap-1">
+                            <span className={cn("h-1 w-1 rounded-full shrink-0", documentsEnabled ? "bg-indigo-600" : "bg-zinc-400")} />
+                            {f}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <Switch
+                    id="documents-module-toggle"
+                    checked={documentsEnabled}
+                    disabled={documentsLoading}
+                    onCheckedChange={async (checked) => {
+                      if (!checked) {
+                        setShowDisableDocumentsConfirm(true);
+                        return;
+                      }
+                      setDocumentsLoading(true);
+                      try {
+                        const res = await fetch('/api/workspace/modules', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ moduleKey: 'DOCUMENTS', enabled: true }),
+                        });
+                        if (res.ok) {
+                          setDocumentsEnabled(true);
+                          toast.success('Document Vault module enabled');
+                        } else {
+                          toast.error('Failed to enable module');
+                        }
+                      } finally {
+                        setDocumentsLoading(false);
+                      }
+                    }}
+                    className="data-[state=checked]:bg-indigo-600 shrink-0 mt-1"
+                  />
+                </div>
+              </div>
+
               <p className="text-xs text-zinc-400 dark:text-zinc-600">
                 More modules (Payroll, Time Tracking, Asset Management) coming soon.
               </p>
@@ -1191,6 +1274,50 @@ export default function SettingsWizard() {
                   className="bg-rose-600 hover:bg-rose-500 text-white border-none"
                 >
                   {workforceLoading ? 'Disabling...' : 'Disable Workforce'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Disable Document Vault Confirmation Dialog */}
+          <Dialog open={showDisableDocumentsConfirm} onOpenChange={setShowDisableDocumentsConfirm}>
+            <DialogContent className="sm:max-w-md bg-zinc-950 border-white/10">
+              <DialogHeader>
+                <DialogTitle className="text-zinc-50 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-400" /> Disable Document Vault?
+                </DialogTitle>
+                <DialogDescription className="text-zinc-400">
+                  Your uploaded documents, OCR jobs, and links will be <strong className="text-zinc-200">preserved</strong>.
+                  Document Vault will be hidden from navigation until re-enabled.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="ghost" onClick={() => setShowDisableDocumentsConfirm(false)} className="text-zinc-400">Cancel</Button>
+                <Button
+                  id="confirm-disable-documents"
+                  disabled={documentsLoading}
+                  onClick={async () => {
+                    setDocumentsLoading(true);
+                    try {
+                      const res = await fetch('/api/workspace/modules', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ moduleKey: 'DOCUMENTS', enabled: false }),
+                      });
+                      if (res.ok) {
+                        setDocumentsEnabled(false);
+                        setShowDisableDocumentsConfirm(false);
+                        toast.success('Document Vault module disabled');
+                      } else {
+                        toast.error('Failed to disable module');
+                      }
+                    } finally {
+                      setDocumentsLoading(false);
+                    }
+                  }}
+                  className="bg-rose-600 hover:bg-rose-500 text-white border-none"
+                >
+                  {documentsLoading ? 'Disabling...' : 'Disable Document Vault'}
                 </Button>
               </div>
             </DialogContent>
