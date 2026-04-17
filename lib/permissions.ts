@@ -181,6 +181,13 @@ export const PERMISSION_KEYS = [
   'workforce.reports.view',          // View workforce analytics & reports
   'workforce.settings.manage',       // Manage departments, designations, holidays
 
+  // Payroll (only surfaced when Payroll module is enabled)
+  'payroll.view',                    // View payroll runs, ledger postings, and summaries
+  'payroll.prepare',                 // Prepare payroll runs and draft calculations
+  'payroll.approve',                 // Approve prepared payroll runs (maker-checker)
+  'payroll.post',                    // Post approved payroll to accounting
+  'payroll.settings.manage',         // Manage payroll config, calendars, and policies
+
   // Documents (only surfaced when Documents module is enabled)
   'documents.view',
   'documents.upload',
@@ -251,6 +258,17 @@ export const PERMISSION_MODULE_GROUPS: { module: string; label: string; keys: Pe
     ],
   },
   {
+    module: 'payroll',
+    label: 'Payroll',
+    keys: [
+      'payroll.view',
+      'payroll.prepare',
+      'payroll.approve',
+      'payroll.post',
+      'payroll.settings.manage',
+    ],
+  },
+  {
     module: 'documents',
     label: 'Documents',
     keys: [
@@ -316,6 +334,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'workforce.attendance.view', 'workforce.attendance.manage',
     'workforce.leave.view', 'workforce.leave.manage', 'workforce.leave.approve',
     'workforce.reports.view', 'workforce.settings.manage',
+    // Payroll — full access
+    'payroll.view', 'payroll.prepare', 'payroll.approve', 'payroll.post', 'payroll.settings.manage',
 
     // Documents — full access
     'documents.view',
@@ -363,6 +383,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'workforce.attendance.view', 'workforce.attendance.manage',
     'workforce.leave.view', 'workforce.leave.manage', 'workforce.leave.approve',
     'workforce.reports.view', 'workforce.settings.manage',
+    // Payroll — least privilege for admin: read-only visibility
+    'payroll.view',
 
     // Documents — admin operations
     'documents.view',
@@ -403,6 +425,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     // Workforce — view-only (payroll cost oversight)
     'workforce.view', 'workforce.people.view',
     'workforce.attendance.view', 'workforce.leave.view', 'workforce.reports.view',
+    // Payroll — maker/checker on runs, no posting or settings
+    'payroll.view', 'payroll.prepare', 'payroll.approve',
 
     // Documents — finance intake + review + linking
     'documents.view',
@@ -434,6 +458,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     // Workforce — view-only
     'workforce.view', 'workforce.people.view', 'workforce.attendance.view',
     'workforce.leave.view', 'workforce.reports.view',
+    // Payroll — posting role (after approval)
+    'payroll.view', 'payroll.post',
 
     // Documents — view (audit evidence)
     'documents.view',
