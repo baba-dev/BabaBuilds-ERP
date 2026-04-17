@@ -676,7 +676,7 @@ export default function TeamAccessPage() {
                 </tr>
                 {keys.map((permission) => {
                   const isHighRisk = [
-                    "accounting.post", "tax.manage", "billing.manage",
+                    "accounting.post", "tax.edit", "tax.approve", "tax.file", "billing.manage",
                     "reports.export", "cash_flow.manage_assumptions",
                     "workspace.manage_roles",
                   ].includes(permission);

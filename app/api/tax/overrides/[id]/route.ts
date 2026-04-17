@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { createTaxOverrideAuditLog, logActivity } from '@/lib/security/activity-log';
+import { RbacDeniedError, requirePermission } from '@/lib/rbac';
+import { hasPermission, isValidBusinessRole } from '@/lib/permissions';
 import type { Session } from 'next-auth';
 
 type SessionWithWorkspace = Session & { workspaceId?: string; user?: Session['user'] & { id?: string } };
@@ -27,8 +29,8 @@ const getCheckerContext = (request: Request) => {
   }
 
   const normalizedRole = checkerRole.toUpperCase();
-  if (!['OWNER', 'ADMIN'].includes(normalizedRole)) {
-    return { valid: false as const, error: 'Checker must have OWNER or ADMIN role.' };
+  if (!isValidBusinessRole(normalizedRole) || !hasPermission(normalizedRole, 'tax.approve')) {
+    return { valid: false as const, error: 'Checker must have tax.approve permission.' };
   }
 
   return {
@@ -56,6 +58,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const workspaceId = typedSession.workspaceId;
     const actorUserId = typedSession.user?.id ?? null;
     const actorEmail = typedSession.user?.email ?? null;
+    if (!actorUserId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    await requirePermission(actorUserId, workspaceId, 'tax.edit');
 
     const checker = getCheckerContext(request);
     if (!checker.valid) {
@@ -144,7 +150,26 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     });
 
     await logActivity({
-      action: 'tax_override_update_maker_checker',
+      action: 'tax_override_approval',
+      status: 'SUCCESS',
+      workspaceId,
+      actor: {
+        userId: checker.checkerUserId,
+      },
+      entity: {
+        type: 'tax_override_approval',
+        id: updated.id,
+      },
+      metadata: {
+        approvedAction: deactivate ? 'DEACTIVATE' : 'UPDATE',
+        checkerRole: checker.checkerRole,
+        makerUserId: actorUserId,
+      },
+      request,
+    });
+
+    await logActivity({
+      action: 'tax_override_update',
       status: 'SUCCESS',
       workspaceId,
       actor: {
@@ -156,6 +181,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         id: updated.id,
       },
       metadata: {
+        mutationType: deactivate ? 'DEACTIVATE' : 'UPDATE',
         checkerUserId: checker.checkerUserId,
         checkerRole: checker.checkerRole,
         deactivate,
@@ -165,6 +191,24 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {
+    if (error instanceof RbacDeniedError) {
+      return NextResponse.json({ error: 'Forbidden', code: 'RBAC_DENIED' }, { status: 403 });
+    }
+    const session = (await getServerSession(authOptions)) as SessionWithWorkspace | null;
+    if (session?.workspaceId) {
+      await logActivity({
+        action: 'tax_override_update',
+        status: 'FAILURE',
+        workspaceId: session.workspaceId,
+        actor: {
+          userId: session?.user?.id ?? null,
+          email: session?.user?.email ?? null,
+        },
+        metadata: {
+          reason: error instanceof Error ? error.message : 'unknown_error',
+        },
+      });
+    }
     console.error('Tax override PATCH error', error);
     return NextResponse.json({ error: 'Failed to update tax override' }, { status: 500 });
   }

@@ -18,7 +18,9 @@ import {
   Percent,
   Building2,
   ShieldCheck,
-  ArrowRight
+  ArrowRight,
+  CalendarClock,
+  Landmark,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,6 +39,10 @@ const defaultSummary: CAPortalSummary = {
   deductions80C: 0,
   deductions80D: 0,
   totalExpenses: 0,
+  periodsDueSoon: 0,
+  readinessPassRate: 0,
+  unresolvedBlockers: 0,
+  lateWithholdingDeposits: 0,
 };
 const EMPTY_PAYLOAD: CAPortalPayload = {
   summary: defaultSummary,
@@ -90,7 +96,11 @@ const isCAPortalSummary = (value: unknown): value is CAPortalSummary => {
     isFiniteNumber(value.presumptiveIncome) &&
     isFiniteNumber(value.deductions80C) &&
     isFiniteNumber(value.deductions80D) &&
-    isFiniteNumber(value.totalExpenses)
+    isFiniteNumber(value.totalExpenses) &&
+    isFiniteNumber(value.periodsDueSoon) &&
+    isFiniteNumber(value.readinessPassRate) &&
+    isFiniteNumber(value.unresolvedBlockers) &&
+    isFiniteNumber(value.lateWithholdingDeposits)
   );
 };
 
@@ -128,6 +138,10 @@ export default function CAPortal() {
     deductions80C: 0,
     deductions80D: 0,
     totalExpenses: 0,
+    periodsDueSoon: 0,
+    readinessPassRate: 0,
+    unresolvedBlockers: 0,
+    lateWithholdingDeposits: 0,
   };
   
   // --- STATE ---
@@ -479,6 +493,49 @@ export default function CAPortal() {
             <CardContent>
               <div className="text-2xl font-black text-emerald-900 dark:text-emerald-300">₹{(summary.deductions80C + summary.deductions80D).toLocaleString('en-IN')}</div>
               <p className="text-xs font-medium text-emerald-600 dark:text-emerald-500 mt-1">80C: ₹{summary.deductions80C.toLocaleString()} | 80D: ₹{summary.deductions80D.toLocaleString()}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="shadow-sm border-amber-200 dark:border-amber-900/50 bg-amber-50/40 dark:bg-amber-950/20">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-xs font-bold uppercase tracking-widest text-amber-800 dark:text-amber-400">Periods due soon</CardTitle>
+              <CalendarClock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-amber-900 dark:text-amber-100">{summary.periodsDueSoon}</div>
+              <p className="text-xs mt-1 font-medium text-amber-700 dark:text-amber-300">Open filing periods due in the next 14 days.</p>
+            </CardContent>
+          </Card>
+          <Card className="shadow-sm border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/40 dark:bg-emerald-950/20">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-xs font-bold uppercase tracking-widest text-emerald-800 dark:text-emerald-400">Readiness pass rate</CardTitle>
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">{summary.readinessPassRate.toFixed(1)}%</div>
+              <p className="text-xs mt-1 font-medium text-emerald-700 dark:text-emerald-300">Invoices and expenses with complete evidence fields.</p>
+            </CardContent>
+          </Card>
+          <Card className="shadow-sm border-rose-200 dark:border-rose-900/50 bg-rose-50/40 dark:bg-rose-950/20">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-xs font-bold uppercase tracking-widest text-rose-800 dark:text-rose-400">Unresolved blockers</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-rose-900 dark:text-rose-100">{summary.unresolvedBlockers}</div>
+              <p className="text-xs mt-1 font-medium text-rose-700 dark:text-rose-300">Missing compliance fields or overdue receivables.</p>
+            </CardContent>
+          </Card>
+          <Card className="shadow-sm border-orange-200 dark:border-orange-900/50 bg-orange-50/40 dark:bg-orange-950/20">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-xs font-bold uppercase tracking-widest text-orange-800 dark:text-orange-400">Late withholding deposits</CardTitle>
+              <Landmark className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{summary.lateWithholdingDeposits}</div>
+              <p className="text-xs mt-1 font-medium text-orange-700 dark:text-orange-300">Quarterly deposit periods past due with pending tax-bearing invoices.</p>
             </CardContent>
           </Card>
         </div>

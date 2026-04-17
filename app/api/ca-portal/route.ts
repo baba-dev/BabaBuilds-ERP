@@ -13,6 +13,17 @@ const isReceiptStatus = (status: unknown) => {
   const normalizedStatus = String(status).toUpperCase();
   return normalizedStatus === "PAID" || normalizedStatus === "PARTIALLY_PAID";
 };
+const DAY_MS = 24 * 60 * 60 * 1000;
+const TDS_PERIOD_DUE_DAYS = 14;
+
+const toQuarterEnd = (date: Date) => {
+  const month = date.getUTCMonth();
+  const year = date.getUTCFullYear();
+  if (month <= 2) return new Date(Date.UTC(year, 2, 31, 23, 59, 59, 999));
+  if (month <= 5) return new Date(Date.UTC(year, 5, 30, 23, 59, 59, 999));
+  if (month <= 8) return new Date(Date.UTC(year, 8, 30, 23, 59, 59, 999));
+  return new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999));
+};
 
 function getFinancialYearDates(fyString: string) {
   const parts = fyString.split('-');
@@ -118,6 +129,49 @@ export async function GET(request: Request) {
     const raw80D = decimalToNumber(investments.filter(i => i.category.includes('80D')).reduce((sum, i) => sum.plus(toDecimal(i.amount)), toDecimal(0)));
     const deductions80D = Math.min(raw80D, 25000);
 
+    const now = new Date();
+    const dueSoonThreshold = new Date(now.getTime() + TDS_PERIOD_DUE_DAYS * DAY_MS);
+    const pendingStatuses = new Set(['PENDING', 'SENT', 'PARTIALLY_PAID', 'OVERDUE']);
+
+    const dueSoonSet = new Set<string>();
+    const lateWithholdingSet = new Set<string>();
+    let readinessPassCount = 0;
+    let readinessTotalCount = 0;
+    let unresolvedBlockers = 0;
+
+    for (const inv of invoices) {
+      const normalizedStatus = String(inv.status ?? '').toUpperCase();
+      const dueDate = inv.dueDate ?? null;
+      if (dueDate && pendingStatuses.has(normalizedStatus)) {
+        if (dueDate >= now && dueDate <= dueSoonThreshold) {
+          dueSoonSet.add(toQuarterEnd(dueDate).toISOString());
+        }
+        if (inv.taxAmount && toDecimal(inv.taxAmount).gt(0) && dueDate < now) {
+          lateWithholdingSet.add(toQuarterEnd(dueDate).toISOString());
+        }
+      }
+
+      const invoiceReady = Boolean(inv.sacCode && inv.sacCode.trim() && inv.pdfPath && inv.taxMode);
+      readinessTotalCount += 1;
+      if (invoiceReady) readinessPassCount += 1;
+      else unresolvedBlockers += 1;
+
+      if (normalizedStatus === 'OVERDUE') unresolvedBlockers += 1;
+    }
+
+    for (const exp of expenses) {
+      const expenseReady = Boolean(exp.receiptUrl && exp.vendor && exp.category && toDecimal(exp.amount).gt(0));
+      readinessTotalCount += 1;
+      if (expenseReady) readinessPassCount += 1;
+      else unresolvedBlockers += 1;
+    }
+
+    const readinessPassRate = readinessTotalCount > 0
+      ? Number(((readinessPassCount / readinessTotalCount) * 100).toFixed(2))
+      : 100;
+
+    // 5. DATA FORMATTING FOR THE UI
+    // Ensure the data exactly matches the datatable columns in the UI
     const formattedInvoices: CAInvoiceRow[] = invoices.map(inv => ({
       id: inv.id,
       invoiceDate: inv.invoiceDate.toISOString(),
@@ -164,7 +218,6 @@ export async function GET(request: Request) {
 
     const returnPeriodByKey = new Map(returnPeriods.map((period) => [period.periodKey, period]));
 
-    const now = new Date();
     const warnings: CAPortalPayload['readiness']['warnings'] = [];
     const blockers: CAPortalPayload['readiness']['blockers'] = [];
 
@@ -209,7 +262,11 @@ export async function GET(request: Request) {
         presumptiveIncome,
         totalExpenses,
         deductions80C,
-        deductions80D
+        deductions80D,
+        periodsDueSoon: dueSoonSet.size,
+        readinessPassRate,
+        unresolvedBlockers,
+        lateWithholdingDeposits: lateWithholdingSet.size,
       },
       invoices: formattedInvoices,
       expenses: formattedExpenses,

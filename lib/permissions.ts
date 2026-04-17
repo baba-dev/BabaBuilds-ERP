@@ -13,7 +13,7 @@
  *   The ORM-level Prisma enum (`BusinessRoleEnum`) enforces type safety.
  *
  * - Default templates are CONSERVATIVE: start restrictive, expand deliberately.
- *   Sensitive surfaces (accounting.post, tax.manage, billing.manage,
+ *   Sensitive surfaces (accounting.post, tax.manage, tax.edit, tax.approve, tax.file, billing.manage,
  *   reports.export, cash_flow.manage_assumptions) require explicit permission.
  *
  * - Seat semantics are explicit (see PLAN_SEAT_LIMITS and SEAT_SEMANTICS):
@@ -144,7 +144,10 @@ export const PERMISSION_KEYS = [
 
   // Tax
   'tax.view',
-  'tax.manage',            // High-risk: changes tax configuration
+  'tax.manage',            // High-risk: workspace tax setup, imports, document links
+  'tax.edit',              // High-risk: maker-side tax overrides / configuration changes
+  'tax.approve',           // High-risk: maker-checker approvals for tax actions
+  'tax.file',              // High-risk: tax filing / submission actions
   'tax.readiness.view',    // read tax return readiness summaries
   'tax.readiness.run',     // run tax return readiness / prefill pipelines
   'tax.withholding.record', // record withholding on payments/expenses (creates WithholdingEvent)
@@ -218,6 +221,9 @@ export const PERMISSION_MODULE_GROUPS: { module: string; label: string; keys: Pe
     keys: [
       'tax.view',
       'tax.manage',
+      'tax.edit',
+      'tax.approve',
+      'tax.file',
       'tax.readiness.view',
       'tax.readiness.run',
       'tax.withholding.record',
@@ -276,7 +282,7 @@ type PermissionSet = ReadonlyArray<Permission>;
  * built-in role. These are code-defined and auditable in git.
  *
  * Design principle: grant the MINIMUM permissions needed for the role's job.
- * Sensitive permissions (accounting.post, tax.manage, billing.manage,
+ * Sensitive permissions (accounting.post, tax.manage, tax.edit, tax.approve, tax.file, billing.manage,
  * reports.export, cash_flow.manage_assumptions) are granted sparingly.
  */
 export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
@@ -294,6 +300,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'accounting.view', 'accounting.post',
     'tax.view',
     'tax.manage',
+    'tax.edit',
+    'tax.approve',
+    'tax.file',
     'tax.readiness.view',
     'tax.readiness.run',
     'tax.withholding.record',
@@ -338,6 +347,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'accounting.view', 'accounting.post',
     'tax.view',
     'tax.manage',
+    'tax.edit',
+    'tax.approve',
+    'tax.file',
     'tax.readiness.view',
     'tax.readiness.run',
     'tax.withholding.record',
@@ -378,14 +390,16 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'service_orders.view',
     'cash_flow.view', 'cash_flow.manage_assumptions',
     'accounting.view',    // can view but NOT post
-    'tax.view',           // can view but NOT manage
+    'tax.view',
+    'tax.edit',
+    'tax.file',
     'tax.readiness.view',
     'tax.readiness.run',
     'tax.withholding.record',
     'tax.withholding.ingest',
     'reports.view', 'reports.export',
     'clients.view',
-    // NOT: accounting.post, tax.manage, billing.manage, workspace.manage_*
+    // NOT: accounting.post, tax.approve, billing.manage, workspace.manage_*
     // Workforce — view-only (payroll cost oversight)
     'workforce.view', 'workforce.people.view',
     'workforce.attendance.view', 'workforce.leave.view', 'workforce.reports.view',
@@ -412,6 +426,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'cash_flow.view',
     'accounting.view',         // view only, NOT post
     'tax.view',
+    'tax.file',
     'tax.readiness.view',
     'reports.view',            // view reports but NOT bulk export
     'clients.view',

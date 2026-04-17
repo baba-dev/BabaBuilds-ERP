@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifySuperAdmin, handleAdminApiError } from '@/app/api/admin/authz';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+import { RbacDeniedError, requirePermission } from '@/lib/rbac';
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
@@ -34,11 +37,13 @@ export async function GET(request: Request) {
       await verifySuperAdmin();
     } catch {
       // Not a super-admin: lock to session workspaceId
-      const session = await (await import("next-auth/next")).getServerSession((await import("@/lib/auth")).authOptions);
+      const session = await getServerSession(authOptions);
       effectiveWorkspaceId = (session as any)?.workspaceId;
-      if (!effectiveWorkspaceId) {
+      const actorUserId = (session as any)?.user?.id;
+      if (!effectiveWorkspaceId || !actorUserId) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
+      await requirePermission(actorUserId, effectiveWorkspaceId, 'tax.view');
     }
 
     const where: {
@@ -77,6 +82,9 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
+    if (error instanceof RbacDeniedError) {
+      return NextResponse.json({ error: 'Forbidden', code: 'RBAC_DENIED' }, { status: 403 });
+    }
     return handleAdminApiError(error, 'Failed to fetch tax audit logs');
   }
 }
