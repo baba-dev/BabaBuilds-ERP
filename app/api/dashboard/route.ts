@@ -9,6 +9,8 @@ import { summarizeReceivablesForAttention } from "@/lib/dashboard/attention-rece
 import { getInvoiceBilledAmount, sumInvoiceBilledAmount } from "@/lib/invoice/totals";
 import { estimateTax } from "@/lib/tax/engine";
 import { getCurrentFinancialYear } from "@/lib/financial-year";
+import { getTaxReadinessSummary } from "@/lib/tax/return-prep";
+import { checkPermission } from "@/lib/rbac";
 import { buildMonthlyChartBuckets, resolveMonthlyBucketTimeZone } from "./monthly-series";
 import { describeKpiPeriod, getFyDateRange } from "./sales-shop-kpi-periods";
 import {
@@ -77,6 +79,9 @@ async function buildDashboardPayload(
 
   const { canViewFinance = true } = options;
 
+  const canViewTaxReadiness =
+    Boolean(userId) && (await checkPermission(userId!, workspaceId, "tax.readiness.view"));
+
   const [
     workspace,
     workspaceOwner,
@@ -114,6 +119,7 @@ async function buildDashboardPayload(
     activities,
     notifications,
     pendingOrderAgingBuckets,
+    taxReadinessSummary,
   ] = await Promise.all([
     timed("workspace.core", () =>
       prisma.workspace.findUnique({
@@ -505,6 +511,9 @@ async function buildDashboardPayload(
 
       return buckets;
     }),
+    timed("tax.readiness_summary", () =>
+      getTaxReadinessSummary(workspaceId, { includeSummary: canViewTaxReadiness }),
+    ),
   ]);
 
   const billedRevenue = canViewFinance ? sumInvoiceBilledAmount(invoices) : new Prisma.Decimal(0);
@@ -892,6 +901,7 @@ async function buildDashboardPayload(
       })),
       openTasks: openTaskCount,
       blockedTasks,
+      taxReadiness: taxReadinessSummary,
     },
 
     trust: {
@@ -905,6 +915,7 @@ async function buildDashboardPayload(
         source: audit.resolutionSource,
         createdAt: audit.createdAt,
       })),
+      taxReadiness: taxReadinessSummary,
     },
 
     activity: activities.map((item) => ({

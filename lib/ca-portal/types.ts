@@ -32,8 +32,30 @@ export interface CAExpenseRow {
   receiptUrl: string | null;
 }
 
+export interface CAReadinessIssue {
+  code: string;
+  severity: 'warning' | 'blocker';
+  message: string;
+  periodKey?: string;
+  deltaAmount?: number;
+}
+
+export interface CAWithholdingReconciliationRow {
+  periodKey: string;
+  dueDate: string;
+  filedAt: string | null;
+  withheldAmount: number;
+  creditedAmount: number;
+  deltaAmount: number;
+}
+
 export interface CAPortalPayload {
   summary: CAPortalSummary;
   invoices: CAInvoiceRow[];
   expenses: CAExpenseRow[];
+  withholdingReconciliation: CAWithholdingReconciliationRow[];
+  readiness: {
+    warnings: CAReadinessIssue[];
+    blockers: CAReadinessIssue[];
+  };
 }

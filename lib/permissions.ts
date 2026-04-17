@@ -13,7 +13,7 @@
  *   The ORM-level Prisma enum (`BusinessRoleEnum`) enforces type safety.
  *
  * - Default templates are CONSERVATIVE: start restrictive, expand deliberately.
- *   Sensitive surfaces (accounting.post, tax.edit, tax.approve, tax.file, billing.manage,
+ *   Sensitive surfaces (accounting.post, tax.manage, tax.edit, tax.approve, tax.file, billing.manage,
  *   reports.export, cash_flow.manage_assumptions) require explicit permission.
  *
  * - Seat semantics are explicit (see PLAN_SEAT_LIMITS and SEAT_SEMANTICS):
@@ -144,9 +144,14 @@ export const PERMISSION_KEYS = [
 
   // Tax
   'tax.view',
-  'tax.edit',              // High-risk: changes tax configuration
+  'tax.manage',            // High-risk: workspace tax setup, imports, document links
+  'tax.edit',              // High-risk: maker-side tax overrides / configuration changes
   'tax.approve',           // High-risk: maker-checker approvals for tax actions
   'tax.file',              // High-risk: tax filing / submission actions
+  'tax.readiness.view',    // read tax return readiness summaries
+  'tax.readiness.run',     // run tax return readiness / prefill pipelines
+  'tax.withholding.record', // record withholding on payments/expenses (creates WithholdingEvent)
+  'tax.withholding.ingest', // ingest withholding certificates / post tax credits from uploads
 
   // Reports
   'reports.view',
@@ -210,7 +215,21 @@ export const PERMISSION_MODULE_GROUPS: { module: string; label: string; keys: Pe
   { module: 'service_orders',  label: 'Service Orders',   keys: ['service_orders.view', 'service_orders.manage'] },
   { module: 'cash_flow',       label: 'Cash Flow',        keys: ['cash_flow.view', 'cash_flow.manage_assumptions'] },
   { module: 'accounting',      label: 'Accounting',       keys: ['accounting.view', 'accounting.post'] },
-  { module: 'tax',             label: 'Tax',              keys: ['tax.view', 'tax.edit', 'tax.approve', 'tax.file'] },
+  {
+    module: 'tax',
+    label: 'Tax',
+    keys: [
+      'tax.view',
+      'tax.manage',
+      'tax.edit',
+      'tax.approve',
+      'tax.file',
+      'tax.readiness.view',
+      'tax.readiness.run',
+      'tax.withholding.record',
+      'tax.withholding.ingest',
+    ],
+  },
   { module: 'reports',         label: 'Reports',          keys: ['reports.view', 'reports.export'] },
   { module: 'clients',         label: 'Clients',          keys: ['clients.view', 'clients.manage'] },
   { module: 'workspace',       label: 'Workspace Admin',  keys: ['workspace.manage_members', 'workspace.manage_roles', 'workspace.manage_settings'] },
@@ -263,7 +282,7 @@ type PermissionSet = ReadonlyArray<Permission>;
  * built-in role. These are code-defined and auditable in git.
  *
  * Design principle: grant the MINIMUM permissions needed for the role's job.
- * Sensitive permissions (accounting.post, tax.edit, tax.approve, tax.file, billing.manage,
+ * Sensitive permissions (accounting.post, tax.manage, tax.edit, tax.approve, tax.file, billing.manage,
  * reports.export, cash_flow.manage_assumptions) are granted sparingly.
  */
 export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
@@ -279,7 +298,15 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'service_orders.view', 'service_orders.manage',
     'cash_flow.view', 'cash_flow.manage_assumptions',
     'accounting.view', 'accounting.post',
-    'tax.view', 'tax.edit', 'tax.approve', 'tax.file',
+    'tax.view',
+    'tax.manage',
+    'tax.edit',
+    'tax.approve',
+    'tax.file',
+    'tax.readiness.view',
+    'tax.readiness.run',
+    'tax.withholding.record',
+    'tax.withholding.ingest',
     'reports.view', 'reports.export',
     'clients.view', 'clients.manage',
     'workspace.manage_members', 'workspace.manage_roles', 'workspace.manage_settings',
@@ -318,7 +345,15 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'service_orders.view', 'service_orders.manage',
     'cash_flow.view', 'cash_flow.manage_assumptions',
     'accounting.view', 'accounting.post',
-    'tax.view', 'tax.edit', 'tax.approve', 'tax.file',
+    'tax.view',
+    'tax.manage',
+    'tax.edit',
+    'tax.approve',
+    'tax.file',
+    'tax.readiness.view',
+    'tax.readiness.run',
+    'tax.withholding.record',
+    'tax.withholding.ingest',
     'reports.view', 'reports.export',
     'clients.view', 'clients.manage',
     'workspace.manage_members', 'workspace.manage_roles', 'workspace.manage_settings',
@@ -355,7 +390,13 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'service_orders.view',
     'cash_flow.view', 'cash_flow.manage_assumptions',
     'accounting.view',    // can view but NOT post
-    'tax.view', 'tax.edit', 'tax.file', // can view/edit/file but NOT approve
+    'tax.view',
+    'tax.edit',
+    'tax.file',
+    'tax.readiness.view',
+    'tax.readiness.run',
+    'tax.withholding.record',
+    'tax.withholding.ingest',
     'reports.view', 'reports.export',
     'clients.view',
     // NOT: accounting.post, tax.approve, billing.manage, workspace.manage_*
@@ -384,7 +425,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'service_orders.view',
     'cash_flow.view',
     'accounting.view',         // view only, NOT post
-    'tax.view', 'tax.file',
+    'tax.view',
+    'tax.file',
+    'tax.readiness.view',
     'reports.view',            // view reports but NOT bulk export
     'clients.view',
     // NOT: any write, any export, any admin
@@ -401,6 +444,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'dashboard.view',
     'proposals.view', 'proposals.create', 'proposals.edit', 'proposals.send', 'proposals.convert',
     'invoices.view', 'invoices.create',
+    'tax.withholding.record',
     'retainers.view',
     'service_orders.view',
     'reports.view',
@@ -413,6 +457,8 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'service_orders.view', 'service_orders.manage',
     'purchase_orders.view', 'purchase_orders.create',
     'expenses.view', 'expenses.create',
+    'tax.withholding.record',
+    'tax.withholding.ingest',
     'inventory.view',
     'clients.view',
     'reports.view',
@@ -446,6 +492,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'clients.view',
     'invoices.view',
     'expenses.view', 'expenses.create',
+    'tax.withholding.record',
     'service_orders.view',
     // NOT: any admin, any financial management, any sensitive data
     // Workforce — self-service only
@@ -462,6 +509,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
   VIEWER: [
     // Strictly read-only — the audit/external reviewer role
     'dashboard.view',
+    'tax.readiness.view',
     'reports.view',
     'invoices.view',
     'expenses.view',

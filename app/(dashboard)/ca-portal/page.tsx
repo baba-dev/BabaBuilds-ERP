@@ -48,6 +48,8 @@ const EMPTY_PAYLOAD: CAPortalPayload = {
   summary: defaultSummary,
   invoices: [],
   expenses: [],
+  withholdingReconciliation: [],
+  readiness: { warnings: [], blockers: [] },
 };
 
 const isFiniteNumber = (value: unknown): value is number =>
@@ -113,7 +115,15 @@ const parseCAPortalResponse = (value: unknown): CAPortalPayload => {
     ? value.expenses.filter(isCAExpenseRow)
     : [];
 
-  return { summary, invoices, expenses };
+  const withholdingReconciliation = Array.isArray(value.withholdingReconciliation) ? value.withholdingReconciliation : [];
+  const readiness = isRecord(value.readiness)
+    ? {
+        warnings: Array.isArray(value.readiness.warnings) ? value.readiness.warnings : [],
+        blockers: Array.isArray(value.readiness.blockers) ? value.readiness.blockers : [],
+      }
+    : { warnings: [], blockers: [] };
+
+  return { summary, invoices, expenses, withholdingReconciliation, readiness };
 };
 
 
