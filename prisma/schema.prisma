@@ -353,6 +353,9 @@ model Workspace {
   leaveBalances     LeaveBalance[]
   workforceHolidays WorkforceHoliday[]
   workSchedules     WorkSchedule[]
+  payrollPeriods    PayrollPeriod[]
+  payrollRuns       PayrollRun[]
+  payrollPostings   PayrollPosting[]
 
   // Document Vault (optional module)
   documents               Document[]
@@ -2389,14 +2392,14 @@ model TaxDocumentLink {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  documentId  String
-  document    Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
-  entityType  String // RETURN_ACKNOWLEDGMENT | WITHHOLDING_CERTIFICATE | TAX_PAYMENT_PROOF
-  entityKey   String // return period, certificate number, challan/proof id, etc.
-  relation    String  @default("EVIDENCE") // ACKNOWLEDGMENT | CERTIFICATE | PROOF | EVIDENCE
+  entityType String // RETURN_ACKNOWLEDGMENT | WITHHOLDING_CERTIFICATE | TAX_PAYMENT_PROOF
+  entityKey  String // return period, certificate number, challan/proof id, etc.
+  relation   String @default("EVIDENCE") // ACKNOWLEDGMENT | CERTIFICATE | PROOF | EVIDENCE
 
-  notes       String?
+  notes           String?
   createdByUserId String?
 
   createdAt DateTime @default(now())
@@ -2408,21 +2411,21 @@ model TaxDocumentLink {
 }
 
 model TaxImportBatch {
-  id            String    @id @default(cuid())
-  workspaceId   String
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  templateType  String // WITHHOLDING_CERTIFICATES | FOREIGN_TAX_PAID | PRIOR_PERIOD_BALANCES
-  sourceName    String?
-  status        String   @default("COMPLETED") // COMPLETED | COMPLETED_WITH_ERRORS | FAILED
+  templateType String // WITHHOLDING_CERTIFICATES | FOREIGN_TAX_PAID | PRIOR_PERIOD_BALANCES
+  sourceName   String?
+  status       String  @default("COMPLETED") // COMPLETED | COMPLETED_WITH_ERRORS | FAILED
 
   submittedByUserId String?
-  rowCount      Int      @default(0)
-  successCount  Int      @default(0)
-  warningCount  Int      @default(0)
-  errorCount    Int      @default(0)
+  rowCount          Int     @default(0)
+  successCount      Int     @default(0)
+  warningCount      Int     @default(0)
+  errorCount        Int     @default(0)
 
-  metadata      Json?
+  metadata Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2434,20 +2437,20 @@ model TaxImportBatch {
 }
 
 model TaxImportRow {
-  id            String    @id @default(cuid())
-  workspaceId   String
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  batchId       String
-  batch         TaxImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  batchId String
+  batch   TaxImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
 
-  rowNumber     Int
-  status        String // SUCCESS | WARNING | ERROR
-  code          String? // VALIDATION_* | PARSE_* | BUSINESS_*
-  message       String?
-  fieldName     String?
+  rowNumber Int
+  status    String // SUCCESS | WARNING | ERROR
+  code      String? // VALIDATION_* | PARSE_* | BUSINESS_*
+  message   String?
+  fieldName String?
 
-  rawData       Json?
+  rawData        Json?
   normalizedData Json?
 
   createdAt DateTime @default(now())
@@ -2520,6 +2523,25 @@ enum LeaveRequestStatus {
   APPROVED
   REJECTED
   CANCELLED
+}
+
+enum PayrollPeriodStatus {
+  OPEN
+  PROCESSING
+  CLOSED
+}
+
+enum PayrollRunStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  POSTED
+}
+
+enum PayrollPostingStatus {
+  PENDING
+  POSTED
+  FAILED
 }
 
 model Department {
@@ -2725,6 +2747,181 @@ model LeaveBalance {
   @@unique([employeeId, leaveTypeId, year])
   @@index([workspaceId, year])
   @@index([workspaceId, employeeId])
+}
+
+/**
+ * PayrollPeriod — payroll window scoped per workspace.
+ * Locked metadata allows preventing further mutations after close.
+ */
+model PayrollPeriod {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  startDate DateTime
+  endDate   DateTime
+  status    PayrollPeriodStatus @default(OPEN)
+
+  lockedAt       DateTime?
+  lockedByUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  runs PayrollRun[]
+
+  @@unique([workspaceId, startDate, endDate])
+  @@index([workspaceId, status, startDate, endDate])
+}
+
+/**
+ * PayrollRun — immutable run/version generated for a period.
+ */
+model PayrollRun {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  periodId String
+  period   PayrollPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  version Int
+  status  PayrollRunStatus @default(DRAFT)
+
+  totalEarnings      Decimal @default(0)
+  totalDeductions    Decimal @default(0)
+  totalEmployerCosts Decimal @default(0)
+  totalNetPay        Decimal @default(0)
+
+  generatedByUserId String?
+  generatedAt       DateTime  @default(now())
+  approvedAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employeeSnapshots PayrollEmployeeSnapshot[]
+  lineItems         PayrollLineItem[]
+  posting           PayrollPosting?
+
+  @@unique([periodId, version])
+  @@index([workspaceId, periodId, status])
+  @@index([workspaceId, status, generatedAt(sort: Desc)])
+}
+
+/**
+ * PayrollEmployeeSnapshot — immutable employee + compensation truth at run time.
+ * This decouples payroll history from later edits to Employee profile records.
+ */
+model PayrollEmployeeSnapshot {
+  id String @id @default(cuid())
+
+  runId String
+  run   PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  // Source employee identifier kept as value (not relation) for immutability
+  employeeId   String
+  employeeCode String?
+  firstName    String
+  lastName     String
+  email        String?
+
+  departmentName String?
+  designation    String?
+  location       String?
+  joinDate       DateTime?
+
+  baseSalary       Decimal  @default(0)
+  hourlyRate       Decimal?
+  paymentFrequency String? // MONTHLY | BIWEEKLY | WEEKLY | CONTRACT
+  compensationMeta Json?
+
+  createdAt DateTime @default(now())
+
+  lineItems PayrollLineItem[]
+
+  @@unique([runId, employeeId])
+  @@index([runId, employeeCode])
+}
+
+/**
+ * PayrollLineItem — employee-level amounts for a run.
+ */
+model PayrollLineItem {
+  id String @id @default(cuid())
+
+  runId String
+  run   PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  employeeSnapshotId String
+  employeeSnapshot   PayrollEmployeeSnapshot @relation(fields: [employeeSnapshotId], references: [id], onDelete: Cascade)
+
+  earnings      Decimal @default(0)
+  deductions    Decimal @default(0)
+  employerCosts Decimal @default(0)
+  netPay        Decimal @default(0)
+
+  currency       String @default("INR")
+  breakdownJson  Json?
+  calculationLog Json?
+
+  createdAt DateTime @default(now())
+
+  allocations PayrollCostAllocation[]
+
+  @@unique([runId, employeeSnapshotId])
+  @@index([runId, netPay])
+}
+
+/**
+ * PayrollCostAllocation — split payroll cost by org dimensions.
+ */
+model PayrollCostAllocation {
+  id String @id @default(cuid())
+
+  lineItemId String
+  lineItem   PayrollLineItem @relation(fields: [lineItemId], references: [id], onDelete: Cascade)
+
+  departmentCode String?
+  projectCode    String?
+  costCenterCode String?
+
+  allocationPercent Decimal @default(100)
+  allocatedAmount   Decimal @default(0)
+  metadata          Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([lineItemId])
+  @@index([departmentCode, projectCode, costCenterCode])
+}
+
+/**
+ * PayrollPosting — accounting posting artifact for a payroll run.
+ */
+model PayrollPosting {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  runId String     @unique
+  run   PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  postingStatus  PayrollPostingStatus @default(PENDING)
+  idempotencyKey String
+
+  journalReference         String?
+  accountingTransactionId  String?
+  accountingTransactionRef String?
+
+  postedAt     DateTime?
+  errorMessage String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, idempotencyKey])
+  @@index([workspaceId, postingStatus, createdAt(sort: Desc)])
 }
 
 model WorkforceHoliday {
