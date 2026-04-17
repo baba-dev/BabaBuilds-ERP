@@ -298,7 +298,7 @@ export async function runTaxObligationScheduler(
           result.obligationsUpdated += 1;
 
           if (existing.period) {
-            await prisma.taxPeriod.update({
+            await prisma.taxObligationPeriod.update({
               where: { id: existing.period.id },
               data: {
                 periodStart: period.periodStart,
@@ -308,7 +308,7 @@ export async function runTaxObligationScheduler(
             });
             result.periodsUpdated += 1;
           } else {
-            await prisma.taxPeriod.create({
+            await prisma.taxObligationPeriod.create({
               data: {
                 workspaceId: workspace.id,
                 obligationId: existing.id,
