@@ -4,6 +4,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getWorkspaceIdForUser } from '@/lib/payroll/settings';
 import { RbacDeniedError, rbacDeniedResponse, requirePermission } from '@/lib/rbac';
+import type { Permission } from '@/lib/permissions';
+
+export type PayrollSettingsPermission = Extract<Permission, 'payroll.view' | 'payroll.settings.manage'>;
 
 type Access = {
   userId: string;
@@ -11,7 +14,7 @@ type Access = {
 };
 
 export async function requirePayrollSettingsAccess(
-  permission: 'workforce.view' | 'workforce.settings.manage',
+  permission: PayrollSettingsPermission,
 ): Promise<{ access?: Access; response?: NextResponse }> {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
