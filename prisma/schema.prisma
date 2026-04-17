@@ -347,6 +347,8 @@ model Workspace {
   leaveBalances     LeaveBalance[]
   workforceHolidays WorkforceHoliday[]
   workSchedules     WorkSchedule[]
+  payrollSettings   PayrollSettings?
+  payComponents     PayrollPayComponent[]
 
   // Document Vault (optional module)
   documents               Document[]
@@ -2242,14 +2244,14 @@ model TaxDocumentLink {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  documentId  String
-  document    Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
-  entityType  String // RETURN_ACKNOWLEDGMENT | WITHHOLDING_CERTIFICATE | TAX_PAYMENT_PROOF
-  entityKey   String // return period, certificate number, challan/proof id, etc.
-  relation    String  @default("EVIDENCE") // ACKNOWLEDGMENT | CERTIFICATE | PROOF | EVIDENCE
+  entityType String // RETURN_ACKNOWLEDGMENT | WITHHOLDING_CERTIFICATE | TAX_PAYMENT_PROOF
+  entityKey  String // return period, certificate number, challan/proof id, etc.
+  relation   String @default("EVIDENCE") // ACKNOWLEDGMENT | CERTIFICATE | PROOF | EVIDENCE
 
-  notes       String?
+  notes           String?
   createdByUserId String?
 
   createdAt DateTime @default(now())
@@ -2261,21 +2263,21 @@ model TaxDocumentLink {
 }
 
 model TaxImportBatch {
-  id            String    @id @default(cuid())
-  workspaceId   String
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  templateType  String // WITHHOLDING_CERTIFICATES | FOREIGN_TAX_PAID | PRIOR_PERIOD_BALANCES
-  sourceName    String?
-  status        String   @default("COMPLETED") // COMPLETED | COMPLETED_WITH_ERRORS | FAILED
+  templateType String // WITHHOLDING_CERTIFICATES | FOREIGN_TAX_PAID | PRIOR_PERIOD_BALANCES
+  sourceName   String?
+  status       String  @default("COMPLETED") // COMPLETED | COMPLETED_WITH_ERRORS | FAILED
 
   submittedByUserId String?
-  rowCount      Int      @default(0)
-  successCount  Int      @default(0)
-  warningCount  Int      @default(0)
-  errorCount    Int      @default(0)
+  rowCount          Int     @default(0)
+  successCount      Int     @default(0)
+  warningCount      Int     @default(0)
+  errorCount        Int     @default(0)
 
-  metadata      Json?
+  metadata Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2287,20 +2289,20 @@ model TaxImportBatch {
 }
 
 model TaxImportRow {
-  id            String    @id @default(cuid())
-  workspaceId   String
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  batchId       String
-  batch         TaxImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  batchId String
+  batch   TaxImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
 
-  rowNumber     Int
-  status        String // SUCCESS | WARNING | ERROR
-  code          String? // VALIDATION_* | PARSE_* | BUSINESS_*
-  message       String?
-  fieldName     String?
+  rowNumber Int
+  status    String // SUCCESS | WARNING | ERROR
+  code      String? // VALIDATION_* | PARSE_* | BUSINESS_*
+  message   String?
+  fieldName String?
 
-  rawData       Json?
+  rawData        Json?
   normalizedData Json?
 
   createdAt DateTime @default(now())
@@ -2373,6 +2375,19 @@ enum LeaveRequestStatus {
   APPROVED
   REJECTED
   CANCELLED
+}
+
+enum PayrollInputMode {
+  STANDALONE
+  WORKFORCE_LINKED
+}
+
+enum PayComponentCategory {
+  BASE_SALARY
+  ALLOWANCE
+  VARIABLE_PAY
+  DEDUCTION
+  EMPLOYER_CONTRIBUTION
 }
 
 model Department {
@@ -2610,4 +2625,42 @@ model WorkSchedule {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model PayrollSettings {
+  id          String    @id @default(cuid())
+  workspaceId String    @unique
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  inputMode PayrollInputMode @default(STANDALONE)
+
+  statutoryRulesJson        Json?
+  paymentScheduleJson       Json?
+  defaultCostAllocationJson Json?
+  standaloneConfigJson      Json?
+  workforceLinkedConfigJson Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PayrollPayComponent {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name     String
+  code     String
+  category PayComponentCategory
+
+  isTaxable Boolean @default(true)
+  isActive  Boolean @default(true)
+
+  metadataJson Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, code])
+  @@index([workspaceId, category])
 }
