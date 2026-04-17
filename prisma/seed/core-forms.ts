@@ -1,0 +1,55 @@
+import type { CoreFormSeedRow } from './types';
+
+export const indiaCoreForms: CoreFormSeedRow[] = [
+  {
+    id: 'in-form-gstr1',
+    countryCode: 'IN',
+    formCode: 'GSTR-1',
+    formName: 'Statement of Outward Supplies',
+    appliesTo: 'Registered GST taxpayers with outward supplies.',
+    filingFrequencyCode: 'MONTHLY',
+    effectiveFrom: '2017-07-01',
+    sourceDocumentRef: {
+      authority: 'CBIC',
+      documentName: 'CGST Rules',
+      citation: 'Rule 59',
+    },
+    verificationLevel: 'VERIFIED',
+    reviewStatus: 'APPROVED',
+    legalCertaintyRequired: true,
+  },
+  {
+    id: 'in-form-gstr3b',
+    countryCode: 'IN',
+    formCode: 'GSTR-3B',
+    formName: 'Summary Return',
+    appliesTo: 'Registered GST taxpayers except composition/non-resident carve-outs.',
+    filingFrequencyCode: 'MONTHLY',
+    effectiveFrom: '2017-07-01',
+    sourceDocumentRef: {
+      authority: 'CBIC',
+      documentName: 'Notification introducing FORM GSTR-3B',
+      citation: 'Notification 21/2017-Central Tax',
+    },
+    verificationLevel: 'VERIFIED',
+    reviewStatus: 'APPROVED',
+    legalCertaintyRequired: true,
+  },
+  {
+    id: 'in-form-gstr9',
+    countryCode: 'IN',
+    formCode: 'GSTR-9',
+    formName: 'Annual Return',
+    appliesTo: 'Registered GST taxpayers subject to turnover exemptions/relaxations.',
+    filingFrequencyCode: 'ANNUAL',
+    effectiveFrom: '2018-04-01',
+    sourceDocumentRef: {
+      authority: 'CBIC',
+      documentName: 'Annual return provisions',
+      citation: 'Section 44 of the CGST Act',
+    },
+    verificationLevel: 'PARTIALLY_VERIFIED',
+    reviewStatus: 'PENDING_REVIEW',
+    legalCertaintyRequired: true,
+  },
+];

@@ -1,0 +1,55 @@
+import type { FilingFrequencySeedRow } from './types';
+
+export const indiaFilingFrequencies: FilingFrequencySeedRow[] = [
+  {
+    id: 'in-frequency-monthly',
+    countryCode: 'IN',
+    code: 'MONTHLY',
+    label: 'Monthly',
+    description: 'Return/statement due every calendar month.',
+    frequency: 'MONTHLY',
+    effectiveFrom: '2017-07-01',
+    sourceDocumentRef: {
+      authority: 'GST Council / CBIC',
+      documentName: 'GST Return Rules',
+      citation: 'Rule-backed monthly cadence',
+    },
+    verificationLevel: 'VERIFIED',
+    reviewStatus: 'APPROVED',
+    legalCertaintyRequired: false,
+  },
+  {
+    id: 'in-frequency-quarterly',
+    countryCode: 'IN',
+    code: 'QUARTERLY',
+    label: 'Quarterly',
+    description: 'Filing expected once per financial quarter.',
+    frequency: 'QUARTERLY',
+    effectiveFrom: '2021-01-01',
+    sourceDocumentRef: {
+      authority: 'CBIC',
+      documentName: 'QRMP scheme guidance',
+      citation: 'Quarterly return monthly payment construct',
+    },
+    verificationLevel: 'PARTIALLY_VERIFIED',
+    reviewStatus: 'PENDING_REVIEW',
+    legalCertaintyRequired: false,
+  },
+  {
+    id: 'in-frequency-annual',
+    countryCode: 'IN',
+    code: 'ANNUAL',
+    label: 'Annual',
+    description: 'Year-end filing requirement for summary declarations.',
+    frequency: 'ANNUAL',
+    effectiveFrom: '2018-04-01',
+    sourceDocumentRef: {
+      authority: 'CBIC / CBDT',
+      documentName: 'Annual return provisions',
+      citation: 'Statute and notification dependent',
+    },
+    verificationLevel: 'UNVERIFIED',
+    reviewStatus: 'DRAFT',
+    legalCertaintyRequired: false,
+  },
+];
