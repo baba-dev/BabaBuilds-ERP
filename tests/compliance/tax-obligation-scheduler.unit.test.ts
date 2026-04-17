@@ -24,7 +24,8 @@ describe('tax obligation scheduler helpers', () => {
       7,
     );
 
-    expect(dueDate.toISOString()).toBe('2026-07-28T00:00:00.000Z');
+    // FY ending Dec 2026, due month July → next calendar year; day 31 clamps to 31 in July
+    expect(dueDate.toISOString()).toBe('2027-07-31T00:00:00.000Z');
   });
 
   it('transitions OPEN to READY when period closes', () => {
@@ -33,17 +34,31 @@ describe('tax obligation scheduler helpers', () => {
       new Date('2026-05-01T00:00:00.000Z'),
       new Date('2026-04-30T23:59:59.999Z'),
       new Date('2026-05-20T00:00:00.000Z'),
+      null,
     );
 
     expect(next).toBe('READY');
   });
 
-  it('transitions READY to FILED after due date passes', () => {
+  it('transitions READY to OVERDUE after due date passes (not filed)', () => {
     const next = __testables.getNextStatus(
       'READY',
       new Date('2026-05-21T00:00:00.000Z'),
       new Date('2026-04-30T23:59:59.999Z'),
       new Date('2026-05-20T00:00:00.000Z'),
+      null,
+    );
+
+    expect(next).toBe('OVERDUE');
+  });
+
+  it('stays FILED when already filed', () => {
+    const next = __testables.getNextStatus(
+      'FILED',
+      new Date('2026-05-21T00:00:00.000Z'),
+      new Date('2026-04-30T23:59:59.999Z'),
+      new Date('2026-05-20T00:00:00.000Z'),
+      new Date('2026-05-10T00:00:00.000Z'),
     );
 
     expect(next).toBe('FILED');

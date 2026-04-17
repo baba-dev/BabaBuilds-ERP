@@ -112,6 +112,7 @@ enum FilingFrequency {
 enum TaxObligationStatus {
   OPEN
   READY
+  OVERDUE
   FILED
 }
 

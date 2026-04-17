@@ -9,6 +9,7 @@ import {
   endOfMonth,
   endOfQuarter,
   endOfYear,
+  lastDayOfMonth,
   startOfDay,
   startOfMonth,
   startOfQuarter,
@@ -35,6 +36,8 @@ type SchedulerResult = {
   periodsUpdated: number;
   transitions: {
     openToReady: number;
+    readyToOverdue: number;
+    openToOverdue: number;
     readyToFiled: number;
     openToFiled: number;
   };
@@ -50,15 +53,18 @@ const FILING_FREQUENCY = {
 const OBLIGATION_STATUS = {
   OPEN: 'OPEN',
   READY: 'READY',
+  OVERDUE: 'OVERDUE',
   FILED: 'FILED',
 } as const satisfies Record<string, TaxObligationStatus>;
 const COMPLIANCE_TASK_STATUS = {
   PENDING: 'PENDING',
 } as const satisfies Record<string, ComplianceTaskStatus>;
 
-function normalizeDay(day: number): number {
+function clampDayToMonth(year: number, monthIndexZeroBased: number, day: number): number {
   if (!Number.isFinite(day)) return 1;
-  return Math.min(28, Math.max(1, Math.floor(day)));
+  const floored = Math.max(1, Math.floor(day));
+  const cap = lastDayOfMonth(new Date(Date.UTC(year, monthIndexZeroBased, 1))).getUTCDate();
+  return Math.min(floored, cap);
 }
 
 function getPeriodBounds(
@@ -101,15 +107,19 @@ function getDueDateForPeriod(
   dueDayOfMonth: number,
   dueMonthOfYear: number | null,
 ): Date {
-  const day = normalizeDay(dueDayOfMonth);
-
   if (frequency === FILING_FREQUENCY.ANNUAL && dueMonthOfYear) {
     const dueMonth = Math.min(12, Math.max(1, dueMonthOfYear));
-    const year = period.periodEnd.getFullYear() + (dueMonth === 1 ? 1 : 0);
+    const endY = period.periodEnd.getUTCFullYear();
+    const endM = period.periodEnd.getUTCMonth() + 1; // 1-12
+    // Annual return due is typically in the calendar year after the period end year
+    // when due month is on/before the period end month; otherwise same calendar year as period end.
+    const year = dueMonth <= endM ? endY + 1 : endY;
+    const day = clampDayToMonth(year, dueMonth - 1, dueDayOfMonth);
     return new Date(Date.UTC(year, dueMonth - 1, day, 0, 0, 0, 0));
   }
 
   const targetMonth = addMonths(startOfMonth(period.periodEnd), 1);
+  const day = clampDayToMonth(targetMonth.getUTCFullYear(), targetMonth.getUTCMonth(), dueDayOfMonth);
   return new Date(Date.UTC(targetMonth.getFullYear(), targetMonth.getMonth(), day, 0, 0, 0, 0));
 }
 
@@ -118,13 +128,15 @@ function getNextStatus(
   asOf: Date,
   periodEnd: Date,
   dueDate: Date,
+  filedAt: Date | null,
 ): TaxObligationStatus {
-  if (current === OBLIGATION_STATUS.FILED) {
+  if (current === OBLIGATION_STATUS.FILED || filedAt) {
     return OBLIGATION_STATUS.FILED;
   }
 
+  // Past due and not filed → overdue (even if still within the nominal period window)
   if (asOf.getTime() > dueDate.getTime()) {
-    return OBLIGATION_STATUS.FILED;
+    return OBLIGATION_STATUS.OVERDUE;
   }
 
   if (asOf.getTime() >= periodEnd.getTime()) {
@@ -132,6 +144,11 @@ function getNextStatus(
   }
 
   return OBLIGATION_STATUS.OPEN;
+}
+
+function shouldSetReadyAt(params: { asOf: Date; periodEnd: Date; status: TaxObligationStatus }): boolean {
+  if (params.status !== OBLIGATION_STATUS.READY && params.status !== OBLIGATION_STATUS.OVERDUE) return false;
+  return params.asOf.getTime() >= params.periodEnd.getTime();
 }
 
 export async function runTaxObligationScheduler(
@@ -153,6 +170,8 @@ export async function runTaxObligationScheduler(
     periodsUpdated: 0,
     transitions: {
       openToReady: 0,
+      readyToOverdue: 0,
+      openToOverdue: 0,
       readyToFiled: 0,
       openToFiled: 0,
     },
@@ -185,7 +204,7 @@ export async function runTaxObligationScheduler(
         where: {
           workspaceId: workspace.id,
           taxRegistrationId: registration.id,
-          status: { in: [OBLIGATION_STATUS.OPEN, OBLIGATION_STATUS.READY] },
+          status: { in: [OBLIGATION_STATUS.OPEN, OBLIGATION_STATUS.READY, OBLIGATION_STATUS.OVERDUE] },
           period: {
             is: {
               periodStart: { gte: currentPeriodStart },
@@ -196,6 +215,13 @@ export async function runTaxObligationScheduler(
 
       const periodCount = Math.max(1, activeRule.lookaheadPeriods);
 
+      const periodKeys: string[] = [];
+      const periodMeta: Array<{
+        periodKey: string;
+        period: PeriodBounds;
+        dueDate: Date;
+      }> = [];
+
       for (let index = 0; index < periodCount; index += 1) {
         const period = getPeriodBounds(registration.frequency, index, asOf);
         const periodKey = buildPeriodKey(period);
@@ -205,20 +231,31 @@ export async function runTaxObligationScheduler(
           activeRule.dueDayOfMonth,
           activeRule.dueMonthOfYear,
         );
+        periodKeys.push(periodKey);
+        periodMeta.push({ periodKey, period, dueDate });
+      }
 
-        const existing = await prisma.taxObligation.findUnique({
-          where: {
-            workspaceId_taxRegistrationId_periodKey: {
-              workspaceId: workspace.id,
-              taxRegistrationId: registration.id,
-              periodKey,
-            },
-          },
-          include: { period: true },
-        });
+      const existingRows = await prisma.taxObligation.findMany({
+        where: {
+          workspaceId: workspace.id,
+          taxRegistrationId: registration.id,
+          periodKey: { in: periodKeys },
+        },
+        include: { period: true },
+      });
+      const existingByKey = new Map(existingRows.map((row) => [row.periodKey, row]));
+
+      for (const { periodKey, period, dueDate } of periodMeta) {
+        const existing = existingByKey.get(periodKey) ?? null;
 
         const existingStatus = existing?.status ?? OBLIGATION_STATUS.OPEN;
-        const nextStatus = getNextStatus(existingStatus, asOf, period.periodEnd, dueDate);
+        const nextStatus = getNextStatus(
+          existingStatus,
+          asOf,
+          period.periodEnd,
+          dueDate,
+          existing?.filedAt ?? null,
+        );
 
         if (!existing) {
           await prisma.taxObligation.create({
@@ -228,8 +265,8 @@ export async function runTaxObligationScheduler(
               filingRuleId: activeRule.id,
               dueDate,
               status: nextStatus,
-              readyAt: nextStatus !== OBLIGATION_STATUS.OPEN ? asOf : null,
-              filedAt: nextStatus === OBLIGATION_STATUS.FILED ? asOf : null,
+              readyAt: shouldSetReadyAt({ asOf, periodEnd: period.periodEnd, status: nextStatus }) ? asOf : null,
+              filedAt: null,
               periodKey,
               period: {
                 create: {
@@ -244,20 +281,18 @@ export async function runTaxObligationScheduler(
           result.obligationsCreated += 1;
           result.periodsCreated += 1;
         } else {
+          const nextReadyAt =
+            existing.readyAt ??
+            (shouldSetReadyAt({ asOf, periodEnd: period.periodEnd, status: nextStatus }) ? asOf : null);
+
           await prisma.taxObligation.update({
             where: { id: existing.id },
             data: {
               filingRuleId: activeRule.id,
               dueDate,
               status: nextStatus,
-              readyAt:
-                nextStatus !== OBLIGATION_STATUS.OPEN
-                  ? (existing.readyAt ?? asOf)
-                  : null,
-              filedAt:
-                nextStatus === OBLIGATION_STATUS.FILED
-                  ? (existing.filedAt ?? asOf)
-                  : null,
+              readyAt: nextReadyAt,
+              filedAt: existing.filedAt,
             },
           });
           result.obligationsUpdated += 1;
@@ -289,6 +324,12 @@ export async function runTaxObligationScheduler(
         if (existingStatus === OBLIGATION_STATUS.OPEN && nextStatus === OBLIGATION_STATUS.READY) {
           result.transitions.openToReady += 1;
         }
+        if (existingStatus === OBLIGATION_STATUS.READY && nextStatus === OBLIGATION_STATUS.OVERDUE) {
+          result.transitions.readyToOverdue += 1;
+        }
+        if (existingStatus === OBLIGATION_STATUS.OPEN && nextStatus === OBLIGATION_STATUS.OVERDUE) {
+          result.transitions.openToOverdue += 1;
+        }
         if (existingStatus === OBLIGATION_STATUS.READY && nextStatus === OBLIGATION_STATUS.FILED) {
           result.transitions.readyToFiled += 1;
         }
@@ -304,7 +345,7 @@ export async function runTaxObligationScheduler(
     const upcomingObligations = await prisma.taxObligation.findMany({
       where: {
         workspaceId: workspace.id,
-        status: { in: [OBLIGATION_STATUS.OPEN, OBLIGATION_STATUS.READY] },
+        status: { in: [OBLIGATION_STATUS.OPEN, OBLIGATION_STATUS.READY, OBLIGATION_STATUS.OVERDUE] },
         dueDate: {
           gte: upcomingDueDateStart,
           lte: upcomingDueDateEnd,
