@@ -103,6 +103,17 @@ enum TaxResolutionSource {
   FALLBACK
 }
 
+
+enum TaxReturnFamily {
+  INDIA_TDS_QTR
+}
+
+enum TaxReadinessSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
 enum AccountingEventType {
   INVOICE_CREATED
   PAYMENT_CAPTURED
@@ -264,6 +275,12 @@ model Workspace {
   taxRateOverrides           TaxRateOverride[]
   taxRateOverrideAuditLogs   TaxRateOverrideAuditLog[]
   taxDecisionAuditLogs       TaxDecisionAuditLog[]
+  taxPeriods                 TaxPeriod[]
+  taxForms                   TaxForm[]
+  taxReturns                 TaxReturn[]
+  taxReturnFieldValues       TaxReturnFieldValue[]
+  taxReadinessChecks         TaxReadinessCheck[]
+  taxReadinessBlockers       TaxReadinessBlocker[]
   fileImportAuditLogs        FileImportAuditLog[]
   appActivityLogs            AppActivityLog[]
   workspaceInvites           WorkspaceInvite[]
@@ -731,6 +748,152 @@ model TaxDecisionAuditLog {
 
   @@index([workspaceId])
   @@index([invoiceId])
+}
+
+
+model TaxPeriod {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  countryCode String   @default("IN")
+  periodCode  String
+  periodType  String   @default("QUARTER")
+  fiscalYear  String
+  startDate   DateTime
+  endDate     DateTime
+  dueDate     DateTime?
+  isClosed    Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  taxReturns TaxReturn[]
+
+  @@unique([workspaceId, periodCode])
+  @@index([workspaceId, startDate, endDate])
+}
+
+model TaxForm {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  countryCode  String          @default("IN")
+  returnFamily TaxReturnFamily
+  formCode     String
+  version      String          @default("1.0")
+  title        String?
+  schemaJson   Json?
+  isActive     Boolean         @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  taxReturns TaxReturn[]
+
+  @@unique([workspaceId, formCode, version])
+  @@index([workspaceId, countryCode, returnFamily, isActive])
+}
+
+model TaxReturn {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  taxPeriodId String
+  taxPeriod   TaxPeriod @relation(fields: [taxPeriodId], references: [id], onDelete: Cascade)
+
+  taxFormId String
+  taxForm   TaxForm @relation(fields: [taxFormId], references: [id], onDelete: Cascade)
+
+  status                 String   @default("DRAFT")
+  readinessScore         Int      @default(0)
+  lastReadinessCheckedAt DateTime?
+  prefillCompletedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fieldValues TaxReturnFieldValue[]
+  blockers    TaxReadinessBlocker[]
+
+  @@unique([workspaceId, taxPeriodId, taxFormId])
+  @@index([workspaceId, status])
+  @@index([workspaceId, lastReadinessCheckedAt])
+}
+
+model TaxReturnFieldValue {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  taxReturnId String
+  taxReturn   TaxReturn @relation(fields: [taxReturnId], references: [id], onDelete: Cascade)
+
+  fieldKey        String
+  fieldLabel      String?
+  valueJson       Json
+  sourceType      String
+  sourceRef       String?
+  confidenceScore Float?
+  isManual        Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  @@unique([taxReturnId, fieldKey])
+  @@index([workspaceId, taxReturnId])
+}
+
+model TaxReadinessCheck {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  countryCode   String               @default("IN")
+  returnFamily  TaxReturnFamily
+  checkCode     String
+  title         String
+  description   String?
+  severity      TaxReadinessSeverity @default(WARNING)
+  ruleConfigJson Json?
+  isActive      Boolean              @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  blockers TaxReadinessBlocker[]
+
+  @@unique([workspaceId, returnFamily, checkCode])
+  @@index([workspaceId, returnFamily, isActive])
+}
+
+model TaxReadinessBlocker {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  taxReturnId String
+  taxReturn   TaxReturn @relation(fields: [taxReturnId], references: [id], onDelete: Cascade)
+
+  checkId String?
+  check   TaxReadinessCheck? @relation(fields: [checkId], references: [id], onDelete: SetNull)
+
+  blockerCode String
+  title       String
+  details     String?
+  severity    TaxReadinessSeverity @default(WARNING)
+  status      String               @default("OPEN")
+  factsJson   Json?
+
+  detectedAt DateTime  @default(now())
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([taxReturnId, blockerCode])
+  @@index([workspaceId, status, severity])
+  @@index([workspaceId, taxReturnId])
 }
 
 model InvoiceIdempotency {
