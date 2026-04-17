@@ -144,6 +144,10 @@ export type LogActivityParams = {
   correlationId?: string | null;
 };
 
+export type LogSensitivePayrollActivityParams = Omit<LogActivityParams, 'action'> & {
+  action: `payroll.${string}`;
+};
+
 const REDACTED = '[REDACTED]';
 const TRUNCATED = '[TRUNCATED]';
 const OMITTED = '[OMITTED]';
@@ -196,6 +200,22 @@ const MAX_METADATA_BYTES = 8_192;
 const MAX_USER_AGENT_LENGTH = 512;
 const MAX_IP_LENGTH = 64;
 const MAX_CORRELATION_ID_LENGTH = 128;
+const PAYROLL_METADATA_REDACT_KEYS = new Set([
+  'grossPay',
+  'netPay',
+  'basicPay',
+  'deductions',
+  'allowances',
+  'bankAccount',
+  'bankAccountNumber',
+  'bankName',
+  'routingNumber',
+  'ifsc',
+  'iban',
+  'salary',
+  'ctc',
+  'employeeCompensation',
+].map((key) => key.toLowerCase()));
 
 const sanitizeString = (value: string): string =>
   value.length <= MAX_STRING_LENGTH ? value : `${value.slice(0, MAX_STRING_LENGTH)}${TRUNCATED}`;
@@ -251,6 +271,21 @@ export const sanitizeMetadata = (metadata?: Record<string, unknown>): Prisma.Inp
     note: TRUNCATED,
     preview: serialized.slice(0, MAX_METADATA_BYTES),
   } as Prisma.InputJsonValue;
+};
+
+const redactPayrollMetadata = (metadata?: Record<string, unknown>): Record<string, unknown> | undefined => {
+  if (!metadata) return undefined;
+  return Object.fromEntries(
+    Object.entries(metadata).map(([key, value]) => {
+      if (PAYROLL_METADATA_REDACT_KEYS.has(key.toLowerCase())) {
+        return [key, REDACTED];
+      }
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        return [key, redactPayrollMetadata(value as Record<string, unknown>) ?? {}];
+      }
+      return [key, value];
+    }),
+  );
 };
 
 const firstHeader = (headers: Headers, candidates: string[]): string | null => {
@@ -319,4 +354,13 @@ export const logActivity = async (params: LogActivityParams): Promise<string | n
     console.error('Activity logging failed (non-blocking):', error);
     return null;
   }
+};
+
+export const logSensitivePayrollActivity = async (
+  params: LogSensitivePayrollActivityParams,
+): Promise<string | null> => {
+  return logActivity({
+    ...params,
+    metadata: redactPayrollMetadata(params.metadata),
+  });
 };
