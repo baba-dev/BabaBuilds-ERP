@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireCashFlowModule } from "@/app/api/cash-flow/_module";
 
 const prefsSchema = z
   .object({
@@ -16,6 +17,9 @@ export async function GET() {
   const session = await getServerSession(authOptions);
   const workspaceId = (session as any)?.workspaceId as string | undefined;
   if (!session || !workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const moduleGate = await requireCashFlowModule(workspaceId);
+  if (moduleGate) return moduleGate;
 
   const row = await prisma.cashForecastAlertPreference.findFirst({
     where: { workspaceId },
@@ -39,6 +43,9 @@ export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   const workspaceId = (session as any)?.workspaceId as string | undefined;
   if (!session || !workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const moduleGate = await requireCashFlowModule(workspaceId);
+  if (moduleGate) return moduleGate;
 
   const body = await request.json().catch(() => null);
   const parsed = prefsSchema.safeParse(body);

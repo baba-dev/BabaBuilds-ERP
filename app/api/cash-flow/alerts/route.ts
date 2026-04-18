@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireCashFlowModule } from "@/app/api/cash-flow/_module";
 
 // v1: alerts are derived from snapshots; this endpoint returns computed alerts
 // using the latest snapshot. Persisted alert settings arrive in later iterations.
@@ -19,6 +20,9 @@ export async function GET(request: Request) {
   if (!session || !workspaceId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const moduleGate = await requireCashFlowModule(workspaceId);
+  if (moduleGate) return moduleGate;
 
   const url = new URL(request.url);
   const parsed = querySchema.safeParse(Object.fromEntries(url.searchParams.entries()));

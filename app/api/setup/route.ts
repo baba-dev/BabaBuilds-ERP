@@ -37,6 +37,7 @@ type SetupPayload = {
   enableWorkforce?: boolean;
   enableDocuments?: boolean;
   enablePayroll?: boolean;
+  enableCashFlow?: boolean;
   payrollSetupPath?: "STANDALONE" | "WORKFORCE_LINKED";
 };
 
@@ -186,6 +187,13 @@ export async function POST(req: Request) {
         createdFrom: 'setup_wizard',
       }).catch((e) =>
         console.error('[setup] Payroll module init failed (non-blocking):', e)
+      );
+    }
+
+
+    if (body.enableCashFlow === true) {
+      await enableModule(workspaceId, 'CASH_FLOW', userId).catch((e) =>
+        console.error('[setup] Cash Flow module init failed (non-blocking):', e)
       );
     }
 

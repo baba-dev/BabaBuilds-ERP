@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireCashFlowModule } from "@/app/api/cash-flow/_module";
 import { z } from "zod";
 
 const QuerySchema = z.object({
@@ -16,6 +17,9 @@ export async function GET(request: Request) {
   if (!session || !workspaceId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const moduleGate = await requireCashFlowModule(workspaceId);
+  if (moduleGate) return moduleGate;
 
   const url = new URL(request.url);
   const parsed = QuerySchema.safeParse({

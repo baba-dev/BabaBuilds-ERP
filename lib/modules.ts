@@ -23,7 +23,7 @@ import { Prisma } from '@prisma/client';
 // - WORKFORCE enhances PAYROLL input quality.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const MODULE_KEYS = ['WORKFORCE', 'PAYROLL', 'DOCUMENTS'] as const;
+export const MODULE_KEYS = ['WORKFORCE', 'PAYROLL', 'DOCUMENTS', 'CASH_FLOW'] as const;
 export type ModuleKey = (typeof MODULE_KEYS)[number];
 
 export function isValidModuleKey(key: unknown): key is ModuleKey {
@@ -34,6 +34,7 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   WORKFORCE: 'Workforce',
   PAYROLL: 'Payroll',
   DOCUMENTS: 'Document Vault',
+  CASH_FLOW: 'Cash Flow',
 };
 
 export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
@@ -43,6 +44,8 @@ export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
     'Payroll runs, posting, liabilities, and compliance exports with onboarding, readiness checks, and staged rollout before go-live.',
   DOCUMENTS:
     'Secure document storage with OCR ingestion, extracted-field review, and ERP-native record linking for accounting and compliance.',
+  CASH_FLOW:
+    'Cash forecast snapshots, scenario planning, variance analysis, and proactive liquidity alerts to anticipate crunch windows early.',
 };
 
 export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
@@ -73,6 +76,13 @@ export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
     'Link documents to expenses, invoices, and more',
     'Archive without deletion (audit preserved)',
     'Storage usage meter with plan-based limits',
+  ],
+  CASH_FLOW: [
+    'Cash forecast snapshots across multiple horizons',
+    'Scenario planning (base, best case, worst case)',
+    'Variance analysis vs actuals',
+    'Crunch-window and liquidity risk alerts',
+    'Manual adjustments and assumption profiles',
   ],
 };
 

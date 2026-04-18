@@ -56,6 +56,7 @@ export function DashboardCashFlowSummary({
   className?: string;
 }) {
   const { fCurrency } = useFormat();
+  const [moduleEnabled, setModuleEnabled] = useState<boolean | null>(null);
   const [snapshot, setSnapshot] = useState<SnapshotDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -91,7 +92,35 @@ export function DashboardCashFlowSummary({
   };
 
   useEffect(() => {
-    void load();
+    let active = true;
+
+    const bootstrap = async () => {
+      try {
+        const modulesRes = await fetch("/api/workspace/modules", { cache: "no-store" });
+        const modulesJson = (await modulesRes.json().catch(() => null)) as { modules?: string[] } | null;
+        const enabled = modulesRes.ok && Array.isArray(modulesJson?.modules) && modulesJson.modules.includes("CASH_FLOW");
+        if (!active) return;
+
+        setModuleEnabled(enabled);
+        if (!enabled) {
+          setLoading(false);
+          return;
+        }
+
+        await load();
+      } catch {
+        if (active) {
+          setModuleEnabled(false);
+          setLoading(false);
+        }
+      }
+    };
+
+    void bootstrap();
+
+    return () => {
+      active = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -120,6 +149,8 @@ export function DashboardCashFlowSummary({
     return format(new Date(snapshot.generatedAt), "dd MMM, HH:mm");
   }, [snapshot?.generatedAt]);
   const confidenceLabel = snapshot?.confidenceScore == null ? "—" : `${Math.round(snapshot.confidenceScore * 100)}%`;
+
+  if (moduleEnabled === false) return null;
 
   return (
     <Card
