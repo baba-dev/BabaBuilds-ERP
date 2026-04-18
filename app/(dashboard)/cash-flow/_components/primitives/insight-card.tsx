@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { dt, cashFlowTypography } from "../cash-flow-typography";
-import { cashFlowCardClassName, cashFlowCardShadowClassName } from "./styles";
+import { cashFlowChrome } from "./styles";
 
 export type CashFlowInsightTone = "default" | "positive" | "warning" | "danger";
 
@@ -34,8 +34,7 @@ export function CashFlowInsightCard(props: {
   return (
     <div
       className={cn(
-        cashFlowCardClassName,
-        cashFlowCardShadowClassName,
+        cashFlowChrome.card,
         toneClasses[tone],
         props.className,
       )}
