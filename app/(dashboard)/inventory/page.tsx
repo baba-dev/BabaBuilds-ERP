@@ -111,7 +111,7 @@ export default function InventoryHub() {
       className: "px-2 py-4",
       cell: (p: any) => (
         <div className="flex flex-col">
-          <span className="font-extrabold text-[13px] text-zinc-900 dark:text-zinc-100 cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => openDetailSheet(p)}>
+          <span className="font-extrabold text-[13px] text-zinc-900 dark:text-zinc-100 cursor-pointer hover:text-orange-600 dark:hover:text-orange-400 transition-colors" onClick={() => openDetailSheet(p)}>
             {p.name}
           </span>
           <span className="text-[11px] font-medium text-zinc-500">{p.category || "Uncategorized"}</span>
@@ -203,8 +203,8 @@ export default function InventoryHub() {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 max-w-7xl mx-auto w-full">
             <div className="space-y-1.5">
               <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-3">
-                <div className="p-2.5 bg-indigo-600/10 dark:bg-indigo-500/20 rounded-xl border border-indigo-200/50 dark:border-indigo-400/20">
-                  <Archive className="w-6 h-6 text-indigo-700 dark:text-indigo-400" />
+                <div className="p-2.5 bg-orange-500/10 dark:bg-orange-500/20 rounded-xl border border-orange-200/50 dark:border-orange-400/25">
+                  <Archive className="w-6 h-6 text-orange-700 dark:text-orange-300" />
                 </div>
                 Inventory Overview
               </h1>
@@ -219,7 +219,7 @@ export default function InventoryHub() {
                 <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">{fCurrency(totalValue)}</p>
               </div>
               <Button
-                className="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-50 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 h-10 px-5 shadow-md text-xs font-bold uppercase tracking-wider transition-all active:scale-95"
+                className="btn-primary w-full sm:w-auto shrink-0 text-xs uppercase tracking-wider h-10 px-5"
                 onClick={() => setFormModalOpen(true)}
               >
                 <Plus className="w-4 h-4 mr-2" /> New Product
@@ -237,7 +237,7 @@ export default function InventoryHub() {
               placeholder="Scan Barcode or Search SKU..." 
               value={globalFilter}
               onChange={(e) => setGlobalFilter(e.target.value)}
-              className="pl-9 h-10 w-full bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus-visible:ring-indigo-500 font-bold"
+              className="pl-9 h-10 w-full bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus-visible:ring-orange-500 font-bold"
             />
           </div>
           

@@ -149,14 +149,14 @@ export default function ServiceCatalog() {
             <Button
               onClick={() => window.open(`/shop/${shopSlug}`, "_blank")}
               variant="outline"
-              className="hidden md:flex items-center gap-2 border-indigo-200 dark:border-indigo-800/50 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-xs font-bold uppercase tracking-wider h-11"
+              className="hidden md:flex items-center gap-2 border-orange-200 dark:border-orange-800/50 text-orange-800 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/40 text-xs font-bold uppercase tracking-wider h-11"
             >
               <ExternalLink className="w-4 h-4" /> View Live Shop
             </Button>
           )}
           <Button
             onClick={openAddDialog}
-            className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20 text-xs font-bold uppercase tracking-wider h-11 transition-all active:scale-95"
+            className="btn-primary w-full md:w-auto shrink-0 text-xs uppercase tracking-wider h-11"
           >
             <Plus className="w-4 h-4 md:mr-2" /><span className="md:inline">Add Service</span>
           </Button>

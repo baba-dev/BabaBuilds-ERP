@@ -392,7 +392,7 @@ export default function ShopDashboardPage() {
   return (
     <DashboardPageShell
       title="Shop Command Center"
-      icon={<Store className="w-6 h-6 text-indigo-700 dark:text-indigo-400" />}
+      icon={<Store className="w-6 h-6 text-accent-strong" />}
       description="Monitor storefront performance, manage incoming orders, and keep your public shop healthy."
       primaryAction={
         <div className="flex flex-wrap items-center gap-3">
@@ -400,7 +400,7 @@ export default function ShopDashboardPage() {
             <Button
               onClick={() => window.open(`/shop/${shopSlug}`, "_blank")}
               variant="outline"
-              className="hidden md:flex items-center gap-2 border-indigo-200 dark:border-indigo-800/50 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-xs font-bold uppercase tracking-wider h-11"
+              className="hidden md:flex items-center gap-2 border-orange-200 dark:border-orange-800/50 text-orange-800 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/40 text-xs font-bold uppercase tracking-wider h-11"
             >
               <ExternalLink className="w-4 h-4" /> View Live Shop
             </Button>
@@ -409,14 +409,14 @@ export default function ShopDashboardPage() {
             onClick={createProposalDraft}
             disabled={isCreatingProposalDraft || selectedServiceIds.length === 0 || publishedServices.length === 0}
             variant="outline"
-            className="hidden md:flex items-center gap-2 border-indigo-200 dark:border-indigo-800/50 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-xs font-bold uppercase tracking-wider h-11"
+            className="hidden md:flex items-center gap-2 border-orange-200 dark:border-orange-800/50 text-orange-800 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/40 text-xs font-bold uppercase tracking-wider h-11"
           >
             {isCreatingProposalDraft ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSignature className="w-4 h-4" />}
             Create Proposal
           </Button>
           <Button
             onClick={() => setServiceDialogOpen(true)}
-            className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20 text-xs font-bold uppercase tracking-wider h-11 transition-all active:scale-95"
+            className="btn-primary w-full md:w-auto shrink-0 text-xs uppercase tracking-wider h-11"
           >
             <Plus className="w-4 h-4 md:mr-2" /> <span className="md:inline">Add Item</span>
           </Button>
