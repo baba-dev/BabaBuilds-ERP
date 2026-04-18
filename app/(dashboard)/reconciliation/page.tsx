@@ -367,7 +367,8 @@ export default function ReconciliationWizard() {
           <Button 
             onClick={handleFinalizeClick} 
             disabled={isFinalizing || totalReadyToCommit === 0}
-            className="w-full md:w-auto bg-zinc-900 dark:bg-zinc-50 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 shadow-lg transition-transform hover:scale-[1.02]"
+            variant="secondary-info"
+            className="w-full md:w-auto"
           >
             {isFinalizing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ListChecks className="w-4 h-4 mr-2" />}
             {isFinalizing ? t('locking') : t('finalize_btn', { count: totalReadyToCommit })}
@@ -376,7 +377,7 @@ export default function ReconciliationWizard() {
 
         {/* METRICS ROW */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-sm transition-all hover:shadow-md">
+          <Card variant="tinted" className="border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider mb-1">{t('metrics_ready')}</p>
@@ -389,7 +390,7 @@ export default function ReconciliationWizard() {
             </CardContent>
           </Card>
 
-          <Card className={`border-purple-200 dark:border-purple-900/50 bg-purple-50/50 dark:bg-purple-950/20 shadow-sm transition-all hover:shadow-md ${needsReviewCount > 0 ? 'ring-2 ring-purple-400 dark:ring-purple-600 ring-offset-2 dark:ring-offset-zinc-950' : ''}`}>
+          <Card variant="accent-highlighted" className={`border-purple-200 dark:border-purple-900/50 bg-purple-50/50 dark:bg-purple-950/20 ${needsReviewCount > 0 ? 'ring-2 ring-purple-400 dark:ring-purple-600 ring-offset-2 dark:ring-offset-zinc-950' : ''}`}>
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-purple-800 dark:text-purple-400 uppercase tracking-wider mb-1">{t('metrics_review')}</p>
@@ -399,7 +400,7 @@ export default function ReconciliationWizard() {
             </CardContent>
           </Card>
 
-          <Card className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm transition-all hover:shadow-md">
+          <Card variant="elevated" className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-wider mb-1">{t('metrics_excluded')}</p>
@@ -411,7 +412,7 @@ export default function ReconciliationWizard() {
         </div>
 
         {/* DATA GRIDS */}
-        <Card className="overflow-hidden border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <Card variant="quiet" className="overflow-hidden border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
           <div className="border-b border-zinc-200 bg-zinc-50/80 p-2 dark:border-zinc-800 dark:bg-zinc-950/50">
             <div role="tablist" aria-label={t("workflow_title")} className={cn(segmentedControlContainerClass, "w-full flex-nowrap overflow-x-auto md:flex-wrap")}>
               <Button

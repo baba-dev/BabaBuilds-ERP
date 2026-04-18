@@ -16,6 +16,8 @@ import { Turnstile } from "@marsidev/react-turnstile";
 import { toast } from "sonner";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 type AuthModalProps = {
   callbackUrl?: string;
@@ -32,6 +34,8 @@ type EmailStatus = "idle" | "loading" | "success" | "error";
 
 const HIGH_RISK_MAGIC_LINK_BLOCKED = "HIGH_RISK_MAGIC_LINK_BLOCKED";
 const MFA_POLICY_BLOCK = "MFA_POLICY_BLOCK";
+const subtleInteractive =
+  "transition-[background-color,border-color,box-shadow,transform,color] duration-200 ease-out";
 
 function hasNextAuthErrorRedirect(payload: Record<string, unknown>): boolean {
   if (typeof payload.error === "string" && payload.error.trim().length > 0) {
@@ -347,7 +351,7 @@ export default function AuthModal({
 
             <div className="relative">
               <Mail className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
-              <input
+              <Input
                 ref={emailInputRef}
                 type="email"
                 required
@@ -365,7 +369,7 @@ export default function AuthModal({
                   }
                 }}
                 onBlur={verifyMagicLinkPolicy}
-                className="w-full bg-background/90 dark:bg-background/80 border border-input text-foreground rounded-xl pl-10 pr-4 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all placeholder:text-muted-foreground/70"
+                className="h-11 w-full rounded-xl bg-background/90 pl-10 pr-4 placeholder:text-muted-foreground/70 dark:bg-background/80"
               />
             </div>
 
@@ -389,22 +393,24 @@ export default function AuthModal({
               </div>
             )}
 
-            <button
+            <Button
               type="submit"
+              variant="primary-action"
+              size="lg"
               disabled={
                 isLoading ||
                 isDemoLoading ||
                 !isMagicLinkAllowed ||
                 isPolicyChecking
               }
-              className="w-full flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 disabled:pointer-events-none disabled:hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-md shadow-orange-600/25 active:scale-[0.98]"
+              className={cn("w-full rounded-xl font-bold disabled:hover:bg-orange-600", subtleInteractive)}
             >
               {isLoading || isPolicyChecking ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 t("actions.sendMagicLink")
               )}
-            </button>
+            </Button>
 
             {emailStatus !== "idle" && (
               <div
@@ -482,10 +488,12 @@ export default function AuthModal({
             <div className="flex-grow border-t border-border"></div>
           </div>
 
-          <button
+          <Button
             onClick={() => signIn("google", { callbackUrl })}
             disabled={isLoading || isDemoLoading}
-            className="w-full flex items-center justify-center gap-3 bg-background/95 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-foreground px-4 py-2.5 rounded-xl font-bold transition-colors shadow-sm active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none border border-input"
+            variant="outline"
+            size="lg"
+            className={cn("w-full rounded-xl font-bold", subtleInteractive)}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -494,7 +502,7 @@ export default function AuthModal({
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
             </svg>
             {t("actions.continueWithGoogle")}
-          </button>
+          </Button>
 
           <details className="rounded-xl border border-border bg-muted/40 p-3 group">
             <summary
@@ -518,15 +526,20 @@ export default function AuthModal({
                 </div>
               )}
 
-              <button
+              <Button
                 data-testid="demo-auth-button"
                 onClick={handleDemoSignIn}
+                variant="secondary-info"
+                size="lg"
                 disabled={
                   isLoading ||
                   isDemoLoading ||
                   (!turnstileToken && isProd)
                 }
-                className="w-full flex items-center justify-between group bg-background/95 hover:bg-muted border border-input hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-muted-foreground hover:text-foreground px-4 py-3 rounded-xl font-medium transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+                className={cn(
+                  "w-full justify-between rounded-xl py-3 text-muted-foreground hover:text-foreground",
+                  subtleInteractive,
+                )}
               >
                 <div className="flex items-center gap-3">
                   {isDemoLoading ? (
@@ -543,7 +556,7 @@ export default function AuthModal({
                 {!isDemoLoading && (
                   <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                 )}
-              </button>
+              </Button>
             </div>
           </details>
 
