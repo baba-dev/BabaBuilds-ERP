@@ -30,7 +30,7 @@ export type AppNavItem = {
 
 export const appNavItems: AppNavItem[] = [
   { key: "dashboard", path: "/dashboard", icon: LayoutDashboard },
-  { key: "revenue_pipeline", path: "/proposals/pipeline", icon: Target, badge: "AI" },
+  { key: "revenue_pipeline", path: "/proposals/pipeline", icon: Target, badge: "AI", requiresModule: "REVENUE_PIPELINE" },
   { key: "service_catalog", path: "/services", icon: Briefcase },
   { key: "shop", path: "/shop", icon: Store, badge: "New" },
   { key: "inventory", path: "/inventory", icon: Archive },
@@ -38,7 +38,7 @@ export const appNavItems: AppNavItem[] = [
   { key: "quotes_proposals", path: "/proposals", icon: FileSignature },
   { key: "retainers_hub", path: "/retainers", icon: Box },
   { key: "expenses_margins", path: "/expenses", icon: Receipt },
-  { key: "cash_flow", path: "/cash-flow/overview", icon: HandCoins, badge: "New" },
+  { key: "cash_flow", path: "/cash-flow/overview", icon: HandCoins, badge: "New", requiresModule: "CASH_FLOW" },
   { key: "savings_tax", path: "/tax", icon: ShieldCheck },
   { key: "ai_reconciliation", path: "/reconciliation", icon: Sparkles, badge: "AI" },
   { key: "invoices_and_earnings", path: "/income", icon: ReceiptText },

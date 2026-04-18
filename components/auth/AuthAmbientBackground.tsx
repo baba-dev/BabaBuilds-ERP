@@ -13,8 +13,10 @@ export type AuthAmbientBackgroundProps = {
  * Layer stack (bottom → top):
  * 1. Base warm gradient — anchors light/dark theme.
  * 2. Subtle dot-grid pattern — masked so the card area stays calmer than the edges.
- * 3. Four blurred mesh “orbs” — slow CSS drift, orange-led palette.
- * 4. Vignette + central spotlight — frames the composition and guides focus to the form.
+ * 3. Four blurred mesh “orbs” — slow CSS drift, orange-led palette (biased toward center).
+ * 4. Center emanation layer — stacked soft radial washes + breathe animation so warmth reads as
+ *    emerging from behind the login card and fading toward the viewport edges.
+ * 5. Vignette + central spotlight — frames the composition and guides focus to the form.
  *
  * Motion is pure CSS; `prefers-reduced-motion` freezes drift via `app/globals.css`.
  */
@@ -42,7 +44,10 @@ export function AuthAmbientBackground({ className = "" }: AuthAmbientBackgroundP
         <div className="auth-ambient-orb auth-ambient-orb-d" />
       </div>
 
-      {/* 4) Spotlight toward the form + edge vignette — readability and framing */}
+      {/* 4) Center emanation — subtle animated orange radiance from the card region outward */}
+      <div className="auth-ambient-emanate absolute inset-0" />
+
+      {/* 5) Spotlight toward the form + edge vignette — readability and framing */}
       <div className="auth-ambient-vignette absolute inset-0" />
     </div>
   );

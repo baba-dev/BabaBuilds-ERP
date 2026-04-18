@@ -36,7 +36,9 @@ type SetupPayload = {
   shopAccentColor?: string;
   enableWorkforce?: boolean;
   enableDocuments?: boolean;
+  enableRevenuePipeline?: boolean;
   enablePayroll?: boolean;
+  enableCashFlow?: boolean;
   payrollSetupPath?: "STANDALONE" | "WORKFORCE_LINKED";
 };
 
@@ -176,6 +178,12 @@ export async function POST(req: Request) {
       );
     }
 
+    if (body.enableRevenuePipeline === true) {
+      await enableModule(workspaceId, 'REVENUE_PIPELINE', userId).catch((e) =>
+        console.error('[setup] Revenue Pipeline module init failed (non-blocking):', e)
+      );
+    }
+
     if (body.enablePayroll === true) {
       await enableModule(workspaceId, 'PAYROLL', userId, {
         onboardingPath: body.payrollSetupPath ?? 'STANDALONE',
@@ -186,6 +194,13 @@ export async function POST(req: Request) {
         createdFrom: 'setup_wizard',
       }).catch((e) =>
         console.error('[setup] Payroll module init failed (non-blocking):', e)
+      );
+    }
+
+
+    if (body.enableCashFlow === true) {
+      await enableModule(workspaceId, 'CASH_FLOW', userId).catch((e) =>
+        console.error('[setup] Cash Flow module init failed (non-blocking):', e)
       );
     }
 

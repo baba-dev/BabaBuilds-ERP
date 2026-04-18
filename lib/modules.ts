@@ -23,7 +23,14 @@ import { Prisma } from '@prisma/client';
 // - WORKFORCE enhances PAYROLL input quality.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const MODULE_KEYS = ['WORKFORCE', 'PAYROLL', 'DOCUMENTS', 'TAX_ADVANCED'] as const;
+export const MODULE_KEYS = [
+  'WORKFORCE',
+  'PAYROLL',
+  'DOCUMENTS',
+  'REVENUE_PIPELINE',
+  'CASH_FLOW',
+  'TAX_ADVANCED',
+] as const;
 export type ModuleKey = (typeof MODULE_KEYS)[number];
 
 export function isValidModuleKey(key: unknown): key is ModuleKey {
@@ -34,6 +41,8 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   WORKFORCE: 'Workforce',
   PAYROLL: 'Payroll',
   DOCUMENTS: 'Document Vault',
+  REVENUE_PIPELINE: 'Revenue Pipeline',
+  CASH_FLOW: 'Cash Flow',
   TAX_ADVANCED: 'Tax Advanced',
 };
 
@@ -44,6 +53,10 @@ export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
     'Payroll runs, posting, liabilities, and compliance exports with onboarding, readiness checks, and staged rollout before go-live.',
   DOCUMENTS:
     'Secure document storage with OCR ingestion, extracted-field review, and ERP-native record linking for accounting and compliance.',
+  REVENUE_PIPELINE:
+    'Pipeline intelligence for proposals with stage insights, stalled-deal detection, and next-best-action workflows to accelerate conversions.',
+  CASH_FLOW:
+    'Cash forecast snapshots, scenario planning, variance analysis, and proactive liquidity alerts to anticipate crunch windows early.',
   TAX_ADVANCED:
     'Advanced tax compliance operations including readiness pipelines, import diagnostics, override tooling, and audit workflows.',
 };
@@ -76,6 +89,20 @@ export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
     'Link documents to expenses, invoices, and more',
     'Archive without deletion (audit preserved)',
     'Storage usage meter with plan-based limits',
+  ],
+  REVENUE_PIPELINE: [
+    'Proposal pipeline overview by stage',
+    'Accepted-but-unconverted revenue tracking',
+    'Converted-but-unpaid cash-flow risk highlights',
+    'Stalled deal detection with reason codes',
+    'Action task generation for follow-up workflows',
+  ],
+  CASH_FLOW: [
+    'Cash forecast snapshots across multiple horizons',
+    'Scenario planning (base, best case, worst case)',
+    'Variance analysis vs actuals',
+    'Crunch-window and liquidity risk alerts',
+    'Manual adjustments and assumption profiles',
   ],
   TAX_ADVANCED: [
     'Tax readiness pipelines and compliance diagnostics',

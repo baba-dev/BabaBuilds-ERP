@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireCashFlowModule } from "@/app/api/cash-flow/_module";
 import { z } from "zod";
 import { CashForecastDirection } from "@prisma/client";
 
@@ -18,6 +19,9 @@ export async function GET() {
   const workspaceId = (session as any)?.workspaceId as string | undefined;
   if (!workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const moduleGate = await requireCashFlowModule(workspaceId);
+  if (moduleGate) return moduleGate;
+
   const rows = await prisma.cashForecastManualAdjustment.findMany({
     where: { workspaceId },
     orderBy: { date: "asc" },
@@ -30,6 +34,9 @@ export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   const workspaceId = (session as any)?.workspaceId as string | undefined;
   if (!workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const moduleGate = await requireCashFlowModule(workspaceId);
+  if (moduleGate) return moduleGate;
 
   const parsed = createSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
