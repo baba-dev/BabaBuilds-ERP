@@ -1,13 +1,7 @@
 /// <reference lib="webworker" />
 
 import { defaultCache } from '@serwist/next/worker';
-import { 
-  ExpirationPlugin, 
-  StaleWhileRevalidate, 
-  type PrecacheEntry, 
-  Serwist, 
-  type SerwistGlobalConfig 
-} from 'serwist';
+import { type PrecacheEntry, Serwist, type SerwistGlobalConfig } from 'serwist';
 import { normalizeLaunchDestination } from '@/lib/launch-routing';
 
 declare global {
@@ -29,33 +23,16 @@ type PeriodicSyncEventLike = ExtendableEvent & {
 
 const OFFLINE_FALLBACK_PAGE = '/offline';
 
-const dashboardRuntimeCaching = [
-  {
-    matcher: ({ sameOrigin, url, request }: { sameOrigin: boolean; url: URL; request: Request }) =>
-      sameOrigin &&
-      request.method === 'GET' &&
-      ['/dashboard', '/invoice', '/expenses', '/clients', '/proposals', '/tax'].some((route) =>
-        url.pathname === route || url.pathname.startsWith(`${route}/`),
-      ),
-    handler: new StaleWhileRevalidate({
-      cacheName: 'erp-dashboard-pages-cache',
-      plugins: [
-        new ExpirationPlugin({
-          maxEntries: 40,
-          maxAgeSeconds: 7 * 24 * 60 * 60,
-          maxAgeFrom: 'last-used',
-        }),
-      ],
-    }),
-  },
-];
-
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
-  runtimeCaching: [...dashboardRuntimeCaching, ...defaultCache],
+  // Do not runtime-cache dashboard HTML documents. StaleWhileRevalidate on navigations can
+  // serve an old shell that references hashed JS/CSS from a prior deploy, which then 404 and
+  // produce a blank client render. precache + defaultCache cover static assets; offline
+  // navigations still fall back via the manual fetch handler below.
+  runtimeCaching: [...defaultCache],
 });
 
 async function notifyClients(message: Record<string, string>) {
