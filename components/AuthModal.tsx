@@ -14,6 +14,7 @@ import {
 import { useTranslations } from "next-intl";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { toast } from "sonner";
+import Link from "next/link";
 
 type AuthModalProps = {
   callbackUrl?: string;
@@ -506,6 +507,16 @@ export default function AuthModal({
               </button>
             </div>
           </details>
+
+          <div className="pt-1 text-center text-xs text-muted-foreground">
+            <div className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+              <Link href="/help" className="hover:text-foreground transition-colors">Documentation</Link>
+              <span aria-hidden="true">&bull;</span>
+              <Link href="/help/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+              <span aria-hidden="true">&bull;</span>
+              <Link href="/help/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>

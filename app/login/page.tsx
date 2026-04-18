@@ -55,14 +55,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
         <AuthModal callbackUrl={callbackUrl} authError={authError} />
       </div>
-
-      <div className="relative z-10 mt-8 text-center text-muted-foreground text-xs font-medium space-x-4">
-        <Link href="/help" className="hover:text-foreground transition-colors">Documentation</Link>
-        <span>&bull;</span>
-        <Link href="/help/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
-        <span>&bull;</span>
-        <Link href="/help/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
-      </div>
     </div>
   );
 }
