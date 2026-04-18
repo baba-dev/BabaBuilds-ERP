@@ -41,11 +41,11 @@ export default function LandingNavbar() {
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform duration-300">
+          <div className="bg-orange-600 p-2 rounded-xl shadow-lg shadow-orange-500/20 group-hover:scale-110 transition-transform duration-300">
             <Box className="h-6 w-6 text-white" />
           </div>
           <span className="text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
-            BabaBuilds <span className="text-indigo-600">ERP</span>
+            BabaBuilds <span className="text-orange-600">ERP</span>
           </span>
         </Link>
 
@@ -55,7 +55,7 @@ export default function LandingNavbar() {
             <Link
               key={link.name}
               href={link.href}
-              className="text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              className="text-sm font-semibold text-zinc-600 dark:text-zinc-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
             >
               {link.name}
             </Link>
@@ -67,7 +67,7 @@ export default function LandingNavbar() {
           {session ? (
             <Button
               asChild
-              className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold gap-2"
+              className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold gap-2"
             >
               <Link href="/dashboard">
                 {t("actions.dashboard")} <ArrowRight className="w-4 h-4" />
@@ -78,7 +78,7 @@ export default function LandingNavbar() {
               <Button
                 variant="ghost"
                 asChild
-                className="font-bold text-zinc-700 dark:text-zinc-300 hover:text-indigo-600"
+                className="font-bold text-zinc-700 dark:text-zinc-300 hover:text-orange-600"
               >
                 <Link href="/help">Help Docs</Link>
               </Button>
@@ -95,7 +95,7 @@ export default function LandingNavbar() {
         {/* Mobile Toggle */}
         <button
           type="button"
-          className="md:hidden p-2 text-zinc-900 dark:text-zinc-50 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950"
+          className="md:hidden p-2 text-zinc-900 dark:text-zinc-50 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
           title={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
@@ -130,7 +130,7 @@ export default function LandingNavbar() {
             {session ? (
               <Button
                 asChild
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold py-6"
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold py-6"
               >
                 <Link href="/dashboard">{t("actions.goToDashboard")}</Link>
               </Button>

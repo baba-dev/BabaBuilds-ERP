@@ -27,8 +27,8 @@ export default function HeroMotionDecor() {
          {/* Simple static grid */}
          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-800/10 via-transparent to-transparent bg-[length:30px_30px] opacity-20" />
          
-        <div className="absolute -top-16 right-10 h-[30vw] w-[30vw] rounded-full bg-indigo-500/15 blur-[120px]" />
-        <div className="absolute bottom-6 left-6 h-[25vw] w-[25vw] rounded-full bg-violet-500/10 blur-[100px]" />
+        <div className="absolute -top-16 right-10 h-[30vw] w-[30vw] rounded-full bg-orange-500/15 blur-[120px]" />
+        <div className="absolute bottom-6 left-6 h-[25vw] w-[25vw] rounded-full bg-amber-500/10 blur-[100px]" />
       </div>
     );
   }
@@ -50,7 +50,7 @@ export default function HeroMotionDecor() {
 
       {/* Dynamic Floating Orbs */}
       <motion.div
-        className="absolute -top-10 -right-10 h-[400px] w-[400px] rounded-full bg-indigo-500/25 blur-[120px]"
+        className="absolute -top-10 -right-10 h-[400px] w-[400px] rounded-full bg-orange-500/25 blur-[120px]"
         animate={{ 
           x: [0, 30, 0], 
           y: [0, -20, 0],
@@ -60,7 +60,7 @@ export default function HeroMotionDecor() {
       />
       
       <motion.div
-        className="absolute bottom-10 -left-10 h-[350px] w-[350px] rounded-full bg-violet-600/20 blur-[100px]"
+        className="absolute bottom-10 -left-10 h-[350px] w-[350px] rounded-full bg-orange-600/15 blur-[100px]"
         animate={{ 
           x: [0, -20, 0], 
           y: [0, 30, 0],

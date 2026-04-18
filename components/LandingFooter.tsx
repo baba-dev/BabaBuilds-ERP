@@ -41,24 +41,24 @@ export default function LandingFooter() {
           {/* Brand */}
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center gap-3">
-              <div className="bg-indigo-600 p-2 rounded-xl">
+              <div className="bg-orange-600 p-2 rounded-xl">
                 <Box className="h-6 w-6 text-white" />
               </div>
               <span className="text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
-                BabaBuilds <span className="text-indigo-600">ERP</span>
+                BabaBuilds <span className="text-orange-600">ERP</span>
               </span>
             </div>
             <p className="text-zinc-500 dark:text-zinc-400 max-w-sm text-lg leading-relaxed">
               The next generation of financial intelligence for global agencies. Operating in over 40 countries.
             </p>
             <div className="flex items-center gap-4">
-              <a href="#" className="p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:bg-indigo-600 hover:text-white transition-all">
+              <a href="#" className="p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:bg-orange-600 hover:text-white transition-all">
                 <Twitter className="w-5 h-5" />
               </a>
-              <a href="#" className="p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:bg-indigo-600 hover:text-white transition-all">
+              <a href="#" className="p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:bg-orange-600 hover:text-white transition-all">
                 <Linkedin className="w-5 h-5" />
               </a>
-              <a href="#" className="p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:bg-indigo-600 hover:text-white transition-all">
+              <a href="#" className="p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:bg-orange-600 hover:text-white transition-all">
                 <Github className="w-5 h-5" />
               </a>
             </div>
@@ -75,7 +75,7 @@ export default function LandingFooter() {
                   <li key={link.name}>
                     <Link
                       href={link.href}
-                      className="text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors font-medium"
+                      className="text-zinc-500 dark:text-zinc-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-medium"
                     >
                       {link.name}
                     </Link>
@@ -95,14 +95,14 @@ export default function LandingFooter() {
               Legal & policy center:{" "}
               <a
                 href="https://erp.bababuilds.com/help/privacy"
-                className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                className="text-orange-600 dark:text-orange-400 hover:underline"
               >
                 erp.bababuilds.com
               </a>
             </p>
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-600">
                <span className="flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
-                 <Box className="w-3 h-3 text-indigo-600" /> MSME: UDYAM-RJ-21-0089275
+                 <Box className="w-3 h-3 text-orange-600" /> MSME: UDYAM-RJ-21-0089275
                </span>
                <span className="flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
                  <Box className="w-3 h-3 text-emerald-500" /> WCAG 2.2 Level AA Compliant
@@ -111,7 +111,7 @@ export default function LandingFooter() {
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-8 text-sm text-zinc-500 font-medium whitespace-nowrap">
             <span className="flex items-center gap-2">
-              <Mail className="w-4 h-4 text-indigo-500" /> support@bababuilds.com
+              <Mail className="w-4 h-4 text-orange-500" /> support@bababuilds.com
             </span>
             <span className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-rose-500" /> Dubai • New Delhi • London
