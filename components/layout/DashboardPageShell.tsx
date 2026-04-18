@@ -89,7 +89,7 @@ export function DashboardPageShell({
   const headerToneClassName =
     headerTone === "transparent"
       ? "bg-transparent dark:bg-transparent"
-      : "bg-background dark:bg-background";
+      : "bg-[color:var(--color-panel-glass,var(--color-surface-glass,var(--color-background)))]";
   const resolvedKpiCard = isStructuredKpiCard(kpiCard) ? (
     <Card
       size="sm"
@@ -112,11 +112,11 @@ export function DashboardPageShell({
 
 
   return (
-    <div className="min-h-full bg-background/50 p-4 transition-colors duration-300 md:p-8">
+    <div className="min-h-full bg-surface-base p-4 transition-colors duration-300 md:p-8">
       <div className={cn("mx-auto space-y-8", maxWidthClassName, animated && animationClassName)}>
         <header
           className={cn(
-            "sticky top-0 z-20 -mx-4 rounded-b-2xl border-b border-zinc-200/50 px-4 backdrop-blur-md transition-all duration-200 ease-out dark:border-zinc-800/50 md:-mx-8 md:px-8",
+            "sticky top-0 z-20 -mx-4 rounded-b-2xl border-b border-border/70 px-4 backdrop-blur-md transition-all duration-200 ease-out md:-mx-8 md:px-8",
             headerToneClassName,
             isCompactHeader ? "py-3" : "py-4",
             headerClassName,
@@ -135,7 +135,7 @@ export function DashboardPageShell({
               <div className="space-y-1.5">
                 <div className="flex items-center gap-3">
                   {icon ? (
-                    <div className="rounded-xl border border-indigo-200/50 bg-indigo-600/10 p-2.5 transition-all duration-200 ease-out dark:border-indigo-400/20 dark:bg-indigo-500/20">
+                    <div className="rounded-xl border border-border/70 bg-[color:var(--color-panel-muted,var(--color-muted))] p-2.5 text-[color:var(--color-accent-info,var(--color-accent-strong))] shadow-xs transition-all duration-200 ease-out">
                       {icon}
                     </div>
                   ) : null}

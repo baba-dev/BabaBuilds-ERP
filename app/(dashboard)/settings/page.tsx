@@ -24,6 +24,7 @@ import { PWASettings } from "@/components/settings/pwa-settings";
 import { cn } from "@/lib/utils";
 import { typography } from "@/lib/ui/typography";
 import { Badge } from "@/components/ui/badge";
+import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 
 export default function SettingsWizard() {
   /**
@@ -415,24 +416,13 @@ export default function SettingsWizard() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8 transition-colors duration-300">
-      <div className="max-w-4xl mx-auto space-y-8">
-        
-        {/* Intentionally excluded from global dashboard hero styling: Settings keeps this bespoke header markup by design. */}
-        <div className="sticky top-0 z-30 -mx-4 px-4 py-6 md:-mx-8 md:px-8 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200/50 dark:border-zinc-800/50 transition-all duration-300 text-center space-y-2 mb-10">
-          <div className="mx-auto w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200 dark:shadow-indigo-900/20 mb-4 transition-transform hover:scale-105">
-            <Building2 className="w-8 h-8 text-white" />
-          </div>
-          <h1 className={cn(typography.pageTitle, "text-3xl sm:text-4xl")}>
-            {isNewSetup ? t("welcome.title") : t('title')}
-          </h1>
-          <p className={cn(typography.bodyCopy, "max-w-2xl mx-auto font-medium")}>
-            {isNewSetup 
-              ? t("welcome.description")
-              : t('description')}
-          </p>
-        </div>
-
+    <DashboardPageShell
+      title={isNewSetup ? t("welcome.title") : t("title")}
+      description={isNewSetup ? t("welcome.description") : t("description")}
+      icon={<Building2 className="w-5 h-5 text-accent-strong" />}
+      headerVariant="compact"
+      maxWidthClassName="max-w-4xl"
+    >
         <form onSubmit={handleSubmit} className="space-y-8">
           
           {/* IDENTITY & BRANDING */}
@@ -1706,7 +1696,6 @@ export default function SettingsWizard() {
           </div>
 
         </form>
-      </div>
-    </div>
+    </DashboardPageShell>
   );
 }
