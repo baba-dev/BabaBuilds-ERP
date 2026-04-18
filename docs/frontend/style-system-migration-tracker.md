@@ -41,4 +41,14 @@ _Last updated: April 18, 2026 (UTC)_
 ## Visual QA + Screenshot Gate
 
 - **Current gate state:** 🚫 **Blocked** — browser screenshot tooling is not available in this execution environment, so before/after captures could not be generated.
-- Manual visual QA checklist execution is therefore pending and must be completed with screenshots before merge approval.
+
+### Manual QA checklist (use this even if screenshots are blocked)
+- Validate **light + dark** for each migrated route:
+  - Header: sticky behavior, backdrop blur, border contrast, icon chip alignment.
+  - Typography: page title weight/size, description readability, KPI card legibility.
+  - Surfaces: consistent card background/border opacity across siblings.
+  - Interactions: keyboard focus ring visible on buttons/inputs, hover states not overly jumpy.
+  - Contrast: CTAs and destructive actions meet contrast expectations in dark mode.
+
+### When screenshot tooling is available again
+- Capture **before/after** for each route group and attach to the PR as a merge gate artifact.

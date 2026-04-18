@@ -88,7 +88,7 @@ export function DashboardPageShell({
   const headerToneClassName =
     headerTone === "transparent"
       ? "bg-transparent dark:bg-transparent"
-      : "bg-surface-glass";
+      : "bg-[color:var(--color-panel-glass,var(--color-surface-glass,var(--color-background)))]";
   const resolvedKpiCard = isStructuredKpiCard(kpiCard) ? (
     <div
       className={cn(
@@ -130,7 +130,7 @@ export function DashboardPageShell({
               <div className="space-y-1.5">
                 <div className="flex items-center gap-3">
                   {icon ? (
-                    <div className="p-2.5 bg-indigo-600/10 dark:bg-indigo-500/20 rounded-xl border border-indigo-200/50 dark:border-indigo-400/20 transition-all duration-300">
+                    <div className="rounded-xl border border-border/70 bg-[color:var(--color-panel-muted,var(--color-muted))] p-2.5 text-[color:var(--color-accent-info,var(--color-accent-strong))] shadow-xs transition-all duration-200 ease-out">
                       {icon}
                     </div>
                   ) : null}
@@ -140,7 +140,9 @@ export function DashboardPageShell({
                   </h1>
                 </div>
                 {description ? (
-                  <p className={cn(typography.bodyCopy, "max-w-xl text-sm")}>{description}</p>
+                  <p className={cn(typography.bodyCopy, "max-w-xl text-sm text-muted-foreground")}>
+                    {description}
+                  </p>
                 ) : null}
               </div>
 
