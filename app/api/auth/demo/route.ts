@@ -99,9 +99,10 @@ export async function POST(request: Request) {
     const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000);
     const recentDemos = await prisma.workspace.count({
       where: {
-        name: "BabaBuilds Demo Enterprise",
-        createdAt: { gte: fifteenMinsAgo }
-      }
+        isDemo: true,
+        demoTemplateKey: 'enterprise',
+        createdAt: { gte: fifteenMinsAgo },
+      },
     });
 
     const configuredThreshold = Number(process.env.DEMO_CIRCUIT_BREAKER_THRESHOLD ?? "10");
@@ -127,10 +128,13 @@ export async function POST(request: Request) {
 
       const workspace = await tx.workspace.create({
         data: {
-          name: "BabaBuilds Demo Enterprise",
-          subscriptionStatus: "ACTIVE",
+          name: 'BabaBuilds Demo Enterprise',
+          isDemo: true,
+          demoTemplateKey: 'enterprise',
+          demoExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          subscriptionStatus: 'ACTIVE',
           users: {
-            create: { userId: user.id, role: "OWNER" }
+            create: { userId: user.id, role: 'OWNER' }
           }
         }
       });

@@ -264,6 +264,10 @@ model Workspace {
   name      String
   createdAt DateTime @default(now())
 
+  isDemo          Boolean   @default(false)
+  demoExpiresAt   DateTime?
+  demoTemplateKey String?
+
   // --- NEW: GLOBALIZATION STATE ---
   isSetupComplete Boolean @default(false) // Triggers the Popup Wizard
   countryCode     String  @default("IN") // ISO 2-letter code (US, AE, GB, IN)
