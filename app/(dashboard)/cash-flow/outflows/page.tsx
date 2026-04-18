@@ -20,6 +20,7 @@ import { CashFlowPeriodBreakdown } from "../_components/primitives/period-breakd
 import { getStaleStatus, isConfidenceLow, sumLineItems, topDrivers } from "../_components/primitives/utils";
 import { buildCashFlowContextQuery, useCashFlowUrlContext } from "../_components/context";
 import { CashFlowPageShell } from "../_components/cash-flow-page-shell";
+import { cashFlowIcon } from "../_components/primitives/styles";
 
 export default function CashFlowOutflowsPage() {
   const { fCurrency } = useFormat();
@@ -165,7 +166,7 @@ export default function CashFlowOutflowsPage() {
     <CashFlowPageShell
       title="Cash Flow · Outflows"
       description="Committed, expected, and actual outflows — with timing and risk context."
-      icon={<ReceiptText className="h-[18px] w-[18px] text-indigo-500/90" />}
+      icon={<ReceiptText className={`${cashFlowIcon.header} text-indigo-500/90`} />}
     >
         <CashFlowActionBar
           context={{ horizonType, scenarioTag }}

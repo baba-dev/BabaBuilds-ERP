@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CashFlowHelp } from "./help";
+import { cashFlowIcon } from "./styles";
 import type { CashFlowHorizonType, CashFlowScenarioTag } from "../types";
 
 export type CashFlowContext = {
@@ -97,7 +98,7 @@ export function CashFlowActionBar({
         {extra}
         {onRefresh ? (
           <Button onClick={onRefresh} disabled={Boolean(refreshing)} className="h-9 gap-2">
-            <RefreshCw className={refreshing ? "h-[15px] w-[15px] animate-spin" : "h-[15px] w-[15px]"} />
+            <RefreshCw className={refreshing ? `${cashFlowIcon.inline} animate-spin` : cashFlowIcon.inline} />
             Refresh
           </Button>
         ) : null}

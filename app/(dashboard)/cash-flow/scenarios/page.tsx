@@ -17,6 +17,7 @@ import { CashFlowMetricCard } from "../_components/primitives/metric-card";
 import { CashFlowHelp } from "../_components/primitives/help";
 import { CashFlowErrorState, CashFlowNoSnapshotState } from "../_components/primitives/state";
 import { deriveCrunchSignal, getSnapshotAssumptions, getStaleStatus, labelForScenarioTag, topDrivers } from "../_components/primitives/utils";
+import { cashFlowIcon } from "../_components/primitives/styles";
 import {
   buildCashFlowContextQuery,
   CASH_FLOW_DEFAULT_HORIZON,
@@ -226,7 +227,7 @@ export default function CashFlowScenariosPage() {
     <CashFlowPageShell
       title="Cash Flow · Scenarios"
       description="Compare best/base/worst outcomes and their deltas — then drill in without leaving cash-flow."
-      icon={<SlidersHorizontal className="h-[18px] w-[18px] text-indigo-500/90" />}
+      icon={<SlidersHorizontal className={`${cashFlowIcon.header} text-indigo-500/90`} />}
     >
       <div className="space-y-6">
         <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/50 dark:bg-zinc-900/30 p-4 shadow-sm backdrop-blur-sm">

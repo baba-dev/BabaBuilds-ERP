@@ -19,6 +19,7 @@ import { CashFlowHelp } from "../_components/primitives/help";
 import { CashFlowMetricCard } from "../_components/primitives/metric-card";
 import { CashFlowErrorState, CashFlowNoSnapshotState } from "../_components/primitives/state";
 import { getStaleStatus, toneForVariance } from "../_components/primitives/utils";
+import { cashFlowIcon } from "../_components/primitives/styles";
 
 export default function CashFlowVariancePage() {
   const { fCurrency } = useFormat();
@@ -100,7 +101,7 @@ export default function CashFlowVariancePage() {
     <CashFlowPageShell
       title="Variance"
       description="Build trust by measuring forecast vs actual, then tune assumptions with evidence."
-      icon={<BarChart3 className="h-[18px] w-[18px] text-indigo-500/90" />}
+      icon={<BarChart3 className={`${cashFlowIcon.header} text-indigo-500/90`} />}
     >
       <div className="space-y-6">
         <CashFlowActionBar

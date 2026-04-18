@@ -17,6 +17,7 @@ import { CashFlowActionBar } from "../_components/primitives/action-bar";
 import { CashFlowInsightCard } from "../_components/primitives/insight-card";
 import { CashFlowErrorState, CashFlowNoSnapshotState } from "../_components/primitives/state";
 import { useCashFlowContextFromUrl, updateCashFlowContextInUrl } from "../_components/context";
+import { cashFlowIcon } from "../_components/primitives/styles";
 
 type AlertPreferences = {
   showInfo: boolean;
@@ -237,10 +238,10 @@ export default function CashFlowAlertsPage() {
                     <AlertTriangle
                       className={
                         a.severity === "critical"
-                          ? "h-[15px] w-[15px] text-rose-600 dark:text-rose-400"
+                          ? `${cashFlowIcon.inline} text-rose-600 dark:text-rose-400`
                           : a.severity === "warning"
-                            ? "h-[15px] w-[15px] text-amber-600 dark:text-amber-400"
-                            : "h-[15px] w-[15px] text-zinc-500"
+                            ? `${cashFlowIcon.inline} text-amber-600 dark:text-amber-400`
+                            : `${cashFlowIcon.inline} text-zinc-500`
                       }
                     />
                   </div>
@@ -305,7 +306,7 @@ export default function CashFlowAlertsPage() {
     <CashFlowPageShell
       title="Cash Flow Alerts"
       description="Proactive warnings derived from your latest forecast snapshot."
-      icon={<ShieldAlert className="h-[18px] w-[18px] text-indigo-500/90" />}
+      icon={<ShieldAlert className={`${cashFlowIcon.header} text-indigo-500/90`} />}
     >
       <div className="space-y-6">
         <CashFlowActionBar

@@ -17,6 +17,7 @@ import { buildCashFlowContextQuery, readCashFlowContextFromUrl, writeCashFlowCon
 import { CashFlowActionBar } from "../_components/primitives/action-bar";
 import { CashFlowInsightCard } from "../_components/primitives/insight-card";
 import { CashFlowMetricCard } from "../_components/primitives/metric-card";
+import { cashFlowIcon } from "../_components/primitives/styles";
 import { CashFlowErrorState, CashFlowNoSnapshotState } from "../_components/primitives/state";
 import { clamp01, computeRunway, deriveCrunchSignal, getSnapshotAssumptions, getStaleReasons, getStaleStatus, toneForRiskLevel, topDrivers } from "../_components/primitives/utils";
 import { dt, cashFlowTypography } from "../_components/cash-flow-typography";
@@ -138,7 +139,7 @@ export default function CashFlowOverviewPage() {
     <CashFlowPageShell
       title="Cash Flow Command Center"
       description="Runway, crunch windows, drivers, and actions — backed by traceable snapshots."
-      icon={<AreaChart className="h-[18px] w-[18px] text-indigo-500/90" />}
+      icon={<AreaChart className={`${cashFlowIcon.header} text-indigo-500/90`} />}
     >
       <div className="space-y-6">
         <CashFlowActionBar

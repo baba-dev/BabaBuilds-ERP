@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { cashFlowTypography, dt } from "../cash-flow-typography";
+import { cashFlowChrome } from "./styles";
 
 export type MetricTone = "default" | "positive" | "warning" | "danger";
 
@@ -21,7 +22,7 @@ export function CashFlowMetricCard(props: {
   return (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-2xl border p-[18px] shadow-[0_1px_2px_rgba(15,23,42,0.06)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-[1px] hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)]",
+        cashFlowChrome.card,
         toneClassName[props.tone ?? "default"],
         props.className,
       )}

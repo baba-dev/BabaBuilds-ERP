@@ -17,6 +17,7 @@ import type { CashFlowScenarioTag, CashFlowHorizonType } from "../_components/ty
 import { CashFlowActionBar } from "../_components/primitives/action-bar";
 import { CashFlowHelp } from "../_components/primitives/help";
 import { CashFlowErrorState, CashFlowState } from "../_components/primitives/state";
+import { cashFlowIcon } from "../_components/primitives/styles";
 import { buildCashFlowContextQuery, useCashFlowUrlContext, updateCashFlowContextInUrl } from "../_components/context";
 
 type ManualAdjustment = {
@@ -126,7 +127,7 @@ export default function CashFlowManualAdjustmentsPage() {
     <CashFlowPageShell
       title="Cash Flow · Manual adjustments"
       description="High-trust, auditable overrides for exceptional cash events."
-      icon={<SlidersHorizontal className="h-[18px] w-[18px] text-indigo-500/90" />}
+      icon={<SlidersHorizontal className={`${cashFlowIcon.header} text-indigo-500/90`} />}
     >
       <div className="space-y-6">
         <CashFlowActionBar

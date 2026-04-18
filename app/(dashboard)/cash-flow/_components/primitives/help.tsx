@@ -5,6 +5,7 @@ import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
+import { cashFlowIcon } from "./styles";
 
 export function CashFlowHelp({
   label,
@@ -31,7 +32,7 @@ export function CashFlowHelp({
             )}
             aria-label={label}
           >
-            <Info className={cn("h-[15px] w-[15px]", iconClassName)} />
+            <Info className={cn(cashFlowIcon.inline, iconClassName)} />
           </Button>
         </TooltipTrigger>
         <TooltipContent sideOffset={8} className="max-w-sm">

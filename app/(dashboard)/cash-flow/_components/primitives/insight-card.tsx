@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { dt, cashFlowTypography } from "../cash-flow-typography";
+import { cashFlowCardClassName, cashFlowCardShadowClassName } from "./styles";
 
 export type CashFlowInsightTone = "default" | "positive" | "warning" | "danger";
 
@@ -33,14 +34,15 @@ export function CashFlowInsightCard(props: {
   return (
     <div
       className={cn(
-        "rounded-2xl border p-[18px] shadow-[0_1px_2px_rgba(15,23,42,0.06)] backdrop-blur-sm transition-all duration-300 motion-reduce:transition-none hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)] hover:-translate-y-[1px]",
+        cashFlowCardClassName,
+        cashFlowCardShadowClassName,
         toneClasses[tone],
         props.className,
       )}
     >
       <div className="flex items-start gap-3">
         {props.icon ? (
-          <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-200/55 dark:border-zinc-800/55 bg-white/55 dark:bg-zinc-950/22 text-zinc-700 dark:text-zinc-200 shadow-[0_1px_2px_rgba(15,23,42,0.06)] [&_svg]:h-4 [&_svg]:w-4">
+          <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-200/55 bg-white/55 text-zinc-700 shadow-[0_1px_2px_rgba(15,23,42,0.06)] [&_svg]:h-4 [&_svg]:w-4 dark:border-zinc-800/55 dark:bg-zinc-950/22 dark:text-zinc-200">
             {props.icon}
           </div>
         ) : null}
