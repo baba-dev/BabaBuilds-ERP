@@ -28,8 +28,8 @@ export async function GET(request: Request) {
 
     const deleted = await prisma.workspace.deleteMany({
       where: {
-        name: 'BabaBuilds Demo Enterprise',
         createdAt: { lt: twentyFourHoursAgo },
+        OR: [{ demoTemplateKey: { not: null } }, { name: 'BabaBuilds Demo Enterprise' }],
       },
     });
 
