@@ -138,10 +138,12 @@ export default function AuthModal({
     return "GENERIC";
   };
 
-  const verifyMagicLinkPolicy = async () => {
+  const verifyMagicLinkPolicy = async ({ blocking = false }: { blocking?: boolean } = {}) => {
     if (!email || !email.includes("@")) return true;
 
-    setIsPolicyChecking(true);
+    if (blocking) {
+      setIsPolicyChecking(true);
+    }
 
     try {
       const response = await fetch("/api/auth/magic-link-policy", {
@@ -170,12 +172,16 @@ export default function AuthModal({
       setMagicLinkPolicyMessage(t("alerts.policyCheckFailed"));
       return false;
     } finally {
-      setIsPolicyChecking(false);
+      if (blocking) {
+        setIsPolicyChecking(false);
+      }
     }
   };
 
   const sendMagicLink = async () => {
-    const isAllowed = await verifyMagicLinkPolicy();
+    if (isLoading || isPolicyChecking) return;
+
+    const isAllowed = await verifyMagicLinkPolicy({ blocking: true });
     if (!isAllowed) {
       setEmailStatus("error");
       setEmailErrorCase("GENERIC");
@@ -374,7 +380,9 @@ export default function AuthModal({
                     setEmailErrorCase(null);
                   }
                 }}
-                onBlur={verifyMagicLinkPolicy}
+                onBlur={() => {
+                  void verifyMagicLinkPolicy();
+                }}
                 className="h-11 w-full rounded-xl bg-background/90 pl-10 pr-4 placeholder:text-muted-foreground/70 dark:bg-background/80"
               />
             </div>
