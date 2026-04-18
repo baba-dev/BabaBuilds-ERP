@@ -36,6 +36,7 @@ type SetupPayload = {
   shopAccentColor?: string;
   enableWorkforce?: boolean;
   enableDocuments?: boolean;
+  enableRevenuePipeline?: boolean;
   enablePayroll?: boolean;
   enableCashFlow?: boolean;
   payrollSetupPath?: "STANDALONE" | "WORKFORCE_LINKED";
@@ -174,6 +175,12 @@ export async function POST(req: Request) {
     if (body.enableDocuments === true) {
       await enableModule(workspaceId, 'DOCUMENTS', userId).catch((e) =>
         console.error('[setup] Documents module init failed (non-blocking):', e)
+      );
+    }
+
+    if (body.enableRevenuePipeline === true) {
+      await enableModule(workspaceId, 'REVENUE_PIPELINE', userId).catch((e) =>
+        console.error('[setup] Revenue Pipeline module init failed (non-blocking):', e)
       );
     }
 

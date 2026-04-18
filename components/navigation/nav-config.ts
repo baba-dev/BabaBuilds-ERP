@@ -30,7 +30,7 @@ export type AppNavItem = {
 
 export const appNavItems: AppNavItem[] = [
   { key: "dashboard", path: "/dashboard", icon: LayoutDashboard },
-  { key: "revenue_pipeline", path: "/proposals/pipeline", icon: Target, badge: "AI" },
+  { key: "revenue_pipeline", path: "/proposals/pipeline", icon: Target, badge: "AI", requiresModule: "REVENUE_PIPELINE" },
   { key: "service_catalog", path: "/services", icon: Briefcase },
   { key: "shop", path: "/shop", icon: Store, badge: "New" },
   { key: "inventory", path: "/inventory", icon: Archive },
