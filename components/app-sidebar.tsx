@@ -29,12 +29,12 @@ function SidebarBrand() {
   return (
     <div className="flex h-16 items-center justify-between border-b border-zinc-800/30 px-4 shrink-0">
       <Link href="/dashboard" className="flex items-center gap-3 font-bold text-zinc-50 group min-w-0">
-        <div className="rounded-xl bg-indigo-600 p-1.5 shadow-lg shadow-indigo-500/20 transition-transform duration-300 group-hover:scale-110">
+        <div className="rounded-xl bg-gradient-to-br from-orange-600 to-amber-600 p-1.5 shadow-lg shadow-orange-950/30 transition-transform duration-300 group-hover:scale-110">
           <Box className="h-5 w-5 text-white" />
         </div>
         {(open || isMobile) && (
           <div className="flex flex-col min-w-0">
-            <span className="truncate text-lg tracking-tight text-white transition-colors hover:text-indigo-400">
+            <span className="truncate text-lg tracking-tight text-white transition-colors hover:text-amber-300">
               {t("bababuilds_erp")}
             </span>
             <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">

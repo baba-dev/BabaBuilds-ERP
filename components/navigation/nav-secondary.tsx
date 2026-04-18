@@ -35,8 +35,10 @@ export function NavSecondary({ preferences, onTogglePin, onNavigate }: Props) {
           href="/settings"
           onClick={() => onNavigate("settings")}
           className={cn(
-            "flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2 text-zinc-200 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500",
-            isActive ? "bg-indigo-600 text-white shadow-md shadow-indigo-900/20" : "hover:bg-white/10 hover:text-white",
+            "flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2 text-zinc-200 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500",
+            isActive
+              ? "bg-gradient-to-br from-orange-600 to-amber-600 text-white shadow-md shadow-orange-950/25"
+              : "hover:bg-white/10 hover:text-white",
             !open && !isMobile && "justify-center px-2",
           )}
           title={!open && !isMobile ? t("settings") : undefined}

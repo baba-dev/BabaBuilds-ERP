@@ -39,7 +39,7 @@ export function NavUser() {
     <Button
       onClick={() => signIn("google")}
       className={cn(
-        "w-full items-center gap-2 rounded-xl bg-indigo-600 px-3 py-6 text-sm font-bold text-white shadow-md shadow-indigo-900/20 hover:bg-indigo-700",
+        "w-full items-center gap-2 rounded-xl bg-gradient-to-br from-orange-600 to-amber-600 px-3 py-6 text-sm font-bold text-white shadow-md shadow-orange-950/30 hover:brightness-95",
         !open && !isMobile && "justify-center px-2",
       )}
       title={!open && !isMobile ? t("sign_in_google") : undefined}

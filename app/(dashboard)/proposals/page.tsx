@@ -465,7 +465,7 @@ export default function ProposalsEngine() {
   const renderListHeaderActions = () => (
     <Button 
       onClick={() => setView('builder')} 
-      className="w-full md:w-auto shrink-0 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20 text-xs font-bold uppercase tracking-wider h-11 transition-all active:scale-95"
+      className="btn-primary w-full md:w-auto shrink-0 text-xs uppercase tracking-wider h-11"
     >
       <Plus className="w-4 h-4 md:mr-2" /> <span className="md:inline">{t('create_proposal')}</span>
     </Button>
@@ -476,7 +476,7 @@ export default function ProposalsEngine() {
       <Button variant="ghost" size="icon" onClick={() => setView('list')} aria-label="Back to Proposals List" className="rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 active:scale-95 transition-transform">
         <ArrowLeft className="w-5 h-5" />
       </Button>
-      <Button onClick={handleSubmit} disabled={isSubmitting || !clientId} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20 text-xs font-bold uppercase tracking-widest h-10 transition-all active:scale-95 border-none">
+      <Button onClick={handleSubmit} disabled={isSubmitting || !clientId} className="btn-primary text-xs uppercase tracking-widest h-10 border-none">
         {isSubmitting ? (
           <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> {t('generating')}</span>
         ) : (

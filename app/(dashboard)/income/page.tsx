@@ -395,13 +395,13 @@ export default function InvoicesAndEarnings() {
     <DashboardPageShell
       title={t("title")}
       description={t("description")}
-      icon={<ReceiptText className="w-6 h-6 text-indigo-700 dark:text-indigo-400" />}
+      icon={<ReceiptText className="w-6 h-6 text-accent-strong" />}
       animated={false}
       primaryAction={
         <Button
           id="new-invoice-btn"
           onClick={() => setNewInvoiceModalOpen(true)}
-          className="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-50 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 h-12 px-6 shadow-md shadow-zinc-900/10 dark:shadow-none text-xs font-bold uppercase tracking-wider transition-all active:scale-95"
+          className="btn-primary w-full sm:w-auto shrink-0 text-xs uppercase tracking-wider h-12 px-6"
         >
           <FilePlus className="w-4 h-4 mr-2" /> New Invoice
         </Button>

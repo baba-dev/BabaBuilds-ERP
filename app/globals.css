@@ -120,16 +120,16 @@
   --accent-primary-foreground: oklch(0.99 0.004 70);
   --accent-warning: oklch(0.76 0.14 76);
   --accent-warning-foreground: oklch(0.22 0.02 78);
-  --accent-info: oklch(0.623 0.214 259.815);
-  --accent-info-foreground: oklch(0.985 0 0);
+  --accent-info: oklch(0.58 0.18 48);
+  --accent-info-foreground: oklch(0.22 0.03 48);
   --surface-base: oklch(0.99 0.002 260);
   --surface-elevated: oklch(1 0 0);
   --surface-glass: oklch(1 0 0 / 72%);
-  --accent-strong: oklch(0.57 0.2 279);
-  --accent-soft: oklch(0.95 0.03 279);
+  --accent-strong: oklch(0.55 0.19 48);
+  --accent-soft: oklch(0.96 0.04 65);
   --success-soft: oklch(0.95 0.06 155);
   --danger-soft: oklch(0.95 0.05 24);
-  --focus-ring: oklch(0.63 0.19 279);
+  --focus-ring: oklch(0.62 0.17 52);
 
   /* Semantic surface/text aliases are intentionally derived from primitives to avoid drift. */
   --panel: var(--surface-elevated);
@@ -202,16 +202,16 @@
   --accent-primary-foreground: oklch(0.18 0.02 58);
   --accent-warning: oklch(0.8 0.13 78);
   --accent-warning-foreground: oklch(0.16 0.01 78);
-  --accent-info: oklch(0.74 0.13 259.815);
-  --accent-info-foreground: oklch(0.16 0.01 259);
+  --accent-info: oklch(0.72 0.15 52);
+  --accent-info-foreground: oklch(0.97 0.02 70);
   --surface-base: oklch(0.19 0.005 260);
   --surface-elevated: oklch(0.23 0.01 260);
   --surface-glass: oklch(0.2 0.008 260 / 78%);
-  --accent-strong: oklch(0.66 0.19 279);
-  --accent-soft: oklch(0.3 0.06 279);
+  --accent-strong: oklch(0.72 0.16 52);
+  --accent-soft: oklch(0.28 0.05 55);
   --success-soft: oklch(0.31 0.08 155);
   --danger-soft: oklch(0.31 0.08 24);
-  --focus-ring: oklch(0.7 0.17 279);
+  --focus-ring: oklch(0.72 0.16 52);
 
   /* Semantic surface/text aliases are intentionally derived from primitives to avoid drift. */
   --panel: var(--surface-elevated);

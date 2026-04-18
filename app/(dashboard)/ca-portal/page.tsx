@@ -335,7 +335,7 @@ export default function CAPortal() {
             href={row.pdfPath}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700"
+            className="inline-flex items-center gap-1 text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300"
           >
             View <ExternalLink className="w-3.5 h-3.5" />
           </a>
@@ -394,7 +394,7 @@ export default function CAPortal() {
             href={row.receiptUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700"
+            className="inline-flex items-center gap-1 text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300"
           >
             View <ExternalLink className="w-3.5 h-3.5" />
           </a>
@@ -430,10 +430,10 @@ export default function CAPortal() {
                 </Select>
               </div>
               <div className="flex items-center gap-2 mt-5">
-                <Button onClick={handleExportCSV} disabled={isExportingCSV} variant="outline" className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-900/50 dark:text-indigo-400">
+                <Button onClick={handleExportCSV} disabled={isExportingCSV} variant="outline" className="border-orange-200 text-orange-800 hover:bg-orange-50 dark:border-orange-900/50 dark:text-orange-300 dark:hover:bg-orange-950/40">
                   {isExportingCSV ? t('generating') : <><DownloadCloud className="w-4 h-4 mr-2" /> {t('export_csv')}</>}
                 </Button>
-                <Button onClick={handleExportZIP} disabled={isExportingZIP} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                <Button onClick={handleExportZIP} disabled={isExportingZIP} className="btn-primary">
                   {isExportingZIP ? t('zipping') : <><FolderArchive className="w-4 h-4 mr-2" /> {t('download_zip')}</>}
                 </Button>
               </div>
@@ -466,14 +466,14 @@ export default function CAPortal() {
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 font-medium">{t('kpi_gross_desc')}</p>
             </CardContent>
           </Card>
-          <Card className="shadow-sm border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/30 dark:bg-indigo-950/20">
+          <Card className="shadow-sm border-orange-200 dark:border-orange-900/50 bg-orange-50/30 dark:bg-orange-950/20">
             <CardHeader className="pb-2 flex flex-row items-center justify-between">
-              <CardTitle className="text-xs font-bold uppercase tracking-widest text-indigo-700 dark:text-indigo-400">{t('kpi_44ada')}</CardTitle>
-              <Percent className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
+              <CardTitle className="text-xs font-bold uppercase tracking-widest text-orange-800 dark:text-orange-300">{t('kpi_44ada')}</CardTitle>
+              <Percent className="h-4 w-4 text-orange-600 dark:text-orange-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">₹{summary.presumptiveIncome.toLocaleString('en-IN')}</div>
-              <p className="text-xs text-indigo-600 dark:text-indigo-400/80 mt-1 font-medium">{t('kpi_44ada_desc')}</p>
+              <div className="text-2xl font-bold text-orange-950 dark:text-orange-50">₹{summary.presumptiveIncome.toLocaleString('en-IN')}</div>
+              <p className="text-xs text-orange-700 dark:text-orange-300/80 mt-1 font-medium">{t('kpi_44ada_desc')}</p>
             </CardContent>
           </Card>
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
@@ -545,7 +545,7 @@ export default function CAPortal() {
           <Tabs defaultValue="ar" className="w-full">
             <CardHeader className="bg-zinc-50/50 dark:bg-zinc-950/50 border-b dark:border-zinc-800 p-0">
               <TabsList className="bg-transparent p-0 h-auto rounded-none">
-                <TabsTrigger value="ar" className="px-6 py-4 font-bold text-xs uppercase tracking-widest data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-indigo-700 border-b-2 border-transparent data-[state=active]:border-indigo-600 rounded-none">
+                <TabsTrigger value="ar" className="px-6 py-4 font-bold text-xs uppercase tracking-widest data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-orange-800 dark:data-[state=active]:text-orange-300 border-b-2 border-transparent data-[state=active]:border-orange-600 rounded-none">
                   {t('tab_ar')}
                 </TabsTrigger>
                 <TabsTrigger value="ap" className="px-6 py-4 font-bold text-xs uppercase tracking-widest data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-rose-700 border-b-2 border-transparent data-[state=active]:border-rose-600 rounded-none">
