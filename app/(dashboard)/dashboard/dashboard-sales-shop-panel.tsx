@@ -45,7 +45,7 @@ export function DashboardSalesAndShopPanel({
   const funnelStages = [
     { key: "draft", label: tr("funnel_draft", "Draft"), value: salesAndShop.proposalFunnel.draft, icon: FileText, color: "text-slate-500", bg: "bg-slate-500/10", tooltip: tr("funnel_draft_help", "Drafts you're still working on.") },
     { key: "sent", label: tr("funnel_sent", "Sent"), value: salesAndShop.proposalFunnel.sent, icon: Send, color: "text-orange-500", bg: "bg-orange-500/10", tooltip: tr("funnel_sent_help", "Sent to clients but not yet opened.") },
-    { key: "viewed", label: tr("funnel_viewed", "Viewed"), value: salesAndShop.proposalFunnel.viewed, icon: Eye, color: "text-violet-500", bg: "bg-violet-500/10", tooltip: tr("funnel_viewed_help", "Clients have opened and viewed these.") },
+    { key: "viewed", label: tr("funnel_viewed", "Viewed"), value: salesAndShop.proposalFunnel.viewed, icon: Eye, color: "text-amber-600", bg: "bg-amber-500/10", tooltip: tr("funnel_viewed_help", "Clients have opened and viewed these.") },
     { key: "accepted", label: tr("funnel_accepted", "Accepted"), value: salesAndShop.proposalFunnel.accepted, icon: BadgeCheck, color: "text-emerald-500", bg: "bg-emerald-500/10", tooltip: tr("funnel_accepted_help", "Clients have formally accepted the proposal.") },
     { key: "invoiced", label: tr("funnel_invoiced", "Invoiced"), value: salesAndShop.proposalFunnel.invoiced, icon: ReceiptText, color: "text-teal-600", bg: "bg-teal-600/15", tooltip: tr("funnel_invoiced_help", "The goal: proposals converted into active invoices.") },
     { key: "declined", label: tr("funnel_declined", "Declined"), value: salesAndShop.proposalFunnel.declined, icon: CircleOff, color: "text-rose-500", bg: "bg-rose-500/10", tooltip: tr("funnel_declined_help", "Proposals that did not move forward.") },
@@ -208,11 +208,11 @@ export function DashboardSalesAndShopPanel({
         transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
       >
         <Card className={cn(panelCardClass, "animate-in fade-in slide-in-from-bottom-3 delay-100 fill-mode-both")}>
-          <div className="absolute -top-16 -right-16 w-40 h-40 bg-violet-500/5 dark:bg-violet-500/10 rounded-full blur-3xl group-hover:bg-violet-500/10 dark:group-hover:bg-violet-500/20 transition-all duration-700" />
+          <div className="absolute -top-16 -right-16 w-40 h-40 bg-orange-500/5 dark:bg-orange-500/10 rounded-full blur-3xl group-hover:bg-orange-500/10 dark:group-hover:bg-orange-500/20 transition-all duration-700" />
           <div className="relative z-10 flex items-start justify-between gap-4 mb-6">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-violet-50 dark:bg-violet-500/10 flex items-center justify-center border border-violet-100 dark:border-violet-500/20 shadow-sm shrink-0">
-                <ShoppingBag className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+              <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center border border-orange-100 dark:border-orange-500/20 shadow-sm shrink-0">
+                <ShoppingBag className="w-4 h-4 text-orange-600 dark:text-orange-400" />
               </div>
               <div className="min-w-0">
                 <h3 className={cn(ty.sectionTitle, "leading-tight")}>
@@ -242,7 +242,7 @@ export function DashboardSalesAndShopPanel({
 
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
             {/* Conversion Hero */}
-            <div className="lg:col-span-2 flex flex-col items-center justify-center p-5 rounded-2xl bg-gradient-to-br from-violet-50/80 to-white dark:from-violet-950/20 dark:to-zinc-950/40 border border-violet-200/60 dark:border-violet-900/40">
+            <div className="lg:col-span-2 flex flex-col items-center justify-center p-5 rounded-2xl bg-gradient-to-br from-orange-50/80 to-white dark:from-orange-950/20 dark:to-zinc-950/40 border border-orange-200/60 dark:border-orange-900/40">
               <div className="relative">
                 <svg className="w-24 h-24 transform -rotate-90">
                   <circle
@@ -259,15 +259,15 @@ export function DashboardSalesAndShopPanel({
                     initial={{ strokeDashoffset: 251.2 }}
                     animate={{ strokeDashoffset: 251.2 - (251.2 * salesAndShop.serviceOrderConversion) / 100 }}
                     transition={{ duration: 1, ease: "easeOut", delay: 0.5 }}
-                    className="text-violet-500"
+                    className="text-orange-500"
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
-                  <span className="text-2xl font-semibold text-violet-700 dark:text-violet-300 tabular-nums">{salesAndShop.serviceOrderConversion}%</span>
+                  <span className="text-2xl font-semibold text-orange-700 dark:text-orange-300 tabular-nums">{salesAndShop.serviceOrderConversion}%</span>
                   <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-1">{tr("conversion", "Conversion")}</span>
                 </div>
               </div>
-              <p className="mt-3 text-sm font-medium text-violet-900/90 dark:text-violet-200/90 flex items-center gap-2">
+              <p className="mt-3 text-sm font-medium text-orange-900/90 dark:text-orange-200/90 flex items-center gap-2">
                 {tr("healthy_funnel", "Healthy funnel")} <DashboardTooltip label={tr("shop_conversion_help", "Conversion measures paid orders against pending/failed orders.")} />
               </p>
             </div>

@@ -414,7 +414,7 @@ export default function Dashboard() {
                   label: tr("step_add_service", "Add a service"),
                   desc: tr("step_add_service_desc", "What will you charge for?"),
                   href: "/services",
-                  color: "violet",
+                  color: "amber",
                 },
                 {
                   icon: <ReceiptText className="w-4 h-4" />,
@@ -423,13 +423,20 @@ export default function Dashboard() {
                   href: "/income",
                   color: "emerald",
                 },
-              ].map((step, i) => (
+              ].map((step, i) => {
+                const stepIconClass =
+                  step.color === "emerald"
+                    ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                    : step.color === "amber"
+                      ? "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                      : "bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400";
+                return (
                 <Link
                   key={i}
                   href={step.href}
                   className="flex items-start gap-3 p-3.5 rounded-xl bg-white dark:bg-zinc-900/60 border border-zinc-100 dark:border-zinc-800/60 hover:border-orange-200 dark:hover:border-orange-700/50 hover:shadow-md transition-all group"
                 >
-                  <div className="p-2 rounded-lg bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 shrink-0 group-hover:scale-110 transition-transform">
+                  <div className={`p-2 rounded-lg shrink-0 group-hover:scale-110 transition-transform ${stepIconClass}`}>
                     {step.icon}
                   </div>
                   <div className="min-w-0">
@@ -438,7 +445,8 @@ export default function Dashboard() {
                   </div>
                   <ArrowRight className="w-3.5 h-3.5 text-zinc-300 dark:text-zinc-600 shrink-0 mt-1 group-hover:text-orange-500 group-hover:translate-x-0.5 transition-all ml-auto" />
                 </Link>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
