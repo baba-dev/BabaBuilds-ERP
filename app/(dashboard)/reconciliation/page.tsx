@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useReducer, useCallback } from "react";
+import { useState, useReducer, useCallback, useEffect } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { 
   UploadCloud, 
@@ -34,7 +35,14 @@ import { PageErrorState } from "@/components/states/PageErrorState";
 import { PageEmptyState } from "@/components/states/PageEmptyState";
 import { DataTable, DataTableToolbar, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
 import { cn } from "@/lib/utils";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { ColumnMapping, ColumnRole } from "@/lib/reconciliation/bank-csv-parse";
 
 // --- STATE MACHINE TYPES ---
 export type Transaction = {
@@ -48,6 +56,8 @@ export type Transaction = {
   reason?: string;
   matchType?: string;
   matchId?: string;
+  confidence?: number;
+  bankTransactionId?: string;
 };
 
 type State = {
@@ -116,6 +126,32 @@ function reconReducer(state: State, action: Action): State {
   }
 }
 
+type BankAccountOption = { id: string; name: string; bankName: string | null };
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const r = reader.result as string;
+      const parts = r.split(",");
+      resolve(parts[1] ?? "");
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+const COLUMN_ROLE_OPTIONS: { value: ColumnRole | ""; label: string }[] = [
+  { value: "", label: "—" },
+  { value: "date", label: "Date" },
+  { value: "description", label: "Description" },
+  { value: "debit", label: "Debit" },
+  { value: "credit", label: "Credit" },
+  { value: "amount", label: "Amount (signed)" },
+  { value: "balance", label: "Balance" },
+  { value: "reference", label: "Reference" },
+];
+
 export default function ReconciliationWizard() {
   const t = useTranslations('Reconciliation');
   const { fCurrency } = useFormat();
@@ -123,7 +159,7 @@ export default function ReconciliationWizard() {
 
   
   // UI States
-  const [step, setStep] = useState<'upload' | 'wizard'>('upload');
+  const [step, setStep] = useState<'upload' | 'mapping' | 'wizard'>('upload');
   const [activeTab, setActiveTab] = useState<'auto' | 'ai' | 'ignored'>('auto');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isFinalizing, setIsFinalizing] = useState(false);
@@ -131,37 +167,163 @@ export default function ReconciliationWizard() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const readyTableState = useUrlTableState("recon_ready");
 
+  const [bankAccounts, setBankAccounts] = useState<BankAccountOption[]>([]);
+  const [bankAccountId, setBankAccountId] = useState<string>("");
+  const [mappingPreview, setMappingPreview] = useState<string[][]>([]);
+  const [mappingCandidates, setMappingCandidates] = useState<number[]>([]);
+  const [mappingDelimiter, setMappingDelimiter] = useState(",");
+  const [mappingHeaderIdx, setMappingHeaderIdx] = useState(0);
+  const [pendingMapFile, setPendingMapFile] = useState<File | null>(null);
+  const [columnRoles, setColumnRoles] = useState<(ColumnRole | "")[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/reconcile/bank-accounts");
+        const json = await res.json();
+        if (!res.ok || cancelled) return;
+        const rows = Array.isArray(json.data) ? json.data : [];
+        setBankAccounts(
+          rows.map((a: { id: string; name: string; bankName: string | null }) => ({
+            id: a.id,
+            name: a.name,
+            bankName: a.bankName,
+          })),
+        );
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mappingPreview.length) return;
+    const width = Math.max(...mappingPreview.map((r) => r.length));
+    setColumnRoles((prev) => {
+      const next = [...prev];
+      while (next.length < width) next.push("");
+      return next.slice(0, width);
+    });
+  }, [mappingPreview]);
+
+  const applyWizardPayload = useCallback(
+    (data: {
+      autoMatched?: Transaction[];
+      aiSuggestions?: Transaction[];
+      ignored?: unknown[];
+    }) => {
+      dispatch({
+        type: "SET_INITIAL_DATA",
+        payload: {
+          auto: data.autoMatched || [],
+          ai: data.aiSuggestions || [],
+          ignored: (data.ignored || []) as Transaction[],
+        },
+      });
+      toast.success(t("upload_success"));
+      setStep("wizard");
+      if (data.aiSuggestions?.length) setActiveTab("ai");
+    },
+    [t],
+  );
+
+  const handleContinueMapping = async () => {
+    if (!pendingMapFile || !bankAccountId) return;
+    const mapping: ColumnMapping = {};
+    columnRoles.forEach((role, idx) => {
+      if (!role || role === "ignore") return;
+      mapping[role] = idx;
+    });
+    const hasAmount =
+      mapping.amount !== undefined ||
+      (mapping.debit !== undefined && mapping.credit !== undefined);
+    if (
+      mapping.date === undefined ||
+      mapping.description === undefined ||
+      !hasAmount
+    ) {
+      toast.error(
+        "Map Date, Description, and either Amount or both Debit and Credit.",
+      );
+      return;
+    }
+    setIsProcessing(true);
+    setUploadError(null);
+    try {
+      const fileBase64 = await fileToBase64(pendingMapFile);
+      const res = await fetch("/api/reconcile/upload/parse-mapped", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bankAccountId,
+          headerRowIndex: mappingHeaderIdx,
+          delimiter: mappingDelimiter,
+          mapping,
+          fileBase64,
+          fileName: pendingMapFile.name,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      applyWizardPayload(data);
+      setPendingMapFile(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : t("upload_error");
+      setUploadError(msg);
+      toast.error(msg);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // --- UPLOAD HANDLER ---
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setIsProcessing(true);
       setUploadError(null);
       const file = e.target.files[0];
+      if (!bankAccountId) {
+        setUploadError("Select a bank account first.");
+        toast.error("Select a bank account first.");
+        setIsProcessing(false);
+        return;
+      }
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
+      formData.append("bankAccountId", bankAccountId);
 
       try {
-        const res = await fetch('/api/reconcile/upload', {
-          method: 'POST',
+        const res = await fetch("/api/reconcile/upload", {
+          method: "POST",
           body: formData,
         });
 
         const data = await res.json();
+        if (data.needsMapping) {
+          setMappingPreview(data.previewRows || []);
+          setMappingCandidates(data.candidateHeaderIndices || []);
+          setMappingDelimiter(data.delimiter || ",");
+          const firstCandidate =
+            typeof data.candidateHeaderIndices?.[0] === "number"
+              ? data.candidateHeaderIndices[0]
+              : 0;
+          setMappingHeaderIdx(firstCandidate);
+          setPendingMapFile(file);
+          setStep("mapping");
+          return;
+        }
+
         if (!res.ok) throw new Error(data.error);
 
-        dispatch({ 
-          type: 'SET_INITIAL_DATA', 
-          payload: { auto: data.autoMatched || [], ai: data.aiSuggestions || [], ignored: data.ignored || [] } 
-        });
-        
-        toast.success(t('upload_success'));
-        setStep('wizard');
-        // Auto-switch to the AI tab if there are things to review
-        if (data.aiSuggestions?.length > 0) setActiveTab('ai');
-
-      } catch (err: any) {
-        setUploadError(err.message || t('upload_error'));
-        toast.error(err.message || t('upload_error'));
+        applyWizardPayload(data);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : t("upload_error");
+        setUploadError(msg);
+        toast.error(msg);
       } finally {
         setIsProcessing(false);
       }
@@ -281,7 +443,9 @@ export default function ReconciliationWizard() {
     try {
       const allApproved = [...state.autoMatched, ...state.approvedAi];
       const invoicesToClear = allApproved.filter(item => item.matchType === 'INVOICE');
-      const expensesToLog = allApproved.filter(item => item.aiCategory); 
+      const expensesToLog = allApproved.filter(
+        (item) => item.aiCategory && item.type === 'DEBIT',
+      );
 
       const res = await fetch('/api/reconcile/commit', {
         method: 'POST',
@@ -317,6 +481,35 @@ export default function ReconciliationWizard() {
             <p className="text-zinc-500 dark:text-zinc-400 font-medium">{t('upload_desc')}</p>
           </div>
 
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Bank account</label>
+            <Select
+              value={bankAccountId || undefined}
+              onValueChange={setBankAccountId}
+            >
+              <SelectTrigger className="w-full bg-white dark:bg-zinc-900">
+                <SelectValue placeholder="Select account for this import" />
+              </SelectTrigger>
+              <SelectContent>
+                {bankAccounts.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.name}
+                    {a.bankName ? ` · ${a.bankName}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {bankAccounts.length === 0 && (
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                No bank accounts yet.{" "}
+                <Link href="/cash-flow/overview" className="underline underline-offset-2">
+                  Open cash flow
+                </Link>{" "}
+                to add a bank account so imports are stored and matched.
+              </p>
+            )}
+          </div>
+
           <Card className="border-2 border-dashed border-zinc-300 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all duration-300 hover:border-purple-300 dark:hover:border-purple-900 shadow-none relative overflow-hidden">
             <CardContent className="flex flex-col items-center justify-center py-20 px-4 text-center">
               {isProcessing ? (
@@ -332,9 +525,10 @@ export default function ReconciliationWizard() {
                   </div>
                   <input 
                     type="file" 
-                    accept=".csv, .xlsx, .xls" 
+                    accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" 
                     onChange={handleFileUpload} 
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    disabled={!bankAccountId}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
                   />
                 </div>
               )}
@@ -347,6 +541,138 @@ export default function ReconciliationWizard() {
               className="min-h-[160px]"
             />
           )}
+        </div>
+      </div>
+    );
+  }
+
+  if (step === "mapping") {
+    const maxCols = mappingPreview.length
+      ? Math.max(...mappingPreview.map((r) => r.length))
+      : 0;
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8">
+        <div className="max-w-5xl mx-auto space-y-6">
+          <div>
+            <h1 className="text-2xl font-black text-zinc-900 dark:text-zinc-50">
+              Map columns
+            </h1>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+              We could not auto-detect the header row. Pick the row that contains your column titles,
+              then assign each column.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-4 items-end">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Header row</label>
+              <Select
+                value={String(mappingHeaderIdx)}
+                onValueChange={(v) => setMappingHeaderIdx(parseInt(v, 10))}
+              >
+                <SelectTrigger className="w-[220px] bg-white dark:bg-zinc-900">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(mappingCandidates.length
+                    ? mappingCandidates
+                    : mappingPreview.map((_, i) => i)
+                  )
+                    .filter((i) => i < mappingPreview.length)
+                    .map((i) => (
+                      <SelectItem key={i} value={String(i)}>
+                        Row {i + 1}{" "}
+                        <span className="text-zinc-400">
+                          ({mappingPreview[i]?.slice(0, 3).join(" · ").slice(0, 48)}…)
+                        </span>
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Delimiter</label>
+              <Select value={mappingDelimiter} onValueChange={setMappingDelimiter}>
+                <SelectTrigger className="w-[120px] bg-white dark:bg-zinc-900">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value=",">Comma</SelectItem>
+                  <SelectItem value=";">Semicolon</SelectItem>
+                  <SelectItem value={"\t"}>Tab</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-24">Col</TableHead>
+                  {Array.from({ length: maxCols }).map((_, c) => (
+                    <TableHead key={c} className="min-w-[140px]">
+                      <Select
+                        value={columnRoles[c] || ""}
+                        onValueChange={(v) => {
+                          setColumnRoles((prev) => {
+                            const next = [...prev];
+                            next[c] = v as ColumnRole | "";
+                            return next;
+                          });
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {COLUMN_ROLE_OPTIONS.map((o) => (
+                            <SelectItem key={`${c}-${o.value || "none"}`} value={o.value}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {mappingPreview.slice(0, 12).map((row, ri) => (
+                  <TableRow key={ri}>
+                    <TableCell className="text-xs text-zinc-500">{ri + 1}</TableCell>
+                    {Array.from({ length: maxCols }).map((_, ci) => (
+                      <TableCell key={ci} className="font-mono text-xs max-w-[180px] truncate">
+                        {row[ci] ?? ""}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setStep("upload");
+                setPendingMapFile(null);
+              }}
+            >
+              Back
+            </Button>
+            <Button onClick={handleContinueMapping} disabled={isProcessing}>
+              {isProcessing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Processing
+                </>
+              ) : (
+                "Continue import"
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     );

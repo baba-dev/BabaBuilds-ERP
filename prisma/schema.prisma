@@ -1321,11 +1321,15 @@ model BankTransaction {
   matchedInvoiceId String?
   matchedExpenseId String?
 
+  /// Dedupe key for imports: workspace + account + stable row fingerprint (hash).
+  sourceImportHash String?
+
   createdAt DateTime @default(now())
 
   @@index([workspaceId])
   @@index([accountId])
   @@index([date])
+  @@unique([workspaceId, accountId, sourceImportHash])
 }
 
 model BankAccount {

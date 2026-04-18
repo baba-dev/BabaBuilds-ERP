@@ -2,12 +2,15 @@ import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 
 type ReconciliationTransaction = {
+  id?: string;
   date?: string;
   amount?: string | number;
   description?: string;
   aiCategory?: string;
   aiVendor?: string;
   matchId?: string;
+  bankTransactionId?: string;
+  confidence?: number;
 };
 
 type CommitInput = {
@@ -24,6 +27,7 @@ type CommitSuccess = {
     message: string;
     expensesCreated: number;
     invoicesReconciled: number;
+    bankTransactionsUpdated: number;
   };
 };
 
@@ -71,10 +75,32 @@ export async function commitReconciliationTransactions({
     const result = await prisma.$transaction(async (tx) => {
       let expensesCreated = 0;
       let invoicesReconciled = 0;
+      let bankTransactionsUpdated = 0;
 
       if (newExpenses.length > 0) {
-        const created = await tx.expense.createMany({ data: newExpenses });
-        expensesCreated = created.count;
+        for (let i = 0; i < newExpenses.length; i++) {
+          const row = approvedExpenses[i];
+          const created = await tx.expense.create({ data: newExpenses[i] });
+          expensesCreated++;
+
+          const bankTxId = row.bankTransactionId ?? row.id;
+          if (bankTxId) {
+            const upd = await tx.bankTransaction.updateMany({
+              where: {
+                id: bankTxId,
+                workspaceId,
+              },
+              data: {
+                matchedExpenseId: created.id,
+                isReconciled: true,
+                reconciliationConfidence:
+                  typeof row.confidence === 'number' ? row.confidence : null,
+                category: row.aiCategory ?? undefined,
+              },
+            });
+            if (upd.count > 0) bankTransactionsUpdated++;
+          }
+        }
       }
 
       if (approvedInvoices.length > 0) {
@@ -100,17 +126,14 @@ export async function commitReconciliationTransactions({
           for (const dbInv of dbInvoices) {
             const bankLine = approvedInvoices.find((inv) => inv.matchId === dbInv.invoiceNumber);
 
-            // Use Prisma.Decimal for all money arithmetic — accumulate, not overwrite.
             const bankAmount = new Prisma.Decimal(
               Math.abs(parseFloat(String(bankLine?.amount ?? 0)))
             ).toDecimalPlaces(2);
             const existingReceived = new Prisma.Decimal(dbInv.amountReceived ?? 0);
             const newCumulative = existingReceived.plus(bankAmount).toDecimalPlaces(2);
 
-            // Mirror the grandTotal ?? totalAmount priority used everywhere else in the app.
             const billedAmount = new Prisma.Decimal(dbInv.grandTotal ?? dbInv.totalAmount ?? 0);
 
-            // 1-paisa tolerance handles floating-point rounding in legacy Float amountReceived storage.
             const ONE_PAISA = new Prisma.Decimal('0.005');
             const newStatus = newCumulative.gte(billedAmount.minus(ONE_PAISA))
               ? 'PAID'
@@ -126,11 +149,30 @@ export async function commitReconciliationTransactions({
             });
 
             invoicesReconciled++;
+
+            const bankTxId = bankLine?.bankTransactionId ?? bankLine?.id;
+            if (bankTxId) {
+              const upd = await tx.bankTransaction.updateMany({
+                where: {
+                  id: bankTxId,
+                  workspaceId,
+                },
+                data: {
+                  matchedInvoiceId: dbInv.id,
+                  isReconciled: true,
+                  reconciliationConfidence:
+                    typeof bankLine?.confidence === 'number'
+                      ? bankLine.confidence
+                      : 100,
+                },
+              });
+              if (upd.count > 0) bankTransactionsUpdated++;
+            }
           }
         }
       }
 
-      return { expensesCreated, invoicesReconciled };
+      return { expensesCreated, invoicesReconciled, bankTransactionsUpdated };
     });
 
     return {
@@ -138,9 +180,10 @@ export async function commitReconciliationTransactions({
       status: 200,
       body: {
         success: true,
-        message: `Successfully logged ${result.expensesCreated} expense(s) and reconciled ${result.invoicesReconciled} invoice(s).`,
+        message: `Successfully logged ${result.expensesCreated} expense(s), reconciled ${result.invoicesReconciled} invoice(s), and updated ${result.bankTransactionsUpdated} bank line(s).`,
         expensesCreated: result.expensesCreated,
         invoicesReconciled: result.invoicesReconciled,
+        bankTransactionsUpdated: result.bankTransactionsUpdated,
       },
     };
   } catch (error) {
