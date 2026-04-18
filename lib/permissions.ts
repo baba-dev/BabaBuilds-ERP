@@ -383,8 +383,9 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'workforce.attendance.view', 'workforce.attendance.manage',
     'workforce.leave.view', 'workforce.leave.manage', 'workforce.leave.approve',
     'workforce.reports.view', 'workforce.settings.manage',
-    // Payroll — least privilege for admin: read-only visibility
+    // Payroll — visibility + settings (runs still gated by prepare/approve/post)
     'payroll.view',
+    'payroll.settings.manage',
 
     // Documents — admin operations
     'documents.view',

@@ -20,7 +20,7 @@ function isInputMode(value: unknown): value is PayrollInputMode {
 
 export async function GET() {
   try {
-    const { access, response } = await requirePayrollSettingsAccess('workforce.view');
+    const { access, response } = await requirePayrollSettingsAccess('payroll.view');
     if (response || !access) return response!;
 
     const snapshot = await getPayrollSettingsSnapshot(access.workspaceId);
@@ -33,7 +33,7 @@ export async function GET() {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const { access, response } = await requirePayrollSettingsAccess('workforce.settings.manage');
+    const { access, response } = await requirePayrollSettingsAccess('payroll.settings.manage');
     if (response || !access) return response!;
 
     const body = (await req.json()) as {
