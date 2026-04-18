@@ -100,6 +100,11 @@ export function rankInvoiceMatchesForCredit(args: {
       reasons.push("bank_reference_present");
     }
 
+    if (amount > outstanding + 0.02) {
+      score = Math.min(score, 55);
+      reasons.push("amount_exceeds_outstanding_penalty");
+    }
+
     if (score <= 0) continue;
 
     candidates.push({ invoice: inv, score, reasons });

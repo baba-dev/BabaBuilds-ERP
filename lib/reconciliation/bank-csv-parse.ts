@@ -10,6 +10,14 @@ export type ParsedBankTransaction = {
   type: "DEBIT" | "CREDIT";
   balance?: number;
   reference?: string;
+  /** Running balance after row when source had balance column */
+  balanceAfter?: number;
+  /** Original currency code from file when mapped */
+  originalCurrency?: string;
+  /** Amount in originalCurrency when separate FX column exists */
+  amountOriginalCurrency?: number;
+  /** Parser / validation hints surfaced to UI */
+  parseFlags?: Record<string, unknown>;
 };
 
 export type ColumnRole =
@@ -20,6 +28,8 @@ export type ColumnRole =
   | "amount"
   | "balance"
   | "reference"
+  | "originalCurrency"
+  | "amountOriginalCurrency"
   | "ignore";
 
 export type ColumnMapping = Partial<Record<Exclude<ColumnRole, "ignore">, number>>;
@@ -97,6 +107,14 @@ const CREDIT_KEYS = [
 const AMOUNT_KEYS = ["amount", "amt"];
 const BALANCE_KEYS = ["balance", "closing balance", "running balance"];
 const REF_KEYS = ["reference", "ref no", "refno", "cheque", "chq", "utr", "transaction id", "txn id"];
+const CURR_KEYS = ["currency", "curr", "ccy", "waehrung"];
+const ORIG_AMT_KEYS = [
+  "original amount",
+  "orig amount",
+  "amount in orig",
+  "foreign amount",
+  "transaction currency amount",
+];
 
 function normalizeHeader(cell: string): string {
   return cell
@@ -201,6 +219,8 @@ function autoMapColumns(headerCells: string[]): ColumnMapping | null {
     else if (matchesAny(n, AMOUNT_KEYS)) mapping.amount ??= index;
     else if (matchesAny(n, BALANCE_KEYS)) mapping.balance ??= index;
     else if (matchesAny(n, REF_KEYS)) mapping.reference ??= index;
+    else if (matchesAny(n, CURR_KEYS)) mapping.originalCurrency ??= index;
+    else if (matchesAny(n, ORIG_AMT_KEYS)) mapping.amountOriginalCurrency ??= index;
   });
 
   const hasAmount =
@@ -342,15 +362,28 @@ function rowToTransaction(
 
   if (amount <= 0 || !Number.isFinite(amount)) return null;
 
-  let balance: number | undefined;
+  let balanceAfter: number | undefined;
   if (mapping.balance !== undefined) {
     const b = parseSignedAmount(row[mapping.balance]);
-    if (Number.isFinite(b)) balance = b;
+    if (Number.isFinite(b)) balanceAfter = b;
   }
 
   let reference: string | undefined;
   if (mapping.reference !== undefined && row[mapping.reference]) {
     reference = String(row[mapping.reference]).trim();
+  }
+
+  let originalCurrency: string | undefined;
+  if (mapping.originalCurrency !== undefined && row[mapping.originalCurrency]) {
+    originalCurrency = String(row[mapping.originalCurrency]).trim().slice(0, 8).toUpperCase();
+  }
+
+  let amountOriginalCurrency: number | undefined;
+  if (mapping.amountOriginalCurrency !== undefined) {
+    const o = parseSignedAmount(row[mapping.amountOriginalCurrency]);
+    if (Number.isFinite(o) && Math.abs(o) > 0) {
+      amountOriginalCurrency = Math.abs(o);
+    }
   }
 
   return {
@@ -359,8 +392,11 @@ function rowToTransaction(
     description,
     amount,
     type,
-    balance,
+    balance: balanceAfter,
+    balanceAfter,
     reference,
+    originalCurrency,
+    amountOriginalCurrency,
   };
 }
 

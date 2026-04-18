@@ -58,6 +58,28 @@ export type Transaction = {
   matchId?: string;
   confidence?: number;
   bankTransactionId?: string;
+  ruleCategory?: string;
+  ruleVendor?: string;
+  invoiceMatchCandidates?: Array<{
+    invoiceNumber: string;
+    score: number;
+    reasons: string[];
+  }>;
+  expenseMatchCandidates?: Array<{
+    expenseId: string;
+    vendor: string;
+    score: number;
+    reasons: string[];
+  }>;
+  poMatchCandidates?: Array<{
+    poNumber: string;
+    score: number;
+    reasons: string[];
+  }>;
+  /** Multi-invoice application from one bank credit */
+  invoiceSplits?: Array<{ invoiceNumber: string; amount: number }>;
+  /** Skip new expense row; link bank debit to existing expense */
+  linkToExpenseId?: string;
 };
 
 type State = {
@@ -150,6 +172,8 @@ const COLUMN_ROLE_OPTIONS: { value: ColumnRole | ""; label: string }[] = [
   { value: "amount", label: "Amount (signed)" },
   { value: "balance", label: "Balance" },
   { value: "reference", label: "Reference" },
+  { value: "originalCurrency", label: "Original currency" },
+  { value: "amountOriginalCurrency", label: "Amount (original ccy)" },
 ];
 
 export default function ReconciliationWizard() {
@@ -175,6 +199,17 @@ export default function ReconciliationWizard() {
   const [mappingHeaderIdx, setMappingHeaderIdx] = useState(0);
   const [pendingMapFile, setPendingMapFile] = useState<File | null>(null);
   const [columnRoles, setColumnRoles] = useState<(ColumnRole | "")[]>([]);
+  const [registerRows, setRegisterRows] = useState<
+    Array<{
+      id: string;
+      date: string;
+      description: string;
+      amount: string;
+      type: string | null;
+      isReconciled: boolean;
+    }>
+  >([]);
+  const [registerLoading, setRegisterLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -200,6 +235,29 @@ export default function ReconciliationWizard() {
     };
   }, []);
 
+  const loadRegister = useCallback(async () => {
+    if (!bankAccountId) return;
+    setRegisterLoading(true);
+    try {
+      const q = new URLSearchParams({
+        accountId: bankAccountId,
+        unreconciled: "1",
+        limit: "40",
+      });
+      const res = await fetch(`/api/reconcile/transactions?${q}`);
+      const json = await res.json();
+      if (res.ok && Array.isArray(json.data)) setRegisterRows(json.data);
+    } catch {
+      /* ignore */
+    } finally {
+      setRegisterLoading(false);
+    }
+  }, [bankAccountId]);
+
+  useEffect(() => {
+    if (step === "wizard" && bankAccountId) void loadRegister();
+  }, [step, bankAccountId, loadRegister]);
+
   useEffect(() => {
     if (!mappingPreview.length) return;
     const width = Math.max(...mappingPreview.map((r) => r.length));
@@ -215,18 +273,41 @@ export default function ReconciliationWizard() {
       autoMatched?: Transaction[];
       aiSuggestions?: Transaction[];
       ignored?: unknown[];
+      bankAccountId?: string;
+      reconciliationSettings?: {
+        autoMatchMinScore?: number;
+        autoMatchSuggestionMin?: number;
+      };
     }) => {
+      if (typeof data.bankAccountId === "string" && data.bankAccountId) {
+        setBankAccountId(data.bankAccountId);
+      }
+      const minAuto = data.reconciliationSettings?.autoMatchMinScore ?? 95;
+      const minSuggest = data.reconciliationSettings?.autoMatchSuggestionMin ?? 70;
+      const ai = (data.aiSuggestions || []).map((row) => {
+        if (row.type !== "CREDIT" || row.matchType) return row;
+        const c = row.invoiceMatchCandidates?.[0];
+        if (
+          c &&
+          c.score >= minSuggest &&
+          c.score < minAuto &&
+          !row.matchId
+        ) {
+          return { ...row, matchId: c.invoiceNumber, confidence: c.score };
+        }
+        return row;
+      });
       dispatch({
         type: "SET_INITIAL_DATA",
         payload: {
           auto: data.autoMatched || [],
-          ai: data.aiSuggestions || [],
+          ai,
           ignored: (data.ignored || []) as Transaction[],
         },
       });
       toast.success(t("upload_success"));
       setStep("wizard");
-      if (data.aiSuggestions?.length) setActiveTab("ai");
+      if (ai.length) setActiveTab("ai");
     },
     [t],
   );
@@ -442,10 +523,24 @@ export default function ReconciliationWizard() {
 
     try {
       const allApproved = [...state.autoMatched, ...state.approvedAi];
-      const invoicesToClear = allApproved.filter(item => item.matchType === 'INVOICE');
-      const expensesToLog = allApproved.filter(
-        (item) => item.aiCategory && item.type === 'DEBIT',
+      const invoiceSplits = allApproved.filter(
+        (item) =>
+          item.type === "CREDIT" &&
+          Array.isArray(item.invoiceSplits) &&
+          item.invoiceSplits.length > 0,
       );
+      const invoicesSimple = allApproved.filter(
+        (item) =>
+          item.type === "CREDIT" &&
+          (item.matchType === "INVOICE" || Boolean(item.matchId)) &&
+          (!item.invoiceSplits || item.invoiceSplits.length === 0),
+      );
+      const invoicesToClear = [...invoicesSimple, ...invoiceSplits];
+      const expensesToLog = allApproved.filter((item) => {
+        if (item.type !== "DEBIT") return false;
+        if (item.linkToExpenseId) return true;
+        return Boolean(item.aiCategory);
+      });
 
       const res = await fetch('/api/reconcile/commit', {
         method: 'POST',
@@ -463,6 +558,7 @@ export default function ReconciliationWizard() {
       
       setStep('upload');
       dispatch({ type: 'RESET_ALL' });
+      void loadRegister();
 
     } catch (err: any) {
       toast.error(err.message || t('save_error'), { id: toastId });
@@ -700,6 +796,45 @@ export default function ReconciliationWizard() {
             {isFinalizing ? t('locking') : t('finalize_btn', { count: totalReadyToCommit })}
           </Button>
         </div>
+
+        <Card variant="quiet" className="border-zinc-200 dark:border-zinc-800">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-50">
+                Unreconciled bank lines (this account)
+              </h2>
+              <Button type="button" size="sm" variant="outline" onClick={() => void loadRegister()} disabled={registerLoading || !bankAccountId}>
+                {registerLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Refresh"}
+              </Button>
+            </div>
+            {!bankAccountId ? (
+              <p className="text-xs text-zinc-500">Select a bank account on upload to scope the register.</p>
+            ) : registerRows.length === 0 ? (
+              <p className="text-xs text-zinc-500">No unreconciled lines, or import to create bank transactions.</p>
+            ) : (
+              <div className="overflow-x-auto rounded-md border border-zinc-200 dark:border-zinc-800">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {registerRows.map((r) => (
+                      <TableRow key={r.id}>
+                        <TableCell className="text-xs whitespace-nowrap">{r.date.slice(0, 10)}</TableCell>
+                        <TableCell className="text-xs max-w-[280px] truncate">{r.description}</TableCell>
+                        <TableCell className="text-xs text-right font-mono">{r.amount}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* METRICS ROW */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

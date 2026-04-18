@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { scanBuffer } from "@/lib/security/clamav";
 import { decrypt } from "@/lib/encryption";
 import {
@@ -12,28 +13,39 @@ import {
   type DateParsePreference,
 } from "@/lib/reconciliation/bank-csv-parse";
 import { excelBufferToGrid } from "@/lib/reconciliation/bank-excel";
+import { parseOfxTransactions } from "@/lib/reconciliation/bank-ofx";
+import { parseBankPdfToTransactions } from "@/lib/reconciliation/bank-pdf";
 import { persistAndMatchTransactions } from "@/lib/reconciliation/run-reconciliation-upload";
+import { getOrCreateReconciliationSettings } from "@/lib/reconciliation/reconciliation-settings";
+
+const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 
 export async function POST(request: Request) {
+  const started = Date.now();
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.workspaceId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const workspaceId = session.workspaceId;
+    const userId = (session as { user?: { id?: string } }).user?.id ?? null;
 
     const profile = await prisma.businessProfile.findUnique({
       where: { workspaceId },
     });
 
-    let groqApiKey: string | null = null;
+    const serverGroq = process.env.GROQ_RECONCILIATION_API_KEY?.trim() || null;
+    let userGroqKey: string | null = null;
     if (profile?.groqApiKey) {
       try {
-        groqApiKey = decrypt(profile.groqApiKey);
+        userGroqKey = decrypt(profile.groqApiKey);
       } catch {
-        groqApiKey = profile.groqApiKey;
+        userGroqKey = profile.groqApiKey;
       }
     }
+    const groqApiKey = serverGroq || userGroqKey;
+
+    const settings = await getOrCreateReconciliationSettings(workspaceId);
 
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
@@ -60,87 +72,191 @@ export async function POST(request: Request) {
     }
 
     const fileBytes = await file.arrayBuffer();
+    if (fileBytes.byteLength > MAX_UPLOAD_BYTES) {
+      return NextResponse.json(
+        { error: `File too large (max ${MAX_UPLOAD_BYTES / 1024 / 1024} MB).` },
+        { status: 400 },
+      );
+    }
+
     const buffer = Buffer.from(fileBytes);
     const isSafe = await scanBuffer(buffer);
     if (!isSafe) {
       return NextResponse.json({ error: "Malware detected in uploaded file." }, { status: 400 });
     }
 
-    const lower = file.name.toLowerCase();
-    let parseResult:
-      | ReturnType<typeof parseBankStatementFromBuffer>
-      | ReturnType<typeof parseBankStatementFromRows>;
+    const importBatch = await prisma.bankImportBatch.create({
+      data: {
+        workspaceId,
+        accountId: bankAccountId,
+        fileName: file.name,
+        mimeType: file.type || null,
+        status: "PENDING",
+        parseVersion: "2",
+        createdByUserId: userId,
+        rawFileData:
+          settings.storeRawImportBytes && settings.importRawRetentionDays > 0
+            ? buffer
+            : undefined,
+      },
+    });
 
-    if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
+    const lower = file.name.toLowerCase();
+    let transactions: import("@/lib/reconciliation/bank-csv-parse").ParsedBankTransaction[] = [];
+    let parseMeta: Prisma.InputJsonValue = {};
+
+    if (lower.endsWith(".ofx") || lower.endsWith(".qfx")) {
+      const text = buffer.toString("utf-8");
+      transactions = parseOfxTransactions(text);
+      parseMeta = { format: "OFX", rowCount: transactions.length };
+    } else if (lower.endsWith(".pdf")) {
+      transactions = await parseBankPdfToTransactions(buffer);
+      parseMeta = { format: "PDF", rowCount: transactions.length };
+    } else if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
       const rows = excelBufferToGrid(buffer);
-      parseResult = parseBankStatementFromRows(rows, {
+      const parseResult = parseBankStatementFromRows(rows, {
         datePreference,
         encoding: "xlsx",
       });
-    } else {
-      parseResult = parseBankStatementFromBuffer(buffer, { datePreference });
-    }
-
-    if (!parseResult.ok && parseResult.needsMapping) {
-      let previewRows = parseResult.previewRows;
-      let delimiter = parseResult.delimiter;
-
-      if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
-        const rows = excelBufferToGrid(buffer);
-        previewRows = rows.slice(0, 20);
-        delimiter = ",";
-      } else {
-        const { text } = decodeBankStatementBuffer(buffer);
-        previewRows = parseRows(text, delimiter).slice(0, 20);
+      if (!parseResult.ok && parseResult.needsMapping) {
+        await prisma.bankImportBatch.update({
+          where: { id: importBatch.id },
+          data: { status: "FAILED", parseMeta: { needsMapping: true } as Prisma.InputJsonValue },
+        });
+        return NextResponse.json(
+          {
+            needsMapping: true,
+            message: parseResult.message,
+            previewRows: rows.slice(0, 20),
+            candidateHeaderIndices: parseResult.candidateHeaderIndices,
+            delimiter: ",",
+            encoding: "xlsx",
+            fileName: file.name,
+            bankAccountId,
+            importBatchId: importBatch.id,
+          },
+          { status: 200 },
+        );
       }
-
-      return NextResponse.json(
-        {
-          needsMapping: true,
-          message: parseResult.message,
-          previewRows,
-          candidateHeaderIndices: parseResult.candidateHeaderIndices,
-          delimiter,
-          encoding: !parseResult.ok ? parseResult.encoding : "utf-8",
-          fileName: file.name,
-          bankAccountId,
-        },
-        { status: 200 },
-      );
+      if (!parseResult.ok) {
+        await prisma.bankImportBatch.update({
+          where: { id: importBatch.id },
+          data: { status: "FAILED" },
+        });
+        return NextResponse.json({ error: "Could not parse bank statement." }, { status: 400 });
+      }
+      transactions = parseResult.transactions;
+      parseMeta = {
+        format: "XLSX",
+        confidence: parseResult.confidence,
+        headerRowIndex: parseResult.headerRowIndex,
+        columnLabels: parseResult.columnLabels,
+      };
+    } else {
+      const parseResult = parseBankStatementFromBuffer(buffer, { datePreference });
+      if (!parseResult.ok && parseResult.needsMapping) {
+        const { text } = decodeBankStatementBuffer(buffer);
+        const previewRows = parseRows(text, parseResult.delimiter).slice(0, 20);
+        await prisma.bankImportBatch.update({
+          where: { id: importBatch.id },
+          data: { status: "FAILED", parseMeta: { needsMapping: true } as Prisma.InputJsonValue },
+        });
+        return NextResponse.json(
+          {
+            needsMapping: true,
+            message: parseResult.message,
+            previewRows,
+            candidateHeaderIndices: parseResult.candidateHeaderIndices,
+            delimiter: parseResult.delimiter,
+            encoding: parseResult.encoding,
+            fileName: file.name,
+            bankAccountId,
+            importBatchId: importBatch.id,
+          },
+          { status: 200 },
+        );
+      }
+      if (!parseResult.ok) {
+        await prisma.bankImportBatch.update({
+          where: { id: importBatch.id },
+          data: { status: "FAILED" },
+        });
+        return NextResponse.json({ error: "Could not parse bank statement." }, { status: 400 });
+      }
+      transactions = parseResult.transactions;
+      parseMeta = {
+        format: "CSV",
+        confidence: parseResult.confidence,
+        headerRowIndex: parseResult.headerRowIndex,
+        delimiter: parseResult.delimiter,
+        encoding: parseResult.encoding,
+        columnLabels: parseResult.columnLabels,
+      };
     }
 
-    if (!parseResult.ok) {
+    if (transactions.length === 0) {
+      await prisma.bankImportBatch.update({
+        where: { id: importBatch.id },
+        data: {
+          status: "FAILED",
+          rowCount: 0,
+          parseMeta: JSON.parse(JSON.stringify(parseMeta)) as Prisma.InputJsonValue,
+        },
+      });
       return NextResponse.json(
-        { error: "Could not parse bank statement." },
+        { error: "No transactions found in file." },
         { status: 400 },
       );
     }
 
-    const fileBase64 = buffer.toString("base64");
-
     const { autoMatched, aiSuggestions } = await persistAndMatchTransactions({
       workspaceId,
       accountId: bankAccountId,
-      parsed: parseResult.transactions,
+      parsed: transactions,
       groqApiKey,
+      settings,
+      importBatchId: importBatch.id,
     });
+
+    await prisma.bankImportBatch.update({
+      where: { id: importBatch.id },
+      data: {
+        status: "COMPLETED",
+        rowCount: transactions.length,
+        parseMeta: JSON.parse(
+          JSON.stringify({
+            ...parseMeta,
+            autoMatched: autoMatched.length,
+            aiQueue: aiSuggestions.length,
+          }),
+        ) as Prisma.InputJsonValue,
+      },
+    });
+
+    console.info(
+      JSON.stringify({
+        event: "reconciliation_import",
+        workspaceId,
+        importBatchId: importBatch.id,
+        rowCount: transactions.length,
+        ms: Date.now() - started,
+      }),
+    );
 
     return NextResponse.json({
       autoMatched,
       aiSuggestions,
       ignored: [],
       bankAccountId,
-      parseMeta: {
-        confidence: parseResult.confidence,
-        headerRowIndex: parseResult.headerRowIndex,
-        delimiter: parseResult.delimiter,
-        encoding: parseResult.encoding,
-        columnLabels: parseResult.columnLabels,
+      importBatchId: importBatch.id,
+      parseMeta,
+      reconciliationSettings: {
+        autoMatchMinScore: settings.autoMatchMinScore,
+        autoMatchSuggestionMin: settings.autoMatchSuggestionMin,
       },
-      fileBase64,
-      fileName: file.name,
     });
-  } catch {
+  } catch (e) {
+    console.error("reconcile upload", e);
     return NextResponse.json(
       {
         error:

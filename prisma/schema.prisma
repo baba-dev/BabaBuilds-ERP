@@ -293,57 +293,61 @@ model Workspace {
   updatedAt DateTime @default(now()) @updatedAt
 
   // RELATIONS
-  users                        WorkspaceUser[]
-  businessProfile              BusinessProfile?
-  clients                      Client[]
-  invoices                     Invoice[]
-  billingTransactions          BillingTransaction[]
-  expenses                     Expense[]
-  withholdingEvents            WithholdingEvent[]
-  taxCreditEvents              TaxCreditEvent[]
-  taxCreditLedgerEntries       TaxCreditLedgerEntry[]
-  taxReturnPeriods             TaxReturnPeriod[]
-  bankTransactions             BankTransaction[]
-  bankAccounts                 BankAccount[]
-  investments                  Investment[]
-  serviceTemplates             ServiceTemplate[]
-  proposals                    Proposal[]
-  proposalConversions          ProposalConversion[]
-  billingMilestones            BillingMilestone[]
-  retainers                    Retainer[]
-  tasks                        Task[]
-  invoiceIdempotencies         InvoiceIdempotency[]
-  financialOperationLocks      FinancialOperationIdempotency[]
-  taxPreference                WorkspaceTaxPreference?
-  workspaceTaxOverrides        WorkspaceTaxOverride[]
-  taxRateOverrides             TaxRateOverride[]
-  taxRateOverrideAuditLogs     TaxRateOverrideAuditLog[]
-  taxDecisionAuditLogs         TaxDecisionAuditLog[]
-  taxableEvents                TaxableEvent[]
-  taxDeterminations            TaxDetermination[]
-  taxComponentLines            TaxComponentLine[]
-  taxAuditEvents               TaxAuditEvent[]
-  taxOperationIdempotencies    TaxOperationIdempotency[]
-  taxReferenceEntries          TaxReferenceEntry[]
-  taxPeriods                   TaxPeriod[]
-  taxForms                     TaxForm[]
-  taxReturns                   TaxReturn[]
-  taxReturnFieldValues         TaxReturnFieldValue[]
-  taxReadinessChecks           TaxReadinessCheck[]
-  taxReadinessBlockers         TaxReadinessBlocker[]
-  fileImportAuditLogs          FileImportAuditLog[]
-  appActivityLogs              AppActivityLog[]
-  workspaceInvites             WorkspaceInvite[]
-  accountingTransactions       AccountingTransaction[]
-  accountingIntegrityRuns      AccountingIntegrityRun[]
-  accountingViolationReports   AccountingViolationReport[]
-  cashForecastSnapshots        CashForecastSnapshot[]
-  cashForecastAssumptions      CashForecastAssumption[]
-  cashForecastAdjustments      CashForecastManualAdjustment[]
-  cashForecastLineItemPlans    CashForecastLineItemPlan[]
-  cashForecastAlertPreferences CashForecastAlertPreference[]
-  clientPaymentBehaviors       ClientPaymentBehavior[]
-  rbacAuditLogs                RbacAuditLog[]
+  users                           WorkspaceUser[]
+  businessProfile                 BusinessProfile?
+  clients                         Client[]
+  invoices                        Invoice[]
+  billingTransactions             BillingTransaction[]
+  expenses                        Expense[]
+  withholdingEvents               WithholdingEvent[]
+  taxCreditEvents                 TaxCreditEvent[]
+  taxCreditLedgerEntries          TaxCreditLedgerEntry[]
+  taxReturnPeriods                TaxReturnPeriod[]
+  bankTransactions                BankTransaction[]
+  bankAccounts                    BankAccount[]
+  bankImportBatches               BankImportBatch[]
+  workspaceReconciliationSettings WorkspaceReconciliationSettings?
+  expenseReconciliationCategories ExpenseReconciliationCategory[]
+  bankReconciliationRules         BankReconciliationRule[]
+  investments                     Investment[]
+  serviceTemplates                ServiceTemplate[]
+  proposals                       Proposal[]
+  proposalConversions             ProposalConversion[]
+  billingMilestones               BillingMilestone[]
+  retainers                       Retainer[]
+  tasks                           Task[]
+  invoiceIdempotencies            InvoiceIdempotency[]
+  financialOperationLocks         FinancialOperationIdempotency[]
+  taxPreference                   WorkspaceTaxPreference?
+  workspaceTaxOverrides           WorkspaceTaxOverride[]
+  taxRateOverrides                TaxRateOverride[]
+  taxRateOverrideAuditLogs        TaxRateOverrideAuditLog[]
+  taxDecisionAuditLogs            TaxDecisionAuditLog[]
+  taxableEvents                   TaxableEvent[]
+  taxDeterminations               TaxDetermination[]
+  taxComponentLines               TaxComponentLine[]
+  taxAuditEvents                  TaxAuditEvent[]
+  taxOperationIdempotencies       TaxOperationIdempotency[]
+  taxReferenceEntries             TaxReferenceEntry[]
+  taxPeriods                      TaxPeriod[]
+  taxForms                        TaxForm[]
+  taxReturns                      TaxReturn[]
+  taxReturnFieldValues            TaxReturnFieldValue[]
+  taxReadinessChecks              TaxReadinessCheck[]
+  taxReadinessBlockers            TaxReadinessBlocker[]
+  fileImportAuditLogs             FileImportAuditLog[]
+  appActivityLogs                 AppActivityLog[]
+  workspaceInvites                WorkspaceInvite[]
+  accountingTransactions          AccountingTransaction[]
+  accountingIntegrityRuns         AccountingIntegrityRun[]
+  accountingViolationReports      AccountingViolationReport[]
+  cashForecastSnapshots           CashForecastSnapshot[]
+  cashForecastAssumptions         CashForecastAssumption[]
+  cashForecastAdjustments         CashForecastManualAdjustment[]
+  cashForecastLineItemPlans       CashForecastLineItemPlan[]
+  cashForecastAlertPreferences    CashForecastAlertPreference[]
+  clientPaymentBehaviors          ClientPaymentBehavior[]
+  rbacAuditLogs                   RbacAuditLog[]
 
   // IMS Relations
   products           Product[]
@@ -400,8 +404,8 @@ model DemoProvisionAttempt {
   fingerprint String?
   templateKey String?
 
-  isAllowed    Boolean @default(false)
-  blockReason  String?
+  isAllowed         Boolean @default(false)
+  blockReason       String?
   retryAfterSeconds Int?
 
   @@index([createdAt])
@@ -783,11 +787,12 @@ model Invoice {
   items                InvoiceItem[]
   linkedServiceOrders  ServiceOrder[]        @relation("ServiceOrderLinkedInvoice")
 
-  sourceProposalId    String?
-  sourceProposal      Proposal?            @relation("ProposalToInvoice", fields: [sourceProposalId], references: [id])
-  proposalConversions ProposalConversion[]
-  billingMilestones   BillingMilestone[]
-  withholdingEvents   WithholdingEvent[]
+  sourceProposalId      String?
+  sourceProposal        Proposal?                     @relation("ProposalToInvoice", fields: [sourceProposalId], references: [id])
+  proposalConversions   ProposalConversion[]
+  billingMilestones     BillingMilestone[]
+  withholdingEvents     WithholdingEvent[]
+  bankTransactionSplits BankTransactionInvoiceSplit[]
 
   // Security: Two different workspaces can use invoice number "001"
   @@unique([invoiceNumber, workspaceId])
@@ -853,12 +858,12 @@ model TaxableEvent {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  sourceEntityKind String // invoice | expense
-  sourceEntityId   String
-  taxableAmount    Decimal
-  originCountryCode      String @default("")
-  destinationCountryCode String @default("")
-  occurredAt       DateTime
+  sourceEntityKind       String // invoice | expense
+  sourceEntityId         String
+  taxableAmount          Decimal
+  originCountryCode      String   @default("")
+  destinationCountryCode String   @default("")
+  occurredAt             DateTime
 
   invoiceId String?
   invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
@@ -874,19 +879,19 @@ model TaxableEvent {
 }
 
 model TaxDetermination {
-  id              String    @id @default(cuid())
-  workspaceId   String
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  taxableEventId String    @unique
+  taxableEventId String       @unique
   taxableEvent   TaxableEvent @relation(fields: [taxableEventId], references: [id], onDelete: Cascade)
 
-  ratePercent       Float
-  taxAmount         Decimal
-  totalAmount       Decimal
-  resolutionSource  String // MANUAL_OVERRIDE | WORKSPACE_RULE | FALLBACK
-  resolutionReason  String
-  overrideId        String?
+  ratePercent      Float
+  taxAmount        Decimal
+  totalAmount      Decimal
+  resolutionSource String // MANUAL_OVERRIDE | WORKSPACE_RULE | FALLBACK
+  resolutionReason String
+  overrideId       String?
 
   componentLines TaxComponentLine[]
 
@@ -916,9 +921,9 @@ model TaxComponentLine {
  * TaxAuditEvent — append-only audit trail for tax operations (correlation-friendly).
  */
 model TaxAuditEvent {
-  id            String    @id @default(cuid())
-  workspaceId   String
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   eventType     String // DETERMINATION | READINESS_RUN | IMPORT_BATCH | DOCUMENT_LINK | RETURN_PERIOD_FILED
   correlationId String?
@@ -938,11 +943,11 @@ model TaxAuditEvent {
  * TaxOperationIdempotency — dedupe readiness runs and import batches per workspace + key.
  */
 model TaxOperationIdempotency {
-  id            String    @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  operation   String // TAX_READINESS_RUN | TAX_IMPORT_BATCH
+  operation      String // TAX_READINESS_RUN | TAX_IMPORT_BATCH
   idempotencyKey String
   requestHash    String
   responseBody   Json?
@@ -959,21 +964,21 @@ model TaxOperationIdempotency {
  * TaxReferenceEntry — global India compliance catalog (seeded reference data).
  */
 model TaxReferenceEntry {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   workspaceId String?
   workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  entryType   String // TAX_TYPE | FILING_FREQUENCY | CORE_FORM | BASELINE_RATE | CALENDAR_RULE
-  countryCode String   @default("IN")
-  code        String
-  label       String?
-  payloadJson Json
+  entryType     String // TAX_TYPE | FILING_FREQUENCY | CORE_FORM | BASELINE_RATE | CALENDAR_RULE
+  countryCode   String    @default("IN")
+  code          String
+  label         String?
+  payloadJson   Json
   effectiveFrom DateTime?
   effectiveTo   DateTime?
 
-  sourceDocumentRef Json?
-  verificationLevel String?
-  reviewStatus      String?
+  sourceDocumentRef      Json?
+  verificationLevel      String?
+  reviewStatus           String?
   legalCertaintyRequired Boolean @default(false)
 
   createdAt DateTime @default(now())
@@ -1307,14 +1312,28 @@ model BankTransaction {
   accountId String?
   account   BankAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
 
+  importBatchId String?
+  importBatch   BankImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+
   date                     DateTime
   description              String
-  amount                   Decimal // Positive for deposits, negative for withdrawals
+  amount                   Decimal // Account currency: positive deposits, negative withdrawals
   referenceId              String?
   transactionType          String?
   isInternalTransfer       Boolean  @default(false)
   reconciliationConfidence Float?
   category                 String?
+
+  /// Statement running balance after row (when source file had a balance column).
+  balanceAfter Decimal?
+
+  /// Original statement currency when different from account (optional).
+  originalCurrency       String?
+  /// Amount in originalCurrency when FX column mapped (optional).
+  amountOriginalCurrency Decimal?
+
+  /// JSON: balance continuity flags, parse warnings, suggested invoice ids, etc.
+  parseFlagsJson Json?
 
   // Reconciliation state
   isReconciled     Boolean @default(false)
@@ -1326,10 +1345,14 @@ model BankTransaction {
 
   createdAt DateTime @default(now())
 
+  invoiceSplits BankTransactionInvoiceSplit[]
+
+  @@unique([workspaceId, accountId, sourceImportHash])
   @@index([workspaceId])
   @@index([accountId])
   @@index([date])
-  @@unique([workspaceId, accountId, sourceImportHash])
+  @@index([workspaceId, isReconciled, date])
+  @@index([importBatchId])
 }
 
 model BankAccount {
@@ -1348,13 +1371,114 @@ model BankAccount {
   // Optional cached value; source of truth is openingBalance + transactions.
   currentBalance Decimal?
 
-  transactions BankTransaction[]
+  transactions  BankTransaction[]
+  importBatches BankImportBatch[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([workspaceId, name])
   @@index([workspaceId])
+}
+
+/// One uploaded bank file (CSV/XLSX/OFX/PDF) — audit trail for imports.
+model BankImportBatch {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  accountId String
+  account   BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  fileName     String
+  mimeType     String?
+  rowCount     Int     @default(0)
+  parseVersion String  @default("1")
+  parseMeta    Json?
+  status       String  @default("COMPLETED") // PENDING|COMPLETED|FAILED
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  /// Optional raw file blob when workspace enables retention (governance).
+  rawFileData Bytes?
+
+  transactions BankTransaction[]
+
+  @@index([workspaceId, accountId, createdAt(sort: Desc)])
+  @@index([workspaceId, createdAt(sort: Desc)])
+}
+
+/// Workspace-scoped expense categories for reconciliation (replaces ad-hoc localStorage lists).
+model ExpenseReconciliationCategory {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name      String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, sortOrder])
+}
+
+/// User-defined rules evaluated before AI (narration substring → category/vendor/internal transfer).
+model BankReconciliationRule {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  priority            Int     @default(0)
+  pattern             String
+  matchTxnType        String  @default("ANY") // ANY|DEBIT|CREDIT
+  setCategory         String?
+  setVendor           String?
+  setInternalTransfer Boolean @default(false)
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, isActive, priority])
+}
+
+/// Tunable reconciliation thresholds and retention (PII governance).
+model WorkspaceReconciliationSettings {
+  id          String    @id @default(cuid())
+  workspaceId String    @unique
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  /// Auto-apply invoice match when score >= this (default 95).
+  autoMatchMinScore      Float   @default(95)
+  /// Surface top suggestions when score >= this but below autoMatchMinScore.
+  autoMatchSuggestionMin Float   @default(70)
+  /// Days to retain raw import payload in staging (0 = do not retain beyond parse).
+  importRawRetentionDays Int     @default(0)
+  /// When true, store raw file bytes in BankImportBatch.rawFileData (encrypted at app level optional future).
+  storeRawImportBytes    Boolean @default(false)
+  /// PLAID|NONE|GROQ — PLAID is stub until keys wired.
+  bankFeedProvider       String  @default("NONE")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Split one bank credit across multiple invoices (partial applications).
+model BankTransactionInvoiceSplit {
+  id                String          @id @default(cuid())
+  bankTransactionId String
+  bankTransaction   BankTransaction @relation(fields: [bankTransactionId], references: [id], onDelete: Cascade)
+
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  amount Decimal
+
+  createdAt DateTime @default(now())
+
+  @@index([bankTransactionId])
+  @@index([invoiceId])
 }
 
 model CashForecastSnapshot {

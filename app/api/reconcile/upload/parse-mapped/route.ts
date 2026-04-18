@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { decrypt } from "@/lib/encryption";
 import { scanBuffer } from "@/lib/security/clamav";
 import {
@@ -13,6 +14,9 @@ import {
 } from "@/lib/reconciliation/bank-csv-parse";
 import { excelBufferToGrid } from "@/lib/reconciliation/bank-excel";
 import { persistAndMatchTransactions } from "@/lib/reconciliation/run-reconciliation-upload";
+import { getOrCreateReconciliationSettings } from "@/lib/reconciliation/reconciliation-settings";
+
+const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 
 export async function POST(request: Request) {
   try {
@@ -21,18 +25,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const workspaceId = session.workspaceId;
+    const userId = (session as { user?: { id?: string } }).user?.id ?? null;
 
     const profile = await prisma.businessProfile.findUnique({
       where: { workspaceId },
     });
-    let groqApiKey: string | null = null;
+    const serverGroq = process.env.GROQ_RECONCILIATION_API_KEY?.trim() || null;
+    let userGroqKey: string | null = null;
     if (profile?.groqApiKey) {
       try {
-        groqApiKey = decrypt(profile.groqApiKey);
+        userGroqKey = decrypt(profile.groqApiKey);
       } catch {
-        groqApiKey = profile.groqApiKey;
+        userGroqKey = profile.groqApiKey;
       }
     }
+    const groqApiKey = serverGroq || userGroqKey;
+    const settings = await getOrCreateReconciliationSettings(workspaceId);
 
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== "object") {
@@ -66,10 +74,28 @@ export async function POST(request: Request) {
     }
 
     const buffer = Buffer.from(fileBase64, "base64");
+    if (buffer.length > MAX_UPLOAD_BYTES) {
+      return NextResponse.json({ error: "File too large." }, { status: 400 });
+    }
     const isSafe = await scanBuffer(buffer);
     if (!isSafe) {
       return NextResponse.json({ error: "Malware detected in uploaded file." }, { status: 400 });
     }
+
+    const importBatch = await prisma.bankImportBatch.create({
+      data: {
+        workspaceId,
+        accountId: bankAccountId,
+        fileName,
+        status: "PENDING",
+        parseVersion: "2-manual-map",
+        createdByUserId: userId,
+        rawFileData:
+          settings.storeRawImportBytes && settings.importRawRetentionDays > 0
+            ? buffer
+            : undefined,
+      },
+    });
 
     const lower = fileName.toLowerCase();
     let rows: string[][];
@@ -88,6 +114,10 @@ export async function POST(request: Request) {
     });
 
     if (extracted.length === 0) {
+      await prisma.bankImportBatch.update({
+        where: { id: importBatch.id },
+        data: { status: "FAILED" },
+      });
       return NextResponse.json(
         { error: "No transactions extracted with the provided mapping." },
         { status: 400 },
@@ -99,6 +129,17 @@ export async function POST(request: Request) {
       accountId: bankAccountId,
       parsed: extracted,
       groqApiKey,
+      settings,
+      importBatchId: importBatch.id,
+    });
+
+    await prisma.bankImportBatch.update({
+      where: { id: importBatch.id },
+      data: {
+        status: "COMPLETED",
+        rowCount: extracted.length,
+        parseMeta: { manualMap: true } as Prisma.InputJsonValue,
+      },
     });
 
     return NextResponse.json({
@@ -106,7 +147,12 @@ export async function POST(request: Request) {
       aiSuggestions,
       ignored: [],
       bankAccountId,
+      importBatchId: importBatch.id,
       encoding: "manual-map",
+      reconciliationSettings: {
+        autoMatchMinScore: settings.autoMatchMinScore,
+        autoMatchSuggestionMin: settings.autoMatchSuggestionMin,
+      },
     });
   } catch (e) {
     console.error("parse-mapped error", e);
