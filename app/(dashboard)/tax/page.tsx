@@ -65,6 +65,7 @@ export default function WealthAndTaxPlanner() {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [taxAdvancedEnabled, setTaxAdvancedEnabled] = useState(false);
   const [taxAuditRows, setTaxAuditRows] = useState<any[]>([]);
   const [taxAuditPage, setTaxAuditPage] = useState(1);
   const [taxAuditTotalPages, setTaxAuditTotalPages] = useState(1);
@@ -105,6 +106,22 @@ export default function WealthAndTaxPlanner() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const loadModules = async () => {
+      try {
+        const res = await fetch("/api/workspace/modules");
+        if (!res.ok) return;
+        const payload = (await res.json()) as { modules?: string[] };
+        const enabled = Array.isArray(payload.modules) && payload.modules.includes("TAX_ADVANCED");
+        setTaxAdvancedEnabled(enabled);
+      } catch (err) {
+        console.error("Failed to load module flags", err);
+      }
+    };
+
+    void loadModules();
+  }, []);
+
   // --- SMART AI AUTO-FILL HOOK ---
   useEffect(() => {
     const aiPayload = sessionStorage.getItem('erp_ai_payload');
@@ -140,7 +157,13 @@ export default function WealthAndTaxPlanner() {
       const nextRevenue = toSafeNumber(revData?.data?.totalRevenue);
       setInvestments(nextInvestments);
       setTotalRevenue(nextRevenue);
-      await fetchTaxAuditLogs(1);
+      if (taxAdvancedEnabled) {
+        await fetchTaxAuditLogs(1);
+      } else {
+        setTaxAuditRows([]);
+        setTaxAuditPage(1);
+        setTaxAuditTotalPages(1);
+      }
     } catch (err) {
       console.error("Failed to load data");
       setFetchError("Failed to load tax planner data. Please refresh.");
@@ -149,6 +172,14 @@ export default function WealthAndTaxPlanner() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!taxAdvancedEnabled) {
+      setTaxOverrideOpen(false);
+      return;
+    }
+    void fetchTaxAuditLogs(1);
+  }, [taxAdvancedEnabled]);
 
   const fetchTaxAuditLogs = async (page = 1, filters = taxAuditFilters) => {
     const searchParams = new URLSearchParams({
@@ -302,7 +333,7 @@ export default function WealthAndTaxPlanner() {
       description={tr("description", "Plan your {taxLabel} and savings.", { taxLabel })}
       animated={false}
     >
-      <Tabs defaultValue="overview" className="w-full space-y-6">
+      <Tabs defaultValue={taxAdvancedEnabled ? "overview" : "planner"} className="w-full space-y-6">
         <TabsList className="flex w-full flex-wrap justify-start gap-1 bg-zinc-100/80 p-1 dark:bg-zinc-900/80">
           <TabsTrigger value="overview" className="text-xs font-semibold">
             Overview
@@ -310,16 +341,20 @@ export default function WealthAndTaxPlanner() {
           <TabsTrigger value="planner" className="text-xs font-semibold">
             Savings & planner
           </TabsTrigger>
-          <TabsTrigger value="compliance" className="text-xs font-semibold">
-            Compliance & imports
-          </TabsTrigger>
-          <TabsTrigger value="audit" className="text-xs font-semibold">
-            Overrides & audit
-          </TabsTrigger>
+          {taxAdvancedEnabled && (
+            <>
+              <TabsTrigger value="compliance" className="text-xs font-semibold">
+                Compliance & imports
+              </TabsTrigger>
+              <TabsTrigger value="audit" className="text-xs font-semibold">
+                Overrides & audit
+              </TabsTrigger>
+            </>
+          )}
         </TabsList>
 
         <TabsContent value="overview" className="mt-0 outline-none">
-          <TaxHubOverview />
+          {taxAdvancedEnabled ? <TaxHubOverview /> : null}
         </TabsContent>
 
         <TabsContent value="planner" className="mt-0 space-y-6 outline-none">
@@ -385,15 +420,17 @@ export default function WealthAndTaxPlanner() {
                 <h2 className="text-lg font-bold tracking-tight flex flex-wrap items-center gap-2">
                   <span>{t('advance_tax')}</span>
                   <span className="text-sm font-medium text-zinc-400">{t('fy_estimate')}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setTaxOverrideOpen(true)}
-                    className="h-7 px-2 rounded-md border border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 text-[10px] font-bold uppercase tracking-widest"
-                  >
-                    Override tax rate
-                  </Button>
+                  {taxAdvancedEnabled && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setTaxOverrideOpen(true)}
+                      className="h-7 px-2 rounded-md border border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 text-[10px] font-bold uppercase tracking-widest"
+                    >
+                      Override tax rate
+                    </Button>
+                  )}
                 </h2>
               </div>
               <div className="flex items-center gap-3 bg-zinc-800/50 dark:bg-zinc-900 px-3 py-2 rounded-lg border border-zinc-700 dark:border-zinc-800">
@@ -611,10 +648,13 @@ export default function WealthAndTaxPlanner() {
         </div>
         </TabsContent>
 
-        <TabsContent value="compliance" className="mt-0 outline-none">
-        <TaxComplianceOps />
-        </TabsContent>
+        {taxAdvancedEnabled && (
+          <TabsContent value="compliance" className="mt-0 outline-none">
+            <TaxComplianceOps />
+          </TabsContent>
+        )}
 
+        {taxAdvancedEnabled && (
         <TabsContent value="audit" className="mt-0 outline-none">
         <Card className="mt-0 shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <CardHeader className="border-b border-zinc-200 dark:border-zinc-800">
@@ -754,6 +794,7 @@ export default function WealthAndTaxPlanner() {
           </CardContent>
         </Card>
         </TabsContent>
+        )}
       </Tabs>
 
     </DashboardPageShell>

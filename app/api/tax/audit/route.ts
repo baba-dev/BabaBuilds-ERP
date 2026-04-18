@@ -4,6 +4,7 @@ import { verifySuperAdmin, handleAdminApiError } from '@/app/api/admin/authz';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { RbacDeniedError, requirePermission } from '@/lib/rbac';
+import { taxAdvancedModuleDisabledResponse } from '@/lib/tax/module-gate';
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
@@ -44,6 +45,11 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
       await requirePermission(actorUserId, effectiveWorkspaceId, 'tax.view');
+    }
+
+    if (effectiveWorkspaceId) {
+      const moduleDisabledResponse = await taxAdvancedModuleDisabledResponse(effectiveWorkspaceId);
+      if (moduleDisabledResponse) return moduleDisabledResponse;
     }
 
     const where: {

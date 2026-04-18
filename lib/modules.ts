@@ -23,7 +23,14 @@ import { Prisma } from '@prisma/client';
 // - WORKFORCE enhances PAYROLL input quality.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const MODULE_KEYS = ['WORKFORCE', 'PAYROLL', 'DOCUMENTS', 'REVENUE_PIPELINE', 'CASH_FLOW'] as const;
+export const MODULE_KEYS = [
+  'WORKFORCE',
+  'PAYROLL',
+  'DOCUMENTS',
+  'REVENUE_PIPELINE',
+  'CASH_FLOW',
+  'TAX_ADVANCED',
+] as const;
 export type ModuleKey = (typeof MODULE_KEYS)[number];
 
 export function isValidModuleKey(key: unknown): key is ModuleKey {
@@ -36,6 +43,7 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   DOCUMENTS: 'Document Vault',
   REVENUE_PIPELINE: 'Revenue Pipeline',
   CASH_FLOW: 'Cash Flow',
+  TAX_ADVANCED: 'Tax Advanced',
 };
 
 export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
@@ -49,6 +57,8 @@ export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
     'Pipeline intelligence for proposals with stage insights, stalled-deal detection, and next-best-action workflows to accelerate conversions.',
   CASH_FLOW:
     'Cash forecast snapshots, scenario planning, variance analysis, and proactive liquidity alerts to anticipate crunch windows early.',
+  TAX_ADVANCED:
+    'Advanced tax compliance operations including readiness pipelines, import diagnostics, override tooling, and audit workflows.',
 };
 
 export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
@@ -93,6 +103,14 @@ export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
     'Variance analysis vs actuals',
     'Crunch-window and liquidity risk alerts',
     'Manual adjustments and assumption profiles',
+  ],
+  TAX_ADVANCED: [
+    'Tax readiness pipelines and compliance diagnostics',
+    'Tax hub summary and operational overview',
+    'Tax rate overrides with maker-checker controls',
+    'Tax decision history and audit events',
+    'Tax document linking and evidence traceability',
+    'Tax import templates and batch diagnostics',
   ],
 };
 

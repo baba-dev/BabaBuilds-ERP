@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { createTaxOverrideAuditLog, logActivity } from '@/lib/security/activity-log';
 import { RbacDeniedError, requirePermission } from '@/lib/rbac';
 import { hasPermission, isValidBusinessRole } from '@/lib/permissions';
+import { taxAdvancedModuleDisabledResponse } from '@/lib/tax/module-gate';
 import type { Session } from 'next-auth';
 
 type SessionWithWorkspace = Session & { workspaceId?: string; user?: Session['user'] & { id?: string } };
@@ -61,6 +62,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     if (!actorUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const moduleDisabledResponse = await taxAdvancedModuleDisabledResponse(workspaceId);
+    if (moduleDisabledResponse) return moduleDisabledResponse;
     await requirePermission(actorUserId, workspaceId, 'tax.edit');
 
     const checker = getCheckerContext(request);

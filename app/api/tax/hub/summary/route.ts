@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { checkPermission } from '@/lib/rbac';
 import { getTaxReadinessSummary } from '@/lib/tax/return-prep';
 import { getGstWorkspaceSummary } from '@/lib/tax/gst-workspace-summary';
+import { taxAdvancedModuleDisabledResponse } from '@/lib/tax/module-gate';
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -13,6 +14,9 @@ export async function GET() {
   if (!workspaceId || !userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const moduleDisabledResponse = await taxAdvancedModuleDisabledResponse(workspaceId);
+  if (moduleDisabledResponse) return moduleDisabledResponse;
 
   const canView = await checkPermission(userId, workspaceId, 'tax.view');
   if (!canView) {

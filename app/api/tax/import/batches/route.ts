@@ -8,6 +8,7 @@ import { requirePermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rb
 import { isTaxImportTemplateType, TAX_IMPORT_TEMPLATES, type TaxImportTemplateType } from '@/lib/tax/import-templates';
 import { buildTaxRequestHash, consumeTaxIdempotency } from '@/lib/tax/idempotency';
 import { appendTaxAuditEvent, newTaxCorrelationId } from '@/lib/tax/audit';
+import { taxAdvancedModuleDisabledResponse } from '@/lib/tax/module-gate';
 
 type ImportRowPayload = {
   rowNumber?: number;
@@ -50,6 +51,8 @@ export async function POST(req: Request) {
   const workspaceId = (session as { workspaceId?: string } | null)?.workspaceId;
   const userId = (session?.user as { id?: string } | undefined)?.id;
   if (!workspaceId || !userId) return apiError(401, 'Unauthorized', 'UNAUTHORIZED');
+  const moduleDisabledResponse = await taxAdvancedModuleDisabledResponse(workspaceId);
+  if (moduleDisabledResponse) return moduleDisabledResponse;
 
   try {
     await requirePermission(userId, workspaceId, 'tax.manage');
