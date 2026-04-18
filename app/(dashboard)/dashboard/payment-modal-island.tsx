@@ -72,7 +72,7 @@ export function PaymentModalIsland({
 
           <div className="flex justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>{t("cancel", "Cancel")}</Button>
-            <Button type="submit" disabled={isSubmittingPayment} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+            <Button type="submit" disabled={isSubmittingPayment} className="bg-emerald-600 text-white hover:bg-emerald-700">
               {isSubmittingPayment ? <span className="inline-flex items-center gap-1"><Activity className="w-4 h-4 animate-spin" />{t("processing", "Processing")}</span> : t("stamp_paid", "Mark paid")}
             </Button>
           </div>

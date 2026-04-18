@@ -248,12 +248,20 @@ export default function Dashboard() {
       id: "client",
       header: tr("table_client", "Client"),
       accessor: (row) => row.clientName,
-      cell: (row) => <span className={`${ty.helper} font-medium text-zinc-600 dark:text-zinc-300`}>{row.clientName}</span>,
+      cell: (row) => (
+        <span className={`${ty.helper} font-medium text-muted-foreground`}>
+          {row.clientName}
+        </span>
+      ),
     },
     {
       id: "date",
       header: tr("table_date", "Date"),
-      cell: (row) => <span className={`${ty.helperXs} text-zinc-400 dark:text-zinc-500 tabular-nums`}>{format(new Date(row.invoiceDate), "dd MMM yyyy")}</span>,
+      cell: (row) => (
+        <span className={`${ty.helperXs} text-muted-foreground tabular-nums`}>
+          {format(new Date(row.invoiceDate), "dd MMM yyyy")}
+        </span>
+      ),
     },
     {
       id: "status",
