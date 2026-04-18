@@ -22,9 +22,9 @@ const buttonVariants = cva(
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/30 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
         "primary-action":
-          "bg-orange-600 text-white shadow-md shadow-orange-600/25 hover:-translate-y-0.5 hover:bg-orange-700 hover:shadow-lg hover:shadow-orange-600/30 active:translate-y-0",
+          "bg-[color:var(--accent-primary,var(--accent-strong))] text-[color:var(--accent-primary-foreground,var(--primary-foreground))] shadow-md shadow-[color:color-mix(in_oklab,var(--accent-primary,var(--accent-strong))_26%,transparent)] hover:-translate-y-0.5 hover:brightness-95 hover:shadow-lg hover:shadow-[color:color-mix(in_oklab,var(--accent-primary,var(--accent-strong))_34%,transparent)] active:translate-y-0",
         "secondary-info":
-          "border-indigo-200/70 bg-indigo-50/70 text-indigo-700 shadow-sm hover:-translate-y-0.5 hover:border-indigo-300/80 hover:bg-indigo-100/80 hover:shadow-md dark:border-indigo-900/60 dark:bg-indigo-950/30 dark:text-indigo-300 dark:hover:border-indigo-800 dark:hover:bg-indigo-900/40",
+          "border-border/70 bg-[color:color-mix(in_oklab,var(--accent-info,var(--chart-2))_10%,transparent)] text-[color:color-mix(in_oklab,var(--accent-info,var(--chart-2))_72%,var(--foreground))] shadow-sm hover:-translate-y-0.5 hover:border-border hover:bg-[color:color-mix(in_oklab,var(--accent-info,var(--chart-2))_16%,transparent)] hover:shadow-md dark:border-border/60 dark:bg-[color:color-mix(in_oklab,var(--accent-info,var(--chart-2))_16%,transparent)] dark:text-[color:color-mix(in_oklab,var(--accent-info,var(--chart-2))_62%,var(--foreground))]",
       },
       size: {
         default:

@@ -11,7 +11,8 @@ const inputVariants = cva(
     variants: {
       variant: {
         default: "border-input bg-transparent dark:bg-input/30",
-        tinted: "border-indigo-200/70 bg-indigo-50/50 dark:border-indigo-900/50 dark:bg-indigo-950/20",
+        tinted:
+          "border-border/70 bg-muted/20 dark:border-border/60 dark:bg-input/20",
         quiet: "border-border/70 bg-muted/40 shadow-none",
       },
     },

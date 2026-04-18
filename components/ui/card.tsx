@@ -16,11 +16,19 @@ const cardVariants = cva(
         elevated:
           "rounded-xl bg-card shadow-md ring-foreground/10 hover:-translate-y-0.5 hover:shadow-lg",
         glass:
-          "rounded-2xl border border-border/70 bg-card/80 shadow-[0_18px_40px_-22px_color-mix(in_oklab,var(--foreground)_40%,transparent)] ring-foreground/10 backdrop-blur-xl backdrop-saturate-150",
+          "rounded-2xl border border-border/70 bg-[color:var(--color-panel-glass,var(--color-surface-glass,var(--color-card)))] shadow-[0_18px_40px_-22px_color-mix(in_oklab,var(--foreground)_40%,transparent)] ring-foreground/10 backdrop-blur-xl backdrop-saturate-150",
+        panel:
+          "rounded-xl border border-border/70 bg-[color:var(--color-panel,var(--color-surface-elevated,var(--color-card)))] shadow-xs ring-foreground/10",
+        "panel-muted":
+          "rounded-xl border border-border/70 bg-[color:var(--color-panel-muted,var(--color-surface-base,var(--color-muted)))] shadow-none ring-transparent",
+        /**
+         * Legacy-ish variants kept for compatibility with existing call sites,
+         * but expressed in token terms (intent-based, not hue-based).
+         */
         tinted:
-          "rounded-xl border border-indigo-200/60 bg-indigo-50/50 shadow-sm ring-indigo-300/30 dark:border-indigo-900/50 dark:bg-indigo-950/20 dark:ring-indigo-700/30",
+          "rounded-xl border border-border/70 bg-[color:color-mix(in_oklab,var(--color-panel-muted,var(--color-surface-base,var(--color-muted)))_86%,var(--color-accent-info,var(--color-chart-2)))] shadow-sm ring-foreground/10 dark:border-border/60 dark:bg-[color:color-mix(in_oklab,var(--color-panel-muted,var(--color-surface-base,var(--color-muted)))_82%,var(--color-accent-info,var(--color-chart-2)))]",
         "accent-highlighted":
-          "rounded-xl border border-indigo-300/70 bg-gradient-to-br from-indigo-50/80 via-card to-card shadow-md ring-indigo-300/40 dark:border-indigo-700/60 dark:from-indigo-950/30 dark:ring-indigo-700/30",
+          "rounded-xl border border-border/70 bg-[color:color-mix(in_oklab,var(--color-panel,var(--color-surface-elevated,var(--color-card)))_90%,var(--color-accent-info,var(--color-chart-2)))] shadow-md ring-foreground/10",
         quiet: "rounded-xl border border-border/70 bg-muted/30 shadow-none ring-transparent",
       },
     },
