@@ -406,6 +406,20 @@ model AppActivityLog {
   @@index([actorUserId, createdAt(sort: Desc)])
 }
 
+
+model DemoProvisionAttempt {
+  id          String   @id @default(cuid())
+  ip          String
+  fingerprint String?
+  reason      String
+  allowed     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@index([ip, createdAt(sort: Desc)])
+  @@index([fingerprint, createdAt(sort: Desc)])
+}
+
 model BillingTransaction {
   id          String    @id @default(cuid())
   workspaceId String

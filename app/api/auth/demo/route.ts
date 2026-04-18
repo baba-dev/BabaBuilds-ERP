@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { decimalToNumber } from "@/lib/money";
 import { v4 as uuidv4 } from "uuid";
 import { encrypt } from "@/lib/encryption";
+import { evaluateDemoProvisionThrottle, recordDemoProvisionAttempt } from "@/lib/demo-auth-throttle";
 
 // --- HELPERS ---
 
@@ -15,6 +16,17 @@ function isLocalhostRequest(request: Request): boolean {
 
   // Best-effort: only trust local development usage; don't rely on x-forwarded-for for security.
   return false;
+}
+
+function getClientIp(req: Request): string {
+  const forwardedFor = req.headers.get("x-forwarded-for");
+  if (forwardedFor) {
+    const first = forwardedFor.split(",")[0]?.trim();
+    if (first) return first;
+  }
+
+  const realIp = req.headers.get("x-real-ip") || req.headers.get("cf-connecting-ip");
+  return realIp?.trim() || "unknown";
 }
 
 const getDateOffset = (days: number) => {
@@ -95,20 +107,27 @@ export async function POST(request: Request) {
       }
     }
 
-    // --- 🚨 SECURITY LAYER 1: GLOBAL CIRCUIT BREAKER ---
-    const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000);
-    const recentDemos = await prisma.workspace.count({
-      where: {
-        name: "BabaBuilds Demo Enterprise",
-        createdAt: { gte: fifteenMinsAgo }
-      }
-    });
+    // --- 🚨 SECURITY LAYER 1: RATE LIMITING (GLOBAL + IP + FINGERPRINT) ---
+    const ip = getClientIp(request);
+    const fingerprint = request.headers.get("x-auth-fingerprint")?.trim() || null;
+    const decision = await evaluateDemoProvisionThrottle({ ip, fingerprint }, prisma);
 
-    const configuredThreshold = Number(process.env.DEMO_CIRCUIT_BREAKER_THRESHOLD ?? "10");
-    const threshold = Number.isFinite(configuredThreshold) ? configuredThreshold : 10;
-
-    if (recentDemos > threshold) {
-      return NextResponse.json({ error: "High volume. Try in 15 mins." }, { status: 429 });
+    if (!decision.allowed) {
+      await recordDemoProvisionAttempt({ ip, fingerprint, decision }, prisma);
+      return NextResponse.json(
+        {
+          error: "High volume. Try again later.",
+          reason: decision.reason,
+          retryAfter: decision.retryAfterSeconds,
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(decision.retryAfterSeconds),
+            "Cache-Control": "no-store",
+          },
+        },
+      );
     }
 
     // --- DATA SEEDING TRANSACTION ---
@@ -272,6 +291,7 @@ export async function POST(request: Request) {
       // --- 🚨 SECURITY PATCH END ---
     });
 
+    await recordDemoProvisionAttempt({ ip, fingerprint, decision }, prisma);
     return NextResponse.json(result);
   } catch (error) {
     console.error("Demo Creation Error:", error);
