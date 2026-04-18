@@ -9,13 +9,13 @@ export type CashFlowInsightTone = "default" | "positive" | "warning" | "danger";
 
 const toneClasses: Record<CashFlowInsightTone, string> = {
   default:
-    "border-zinc-200/70 dark:border-zinc-800/70 bg-white/50 dark:bg-zinc-900/40",
+    "border-zinc-200/55 dark:border-zinc-800/55 bg-white/45 dark:bg-zinc-900/30",
   positive:
-    "border-emerald-200/60 dark:border-emerald-900/40 bg-emerald-50/40 dark:bg-emerald-950/20",
+    "border-emerald-200/55 dark:border-emerald-900/40 bg-emerald-50/30 dark:bg-emerald-950/16",
   warning:
-    "border-amber-200/60 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20",
+    "border-amber-200/55 dark:border-amber-900/40 bg-amber-50/30 dark:bg-amber-950/16",
   danger:
-    "border-rose-200/60 dark:border-rose-900/40 bg-rose-50/40 dark:bg-rose-950/20",
+    "border-rose-200/55 dark:border-rose-900/40 bg-rose-50/30 dark:bg-rose-950/16",
 };
 
 export function CashFlowInsightCard(props: {
@@ -33,21 +33,21 @@ export function CashFlowInsightCard(props: {
   return (
     <div
       className={cn(
-        "rounded-2xl border p-4 shadow-sm backdrop-blur-sm transition-all duration-300 motion-reduce:transition-none hover:shadow-md hover:-translate-y-[1px]",
+        "rounded-2xl border p-[18px] shadow-[0_1px_2px_rgba(15,23,42,0.06)] backdrop-blur-sm transition-all duration-300 motion-reduce:transition-none hover:shadow-[0_10px_24px_rgba(15,23,42,0.08)] hover:-translate-y-[1px]",
         toneClasses[tone],
         props.className,
       )}
     >
       <div className="flex items-start gap-3">
         {props.icon ? (
-          <div className="mt-0.5 rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/60 dark:bg-zinc-950/20 p-2 text-zinc-700 dark:text-zinc-200 shadow-sm">
+          <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-200/55 dark:border-zinc-800/55 bg-white/55 dark:bg-zinc-950/22 text-zinc-700 dark:text-zinc-200 shadow-[0_1px_2px_rgba(15,23,42,0.06)] [&_svg]:h-4 [&_svg]:w-4">
             {props.icon}
           </div>
         ) : null}
         <div className="min-w-0 flex-1">
           <div className={dt(cashFlowTypography.cardTitle)}>{props.title}</div>
           {props.description ? (
-            <div className={dt("mt-1", cashFlowTypography.helper)}>
+            <div className={dt("mt-1.5", cashFlowTypography.helper)}>
               {props.description}
             </div>
           ) : null}
@@ -89,4 +89,3 @@ export function CashFlowInsightCard(props: {
     </div>
   );
 }
-

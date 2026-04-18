@@ -126,7 +126,7 @@ export default function CashFlowManualAdjustmentsPage() {
     <CashFlowPageShell
       title="Cash Flow · Manual adjustments"
       description="High-trust, auditable overrides for exceptional cash events."
-      icon={<SlidersHorizontal className="h-5 w-5 text-indigo-500" />}
+      icon={<SlidersHorizontal className="h-[18px] w-[18px] text-indigo-500/90" />}
     >
       <div className="space-y-6">
         <CashFlowActionBar

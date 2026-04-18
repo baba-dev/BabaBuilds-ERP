@@ -22,8 +22,8 @@ export function CashFlowPageShell({
 }) {
   return (
     <DashboardPageShell title={title} description={description} icon={icon} animated={false}>
-      <div className={cn("space-y-6", className)}>
-        <div className="space-y-3">
+      <div className={cn("space-y-7", className)}>
+        <div className="space-y-4">
           <CashFlowNav />
           {actions ? <div className="flex items-center justify-end">{actions}</div> : null}
         </div>
@@ -32,4 +32,3 @@ export function CashFlowPageShell({
     </DashboardPageShell>
   );
 }
-

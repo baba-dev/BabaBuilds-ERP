@@ -237,10 +237,10 @@ export default function CashFlowAlertsPage() {
                     <AlertTriangle
                       className={
                         a.severity === "critical"
-                          ? "h-4 w-4 text-rose-600 dark:text-rose-400"
+                          ? "h-[15px] w-[15px] text-rose-600 dark:text-rose-400"
                           : a.severity === "warning"
-                            ? "h-4 w-4 text-amber-600 dark:text-amber-400"
-                            : "h-4 w-4 text-zinc-500"
+                            ? "h-[15px] w-[15px] text-amber-600 dark:text-amber-400"
+                            : "h-[15px] w-[15px] text-zinc-500"
                       }
                     />
                   </div>
@@ -305,7 +305,7 @@ export default function CashFlowAlertsPage() {
     <CashFlowPageShell
       title="Cash Flow Alerts"
       description="Proactive warnings derived from your latest forecast snapshot."
-      icon={<ShieldAlert className="h-5 w-5 text-indigo-500" />}
+      icon={<ShieldAlert className="h-[18px] w-[18px] text-indigo-500/90" />}
     >
       <div className="space-y-6">
         <CashFlowActionBar
@@ -437,4 +437,3 @@ export default function CashFlowAlertsPage() {
     </CashFlowPageShell>
   );
 }
-

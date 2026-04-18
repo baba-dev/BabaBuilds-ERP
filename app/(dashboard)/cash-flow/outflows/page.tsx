@@ -165,7 +165,7 @@ export default function CashFlowOutflowsPage() {
     <CashFlowPageShell
       title="Cash Flow · Outflows"
       description="Committed, expected, and actual outflows — with timing and risk context."
-      icon={<ReceiptText className="h-5 w-5 text-indigo-500" />}
+      icon={<ReceiptText className="h-[18px] w-[18px] text-indigo-500/90" />}
     >
         <CashFlowActionBar
           context={{ horizonType, scenarioTag }}

@@ -83,7 +83,7 @@ export function CashFlowActionBar({
         <Badge
           variant={freshness.tone}
           className={
-            stale ? "border-amber-200 text-amber-700 dark:border-amber-900/50 dark:text-amber-300" : undefined
+            stale ? "border-amber-200/60 text-amber-700 dark:border-amber-900/40 dark:text-amber-300" : undefined
           }
         >
           {freshness.label}
@@ -97,7 +97,7 @@ export function CashFlowActionBar({
         {extra}
         {onRefresh ? (
           <Button onClick={onRefresh} disabled={Boolean(refreshing)} className="h-9 gap-2">
-            <RefreshCw className={refreshing ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+            <RefreshCw className={refreshing ? "h-[15px] w-[15px] animate-spin" : "h-[15px] w-[15px]"} />
             Refresh
           </Button>
         ) : null}
@@ -105,4 +105,3 @@ export function CashFlowActionBar({
     </div>
   );
 }
-

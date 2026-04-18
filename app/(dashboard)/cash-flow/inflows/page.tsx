@@ -110,7 +110,7 @@ export default function CashFlowInflowsPage() {
     <CashFlowPageShell
       title="Cash Flow · Inflows"
       description={description}
-      icon={<ReceiptText className="h-5 w-5 text-indigo-500" />}
+      icon={<ReceiptText className="h-[18px] w-[18px] text-indigo-500/90" />}
     >
       <div className="space-y-6">
         <CashFlowActionBar

@@ -316,7 +316,7 @@ export default function CashFlowAssumptionsPage() {
     <CashFlowPageShell
       title="Cash Flow Assumptions"
       description="Scenario tuning with clear defaults, explainers, and quick resets — designed for trust and speed."
-      icon={<Settings2 className="h-5 w-5 text-indigo-500" />}
+      icon={<Settings2 className="h-[18px] w-[18px] text-indigo-500/90" />}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2">
           <Select
