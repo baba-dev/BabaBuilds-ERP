@@ -24,13 +24,51 @@ export async function GET(request: Request) {
   }
 
   try {
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const url = new URL(request.url);
+    const dryRun =
+      request.headers.get('x-cleanup-dry-run') === 'true' || url.searchParams.get('dryRun') === 'true';
+    const confirmDemoCleanup =
+      request.headers.get('x-confirm-demo-cleanup') === 'true' ||
+      url.searchParams.get('confirmDemoCleanup') === 'true';
+
+    const isProd = process.env.NODE_ENV === 'production';
+    if (isProd && !confirmDemoCleanup) {
+      return NextResponse.json(
+        {
+          error:
+            'Production safeguard: set x-confirm-demo-cleanup=true (or ?confirmDemoCleanup=true) to allow demo deletions.',
+        },
+        { status: 400 },
+      );
+    }
+
+    const where = {
+      isDemo: true,
+      demoExpiresAt: { lt: new Date() },
+    } as const;
+
+    const candidateCount = await prisma.workspace.count({ where });
+    const oldest = await prisma.workspace.findFirst({
+      where: {
+        ...where,
+      },
+      orderBy: { createdAt: 'asc' },
+      select: { createdAt: true },
+    });
+
+    if (dryRun) {
+      return NextResponse.json({
+        success: true,
+        dryRun: true,
+        candidates: {
+          count: candidateCount,
+          oldestCreatedAt: oldest?.createdAt ?? null,
+        },
+      });
+    }
 
     const deleted = await prisma.workspace.deleteMany({
-      where: {
-        name: 'BabaBuilds Demo Enterprise',
-        createdAt: { lt: twentyFourHoursAgo },
-      },
+      where,
     });
 
     const activityRetentionCutoff = new Date(Date.now() - parseDays(ACTIVITY_RETENTION_DAYS, 90) * 24 * 60 * 60 * 1000);
@@ -60,6 +98,10 @@ export async function GET(request: Request) {
       success: true,
       message: 'Old demos and logs purged successfully.',
       purgedCount: deleted.count,
+      candidates: {
+        count: candidateCount,
+        oldestCreatedAt: oldest?.createdAt ?? null,
+      },
       retention: {
         activityLogRetentionDays: parseDays(ACTIVITY_RETENTION_DAYS, 90),
         fileImportLogRetentionDays: parseDays(IMPORT_RETENTION_DAYS, 90),

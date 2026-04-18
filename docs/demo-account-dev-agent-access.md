@@ -31,7 +31,7 @@ If a valid `x-demo-agent-key` is provided, **non-local callers (e.g. cloud agent
   - `POST /api/auth/demo`
   - Header: `x-demo-agent-key: some-long-random-string`
   - JSON body: `{}` (or `{ "token": null }`)
-3. The response contains `{ email, password }` (the password is a short-lived, single-use token stored in `VerificationToken`).
+3. The response contains `{ email, password, templateKey }` (the password is a short-lived, single-use token stored in `VerificationToken`).
 4. Complete sign-in using the existing UI flow (click “Try interactive demo”), or programmatically via NextAuth credentials provider (`demo-login`).
 
 ### Notes

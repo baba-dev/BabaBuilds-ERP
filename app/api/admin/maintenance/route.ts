@@ -32,9 +32,14 @@ export async function POST(req: Request) {
         // Or if they are marked as guest/demo users
         const deletedUsers = await prisma.user.deleteMany({
           where: {
-            email: {
-              contains: "bababuilds.demo"
-            }
+            OR: [
+              { isDemo: true },
+              {
+                email: {
+                  contains: "bababuilds.demo",
+                },
+              },
+            ],
           }
         });
         return NextResponse.json({ success: true, message: `Purged ${deletedUsers.count} demo accounts.` });

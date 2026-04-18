@@ -81,6 +81,9 @@ export default function AuthModal({
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isDemoLoading, setIsDemoLoading] = useState(false);
   const [isPolicyChecking, setIsPolicyChecking] = useState(false);
+  const [selectedDemoTemplateKey, setSelectedDemoTemplateKey] = useState<
+    "dm_agency" | "software_company" | "tax_agency"
+  >("dm_agency");
   const [magicLinkPolicyMessage, setMagicLinkPolicyMessage] = useState<string | null>(
     authError === HIGH_RISK_MAGIC_LINK_BLOCKED
       ? t("alerts.highRiskMagicLinkBlocked")
@@ -264,8 +267,11 @@ export default function AuthModal({
     try {
       const response = await fetch("/api/auth/demo", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: turnstileToken }),
+        headers: {
+          "Content-Type": "application/json",
+          "x-demo-fingerprint": getDeviceFingerprint(),
+        },
+        body: JSON.stringify({ token: turnstileToken, templateKey: selectedDemoTemplateKey }),
       });
 
       const data = await response.json();
@@ -505,6 +511,55 @@ export default function AuthModal({
             </summary>
 
             <div className="mt-3 space-y-3">
+              <div className="grid grid-cols-1 gap-2">
+                <button
+                  type="button"
+                  disabled={isDemoLoading || isLoading}
+                  onClick={() => setSelectedDemoTemplateKey("dm_agency")}
+                  className={cn(
+                    "w-full rounded-xl border px-3 py-2 text-left transition-colors",
+                    selectedDemoTemplateKey === "dm_agency"
+                      ? "border-orange-500/50 bg-orange-500/10"
+                      : "border-border bg-background/80 hover:bg-muted/60",
+                  )}
+                >
+                  <div className="text-sm font-semibold">{t("demoTemplates.dm_agency.title")}</div>
+                  <div className="text-xs text-muted-foreground">{t("demoTemplates.dm_agency.description")}</div>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isDemoLoading || isLoading}
+                  onClick={() => setSelectedDemoTemplateKey("software_company")}
+                  className={cn(
+                    "w-full rounded-xl border px-3 py-2 text-left transition-colors",
+                    selectedDemoTemplateKey === "software_company"
+                      ? "border-orange-500/50 bg-orange-500/10"
+                      : "border-border bg-background/80 hover:bg-muted/60",
+                  )}
+                >
+                  <div className="text-sm font-semibold">{t("demoTemplates.software_company.title")}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {t("demoTemplates.software_company.description")}
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isDemoLoading || isLoading}
+                  onClick={() => setSelectedDemoTemplateKey("tax_agency")}
+                  className={cn(
+                    "w-full rounded-xl border px-3 py-2 text-left transition-colors",
+                    selectedDemoTemplateKey === "tax_agency"
+                      ? "border-orange-500/50 bg-orange-500/10"
+                      : "border-border bg-background/80 hover:bg-muted/60",
+                  )}
+                >
+                  <div className="text-sm font-semibold">{t("demoTemplates.tax_agency.title")}</div>
+                  <div className="text-xs text-muted-foreground">{t("demoTemplates.tax_agency.description")}</div>
+                </button>
+              </div>
+
               {!isDemoLoading && isProd && (
                 <div className="flex justify-center py-2 scale-90">
                   <Turnstile
