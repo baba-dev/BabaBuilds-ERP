@@ -2,6 +2,7 @@
 
 import { ReactNode } from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { typography as ty, tx } from "@/lib/ui/typography";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -102,7 +103,7 @@ export function DashboardPageShell({
         <span className="text-[0.65rem] font-bold uppercase tracking-[0.15em] opacity-60">
           {kpiCard.label}
         </span>
-        <span className="text-xl font-black leading-tight tracking-tight">{kpiCard.value}</span>
+        <span className={tx(ty.metricValueMd, "text-xl font-black")}>{kpiCard.value}</span>
       </CardContent>
     </Card>
   ) : (
@@ -123,7 +124,7 @@ export function DashboardPageShell({
         >
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <div className={tx(ty.labelUpper, "text-muted-foreground flex items-center gap-2")}>
                 <SidebarTrigger className="md:hidden" />
                 {breadcrumb ? <span className="min-h-5">{breadcrumb}</span> : null}
               </div>
@@ -139,12 +140,12 @@ export function DashboardPageShell({
                     </div>
                   ) : null}
 
-                  <h1 className={cn("font-bold tracking-tight text-foreground", isCompactHeader ? "text-2xl" : "text-3xl")}>
+                  <h1 className={cn(ty.pageTitle, "text-foreground", isCompactHeader ? "text-2xl sm:text-2xl lg:text-2xl" : "text-3xl sm:text-3xl lg:text-3xl")}>
                     {title}
                   </h1>
                 </div>
                 {description ? (
-                  <p className="max-w-xl text-sm font-medium text-zinc-500 dark:text-zinc-400">{description}</p>
+                  <p className={tx(ty.helper, "max-w-xl font-medium")}>{description}</p>
                 ) : null}
               </div>
 

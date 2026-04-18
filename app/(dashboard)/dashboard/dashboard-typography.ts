@@ -1,25 +1,18 @@
-import { cn } from "@/lib/utils";
+import { typography, tx } from "@/lib/ui/typography";
 
 export const dashboardTypography = {
-  sectionTitle: "text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50",
-  cardTitle: "text-sm font-semibold text-zinc-900 dark:text-zinc-100",
-  cardSubtitle: "text-sm text-zinc-500 dark:text-zinc-400 leading-tight",
-  labelUpper: "text-xs text-zinc-500 dark:text-zinc-400 font-semibold tracking-wider uppercase",
-  labelUpperStrong:
-    "text-xs text-zinc-500 dark:text-zinc-400 font-bold tracking-wider uppercase",
-  value4xlLight:
-    "text-4xl font-light tracking-tight tabular-nums text-zinc-900 dark:text-white",
-  value3xlLight:
-    "text-3xl font-light tracking-tight tabular-nums text-zinc-900 dark:text-white",
-  value2xlLight:
-    "text-2xl font-light tracking-tight tabular-nums text-zinc-900 dark:text-white",
-  valueSmBold: "text-sm font-bold text-zinc-900 dark:text-zinc-200",
-  helper: "text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed",
-  helperXs: "text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed",
-  kpiBadge: "h-5 text-[10px] font-bold uppercase tracking-wider",
-};
+  sectionTitle: typography.sectionTitle,
+  cardTitle: typography.cardTitle,
+  cardSubtitle: typography.cardSubtitle,
+  labelUpper: typography.labelUpper,
+  labelUpperStrong: typography.labelUpperStrong,
+  value4xlLight: typography.metricValueXl,
+  value3xlLight: typography.metricValueLg,
+  value2xlLight: typography.metricValueMd,
+  valueSmBold: typography.metricValueSm,
+  helper: typography.helper,
+  helperXs: typography.helperXs,
+  kpiBadge: typography.kpiBadge,
+} as const;
 
-export function dt(...classes: Array<string | undefined | false | null>) {
-  return cn(...classes);
-}
-
+export const dt = tx;

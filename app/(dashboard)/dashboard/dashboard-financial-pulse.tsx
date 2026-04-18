@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Landmark, ArrowUpRight, ArrowDownRight, ShieldCheck, AlertCircle, CheckCircle2, Clock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
+import { typography as ty, tx } from "@/lib/ui/typography";
 import type { DashboardData } from "./types";
 import { DashboardTooltip } from "./dashboard-tooltip";
 
@@ -100,7 +101,7 @@ export function DashboardFinancialPulse({
     <section className="space-y-6">
       <div className="flex items-center gap-2 px-1">
         <Landmark className="w-5 h-5 text-indigo-500" />
-        <h3 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+        <h3 className={ty.sectionTitle}>
           {tr("financial_pulse", "Financial pulse")}
         </h3>
       </div>
@@ -116,28 +117,28 @@ export function DashboardFinancialPulse({
                 <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center border border-indigo-100 dark:border-indigo-500/20 shadow-sm">
                   <ArrowUpRight className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 </div>
-                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                <p className={ty.cardTitle}>
                   {tr("revenue_collections", "Revenue & Collections")}
                 </p>
               </div>
             </div>
             
             <div className="space-y-1 mb-8">
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5 font-semibold tracking-wider uppercase">
+              <p className={tx(ty.labelUpper, "flex items-center gap-1.5")}>
                 {tr("billed_revenue", "Billed revenue")} 
                 <DashboardTooltip label={tr("billed_revenue_help", "Revenue invoiced in the selected financial year.")} />
               </p>
-              <p className="text-4xl font-light tracking-tight text-zinc-900 dark:text-white">
+              <p className={ty.metricValueXl}>
                 <CountUpValue value={billedRevenue} formatter={fCurrency} />
               </p>
             </div>
             
             <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/50 dark:border-zinc-800 flex items-center justify-between transition-colors group-hover:border-indigo-100 dark:group-hover:border-indigo-900/40">
-              <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
+              <p className={tx(ty.helperXs, "font-semibold flex items-center gap-1.5")}>
                 {tr("receivables", "Receivables")} 
                 <DashboardTooltip label={tr("receivables_help", "Money still expected from issued invoices.")} />
               </p>
-              <p className="text-sm font-bold text-zinc-900 dark:text-zinc-200">
+              <p className={ty.metricValueSm}>
                 {fCurrency(receivables)}
               </p>
             </div>
@@ -154,28 +155,28 @@ export function DashboardFinancialPulse({
                 <div className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center border border-rose-100 dark:border-rose-500/20 shadow-sm">
                   <ArrowDownRight className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                 </div>
-                <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                <p className={ty.cardTitle}>
                   {tr("outflow_obligations", "Outflow & Obligations")}
                 </p>
               </div>
             </div>
             
             <div className="space-y-1 mb-8">
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5 font-semibold tracking-wider uppercase">
+              <p className={tx(ty.labelUpper, "flex items-center gap-1.5")}>
                 {tr("expenses", "Expenses")} 
                 <DashboardTooltip label={tr("expenses_help", "Recorded outgoing spend for the selected period.")} />
               </p>
-              <p className="text-4xl font-light tracking-tight text-zinc-900 dark:text-white">
+              <p className={ty.metricValueXl}>
                 <CountUpValue value={expenses} formatter={fCurrency} />
               </p>
             </div>
             
             <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/50 dark:border-zinc-800 flex items-center justify-between transition-colors group-hover:border-rose-100 dark:group-hover:border-rose-900/40">
-              <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400 flex items-center gap-1.5">
+              <p className={tx(ty.helperXs, "font-semibold flex items-center gap-1.5")}>
                 {tr("estimated_tax", "Estimated tax")} 
                 <DashboardTooltip label={tr("estimated_tax_help", "Projected tax due based on current revenue profile.")} />
               </p>
-              <p className="text-sm font-bold text-zinc-900 dark:text-zinc-200">
+              <p className={ty.metricValueSm}>
                 {fCurrency(estimatedTax)}
               </p>
             </div>
@@ -192,28 +193,28 @@ export function DashboardFinancialPulse({
                 <div className="w-9 h-9 rounded-xl bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center shadow-md">
                   <ShieldCheck className="w-4 h-4 text-white" />
                 </div>
-                <p className="text-sm font-semibold text-indigo-950 dark:text-indigo-100">
+                <p className={tx(ty.cardTitle, "text-indigo-950 dark:text-indigo-100")}>
                   {tr("capital_stability", "Capital & Stability")}
                 </p>
               </div>
             </div>
             
             <div className="space-y-1 mb-8">
-              <p className="text-xs text-indigo-800/80 dark:text-indigo-300 flex items-center gap-1.5 font-bold tracking-wider uppercase">
+              <p className={tx(ty.labelUpperStrong, "text-indigo-800/80 dark:text-indigo-300 flex items-center gap-1.5")}>
                 {tr("mrr", "Monthly Recurring (MRR)")} 
                 <DashboardTooltip label={tr("mrr_help", "Monthly recurring revenue from active retainers.")} />
               </p>
-              <p className="text-4xl font-semibold tracking-tight text-indigo-950 dark:text-white">
+              <p className={tx(ty.metricValueXl, "font-semibold text-indigo-950 dark:text-white")}>
                 <CountUpValue value={recurringRevenue} formatter={fCurrency} />
               </p>
             </div>
             
             <div className="p-3.5 rounded-xl bg-white/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-500/20 flex items-center justify-between backdrop-blur-sm transition-colors group-hover:border-indigo-200 dark:group-hover:border-indigo-500/40">
-              <p className="text-xs font-semibold text-indigo-900/80 dark:text-indigo-200 flex items-center gap-1.5">
+              <p className={tx(ty.helperXs, "font-semibold text-indigo-900/80 dark:text-indigo-200 flex items-center gap-1.5")}>
                 {tr("liquid_assets", "Liquid assets")} 
                 <DashboardTooltip label={tr("liquid_assets_help", "Investments and liquid holdings currently tracked.")} />
               </p>
-              <p className="text-sm font-bold text-indigo-950 dark:text-white">
+              <p className={tx(ty.metricValueSm, "text-indigo-950 dark:text-white")}>
                 {fCurrency(liquidAssets)}
               </p>
             </div>
@@ -242,7 +243,7 @@ export function DashboardFinancialPulse({
             
             <div className="space-y-2">
               <div className="flex items-center gap-3">
-                <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+                <h4 className={tx(ty.cardTitle, "text-base")}>
                   {tr("reconciliation_progress", "Reconciliation Progress")}
                 </h4>
                 <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
@@ -254,7 +255,7 @@ export function DashboardFinancialPulse({
                 </span>
                 <DashboardTooltip label={tr("reconciliation_progress_help", "Percent of bank transactions matched against invoices/expenses.")} />
               </div>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400 max-w-xl leading-relaxed">
+              <p className={tx(ty.helper, "max-w-xl")}>
                 {reconMessage}
               </p>
             </div>
@@ -262,7 +263,7 @@ export function DashboardFinancialPulse({
 
           <div className="flex-shrink-0 w-full lg:w-80 mt-2 lg:mt-0">
             <div className="flex justify-between items-end mb-3">
-              <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Match rate</span>
+              <span className={ty.helper}>Match rate</span>
               <span className={`text-3xl font-bold tracking-tight ${
                   isHealthy ? 'text-emerald-600 dark:text-emerald-400' 
                   : isModerate ? 'text-amber-600 dark:text-amber-400' 
@@ -284,4 +285,3 @@ export function DashboardFinancialPulse({
     </section>
   );
 }
-
