@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { computeAndPersistCashForecastSnapshot } from "@/lib/cash-flow/persist";
+import { requireCashFlowModule } from "@/app/api/cash-flow/_module";
 
 export async function POST(request: Request) {
   try {
@@ -10,6 +11,9 @@ export async function POST(request: Request) {
     if (!session || !workspaceId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+  const moduleGate = await requireCashFlowModule(workspaceId);
+  if (moduleGate) return moduleGate;
 
     const body = (await request.json().catch(() => ({}))) as {
       horizonType?: "DAILY_30" | "WEEKLY_13" | "MONTHLY_12";

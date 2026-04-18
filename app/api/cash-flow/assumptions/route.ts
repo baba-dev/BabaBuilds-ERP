@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireCashFlowModule } from "@/app/api/cash-flow/_module";
 
 const upsertSchema = z.object({
   key: z.string().min(1).max(128),
@@ -16,6 +17,9 @@ export async function GET() {
   const workspaceId = (session as any)?.workspaceId;
   if (!session || !workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const moduleGate = await requireCashFlowModule(workspaceId);
+  if (moduleGate) return moduleGate;
+
   const rows = await prisma.cashForecastAssumption.findMany({
     where: { workspaceId },
     orderBy: { updatedAt: "desc" },
@@ -28,6 +32,9 @@ export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   const workspaceId = (session as any)?.workspaceId;
   if (!session || !workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const moduleGate = await requireCashFlowModule(workspaceId);
+  if (moduleGate) return moduleGate;
 
   const body = await request.json().catch(() => null);
   const parsed = upsertSchema.safeParse(body);

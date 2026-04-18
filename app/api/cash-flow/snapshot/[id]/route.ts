@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireCashFlowModule } from "@/app/api/cash-flow/_module";
 
 type StalenessSignal = {
   key:
@@ -21,6 +22,9 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   if (!session || !workspaceId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const moduleGate = await requireCashFlowModule(workspaceId);
+  if (moduleGate) return moduleGate;
 
   const { id } = await context.params;
   if (!id) return NextResponse.json({ error: "Missing snapshot id" }, { status: 400 });

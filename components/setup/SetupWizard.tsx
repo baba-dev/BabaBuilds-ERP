@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { 
   Globe, ShieldCheck, Building2, 
   ArrowRight, ArrowLeft, CheckCircle2, Sparkles,
-  Zap, Wallet, Users2, Calendar, Clock, ClipboardList, FileText, Route, CheckSquare2, Target
+  Zap, Wallet, Users2, Calendar, Clock, ClipboardList, FileText, Route, CheckSquare2, HandCoins, Target
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -69,6 +69,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
     enableDocuments: false,
     enableRevenuePipeline: false,
     enablePayroll: false,
+    enableCashFlow: false,
     payrollSetupPath: "STANDALONE" as "STANDALONE" | "WORKFORCE_LINKED",
   });
   const [payrollReadiness, setPayrollReadiness] = useState<PayrollReadinessResponse | null>(null);
@@ -577,6 +578,46 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                     </div>
                   </div>
                 </div>
+
+                <div
+                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
+                    form.enableCashFlow
+                      ? 'border-cyan-500 bg-cyan-50/50 dark:bg-cyan-950/20'
+                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
+                  }`}
+                  onClick={() => setForm({ ...form, enableCashFlow: !form.enableCashFlow })}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
+                        form.enableCashFlow ? 'bg-cyan-600 shadow-lg shadow-cyan-500/20' : 'bg-zinc-100 dark:bg-zinc-800'
+                      }`}>
+                        <HandCoins className={`h-5 w-5 ${form.enableCashFlow ? 'text-white' : 'text-zinc-500 dark:text-zinc-400'}`} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Cash Flow</p>
+                          {form.enableCashFlow && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 dark:bg-cyan-900/40 px-2 py-0.5 text-[10px] font-bold text-cyan-700 dark:text-cyan-300 uppercase tracking-wider">
+                              <CheckCircle2 className="h-2.5 w-2.5" /> Enabled
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                          Forecast cash runways, monitor crunch windows, and refresh scenarios before risks become urgent.
+                        </p>
+                      </div>
+                    </div>
+                    <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                      form.enableCashFlow ? 'bg-cyan-600' : 'bg-zinc-300 dark:bg-zinc-700'
+                    }`}>
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        form.enableCashFlow ? 'translate-x-5' : 'translate-x-0'
+                      }`} />
+                    </div>
+                  </div>
+                </div>
+
                 <p className="text-center text-xs text-zinc-400 dark:text-zinc-600 pt-2">
                   More modules (Time Tracking, Asset Registry) coming soon.
                 </p>

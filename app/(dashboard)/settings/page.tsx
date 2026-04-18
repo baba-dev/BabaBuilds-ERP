@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import {
   Building2, Landmark, ShieldCheck, Image as ImageIcon, CheckCircle2,
   Mailbox, Bot, Trash2, CreditCard, Lock, Globe, AlertTriangle,
-  Loader2, Info, Users, Mail, Clock, UserPlus, ArrowRight, Sparkles, Users2, FileText, Target
+  Loader2, Info, Users, Mail, Clock, UserPlus, ArrowRight, Sparkles, Users2, FileText, HandCoins, Target
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -56,6 +56,9 @@ export default function SettingsWizard() {
   const [documentsEnabled, setDocumentsEnabled] = useState(false);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [showDisableDocumentsConfirm, setShowDisableDocumentsConfirm] = useState(false);
+  const [cashFlowEnabled, setCashFlowEnabled] = useState(false);
+  const [cashFlowLoading, setCashFlowLoading] = useState(false);
+  const [showDisableCashFlowConfirm, setShowDisableCashFlowConfirm] = useState(false);
   const [revenuePipelineEnabled, setRevenuePipelineEnabled] = useState(false);
   const [revenuePipelineLoading, setRevenuePipelineLoading] = useState(false);
   const [showDisableRevenuePipelineConfirm, setShowDisableRevenuePipelineConfirm] = useState(false);
@@ -104,6 +107,7 @@ export default function SettingsWizard() {
           setWorkforceEnabled(d.modules.includes('WORKFORCE'));
           setPayrollEnabled(d.modules.includes('PAYROLL'));
           setDocumentsEnabled(d.modules.includes('DOCUMENTS'));
+          setCashFlowEnabled(d.modules.includes('CASH_FLOW'));
           setRevenuePipelineEnabled(d.modules.includes('REVENUE_PIPELINE'));
         }
       })
@@ -1396,6 +1400,69 @@ export default function SettingsWizard() {
                 </div>
               </div>
 
+              {/* Cash Flow module card */}
+              <div className={cn(
+                "rounded-xl border-2 p-5 transition-all duration-200",
+                cashFlowEnabled
+                  ? "border-cyan-500/50 bg-cyan-50/30 dark:bg-cyan-950/10"
+                  : "border-zinc-200 dark:border-zinc-800"
+              )}>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className={cn(
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all",
+                      cashFlowEnabled ? "bg-cyan-600 shadow-lg shadow-cyan-500/20" : "bg-zinc-100 dark:bg-zinc-800"
+                    )}>
+                      <HandCoins className={cn("h-5 w-5", cashFlowEnabled ? "text-white" : "text-zinc-500")} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Cash Flow</p>
+                        <Badge variant="outline" className={cn(
+                          "text-[10px] font-bold uppercase",
+                          cashFlowEnabled
+                            ? "border-cyan-500/30 text-cyan-600 dark:text-cyan-400"
+                            : "border-zinc-300 dark:border-zinc-700 text-zinc-500"
+                        )}>
+                          {cashFlowEnabled ? "Enabled" : "Disabled"}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2 max-w-sm">
+                        Forecast cash positions, scenario outcomes, risk alerts, and variance drivers for proactive liquidity planning.
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="cash-flow-module-toggle"
+                    checked={cashFlowEnabled}
+                    disabled={cashFlowLoading}
+                    onCheckedChange={async (checked) => {
+                      if (!checked) {
+                        setShowDisableCashFlowConfirm(true);
+                        return;
+                      }
+                      setCashFlowLoading(true);
+                      try {
+                        const res = await fetch('/api/workspace/modules', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ moduleKey: 'CASH_FLOW', enabled: true }),
+                        });
+                        if (res.ok) {
+                          setCashFlowEnabled(true);
+                          toast.success('Cash Flow module enabled');
+                        } else {
+                          toast.error('Failed to enable module');
+                        }
+                      } finally {
+                        setCashFlowLoading(false);
+                      }
+                    }}
+                    className="data-[state=checked]:bg-cyan-600 shrink-0 mt-1"
+                  />
+                </div>
+              </div>
+
               <p className="text-xs text-zinc-400 dark:text-zinc-600">
                 More modules (Time Tracking, Asset Management) coming soon.
               </p>
@@ -1573,6 +1640,50 @@ export default function SettingsWizard() {
                   className="bg-rose-600 hover:bg-rose-500 text-white border-none"
                 >
                   {documentsLoading ? 'Disabling...' : 'Disable Document Vault'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Disable Cash Flow Confirmation Dialog */}
+          <Dialog open={showDisableCashFlowConfirm} onOpenChange={setShowDisableCashFlowConfirm}>
+            <DialogContent className="sm:max-w-md bg-zinc-950 border-white/10">
+              <DialogHeader>
+                <DialogTitle className="text-zinc-50 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-400" /> Disable Cash Flow?
+                </DialogTitle>
+                <DialogDescription className="text-zinc-400">
+                  Forecast snapshots, alerts, assumptions, and plans will be <strong className="text-zinc-200">preserved</strong>.
+                  Cash Flow will be hidden from navigation and route access until re-enabled.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="ghost" onClick={() => setShowDisableCashFlowConfirm(false)} className="text-zinc-400">Cancel</Button>
+                <Button
+                  id="confirm-disable-cash-flow"
+                  disabled={cashFlowLoading}
+                  onClick={async () => {
+                    setCashFlowLoading(true);
+                    try {
+                      const res = await fetch('/api/workspace/modules', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ moduleKey: 'CASH_FLOW', enabled: false }),
+                      });
+                      if (res.ok) {
+                        setCashFlowEnabled(false);
+                        setShowDisableCashFlowConfirm(false);
+                        toast.success('Cash Flow module disabled');
+                      } else {
+                        toast.error('Failed to disable module');
+                      }
+                    } finally {
+                      setCashFlowLoading(false);
+                    }
+                  }}
+                  className="bg-rose-600 hover:bg-rose-500 text-white border-none"
+                >
+                  {cashFlowLoading ? 'Disabling...' : 'Disable Cash Flow'}
                 </Button>
               </div>
             </DialogContent>
