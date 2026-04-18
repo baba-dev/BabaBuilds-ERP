@@ -24,6 +24,12 @@ Use this checklist before promoting frontend updates between rollout phases.
 | Icon-only controls accessibility | Icon-only buttons/links include meaningful `aria-label` + `title`; disclosure toggles set `aria-expanded` and `aria-controls` to expose state and relationship. | Accessibility Lead | In progress | Shared button patterns and lint/checklist enforcement | Phase 1 |
 | Contrast checks | Text, iconography, chart series, and UI states meet contrast requirements. | Accessibility Lead | In progress | Approved palette and semantic color mappings | Phase 1 |
 
+
+## Baseline guardrails
+
+- Follow `docs/frontend/style-quality-gates.md` for minimum contrast targets and state consistency expectations.
+- Use `/admin/style-gallery` as the canonical visual reference for light/dark component parity and state rendering.
+
 ## Suggested QA cadence by phase
 
 - **Phase 1:** Run parity + responsiveness + keyboard/contrast checks on every merge candidate.
