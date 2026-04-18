@@ -3,6 +3,7 @@
 import { ReactNode } from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { typography } from "@/lib/ui/typography";
 
 type DashboardPageShellKpiCard =
   | ReactNode
@@ -87,7 +88,7 @@ export function DashboardPageShell({
   const headerToneClassName =
     headerTone === "transparent"
       ? "bg-transparent dark:bg-transparent"
-      : "bg-background dark:bg-background";
+      : "bg-surface-glass";
   const resolvedKpiCard = isStructuredKpiCard(kpiCard) ? (
     <div
       className={cn(
@@ -106,11 +107,11 @@ export function DashboardPageShell({
 
 
   return (
-    <div className="min-h-full bg-background/50 p-4 transition-colors duration-300 md:p-8">
+    <div className="min-h-full bg-surface-base p-4 transition-colors duration-300 md:p-8">
       <div className={cn("mx-auto space-y-8", maxWidthClassName, animated && animationClassName)}>
         <header
           className={cn(
-            "sticky top-0 z-20 -mx-4 border-b border-zinc-200/50 px-4 backdrop-blur-md transition-all duration-300 dark:border-zinc-800/50 md:-mx-8 md:px-8",
+            "sticky top-0 z-20 -mx-4 border-b border-border/70 px-4 backdrop-blur-md transition-all duration-300 md:-mx-8 md:px-8",
             headerToneClassName,
             isCompactHeader ? "py-3" : "py-4",
             headerClassName,
@@ -134,12 +135,12 @@ export function DashboardPageShell({
                     </div>
                   ) : null}
 
-                  <h1 className={cn("font-bold tracking-tight text-foreground", isCompactHeader ? "text-2xl" : "text-3xl")}>
+                  <h1 className={cn(typography.pageTitle, isCompactHeader ? "text-2xl" : "text-3xl")}>
                     {title}
                   </h1>
                 </div>
                 {description ? (
-                  <p className="max-w-xl text-sm font-medium text-zinc-500 dark:text-zinc-400">{description}</p>
+                  <p className={cn(typography.bodyCopy, "max-w-xl text-sm")}>{description}</p>
                 ) : null}
               </div>
 
