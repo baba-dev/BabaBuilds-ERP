@@ -15,10 +15,16 @@ import { useTranslations } from "next-intl";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { toast } from "sonner";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 type AuthModalProps = {
   callbackUrl?: string;
   authError?: string;
+  /**
+   * `modal`: full-screen overlay (e.g. unauthenticated dashboard prompt).
+   * `embedded`: sits in-page on `/login` with the ambient background visible behind it.
+   */
+  variant?: "modal" | "embedded";
 };
 
 type EmailErrorCase = "CONFIG_ERROR" | "RATE_LIMITED" | "INVALID_EMAIL" | "GENERIC";
@@ -62,6 +68,7 @@ function getDeviceFingerprint(): string {
 export default function AuthModal({
   callbackUrl = "/dashboard",
   authError,
+  variant = "modal",
 }: AuthModalProps) {
   const t = useTranslations("AuthModal");
   const { status } = useSession();
@@ -281,11 +288,43 @@ export default function AuthModal({
     }
   };
 
+  const isEmbedded = variant === "embedded";
+
   return (
-    <div className="fixed inset-0 z-[999] flex items-end sm:items-center justify-center bg-background/65 backdrop-blur-md p-0 sm:p-4 animate-in fade-in duration-300">
-      <div className="w-full max-w-md bg-card text-card-foreground border border-border rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden animate-in sm:zoom-in-95 slide-in-from-bottom duration-300 max-h-[90vh] sm:max-h-none overflow-y-auto">
-        <div className="p-6 sm:p-8 text-center space-y-4 border-b border-border bg-background/40">
-          <div className="mx-auto w-12 h-12 bg-indigo-600 rounded-xl shadow-inner shadow-indigo-400/20 flex items-center justify-center">
+    <div
+      className={cn(
+        "flex justify-center animate-in fade-in duration-300",
+        isEmbedded
+          ? "relative z-10 w-full"
+          : "fixed inset-0 z-[999] flex items-end sm:items-center bg-background/55 backdrop-blur-md p-0 sm:p-4"
+      )}
+    >
+      <div
+        className={cn(
+          "w-full max-w-md text-card-foreground overflow-hidden animate-in duration-300 max-h-[90vh] sm:max-h-none overflow-y-auto",
+          isEmbedded
+            ? [
+                "rounded-2xl sm:rounded-[1.35rem]",
+                "border border-border/80 dark:border-white/12",
+                "bg-card/78 dark:bg-card/72 backdrop-blur-xl backdrop-saturate-150",
+                "shadow-[0_20px_60px_-15px_color-mix(in_oklab,var(--foreground)_14%,transparent),0_0_0_1px_color-mix(in_oklab,var(--foreground)_6%,transparent)]",
+                "sm:zoom-in-95",
+              ]
+            : [
+                "rounded-t-3xl sm:rounded-[1.35rem]",
+                "border border-border/90 dark:border-white/10",
+                "bg-card/85 dark:bg-card/78 backdrop-blur-xl backdrop-saturate-150",
+                "shadow-[0_28px_70px_-18px_color-mix(in_oklab,var(--foreground)_18%,transparent)]",
+                "sm:zoom-in-95 slide-in-from-bottom",
+              ]
+        )}
+      >
+        <div
+          className={cn(
+            "p-6 sm:p-8 text-center space-y-4 border-b border-border/70 bg-muted/25 dark:bg-muted/15"
+          )}
+        >
+          <div className="mx-auto w-12 h-12 rounded-xl flex items-center justify-center bg-orange-600 text-white shadow-inner shadow-orange-400/25 ring-1 ring-orange-400/35">
             <Box className="w-7 h-7 text-white" />
           </div>
           <div>
@@ -297,9 +336,9 @@ export default function AuthModal({
         <div className="p-6 sm:p-8 space-y-5">
           <form onSubmit={handleEmailSignIn} className="space-y-3">
             {emailStatus === "success" && (
-              <div className="bg-indigo-500/10 border border-indigo-500/25 rounded-xl p-4 text-center space-y-2 animate-in fade-in">
-                <CheckCircle2 className="w-8 h-8 text-indigo-500 mx-auto" />
-                <p className="text-sm font-medium text-indigo-600 dark:text-indigo-300">
+              <div className="bg-orange-500/10 border border-orange-500/25 rounded-xl p-4 text-center space-y-2 animate-in fade-in">
+                <CheckCircle2 className="w-8 h-8 text-orange-600 dark:text-orange-400 mx-auto" />
+                <p className="text-sm font-medium text-orange-700 dark:text-orange-300">
                   {t("emailSent.title")}
                 </p>
                 <p className="text-xs text-muted-foreground">{t("emailSent.description", { email })}</p>
@@ -326,7 +365,7 @@ export default function AuthModal({
                   }
                 }}
                 onBlur={verifyMagicLinkPolicy}
-                className="w-full bg-background border border-input text-foreground rounded-xl pl-10 pr-4 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all placeholder:text-muted-foreground/70"
+                className="w-full bg-background/90 dark:bg-background/80 border border-input text-foreground rounded-xl pl-10 pr-4 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all placeholder:text-muted-foreground/70"
               />
             </div>
 
@@ -358,7 +397,7 @@ export default function AuthModal({
                 !isMagicLinkAllowed ||
                 isPolicyChecking
               }
-              className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 disabled:pointer-events-none disabled:hover:bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-sm active:scale-95"
+              className="w-full flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 disabled:pointer-events-none disabled:hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl font-bold transition-all shadow-md shadow-orange-600/25 active:scale-[0.98]"
             >
               {isLoading || isPolicyChecking ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -374,11 +413,11 @@ export default function AuthModal({
                 role={emailStatus === "error" ? "alert" : "status"}
                 aria-live={emailStatus === "error" ? "assertive" : "polite"}
                 className={`rounded-xl border p-3 space-y-2 outline-none ${
-                  emailStatus === "error"
+                    emailStatus === "error"
                     ? "bg-red-500/10 border-red-500/30"
                     : emailStatus === "loading"
                       ? "bg-muted border-border"
-                      : "bg-indigo-500/10 border-indigo-500/20"
+                      : "bg-orange-500/10 border-orange-500/22"
                 }`}
               >
                 {emailStatus === "loading" && (
@@ -387,13 +426,13 @@ export default function AuthModal({
 
                 {emailStatus === "success" && (
                   <>
-                    <p className="text-xs text-indigo-600 dark:text-indigo-300">{t("status.sent")}</p>
+                    <p className="text-xs text-orange-700 dark:text-orange-300">{t("status.sent")}</p>
                     <div className="flex items-center justify-between gap-3">
                       <button
                         type="button"
                         onClick={handleResend}
                         disabled={isLoading || resendCooldown > 0}
-                        className="text-xs text-indigo-600 hover:text-indigo-700 dark:text-indigo-200 dark:hover:text-white disabled:text-muted-foreground disabled:cursor-not-allowed"
+                        className="text-xs text-orange-700 hover:text-orange-800 dark:text-orange-300 dark:hover:text-orange-100 disabled:text-muted-foreground disabled:cursor-not-allowed"
                       >
                         {t("actions.resendLink")}
                       </button>
@@ -446,7 +485,7 @@ export default function AuthModal({
           <button
             onClick={() => signIn("google", { callbackUrl })}
             disabled={isLoading || isDemoLoading}
-            className="w-full flex items-center justify-center gap-3 bg-background hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-foreground px-4 py-2.5 rounded-xl font-bold transition-colors shadow-sm active:scale-95 disabled:opacity-50 disabled:pointer-events-none border border-input"
+            className="w-full flex items-center justify-center gap-3 bg-background/95 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-foreground px-4 py-2.5 rounded-xl font-bold transition-colors shadow-sm active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none border border-input"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -487,13 +526,13 @@ export default function AuthModal({
                   isDemoLoading ||
                   (!turnstileToken && isProd)
                 }
-                className="w-full flex items-center justify-between group bg-background hover:bg-muted border border-input hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-muted-foreground hover:text-foreground px-4 py-3 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+                className="w-full flex items-center justify-between group bg-background/95 hover:bg-muted border border-input hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-background text-muted-foreground hover:text-foreground px-4 py-3 rounded-xl font-medium transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
               >
                 <div className="flex items-center gap-3">
                   {isDemoLoading ? (
-                    <Loader2 className="w-5 h-5 text-indigo-400 animate-spin" />
+                    <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
                   ) : (
-                    <Sparkles className="w-5 h-5 text-indigo-400" />
+                    <Sparkles className="w-5 h-5 text-orange-500" />
                   )}
                   <span>
                     {isDemoLoading
