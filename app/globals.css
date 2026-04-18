@@ -242,43 +242,81 @@
   }
 
   .auth-ambient-orb-a {
-    width: min(72vw, 520px);
-    height: min(72vw, 520px);
-    left: -12%;
-    top: 8%;
+    width: min(68vw, 480px);
+    height: min(68vw, 480px);
+    left: 6%;
+    top: 14%;
     background: radial-gradient(circle at 40% 40%, var(--auth-mesh-a), transparent 68%);
-    opacity: 0.85;
+    opacity: 0.82;
     animation: auth-mesh-float-a 38s var(--motion-ease-standard) -4s infinite alternate;
   }
 
   .auth-ambient-orb-b {
-    width: min(78vw, 580px);
-    height: min(78vw, 580px);
-    right: -18%;
-    top: -6%;
+    width: min(72vw, 520px);
+    height: min(72vw, 520px);
+    right: 5%;
+    top: 10%;
     background: radial-gradient(circle at 55% 45%, var(--auth-mesh-b), transparent 70%);
-    opacity: 0.78;
+    opacity: 0.76;
     animation: auth-mesh-float-b 44s var(--motion-ease-standard) -8s infinite alternate;
   }
 
   .auth-ambient-orb-c {
-    width: min(85vw, 640px);
-    height: min(85vw, 640px);
-    left: 18%;
-    bottom: -22%;
+    width: min(78vw, 560px);
+    height: min(78vw, 560px);
+    left: 22%;
+    bottom: -14%;
     background: radial-gradient(circle at 48% 42%, var(--auth-mesh-c), transparent 72%);
-    opacity: 0.72;
+    opacity: 0.7;
     animation: auth-mesh-float-c 48s var(--motion-ease-standard) -2s infinite alternate;
   }
 
   .auth-ambient-orb-d {
-    width: min(62vw, 460px);
-    height: min(62vw, 460px);
-    right: 8%;
-    bottom: 12%;
+    width: min(58vw, 420px);
+    height: min(58vw, 420px);
+    right: 18%;
+    bottom: 16%;
     background: radial-gradient(circle at 50% 50%, var(--auth-mesh-d), transparent 68%);
-    opacity: 0.68;
+    opacity: 0.66;
     animation: auth-mesh-float-d 42s var(--motion-ease-standard) -12s infinite alternate;
+  }
+
+  /**
+   * Center “emanation” — reads as warm light radiating from behind the login card,
+   * fading into the viewport edges (complements peripheral mesh orbs).
+   */
+  .auth-ambient-emanate {
+    transform: translateZ(0);
+    will-change: transform, opacity;
+    opacity: calc(0.78 * var(--auth-ambient-intensity));
+    filter: blur(48px) saturate(1.08);
+    mix-blend-mode: normal;
+    background:
+      radial-gradient(ellipse 52% 48% at 50% 46%, color-mix(in oklab, var(--auth-mesh-a) 55%, transparent) 0%, transparent 52%),
+      radial-gradient(ellipse 72% 64% at 50% 48%, color-mix(in oklab, var(--auth-mesh-b) 38%, transparent) 0%, transparent 58%),
+      radial-gradient(ellipse 95% 85% at 50% 50%, color-mix(in oklab, var(--auth-mesh-c) 22%, transparent) 0%, transparent 68%);
+    animation: auth-emanate-breathe 40s var(--motion-ease-standard) -6s infinite alternate;
+  }
+
+  .dark .auth-ambient-emanate {
+    mix-blend-mode: screen;
+    opacity: calc(0.88 * var(--auth-ambient-intensity));
+    filter: blur(52px) saturate(1.1);
+  }
+
+  @media (max-width: 639px) {
+    .auth-ambient-emanate {
+      filter: blur(40px) saturate(1.06);
+      background:
+        radial-gradient(ellipse 62% 52% at 50% 48%, color-mix(in oklab, var(--auth-mesh-a) 48%, transparent) 0%, transparent 54%),
+        radial-gradient(ellipse 88% 78% at 50% 50%, color-mix(in oklab, var(--auth-mesh-b) 32%, transparent) 0%, transparent 62%),
+        radial-gradient(ellipse 110% 95% at 50% 52%, color-mix(in oklab, var(--auth-mesh-c) 18%, transparent) 0%, transparent 72%);
+    }
+  }
+
+  @keyframes auth-emanate-breathe {
+    from { transform: translate3d(-0.6%, 0.35%, 0) scale(1); }
+    to { transform: translate3d(0.45%, -0.4%, 0) scale(1.06); }
   }
 
   .auth-ambient-vignette {
@@ -492,7 +530,8 @@
     .auth-ambient-orb-a,
     .auth-ambient-orb-b,
     .auth-ambient-orb-c,
-    .auth-ambient-orb-d {
+    .auth-ambient-orb-d,
+    .auth-ambient-emanate {
       animation: none !important;
     }
   }
