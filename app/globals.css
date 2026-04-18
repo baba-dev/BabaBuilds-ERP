@@ -43,6 +43,17 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-panel: var(--panel);
+  --color-panel-muted: var(--panel-muted);
+  --color-panel-glass: var(--panel-glass);
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-primary-foreground: var(--accent-primary-foreground);
+  --color-accent-warning: var(--accent-warning);
+  --color-accent-warning-foreground: var(--accent-warning-foreground);
+  --color-accent-info: var(--accent-info);
+  --color-accent-info-foreground: var(--accent-info-foreground);
+  --color-text-strong: var(--text-strong);
+  --color-text-soft: var(--text-soft);
   --color-surface-base: var(--surface-base);
   --color-surface-elevated: var(--surface-elevated);
   --color-surface-glass: var(--surface-glass);
@@ -68,6 +79,11 @@
 }
 
 :root {
+  /* Semantic token mapping (appwide aliases; keep primitive tokens unchanged):
+   * surfaces -> panel / panel-muted / panel-glass
+   * accents  -> accent-primary (orange-led action), accent-warning (amber caution), accent-info (indigo highlight)
+   * text     -> text-strong / text-soft
+   */
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -100,6 +116,12 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --accent-primary: oklch(0.66 0.17 52);
+  --accent-primary-foreground: oklch(0.99 0.004 70);
+  --accent-warning: oklch(0.76 0.14 76);
+  --accent-warning-foreground: oklch(0.22 0.02 78);
+  --accent-info: oklch(0.623 0.214 259.815);
+  --accent-info-foreground: oklch(0.985 0 0);
   --surface-base: oklch(0.99 0.002 260);
   --surface-elevated: oklch(1 0 0);
   --surface-glass: oklch(1 0 0 / 72%);
@@ -108,6 +130,13 @@
   --success-soft: oklch(0.95 0.06 155);
   --danger-soft: oklch(0.95 0.05 24);
   --focus-ring: oklch(0.63 0.19 279);
+
+  /* Semantic surface/text aliases are intentionally derived from primitives to avoid drift. */
+  --panel: var(--surface-elevated);
+  --panel-muted: var(--surface-base);
+  --panel-glass: var(--surface-glass);
+  --text-strong: var(--foreground);
+  --text-soft: var(--muted-foreground);
 
   --motion-duration-fast: 150ms;
   --motion-duration-base: 220ms;
@@ -118,6 +147,9 @@
   --motion-hover-lift-y: -2px;
   --motion-press-scale: 0.985;
 
+  /* Reusable app tokens end above.
+   * Auth-only ambient tokens begin below (intentionally auth scoped).
+   */
   /* ── Auth ambient background (orange-led ERP accent) ───────────────────── */
   --auth-ambient-intensity: 1;
   --auth-bg-a: oklch(0.995 0.006 55);
@@ -134,6 +166,7 @@
 }
 
 .dark {
+  /* Semantic token mapping (dark mode), preserving role parity with :root. */
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -165,6 +198,12 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --accent-primary: oklch(0.72 0.16 52);
+  --accent-primary-foreground: oklch(0.18 0.02 58);
+  --accent-warning: oklch(0.8 0.13 78);
+  --accent-warning-foreground: oklch(0.16 0.01 78);
+  --accent-info: oklch(0.74 0.13 259.815);
+  --accent-info-foreground: oklch(0.16 0.01 259);
   --surface-base: oklch(0.19 0.005 260);
   --surface-elevated: oklch(0.23 0.01 260);
   --surface-glass: oklch(0.2 0.008 260 / 78%);
@@ -174,6 +213,16 @@
   --danger-soft: oklch(0.31 0.08 24);
   --focus-ring: oklch(0.7 0.17 279);
 
+  /* Semantic surface/text aliases are intentionally derived from primitives to avoid drift. */
+  --panel: var(--surface-elevated);
+  --panel-muted: var(--surface-base);
+  --panel-glass: var(--surface-glass);
+  --text-strong: var(--foreground);
+  --text-soft: var(--muted-foreground);
+
+  /* Reusable app tokens end above.
+   * Auth-only ambient tokens begin below (intentionally auth scoped).
+   */
   /* ── Auth ambient background (dark — richer amber / ember glow) ───────── */
   --auth-ambient-intensity: 1;
   --auth-bg-a: oklch(0.14 0.025 55);
@@ -363,8 +412,9 @@
 @layer components {
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 font-bold text-white transition-all duration-200 active:scale-[0.98];
-    background: var(--accent-strong);
-    box-shadow: 0 16px 30px color-mix(in oklab, var(--accent-strong) 28%, transparent);
+    color: var(--accent-primary-foreground);
+    background: var(--accent-primary);
+    box-shadow: 0 16px 30px color-mix(in oklab, var(--accent-primary) 28%, transparent);
   }
 
   .btn-primary:hover {
@@ -378,19 +428,19 @@
 
   .card-elevated {
     @apply rounded-2xl border p-6 shadow-sm transition-colors;
-    background: var(--surface-elevated);
+    background: var(--panel);
     border-color: color-mix(in oklab, var(--foreground) 10%, transparent);
     box-shadow: 0 12px 32px color-mix(in oklab, var(--foreground) 8%, transparent);
   }
 
   .page-header-sticky {
     @apply sticky top-0 z-20 border-b backdrop-blur-md transition-all duration-300;
-    background: var(--surface-glass);
+    background: var(--panel-glass);
     border-color: color-mix(in oklab, var(--foreground) 12%, transparent);
   }
 
   .text-muted-body {
-    color: color-mix(in oklab, var(--foreground) 62%, transparent);
+    color: var(--text-soft);
   }
 
   .action-destructive {
