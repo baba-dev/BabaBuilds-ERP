@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowRight, Rocket, ShoppingBag, Sparkles } from "lucide-react";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
