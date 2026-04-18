@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { 
   Globe, ShieldCheck, Building2, 
   ArrowRight, ArrowLeft, CheckCircle2, Sparkles,
-  Zap, Wallet, Users2, Calendar, ClipboardList, FileText, Route, CheckSquare2
+  Zap, Wallet, Users2, Calendar, Clock, ClipboardList, FileText, Route, CheckSquare2, Target
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,6 +67,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
     shopAccentColor: "#6366f1",
     enableWorkforce: false,
     enableDocuments: false,
+    enableRevenuePipeline: false,
     enablePayroll: false,
     payrollSetupPath: "STANDALONE" as "STANDALONE" | "WORKFORCE_LINKED",
   });
@@ -579,6 +580,58 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 <p className="text-center text-xs text-zinc-400 dark:text-zinc-600 pt-2">
                   More modules (Time Tracking, Asset Registry) coming soon.
                 </p>
+
+                <div
+                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
+                    form.enableRevenuePipeline
+                      ? 'border-violet-500 bg-violet-50/50 dark:bg-violet-950/20'
+                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
+                  }`}
+                  onClick={() => setForm({ ...form, enableRevenuePipeline: !form.enableRevenuePipeline })}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
+                        form.enableRevenuePipeline ? 'bg-violet-600 shadow-lg shadow-violet-500/20' : 'bg-zinc-100 dark:bg-zinc-800'
+                      }`}>
+                        <Target className={`h-5 w-5 ${form.enableRevenuePipeline ? 'text-white' : 'text-zinc-500 dark:text-zinc-400'}`} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Revenue Pipeline</p>
+                          {form.enableRevenuePipeline && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 dark:bg-violet-900/40 px-2 py-0.5 text-[10px] font-bold text-violet-700 dark:text-violet-300 uppercase tracking-wider">
+                              <CheckCircle2 className="h-2.5 w-2.5" /> Enabled
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                          Proposal-stage intelligence with stalled-deal alerts and guided follow-up actions to accelerate conversions.
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                          {[
+                            { icon: Target, text: 'Pipeline overview by stage' },
+                            { icon: Clock, text: 'Stalled opportunity detection' },
+                            { icon: Route, text: 'Next-best-action recommendations' },
+                            { icon: ClipboardList, text: 'Batch task creation for follow-ups' },
+                          ].map(({ icon: Icon, text }) => (
+                            <div key={text} className="flex items-center gap-1.5">
+                              <Icon className={`h-3 w-3 shrink-0 ${form.enableRevenuePipeline ? 'text-violet-500' : 'text-zinc-400'}`} />
+                              <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{text}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                      form.enableRevenuePipeline ? 'bg-violet-600' : 'bg-zinc-300 dark:bg-zinc-700'
+                    }`}>
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        form.enableRevenuePipeline ? 'translate-x-5' : 'translate-x-0'
+                      }`} />
+                    </div>
+                  </div>
+                </div>
 
                 <div
                   className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
