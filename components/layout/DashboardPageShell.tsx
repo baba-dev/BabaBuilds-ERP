@@ -2,8 +2,9 @@
 
 import { ReactNode } from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { typography as ty, tx } from "@/lib/ui/typography";
 import { cn } from "@/lib/utils";
-import { typography } from "@/lib/ui/typography";
+import { Card, CardContent } from "@/components/ui/card";
 
 type DashboardPageShellKpiCard =
   | ReactNode
@@ -36,13 +37,13 @@ const defaultAnimationClassName =
   "animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out";
 
 const kpiCardToneClassNames = {
-  default: "border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 text-zinc-900 dark:text-zinc-50",
+  default: "text-zinc-900 dark:text-zinc-50",
   positive:
-    "border-emerald-200/60 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400",
+    "text-emerald-700 dark:text-emerald-400",
   warning:
-    "border-amber-200/60 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400",
+    "text-amber-700 dark:text-amber-400",
   danger:
-    "border-rose-200/60 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400",
+    "text-rose-700 dark:text-rose-400",
 };
 
 
@@ -90,17 +91,21 @@ export function DashboardPageShell({
       ? "bg-transparent dark:bg-transparent"
       : "bg-[color:var(--color-panel-glass,var(--color-surface-glass,var(--color-background)))]";
   const resolvedKpiCard = isStructuredKpiCard(kpiCard) ? (
-    <div
+    <Card
+      size="sm"
+      variant="tinted"
       className={cn(
-        "inline-flex flex-col gap-0.5 rounded-xl border px-5 py-2.5 shadow-sm text-center sm:text-right backdrop-blur-sm transition-all",
+        "inline-flex border-0 px-5 py-2.5 text-center sm:text-right",
         kpiCardToneClassNames[kpiCard.tone ?? "default"],
       )}
     >
-      <span className="text-[0.65rem] font-bold uppercase tracking-[0.15em] opacity-60">
-        {kpiCard.label}
-      </span>
-      <span className="text-xl font-black leading-tight tracking-tight">{kpiCard.value}</span>
-    </div>
+      <CardContent className="px-0">
+        <span className="text-[0.65rem] font-bold uppercase tracking-[0.15em] opacity-60">
+          {kpiCard.label}
+        </span>
+        <span className={tx(ty.metricValueMd, "text-xl font-black")}>{kpiCard.value}</span>
+      </CardContent>
+    </Card>
   ) : (
     kpiCard
   );
@@ -111,7 +116,7 @@ export function DashboardPageShell({
       <div className={cn("mx-auto space-y-8", maxWidthClassName, animated && animationClassName)}>
         <header
           className={cn(
-            "sticky top-0 z-20 -mx-4 border-b border-border/70 px-4 backdrop-blur-md transition-all duration-300 md:-mx-8 md:px-8",
+            "sticky top-0 z-20 -mx-4 rounded-b-2xl border-b border-border/70 px-4 backdrop-blur-md transition-all duration-200 ease-out md:-mx-8 md:px-8",
             headerToneClassName,
             isCompactHeader ? "py-3" : "py-4",
             headerClassName,
@@ -119,7 +124,7 @@ export function DashboardPageShell({
         >
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <div className={tx(ty.labelUpper, "text-muted-foreground flex items-center gap-2")}>
                 <SidebarTrigger className="md:hidden" />
                 {breadcrumb ? <span className="min-h-5">{breadcrumb}</span> : null}
               </div>
@@ -135,14 +140,12 @@ export function DashboardPageShell({
                     </div>
                   ) : null}
 
-                  <h1 className={cn(typography.pageTitle, isCompactHeader ? "text-2xl" : "text-3xl")}>
+                  <h1 className={cn(ty.pageTitle, "text-foreground", isCompactHeader ? "text-2xl sm:text-2xl lg:text-2xl" : "text-3xl sm:text-3xl lg:text-3xl")}>
                     {title}
                   </h1>
                 </div>
                 {description ? (
-                  <p className={cn(typography.bodyCopy, "max-w-xl text-sm text-muted-foreground")}>
-                    {description}
-                  </p>
+                  <p className={tx(ty.helper, "max-w-xl font-medium")}>{description}</p>
                 ) : null}
               </div>
 
