@@ -49,49 +49,79 @@ export async function POST(request: Request) {
       Boolean(agentKeyFromHeader) &&
       agentKeyFromHeader === configuredAgentKey;
 
-    // In development we allow non-local callers (e.g. Cloud Agents) ONLY if they present a valid agent key.
-    // Without the key, dev access is limited to localhost to reduce accidental exposure.
-    if (isDev && !isLocal && !hasValidAgentKey) {
-      return NextResponse.json(
-        {
-          error:
-            "Demo provisioning in development is only allowed from localhost unless a valid x-demo-agent-key is provided.",
-        },
-        { status: 403 },
-      );
-    }
-
-    // Production requires Turnstile always.
-    // Development rules:
-    // - localhost: allow without Turnstile (faster local onboarding)
-    // - non-local: require a valid agent key (Cloud Agents / remote dev)
-    if (!isDev) {
-      if (!token) {
-        return NextResponse.json({ error: "Security challenge failed: No token." }, { status: 400 });
+    const verifyTurnstile = async (challengeToken: string, verificationMode: "turnstile") => {
+      const turnstileSecret = process.env.TURNSTILE_SECRET_KEY?.trim();
+      if (!turnstileSecret) {
+        console.error("Demo provisioning Turnstile secret is missing.", {
+          source: "demo_provision",
+          mode: isDev ? "dev_nonlocal" : "production",
+          verification: verificationMode,
+        });
+        return NextResponse.json(
+          { error: "Server misconfiguration: TURNSTILE_SECRET_KEY is required for bot verification." },
+          { status: 500 },
+        );
       }
 
       const verifyRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          secret: process.env.TURNSTILE_SECRET_KEY,
-          response: token,
+          secret: turnstileSecret,
+          response: challengeToken,
         }),
       });
 
       const verifyData = await verifyRes.json();
       if (!verifyData.success) {
+        console.warn("Demo provisioning Turnstile verification failed.", {
+          source: "demo_provision",
+          mode: isDev ? "dev_nonlocal" : "production",
+          verification: verificationMode,
+        });
         return NextResponse.json({ error: "Bot verification failed." }, { status: 403 });
       }
-    } else {
-      if (!isLocal && !token && !hasValidAgentKey) {
-        return NextResponse.json(
-          {
-            error:
-              "Demo provisioning in development requires either a Turnstile token or a valid x-demo-agent-key header.",
-          },
-          { status: 400 },
-        );
+
+      return null;
+    };
+
+    // Production requires Turnstile always.
+    if (!isDev) {
+      if (!token) {
+        return NextResponse.json({ error: "Security challenge failed: No token." }, { status: 400 });
+      }
+
+      const turnstileFailure = await verifyTurnstile(token, "turnstile");
+      if (turnstileFailure) return turnstileFailure;
+    } else if (!isLocal) {
+      // Development non-local rules:
+      // - valid agent key: trusted channel (bypass Turnstile)
+      // - otherwise: Turnstile must be provided + verified
+      if (hasValidAgentKey) {
+        console.info("Demo provisioning permitted with agent key.", {
+          source: "demo_provision",
+          mode: "dev_nonlocal",
+          verification: "agent_key",
+        });
+      } else {
+        if (!token) {
+          return NextResponse.json(
+            {
+              error:
+                "Demo provisioning in development requires either a Turnstile token or a valid x-demo-agent-key header.",
+            },
+            { status: 400 },
+          );
+        }
+
+        console.info("Demo provisioning verifying Turnstile for non-local development request.", {
+          source: "demo_provision",
+          mode: "dev_nonlocal",
+          verification: "turnstile",
+        });
+
+        const turnstileFailure = await verifyTurnstile(token, "turnstile");
+        if (turnstileFailure) return turnstileFailure;
       }
     }
 
