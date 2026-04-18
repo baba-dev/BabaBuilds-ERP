@@ -37,7 +37,7 @@ export function TableActions({
         <Button 
           variant="ghost" 
           size="icon" 
-          className="h-7 w-7 text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all" 
+          className="h-7 w-7 text-zinc-500 dark:text-zinc-400 hover:text-orange-600 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 transition-all" 
           onClick={() => onResendEmail(invoice)} 
           disabled={resending} 
           title={t("actions.resend_invoice_title", "Resend invoice")} 

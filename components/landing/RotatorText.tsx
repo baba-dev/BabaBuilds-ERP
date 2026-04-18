@@ -24,7 +24,7 @@ export default function RotatorText() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: -50, opacity: 0 }}
           transition={{ duration: 0.5, type: "spring", stiffness: 100, damping: 15 }}
-          className="bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-500 bg-clip-text text-transparent block"
+          className="bg-gradient-to-r from-orange-600 via-amber-500 to-orange-500 bg-clip-text text-transparent block"
           style={{ position: 'relative' }}
         >
           {words[index]}

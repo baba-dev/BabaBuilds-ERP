@@ -28,35 +28,35 @@ export function DashboardAttentionCenter({ attention }: { attention: DashboardDa
     if (computedTone === "ok") return "bg-emerald-500/5 dark:bg-emerald-500/10 group-hover:bg-emerald-500/10 dark:group-hover:bg-emerald-500/20";
     if (computedTone === "critical") return "bg-rose-500/5 dark:bg-rose-500/10 group-hover:bg-rose-500/10 dark:group-hover:bg-rose-500/20";
     if (computedTone === "warning") return "bg-amber-500/5 dark:bg-amber-500/10 group-hover:bg-amber-500/10 dark:group-hover:bg-amber-500/20";
-    return "bg-indigo-500/5 dark:bg-indigo-500/10 group-hover:bg-indigo-500/10 dark:group-hover:bg-indigo-500/20";
+    return "bg-orange-500/5 dark:bg-orange-500/10 group-hover:bg-orange-500/10 dark:group-hover:bg-orange-500/20";
   };
 
   const getIndicatorClass = (computedTone: "ok" | "critical" | "warning" | "info") => {
     if (computedTone === "ok") return "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20";
     if (computedTone === "critical") return "bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-500/20";
     if (computedTone === "warning") return "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-500/20";
-    return "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-500/20";
+    return "bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-100 dark:border-orange-500/20";
   };
 
   const getAccentBorderClass = (computedTone: "ok" | "critical" | "warning" | "info") => {
     if (computedTone === "ok") return "hover:border-emerald-200/70 dark:hover:border-emerald-500/30";
     if (computedTone === "critical") return "hover:border-rose-200/70 dark:hover:border-rose-500/30";
     if (computedTone === "warning") return "hover:border-amber-200/70 dark:hover:border-amber-500/30";
-    return "hover:border-indigo-200/70 dark:hover:border-indigo-500/30";
+    return "hover:border-orange-200/70 dark:hover:border-orange-500/30";
   };
 
   const getTopBarClass = (computedTone: "ok" | "critical" | "warning" | "info") => {
     if (computedTone === "ok") return "bg-emerald-500/60";
     if (computedTone === "critical") return "bg-rose-500/60";
     if (computedTone === "warning") return "bg-amber-500/60";
-    return "bg-indigo-500/60";
+    return "bg-orange-500/60";
   };
 
   const getTextAccentClass = (computedTone: "ok" | "critical" | "warning" | "info") => {
     if (computedTone === "ok") return "text-emerald-600 dark:text-emerald-400";
     if (computedTone === "critical") return "text-rose-600 dark:text-rose-400";
     if (computedTone === "warning") return "text-amber-600 dark:text-amber-400";
-    return "text-indigo-600 dark:text-indigo-400";
+    return "text-orange-600 dark:text-orange-400";
   };
   return (
     <section className="space-y-6">
@@ -146,7 +146,7 @@ export function DashboardAttentionCenter({ attention }: { attention: DashboardDa
                         className={`inline-flex items-center ${ty.helperXs} font-semibold transition-colors ${
                           isZero
                             ? "text-zinc-400 hover:text-zinc-600 dark:text-zinc-600 dark:hover:text-zinc-400"
-                            : "text-zinc-900 hover:text-indigo-600 dark:text-zinc-300 dark:hover:text-indigo-400"
+                            : "text-zinc-900 hover:text-orange-600 dark:text-zinc-300 dark:hover:text-orange-400"
                         }`}
                       >
                         Open <ArrowRight className="ml-1 w-3.5 h-3.5 transition-transform duration-300 group-hover:translate-x-0.5" />

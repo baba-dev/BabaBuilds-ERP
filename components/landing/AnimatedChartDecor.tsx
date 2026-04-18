@@ -13,7 +13,7 @@ export default function AnimatedChartDecor() {
       <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/4 hidden lg:block opacity-50">
         <div className="flex items-end gap-2 h-40 w-64 bg-surface-elevated/40 backdrop-blur-md border border-border/80 rounded-2xl p-4 shadow-2xl">
           {bars.map((height, i) => (
-            <div key={i} className="flex-1 bg-indigo-500/50 rounded-t-sm" style={{ height: `${height}%` }} />
+            <div key={i} className="flex-1 bg-orange-500/50 rounded-t-sm" style={{ height: `${height}%` }} />
           ))}
         </div>
       </div>
@@ -36,7 +36,7 @@ export default function AnimatedChartDecor() {
           {bars.map((height, i) => (
             <motion.div
               key={i}
-              className="w-full bg-gradient-to-t from-indigo-600/80 to-violet-400/80 rounded-t-md shadow-[0_0_15px_rgba(99,102,241,0.2)]"
+              className="w-full bg-gradient-to-t from-orange-600/80 to-amber-400/80 rounded-t-md shadow-[0_0_15px_rgba(249,115,22,0.22)]"
               initial={{ height: 0 }}
               animate={{ height: [`${height * 0.5}%`, `${height}%`, `${height * 0.8}%`] }}
               transition={{

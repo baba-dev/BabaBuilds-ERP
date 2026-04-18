@@ -100,7 +100,7 @@ export function DashboardFinancialPulse({
   return (
     <section className="space-y-6">
       <div className="flex items-center gap-2 px-1">
-        <Landmark className="w-5 h-5 text-indigo-500" />
+        <Landmark className="w-5 h-5 text-orange-500" />
         <h3 className={ty.sectionTitle}>
           {tr("financial_pulse", "Financial pulse")}
         </h3>
@@ -109,13 +109,13 @@ export function DashboardFinancialPulse({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* 1. Revenue & Collections */}
         <Card className="group relative overflow-hidden p-6 border-zinc-200 dark:border-zinc-800/60 bg-white dark:bg-zinc-950/50 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-500 animate-in fade-in slide-in-from-bottom-3">
-          <div className="absolute -top-12 -right-12 w-32 h-32 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/10 dark:group-hover:bg-indigo-500/20 transition-all duration-700" />
+          <div className="absolute -top-12 -right-12 w-32 h-32 bg-orange-500/5 dark:bg-orange-500/10 rounded-full blur-3xl group-hover:bg-orange-500/10 dark:group-hover:bg-orange-500/20 transition-all duration-700" />
           
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center border border-indigo-100 dark:border-indigo-500/20 shadow-sm">
-                  <ArrowUpRight className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center border border-orange-100 dark:border-orange-500/20 shadow-sm">
+                  <ArrowUpRight className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                 </div>
                 <p className={ty.cardTitle}>
                   {tr("revenue_collections", "Revenue & Collections")}
@@ -133,7 +133,7 @@ export function DashboardFinancialPulse({
               </p>
             </div>
             
-            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/50 dark:border-zinc-800 flex items-center justify-between transition-colors group-hover:border-indigo-100 dark:group-hover:border-indigo-900/40">
+            <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/50 dark:border-zinc-800 flex items-center justify-between transition-colors group-hover:border-orange-100 dark:group-hover:border-orange-900/40">
               <p className={tx(ty.helperXs, "font-semibold flex items-center gap-1.5")}>
                 {tr("receivables", "Receivables")} 
                 <DashboardTooltip label={tr("receivables_help", "Money still expected from issued invoices.")} />
@@ -184,37 +184,37 @@ export function DashboardFinancialPulse({
         </Card>
 
         {/* 3. Stability & MRR (Visual Anchor) */}
-        <Card className="group relative overflow-hidden p-6 border-indigo-200 dark:border-indigo-500/30 bg-[#f8f9ff] dark:bg-indigo-950/20 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-500 animate-in fade-in slide-in-from-bottom-3 delay-200 fill-mode-both ring-1 ring-inset ring-indigo-500/5 dark:ring-indigo-500/10">
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 dark:from-indigo-500/10 dark:to-purple-500/10 opacity-80 pointer-events-none" />
+        <Card className="group relative overflow-hidden p-6 border-orange-200 dark:border-orange-500/30 bg-[#fff8f3] dark:bg-orange-950/20 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all duration-500 animate-in fade-in slide-in-from-bottom-3 delay-200 fill-mode-both ring-1 ring-inset ring-orange-500/5 dark:ring-orange-500/10">
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-amber-500/5 dark:from-orange-500/10 dark:to-amber-500/10 opacity-80 pointer-events-none" />
           
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center shadow-md">
+                <div className="w-9 h-9 rounded-xl bg-orange-600 dark:bg-orange-500 flex items-center justify-center shadow-md">
                   <ShieldCheck className="w-4 h-4 text-white" />
                 </div>
-                <p className={tx(ty.cardTitle, "text-indigo-950 dark:text-indigo-100")}>
+                <p className={tx(ty.cardTitle, "text-orange-950 dark:text-orange-100")}>
                   {tr("capital_stability", "Capital & Stability")}
                 </p>
               </div>
             </div>
             
             <div className="space-y-1 mb-8">
-              <p className={tx(ty.labelUpperStrong, "text-indigo-800/80 dark:text-indigo-300 flex items-center gap-1.5")}>
+              <p className={tx(ty.labelUpperStrong, "text-orange-800/80 dark:text-orange-300 flex items-center gap-1.5")}>
                 {tr("mrr", "Monthly Recurring (MRR)")} 
                 <DashboardTooltip label={tr("mrr_help", "Monthly recurring revenue from active retainers.")} />
               </p>
-              <p className={tx(ty.metricValueXl, "font-semibold text-indigo-950 dark:text-white")}>
+              <p className={tx(ty.metricValueXl, "font-semibold text-orange-950 dark:text-white")}>
                 <CountUpValue value={recurringRevenue} formatter={fCurrency} />
               </p>
             </div>
             
-            <div className="p-3.5 rounded-xl bg-white/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-500/20 flex items-center justify-between backdrop-blur-sm transition-colors group-hover:border-indigo-200 dark:group-hover:border-indigo-500/40">
-              <p className={tx(ty.helperXs, "font-semibold text-indigo-900/80 dark:text-indigo-200 flex items-center gap-1.5")}>
+            <div className="p-3.5 rounded-xl bg-white/70 dark:bg-orange-950/40 border border-orange-100 dark:border-orange-500/20 flex items-center justify-between backdrop-blur-sm transition-colors group-hover:border-orange-200 dark:group-hover:border-orange-500/40">
+              <p className={tx(ty.helperXs, "font-semibold text-orange-900/80 dark:text-orange-200 flex items-center gap-1.5")}>
                 {tr("liquid_assets", "Liquid assets")} 
                 <DashboardTooltip label={tr("liquid_assets_help", "Investments and liquid holdings currently tracked.")} />
               </p>
-              <p className={tx(ty.metricValueSm, "text-indigo-950 dark:text-white")}>
+              <p className={tx(ty.metricValueSm, "text-orange-950 dark:text-white")}>
                 {fCurrency(liquidAssets)}
               </p>
             </div>

@@ -61,8 +61,8 @@ export default function LandingContent() {
       title: t("features.items.automatedInvoicing.title"),
       description: t("features.items.automatedInvoicing.description"),
       icon: Receipt,
-      color: "text-blue-500",
-      bg: "bg-blue-50 dark:bg-blue-950/30",
+      color: "text-orange-500",
+      bg: "bg-orange-50 dark:bg-orange-950/30",
       span: "lg:col-span-2 lg:row-span-2",
       priority: "Built for velocity",
     },
@@ -79,8 +79,8 @@ export default function LandingContent() {
       title: t("features.items.aiBabaBotInsights.title"),
       description: t("features.items.aiBabaBotInsights.description"),
       icon: Sparkles,
-      color: "text-indigo-500",
-      bg: "bg-indigo-50 dark:bg-indigo-950/30",
+      color: "text-amber-600",
+      bg: "bg-amber-50 dark:bg-amber-950/30",
       span: "lg:col-span-1",
       priority: "Intelligence",
     },
@@ -106,8 +106,8 @@ export default function LandingContent() {
       title: t("features.items.investmentHub.title"),
       description: t("features.items.investmentHub.description"),
       icon: Calculator,
-      color: "text-violet-500",
-      bg: "bg-violet-50 dark:bg-violet-950/30",
+      color: "text-amber-700",
+      bg: "bg-amber-100/80 dark:bg-amber-950/30",
       span: "lg:col-span-1",
       priority: "Forecasting",
     },
@@ -124,8 +124,8 @@ export default function LandingContent() {
       title: t("features.items.clientCrm.title"),
       description: t("features.items.clientCrm.description"),
       icon: Users,
-      color: "text-sky-500",
-      bg: "bg-sky-50 dark:bg-sky-950/30",
+      color: "text-orange-700",
+      bg: "bg-orange-100/80 dark:bg-orange-950/25",
       span: "lg:col-span-1",
       priority: "Relationships",
     },
@@ -133,8 +133,8 @@ export default function LandingContent() {
       title: t("features.items.premiumProposals.title"),
       description: t("features.items.premiumProposals.description"),
       icon: FileSignature,
-      color: "text-indigo-500",
-      bg: "bg-indigo-50 dark:bg-indigo-950/30",
+      color: "text-orange-600",
+      bg: "bg-orange-50 dark:bg-orange-950/30",
       span: "lg:col-span-1",
       priority: "Conversion",
     },
@@ -142,8 +142,8 @@ export default function LandingContent() {
       title: t("features.items.inventoryHub.title"),
       description: t("features.items.inventoryHub.description"),
       icon: Package,
-      color: "text-orange-500",
-      bg: "bg-orange-50 dark:bg-orange-950/30",
+      color: "text-amber-600",
+      bg: "bg-amber-50 dark:bg-amber-950/30",
       span: "lg:col-span-1",
       priority: "Logistics",
     },
@@ -178,8 +178,8 @@ export default function LandingContent() {
       title: t("features.items.multiLevelRoles.title"),
       description: t("features.items.multiLevelRoles.description"),
       icon: UsersRound,
-      color: "text-blue-500",
-      bg: "bg-blue-50 dark:bg-blue-950/30",
+      color: "text-orange-700",
+      bg: "bg-orange-100/70 dark:bg-orange-950/25",
       span: "lg:col-span-1",
       priority: "Security",
     },
@@ -187,8 +187,8 @@ export default function LandingContent() {
       title: t("features.items.pwaImplementation.title"),
       description: t("features.items.pwaImplementation.description"),
       icon: MonitorSmartphone,
-      color: "text-purple-500",
-      bg: "bg-purple-50 dark:bg-purple-950/30",
+      color: "text-amber-700",
+      bg: "bg-amber-100/70 dark:bg-amber-950/25",
       span: "lg:col-span-1",
       priority: "Offline",
     },
@@ -209,7 +209,7 @@ export default function LandingContent() {
 
       <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-6 pt-32 pb-20">
         <div className="pointer-events-none absolute left-1/2 top-0 h-[600px] w-[1000px] -translate-x-1/2 rounded-full bg-accent-soft blur-[120px]" />
-        <div className="pointer-events-none absolute bottom-0 right-0 h-[500px] w-[500px] rounded-full bg-violet-600/10 blur-[110px]" />
+        <div className="pointer-events-none absolute bottom-0 right-0 h-[500px] w-[500px] rounded-full bg-orange-600/10 blur-[110px]" />
         
         {/* Floating background noise/grid for dark mode texture */}
         <div className="pointer-events-none absolute inset-0 opacity-[0.02] mix-blend-overlay dark:opacity-[0.04]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=0 0 200 200 xmlns=http://www.w3.org/2000/svg%3E%3Cfilter id=noiseFilter%3E%3CfeTurbulence type=fractalNoise baseFrequency=0.65 numOctaves=3 stitchTiles=stitch/%3E%3C/filter%3E%3Crect width=100%25 height=100%25 filter=url(%23noiseFilter)/%3E%3C/svg%3E")' }} />
@@ -251,7 +251,7 @@ export default function LandingContent() {
           >
             {/* Enhanced glowing primary CTA button */}
             <div className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-violet-500 rounded-2xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
               <Button size="lg" className="relative btn-primary h-16 gap-2 rounded-2xl px-12 text-lg font-black shadow-2xl transition-all" asChild>
                 <Link href="/api/auth/signin">
                   {t("hero.primaryCta")} <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
@@ -329,7 +329,7 @@ export default function LandingContent() {
         <div className="mx-auto max-w-7xl px-6">
           <div className="mb-20 max-w-3xl space-y-4 text-left">
             <h2 className="text-3xl font-black tracking-tight text-foreground md:text-5xl">
-              {t("features.headingPrefix")} <span className="text-indigo-600">{t("features.headingHighlight")}</span>
+              {t("features.headingPrefix")} <span className="text-orange-600">{t("features.headingHighlight")}</span>
             </h2>
             <p className="text-lg font-medium leading-relaxed text-muted-body">{t("features.description")}</p>
           </div>
@@ -391,7 +391,7 @@ export default function LandingContent() {
               <CheckCircle2 className="h-4 w-4 text-accent-strong" /> {t("finalCta.badges.wcag")}
             </div>
             <div className="flex items-center gap-2">
-              <Globe className="h-4 w-4 text-blue-500" /> {t("finalCta.badges.globalSupport")}
+              <Globe className="h-4 w-4 text-orange-500" /> {t("finalCta.badges.globalSupport")}
             </div>
           </div>
         </div>

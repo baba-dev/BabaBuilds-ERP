@@ -273,7 +273,7 @@ export default function Dashboard() {
           status === INVOICE_STATUS.PAID
             ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
             : status === INVOICE_STATUS.PARTIALLY_PAID
-              ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+              ? "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20"
               : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
         return (
           <Badge variant="outline" className={`${ty.kpiBadge} ${className}`}>
@@ -366,7 +366,7 @@ export default function Dashboard() {
     <DashboardPageShell
       title={tr("financial_overview", "Business command center")}
       description={tr("global_command_center", "Finance, compliance, shop, and operations in one decisive view.", { countryCode: data.countryCode })}
-      icon={<LayoutDashboard className="w-5 h-5 text-indigo-500" />}
+      icon={<LayoutDashboard className="w-5 h-5 text-orange-500" />}
       secondaryActions={
         <Select value={selectedFy} onValueChange={setSelectedFy}>
           <SelectTrigger className="w-[120px] h-9">
@@ -385,7 +385,7 @@ export default function Dashboard() {
       <div className="space-y-6">
         {/* 2.3 FIX — Getting Started checklist: shows for brand-new workspaces with zero activity */}
         {showGettingStarted && (
-          <div className="relative rounded-2xl border border-indigo-200 dark:border-indigo-800/50 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/30 dark:to-zinc-900/60 p-5 shadow-sm animate-in fade-in slide-in-from-top-2 duration-500">
+          <div className="relative rounded-2xl border border-orange-200 dark:border-orange-800/50 bg-gradient-to-br from-orange-50 to-white dark:from-orange-950/30 dark:to-zinc-900/60 p-5 shadow-sm animate-in fade-in slide-in-from-top-2 duration-500">
             <button
               type="button"
               onClick={dismissGettingStarted}
@@ -395,8 +395,8 @@ export default function Dashboard() {
               <X className="w-4 h-4" />
             </button>
             <div className="flex items-center gap-2 mb-4">
-              <Sparkles className="w-4 h-4 text-indigo-500" />
-              <p className={`${ty.labelUpperStrong} text-indigo-700 dark:text-indigo-400`}>
+              <Sparkles className="w-4 h-4 text-orange-500" />
+              <p className={`${ty.labelUpperStrong} text-orange-700 dark:text-orange-400`}>
                 {tr("getting_started_title", "Get started — 3 steps to your first invoice")}
               </p>
             </div>
@@ -407,14 +407,14 @@ export default function Dashboard() {
                   label: tr("step_add_client", "Add a client"),
                   desc: tr("step_add_client_desc", "Who will you bill?"),
                   href: "/clients",
-                  color: "indigo",
+                  color: "orange",
                 },
                 {
                   icon: <Briefcase className="w-4 h-4" />,
                   label: tr("step_add_service", "Add a service"),
                   desc: tr("step_add_service_desc", "What will you charge for?"),
                   href: "/services",
-                  color: "violet",
+                  color: "amber",
                 },
                 {
                   icon: <ReceiptText className="w-4 h-4" />,
@@ -423,22 +423,30 @@ export default function Dashboard() {
                   href: "/income",
                   color: "emerald",
                 },
-              ].map((step, i) => (
+              ].map((step, i) => {
+                const stepIconClass =
+                  step.color === "emerald"
+                    ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                    : step.color === "amber"
+                      ? "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                      : "bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400";
+                return (
                 <Link
                   key={i}
                   href={step.href}
-                  className="flex items-start gap-3 p-3.5 rounded-xl bg-white dark:bg-zinc-900/60 border border-zinc-100 dark:border-zinc-800/60 hover:border-indigo-200 dark:hover:border-indigo-700/50 hover:shadow-md transition-all group"
+                  className="flex items-start gap-3 p-3.5 rounded-xl bg-white dark:bg-zinc-900/60 border border-zinc-100 dark:border-zinc-800/60 hover:border-orange-200 dark:hover:border-orange-700/50 hover:shadow-md transition-all group"
                 >
-                  <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shrink-0 group-hover:scale-110 transition-transform">
+                  <div className={`p-2 rounded-lg shrink-0 group-hover:scale-110 transition-transform ${stepIconClass}`}>
                     {step.icon}
                   </div>
                   <div className="min-w-0">
                     <p className={`${ty.cardTitle} leading-tight`}>{step.label}</p>
                     <p className={`${ty.helperXs} mt-0.5`}>{step.desc}</p>
                   </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-zinc-300 dark:text-zinc-600 shrink-0 mt-1 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition-all ml-auto" />
+                  <ArrowRight className="w-3.5 h-3.5 text-zinc-300 dark:text-zinc-600 shrink-0 mt-1 group-hover:text-orange-500 group-hover:translate-x-0.5 transition-all ml-auto" />
                 </Link>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -507,7 +515,7 @@ export default function Dashboard() {
                 Live Feed
               </Badge>
             </div>
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500" />
+            <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500" />
           </CardHeader>
           <CardContent className={isMobile ? "p-4 space-y-3" : "p-0"}>
             {!d.recentInvoices ? (
@@ -559,10 +567,10 @@ export default function Dashboard() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           whileHover={{ y: -2 }}
-          className="group relative flex flex-col sm:flex-row items-center justify-between gap-4 p-3 px-5 rounded-2xl border border-zinc-200/50 dark:border-zinc-800/50 bg-white/50 dark:bg-zinc-900/30 backdrop-blur-sm transition-all hover:shadow-lg hover:shadow-indigo-500/5 hover:border-indigo-500/20"
+          className="group relative flex flex-col sm:flex-row items-center justify-between gap-4 p-3 px-5 rounded-2xl border border-zinc-200/50 dark:border-zinc-800/50 bg-white/50 dark:bg-zinc-900/30 backdrop-blur-sm transition-all hover:shadow-lg hover:shadow-orange-500/5 hover:border-orange-500/20"
         >
           <div className="flex items-center gap-3">
-            <div className="flex-shrink-0 p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 group-hover:scale-110 transition-transform duration-300">
+            <div className="flex-shrink-0 p-2 rounded-xl bg-orange-50 dark:bg-orange-500/10 text-orange-500 dark:text-orange-400 group-hover:scale-110 transition-transform duration-300">
               <Building className="w-4 h-4" />
             </div>
             <div className="flex flex-col">
@@ -578,7 +586,7 @@ export default function Dashboard() {
             asChild
             variant="ghost"
             size="sm"
-            className={`flex-shrink-0 h-8 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100/50 dark:hover:bg-indigo-500/20 gap-2 border border-transparent hover:border-indigo-100 dark:hover:border-indigo-500/30 ${ty.labelUpperStrong}`}
+            className={`flex-shrink-0 h-8 text-orange-600 dark:text-orange-400 hover:bg-orange-100/50 dark:hover:bg-orange-500/20 gap-2 border border-transparent hover:border-orange-100 dark:hover:border-orange-500/30 ${ty.labelUpperStrong}`}
           >
             <Link href="https://erp.bababuilds.com/settings/profile" className="flex items-center gap-2">
               User Session Settings
@@ -586,7 +594,7 @@ export default function Dashboard() {
             </Link>
           </Button>
 
-          <div className="absolute left-0 top-1/4 bottom-1/4 w-0.5 rounded-full bg-indigo-500/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute left-0 top-1/4 bottom-1/4 w-0.5 rounded-full bg-orange-500/50 opacity-0 group-hover:opacity-100 transition-opacity" />
         </motion.div>
       </div>
 

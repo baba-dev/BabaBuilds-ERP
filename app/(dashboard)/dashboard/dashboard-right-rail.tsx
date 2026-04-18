@@ -73,7 +73,7 @@ export function DashboardRightRail({
           aiState === 'locked_no_key' ? 'bg-amber-500' :
           mood === 'critical' ? 'bg-rose-500' : 
           mood === 'warning' ? 'bg-amber-500' : 
-          mood === 'opportunity' ? 'bg-indigo-500' : 
+          mood === 'opportunity' ? 'bg-orange-500' : 
           'bg-emerald-500'
         }`} />
         
@@ -138,7 +138,7 @@ function RightRailHeader({ tr, mood, aiState }: { tr: any, mood: WorkspaceMood, 
     const labels = {
       critical: { label: tr("mood_critical", "Intervention Needed"), color: "text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20" },
       warning: { label: tr("mood_warning", "Analysis Required"), color: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20" },
-      opportunity: { label: tr("mood_opportunity", "Growth Insight"), color: "text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 border-indigo-500/20" },
+      opportunity: { label: tr("mood_opportunity", "Growth Insight"), color: "text-orange-600 dark:text-orange-400 bg-orange-500/10 border-orange-500/20" },
       healthy: { label: tr("mood_healthy", "Optimal Active"), color: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20" }
     };
 
@@ -160,7 +160,7 @@ function RightRailHeader({ tr, mood, aiState }: { tr: any, mood: WorkspaceMood, 
           aiState === 'locked_no_key' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 rotate-12 group-hover/header:rotate-0' :
           mood === 'critical' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
           mood === 'warning' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
-          mood === 'opportunity' ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' :
+          mood === 'opportunity' ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' :
           'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
         }`}>
           <Icon className={`w-6 h-6 ${aiState === 'enabled' ? 'animate-pulse' : ''}`} />
@@ -229,7 +229,7 @@ function IntelligenceAssistantSection({ data, tr, mood, aiState }: { data: Dashb
   }
 
   return (
-    <div className="p-6 bg-indigo-50/20 dark:bg-indigo-500/5">
+    <div className="p-6 bg-orange-50/20 dark:bg-orange-500/5">
       <div className="flex items-center gap-4">
         <div className="flex -space-x-2">
           {[1,2,3].map(i => (
@@ -257,7 +257,7 @@ function RecentActivitySection({ data, tr }: { data: DashboardData, tr: any }) {
           {tr("workspace_signals", "Workspace Stream")}
         </h4>
         {hasActivity && (
-          <Link href="/logs" className={`${ty.labelUpper} text-indigo-600 dark:text-indigo-400 hover:underline opacity-80 hover:opacity-100 transition-all inline-flex items-center gap-1 group`}>
+          <Link href="/logs" className={`${ty.labelUpper} text-orange-600 dark:text-orange-400 hover:underline opacity-80 hover:opacity-100 transition-all inline-flex items-center gap-1 group`}>
             {tr("audit_feed", "Audit Feed")}
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
           </Link>
@@ -279,7 +279,7 @@ function RecentActivitySection({ data, tr }: { data: DashboardData, tr: any }) {
           data.activity.slice(0, 3).map((item, idx) => (
             <div 
               key={item.id} 
-              className="group/item relative pl-5 border-l-2 border-zinc-100 dark:border-zinc-800/80 hover:border-indigo-500/50 transition-all animate-in fade-in slide-in-from-left-2"
+              className="group/item relative pl-5 border-l-2 border-zinc-100 dark:border-zinc-800/80 hover:border-orange-500/50 transition-all animate-in fade-in slide-in-from-left-2"
               style={{ animationDelay: `${idx * 150}ms` }}
             >
               <p className={`${ty.cardTitle} leading-tight group-hover/item:text-zinc-900 dark:group-hover/item:text-zinc-100 transition-colors`}>
@@ -383,24 +383,24 @@ function SuggestedActionsSection({ data, tr, mood }: { data: DashboardData, tr: 
           <Link 
             key={idx} 
             href={action.href}
-            className="group flex items-start gap-4 p-5 rounded-2xl border border-zinc-100 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 hover:border-indigo-500/40 hover:shadow-2xl hover:shadow-indigo-500/5 transition-all duration-500 relative overflow-hidden"
+            className="group flex items-start gap-4 p-5 rounded-2xl border border-zinc-100 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 hover:border-orange-500/40 hover:shadow-2xl hover:shadow-orange-500/5 transition-all duration-500 relative overflow-hidden"
           >
             {/* Contextual Glow */}
             <div className={`absolute -right-6 -bottom-6 w-20 h-20 opacity-[0.08] rounded-full blur-2xl transition-colors ${
               action.tone === 'amber' ? 'bg-amber-500' : 
-              action.tone === 'emerald' ? 'bg-emerald-500' : 'bg-indigo-500'
+              action.tone === 'emerald' ? 'bg-emerald-500' : 'bg-orange-500'
             }`} />
 
             <div className={`mt-0.5 h-12 w-12 shrink-0 rounded-2xl flex items-center justify-center transition-all duration-700 shadow-sm group-hover:scale-110 group-hover:rotate-3 ${
               action.tone === 'amber' ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" :
               action.tone === 'emerald' ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" :
-              "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+              "bg-orange-500/10 text-orange-600 dark:text-orange-400"
             }`}>
               <action.icon className="w-6 h-6 transition-transform duration-500 group-hover:scale-110" />
             </div>
             <div className="flex-1 relative z-10">
               <div className="flex items-center justify-between">
-                <span className={`${ty.cardTitle} group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors`}>
+                <span className={`${ty.cardTitle} group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors`}>
                   {action.label}
                 </span>
                 <ChevronRight className="w-4.5 h-4.5 text-zinc-300 dark:text-zinc-700 group-hover:translate-x-1.5 transition-transform" />
@@ -436,7 +436,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
       desc: tr("action_finish_onboarding_desc", "A few remaining setup steps will unlock full automation and cleaner workstreams."),
       href: INTELLIGENCE_SUGGESTION_ROUTES.finishOnboarding,
       icon: FilePlus2,
-      tone: "indigo"
+      tone: "accent"
     });
   }
 
@@ -456,7 +456,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
       desc: tr("action_reconcile_books_desc", "Unmatched bank entries detected. Reconcile to ensure ledger trust."),
       href: INTELLIGENCE_SUGGESTION_ROUTES.reconcileBooks,
       icon: ShieldEllipsis,
-      tone: "indigo"
+      tone: "accent"
     });
   }
 
@@ -477,7 +477,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
       desc: tr("action_scale_billing_desc", "Workspace state is stable. Now is the peak time to generate new growth signals."),
       href: INTELLIGENCE_SUGGESTION_ROUTES.scaleBilling,
       icon: Sparkles,
-      tone: "indigo"
+      tone: "accent"
     });
   }
 
@@ -518,7 +518,7 @@ function SystemSignalsSection({ data, tr, mood }: { data: DashboardData, tr: any
 
         <div className="grid grid-cols-2 gap-4">
           <SignalPill label={tr("trust_index", "Trust Index")} value={trust.integrityStatus} tone={healthy ? 'emerald' : 'amber'} />
-          <SignalPill label={tr("linkage", "Linkage")} value={`${integrationCount}/${totalIntegrations} Sync`} tone={integrationCount === totalIntegrations ? 'emerald' : 'indigo'} />
+          <SignalPill label={tr("linkage", "Linkage")} value={`${integrationCount}/${totalIntegrations} Sync`} tone={integrationCount === totalIntegrations ? 'emerald' : 'accent'} />
           <SignalPill label={tr("operational", "Operational")} value={tr("vault_secure", "Active")} tone="emerald" />
           <SignalPill label={tr("compliance", "Compliance")} value={data.attention.complianceIssues > 0 ? tr("risk_detected", "Risk") : tr("nominal", "Nominal")} tone={data.attention.complianceIssues > 0 ? 'amber' : 'emerald'} />
         </div>
@@ -527,11 +527,11 @@ function SystemSignalsSection({ data, tr, mood }: { data: DashboardData, tr: any
   );
 }
 
-function SignalPill({ label, value, tone }: { label: string, value: string, tone: 'emerald' | 'amber' | 'indigo' }) {
+function SignalPill({ label, value, tone }: { label: string, value: string, tone: 'emerald' | 'amber' | 'accent' }) {
   const colors = {
     emerald: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
     amber: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20",
-    indigo: "text-indigo-600 dark:text-indigo-300 bg-indigo-500/10 border-indigo-500/20",
+    accent: "text-orange-600 dark:text-orange-300 bg-orange-500/10 border-orange-500/20",
   };
   return (
     <div className={`p-4 rounded-2xl border bg-white/50 dark:bg-zinc-950/20 transition-all hover:bg-white dark:hover:bg-zinc-900 shadow-sm ${colors[tone]}`}>
@@ -602,7 +602,7 @@ function SyncImportHealthSection({
               onClick={handleRefresh}
               disabled={isRefreshing}
               aria-label={tr("refresh_sync_pipeline", "Refresh sync pipeline status")}
-              className="h-10 w-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-indigo-600 hover:border-indigo-500/50 transition-all shadow-sm active:scale-90 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:text-zinc-400 disabled:hover:border-zinc-100 dark:disabled:hover:border-zinc-800"
+              className="h-10 w-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-orange-600 hover:border-orange-500/50 transition-all shadow-sm active:scale-90 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:text-zinc-400 disabled:hover:border-zinc-100 dark:disabled:hover:border-zinc-800"
             >
               <RefreshCw className={`w-5 h-5 ${isRefreshing ? "animate-spin" : ""}`} />
             </button>

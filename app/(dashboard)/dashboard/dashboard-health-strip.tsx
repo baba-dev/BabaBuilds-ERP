@@ -25,13 +25,13 @@ function SetupSection({
 }) {
   return (
     <Card className="group relative overflow-hidden p-5 border-zinc-200 dark:border-zinc-800/60 bg-white dark:bg-zinc-950/50 shadow-sm transition-all">
-      <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full blur-3xl bg-indigo-500/5 dark:bg-indigo-500/10 group-hover:bg-indigo-500/10 dark:group-hover:bg-indigo-500/20 transition-all duration-700" />
+      <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full blur-3xl bg-orange-500/5 dark:bg-orange-500/10 group-hover:bg-orange-500/10 dark:group-hover:bg-orange-500/20 transition-all duration-700" />
       <div className="absolute inset-0 bg-gradient-to-br from-zinc-50/50 to-transparent dark:from-white/5 dark:to-transparent pointer-events-none" />
 
       <div className="relative z-10 flex flex-col h-full justify-between gap-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20 shadow-sm">
+            <div className="p-2 rounded-xl bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-100 dark:border-orange-500/20 shadow-sm">
               <Zap className="w-4 h-4" />
             </div>
             <div className="min-w-0">
@@ -56,7 +56,7 @@ function SetupSection({
               initial={{ width: 0 }}
               animate={{ width: `${Math.max(0, Math.min(100, completion))}%` }}
               transition={{ duration: 0.9, ease: "easeOut" }}
-              className="h-full bg-indigo-600 dark:bg-indigo-500 rounded-full"
+              className="h-full bg-orange-600 dark:bg-orange-500 rounded-full"
             />
           </div>
 
@@ -65,7 +65,7 @@ function SetupSection({
               asChild
               size="sm"
               variant="outline"
-              className="w-full h-9 justify-between text-[11px] font-bold uppercase tracking-wider border-zinc-200 dark:border-zinc-800 bg-white/70 dark:bg-zinc-950/40 hover:bg-indigo-50/60 dark:hover:bg-indigo-500/10 hover:border-indigo-200/70 dark:hover:border-indigo-500/30 transition-colors"
+              className="w-full h-9 justify-between text-[11px] font-bold uppercase tracking-wider border-zinc-200 dark:border-zinc-800 bg-white/70 dark:bg-zinc-950/40 hover:bg-orange-50/60 dark:hover:bg-orange-500/10 hover:border-orange-200/70 dark:hover:border-orange-500/30 transition-colors"
             >
               <Link href="/onboarding">
                 {t("continue_setup", "Continue setup")}
@@ -97,7 +97,7 @@ function SubscriptionSection({
 }) {
   return (
     <Card className="group relative overflow-hidden p-5 border-zinc-200 dark:border-zinc-800/60 bg-white dark:bg-zinc-950/50 shadow-sm transition-all">
-      <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full blur-3xl bg-zinc-500/5 dark:bg-white/5 group-hover:bg-indigo-500/5 dark:group-hover:bg-indigo-500/10 transition-all duration-700" />
+      <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full blur-3xl bg-zinc-500/5 dark:bg-white/5 group-hover:bg-orange-500/5 dark:group-hover:bg-orange-500/10 transition-all duration-700" />
       <div className="relative z-10 space-y-4">
         <div className="flex items-center gap-2">
           <p className="text-xs font-semibold tracking-wider uppercase text-zinc-500 dark:text-zinc-400">
@@ -119,7 +119,7 @@ function SubscriptionSection({
             </Badge>
           </div>
           <p className="text-xs text-zinc-600 dark:text-zinc-400 flex items-center gap-2 font-medium">
-            <Clock className="w-3.5 h-3.5 text-indigo-500/50" />
+            <Clock className="w-3.5 h-3.5 text-orange-500/50" />
             {t("active_billing", "Billing cycle active")}
           </p>
         </div>
@@ -144,7 +144,7 @@ export function DashboardHealthStrip({ health }: { health: DashboardData["health
   return (
     <section className="space-y-6">
       <div className="flex items-center gap-2 px-1">
-        <Zap className="w-5 h-5 text-indigo-500" />
+        <Zap className="w-5 h-5 text-orange-500" />
         <h3 className={ty.sectionTitle}>{tr("dashboard_status", "Dashboard status")}</h3>
       </div>
 
@@ -153,7 +153,7 @@ export function DashboardHealthStrip({ health }: { health: DashboardData["health
         <SubscriptionSection tier={health.planTier} state={health.subscriptionState} t={tr} />
 
         <Card className="group relative overflow-hidden p-5 border-zinc-200 dark:border-zinc-800/60 bg-white dark:bg-zinc-950/50 shadow-sm">
-          <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full blur-3xl bg-indigo-500/5 dark:bg-indigo-500/10 group-hover:bg-indigo-500/10 dark:group-hover:bg-indigo-500/20 transition-all duration-700" />
+          <div className="absolute -top-10 -right-10 w-28 h-28 rounded-full blur-3xl bg-orange-500/5 dark:bg-orange-500/10 group-hover:bg-orange-500/10 dark:group-hover:bg-orange-500/20 transition-all duration-700" />
           <div className="absolute inset-0 bg-gradient-to-br from-zinc-50/40 to-transparent dark:from-white/5 dark:to-transparent pointer-events-none" />
           <div className="relative z-10">
             <DashboardAIPromptBar />

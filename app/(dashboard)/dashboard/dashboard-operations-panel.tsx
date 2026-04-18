@@ -20,7 +20,7 @@ export function DashboardOperationsPanel({ operations }: { operations: Dashboard
   return (
     <Card className="p-4 border-zinc-200 dark:border-zinc-800">
       <p className={`${ty.sectionTitle} inline-flex items-center gap-2`}>
-        <Boxes className="w-4 h-4 text-indigo-500" /> {tr("operations_inventory", "Operations & inventory")}
+        <Boxes className="w-4 h-4 text-orange-500" /> {tr("operations_inventory", "Operations & inventory")}
       </p>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 text-sm">
         <div>

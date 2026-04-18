@@ -76,7 +76,7 @@ export default function ComparisonTable() {
       <div className="max-w-7xl mx-auto px-6">
         <div className="text-center space-y-4 mb-20">
           <h2 className="text-3xl md:text-5xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
-            Why <span className="text-indigo-600">BabaBuilds ERP?</span>
+            Why <span className="text-orange-600">BabaBuilds ERP?</span>
           </h2>
           <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto">
             Traditional software treats bookkeeping as a chore. We treat it as an automated superpower.
@@ -88,7 +88,7 @@ export default function ComparisonTable() {
             <thead>
               <tr className="border-b border-zinc-200 dark:border-zinc-800">
                 <th className="py-6 px-4 font-bold text-lg text-zinc-900 dark:text-zinc-50">Feature</th>
-                <th className="py-6 px-4 font-bold text-center text-lg bg-indigo-600/5 dark:bg-indigo-600/10 text-indigo-600">
+                <th className="py-6 px-4 font-bold text-center text-lg bg-orange-600/5 dark:bg-orange-600/10 text-orange-600">
                   <div className="flex flex-col items-center gap-1">
                     <Box className="w-6 h-6" />
                     <span>BabaERP</span>
@@ -114,7 +114,7 @@ export default function ComparisonTable() {
                       <p className="text-sm text-zinc-500 dark:text-zinc-500 max-w-md">{feature.desc}</p>
                     </div>
                   </td>
-                  <td className="py-8 px-4 text-center bg-indigo-600/5 dark:bg-indigo-600/10">
+                  <td className="py-8 px-4 text-center bg-orange-600/5 dark:bg-orange-600/10">
                     <div className="flex items-center justify-center">
                       <div className="bg-emerald-500/20 text-emerald-500 p-2 rounded-full">
                         <Check className="w-6 h-6 stroke-[3px]" />
@@ -149,14 +149,14 @@ export default function ComparisonTable() {
           </table>
         </div>
 
-        <div className="mt-12 p-6 bg-indigo-600/5 dark:bg-indigo-600/10 rounded-2xl border border-indigo-500/20 flex flex-col sm:flex-row items-center gap-6 justify-between animate-pulse-subtle">
+        <div className="mt-12 p-6 bg-orange-600/5 dark:bg-orange-600/10 rounded-2xl border border-orange-500/20 flex flex-col sm:flex-row items-center gap-6 justify-between animate-pulse-subtle">
            <div className="flex items-center gap-4">
-              <Info className="w-8 h-8 text-indigo-600" />
+              <Info className="w-8 h-8 text-orange-600" />
               <p className="text-zinc-700 dark:text-zinc-300 font-medium">
-                Switching is easy. We support <span className="text-indigo-600 font-bold">direct data import</span> from most legacy accounting tools.
+                Switching is easy. We support <span className="text-orange-600 font-bold">direct data import</span> from most legacy accounting tools.
               </p>
            </div>
-           <button className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-3 rounded-xl transition-all active:scale-95 shadow-lg shadow-indigo-600/20">
+           <button className="bg-orange-600 hover:bg-orange-700 text-white font-bold px-8 py-3 rounded-xl transition-all active:scale-95 shadow-lg shadow-orange-600/20">
               Switch Today
            </button>
         </div>

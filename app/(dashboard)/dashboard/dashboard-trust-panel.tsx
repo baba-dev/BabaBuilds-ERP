@@ -101,7 +101,7 @@ export function DashboardTrustPanel({ trust }: { trust: DashboardData["trust"] }
               const colors = {
                 critical: "text-rose-500 bg-rose-500/10 border-rose-500/20",
                 warning: "text-amber-500 bg-amber-500/10 border-amber-500/20",
-                info: "text-indigo-500 bg-indigo-500/10 border-indigo-500/20",
+                info: "text-orange-500 bg-orange-500/10 border-orange-500/20",
                 healthy: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
               }[metric.tone];
 
@@ -125,7 +125,7 @@ export function DashboardTrustPanel({ trust }: { trust: DashboardData["trust"] }
         </div>
 
         {/* Subtle Background Pattern */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-[60px] rounded-full -mr-16 -mt-16" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 blur-[60px] rounded-full -mr-16 -mt-16" />
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-500/5 blur-[40px] rounded-full -ml-12 -mb-12" />
       </Card>
     </motion.div>
