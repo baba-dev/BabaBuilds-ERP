@@ -23,6 +23,12 @@ const getDateOffset = (days: number) => {
   return date;
 };
 
+const getDemoExpiry = () => {
+  const configuredHours = Number(process.env.DEMO_TTL_HOURS ?? "24");
+  const ttlHours = Number.isFinite(configuredHours) && configuredHours > 0 ? configuredHours : 24;
+  return new Date(Date.now() + ttlHours * 60 * 60 * 1000);
+};
+
 const getFY = (date: Date) => {
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
@@ -99,7 +105,7 @@ export async function POST(request: Request) {
     const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000);
     const recentDemos = await prisma.workspace.count({
       where: {
-        name: "BabaBuilds Demo Enterprise",
+        isDemo: true,
         createdAt: { gte: fifteenMinsAgo }
       }
     });
@@ -114,6 +120,7 @@ export async function POST(request: Request) {
     // --- DATA SEEDING TRANSACTION ---
     const demoId = uuidv4().substring(0, 8);
     const demoEmail = `demo_${demoId}@bababuilds.demo`;
+    const demoExpiresAt = getDemoExpiry();
 
     const result = await prisma.$transaction(async (tx) => {
       // 1. CREATE USER & WORKSPACE
@@ -122,12 +129,18 @@ export async function POST(request: Request) {
           name: `Demo User ${demoId.toUpperCase()}`,
           email: demoEmail,
           role: "DEMO",
+          isDemo: true,
+          demoTemplateKey: "enterprise-default",
+          demoExpiresAt,
         },
       });
 
       const workspace = await tx.workspace.create({
         data: {
           name: "BabaBuilds Demo Enterprise",
+          isDemo: true,
+          demoTemplateKey: "enterprise-default",
+          demoExpiresAt,
           subscriptionStatus: "ACTIVE",
           users: {
             create: { userId: user.id, role: "OWNER" }

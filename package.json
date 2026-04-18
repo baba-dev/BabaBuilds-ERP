@@ -16,7 +16,8 @@
     "test:unit": "vitest run tests/sidebar/sidebar-rules.unit.test.ts",
     "test:integration": "vitest run tests/sidebar/mobile-drawer-parity.integration.test.ts",
     "test:smoke": "playwright test tests/smoke",
-    "test": "vitest run"
+    "test": "vitest run",
+    "migrate:demo-flags": "ts-node scripts/migrate-demo-flags.ts"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.4.2",

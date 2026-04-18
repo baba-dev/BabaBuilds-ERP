@@ -28,16 +28,18 @@ export async function POST(req: Request) {
 
     switch (action) {
       case "PURGE_DEMO":
-        // Delete all users whose email ends with bababuilds.demo
-        // Or if they are marked as guest/demo users
-        const deletedUsers = await prisma.user.deleteMany({
-          where: {
-            email: {
-              contains: "bababuilds.demo"
-            }
-          }
+        const [deletedWorkspaces, deletedUsers] = await prisma.$transaction([
+          prisma.workspace.deleteMany({
+            where: { isDemo: true },
+          }),
+          prisma.user.deleteMany({
+            where: { isDemo: true },
+          }),
+        ]);
+        return NextResponse.json({
+          success: true,
+          message: `Purged ${deletedUsers.count} demo users and ${deletedWorkspaces.count} demo workspaces.`,
         });
-        return NextResponse.json({ success: true, message: `Purged ${deletedUsers.count} demo accounts.` });
 
       case "PRUNE_FILES":
         let orphanedCount = 0;

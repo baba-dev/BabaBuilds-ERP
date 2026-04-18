@@ -266,7 +266,7 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Secure Token", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials.email.endsWith('@bababuilds.demo') || !credentials.password) {
+        if (!credentials?.email || !credentials.password) {
           return null;
         }
 
@@ -289,10 +289,15 @@ export const authOptions: NextAuthOptions = {
           }
         });
 
-        const user = await prisma.user.findUnique({ 
-          where: { email: credentials.email } 
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
         });
-        
+        if (!user?.isDemo) return null;
+
+        if (user.demoExpiresAt && user.demoExpiresAt <= new Date()) {
+          return null;
+        }
+
         return user;
       }
     })
@@ -341,8 +346,15 @@ export const authOptions: NextAuthOptions = {
 
       const isAllowedExceptionMagicLinkSignIn = isExceptionEmail && account?.provider === "email";
       if (hasHighRiskRole(effectiveRoles) && !isPhishingResistantSignIn(account) && !isAllowedExceptionMagicLinkSignIn) {
+        const dbUser = user.id
+          ? await prisma.user.findUnique({
+              where: { id: user.id },
+              select: { isDemo: true, demoExpiresAt: true },
+            })
+          : null;
         const isDemoCredentialsSignIn =
-          Boolean(user.email?.endsWith("@bababuilds.demo")) &&
+          Boolean(dbUser?.isDemo) &&
+          (!dbUser?.demoExpiresAt || dbUser.demoExpiresAt > new Date()) &&
           (account?.provider === "demo-login" || account?.type === "credentials");
         if (isDemoCredentialsSignIn) {
           return true;
@@ -587,7 +599,11 @@ export const authOptions: NextAuthOptions = {
   },
   events: {
     async createUser({ user }) {
-      if (user.email?.endsWith('@bababuilds.demo')) return;
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { isDemo: true },
+      });
+      if (dbUser?.isDemo) return;
 
       const trialDays = 14;
       const trialEndDate = new Date();

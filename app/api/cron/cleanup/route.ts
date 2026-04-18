@@ -24,12 +24,15 @@ export async function GET(request: Request) {
   }
 
   try {
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const now = new Date();
 
     const deleted = await prisma.workspace.deleteMany({
       where: {
-        name: 'BabaBuilds Demo Enterprise',
-        createdAt: { lt: twentyFourHoursAgo },
+        isDemo: true,
+        OR: [
+          { demoExpiresAt: { lt: now } },
+          { demoExpiresAt: null, createdAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+        ],
       },
     });
 

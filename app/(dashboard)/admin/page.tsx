@@ -745,7 +745,7 @@ export default function SuperAdminPortal() {
                     <CardTitle className="text-sm font-bold text-zinc-900 dark:text-zinc-50">Purge Demo Accounts</CardTitle>
                     <Trash2 className="w-4 h-4 text-rose-500" />
                   </div>
-                  <CardDescription className="text-xs">Deletes all users & workspaces associated with bababuilds.demo</CardDescription>
+                  <CardDescription className="text-xs">Deletes all users & workspaces explicitly flagged as demo data.</CardDescription>
                 </CardHeader>
               </Card>
 

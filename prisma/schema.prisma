@@ -172,12 +172,15 @@ enum ProposalConversionType {
 // 1. AUTHENTICATION (NextAuth Standard)
 // ==========================================
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String? // This acts as the Avatar URL
-  role          String    @default("USER") // "USER", "ADMIN"
+  id              String    @id @default(cuid())
+  name            String?
+  email           String?   @unique
+  emailVerified   DateTime?
+  image           String? // This acts as the Avatar URL
+  role            String    @default("USER") // "USER", "ADMIN"
+  isDemo          Boolean   @default(false)
+  demoTemplateKey String?
+  demoExpiresAt   DateTime?
 
   // --- NEW: PERSONAL PREFERENCES ---
   theme              String @default("system") // "light", "dark", "system"
@@ -205,6 +208,8 @@ model User {
   inAppNotifications InAppNotification[]
   onboarding         UserOnboarding?
   userPreference     UserPreference?
+
+  @@index([isDemo, demoExpiresAt])
 }
 
 model UserOnboarding {
@@ -260,9 +265,12 @@ model VerificationToken {
 // 2. MULTI-TENANCY & BILLING (The "Workspace")
 // ==========================================
 model Workspace {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
+  id              String    @id @default(cuid())
+  name            String
+  createdAt       DateTime  @default(now())
+  isDemo          Boolean   @default(false)
+  demoTemplateKey String?
+  demoExpiresAt   DateTime?
 
   // --- NEW: GLOBALIZATION STATE ---
   isSetupComplete Boolean @default(false) // Triggers the Popup Wizard
@@ -375,6 +383,9 @@ model Workspace {
   taxObligations          TaxObligation[]
   taxObligationPeriods    TaxObligationPeriod[]
   complianceTasks         ComplianceTask[]
+
+  @@index([isDemo, demoExpiresAt])
+  @@index([isDemo, createdAt(sort: Desc)])
 }
 
 model AppActivityLog {
@@ -820,12 +831,12 @@ model TaxableEvent {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  sourceEntityKind String // invoice | expense
-  sourceEntityId   String
-  taxableAmount    Decimal
-  originCountryCode      String @default("")
-  destinationCountryCode String @default("")
-  occurredAt       DateTime
+  sourceEntityKind       String // invoice | expense
+  sourceEntityId         String
+  taxableAmount          Decimal
+  originCountryCode      String   @default("")
+  destinationCountryCode String   @default("")
+  occurredAt             DateTime
 
   invoiceId String?
   invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
@@ -841,19 +852,19 @@ model TaxableEvent {
 }
 
 model TaxDetermination {
-  id              String    @id @default(cuid())
-  workspaceId   String
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  taxableEventId String    @unique
+  taxableEventId String       @unique
   taxableEvent   TaxableEvent @relation(fields: [taxableEventId], references: [id], onDelete: Cascade)
 
-  ratePercent       Float
-  taxAmount         Decimal
-  totalAmount       Decimal
-  resolutionSource  String // MANUAL_OVERRIDE | WORKSPACE_RULE | FALLBACK
-  resolutionReason  String
-  overrideId        String?
+  ratePercent      Float
+  taxAmount        Decimal
+  totalAmount      Decimal
+  resolutionSource String // MANUAL_OVERRIDE | WORKSPACE_RULE | FALLBACK
+  resolutionReason String
+  overrideId       String?
 
   componentLines TaxComponentLine[]
 
@@ -883,9 +894,9 @@ model TaxComponentLine {
  * TaxAuditEvent — append-only audit trail for tax operations (correlation-friendly).
  */
 model TaxAuditEvent {
-  id            String    @id @default(cuid())
-  workspaceId   String
-  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   eventType     String // DETERMINATION | READINESS_RUN | IMPORT_BATCH | DOCUMENT_LINK | RETURN_PERIOD_FILED
   correlationId String?
@@ -905,11 +916,11 @@ model TaxAuditEvent {
  * TaxOperationIdempotency — dedupe readiness runs and import batches per workspace + key.
  */
 model TaxOperationIdempotency {
-  id            String    @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  operation   String // TAX_READINESS_RUN | TAX_IMPORT_BATCH
+  operation      String // TAX_READINESS_RUN | TAX_IMPORT_BATCH
   idempotencyKey String
   requestHash    String
   responseBody   Json?
@@ -926,21 +937,21 @@ model TaxOperationIdempotency {
  * TaxReferenceEntry — global India compliance catalog (seeded reference data).
  */
 model TaxReferenceEntry {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   workspaceId String?
   workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  entryType   String // TAX_TYPE | FILING_FREQUENCY | CORE_FORM | BASELINE_RATE | CALENDAR_RULE
-  countryCode String   @default("IN")
-  code        String
-  label       String?
-  payloadJson Json
+  entryType     String // TAX_TYPE | FILING_FREQUENCY | CORE_FORM | BASELINE_RATE | CALENDAR_RULE
+  countryCode   String    @default("IN")
+  code          String
+  label         String?
+  payloadJson   Json
   effectiveFrom DateTime?
   effectiveTo   DateTime?
 
-  sourceDocumentRef Json?
-  verificationLevel String?
-  reviewStatus      String?
+  sourceDocumentRef      Json?
+  verificationLevel      String?
+  reviewStatus           String?
   legalCertaintyRequired Boolean @default(false)
 
   createdAt DateTime @default(now())
