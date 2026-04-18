@@ -248,12 +248,12 @@ export default function Dashboard() {
       id: "client",
       header: tr("table_client", "Client"),
       accessor: (row) => row.clientName,
-      cell: (row) => <span className="text-zinc-600 dark:text-zinc-300 font-medium">{row.clientName}</span>,
+      cell: (row) => <span className={`${ty.helper} font-medium text-zinc-600 dark:text-zinc-300`}>{row.clientName}</span>,
     },
     {
       id: "date",
       header: tr("table_date", "Date"),
-      cell: (row) => <span className="text-zinc-400 dark:text-zinc-500 text-xs tabular-nums">{format(new Date(row.invoiceDate), "dd MMM yyyy")}</span>,
+      cell: (row) => <span className={`${ty.helperXs} text-zinc-400 dark:text-zinc-500 tabular-nums`}>{format(new Date(row.invoiceDate), "dd MMM yyyy")}</span>,
     },
     {
       id: "status",
@@ -558,10 +558,10 @@ export default function Dashboard() {
               <Building className="w-4 h-4" />
             </div>
             <div className="flex flex-col">
-              <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 leading-tight">
+              <p className={`${ty.cardTitle} font-bold leading-tight`}>
                 {orgName ?? "Organisation"}
               </p>
-              <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              <p className={`${ty.helperXs} font-medium`}>
                 Premium Enterprise Workspace
               </p>
             </div>
