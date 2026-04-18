@@ -6,7 +6,7 @@ import AuthModal from "@/components/AuthModal";
 import Link from "next/link";
 import { Box } from "lucide-react";
 import { normalizeLaunchDestination } from "@/lib/launch-routing";
-import { LoginAmbientBackground } from "@/components/auth/LoginAmbientBackground";
+import { AuthAmbientBackground } from "@/components/auth/AuthAmbientBackground";
 
 type LoginPageProps = {
   searchParams?: Promise<{ callbackUrl?: string; error?: string }>;
@@ -42,18 +42,18 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden bg-background">
-      <LoginAmbientBackground particles />
+    <div className="relative min-h-dvh flex flex-col items-center justify-center overflow-hidden bg-background">
+      <AuthAmbientBackground />
 
-      <div className="relative z-10 w-full max-w-md">
+      <div className="relative z-10 w-full max-w-md px-4 py-10 sm:py-14">
         <Link href="/" className="flex items-center gap-2 justify-center mb-8 group">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-orange-600 text-white shadow-lg shadow-orange-500/25 ring-1 ring-orange-400/30 group-hover:scale-105 transition-transform duration-300">
             <Box className="w-6 h-6 text-white" />
           </div>
-          <span className="text-2xl font-black text-foreground px-2">BabaBuilds</span>
+          <span className="text-2xl font-black text-foreground px-2 tracking-tight">BabaBuilds</span>
         </Link>
 
-        <AuthModal callbackUrl={callbackUrl} authError={authError} />
+        <AuthModal variant="embedded" callbackUrl={callbackUrl} authError={authError} />
       </div>
     </div>
   );
