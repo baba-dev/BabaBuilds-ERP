@@ -24,6 +24,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { closeAIChat, getAIChatStoreSnapshot, subscribeToAIChatStore, openAIChat } from "@/src/stores/ui/aiChatStore";
+import Link from "next/link";
 
 const QUICK_PROMPTS = [
   "📈 What's my estimated tax liability?",
@@ -413,13 +414,13 @@ export default function AIChatbot() {
 
         {/* HELP CENTER LINK */}
         <div className="px-3 py-1.5 pb-[max(env(safe-area-inset-bottom),0.375rem)] bg-white dark:bg-zinc-950 border-t border-zinc-100 dark:border-zinc-800/50 flex items-center justify-center shrink-0">
-          <a
+          <Link
             href="/help"
             className="flex items-center gap-1.5 rounded-md text-[10px] font-semibold text-zinc-400 dark:text-zinc-600 hover:text-purple-600 dark:hover:text-purple-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950 transition-colors uppercase tracking-widest"
           >
             <BookOpen className="w-3 h-3" />
             Help Center & Docs
-          </a>
+          </Link>
         </div>
       </div>
 
