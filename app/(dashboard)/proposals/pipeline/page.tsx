@@ -13,6 +13,7 @@ import Link from "next/link";
 import { createCommercialActionTask } from "@/lib/commercial-workflow/tasks";
 import { revalidatePath } from "next/cache";
 import type { ComponentType } from "react";
+import { isModuleEnabled, requireModule } from "@/lib/modules";
 
 type InsightCardProps = {
   title: string;
@@ -33,12 +34,47 @@ export default async function PipelineDashboardPage({
   if (!session?.workspaceId) redirect("/login");
   const t = await getTranslations("Pipeline");
   const { filter = "all" } = await searchParams;
+  const pipelineModuleEnabled = await isModuleEnabled(session.workspaceId, "REVENUE_PIPELINE");
+
+  if (!pipelineModuleEnabled) {
+    return (
+      <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8">
+        <div className="max-w-3xl mx-auto">
+          <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-8 shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-indigo-500">Revenue Pipeline</p>
+            <h1 className="mt-2 text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+              Enable Revenue Pipeline to unlock this view
+            </h1>
+            <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-300 max-w-2xl">
+              Your quoting flow in <strong>/proposals</strong> stays fully available. Enable this module to access
+              pipeline insights, stalled opportunity detection, and action task automation.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <Link
+                href="/settings"
+                className="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold uppercase tracking-widest text-white hover:bg-indigo-700 transition-colors"
+              >
+                Enable in Settings
+              </Link>
+              <Link
+                href="/proposals"
+                className="inline-flex items-center rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-2 text-xs font-bold uppercase tracking-widest text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+              >
+                Back to Proposals
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   async function generateStalledTasks(formData: FormData) {
     "use server";
 
     const session = await getServerSession(authOptions);
     if (!session?.workspaceId) redirect("/login");
+    await requireModule(session.workspaceId, "REVENUE_PIPELINE");
 
     const filter = String(formData.get("filter") || "stalled");
 
