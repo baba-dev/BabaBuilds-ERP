@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { getTaxReadinessSummary } from "@/lib/tax/return-prep";
 import { checkPermission } from "@/lib/rbac";
+import { taxAdvancedModuleDisabledResponse } from "@/lib/tax/module-gate";
 
 type SessionWithWorkspace = {
   workspaceId?: string | null;
@@ -17,6 +18,9 @@ export async function GET() {
     if (!workspaceId || !userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const moduleDisabledResponse = await taxAdvancedModuleDisabledResponse(workspaceId);
+    if (moduleDisabledResponse) return moduleDisabledResponse;
 
     const canView = await checkPermission(userId, workspaceId, "tax.readiness.view");
     const summary = await getTaxReadinessSummary(workspaceId, { includeSummary: canView });

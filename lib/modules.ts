@@ -23,7 +23,7 @@ import { Prisma } from '@prisma/client';
 // - WORKFORCE enhances PAYROLL input quality.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const MODULE_KEYS = ['WORKFORCE', 'PAYROLL', 'DOCUMENTS'] as const;
+export const MODULE_KEYS = ['WORKFORCE', 'PAYROLL', 'DOCUMENTS', 'TAX_ADVANCED'] as const;
 export type ModuleKey = (typeof MODULE_KEYS)[number];
 
 export function isValidModuleKey(key: unknown): key is ModuleKey {
@@ -34,6 +34,7 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   WORKFORCE: 'Workforce',
   PAYROLL: 'Payroll',
   DOCUMENTS: 'Document Vault',
+  TAX_ADVANCED: 'Tax Advanced',
 };
 
 export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
@@ -43,6 +44,8 @@ export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
     'Payroll runs, posting, liabilities, and compliance exports with onboarding, readiness checks, and staged rollout before go-live.',
   DOCUMENTS:
     'Secure document storage with OCR ingestion, extracted-field review, and ERP-native record linking for accounting and compliance.',
+  TAX_ADVANCED:
+    'Advanced tax compliance operations including readiness pipelines, import diagnostics, override tooling, and audit workflows.',
 };
 
 export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
@@ -73,6 +76,14 @@ export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
     'Link documents to expenses, invoices, and more',
     'Archive without deletion (audit preserved)',
     'Storage usage meter with plan-based limits',
+  ],
+  TAX_ADVANCED: [
+    'Tax readiness pipelines and compliance diagnostics',
+    'Tax hub summary and operational overview',
+    'Tax rate overrides with maker-checker controls',
+    'Tax decision history and audit events',
+    'Tax document linking and evidence traceability',
+    'Tax import templates and batch diagnostics',
   ],
 };
 

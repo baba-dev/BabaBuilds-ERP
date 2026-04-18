@@ -4,12 +4,15 @@ import { authOptions } from '@/lib/auth';
 import { requirePermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
 import { apiError } from '@/lib/api-error';
 import { isTaxImportTemplateType, TAX_IMPORT_TEMPLATES, templateToCsv } from '@/lib/tax/import-templates';
+import { taxAdvancedModuleDisabledResponse } from '@/lib/tax/module-gate';
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   const workspaceId = (session as { workspaceId?: string } | null)?.workspaceId;
   const userId = (session?.user as { id?: string } | undefined)?.id;
   if (!workspaceId || !userId) return apiError(401, 'Unauthorized', 'UNAUTHORIZED');
+  const moduleDisabledResponse = await taxAdvancedModuleDisabledResponse(workspaceId);
+  if (moduleDisabledResponse) return moduleDisabledResponse;
 
   try {
     await requirePermission(userId, workspaceId, 'tax.view');

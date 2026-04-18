@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { apiError } from '@/lib/api-error';
 import { requirePermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
 import { appendTaxAuditEvent, newTaxCorrelationId } from '@/lib/tax/audit';
+import { taxAdvancedModuleDisabledResponse } from '@/lib/tax/module-gate';
 
 const ENTITY_TYPES = ['RETURN_ACKNOWLEDGMENT', 'WITHHOLDING_CERTIFICATE', 'TAX_PAYMENT_PROOF'] as const;
 const RELATIONS = ['ACKNOWLEDGMENT', 'CERTIFICATE', 'PROOF', 'EVIDENCE'] as const;
@@ -30,6 +31,8 @@ async function getAuth() {
 export async function GET(req: Request) {
   const { workspaceId, userId } = await getAuth();
   if (!workspaceId || !userId) return apiError(401, 'Unauthorized', 'UNAUTHORIZED');
+  const moduleDisabledResponse = await taxAdvancedModuleDisabledResponse(workspaceId);
+  if (moduleDisabledResponse) return moduleDisabledResponse;
 
   try {
     await requirePermission(userId, workspaceId, 'tax.view');
@@ -77,6 +80,8 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const { workspaceId, userId } = await getAuth();
   if (!workspaceId || !userId) return apiError(401, 'Unauthorized', 'UNAUTHORIZED');
+  const moduleDisabledResponse = await taxAdvancedModuleDisabledResponse(workspaceId);
+  if (moduleDisabledResponse) return moduleDisabledResponse;
 
   try {
     await requirePermission(userId, workspaceId, 'tax.manage');
@@ -182,6 +187,8 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
   const { workspaceId, userId } = await getAuth();
   if (!workspaceId || !userId) return apiError(401, 'Unauthorized', 'UNAUTHORIZED');
+  const moduleDisabledResponse = await taxAdvancedModuleDisabledResponse(workspaceId);
+  if (moduleDisabledResponse) return moduleDisabledResponse;
 
   try {
     await requirePermission(userId, workspaceId, 'tax.manage');

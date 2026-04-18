@@ -6,6 +6,7 @@ import { withPermission } from "@/lib/rbac";
 import { prisma } from "@/lib/prisma";
 import { buildTaxRequestHash, consumeTaxIdempotency } from "@/lib/tax/idempotency";
 import { newTaxCorrelationId } from "@/lib/tax/audit";
+import { taxAdvancedModuleDisabledResponse } from "@/lib/tax/module-gate";
 
 type SessionWithWorkspace = {
   workspaceId?: string | null;
@@ -20,6 +21,9 @@ export async function POST(request: Request) {
     if (!workspaceId || !userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const moduleDisabledResponse = await taxAdvancedModuleDisabledResponse(workspaceId);
+    if (moduleDisabledResponse) return moduleDisabledResponse;
 
     const perm = await withPermission(userId, workspaceId, "tax.readiness.run");
     if (!perm.granted) return perm.response;
