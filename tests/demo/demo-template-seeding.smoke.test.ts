@@ -1,0 +1,80 @@
+import { describe, expect, it, vi } from 'vitest';
+import { prisma } from '@/lib/prisma';
+import { seedDemoWorkspace } from '@/lib/demo/seed-workspace';
+import { DEMO_TEMPLATE_KEYS, type DemoTemplateKey } from '@/lib/demo/templates';
+import { MODULE_KEYS } from '@/lib/modules';
+
+vi.mock('@/lib/prisma', () => {
+  return {
+    prisma: {
+      $transaction: vi.fn(),
+      workspace: { create: vi.fn(), count: vi.fn() },
+      user: { update: vi.fn() },
+      businessProfile: { create: vi.fn() },
+      client: { create: vi.fn(), findMany: vi.fn() },
+      serviceTemplate: { createMany: vi.fn(), findMany: vi.fn() },
+      proposal: { create: vi.fn() },
+      invoice: { create: vi.fn() },
+      expense: { createMany: vi.fn() },
+      investment: { createMany: vi.fn() },
+      retainer: { create: vi.fn() },
+      workspaceModule: { upsert: vi.fn(), findMany: vi.fn() },
+      // optional module tables used by seed hooks
+      clientPaymentBehavior: { upsert: vi.fn() },
+      inAppNotification: { createMany: vi.fn() },
+      cashForecastSnapshot: { create: vi.fn() },
+      cashForecastPeriod: { create: vi.fn() },
+      cashForecastManualAdjustment: { create: vi.fn(), createMany: vi.fn() },
+      department: { create: vi.fn() },
+      designation: { create: vi.fn() },
+      employee: { create: vi.fn() },
+      attendanceRecord: { createMany: vi.fn() },
+      payrollPeriod: { create: vi.fn() },
+      payrollRun: { create: vi.fn() },
+      document: { create: vi.fn() },
+      documentFile: { create: vi.fn() },
+      documentOcrJob: { create: vi.fn() },
+      documentAuditEvent: { createMany: vi.fn() },
+      taxPeriod: { create: vi.fn() },
+      taxForm: { create: vi.fn() },
+      taxReturn: { create: vi.fn() },
+      taxReadinessCheck: { upsert: vi.fn() },
+      taxReadinessBlocker: { create: vi.fn() },
+    },
+  };
+});
+
+describe('demo templates seeding', () => {
+  it.each(DEMO_TEMPLATE_KEYS)('enables all optional modules for %s', async (templateKey) => {
+    const key = templateKey as DemoTemplateKey;
+
+    const tx = prisma as any;
+    tx.workspace.create.mockResolvedValue({ id: 'ws_1' });
+    tx.client.create.mockResolvedValue({ id: 'client_1' });
+    tx.client.findMany.mockResolvedValue([{ id: 'client_1', name: 'Client 1' }]);
+    tx.serviceTemplate.findMany.mockResolvedValue([
+      { id: 'srv_1', name: 'S1', defaultPrice: 1, description: 'd' },
+    ]);
+    tx.workspaceModule.findMany.mockResolvedValue(MODULE_KEYS.map((moduleKey) => ({ moduleKey })));
+    tx.payrollPeriod.create.mockResolvedValue({ id: 'pp_1' });
+    tx.payrollRun.create.mockResolvedValue({ id: 'pr_1' });
+    tx.employee.create.mockResolvedValue({ id: 'emp_1', firstName: 'A', lastName: 'B', email: 'a@b.com' });
+    tx.department.create.mockResolvedValue({ id: 'dept_1' });
+    tx.designation.create.mockResolvedValue({ id: 'desg_1' });
+    tx.document.create.mockResolvedValue({ id: 'doc_1' });
+    tx.documentFile.create.mockResolvedValue({ id: 'file_1' });
+    tx.taxPeriod.create.mockResolvedValue({ id: 'tp_1' });
+    tx.taxForm.create.mockResolvedValue({ id: 'tf_1' });
+    tx.taxReturn.create.mockResolvedValue({ id: 'tr_1' });
+    tx.taxReadinessCheck.upsert.mockResolvedValue({ id: 'tc_1' });
+    tx.cashForecastSnapshot.create.mockResolvedValue({ id: 'cfs_1' });
+
+    const result = await seedDemoWorkspace(tx, { userId: 'u_1', templateKey: key, ttlHours: 24 });
+
+    expect(result.templateKey).toBe(key);
+    expect(tx.workspaceModule.upsert).toHaveBeenCalled();
+    // At least once per module
+    expect(tx.workspaceModule.upsert.mock.calls.length).toBeGreaterThanOrEqual(MODULE_KEYS.length);
+  });
+});
+

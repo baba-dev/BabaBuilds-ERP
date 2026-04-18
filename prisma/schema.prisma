@@ -179,6 +179,11 @@ model User {
   image         String? // This acts as the Avatar URL
   role          String    @default("USER") // "USER", "ADMIN"
 
+  // --- DEMO LIFECYCLE ---
+  isDemo          Boolean   @default(false)
+  demoTemplateKey String?
+  demoExpiresAt   DateTime?
+
   // --- NEW: PERSONAL PREFERENCES ---
   theme              String @default("system") // "light", "dark", "system"
   dateFormat         String @default("DD/MM/YYYY")
@@ -263,6 +268,11 @@ model Workspace {
   id        String   @id @default(cuid())
   name      String
   createdAt DateTime @default(now())
+
+  // --- DEMO LIFECYCLE ---
+  isDemo          Boolean   @default(false)
+  demoTemplateKey String?
+  demoExpiresAt   DateTime?
 
   // --- NEW: GLOBALIZATION STATE ---
   isSetupComplete Boolean @default(false) // Triggers the Popup Wizard
@@ -375,6 +385,29 @@ model Workspace {
   taxObligations          TaxObligation[]
   taxObligationPeriods    TaxObligationPeriod[]
   complianceTasks         ComplianceTask[]
+
+  @@index([isDemo])
+  @@index([demoExpiresAt])
+  @@index([demoTemplateKey])
+}
+
+model DemoProvisionAttempt {
+  id String @id @default(cuid())
+
+  createdAt DateTime @default(now())
+
+  ip          String?
+  fingerprint String?
+  templateKey String?
+
+  isAllowed    Boolean @default(false)
+  blockReason  String?
+  retryAfterSeconds Int?
+
+  @@index([createdAt])
+  @@index([ip, createdAt])
+  @@index([fingerprint, createdAt])
+  @@index([templateKey, createdAt])
 }
 
 model AppActivityLog {
