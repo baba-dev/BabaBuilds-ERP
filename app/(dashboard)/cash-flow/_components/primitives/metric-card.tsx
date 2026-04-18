@@ -1,13 +1,14 @@
 import { cn } from "@/lib/utils";
 import { cashFlowTypography, dt } from "../cash-flow-typography";
+import { cashFlowChrome } from "./styles";
 
 export type MetricTone = "default" | "positive" | "warning" | "danger";
 
 const toneClassName: Record<MetricTone, string> = {
-  default: "border-zinc-200/70 dark:border-zinc-800/70 bg-white/50 dark:bg-zinc-900/40",
-  positive: "border-emerald-200/60 dark:border-emerald-900/40 bg-emerald-50/40 dark:bg-emerald-950/15",
-  warning: "border-amber-200/60 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/15",
-  danger: "border-rose-200/60 dark:border-rose-900/40 bg-rose-50/40 dark:bg-rose-950/15",
+  default: "border-zinc-200/55 dark:border-zinc-800/55 bg-white/45 dark:bg-zinc-900/30",
+  positive: "border-emerald-200/55 dark:border-emerald-900/40 bg-emerald-50/30 dark:bg-emerald-950/14",
+  warning: "border-amber-200/55 dark:border-amber-900/40 bg-amber-50/30 dark:bg-amber-950/14",
+  danger: "border-rose-200/55 dark:border-rose-900/40 bg-rose-50/30 dark:bg-rose-950/14",
 };
 
 export function CashFlowMetricCard(props: {
@@ -21,7 +22,7 @@ export function CashFlowMetricCard(props: {
   return (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-2xl border p-4 shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-[1px] hover:shadow-md",
+        cashFlowChrome.card,
         toneClassName[props.tone ?? "default"],
         props.className,
       )}
@@ -31,11 +32,11 @@ export function CashFlowMetricCard(props: {
           <div className={dt(cashFlowTypography.labelUpperStrong)}>
             {props.label}
           </div>
-          <div className={dt("mt-2", cashFlowTypography.value2xlLight)}>
+          <div className={dt("mt-2.5", cashFlowTypography.value2xlLight)}>
             {props.value}
           </div>
           {props.subtext ? (
-            <div className={dt("mt-1.5", cashFlowTypography.helperXs)}>{props.subtext}</div>
+            <div className={dt("mt-2", cashFlowTypography.helperXs)}>{props.subtext}</div>
           ) : null}
         </div>
         {props.indicator ? <div className="shrink-0">{props.indicator}</div> : null}
@@ -43,4 +44,3 @@ export function CashFlowMetricCard(props: {
     </div>
   );
 }
-

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CashFlowHelp } from "./help";
+import { cashFlowIcon } from "./styles";
 import type { CashFlowHorizonType, CashFlowScenarioTag } from "../types";
 
 export type CashFlowContext = {
@@ -83,7 +84,7 @@ export function CashFlowActionBar({
         <Badge
           variant={freshness.tone}
           className={
-            stale ? "border-amber-200 text-amber-700 dark:border-amber-900/50 dark:text-amber-300" : undefined
+            stale ? "border-amber-200/60 text-amber-700 dark:border-amber-900/40 dark:text-amber-300" : undefined
           }
         >
           {freshness.label}
@@ -97,7 +98,7 @@ export function CashFlowActionBar({
         {extra}
         {onRefresh ? (
           <Button onClick={onRefresh} disabled={Boolean(refreshing)} className="h-9 gap-2">
-            <RefreshCw className={refreshing ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+            <RefreshCw className={refreshing ? `${cashFlowIcon.inline} animate-spin` : cashFlowIcon.inline} />
             Refresh
           </Button>
         ) : null}
@@ -105,4 +106,3 @@ export function CashFlowActionBar({
     </div>
   );
 }
-

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useFormat } from "@/hooks/use-format";
+import { cashFlowIcon } from "../_components/primitives/styles";
 import { getCashFlowContextFromSearchParams, updateCashFlowContextInUrl } from "../_components/context";
 import { CashFlowPageShell } from "../_components/cash-flow-page-shell";
 import { fetchCashFlowSnapshotWithPeriods, refreshCashForecast } from "../_components/api";
@@ -110,7 +111,7 @@ export default function CashFlowInflowsPage() {
     <CashFlowPageShell
       title="Cash Flow · Inflows"
       description={description}
-      icon={<ReceiptText className="h-5 w-5 text-indigo-500" />}
+      icon={<ReceiptText className={`${cashFlowIcon.header} text-indigo-500/90`} />}
     >
       <div className="space-y-6">
         <CashFlowActionBar

@@ -5,6 +5,7 @@ import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
+import { cashFlowIcon } from "./styles";
 
 export function CashFlowHelp({
   label,
@@ -26,12 +27,12 @@ export function CashFlowHelp({
             variant="ghost"
             size="icon-sm"
             className={cn(
-              "h-7 w-7 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60",
+              "h-7 w-7 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100/55 dark:hover:bg-zinc-800/55",
               className,
             )}
             aria-label={label}
           >
-            <Info className={cn("h-4 w-4", iconClassName)} />
+            <Info className={cn(cashFlowIcon.inline, iconClassName)} />
           </Button>
         </TooltipTrigger>
         <TooltipContent sideOffset={8} className="max-w-sm">
@@ -44,4 +45,3 @@ export function CashFlowHelp({
     </TooltipProvider>
   );
 }
-
