@@ -37,7 +37,9 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## Auth provider configuration
 
-`validateAuthEnvOrThrow` always requires these core NextAuth variables in all modes:
+`validateAuthEnvOrThrow` runs when the NextAuth API route handles a request (`/api/auth/*`). Public pages (e.g. marketing) render even if optional provider env is missing; sign-in still fails fast with a clear configuration error instead of obscure runtime failures.
+
+It always requires these core NextAuth variables once auth is exercised:
 
 - `NEXTAUTH_URL=https://erp.bababuilds.com`
 - `NEXTAUTH_SECRET=<strong random value>`

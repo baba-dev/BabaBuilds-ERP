@@ -41,6 +41,11 @@ export default defineConfig({
     url: 'http://localhost:3000',
     env: {
       ...process.env,
+      // Dev server smoke runs often have no .env.local; NextAuth session polling must not 500.
+      NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000',
+      NEXTAUTH_SECRET:
+        process.env.NEXTAUTH_SECRET ||
+        'playwright-local-dev-secret-must-be-32chars-min',
       // Playwright runs can create many demo workspaces quickly; relax the demo circuit breaker.
       DEMO_CIRCUIT_BREAKER_THRESHOLD: process.env.DEMO_CIRCUIT_BREAKER_THRESHOLD || '1000',
     },

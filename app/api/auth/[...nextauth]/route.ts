@@ -3,7 +3,7 @@ import NextAuth from "next-auth";
 import type { NextRequest } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { evaluateEmailSignInThrottle } from "@/lib/auth-throttle";
-import { recordAuthThrottleAttempt } from "@/lib/auth-observability";
+import { recordAuthThrottleAttempt, validateAuthEnvOrThrow } from "@/lib/auth-observability";
 
 const handler = NextAuth(authOptions);
 
@@ -95,10 +95,12 @@ type RouteContext = {
 };
 
 export async function GET(req: Request, context: RouteContext) {
+  validateAuthEnvOrThrow();
   return handler(req, context);
 }
 
 export async function POST(req: NextRequest, context: RouteContext) {
+  validateAuthEnvOrThrow();
   const throttleResponse = await applyEmailSignInThrottle(req);
   if (throttleResponse) {
     return throttleResponse;

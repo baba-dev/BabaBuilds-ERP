@@ -9,7 +9,6 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
-import { validateAuthEnvOrThrow } from "@/lib/auth-observability";
 import { getLocaleDirection } from "@/lib/i18n";
 import PWARegistration from "@/components/PWARegistration";
 import OfflineSyncBanner from "@/components/offline-sync-banner";
@@ -108,7 +107,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  validateAuthEnvOrThrow();
   const locale = await getLocale();
   const messages = await getMessages();
   const dir = getLocaleDirection(locale);

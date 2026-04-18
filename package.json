@@ -15,6 +15,7 @@
     "backfill:smtp-passwords": "node scripts/backfill-smtp-password-encryption.js",
     "test:unit": "vitest run tests/sidebar/sidebar-rules.unit.test.ts",
     "test:integration": "vitest run tests/sidebar/mobile-drawer-parity.integration.test.ts",
+    "test:smoke": "playwright test tests/smoke",
     "test": "vitest run"
   },
   "dependencies": {
