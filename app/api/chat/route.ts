@@ -10,6 +10,8 @@ import { promisify } from 'util';
 import { decimalToNumber, toDecimal } from '@/lib/money';
 import { getRuntimeSmtpPassword } from '@/lib/mailer';
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
+import { chatRequestSchema, type ToolAction } from '@/lib/ai/chat/contracts';
+import { canExecuteToolForRole } from '@/lib/ai/chat/tool-policy';
 
 const lookupAsync = promisify(dns.lookup);
 
@@ -774,9 +776,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const workspaceId = (session as any).workspaceId;
+    const actorRole = String((session as any).businessRole || (session as any).user?.role || '').toUpperCase();
 
-    const { message, history, context = {} } = await request.json();
-    const safeHistory = (history || []).slice(-10); 
+    const parsedBody = chatRequestSchema.safeParse(await request.json());
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        {
+          code: 'CHAT_REQUEST_INVALID',
+          error: 'Chat payload is invalid. Please retry with a shorter message.',
+          details: parsedBody.error.flatten(),
+        },
+        { status: 400 },
+      );
+    }
+    const { message, history, context } = parsedBody.data;
+    const safeHistory = history.slice(-10);
 
     const profile = await prisma.businessProfile.findUnique({ 
       where: { workspaceId: workspaceId },
@@ -840,7 +854,11 @@ export async function POST(request: Request) {
       timeout: 12_000,
       maxRetries: 2,
     });
-    const messages: any[] = [{ role: "system", content: systemPrompt }, ...safeHistory, { role: "user", content: message }];
+    const messages: any[] = [
+      { role: "system", content: systemPrompt },
+      ...safeHistory,
+      { role: "user", content: message },
+    ];
 
     const tools = [
       {
@@ -1218,7 +1236,7 @@ export async function POST(request: Request) {
     );
 
     const responseMessage = initialResponse.choices[0]?.message;
-    let actionPayload = null; 
+    let actionPayload: ToolAction | null = null;
 
     if (responseMessage?.tool_calls && responseMessage.tool_calls.length > 0) {
       messages.push(responseMessage);
@@ -1273,7 +1291,11 @@ export async function POST(request: Request) {
           predict_stockouts: (_a: any, wid: string) => predictStockouts(wid)
         };
 
-        if (toolHandlers[toolCall.function.name]) {
+        if (!canExecuteToolForRole(toolCall.function.name, actorRole)) {
+          dbResult = JSON.stringify({
+            error: `Tool ${toolCall.function.name} requires elevated permissions for your workspace role.`,
+          });
+        } else if (toolHandlers[toolCall.function.name]) {
           dbResult = await toolHandlers[toolCall.function.name](args, workspaceId);
         } else if (toolCall.function.name === "draft_proposal") {
           // Bug 6 fix: /proposals/new does not exist — the proposals page is a single-page
@@ -1281,7 +1303,7 @@ export async function POST(request: Request) {
           action = { type: 'NAVIGATE', path: '/proposals', payload: { clientName: args.client_name, title: args.title, totalAmount: args.total_amount } };
           dbResult = JSON.stringify({ status: `Success. Redirecting user to proposal form.` });
         } else if (toolCall.function.name === "draft_invoice") {
-          action = { type: 'NAVIGATE', path: '/invoice', payload: { clientName: args.client_name, totalAmount: args.amount, serviceDescription: args.description } };
+          action = { type: 'NAVIGATE', path: '/invoice', payload: { client: args.client_name, amount: args.amount, description: args.description } };
           dbResult = JSON.stringify({ status: `Success. Pushed actionPayload to UI to load invoice form for ${args.client_name}.` });
         } else if (toolCall.function.name === "ui_navigate") {
           action = { type: 'NAVIGATE', path: args.path, payload: args.payload || null };
@@ -1293,7 +1315,7 @@ export async function POST(request: Request) {
           dbResult = JSON.stringify({ error: `Tool ${toolCall.function.name} is not recognized or not implemented.` });
         }
 
-        return { 
+        return {
           role: "tool", 
           tool_call_id: toolCall.id, 
           name: toolCall.function.name, 
@@ -1305,7 +1327,7 @@ export async function POST(request: Request) {
       const toolResults = await Promise.all(toolPromises);
 
       for (const result of toolResults) {
-        if (result.action) actionPayload = result.action;
+        if (result.action && !actionPayload) actionPayload = result.action as ToolAction;
         messages.push({ role: result.role, tool_call_id: result.tool_call_id, name: result.name, content: result.content });
       }
 
