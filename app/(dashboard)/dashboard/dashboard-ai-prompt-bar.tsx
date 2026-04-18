@@ -58,13 +58,13 @@ export function DashboardAIPromptBar() {
   return (
     <div className="relative group">
       {/* Background Glow Effect (focus-driven, not hover-driven) */}
-      <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/15 via-purple-500/15 to-indigo-500/15 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 motion-reduce:transition-none transition-opacity duration-500 pointer-events-none" />
+      <div className="absolute -inset-1 bg-gradient-to-r from-orange-500/15 via-amber-500/15 to-orange-500/15 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 motion-reduce:transition-none transition-opacity duration-500 pointer-events-none" />
       
       <div className="relative space-y-3">
         {/* Header Label */}
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
-             <div className="flex items-center justify-center w-5 h-5 rounded-full bg-indigo-500 dark:bg-indigo-600 text-white shadow-lg shadow-indigo-500/20">
+             <div className="flex items-center justify-center w-5 h-5 rounded-full bg-orange-500 dark:bg-orange-600 text-white shadow-lg shadow-orange-500/20">
               <Sparkles className="w-3 h-3" />
             </div>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
@@ -87,9 +87,9 @@ export function DashboardAIPromptBar() {
               placeholder=""
               className={cn(
                 "h-12 pl-4 pr-12 bg-zinc-50/50 dark:bg-zinc-900/50 border-zinc-200/60 dark:border-zinc-800/60",
-                "focus-visible:ring-indigo-500/30 focus-visible:border-indigo-500/50",
+                "focus-visible:ring-orange-500/30 focus-visible:border-orange-500/50",
                 "rounded-xl text-sm font-medium transition-all duration-300",
-                "group-hover/form:bg-white dark:group-hover/form:bg-zinc-900 group-hover/form:border-indigo-500/30"
+                "group-hover/form:bg-white dark:group-hover/form:bg-zinc-900 group-hover/form:border-orange-500/30"
               )}
             />
             
@@ -116,7 +116,7 @@ export function DashboardAIPromptBar() {
               className={cn(
                 "absolute right-2 p-2 rounded-lg transition-all duration-300",
                 prompt.trim() 
-                  ? "bg-indigo-600 dark:bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 scale-100" 
+                  ? "bg-orange-600 dark:bg-orange-500 text-white shadow-lg shadow-orange-500/30 scale-100" 
                   : "text-zinc-300 dark:text-zinc-700 scale-90 opacity-0 pointer-events-none"
               )}
             >
@@ -134,7 +134,7 @@ export function DashboardAIPromptBar() {
               className={cn(
                 "flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-bold uppercase tracking-wider transition-all duration-200",
                 "bg-white dark:bg-zinc-900/50 border-zinc-200/60 dark:border-zinc-800/60 text-zinc-500",
-                "hover:border-indigo-500/30 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400"
+                "hover:border-orange-500/30 hover:bg-orange-50/50 dark:hover:bg-orange-500/10 hover:text-orange-600 dark:hover:text-orange-400"
               )}
             >
               {chip.icon}

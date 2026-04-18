@@ -265,8 +265,8 @@ export function ChartsIsland({
                         animate={{ width: `${percentage}%` }}
                         transition={{ duration: 1, delay: i * 0.1, ease: "circOut" }}
                         className={`absolute inset-y-0 left-0 rounded-full ${
-                          i === 0 ? 'bg-indigo-500' : 
-                          i === 1 ? 'bg-blue-500' : 
+                          i === 0 ? 'bg-orange-500' : 
+                          i === 1 ? 'bg-orange-400' : 
                           i === 2 ? 'bg-amber-500' : 'bg-rose-500'
                         }`}
                       />
@@ -292,7 +292,7 @@ export function ChartsIsland({
             icon={Filter}
             headerAction={
               hasProposalData && (
-                <Badge variant="outline" className="bg-indigo-500/5 text-indigo-600 dark:text-indigo-400 border-indigo-500/20 gap-1 py-0.5">
+                <Badge variant="outline" className="bg-orange-500/5 text-orange-600 dark:text-orange-400 border-orange-500/20 gap-1 py-0.5">
                   <Sparkles className="w-3 h-3" />
                   {tr("pipeline_active", "Active Dealflow")}
                 </Badge>
@@ -317,7 +317,7 @@ export function ChartsIsland({
                         animate={{ width: `${Math.max(2, width)}%` }}
                         transition={{ duration: 1.2, delay: i * 0.1, ease: "anticipate" }}
                         style={{ opacity }}
-                        className="h-full bg-indigo-500 rounded-md shadow-[0_0_12px_rgba(99,102,241,0.2)]"
+                        className="h-full bg-orange-500 rounded-md shadow-[0_0_12px_rgba(249,115,22,0.25)]"
                       />
                     </div>
                     {i < funnelData.length - 1 && (

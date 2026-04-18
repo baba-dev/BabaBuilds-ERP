@@ -44,7 +44,7 @@ export function DashboardSalesAndShopPanel({
 
   const funnelStages = [
     { key: "draft", label: tr("funnel_draft", "Draft"), value: salesAndShop.proposalFunnel.draft, icon: FileText, color: "text-slate-500", bg: "bg-slate-500/10", tooltip: tr("funnel_draft_help", "Drafts you're still working on.") },
-    { key: "sent", label: tr("funnel_sent", "Sent"), value: salesAndShop.proposalFunnel.sent, icon: Send, color: "text-blue-500", bg: "bg-blue-500/10", tooltip: tr("funnel_sent_help", "Sent to clients but not yet opened.") },
+    { key: "sent", label: tr("funnel_sent", "Sent"), value: salesAndShop.proposalFunnel.sent, icon: Send, color: "text-orange-500", bg: "bg-orange-500/10", tooltip: tr("funnel_sent_help", "Sent to clients but not yet opened.") },
     { key: "viewed", label: tr("funnel_viewed", "Viewed"), value: salesAndShop.proposalFunnel.viewed, icon: Eye, color: "text-violet-500", bg: "bg-violet-500/10", tooltip: tr("funnel_viewed_help", "Clients have opened and viewed these.") },
     { key: "accepted", label: tr("funnel_accepted", "Accepted"), value: salesAndShop.proposalFunnel.accepted, icon: BadgeCheck, color: "text-emerald-500", bg: "bg-emerald-500/10", tooltip: tr("funnel_accepted_help", "Clients have formally accepted the proposal.") },
     { key: "invoiced", label: tr("funnel_invoiced", "Invoiced"), value: salesAndShop.proposalFunnel.invoiced, icon: ReceiptText, color: "text-teal-600", bg: "bg-teal-600/15", tooltip: tr("funnel_invoiced_help", "The goal: proposals converted into active invoices.") },
@@ -86,12 +86,12 @@ export function DashboardSalesAndShopPanel({
         transition={{ duration: 0.4, ease: "easeOut" }}
       >
         <Card className={cn(panelCardClass, "animate-in fade-in slide-in-from-bottom-3")}>
-          <div className="absolute -top-16 -right-16 w-40 h-40 bg-indigo-500/5 dark:bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/10 dark:group-hover:bg-indigo-500/20 transition-all duration-700" />
+          <div className="absolute -top-16 -right-16 w-40 h-40 bg-orange-500/5 dark:bg-orange-500/10 rounded-full blur-3xl group-hover:bg-orange-500/10 dark:group-hover:bg-orange-500/20 transition-all duration-700" />
           <div className="relative z-10 flex items-start justify-between gap-4 mb-6">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center border border-indigo-100 dark:border-indigo-500/20 shadow-sm">
-                  <FileCheck2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center border border-orange-100 dark:border-orange-500/20 shadow-sm">
+                  <FileCheck2 className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                 </div>
                 <div className="min-w-0">
                   <h3 className={cn(ty.sectionTitle, "leading-tight")}>
@@ -340,7 +340,7 @@ export function DashboardSalesAndShopPanel({
               className="flex-1 h-10 rounded-2xl border-zinc-200/70 dark:border-zinc-800/70 hover:bg-zinc-50 dark:hover:bg-zinc-900 group transition-all"
             >
               <Link href="/proposals" className="flex items-center justify-center gap-2">
-                <FileCheck2 className="w-3.5 h-3.5 text-zinc-500 group-hover:text-indigo-500 transition-colors" />
+                <FileCheck2 className="w-3.5 h-3.5 text-zinc-500 group-hover:text-orange-500 transition-colors" />
                 <span className="text-sm font-semibold">{tr("view_proposals", "Proposals")}</span>
               </Link>
             </Button>
@@ -351,7 +351,7 @@ export function DashboardSalesAndShopPanel({
               className="flex-1 h-10 rounded-2xl border-zinc-200/70 dark:border-zinc-800/70 hover:bg-zinc-50 dark:hover:bg-zinc-900 group transition-all"
             >
               <Link href="/shop" className="flex items-center justify-center gap-2">
-                <Store className="w-3.5 h-3.5 text-zinc-500 group-hover:text-indigo-500 transition-colors" />
+                <Store className="w-3.5 h-3.5 text-zinc-500 group-hover:text-orange-500 transition-colors" />
                 <span className="text-sm font-semibold">{tr("view_shop_orders", "Shop orders")}</span>
               </Link>
             </Button>

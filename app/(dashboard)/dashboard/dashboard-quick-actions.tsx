@@ -39,7 +39,7 @@ export function DashboardQuickActions() {
           >
             <span className={ty.cardTitle}>
               <span className="inline-flex items-center gap-2">
-                <action.icon className="w-4 h-4 text-indigo-500" /> {action.label}
+                <action.icon className="w-4 h-4 text-orange-500" /> {action.label}
               </span>
             </span>
             <ArrowRight className="w-3.5 h-3.5 text-zinc-500" />

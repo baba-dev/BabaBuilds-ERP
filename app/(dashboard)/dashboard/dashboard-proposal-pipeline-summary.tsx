@@ -14,9 +14,9 @@ export function DashboardProposalPipelineSummary({ summary }: DashboardProposalP
     <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-sm flex flex-col h-full">
       <div className="p-5 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-950/50">
         <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-indigo-500" /> Revenue Operations
+          <TrendingUp className="w-4 h-4 text-orange-500" /> Revenue Operations
         </h2>
-        <Link href="/proposals/pipeline" className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 uppercase tracking-widest">
+        <Link href="/proposals/pipeline" className="text-xs font-bold text-orange-600 hover:text-orange-700 flex items-center gap-1 uppercase tracking-widest">
           Pipeline <ChevronRight className="w-3 h-3" />
         </Link>
       </div>

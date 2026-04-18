@@ -73,7 +73,7 @@ export function InAppHelpHubClient({
       {suggested.length > 0 && (
         <section className="space-y-4">
           <div className="flex items-center gap-2">
-            <Compass className="w-5 h-5 text-indigo-500" />
+            <Compass className="w-5 h-5 text-orange-500" />
             <h2 className="text-lg font-black tracking-tight text-zinc-900 dark:text-zinc-50">Suggested for this page</h2>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -83,7 +83,7 @@ export function InAppHelpHubClient({
                 href={`/help/${doc.slug}`}
                 className={cn(
                   "group rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5",
-                  "hover:border-indigo-300 dark:hover:border-indigo-700/50 hover:shadow-md transition-all",
+                  "hover:border-orange-300 dark:hover:border-orange-700/50 hover:shadow-md transition-all",
                 )}
               >
                 <div className="flex items-start justify-between gap-4">
@@ -96,7 +96,7 @@ export function InAppHelpHubClient({
                       </p>
                     ) : null}
                   </div>
-                  <ArrowRight className="w-4 h-4 text-zinc-300 dark:text-zinc-700 group-hover:text-indigo-500 shrink-0 transition-colors" />
+                  <ArrowRight className="w-4 h-4 text-zinc-300 dark:text-zinc-700 group-hover:text-orange-500 shrink-0 transition-colors" />
                 </div>
               </Link>
             ))}
@@ -128,7 +128,7 @@ export function InAppHelpHubClient({
             <h2 className="text-lg font-black tracking-tight text-zinc-900 dark:text-zinc-50">Featured</h2>
             <p className="mt-1 text-sm font-medium text-zinc-500 dark:text-zinc-400">The best place to start.</p>
           </div>
-          <Link href="/help" className="text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
+          <Link href="/help" className="text-sm font-bold text-orange-600 dark:text-orange-400 hover:underline">
             Open Help Center
           </Link>
         </div>
@@ -137,7 +137,7 @@ export function InAppHelpHubClient({
             <Link
               key={doc.slug}
               href={`/help/${doc.slug}`}
-              className="group rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 hover:border-indigo-300 dark:hover:border-indigo-700/50 hover:shadow-md transition-all"
+              className="group rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 hover:border-orange-300 dark:hover:border-orange-700/50 hover:shadow-md transition-all"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
@@ -147,7 +147,7 @@ export function InAppHelpHubClient({
                     {doc.category ?? "Guide"}
                   </p>
                 </div>
-                <ArrowRight className="w-4 h-4 text-zinc-300 dark:text-zinc-700 group-hover:text-indigo-500 shrink-0 transition-colors" />
+                <ArrowRight className="w-4 h-4 text-zinc-300 dark:text-zinc-700 group-hover:text-orange-500 shrink-0 transition-colors" />
               </div>
             </Link>
           ))}

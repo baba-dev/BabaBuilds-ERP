@@ -159,13 +159,13 @@ export function DashboardCashFlowSummary({
         className,
       )}
     >
-      <div className="absolute -top-12 -right-12 w-36 h-36 bg-indigo-500/5 dark:bg-indigo-500/12 rounded-full blur-3xl group-hover:bg-indigo-500/10 dark:group-hover:bg-indigo-500/20 transition-all duration-700" />
+      <div className="absolute -top-12 -right-12 w-36 h-36 bg-orange-500/5 dark:bg-orange-500/12 rounded-full blur-3xl group-hover:bg-orange-500/10 dark:group-hover:bg-orange-500/20 transition-all duration-700" />
 
       <div className="relative z-10 p-6 space-y-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center border border-indigo-100 dark:border-indigo-500/20 shadow-sm">
-              <AreaChart className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center border border-orange-100 dark:border-orange-500/20 shadow-sm">
+              <AreaChart className="w-4 h-4 text-orange-600 dark:text-orange-400" />
             </div>
             <div>
               <p className={dt(dashboardTypography.cardTitle, "leading-tight")}>Cash flow</p>
@@ -182,7 +182,7 @@ export function DashboardCashFlowSummary({
               variant="ghost"
               onClick={onRefresh}
               disabled={refreshing}
-              className="h-9 w-9 rounded-xl text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50/60 dark:hover:bg-indigo-500/10"
+              className="h-9 w-9 rounded-xl text-zinc-400 hover:text-orange-600 hover:bg-orange-50/60 dark:hover:bg-orange-500/10"
               aria-label="Refresh cash flow"
             >
               <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
