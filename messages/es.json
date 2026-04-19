@@ -280,7 +280,7 @@
     "revenue_pipeline": "Pipeline de ingresos",
     "service_catalog": "Catálogo de servicios",
     "cash_flow": "Flujo de caja",
-    "reporting_center": "Centro de informes",
+    "reporting_center": "Centro de Informes",
     "shop": "Shop",
     "inventory": "Inventario",
     "client_crm": "CRM de clientes",
@@ -308,7 +308,7 @@
     "group_finance": "Finanzas",
     "group_compliance": "Cumplimiento",
     "group_workspace": "Espacio de trabajo",
-    "reporting_center": "Centro de Informes"
+    "import_manager": "Gestor de importación"
   },
   "UserNav": {
     "my_account": "Mi Cuenta",

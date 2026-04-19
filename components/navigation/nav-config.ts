@@ -19,6 +19,7 @@ import {
   Wallet,
   Siren,
   ChartColumnBig,
+  UploadCloud,
   type LucideIcon,
 } from "lucide-react";
 
@@ -59,6 +60,7 @@ export const appNavItems: AppNavItem[] = [
   { key: "documents", path: "/documents", icon: FileText, requiresModule: "DOCUMENTS" },
   { key: "workforce", path: "/workforce", icon: Users2, requiresModule: "WORKFORCE" },
   { key: "payroll", path: "/payroll", icon: Wallet, requiresModule: "PAYROLL" },
+  { key: "import_manager", path: "/import-manager", icon: UploadCloud, badge: "New", requiresModule: "IMPORT_MANAGER" },
   { key: "help_center", path: "/dashboard/help", icon: CircleHelp },
 ];
 

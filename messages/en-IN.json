@@ -393,7 +393,7 @@
     "group_finance": "Finance",
     "group_compliance": "Compliance",
     "group_workspace": "Workspace",
-    "reporting_center": "Reporting Center"
+    "import_manager": "Import Manager"
   },
   "UserNav": {
     "my_account": "My Account",
