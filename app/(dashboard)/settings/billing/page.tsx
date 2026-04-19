@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 
 type WorkspaceSummary = {
   planInterval: string | null;
+  planTier: string;
   subscriptionStatus: string;
   subscriptionEndsAt: Date | null;
   billingProviderId: string | null;
@@ -33,6 +34,7 @@ export default async function BillingSettingsPage() {
     where: { id: scopedSession.workspaceId },
     select: {
       planInterval: true,
+      planTier: true,
       subscriptionStatus: true,
       subscriptionEndsAt: true,
       billingProviderId: true,
@@ -46,6 +48,7 @@ export default async function BillingSettingsPage() {
 
   const workspaceSummary: WorkspaceSummary = {
     planInterval: workspace.planInterval,
+    planTier: workspace.planTier ?? "FREE",
     subscriptionStatus: workspace.subscriptionStatus,
     subscriptionEndsAt: workspace.subscriptionEndsAt,
     billingProviderId: workspace.billingProviderId,

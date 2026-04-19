@@ -596,7 +596,7 @@ export function hasPermission(role: BusinessRole, permission: Permission): boole
  * - The seat count formula is:
  *     used = activeMembers + pendingInvites
  *     available = limit - used
- *     canInvite = available > 0 (or plan is ENTERPRISE)
+ *     canInvite = available > 0 (or unlimited for special cases — none in current tiers)
  */
 export const SEAT_SEMANTICS = {
   PENDING_INVITES_RESERVE_SEATS: true,
@@ -608,7 +608,8 @@ export const PLAN_SEAT_LIMITS: Record<string, number> = {
   FREE:       1,
   PRO:        3,
   TEAM:       15,
-  ENTERPRISE: Infinity,   // Displayed as "Unlimited" in all UI/API responses
+  /** Legacy tier: treat as Team seat cap (Enterprise product removed). */
+  ENTERPRISE: 15,
   TRIALING:   5,          // Trial workspaces get team-tier seat access
 };
 

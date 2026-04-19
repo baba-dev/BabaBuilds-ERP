@@ -15,6 +15,10 @@ import fs from "fs";
 import { decrypt } from "@/lib/encryption";
 import { generateTenantPaymentLink } from "@/lib/razorpay-links";
 import { generateStripePaymentLink } from "@/lib/stripe-links";
+import {
+  assertFreeTierMonthlyInvoiceAllowed,
+  canInjectGatewayPaymentLinks,
+} from "@/lib/entitlements";
 
 export async function convertProposalToInvoiceAction(proposalId: string) {
   const session = await getServerSession(authOptions);
@@ -25,7 +29,11 @@ export async function convertProposalToInvoiceAction(proposalId: string) {
 
   const proposal = await prisma.proposal.findFirst({
     where: { id: proposalId, workspaceId },
-    include: { client: true, items: true, workspace: true },
+    include: {
+      client: true,
+      items: true,
+      workspace: { select: { planTier: true, subscriptionStatus: true, subscriptionEndsAt: true } },
+    },
   });
   if (!proposal) redirect("/proposals");
 
@@ -46,6 +54,12 @@ export async function convertProposalToInvoiceAction(proposalId: string) {
   if (!profile) {
     // Cannot generate invoice without business profile configuration.
     redirect(`/proposals/${proposal.id}`);
+  }
+
+  const invoiceDate = new Date();
+  const limitErr = await assertFreeTierMonthlyInvoiceAllowed(workspaceId, invoiceDate);
+  if (limitErr) {
+    redirect(`/proposals/${proposalId}?billing=free_invoice_month`);
   }
 
   const baseCurrency = profile.workspace?.baseCurrency || "INR";
@@ -91,7 +105,6 @@ export async function convertProposalToInvoiceAction(proposalId: string) {
         defaultTaxRate: taxResolution.taxRate,
       });
 
-  const invoiceDate = new Date();
   const dueDate = new Date(invoiceDate);
   dueDate.setDate(dueDate.getDate() + 7);
 
@@ -118,13 +131,18 @@ export async function convertProposalToInvoiceAction(proposalId: string) {
   const invoiceNumber = `INV/${fy}/${sequence.toString().padStart(3, "0")}`;
 
   // Generate payment link if possible (best-effort; never blocks conversion).
-  const isProPlan = String(profile.workspace?.planTier || "").toUpperCase() !== "FREE";
+  const billingSnap = {
+    planTier: proposal.workspace?.planTier,
+    subscriptionStatus: proposal.workspace?.subscriptionStatus,
+    subscriptionEndsAt: proposal.workspace?.subscriptionEndsAt,
+  };
+  const paidFeatures = canInjectGatewayPaymentLinks(billingSnap);
   const defaultGateway = String((profile as any).defaultGateway || "RAZORPAY").toUpperCase();
   let paymentLink: string | null = null;
   let providerPaymentLinkId: string | null = null;
   let providerGateway: string | null = null;
 
-  if (isProPlan) {
+  if (paidFeatures) {
     if (
       defaultGateway === "RAZORPAY" &&
       baseCurrency === "INR" &&

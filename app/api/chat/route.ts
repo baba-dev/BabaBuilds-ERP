@@ -12,6 +12,8 @@ import { decimalToNumber, toDecimal } from '@/lib/money';
 import { getRuntimeSmtpPassword } from '@/lib/mailer';
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import { chatRequestSchema, type ToolAction } from '@/lib/ai/chat/contracts';
+import { canExecuteToolForRole } from '@/lib/ai/chat/tool-policy';
+import { assertFreeTierMonthlyInvoiceAllowed } from '@/lib/entitlements';
 import { canExecuteToolForRole, canUseReportingTools } from '@/lib/ai/chat/tool-policy';
 import { REPORT_PRESETS } from '@/lib/reporting/presets';
 import { isModuleEnabled } from '@/lib/modules';
@@ -540,6 +542,9 @@ async function convertProposalToInvoice(proposalNo: string, workspaceId: string)
         nextInvNum = `INV-${Date.now().toString().slice(-4)}`;
       }
     }
+
+    const monthCap = await assertFreeTierMonthlyInvoiceAllowed(workspaceId, new Date());
+    if (monthCap) return JSON.stringify({ error: monthCap.message });
 
     // Create converted Invoice
     const newInvoice = await prisma.invoice.create({
