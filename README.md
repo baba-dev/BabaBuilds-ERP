@@ -107,3 +107,30 @@ Use these artifacts to coordinate phased UI delivery and design QA gates:
 To keep email sign-in and verification-token delivery compatible with `next-auth@4.24.13`, keep `nodemailer` on the `^7.0.7` major range (the peer dependency expected by this `next-auth` release).
 
 When updating mailer dependencies, align `@types/nodemailer` to the same runtime major as `nodemailer` to avoid drift between compile-time types and runtime APIs.
+
+## Reporting Center (Optional Module)
+
+Reporting Center is an optional workspace subsystem. Enable it from **Setup Wizard** or **Settings → Optional Modules**.
+
+### Enablement
+- Setup payload supports `enableReportingCenter: true`.
+- Settings supports runtime enable/disable (non-destructive; data preserved).
+
+### Permissions
+Reporting Center uses enterprise RBAC permissions:
+- `reporting_center.view`
+- `reporting_center.query.run`
+- `reporting_center.preset.manage`
+- `reporting_center.export`
+
+### Usage
+1. Open `/reporting`.
+2. Select a preset and filters.
+3. Run preview or export to XLSX.
+
+### Security
+- Single-statement `SELECT`-only execution policy.
+- Mandatory workspace scoping (`workspaceId = :workspaceId`).
+- DML/DDL/PRAGMA/ATTACH denied.
+- Timeout, row cap, and payload cap enforced.
+- Every run/export is audit logged.

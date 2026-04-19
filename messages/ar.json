@@ -252,7 +252,8 @@
     "group_sales": "المبيعات",
     "group_finance": "المالية",
     "group_compliance": "الامتثال",
-    "group_workspace": "مساحة العمل"
+    "group_workspace": "مساحة العمل",
+    "reporting_center": "مركز التقارير"
   },
   "UserNav": {
     "my_account": "حسابي",

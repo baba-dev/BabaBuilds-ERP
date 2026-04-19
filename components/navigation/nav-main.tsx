@@ -14,18 +14,19 @@ type Props = {
   preferences: UserPreferences;
   pinError: string | null;
   enabledModules: Set<string>;
+  grantedPermissions: Set<string>;
   onTogglePin: (itemId: Exclude<SidebarItemId, "settings">, shouldPin: boolean) => void;
   onNavigate: (itemId: Exclude<SidebarItemId, "settings">) => void;
 };
 
-export function NavMain({ preferences, pinError, enabledModules, onTogglePin, onNavigate }: Props) {
+export function NavMain({ preferences, pinError, enabledModules, grantedPermissions, onTogglePin, onNavigate }: Props) {
   const pathname = usePathname();
   const t = useTranslations("Sidebar");
   const { open, isMobile } = useSidebar();
 
   // Filter items that require a module that is not enabled
   const visibleNavItems = appNavItems.filter(
-    (item) => !item.requiresModule || enabledModules.has(item.requiresModule)
+    (item) => (!item.requiresModule || enabledModules.has(item.requiresModule)) && (!item.requiresPermission || grantedPermissions.has(item.requiresPermission))
   );
 
   const recentIds = preferences.recentItems.filter((id): id is Exclude<SidebarItemId, "settings"> => id !== "settings");

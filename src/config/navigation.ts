@@ -23,6 +23,7 @@ export type NavItemId =
   | "ai_reconciliation"
   | "savings_tax"
   | "ca_compliance"
+  | "reporting_center"
   | "settings";
 
 export type NavItem = {
@@ -61,6 +62,7 @@ const navItems: NavItem[] = [
 
   { id: "savings_tax", label: "savings_tax", href: "/tax", icon: "savingsAndTax", group: "Taxes & Compliance", keywords: ["tax", "savings"], pinnable: true },
   { id: "ca_compliance", label: "ca_compliance", href: "/ca-portal", icon: "caCompliance", group: "Taxes & Compliance", roleVisibility: ["OWNER", "ADMIN"], keywords: ["ca", "compliance"], pinnable: false },
+  { id: "reporting_center", label: "reporting_center", href: "/reporting", icon: "reportingCenter", group: "Get Paid & Track Money", roleVisibility: ["OWNER", "ADMIN"], keywords: ["reports", "analytics"], pinnable: true },
 
   { id: "settings", label: "settings", href: "/settings", icon: "settings", group: "System", keywords: ["preferences", "configuration"], pinnable: false },
 ];

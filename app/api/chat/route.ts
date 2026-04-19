@@ -12,7 +12,9 @@ import { decimalToNumber, toDecimal } from '@/lib/money';
 import { getRuntimeSmtpPassword } from '@/lib/mailer';
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import { chatRequestSchema, type ToolAction } from '@/lib/ai/chat/contracts';
-import { canExecuteToolForRole } from '@/lib/ai/chat/tool-policy';
+import { canExecuteToolForRole, canUseReportingTools } from '@/lib/ai/chat/tool-policy';
+import { REPORT_PRESETS } from '@/lib/reporting/presets';
+import { isModuleEnabled } from '@/lib/modules';
 
 const lookupAsync = promisify(dns.lookup);
 
@@ -848,6 +850,8 @@ export async function POST(request: Request) {
     const totalRevenue = revenueAggregation._sum.totalAmount || 0;
 
     // +++ ENHANCEMENT 3: MEANINGFUL & POWERFUL AI PROMPT +++
+    const reportingEnabled = await isModuleEnabled(workspaceId, 'REPORTING_CENTER');
+
     const systemPrompt = `You are the Elite CFO & Executive AI Assistant for ${profile?.companyName || "this business"}. 
     Current Workspace ID: ${workspaceId}.
     Current FY Revenue: ₹${totalRevenue.toLocaleString('en-IN')}.
@@ -858,7 +862,8 @@ export async function POST(request: Request) {
     2. CONTEXT-AWARE NAVIGATION ('ui_navigate'): You don't just tell users where to go; you take them there. If a user says "Draft an invoice for Acme Corp for ₹50,000", call 'ui_navigate' to path '/income' AND pass a JSON payload { "client": "Acme Corp", "amount": 50000 } so the UI opens the New Invoice modal and auto-fills the form for them.
     3. PROACTIVE ASSISTANCE ('create_task'): You are not read-only. If a user mentions needing to follow up, verify a payment, or do something later, use 'create_task' to add it to their system. Anticipate their needs!
     4. UI THEME CONTROL ('set_ui_theme'): You can switch the user's UI theme instantly without navigation. Use it when the user asks for dark mode, light mode, or system theme.
-    5. TONE: Confident, incredibly helpful, and brief. Never use generic AI filler phrases like "I am an AI...". Get straight to the value.`;
+    5. TONE: Confident, incredibly helpful, and brief. Never use generic AI filler phrases like "I am an AI...". Get straight to the value.
+    6. REPORTING CENTER: If user asks for P&L, aging, register, tax summary, or exports, prefer reporting tools (list_reporting_presets, open_reporting_center) and guide them to /reporting.`;
 
     const groq = new Groq({
       apiKey: shouldUseEnvFallback ? envGroqKey : userApiKey,
@@ -1233,6 +1238,27 @@ export async function POST(request: Request) {
           description: "Calculates the recent 30-day sales velocity across all inventory products and predicts which products will run out of stock in the next 15 days.",
           parameters: { type: "object", properties: {} }
         }
+      },
+      {
+        type: "function", function: {
+          name: "list_reporting_presets",
+          description: "List available Reporting Center presets for non-technical users.",
+          parameters: { type: "object", properties: {} }
+        }
+      },
+      {
+        type: "function", function: {
+          name: "open_reporting_center",
+          description: "Open Reporting Center with a selected preset and optional filters.",
+          parameters: {
+            type: "object",
+            properties: {
+              presetId: { type: "string" },
+              filters: { type: "object", additionalProperties: true }
+            },
+            required: ["presetId"]
+          }
+        }
       }
     ];
 
@@ -1300,7 +1326,8 @@ export async function POST(request: Request) {
           log_investment: (a: any, wid: string) => logInvestment(a.asset_name, a.amount, a.category, a.date_string, wid),
           get_investments_list: (_a: any, wid: string) => getInvestmentsList(wid),
           calculate_estimated_tax: (_a: any, wid: string) => calculateEstimatedTax(wid),
-          predict_stockouts: (_a: any, wid: string) => predictStockouts(wid)
+          predict_stockouts: (_a: any, wid: string) => predictStockouts(wid),
+          list_reporting_presets: async () => JSON.stringify({ presets: REPORT_PRESETS.map((p) => ({ id: p.id, title: p.title, description: p.description })) })
         };
 
         if (!canExecuteToolForRole(toolCall.function.name, actorRole)) {
@@ -1317,6 +1344,13 @@ export async function POST(request: Request) {
         } else if (toolCall.function.name === "draft_invoice") {
           action = { type: 'NAVIGATE', path: '/invoice', payload: { client: args.client_name, amount: args.amount, description: args.description } };
           dbResult = JSON.stringify({ status: `Success. Pushed actionPayload to UI to load invoice form for ${args.client_name}.` });
+        } else if (toolCall.function.name === "open_reporting_center") {
+          if (!canUseReportingTools(actorRole, reportingEnabled)) {
+            dbResult = JSON.stringify({ error: 'Reporting Center is disabled or not allowed for your role.' });
+          } else {
+            action = { type: 'NAVIGATE', path: `/reporting/${args.presetId}`, payload: args.filters || null };
+            dbResult = JSON.stringify({ status: `Success. Opened Reporting Center preset ${args.presetId}.` });
+          }
         } else if (toolCall.function.name === "ui_navigate") {
           action = { type: 'NAVIGATE', path: args.path, payload: args.payload || null };
           dbResult = JSON.stringify({ status: `Success. Redirected user to ${args.path} and injected payload data.` });

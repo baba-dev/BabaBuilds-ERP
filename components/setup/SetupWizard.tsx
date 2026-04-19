@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { 
   Globe, ShieldCheck, Building2, 
   ArrowRight, ArrowLeft, CheckCircle2, Sparkles,
-  Zap, Wallet, Users2, Calendar, Clock, ClipboardList, FileText, Route, CheckSquare2, HandCoins, Target, Siren
+  Zap, Wallet, Users2, Calendar, Clock, ClipboardList, FileText, Route, CheckSquare2, HandCoins, Target, Siren, ChartColumnBig
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -71,6 +71,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
     enablePayroll: false,
     enableCashFlow: false,
     enableArCollections: false,
+    enableReportingCenter: false,
     payrollSetupPath: "STANDALONE" as "STANDALONE" | "WORKFORCE_LINKED",
   });
   const [payrollReadiness, setPayrollReadiness] = useState<PayrollReadinessResponse | null>(null);
@@ -666,6 +667,44 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                     }`}>
                       <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
                         form.enableArCollections ? 'translate-x-5' : 'translate-x-0'
+                      }`} />
+                    </div>
+                  </div>
+                </div>
+
+
+                <div
+                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
+                    form.enableReportingCenter
+                      ? 'border-amber-500 bg-amber-50/60 dark:bg-amber-950/20'
+                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
+                  }`}
+                  onClick={() => setForm({ ...form, enableReportingCenter: !form.enableReportingCenter })}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
+                        form.enableReportingCenter ? 'bg-amber-600 shadow-lg shadow-amber-500/20' : 'bg-zinc-100 dark:bg-zinc-800'
+                      }`}>
+                        <ChartColumnBig className={`h-5 w-5 ${form.enableReportingCenter ? 'text-white' : 'text-zinc-500 dark:text-zinc-400'}`} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Reporting Center</p>
+                          {form.enableReportingCenter && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider">
+                              <CheckCircle2 className="h-2.5 w-2.5" /> Enabled
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">Run curated P&L, aging, tax, invoice, and expense reports with governed read-only execution and premium exports.</p>
+                      </div>
+                    </div>
+                    <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                      form.enableReportingCenter ? 'bg-amber-600' : 'bg-zinc-300 dark:bg-zinc-700'
+                    }`}>
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        form.enableReportingCenter ? 'translate-x-5' : 'translate-x-0'
                       }`} />
                     </div>
                   </div>

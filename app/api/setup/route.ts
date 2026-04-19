@@ -40,6 +40,7 @@ type SetupPayload = {
   enablePayroll?: boolean;
   enableCashFlow?: boolean;
   enableArCollections?: boolean;
+  enableReportingCenter?: boolean;
   payrollSetupPath?: "STANDALONE" | "WORKFORCE_LINKED";
 };
 
@@ -208,6 +209,11 @@ export async function POST(req: Request) {
     if (body.enableArCollections === true) {
       await enableModule(workspaceId, 'AR_COLLECTIONS', userId).catch((e) =>
         console.error('[setup] AR Collections module init failed (non-blocking):', e)
+      );
+    }
+    if (body.enableReportingCenter === true) {
+      await enableModule(workspaceId, 'REPORTING_CENTER', userId).catch((e) =>
+        console.error('[setup] Reporting Center module init failed (non-blocking):', e)
       );
     }
 
