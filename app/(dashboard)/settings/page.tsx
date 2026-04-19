@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import {
   Building2, Landmark, ShieldCheck, Image as ImageIcon, CheckCircle2,
   Mailbox, Bot, Trash2, CreditCard, Lock, Globe, AlertTriangle,
-  Loader2, Info, Users, Mail, Clock, UserPlus, ArrowRight, Sparkles, Users2, FileText, HandCoins, Target, Siren, ChartColumnBig
+  Loader2, Info, Users, Mail, Clock, UserPlus, ArrowRight, Sparkles, Users2, FileText, HandCoins, Target, Siren, ChartColumnBig, UploadCloud
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -69,6 +69,9 @@ export default function SettingsWizard() {
   const [revenuePipelineEnabled, setRevenuePipelineEnabled] = useState(false);
   const [revenuePipelineLoading, setRevenuePipelineLoading] = useState(false);
   const [showDisableRevenuePipelineConfirm, setShowDisableRevenuePipelineConfirm] = useState(false);
+  const [importManagerEnabled, setImportManagerEnabled] = useState(false);
+  const [importManagerLoading, setImportManagerLoading] = useState(false);
+  const [showDisableImportManagerConfirm, setShowDisableImportManagerConfirm] = useState(false);
   // Team invite state
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("MEMBER");
@@ -132,6 +135,7 @@ export default function SettingsWizard() {
           setArCollectionsEnabled(d.modules.includes('AR_COLLECTIONS'));
           setRevenuePipelineEnabled(d.modules.includes('REVENUE_PIPELINE'));
           setReportingCenterEnabled(d.modules.includes('REPORTING_CENTER'));
+          setImportManagerEnabled(d.modules.includes('IMPORT_MANAGER'));
         }
       })
       .catch(() => {});
@@ -1696,6 +1700,69 @@ export default function SettingsWizard() {
                 </div>
               </div>
 
+              {/* Import Manager module card */}
+              <div className={cn(
+                "rounded-xl border-2 p-5 transition-all duration-200",
+                importManagerEnabled
+                  ? "border-orange-500/50 bg-orange-50/30 dark:bg-orange-950/10"
+                  : "border-zinc-200 dark:border-zinc-800"
+              )}>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className={cn(
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all",
+                      importManagerEnabled ? "bg-orange-600 shadow-lg shadow-orange-500/20" : "bg-zinc-100 dark:bg-zinc-800"
+                    )}>
+                      <UploadCloud className={cn("h-5 w-5", importManagerEnabled ? "text-white" : "text-zinc-500")} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Import Manager</p>
+                        <Badge variant="outline" className={cn(
+                          "text-[10px] font-bold uppercase",
+                          importManagerEnabled
+                            ? "border-orange-500/30 text-orange-600 dark:text-orange-400"
+                            : "border-zinc-300 dark:border-zinc-700 text-zinc-500"
+                        )}>
+                          {importManagerEnabled ? "Enabled" : "Disabled"}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2 max-w-sm">
+                        Universal CSV/XLSX import workspace with mapping, validation previews, safe create/upsert execution, and import history.
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="import-manager-module-toggle"
+                    checked={importManagerEnabled}
+                    disabled={importManagerLoading}
+                    onCheckedChange={async (checked) => {
+                      if (!checked) {
+                        setShowDisableImportManagerConfirm(true);
+                        return;
+                      }
+                      setImportManagerLoading(true);
+                      try {
+                        const res = await fetch('/api/workspace/modules', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ moduleKey: 'IMPORT_MANAGER', enabled: true }),
+                        });
+                        if (res.ok) {
+                          setImportManagerEnabled(true);
+                          toast.success('Import Manager module enabled');
+                        } else {
+                          toast.error('Failed to enable module');
+                        }
+                      } finally {
+                        setImportManagerLoading(false);
+                      }
+                    }}
+                    className="data-[state=checked]:bg-orange-600 shrink-0 mt-1"
+                  />
+                </div>
+              </div>
+
               <p className="text-xs text-zinc-400 dark:text-zinc-600">
                 More modules (Time Tracking, Asset Management) coming soon.
               </p>
@@ -2015,6 +2082,49 @@ export default function SettingsWizard() {
                   className="bg-rose-600 hover:bg-rose-500 text-white border-none"
                 >
                   {arCollectionsLoading ? 'Disabling...' : 'Disable AR Collections'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={showDisableImportManagerConfirm} onOpenChange={setShowDisableImportManagerConfirm}>
+            <DialogContent className="sm:max-w-md bg-zinc-950 border-white/10">
+              <DialogHeader>
+                <DialogTitle className="text-zinc-50 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-400" /> Disable Import Manager?
+                </DialogTitle>
+                <DialogDescription className="text-zinc-400">
+                  Previous import runs and summaries will be <strong className="text-zinc-200">preserved</strong>.
+                  Import Manager will be hidden from navigation and route access until re-enabled.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="ghost" onClick={() => setShowDisableImportManagerConfirm(false)} className="text-zinc-400">Cancel</Button>
+                <Button
+                  id="confirm-disable-import-manager"
+                  disabled={importManagerLoading}
+                  onClick={async () => {
+                    setImportManagerLoading(true);
+                    try {
+                      const res = await fetch('/api/workspace/modules', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ moduleKey: 'IMPORT_MANAGER', enabled: false }),
+                      });
+                      if (res.ok) {
+                        setImportManagerEnabled(false);
+                        setShowDisableImportManagerConfirm(false);
+                        toast.success('Import Manager module disabled');
+                      } else {
+                        toast.error('Failed to disable module');
+                      }
+                    } finally {
+                      setImportManagerLoading(false);
+                    }
+                  }}
+                  className="bg-rose-600 hover:bg-rose-500 text-white border-none"
+                >
+                  {importManagerLoading ? 'Disabling...' : 'Disable Import Manager'}
                 </Button>
               </div>
             </DialogContent>

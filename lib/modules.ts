@@ -32,6 +32,7 @@ export const MODULE_KEYS = [
   'AR_COLLECTIONS',
   'TAX_ADVANCED',
   'REPORTING_CENTER',
+  'IMPORT_MANAGER',
 ] as const;
 export type ModuleKey = (typeof MODULE_KEYS)[number];
 
@@ -48,6 +49,7 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   AR_COLLECTIONS: 'AR Aging + Collections Centre',
   TAX_ADVANCED: 'Tax Advanced',
   REPORTING_CENTER: 'Reporting Center',
+  IMPORT_MANAGER: 'Import Manager',
 };
 
 export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
@@ -67,6 +69,8 @@ export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
     'Advanced tax compliance operations including readiness pipelines, import diagnostics, override tooling, and audit workflows.',
   REPORTING_CENTER:
     'Enterprise-ready reporting workspace with curated finance/compliance presets, governed query execution, and polished exports.',
+  IMPORT_MANAGER:
+    'Universal import workspace with template downloads, intelligent mapping, strict validation, preview-first workflows, and safe create/upsert execution.',
 };
 
 export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
@@ -133,6 +137,13 @@ export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
     'Interactive preview table with filter chips and metadata',
     'Enterprise XLSX export with frozen headers and autofilters',
     'Structured audit logs for every report run and export',
+  ],
+  IMPORT_MANAGER: [
+    'Universal import flow for clients, services, shop items, inventory, proposals, and expenses',
+    'CSV/XLSX template downloads plus arbitrary file mapping support',
+    'Preview-first validation with duplicate detection and per-row issue reporting',
+    'Create-only and upsert execution modes with workspace-scoped writes',
+    'Run history with actor, source mode, AI usage, and execution summary',
   ],
 };
 

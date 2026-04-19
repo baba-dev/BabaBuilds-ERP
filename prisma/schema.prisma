@@ -358,6 +358,7 @@ model Workspace {
 
   // Workforce Module
   workspaceModules  WorkspaceModule[]
+  importRuns        ImportRun[]
   employees         Employee[]
   departments       Department[]
   designations      Designation[]
@@ -2382,6 +2383,44 @@ model WorkspaceModule {
   @@unique([workspaceId, moduleKey])
   @@index([workspaceId, isEnabled])
   @@index([workspaceId, moduleKey])
+}
+
+model ImportRun {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  entityKey String
+  fileName  String
+  sourceMode String
+  executionMode String?
+  aiUsed    Boolean @default(false)
+  status    String  @default("PREVIEW_READY")
+
+  parsedCount   Int @default(0)
+  importedCount Int @default(0)
+  updatedCount  Int @default(0)
+  skippedCount  Int @default(0)
+  failedCount   Int @default(0)
+  lastProcessedRow Int @default(0)
+
+  inputJson   Json?
+  previewJson Json?
+  resultJson  Json?
+  errorReportJson Json?
+  sourceDigest String?
+  idempotencyKey String?
+  executionStartedAt DateTime?
+  executionFinishedAt DateTime?
+
+  initiatedByUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([workspaceId, entityKey, status])
+  @@unique([workspaceId, idempotencyKey])
 }
 
 // ==========================================

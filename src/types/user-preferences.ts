@@ -20,6 +20,8 @@ export type SidebarItemId =
   | "documents"
   | "revenue_pipeline"
   | "workforce"
+  | "payroll"
+  | "import_manager"
   | "help_center"
   | "settings";
 
@@ -57,6 +59,8 @@ const ALLOWED_IDS = new Set<SidebarItemId>([
   "documents",
   "revenue_pipeline",
   "workforce",
+  "payroll",
+  "import_manager",
   "help_center",
   "settings",
 ]);
