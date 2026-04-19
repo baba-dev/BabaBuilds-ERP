@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import {
   Building2, Landmark, ShieldCheck, Image as ImageIcon, CheckCircle2,
   Mailbox, Bot, Trash2, CreditCard, Lock, Globe, AlertTriangle,
-  Loader2, Info, Users, Mail, Clock, UserPlus, ArrowRight, Sparkles, Users2, FileText, HandCoins, Target
+  Loader2, Info, Users, Mail, Clock, UserPlus, ArrowRight, Sparkles, Users2, FileText, HandCoins, Target, Siren
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -60,6 +60,9 @@ export default function SettingsWizard() {
   const [cashFlowEnabled, setCashFlowEnabled] = useState(false);
   const [cashFlowLoading, setCashFlowLoading] = useState(false);
   const [showDisableCashFlowConfirm, setShowDisableCashFlowConfirm] = useState(false);
+  const [arCollectionsEnabled, setArCollectionsEnabled] = useState(false);
+  const [arCollectionsLoading, setArCollectionsLoading] = useState(false);
+  const [showDisableArCollectionsConfirm, setShowDisableArCollectionsConfirm] = useState(false);
   const [revenuePipelineEnabled, setRevenuePipelineEnabled] = useState(false);
   const [revenuePipelineLoading, setRevenuePipelineLoading] = useState(false);
   const [showDisableRevenuePipelineConfirm, setShowDisableRevenuePipelineConfirm] = useState(false);
@@ -109,6 +112,7 @@ export default function SettingsWizard() {
           setPayrollEnabled(d.modules.includes('PAYROLL'));
           setDocumentsEnabled(d.modules.includes('DOCUMENTS'));
           setCashFlowEnabled(d.modules.includes('CASH_FLOW'));
+          setArCollectionsEnabled(d.modules.includes('AR_COLLECTIONS'));
           setRevenuePipelineEnabled(d.modules.includes('REVENUE_PIPELINE'));
         }
       })
@@ -1453,6 +1457,82 @@ export default function SettingsWizard() {
                 </div>
               </div>
 
+              {/* AR Aging + Collections module card */}
+              <div className={cn(
+                "rounded-xl border-2 p-5 transition-all duration-200",
+                arCollectionsEnabled
+                  ? "border-orange-500/50 bg-orange-50/30 dark:bg-orange-950/10"
+                  : "border-zinc-200 dark:border-zinc-800"
+              )}>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className={cn(
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all",
+                      arCollectionsEnabled ? "bg-orange-600 shadow-lg shadow-orange-500/20" : "bg-zinc-100 dark:bg-zinc-800"
+                    )}>
+                      <Siren className={cn("h-5 w-5", arCollectionsEnabled ? "text-white" : "text-zinc-500")} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">AR Aging + Collections Centre</p>
+                        <Badge variant="outline" className={cn(
+                          "text-[10px] font-bold uppercase",
+                          arCollectionsEnabled
+                            ? "border-orange-500/30 text-orange-600 dark:text-orange-400"
+                            : "border-zinc-300 dark:border-zinc-700 text-zinc-500"
+                        )}>
+                          {arCollectionsEnabled ? "Enabled" : "Disabled"}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2 max-w-sm">
+                        Aging buckets, overdue queue, reminder automation, and collection prioritization for receivables recovery.
+                      </p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                        {[
+                          "Aging buckets and overdue list",
+                          "Collection priority queue",
+                          "Reminder automation runner",
+                          "Follow-up status lifecycle",
+                        ].map((f) => (
+                          <p key={f} className="text-[11px] text-zinc-500 flex items-center gap-1">
+                            <span className={cn("h-1 w-1 rounded-full shrink-0", arCollectionsEnabled ? "bg-orange-600" : "bg-zinc-400")} />
+                            {f}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <Switch
+                    id="ar-collections-module-toggle"
+                    checked={arCollectionsEnabled}
+                    disabled={arCollectionsLoading}
+                    onCheckedChange={async (checked) => {
+                      if (!checked) {
+                        setShowDisableArCollectionsConfirm(true);
+                        return;
+                      }
+                      setArCollectionsLoading(true);
+                      try {
+                        const res = await fetch('/api/workspace/modules', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ moduleKey: 'AR_COLLECTIONS', enabled: true }),
+                        });
+                        if (res.ok) {
+                          setArCollectionsEnabled(true);
+                          toast.success('AR Collections module enabled');
+                        } else {
+                          toast.error('Failed to enable module');
+                        }
+                      } finally {
+                        setArCollectionsLoading(false);
+                      }
+                    }}
+                    className="data-[state=checked]:bg-orange-600 shrink-0 mt-1"
+                  />
+                </div>
+              </div>
+
               <p className="text-xs text-zinc-400 dark:text-zinc-600">
                 More modules (Time Tracking, Asset Management) coming soon.
               </p>
@@ -1674,6 +1754,50 @@ export default function SettingsWizard() {
                   className="bg-rose-600 hover:bg-rose-500 text-white border-none"
                 >
                   {cashFlowLoading ? 'Disabling...' : 'Disable Cash Flow'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Disable AR Collections Confirmation Dialog */}
+          <Dialog open={showDisableArCollectionsConfirm} onOpenChange={setShowDisableArCollectionsConfirm}>
+            <DialogContent className="sm:max-w-md bg-zinc-950 border-white/10">
+              <DialogHeader>
+                <DialogTitle className="text-zinc-50 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-400" /> Disable AR Collections?
+                </DialogTitle>
+                <DialogDescription className="text-zinc-400">
+                  Aging buckets, follow-up statuses, and reminder history will be <strong className="text-zinc-200">preserved</strong>.
+                  AR Collections will be hidden from navigation and route access until re-enabled.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="ghost" onClick={() => setShowDisableArCollectionsConfirm(false)} className="text-zinc-400">Cancel</Button>
+                <Button
+                  id="confirm-disable-ar-collections"
+                  disabled={arCollectionsLoading}
+                  onClick={async () => {
+                    setArCollectionsLoading(true);
+                    try {
+                      const res = await fetch('/api/workspace/modules', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ moduleKey: 'AR_COLLECTIONS', enabled: false }),
+                      });
+                      if (res.ok) {
+                        setArCollectionsEnabled(false);
+                        setShowDisableArCollectionsConfirm(false);
+                        toast.success('AR Collections module disabled');
+                      } else {
+                        toast.error('Failed to disable module');
+                      }
+                    } finally {
+                      setArCollectionsLoading(false);
+                    }
+                  }}
+                  className="bg-rose-600 hover:bg-rose-500 text-white border-none"
+                >
+                  {arCollectionsLoading ? 'Disabling...' : 'Disable AR Collections'}
                 </Button>
               </div>
             </DialogContent>

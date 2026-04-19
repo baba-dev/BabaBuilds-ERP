@@ -29,6 +29,7 @@ export const MODULE_KEYS = [
   'DOCUMENTS',
   'REVENUE_PIPELINE',
   'CASH_FLOW',
+  'AR_COLLECTIONS',
   'TAX_ADVANCED',
 ] as const;
 export type ModuleKey = (typeof MODULE_KEYS)[number];
@@ -43,6 +44,7 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   DOCUMENTS: 'Document Vault',
   REVENUE_PIPELINE: 'Revenue Pipeline',
   CASH_FLOW: 'Cash Flow',
+  AR_COLLECTIONS: 'AR Aging + Collections Centre',
   TAX_ADVANCED: 'Tax Advanced',
 };
 
@@ -57,6 +59,8 @@ export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
     'Pipeline intelligence for proposals with stage insights, stalled-deal detection, and next-best-action workflows to accelerate conversions.',
   CASH_FLOW:
     'Cash forecast snapshots, scenario planning, variance analysis, and proactive liquidity alerts to anticipate crunch windows early.',
+  AR_COLLECTIONS:
+    'Aging buckets, overdue work queues, reminder automation, and collector prioritization workflows to improve receivables recovery.',
   TAX_ADVANCED:
     'Advanced tax compliance operations including readiness pipelines, import diagnostics, override tooling, and audit workflows.',
 };
@@ -103,6 +107,13 @@ export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
     'Variance analysis vs actuals',
     'Crunch-window and liquidity risk alerts',
     'Manual adjustments and assumption profiles',
+  ],
+  AR_COLLECTIONS: [
+    'Aging buckets and overdue exposure tracking',
+    'Collections priority queue by risk and amount',
+    'Reminder automation for overdue invoices',
+    'Follow-up status tracking and collector notes',
+    'Promise-to-pay and escalation workflow states',
   ],
   TAX_ADVANCED: [
     'Tax readiness pipelines and compliance diagnostics',

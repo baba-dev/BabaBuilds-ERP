@@ -17,6 +17,7 @@ import {
   Target,
   FileText,
   Wallet,
+  Siren,
   type LucideIcon,
 } from "lucide-react";
 
@@ -39,6 +40,7 @@ export const appNavItems: AppNavItem[] = [
   { key: "retainers_hub", path: "/retainers", icon: Box },
   { key: "expenses_margins", path: "/expenses", icon: Receipt },
   { key: "cash_flow", path: "/cash-flow/overview", icon: HandCoins, badge: "New", requiresModule: "CASH_FLOW" },
+  { key: "ar_collections", path: "/ar-collections", icon: Siren, badge: "New", requiresModule: "AR_COLLECTIONS" },
   { key: "savings_tax", path: "/tax", icon: ShieldCheck },
   { key: "ai_reconciliation", path: "/reconciliation", icon: Sparkles, badge: "AI" },
   { key: "invoices_and_earnings", path: "/income", icon: ReceiptText },
