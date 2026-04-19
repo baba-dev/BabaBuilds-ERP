@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import Groq from 'groq-sdk';
@@ -457,17 +458,28 @@ async function autoReconcile(transactionId: string, invoiceNumber: string, works
     const invoice = await prisma.invoice.findFirst({ where: { invoiceNumber, workspaceId } });
     if (!invoice) return JSON.stringify({ error: `Could not find invoice ${invoiceNumber}.` });
     
-    const transaction = await (prisma as any).bankTransaction.findFirst({ where: { id: transactionId, workspaceId, isReconciled: false } });
+    const transaction = await prisma.bankTransaction.findFirst({ where: { id: transactionId, workspaceId, isReconciled: false } });
     if (!transaction) return JSON.stringify({ error: `Could not find unreconciled transaction ${transactionId}.` });
 
-    await (prisma as any).bankTransaction.update({
+    const bankAmount = new Prisma.Decimal(Number(transaction.amount)).abs().toDecimalPlaces(2);
+    const existingReceived = new Prisma.Decimal(invoice.amountReceived ?? 0);
+    const newCumulative = existingReceived.plus(bankAmount).toDecimalPlaces(2);
+    const billedAmount = new Prisma.Decimal(invoice.grandTotal ?? invoice.totalAmount ?? 0);
+    const ONE_PAISA = new Prisma.Decimal("0.005");
+    const newStatus = newCumulative.gte(billedAmount.minus(ONE_PAISA)) ? "PAID" : "PARTIALLY_PAID";
+
+    await prisma.bankTransaction.update({
       where: { id: transactionId },
-      data: { isReconciled: true, matchedInvoiceId: invoice.id }
+      data: { isReconciled: true, matchedInvoiceId: invoice.id, reconciliationConfidence: 100 },
     });
     
     await prisma.invoice.update({
       where: { id: invoice.id },
-      data: { status: "PAID", amountReceived: Number(invoice.totalAmount), dateReceived: transaction.date }
+      data: {
+        status: newStatus,
+        amountReceived: newCumulative.toNumber(),
+        dateReceived: transaction.date,
+      },
     });
 
     try {
@@ -476,7 +488,7 @@ async function autoReconcile(transactionId: string, invoiceNumber: string, works
       noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'invoice', action: 'payment', error: String(error) });
     }
     
-    return JSON.stringify({ success: true, message: `Perfect match! Invoice ${invoiceNumber} is now marked Paid using deposit of ₹${transaction.amount}.` });
+    return JSON.stringify({ success: true, message: `Invoice ${invoiceNumber} updated from bank deposit (status ${newStatus}).` });
 
   } catch (e) { return JSON.stringify({ error: "Reconciliation failed due to DB error." }); }
 }
