@@ -152,15 +152,11 @@ export const PERMISSION_KEYS = [
   'tax.readiness.run',     // run tax return readiness / prefill pipelines
   'tax.withholding.record', // record withholding on payments/expenses (creates WithholdingEvent)
   'tax.withholding.ingest', // ingest withholding certificates / post tax credits from uploads
-
+  
   // Reports
   'reports.view',
   'reports.export',        // separate from view — controls bulk export surfaces
-  'reporting_center.view',
-  'reporting_center.query.run',
-  'reporting_center.preset.manage',
-  'reporting_center.export',
-
+  
   // Reporting Center (optional module; curated presets — server-side execution only)
   'reporting_center.view',
   'reporting_center.query.run',
