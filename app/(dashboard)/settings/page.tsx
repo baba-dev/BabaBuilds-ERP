@@ -66,9 +66,6 @@ export default function SettingsWizard() {
   const [arCollectionsEnabled, setArCollectionsEnabled] = useState(false);
   const [arCollectionsLoading, setArCollectionsLoading] = useState(false);
   const [showDisableArCollectionsConfirm, setShowDisableArCollectionsConfirm] = useState(false);
-  const [reportingCenterEnabled, setReportingCenterEnabled] = useState(false);
-  const [reportingCenterLoading, setReportingCenterLoading] = useState(false);
-  const [showDisableReportingCenterConfirm, setShowDisableReportingCenterConfirm] = useState(false);
   const [revenuePipelineEnabled, setRevenuePipelineEnabled] = useState(false);
   const [revenuePipelineLoading, setRevenuePipelineLoading] = useState(false);
   const [showDisableRevenuePipelineConfirm, setShowDisableRevenuePipelineConfirm] = useState(false);
@@ -1951,35 +1948,33 @@ export default function SettingsWizard() {
         variant="destructive"
         disabled={reportingCenterLoading}
         onClick={async () => {
-          disabled={reportingCenterLoading}
-                  onClick={async () => {
-                    setReportingCenterLoading(true);
-                    try {
-const res = await fetch('/api/workspace/modules', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ moduleKey: 'REPORTING_CENTER', enabled: false }),
-                      });
-                      if (res.ok) {
-                        setReportingCenterEnabled(false);
-                        setShowDisableReportingCenterConfirm(false);
-toast.success(t("module_reporting.toast_disabled"));
-} else {
-  toast.error(t("module_reporting.toast_disable_failed"));
-                      }
-                    } finally {
-                      setReportingCenterLoading(false);
-                    }
-                  }}
-className="bg-rose-600 hover:bg-rose-500 text-white border-none"
->
-  {reportingCenterLoading
-    ? t("module_reporting.disable_loading")
-    : t("module_reporting.disable_confirm")}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+          setReportingCenterLoading(true);
+          try {
+            const res = await fetch('/api/workspace/modules', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ moduleKey: 'REPORTING_CENTER', enabled: false }),
+            });
+            if (res.ok) {
+              setReportingCenterEnabled(false);
+              setShowDisableReportingCenterConfirm(false);
+              toast.success(t("module_reporting.toast_disabled"));
+            } else {
+              toast.error(t("module_reporting.toast_disable_failed"));
+            }
+          } finally {
+            setReportingCenterLoading(false);
+          }
+        }}
+        className="bg-rose-600 hover:bg-rose-500 text-white border-none"
+      >
+        {reportingCenterLoading
+          ? t("module_reporting.disable_loading")
+          : t("module_reporting.disable_confirm")}
+      </Button>
+    </div>
+  </DialogContent>
+</Dialog>
 
           {/* Disable AR Collections Confirmation Dialog */}
           <Dialog open={showDisableArCollectionsConfirm} onOpenChange={setShowDisableArCollectionsConfirm}>

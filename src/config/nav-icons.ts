@@ -31,7 +31,6 @@ export const navIconMap = {
   caCompliance: Landmark,
   reportingCenter: ChartColumnBig,
   settings: Settings,
-  reportingCenter: ChartColumnBig,
 } as const satisfies Record<string, LucideIcon>;
 
 export type NavIconName = keyof typeof navIconMap;
