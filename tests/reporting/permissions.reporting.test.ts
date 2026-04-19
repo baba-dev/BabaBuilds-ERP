@@ -1,0 +1,19 @@
+import { describe, expect, it } from 'vitest';
+import { hasPermission } from '@/lib/permissions';
+
+describe('reporting center permission matrix', () => {
+  it('grants finance roles reporting export where intended', () => {
+    expect(hasPermission('OWNER', 'reporting_center.export')).toBe(true);
+    expect(hasPermission('FINANCE_MANAGER', 'reporting_center.export')).toBe(true);
+  });
+
+  it('viewer can view but not run or export', () => {
+    expect(hasPermission('VIEWER', 'reporting_center.view')).toBe(true);
+    expect(hasPermission('VIEWER', 'reporting_center.query.run')).toBe(false);
+    expect(hasPermission('VIEWER', 'reporting_center.export')).toBe(false);
+  });
+
+  it('staff does not get reporting center', () => {
+    expect(hasPermission('STAFF', 'reporting_center.view')).toBe(false);
+  });
+});

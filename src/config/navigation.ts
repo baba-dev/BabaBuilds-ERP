@@ -23,6 +23,7 @@ export type NavItemId =
   | "ai_reconciliation"
   | "savings_tax"
   | "ca_compliance"
+  | "reporting_center"
   | "settings";
 
 export type NavItem = {
@@ -56,6 +57,15 @@ const navItems: NavItem[] = [
   { id: "retainers_hub", label: "retainers_hub", href: "/retainers", icon: "retainersHub", group: "Run Operations", keywords: ["retainers", "mrr"], pinnable: true },
 
   { id: "invoices_earnings", label: "invoices_and_earnings", href: "/income", icon: "invoicesAndEarnings", group: "Get Paid & Track Money", keywords: ["income", "invoices"], badgeSource: "openInvoices", pinnable: true },
+  {
+    id: "reporting_center",
+    label: "reporting_center",
+    href: "/reporting",
+    icon: "reportingCenter",
+    group: "Get Paid & Track Money",
+    keywords: ["reports", "analytics", "reporting"],
+    pinnable: true,
+  },
   { id: "expenses_margins", label: "expenses_margins", href: "/expenses", icon: "expensesAndMargins", group: "Get Paid & Track Money", keywords: ["expenses", "margins"], pinnable: true },
   { id: "ai_reconciliation", label: "ai_reconciliation", href: "/reconciliation", icon: "aiReconciliation", group: "Get Paid & Track Money", featureFlag: "aiReconciliation", keywords: ["bank", "reconcile"], pinnable: true },
 

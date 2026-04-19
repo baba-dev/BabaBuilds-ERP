@@ -268,6 +268,21 @@
       "placeholder": "e.g. 998313",
       "hint": "Used as fallback if individual invoice code is blank."
     },
+    "module_reporting": {
+      "title": "Reporting Center",
+      "description": "Curated finance and operations reports with governed read-only execution. Disabling hides the module only; data and audit history stay intact.",
+      "enabled_badge": "Enabled",
+      "disabled_badge": "Disabled",
+      "toast_enabled": "Reporting Center enabled",
+      "toast_disabled": "Reporting Center disabled",
+      "toast_enable_failed": "Failed to enable module",
+      "toast_disable_failed": "Failed to disable module",
+      "disable_title": "Disable Reporting Center?",
+      "disable_body": "Reporting Center navigation will be hidden until you turn it back on. Existing audit events remain.",
+      "disable_confirm": "Disable Reporting Center",
+      "disable_loading": "Disabling…",
+      "cancel": "Cancel"
+    },
     "payment": {
       "title": "Payment Gateway Integration",
       "description": "Connect a payment gateway to automatically embed a secure payment link in every invoice PDF.",
@@ -305,6 +320,45 @@
       }
     }
   },
+  "Reporting": {
+    "hero": {
+      "title": "Reporting Center",
+      "subtitle": "Curated workspace reports with governed execution, role-aware actions, and audit-logged exports."
+    },
+    "filters": {
+      "preset": "Report",
+      "preset_placeholder": "Select a report…",
+      "from": "From date",
+      "to": "To date"
+    },
+    "actions": {
+      "run": "Run report",
+      "running": "Running…",
+      "download": "Download XLSX"
+    },
+    "gallery": {
+      "title": "Quick presets"
+    },
+    "methodology": {
+      "policy_refs": "Policy references"
+    },
+    "meta": {
+      "line": "Completed in {ms} ms · {rows} rows"
+    },
+    "empty": {
+      "run_hint": "Choose filters and run the report to see results here."
+    },
+    "hints": {
+      "no_run_permission": "Your role can view this page but cannot execute reports. Ask an admin for “Reporting Center — Run queries”.",
+      "no_export_permission": "Exports require the Reporting Center export permission."
+    },
+    "errors": {
+      "title": "Something went wrong",
+      "load_failed": "Could not load reporting presets.",
+      "run_failed": "Could not run the report.",
+      "export_failed": "Could not export the workbook."
+    }
+  },
   "Sidebar": {
     "dashboard": "Dashboard",
     "revenue_pipeline": "Revenue Pipeline",
@@ -315,6 +369,7 @@
     "quotes_proposals": "Quotes & Proposals",
     "retainers_hub": "Retainers Hub",
     "cash_flow": "Cash Flow",
+    "reporting_center": "Reporting Center",
     "ar_collections": "AR Collections",
     "expenses_margins": "Expenses & Margins",
     "savings_tax": "Savings & Tax",
@@ -1024,7 +1079,9 @@
     "ph_routing": "IFSC, SWIFT, Sort Code...",
     "ph_company": "e.g. Acme Agency Ltd",
     "ph_founder": "Your Name",
-    "ph_address": "Street, City, Postcode"
+    "ph_address": "Street, City, Postcode",
+    "optional_reporting_title": "Reporting Center",
+    "optional_reporting_desc": "Curated P&L-style, AR aging, and register reports with read-only execution and XLSX export. Disabling only hides the UI."
   },
   "Tax": {
     "title": "Wealth & Tax Planner",

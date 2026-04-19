@@ -107,3 +107,7 @@ Use these artifacts to coordinate phased UI delivery and design QA gates:
 To keep email sign-in and verification-token delivery compatible with `next-auth@4.24.13`, keep `nodemailer` on the `^7.0.7` major range (the peer dependency expected by this `next-auth` release).
 
 When updating mailer dependencies, align `@types/nodemailer` to the same runtime major as `nodemailer` to avoid drift between compile-time types and runtime APIs.
+
+## Reporting Center (optional module)
+
+Enable **REPORTING_CENTER** from the setup wizard or **Settings → optional modules**. The API returns **public preset metadata only** (no SQL in JSON). Execution is `SELECT` / `WITH` + read-only policy, mandatory `workspaceId` scoping, row and payload caps, and `AppActivityLog` entries for runs and exports. Role keys: `reporting_center.view`, `reporting_center.query.run`, `reporting_center.export` (see `lib/permissions.ts`). The chat assistant only registers `list_reporting_presets` / `open_reporting_center` when the module is on and the user has the matching permissions.

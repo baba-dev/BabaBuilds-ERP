@@ -31,6 +31,7 @@ export const MODULE_KEYS = [
   'CASH_FLOW',
   'AR_COLLECTIONS',
   'TAX_ADVANCED',
+  'REPORTING_CENTER',
 ] as const;
 export type ModuleKey = (typeof MODULE_KEYS)[number];
 
@@ -46,6 +47,7 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   CASH_FLOW: 'Cash Flow',
   AR_COLLECTIONS: 'AR Aging + Collections Centre',
   TAX_ADVANCED: 'Tax Advanced',
+  REPORTING_CENTER: 'Reporting Center',
 };
 
 export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
@@ -63,6 +65,8 @@ export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
     'Aging buckets, overdue work queues, reminder automation, and collector prioritization workflows to improve receivables recovery.',
   TAX_ADVANCED:
     'Advanced tax compliance operations including readiness pipelines, import diagnostics, override tooling, and audit workflows.',
+  REPORTING_CENTER:
+    'Curated finance and operations reports with governed read-only execution, workspace-scoped data, and export-ready workbooks.',
 };
 
 export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
@@ -122,6 +126,12 @@ export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
     'Tax decision history and audit events',
     'Tax document linking and evidence traceability',
     'Tax import templates and batch diagnostics',
+  ],
+  REPORTING_CENTER: [
+    'Preset gallery with methodology notes (no raw SQL exposed to clients)',
+    'Read-only execution with mandatory workspace scope and audit logging',
+    'Role-gated preview and XLSX export',
+    'Dark/light UI aligned with ERP amber accent system',
   ],
 };
 

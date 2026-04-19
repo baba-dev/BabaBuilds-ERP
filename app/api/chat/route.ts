@@ -12,7 +12,10 @@ import { decimalToNumber, toDecimal } from '@/lib/money';
 import { getRuntimeSmtpPassword } from '@/lib/mailer';
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import { chatRequestSchema, type ToolAction } from '@/lib/ai/chat/contracts';
-import { canExecuteToolForRole } from '@/lib/ai/chat/tool-policy';
+import { canExecuteToolForRole, isReportingTool, reportingToolAllowed } from '@/lib/ai/chat/tool-policy';
+import { isModuleEnabled } from '@/lib/modules';
+import { listPublicPresets } from '@/lib/reporting/presets';
+import { checkPermission } from '@/lib/rbac';
 
 const lookupAsync = promisify(dns.lookup);
 
@@ -789,6 +792,7 @@ export async function POST(request: Request) {
     }
     const workspaceId = (session as any).workspaceId;
     const actorRole = String((session as any).businessRole || (session as any).user?.role || '').toUpperCase();
+    const actorUserId = (session as any).user?.id as string | undefined;
 
     const parsedBody = chatRequestSchema.safeParse(await request.json());
     if (!parsedBody.success) {
@@ -847,6 +851,18 @@ export async function POST(request: Request) {
     });
     const totalRevenue = revenueAggregation._sum.totalAmount || 0;
 
+    const reportingModuleEnabled = await isModuleEnabled(workspaceId, 'REPORTING_CENTER');
+    let reportingCanList = false;
+    let reportingCanNavigateRun = false;
+    if (actorUserId && reportingModuleEnabled) {
+      const [view, run] = await Promise.all([
+        checkPermission(actorUserId, workspaceId, 'reporting_center.view'),
+        checkPermission(actorUserId, workspaceId, 'reporting_center.query.run'),
+      ]);
+      reportingCanList = view;
+      reportingCanNavigateRun = run;
+    }
+
     // +++ ENHANCEMENT 3: MEANINGFUL & POWERFUL AI PROMPT +++
     const systemPrompt = `You are the Elite CFO & Executive AI Assistant for ${profile?.companyName || "this business"}. 
     Current Workspace ID: ${workspaceId}.
@@ -858,7 +874,12 @@ export async function POST(request: Request) {
     2. CONTEXT-AWARE NAVIGATION ('ui_navigate'): You don't just tell users where to go; you take them there. If a user says "Draft an invoice for Acme Corp for ₹50,000", call 'ui_navigate' to path '/income' AND pass a JSON payload { "client": "Acme Corp", "amount": 50000 } so the UI opens the New Invoice modal and auto-fills the form for them.
     3. PROACTIVE ASSISTANCE ('create_task'): You are not read-only. If a user mentions needing to follow up, verify a payment, or do something later, use 'create_task' to add it to their system. Anticipate their needs!
     4. UI THEME CONTROL ('set_ui_theme'): You can switch the user's UI theme instantly without navigation. Use it when the user asks for dark mode, light mode, or system theme.
-    5. TONE: Confident, incredibly helpful, and brief. Never use generic AI filler phrases like "I am an AI...". Get straight to the value.`;
+    5. TONE: Confident, incredibly helpful, and brief. Never use generic AI filler phrases like "I am an AI...". Get straight to the value.
+    ${
+      reportingModuleEnabled && reportingCanList
+        ? `6. REPORTING CENTER: Curated workspace reports live at /reporting. Use list_reporting_presets for titles (when available). Use open_reporting_center only when the user should open the Reporting Center UI with a preset${reportingCanNavigateRun ? ' (user has run access).' : ' — if they cannot run queries, suggest they ask an Admin for reporting_center.query.run.'}`
+        : ''
+    }`;
 
     const groq = new Groq({
       apiKey: shouldUseEnvFallback ? envGroqKey : userApiKey,
@@ -872,7 +893,7 @@ export async function POST(request: Request) {
       { role: "user", content: message },
     ];
 
-    const tools = [
+    const baseTools = [
       {
         type: "function", function: {
           name: "lookup_invoice_details",
@@ -1236,6 +1257,43 @@ export async function POST(request: Request) {
       }
     ];
 
+    const reportingTools =
+      reportingModuleEnabled && reportingCanList
+        ? [
+            {
+              type: 'function',
+              function: {
+                name: 'list_reporting_presets',
+                description:
+                  'List curated Reporting Center presets (titles and descriptions only; no SQL). Requires Reporting Center module and reporting_center.view.',
+                parameters: { type: 'object', properties: {} },
+              },
+            },
+            ...(reportingCanNavigateRun
+              ? [
+                  {
+                    type: 'function',
+                    function: {
+                      name: 'open_reporting_center',
+                      description:
+                        'Navigate the user to Reporting Center with an optional preset and filter payload. Requires reporting_center.query.run.',
+                      parameters: {
+                        type: 'object',
+                        properties: {
+                          presetId: { type: 'string' },
+                          filters: { type: 'object', additionalProperties: true },
+                        },
+                        required: ['presetId'],
+                      },
+                    },
+                  },
+                ]
+              : []),
+          ]
+        : [];
+
+    const tools = [...baseTools, ...reportingTools];
+
     const initialResponse = await groq.chat.completions.create(
       {
         messages,
@@ -1303,10 +1361,40 @@ export async function POST(request: Request) {
           predict_stockouts: (_a: any, wid: string) => predictStockouts(wid)
         };
 
-        if (!canExecuteToolForRole(toolCall.function.name, actorRole)) {
+        if (
+          isReportingTool(toolCall.function.name) &&
+          (!actorUserId ||
+            !reportingToolAllowed(
+              toolCall.function.name,
+              reportingModuleEnabled,
+              reportingCanList,
+              reportingCanNavigateRun,
+            ))
+        ) {
+          dbResult = JSON.stringify({
+            error:
+              'Reporting Center is disabled for this workspace or your role cannot use this reporting action.',
+          });
+        } else if (!canExecuteToolForRole(toolCall.function.name, actorRole)) {
           dbResult = JSON.stringify({
             error: `Tool ${toolCall.function.name} requires elevated permissions for your workspace role.`,
           });
+        } else if (toolCall.function.name === 'list_reporting_presets') {
+          dbResult = JSON.stringify({
+            presets: listPublicPresets().map((p) => ({
+              id: p.id,
+              title: p.title,
+              description: p.description,
+              category: p.category,
+            })),
+          });
+        } else if (toolCall.function.name === 'open_reporting_center') {
+          action = {
+            type: 'NAVIGATE',
+            path: `/reporting/${args.presetId}`,
+            payload: args.filters || null,
+          };
+          dbResult = JSON.stringify({ status: `Opening Reporting Center preset ${args.presetId}.` });
         } else if (toolHandlers[toolCall.function.name]) {
           dbResult = await toolHandlers[toolCall.function.name](args, workspaceId);
         } else if (toolCall.function.name === "draft_proposal") {

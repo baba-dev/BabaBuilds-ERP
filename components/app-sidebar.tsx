@@ -53,13 +53,15 @@ export function AppSidebar() {
   const [pinError, setPinError] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const [enabledModules, setEnabledModules] = useState<Set<string>>(new Set());
+  const [grantedPermissions, setGrantedPermissions] = useState<Set<string>>(new Set());
   const skipNextOpenSyncRef = useRef(false);
 
   const loadPreferences = useCallback(async () => {
     try {
-      const [prefRes, modulesRes] = await Promise.all([
+      const [prefRes, modulesRes, teamRes] = await Promise.all([
         fetch("/api/user-preferences"),
         fetch("/api/workspace/modules"),
+        fetch("/api/team/members"),
       ]);
 
       if (prefRes.ok) {
@@ -70,6 +72,14 @@ export function AppSidebar() {
       if (modulesRes.ok) {
         const { modules } = (await modulesRes.json()) as { modules: string[] };
         setEnabledModules(new Set(modules));
+      }
+
+      if (teamRes.ok) {
+        const payload = (await teamRes.json()) as { data?: { grantedPermissions?: Record<string, boolean> } };
+        const granted = Object.entries(payload.data?.grantedPermissions ?? {})
+          .filter(([, v]) => v)
+          .map(([k]) => k);
+        setGrantedPermissions(new Set(granted));
       }
     } catch {
       // no-op: defaults still render
@@ -208,6 +218,7 @@ export function AppSidebar() {
             preferences={preferences}
             pinError={pinError}
             enabledModules={enabledModules}
+            grantedPermissions={grantedPermissions}
             onTogglePin={onTogglePin}
             onNavigate={onNavigate}
           />
