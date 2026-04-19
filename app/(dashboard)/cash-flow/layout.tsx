@@ -28,7 +28,7 @@ export default async function CashFlowLayout({ children }: { children: ReactNode
 
   const enabled = await isModuleEnabled(workspaceId, "CASH_FLOW");
   if (!enabled) {
-    redirect("/settings");
+    redirect("/settings#workspace-modules");
   }
 
   return children;

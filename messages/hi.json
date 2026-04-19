@@ -1227,5 +1227,89 @@
       "INVALID_EMAIL": "Please enter a valid email address before continuing.",
       "GENERIC": "We could not send your sign-in link. Please try again."
     }
+  },
+  "ArCollections": {
+    "title": "AR Aging + Collections Centre",
+    "description": "Track aging buckets, prioritize collections, and send payment reminders when SMTP is configured.",
+    "kpi": {
+      "total_outstanding": "Total outstanding",
+      "overdue_invoices": "Overdue invoices",
+      "overdue_amount": "Overdue amount",
+      "reminders_7d": "Reminders (7d)"
+    },
+    "buckets": {
+      "title": "Aging buckets",
+      "subtitle": "Receivable distribution by overdue age.",
+      "invoice_count": "{count, plural, one {# invoice} other {# invoices}}"
+    },
+    "table": {
+      "title": "Receivables queue",
+      "subtitle": "Open invoices (pending or partially paid). Update follow-up state and send reminders when email is configured.",
+      "search_placeholder": "Search client or invoice",
+      "empty": "No invoices match your filters."
+    },
+    "filters": {
+      "all": "All buckets",
+      "current": "Current (not overdue)",
+      "d1_30": "1–30 days",
+      "d31_60": "31–60 days",
+      "d61_90": "61–90 days",
+      "d90_plus": "90+ days"
+    },
+    "columns": {
+      "invoice": "Invoice",
+      "client": "Client",
+      "status": "Overdue",
+      "outstanding": "Outstanding",
+      "priority": "Priority",
+      "risk": "Risk",
+      "risk_aria": "Collection risk score (0–100)",
+      "followup": "Follow-up",
+      "action": "Action"
+    },
+    "aging": {
+      "days_overdue": "{days}d",
+      "current": "Current"
+    },
+    "queue": {
+      "title": "Collection priority queue",
+      "subtitle": "Top overdue accounts by priority score.",
+      "days": "{days} days overdue"
+    },
+    "actions": {
+      "send_reminder": "Send reminder email",
+      "run_automation": "Run reminder automation",
+      "refresh_aria": "Refresh data",
+      "configure_smtp": "Configure SMTP"
+    },
+    "automation": {
+      "disclaimer": "Overdue invoices are emailed when SMTP is set in Business Settings (max one run per minute)."
+    },
+    "smtp_banner": {
+      "title": "Email reminders require SMTP",
+      "body": "Configure outgoing email in Master Settings so reminder buttons and automation can reach clients."
+    },
+    "error_panel": {
+      "title": "Could not load collections data",
+      "retry": "Retry"
+    },
+    "errors": {
+      "load_failed": "Could not load AR Collections data.",
+      "forbidden": "You do not have access to AR Collections or the module is disabled."
+    },
+    "toast": {
+      "load_failed": "Could not load AR Collections data.",
+      "followup_updated": "Follow-up status updated.",
+      "followup_failed": "Could not update follow-up status.",
+      "risk_updated": "Risk score updated.",
+      "risk_failed": "Could not update risk score.",
+      "reminder_sent": "Reminder email sent.",
+      "reminder_failed": "Could not send reminder.",
+      "automation_running": "Running reminder automation…",
+      "automation_done": "Automation finished. {count, plural, one {# email sent.} other {# emails sent.}}",
+      "automation_failed": "Automation failed.",
+      "automation_no_smtp": "Configure SMTP in Business Settings to send reminders.",
+      "automation_rate_limited": "Please wait a minute before running automation again."
+    }
   }
 }
