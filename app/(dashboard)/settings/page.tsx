@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useTranslations } from "next-intl";
 import {
   Building2, Landmark, ShieldCheck, Image as ImageIcon, CheckCircle2,
@@ -101,6 +101,16 @@ export default function SettingsWizard() {
 
   const isIndian = countryCode === "IN";
   const isTeamPlan = planTier === "TEAM" || planTier === "ENTERPRISE";
+
+  const workspaceModulesAnchorRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash.replace(/^#/, "");
+    if (hash === "workspace-modules") {
+      workspaceModulesAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
 
   useEffect(() => {
     // Fetch workspace modules state
@@ -1074,6 +1084,7 @@ export default function SettingsWizard() {
           <PWASettings />
 
           {/* ─── WORKSPACE MODULES ─────────────────────────────────────── */}
+          <div ref={workspaceModulesAnchorRef} id="workspace-modules" className="scroll-mt-24" aria-hidden />
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
             <CardHeader className="pb-2">
               <CardTitle className={cn(typography.sectionHeader, "flex items-center gap-2")}>

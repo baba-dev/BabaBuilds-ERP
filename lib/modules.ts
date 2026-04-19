@@ -111,8 +111,8 @@ export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
   AR_COLLECTIONS: [
     'Aging buckets and overdue exposure tracking',
     'Collections priority queue by risk and amount',
-    'Reminder automation for overdue invoices',
-    'Follow-up status tracking and collector notes',
+    'Email payment reminders when SMTP is configured (automation and one-click send)',
+    'Follow-up status tracking and collection risk score',
     'Promise-to-pay and escalation workflow states',
   ],
   TAX_ADVANCED: [
