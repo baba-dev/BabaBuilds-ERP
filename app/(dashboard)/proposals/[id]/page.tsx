@@ -14,17 +14,22 @@ import {
   convertProposalToServiceOrderFormAction,
 } from "./actions";
 import { getTranslations } from "next-intl/server";
+import { FREE_TIER_MONTHLY_INVOICE_LIMIT } from "@/lib/pricing";
 
 export default async function ProposalDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ billing?: string }>;
 }) {
   const session = await getServerSession(authOptions);
   if (!session?.workspaceId) redirect("/login");
 
   const t = await getTranslations("ProposalDetail");
   const { id } = await params;
+  const billingQuery = searchParams ? await searchParams : {};
+  const showInvoiceLimitNotice = billingQuery.billing === "free_invoice_month";
 
   const serviceTemplates = await prisma.serviceTemplate.findMany({
     where: { workspaceId: session.workspaceId },
@@ -68,7 +73,16 @@ export default async function ProposalDetailPage({
   return (
     <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8">
       <div className="max-w-5xl mx-auto space-y-6">
-        
+        {showInvoiceLimitNotice && (
+          <div
+            role="alert"
+            className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100"
+          >
+            You have reached the limit of {FREE_TIER_MONTHLY_INVOICE_LIMIT} invoices this month on the Free plan.
+            Upgrade to Pro or Team for unlimited invoices.
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start gap-4">
           <div>

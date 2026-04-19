@@ -156,6 +156,10 @@ export const PERMISSION_KEYS = [
   // Reports
   'reports.view',
   'reports.export',        // separate from view — controls bulk export surfaces
+  'reporting_center.view',
+  'reporting_center.query.run',
+  'reporting_center.preset.manage',
+  'reporting_center.export',
 
   // Reporting Center (optional module; curated presets — server-side execution only)
   'reporting_center.view',
@@ -496,6 +500,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'retainers.view',
     'service_orders.view',
     'reports.view',
+    'reporting_center.view', 'reporting_center.query.run', 'reporting_center.export',
     'clients.view', 'clients.manage',
     // NOT: expenses admin, purchase_orders, inventory, accounting, tax, financial exports
   ],
@@ -608,7 +613,7 @@ export function hasPermission(role: BusinessRole, permission: Permission): boole
  * - The seat count formula is:
  *     used = activeMembers + pendingInvites
  *     available = limit - used
- *     canInvite = available > 0 (or plan is ENTERPRISE)
+ *     canInvite = available > 0 (or unlimited for special cases — none in current tiers)
  */
 export const SEAT_SEMANTICS = {
   PENDING_INVITES_RESERVE_SEATS: true,
@@ -620,7 +625,8 @@ export const PLAN_SEAT_LIMITS: Record<string, number> = {
   FREE:       1,
   PRO:        3,
   TEAM:       15,
-  ENTERPRISE: Infinity,   // Displayed as "Unlimited" in all UI/API responses
+  /** Legacy tier: treat as Team seat cap (Enterprise product removed). */
+  ENTERPRISE: 15,
   TRIALING:   5,          // Trial workspaces get team-tier seat access
 };
 

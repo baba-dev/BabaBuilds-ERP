@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { buildPrivatePath } from '@/lib/uploads/private-storage';
 import type { InvoiceTotals } from '@/lib/invoice/totals';
+import { canUsePaymentGateways } from '@/lib/entitlements';
 
 export interface PDFProfile {
   companyName: string;
@@ -26,6 +27,8 @@ export interface PDFProfile {
   taxLabel?: string | null;
   workspace?: {
     planTier: string;
+    subscriptionStatus?: string | null;
+    subscriptionEndsAt?: Date | string | null;
     countryCode?: string | null;
     baseCurrency?: string | null;
   } | null;
@@ -62,6 +65,8 @@ export interface PDFParams {
   userLocale: string;
   paymentLink?: string | null;
   status?: string | null;
+  /** When true, show small “Make yours” footer (Free plan, non-trial). Omit to infer from profile.workspace. */
+  showFreePlanFooter?: boolean;
 }
 
 export async function generateInvoicePDF({
@@ -78,8 +83,18 @@ export async function generateInvoicePDF({
   baseCurrency,
   userLocale,
   paymentLink,
-  status
+  status,
+  showFreePlanFooter: showFreePlanFooterArg,
 }: PDFParams): Promise<Uint8Array> {
+  const billingSnapshot = {
+    planTier: profile.workspace?.planTier,
+    subscriptionStatus: profile.workspace?.subscriptionStatus,
+    subscriptionEndsAt: profile.workspace?.subscriptionEndsAt,
+  };
+  const showFreePlanFooter =
+    showFreePlanFooterArg !== undefined
+      ? showFreePlanFooterArg
+      : !canUsePaymentGateways(billingSnapshot);
   const pdfDoc = await PDFDocument.create();
   const page   = pdfDoc.addPage([595.28, 841.89]); 
   const { height, width } = page.getSize();
@@ -366,6 +381,19 @@ export async function generateInvoicePDF({
       footerY += 16;
     }
 
+    if (showFreePlanFooter) {
+      drawText(
+        "This document was prepared on erp.bababuilds.com | Make yours.",
+        width / 2,
+        height - 18,
+        7,
+        false,
+        "center",
+        textMuted,
+        true,
+      );
+    }
+
     page.drawLine({ start: { x: leftMargin, y: 45 }, end: { x: rightMargin, y: 45 }, thickness: 0.5, color: borderGray });
     drawText("Page 1 of 1", rightMargin, height - 30, 8, false, 'right', textMuted);
 
@@ -539,9 +567,9 @@ export async function generateInvoicePDF({
     drawText(metaStringValue, width / 2, height - 43, 9, false, 'center', white);
     drawText(contactString, width / 2, height - 24, 9, false, 'center', white);
 
-    if (profile.workspace?.planTier === "FREE") {
+    if (showFreePlanFooter) {
       drawText(
-        "This Receipt was prepared on erp.bababuilds.com | Make yours.", 
+        "This document was prepared on erp.bababuilds.com | Make yours.", 
         width / 2,           
         height - 9,         
         7,                   

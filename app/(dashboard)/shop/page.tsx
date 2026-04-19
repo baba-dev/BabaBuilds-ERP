@@ -28,7 +28,7 @@ import { useFormat } from "@/hooks/use-format";
 import { ServiceFormDialog, ServiceFormService } from "@/components/services/ServiceFormDialog";
 
 type Service = ServiceFormService;
-type PlanTier = "FREE" | "PRO" | "TEAM" | "ENTERPRISE";
+type PlanTier = "FREE" | "PRO" | "TEAM";
 
 type ServiceCatalogItem = {
   id: string;

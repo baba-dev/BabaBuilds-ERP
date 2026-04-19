@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { decrypt } from '@/lib/encryption';
 import crypto from 'crypto';
+import { assertFreeTierMonthlyInvoiceAllowed } from '@/lib/entitlements';
 
 /**
  * POST /api/shop/[slug]/verify
@@ -58,8 +59,15 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
     // ── Auto-generate ERP Invoice ─────────────────────────────────────────────
     try {
       const workspaceId   = order.workspaceId;
-      const financialYear = new Date().getFullYear().toString();
-      const billingMonth  = new Date().toLocaleString('default', { month: 'long' });
+      const invoiceDate = new Date();
+      const invoiceLimit = await assertFreeTierMonthlyInvoiceAllowed(workspaceId, invoiceDate);
+      if (invoiceLimit) {
+        console.error('Shop invoice blocked by free-tier monthly limit:', invoiceLimit.message);
+        throw new Error(invoiceLimit.message);
+      }
+
+      const financialYear = invoiceDate.getFullYear().toString();
+      const billingMonth  = invoiceDate.toLocaleString('default', { month: 'long' });
 
       // Get next invoice number
       const lastInvoice = await prisma.invoice.findFirst({
@@ -78,7 +86,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
           invoiceNumber,
           financialYear,
           billingMonth,
-          invoiceDate:        new Date(),
+          invoiceDate,
           clientName:         order.buyerName,
           serviceDescription: `${order.serviceTemplate.name} [E-Commerce Sale]`,
           subtotal:           order.amount,

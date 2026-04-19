@@ -22,6 +22,11 @@ import { buildPrivatePath, ensureDir } from '@/lib/uploads/private-storage';
 import { determineAndPersistTax } from '@/src/server/tax/service';
 import { createPrismaTaxPersistence } from '@/lib/tax/prisma-tax-persistence';
 import { appendTaxAuditEvent, newTaxCorrelationId } from '@/lib/tax/audit';
+import {
+  assertFreeTierMonthlyInvoiceAllowed,
+  canInjectGatewayPaymentLinks,
+  type WorkspaceBillingSnapshot,
+} from '@/lib/entitlements';
 
 const lookupAsync = promisify(dns.lookup);
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
@@ -343,13 +348,28 @@ export async function POST(request: Request) {
       defaultTaxRate: taxResolution.taxRate,
     });
 
-    const isFreePlan = profile.workspace?.planTier === "FREE";
-    const isProPlan = !isFreePlan;
+    const invoiceDate = customDate ? new Date(customDate) : new Date();
+    const billingSnapshot: WorkspaceBillingSnapshot = {
+      planTier: profile.workspace?.planTier,
+      subscriptionStatus: profile.workspace?.subscriptionStatus,
+      subscriptionEndsAt: profile.workspace?.subscriptionEndsAt,
+    };
+    const invoiceLimitDenied = await assertFreeTierMonthlyInvoiceAllowed(workspaceId, invoiceDate);
+    if (invoiceLimitDenied) {
+      return NextResponse.json(
+        {
+          error: invoiceLimitDenied.message,
+          code: invoiceLimitDenied.code,
+          limit: invoiceLimitDenied.limit,
+        },
+        { status: 403 },
+      );
+    }
+
+    const paidFeatures = canInjectGatewayPaymentLinks(billingSnapshot);
     const userLocale = profile.workspace?.countryCode === "IN" ? "en-IN" : "en-US";
     const invoiceTheme = (profile as any).invoiceTheme || "DESIGN_1";
     const baseCurrency = profile.workspace?.baseCurrency || 'INR';
-
-    const invoiceDate = customDate ? new Date(customDate) : new Date();
     const invoiceDueDate = new Date(invoiceDate);
     invoiceDueDate.setDate(invoiceDueDate.getDate() + 7);
 
@@ -404,7 +424,7 @@ export async function POST(request: Request) {
         let providerPaymentLinkId: string | null = null;
         let providerGateway: string | null = null;
 
-        if (isProPlan) {
+        if (paidFeatures) {
           const defaultGateway = (profile as any).defaultGateway || 'RAZORPAY';
 
           if (

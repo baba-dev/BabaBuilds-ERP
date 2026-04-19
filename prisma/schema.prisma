@@ -282,7 +282,7 @@ model Workspace {
   // --- EXISTING BILLING ---
   subscriptionStatus   String    @default("FREE") // "TRIALING", "PRO", "FREE", "SUSPENDED"
   subscriptionEndsAt   DateTime?
-  planTier             String    @default("FREE") // "FREE", "PRO", "TEAM", "ENTERPRISE"
+  planTier             String    @default("FREE") // "FREE", "PRO", "TEAM"
   currentMonthInvoices Int       @default(0)
   seatAddonCount       Int       @default(0) // future: purchased additional seats
 

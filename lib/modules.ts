@@ -66,7 +66,7 @@ export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
   TAX_ADVANCED:
     'Advanced tax compliance operations including readiness pipelines, import diagnostics, override tooling, and audit workflows.',
   REPORTING_CENTER:
-    'Curated finance and operations reports with governed read-only execution, workspace-scoped data, and export-ready workbooks.',
+    'Enterprise-ready reporting workspace with curated finance/compliance presets, governed query execution, and polished exports.',
 };
 
 export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
@@ -128,10 +128,11 @@ export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
     'Tax import templates and batch diagnostics',
   ],
   REPORTING_CENTER: [
-    'Preset gallery with methodology notes (no raw SQL exposed to clients)',
-    'Read-only execution with mandatory workspace scope and audit logging',
-    'Role-gated preview and XLSX export',
-    'Dark/light UI aligned with ERP amber accent system',
+    'Preset report gallery for non-technical users',
+    'Read-only SQL engine with enforced workspace scoping',
+    'Interactive preview table with filter chips and metadata',
+    'Enterprise XLSX export with frozen headers and autofilters',
+    'Structured audit logs for every report run and export',
   ],
 };
 

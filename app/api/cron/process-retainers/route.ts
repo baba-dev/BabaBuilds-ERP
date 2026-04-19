@@ -18,6 +18,10 @@ import { decimalToNumber, toDecimal } from '@/lib/money';
 import { isCronAuthorized, unauthorizedCronResponse } from '@/lib/security/cron-auth';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
 import { buildPrivatePath, ensureDir } from '@/lib/uploads/private-storage';
+import {
+  assertFreeTierMonthlyInvoiceAllowed,
+  canInjectGatewayPaymentLinks,
+} from '@/lib/entitlements';
 
 // Helper for Indian Financial Year
 const getFY = (date: Date) => {
@@ -507,6 +511,17 @@ export async function GET(request: Request) {
           throw new Error("Business profile missing. Cannot generate PDF.");
         }
 
+        const invoiceMonthBlocked = await assertFreeTierMonthlyInvoiceAllowed(workspaceId, today);
+        if (invoiceMonthBlocked) {
+          throw new Error(invoiceMonthBlocked.message);
+        }
+
+        const billingSnap = {
+          planTier: profile.workspace?.planTier,
+          subscriptionStatus: profile.workspace?.subscriptionStatus,
+          subscriptionEndsAt: profile.workspace?.subscriptionEndsAt,
+        };
+
         // A. AUTO-SEQUENCE THE INVOICE NUMBER (Optimistic Concurrency)
         let attempts = 0;
         const MAX_ATTEMPTS = 5;
@@ -552,17 +567,17 @@ export async function GET(request: Request) {
               defaultTaxRate: taxResolution.taxRate,
             });
 
-            // --- PAYMENT LINK GENERATION (PRO ONLY) ---
+            // --- PAYMENT LINK GENERATION (paid tier or trial — same as manual invoice generate) ---
             let paymentLink: string | null = null;
             let providerPaymentLinkId: string | null = null;
             let providerGateway: string | null = null;
 
-            const isProPlan = profile.workspace?.planTier === "PRO";
+            const paidFeatures = canInjectGatewayPaymentLinks(billingSnap);
             const baseCurrency = profile.workspace?.baseCurrency || 'INR';
             const dueDate = new Date(today);
             dueDate.setDate(dueDate.getDate() + 7);
 
-            if (isProPlan) {
+            if (paidFeatures) {
               const defaultGateway = (profile as any).defaultGateway || 'RAZORPAY';
 
               if (

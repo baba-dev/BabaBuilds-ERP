@@ -749,7 +749,7 @@ export default function TeamAccessPage() {
               {isUnlimited ? "Unlimited seats" : `${seatData.limitDisplay} seat${seatData.limit === 1 ? "" : "s"} included`}
             </div>
           </div>
-          {!isUnlimited && seatData.planTier !== "ENTERPRISE" && (
+          {!isUnlimited && ["FREE", "PRO"].includes(String(seatData.planTier).toUpperCase()) && (
             <a
               href="/settings?tab=billing"
               className="ml-auto flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline"

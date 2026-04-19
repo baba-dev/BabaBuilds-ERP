@@ -1,6 +1,6 @@
 import 'server-only';
 
-export type WorkspacePlanTier = 'FREE' | 'PRO' | 'TEAM' | 'ENTERPRISE';
+export type WorkspacePlanTier = 'FREE' | 'PRO' | 'TEAM';
 
 export const MiB = 1024 * 1024;
 
@@ -8,7 +8,6 @@ export const DOCUMENT_STORAGE_CAP_BYTES: Record<WorkspacePlanTier, number> = {
   FREE: 10 * MiB,
   PRO: 20 * MiB,
   TEAM: 50 * MiB,
-  ENTERPRISE: Number.POSITIVE_INFINITY,
 };
 
 export type DocumentCategory =
@@ -66,7 +65,8 @@ export const DOCUMENT_PER_FILE_CAP_BYTES: Record<DocumentUploadCategory, number>
 
 export function normalizePlanTier(planTier: string | null | undefined): WorkspacePlanTier {
   const t = String(planTier ?? 'FREE').toUpperCase();
-  if (t === 'PRO' || t === 'TEAM' || t === 'ENTERPRISE') return t;
+  if (t === 'PRO') return 'PRO';
+  if (t === 'TEAM' || t === 'ENTERPRISE') return 'TEAM';
   return 'FREE';
 }
 

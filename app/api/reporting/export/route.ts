@@ -19,16 +19,16 @@ export async function POST(req: Request) {
       throw new Error('INVALID_FILTERS');
     }
 
-    const params: Record<string, unknown> = {
-      workspaceId,
-      fromDate: filters.fromDate ? new Date(filters.fromDate) : undefined,
-      toDate: filters.toDate ? new Date(filters.toDate) : undefined,
-      status: filters.status,
-      limit: filters.limit,
-    };
+const params: Record<string, unknown> = {
+  workspaceId,
+  fromDate: filters.fromDate ? new Date(filters.fromDate) : undefined,
+  toDate: filters.toDate ? new Date(filters.toDate) : undefined,
+  status: filters.status,
+  limit: filters.limit,
+};
 
-    const [result, workspace] = await Promise.all([
-      executeReportingQuery(preset.sql, params),
+const [result, workspace] = await Promise.all([
+  executeReportingQuery(preset.sql, params),
       prisma.workspace.findUnique({ where: { id: workspaceId }, select: { name: true } }),
     ]);
 
@@ -37,8 +37,8 @@ export async function POST(req: Request) {
       reportTitle: preset.title,
       workspaceName: workspace?.name ?? 'Workspace',
       generatedAt,
-      methodology: preset.methodology,
-      accountingPolicyRefs: preset.accountingPolicyRefs,
+methodology: preset.methodology,
+accountingPolicyRefs: preset.accountingPolicyRefs,
       rows: result.rows,
       columns: preset.columns,
     });

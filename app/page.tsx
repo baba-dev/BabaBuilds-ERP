@@ -86,7 +86,7 @@ const faqJsonLd = {
       name: "Is BabaBuilds ERP free to use?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "BabaBuilds ERP offers a free tier for solo freelancers. Team and enterprise plans with advanced features like CA portal access, audit ledger, and push notifications are available as paid upgrades.",
+        text: "BabaBuilds ERP offers a free tier with full product access and limits on clients, invoices, and shop listings. Pro and Team add payment gateways, higher seat limits, and more document storage.",
       },
     },
     {

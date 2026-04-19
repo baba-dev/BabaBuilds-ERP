@@ -672,6 +672,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                   </div>
                 </div>
 
+
                 <div
                   className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
                     form.enableReportingCenter

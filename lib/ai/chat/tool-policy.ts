@@ -28,6 +28,8 @@ const WRITE_ALLOWED_ROLES = new Set<string>([
   "INVENTORY_MANAGER",
 ]);
 
+const REPORTING_ALLOWED_ROLES = new Set<string>(['OWNER', 'ADMIN', 'FINANCE_MANAGER', 'ACCOUNTANT', 'VIEWER']);
+
 export function isWriteTool(toolName: string) {
   return WRITE_TOOLS.has(toolName);
 }

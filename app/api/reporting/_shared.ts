@@ -52,6 +52,7 @@ export function reportingErrorResponse(error: unknown) {
     PRESET_NOT_FOUND: [404, 'Requested report preset was not found.'],
     INVALID_FILTERS: [400, 'One or more report filters are invalid.'],
     MISSING_SQL_PARAM: [400, 'Report parameters are incomplete for this preset.'],
+    EMPTY_RESULT: [200, 'Report executed successfully with no rows.'],
     REPORT_TIMEOUT: [408, 'Report execution timed out. Please narrow your filters.'],
     REPORT_PAYLOAD_TOO_LARGE: [413, 'Report result is too large. Please narrow your filters.'],
   };

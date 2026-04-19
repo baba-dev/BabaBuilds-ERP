@@ -20,6 +20,7 @@ import { getTaxFeatureFlags } from '@/lib/tax/feature-flags';
 import { logActivity } from '@/lib/security/activity-log';
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import { withPermission } from '@/lib/rbac';
+import { canUsePaymentGateways, loadWorkspaceBillingSnapshot, shouldApplyFreeTierLimits } from '@/lib/entitlements';
 
 export async function GET() {
   try {
@@ -61,12 +62,27 @@ export async function GET() {
       workspaceName: workspace?.name ?? null,
     });
 
+    const billing = await loadWorkspaceBillingSnapshot(workspaceId);
+    const billingEntitlements = {
+      canUsePaymentGateways: billing ? canUsePaymentGateways(billing) : false,
+      shouldApplyFreeTierLimits: billing ? shouldApplyFreeTierLimits(billing) : true,
+    };
+
     // Strip the nested workspace object before returning (cleaner payload)
     const { workspace: _workspace, ...safeProfile } = (profile as Record<string, unknown> & { workspace: unknown }) ?? {};
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const _ignore = _workspace; 
 
-    return NextResponse.json({ ...safeProfile, locale, planTier, countryCode, taxFeatureFlags });
+    return NextResponse.json({
+      ...safeProfile,
+      locale,
+      planTier,
+      subscriptionStatus: workspace?.subscriptionStatus ?? "FREE",
+      subscriptionEndsAt: workspace?.subscriptionEndsAt?.toISOString() ?? null,
+      countryCode,
+      taxFeatureFlags,
+      billingEntitlements,
+    });
   } catch {
     return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
   }

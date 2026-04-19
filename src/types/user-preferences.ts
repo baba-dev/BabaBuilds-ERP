@@ -11,6 +11,7 @@ export type SidebarItemId =
   | "cash_flow"
   | "reporting_center"
   | "ar_collections"
+  | "reporting_center"
   | "expenses_margins"
   | "savings_tax"
   | "ai_reconciliation"
@@ -47,6 +48,7 @@ const ALLOWED_IDS = new Set<SidebarItemId>([
   "cash_flow",
   "reporting_center",
   "ar_collections",
+  "reporting_center",
   "expenses_margins",
   "savings_tax",
   "ai_reconciliation",

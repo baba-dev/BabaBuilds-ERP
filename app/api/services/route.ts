@@ -7,6 +7,7 @@ import { logActivity } from '@/lib/activity-log';
 import { apiError } from '@/lib/api-error';
 import { scanBuffer } from '@/lib/security/clamav';
 import { buildPrivatePath, ensureDir, sniffAllowedContent, uniqueStoredName } from '@/lib/uploads/private-storage';
+import { FREE_TIER_PUBLISHED_SERVICES_LIMIT, shouldApplyFreeTierLimits } from '@/lib/entitlements';
 
 type SessionContext = {
   workspaceId?: string;
@@ -53,6 +54,8 @@ export async function POST(request: Request) {
       where: { id: workspaceId },
       select: {
         planTier: true,
+        subscriptionStatus: true,
+        subscriptionEndsAt: true,
         _count: { select: { serviceTemplates: { where: { showInShop: true } } } },
       },
     });
@@ -61,9 +64,13 @@ export async function POST(request: Request) {
       return apiError(404, "Workspace not found", "WORKSPACE_NOT_FOUND");
     }
 
-    if (showInShop && workspace.planTier === "FREE" && workspace._count.serviceTemplates >= 3) {
+    if (
+      showInShop &&
+      shouldApplyFreeTierLimits(workspace) &&
+      workspace._count.serviceTemplates >= FREE_TIER_PUBLISHED_SERVICES_LIMIT
+    ) {
       return apiError(403, "Upgrade Required", "PLAN_LIMIT_REACHED", {
-        message: "You have reached the limit of 3 published services on the Free plan. Upgrade to Pro for unlimited published services.",
+        message: `You have reached the limit of ${FREE_TIER_PUBLISHED_SERVICES_LIMIT} published services on the Free plan. Upgrade to Pro for unlimited published services.`,
         requiresUpgrade: true,
       });
     }

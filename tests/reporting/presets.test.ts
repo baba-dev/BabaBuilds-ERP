@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { getReportPreset, listPublicPresets, toPublicPreset, validatePresetFilters } from '@/lib/reporting/presets';
+import {
+  getReportPreset,
+  listPublicPresets,
+  toPublicPreset,
+  validatePresetFilters,
+} from '@/lib/reporting/presets';
 
 describe('reporting preset filters', () => {
   it('requires mandatory filters', () => {
@@ -22,8 +27,10 @@ describe('reporting preset filters', () => {
       expect(p).not.toHaveProperty('sql');
       expect(JSON.stringify(p)).not.toContain('FROM ');
     }
+
     const preset = getReportPreset('invoice_register');
     expect(preset?.sql).toContain('FROM');
+
     const pub = toPublicPreset(preset!);
     expect(pub).not.toHaveProperty('sql');
   });

@@ -51,6 +51,7 @@ export const appNavItems: AppNavItem[] = [
     requiresPermission: "reporting_center.view",
   },
   { key: "ar_collections", path: "/ar-collections", icon: Siren, badge: "New", requiresModule: "AR_COLLECTIONS" },
+  { key: "reporting_center", path: "/reporting", icon: ChartColumnBig, requiresModule: "REPORTING_CENTER", requiresPermission: "reporting_center.view" },
   { key: "savings_tax", path: "/tax", icon: ShieldCheck },
   { key: "ai_reconciliation", path: "/reconciliation", icon: Sparkles, badge: "AI" },
   { key: "invoices_and_earnings", path: "/income", icon: ReceiptText },

@@ -18,15 +18,15 @@ export async function POST(req: Request) {
       throw new Error('INVALID_FILTERS');
     }
 
-    const params: Record<string, unknown> = {
-      workspaceId,
-      fromDate: filters.fromDate ? new Date(filters.fromDate) : undefined,
-      toDate: filters.toDate ? new Date(filters.toDate) : undefined,
-      status: filters.status,
-      limit: filters.limit,
-    };
+const params: Record<string, unknown> = {
+  workspaceId,
+  fromDate: filters.fromDate ? new Date(filters.fromDate) : undefined,
+  toDate: filters.toDate ? new Date(filters.toDate) : undefined,
+  status: filters.status,
+  limit: filters.limit,
+};
 
-    const { rows, durationMs } = await executeReportingQuery(preset.sql, params);
+const { rows, durationMs } = await executeReportingQuery(preset.sql, params);
 
     await prisma.appActivityLog.create({
       data: {
@@ -40,17 +40,17 @@ export async function POST(req: Request) {
       },
     });
 
-    return Response.json({
-      preset: {
-        id: preset.id,
-        title: preset.title,
-        columns: preset.columns,
-        methodology: preset.methodology,
-        accountingPolicyRefs: preset.accountingPolicyRefs,
-      },
-      rows,
-      meta: { durationMs, rowCount: rows.length, generatedAt: new Date().toISOString() },
-    });
+return Response.json({
+  preset: {
+    id: preset.id,
+    title: preset.title,
+    columns: preset.columns,
+    methodology: preset.methodology,
+    accountingPolicyRefs: preset.accountingPolicyRefs,
+  },
+  rows,
+  meta: { durationMs, rowCount: rows.length, generatedAt: new Date().toISOString() },
+});
   } catch (error) {
     return reportingErrorResponse(error);
   }

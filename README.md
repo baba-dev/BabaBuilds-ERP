@@ -108,6 +108,32 @@ To keep email sign-in and verification-token delivery compatible with `next-auth
 
 When updating mailer dependencies, align `@types/nodemailer` to the same runtime major as `nodemailer` to avoid drift between compile-time types and runtime APIs.
 
-## Reporting Center (optional module)
+## Reporting Center (Optional Module)
 
-Enable **REPORTING_CENTER** from the setup wizard or **Settings → optional modules**. The API returns **public preset metadata only** (no SQL in JSON). Execution is `SELECT` / `WITH` + read-only policy, mandatory `workspaceId` scoping, row and payload caps, and `AppActivityLog` entries for runs and exports. Role keys: `reporting_center.view`, `reporting_center.query.run`, `reporting_center.export` (see `lib/permissions.ts`). The chat assistant only registers `list_reporting_presets` / `open_reporting_center` when the module is on and the user has the matching permissions.
+Reporting Center is an optional workspace subsystem. Enable it from **Setup Wizard** or **Settings → Optional Modules**.
+
+### Enablement
+- Setup payload supports `enableReportingCenter: true`.
+- Settings supports runtime enable/disable (non-destructive; data preserved).
+
+### Permissions
+Reporting Center uses enterprise RBAC permissions:
+- `reporting_center.view`
+- `reporting_center.query.run`
+- `reporting_center.export`
+
+### Usage
+1. Open `/reporting`.
+2. Select a preset and filters.
+3. Run preview or export to XLSX.
+
+### Security
+- API returns **public preset metadata only** (no SQL in JSON).
+- Read-only execution policy allows `SELECT` / `WITH`.
+- Mandatory workspace scoping (`workspaceId = :workspaceId`).
+- DML/DDL/PRAGMA/ATTACH denied.
+- Timeout, row cap, and payload cap enforced.
+- Every run/export is audit logged via `AppActivityLog`.
+
+### Chat assistant integration
+The chat assistant only registers `list_reporting_presets` and `open_reporting_center` when the module is enabled and the user has the required permissions.

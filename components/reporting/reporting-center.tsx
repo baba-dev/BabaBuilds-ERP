@@ -221,8 +221,12 @@ export function ReportingCenter({ initialPresetId }: { initialPresetId?: string 
               <ChartColumnBig className="h-5 w-5 text-white" />
             </div>
             <div>
-              <CardTitle className="text-xl text-amber-950 dark:text-amber-100">{t('hero.title')}</CardTitle>
-              <CardDescription className="text-zinc-600 dark:text-zinc-400">{t('hero.subtitle')}</CardDescription>
+              <CardTitle className="text-xl text-amber-950 dark:text-amber-100">
+                {t('hero.title')}
+              </CardTitle>
+              <CardDescription className="text-zinc-600 dark:text-zinc-400">
+                {t('hero.subtitle')}
+              </CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -248,6 +252,7 @@ export function ReportingCenter({ initialPresetId }: { initialPresetId?: string 
               </Select>
             )}
           </div>
+
           {needsDateRange && (
             <>
               <div className="space-y-2">
@@ -274,6 +279,7 @@ export function ReportingCenter({ initialPresetId }: { initialPresetId?: string 
               </div>
             </>
           )}
+
           <div className="flex flex-wrap items-end gap-2 md:col-span-2 xl:col-span-4">
             <Button
               onClick={() => void runReport()}
@@ -285,15 +291,25 @@ export function ReportingCenter({ initialPresetId }: { initialPresetId?: string 
               }
               className="bg-amber-600 hover:bg-amber-700 text-white dark:bg-amber-600 dark:hover:bg-amber-700"
             >
-              {runLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Play className="mr-2 h-4 w-4" />}
+              {runLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Play className="mr-2 h-4 w-4" />
+              )}
               {runLoading ? t('actions.running') : t('actions.run')}
             </Button>
+
             <Button
               type="button"
               variant="outline"
               className="border-amber-300 bg-white hover:bg-amber-50 dark:border-amber-800 dark:bg-zinc-900 dark:hover:bg-amber-950/40"
               onClick={() => void downloadReport()}
-              disabled={!presetId || exportLoading || !abilities?.canExport || (needsDateRange && (!fromDate || !toDate))}
+              disabled={
+                !presetId ||
+                exportLoading ||
+                !abilities?.canExport ||
+                (needsDateRange && (!fromDate || !toDate))
+              }
             >
               {exportLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -302,11 +318,16 @@ export function ReportingCenter({ initialPresetId }: { initialPresetId?: string 
               )}
               {t('actions.download')}
             </Button>
+
             {abilities && !abilities.canRun && abilities.moduleEnabled && (
-              <p className="text-xs text-amber-800 dark:text-amber-300">{t('hints.no_run_permission')}</p>
+              <p className="text-xs text-amber-800 dark:text-amber-300">
+                {t('hints.no_run_permission')}
+              </p>
             )}
             {abilities && !abilities.canExport && abilities.moduleEnabled && abilities.canRun && (
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('hints.no_export_permission')}</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                {t('hints.no_export_permission')}
+              </p>
             )}
           </div>
         </CardContent>
@@ -319,7 +340,9 @@ export function ReportingCenter({ initialPresetId }: { initialPresetId?: string 
         >
           <AlertTriangle className="h-5 w-5 shrink-0 text-rose-600 dark:text-rose-400" />
           <div>
-            <p className="text-sm font-semibold text-rose-900 dark:text-rose-100">{t('errors.title')}</p>
+            <p className="text-sm font-semibold text-rose-900 dark:text-rose-100">
+              {t('errors.title')}
+            </p>
             <p className="text-sm text-rose-800 dark:text-rose-200">{error}</p>
           </div>
         </div>
@@ -331,8 +354,12 @@ export function ReportingCenter({ initialPresetId }: { initialPresetId?: string 
             <CardHeader>
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
-                  <CardTitle className="text-lg text-zinc-900 dark:text-zinc-50">{selectedPreset.title}</CardTitle>
-                  <CardDescription className="mt-1">{selectedPreset.description}</CardDescription>
+                  <CardTitle className="text-lg text-zinc-900 dark:text-zinc-50">
+                    {selectedPreset.title}
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    {selectedPreset.description}
+                  </CardDescription>
                 </div>
                 <Badge
                   variant="outline"
@@ -351,9 +378,12 @@ export function ReportingCenter({ initialPresetId }: { initialPresetId?: string 
               )}
             </CardContent>
           </Card>
+
           <Card className="border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/40">
             <CardHeader>
-              <CardTitle className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">{t('gallery.title')}</CardTitle>
+              <CardTitle className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                {t('gallery.title')}
+              </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
               {presets.map((p) => (
@@ -391,7 +421,10 @@ export function ReportingCenter({ initialPresetId }: { initialPresetId?: string 
             <thead className="sticky top-0 z-10 bg-amber-100/90 dark:bg-amber-950/50 backdrop-blur">
               <tr>
                 {displayColumns.map((c) => (
-                  <th key={c.key} className="px-3 py-2 text-left font-semibold text-amber-950 dark:text-amber-100">
+                  <th
+                    key={c.key}
+                    className="px-3 py-2 text-left font-semibold text-amber-950 dark:text-amber-100"
+                  >
                     {c.label}
                   </th>
                 ))}

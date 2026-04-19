@@ -16,10 +16,11 @@ import { ProUpgradeCard } from "@/components/UpgradeButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
-import { PRICING, FREE_TIER_CLIENT_LIMIT } from "@/lib/pricing";
+import { PRICING, FREE_TIER_CLIENT_LIMIT, FREE_TIER_MONTHLY_INVOICE_LIMIT } from "@/lib/pricing";
 
 type WorkspaceSummary = {
   planInterval: string | null;
+  planTier: string;
   subscriptionStatus: string;
   subscriptionEndsAt: Date | string | null;
   billingProviderId: string | null;
@@ -99,7 +100,10 @@ export default function BillingSettingsClient({
 
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
-  const isPro = workspace.subscriptionStatus === "PRO" && !subscriptionCancelled;
+  const isPaidSubscription =
+    (workspace.subscriptionStatus === "PRO" || workspace.subscriptionStatus === "TEAM") &&
+    !subscriptionCancelled;
+  const isTrialing = workspace.subscriptionStatus === "TRIALING" && !subscriptionCancelled;
   const clientCount = workspace._count.clients;
   const clientLimit = FREE_TIER_CLIENT_LIMIT;
   const usagePercentage = Math.min((clientCount / clientLimit) * 100, 100);
@@ -116,13 +120,18 @@ export default function BillingSettingsClient({
   );
 
   const { activePrice, intervalText } = useMemo(() => {
-    if (!isPro) return { activePrice: 0, intervalText: "Forever" };
+    if (isTrialing) return { activePrice: 0, intervalText: "Trial — Pro features" };
+    if (!isPaidSubscription) return { activePrice: 0, intervalText: "Forever" };
+    const isTeam = workspace.subscriptionStatus === "TEAM" || workspace.planTier === "TEAM";
+    if (isTeam) {
+      if (workspace.planInterval === "TEAM_MONTHLY") return { activePrice: PRICING.TEAM_MONTHLY, intervalText: "Per Month (Team)" };
+      if (workspace.planInterval === "TEAM_YEARLY") return { activePrice: PRICING.TEAM_YEARLY, intervalText: "Per Year (Team)" };
+      return { activePrice: PRICING.TEAM_MONTHLY, intervalText: "Team plan" };
+    }
     if (workspace.planInterval === "MONTHLY") return { activePrice: PRICING.MONTHLY, intervalText: "Per Month" };
     if (workspace.planInterval === "QUARTERLY") return { activePrice: PRICING.QUARTERLY, intervalText: "Per Quarter" };
-    if (workspace.planInterval === "TEAM_MONTHLY") return { activePrice: PRICING.TEAM_MONTHLY, intervalText: "Per Month (Team)" };
-    if (workspace.planInterval === "TEAM_YEARLY") return { activePrice: PRICING.TEAM_YEARLY, intervalText: "Per Year (Team)" };
     return { activePrice: PRICING.YEARLY, intervalText: "Per Year" };
-  }, [isPro, workspace.planInterval]);
+  }, [isPaidSubscription, isTrialing, workspace.planInterval, workspace.planTier, workspace.subscriptionStatus]);
 
   const fetchBillingHistory = useCallback(async () => {
     setBillingLoading(true);
@@ -333,10 +342,16 @@ export default function BillingSettingsClient({
                 <div>
                   <div className="flex items-center gap-3">
                     <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-                      {isPro ? `Pro Agency Plan (${workspace.planInterval || "YEARLY"})` : "Free Starter Plan"}
+                      {isTrialing
+                        ? "Trial — full paid features"
+                        : isPaidSubscription
+                          ? workspace.subscriptionStatus === "TEAM" || workspace.planTier === "TEAM"
+                            ? `Team Plan (${workspace.planInterval || "TEAM_MONTHLY"})`
+                            : `Pro Plan (${workspace.planInterval || "YEARLY"})`
+                          : "Free Plan"}
                     </h2>
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-widest ${
-                      isPro
+                      isPaidSubscription || isTrialing
                         ? "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50"
                         : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700"
                     }`}>
@@ -344,13 +359,19 @@ export default function BillingSettingsClient({
                     </span>
                   </div>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2 font-medium">
-                    {isPro
-                      ? `Your subscription auto-renews on ${
+                    {isTrialing
+                      ? `Your trial ends on ${
                           workspace.subscriptionEndsAt
                             ? new Date(workspace.subscriptionEndsAt).toLocaleDateString(locale)
-                            : "next billing cycle"
-                        }.`
-                      : "Perfect for freelancers and micro-agencies just starting out."}
+                            : "—"
+                        }. You have full Pro/Team features during the trial.`
+                      : isPaidSubscription
+                        ? `Your subscription auto-renews on ${
+                            workspace.subscriptionEndsAt
+                              ? new Date(workspace.subscriptionEndsAt).toLocaleDateString(locale)
+                              : "next billing cycle"
+                          }.`
+                        : "One workspace per account. Free tier includes limited clients and invoices per month."}
                   </p>
                   {cancelError && (
                     <p className="mt-2 text-xs font-semibold text-rose-600 dark:text-rose-400">
@@ -360,11 +381,13 @@ export default function BillingSettingsClient({
                 </div>
                 <div className="text-right hidden sm:block">
                   <p className="text-3xl font-black text-zinc-900 dark:text-zinc-50">{formatMoney(activePrice)}</p>
-                  <p className="text-xs text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-widest mt-1">{intervalText}</p>
+                  <p className="text-xs text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-widest mt-1">
+                    {(isPaidSubscription || isTrialing) ? intervalText : `${FREE_TIER_MONTHLY_INVOICE_LIMIT} invoices/mo limit`}
+                  </p>
                 </div>
               </div>
 
-              {!isPro && (
+              {!isPaidSubscription && !isTrialing && (
                 <>
                   <Separator className="dark:bg-zinc-800" />
                   <div>
@@ -384,7 +407,7 @@ export default function BillingSettingsClient({
                 </>
               )}
             </CardContent>
-            {isPro && (
+            {isPaidSubscription && (
               <CardFooter className="bg-zinc-50 dark:bg-zinc-950/50 border-t dark:border-zinc-800 p-4">
                 <Button
                   variant="outline"
@@ -399,7 +422,7 @@ export default function BillingSettingsClient({
             )}
           </Card>
 
-          {!isPro && <ProUpgradeCard locale={locale} currency={currency} />}
+          {!isPaidSubscription && !isTrialing && <ProUpgradeCard locale={locale} currency={currency} />}
 
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
             <CardHeader className="bg-zinc-50/50 dark:bg-zinc-950/50 border-b dark:border-zinc-800">

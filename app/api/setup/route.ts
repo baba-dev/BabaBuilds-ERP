@@ -211,6 +211,11 @@ export async function POST(req: Request) {
         console.error('[setup] AR Collections module init failed (non-blocking):', e)
       );
     }
+    if (body.enableReportingCenter === true) {
+      await enableModule(workspaceId, 'REPORTING_CENTER', userId).catch((e) =>
+        console.error('[setup] Reporting Center module init failed (non-blocking):', e)
+      );
+    }
 
     if (body.enableReportingCenter === true) {
       await enableModule(workspaceId, 'REPORTING_CENTER', userId).catch((e) =>

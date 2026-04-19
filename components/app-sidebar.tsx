@@ -76,9 +76,7 @@ export function AppSidebar() {
 
       if (teamRes.ok) {
         const payload = (await teamRes.json()) as { data?: { grantedPermissions?: Record<string, boolean> } };
-        const granted = Object.entries(payload.data?.grantedPermissions ?? {})
-          .filter(([, v]) => v)
-          .map(([k]) => k);
+        const granted = Object.entries(payload.data?.grantedPermissions ?? {}).filter(([,v]) => v).map(([k]) => k);
         setGrantedPermissions(new Set(granted));
       }
     } catch {

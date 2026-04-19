@@ -307,7 +307,8 @@
     "group_sales": "Ventas",
     "group_finance": "Finanzas",
     "group_compliance": "Cumplimiento",
-    "group_workspace": "Espacio de trabajo"
+    "group_workspace": "Espacio de trabajo",
+    "reporting_center": "Centro de Informes"
   },
   "UserNav": {
     "my_account": "Mi Cuenta",
