@@ -337,7 +337,8 @@
     "group_sales": "Sales",
     "group_finance": "Finance",
     "group_compliance": "Compliance",
-    "group_workspace": "Workspace"
+    "group_workspace": "Workspace",
+    "reporting_center": "Reporting Center"
   },
   "UserNav": {
     "my_account": "My Account",

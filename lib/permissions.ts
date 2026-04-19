@@ -156,6 +156,10 @@ export const PERMISSION_KEYS = [
   // Reports
   'reports.view',
   'reports.export',        // separate from view — controls bulk export surfaces
+  'reporting_center.view',
+  'reporting_center.query.run',
+  'reporting_center.preset.manage',
+  'reporting_center.export',
 
   // Clients
   'clients.view',
@@ -238,6 +242,7 @@ export const PERMISSION_MODULE_GROUPS: { module: string; label: string; keys: Pe
     ],
   },
   { module: 'reports',         label: 'Reports',          keys: ['reports.view', 'reports.export'] },
+  { module: 'reporting_center', label: 'Reporting Center', keys: ['reporting_center.view', 'reporting_center.query.run', 'reporting_center.preset.manage', 'reporting_center.export'] },
   { module: 'clients',         label: 'Clients',          keys: ['clients.view', 'clients.manage'] },
   { module: 'workspace',       label: 'Workspace Admin',  keys: ['workspace.manage_members', 'workspace.manage_roles', 'workspace.manage_settings'] },
   { module: 'billing',         label: 'Billing',          keys: ['billing.manage'] },
@@ -326,6 +331,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'tax.withholding.record',
     'tax.withholding.ingest',
     'reports.view', 'reports.export',
+    'reporting_center.view', 'reporting_center.query.run', 'reporting_center.preset.manage', 'reporting_center.export',
     'clients.view', 'clients.manage',
     'workspace.manage_members', 'workspace.manage_roles', 'workspace.manage_settings',
     'billing.manage',
@@ -375,6 +381,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'tax.withholding.record',
     'tax.withholding.ingest',
     'reports.view', 'reports.export',
+    'reporting_center.view', 'reporting_center.query.run', 'reporting_center.preset.manage', 'reporting_center.export',
     'clients.view', 'clients.manage',
     'workspace.manage_members', 'workspace.manage_roles', 'workspace.manage_settings',
     // NOT: billing.manage
@@ -421,6 +428,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'tax.withholding.record',
     'tax.withholding.ingest',
     'reports.view', 'reports.export',
+    'reporting_center.view', 'reporting_center.query.run', 'reporting_center.export',
     'clients.view',
     // NOT: accounting.post, tax.approve, billing.manage, workspace.manage_*
     // Workforce — view-only (payroll cost oversight)
@@ -475,6 +483,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'retainers.view',
     'service_orders.view',
     'reports.view',
+    'reporting_center.view', 'reporting_center.query.run', 'reporting_center.export',
     'clients.view', 'clients.manage',
     // NOT: expenses admin, purchase_orders, inventory, accounting, tax, financial exports
   ],
@@ -538,6 +547,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'dashboard.view',
     'tax.readiness.view',
     'reports.view',
+    'reporting_center.view',
     'invoices.view',
     'expenses.view',
     'clients.view',
