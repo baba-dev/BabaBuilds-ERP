@@ -18,7 +18,14 @@ export function computeBankRowImportHash(args: {
   amountSigned: string;
   description: string;
   reference?: string | null;
+  providerTransactionId?: string | null;
 }): string {
+  const pid = args.providerTransactionId?.trim();
+  if (pid) {
+    return createHash("sha256")
+      .update(`${args.workspaceId}|${args.accountId}|${pid}`)
+      .digest("hex");
+  }
   const desc = normalizeDescriptionForHash(args.description);
   const ref = (args.reference ?? "").trim().toUpperCase().replace(/\s+/g, "").slice(0, 120);
   const payload = [

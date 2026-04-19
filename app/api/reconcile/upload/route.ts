@@ -15,6 +15,8 @@ import {
 import { excelBufferToGrid } from "@/lib/reconciliation/bank-excel";
 import { parseOfxTransactions } from "@/lib/reconciliation/bank-ofx";
 import { parseBankPdfToTransactions } from "@/lib/reconciliation/bank-pdf";
+import { parseCamt053ToTransactions } from "@/lib/reconciliation/bank-camt";
+import { parseMt940ToTransactions } from "@/lib/reconciliation/bank-mt940";
 import { persistAndMatchTransactions } from "@/lib/reconciliation/run-reconciliation-upload";
 import { getOrCreateReconciliationSettings } from "@/lib/reconciliation/reconciliation-settings";
 
@@ -105,10 +107,28 @@ export async function POST(request: Request) {
     let transactions: import("@/lib/reconciliation/bank-csv-parse").ParsedBankTransaction[] = [];
     let parseMeta: Prisma.InputJsonValue = {};
 
+    const sniffText = buffer.slice(0, Math.min(buffer.length, 4096)).toString("utf-8");
+    const looksCamt =
+      sniffText.includes("BkToCstmrStmt") ||
+      sniffText.includes("Camt.053") ||
+      sniffText.includes("camt.053");
+
     if (lower.endsWith(".ofx") || lower.endsWith(".qfx")) {
       const text = buffer.toString("utf-8");
       transactions = parseOfxTransactions(text);
       parseMeta = { format: "OFX", rowCount: transactions.length };
+    } else if (looksCamt || lower.endsWith(".xml")) {
+      const text = buffer.toString("utf-8");
+      transactions = parseCamt053ToTransactions(text);
+      parseMeta = { format: "CAMT053", rowCount: transactions.length };
+    } else if (
+      lower.endsWith(".mt940") ||
+      lower.endsWith(".sta") ||
+      lower.endsWith(".940")
+    ) {
+      const text = buffer.toString("utf-8");
+      transactions = parseMt940ToTransactions(text);
+      parseMeta = { format: "MT940", rowCount: transactions.length };
     } else if (lower.endsWith(".pdf")) {
       transactions = await parseBankPdfToTransactions(buffer);
       parseMeta = { format: "PDF", rowCount: transactions.length };

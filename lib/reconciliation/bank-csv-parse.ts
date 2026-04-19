@@ -18,6 +18,8 @@ export type ParsedBankTransaction = {
   amountOriginalCurrency?: number;
   /** Parser / validation hints surfaced to UI */
   parseFlags?: Record<string, unknown>;
+  /** Plaid / ISO20022 stable id for deduplication */
+  providerTransactionId?: string;
 };
 
 export type ColumnRole =

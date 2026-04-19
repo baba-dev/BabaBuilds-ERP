@@ -95,6 +95,7 @@ type Action =
   | { type: 'IGNORE_ITEM'; payload: Transaction }
   | { type: 'RESTORE_ITEM'; payload: Transaction }
   | { type: 'BULK_APPROVE'; payload: { items: Transaction[] } }
+  | { type: 'UPDATE_TRANSACTION'; payload: { id: string; patch: Partial<Transaction> } }
   | { type: 'RESET_ALL' };
 
 // --- REDUCER LOGIC ---
@@ -141,6 +142,18 @@ function reconReducer(state: State, action: Action): State {
         pendingAi: state.pendingAi.filter(i => !idsToApprove.has(i.id)),
         approvedAi: [...action.payload.items, ...state.approvedAi]
       };
+    case 'UPDATE_TRANSACTION': {
+      const { id, patch } = action.payload;
+      const map = (rows: Transaction[]) =>
+        rows.map((r) => (r.id === id ? { ...r, ...patch } : r));
+      return {
+        ...state,
+        autoMatched: map(state.autoMatched),
+        pendingAi: map(state.pendingAi),
+        approvedAi: map(state.approvedAi),
+        ignored: map(state.ignored),
+      };
+    }
     case 'RESET_ALL':
       return initialState;
     default:
@@ -433,7 +446,7 @@ export default function ReconciliationWizard() {
         }));
 
         toast(t('found_similar', { count: similarPending.length, vendor: updatedItem.aiVendor }), {
-          icon: <Sparkles className="w-4 h-4 text-purple-500" />,
+          icon: <Sparkles className="w-4 h-4 text-amber-500" />,
           action: {
             label: t('apply_all'),
             onClick: () => {
@@ -484,7 +497,7 @@ export default function ReconciliationWizard() {
           <Badge className="bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 border-none hover:bg-blue-100 dark:hover:bg-blue-900/40">{t("invoice_match")}</Badge>
         ) : (
           <div className="flex gap-1">
-            <Badge className="bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300 border-none">{row.aiCategory}</Badge>
+            <Badge className="bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 border-none">{row.aiCategory}</Badge>
             <Badge variant="outline" className="text-zinc-600 dark:text-zinc-400 dark:border-zinc-700">{row.aiVendor}</Badge>
           </div>
         ),
@@ -606,13 +619,13 @@ export default function ReconciliationWizard() {
             )}
           </div>
 
-          <Card className="border-2 border-dashed border-zinc-300 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all duration-300 hover:border-purple-300 dark:hover:border-purple-900 shadow-none relative overflow-hidden">
+          <Card className="border-2 border-dashed border-zinc-300 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all duration-300 hover:border-amber-300 dark:hover:border-amber-900 shadow-none relative overflow-hidden">
             <CardContent className="flex flex-col items-center justify-center py-20 px-4 text-center">
               {isProcessing ? (
                 <PageLoadingState title={t('ai_classifying')} description={t('matching_desc')} className="min-h-[260px]" />
               ) : (
                 <div className="space-y-4 flex flex-col items-center group">
-                  <div className="w-16 h-16 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 group-hover:border-purple-200 dark:group-hover:border-purple-800 rounded-full flex items-center justify-center shadow-sm transition-all duration-300">
+                  <div className="w-16 h-16 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 group-hover:border-amber-200 dark:group-hover:border-amber-800 rounded-full flex items-center justify-center shadow-sm transition-all duration-300">
                     <UploadCloud className="w-8 h-8" />
                   </div>
                   <div className="space-y-1">
@@ -782,7 +795,7 @@ export default function ReconciliationWizard() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 flex flex-wrap items-center gap-2">
-              {t('wizard_title')} <Badge className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-none"><Sparkles className="w-3 h-3 mr-1" /> {t('human_loop')}</Badge>
+              {t('wizard_title')} <Badge className="bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-200 border-none"><Sparkles className="w-3 h-3 mr-1" /> {t('human_loop')}</Badge>
             </h1>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1 font-medium">{t('wizard_desc')}</p>
           </div>
@@ -851,13 +864,13 @@ export default function ReconciliationWizard() {
             </CardContent>
           </Card>
 
-          <Card variant="accent-highlighted" className={`border-purple-200 dark:border-purple-900/50 bg-purple-50/50 dark:bg-purple-950/20 ${needsReviewCount > 0 ? 'ring-2 ring-purple-400 dark:ring-purple-600 ring-offset-2 dark:ring-offset-zinc-950' : ''}`}>
+          <Card variant="accent-highlighted" className={`border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20 ${needsReviewCount > 0 ? 'ring-2 ring-amber-400 dark:ring-amber-600 ring-offset-2 dark:ring-offset-zinc-950' : ''}`}>
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold text-purple-800 dark:text-purple-400 uppercase tracking-wider mb-1">{t('metrics_review')}</p>
-                <p className="text-3xl font-black text-purple-900 dark:text-purple-50">{needsReviewCount}</p>
+                <p className="text-xs font-bold text-amber-900 dark:text-amber-400 uppercase tracking-wider mb-1">{t('metrics_review')}</p>
+                <p className="text-3xl font-black text-amber-950 dark:text-amber-50">{needsReviewCount}</p>
               </div>
-              <Sparkles className="w-10 h-10 text-purple-300 dark:text-purple-900/50" />
+              <Sparkles className="w-10 h-10 text-amber-300 dark:text-amber-900/50" />
             </CardContent>
           </Card>
 
@@ -891,7 +904,7 @@ export default function ReconciliationWizard() {
                 )}
               >
                 <Sparkles className="size-4" /> {t("tab_queue")}
-                <Badge variant="secondary" className="ml-1 border-none bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">{state.pendingAi.length}</Badge>
+                <Badge variant="secondary" className="ml-1 border-none bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-200">{state.pendingAi.length}</Badge>
               </Button>
               <Button
                 type="button"
@@ -938,7 +951,7 @@ export default function ReconciliationWizard() {
                   <PageEmptyState title={t('empty_queue_title')} description={t('empty_queue_desc')} className="min-h-[400px]" />
                 ) : (
                   <Table>
-                    <TableHeader className="bg-purple-50/30 dark:bg-purple-900/10">
+                    <TableHeader className="bg-amber-50/30 dark:bg-amber-900/10">
                       <TableRow className="dark:border-zinc-800">
                         <TableHead className="w-1/3 font-bold dark:text-zinc-400">{t('col_bank_line')}</TableHead>
                         <TableHead className="font-bold dark:text-zinc-400">{t('col_ai_mapping')}</TableHead>
