@@ -8,11 +8,17 @@ import { prisma } from '@/lib/prisma';
 
 type TaxEstimateScenarioPayload = {
   country?: string | null;
+  regionCode?: string | null;
   revenue?: number | string | null;
   deductions?: number | string | null;
   serviceScope?: string | null;
   customerScope?: string | null;
   date?: string | null;
+  correction?: {
+    ratePercent?: number | string | null;
+    overrideId?: string | null;
+    reason?: string | null;
+  } | null;
   override?: {
     ratePercent?: number | string | null;
     overrideId?: string | null;
@@ -46,14 +52,15 @@ export async function POST(request: Request) {
 
     const taxEstimate = estimateTax({
       countryCode: countryForEstimate,
+      serviceScope: payload.serviceScope,
+      regionCode: payload.regionCode,
       revenue: payload.revenue,
       deductions: payload.deductions,
-      serviceScope: payload.serviceScope,
       customerScope: payload.customerScope,
       asOfDate: payload.date,
-      overrideRatePercent: payload.override?.ratePercent,
-      overrideId: payload.override?.overrideId,
-      overrideReason: payload.override?.reason,
+      overrideRatePercent: payload.correction?.ratePercent ?? payload.override?.ratePercent,
+      overrideId: payload.correction?.overrideId ?? payload.override?.overrideId,
+      overrideReason: payload.correction?.reason ?? payload.override?.reason ?? 'User-corrected tax rate',
     });
 
     return NextResponse.json({ taxEstimate });
