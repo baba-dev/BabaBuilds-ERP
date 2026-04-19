@@ -95,9 +95,10 @@ export function ImportManagerClient() {
     if (!previewRunId) return;
     setLoading(true);
     try {
+      const idem = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `import-${Date.now()}`;
       const res = await fetch('/api/imports/execute', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idem },
         body: JSON.stringify({ previewRunId, mode }),
       });
       const data = await res.json();
@@ -253,6 +254,11 @@ export function ImportManagerClient() {
             <Badge variant="outline">Skipped {String(result.skipped ?? 0)}</Badge>
             <Badge variant="outline">Failed {String(result.failed ?? 0)}</Badge>
             <Badge variant="outline">Rows {String(result.totalRowsParsed ?? 0)}</Badge>
+            {Number(result.failed ?? 0) > 0 && previewRunId ? (
+              <a className="text-xs underline text-amber-600" href={`/api/imports/history/${previewRunId}/errors.csv`}>
+                Download error CSV
+              </a>
+            ) : null}
           </CardContent>
         </Card>
       )}
@@ -267,7 +273,7 @@ export function ImportManagerClient() {
                 {history.length === 0 ? (
                   <tr><td className="p-3 text-zinc-500" colSpan={6}>No import runs yet.</td></tr>
                 ) : history.map((run, i) => (
-                  <tr key={String(run.id ?? i)} className="border-t"><td className="p-2">{String(run.entityKey ?? '')}</td><td className="p-2">{String(run.fileName ?? '')}</td><td className="p-2">{String(run.executionMode ?? run.sourceMode ?? '')}</td><td className="p-2">{run.aiUsed ? 'Yes' : 'No'}</td><td className="p-2">I:{String(run.importedCount ?? 0)} U:{String(run.updatedCount ?? 0)} S:{String(run.skippedCount ?? 0)} F:{String(run.failedCount ?? 0)}</td><td className="p-2">{String(run.status ?? '')}</td></tr>
+                  <tr key={String(run.id ?? i)} className="border-t"><td className="p-2">{String(run.entityKey ?? '')}</td><td className="p-2">{String(run.fileName ?? '')}</td><td className="p-2">{String(run.executionMode ?? run.sourceMode ?? '')}</td><td className="p-2">{run.aiUsed ? 'Yes' : 'No'}</td><td className="p-2">I:{String(run.importedCount ?? 0)} U:{String(run.updatedCount ?? 0)} S:{String(run.skippedCount ?? 0)} F:{String(run.failedCount ?? 0)} <span className="text-zinc-400">({String(run.lastProcessedRow ?? 0)})</span></td><td className="p-2 space-x-2">{String(run.status ?? '')}{Number(run.failedCount ?? 0) > 0 ? <a className="underline text-amber-600" href={`/api/imports/history/${String(run.id)}/errors.csv`}>Errors</a> : null}</td></tr>
                 ))}
               </tbody>
             </table>

@@ -2402,9 +2402,16 @@ model ImportRun {
   updatedCount  Int @default(0)
   skippedCount  Int @default(0)
   failedCount   Int @default(0)
+  lastProcessedRow Int @default(0)
 
+  inputJson   Json?
   previewJson Json?
   resultJson  Json?
+  errorReportJson Json?
+  sourceDigest String?
+  idempotencyKey String?
+  executionStartedAt DateTime?
+  executionFinishedAt DateTime?
 
   initiatedByUserId String?
 
@@ -2413,6 +2420,7 @@ model ImportRun {
 
   @@index([workspaceId, createdAt(sort: Desc)])
   @@index([workspaceId, entityKey, status])
+  @@unique([workspaceId, idempotencyKey])
 }
 
 // ==========================================

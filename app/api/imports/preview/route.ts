@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { requireImportContext } from '@/lib/imports/core/auth';
 import { buildPreview } from '@/lib/imports/core/preview';
 import { IMPORT_ENTITY_KEYS } from '@/lib/imports/core/types';
+import { computeImportDigest } from '@/lib/imports/core/digest';
 
 const Mapping = z.object({ sourceHeader: z.string(), targetField: z.string().nullable(), confidence: z.number(), source: z.enum(['synonym', 'ai', 'manual']), reason: z.string().optional() });
 const Body = z.object({
@@ -20,6 +21,16 @@ export async function POST(req: Request) {
   try {
     const context = await requireImportContext();
     const body = Body.parse(await req.json());
+    const immutableInput = {
+      entity: body.entity,
+      sourceMode: body.sourceMode,
+      fileName: body.fileName,
+      headers: body.headers,
+      rows: body.rows,
+      mappings: body.mappings,
+      aiUsed: body.aiUsed,
+    };
+    const sourceDigest = computeImportDigest(immutableInput);
     const preview = buildPreview(body);
 
     const run = await prisma.importRun.create({
@@ -36,6 +47,8 @@ export async function POST(req: Request) {
         updatedCount: 0,
         skippedCount: preview.counts.skipped,
         failedCount: preview.counts.errors,
+        sourceDigest,
+        inputJson: immutableInput as unknown as object,
         previewJson: preview as unknown as object,
       },
       select: { id: true },

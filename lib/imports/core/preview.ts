@@ -23,6 +23,13 @@ function emailOk(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function normalizeDedupeValue(value: unknown): string {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '')
+    .trim();
+}
+
 export function buildPreview(args: {
   entity: ImportEntityKey;
   fileName: string;
@@ -95,8 +102,16 @@ export function buildPreview(args: {
 
     let dedupeKey = '';
     if (args.entity === 'clients') dedupeKey = String(normalized.email || `${normalized.name}|${normalized.phone}`);
-    if (args.entity === 'services') dedupeKey = String(normalized.code || normalized.name || '');
-    if (args.entity === 'shop_items') dedupeKey = String(normalized.sku || normalized.name || '');
+    if (args.entity === 'services') {
+      const code = normalizeDedupeValue(normalized.code);
+      const name = normalizeDedupeValue(normalized.name);
+      dedupeKey = code || name;
+    }
+    if (args.entity === 'shop_items') {
+      const sku = normalizeDedupeValue(normalized.sku);
+      const name = normalizeDedupeValue(normalized.name);
+      dedupeKey = sku || name;
+    }
     if (args.entity === 'inventory') dedupeKey = String(normalized.sku || '');
     if (args.entity === 'proposals') dedupeKey = String(normalized.proposalNo || `${normalized.title}|${normalized.clientEmail}` || '');
     if (args.entity === 'expenses') dedupeKey = String(`${normalized.vendor}|${normalized.amount}|${normalized.date}`);

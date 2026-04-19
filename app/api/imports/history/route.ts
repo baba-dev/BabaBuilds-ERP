@@ -21,8 +21,11 @@ export async function GET() {
         updatedCount: true,
         skippedCount: true,
         failedCount: true,
+        lastProcessedRow: true,
         status: true,
         createdAt: true,
+        executionStartedAt: true,
+        executionFinishedAt: true,
         initiatedByUserId: true,
       },
     });
