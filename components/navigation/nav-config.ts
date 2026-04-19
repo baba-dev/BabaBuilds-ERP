@@ -18,6 +18,7 @@ import {
   FileText,
   Wallet,
   Siren,
+  ChartColumnBig,
   type LucideIcon,
 } from "lucide-react";
 
@@ -27,6 +28,7 @@ export type AppNavItem = {
   icon: LucideIcon;
   badge?: "New" | "AI";
   requiresModule?: string; // Module key required to show this item (e.g., 'WORKFORCE')
+  requiresPermission?: string;
 };
 
 export const appNavItems: AppNavItem[] = [
@@ -41,6 +43,7 @@ export const appNavItems: AppNavItem[] = [
   { key: "expenses_margins", path: "/expenses", icon: Receipt },
   { key: "cash_flow", path: "/cash-flow/overview", icon: HandCoins, badge: "New", requiresModule: "CASH_FLOW" },
   { key: "ar_collections", path: "/ar-collections", icon: Siren, badge: "New", requiresModule: "AR_COLLECTIONS" },
+  { key: "reporting_center", path: "/reporting", icon: ChartColumnBig, requiresModule: "REPORTING_CENTER", requiresPermission: "reporting_center.view" },
   { key: "savings_tax", path: "/tax", icon: ShieldCheck },
   { key: "ai_reconciliation", path: "/reconciliation", icon: Sparkles, badge: "AI" },
   { key: "invoices_and_earnings", path: "/income", icon: ReceiptText },

@@ -13,6 +13,7 @@ import {
   Sparkles,
   Store,
   Users,
+  ChartColumnBig,
 } from "lucide-react";
 
 export const navIconMap = {
@@ -29,6 +30,7 @@ export const navIconMap = {
   savingsAndTax: ShieldCheck,
   caCompliance: Landmark,
   settings: Settings,
+  reportingCenter: ChartColumnBig,
 } as const satisfies Record<string, LucideIcon>;
 
 export type NavIconName = keyof typeof navIconMap;

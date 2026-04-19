@@ -252,7 +252,8 @@
     "group_sales": "बिक्री",
     "group_finance": "वित्त",
     "group_compliance": "अनुपालन",
-    "group_workspace": "वर्कस्पेस"
+    "group_workspace": "वर्कस्पेस",
+    "reporting_center": "रिपोर्टिंग सेंटर"
   },
   "UserNav": {
     "my_account": "मेरा खाता",
