@@ -1,4 +1,5 @@
 import fallbackRatesJson from '@/lib/tax/fallback-rates.json';
+import { COMPLIANCE_PACK_DEFAULT_RATES, resolveJurisdictionalRate } from '@/lib/tax/compliance-packs';
 
 export interface TaxRuleSourceMetadata {
   sourceName: string;
@@ -42,11 +43,25 @@ export function toTaxResolverInputMap(rules: TaxRuleInput[]): Record<string, num
   }, {});
 }
 
-export const COUNTRY_DEFAULT_TAX_RATES = toTaxResolverInputMap(FALLBACK_TAX_RULES);
+export const COUNTRY_DEFAULT_TAX_RATES: Record<string, number> = {
+  ...toTaxResolverInputMap(FALLBACK_TAX_RULES),
+  ...COMPLIANCE_PACK_DEFAULT_RATES,
+};
 
 export function estimateTaxFromRules(input: { countryCode?: string | null; regionCode?: string | null; taxableAmount?: number }): number {
   const normalizedCountryCode = normalizeCountryCode(input.countryCode ?? '');
   if (!normalizedCountryCode) return 0;
+
+  const jurisdictionResolution = resolveJurisdictionalRate({
+    countryCode: normalizedCountryCode,
+    regionCode: input.regionCode,
+    includeUSLocalDefault: true,
+  });
+
+  if (jurisdictionResolution.rate > 0 || jurisdictionResolution.jurisdictionCode) {
+    return jurisdictionResolution.rate;
+  }
+
   const rate = COUNTRY_DEFAULT_TAX_RATES[normalizedCountryCode];
   return typeof rate === 'number' ? rate : 0;
 }

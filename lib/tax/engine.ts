@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { serializeMoney, toDecimal } from '@/lib/money';
-import { COUNTRY_DEFAULT_TAX_RATES } from '@/lib/tax/rules';
+import { estimateTaxFromRules as estimateCountryRateFromRules } from '@/lib/tax/rules';
 
 export type TaxDisclaimerKey = 'AUTO_RULE' | 'MANUAL_OVERRIDE' | 'PROVIDER_RATE' | 'FALLBACK_RULE';
 
@@ -49,15 +49,15 @@ const normalizePercent = (value: unknown): number | null => {
   return normalized > 1 ? normalized : normalized * 100;
 };
 
-const resolveProviderRatePercent = (countryCode?: string | null): number | null => {
+const resolveProviderRatePercent = (countryCode?: string | null, regionCode?: string | null): number | null => {
   const normalized = (countryCode || '').trim().toUpperCase();
   if (!normalized) return null;
-  const providerRate = COUNTRY_DEFAULT_TAX_RATES[normalized];
+  const providerRate = estimateCountryRateFromRules({ countryCode: normalized, regionCode });
   if (typeof providerRate !== 'number') return null;
   return providerRate * 100;
 };
 
-export const estimateTaxFromRules = (taxableIncome: Prisma.Decimal): { amount: Prisma.Decimal; ratePercent: number } => {
+export const estimateIndiaIncomeTaxFromRules = (taxableIncome: Prisma.Decimal): { amount: Prisma.Decimal; ratePercent: number } => {
   const slabs: Array<{ floor: number; width: number | null; rate: number }> = [
     { floor: 300000, width: 300000, rate: 0.05 },
     { floor: 600000, width: 300000, rate: 0.1 },
@@ -95,7 +95,7 @@ export const estimateTax = (input: TaxEstimateInput): TaxEstimateResult => {
 
   const overrideRatePercent = normalizePercent(input.overrideRatePercent);
   const normalizedCountryCode = input.countryCode?.trim().toUpperCase() || null;
-  const providerRatePercent = resolveProviderRatePercent(normalizedCountryCode);
+  const providerRatePercent = resolveProviderRatePercent(normalizedCountryCode, input.serviceScope);
   const resolutionMode = input.resolutionMode ?? 'auto';
   const hasCountryRuleEngine = Boolean(normalizedCountryCode && RULE_ENGINE_COUNTRIES.has(normalizedCountryCode));
 
@@ -138,7 +138,7 @@ export const estimateTax = (input: TaxEstimateInput): TaxEstimateResult => {
     }
 
     if (hasCountryRuleEngine && resolutionMode !== 'prefer_provider_rate') {
-      const fromRules = estimateTaxFromRules(taxableIncome);
+      const fromRules = estimateIndiaIncomeTaxFromRules(taxableIncome);
       return {
         amount: serializeMoney(fromRules.amount),
         ratePercent: fromRules.ratePercent,

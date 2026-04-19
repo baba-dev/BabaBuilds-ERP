@@ -1,6 +1,10 @@
+import { resolveJurisdictionalRate } from '@/lib/tax/compliance-packs';
 import { COUNTRY_DEFAULT_TAX_RATES } from '@/lib/tax/rules';
+
 export interface ResolveTaxRateInput {
   countryCode?: string | null;
+  regionCode?: string | null;
+  applyDefaultUSLocalRate?: boolean;
   isTaxExempt: boolean;
   serviceTaxRates?: Array<number | null | undefined>;
   workspaceDefaultTaxRate?: number | null;
@@ -10,7 +14,7 @@ export interface ResolveTaxRateInput {
 export interface TaxRateResolution {
   taxRate: number;
   taxMode: 'taxable' | 'exempt';
-  source: 'override' | 'service_code' | 'workspace_default' | 'country_default' | 'exempt';
+  source: 'override' | 'service_code' | 'workspace_default' | 'country_default' | 'jurisdiction_default' | 'exempt';
   requiresUserInput?: boolean;
   reason?: 'MISSING_RATE' | 'MIXED_SERVICE_RATES';
   candidates?: number[];
@@ -27,6 +31,8 @@ export function normalizeTaxRate(raw: unknown): number | null {
 
 export function resolveTaxRate({
   countryCode,
+  regionCode,
+  applyDefaultUSLocalRate = true,
   isTaxExempt,
   serviceTaxRates = [],
   workspaceDefaultTaxRate,
@@ -67,6 +73,16 @@ export function resolveTaxRate({
   const normalizedWorkspaceDefault = normalizeTaxRate(workspaceDefaultTaxRate);
   if (normalizedWorkspaceDefault !== null) {
     return { taxRate: normalizedWorkspaceDefault, taxMode: 'taxable', source: 'workspace_default' };
+  }
+
+  const jurisdiction = resolveJurisdictionalRate({
+    countryCode,
+    regionCode,
+    includeUSLocalDefault: applyDefaultUSLocalRate,
+  });
+
+  if (jurisdiction.source === 'jurisdiction_default') {
+    return { taxRate: jurisdiction.rate, taxMode: 'taxable', source: 'jurisdiction_default' };
   }
 
   const normalizedCountryCode = (countryCode || '').toUpperCase();
