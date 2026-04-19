@@ -11,7 +11,7 @@ import { CLIENT_LOGO_INVALID_TYPE_ERROR, isAllowedClientLogoExtension } from '@/
 import { apiError } from '@/lib/api-error';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
 import { logActivity } from '@/lib/security/activity-log';
-import { FREE_TIER_CLIENT_LIMIT } from '@/lib/pricing';
+import { FREE_TIER_CLIENT_LIMIT, shouldApplyFreeTierLimits } from '@/lib/entitlements';
 import { buildPrivatePath, ensureDir, sniffAllowedContent, uniqueStoredName } from '@/lib/uploads/private-storage';
 
 export async function GET(request: Request) {
@@ -92,15 +92,20 @@ export async function POST(request: Request) {
     // --- 🚨 SAAS MONETIZATION BARRICADE START ---
     const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { planTier: true, _count: { select: { clients: true } } }
+      select: {
+        planTier: true,
+        subscriptionStatus: true,
+        subscriptionEndsAt: true,
+        _count: { select: { clients: true } },
+      },
     });
 
     if (!workspace) {
       return apiError(404, "Workspace not found", "WORKSPACE_NOT_FOUND");
     }
 
-    // The Rule: Free tier gets FREE_TIER_CLIENT_LIMIT clients max.
-    if (workspace.planTier === "FREE" && workspace._count.clients >= FREE_TIER_CLIENT_LIMIT) {
+    // Free tier (non-trial): FREE_TIER_CLIENT_LIMIT clients max.
+    if (shouldApplyFreeTierLimits(workspace) && workspace._count.clients >= FREE_TIER_CLIENT_LIMIT) {
       return apiError(403, "Upgrade Required", "PLAN_LIMIT_REACHED", {
         message: `You have reached the limit of ${FREE_TIER_CLIENT_LIMIT} clients on the Free plan. Upgrade to Pro for unlimited clients.`,
         requiresUpgrade: true,

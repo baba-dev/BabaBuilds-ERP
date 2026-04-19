@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
-import { Check, Gift, Sparkles, ShieldCheck, Users } from "lucide-react";
+import { Check, Gift, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   SegmentedControl,
@@ -43,29 +43,42 @@ const currencies: Currency[] = [
 
 const tiers: PricingTier[] = [
   {
-    name: "Starter",
-    id: "tier-starter",
+    name: "Free",
+    id: "tier-free",
     href: "/api/auth/signin",
     priceMonthly: 0,
-    description: "Perfect for freelancers and small agencies starting out.",
-    features: ["5 Invoices per Month", "1 Workspace", "Standard Proposal Templates", "Client CRM (Basic)", "Multi-Currency support"],
+    description: "Explore the full ERP with sensible limits — one workspace per account.",
+    features: [
+      "5 invoices per calendar month (UTC)",
+      "Up to 3 clients",
+      "Up to 3 published shop listings",
+      "Core CRM, proposals, income & expenses",
+      "Multi-currency support",
+    ],
     featured: false,
     cta: "Start Free",
     icon: Gift,
-    cue: "Good for validating your workflow",
+    cue: "Validate your workflow before you scale",
   },
   {
-    name: "Professional",
+    name: "Pro",
     id: "tier-pro",
     href: "/api/auth/signin",
     priceMonthly: 2.5,
     priceINR: 200,
-    description: "Unleash the full power of automated bookkeeping and AI insights.",
-    features: ["Unlimited Invoices", "3 Workspaces", "AI BabaBot Insights", "Premium Proposal Workflows", "Retainer Automation", "E-Signature integration", "Stripe/Razorpay Gateway"],
+    description: "Solo operators: unlimited invoices, gateways, and automation.",
+    features: [
+      "Unlimited invoices",
+      "Stripe & Razorpay on invoices",
+      "AI BabaBot & premium workflows",
+      "Retainer automation",
+      "Up to 3 seats",
+      "20 MB document storage",
+    ],
     featured: true,
     cta: "Go Pro",
     icon: Sparkles,
-    cue: "Most teams upgrade here",
+    cue: "Best for freelancers who bill every month",
   },
   {
     name: "Team",
@@ -73,25 +86,18 @@ const tiers: PricingTier[] = [
     href: "/api/auth/signin",
     priceMonthly: 5,
     priceINR: 400,
-    description: "Collaborate with your partners, accountants, and staff in one unified workspace.",
-    features: ["Up to 5 Users", "Role-Based Access Control", "Accountant View", "Unlimited Invoices", "All Pro features"],
+    description: "Collaborate with staff and accountants in the same workspace.",
+    features: [
+      "Everything in Pro",
+      "Up to 15 seats",
+      "Role-based access & accountant workflows",
+      "50 MB document storage",
+      "Priority scaling for agencies",
+    ],
     featured: false,
     cta: "Start with Team",
     icon: Users,
-    cue: "Scaling businesses & agencies",
-  },
-  {
-    name: "Enterprise",
-    id: "tier-enterprise",
-    href: "mailto:admin@bababuilds.com",
-    priceMonthly: 2000,
-    isOneTime: true,
-    description: "For agencies and groups managing multiple organizations. $2,000 one-time fee.",
-    features: ["Unlimited Invoices", "Unlimited Workspaces", "Custom Domain support", "Priority CA-Portal Support", "Dedicated Success Manager", "SLA & Security Audits"],
-    featured: false,
-    cta: "Contact Sales",
-    icon: ShieldCheck,
-    cue: "Tailored onboarding included",
+    cue: "Best for agencies with multiple operators",
   },
 ];
 
@@ -103,7 +109,7 @@ export default function PricingSection() {
   const formatPrice = (tier: (typeof tiers)[number]) => {
     if (tier.priceMonthly === 0) return "0";
 
-    if (tier.name === "Professional" && currency.code === "INR") {
+    if (tier.name === "Pro" && currency.code === "INR") {
       const final = billingCycle === "annually" ? PRICING.YEARLY : PRICING.MONTHLY;
       return final.toLocaleString();
     }
@@ -111,12 +117,6 @@ export default function PricingSection() {
     if (tier.name === "Team" && currency.code === "INR") {
       const final = billingCycle === "annually" ? PRICING.TEAM_YEARLY : PRICING.TEAM_MONTHLY;
       return final.toLocaleString();
-    }
-
-    if (tier.name === "Enterprise") {
-      const base = 2000;
-      const converted = currency.code === "USD" ? base : base * currency.rate;
-      return Math.floor(converted).toLocaleString();
     }
 
     const convertedPrice = tier.priceMonthly * currency.rate;
@@ -195,7 +195,7 @@ export default function PricingSection() {
         </div>
 
         <LazyMotion features={domAnimation}>
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
             {tiers.map((tier, idx) => {
               const Icon = tier.icon;
               const price = `${currency.symbol}${formatPrice(tier)}`;
@@ -287,16 +287,16 @@ export default function PricingSection() {
 
         <div className="mt-16 flex flex-col items-center gap-6">
           <div className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-6 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <ShieldCheck className="h-5 w-5 text-emerald-500" />
+            <Check className="h-5 w-5 text-emerald-500" />
             <div className="text-left">
               <p className="mb-1 text-xs font-bold uppercase leading-none tracking-widest text-zinc-500 dark:text-zinc-400">Official MSME Registered</p>
               <p className="text-sm font-black text-zinc-900 dark:text-zinc-100">UDYAM-RJ-21-0089275</p>
             </div>
           </div>
           <p className="text-sm text-zinc-600 dark:text-zinc-300">
-            Need a custom solution for your enterprise?{" "}
+            Questions about Pro or Team?{" "}
             <a href="mailto:admin@bababuilds.com" className="rounded-sm font-bold text-orange-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950">
-              Speak with an expert
+              Email us
             </a>
           </p>
         </div>

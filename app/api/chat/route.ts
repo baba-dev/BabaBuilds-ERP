@@ -13,6 +13,7 @@ import { getRuntimeSmtpPassword } from '@/lib/mailer';
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import { chatRequestSchema, type ToolAction } from '@/lib/ai/chat/contracts';
 import { canExecuteToolForRole } from '@/lib/ai/chat/tool-policy';
+import { assertFreeTierMonthlyInvoiceAllowed } from '@/lib/entitlements';
 
 const lookupAsync = promisify(dns.lookup);
 
@@ -538,6 +539,9 @@ async function convertProposalToInvoice(proposalNo: string, workspaceId: string)
         nextInvNum = `INV-${Date.now().toString().slice(-4)}`;
       }
     }
+
+    const monthCap = await assertFreeTierMonthlyInvoiceAllowed(workspaceId, new Date());
+    if (monthCap) return JSON.stringify({ error: monthCap.message });
 
     // Create converted Invoice
     const newInvoice = await prisma.invoice.create({

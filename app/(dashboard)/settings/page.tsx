@@ -94,13 +94,16 @@ export default function SettingsWizard() {
   });
 
   const [planTier, setPlanTier] = useState<string>("FREE");
+  /** Mirrors server entitlements: trial OR paid tier unlocks gateways */
+  const [canUseGatewaysFeature, setCanUseGatewaysFeature] = useState(false);
+  const gatewayLocked = !canUseGatewaysFeature;
   
   const t = useTranslations('Settings');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
 
   const isIndian = countryCode === "IN";
-  const isTeamPlan = planTier === "TEAM" || planTier === "ENTERPRISE";
+  const isTeamPlan = planTier === "TEAM";
 
   const workspaceModulesAnchorRef = useRef<HTMLDivElement | null>(null);
 
@@ -134,6 +137,7 @@ export default function SettingsWizard() {
         if (data && data.companyName) {
           setIsNewSetup(false);
           setPlanTier(data.planTier || "FREE");
+          setCanUseGatewaysFeature(Boolean(data.billingEntitlements?.canUsePaymentGateways));
           const detectedCountry = data.countryCode || "IN";
           setCountryCode(detectedCountry);
 
@@ -291,13 +295,13 @@ export default function SettingsWizard() {
           </div>
           <Button
             type="button" variant="outline"
-            disabled={planTier === "FREE"}
+            disabled={gatewayLocked}
             onClick={() => setFormData({ ...formData, stripeSecretKey: "" })}
             className="border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400"
           >{t("actions.change")}</Button>
           <Button
             type="button" variant="outline"
-            disabled={planTier === "FREE"}
+            disabled={gatewayLocked}
             onClick={() => setFormData({ ...formData, stripeSecretKey: "DELETE_KEY", stripePublishableKey: "" })}
             className="border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-900/50 dark:hover:bg-rose-900/20"
           ><Trash2 className="w-4 h-4" /></Button>
@@ -309,7 +313,7 @@ export default function SettingsWizard() {
         <Input
           id="stripe-secret-key"
           type={formData.stripeSecretKey === "DELETE_KEY" ? "text" : "password"}
-          disabled={planTier === "FREE"}
+          disabled={gatewayLocked}
           value={formData.stripeSecretKey}
           onChange={e => setFormData({ ...formData, stripeSecretKey: e.target.value })}
           placeholder={t("placeholders.stripeSecretKey")}
@@ -322,7 +326,7 @@ export default function SettingsWizard() {
         {formData.stripeSecretKey !== "" && (
           <Button
             type="button" variant="outline"
-            disabled={planTier === "FREE"}
+            disabled={gatewayLocked}
             onClick={() => setFormData({ ...formData, stripeSecretKey: "DELETE_KEY", stripePublishableKey: "" })}
             className="border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-900/50 dark:hover:bg-rose-900/20"
           ><Trash2 className="w-4 h-4" /></Button>
@@ -342,13 +346,13 @@ export default function SettingsWizard() {
           </div>
           <Button
             type="button" variant="outline"
-            disabled={planTier === "FREE" || !isIndian}
+            disabled={gatewayLocked || !isIndian}
             onClick={() => setFormData({ ...formData, razorpayKeySecret: "" })}
             className="border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400"
           >{t("actions.change")}</Button>
           <Button
             type="button" variant="outline"
-            disabled={planTier === "FREE" || !isIndian}
+            disabled={gatewayLocked || !isIndian}
             onClick={() => setFormData({ ...formData, razorpayKeySecret: "DELETE_KEY", razorpayKeyId: "" })}
             className="border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-900/50 dark:hover:bg-rose-900/20"
           ><Trash2 className="w-4 h-4" /></Button>
@@ -360,7 +364,7 @@ export default function SettingsWizard() {
         <Input
           id="razorpay-key-secret"
           type={formData.razorpayKeySecret === "DELETE_KEY" ? "text" : "password"}
-          disabled={planTier === "FREE" || !isIndian}
+          disabled={gatewayLocked || !isIndian}
           value={formData.razorpayKeySecret}
           onChange={e => setFormData({ ...formData, razorpayKeySecret: e.target.value })}
           placeholder="••••••••••••••••••••"
@@ -373,7 +377,7 @@ export default function SettingsWizard() {
         {formData.razorpayKeySecret !== "" && (
           <Button
             type="button" variant="outline"
-            disabled={planTier === "FREE" || !isIndian}
+            disabled={gatewayLocked || !isIndian}
             onClick={() => setFormData({ ...formData, razorpayKeySecret: "DELETE_KEY", razorpayKeyId: "" })}
             className="border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-900/50 dark:hover:bg-rose-900/20"
           ><Trash2 className="w-4 h-4" /></Button>
@@ -874,20 +878,20 @@ export default function SettingsWizard() {
             <CardContent className="pt-6 space-y-6">
 
               {/* PRO GATE: Free users see this notice */}
-              {planTier === "FREE" && (
+              {gatewayLocked && (
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50">
                   <Lock className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                   <div>
                     <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">{t("payment.proFeature.title")}</p>
                     <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
-                      {t("payment.proFeature.description")}
+                      Pro or Team plan required for this feature. {t("payment.proFeature.description")}
                     </p>
                   </div>
                 </div>
               )}
 
               {/* DEFAULT GATEWAY SELECTOR — segmented control */}
-              <div className={`space-y-3 ${planTier === "FREE" ? "opacity-50 pointer-events-none select-none" : ""}`}>
+              <div className={`space-y-3 ${gatewayLocked ? "opacity-50 pointer-events-none select-none" : ""}`}>
                 <Label className="dark:text-zinc-300 text-sm font-semibold">{t("payment.defaultGateway.label")}</Label>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   {t("payment.defaultGateway.hint")}
@@ -897,7 +901,7 @@ export default function SettingsWizard() {
                     type="button"
                     id="gateway-tab-razorpay"
                     onClick={() => handleGatewayTabChange("RAZORPAY")}
-                    disabled={planTier === "FREE" || !isIndian}
+                    disabled={gatewayLocked || !isIndian}
                     className={`px-5 py-2.5 text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
                       activeGatewayTab === "RAZORPAY"
                         ? "bg-indigo-600 text-white"
@@ -911,7 +915,7 @@ export default function SettingsWizard() {
                     type="button"
                     id="gateway-tab-stripe"
                     onClick={() => handleGatewayTabChange("STRIPE")}
-                    disabled={planTier === "FREE"}
+                    disabled={gatewayLocked}
                     className={`px-5 py-2.5 text-sm font-semibold transition-all duration-200 flex items-center gap-2 border-l border-zinc-200 dark:border-zinc-700 ${
                       activeGatewayTab === "STRIPE"
                         ? "bg-indigo-600 text-white"
@@ -929,7 +933,7 @@ export default function SettingsWizard() {
                 activeGatewayTab === "RAZORPAY"
                   ? "border-indigo-200 dark:border-indigo-800/50 bg-indigo-50/30 dark:bg-indigo-950/10"
                   : "border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 opacity-60"
-              } ${planTier === "FREE" ? "opacity-50 pointer-events-none select-none" : ""}`}>
+              } ${gatewayLocked ? "opacity-50 pointer-events-none select-none" : ""}`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-lg">🇮🇳</span>
@@ -944,7 +948,7 @@ export default function SettingsWizard() {
                         {t("payment.active")}
                       </span>
                     )}
-                    {formData.defaultGateway !== "RAZORPAY" && isIndian && planTier !== "FREE" && (
+                    {formData.defaultGateway !== "RAZORPAY" && isIndian && !gatewayLocked && (
                       <button
                         type="button"
                         onClick={() => handleSetDefaultGateway("RAZORPAY")}
@@ -971,7 +975,7 @@ export default function SettingsWizard() {
                     <Label className="dark:text-zinc-300 text-sm">{t("payment.razorpay.keyIdLabel")}</Label>
                     <Input
                       id="razorpay-key-id"
-                      disabled={planTier === "FREE" || !isIndian}
+                      disabled={gatewayLocked || !isIndian}
                       value={formData.razorpayKeyId}
                       onChange={e => setFormData({...formData, razorpayKeyId: e.target.value})}
                       placeholder={t("payment.razorpay.keyIdPlaceholder")}
@@ -992,7 +996,7 @@ export default function SettingsWizard() {
                 activeGatewayTab === "STRIPE"
                   ? "border-violet-200 dark:border-violet-800/50 bg-violet-50/30 dark:bg-violet-950/10"
                   : "border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/30 opacity-60"
-              } ${planTier === "FREE" ? "opacity-50 pointer-events-none select-none" : ""}`}>
+              } ${gatewayLocked ? "opacity-50 pointer-events-none select-none" : ""}`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Globe className="w-5 h-5 text-violet-600 dark:text-violet-400" />
@@ -1007,7 +1011,7 @@ export default function SettingsWizard() {
                         {t("payment.active")}
                       </span>
                     )}
-                    {formData.defaultGateway !== "STRIPE" && planTier !== "FREE" && (
+                    {formData.defaultGateway !== "STRIPE" && !gatewayLocked && (
                       <button
                         type="button"
                         onClick={() => handleSetDefaultGateway("STRIPE")}
@@ -1034,7 +1038,7 @@ export default function SettingsWizard() {
                     <Label className="dark:text-zinc-300 text-sm">{t("payment.stripe.publishableKeyLabel")}</Label>
                     <Input
                       id="stripe-publishable-key"
-                      disabled={planTier === "FREE"}
+                      disabled={gatewayLocked}
                       value={formData.stripePublishableKey}
                       onChange={e => setFormData({...formData, stripePublishableKey: e.target.value})}
                       placeholder={t("payment.stripe.publishableKeyPlaceholder")}

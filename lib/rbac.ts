@@ -65,9 +65,9 @@ export type SeatAvailability = {
   pendingInvites: number;
   used: number;
   limit: number;
-  limitDisplay: string;       // "Unlimited" for ENTERPRISE, else the number
+  limitDisplay: string;       // Seat limit label for UI
   available: number;
-  availableDisplay: string;   // "Unlimited" for ENTERPRISE, else the number
+  availableDisplay: string;   // Available seats label for UI
   canInvite: boolean;
   planTier: string;
   atWarningThreshold: boolean; // true when used >= 80% of limit

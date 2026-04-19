@@ -20,7 +20,7 @@ import { ServiceFormDialog, type ServiceFormService } from "@/components/service
 import { OnboardingHint } from "@/components/onboarding/OnboardingHint";
 
 type Service = ServiceFormService;
-type PlanTier = "FREE" | "PRO" | "TEAM" | "ENTERPRISE";
+type PlanTier = "FREE" | "PRO" | "TEAM";
 
 export default function ServiceCatalog() {
   const router = useRouter();
