@@ -26,7 +26,9 @@ export function NavMain({ preferences, pinError, enabledModules, grantedPermissi
 
   // Filter items that require a module that is not enabled
   const visibleNavItems = appNavItems.filter(
-    (item) => (!item.requiresModule || enabledModules.has(item.requiresModule)) && (!item.requiresPermission || grantedPermissions.has(item.requiresPermission))
+    (item) =>
+      (!item.requiresModule || enabledModules.has(item.requiresModule)) &&
+      (!item.requiresPermission || grantedPermissions.has(item.requiresPermission)),
   );
 
   const recentIds = preferences.recentItems.filter((id): id is Exclude<SidebarItemId, "settings"> => id !== "settings");

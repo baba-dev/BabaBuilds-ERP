@@ -25,11 +25,11 @@ export class ReportingSqlPolicyError extends Error {
 
 export function enforceReadOnlySqlPolicy(sql: string): void {
   const normalized = sql.trim();
-  if (!normalized || !/^SELECT\b/i.test(normalized)) {
+  const startsOk = /^SELECT\b/i.test(normalized) || /^WITH\b/i.test(normalized);
+  if (!normalized || !startsOk) {
     throw new ReportingSqlPolicyError('INVALID_SQL');
   }
 
-  // Single-statement only; allow a trailing semicolon.
   const semiCount = (normalized.match(/;/g) ?? []).length;
   if (semiCount > 1 || (semiCount === 1 && !normalized.endsWith(';'))) {
     throw new ReportingSqlPolicyError('INVALID_SQL');

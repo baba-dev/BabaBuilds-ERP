@@ -4,7 +4,12 @@ import { prisma } from '@/lib/prisma';
 import { ModuleDisabledError, requireModule } from '@/lib/modules';
 import { RbacDeniedError, requirePermission } from '@/lib/rbac';
 
-export async function resolveReportingContext(requiredPermission: 'reporting_center.view' | 'reporting_center.query.run' | 'reporting_center.export' | 'reporting_center.preset.manage') {
+export async function resolveReportingContext(
+  requiredPermission:
+    | 'reporting_center.view'
+    | 'reporting_center.query.run'
+    | 'reporting_center.export',
+) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     throw new Error('UNAUTHORIZED');
@@ -46,6 +51,7 @@ export function reportingErrorResponse(error: unknown) {
     FORBIDDEN: [403, 'Your role does not have access to this reporting action.'],
     PRESET_NOT_FOUND: [404, 'Requested report preset was not found.'],
     INVALID_FILTERS: [400, 'One or more report filters are invalid.'],
+    MISSING_SQL_PARAM: [400, 'Report parameters are incomplete for this preset.'],
     EMPTY_RESULT: [200, 'Report executed successfully with no rows.'],
     REPORT_TIMEOUT: [408, 'Report execution timed out. Please narrow your filters.'],
     REPORT_PAYLOAD_TOO_LARGE: [413, 'Report result is too large. Please narrow your filters.'],

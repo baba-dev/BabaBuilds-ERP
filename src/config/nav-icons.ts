@@ -29,6 +29,7 @@ export const navIconMap = {
   aiReconciliation: Sparkles,
   savingsAndTax: ShieldCheck,
   caCompliance: Landmark,
+  reportingCenter: ChartColumnBig,
   settings: Settings,
   reportingCenter: ChartColumnBig,
 } as const satisfies Record<string, LucideIcon>;

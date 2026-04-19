@@ -216,6 +216,7 @@ export function AppSidebar() {
             preferences={preferences}
             pinError={pinError}
             enabledModules={enabledModules}
+            grantedPermissions={grantedPermissions}
             onTogglePin={onTogglePin}
             onNavigate={onNavigate}
           />

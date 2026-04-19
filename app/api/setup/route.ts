@@ -217,6 +217,12 @@ export async function POST(req: Request) {
       );
     }
 
+    if (body.enableReportingCenter === true) {
+      await enableModule(workspaceId, 'REPORTING_CENTER', userId).catch((e) =>
+        console.error('[setup] Reporting Center module init failed (non-blocking):', e)
+      );
+    }
+
     return NextResponse.json({ success: true, workspaceId });
   } catch (err) {
     console.error("Setup Error:", err);

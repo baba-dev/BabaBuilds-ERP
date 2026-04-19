@@ -60,6 +60,9 @@ export default function SettingsWizard() {
   const [cashFlowEnabled, setCashFlowEnabled] = useState(false);
   const [cashFlowLoading, setCashFlowLoading] = useState(false);
   const [showDisableCashFlowConfirm, setShowDisableCashFlowConfirm] = useState(false);
+  const [reportingCenterEnabled, setReportingCenterEnabled] = useState(false);
+  const [reportingCenterLoading, setReportingCenterLoading] = useState(false);
+  const [showDisableReportingCenterConfirm, setShowDisableReportingCenterConfirm] = useState(false);
   const [arCollectionsEnabled, setArCollectionsEnabled] = useState(false);
   const [arCollectionsLoading, setArCollectionsLoading] = useState(false);
   const [showDisableArCollectionsConfirm, setShowDisableArCollectionsConfirm] = useState(false);
@@ -128,6 +131,7 @@ export default function SettingsWizard() {
           setPayrollEnabled(d.modules.includes('PAYROLL'));
           setDocumentsEnabled(d.modules.includes('DOCUMENTS'));
           setCashFlowEnabled(d.modules.includes('CASH_FLOW'));
+          setReportingCenterEnabled(d.modules.includes('REPORTING_CENTER'));
           setArCollectionsEnabled(d.modules.includes('AR_COLLECTIONS'));
           setRevenuePipelineEnabled(d.modules.includes('REVENUE_PIPELINE'));
           setReportingCenterEnabled(d.modules.includes('REPORTING_CENTER'));
@@ -1476,6 +1480,84 @@ export default function SettingsWizard() {
                 </div>
               </div>
 
+              {/* Reporting Center module card */}
+              <div
+                className={cn(
+                  "rounded-xl border-2 p-5 transition-all duration-200",
+                  reportingCenterEnabled
+                    ? "border-amber-500/50 bg-amber-50/30 dark:bg-amber-950/10"
+                    : "border-zinc-200 dark:border-zinc-800",
+                )}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div
+                      className={cn(
+                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all",
+                        reportingCenterEnabled
+                          ? "bg-amber-600 shadow-lg shadow-amber-500/20"
+                          : "bg-zinc-100 dark:bg-zinc-800",
+                      )}
+                    >
+                      <ChartColumnBig
+                        className={cn("h-5 w-5", reportingCenterEnabled ? "text-white" : "text-zinc-500")}
+                      />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                          {t("module_reporting.title")}
+                        </p>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[10px] font-bold uppercase",
+                            reportingCenterEnabled
+                              ? "border-amber-500/30 text-amber-600 dark:text-amber-400"
+                              : "border-zinc-300 dark:border-zinc-700 text-zinc-500",
+                          )}
+                        >
+                          {reportingCenterEnabled
+                            ? t("module_reporting.enabled_badge")
+                            : t("module_reporting.disabled_badge")}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2 max-w-sm">
+                        {t("module_reporting.description")}
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="reporting-center-module-toggle"
+                    checked={reportingCenterEnabled}
+                    disabled={reportingCenterLoading}
+                    onCheckedChange={async (checked) => {
+                      if (!checked) {
+                        setShowDisableReportingCenterConfirm(true);
+                        return;
+                      }
+                      setReportingCenterLoading(true);
+                      try {
+                        const res = await fetch("/api/workspace/modules", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ moduleKey: "REPORTING_CENTER", enabled: true }),
+                        });
+                        if (res.ok) {
+                          setReportingCenterEnabled(true);
+                          toast.success(t("module_reporting.toast_enabled"));
+                        } else {
+                          toast.error(t("module_reporting.toast_enable_failed"));
+                        }
+                      } finally {
+                        setReportingCenterLoading(false);
+                      }
+                    }}
+                    className="data-[state=checked]:bg-amber-600 shrink-0 mt-1"
+                  />
+                </div>
+              </div>
+
               {/* AR Aging + Collections module card */}
               <div className={cn(
                 "rounded-xl border-2 p-5 transition-all duration-200",
@@ -1843,45 +1925,57 @@ export default function SettingsWizard() {
             </DialogContent>
           </Dialog>
 
-
-          <Dialog open={showDisableReportingCenterConfirm} onOpenChange={setShowDisableReportingCenterConfirm}>
-            <DialogContent className="sm:max-w-md bg-zinc-950 border-white/10">
-              <DialogHeader>
-                <DialogTitle className="text-zinc-50 flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-amber-400" /> Disable Reporting Center?
-                </DialogTitle>
-                <DialogDescription className="text-zinc-400">
-                  Reporting Center views will be hidden until re-enabled, and all report data/audit history will be <strong className="text-zinc-200">preserved</strong>.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="flex justify-end gap-3 pt-2">
-                <Button variant="outline" onClick={() => setShowDisableReportingCenterConfirm(false)} className="border-zinc-700 text-zinc-300 hover:bg-zinc-900">
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  disabled={reportingCenterLoading}
+<Dialog
+  open={showDisableReportingCenterConfirm}
+  onOpenChange={setShowDisableReportingCenterConfirm}
+>
+  <DialogContent className="sm:max-w-md bg-zinc-950 border-white/10">
+    <DialogHeader>
+      <DialogTitle className="text-zinc-50 flex items-center gap-2">
+        <AlertTriangle className="h-5 w-5 text-amber-400" /> {t("module_reporting.disable_title")}
+      </DialogTitle>
+      <DialogDescription className="text-zinc-400">
+        {t("module_reporting.disable_body")}
+      </DialogDescription>
+    </DialogHeader>
+    <div className="flex justify-end gap-3 pt-2">
+      <Button
+        variant="outline"
+        onClick={() => setShowDisableReportingCenterConfirm(false)}
+        className="border-zinc-700 text-zinc-300 hover:bg-zinc-900"
+      >
+        {t("module_reporting.cancel")}
+      </Button>
+      <Button
+        id="confirm-disable-reporting-center"
+        variant="destructive"
+        disabled={reportingCenterLoading}
+        onClick={async () => {
+          disabled={reportingCenterLoading}
                   onClick={async () => {
                     setReportingCenterLoading(true);
                     try {
-                      const res = await fetch('/api/workspace/modules', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ moduleKey: 'REPORTING_CENTER', enabled: false }),
+const res = await fetch('/api/workspace/modules', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ moduleKey: 'REPORTING_CENTER', enabled: false }),
                       });
                       if (res.ok) {
                         setReportingCenterEnabled(false);
                         setShowDisableReportingCenterConfirm(false);
-                        toast.success('Reporting Center module disabled');
-                      } else {
-                        toast.error('Failed to disable module');
+toast.success(t("module_reporting.toast_disabled"));
+} else {
+  toast.error(t("module_reporting.toast_disable_failed"));
                       }
                     } finally {
                       setReportingCenterLoading(false);
                     }
                   }}
-                >
-                  {reportingCenterLoading ? 'Disabling...' : 'Disable Reporting Center'}
+className="bg-rose-600 hover:bg-rose-500 text-white border-none"
+>
+  {reportingCenterLoading
+    ? t("module_reporting.disable_loading")
+    : t("module_reporting.disable_confirm")}
                 </Button>
               </div>
             </DialogContent>

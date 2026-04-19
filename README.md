@@ -120,7 +120,6 @@ Reporting Center is an optional workspace subsystem. Enable it from **Setup Wiza
 Reporting Center uses enterprise RBAC permissions:
 - `reporting_center.view`
 - `reporting_center.query.run`
-- `reporting_center.preset.manage`
 - `reporting_center.export`
 
 ### Usage
@@ -129,8 +128,12 @@ Reporting Center uses enterprise RBAC permissions:
 3. Run preview or export to XLSX.
 
 ### Security
-- Single-statement `SELECT`-only execution policy.
+- API returns **public preset metadata only** (no SQL in JSON).
+- Read-only execution policy allows `SELECT` / `WITH`.
 - Mandatory workspace scoping (`workspaceId = :workspaceId`).
 - DML/DDL/PRAGMA/ATTACH denied.
 - Timeout, row cap, and payload cap enforced.
-- Every run/export is audit logged.
+- Every run/export is audit logged via `AppActivityLog`.
+
+### Chat assistant integration
+The chat assistant only registers `list_reporting_presets` and `open_reporting_center` when the module is enabled and the user has the required permissions.

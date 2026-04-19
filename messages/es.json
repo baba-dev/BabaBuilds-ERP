@@ -184,6 +184,21 @@
       "placeholder": "e.g. 998313",
       "hint": "Used as fallback if individual invoice code is blank."
     },
+    "module_reporting": {
+      "title": "Centro de informes",
+      "description": "Informes seleccionados con ejecución de solo lectura. Desactivar solo oculta la interfaz; los datos se conservan.",
+      "enabled_badge": "Activado",
+      "disabled_badge": "Desactivado",
+      "toast_enabled": "Centro de informes activado",
+      "toast_disabled": "Centro de informes desactivado",
+      "toast_enable_failed": "No se pudo activar el módulo",
+      "toast_disable_failed": "No se pudo desactivar el módulo",
+      "disable_title": "¿Desactivar el Centro de informes?",
+      "disable_body": "Se ocultará el acceso. El historial de auditoría se conserva.",
+      "disable_confirm": "Desactivar Centro de informes",
+      "disable_loading": "Desactivando…",
+      "cancel": "Cancelar"
+    },
     "payment": {
       "title": "Payment Gateway Integration",
       "description": "Connect a payment gateway to automatically embed a secure payment link in every invoice PDF.",
@@ -221,11 +236,51 @@
       }
     }
   },
+  "Reporting": {
+    "hero": {
+      "title": "Centro de informes",
+      "subtitle": "Informes seleccionados, ejecución gobernada, acciones según rol y exportaciones auditadas."
+    },
+    "filters": {
+      "preset": "Informe",
+      "preset_placeholder": "Elija un informe…",
+      "from": "Desde",
+      "to": "Hasta"
+    },
+    "actions": {
+      "run": "Ejecutar",
+      "running": "Ejecutando…",
+      "download": "Descargar XLSX"
+    },
+    "gallery": {
+      "title": "Preajustes"
+    },
+    "methodology": {
+      "policy_refs": "Referencias de política"
+    },
+    "meta": {
+      "line": "Completado en {ms} ms · {rows} filas"
+    },
+    "empty": {
+      "run_hint": "Elija filtros y ejecute el informe."
+    },
+    "hints": {
+      "no_run_permission": "Su rol solo puede ver la página. Pida permiso de ejecución a un administrador.",
+      "no_export_permission": "La exportación requiere permiso de exportación."
+    },
+    "errors": {
+      "title": "Error",
+      "load_failed": "No se pudieron cargar los informes.",
+      "run_failed": "No se pudo ejecutar el informe.",
+      "export_failed": "Error al exportar."
+    }
+  },
   "Sidebar": {
     "dashboard": "Panel principal",
     "revenue_pipeline": "Pipeline de ingresos",
     "service_catalog": "Catálogo de servicios",
     "cash_flow": "Flujo de caja",
+    "reporting_center": "Centro de informes",
     "shop": "Shop",
     "inventory": "Inventario",
     "client_crm": "CRM de clientes",
@@ -914,7 +969,9 @@
     "ph_routing": "IBAN, SWIFT, Código...",
     "ph_company": "ej. Agencia Acme S.A.",
     "ph_founder": "Su Nombre",
-    "ph_address": "Calle, Ciudad, C.P."
+    "ph_address": "Calle, Ciudad, C.P.",
+    "optional_reporting_title": "Centro de informes",
+    "optional_reporting_desc": "Informes seleccionados con ejecución de solo lectura y exportación XLSX."
   },
   "Tax": {
     "title": "Planificador Fiscal y Patrimonial",

@@ -19,8 +19,16 @@ export async function POST(req: Request) {
       throw new Error('INVALID_FILTERS');
     }
 
-    const [result, workspace] = await Promise.all([
-      executeReportingQuery(preset.sql, { workspaceId, fromDate: filters.fromDate, toDate: filters.toDate, status: filters.status, limit: filters.limit }),
+const params: Record<string, unknown> = {
+  workspaceId,
+  fromDate: filters.fromDate ? new Date(filters.fromDate) : undefined,
+  toDate: filters.toDate ? new Date(filters.toDate) : undefined,
+  status: filters.status,
+  limit: filters.limit,
+};
+
+const [result, workspace] = await Promise.all([
+  executeReportingQuery(preset.sql, params),
       prisma.workspace.findUnique({ where: { id: workspaceId }, select: { name: true } }),
     ]);
 
@@ -29,9 +37,13 @@ export async function POST(req: Request) {
       reportTitle: preset.title,
       workspaceName: workspace?.name ?? 'Workspace',
       generatedAt,
+methodology: preset.methodology,
+accountingPolicyRefs: preset.accountingPolicyRefs,
       rows: result.rows,
       columns: preset.columns,
     });
+
+    const filename = buildReportFilename(preset.id, generatedAt);
 
     await prisma.appActivityLog.create({
       data: {
@@ -48,7 +60,7 @@ export async function POST(req: Request) {
     return new Response(buffer, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="${buildReportFilename(preset.id, generatedAt)}"`,
+        'Content-Disposition': `attachment; filename="${filename}"`,
       },
     });
   } catch (error) {

@@ -40,8 +40,22 @@ export function canExecuteToolForRole(toolName: string, role: string | null | un
   return WRITE_ALLOWED_ROLES.has(role);
 }
 
-export function canUseReportingTools(role: string | null | undefined, reportingModuleEnabled: boolean) {
-  if (!reportingModuleEnabled) return false;
-  if (!role) return false;
-  return REPORTING_ALLOWED_ROLES.has(role);
+const REPORTING_TOOLS = new Set(['list_reporting_presets', 'open_reporting_center']);
+
+export function isReportingTool(toolName: string) {
+  return REPORTING_TOOLS.has(toolName);
 }
+
+/** Chat reporting tools: require module + RBAC (session checked in route). */
+export function reportingToolAllowed(
+  toolName: string,
+  moduleEnabled: boolean,
+  canView: boolean,
+  canRun: boolean,
+): boolean {
+  if (!moduleEnabled || !canView) return false;
+  if (toolName === 'list_reporting_presets') return true;
+  if (toolName === 'open_reporting_center') return canRun;
+  return false;
+}
+

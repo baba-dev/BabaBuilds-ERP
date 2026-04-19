@@ -184,6 +184,21 @@
       "placeholder": "e.g. 998313",
       "hint": "Used as fallback if individual invoice code is blank."
     },
+    "module_reporting": {
+      "title": "مركز التقارير",
+      "description": "تقارير منتقاة مع تنفيذ للقراءة فقط. التعطيل يخفي الواجهة فقط.",
+      "enabled_badge": "مفعّل",
+      "disabled_badge": "معطّل",
+      "toast_enabled": "تم تفعيل مركز التقارير",
+      "toast_disabled": "تم تعطيل مركز التقارير",
+      "toast_enable_failed": "تعذّر تفعيل الوحدة",
+      "toast_disable_failed": "تعذّر تعطيل الوحدة",
+      "disable_title": "تعطيل مركز التقارير؟",
+      "disable_body": "سيتم إخفاء الانتقال. تبقى سجلات التدقيق.",
+      "disable_confirm": "تعطيل مركز التقارير",
+      "disable_loading": "جارٍ التعطيل…",
+      "cancel": "إلغاء"
+    },
     "payment": {
       "title": "Payment Gateway Integration",
       "description": "Connect a payment gateway to automatically embed a secure payment link in every invoice PDF.",
@@ -221,11 +236,51 @@
       }
     }
   },
+  "Reporting": {
+    "hero": {
+      "title": "مركز التقارير",
+      "subtitle": "تقارير مُنتقاة، وتنفيذ مُحكَم، وإجراءات حسب الدور، وتصدير مُسجّل."
+    },
+    "filters": {
+      "preset": "التقرير",
+      "preset_placeholder": "اختر تقريراً…",
+      "from": "من تاريخ",
+      "to": "إلى تاريخ"
+    },
+    "actions": {
+      "run": "تشغيل التقرير",
+      "running": "جارٍ التشغيل…",
+      "download": "تنزيل XLSX"
+    },
+    "gallery": {
+      "title": "إعدادات سريعة"
+    },
+    "methodology": {
+      "policy_refs": "مرجع السياسة"
+    },
+    "meta": {
+      "line": "اكتمل في {ms} ms · {rows} صفًا"
+    },
+    "empty": {
+      "run_hint": "اختر المرشحات ثم شغّل التقرير."
+    },
+    "hints": {
+      "no_run_permission": "دورك يسمح بالعرض فقط. اطلب صلاحية التشغيل من المشرف.",
+      "no_export_permission": "التصدير يحتاج إذناً خاصاً."
+    },
+    "errors": {
+      "title": "خطأ",
+      "load_failed": "تعذّر تحميل التقارير.",
+      "run_failed": "تعذّر تشغيل التقرير.",
+      "export_failed": "فشل التصدير."
+    }
+  },
   "Sidebar": {
     "dashboard": "لوحة القيادة",
     "revenue_pipeline": "مسار الإيرادات",
     "service_catalog": "كتالوج الخدمات",
     "cash_flow": "التدفق النقدي",
+    "reporting_center": "مركز التقارير",
     "ar_collections": "تحصيل الذمم المدينة",
     "shop": "Shop",
     "inventory": "المخزون",
@@ -914,7 +969,9 @@
     "ph_routing": "رمز البنك...",
     "ph_company": "مثل شركة العباقرة...",
     "ph_founder": "اسمك",
-    "ph_address": "الشارع ، المدينة"
+    "ph_address": "الشارع ، المدينة",
+    "optional_reporting_title": "مركز التقارير",
+    "optional_reporting_desc": "تقارير مختارة وتنفيذ للقراءة فقط وتصدير XLSX."
   },
   "Tax": {
     "title": "مخطط الثروة والضرائب",

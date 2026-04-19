@@ -184,6 +184,21 @@
       "placeholder": "e.g. 998313",
       "hint": "Used as fallback if individual invoice code is blank."
     },
+    "module_reporting": {
+      "title": "Reporting Center",
+      "description": "चयनित वित्तीय रिपोर्ट; केवल-पठन निष्पादन। बंद करने से केवल UI छुपता है।",
+      "enabled_badge": "सक्षम",
+      "disabled_badge": "अक्षम",
+      "toast_enabled": "Reporting Center सक्षम",
+      "toast_disabled": "Reporting Center अक्षम",
+      "toast_enable_failed": "मॉड्यूल सक्षम करने में विफल",
+      "toast_disable_failed": "मॉड्यूल अक्षम करने में विफल",
+      "disable_title": "Reporting Center अक्षम करें?",
+      "disable_body": "नेविगेशन छिप जाएगा। ऑडिट इतिहास सुरक्षित रहेगा।",
+      "disable_confirm": "Reporting Center अक्षम करें",
+      "disable_loading": "अक्षम कर रहे हैं…",
+      "cancel": "रद्द करें"
+    },
     "payment": {
       "title": "Payment Gateway Integration",
       "description": "Connect a payment gateway to automatically embed a secure payment link in every invoice PDF.",
@@ -221,11 +236,51 @@
       }
     }
   },
+  "Reporting": {
+    "hero": {
+      "title": "रिपोर्टिंग सेंटर",
+      "subtitle": "क्यूरेटेड रिपोर्ट, नियंत्रित एक्ज़ीक्यूशन, भूमिका-आधारित कार्रवाई, और ऑडिट लॉग एक्सपोर्ट।"
+    },
+    "filters": {
+      "preset": "रिपोर्ट",
+      "preset_placeholder": "रिपोर्ट चुनें…",
+      "from": "प्रारंभ तिथि",
+      "to": "अंतिम तिथि"
+    },
+    "actions": {
+      "run": "रिपोर्ट चलाएँ",
+      "running": "चल रहा है…",
+      "download": "XLSX डाउनलोड"
+    },
+    "gallery": {
+      "title": "त्वरित प्रीसेट"
+    },
+    "methodology": {
+      "policy_refs": "नीति संदर्भ"
+    },
+    "meta": {
+      "line": "{ms} ms में पूर्ण · {rows} पंक्तियाँ"
+    },
+    "empty": {
+      "run_hint": "फ़िल्टर चुनकर रिपोर्ट चलाएँ।"
+    },
+    "hints": {
+      "no_run_permission": "आपकी भूमिका केवल देख सकती है। चलाने के लिए व्यवस्थापक से अनुमति लें।",
+      "no_export_permission": "निर्यात के लिए अलग अनुमति चाहिए।"
+    },
+    "errors": {
+      "title": "त्रुटि",
+      "load_failed": "प्रीसेट लोड नहीं हो सके।",
+      "run_failed": "रिपोर्ट चल नहीं सकी।",
+      "export_failed": "एक्सपोर्ट विफल।"
+    }
+  },
   "Sidebar": {
     "dashboard": "डैशबोर्ड",
     "revenue_pipeline": "रेवेन्यू पाइपलाइन",
     "service_catalog": "सेवा कैटलॉग",
     "cash_flow": "कैश फ्लो",
+    "reporting_center": "रिपोर्टिंग सेंटर",
     "ar_collections": "एआर कलेक्शंस",
     "shop": "Shop",
     "inventory": "इन्वेंटरी हब",
@@ -914,7 +969,9 @@
     "ph_routing": "आईएफएससी, स्विफ्ट, सॉर्ट कोड...",
     "ph_company": "उदा. एक्मे एजेंसी लिमिटेड",
     "ph_founder": "आपका नाम",
-    "ph_address": "सड़क, शहर, पिनकोड"
+    "ph_address": "सड़क, शहर, पिनकोड",
+    "optional_reporting_title": "Reporting Center",
+    "optional_reporting_desc": "चयनित रिपोर्ट और केवल-पठन चलान। बंद करने से केवल UI छुपता है।"
   },
   "Tax": {
     "title": "धन और कर योजनाकार",

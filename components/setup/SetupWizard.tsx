@@ -690,14 +690,14 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Reporting Center</p>
+                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{t('optional_reporting_title')}</p>
                           {form.enableReportingCenter && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider">
                               <CheckCircle2 className="h-2.5 w-2.5" /> Enabled
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400">Run curated P&L, aging, tax, invoice, and expense reports with governed read-only execution and premium exports.</p>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('optional_reporting_desc')}</p>
                       </div>
                     </div>
                     <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
