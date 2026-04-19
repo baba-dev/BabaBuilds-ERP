@@ -9,6 +9,7 @@ export interface TaxEstimateInput {
   revenue?: Prisma.Decimal | number | string | null;
   deductions?: Prisma.Decimal | number | string | null;
   serviceScope?: string | null;
+  regionCode?: string | null;
   customerScope?: string | null;
   asOfDate?: string | Date | null;
   overrideRatePercent?: number | string | null;
@@ -26,6 +27,7 @@ export interface TaxEstimateResult {
     deductions: string;
     taxableIncome: string;
     serviceScope: string | null;
+    regionCode: string | null;
     customerScope: string | null;
     asOfDate: string;
     method: 'rule_engine' | 'provider_rate' | 'manual_override' | 'fallback';
@@ -95,7 +97,7 @@ export const estimateTax = (input: TaxEstimateInput): TaxEstimateResult => {
 
   const overrideRatePercent = normalizePercent(input.overrideRatePercent);
   const normalizedCountryCode = input.countryCode?.trim().toUpperCase() || null;
-  const providerRatePercent = resolveProviderRatePercent(normalizedCountryCode, input.serviceScope);
+  const providerRatePercent = resolveProviderRatePercent(normalizedCountryCode, input.regionCode);
   const resolutionMode = input.resolutionMode ?? 'auto';
   const hasCountryRuleEngine = Boolean(normalizedCountryCode && RULE_ENGINE_COUNTRIES.has(normalizedCountryCode));
 
@@ -106,6 +108,7 @@ export const estimateTax = (input: TaxEstimateInput): TaxEstimateResult => {
       deductions: serializeMoney(deductions),
       taxableIncome: serializeMoney(taxableIncome),
       serviceScope: input.serviceScope?.trim() || null,
+      regionCode: input.regionCode?.trim().toUpperCase() || null,
       customerScope: input.customerScope?.trim() || null,
       asOfDate: asOfDateIso,
       method: 'rule_engine' as const,

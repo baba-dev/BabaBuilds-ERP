@@ -52,7 +52,8 @@ export async function POST(request: Request) {
 
     const taxEstimate = estimateTax({
       countryCode: countryForEstimate,
-      serviceScope: payload.serviceScope ?? payload.regionCode,
+      serviceScope: payload.serviceScope,
+      regionCode: payload.regionCode,
       revenue: payload.revenue,
       deductions: payload.deductions,
       customerScope: payload.customerScope,

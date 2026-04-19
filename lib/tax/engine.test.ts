@@ -43,3 +43,20 @@ test('Manual override supersedes rule-engine and fallback/provider resolution', 
   assert.equal(result.amount, '220000.00');
   assert.equal(result.override.applied, true);
 });
+
+test('Region code drives provider rate while service scope remains separate metadata', () => {
+  const result = estimateTax({
+    countryCode: 'US',
+    regionCode: 'US-CA',
+    serviceScope: 'consulting_services',
+    revenue: '1000',
+    deductions: '0',
+    resolutionMode: 'prefer_provider_rate',
+  });
+
+  assert.equal(result.basis.method, 'provider_rate');
+  assert.equal(result.basis.serviceScope, 'consulting_services');
+  assert.equal(result.basis.regionCode, 'US-CA');
+  assert.equal(result.ratePercent, 9.25);
+  assert.equal(result.amount, '92.50');
+});
