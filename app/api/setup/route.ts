@@ -39,6 +39,7 @@ type SetupPayload = {
   enableRevenuePipeline?: boolean;
   enablePayroll?: boolean;
   enableCashFlow?: boolean;
+  enableArCollections?: boolean;
   payrollSetupPath?: "STANDALONE" | "WORKFORCE_LINKED";
 };
 
@@ -201,6 +202,12 @@ export async function POST(req: Request) {
     if (body.enableCashFlow === true) {
       await enableModule(workspaceId, 'CASH_FLOW', userId).catch((e) =>
         console.error('[setup] Cash Flow module init failed (non-blocking):', e)
+      );
+    }
+
+    if (body.enableArCollections === true) {
+      await enableModule(workspaceId, 'AR_COLLECTIONS', userId).catch((e) =>
+        console.error('[setup] AR Collections module init failed (non-blocking):', e)
       );
     }
 

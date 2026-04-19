@@ -9,6 +9,7 @@ export type SidebarItemId =
   | "quotes_proposals"
   | "retainers_hub"
   | "cash_flow"
+  | "ar_collections"
   | "expenses_margins"
   | "savings_tax"
   | "ai_reconciliation"
@@ -43,6 +44,7 @@ const ALLOWED_IDS = new Set<SidebarItemId>([
   "quotes_proposals",
   "retainers_hub",
   "cash_flow",
+  "ar_collections",
   "expenses_margins",
   "savings_tax",
   "ai_reconciliation",
