@@ -159,6 +159,7 @@ export async function persistAndMatchTransactions(
       amountSigned: signed.toFixed(2),
       description: t.description,
       reference: t.reference,
+      providerTransactionId: t.providerTransactionId,
     });
     return { parsed: t, hash, bankDate, signed };
   });
@@ -201,6 +202,8 @@ export async function persistAndMatchTransactions(
             referenceId: w.parsed.reference?.slice(0, 512) ?? null,
             transactionType: w.parsed.type,
             sourceImportHash: w.hash,
+            providerTransactionId:
+              w.parsed.providerTransactionId?.slice(0, 512) ?? null,
             isReconciled: false,
             balanceAfter:
               w.parsed.balanceAfter != null

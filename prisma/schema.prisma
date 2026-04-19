@@ -1315,6 +1315,9 @@ model BankTransaction {
   importBatchId String?
   importBatch   BankImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
 
+  /// Stable id from aggregator (Plaid) or ISO20022 — dedupe independent of narration.
+  providerTransactionId String?
+
   date                     DateTime
   description              String
   amount                   Decimal // Account currency: positive deposits, negative withdrawals
@@ -1348,6 +1351,7 @@ model BankTransaction {
   invoiceSplits BankTransactionInvoiceSplit[]
 
   @@unique([workspaceId, accountId, sourceImportHash])
+  @@unique([workspaceId, accountId, providerTransactionId])
   @@index([workspaceId])
   @@index([accountId])
   @@index([date])
@@ -1373,6 +1377,13 @@ model BankAccount {
 
   transactions  BankTransaction[]
   importBatches BankImportBatch[]
+
+  /// Plaid Item + account (encrypted token at rest)
+  plaidItemId               String?
+  plaidAccountId            String?
+  plaidAccessTokenEncrypted String?
+  plaidTransactionsCursor   String?
+  lastPlaidSyncAt           DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

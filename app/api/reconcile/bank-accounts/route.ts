@@ -17,8 +17,18 @@ export async function GET() {
       bankName: true,
       maskedAccountNumber: true,
       currency: true,
+      plaidAccessTokenEncrypted: true,
     },
   });
 
-  return NextResponse.json({ data: accounts });
+  const data = accounts.map((a) => ({
+    id: a.id,
+    name: a.name,
+    bankName: a.bankName,
+    maskedAccountNumber: a.maskedAccountNumber,
+    currency: a.currency,
+    plaidLinked: Boolean(a.plaidAccessTokenEncrypted),
+  }));
+
+  return NextResponse.json({ data });
 }
