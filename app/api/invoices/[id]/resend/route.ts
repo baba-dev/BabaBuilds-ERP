@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import fs from 'fs';
 import path from 'path';
 import { sendEmail } from '@/lib/mailer';
+import { buildInvoiceDeliveryEmail } from '@/lib/notifications/transactional-email-templates';
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -52,13 +53,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const billedAmount = (invoice as any).grandTotal || invoice.totalAmount;
     const formattedTotal = billedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const pdfFilename = invoice.pdfPath.split('/').pop() || `${invoice.invoiceNumber.replace(/\//g, '_')}.pdf`;
+    const invoiceEmail = buildInvoiceDeliveryEmail({
+      companyName: profile.companyName,
+      clientName: invoice.client.name,
+      invoiceNumber: invoice.invoiceNumber,
+      billingMonth: invoice.billingMonth,
+      amountFormatted: `INR ${formattedTotal}`,
+    });
 
     await sendEmail({
       route: 'user',
       profile,
       to: invoice.client.email,
-      subject: `Invoice ${invoice.invoiceNumber} from ${profile.companyName}`,
-      text: `Dear ${invoice.client.name},\n\nPlease find attached the invoice ${invoice.invoiceNumber} for the billing month of ${invoice.billingMonth}.\n\nTotal Amount Billed: INR ${formattedTotal}\n\nThank you for your business.\n\nBest Regards,\n${profile.companyName}`,
+      subject: invoiceEmail.subject,
+      html: invoiceEmail.html,
+      text: invoiceEmail.text,
       attachments: [
         {
           filename: pdfFilename,
@@ -74,4 +83,3 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: error.message || 'Failed to resend the invoice email.' }, { status: 500 });
   }
 }
-

@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useNotifications } from '@/hooks/use-notifications';
+import { useNotificationsContext } from '@/components/notifications/notifications-context';
 import {
   Bell,
   Check,
@@ -37,10 +37,19 @@ const EVENT_ICON: Record<string, string> = {
   PAYMENT_REMINDER: '⏰',
   CLIENT_ADDED: '🤝',
   PROPOSAL_CREATED: '📄',
+  PROPOSAL_VIEWED: '👀',
   SERVICE_CREATED: '🔧',
   RENEWAL_ALERT: '🔄',
+  BILLING_FAILED: '⚠️',
   DEADLINE_ALERT: '⚠️',
   TAX_ALERT: '🏛️',
+  SHOP_ORDER_CREATED: '🛒',
+  SHOP_ORDER_UPDATED: '📝',
+  SHOP_ORDER_DELETED: '🗑️',
+  SHOP_ORDER_STATUS_CHANGED: '📦',
+  LEAVE_REQUEST_SUBMITTED: '🗓️',
+  LEAVE_APPROVED: '✅',
+  LEAVE_REJECTED: '❌',
 };
 
 const EVENT_ACCENT: Record<string, string> = {
@@ -49,10 +58,19 @@ const EVENT_ACCENT: Record<string, string> = {
   PAYMENT_REMINDER: 'border-l-amber-500',
   CLIENT_ADDED: 'border-l-sky-500',
   PROPOSAL_CREATED: 'border-l-violet-500',
+  PROPOSAL_VIEWED: 'border-l-fuchsia-500',
   SERVICE_CREATED: 'border-l-cyan-500',
   RENEWAL_ALERT: 'border-l-purple-500',
+  BILLING_FAILED: 'border-l-rose-500',
   DEADLINE_ALERT: 'border-l-red-500',
   TAX_ALERT: 'border-l-blue-500',
+  SHOP_ORDER_CREATED: 'border-l-emerald-500',
+  SHOP_ORDER_UPDATED: 'border-l-indigo-500',
+  SHOP_ORDER_DELETED: 'border-l-zinc-500',
+  SHOP_ORDER_STATUS_CHANGED: 'border-l-amber-500',
+  LEAVE_REQUEST_SUBMITTED: 'border-l-sky-500',
+  LEAVE_APPROVED: 'border-l-emerald-500',
+  LEAVE_REJECTED: 'border-l-rose-500',
 };
 
 interface NotificationItemProps {
@@ -359,7 +377,7 @@ function CommsHubInner({
 
 export function CommsHub() {
   const { data: session } = useSession();
-  const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
+  const { notifications, unreadCount, markRead, markAllRead } = useNotificationsContext();
   const isMobile = useIsMobile();
   const preferBottomSheet = true;
   const mobileSheetSide: 'bottom' | 'right' = preferBottomSheet ? 'bottom' : 'right';

@@ -123,11 +123,35 @@ function buildPushAndInAppContent(
         body: `${d.clientName} has accepted Proposal ${d.proposalNo}`,
         actionUrl: '/proposals',
       };
+    case 'PROPOSAL_VIEWED':
+      return {
+        title: `👀 Proposal Viewed`,
+        body: `${d.clientName} viewed Proposal ${d.proposalNo}`,
+        actionUrl: '/proposals',
+      };
     case 'SETTINGS_UPDATED':
       return {
         title: `⚙️ Settings Updated`,
         body: `${d.section} settings were updated by ${d.updatedBy}`,
         actionUrl: '/settings',
+      };
+    case 'LEAVE_REQUEST_SUBMITTED':
+      return {
+        title: '🗓️ New Leave Request',
+        body: `${d.employeeName} requested ${d.days} day(s) of ${d.leaveType}.`,
+        actionUrl: '/workforce/leave',
+      };
+    case 'LEAVE_APPROVED':
+      return {
+        title: '✅ Leave Approved',
+        body: `Your ${d.leaveType} request was approved.`,
+        actionUrl: '/workforce/leave',
+      };
+    case 'LEAVE_REJECTED':
+      return {
+        title: '❌ Leave Rejected',
+        body: `Your ${d.leaveType} request was rejected.`,
+        actionUrl: '/workforce/leave',
       };
     default:
       return { title: 'BabaBuilds ERP', body: 'You have a new notification', actionUrl: '/dashboard' };
@@ -191,7 +215,9 @@ export async function dispatchNotification(payload: NotificationPayload): Promis
             const isSystemEvent = [
               'CLIENT_ADDED', 'SERVICE_CREATED', 'RENEWAL_ALERT', 
               'DEADLINE_ALERT', 'TAX_ALERT', 'SHOP_ORDER_CREATED', 
-              'SETTINGS_UPDATED', 'RETAINER_CREATED', 'PROPOSAL_ACCEPTED'
+              'SHOP_ORDER_UPDATED', 'SHOP_ORDER_DELETED', 'SHOP_ORDER_STATUS_CHANGED',
+              'BILLING_FAILED', 'SETTINGS_UPDATED', 'RETAINER_CREATED', 'PROPOSAL_ACCEPTED',
+              'LEAVE_REQUEST_SUBMITTED', 'LEAVE_APPROVED', 'LEAVE_REJECTED'
             ].includes(event);
             
             const route = isSystemEvent ? 'system' : 'user';

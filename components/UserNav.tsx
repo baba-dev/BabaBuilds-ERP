@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { CommsHub } from "@/components/notifications/CommsHub";
+import { NotificationsProvider } from "@/components/notifications/notifications-context";
 import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +22,8 @@ export function UserNav() {
   const isExpanded = open || isMobile;
 
   return (
-    <Dialog>
+    <NotificationsProvider>
+      <Dialog>
       <DialogTrigger asChild>
         <button 
           className={cn(
@@ -53,6 +55,7 @@ export function UserNav() {
       </DialogTrigger>
       
       <CommsHub />
-    </Dialog>
+      </Dialog>
+    </NotificationsProvider>
   );
 }

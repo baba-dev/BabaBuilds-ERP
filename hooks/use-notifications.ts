@@ -25,10 +25,19 @@ const TOAST_ICON: Record<string, string> = {
   PAYMENT_REMINDER:  '⏰',
   CLIENT_ADDED:      '🤝',
   PROPOSAL_CREATED:  '📄',
+  PROPOSAL_VIEWED:   '👀',
   SERVICE_CREATED:   '🔧',
   RENEWAL_ALERT:     '🔄',
+  BILLING_FAILED:    '⚠️',
   DEADLINE_ALERT:    '⚠️',
   TAX_ALERT:         '🏛️',
+  SHOP_ORDER_CREATED: '🛒',
+  SHOP_ORDER_UPDATED: '📝',
+  SHOP_ORDER_DELETED: '🗑️',
+  SHOP_ORDER_STATUS_CHANGED: '📦',
+  LEAVE_REQUEST_SUBMITTED: '🗓️',
+  LEAVE_APPROVED: '✅',
+  LEAVE_REJECTED: '❌',
 };
 
 export interface UseNotificationsReturn {
@@ -47,6 +56,7 @@ export function useNotifications(): UseNotificationsReturn {
 
   // Track latest-seen createdAt so we only toast newly arrived items
   const lastSeenAtRef    = useRef<string | null>(null);
+  const hasHydratedRef   = useRef(false);
   const lastActivityRef  = useRef<number>(Date.now());
   const intervalRef      = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef     = useRef(true);
@@ -91,25 +101,28 @@ export function useNotifications(): UseNotificationsReturn {
           const fresh = newItems.filter((n) => !existingIds.has(n.id));
           if (fresh.length === 0) return prev;
 
-          // Toast each new item
-          fresh.slice().reverse().forEach((n) => {
-            const icon = TOAST_ICON[n.eventType] ?? '🔔';
-            toast(n.title, {
-              description: n.body,
-              icon,
-              duration: 6000,
-              action: n.actionUrl
-                ? {
-                    label: 'View',
-                    onClick: () => { window.location.href = n.actionUrl!; },
-                  }
-                : undefined,
+          // Toast only after first hydration to avoid replaying historical backlog.
+          if (hasHydratedRef.current) {
+            fresh.slice().reverse().forEach((n) => {
+              const icon = TOAST_ICON[n.eventType] ?? '🔔';
+              toast(n.title, {
+                description: n.body,
+                icon,
+                duration: 6000,
+                action: n.actionUrl
+                  ? {
+                      label: 'View',
+                      onClick: () => { window.location.href = n.actionUrl!; },
+                    }
+                  : undefined,
+              });
             });
-          });
+          }
 
           return [...fresh, ...prev].slice(0, 50);
         });
       }
+      hasHydratedRef.current = true;
     } catch {
       // Silently swallow network errors during poll
     }
