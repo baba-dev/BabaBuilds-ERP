@@ -16,16 +16,15 @@ export default function RotatorText() {
   }, []);
 
   return (
-    <span className="relative inline-flex items-center justify-center overflow-hidden h-fit w-full text-center sm:inline-block sm:w-auto mt-2 sm:mt-0 pb-1 align-top">
-      <AnimatePresence mode="popLayout">
+    <span className="relative inline-block min-h-[1.15em] min-w-[4ch] align-top">
+      <AnimatePresence mode="wait" initial={false}>
         <motion.span
           key={index}
-          initial={{ y: 50, opacity: 0 }}
+          initial={{ y: 12, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          exit={{ y: -50, opacity: 0 }}
-          transition={{ duration: 0.5, type: "spring", stiffness: 100, damping: 15 }}
-          className="bg-gradient-to-r from-orange-600 via-amber-500 to-orange-500 bg-clip-text text-transparent block"
-          style={{ position: 'relative' }}
+          exit={{ y: -12, opacity: 0 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="font-black text-orange-600 dark:text-orange-300"
         >
           {words[index]}
         </motion.span>
