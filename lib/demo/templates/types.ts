@@ -1,4 +1,4 @@
-import type { ModuleKey } from "@/lib/modules";
+import type { ModuleKey } from '@/lib/module-keys';
 import type { Prisma } from "@prisma/client";
 
 export const DEMO_TEMPLATE_KEYS = ["dm_agency", "software_company", "tax_agency"] as const;

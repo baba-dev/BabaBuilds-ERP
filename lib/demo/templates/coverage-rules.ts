@@ -1,4 +1,4 @@
-import { MODULE_KEYS, type ModuleKey } from '@/lib/modules';
+import { MODULE_KEYS, type ModuleKey } from '@/lib/module-keys';
 
 export const DEMO_REQUIRED_MODULES: readonly ModuleKey[] = MODULE_KEYS;
 

@@ -1,7 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { decimalToNumber } from '@/lib/money';
 import { encrypt } from '@/lib/encryption';
-import { MODULE_KEYS } from '@/lib/modules';
+import { MODULE_KEYS } from '@/lib/module-keys';
 import { getDemoTemplate, type DemoTemplateKey } from '@/lib/demo/templates';
 import { getMissingRequiredModules } from '@/lib/demo/templates/coverage-rules';
 

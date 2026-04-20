@@ -152,13 +152,16 @@ export const taxAgencyTemplate: DemoTemplateDefinition = {
     });
 
     // Tax advanced story: a readiness check + blocker linked to a TaxReturn.
-    const start = new Date(now.getFullYear(), Math.max(0, now.getMonth() - 1), 1);
-    const end = new Date(now.getFullYear(), now.getMonth(), 0);
+    const previousMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const periodYear = previousMonthDate.getFullYear();
+    const periodMonth = previousMonthDate.getMonth();
+    const start = new Date(periodYear, periodMonth, 1);
+    const end = new Date(periodYear, periodMonth + 1, 0);
     const taxPeriod = await tx.taxPeriod.create({
       data: {
         workspaceId,
         countryCode: 'IN',
-        periodCode: `TDS-${now.getFullYear()}-${String(now.getMonth()).padStart(2, '0')}`,
+        periodCode: `TDS-${periodYear}-${String(periodMonth + 1).padStart(2, '0')}`,
         periodType: 'MONTH',
         fiscalYear: `${now.getFullYear()}`,
         startDate: start,

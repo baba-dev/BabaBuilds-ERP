@@ -19,5 +19,13 @@ export function getDemoTemplate(key: DemoTemplateKey): DemoTemplateDefinition {
   return TEMPLATE_MAP[key];
 }
 
+export const DEMO_TEMPLATES: readonly DemoTemplateDefinition[] = DEMO_TEMPLATE_KEYS.map(
+  (key) => TEMPLATE_MAP[key],
+);
+
+export function getDemoTemplates(): readonly DemoTemplateDefinition[] {
+  return DEMO_TEMPLATES;
+}
+
 export { DEMO_TEMPLATE_KEYS };
 export type { DemoTemplateDefinition, DemoTemplateKey };

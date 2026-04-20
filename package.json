@@ -11,7 +11,7 @@
     "validate": "npm run lint && npm run typecheck && npm run build",
     "check:locales": "node scripts/check-locales.js",
     "check:kpi-impact": "node scripts/check-dashboard-kpi-coverage.js",
-    "validate:demos": "node scripts/validate-demo-templates.js",
+    "validate:demos": "npx tsx scripts/validate-demo-templates.ts",
     "codex:quick": "bash scripts/codex-quick-check.sh",
     "backfill:smtp-passwords": "node scripts/backfill-smtp-password-encryption.js",
     "backfill:primary-remittance": "npx ts-node prisma/backfill-primary-remittance.ts",
@@ -97,6 +97,7 @@
     "eslint-config-next": "16.2.4",
     "prisma": "^6.19.2",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5",
     "vitest": "^4.1.4"
   },
