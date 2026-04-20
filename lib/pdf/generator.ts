@@ -4,6 +4,7 @@ import path from 'path';
 import { buildPrivatePath } from '@/lib/uploads/private-storage';
 import type { InvoiceTotals } from '@/lib/invoice/totals';
 import { canUsePaymentGateways } from '@/lib/entitlements';
+import { resolvePrimaryRemittanceFromProfile } from '@/lib/banking/resolve-primary-remittance';
 
 export interface PDFProfile {
   companyName: string;
@@ -22,6 +23,12 @@ export interface PDFProfile {
   accountName: string;
   accountNumber: string;
   ifscCode: string; // Routing ID
+  primaryBankAccount?: {
+    bankName?: string | null;
+    accountHolderName?: string | null;
+    maskedAccountNumber?: string | null;
+    routingCode?: string | null;
+  } | null;
   signatureUrl?: string | null;
   invoiceTheme?: string | null;
   taxLabel?: string | null;
@@ -238,6 +245,11 @@ export async function generateInvoicePDF({
   const subHeader    = client.isExport ? 'ZERO RATED SUPPLY' : 'DOMESTIC SUPPLY';
   const safeTaxIdLabel    = profile.taxIdLabel    || "VAT/GST Number";
   const safeRoutingLabel  = profile.routingLabel  || "IFSC Code";
+  const remittance = resolvePrimaryRemittanceFromProfile(profile);
+  const remittanceBankName = remittance.bankName || "Not configured";
+  const remittanceAccountName = remittance.accountHolderName || "Not configured";
+  const remittanceAccountNumber = remittance.accountNumberDisplay || remittance.maskedAccountNumber || "Not configured";
+  const remittanceRoutingCode = remittance.routingCode || "Not configured";
 
   const invoiceTheme = profile.invoiceTheme || "DESIGN_1";
 
@@ -356,10 +368,10 @@ export async function generateInvoicePDF({
       footerY += 14;
     };
 
-    drawBankDetail("Bank name",      profile.bankName);
-    drawBankDetail("Account Name",   profile.accountName);
-    drawBankDetail("Account number", profile.accountNumber);
-    drawBankDetail(safeRoutingLabel, profile.ifscCode);
+    drawBankDetail("Bank name",      remittanceBankName);
+    drawBankDetail("Account Name",   remittanceAccountName);
+    drawBankDetail("Account number", remittanceAccountNumber);
+    drawBankDetail(safeRoutingLabel, remittanceRoutingCode);
     drawBankDetail("Reference",      invoiceNumber);
 
     if (paymentLink) {
@@ -531,10 +543,10 @@ export async function generateInvoicePDF({
     }
 
     drawText('Bank Details for Remittance', 40, bankY,      10, true,  'left', black);
-    drawText(`Bank Name: ${profile.bankName}`,       40, bankY + 20, 9,  false, 'left', textDark);
-    drawText(`Account Name: ${profile.accountName}`, 40, bankY + 35, 9,  false, 'left', textDark);
-    drawText(`Account No: ${profile.accountNumber}`, 40, bankY + 50, 9,  true,  'left', black);
-    drawText(`${safeRoutingLabel}: ${profile.ifscCode}`, 40, bankY + 65, 9, false, 'left', textDark);
+    drawText(`Bank Name: ${remittanceBankName}`,       40, bankY + 20, 9,  false, 'left', textDark);
+    drawText(`Account Name: ${remittanceAccountName}`, 40, bankY + 35, 9,  false, 'left', textDark);
+    drawText(`Account No: ${remittanceAccountNumber}`, 40, bankY + 50, 9,  true,  'left', black);
+    drawText(`${safeRoutingLabel}: ${remittanceRoutingCode}`, 40, bankY + 65, 9, false, 'left', textDark);
 
     drawText(`For ${profile.companyName}`, width - 40, bankY + 20, 10, true, 'right', black);
     if (profile.signatureUrl) {

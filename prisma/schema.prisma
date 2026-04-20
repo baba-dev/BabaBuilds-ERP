@@ -656,6 +656,8 @@ model BusinessProfile {
   accountName   String
   accountNumber String
   ifscCode      String // General routing code
+  primaryBankAccountId String?
+  primaryBankAccount   BankAccount? @relation("PrimaryRemittanceBankAccount", fields: [primaryBankAccountId], references: [id], onDelete: SetNull)
 
   logoUrl        String?
   signatureUrl   String?
@@ -686,6 +688,8 @@ model BusinessProfile {
   smtpFromEmail String?
 
   updatedAt DateTime @updatedAt
+
+  @@index([primaryBankAccountId])
 }
 
 model Client {
@@ -1367,7 +1371,11 @@ model BankAccount {
 
   name                String
   bankName            String?
+  accountHolderName   String?
   maskedAccountNumber String?
+  routingCode         String?
+  sourceType          String? @default("MANUAL")
+  isPrimaryRemittance Boolean @default(false)
   currency            String  @default("INR")
 
   openingBalance     Decimal  @default(0)
@@ -1378,6 +1386,7 @@ model BankAccount {
 
   transactions  BankTransaction[]
   importBatches BankImportBatch[]
+  primaryForBusinessProfiles BusinessProfile[] @relation("PrimaryRemittanceBankAccount")
 
   /// Plaid Item + account (encrypted token at rest)
   plaidItemId               String?
@@ -1390,6 +1399,7 @@ model BankAccount {
   updatedAt DateTime @updatedAt
 
   @@unique([workspaceId, name])
+  @@index([workspaceId, isPrimaryRemittance])
   @@index([workspaceId])
 }
 

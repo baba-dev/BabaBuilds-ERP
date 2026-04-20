@@ -21,6 +21,8 @@ import { logActivity } from '@/lib/security/activity-log';
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import { withPermission } from '@/lib/rbac';
 import { canUsePaymentGateways, loadWorkspaceBillingSnapshot, shouldApplyFreeTierLimits } from '@/lib/entitlements';
+import { resolvePrimaryRemittanceFromProfile } from '@/lib/banking/resolve-primary-remittance';
+import { syncPrimaryRemittanceBankAccount } from '@/lib/banking/sync-primary-remittance-account';
 
 export async function GET() {
   try {
@@ -34,7 +36,7 @@ export async function GET() {
 
     const profile = await prisma.businessProfile.findUnique({ 
       where: { workspaceId },
-      include: { workspace: true },  // Need planTier for UI gating
+      include: { workspace: true, primaryBankAccount: true },  // Need planTier for UI gating
     });
 
     if (profile) {
@@ -75,6 +77,7 @@ export async function GET() {
 
     return NextResponse.json({
       ...safeProfile,
+      primaryBankAccount: profile ? resolvePrimaryRemittanceFromProfile(profile) : null,
       locale,
       planTier,
       subscriptionStatus: workspace?.subscriptionStatus ?? "FREE",
@@ -377,30 +380,48 @@ export async function POST(request: Request) {
     }
 
     // ── Upsert ────────────────────────────────────────────────────────────────
-    const profile = await prisma.businessProfile.upsert({
-      where:  { workspaceId },
-      update: updateData,
-      create: {
+    const profile = await prisma.$transaction(async (tx) => {
+      const upserted = await tx.businessProfile.upsert({
+        where:  { workspaceId },
+        update: updateData,
+        create: {
+          workspaceId,
+          companyName, proprietorName, address, email, phone, website,
+          panNumber, udyamNumber, gstin,
+          bankName, accountName, accountNumber, ifscCode,
+          smtpHost, smtpPort, smtpUser, smtpFromEmail, 
+          smtpPassword:
+            parsedSmtpPassword && parsedSmtpPassword !== "SET"
+              ? encrypt(parsedSmtpPassword)
+              : null,
+          groqApiKey:          (rawGroqApiKey && rawGroqApiKey !== "SET" && rawGroqApiKey !== "DELETE_KEY")
+                                 ? encrypt(rawGroqApiKey) : (parsedGroqApiKey || null),
+          razorpayKeyId:       rawRzpKeyId        || null,
+          razorpayKeySecret:   (rawRzpSecret && rawRzpSecret !== "SET" && rawRzpSecret !== "DELETE_KEY")
+                                 ? encrypt(rawRzpSecret) : null,
+          stripePublishableKey: rawStripePublishableKey || null,
+          stripeSecretKey:      (rawStripeSecretKey && rawStripeSecretKey !== "SET" && rawStripeSecretKey !== "DELETE_KEY")
+                                 ? encrypt(rawStripeSecretKey) : null,
+          defaultGateway:       defaultGateway || "RAZORPAY",
+          invoiceTheme, defaultSacCode, logoUrl, signatureUrl,
+        },
+      });
+
+      await syncPrimaryRemittanceBankAccount(tx, {
         workspaceId,
-        companyName, proprietorName, address, email, phone, website,
-        panNumber, udyamNumber, gstin,
-        bankName, accountName, accountNumber, ifscCode,
-        smtpHost, smtpPort, smtpUser, smtpFromEmail, 
-        smtpPassword:
-          parsedSmtpPassword && parsedSmtpPassword !== "SET"
-            ? encrypt(parsedSmtpPassword)
-            : null,
-        groqApiKey:          (rawGroqApiKey && rawGroqApiKey !== "SET" && rawGroqApiKey !== "DELETE_KEY")
-                               ? encrypt(rawGroqApiKey) : (parsedGroqApiKey || null),
-        razorpayKeyId:       rawRzpKeyId        || null,
-        razorpayKeySecret:   (rawRzpSecret && rawRzpSecret !== "SET" && rawRzpSecret !== "DELETE_KEY")
-                               ? encrypt(rawRzpSecret) : null,
-        stripePublishableKey: rawStripePublishableKey || null,
-        stripeSecretKey:      (rawStripeSecretKey && rawStripeSecretKey !== "SET" && rawStripeSecretKey !== "DELETE_KEY")
-                               ? encrypt(rawStripeSecretKey) : null,
-        defaultGateway:       defaultGateway || "RAZORPAY",
-        invoiceTheme, defaultSacCode, logoUrl, signatureUrl,
-      },
+        bankName,
+        accountHolderName: accountName,
+        accountNumber,
+        routingCode: ifscCode,
+        routingLabel: upserted.routingLabel,
+        currency: null,
+        sourceType: "SETTINGS_SYNC",
+      });
+
+      return tx.businessProfile.findUnique({
+        where: { workspaceId },
+        include: { primaryBankAccount: true },
+      });
     });
 
     if (profile) {
@@ -444,6 +465,7 @@ export async function POST(request: Request) {
       metadata: {
         changedFieldNames,
         changedFieldCount: changedFieldNames.length,
+        bankSync: true,
       },
       request,
     });

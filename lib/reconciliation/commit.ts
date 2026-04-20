@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
+import { createExpenseWithSideEffectsTx } from '@/lib/expenses/create-expense-with-side-effects';
 
 type InvoiceSplitLine = {
   invoiceNumber: string;
@@ -26,6 +27,7 @@ type CommitInput = {
   workspaceId: string;
   approvedInvoices: ReconciliationTransaction[];
   approvedExpenses: ReconciliationTransaction[];
+  actorUserId?: string;
 };
 
 type CommitSuccess = {
@@ -55,6 +57,7 @@ export async function commitReconciliationTransactions({
   workspaceId,
   approvedInvoices,
   approvedExpenses,
+  actorUserId,
 }: CommitInput): Promise<CommitResult> {
   if (!Array.isArray(approvedInvoices) || !Array.isArray(approvedExpenses)) {
     return {
@@ -109,7 +112,15 @@ export async function commitReconciliationTransactions({
             continue;
           }
 
-          const created = await tx.expense.create({ data: newExpenses[i] });
+          const created = await createExpenseWithSideEffectsTx(tx, {
+            workspaceId,
+            userId: actorUserId ?? 'system-reconciliation',
+            date: newExpenses[i].date,
+            amount: newExpenses[i].amount,
+            category: newExpenses[i].category,
+            vendor: newExpenses[i].vendor,
+            description: newExpenses[i].description,
+          });
           expensesCreated++;
 
           const bankTxId = row.bankTransactionId ?? row.id;

@@ -13,6 +13,7 @@
     "check:kpi-impact": "node scripts/check-dashboard-kpi-coverage.js",
     "codex:quick": "bash scripts/codex-quick-check.sh",
     "backfill:smtp-passwords": "node scripts/backfill-smtp-password-encryption.js",
+    "backfill:primary-remittance": "npx ts-node prisma/backfill-primary-remittance.ts",
     "test:unit": "vitest run tests/sidebar/sidebar-rules.unit.test.ts",
     "test:integration": "vitest run tests/sidebar/mobile-drawer-parity.integration.test.ts",
     "test:smoke": "playwright test tests/smoke",

@@ -161,7 +161,7 @@ function reconReducer(state: State, action: Action): State {
   }
 }
 
-type BankAccountOption = { id: string; name: string; bankName: string | null };
+type BankAccountOption = { id: string; name: string; bankName: string | null; isPrimaryRemittance?: boolean };
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -233,12 +233,16 @@ export default function ReconciliationWizard() {
         if (!res.ok || cancelled) return;
         const rows = Array.isArray(json.data) ? json.data : [];
         setBankAccounts(
-          rows.map((a: { id: string; name: string; bankName: string | null }) => ({
+          rows.map((a: { id: string; name: string; bankName: string | null; isPrimaryRemittance?: boolean }) => ({
             id: a.id,
             name: a.name,
             bankName: a.bankName,
+            isPrimaryRemittance: a.isPrimaryRemittance,
           })),
         );
+        if (!bankAccountId && rows.length === 1) {
+          setBankAccountId(rows[0].id);
+        }
       } catch {
         /* ignore */
       }
@@ -604,6 +608,7 @@ export default function ReconciliationWizard() {
                   <SelectItem key={a.id} value={a.id}>
                     {a.name}
                     {a.bankName ? ` · ${a.bankName}` : ""}
+                    {a.isPrimaryRemittance ? " · Primary Remittance" : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -611,8 +616,13 @@ export default function ReconciliationWizard() {
             {bankAccounts.length === 0 && (
               <p className="text-xs text-amber-700 dark:text-amber-400">
                 No bank accounts yet.{" "}
+                Add remittance banking in{" "}
+                <Link href="/settings" className="underline underline-offset-2">
+                  Settings
+                </Link>{" "}
+                or{" "}
                 <Link href="/cash-flow/overview" className="underline underline-offset-2">
-                  Open cash flow
+                  open Cash Flow
                 </Link>{" "}
                 to add a bank account so imports are stored and matched.
               </p>
