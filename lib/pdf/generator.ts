@@ -217,14 +217,14 @@ export async function generateInvoicePDF({
   };
 
   const loadLogo = async (logoUrl: string | null, x: number, y: number, maxWidth: number, maxHeight: number, align = 'left') => {
-    if (!logoUrl) return;
+    if (!logoUrl) return false;
     try {
       const cleanUrl = logoUrl.split('?')[0];
       const relativeLogoPath = cleanUrl.startsWith('/') ? cleanUrl.substring(1) : cleanUrl;
       // Private storage: translate URL path to on-disk private_uploads/<kind>/...
       const parts = relativeLogoPath.split('/').filter(Boolean);
       const kind = parts.shift();
-      if (!kind) return;
+      if (!kind) return false;
       const fullPath = buildPrivatePath(kind as any, parts);
       if (fs.existsSync(fullPath)) {
         const imageData = fs.readFileSync(fullPath);
@@ -237,8 +237,13 @@ export async function generateInvoicePDF({
         const dims  = image.scaleToFit(maxWidth, maxHeight);
         const drawX = align === 'right' ? x - dims.width : x;
         page.drawImage(image, { x: drawX, y: height - y - dims.height, width: dims.width, height: dims.height });
+        return true;
       }
-    } catch (e) { console.log(`Logo load failed: ${logoUrl}`, e); }
+      return false;
+    } catch (e) {
+      console.log(`Logo load failed: ${logoUrl}`, e);
+      return false;
+    }
   };
 
   const headerTitle  = client.isExport ? 'EXPORT OF SERVICES' : 'TAX INVOICE';
@@ -413,8 +418,12 @@ export async function generateInvoicePDF({
     // ── DESIGN_1
     const currencyCode = baseCurrency;
     
-    if (profile.logoUrl) await loadLogo(profile.logoUrl, 40, 30, 180, 45); 
-    else drawText(profile.companyName, 40, 50, 18, true, 'left', black);
+    const profileLogoLoaded = profile.logoUrl
+      ? await loadLogo(profile.logoUrl, 40, 30, 180, 45)
+      : false;
+    if (!profileLogoLoaded) {
+      drawText(profile.companyName, 40, 50, 18, true, 'left', black);
+    }
 
     drawText('INVOICE',    width - 40, 45, 24, true,  'right', black);
     drawText(headerTitle,  width - 40, 60, 10, true,  'right', textMuted);
