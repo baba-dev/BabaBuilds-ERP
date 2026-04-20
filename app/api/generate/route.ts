@@ -408,7 +408,14 @@ export async function POST(request: Request) {
               const { decrypt } = await import('@/lib/encryption');
               const { generateTenantPaymentLink } = await import('@/lib/razorpay-links');
 
-              const decryptedSecret = decrypt((profile as any).razorpayKeySecret);
+              let decryptedSecret = (profile as any).razorpayKeySecret as string;
+              try {
+                decryptedSecret = decrypt((profile as any).razorpayKeySecret);
+              } catch {
+                // Legacy compatibility: older rows may still store plaintext.
+                // We keep runtime behavior permissive so payment links continue working.
+                console.warn('[generate] Using legacy plaintext Razorpay secret fallback for payment link generation.');
+              }
 
               const linkResult = await generateTenantPaymentLink({
                 amount: toDecimal(totals.total).toNumber(),
@@ -442,7 +449,13 @@ export async function POST(request: Request) {
               const { decrypt } = await import('@/lib/encryption');
               const { generateStripePaymentLink } = await import('@/lib/stripe-links');
 
-              const decryptedSecret = decrypt((profile as any).stripeSecretKey);
+              let decryptedSecret = (profile as any).stripeSecretKey as string;
+              try {
+                decryptedSecret = decrypt((profile as any).stripeSecretKey);
+              } catch {
+                // Legacy compatibility for historical plaintext rows.
+                console.warn('[generate] Using legacy plaintext Stripe secret fallback for payment link generation.');
+              }
 
               const linkResult = await generateStripePaymentLink({
                 amount: toDecimal(totals.total).toNumber(),    // in major units — service converts to smallest unit internally
