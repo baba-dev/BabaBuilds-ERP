@@ -31,6 +31,7 @@ export const sidebarItems: SidebarItem[] = [
   { key: "client_crm", path: "/clients", icon: Users, groupKey: "operations", keywords: ["customers", "contacts", "crm"] },
   { key: "quotes_proposals", path: "/proposals", icon: FileSignature, groupKey: "sales", keywords: ["quotes", "deals", "proposals"] },
   { key: "retainers_hub", path: "/retainers", icon: Box, groupKey: "sales", keywords: ["recurring", "contracts", "retainer"] },
+  { key: "referrals_rewards", path: "/referrals", icon: Users, groupKey: "sales", keywords: ["affiliate", "reseller", "customer referral"] },
   { key: "expenses_margins", path: "/expenses", icon: Receipt, groupKey: "finance", keywords: ["costs", "purchases", "spend"] },
   { key: "savings_tax", path: "/tax", icon: ShieldCheck, groupKey: "finance", keywords: ["gst", "compliance", "tax"] },
   { key: "ai_reconciliation", path: "/reconciliation", icon: Sparkles, groupKey: "finance", keywords: ["bank", "matching", "ledger"] },
