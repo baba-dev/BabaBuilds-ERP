@@ -1,11 +1,13 @@
 "use client";
 
+import { motion, useReducedMotion } from "framer-motion";
 import { BriefcaseBusiness, Building2, Calculator, ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { DemoLaunchButton } from "@/components/landing/persona/DemoLaunchButton";
 
 export default function RoleDemoLauncher() {
   const tp1 = useTranslations("LandingPhase1");
+  const reduceMotion = useReducedMotion();
   const roleCards = [
     {
       title: tp1("roleLauncher.cards.ca.title"),
@@ -30,7 +32,13 @@ export default function RoleDemoLauncher() {
   return (
     <section className="border-y border-border bg-zinc-50/70 py-16 dark:bg-zinc-950/40">
       <div className="mx-auto max-w-7xl px-6">
-        <div className="mb-8 max-w-3xl space-y-3">
+        <motion.div
+          initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.4 }}
+          className="mb-8 max-w-3xl space-y-3"
+        >
           <p className="text-xs font-black uppercase tracking-[0.18em] text-orange-700 dark:text-orange-300">
             {tp1("roleLauncher.badge")}
           </p>
@@ -40,12 +48,16 @@ export default function RoleDemoLauncher() {
           <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
             {tp1("roleLauncher.description")}
           </p>
-        </div>
+        </motion.div>
 
         <div className="grid gap-5 md:grid-cols-3">
-          {roleCards.map((card) => (
-            <article
+          {roleCards.map((card, idx) => (
+            <motion.article
               key={card.title}
+              initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.35, delay: reduceMotion ? 0 : idx * 0.06 }}
               className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900/70"
             >
               <div className="mb-4 inline-flex rounded-xl bg-orange-50 p-2.5 text-orange-600 dark:bg-orange-950/40 dark:text-orange-300">
@@ -59,7 +71,7 @@ export default function RoleDemoLauncher() {
                 analyticsContext="homepage_role_demo"
                 className="mt-4 h-11 w-full justify-center rounded-xl border-orange-300 font-bold text-orange-700 hover:bg-orange-50 hover:text-orange-800 dark:border-orange-800/60 dark:text-orange-300 dark:hover:bg-orange-950/30"
               />
-            </article>
+            </motion.article>
           ))}
         </div>
 
