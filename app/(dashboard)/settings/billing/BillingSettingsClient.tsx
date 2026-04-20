@@ -16,7 +16,13 @@ import { ProUpgradeCard } from "@/components/UpgradeButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
-import { PRICING, FREE_TIER_CLIENT_LIMIT, FREE_TIER_MONTHLY_INVOICE_LIMIT } from "@/lib/pricing";
+import {
+  FREE_TIER_CLIENT_LIMIT,
+  FREE_TIER_MONTHLY_INVOICE_LIMIT,
+  formatPlanPrice,
+  getPlanPriceFromInterval,
+  getPricingRegion,
+} from "@/lib/pricing";
 
 type WorkspaceSummary = {
   planInterval: string | null;
@@ -24,6 +30,8 @@ type WorkspaceSummary = {
   subscriptionStatus: string;
   subscriptionEndsAt: Date | string | null;
   billingProviderId: string | null;
+  countryCode: string;
+  baseCurrency: string;
   _count: { clients: number };
 };
 
@@ -119,19 +127,29 @@ export default function BillingSettingsClient({
     [currency, locale],
   );
 
-  const { activePrice, intervalText } = useMemo(() => {
-    if (isTrialing) return { activePrice: 0, intervalText: "Trial — Pro features" };
-    if (!isPaidSubscription) return { activePrice: 0, intervalText: "Forever" };
+  const pricingRegion = useMemo(
+    () =>
+      getPricingRegion({
+        explicitCountryCode: workspace.countryCode,
+        explicitCurrency: currency || workspace.baseCurrency,
+        locale,
+      }),
+    [currency, locale, workspace.baseCurrency, workspace.countryCode],
+  );
+
+  const { activePriceLabel, intervalText } = useMemo(() => {
+    if (isTrialing) return { activePriceLabel: "Included", intervalText: "Trial — Pro features" };
+    if (!isPaidSubscription) return { activePriceLabel: formatMoney(0), intervalText: "Forever" };
     const isTeam = workspace.subscriptionStatus === "TEAM" || workspace.planTier === "TEAM";
-    if (isTeam) {
-      if (workspace.planInterval === "TEAM_MONTHLY") return { activePrice: PRICING.TEAM_MONTHLY, intervalText: "Per Month (Team)" };
-      if (workspace.planInterval === "TEAM_YEARLY") return { activePrice: PRICING.TEAM_YEARLY, intervalText: "Per Year (Team)" };
-      return { activePrice: PRICING.TEAM_MONTHLY, intervalText: "Team plan" };
-    }
-    if (workspace.planInterval === "MONTHLY") return { activePrice: PRICING.MONTHLY, intervalText: "Per Month" };
-    if (workspace.planInterval === "QUARTERLY") return { activePrice: PRICING.QUARTERLY, intervalText: "Per Quarter" };
-    return { activePrice: PRICING.YEARLY, intervalText: "Per Year" };
-  }, [isPaidSubscription, isTrialing, workspace.planInterval, workspace.planTier, workspace.subscriptionStatus]);
+    const fallbackInterval = isTeam ? "TEAM_MONTHLY" : "MONTHLY";
+    const activeInterval = workspace.planInterval || fallbackInterval;
+    const price = getPlanPriceFromInterval({ interval: activeInterval, region: pricingRegion });
+    if (activeInterval === "TEAM_MONTHLY") return { activePriceLabel: formatPlanPrice(price, locale), intervalText: "Per Month (Team)" };
+    if (activeInterval === "TEAM_YEARLY") return { activePriceLabel: formatPlanPrice(price, locale), intervalText: "Per Year (Team)" };
+    if (activeInterval === "YEARLY") return { activePriceLabel: formatPlanPrice(price, locale), intervalText: "Per Year" };
+    if (activeInterval === "QUARTERLY") return { activePriceLabel: formatPlanPrice(price, locale), intervalText: "Per Quarter" };
+    return { activePriceLabel: formatPlanPrice(price, locale), intervalText: isTeam ? "Team plan" : "Per Month" };
+  }, [formatMoney, isPaidSubscription, isTrialing, locale, pricingRegion, workspace.planInterval, workspace.planTier, workspace.subscriptionStatus]);
 
   const fetchBillingHistory = useCallback(async () => {
     setBillingLoading(true);
@@ -380,7 +398,9 @@ export default function BillingSettingsClient({
                   )}
                 </div>
                 <div className="text-right hidden sm:block">
-                  <p className="text-3xl font-black text-zinc-900 dark:text-zinc-50">{formatMoney(activePrice)}</p>
+                  <p className="text-3xl font-black text-zinc-900 dark:text-zinc-50">
+                    {isPaidSubscription || isTrialing ? activePriceLabel : formatMoney(0)}
+                  </p>
                   <p className="text-xs text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-widest mt-1">
                     {(isPaidSubscription || isTrialing) ? intervalText : `${FREE_TIER_MONTHLY_INVOICE_LIMIT} invoices/mo limit`}
                   </p>
@@ -422,7 +442,9 @@ export default function BillingSettingsClient({
             )}
           </Card>
 
-          {!isPaidSubscription && !isTrialing && <ProUpgradeCard locale={locale} currency={currency} />}
+          {!isPaidSubscription && !isTrialing && (
+            <ProUpgradeCard locale={locale} currency={currency} countryCode={workspace.countryCode} />
+          )}
 
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
             <CardHeader className="bg-zinc-50/50 dark:bg-zinc-950/50 border-b dark:border-zinc-800">

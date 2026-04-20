@@ -1,4 +1,12 @@
-import { PRICING } from "@/lib/pricing";
+import {
+  PRICING,
+  getPlanPriceFromInterval,
+  majorAmountToRazorpayMinor,
+  roundMajorAmount,
+  type PlanPrice,
+  type PricingRegion,
+  type SupportedCurrency,
+} from "@/lib/pricing";
 
 export type SubscriptionIntervalKey =
   | "MONTHLY"
@@ -15,27 +23,32 @@ const INTERVAL_ORDER: SubscriptionIntervalKey[] = [
   "TEAM_YEARLY",
 ];
 
+export function getListPriceForInterval(interval: SubscriptionIntervalKey, region: PricingRegion): PlanPrice {
+  return getPlanPriceFromInterval({ interval, region });
+}
+
+/** @deprecated Use getListPriceForInterval — kept for call sites that assume India INR. */
 export function getListPriceInr(interval: SubscriptionIntervalKey): number {
-  return PRICING[interval];
+  return getListPriceForInterval(interval, "IN").amountMajor;
 }
 
 export function isValidInterval(interval: unknown): interval is SubscriptionIntervalKey {
   return typeof interval === "string" && INTERVAL_ORDER.includes(interval as SubscriptionIntervalKey);
 }
 
-/** Razorpay amounts are in paise; round to avoid float drift. */
-export function inrToPaise(amountInr: number): number {
-  return Math.round(amountInr * 100);
+/** Razorpay order amount uses smallest currency units (paise/cents/baisa). */
+export function amountMajorToGatewayMinor(amountMajor: number, currency: PlanPrice["currency"]): number {
+  return majorAmountToRazorpayMinor(amountMajor, currency);
 }
 
-export function paiseToInr(paise: number): number {
-  return paise / 100;
-}
-
-export function applyCustomerDiscountPercent(listInr: number, discountPercent: number): number {
+export function applyCustomerDiscountPercent(
+  listMajor: number,
+  discountPercent: number,
+  currency: SupportedCurrency,
+): number {
   const pct = Math.min(100, Math.max(0, discountPercent));
-  const net = listInr * (1 - pct / 100);
-  return Math.max(0, Math.round(net * 100) / 100);
+  const net = listMajor * (1 - pct / 100);
+  return roundMajorAmount(net, currency);
 }
 
 export function tierFromInterval(interval: SubscriptionIntervalKey): "PRO" | "TEAM" {
@@ -43,49 +56,55 @@ export function tierFromInterval(interval: SubscriptionIntervalKey): "PRO" | "TE
 }
 
 /**
- * Minimum acceptable paid amount (INR) for a plan after distributor discount (inclusive).
+ * Minimum acceptable paid amount (major units, gateway currency) after distributor discount (inclusive).
  */
-export function minimumExpectedPaidInr(
+export function minimumExpectedPaidMajor(
   interval: SubscriptionIntervalKey,
   customerDiscountPercent: number,
+  region: PricingRegion,
 ): number {
-  const list = getListPriceInr(interval);
-  return applyCustomerDiscountPercent(list, customerDiscountPercent);
+  const price = getListPriceForInterval(interval, region);
+  return applyCustomerDiscountPercent(price.amountMajor, customerDiscountPercent, price.currency);
 }
 
-const PAID_EPS = 0.02;
+function paidEpsilon(currency: SupportedCurrency): number {
+  return currency === "OMR" ? 0.005 : 0.02;
+}
 
 export function paidMatchesPlan(
-  amountPaid: number,
+  amountPaidMajor: number,
   interval: SubscriptionIntervalKey,
   customerDiscountPercent: number,
+  region: PricingRegion,
 ): boolean {
-  const minDue = minimumExpectedPaidInr(interval, customerDiscountPercent);
-  return amountPaid + PAID_EPS >= minDue;
+  const price = getListPriceForInterval(interval, region);
+  const minDue = minimumExpectedPaidMajor(interval, customerDiscountPercent, region);
+  return amountPaidMajor + paidEpsilon(price.currency) >= minDue;
 }
 
 /**
- * Infer tier + billing interval from amount paid (INR) when no explicit interval is available
- * (e.g. legacy webhooks). Uses catalog thresholds — ambiguous when discounts make two plans
- * the same price; prefer passing `interval` in payment notes / verify body.
+ * Infer tier + billing interval from amount paid (major units, INR) when no explicit interval is available.
+ * Uses India catalog only — prefer passing `interval` in payment notes.
  */
-export function inferTierAndIntervalFromPaidAmount(amountPaid: number): {
+const LEGACY_INR_EPS = 0.02;
+
+export function inferTierAndIntervalFromPaidAmount(amountPaidInr: number): {
   interval: SubscriptionIntervalKey;
   tier: "PRO" | "TEAM";
 } {
-  if (amountPaid >= PRICING.TEAM_YEARLY - PAID_EPS) {
+  if (amountPaidInr >= PRICING.TEAM_YEARLY - LEGACY_INR_EPS) {
     return { interval: "TEAM_YEARLY", tier: "TEAM" };
   }
-  if (amountPaid >= PRICING.YEARLY - PAID_EPS) {
+  if (amountPaidInr >= PRICING.YEARLY - LEGACY_INR_EPS) {
     return { interval: "YEARLY", tier: "PRO" };
   }
-  if (amountPaid >= PRICING.QUARTERLY - PAID_EPS) {
+  if (amountPaidInr >= PRICING.QUARTERLY - LEGACY_INR_EPS) {
     return { interval: "QUARTERLY", tier: "PRO" };
   }
-  if (amountPaid >= PRICING.TEAM_MONTHLY - PAID_EPS) {
+  if (amountPaidInr >= PRICING.TEAM_MONTHLY - LEGACY_INR_EPS) {
     return { interval: "TEAM_MONTHLY", tier: "TEAM" };
   }
-  if (amountPaid >= PRICING.MONTHLY - PAID_EPS) {
+  if (amountPaidInr >= PRICING.MONTHLY - LEGACY_INR_EPS) {
     return { interval: "MONTHLY", tier: "PRO" };
   }
   return { interval: "MONTHLY", tier: "PRO" };

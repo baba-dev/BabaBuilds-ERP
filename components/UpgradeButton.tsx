@@ -6,9 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { ShieldCheck, CheckCircle2, Sparkles, CreditCard, PartyPopper } from "lucide-react";
 import { toast } from "sonner";
-import { getCurrencySymbol } from "@/lib/currency";
 import { useSession } from "next-auth/react";
-import { PRICING } from "@/lib/pricing";
+import {
+  formatMajorInCurrency,
+  getPlanPriceFromInterval,
+  getPricingRegion,
+  roundMajorAmount,
+  type PlanInterval,
+  type PricingRegion,
+} from "@/lib/pricing";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -73,32 +79,39 @@ const loadRazorpayScript = () => {
   });
 };
 
-export function ProUpgradeCard({ locale = "en-IN", currency = "INR" }: { locale?: string, currency?: string }) {
+export function ProUpgradeCard({
+  locale = "en-IN",
+  currency = "INR",
+  countryCode,
+}: {
+  locale?: string;
+  currency?: string;
+  countryCode?: string | null;
+}) {
   const { data: session, update } = useSession();
   const router = useRouter();
-  const [interval, setInterval] = useState<"MONTHLY" | "QUARTERLY" | "YEARLY" | "TEAM_MONTHLY" | "TEAM_YEARLY">("YEARLY");
+  const [interval, setInterval] = useState<PlanInterval>("YEARLY");
   const [isLoading, setIsLoading] = useState(false);
   const [isUpgradeSuccess, setIsUpgradeSuccess] = useState(false);
   const [couponInput, setCouponInput] = useState("");
   const [appliedCouponCode, setAppliedCouponCode] = useState<string | null>(null);
   const [appliedDiscountPercent, setAppliedDiscountPercent] = useState<number | null>(null);
 
-  const currencySymbol = getCurrencySymbol(currency, locale);
+  const sessionCountry = session && "countryCode" in session ? (session as { countryCode?: string }).countryCode : undefined;
+  const pricingRegion: PricingRegion = getPricingRegion({
+    explicitCountryCode: countryCode ?? sessionCountry,
+    explicitCurrency: currency,
+    locale,
+  });
 
-  const formatMoney = (amount: number) => {
-    return new Intl.NumberFormat(locale, { 
-      style: 'currency', 
-      currency: currency, 
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
+  const listPlanPrice = getPlanPriceFromInterval({ interval, region: pricingRegion });
+  const listMajor = listPlanPrice.amountMajor;
+  const displayCurrency = listPlanPrice.currency;
 
-  const listPrice = PRICING[interval];
-  const estimatedCharge =
+  const estimatedMajor =
     appliedDiscountPercent != null && appliedDiscountPercent > 0
-      ? Math.max(0, Math.round(listPrice * (1 - appliedDiscountPercent / 100) * 100) / 100)
-      : listPrice;
+      ? roundMajorAmount(listMajor * (1 - Math.min(100, appliedDiscountPercent) / 100), displayCurrency)
+      : listMajor;
 
   const loadSavedCoupon = useCallback(async () => {
     try {
@@ -269,16 +282,10 @@ export function ProUpgradeCard({ locale = "en-IN", currency = "INR" }: { locale?
               1-Mo
             </button>
             <button 
-              onClick={() => setInterval("QUARTERLY")}
-              className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all ${interval === "QUARTERLY" ? "bg-white dark:bg-indigo-600 text-indigo-900 dark:text-white shadow-sm" : "text-indigo-600/70 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300"}`}
-            >
-              3-Mo
-            </button>
-            <button 
               onClick={() => setInterval("YEARLY")}
               className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all ${interval === "YEARLY" ? "bg-white dark:bg-indigo-600 text-indigo-900 dark:text-white shadow-sm" : "text-indigo-600/70 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300"}`}
             >
-              12-Mo <span className="ml-1 text-emerald-600 dark:text-emerald-400 hidden sm:inline">(Save 5%)</span>
+              12-Mo <span className="ml-1 text-emerald-600 dark:text-emerald-400 hidden sm:inline">(Save 2 months)</span>
             </button>
             <div className="w-[1px] bg-indigo-200/50 dark:bg-indigo-800/50 mx-1"></div>
             <button 
@@ -331,15 +338,15 @@ export function ProUpgradeCard({ locale = "en-IN", currency = "INR" }: { locale?
            <div className="text-center md:text-right">
               {appliedDiscountPercent != null && appliedDiscountPercent > 0 ? (
                 <>
-                  <p className="text-sm line-through text-zinc-400">{formatMoney(listPrice)}</p>
-                  <p className="text-3xl font-extrabold text-indigo-950 dark:text-zinc-50">{formatMoney(estimatedCharge)}</p>
+                  <p className="text-sm line-through text-zinc-400">{formatMajorInCurrency(listMajor, displayCurrency, locale)}</p>
+                  <p className="text-3xl font-extrabold text-indigo-950 dark:text-zinc-50">{formatMajorInCurrency(estimatedMajor, displayCurrency, locale)}</p>
                   <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
                     {appliedDiscountPercent}% partner discount · Billed {interval.toLowerCase()}
                   </p>
                 </>
               ) : (
                 <>
-                  <p className="text-3xl font-extrabold text-indigo-950 dark:text-zinc-50">{formatMoney(listPrice)}</p>
+                  <p className="text-3xl font-extrabold text-indigo-950 dark:text-zinc-50">{formatMajorInCurrency(listMajor, displayCurrency, locale)}</p>
                   <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
                     Billed {interval.toLowerCase()}
                   </p>

@@ -18,6 +18,7 @@
     "test:unit": "vitest run tests/sidebar/sidebar-rules.unit.test.ts",
     "test:integration": "vitest run tests/sidebar/mobile-drawer-parity.integration.test.ts",
     "test:smoke": "playwright test tests/smoke",
+    "test:payments": "vitest run tests/payments && playwright test tests/payments",
     "test": "vitest run"
   },
   "dependencies": {

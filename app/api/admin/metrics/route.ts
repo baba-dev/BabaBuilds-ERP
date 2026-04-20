@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getAuthFailureMetrics } from "@/lib/auth-observability";
 import { getProtocolLaunchMetrics } from "@/lib/protocol-observability";
 import { decimalToNumber, toDecimal } from "@/lib/money";
-import { getMonthlyPriceForInterval } from "@/lib/pricing";
+import { getMonthlyPriceForInterval, getPricingRegionFromCountry } from "@/lib/pricing";
 
 export async function GET() {
   try {
@@ -14,11 +14,14 @@ export async function GET() {
     const totalWorkspaces = await prisma.workspace.count();
     // 2a. Real MRR calculation based on current pricing constants
     const workspaces = await prisma.workspace.findMany({
-      where: { subscriptionStatus: 'PRO' },
-      select: { planInterval: true }
+      where: { subscriptionStatus: { in: ["PRO", "TEAM"] } },
+      select: { planInterval: true, countryCode: true },
     });
 
-    const mrr = workspaces.reduce((sum, ws) => sum + getMonthlyPriceForInterval(ws.planInterval), 0);
+    const mrr = workspaces.reduce(
+      (sum, ws) => sum + getMonthlyPriceForInterval(ws.planInterval, getPricingRegionFromCountry(ws.countryCode)),
+      0,
+    );
     
     const totalInvoices = await prisma.invoice.count();
     const totalClients = await prisma.client.count();
