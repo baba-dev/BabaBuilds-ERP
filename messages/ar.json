@@ -1248,7 +1248,26 @@
     "nav": {
       "features": "Features",
       "comparison": "Comparison",
-      "pricing": "Pricing"
+      "pricing": "Pricing",
+      "useCases": "حالات الاستخدام"
+    },
+    "useCases": {
+      "agency": {
+        "title": "للوكالات",
+        "description": "الاحتفاظات والمقترحات وسير الفوترة."
+      },
+      "contractor": {
+        "title": "للمقاولين",
+        "description": "فوترة المراحل وتتبّع التكاليف النقدية."
+      },
+      "smallBusiness": {
+        "title": "للشركات الصغيرة",
+        "description": "الفواتير والتحصيلات والامتثال اليومي."
+      },
+      "freelancer": {
+        "title": "للمستقلين",
+        "description": "الفوترة السريعة وإدارة الاحتفاظات."
+      }
     },
     "actions": {
       "dashboard": "Dashboard",

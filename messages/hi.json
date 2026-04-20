@@ -1228,7 +1228,19 @@
     "nav": {
       "features": "Features",
       "comparison": "Comparison",
-      "pricing": "Pricing"
+      "pricing": "Pricing",
+      "useCases": "Use Cases",
+      "useCasesDescription": "भूमिका-आधारित सेटअप एक्सप्लोर करें",
+      "useCasesItems": {
+        "agenciesTitle": "For Agencies",
+        "agenciesDescription": "Retainers, proposals और receivables automation",
+        "contractorsTitle": "For Contractors",
+        "contractorsDescription": "Milestone billing और project cash visibility",
+        "smallBusinessesTitle": "For Small Businesses",
+        "smallBusinessesDescription": "Invoicing, collections और tax-ready records",
+        "freelancersTitle": "For Freelancers",
+        "freelancersDescription": "Fast invoicing और retainer-led solo workflows"
+      }
     },
     "actions": {
       "dashboard": "Dashboard",

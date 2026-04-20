@@ -1359,7 +1359,25 @@
     "nav": {
       "features": "Features",
       "comparison": "Comparison",
-      "pricing": "Pricing"
+      "pricing": "Pricing",
+      "useCases": "Use Cases",
+      "useCasesDescription": "Explore role-specific pages",
+      "forAgencies": {
+        "title": "For Agencies",
+        "description": "Retainers, proposals, and collections in one flow."
+      },
+      "forContractors": {
+        "title": "For Contractors",
+        "description": "Milestone billing, vendor costs, and project cash control."
+      },
+      "forSmallBusinesses": {
+        "title": "For Small Businesses",
+        "description": "Simplified invoicing, expenses, and tax-ready records."
+      },
+      "forFreelancers": {
+        "title": "For Freelancers",
+        "description": "Fast proposal-to-invoice workflow with retainer automation."
+      }
     },
     "actions": {
       "dashboard": "Dashboard",
