@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { 
@@ -75,6 +75,11 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
     payrollSetupPath: "STANDALONE" as "STANDALONE" | "WORKFORCE_LINKED",
   });
   const [payrollReadiness, setPayrollReadiness] = useState<PayrollReadinessResponse | null>(null);
+  const essentialCompletionCount = useMemo(() => {
+    const essentials = [form.companyName, form.proprietorName, form.email, form.address];
+    return essentials.filter((value) => value.trim().length > 0).length;
+  }, [form.address, form.companyName, form.email, form.proprietorName]);
+  const essentialCompletionPercent = Math.round((essentialCompletionCount / 4) * 100);
 
   // Smart Suggestion Logic
   const handleCountryChange = (code: string) => {
@@ -143,7 +148,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
         if (isModal && onComplete) {
           onComplete(); // This triggers update() in the Gatekeeper
         } else {
-          router.push("/dashboard"); // Redirect to canonical dashboard entry path
+          router.push("/dashboard?firstLook=1"); // Redirect to canonical dashboard entry path with first-look context
         }
       } else {
         const errorBody = await res.json().catch(() => null);
@@ -177,6 +182,13 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
             name: step === 1 ? t('step_geo') : step === 2 ? t('step_finance') : step === 3 ? t('step_compliance') : step === 4 ? t('step_identity') : step === 5 ? t('step_integrations') : step === 6 ? t('step_shop') : 'Modules'
           })}
         </p>
+        <div className="rounded-xl border border-indigo-200/60 bg-indigo-50/70 px-4 py-3 text-xs text-indigo-900 dark:border-indigo-900/40 dark:bg-indigo-950/30 dark:text-indigo-200">
+          <p className="font-bold uppercase tracking-wider">Why this matters</p>
+          <p className="mt-1 leading-relaxed">
+            Essential setup completion: {essentialCompletionPercent}% ({essentialCompletionCount}/4)
+            {" "}core identity fields complete. Accurate identity and remittance details improve invoice trust and reduce failed collections.
+          </p>
+        </div>
       </div>
 
       <div className="max-w-xl w-full relative">
@@ -305,6 +317,23 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 <CardDescription className="dark:text-zinc-400">{t('step4_desc')}</CardDescription>
               </CardHeader>
               <CardContent className="pt-8 space-y-4">
+                <div className="rounded-xl border border-amber-200/70 bg-amber-50/70 p-3 text-left dark:border-amber-900/50 dark:bg-amber-900/20">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
+                    Essential setup progress
+                  </p>
+                  <p className="mt-1 text-xs text-amber-800/90 dark:text-amber-200/90">
+                    Complete these fields to activate professional invoices and smoother onboarding completion.
+                  </p>
+                  <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-amber-200/60 dark:bg-amber-900/60">
+                    <div
+                      className="h-full rounded-full bg-amber-500 transition-all duration-300"
+                      style={{ width: `${essentialCompletionPercent}%` }}
+                    />
+                  </div>
+                  <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                    {essentialCompletionCount}/4 completed
+                  </p>
+                </div>
                 <div className="space-y-2">
                   <Label className="dark:text-zinc-300">{t('legal_company_name')}</Label>
                   <Input value={form.companyName} onChange={e => {

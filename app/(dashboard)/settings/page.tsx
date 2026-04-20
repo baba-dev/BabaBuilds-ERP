@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { typography } from "@/lib/ui/typography";
 import { Badge } from "@/components/ui/badge";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
+import { OnboardingHint } from "@/components/onboarding/OnboardingHint";
 
 export default function SettingsWizard() {
   /**
@@ -112,12 +113,15 @@ export default function SettingsWizard() {
   const isTeamPlan = planTier === "TEAM";
 
   const workspaceModulesAnchorRef = useRef<HTMLDivElement | null>(null);
+  const firstLookSettingsAnchorRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const hash = window.location.hash.replace(/^#/, "");
     if (hash === "workspace-modules") {
       workspaceModulesAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else if (hash === "first-look-settings") {
+      firstLookSettingsAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, []);
 
@@ -450,9 +454,38 @@ export default function SettingsWizard() {
       headerVariant="compact"
       maxWidthClassName="max-w-4xl"
     >
+        <OnboardingHint
+          stepId="complete_profile"
+          title="Onboarding tip: Complete profile"
+          message="Finish legal identity, tax, and remittance details so invoices and collections run smoothly."
+          className="mb-4"
+        />
         <form onSubmit={handleSubmit} className="space-y-8 pb-40">
           
           {/* IDENTITY & BRANDING */}
+          <div ref={firstLookSettingsAnchorRef} id="first-look-settings" className="scroll-mt-24" aria-hidden />
+          {isNewSetup && (
+            <Card className="shadow-sm border-indigo-200/70 dark:border-indigo-900/50 bg-indigo-50/70 dark:bg-indigo-950/20">
+              <CardContent className="pt-5 pb-5">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 rounded-lg bg-indigo-500/10 p-2 text-indigo-600 dark:text-indigo-300">
+                    <Sparkles className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-indigo-600 dark:text-indigo-300">
+                      Helpful Intro
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                      Complete these essentials first: company identity, remittance bank details, and invoice defaults.
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">
+                      These fields improve invoice deliverability, customer trust, and compliance readiness.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
             <CardHeader className="bg-zinc-50/50 dark:bg-zinc-950/50 border-b dark:border-zinc-800">
               <CardTitle className={cn(typography.sectionHeader, "text-lg flex items-center gap-2")}>
