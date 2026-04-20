@@ -33,13 +33,15 @@ export const metadata: Metadata = {
     template: "%s | BabaBuilds ERP",
   },
   description:
-    "The all-in-one ERP for agencies and freelancers. Automate multi-currency invoicing, GST/VAT compliance, AI-powered bank reconciliation, and real-time financial dashboards — trusted by businesses across India, the Middle East, and LATAM.",
+    "The all-in-one ERP for agencies and freelancers. Automate multi-currency invoicing, GST/VAT workflows with country-aware setup defaults, AI-powered bank reconciliation, and real-time financial dashboards.",
   applicationName: "BabaBuilds ERP",
   keywords: [
     "ERP for freelancers",
     "automated invoicing software",
     "GST compliance ERP",
     "VAT invoicing Oman",
+    "VAT invoicing UAE",
+    "VAT invoicing Saudi Arabia",
     "multi-currency invoicing",
     "bank reconciliation software",
     "agency finance management",
@@ -151,7 +153,7 @@ export default async function RootLayout({
               url: SITE_URL,
               image: `${SITE_URL}/icons/Banner-1.png`,
               description:
-                "All-in-one ERP for agencies: automated invoicing, multi-currency billing, GST/VAT compliance, AI reconciliation, and financial dashboards.",
+                "All-in-one ERP for agencies: automated invoicing, multi-currency billing, country-aware GST/VAT workflows, AI reconciliation, and financial dashboards.",
               author: {
                 "@type": "Organization",
                 name: ORGANIZATION_NAME,
@@ -170,7 +172,7 @@ export default async function RootLayout({
               offers: {
                 "@type": "Offer",
                 price: "0",
-                priceCurrency: "INR",
+                priceCurrency: "USD",
                 availability: "https://schema.org/InStock",
               },
               screenshot: `${SITE_URL}/icons/Banner-1.png`,

@@ -49,9 +49,9 @@ Select your preferred language for the ERP interface:
 
 | Field | Description |
 |---|---|
-| **PAN Number** | Permanent Account Number (mandatory) |
-| **Udyam Registration** | MSME registration number |
-| **GSTIN** | GST Identification Number (if registered) |
+| **PAN Number** | Primary compliance identifier field (commonly PAN for India, can map to local business/tax ID in other regions) |
+| **Udyam Registration** | Secondary business registration field (India MSME or local registration reference) |
+| **GSTIN** | Tax registration field (GSTIN/TRN/VAT number, depending on country setup) |
 | **Default SAC/HSN Code** | Fallback service classification code if none specified per invoice |
 
 ---
@@ -65,7 +65,7 @@ These appear in the **"Bank Details for Remittance"** section of every invoice:
 | **Bank Name** | Your bank (e.g., ICICI Bank) |
 | **Account Name** | Name on the account |
 | **Account Number** | Stored securely, visible only on invoices |
-| **IFSC Code** | 11-digit routing code |
+| **IFSC Code** | Routing identifier field (IFSC / IBAN / SWIFT based on your country setup) |
 
 ---
 

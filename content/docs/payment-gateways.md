@@ -19,6 +19,8 @@ isFeatured: true
 
 Once connected, BabaBuilds ERP automatically embeds a **clickable payment link** in every invoice PDF you generate. Your clients can pay directly from the PDF — no extra steps.
 
+<Callout type="info">Regional readiness note: Stripe supports global collections (including GCC currencies supported by your Stripe account). Razorpay is India-specific and INR-only.</Callout>
+
 ---
 
 ## Which Gateway Should I Use?

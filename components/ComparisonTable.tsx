@@ -24,7 +24,7 @@ const features = [
     baba: true,
     tally: "Regional",
     quickbooks: true,
-    desc: "Global tax labels (VAT, GST, Sales Tax) and NIC/SAC code lookups baked in.",
+    desc: "Region-aware tax labels (VAT, GST, Sales Tax), configurable rates, and country-pack coverage for selected jurisdictions.",
   },
   {
     name: "Unified Proposal-to-Paid Workflow",

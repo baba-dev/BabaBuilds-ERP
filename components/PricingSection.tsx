@@ -17,6 +17,7 @@ type Currency = {
   code: string;
   symbol: string;
   rate: number;
+  decimals?: number;
 };
 
 type PricingTier = {
@@ -35,10 +36,16 @@ type PricingTier = {
 };
 
 const currencies: Currency[] = [
-  { code: "USD", symbol: "$", rate: 1 },
-  { code: "INR", symbol: "₹", rate: 80 },
-  { code: "EUR", symbol: "€", rate: 0.92 },
-  { code: "GBP", symbol: "£", rate: 0.79 },
+  { code: "USD", symbol: "$", rate: 1, decimals: 2 },
+  { code: "INR", symbol: "₹", rate: 80, decimals: 0 },
+  { code: "EUR", symbol: "€", rate: 0.92, decimals: 0 },
+  { code: "GBP", symbol: "£", rate: 0.79, decimals: 0 },
+  { code: "OMR", symbol: "OMR ", rate: 0.385, decimals: 3 },
+  { code: "AED", symbol: "AED ", rate: 3.67, decimals: 0 },
+  { code: "SAR", symbol: "SAR ", rate: 3.75, decimals: 0 },
+  { code: "QAR", symbol: "QAR ", rate: 3.64, decimals: 0 },
+  { code: "KWD", symbol: "KWD ", rate: 0.307, decimals: 3 },
+  { code: "BHD", symbol: "BHD ", rate: 0.376, decimals: 3 },
 ];
 
 const tiers: PricingTier[] = [
@@ -121,7 +128,11 @@ export default function PricingSection() {
 
     const convertedPrice = tier.priceMonthly * currency.rate;
     const finalPrice = billingCycle === "annually" ? convertedPrice * 10 : convertedPrice;
-    return Math.floor(finalPrice).toLocaleString();
+    const decimals = currency.decimals ?? 0;
+    return finalPrice.toLocaleString(undefined, {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
   };
 
   const planSignals = [
@@ -139,6 +150,9 @@ export default function PricingSection() {
           </h2>
           <p className="mx-auto max-w-2xl text-lg text-zinc-600 dark:text-zinc-300">
             Choose the plan that fits your current operational scale. No hidden fees, just pure productivity.
+          </p>
+          <p className="mx-auto max-w-3xl text-sm font-medium text-zinc-500 dark:text-zinc-400">
+            Payment links use regional gateway routing: Razorpay for India (INR) and Stripe for global collection, including Oman and GCC currencies.
           </p>
 
           <div className="flex w-full flex-col items-center justify-center gap-4 py-4 md:flex-row md:gap-8">
@@ -178,7 +192,7 @@ export default function PricingSection() {
                     currency.code === c.code && segmentedControlItemActiveClass,
                   )}
                 >
-                  {c.code} {c.symbol}
+                  {c.symbol}
                 </Button>
               ))}
             </div>
