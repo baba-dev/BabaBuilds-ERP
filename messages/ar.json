@@ -1255,7 +1255,82 @@
       "login": "Log in",
       "getStarted": "Get Started",
       "goToDashboard": "Go to Dashboard",
-      "getStartedFree": "Get Started free"
+      "getStartedFree": "Get Started free",
+      "exploreDemo": "استكشف العرض التفاعلي",
+      "startTrial": "ابدأ تجربة Pro لمدة 15 يومًا"
+    }
+  },
+  "LandingPhase1": {
+    "cta": {
+      "startTrial": "ابدأ تجربة Pro لمدة 15 يومًا",
+      "exploreDemo": "استكشف العرض التفاعلي"
+    },
+    "trustChips": {
+      "secureBilling": "فوترة آمنة",
+      "taxWorkflows": "مبني لتدفقات الضرائب الهندية/العالمية",
+      "gstVat": "دعم GST/VAT",
+      "proposalsInvoicing": "العروض والفوترة",
+      "multiCurrency": "متعدد العملات"
+    },
+    "trustMetrics": {
+      "automationsEnabled": "الأتمتة المفعلة",
+      "invoiceSuccessRate": "معدل نجاح الفواتير",
+      "supportedCurrencies": "العملات المدعومة",
+      "avgSetupTime": "متوسط وقت الإعداد"
+    },
+    "featurePriorities": {
+      "velocity": "مصمم للسرعة",
+      "automation": "الأتمتة",
+      "intelligence": "الذكاء",
+      "control": "التحكم",
+      "confidence": "الثقة",
+      "forecasting": "التنبؤ",
+      "global": "عالمي",
+      "relationships": "العلاقات",
+      "conversion": "التحويل",
+      "logistics": "اللوجستيات",
+      "commerce": "التجارة",
+      "alerts": "التنبيهات",
+      "auditing": "التدقيق",
+      "security": "الأمان",
+      "offline": "دون اتصال"
+    },
+    "exploreByPersona": "استكشف حسب الفئة",
+    "roleLauncher": {
+      "badge": "استكشف العرض التفاعلي",
+      "title": "ادخل إلى إعداد مناسب للدور بنقرة واحدة.",
+      "description": "لا حاجة للتسجيل في النظرة الأولى. نقوم بتجهيز بيانات تجريبية ممهدة فورًا حتى يتمكن الزوار من تقييم تدفقات العمل الحقيقية بدون احتكاك.",
+      "cards": {
+        "ca": {
+          "title": "جرّب عرض المحاسب القانوني",
+          "description": "مساحة عمل تركز على الامتثال مع عوائق GST/TDS والمستندات وتدفق التسوية."
+        },
+        "agency": {
+          "title": "جرّب عرض الوكالة",
+          "description": "الاحتفاظات والعروض وخط الفوترة وإشارات التحصيل المتأخر في إعداد واحد."
+        },
+        "contractor": {
+          "title": "جرّب عرض المقاول",
+          "description": "فوترة المراحل ورؤية المصروفات وتخطيط التدفق النقدي للمشاريع للبنّائين والفرق."
+        }
+      },
+      "footerPrefix": "داخل كل عرض:",
+      "footerTextPart1": "مطالبة تحويل ثابتة مع",
+      "footerQuotedCta": "ابدأ باستخدام هذا الإعداد",
+      "footerTextPart2": "حتى ينتقل التقييم طبيعيًا إلى التجربة."
+    },
+    "persona": {
+      "widget": {
+        "title": "تفضيلات التجربة",
+        "language": "اللغة",
+        "switchToLight": "التبديل إلى الوضع الفاتح",
+        "switchToDark": "التبديل إلى الوضع الداكن"
+      },
+      "workflowTitle": "هذه هي سير العمل الذي سيراه فريقك",
+      "painPointsTitle": "نقاط الألم التي نعالجها أولًا",
+      "featuresTitle": "ميزات مصممة لهذا المجال",
+      "testimonialsTitle": "موثوق به من فرق مثلك",
+      "exploreByPersona": "استكشف حسب الفئة"
     }
   },
   "AuthModal": {

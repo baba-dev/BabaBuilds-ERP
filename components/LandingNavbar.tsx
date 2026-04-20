@@ -8,6 +8,8 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { personaNavigationLinks } from "@/components/landing/persona/persona-config";
+import { emitMarketingAnalyticsEvent } from "@/lib/marketing-analytics";
 
 export default function LandingNavbar() {
   const t = useTranslations("LandingNavbar");
@@ -27,6 +29,7 @@ export default function LandingNavbar() {
     { name: t("nav.features"), href: "#features" },
     { name: t("nav.comparison"), href: "#comparison" },
     { name: t("nav.pricing"), href: "#pricing" },
+    ...personaNavigationLinks.map((item) => ({ name: item.label, href: item.href })),
   ];
 
   return (
@@ -80,13 +83,33 @@ export default function LandingNavbar() {
                 asChild
                 className="font-bold text-zinc-700 dark:text-zinc-300 hover:text-orange-600"
               >
-                <Link href="/help">Help Docs</Link>
+                <Link
+                  href="#demo-launcher"
+                  onClick={() =>
+                    emitMarketingAnalyticsEvent("interactive_demo_click", {
+                      source: "navbar",
+                      label: t("actions.exploreDemo"),
+                    })
+                  }
+                >
+                  {t("actions.exploreDemo")}
+                </Link>
               </Button>
               <Button
                 asChild
                 className="bg-zinc-900 dark:bg-zinc-50 dark:text-zinc-950 text-white hover:bg-zinc-800 dark:hover:bg-zinc-200 rounded-xl font-bold"
               >
-                <Link href="/api/auth/signin">{t("actions.getStarted")}</Link>
+                <Link
+                  href="/api/auth/signin"
+                  onClick={() =>
+                    emitMarketingAnalyticsEvent("trial_cta_click", {
+                      source: "navbar",
+                      label: t("actions.startTrial"),
+                    })
+                  }
+                >
+                  {t("actions.startTrial")}
+                </Link>
               </Button>
             </>
           )}
@@ -141,13 +164,33 @@ export default function LandingNavbar() {
                   asChild
                   className="w-full rounded-xl font-bold py-6"
                 >
-                  <Link href="/help">Help Docs</Link>
+                  <Link
+                    href="#demo-launcher"
+                    onClick={() =>
+                      emitMarketingAnalyticsEvent("interactive_demo_click", {
+                        source: "mobile_navbar",
+                        label: t("actions.exploreDemo"),
+                      })
+                    }
+                  >
+                    {t("actions.exploreDemo")}
+                  </Link>
                 </Button>
                 <Button
                   asChild
                   className="w-full bg-zinc-900 dark:bg-zinc-50 dark:text-zinc-950 text-white rounded-xl font-bold py-6"
                 >
-                  <Link href="/api/auth/signin">{t("actions.getStartedFree")}</Link>
+                  <Link
+                    href="/api/auth/signin"
+                    onClick={() =>
+                      emitMarketingAnalyticsEvent("trial_cta_click", {
+                        source: "mobile_navbar",
+                        label: t("actions.startTrial"),
+                      })
+                    }
+                  >
+                    {t("actions.startTrial")}
+                  </Link>
                 </Button>
               </div>
             )}

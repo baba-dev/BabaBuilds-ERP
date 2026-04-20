@@ -34,9 +34,13 @@ import HeroMotionDecor from "@/components/landing/HeroMotionDecor";
 import SocialProofHero from "@/components/landing/SocialProofHero";
 import RotatorText from "@/components/landing/RotatorText";
 import AnimatedChartDecor from "@/components/landing/AnimatedChartDecor";
+import RoleDemoLauncher from "@/components/landing/RoleDemoLauncher";
+import { personaNavigationLinks } from "@/components/landing/persona/persona-config";
+import { emitMarketingAnalyticsEvent } from "@/lib/marketing-analytics";
 
 export default function LandingContent() {
   const t = useTranslations("Landing");
+  const tp1 = useTranslations("LandingPhase1");
   const reduceMotion = useReducedMotion();
   const { scrollYProgress } = useScroll();
   const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
@@ -50,16 +54,36 @@ export default function LandingContent() {
     t("trust.cities.newDelhi"),
   ];
   const trustMetrics = [
-    { label: "Automations enabled", value: "120+" },
-    { label: "Invoice success rate", value: "99.9%" },
-    { label: "Supported currencies", value: "25+" },
-    { label: "Avg. setup time", value: "< 15 min" },
+    { label: tp1("trustMetrics.automationsEnabled"), value: "120+" },
+    { label: tp1("trustMetrics.invoiceSuccessRate"), value: "99.9%" },
+    { label: tp1("trustMetrics.supportedCurrencies"), value: "25+" },
+    { label: tp1("trustMetrics.avgSetupTime"), value: "< 15 min" },
   ];
   const regionalReadiness = [
-    t("regionalReadiness.items.omanGcc"),
-    t("regionalReadiness.items.advancedPacks"),
-    t("regionalReadiness.items.expandingCoverage"),
+    t("regionalReadiness.signals.vat"),
+    t("regionalReadiness.signals.remittance"),
+    t("regionalReadiness.signals.arabic"),
   ];
+  const trustChips = [
+    tp1("trustChips.secureBilling"),
+    tp1("trustChips.taxWorkflows"),
+    tp1("trustChips.gstVat"),
+    tp1("trustChips.proposalsInvoicing"),
+    tp1("trustChips.multiCurrency"),
+  ];
+  const trackTrialClick = (surface: string) => {
+    emitMarketingAnalyticsEvent("marketing_trial_cta_clicked", {
+      location: surface,
+      label: "Start 15-Day Pro Trial",
+    });
+  };
+  const trackDemoClick = (surface: string) => {
+    emitMarketingAnalyticsEvent("marketing_cta_click", {
+      location: surface,
+      label: "Explore Interactive Demo",
+      href: "#demo-launcher",
+    });
+  };
 
   const features = [
     {
@@ -69,7 +93,7 @@ export default function LandingContent() {
       color: "text-orange-500",
       bg: "bg-orange-50 dark:bg-orange-950/30",
       span: "lg:col-span-2 lg:row-span-2",
-      priority: "Built for velocity",
+      priority: tp1("featurePriorities.velocity"),
     },
     {
       title: t("features.items.zeroEffortRetainers.title"),
@@ -78,7 +102,7 @@ export default function LandingContent() {
       color: "text-amber-500",
       bg: "bg-amber-50 dark:bg-amber-950/30",
       span: "lg:col-span-1",
-      priority: "Automation",
+      priority: tp1("featurePriorities.automation"),
     },
     {
       title: t("features.items.aiBabaBotInsights.title"),
@@ -87,7 +111,7 @@ export default function LandingContent() {
       color: "text-amber-600",
       bg: "bg-amber-50 dark:bg-amber-950/30",
       span: "lg:col-span-1",
-      priority: "Intelligence",
+      priority: tp1("featurePriorities.intelligence"),
     },
     {
       title: t("features.items.expenseLedger.title"),
@@ -96,7 +120,7 @@ export default function LandingContent() {
       color: "text-rose-500",
       bg: "bg-rose-50 dark:bg-rose-950/30",
       span: "lg:col-span-1",
-      priority: "Control",
+      priority: tp1("featurePriorities.control"),
     },
     {
       title: t("features.items.bankReconciliation.title"),
@@ -105,7 +129,7 @@ export default function LandingContent() {
       color: "text-emerald-500",
       bg: "bg-emerald-50 dark:bg-emerald-950/30",
       span: "lg:col-span-1",
-      priority: "Confidence",
+      priority: tp1("featurePriorities.confidence"),
     },
     {
       title: t("features.items.investmentHub.title"),
@@ -114,7 +138,7 @@ export default function LandingContent() {
       color: "text-amber-700",
       bg: "bg-amber-100/80 dark:bg-amber-950/30",
       span: "lg:col-span-1",
-      priority: "Forecasting",
+      priority: tp1("featurePriorities.forecasting"),
     },
     {
       title: t("features.items.globalCompliance.title"),
@@ -123,7 +147,7 @@ export default function LandingContent() {
       color: "text-emerald-500",
       bg: "bg-emerald-50 dark:bg-emerald-950/30",
       span: "lg:col-span-1",
-      priority: "Global",
+      priority: tp1("featurePriorities.global"),
     },
     {
       title: t("features.items.clientCrm.title"),
@@ -132,7 +156,7 @@ export default function LandingContent() {
       color: "text-orange-700",
       bg: "bg-orange-100/80 dark:bg-orange-950/25",
       span: "lg:col-span-1",
-      priority: "Relationships",
+      priority: tp1("featurePriorities.relationships"),
     },
     {
       title: t("features.items.premiumProposals.title"),
@@ -141,7 +165,7 @@ export default function LandingContent() {
       color: "text-orange-600",
       bg: "bg-orange-50 dark:bg-orange-950/30",
       span: "lg:col-span-1",
-      priority: "Conversion",
+      priority: tp1("featurePriorities.conversion"),
     },
     {
       title: t("features.items.inventoryHub.title"),
@@ -150,7 +174,7 @@ export default function LandingContent() {
       color: "text-amber-600",
       bg: "bg-amber-50 dark:bg-amber-950/30",
       span: "lg:col-span-1",
-      priority: "Logistics",
+      priority: tp1("featurePriorities.logistics"),
     },
     {
       title: t("features.items.storeCatalog.title"),
@@ -159,7 +183,7 @@ export default function LandingContent() {
       color: "text-pink-500",
       bg: "bg-pink-50 dark:bg-pink-950/30",
       span: "lg:col-span-1",
-      priority: "Commerce",
+      priority: tp1("featurePriorities.commerce"),
     },
     {
       title: t("features.items.multiChannelNotifications.title"),
@@ -168,7 +192,7 @@ export default function LandingContent() {
       color: "text-yellow-500",
       bg: "bg-yellow-50 dark:bg-yellow-950/30",
       span: "lg:col-span-1",
-      priority: "Alerts",
+      priority: tp1("featurePriorities.alerts"),
     },
     {
       title: t("features.items.caCompliance.title"),
@@ -177,7 +201,7 @@ export default function LandingContent() {
       color: "text-teal-500",
       bg: "bg-teal-50 dark:bg-teal-950/30",
       span: "lg:col-span-1",
-      priority: "Auditing",
+      priority: tp1("featurePriorities.auditing"),
     },
     {
       title: t("features.items.multiLevelRoles.title"),
@@ -186,7 +210,7 @@ export default function LandingContent() {
       color: "text-orange-700",
       bg: "bg-orange-100/70 dark:bg-orange-950/25",
       span: "lg:col-span-1",
-      priority: "Security",
+      priority: tp1("featurePriorities.security"),
     },
     {
       title: t("features.items.pwaImplementation.title"),
@@ -195,7 +219,7 @@ export default function LandingContent() {
       color: "text-amber-700",
       bg: "bg-amber-100/70 dark:bg-amber-950/25",
       span: "lg:col-span-1",
-      priority: "Offline",
+      priority: tp1("featurePriorities.offline"),
     },
     {
       title: t("features.items.nativeApps.title"),
@@ -258,17 +282,27 @@ export default function LandingContent() {
             <div className="relative group">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
               <Button size="lg" className="relative btn-primary h-16 gap-2 rounded-2xl px-12 text-lg font-black shadow-2xl transition-all" asChild>
-                <Link href="/api/auth/signin">
-                  {t("hero.primaryCta")} <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                <Link href="/api/auth/signin" onClick={() => trackTrialClick("hero")}>
+                  {tp1("cta.startTrial")} <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>
             </div>
             <Button variant="ghost" size="lg" className="h-16 px-10 text-lg font-bold text-muted-body hover:bg-surface-elevated hover:text-foreground transition-colors rounded-2xl" asChild>
-              <Link href="#features">{t("hero.secondaryCta")}</Link>
+              <Link href="#demo-launcher" onClick={() => trackDemoClick("hero")}>{tp1("cta.exploreDemo")}</Link>
             </Button>
           </motion.div>
 
           <SocialProofHero />
+          <div className="flex flex-wrap justify-center gap-2">
+            {trustChips.map((chip) => (
+              <span
+                key={chip}
+                className="rounded-full border border-border/80 bg-surface-elevated px-3 py-1 text-xs font-semibold text-muted-body"
+              >
+                {chip}
+              </span>
+            ))}
+          </div>
 
           <motion.div
             initial={reduceMotion ? false : { opacity: 0, y: 60 }}
@@ -342,6 +376,10 @@ export default function LandingContent() {
         </div>
       </section>
 
+      <section id="demo-launcher" className="bg-surface-base py-20">
+        <RoleDemoLauncher />
+      </section>
+
       <section id="features" className="bg-surface-base py-32">
         <div className="mx-auto max-w-7xl px-6">
           <div className="mb-20 max-w-3xl space-y-4 text-left">
@@ -385,6 +423,23 @@ export default function LandingContent() {
       <ComparisonTable />
       <PricingSection />
 
+      <section className="bg-surface-base py-16">
+        <div className="mx-auto max-w-7xl px-6">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-muted-body">{tp1("exploreByPersona")}</p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            {personaNavigationLinks.map((persona) => (
+              <Link
+                key={persona.href}
+                href={persona.href}
+                className="rounded-xl border border-border/80 bg-surface-elevated px-4 py-2 text-sm font-semibold text-foreground/90 transition hover:border-orange-500/40 hover:text-orange-600"
+              >
+                {persona.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="relative overflow-hidden bg-foreground py-32">
         <div className="absolute right-0 top-0 h-[600px] w-[600px] rounded-full bg-accent-strong/30 blur-[120px]" />
         <div className="relative z-10 mx-auto max-w-4xl space-y-12 px-6 text-center">
@@ -394,10 +449,10 @@ export default function LandingContent() {
           </h2>
           <div className="flex flex-col items-center justify-center gap-6 sm:flex-row">
             <Button size="lg" className="h-16 rounded-2xl bg-surface-elevated px-12 text-xl font-black text-foreground shadow-2xl hover:bg-surface-base active:scale-95" asChild>
-              <Link href="/api/auth/signin">{t("finalCta.primaryCta")}</Link>
+              <Link href="/api/auth/signin" onClick={() => trackTrialClick("final_cta")}>{tp1("cta.startTrial")}</Link>
             </Button>
             <Button size="lg" className="h-16 rounded-2xl border border-white/20 bg-transparent px-12 text-xl font-bold text-white transition-all hover:bg-white/10" asChild>
-              <Link href="/help">{t("finalCta.secondaryCta")}</Link>
+              <Link href="#demo-launcher" onClick={() => trackDemoClick("final_cta")}>{tp1("cta.exploreDemo")}</Link>
             </Button>
           </div>
           <div className="flex flex-wrap justify-center gap-8 pt-8 text-xs font-bold uppercase tracking-widest text-white/70">

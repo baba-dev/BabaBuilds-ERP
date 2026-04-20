@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Box, Twitter, Linkedin, Github, Mail, Phone, MapPin } from "lucide-react";
+import { Box, Twitter, Linkedin, Github, Mail, MapPin } from "lucide-react";
+import { personaNavigationLinks } from "@/components/landing/persona/persona-config";
 
 export default function LandingFooter() {
   const sections = [
@@ -13,6 +14,13 @@ export default function LandingFooter() {
         { name: "Global Tax Compliance", href: "#features" },
         { name: "AI Financial Insights", href: "#features" },
       ],
+    },
+    {
+      title: "By Persona",
+      links: personaNavigationLinks.map((item) => ({
+        name: item.label,
+        href: item.href,
+      })),
     },
     {
       title: "Support",

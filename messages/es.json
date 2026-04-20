@@ -1235,7 +1235,76 @@
       "login": "Log in",
       "getStarted": "Get Started",
       "goToDashboard": "Go to Dashboard",
-      "getStartedFree": "Get Started free"
+      "getStartedFree": "Get Started free",
+      "exploreDemo": "Explorar demo interactiva",
+      "startTrial": "Iniciar prueba Pro de 15 días"
+    }
+  },
+  "LandingPhase1": {
+    "cta": {
+      "startTrial": "Iniciar prueba Pro de 15 días",
+      "exploreDemo": "Explorar demo interactiva"
+    },
+    "trustChips": {
+      "secureBilling": "Facturación segura",
+      "taxWorkflows": "Flujos fiscales India/global",
+      "gstVat": "Soporte GST/VAT",
+      "proposalsInvoicing": "Propuestas e facturación",
+      "multiCurrency": "Cobros multidivisa"
+    },
+    "trustMetrics": {
+      "automationsEnabled": "Automatizaciones activas",
+      "invoiceSuccessRate": "Tasa de éxito de facturas",
+      "supportedCurrencies": "Monedas compatibles",
+      "avgSetupTime": "Tiempo promedio de configuración"
+    },
+    "featurePriorities": {
+      "velocity": "Hecho para velocidad",
+      "automation": "Automatización",
+      "intelligence": "Inteligencia",
+      "control": "Control",
+      "confidence": "Confianza",
+      "forecasting": "Pronóstico",
+      "global": "Global",
+      "relationships": "Relaciones",
+      "conversion": "Conversión",
+      "logistics": "Logística",
+      "commerce": "Comercio",
+      "alerts": "Alertas",
+      "auditing": "Auditoría",
+      "security": "Seguridad",
+      "offline": "Sin conexión"
+    },
+    "exploreByPersona": "Explorar por perfil",
+    "roleLauncher": {
+      "badge": "Explorar demo interactiva",
+      "title": "Entra en una configuración por rol con un clic.",
+      "description": "Sin registro para el primer vistazo. Aprovisionamos datos demo de ejemplo al instante para evaluar flujos reales sin fricción.",
+      "cards": {
+        "caTitle": "Probar demo de CA",
+        "caDescription": "Espacio de trabajo centrado en cumplimiento con bloqueos GST/TDS, documentos y conciliación.",
+        "agencyTitle": "Probar demo de agencia",
+        "agencyDescription": "Retainers, propuestas, flujo de facturas y señales de cobro vencido en una sola configuración.",
+        "contractorTitle": "Probar demo de contratista",
+        "contractorDescription": "Facturación por hitos, visibilidad de gastos y planificación de caja para constructores y equipos."
+      },
+      "footerPrefix": "Dentro de cada demo:",
+      "footerTextPart1": "aviso fijo de conversión con",
+      "footerQuotedCta": "Empieza a usar esta configuración",
+      "footerTextPart2": "para que la evaluación pase naturalmente a prueba."
+    },
+    "persona": {
+      "widget": {
+        "title": "Preferencias de experiencia",
+        "language": "Idioma",
+        "switchToLight": "Cambiar a modo claro",
+        "switchToDark": "Cambiar a modo oscuro"
+      },
+      "workflowTitle": "Este es el flujo que verá tu equipo",
+      "painPointsTitle": "Problemas que resolvemos primero",
+      "featuresTitle": "Funciones adaptadas a este perfil",
+      "testimonialsTitle": "Equipos como el tuyo confían en nosotros",
+      "exploreByPersona": "Explorar por perfil"
     }
   },
   "AuthModal": {

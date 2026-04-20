@@ -4,9 +4,9 @@ import LandingContent from "@/components/LandingContent";
 const SITE_URL = "https://erp.bababuilds.com";
 
 export const metadata: Metadata = {
-  title: "BabaBuilds ERP | Automated Invoicing, Reconciliation & Tax Compliance",
+  title: "BabaBuilds ERP | Start 15-Day Trial or Explore Interactive Demo",
   description:
-    "The global command center for bookkeeping and growth. Automate multi-currency invoices, manage clients, reconcile bank statements with AI, and stay GST/VAT compliant with region-aware setup — built for agencies, freelancers, and MSMEs.",
+    "Conversion-first ERP for agencies, accountants, contractors, freelancers, and service businesses. Start a 15-day Pro trial or jump into a role-based interactive demo with seeded data.",
   keywords: [
     "Invoices",
     "Reconcile",
@@ -28,9 +28,9 @@ export const metadata: Metadata = {
     follow: true,
   },
   openGraph: {
-    title: "BabaBuilds ERP | Run Your Agency on Autopilot",
+    title: "BabaBuilds ERP | Trial + Interactive Persona Demos",
     description:
-      "Multi-currency invoicing, AI-powered financial insights, and global tax compliance for modern agencies.",
+      "Pick your role, explore a seeded live demo instantly, or start your 15-day Pro trial.",
     url: SITE_URL,
     siteName: "BabaBuilds ERP",
     images: [
@@ -47,8 +47,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "BabaBuilds ERP | Automated Invoicing & Compliance",
-    description: "The global command center for bookkeeping and growth.",
+    title: "BabaBuilds ERP | Start Trial or Explore Demo",
+    description: "Role-based ERP demos for CAs, agencies, contractors, freelancers, and SMB teams.",
     images: ["/icons/Banner-1.png"],
     creator: "@bababuilds",
   },

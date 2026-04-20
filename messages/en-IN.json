@@ -1366,7 +1366,82 @@
       "login": "Log in",
       "getStarted": "Get Started",
       "goToDashboard": "Go to Dashboard",
-      "getStartedFree": "Get Started free"
+      "getStartedFree": "Get Started free",
+      "startTrial": "Start 15-Day Pro Trial",
+      "exploreDemo": "Explore Interactive Demo"
+    }
+  },
+  "LandingPhase1": {
+    "cta": {
+      "startTrial": "Start 15-Day Pro Trial",
+      "exploreDemo": "Explore Interactive Demo"
+    },
+    "exploreByPersona": "Explore by persona",
+    "trustMetrics": {
+      "automationsEnabled": "Automations enabled",
+      "invoiceSuccessRate": "Invoice success rate",
+      "supportedCurrencies": "Supported currencies",
+      "avgSetupTime": "Avg. setup time"
+    },
+    "trustChips": {
+      "secureBilling": "Secure billing",
+      "taxWorkflows": "Built for Indian/global tax workflows",
+      "gstVat": "GST/VAT support",
+      "proposalsInvoicing": "Proposals + invoicing",
+      "multiCurrency": "Multi-currency support"
+    },
+    "featurePriorities": {
+      "velocity": "Built for velocity",
+      "automation": "Automation",
+      "intelligence": "Intelligence",
+      "control": "Control",
+      "confidence": "Confidence",
+      "forecasting": "Forecasting",
+      "global": "Global",
+      "relationships": "Relationships",
+      "conversion": "Conversion",
+      "logistics": "Logistics",
+      "commerce": "Commerce",
+      "alerts": "Alerts",
+      "auditing": "Auditing",
+      "security": "Security",
+      "offline": "Offline"
+    },
+    "roleLauncher": {
+      "badge": "Explore Interactive Demo",
+      "title": "Jump into a role-specific setup in one click.",
+      "description": "No signup for first look. We provision seeded demo data instantly so visitors can evaluate real workflows without friction.",
+      "cards": {
+        "ca": {
+          "title": "Try CA Demo",
+          "description": "Compliance-first workspace with GST/TDS blockers, docs, and reconciliation flow."
+        },
+        "agency": {
+          "title": "Try Agency Demo",
+          "description": "Retainers, proposals, invoice pipeline, and overdue collection signals in one setup."
+        },
+        "contractor": {
+          "title": "Try Contractor Demo",
+          "description": "Milestone billing, expense visibility, and project cash planning for builders and teams."
+        }
+      },
+      "footerPrefix": "Inside each demo:",
+      "footerTextPart1": "sticky conversion prompt with",
+      "footerQuotedCta": "Start using this setup",
+      "footerTextPart2": "so evaluation naturally transitions to trial."
+    },
+    "persona": {
+      "workflowTitle": "This is the workflow your team will see",
+      "painPointsTitle": "Pain points we fix first",
+      "featuresTitle": "Features tailored to this niche",
+      "testimonialsTitle": "Trusted by teams like yours",
+      "exploreByPersona": "Explore by persona",
+      "widget": {
+        "title": "Experience Preferences",
+        "language": "Language",
+        "switchToLight": "Switch to Light Mode",
+        "switchToDark": "Switch to Dark Mode"
+      }
     }
   },
   "AuthModal": {
