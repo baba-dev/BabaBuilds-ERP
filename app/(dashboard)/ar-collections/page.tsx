@@ -146,7 +146,16 @@ export default function ArCollectionsPage() {
       }
 
       const sent = payload.emailsSent ?? payload.processed ?? 0;
-      toast.success(t('toast.automation_done', { count: sent }), { id: toastId });
+      const failed = payload.emailsFailed ?? 0;
+      const skipped = payload.skippedNoClientEmail ?? 0;
+      if (failed > 0 || skipped > 0) {
+        toast.warning(
+          `${t('toast.automation_done', { count: sent })} (${failed} failed, ${skipped} skipped)`,
+          { id: toastId },
+        );
+      } else {
+        toast.success(t('toast.automation_done', { count: sent }), { id: toastId });
+      }
       await loadSnapshot();
     } catch {
       toast.error(t('toast.automation_failed'), { id: toastId });

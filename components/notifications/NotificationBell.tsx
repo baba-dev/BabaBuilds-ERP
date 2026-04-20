@@ -7,13 +7,13 @@
  * Shows a badge count and animates when new notifications arrive.
  */
 
-import { useNotifications } from '@/hooks/use-notifications';
+import { useNotificationsContext } from '@/components/notifications/notifications-context';
 import { Bell, BellRing } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 export function NotificationBell({ className }: { className?: string }) {
-  const { unreadCount } = useNotifications();
+  const { unreadCount } = useNotificationsContext();
 
   const [hasRung, setHasRung]     = useState(false);
   const prevCountRef              = useRef(unreadCount);

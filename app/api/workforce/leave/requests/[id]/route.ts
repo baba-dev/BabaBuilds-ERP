@@ -8,6 +8,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { requirePermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
 import { requireModule, ModuleDisabledError } from '@/lib/modules';
+import { dispatchNotification } from '@/lib/notifications/dispatcher';
 
 async function getWid(userId: string) {
   const wu = await prisma.workspaceUser.findFirst({ where: { userId, isActive: true }, select: { workspaceId: true } });
@@ -65,16 +66,15 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 
     // Notify the employee (if they have a user account)
     if (existing.employee?.userId) {
-      await prisma.inAppNotification.create({
+      dispatchNotification({
+        event: body.action === 'APPROVE' ? 'LEAVE_APPROVED' : 'LEAVE_REJECTED',
+        workspaceId: wid,
+        userIds: [existing.employee.userId],
         data: {
-          userId: existing.employee.userId,
-          eventType: body.action === 'APPROVE' ? 'LEAVE_APPROVED' : 'LEAVE_REJECTED',
-          title: body.action === 'APPROVE' ? 'Leave Approved' : 'Leave Rejected',
-          body: `Your ${existing.leaveType.name} request has been ${body.action === 'APPROVE' ? 'approved' : 'rejected'}.`,
-          actionUrl: '/workforce/leave',
-          workspaceId: wid,
+          leaveType: existing.leaveType.name,
+          employeeName: `${existing.employee.firstName} ${existing.employee.lastName}`,
         },
-      }).catch(() => {});
+      }).catch(() => null);
     }
 
     return NextResponse.json(updated);

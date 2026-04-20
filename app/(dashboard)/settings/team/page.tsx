@@ -283,10 +283,16 @@ export default function TeamAccessPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send invite");
-      toast.success("Invitation sent successfully", { id: tid });
+      if (res.status === 202) {
+        toast.warning(data.error || "Invite created but email delivery failed.", { id: tid });
+      } else {
+        toast.success("Invitation sent successfully", { id: tid });
+      }
       if (data.seatWarning) toast.warning(data.seatWarning);
       setInviteEmail("");
-      setInviteOpen(false);
+      if (res.status !== 202) {
+        setInviteOpen(false);
+      }
       void fetchTeam();
       void fetchSeats();
     } catch (err: any) {

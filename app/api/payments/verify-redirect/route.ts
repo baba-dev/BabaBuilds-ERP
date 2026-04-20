@@ -51,7 +51,18 @@ export async function GET(req: NextRequest) {
       const session = await stripe.checkout.sessions.retrieve(sessionId);
 
       if (session.payment_status === "paid") {
-        await markInvoicePaid(invoice.id, invoice.workspaceId, Number(invoice.grandTotal), session.payment_intent as string);
+        const settled = await markInvoicePaid(invoice.id, invoice.workspaceId, Number(invoice.grandTotal), session.payment_intent as string);
+        if (settled) {
+          dispatchNotification({
+            event: 'INVOICE_PAID',
+            workspaceId: invoice.workspaceId,
+            data: {
+              invoiceNumber: invoice.invoiceNumber,
+              clientName: invoice.clientName,
+              amount: String(invoice.grandTotal ?? invoice.totalAmount),
+            },
+          }).catch(() => null);
+        }
         return NextResponse.redirect(new URL("/payments/success", req.url));
       }
 
@@ -103,7 +114,18 @@ export async function GET(req: NextRequest) {
 
       const payment = await rzp.payments.fetch(razorpayPaymentId);
       if (payment.status === "captured") {
-        await markInvoicePaid(invoice.id, invoice.workspaceId, Number(invoice.grandTotal), razorpayPaymentId);
+        const settled = await markInvoicePaid(invoice.id, invoice.workspaceId, Number(invoice.grandTotal), razorpayPaymentId);
+        if (settled) {
+          dispatchNotification({
+            event: 'INVOICE_PAID',
+            workspaceId: invoice.workspaceId,
+            data: {
+              invoiceNumber: invoice.invoiceNumber,
+              clientName: invoice.clientName,
+              amount: String(invoice.grandTotal ?? invoice.totalAmount),
+            },
+          }).catch(() => null);
+        }
         return NextResponse.redirect(new URL("/payments/success", req.url));
       }
 
@@ -117,7 +139,8 @@ export async function GET(req: NextRequest) {
   }
 }
 
-async function markInvoicePaid(invoiceId: string, workspaceId: string, amount: number, reference: string) {
+async function markInvoicePaid(invoiceId: string, workspaceId: string, amount: number, reference: string): Promise<boolean> {
+  let settledNow = false;
   await prisma.$transaction(async (tx) => {
     // Re-verify inside the transaction to prevent race conditions
     const invoice = await tx.invoice.findFirst({ where: { id: invoiceId } });
@@ -148,6 +171,7 @@ async function markInvoicePaid(invoiceId: string, workspaceId: string, amount: n
       },
       update: {}, // idempotent — no-op if already recorded
     });
+    settledNow = true;
   });
 
   // Invalidate the in-process dashboard cache so the workspace sees the updated
@@ -162,4 +186,5 @@ async function markInvoicePaid(invoiceId: string, workspaceId: string, amount: n
       error: String(err),
     });
   }
+  return settledNow;
 }

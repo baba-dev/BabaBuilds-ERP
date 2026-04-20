@@ -3,6 +3,7 @@ import 'server-only';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/mailer';
+import { buildPaymentReminderEmail } from '@/lib/notifications/transactional-email-templates';
 import { logActivity } from '@/lib/security/activity-log';
 
 /** Closed set stored on Invoice.followUpStatus — keep in sync with UI selects. */
@@ -334,14 +335,21 @@ export async function runReminderAutomation(
 
     const outstanding = resolveOutstandingAmount(invoice);
     const formatted = formatMoneyForLocale(outstanding, baseCurrency, workspace?.countryCode ?? 'IN');
+    const reminderEmail = buildPaymentReminderEmail({
+      companyName: profile.companyName,
+      clientName: invoice.client?.name ?? invoice.clientName,
+      invoiceNumber: invoice.invoiceNumber,
+      outstandingAmountFormatted: `${baseCurrency} ${formatted}`,
+    });
 
     try {
       await sendEmail({
         route: 'user',
         profile,
         to,
-        subject: `Payment reminder: Invoice ${invoice.invoiceNumber}`,
-        text: `Dear ${invoice.client?.name ?? invoice.clientName},\n\nThis is a reminder that Invoice ${invoice.invoiceNumber} has an outstanding balance of ${baseCurrency} ${formatted}.\n\nIf you have already paid, please disregard this message.\n\nThank you,\n${profile.companyName}`,
+        subject: reminderEmail.subject,
+        html: reminderEmail.html,
+        text: reminderEmail.text,
       });
 
       await prisma.invoice.update({
@@ -447,14 +455,21 @@ export async function sendArReminderEmailForInvoice(
 
   const outstanding = resolveOutstandingAmount(invoice);
   const formatted = formatMoneyForLocale(outstanding, baseCurrency, workspace?.countryCode ?? 'IN');
+  const reminderEmail = buildPaymentReminderEmail({
+    companyName: profile.companyName,
+    clientName: invoice.client?.name ?? invoice.clientName,
+    invoiceNumber: invoice.invoiceNumber,
+    outstandingAmountFormatted: `${baseCurrency} ${formatted}`,
+  });
 
   try {
     await sendEmail({
       route: 'user',
       profile,
       to,
-      subject: `Payment reminder: Invoice ${invoice.invoiceNumber}`,
-      text: `Dear ${invoice.client?.name ?? invoice.clientName},\n\nThis is a reminder that Invoice ${invoice.invoiceNumber} has an outstanding balance of ${baseCurrency} ${formatted}.\n\nIf you have already paid, please disregard this message.\n\nThank you,\n${profile.companyName}`,
+      subject: reminderEmail.subject,
+      html: reminderEmail.html,
+      text: reminderEmail.text,
     });
 
     await prisma.invoice.update({

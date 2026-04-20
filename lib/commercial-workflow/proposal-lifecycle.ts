@@ -24,7 +24,10 @@ export async function markProposalAsSent(proposalId: string, workspaceId: string
 }
 
 export async function markProposalAsViewed(proposalId: string, workspaceId: string) {
-  const proposal = await prisma.proposal.findUnique({ where: { id: proposalId } });
+  const proposal = await prisma.proposal.findUnique({
+    where: { id: proposalId },
+    include: { client: { select: { name: true } } },
+  });
   if (!proposal) return null;
 
   const now = new Date();
@@ -53,7 +56,7 @@ export async function markProposalAsViewed(proposalId: string, workspaceId: stri
       workspaceId,
       data: {
         proposalNo: updated.proposalNo,
-        clientName: updated.clientId // Best effort, or fetch client
+        clientName: proposal.client?.name || 'Client',
       },
     }).catch(() => null);
   }

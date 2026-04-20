@@ -15,6 +15,7 @@ import {
   isValidBusinessRole,
   legacyRoleToBusinessRole,
 } from '@/lib/permissions';
+import { dispatchNotification } from '@/lib/notifications/dispatcher';
 
 async function getWid(userId: string) {
   const wu = await prisma.workspaceUser.findFirst({ where: { userId, isActive: true }, select: { workspaceId: true } });
@@ -149,16 +150,16 @@ export async function POST(req: NextRequest) {
       .map((m) => m.userId)
       .filter(Boolean);
     if (notifyUserIds.length > 0) {
-      await prisma.inAppNotification.createMany({
-        data: notifyUserIds.map((uid) => ({
-          userId: uid,
-          eventType: 'LEAVE_REQUEST_SUBMITTED',
-          title: 'New Leave Request',
-          body: `${leaveRequest.employee.firstName} ${leaveRequest.employee.lastName} requested ${days} day(s) of ${leaveRequest.leaveType.name}`,
-          actionUrl: `/workforce/leave`,
-          workspaceId: wid,
-        })),
-      }).catch(() => {});
+      dispatchNotification({
+        event: 'LEAVE_REQUEST_SUBMITTED',
+        workspaceId: wid,
+        userIds: notifyUserIds,
+        data: {
+          employeeName: `${leaveRequest.employee.firstName} ${leaveRequest.employee.lastName}`,
+          days,
+          leaveType: leaveRequest.leaveType.name,
+        },
+      }).catch(() => null);
     }
 
     return NextResponse.json(leaveRequest, { status: 201 });
