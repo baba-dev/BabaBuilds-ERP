@@ -6,58 +6,29 @@ import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from
 import { generateInvoicePDF } from '@/lib/pdf/generator';
 import fs from 'fs';
 import path from 'path';
-import nodemailer from 'nodemailer';
-import dns from 'dns';
-import { promisify } from 'util';
 import { Prisma } from "@prisma/client";
 import crypto from 'crypto';
 import { calculateInvoiceTotals } from '@/lib/invoice/totals';
 import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
 import { toInvoiceStatus } from '@/lib/invoice-status';
 import { toDecimal } from '@/lib/money';
-import { getRuntimeSmtpPassword } from '@/lib/mailer';
+import { sendEmail } from '@/lib/mailer';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
 import { logActivity } from '@/lib/activity-log';
 import { buildPrivatePath, ensureDir } from '@/lib/uploads/private-storage';
 import { determineAndPersistTax } from '@/src/server/tax/service';
 import { createPrismaTaxPersistence } from '@/lib/tax/prisma-tax-persistence';
 import { appendTaxAuditEvent, newTaxCorrelationId } from '@/lib/tax/audit';
+import { buildInvoiceDeliveryEmail } from '@/lib/notifications/transactional-email-templates';
 import {
   assertFreeTierMonthlyInvoiceAllowed,
   canInjectGatewayPaymentLinks,
   type WorkspaceBillingSnapshot,
 } from '@/lib/entitlements';
 
-const lookupAsync = promisify(dns.lookup);
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
 const IDEMPOTENCY_PENDING = "PENDING";
 const IDEMPOTENCY_CONSUMED = "CONSUMED";
-
-async function resolveSafeIp(host: string): Promise<string | null> {
-  try {
-    if (host.toLowerCase() === 'localhost') return null;
-
-    const { address } = await lookupAsync(host);
-
-    if (address.startsWith('127.')) return null;
-    if (address.startsWith('10.')) return null;
-    if (address.startsWith('192.168.')) return null;
-    if (address.startsWith('169.254.')) return null;
-    if (address === '0.0.0.0') return null;
-
-    if (address.startsWith('172.')) {
-      const secondOctet = parseInt(address.split('.')[1], 10);
-      if (secondOctet >= 16 && secondOctet <= 31) return null;
-    }
-
-    if (address === '::1') return null;
-    if (address.toLowerCase().startsWith('fe80:')) return null;
-
-    return address;
-  } catch (e) {
-    return null;
-  }
-}
 
 function canonicalize(value: any): any {
   if (Array.isArray(value)) return value.map(canonicalize);
@@ -165,7 +136,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const { clientId, billingMonth, sacCode, services, customDate, sendEmail, status: rawStatus, taxRateOverride } = body;
+    const { clientId, billingMonth, sacCode, services, customDate, sendEmail: shouldSendEmail, status: rawStatus, taxRateOverride } = body;
     const normalizedStatus = toInvoiceStatus(rawStatus);
     const validationErrors: Array<{ field: string; message: string; index?: number }> = [];
 
@@ -626,19 +597,27 @@ export async function POST(request: Request) {
 
     let emailStatus = "Not requested";
 
-    if (sendEmail) {
+    if (shouldSendEmail) {
       if (!client.email) {
         emailStatus = "Failed: Client has no email address on file.";
       } else if (!profile.smtpHost || !profile.smtpUser || !profile.smtpPassword) {
         emailStatus = "Failed: SMTP Server not configured in Settings.";
       } else {
         try {
+          const invoiceEmail = buildInvoiceDeliveryEmail({
+            companyName: profile.companyName,
+            clientName: client.name,
+            invoiceNumber: currentInvoiceNumber,
+            billingMonth,
+            amountFormatted: `${baseCurrency} ${formattedTotal}`,
+          });
           await sendEmail({
             route: 'user',
             profile,
             to: client.email,
-            subject: `Invoice ${currentInvoiceNumber} from ${profile.companyName}`,
-            text: `Dear ${client.name},\n\nPlease find attached the invoice ${currentInvoiceNumber} for the billing month of ${billingMonth}.\n\nTotal Amount Billed: ${baseCurrency} ${formattedTotal}\n\nThank you for your business.\n\nBest Regards,\n${profile.companyName}`,
+            subject: invoiceEmail.subject,
+            html: invoiceEmail.html,
+            text: invoiceEmail.text,
             attachments: [{ filename: finalPdfFilename, path: finalPdfPath }],
           });
           emailStatus = "Success";
@@ -679,7 +658,7 @@ export async function POST(request: Request) {
       metadata: {
         invoiceId: newInvoice.id,
         invoiceNumber: newInvoice.invoiceNumber,
-        emailRequested: Boolean(sendEmail),
+        emailRequested: Boolean(shouldSendEmail),
       },
     });
 

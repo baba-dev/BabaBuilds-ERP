@@ -10,6 +10,8 @@ import {
   Loader2,
   CheckCircle2,
   ShieldAlert,
+  Stars,
+  ShieldCheck,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Turnstile } from "@marsidev/react-turnstile";
@@ -346,6 +348,10 @@ export default function AuthModal({
           <div>
             <h2 className="text-2xl font-black tracking-tight">{t("title")}</h2>
             <p className="text-sm text-muted-foreground mt-1">{t("subtitle")}</p>
+            <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-orange-500/25 bg-orange-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-orange-700 dark:text-orange-300">
+              <Stars className="h-3.5 w-3.5" />
+              Million-dollar onboarding flow
+            </div>
           </div>
         </div>
 
@@ -425,6 +431,9 @@ export default function AuthModal({
                 t("actions.sendMagicLink")
               )}
             </Button>
+            <p className="text-[11px] text-center text-muted-foreground">
+              Magic link and Google sign-in both create your secure workspace session.
+            </p>
 
             {emailStatus !== "idle" && (
               <div
@@ -517,6 +526,10 @@ export default function AuthModal({
             </svg>
             {t("actions.continueWithGoogle")}
           </Button>
+          <div className="flex items-center justify-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-700 dark:text-emerald-300">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Google OAuth is enabled as a primary signup path.
+          </div>
 
           <details className="rounded-xl border border-border bg-muted/40 p-3 group">
             <summary
@@ -525,6 +538,9 @@ export default function AuthModal({
             >
               {t("actions.demoSection")}
             </summary>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Demo sandbox sessions skip onboarding so users can explore instantly.
+            </p>
 
             <div className="mt-3 space-y-3">
               <div className="grid grid-cols-1 gap-2">

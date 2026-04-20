@@ -26,17 +26,18 @@ import remarkGfm from "remark-gfm";
 import { closeAIChat, getAIChatStoreSnapshot, subscribeToAIChatStore, openAIChat } from "@/src/stores/ui/aiChatStore";
 import Link from "next/link";
 
-const QUICK_PROMPTS = [
-  "📈 What's my estimated tax liability?",
-  "📊 How close am I to the ₹20L GST limit?",
-  "💸 Log a ₹10,000 expense for 'Office Rent'",
-  "🤝 Onboard Global Tech (contact@global.com)",
-  "📧 Send a reminder for overdue invoices",
-  "📝 Draft an invoice for Acme Corp for ₹50,000",
-  "🔄 Which monthly retainers are due?",
-  "🎯 Convert my last proposal to an invoice",
-  "🏦 Find unreconciled bank transactions",
-  "📅 Remind me to call client X tomorrow"
+const QUICK_PROMPTS: Array<{ label: string; query: string; kind?: "theme-toggle" }> = [
+  { label: "📈 What's my estimated tax liability?", query: "What's my estimated tax liability?" },
+  { label: "📊 How close am I to the ₹20L GST limit?", query: "How close am I to the ₹20L GST limit?" },
+  { label: "💸 Log a ₹10,000 expense for 'Office Rent'", query: "Log a ₹10,000 expense for Office Rent." },
+  { label: "🤝 Onboard Global Tech (contact@global.com)", query: "Onboard Global Tech with contact email contact@global.com." },
+  { label: "📧 Send a reminder for overdue invoices", query: "Send reminders for overdue invoices." },
+  { label: "📝 Draft an invoice for Acme Corp for ₹50,000", query: "Draft an invoice for Acme Corp for ₹50,000." },
+  { label: "🔄 Which monthly retainers are due?", query: "Which monthly retainers are due right now?" },
+  { label: "🎯 Convert my last proposal to an invoice", query: "Convert my last proposal to an invoice." },
+  { label: "🏦 Find unreconciled bank transactions", query: "Find unreconciled bank transactions." },
+  { label: "📅 Remind me to call client X tomorrow", query: "Remind me to call client X tomorrow." },
+  { label: "🌓 Toggle UI theme", query: "Switch my UI theme.", kind: "theme-toggle" },
 ];
 
 const DEFAULT_GREETING = { 
@@ -95,7 +96,7 @@ export default function AIChatbot() {
   const router = useRouter();
   const pathname = usePathname();
   const { data: session, status } = useSession(); 
-  const { setTheme } = useTheme();
+  const { setTheme, theme, resolvedTheme } = useTheme();
   
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -112,6 +113,7 @@ export default function AIChatbot() {
   const sendInFlightRef = useRef(false);
   const lastAutoSubmitRequestIdRef = useRef<number | null>(null);
   const aiChatStoreState = useSyncExternalStore(subscribeToAIChatStore, getAIChatStoreSnapshot, getAIChatStoreSnapshot);
+  const currentThemeForToggle = resolvedTheme === "dark" ? "dark" : "light";
 
   const workspaceId = (session as any)?.workspaceId;
   const storageKey = workspaceId ? `cfo_chat_history_${workspaceId}` : null;
@@ -223,8 +225,25 @@ export default function AIChatbot() {
         if (data.action && data.action.type === 'SET_THEME') {
           const next = String(data.action.theme || "").toLowerCase();
           if (next === "light" || next === "dark" || next === "system") {
-            setTheme(next);
-            actionMsg = `Theme updated to ${next}.`;
+            const currentConfiguredTheme =
+              theme === "light" || theme === "dark" || theme === "system" ? theme : "system";
+            const currentEffectiveTheme =
+              resolvedTheme === "light" || resolvedTheme === "dark" ? resolvedTheme : null;
+
+            if (next === "system") {
+              if (currentConfiguredTheme === "system") {
+                actionMsg = "Theme already follows your system preference.";
+              } else {
+                setTheme(next);
+                actionMsg = "Theme updated to system mode.";
+              }
+            } else if (currentEffectiveTheme === next) {
+              const opposite = next === "dark" ? "light" : "dark";
+              actionMsg = `Already using ${next} mode. Ask me to switch to ${opposite} mode to toggle.`;
+            } else {
+              setTheme(next);
+              actionMsg = `Theme updated to ${next}.`;
+            }
           } else {
             actionMsg = "Theme change requested, but the requested mode was invalid.";
           }
@@ -249,7 +268,7 @@ export default function AIChatbot() {
       sendInFlightRef.current = false;
       setIsLoading(false);
     }
-  }, [isLoading, pathname, router, setTheme]);
+  }, [isLoading, pathname, resolvedTheme, router, setTheme, theme]);
 
   useEffect(() => {
     if (!aiChatStoreState.requestId) return;
@@ -374,8 +393,22 @@ export default function AIChatbot() {
               <p className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider ml-11">Suggested Queries</p>
               <div className="flex flex-wrap gap-2 ml-11">
                 {QUICK_PROMPTS.map((prompt, idx) => (
-                  <button key={idx} onClick={() => sendMessage(prompt)} className="text-xs bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 px-3 py-2 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 hover:border-purple-200 dark:hover:border-purple-800/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-purple-500 dark:focus-visible:ring-offset-zinc-900 transition-all text-left font-medium active:scale-95 shadow-sm">
-                    {prompt}
+                  <button
+                    key={idx}
+                    onClick={() =>
+                      sendMessage(
+                        prompt.kind === "theme-toggle"
+                          ? `Switch my UI theme to ${currentThemeForToggle === "dark" ? "light" : "dark"} mode instantly using UI Theme Control.`
+                          : prompt.query
+                      )
+                    }
+                    className="text-xs bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 px-3 py-2 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300 hover:border-purple-200 dark:hover:border-purple-800/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-purple-500 dark:focus-visible:ring-offset-zinc-900 transition-all text-left font-medium active:scale-95 shadow-sm"
+                  >
+                    {prompt.kind === "theme-toggle"
+                      ? currentThemeForToggle === "dark"
+                        ? "🌓 Switch to light mode"
+                        : "🌓 Switch to dark mode"
+                      : prompt.label}
                   </button>
                 ))}
               </div>

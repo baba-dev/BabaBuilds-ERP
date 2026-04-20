@@ -6,6 +6,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { OnboardingProvider } from "@/components/onboarding/OnboardingProvider";
 import dynamic from "next/dynamic";
+import { usePathname } from "next/navigation";
 
 const AIChatbot = dynamic(() => import("@/components/AIChatbot"), {
   ssr: false,
@@ -13,6 +14,8 @@ const AIChatbot = dynamic(() => import("@/components/AIChatbot"), {
 });
 
 export function DashboardShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const isLoginRoute = pathname === "/login";
   return (
     <OnboardingProvider>
       <SidebarProvider>
@@ -24,7 +27,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               <div className="absolute bottom-[-10%] left-[-5%] h-[280px] w-[280px] rounded-full bg-amber-400/[0.06] blur-[88px] dark:bg-amber-400/[0.09]" />
             </div>
             <div className="relative z-10">
-              <AuthModal />
+              {!isLoginRoute && <AuthModal />}
               {children}
             </div>
           </main>

@@ -396,6 +396,43 @@ export function buildEmailTemplate(
       };
     }
 
+    case 'BILLING_FAILED': {
+      const client = escapeHtml(data.clientName);
+      const message = escapeHtml(data.message);
+      return {
+        subject: `⚠️ Automated billing failed for ${client}`,
+        html: layout({
+          appUrl, companyName, emoji: '⚠️',
+          headline: 'Billing Failed',
+          subheadline: `Automated billing issue for ${client}`,
+          accentColor: '#ef4444',
+          body: `<p>Automated billing could not be completed for <strong>${client}</strong>.</p>
+                 <p>${message}</p>`,
+          ctaLabel: 'Review Retainers',
+          ctaUrl: `${appUrl}/retainers`,
+        }),
+        text: `Automated billing failed for ${client}. ${message}`,
+      };
+    }
+
+    case 'PROPOSAL_VIEWED': {
+      const proposal = escapeHtml(data.proposalNo);
+      const client = escapeHtml(data.clientName);
+      return {
+        subject: `👀 Proposal ${proposal} was viewed`,
+        html: layout({
+          appUrl, companyName, emoji: '👀',
+          headline: 'Proposal Viewed',
+          subheadline: `${client} viewed your proposal`,
+          body: `<p><strong>${client}</strong> has viewed proposal <strong>${proposal}</strong>.</p>
+                 <p>Consider following up while engagement is fresh.</p>`,
+          ctaLabel: 'Open Proposals',
+          ctaUrl: `${appUrl}/proposals`,
+        }),
+        text: `${client} viewed proposal ${proposal}.`,
+      };
+    }
+
     case 'PROPOSAL_ACCEPTED': {
       const proposal = escapeHtml(data.proposalNo);
       const client = escapeHtml(data.clientName);
@@ -433,14 +470,69 @@ export function buildEmailTemplate(
       };
     }
 
+    case 'LEAVE_REQUEST_SUBMITTED': {
+      const employeeName = escapeHtml(data.employeeName);
+      const leaveType = escapeHtml(data.leaveType);
+      const days = escapeHtml(data.days);
+      return {
+        subject: `🗓️ New leave request from ${employeeName}`,
+        html: layout({
+          appUrl, companyName, emoji: '🗓️',
+          headline: 'Leave Request Submitted',
+          subheadline: `${employeeName} requested ${leaveType}`,
+          body: `<p><strong>${employeeName}</strong> has submitted a leave request for <strong>${days}</strong> day(s) of <strong>${leaveType}</strong>.</p>`,
+          ctaLabel: 'Review Leave Queue',
+          ctaUrl: `${appUrl}/workforce/leave`,
+        }),
+        text: `${employeeName} submitted a leave request for ${days} day(s) of ${leaveType}.`,
+      };
+    }
+
+    case 'LEAVE_APPROVED': {
+      const leaveType = escapeHtml(data.leaveType);
+      return {
+        subject: `✅ Your ${leaveType} leave was approved`,
+        html: layout({
+          appUrl, companyName, emoji: '✅',
+          headline: 'Leave Request Approved',
+          subheadline: `${leaveType} leave approved`,
+          accentColor: '#22c55e',
+          body: `<p>Your leave request for <strong>${leaveType}</strong> has been approved.</p>`,
+          ctaLabel: 'View Leave Status',
+          ctaUrl: `${appUrl}/workforce/leave`,
+        }),
+        text: `Your ${leaveType} leave request has been approved.`,
+      };
+    }
+
+    case 'LEAVE_REJECTED': {
+      const leaveType = escapeHtml(data.leaveType);
+      return {
+        subject: `❌ Your ${leaveType} leave was rejected`,
+        html: layout({
+          appUrl, companyName, emoji: '❌',
+          headline: 'Leave Request Rejected',
+          subheadline: `${leaveType} leave rejected`,
+          accentColor: '#ef4444',
+          body: `<p>Your leave request for <strong>${leaveType}</strong> has been rejected.</p>`,
+          ctaLabel: 'View Leave Status',
+          ctaUrl: `${appUrl}/workforce/leave`,
+        }),
+        text: `Your ${leaveType} leave request has been rejected.`,
+      };
+    }
+
     default:
       return {
         subject: 'Notification from BabaBuilds ERP',
         html: layout({
           appUrl, companyName, emoji: '🔔',
           headline: 'New Notification',
-          subheadline: '',
-          body: `<p>${JSON.stringify(data)}</p>`,
+          subheadline: 'You have a new activity update',
+          body: `<p>You have a new notification in your workspace.</p>
+                 <p>Please open BabaBuilds ERP to view the details.</p>`,
+          ctaLabel: 'Open Dashboard',
+          ctaUrl: `${appUrl}/dashboard`,
         }),
         text: 'You have a new notification from BabaBuilds ERP.',
       };

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle2, Circle, Sparkles, X, Flag } from "lucide-react";
+import { Briefcase, CheckCircle2, Circle, Flag, LayoutDashboard, Settings2, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useOnboarding } from "@/components/onboarding/OnboardingProvider";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -17,9 +17,9 @@ import { Progress } from "@/components/ui/progress";
 
 export function SidebarOnboardingChecklist() {
   const { open, isMobile } = useSidebar();
-  const { steps, completedSteps, disabled, isLoading, completeStep, dismiss, complete } = useOnboarding();
+  const { steps, completedSteps, disabled, isDemoUser, isLoading, completeStep, dismiss, complete } = useOnboarding();
 
-  if (isLoading || disabled || (!open && !isMobile)) {
+  if (isLoading || disabled || isDemoUser || (!open && !isMobile)) {
     return null;
   }
 
@@ -80,6 +80,14 @@ export function SidebarOnboardingChecklist() {
           <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1 custom-scrollbar">
             {steps.map((step) => {
               const isDone = completedSet.has(step.id);
+              const StepIcon =
+                step.icon === "layout-dashboard"
+                  ? LayoutDashboard
+                  : step.icon === "users"
+                    ? Users
+                    : step.icon === "briefcase"
+                      ? Briefcase
+                      : Settings2;
               return (
                 <div 
                   key={step.id} 
@@ -99,14 +107,20 @@ export function SidebarOnboardingChecklist() {
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <Link 
-                        href={step.href} 
-                        className={`text-sm font-bold transition-colors ${
-                          isDone ? "text-zinc-400 line-through" : "text-zinc-100 hover:text-indigo-400"
-                        }`}
-                      >
-                        {step.title}
-                      </Link>
+                      <div>
+                        <Link 
+                          href={step.href} 
+                          className={`text-sm font-bold transition-colors inline-flex items-center gap-2 ${
+                            isDone ? "text-zinc-400 line-through" : "text-zinc-100 hover:text-indigo-400"
+                          }`}
+                        >
+                          <StepIcon className="h-3.5 w-3.5 shrink-0" />
+                          {step.title}
+                        </Link>
+                        <p className="mt-1 text-[11px] uppercase tracking-wider text-indigo-300/80">
+                          {step.valueStatement}
+                        </p>
+                      </div>
                     </div>
                     <p className={`mt-1 text-xs leading-relaxed ${isDone ? "text-zinc-500" : "text-zinc-400"}`}>
                       {step.description}

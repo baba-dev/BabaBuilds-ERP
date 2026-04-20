@@ -16,6 +16,7 @@ import { toDecimal } from '@/lib/money';
 import { computeWithheldAmount, defaultDepositDueDate, deriveReturnPeriodKey } from '@/lib/tax/withholding';
 import { withPermission } from '@/lib/rbac';
 import { appendTaxAuditEvent, newTaxCorrelationId } from '@/lib/tax/audit';
+import { dispatchNotification } from '@/lib/notifications/dispatcher';
 
 import { 
   getWorkspaceId,
@@ -269,8 +270,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     const { PDFDocument, rgb, degrees, StandardFonts } = await import('pdf-lib');
     const { existingInvoice, updatedInvoice, newStatus } = transitionResult;
+    const becamePaidNow = newStatus === INVOICE_STATUS.PAID && existingInvoice.status !== INVOICE_STATUS.PAID;
 
-    if (newStatus === INVOICE_STATUS.PAID && existingInvoice.status !== INVOICE_STATUS.PAID) {
+    if (becamePaidNow) {
       let relativePath = updatedInvoice.pdfPath.startsWith('/')
         ? updatedInvoice.pdfPath.substring(1)
         : updatedInvoice.pdfPath;
@@ -342,6 +344,18 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       invalidateDashboardCacheForWorkspace(workspaceId);
     } catch (error) {
       noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'invoice', action: 'payment', error: String(error) });
+    }
+
+    if (becamePaidNow) {
+      dispatchNotification({
+        event: 'INVOICE_PAID',
+        workspaceId,
+        data: {
+          invoiceNumber: updatedInvoice.invoiceNumber,
+          clientName: updatedInvoice.clientName,
+          amount: String(updatedInvoice.grandTotal ?? updatedInvoice.totalAmount),
+        },
+      }).catch(() => null);
     }
 
     const responseBody = { success: true, invoice: updatedInvoice };

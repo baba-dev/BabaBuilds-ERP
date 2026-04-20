@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import type { DashboardData } from "./types";
 import { INTELLIGENCE_SUGGESTION_ROUTES } from "./intelligence-suggestion-routes";
 import { dashboardTypography as ty } from "./dashboard-typography";
+import { DashboardTooltip } from "./dashboard-tooltip";
 
 interface DashboardRightRailProps {
   data: DashboardData;
@@ -376,6 +377,7 @@ function SuggestedActionsSection({ data, tr, mood }: { data: DashboardData, tr: 
       <h4 className={`${ty.labelUpper} inline-flex items-center gap-2`}>
         <Sparkles className="w-4 h-4" />
         {tr("intelligence_suggestions", "Contextual Guidance")}
+        <DashboardTooltip label="Guided recommendations are prioritized from setup completion, reconciliation status, receivables pressure, and module readiness." />
       </h4>
 
       <div className="space-y-4">

@@ -123,11 +123,35 @@ function buildPushAndInAppContent(
         body: `${d.clientName} has accepted Proposal ${d.proposalNo}`,
         actionUrl: '/proposals',
       };
+    case 'PROPOSAL_VIEWED':
+      return {
+        title: `👀 Proposal Viewed`,
+        body: `${d.clientName} viewed Proposal ${d.proposalNo}`,
+        actionUrl: '/proposals',
+      };
     case 'SETTINGS_UPDATED':
       return {
         title: `⚙️ Settings Updated`,
         body: `${d.section} settings were updated by ${d.updatedBy}`,
         actionUrl: '/settings',
+      };
+    case 'LEAVE_REQUEST_SUBMITTED':
+      return {
+        title: '🗓️ New Leave Request',
+        body: `${d.employeeName} requested ${d.days} day(s) of ${d.leaveType}.`,
+        actionUrl: '/workforce/leave',
+      };
+    case 'LEAVE_APPROVED':
+      return {
+        title: '✅ Leave Approved',
+        body: `Your ${d.leaveType} request was approved.`,
+        actionUrl: '/workforce/leave',
+      };
+    case 'LEAVE_REJECTED':
+      return {
+        title: '❌ Leave Rejected',
+        body: `Your ${d.leaveType} request was rejected.`,
+        actionUrl: '/workforce/leave',
       };
     default:
       return { title: 'BabaBuilds ERP', body: 'You have a new notification', actionUrl: '/dashboard' };
