@@ -1,6 +1,6 @@
 "use client";
 
-import { m, motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { m, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
   ShieldCheck,
@@ -37,9 +37,6 @@ export default function LandingContent() {
   const t = useTranslations("Landing");
   const tp1 = useTranslations("LandingPhase1");
   const reduceMotion = useReducedMotion();
-  const { scrollYProgress } = useScroll();
-  const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
-  const scale = useTransform(scrollYProgress, [0, 0.2], [1, 0.98]);
 
   const trustCities = [
     t("trust.cities.dubai"),
@@ -95,35 +92,24 @@ export default function LandingContent() {
           }}
         />
 
-        <m.div
-          style={reduceMotion ? undefined : { opacity, scale }}
-          className="relative z-10 mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-14"
-        >
-          <div className="space-y-8">
-            <m.div
-              initial={reduceMotion ? false : { opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-              className="space-y-6"
-            >
+        <div className="relative z-10 mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-start lg:gap-14">
+          <div className="min-w-0 space-y-8">
+            <div className="space-y-6">
               <span className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-surface-elevated/90 px-4 py-2 text-sm font-bold text-muted-body shadow-sm backdrop-blur-md">
-                <Sparkles className="h-4 w-4 text-accent-strong" /> {t("hero.badge")}
+                <Sparkles className="h-4 w-4 text-accent-strong" aria-hidden /> {t("hero.badge")}
               </span>
-              <h1 className="text-4xl font-black leading-[1.08] tracking-tight text-foreground md:text-6xl lg:text-7xl">
+              <h1 className="text-balance text-4xl font-black leading-[1.08] tracking-tight text-foreground md:text-6xl lg:text-7xl">
                 {t("hero.titleLine1")} <br />
-                <RotatorText />
+                <span className="mt-1 block text-orange-600 dark:text-orange-300 md:mt-0 md:inline">
+                  <RotatorText />
+                </span>
               </h1>
               <p className="max-w-xl text-lg font-medium leading-relaxed text-muted-body md:text-xl">
                 {t("hero.description")}
               </p>
-            </m.div>
+            </div>
 
-            <m.div
-              initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.12 }}
-              className="flex flex-col gap-4 sm:flex-row sm:items-center"
-            >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               <div className="relative group">
                 <div className="absolute -inset-0.5 animate-pulse rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 opacity-25 blur transition duration-500 group-hover:opacity-40" />
                 <Button
@@ -146,16 +132,11 @@ export default function LandingContent() {
                   {tp1("cta.exploreDemo")}
                 </Link>
               </Button>
-            </m.div>
+            </div>
 
             <SocialProofHero />
 
-            <m.div
-              initial={reduceMotion ? false : { opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.35 }}
-              className="flex flex-wrap gap-2 pt-1"
-            >
+            <div className="flex flex-wrap gap-2 pt-1">
               {trustChips.map((chip) => (
                 <span
                   key={chip}
@@ -164,11 +145,13 @@ export default function LandingContent() {
                   {chip}
                 </span>
               ))}
-            </m.div>
+            </div>
           </div>
 
-          <HeroRevenueLoopVisual />
-        </m.div>
+          <div className="min-w-0 lg:pt-2">
+            <HeroRevenueLoopVisual />
+          </div>
+        </div>
       </section>
 
       <LandingStorySteps />
