@@ -27,6 +27,7 @@ export default function LandingNavbar() {
     { name: t("nav.features"), href: "#features" },
     { name: t("nav.comparison"), href: "#comparison" },
     { name: t("nav.pricing"), href: "#pricing" },
+    { name: "Reseller", href: "/reseller" },
   ];
 
   return (
