@@ -10,7 +10,7 @@ import {
   consumeFinancialIdempotency,
   releaseFinancialIdempotency,
 } from "@/lib/financial-idempotency";
-import { PRICING } from "@/lib/pricing";
+import { resolvePricingIntervalByAmount } from "@/lib/pricing";
 
 function getRazorpayClient() {
   const keyId = process.env.RAZORPAY_KEY_ID;
@@ -100,7 +100,7 @@ export async function POST(req: Request) {
     // If they are currently PRO and their expiry is in the future, we append to that date.
     // Otherwise (FREE, Expired, or Suspended), we start from today.
     const isCurrentlyActivePro = 
-      workspace.subscriptionStatus === "PRO" && 
+      (workspace.subscriptionStatus === "PRO" || workspace.subscriptionStatus === "TEAM") && 
       workspace.subscriptionEndsAt && 
       new Date(workspace.subscriptionEndsAt) > new Date();
 
@@ -108,33 +108,31 @@ export async function POST(req: Request) {
       ? new Date(workspace.subscriptionEndsAt!) 
       : new Date();
 
-    // 5. CALCULATE NEW EXPIRATION BASED ON AMOUNT PAID
-    let verifiedInterval = "MONTHLY";
+    // 5. CALCULATE NEW EXPIRATION BASED ON EXACT AMOUNT PAID
+    // Use exact plan amount matching so a higher-tier threshold cannot
+    // accidentally classify a lower plan (for example TEAM_MONTHLY as QUARTERLY).
+    const verifiedInterval = resolvePricingIntervalByAmount(amountPaid);
+    if (!verifiedInterval) {
+      return NextResponse.json({ error: "Unrecognized payment amount detected." }, { status: 400 });
+    }
     let verifiedTier = "PRO";
     const newExpirationDate = new Date(baseDate);
 
-    if (amountPaid >= PRICING.TEAM_YEARLY) {
-      verifiedInterval = "TEAM_YEARLY";
+    if (verifiedInterval === "TEAM_YEARLY") {
       verifiedTier = "TEAM";
       newExpirationDate.setFullYear(newExpirationDate.getFullYear() + 1);
-    } else if (amountPaid >= PRICING.YEARLY) {
-      verifiedInterval = "YEARLY";
+    } else if (verifiedInterval === "YEARLY") {
       verifiedTier = "PRO";
       newExpirationDate.setFullYear(newExpirationDate.getFullYear() + 1);
-    } else if (amountPaid >= PRICING.QUARTERLY) {
-      verifiedInterval = "QUARTERLY";
+    } else if (verifiedInterval === "QUARTERLY") {
       verifiedTier = "PRO";
       newExpirationDate.setMonth(newExpirationDate.getMonth() + 3);
-    } else if (amountPaid >= PRICING.TEAM_MONTHLY) {
-      verifiedInterval = "TEAM_MONTHLY";
+    } else if (verifiedInterval === "TEAM_MONTHLY") {
       verifiedTier = "TEAM";
       newExpirationDate.setMonth(newExpirationDate.getMonth() + 1);
-    } else if (amountPaid >= PRICING.MONTHLY) {
-      verifiedInterval = "MONTHLY";
+    } else if (verifiedInterval === "MONTHLY") {
       verifiedTier = "PRO";
       newExpirationDate.setMonth(newExpirationDate.getMonth() + 1);
-    } else {
-      return NextResponse.json({ error: "Insufficient payment amount detected." }, { status: 400 });
     }
 
     // 6. SECURELY UPGRADE THE WORKSPACE
