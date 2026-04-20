@@ -2,12 +2,13 @@
 
 import { type KeyboardEvent as ReactKeyboardEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Search, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { sidebarItems } from "@/components/navigation/sidebar-items";
 import { openAIChat } from "@/src/stores/ui/aiChatStore";
+import { dirFromLocale } from "@/src/lib/direction";
 
 const GROUP_LABEL_FALLBACKS: Record<string, string> = {
   overview: "Overview",
@@ -32,6 +33,8 @@ const DEBOUNCE_MS = 200;
 export function SidebarSearch() {
   const router = useRouter();
   const t = useTranslations("Sidebar");
+  const locale = useLocale();
+  const isRtl = dirFromLocale(locale) === "rtl";
   const inputRef = useRef<HTMLInputElement>(null);
   const [searchText, setSearchText] = useState("");
   const [debouncedSearchText, setDebouncedSearchText] = useState("");
@@ -122,7 +125,7 @@ export function SidebarSearch() {
   return (
     <div className="px-2 pt-2 pb-1">
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+        <Search className={cn("pointer-events-none absolute top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400", isRtl ? "right-3" : "left-3")} />
         <Input
           ref={inputRef}
           value={searchText}
@@ -132,7 +135,7 @@ export function SidebarSearch() {
           }}
           onKeyDown={handleInputKeyDown}
           placeholder="Search menu (/)"
-          className="h-9 border-zinc-700/70 bg-zinc-900/60 pl-9 text-zinc-100 placeholder:text-zinc-400 focus-visible:ring-indigo-500"
+          className={cn("h-9 border-zinc-700/70 bg-zinc-900/60 text-zinc-100 placeholder:text-zinc-400 focus-visible:ring-indigo-500", isRtl ? "pr-9" : "pl-9")}
           aria-label="Sidebar search"
         />
       </div>
@@ -143,7 +146,7 @@ export function SidebarSearch() {
             <button
               type="button"
               className={cn(
-                "w-full rounded-md px-3 py-2 text-left transition-colors",
+                "w-full rounded-md px-3 py-2 text-start transition-colors",
                 activeIndex === 0 ? "bg-indigo-600/90 text-white" : "text-zinc-200 hover:bg-zinc-800",
               )}
               onMouseEnter={() => setSelectedIndex(0)}
@@ -163,12 +166,12 @@ export function SidebarSearch() {
                 onMouseEnter={() => setSelectedIndex(index)}
                 onClick={() => router.push(item.path)}
                 className={cn(
-                  "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors",
+                  "flex w-full items-center justify-between rounded-md px-3 py-2 text-start text-sm transition-colors",
                   activeIndex === index ? "bg-indigo-600/90 text-white" : "text-zinc-200 hover:bg-zinc-800",
                 )}
               >
                 <span className="truncate">{t(item.key)}</span>
-                <span className="ml-2 shrink-0 text-xs text-zinc-300">{getGroupLabel(item.groupKey)}</span>
+                <span className={cn("shrink-0 text-xs text-zinc-300", isRtl ? "mr-2" : "ml-2")}>{getGroupLabel(item.groupKey)}</span>
               </button>
             ))
           )}

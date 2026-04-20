@@ -72,7 +72,8 @@ function SheetContent({
           <SheetPrimitive.Close data-slot="sheet-close" asChild>
             <Button
               variant="ghost"
-              className="absolute top-4 right-4"
+              className="absolute top-4"
+              style={{ insetInlineEnd: "1rem" }}
               size="icon-sm"
             >
               <XIcon

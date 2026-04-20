@@ -20,6 +20,8 @@ import { getCurrencySymbol } from "@/lib/currency";
 import { useTranslations } from "next-intl";
 import { getBustedUrl } from "@/lib/cache-buster";
 import { getConflictPolicy, queueOfflineMutation } from "@/lib/offline-sync";
+import { cn } from "@/lib/utils";
+import { dirFromLocale } from "@/src/lib/direction";
 
 const isLikelyOfflineError = (error: unknown) => {
   if (typeof navigator !== "undefined" && !navigator.onLine) return true;
@@ -50,6 +52,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
   } = useFormat();
 
   const currencySymbol = getCurrencySymbol(currency, locale);
+  const isRtl = dirFromLocale(locale) === "rtl";
 
   // App State
   const [clients, setClients] = useState<any[]>([]);
@@ -411,7 +414,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
               className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-700 h-11 font-bold text-xs shadow-sm text-zinc-900 dark:text-zinc-100 focus:ring-indigo-500/30"
             />
             {selectedClient && (
-              <div className="flex items-center gap-1.5 px-1 pt-1 text-xs text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest animate-in fade-in slide-in-from-left-2">
+              <div className="flex items-center gap-1.5 px-1 pt-1 text-xs text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest animate-in fade-in slide-in-from-top-2">
                 <CheckCircle2 className="h-3 w-3" /> {t("jurisdiction", { country: selectedClient.country })}
               </div>
             )}
@@ -442,7 +445,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
         </FormSection>
 
         {isMonthAlreadyBilled && (
-          <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-500/10 border-l-4 border-amber-400 dark:border-amber-500 rounded-r-md text-amber-800 dark:text-amber-400 text-xs font-medium animate-in fade-in slide-in-from-top-2 shadow-sm">
+          <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-500/10 border-s-4 border-amber-400 dark:border-amber-500 rounded-e-md text-amber-800 dark:text-amber-400 text-xs font-medium animate-in fade-in slide-in-from-top-2 shadow-sm">
             <AlertCircle className="h-5 w-5 text-amber-500 dark:text-amber-500 shrink-0" />
             <p className="leading-relaxed">{t("warning_duplicate", { billingMonth })}</p>
           </div>
@@ -511,7 +514,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
                           </div>
                         )}
                         <div className="relative group/price w-[120px]">
-                          <span className="absolute left-3 top-2.5 text-zinc-400 dark:text-zinc-500 text-xs font-bold transition-colors group-focus-within/price:text-indigo-600 dark:group-focus-within/price:text-indigo-400">{currencySymbol}</span>
+                          <span className={cn("absolute top-2.5 text-zinc-400 dark:text-zinc-500 text-xs font-bold transition-colors group-focus-within/price:text-indigo-600 dark:group-focus-within/price:text-indigo-400", isRtl ? "right-3" : "left-3")}>{currencySymbol}</span>
                           <Label htmlFor={`service-price-${index}`} className="sr-only">Amount for {service.title}</Label>
                           <Input
                             id={`service-price-${index}`}
@@ -520,7 +523,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
                             value={service.amount}
                             onChange={(e) => handleAmountChange(index, e.target.value)}
                             required={service.selected}
-                            className="pl-7 h-9 bg-white dark:bg-zinc-900 border-indigo-200 dark:border-indigo-800 font-bold text-sm text-indigo-700 dark:text-indigo-400 shadow-inner focus-visible:ring-indigo-500/30 transition-colors"
+                            className={cn("h-9 bg-white dark:bg-zinc-900 border-indigo-200 dark:border-indigo-800 font-bold text-sm text-indigo-700 dark:text-indigo-400 shadow-inner focus-visible:ring-indigo-500/30 transition-colors", isRtl ? "pr-7" : "pl-7")}
                           />
                         </div>
                       </div>
@@ -552,7 +555,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
               )}
             </div>
           </div>
-          <div className="ml-14 sm:ml-0 shrink-0">
+          <div className="ms-14 sm:ms-0 shrink-0">
             <Checkbox
               id="send-email"
               checked={sendEmail}
@@ -601,7 +604,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
 
         <FormFieldMessages
           errorText={error ? <span className="flex items-center justify-center gap-2"><AlertCircle className="w-4 h-4 shrink-0" /> {error}</span> : undefined}
-          className="w-full p-4 bg-red-50 dark:bg-red-500/10 border-l-4 border-red-500 rounded-r-xl text-xs text-center font-bold uppercase tracking-widest shadow-sm animate-pulse"
+          className="w-full p-4 bg-red-50 dark:bg-red-500/10 border-s-4 border-red-500 rounded-e-xl text-xs text-center font-bold uppercase tracking-widest shadow-sm animate-pulse"
         />
       </CardFooter>
     </form>

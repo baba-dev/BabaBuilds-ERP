@@ -2,9 +2,12 @@
 
 import { useMemo } from "react";
 import { Sparkles, Percent } from "lucide-react";
+import { useLocale } from "next-intl";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { dirFromLocale } from "@/src/lib/direction";
 
 interface TaxRateModalProps {
   open: boolean;
@@ -34,6 +37,8 @@ export function TaxRateModal({
   isSubmitting = false,
 }: TaxRateModalProps) {
   const candidateButtons = useMemo(() => candidates.slice(0, 4), [candidates]);
+  const locale = useLocale();
+  const isRtl = dirFromLocale(locale) === "rtl";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -59,12 +64,12 @@ export function TaxRateModal({
             {taxLabel} rate {countryCode ? `for ${countryCode}` : ""}
           </div>
           <div className="relative">
-            <Percent className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+            <Percent className={cn("w-4 h-4 absolute top-1/2 -translate-y-1/2 text-zinc-400", isRtl ? "right-3" : "left-3")} />
             <Input
               value={value}
               onChange={(e) => onValueChange(e.target.value)}
               placeholder="e.g. 5 or 18"
-              className="pl-9 h-12 text-base font-bold"
+              className={cn("h-12 text-base font-bold", isRtl ? "pr-9" : "pl-9")}
               inputMode="decimal"
             />
           </div>

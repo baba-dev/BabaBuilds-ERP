@@ -7,12 +7,13 @@
  */
 
 import type { NotificationEventType } from './types';
+import { getLocaleDirection } from '@/lib/i18n';
 
 // --- DESIGN TOKENS ---
 const BRAND_PURPLE = '#6366f1'; // indigo-500 – matches the app accent
 const BRAND_DARK = '#18181b';   // zinc-900
 const BRAND_LIGHT = '#f4f4f5';  // zinc-100
-const FONT_STACK = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+const FONT_STACK = "'Inter', 'Noto Naskh Arabic', 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
 const escapeHtml = (value: unknown): string => {
   const str = String(value ?? '');
@@ -42,8 +43,13 @@ export function layout(opts: {
   ctaLabel?: string;
   ctaUrl?: string;
   accentColor?: string;
+  locale?: string;
+  dir?: "rtl" | "ltr";
 }): string {
   const accent = opts.accentColor ?? BRAND_PURPLE;
+  const locale = opts.locale ?? "en";
+  const dir = opts.dir ?? getLocaleDirection(locale);
+  const alignStart = dir === "rtl" ? "right" : "left";
   
   const cta = opts.ctaLabel && opts.ctaUrl
     ? `
@@ -62,13 +68,13 @@ export function layout(opts: {
     : '';
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${locale}" dir="${dir}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>${opts.headline}</title>
 </head>
-<body style="background-color: ${BRAND_LIGHT}; font-family: ${FONT_STACK}; padding: 60px 20px; margin: 0; -webkit-font-smoothing: antialiased;">
+<body style="background-color: ${BRAND_LIGHT}; font-family: ${FONT_STACK}; padding: 60px 20px; margin: 0; -webkit-font-smoothing: antialiased; direction: ${dir};">
   <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);">
     <tr>
       <td style="padding: 48px 40px; text-align: center;">
@@ -77,7 +83,7 @@ export function layout(opts: {
         <h1 style="margin: 0; color: #09090b; font-size: 28px; font-weight: 900; letter-spacing: -0.5px;">${opts.emoji} ${opts.headline}</h1>
         <p style="margin: 4px 0 0 0; color: ${accent}; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">${opts.subheadline}</p>
         
-        <div style="margin: 40px 0 32px 0; color: #52525b; font-size: 15px; line-height: 24px; text-align: left;">
+        <div style="margin: 40px 0 32px 0; color: #52525b; font-size: 15px; line-height: 24px; text-align: ${alignStart};">
           ${opts.body}
         </div>
         
@@ -108,9 +114,10 @@ export type EmailTemplate = { subject: string; html: string; text: string };
 export function buildEmailTemplate(
   event: NotificationEventType,
   data: Record<string, unknown>,
-  meta: { companyName: string; appUrl: string }
+  meta: { companyName: string; appUrl: string; locale?: string }
 ): EmailTemplate {
-  const { companyName, appUrl } = meta;
+  const { companyName, appUrl, locale = "en" } = meta;
+  const dir = getLocaleDirection(locale);
 
   switch (event) {
     // ── Invoice Generated ───────────────────────────────────────────────────
@@ -122,7 +129,7 @@ export function buildEmailTemplate(
       return {
         subject: `🧾 Invoice ${inv} generated for ${client}`,
         html: layout({
-          appUrl, companyName, emoji: '🧾',
+          appUrl, companyName, locale, dir, emoji: '🧾',
           headline: `Invoice ${inv} Ready`,
           subheadline: `A new invoice has been generated for ${client}`,
           body: `
@@ -144,7 +151,7 @@ export function buildEmailTemplate(
       return {
         subject: `✅ Payment received — Invoice ${inv}`,
         html: layout({
-          appUrl, companyName, emoji: '✅',
+          appUrl, companyName, locale, dir, emoji: '✅',
           headline: 'Payment Received!',
           subheadline: `Invoice ${inv} from ${client} is now settled`,
           accentColor: '#22c55e',
@@ -166,7 +173,7 @@ export function buildEmailTemplate(
       return {
         subject: `⏰ Payment reminder — Invoice ${inv} due ${dueDate}`,
         html: layout({
-          appUrl, companyName, emoji: '⏰',
+          appUrl, companyName, locale, dir, emoji: '⏰',
           headline: 'Payment Reminder',
           subheadline: `Invoice ${inv} for ${client} is awaiting payment`,
           accentColor: '#f59e0b',
@@ -186,7 +193,7 @@ export function buildEmailTemplate(
       return {
         subject: `🤝 New client added: ${client}`,
         html: layout({
-          appUrl, companyName, emoji: '🤝',
+          appUrl, companyName, locale, dir, emoji: '🤝',
           headline: `Welcome, ${client}!`,
           subheadline: 'A new client has been added to your workspace',
           body: `
@@ -207,7 +214,7 @@ export function buildEmailTemplate(
       return {
         subject: `📄 Proposal ${proposal} created for ${client}`,
         html: layout({
-          appUrl, companyName, emoji: '📄',
+          appUrl, companyName, locale, dir, emoji: '📄',
           headline: `Proposal ${proposal} Created`,
           subheadline: `Quote sent to ${client}`,
           body: `
@@ -226,7 +233,7 @@ export function buildEmailTemplate(
       return {
         subject: `🔧 New service template created: ${service}`,
         html: layout({
-          appUrl, companyName, emoji: '🔧',
+          appUrl, companyName, locale, dir, emoji: '🔧',
           headline: 'New Service Added',
           subheadline: `${service} is ready to use in proposals and invoices`,
           body: `
@@ -247,7 +254,7 @@ export function buildEmailTemplate(
       return {
         subject: `🔄 Retainer renewal upcoming — ${client} on ${renewalDate}`,
         html: layout({
-          appUrl, companyName, emoji: '🔄',
+          appUrl, companyName, locale, dir, emoji: '🔄',
           headline: 'Retainer Renewal Alert',
           subheadline: `Upcoming renewal for ${client}`,
           accentColor: '#8b5cf6',
@@ -269,7 +276,7 @@ export function buildEmailTemplate(
       return {
         subject: `⚠️ Deadline approaching: ${title}`,
         html: layout({
-          appUrl, companyName, emoji: '⚠️',
+          appUrl, companyName, locale, dir, emoji: '⚠️',
           headline: 'Deadline Alert',
           subheadline: title,
           accentColor: '#ef4444',
@@ -291,7 +298,7 @@ export function buildEmailTemplate(
       return {
         subject: `🏛️ Tax filing reminder: ${taxType} due ${dueDate}`,
         html: layout({
-          appUrl, companyName, emoji: '🏛️',
+          appUrl, companyName, locale, dir, emoji: '🏛️',
           headline: 'Tax Filing Reminder',
           subheadline: `${taxType} return due by ${dueDate}`,
           accentColor: '#0ea5e9',
@@ -313,7 +320,7 @@ export function buildEmailTemplate(
       return {
         subject: `🛒 New shop order received: ${orderId}`,
         html: layout({
-          appUrl, companyName, emoji: '🛒',
+          appUrl, companyName, locale, dir, emoji: '🛒',
           headline: 'New Shop Order',
           subheadline: `${buyerName} placed an order for ${serviceName}`,
           body: `<p>Order <strong>${orderId}</strong> has been created for <strong>${amount}</strong>.</p>`,
@@ -330,7 +337,7 @@ export function buildEmailTemplate(
       return {
         subject: `📝 Shop order updated: ${orderId}`,
         html: layout({
-          appUrl, companyName, emoji: '📝',
+          appUrl, companyName, locale, dir, emoji: '📝',
           headline: 'Shop Order Updated',
           subheadline: `Order ${orderId} was updated`,
           body: `<p>The shop order for <strong>${buyerName}</strong> has new details.</p>`,
@@ -347,7 +354,7 @@ export function buildEmailTemplate(
       return {
         subject: `🗑️ Shop order deleted: ${orderId}`,
         html: layout({
-          appUrl, companyName, emoji: '🗑️',
+          appUrl, companyName, locale, dir, emoji: '🗑️',
           headline: 'Shop Order Deleted',
           subheadline: `Order ${orderId} was removed`,
           accentColor: '#ef4444',
@@ -367,7 +374,7 @@ export function buildEmailTemplate(
       return {
         subject: `📦 Shop order status changed: ${orderId} (${newStatus})`,
         html: layout({
-          appUrl, companyName, emoji: '📦',
+          appUrl, companyName, locale, dir, emoji: '📦',
           headline: 'Shop Order Status Changed',
           subheadline: `Order ${orderId} moved to ${newStatus}`,
           body: `<p><strong>${buyerName}</strong>'s order changed from <strong>${oldStatus}</strong> to <strong>${newStatus}</strong>.</p>`,
@@ -385,7 +392,7 @@ export function buildEmailTemplate(
       return {
         subject: `📋 New retainer created for ${client}`,
         html: layout({
-          appUrl, companyName, emoji: '📋',
+          appUrl, companyName, locale, dir, emoji: '📋',
           headline: 'Retainer Established',
           subheadline: `New recurring service for ${client}`,
           body: `<p>A new retainer for <strong>${service}</strong> has been successfully created for <strong>${client}</strong> at <strong>${amount}</strong>.</p>`,
@@ -402,7 +409,7 @@ export function buildEmailTemplate(
       return {
         subject: `🎉 Proposal ${proposal} accepted by ${client}!`,
         html: layout({
-          appUrl, companyName, emoji: '🎉',
+          appUrl, companyName, locale, dir, emoji: '🎉',
           headline: 'Proposal Accepted',
           subheadline: `Great news! ${client} accepted your proposal`,
           accentColor: '#22c55e',
@@ -421,7 +428,7 @@ export function buildEmailTemplate(
       return {
         subject: `⚙️ Workspace settings updated: ${section}`,
         html: layout({
-          appUrl, companyName, emoji: '⚙️',
+          appUrl, companyName, locale, dir, emoji: '⚙️',
           headline: 'Settings Updated',
           subheadline: `${section} settings modified`,
           body: `<p>Important workspace settings in the <strong>${section}</strong> section were updated by <strong>${updatedBy}</strong>.</p>
@@ -437,7 +444,7 @@ export function buildEmailTemplate(
       return {
         subject: 'Notification from BabaBuilds ERP',
         html: layout({
-          appUrl, companyName, emoji: '🔔',
+          appUrl, companyName, locale, dir, emoji: '🔔',
           headline: 'New Notification',
           subheadline: '',
           body: `<p>${JSON.stringify(data)}</p>`,

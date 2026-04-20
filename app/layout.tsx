@@ -1,6 +1,6 @@
 import type { Viewport, Metadata } from "next";
 import Script from "next/script";
-import { Inter } from "next/font/google";
+import { Inter, Noto_Naskh_Arabic } from "next/font/google";
 
 import "./globals.css";
 import AuthProvider from "@/components/AuthProvider";
@@ -14,6 +14,11 @@ import PWARegistration from "@/components/PWARegistration";
 import OfflineSyncBanner from "@/components/offline-sync-banner";
 
 const inter = Inter({ subsets: ["latin"] });
+const notoNaskhArabic = Noto_Naskh_Arabic({
+  subsets: ["arabic"],
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+});
 
 export const viewport: Viewport = {
   themeColor: '#0062ff',
@@ -113,7 +118,10 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
-      <body className={inter.className} suppressHydrationWarning>
+      <body
+        className={dir === "rtl" ? notoNaskhArabic.className : inter.className}
+        suppressHydrationWarning
+      >
         {/* ── Structured Data: Organization ── */}
         <Script
           id="ld-json-organization"
