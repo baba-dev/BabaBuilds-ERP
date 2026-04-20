@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { enableModule } from "@/lib/modules";
+import { syncPrimaryRemittanceBankAccount } from "@/lib/banking/sync-primary-remittance-account";
 
 type SetupPayload = {
   countryCode?: string;
@@ -100,7 +101,7 @@ export async function POST(req: Request) {
         },
       });
 
-      await tx.businessProfile.upsert({
+      const profile = await tx.businessProfile.upsert({
         where: { workspaceId },
         create: {
           workspaceId,
@@ -159,6 +160,16 @@ export async function POST(req: Request) {
           shopTagline: body.shopTagline,
           shopAccentColor: body.shopAccentColor,
         },
+      });
+
+      await syncPrimaryRemittanceBankAccount(tx, {
+        workspaceId,
+        bankName: profile.bankName,
+        accountHolderName: profile.accountName,
+        accountNumber: profile.accountNumber,
+        routingCode: profile.ifscCode,
+        routingLabel: profile.routingLabel,
+        sourceType: "SETUP_SEEDED",
       });
 
       await tx.workspace.update({

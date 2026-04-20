@@ -10,13 +10,14 @@ export async function GET() {
 
   const accounts = await prisma.bankAccount.findMany({
     where: { workspaceId },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ isPrimaryRemittance: "desc" }, { createdAt: "asc" }],
     select: {
       id: true,
       name: true,
       bankName: true,
       maskedAccountNumber: true,
       currency: true,
+      isPrimaryRemittance: true,
       plaidAccessTokenEncrypted: true,
     },
   });
@@ -27,6 +28,7 @@ export async function GET() {
     bankName: a.bankName,
     maskedAccountNumber: a.maskedAccountNumber,
     currency: a.currency,
+    isPrimaryRemittance: a.isPrimaryRemittance,
     plaidLinked: Boolean(a.plaidAccessTokenEncrypted),
   }));
 

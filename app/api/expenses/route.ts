@@ -15,10 +15,7 @@ import {
   buildPrivatePath,
 } from '@/lib/uploads/private-storage';
 import { withPermission } from '@/lib/rbac';
-import { computeWithheldAmount, defaultDepositDueDate, deriveReturnPeriodKey } from '@/lib/tax/withholding';
-import { determineAndPersistTax } from '@/src/server/tax/service';
-import { createPrismaTaxPersistence } from '@/lib/tax/prisma-tax-persistence';
-import { appendTaxAuditEvent, newTaxCorrelationId } from '@/lib/tax/audit';
+import { createExpenseWithSideEffects } from '@/lib/expenses/create-expense-with-side-effects';
 
 // Fetch all expenses for the ledger (NOW PAGINATED)
 export async function GET(request: Request) {
@@ -191,100 +188,25 @@ export async function POST(request: Request) {
       receiptUrl = `/receipts/${workspaceId}/${storedName}`;
     }
 
-    const deductedAt = parsedWithholdingDeductedAt ?? null;
-    const computedWithholdingAmount = deductedAt
-      ? computeWithheldAmount({
-          grossAmount: parsedAmount,
-          ratePercent: parsedWithholdingRate,
-          explicitWithheldAmount: parsedWithholdingAmount,
-          deductedAt,
-        })
-      : null;
-    const depositDueAt = deductedAt
-      ? (parsedWithholdingDepositDueAt ?? defaultDepositDueDate(deductedAt))
-      : null;
-
-    // 3. SECURE CREATION: Link expense to the workspace
-    const newExpense = await prisma.$transaction(async (tx) => {
-      const created = await tx.expense.create({
-        data: {
-          workspaceId: workspaceId,
-          date: parsedDate,
-          category,
-          vendor,
-          amount: parsedAmount,
-          description: description || null,
-          receiptUrl,
-          withholdingRatePercent: parsedWithholdingRate,
-          withholdingAmount: computedWithholdingAmount,
-          withholdingDeductedAt: deductedAt,
-          withholdingDepositedAt: parsedWithholdingDepositedAt,
-          withholdingDepositDueAt: depositDueAt,
-        }
-      });
-
-      const ws = await tx.workspace.findUnique({
-        where: { id: workspaceId },
-        select: { countryCode: true },
-      });
-      const countryCode = (ws?.countryCode ?? 'IN').trim().toUpperCase() || 'IN';
-
-      await determineAndPersistTax(createPrismaTaxPersistence(tx), {
-        source: {
-          kind: 'expense',
-          entityId: created.id,
-          workspaceId,
-          taxableAmount: parsedAmount,
-          originCountryCode: countryCode,
-          destinationCountryCode: countryCode,
-          occurredAt: parsedDate,
-        },
-        actorUserId: userId,
-      });
-
-      await appendTaxAuditEvent(tx, {
-        workspaceId,
-        eventType: 'DETERMINATION',
-        correlationId: newTaxCorrelationId(),
-        actorUserId: userId,
-        entityType: 'Expense',
-        entityId: created.id,
-        payload: { vendor, category, amount: parsedAmount },
-      });
-
-      if (deductedAt && computedWithholdingAmount && computedWithholdingAmount.gt(0)) {
-        await tx.withholdingEvent.create({
-          data: {
-            workspaceId,
-            sourceType: 'EXPENSE_PAYMENT',
-            sourceId: created.id,
-            expenseId: created.id,
-            counterpartyName: vendor || null,
-            grossAmount: parsedAmount,
-            withheldAmount: computedWithholdingAmount,
-            withholdingRatePercent: parsedWithholdingRate,
-            deductedAt,
-            depositedAt: parsedWithholdingDepositedAt,
-            depositDueAt,
-            returnPeriodKey: deriveReturnPeriodKey(deductedAt, returnPeriodKeyRaw),
-            createdByUserId: userId,
-          },
-        });
-      }
-
-      return created;
-    });
-
-    logActivity({
-      action: "expense_created",
-      status: "SUCCESS",
+    const newExpense = await createExpenseWithSideEffects({
       workspaceId,
-      actor: { userId: session.user?.id, email: session.user?.email },
-      entity: { type: "expense", id: newExpense.id },
+      userId,
       request,
+      date: parsedDate,
+      category,
+      vendor,
+      amount: parsedAmount,
+      description: description || null,
+      receiptUrl,
+      withholdingRatePercent: parsedWithholdingRate,
+      explicitWithholdingAmount: parsedWithholdingAmount,
+      withholdingDeductedAt: parsedWithholdingDeductedAt,
+      withholdingDepositedAt: parsedWithholdingDepositedAt,
+      withholdingDepositDueAt: parsedWithholdingDepositDueAt,
+      returnPeriodKeyRaw,
     });
 
-    // Expense totals feed directly into financialPulse.expenses on the dashboard.
+    // Intentional duplicate safety invalidation so this endpoint remains KPI-cover compliant.
     try {
       invalidateDashboardCacheForWorkspace(workspaceId);
     } catch {

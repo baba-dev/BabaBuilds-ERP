@@ -309,7 +309,7 @@ export async function POST(request: Request) {
     // 3. FETCH PROFILE & WORKSPACE
     const profile = await prisma.businessProfile.findUnique({
       where: { workspaceId },
-      include: { workspace: true }
+      include: { workspace: true, primaryBankAccount: true }
     });
     if (!profile) return NextResponse.json({ error: "Business profile missing. Please complete Settings Wizard." }, { status: 400 });
     const countryCode = profile.workspace?.countryCode || "IN";

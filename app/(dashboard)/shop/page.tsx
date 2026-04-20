@@ -355,6 +355,12 @@ export default function ShopDashboardPage() {
       const settingsData = await settingsRes.json();
 
       const missingRequired = SETTINGS_REQUIRED_FIELDS.filter((field) => {
+        if (
+          ["bankName", "accountName", "accountNumber", "ifscCode"].includes(field) &&
+          settingsData?.primaryBankAccount?.source === "BANK_ACCOUNT"
+        ) {
+          return false;
+        }
         const value = settingsData?.[field];
         return value === null || value === undefined || value === "";
       });

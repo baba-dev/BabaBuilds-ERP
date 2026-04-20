@@ -13,6 +13,7 @@ export async function POST(request: Request) {
   const body = await request.json();
   const result = await commitReconciliationTransactions({
     workspaceId: (session as any).workspaceId,
+    actorUserId: (session as any).user?.id,
     approvedInvoices: body?.approvedInvoices,
     approvedExpenses: body?.approvedExpenses,
   });

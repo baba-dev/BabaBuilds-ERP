@@ -8,7 +8,9 @@ import { z } from "zod";
 const BankAccountCreateSchema = z.object({
   name: z.string().min(1).max(120),
   bankName: z.string().max(120).optional().nullable(),
+  accountHolderName: z.string().max(120).optional().nullable(),
   maskedAccountNumber: z.string().max(32).optional().nullable(),
+  routingCode: z.string().max(64).optional().nullable(),
   currency: z.string().min(3).max(8).optional().nullable(),
   openingBalance: z.number().finite().optional().nullable(),
   openingBalanceDate: z.string().datetime().optional().nullable(),
@@ -48,7 +50,10 @@ export async function POST(request: Request) {
       workspaceId,
       name: parsed.data.name,
       bankName: parsed.data.bankName ?? null,
+      accountHolderName: parsed.data.accountHolderName ?? null,
       maskedAccountNumber: parsed.data.maskedAccountNumber ?? null,
+      routingCode: parsed.data.routingCode ?? null,
+      sourceType: "CASH_FLOW",
       currency: (parsed.data.currency ?? undefined) || "INR",
       openingBalance: parsed.data.openingBalance ?? 0,
       openingBalanceDate: parsed.data.openingBalanceDate ? new Date(parsed.data.openingBalanceDate) : new Date(),
@@ -57,4 +62,3 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ data: created }, { status: 201 });
 }
-
