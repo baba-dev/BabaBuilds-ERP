@@ -11,6 +11,8 @@ type WorkspaceSummary = {
   subscriptionStatus: string;
   subscriptionEndsAt: Date | null;
   billingProviderId: string | null;
+  countryCode: string | null;
+  baseCurrency: string | null;
   _count: { clients: number };
 };
 
@@ -38,6 +40,8 @@ export default async function BillingSettingsPage() {
       subscriptionStatus: true,
       subscriptionEndsAt: true,
       billingProviderId: true,
+      countryCode: true,
+      baseCurrency: true,
       _count: { select: { clients: true } },
     },
   });
@@ -52,6 +56,8 @@ export default async function BillingSettingsPage() {
     subscriptionStatus: workspace.subscriptionStatus,
     subscriptionEndsAt: workspace.subscriptionEndsAt,
     billingProviderId: workspace.billingProviderId,
+    countryCode: workspace.countryCode,
+    baseCurrency: workspace.baseCurrency,
     _count: { clients: workspace._count.clients },
   };
 

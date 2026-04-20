@@ -10,7 +10,7 @@ import {
   consumeFinancialIdempotency,
   releaseFinancialIdempotency,
 } from "@/lib/financial-idempotency";
-import { resolvePricingIntervalByAmount } from "@/lib/pricing";
+import { getPricingRegion, resolvePricingIntervalByAmount, type PricingRegion } from "@/lib/pricing";
 
 function getRazorpayClient() {
   const keyId = process.env.RAZORPAY_KEY_ID;
@@ -84,12 +84,13 @@ export async function POST(req: Request) {
     // We fetch the payment directly from the gateway to verify the ACTUAL amount paid
     const razorpay = getRazorpayClient();
     const payment = await razorpay.payments.fetch(razorpay_payment_id);
-    const amountPaid = Number(payment.amount) / 100; // Convert from Paise to INR
+    const amountPaid = Number(payment.amount) / 100;
+    const paymentCurrency = String(payment.currency ?? "INR").toUpperCase();
 
     // 4. FETCH CURRENT WORKSPACE STATE (THE RENEWAL FIX)
     const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { subscriptionEndsAt: true, subscriptionStatus: true }
+      select: { subscriptionEndsAt: true, subscriptionStatus: true, countryCode: true, baseCurrency: true }
     });
 
     if (!workspace) {
@@ -111,7 +112,18 @@ export async function POST(req: Request) {
     // 5. CALCULATE NEW EXPIRATION BASED ON EXACT AMOUNT PAID
     // Use exact plan amount matching so a higher-tier threshold cannot
     // accidentally classify a lower plan (for example TEAM_MONTHLY as QUARTERLY).
-    const verifiedInterval = resolvePricingIntervalByAmount(amountPaid);
+    const requestedRegion = (body?.pricingRegion as PricingRegion | undefined) ?? undefined;
+    const notesRegion = (payment.notes?.pricingRegion as PricingRegion | undefined) ?? undefined;
+    const resolvedRegion = getPricingRegion({
+      explicitRegion: requestedRegion ?? notesRegion,
+      billingCountryCode: workspace.countryCode,
+      explicitCurrency: paymentCurrency || workspace.baseCurrency,
+    });
+    const verifiedInterval = resolvePricingIntervalByAmount({
+      amountMajor: amountPaid,
+      currency: paymentCurrency,
+      region: resolvedRegion,
+    });
     if (!verifiedInterval) {
       return NextResponse.json({ error: "Unrecognized payment amount detected." }, { status: 400 });
     }

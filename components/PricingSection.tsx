@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
 import { Check, Gift, Sparkles, Tag, Users } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   SegmentedControl,
@@ -12,55 +12,45 @@ import {
   segmentedControlItemClass,
 } from "@/components/ui/segmented-control";
 import { cn } from "@/lib/utils";
-import { PRICING } from "@/lib/pricing";
-
-type Currency = {
-  code: string;
-  symbol: string;
-  rate: number;
-  decimals?: number;
-};
+import { type BillingCycle, formatPlanPrice, getPlanPrice, getPricingRegionFromLocale, type PlanId, type PricingRegion } from "@/lib/pricing";
 
 type TierId = "tier-free" | "tier-pro" | "tier-team";
 
 type PricingTier = {
   id: TierId;
   href: string;
-  priceMonthly: number;
-  priceINR?: number;
+  planId?: PlanId;
   isOneTime?: boolean;
   featured: boolean;
   icon: typeof Gift;
 };
 
-const currencies: Currency[] = [
-  { code: "USD", symbol: "$", rate: 1, decimals: 2 },
-  { code: "INR", symbol: "₹", rate: 80, decimals: 0 },
-  { code: "EUR", symbol: "€", rate: 0.92, decimals: 0 },
-  { code: "OMR", symbol: "OMR ", rate: 0.385, decimals: 3 },
+const pricingRegions: Array<{ code: PricingRegion; label: string }> = [
+  { code: "US", label: "USD" },
+  { code: "IN", label: "INR" },
+  { code: "EU", label: "EUR" },
+  { code: "OM", label: "OMR" },
+  { code: "ROW", label: "USD (ROW)" },
 ];
 
 const tiers: PricingTier[] = [
   {
     id: "tier-free",
     href: "/api/auth/signin",
-    priceMonthly: 0,
     featured: false,
     icon: Gift,
   },
   {
     id: "tier-pro",
     href: "/api/auth/signin",
-    priceMonthly: 2.5,
-    priceINR: 200,
+    planId: "pro",
     featured: true,
     icon: Sparkles,
   },
   {
     id: "tier-team",
     href: "/api/auth/signin",
-    priceMonthly: 5,
-    priceINR: 400,
+    planId: "team",
     featured: false,
     icon: Users,
   },
@@ -68,31 +58,12 @@ const tiers: PricingTier[] = [
 
 export default function PricingSection() {
   const tp = useTranslations("Landing.pricingSection");
-  const [currency, setCurrency] = useState<Currency>(currencies[0]);
+  const locale = useLocale();
+  const defaultRegion = getPricingRegionFromLocale(locale) ?? "ROW";
+  const [pricingRegion, setPricingRegion] = useState<PricingRegion>(defaultRegion);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annually">("monthly");
   const reduceMotion = useReducedMotion();
-
-  const formatPrice = (tier: PricingTier) => {
-    if (tier.priceMonthly === 0) return "0";
-
-    if (tier.id === "tier-pro" && currency.code === "INR") {
-      const final = billingCycle === "annually" ? PRICING.YEARLY : PRICING.MONTHLY;
-      return final.toLocaleString();
-    }
-
-    if (tier.id === "tier-team" && currency.code === "INR") {
-      const final = billingCycle === "annually" ? PRICING.TEAM_YEARLY : PRICING.TEAM_MONTHLY;
-      return final.toLocaleString();
-    }
-
-    const convertedPrice = tier.priceMonthly * currency.rate;
-    const finalPrice = billingCycle === "annually" ? convertedPrice * 10 : convertedPrice;
-    const decimals = currency.decimals ?? 0;
-    return finalPrice.toLocaleString(undefined, {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
-    });
-  };
+  const normalizedCycle: BillingCycle = billingCycle === "annually" ? "annual" : "monthly";
 
   const planSignals = useMemo(
     () => [
@@ -143,22 +114,22 @@ export default function PricingSection() {
             />
 
             <div className={cn(segmentedControlContainerClass, "w-full max-w-full flex-nowrap overflow-x-auto md:w-auto")}>
-              {currencies.map((c) => (
+              {pricingRegions.map((region) => (
                 <Button
-                  key={c.code}
+                  key={region.code}
                   type="button"
                   variant="ghost"
                   size="sm"
-                  aria-label={c.code}
-                  aria-pressed={currency.code === c.code}
-                  onClick={() => setCurrency(c)}
+                  aria-label={region.label}
+                  aria-pressed={pricingRegion === region.code}
+                  onClick={() => setPricingRegion(region.code)}
                   className={cn(
                     "h-auto shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-100 dark:focus-visible:ring-offset-zinc-900",
                     segmentedControlItemClass,
-                    currency.code === c.code && segmentedControlItemActiveClass,
+                    pricingRegion === region.code && segmentedControlItemActiveClass,
                   )}
                 >
-                  {c.symbol}
+                  {region.label}
                 </Button>
               ))}
             </div>
@@ -178,8 +149,11 @@ export default function PricingSection() {
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
             {tiers.map((tier, idx) => {
               const Icon = tier.icon;
-              const price = `${currency.symbol}${formatPrice(tier)}`;
-              const priceKey = `${tier.id}-${currency.code}-${billingCycle}`;
+              const resolvedPrice = tier.planId
+                ? getPlanPrice({ planId: tier.planId, billingCycle: normalizedCycle, region: pricingRegion })
+                : null;
+              const price = resolvedPrice ? formatPlanPrice(resolvedPrice) : "0";
+              const priceKey = `${tier.id}-${pricingRegion}-${billingCycle}`;
               const tierKey = tier.id === "tier-free" ? "free" : tier.id === "tier-pro" ? "pro" : "team";
               const featureList = tp.raw(`tiers.${tierKey}.features`) as string[];
               const description = tp(`tiers.${tierKey}.description`);
@@ -233,7 +207,7 @@ export default function PricingSection() {
                           {price}
                         </m.span>
                       </AnimatePresence>
-                      {tier.priceMonthly > 0 && (
+                      {Boolean(tier.planId) && (
                         <span className={cn("text-sm font-medium", tier.featured ? "text-zinc-300" : "text-zinc-500 dark:text-zinc-400")}>
                           {"isOneTime" in tier && tier.isOneTime
                             ? `/ ${tp("perOneTime")}`

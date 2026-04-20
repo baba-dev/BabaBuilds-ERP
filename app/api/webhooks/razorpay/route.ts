@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
+import { parsePlanInterval } from '@/lib/pricing';
 
 export async function POST(req: Request) {
   try {
@@ -48,19 +49,13 @@ export async function POST(req: Request) {
             : new Date();
 
           const endsAt = new Date(baseDate);
-          
-          if (interval.includes("MONTHLY")) {
-            endsAt.setMonth(endsAt.getMonth() + 1);
-          } else if (interval === "QUARTERLY") {
-            endsAt.setMonth(endsAt.getMonth() + 3);
-          } else if (interval.includes("YEARLY")) {
+          const { planId, billingCycle } = parsePlanInterval(interval);
+          if (billingCycle === "annual") {
             endsAt.setFullYear(endsAt.getFullYear() + 1);
+          } else {
+            endsAt.setMonth(endsAt.getMonth() + 1);
           }
-          
-          let planTier = "PRO";
-          if (interval.includes("TEAM")) {
-            planTier = "TEAM";
-          }
+          const planTier = planId === "team" ? "TEAM" : "PRO";
 
           await prisma.workspace.update({
             where: { id: workspaceId },

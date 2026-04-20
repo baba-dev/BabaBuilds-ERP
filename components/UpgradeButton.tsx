@@ -5,9 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { ShieldCheck, CheckCircle2, Sparkles, CreditCard, PartyPopper } from "lucide-react";
 import { toast } from "sonner";
-import { getCurrencySymbol } from "@/lib/currency";
 import { useSession } from "next-auth/react";
-import { PRICING } from "@/lib/pricing";
+import { formatPlanPrice, getPlanPriceFromInterval, getPricingRegion, type PlanInterval, type PricingRegion } from "@/lib/pricing";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -72,23 +71,18 @@ const loadRazorpayScript = () => {
   });
 };
 
-export function ProUpgradeCard({ locale = "en-IN", currency = "INR" }: { locale?: string, currency?: string }) {
+export function ProUpgradeCard({ locale = "en-IN", currency = "INR", countryCode }: { locale?: string, currency?: string; countryCode?: string | null }) {
   const { data: session, update } = useSession();
   const router = useRouter();
-  const [interval, setInterval] = useState<"MONTHLY" | "QUARTERLY" | "YEARLY" | "TEAM_MONTHLY" | "TEAM_YEARLY">("YEARLY");
+  const [interval, setInterval] = useState<PlanInterval>("YEARLY");
   const [isLoading, setIsLoading] = useState(false);
   const [isUpgradeSuccess, setIsUpgradeSuccess] = useState(false);
-
-  const currencySymbol = getCurrencySymbol(currency, locale);
-
-  const formatMoney = (amount: number) => {
-    return new Intl.NumberFormat(locale, { 
-      style: 'currency', 
-      currency: currency, 
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
+  const pricingRegion: PricingRegion = getPricingRegion({
+    explicitCountryCode: countryCode,
+    explicitCurrency: currency,
+    locale,
+  });
+  const activePrice = getPlanPriceFromInterval({ interval, region: pricingRegion });
 
   const handleUpgrade = async () => {
     setIsLoading(true);
@@ -105,7 +99,7 @@ export function ProUpgradeCard({ locale = "en-IN", currency = "INR" }: { locale?
       const orderRes = await fetch("/api/razorpay/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ interval }),
+        body: JSON.stringify({ interval, pricingRegion }),
       });
       const orderData = await orderRes.json();
 
@@ -139,7 +133,8 @@ export function ProUpgradeCard({ locale = "en-IN", currency = "INR" }: { locale?
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_signature: response.razorpay_signature,
-                interval: interval
+                interval,
+                pricingRegion,
               }),
             });
             
@@ -207,16 +202,10 @@ export function ProUpgradeCard({ locale = "en-IN", currency = "INR" }: { locale?
               1-Mo
             </button>
             <button 
-              onClick={() => setInterval("QUARTERLY")}
-              className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all ${interval === "QUARTERLY" ? "bg-white dark:bg-indigo-600 text-indigo-900 dark:text-white shadow-sm" : "text-indigo-600/70 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300"}`}
-            >
-              3-Mo
-            </button>
-            <button 
               onClick={() => setInterval("YEARLY")}
               className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all ${interval === "YEARLY" ? "bg-white dark:bg-indigo-600 text-indigo-900 dark:text-white shadow-sm" : "text-indigo-600/70 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300"}`}
             >
-              12-Mo <span className="ml-1 text-emerald-600 dark:text-emerald-400 hidden sm:inline">(Save 5%)</span>
+              12-Mo <span className="ml-1 text-emerald-600 dark:text-emerald-400 hidden sm:inline">(Save 2 months)</span>
             </button>
             <div className="w-[1px] bg-indigo-200/50 dark:bg-indigo-800/50 mx-1"></div>
             <button 
@@ -251,7 +240,7 @@ export function ProUpgradeCard({ locale = "en-IN", currency = "INR" }: { locale?
         </ul>
         <div className="w-full md:w-auto flex flex-col items-center md:items-end gap-3">
            <div className="text-center md:text-right">
-              <p className="text-3xl font-extrabold text-indigo-950 dark:text-zinc-50">{formatMoney(PRICING[interval])}</p>
+              <p className="text-3xl font-extrabold text-indigo-950 dark:text-zinc-50">{formatPlanPrice(activePrice, locale)}</p>
               <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
                 Billed {interval.toLowerCase()}
               </p>
