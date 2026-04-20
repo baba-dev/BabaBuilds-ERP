@@ -118,6 +118,8 @@ export type DemoTemplateDefinition = {
   investments: DemoInvestmentDefinition[];
   retainers: DemoRetainerDefinition[];
   modules: Partial<Record<ModuleKey, boolean>>;
+  // Human-maintained declaration of which enabled modules have showcase-oriented seeded data.
+  // Used by validation and runtime safeguards to prevent empty enabled modules in demos.
+  seededModules: ModuleKey[];
   seed?: (ctx: DemoSeedContext) => Promise<void>;
 };
-

@@ -3,6 +3,7 @@ import { decimalToNumber } from '@/lib/money';
 import { encrypt } from '@/lib/encryption';
 import { MODULE_KEYS } from '@/lib/modules';
 import { getDemoTemplate, type DemoTemplateKey } from '@/lib/demo/templates';
+import { getMissingRequiredModules } from '@/lib/demo/templates/coverage-rules';
 
 const getDateOffset = (days: number) => {
   const date = new Date();
@@ -24,6 +25,19 @@ export async function seedDemoWorkspace(
   params: { userId: string; templateKey: DemoTemplateKey; ttlHours: number },
 ): Promise<{ workspaceId: string; templateKey: DemoTemplateKey }> {
   const template = getDemoTemplate(params.templateKey);
+  const enabledModuleKeys = MODULE_KEYS.filter((moduleKey) => Boolean(template.modules[moduleKey]));
+  const missingRequiredModules = getMissingRequiredModules(enabledModuleKeys);
+  if (missingRequiredModules.length > 0) {
+    throw new Error(
+      `Demo template "${template.key}" is missing required module enablement: ${missingRequiredModules.join(', ')}`,
+    );
+  }
+  const missingSeededCoverage = enabledModuleKeys.filter((moduleKey) => !template.seededModules.includes(moduleKey));
+  if (missingSeededCoverage.length > 0) {
+    throw new Error(
+      `Demo template "${template.key}" enables modules without seeded showcase coverage: ${missingSeededCoverage.join(', ')}`,
+    );
+  }
   const expiresAt = new Date(Date.now() + params.ttlHours * 60 * 60 * 1000);
 
   const workspace = await tx.workspace.create({
@@ -222,4 +236,3 @@ export async function seedDemoWorkspace(
 
   return { workspaceId: workspace.id, templateKey: template.key };
 }
-

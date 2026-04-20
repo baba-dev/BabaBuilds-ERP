@@ -96,7 +96,21 @@ export const softwareCompanyTemplate: DemoTemplateDefinition = {
     REVENUE_PIPELINE: true,
     CASH_FLOW: true,
     TAX_ADVANCED: true,
+    AR_COLLECTIONS: true,
+    REPORTING_CENTER: true,
+    IMPORT_MANAGER: true,
   },
+  seededModules: [
+    "WORKFORCE",
+    "PAYROLL",
+    "DOCUMENTS",
+    "REVENUE_PIPELINE",
+    "CASH_FLOW",
+    "AR_COLLECTIONS",
+    "TAX_ADVANCED",
+    "REPORTING_CENTER",
+    "IMPORT_MANAGER",
+  ],
   seed: async ({ tx, workspaceId, userId, now }) => {
     const employee = await tx.employee.create({
       data: {
@@ -227,6 +241,117 @@ export const softwareCompanyTemplate: DemoTemplateDefinition = {
         createdBy: userId,
       },
     });
+
+    // AR collections signal.
+    const clients = await tx.client.findMany({ where: { workspaceId }, select: { id: true }, take: 1 });
+    if (clients[0]) {
+      await tx.clientPaymentBehavior.upsert({
+        where: { clientId: clients[0].id },
+        update: {
+          avgDaysToPay: 24,
+          medianDaysToPay: 21,
+          onTimeRate: 0.74,
+          lateRate: 0.22,
+          partialPaymentRate: 0.08,
+          sampleInvoicesCount: 11,
+          lastComputedAt: now,
+        },
+        create: {
+          workspaceId,
+          clientId: clients[0].id,
+          avgDaysToPay: 24,
+          medianDaysToPay: 21,
+          onTimeRate: 0.74,
+          lateRate: 0.22,
+          partialPaymentRate: 0.08,
+          sampleInvoicesCount: 11,
+          lastComputedAt: now,
+        },
+      });
+    }
+
+    // Tax Advanced demo workflow.
+    const taxPeriod = await tx.taxPeriod.create({
+      data: {
+        workspaceId,
+        countryCode: "IN",
+        periodCode: `TDS-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`,
+        periodType: "MONTH",
+        fiscalYear: `${now.getFullYear()}`,
+        startDate: new Date(now.getFullYear(), now.getMonth(), 1),
+        endDate: new Date(now.getFullYear(), now.getMonth() + 1, 0),
+        dueDate: new Date(now.getTime() + 1000 * 60 * 60 * 24 * 10),
+      },
+      select: { id: true },
+    });
+
+    const taxForm = await tx.taxForm.create({
+      data: {
+        workspaceId,
+        countryCode: "IN",
+        returnFamily: "INDIA_TDS_QTR",
+        formCode: "TDS-Q2",
+        version: "1.0",
+        title: "Quarterly TDS Return",
+        isActive: true,
+      },
+      select: { id: true },
+    });
+
+    const taxReturn = await tx.taxReturn.create({
+      data: {
+        workspaceId,
+        taxPeriodId: taxPeriod.id,
+        taxFormId: taxForm.id,
+        status: "DRAFT",
+      },
+      select: { id: true },
+    });
+
+    const readinessCheck = await tx.taxReadinessCheck.upsert({
+      where: {
+        workspaceId_returnFamily_checkCode: {
+          workspaceId,
+          returnFamily: "INDIA_TDS_QTR",
+          checkCode: "MISSING_EXEMPTION_CERTS",
+        },
+      },
+      update: { isActive: true },
+      create: {
+        workspaceId,
+        countryCode: "IN",
+        returnFamily: "INDIA_TDS_QTR",
+        checkCode: "MISSING_EXEMPTION_CERTS",
+        title: "Missing resale certificate evidence",
+        description: "Attach exemption certificates for tax-exempt invoices before filing.",
+        severity: "WARNING",
+        isActive: true,
+      },
+      select: { id: true },
+    });
+
+    await tx.taxReadinessBlocker.create({
+      data: {
+        workspaceId,
+        taxReturnId: taxReturn.id,
+        checkId: readinessCheck.id,
+        blockerCode: "CERTS_REQUIRED",
+        title: "Resale certificates missing",
+        details: "One or more exempt invoices are missing supporting exemption documents.",
+        severity: "WARNING",
+        status: "OPEN",
+      },
+    });
+
+    await tx.inAppNotification.create({
+      data: {
+        userId,
+        workspaceId,
+        eventType: "TAX_ALERT",
+        title: "Sales tax readiness warning",
+        body: "An exemption-certificate blocker was detected in Tax Advanced.",
+        actionUrl: "/tax/advanced",
+      },
+    });
   },
 };
-

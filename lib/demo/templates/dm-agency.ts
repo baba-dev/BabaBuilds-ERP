@@ -187,7 +187,21 @@ export const dmAgencyTemplate: DemoTemplateDefinition = {
     REVENUE_PIPELINE: true,
     CASH_FLOW: true,
     TAX_ADVANCED: true,
+    AR_COLLECTIONS: true,
+    REPORTING_CENTER: true,
+    IMPORT_MANAGER: true,
   },
+  seededModules: [
+    'WORKFORCE',
+    'PAYROLL',
+    'DOCUMENTS',
+    'REVENUE_PIPELINE',
+    'CASH_FLOW',
+    'AR_COLLECTIONS',
+    'TAX_ADVANCED',
+    'REPORTING_CENTER',
+    'IMPORT_MANAGER',
+  ],
   async seed({ tx, workspaceId, userId, now }) {
     // Payment behavior signal for receivables widgets
     const clients = await tx.client.findMany({ where: { workspaceId }, select: { id: true } });
@@ -310,8 +324,162 @@ export const dmAgencyTemplate: DemoTemplateDefinition = {
           body: 'Google Ads spend for “Acme Launch” is tracking 12% above plan this week.',
           actionUrl: '/dashboard',
         },
+        {
+          userId,
+          workspaceId,
+          eventType: 'SYSTEM_ALERT',
+          title: 'Import preview available',
+          body: 'A client import preview is ready for review in Import Manager.',
+          actionUrl: '/imports',
+        },
       ],
+    });
+
+    // Workforce + payroll coverage for non-empty module walkthroughs.
+    const department = await tx.department.create({
+      data: { workspaceId, name: 'Client Delivery' },
+      select: { id: true },
+    });
+    const designation = await tx.designation.create({
+      data: { workspaceId, title: 'Campaign Specialist' },
+      select: { id: true },
+    });
+    const employee = await tx.employee.create({
+      data: {
+        workspaceId,
+        firstName: 'Ira',
+        lastName: 'Menon',
+        email: 'ira@nexusdigital.demo',
+        employeeCode: 'EMP-DM-001',
+        joinDate: new Date(now.getTime() - 1000 * 60 * 60 * 24 * 150),
+        status: 'ACTIVE',
+        departmentId: department.id,
+        designationId: designation.id,
+        location: 'Bangalore',
+      },
+      select: { id: true, firstName: true, lastName: true, email: true },
+    });
+    await tx.attendanceRecord.create({
+      data: {
+        workspaceId,
+        employeeId: employee.id,
+        date: new Date(now.getTime() - 1000 * 60 * 60 * 24),
+        status: 'PRESENT',
+      },
+    });
+
+    const payrollPeriod = await tx.payrollPeriod.create({
+      data: {
+        workspaceId,
+        startDate: new Date(now.getFullYear(), now.getMonth(), 1),
+        endDate: new Date(now.getFullYear(), now.getMonth() + 1, 0),
+        status: 'OPEN',
+      },
+      select: { id: true },
+    });
+    await tx.payrollRun.create({
+      data: {
+        workspaceId,
+        periodId: payrollPeriod.id,
+        version: 1,
+        status: 'DRAFT',
+        totalEarnings: 62000,
+        totalDeductions: 7500,
+        totalEmployerCosts: 4200,
+        totalNetPay: 54500,
+        generatedByUserId: userId,
+        employeeSnapshots: {
+          create: [
+            {
+              employeeId: employee.id,
+              employeeCode: 'EMP-DM-001',
+              firstName: employee.firstName,
+              lastName: employee.lastName,
+              email: employee.email,
+              departmentName: 'Client Delivery',
+              designation: 'Campaign Specialist',
+              location: 'Bangalore',
+              baseSalary: 62000,
+            },
+          ],
+        },
+      },
+    });
+
+    // Document Vault coverage.
+    const document = await tx.document.create({
+      data: {
+        workspaceId,
+        title: 'Nexus - Campaign SOW - Reliance.pdf',
+        category: 'CONTRACT',
+        scope: 'WORKSPACE_BUSINESS',
+        status: 'READY',
+        source: 'upload_center',
+        uploadedByUserId: userId,
+      },
+      select: { id: true },
+    });
+    const documentFile = await tx.documentFile.create({
+      data: {
+        workspaceId,
+        documentId: document.id,
+        isCurrent: true,
+        mimeType: 'application/pdf',
+        originalName: 'campaign-sow-reliance.pdf',
+        storedPath: `/documents/${workspaceId}/campaign-sow-reliance.pdf`,
+        byteSize: 188000,
+        pageCount: 8,
+      },
+      select: { id: true },
+    });
+    await tx.documentOcrJob.create({
+      data: {
+        workspaceId,
+        documentId: document.id,
+        documentFileId: documentFile.id,
+        kind: 'GENERIC',
+        status: 'SUCCEEDED',
+        provider: 'UNCONFIGURED',
+        attemptCount: 1,
+        queuedAt: new Date(now.getTime() - 1000 * 60 * 25),
+        startedAt: new Date(now.getTime() - 1000 * 60 * 24),
+        finishedAt: new Date(now.getTime() - 1000 * 60 * 23),
+      },
+    });
+
+    // Tax Advanced coverage.
+    const taxPeriod = await tx.taxPeriod.create({
+      data: {
+        workspaceId,
+        countryCode: 'IN',
+        periodCode: `GST-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+        periodType: 'MONTH',
+        fiscalYear: `${now.getFullYear()}`,
+        startDate: new Date(now.getFullYear(), now.getMonth(), 1),
+        endDate: new Date(now.getFullYear(), now.getMonth() + 1, 0),
+        dueDate: new Date(now.getTime() + 1000 * 60 * 60 * 24 * 8),
+      },
+      select: { id: true },
+    });
+    const taxForm = await tx.taxForm.create({
+      data: {
+        workspaceId,
+        countryCode: 'IN',
+        returnFamily: 'INDIA_TDS_QTR',
+        formCode: 'TDS-Q2',
+        version: '1.0',
+        title: 'Quarterly TDS Return',
+        isActive: true,
+      },
+      select: { id: true },
+    });
+    await tx.taxReturn.create({
+      data: {
+        workspaceId,
+        taxPeriodId: taxPeriod.id,
+        taxFormId: taxForm.id,
+        status: 'DRAFT',
+      },
     });
   },
 };
-

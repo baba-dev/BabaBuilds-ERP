@@ -65,7 +65,21 @@ export const taxAgencyTemplate: DemoTemplateDefinition = {
     REVENUE_PIPELINE: true,
     CASH_FLOW: true,
     TAX_ADVANCED: true,
+    AR_COLLECTIONS: true,
+    REPORTING_CENTER: true,
+    IMPORT_MANAGER: true,
   },
+  seededModules: [
+    'WORKFORCE',
+    'PAYROLL',
+    'DOCUMENTS',
+    'REVENUE_PIPELINE',
+    'CASH_FLOW',
+    'AR_COLLECTIONS',
+    'TAX_ADVANCED',
+    'REPORTING_CENTER',
+    'IMPORT_MANAGER',
+  ],
   seed: async ({ tx, workspaceId, userId, now }) => {
     const [surya, verdant, ion] = await tx.client.findMany({
       where: { workspaceId },
@@ -314,6 +328,33 @@ export const taxAgencyTemplate: DemoTemplateDefinition = {
         totalNetPay: 108000,
       },
     });
+
+    // AR Collections signal.
+    if (surya?.id) {
+      await tx.clientPaymentBehavior.upsert({
+        where: { clientId: surya.id },
+        update: {
+          avgDaysToPay: 39,
+          medianDaysToPay: 34,
+          onTimeRate: 0.58,
+          lateRate: 0.35,
+          partialPaymentRate: 0.18,
+          sampleInvoicesCount: 9,
+          lastComputedAt: now,
+        },
+        create: {
+          workspaceId,
+          clientId: surya.id,
+          avgDaysToPay: 39,
+          medianDaysToPay: 34,
+          onTimeRate: 0.58,
+          lateRate: 0.35,
+          partialPaymentRate: 0.18,
+          sampleInvoicesCount: 9,
+          lastComputedAt: now,
+        },
+      });
+    }
+
   },
 };
-
