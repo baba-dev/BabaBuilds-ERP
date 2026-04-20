@@ -181,7 +181,7 @@ export const personaConfigs: Record<PersonaConfig["slug"], PersonaConfig> = {
     primaryCta: PRIMARY_CTA,
     secondaryCta: {
       label: "Try Live Demo",
-      templateKey: "software_company",
+      templateKey: "contractor_builder",
     },
     metadata: {
       title: "ERP for contractors and builders | BabaBuilds ERP",
@@ -279,7 +279,7 @@ export const personaConfigs: Record<PersonaConfig["slug"], PersonaConfig> = {
     primaryCta: PRIMARY_CTA,
     secondaryCta: {
       label: "Try Live Demo",
-      templateKey: "dm_agency",
+      templateKey: "freelancer_consultant",
     },
     metadata: {
       title: "ERP for freelancers and consultants | BabaBuilds ERP",

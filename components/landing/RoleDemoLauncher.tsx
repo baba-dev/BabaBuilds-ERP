@@ -19,7 +19,7 @@ const roleCards = [
   {
     title: "Try Contractor Demo",
     description: "Milestone billing, expense visibility, and project cash planning for builders and teams.",
-    templateKey: "software_company" as const,
+    templateKey: "contractor_builder" as const,
     icon: Building2,
   },
 ];
@@ -54,6 +54,7 @@ export default function RoleDemoLauncher() {
               <DemoLaunchButton
                 templateKey={card.templateKey}
                 label={card.title}
+                analyticsContext="homepage_role_demo"
                 className="mt-4 h-11 w-full justify-center rounded-xl border-orange-300 font-bold text-orange-700 hover:bg-orange-50 hover:text-orange-800 dark:border-orange-800/60 dark:text-orange-300 dark:hover:bg-orange-950/30"
               />
             </article>

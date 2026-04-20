@@ -1,10 +1,14 @@
 import { dmAgencyTemplate } from '@/lib/demo/templates/dm-agency';
+import { contractorBuilderTemplate } from '@/lib/demo/templates/contractor-builder';
+import { freelancerConsultantTemplate } from '@/lib/demo/templates/freelancer-consultant';
 import { softwareCompanyTemplate } from '@/lib/demo/templates/software-company';
 import { taxAgencyTemplate } from '@/lib/demo/templates/tax-agency';
 import { DEMO_TEMPLATE_KEYS, type DemoTemplateDefinition, type DemoTemplateKey } from '@/lib/demo/templates/types';
 
 const TEMPLATE_MAP: Record<DemoTemplateKey, DemoTemplateDefinition> = {
   dm_agency: dmAgencyTemplate,
+  contractor_builder: contractorBuilderTemplate,
+  freelancer_consultant: freelancerConsultantTemplate,
   software_company: softwareCompanyTemplate,
   tax_agency: taxAgencyTemplate,
 };

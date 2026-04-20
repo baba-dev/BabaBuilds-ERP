@@ -6,23 +6,34 @@ import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { DemoTemplateKey } from "@/lib/demo/templates";
+import { emitMarketingAnalyticsEvent } from "@/lib/marketing-analytics";
 
 type DemoLaunchButtonProps = {
   templateKey: DemoTemplateKey;
   label?: string;
   className?: string;
+  analyticsContext?: string;
+  onLaunchStart?: () => void;
 };
 
 export function DemoLaunchButton({
   templateKey,
   label = "Try Live Demo",
   className,
+  analyticsContext = "unknown",
+  onLaunchStart,
 }: DemoLaunchButtonProps) {
   const [loading, setLoading] = useState(false);
 
   const launchDemo = async () => {
     if (loading) return;
     setLoading(true);
+    onLaunchStart?.();
+    emitMarketingAnalyticsEvent("interactive_demo_click", {
+      ctaLabel: label,
+      role: templateKey,
+      context: analyticsContext,
+    });
     try {
       const response = await fetch("/api/auth/demo", {
         method: "POST",
@@ -48,6 +59,11 @@ export function DemoLaunchButton({
         email: data.email,
         password: data.password,
         callbackUrl: "/dashboard?demo=1",
+      });
+      emitMarketingAnalyticsEvent("interactive_demo_provisioned", {
+        ctaLabel: label,
+        role: templateKey,
+        context: analyticsContext,
       });
     } catch (error) {
       const message =

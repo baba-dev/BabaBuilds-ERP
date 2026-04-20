@@ -36,6 +36,7 @@ import RotatorText from "@/components/landing/RotatorText";
 import AnimatedChartDecor from "@/components/landing/AnimatedChartDecor";
 import RoleDemoLauncher from "@/components/landing/RoleDemoLauncher";
 import { personaNavigationLinks } from "@/components/landing/persona/persona-config";
+import { emitMarketingAnalyticsEvent } from "@/lib/marketing-analytics";
 
 export default function LandingContent() {
   const t = useTranslations("Landing");
@@ -69,6 +70,19 @@ export default function LandingContent() {
     "Proposals + invoicing",
     "Multi-currency collection",
   ];
+  const trackTrialClick = (surface: string) => {
+    emitMarketingAnalyticsEvent("marketing_trial_cta_clicked", {
+      location: surface,
+      label: "Start 15-Day Pro Trial",
+    });
+  };
+  const trackDemoClick = (surface: string) => {
+    emitMarketingAnalyticsEvent("marketing_cta_click", {
+      location: surface,
+      label: "Explore Interactive Demo",
+      href: "#demo-launcher",
+    });
+  };
 
   const features = [
     {
@@ -267,13 +281,13 @@ export default function LandingContent() {
             <div className="relative group">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
               <Button size="lg" className="relative btn-primary h-16 gap-2 rounded-2xl px-12 text-lg font-black shadow-2xl transition-all" asChild>
-                <Link href="/api/auth/signin">
+                <Link href="/api/auth/signin" onClick={() => trackTrialClick("hero")}>
                   Start 15-Day Pro Trial <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>
             </div>
             <Button variant="ghost" size="lg" className="h-16 px-10 text-lg font-bold text-muted-body hover:bg-surface-elevated hover:text-foreground transition-colors rounded-2xl" asChild>
-              <Link href="#interactive-demo">Explore Interactive Demo</Link>
+              <Link href="#demo-launcher" onClick={() => trackDemoClick("hero")}>Explore Interactive Demo</Link>
             </Button>
           </motion.div>
 
@@ -361,7 +375,7 @@ export default function LandingContent() {
         </div>
       </section>
 
-      <section id="interactive-demo" className="bg-surface-base py-20">
+      <section id="demo-launcher" className="bg-surface-base py-20">
         <RoleDemoLauncher />
       </section>
 
@@ -434,10 +448,10 @@ export default function LandingContent() {
           </h2>
           <div className="flex flex-col items-center justify-center gap-6 sm:flex-row">
             <Button size="lg" className="h-16 rounded-2xl bg-surface-elevated px-12 text-xl font-black text-foreground shadow-2xl hover:bg-surface-base active:scale-95" asChild>
-              <Link href="/api/auth/signin">Start 15-Day Pro Trial</Link>
+              <Link href="/api/auth/signin" onClick={() => trackTrialClick("final_cta")}>Start 15-Day Pro Trial</Link>
             </Button>
             <Button size="lg" className="h-16 rounded-2xl border border-white/20 bg-transparent px-12 text-xl font-bold text-white transition-all hover:bg-white/10" asChild>
-              <Link href="#interactive-demo">Explore Interactive Demo</Link>
+              <Link href="#demo-launcher" onClick={() => trackDemoClick("final_cta")}>Explore Interactive Demo</Link>
             </Button>
           </div>
           <div className="flex flex-wrap justify-center gap-8 pt-8 text-xs font-bold uppercase tracking-widest text-white/70">

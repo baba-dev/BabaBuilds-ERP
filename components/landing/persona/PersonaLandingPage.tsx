@@ -10,6 +10,7 @@ import LandingFooter from "@/components/LandingFooter";
 import { DemoLaunchButton } from "@/components/landing/persona/DemoLaunchButton";
 import type { PersonaConfig } from "@/components/landing/persona/persona-config";
 import { personaNavigationLinks } from "@/components/landing/persona/persona-config";
+import { emitMarketingAnalyticsEvent } from "@/lib/marketing-analytics";
 
 const localeOptions = [
   { label: "English", value: "en-IN" },
@@ -95,7 +96,15 @@ export default function PersonaLandingPage({ persona }: PersonaLandingPageProps)
             <p className="max-w-2xl text-lg text-zinc-600 dark:text-zinc-300">{persona.subheadline}</p>
             <div className="flex flex-col gap-4 sm:flex-row">
               <Button size="lg" className="h-14 rounded-2xl px-8 text-base font-black" asChild>
-                <Link href={persona.primaryCta.href}>
+                <Link
+                  href={persona.primaryCta.href}
+                  onClick={() =>
+                    emitMarketingAnalyticsEvent("trial_cta_click", {
+                      source: persona.slug,
+                      label: persona.primaryCta.label,
+                    })
+                  }
+                >
                   {persona.primaryCta.label}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -103,6 +112,7 @@ export default function PersonaLandingPage({ persona }: PersonaLandingPageProps)
               <DemoLaunchButton
                 templateKey={persona.secondaryCta.templateKey}
                 label={persona.secondaryCta.label}
+                analyticsContext={`persona:${persona.slug}`}
                 className="h-14 rounded-2xl px-8 text-base font-bold"
               />
             </div>
