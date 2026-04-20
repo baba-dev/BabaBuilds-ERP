@@ -208,22 +208,11 @@ export async function dispatchNotification(payload: NotificationPayload): Promis
 
           // ── 4b. EMAIL ────────────────────────────────────────────────────
           if (user.notifyEmail && user.transactionalAlerts && user.email) {
-            
-            // Events that are sent via the user's SMTP settings.
-            // Even though these notify the workspace owner, they are "transactional" in nature.
-            // System events relate to infra/admin (invites, security, settings, billing).
-            const isSystemEvent = [
-              'CLIENT_ADDED', 'SERVICE_CREATED', 'RENEWAL_ALERT', 
-              'DEADLINE_ALERT', 'TAX_ALERT', 'SHOP_ORDER_CREATED', 
-              'SHOP_ORDER_UPDATED', 'SHOP_ORDER_DELETED', 'SHOP_ORDER_STATUS_CHANGED',
-              'BILLING_FAILED', 'SETTINGS_UPDATED', 'RETAINER_CREATED', 'PROPOSAL_ACCEPTED',
-              'LEAVE_REQUEST_SUBMITTED', 'LEAVE_APPROVED', 'LEAVE_REJECTED'
-            ].includes(event);
-            
-            const route = isSystemEvent ? 'system' : 'user';
+            // Optional modules/reports use workspace-provided SMTP.
+            // Global infra SMTP is reserved for auth/login flows elsewhere.
+            const route = 'user';
 
-            // For user routes, profile SMTP is required.
-            if (route === 'user' && (!profile || !profile.smtpHost)) {
+            if (!profile || !profile.smtpHost) {
               console.warn(`[notify] Skipped email for event ${event}: User SMTP not configured.`);
               // Create an in-app notification to warn the user about missing SMTP setup.
               await prisma.inAppNotification.create({
@@ -246,18 +235,6 @@ export async function dispatchNotification(payload: NotificationPayload): Promis
                 text: emailText,
               }).catch((err) => {
                 console.error(`[notify] email failed to route ${route}:`, err);
-                if (route === 'system') {
-                  prisma.inAppNotification.create({
-                    data: {
-                      userId: user.id,
-                      workspaceId,
-                      eventType: 'SETTINGS_UPDATED',
-                      title: '⚠️ System Email Failed',
-                      body: 'The server could not dispatch a critical alert. Contact support.',
-                      actionUrl: '/settings',
-                    },
-                  }).catch(() => null);
-                }
               });
             }
           }

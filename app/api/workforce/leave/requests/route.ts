@@ -150,16 +150,20 @@ export async function POST(req: NextRequest) {
       .map((m) => m.userId)
       .filter(Boolean);
     if (notifyUserIds.length > 0) {
-      dispatchNotification({
-        event: 'LEAVE_REQUEST_SUBMITTED',
-        workspaceId: wid,
-        userIds: notifyUserIds,
-        data: {
-          employeeName: `${leaveRequest.employee.firstName} ${leaveRequest.employee.lastName}`,
-          days,
-          leaveType: leaveRequest.leaveType.name,
-        },
-      }).catch(() => null);
+      try {
+        await dispatchNotification({
+          event: 'LEAVE_REQUEST_SUBMITTED',
+          workspaceId: wid,
+          userIds: notifyUserIds,
+          data: {
+            employeeName: `${leaveRequest.employee.firstName} ${leaveRequest.employee.lastName}`,
+            days,
+            leaveType: leaveRequest.leaveType.name,
+          },
+        });
+      } catch {
+        // Best-effort notification dispatch should not fail leave submission.
+      }
     }
 
     return NextResponse.json(leaveRequest, { status: 201 });
