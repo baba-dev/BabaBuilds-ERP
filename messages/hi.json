@@ -1131,6 +1131,88 @@
       "secondaryCta": "See all Features",
       "dashboardPreview": "Dashboard Preview"
     },
+    "heroLoop": {
+      "label": "Your revenue loop",
+      "live": "Live",
+      "seeDemo": "See it in the interactive demo",
+      "steps": {
+        "step1": { "title": "Win the deal", "body": "Proposals and e-signatures that convert." },
+        "step2": { "title": "Send & bill", "body": "Invoices and retainers with tax-aware fields." },
+        "step3": { "title": "Collect faster", "body": "Payment links and follow-ups in one thread." },
+        "step4": { "title": "Close the books", "body": "Bank matching and audit-ready trails." }
+      }
+    },
+    "story": {
+      "eyebrow": "The week, fixed",
+      "title": "From signed proposal to reconciled cash—without the spreadsheet chaos.",
+      "subtitle": "One orange-amber command center for agencies, accountants, contractors, and service teams who bill globally and need compliance that keeps up.",
+      "steps": {
+        "s1": { "title": "Quote & convert", "body": "Pipeline and proposals tied to what you invoice next." },
+        "s2": { "title": "Bill & remind", "body": "Recurring retainers, multi-currency invoices, AR signals." },
+        "s3": { "title": "Match & categorize", "body": "Expenses and bank lines reconciled to the right client or job." },
+        "s4": { "title": "Report & file-ready", "body": "Tax dashboards, documents, and exports your CA can trust." }
+      }
+    },
+    "socialProof": {
+      "quote": "We stopped revenue leakage when retainers, collections, and recon finally lived in one system.",
+      "attribution": "Rhea Malhotra",
+      "role": "Founder, PixelRidge Studio"
+    },
+    "socialProofHero": {
+      "trustedLine": "Trusted by 2,500+",
+      "trustedSuffix": "successful teams",
+      "taxLine": "Built for Indian and global tax workflows"
+    },
+    "featuresByOutcome": {
+      "getPaid": {
+        "title": "Get paid",
+        "description": "Proposals, invoices, retainers, and a public shop—built for how service businesses actually bill."
+      },
+      "control": {
+        "title": "Stay in control",
+        "description": "Ledger discipline, bank reconciliation, CRM context, and alerts before cash surprises you."
+      },
+      "compliance": {
+        "title": "Compliance you can defend",
+        "description": "Region-aware tax workflows, document governance, and CA-ready evidence without the scramble."
+      },
+      "scale": {
+        "title": "Scale delivery",
+        "description": "Roles, inventory when you need it, and apps that keep working on the go."
+      },
+      "advancedEyebrow": "Also included"
+    },
+    "personaHub": {
+      "eyebrow": "Pick your path",
+      "title": "Built for how you work—not a one-size ERP template.",
+      "subtitle": "Each page opens with pain points, a guided demo, and proof tailored to that role.",
+      "visit": "Explore page"
+    },
+    "personaCards": {
+      "caTitle": "For CAs & Accountants",
+      "caDesc": "Compliance workflows, filing readiness, and client collections in one command center.",
+      "agencyTitle": "For Agencies",
+      "agencyDesc": "Retainers, proposals, and invoice pipeline visibility tailored for growth teams.",
+      "contractorTitle": "For Contractors & Builders",
+      "contractorDesc": "Milestone billing, vendor expenses, and project cash planning without spreadsheet chaos.",
+      "smbTitle": "For Small Businesses",
+      "smbDesc": "Practical invoicing, tax-aware records, and receivables tracking for service operations.",
+      "freelanceTitle": "For Freelancers & Consultants",
+      "freelanceDesc": "Proposal-to-invoice flow and retainer automation for solo operators and consultants."
+    },
+    "comparisonSection": {
+      "eyebrow": "Compare",
+      "title": "Why teams evaluate BabaBuilds alongside the incumbents",
+      "subtitle": "Heritage ledgers excel at deep accounting history. We optimize the service-business loop: sell, bill, collect, reconcile, and stay audit-ready—with a live demo that proves it.",
+      "footnote": "Coverage varies by region and configuration. Use trials and imports to validate your exact books workflow.",
+      "ctaExplore": "Explore features",
+      "ctaTrial": "Start 15-day Pro trial"
+    },
+    "pricingSection": {
+      "eyebrow": "Pricing",
+      "title": "Start free. Scale when revenue justifies it.",
+      "subtitle": "Transparent limits on Free, full power on Pro, collaboration on Team—no surprise line items."
+    },
     "trust": {
       "title": "Trusted by Modern Agencies in",
       "cities": {
@@ -1139,6 +1221,26 @@
         "singapore": "Singapore",
         "newYork": "New York",
         "newDelhi": "New Delhi"
+      }
+    },
+    "regionalReadiness": {
+      "title": "Regional readiness for Oman & GCC",
+      "subtitle": "Transparent coverage for invoicing and tax workflows across Gulf markets.",
+      "badgeAdvanced": "Advanced pack available",
+      "badgeCore": "Country-aware core support",
+      "countries": {
+        "oman": "Oman",
+        "uae": "United Arab Emirates",
+        "saudi": "Saudi Arabia",
+        "qatar": "Qatar",
+        "bahrain": "Bahrain",
+        "kuwait": "Kuwait"
+      },
+      "signals": {
+        "vat": "VAT labels and registration terminology adapt by selected country.",
+        "remittance": "Remittance details support local routing conventions (for example, IBAN/SWIFT).",
+        "arabic": "Arabic UI and RTL layout are available for regional teams.",
+        "payments": "Stripe supports global invoice collections; Razorpay remains India/INR only."
       }
     },
     "features": {

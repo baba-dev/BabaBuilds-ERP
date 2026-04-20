@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
-import { Check, Gift, Sparkles, Users } from "lucide-react";
+import { Check, Gift, Sparkles, Tag, Users } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   SegmentedControl,
@@ -103,6 +104,7 @@ const tiers: PricingTier[] = [
 ];
 
 export default function PricingSection() {
+  const tp = useTranslations("Landing.pricingSection");
   const [currency, setCurrency] = useState<Currency>(currencies[0]);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annually">("monthly");
   const reduceMotion = useReducedMotion();
@@ -139,12 +141,14 @@ export default function PricingSection() {
     <section id="pricing" className="bg-white py-24 dark:bg-zinc-950">
       <div className="mx-auto max-w-7xl px-6">
         <div className="mb-16 space-y-6 text-center">
-          <h2 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 md:text-5xl">
-            Simple, <span className="text-orange-600">Growth-Ready</span> Pricing
-          </h2>
-          <p className="mx-auto max-w-2xl text-lg text-zinc-600 dark:text-zinc-300">
-            Choose the plan that fits your current operational scale. No hidden fees, just pure productivity.
+          <p className="inline-flex items-center justify-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-orange-700 dark:text-orange-300">
+            <Tag className="h-4 w-4 shrink-0" aria-hidden />
+            {tp("eyebrow")}
           </p>
+          <h2 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 md:text-5xl">
+            {tp("title")}
+          </h2>
+          <p className="mx-auto max-w-2xl text-lg text-zinc-600 dark:text-zinc-300">{tp("subtitle")}</p>
           <p className="mx-auto max-w-3xl text-sm font-medium text-zinc-500 dark:text-zinc-400">
             Payment links use regional gateway routing: Razorpay for India (INR) and Stripe for global collection, including Oman and GCC currencies.
           </p>
