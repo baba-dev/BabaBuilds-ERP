@@ -27,8 +27,12 @@ export const viewport: Viewport = {
 };
 
 const SITE_URL = "https://erp.bababuilds.com";
+const DEFAULT_SOCIAL_BANNER_PATH = "/icons/Banner-1.png";
+const FAVICON_PATH = "/icons/BabaBuillds_ERP_Logo.png";
+const DEFAULT_SOCIAL_BANNER_URL = `${SITE_URL}${DEFAULT_SOCIAL_BANNER_PATH}`;
+const FAVICON_URL = `${SITE_URL}${FAVICON_PATH}`;
 const ORGANIZATION_NAME = "BabaBuilds";
-const ORGANIZATION_LOGO_URL = `${SITE_URL}/icons/BabaBuillds_ERP_Logo.png`;
+const ORGANIZATION_LOGO_URL = FAVICON_URL;
 const ORGANIZATION_SAME_AS = ["https://github.com/BabaBuilds-ERP"];
 
 export const metadata: Metadata = {
@@ -57,6 +61,16 @@ export const metadata: Metadata = {
   authors: [{ name: "BabaBuilds", url: SITE_URL }],
   creator: "BabaBuilds",
   publisher: "BabaBuilds",
+  referrer: "origin-when-cross-origin",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: FAVICON_PATH, type: "image/png", sizes: "512x512" },
+      { url: FAVICON_PATH, type: "image/png", sizes: "192x192" },
+    ],
+    shortcut: [FAVICON_PATH],
+    apple: [{ url: FAVICON_PATH, type: "image/png" }],
+  },
   robots: {
     index: true,
     follow: true,
@@ -82,7 +96,7 @@ export const metadata: Metadata = {
       "Multi-currency invoicing, AI-powered reconciliation, and global tax compliance for modern agencies and freelancers.",
     images: [
       {
-        url: "/icons/Banner-1.png",
+        url: DEFAULT_SOCIAL_BANNER_PATH,
         width: 1536,
         height: 1024,
         alt: "BabaBuilds ERP Dashboard — Invoicing, Reconciliation & Tax Compliance",
@@ -95,7 +109,7 @@ export const metadata: Metadata = {
     title: "BabaBuilds ERP — Automated Invoicing & Compliance",
     description:
       "The global command center for bookkeeping and growth. Automate invoices, manage clients, and track expenses.",
-    images: ["/icons/Banner-1.png"],
+    images: [DEFAULT_SOCIAL_BANNER_PATH],
     creator: "@bababuilds",
   },
   appleWebApp: {
@@ -107,6 +121,11 @@ export const metadata: Metadata = {
     telephone: false,
   },
   category: "Business Software",
+  other: {
+    "msapplication-TileColor": "#0062ff",
+    "apple-mobile-web-app-capable": "yes",
+    "mobile-web-app-capable": "yes",
+  },
 };
 
 export default async function RootLayout({
@@ -124,66 +143,106 @@ export default async function RootLayout({
         className={dir === "rtl" ? notoNaskhArabic.className : inter.className}
         suppressHydrationWarning
       >
-        {/* ── Structured Data: Organization ── */}
+        {/* ── Structured Data: SEO graph for SERP rich results ── */}
         <Script
-          id="ld-json-organization"
+          id="ld-json-seo-graph"
           type="application/ld+json"
           strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@type": "Organization",
-              name: ORGANIZATION_NAME,
-              url: SITE_URL,
-              logo: ORGANIZATION_LOGO_URL,
-              sameAs: ORGANIZATION_SAME_AS,
-              contactPoint: {
-                "@type": "ContactPoint",
-                email: "admin@bababuilds.com",
-                contactType: "customer support",
-                availableLanguage: ["English", "Hindi", "Arabic", "Spanish"],
-              },
-            }),
-          }}
-        />
-        {/* ── Structured Data: SoftwareApplication ── */}
-        <Script
-          id="ld-json-software-application"
-          type="application/ld+json"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "SoftwareApplication",
-              name: "BabaBuilds ERP",
-              applicationCategory: "BusinessApplication",
-              operatingSystem: "Web, Android, iOS",
-              url: SITE_URL,
-              image: `${SITE_URL}/icons/Banner-1.png`,
-              description:
-                "All-in-one ERP for agencies: automated invoicing, multi-currency billing, country-aware GST/VAT workflows, AI reconciliation, and financial dashboards.",
-              author: {
-                "@type": "Organization",
-                name: ORGANIZATION_NAME,
-                url: SITE_URL,
-              },
-              publisher: {
-                "@type": "Organization",
-                name: ORGANIZATION_NAME,
-                url: SITE_URL,
-                logo: {
-                  "@type": "ImageObject",
-                  url: ORGANIZATION_LOGO_URL,
+              "@graph": [
+                {
+                  "@type": "Organization",
+                  "@id": `${SITE_URL}/#organization`,
+                  name: ORGANIZATION_NAME,
+                  url: SITE_URL,
+                  logo: {
+                    "@type": "ImageObject",
+                    "@id": `${SITE_URL}/#primary-logo`,
+                    url: ORGANIZATION_LOGO_URL,
+                    contentUrl: ORGANIZATION_LOGO_URL,
+                    width: 1024,
+                    height: 1024,
+                  },
+                  sameAs: ORGANIZATION_SAME_AS,
+                  contactPoint: {
+                    "@type": "ContactPoint",
+                    email: "admin@bababuilds.com",
+                    contactType: "customer support",
+                    availableLanguage: ["English", "Hindi", "Arabic", "Spanish"],
+                  },
                 },
-                sameAs: ORGANIZATION_SAME_AS,
-              },
-              offers: {
-                "@type": "Offer",
-                price: "0",
-                priceCurrency: "USD",
-                availability: "https://schema.org/InStock",
-              },
-              screenshot: `${SITE_URL}/icons/Banner-1.png`,
+                {
+                  "@type": "WebSite",
+                  "@id": `${SITE_URL}/#website`,
+                  url: SITE_URL,
+                  name: "BabaBuilds ERP",
+                  publisher: {
+                    "@id": `${SITE_URL}/#organization`,
+                  },
+                  inLanguage: ["en", "hi", "ar", "es"],
+                  potentialAction: {
+                    "@type": "SearchAction",
+                    target: `${SITE_URL}/search?q={search_term_string}`,
+                    "query-input": "required name=search_term_string",
+                  },
+                },
+                {
+                  "@type": "WebPage",
+                  "@id": `${SITE_URL}/#webpage`,
+                  url: SITE_URL,
+                  name: "BabaBuilds ERP — Automated Invoicing, Reconciliation & Tax Compliance",
+                  isPartOf: {
+                    "@id": `${SITE_URL}/#website`,
+                  },
+                  about: {
+                    "@id": `${SITE_URL}/#organization`,
+                  },
+                  primaryImageOfPage: {
+                    "@type": "ImageObject",
+                    "@id": `${SITE_URL}/#primary-banner`,
+                    url: DEFAULT_SOCIAL_BANNER_URL,
+                    contentUrl: DEFAULT_SOCIAL_BANNER_URL,
+                    width: 1536,
+                    height: 1024,
+                  },
+                  description:
+                    "The all-in-one ERP for agencies and freelancers. Automate multi-currency invoicing, GST/VAT workflows, AI reconciliation, and real-time dashboards.",
+                },
+                {
+                  "@type": "SoftwareApplication",
+                  "@id": `${SITE_URL}/#software`,
+                  name: "BabaBuilds ERP",
+                  applicationCategory: "BusinessApplication",
+                  applicationSubCategory: "Accounting, Billing and Tax Compliance",
+                  operatingSystem: "Web, Android, iOS",
+                  url: SITE_URL,
+                  image: DEFAULT_SOCIAL_BANNER_URL,
+                  description:
+                    "All-in-one ERP for agencies: automated invoicing, multi-currency billing, country-aware GST/VAT workflows, AI reconciliation, and financial dashboards.",
+                  author: {
+                    "@id": `${SITE_URL}/#organization`,
+                  },
+                  publisher: {
+                    "@id": `${SITE_URL}/#organization`,
+                  },
+                  offers: {
+                    "@type": "Offer",
+                    price: "0",
+                    priceCurrency: "USD",
+                    availability: "https://schema.org/InStock",
+                  },
+                  screenshot: DEFAULT_SOCIAL_BANNER_URL,
+                  featureList: [
+                    "Automated invoicing",
+                    "AI-powered bank reconciliation",
+                    "Country-aware GST/VAT setup",
+                    "Multi-currency accounting",
+                    "Client and project financial dashboards",
+                  ],
+                },
+              ],
             }),
           }}
         />
