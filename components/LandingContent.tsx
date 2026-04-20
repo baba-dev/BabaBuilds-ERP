@@ -34,6 +34,8 @@ import HeroMotionDecor from "@/components/landing/HeroMotionDecor";
 import SocialProofHero from "@/components/landing/SocialProofHero";
 import RotatorText from "@/components/landing/RotatorText";
 import AnimatedChartDecor from "@/components/landing/AnimatedChartDecor";
+import RoleDemoLauncher from "@/components/landing/RoleDemoLauncher";
+import { personaNavigationLinks } from "@/components/landing/persona/persona-config";
 
 export default function LandingContent() {
   const t = useTranslations("Landing");
@@ -59,6 +61,13 @@ export default function LandingContent() {
     t("regionalReadiness.items.omanGcc"),
     t("regionalReadiness.items.advancedPacks"),
     t("regionalReadiness.items.expandingCoverage"),
+  ];
+  const trustChips = [
+    "Secure billing infrastructure",
+    "Built for Indian and global tax workflows",
+    "GST/VAT support",
+    "Proposals + invoicing",
+    "Multi-currency collection",
   ];
 
   const features = [
@@ -259,16 +268,26 @@ export default function LandingContent() {
               <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl blur opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-pulse"></div>
               <Button size="lg" className="relative btn-primary h-16 gap-2 rounded-2xl px-12 text-lg font-black shadow-2xl transition-all" asChild>
                 <Link href="/api/auth/signin">
-                  {t("hero.primaryCta")} <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                  Start 15-Day Pro Trial <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>
             </div>
             <Button variant="ghost" size="lg" className="h-16 px-10 text-lg font-bold text-muted-body hover:bg-surface-elevated hover:text-foreground transition-colors rounded-2xl" asChild>
-              <Link href="#features">{t("hero.secondaryCta")}</Link>
+              <Link href="#interactive-demo">Explore Interactive Demo</Link>
             </Button>
           </motion.div>
 
           <SocialProofHero />
+          <div className="flex flex-wrap justify-center gap-2">
+            {trustChips.map((chip) => (
+              <span
+                key={chip}
+                className="rounded-full border border-border/80 bg-surface-elevated px-3 py-1 text-xs font-semibold text-muted-body"
+              >
+                {chip}
+              </span>
+            ))}
+          </div>
 
           <motion.div
             initial={reduceMotion ? false : { opacity: 0, y: 60 }}
@@ -342,6 +361,10 @@ export default function LandingContent() {
         </div>
       </section>
 
+      <section id="interactive-demo" className="bg-surface-base py-20">
+        <RoleDemoLauncher />
+      </section>
+
       <section id="features" className="bg-surface-base py-32">
         <div className="mx-auto max-w-7xl px-6">
           <div className="mb-20 max-w-3xl space-y-4 text-left">
@@ -385,6 +408,23 @@ export default function LandingContent() {
       <ComparisonTable />
       <PricingSection />
 
+      <section className="bg-surface-base py-16">
+        <div className="mx-auto max-w-7xl px-6">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-muted-body">Explore by persona</p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            {personaNavigationLinks.map((persona) => (
+              <Link
+                key={persona.href}
+                href={persona.href}
+                className="rounded-xl border border-border/80 bg-surface-elevated px-4 py-2 text-sm font-semibold text-foreground/90 transition hover:border-orange-500/40 hover:text-orange-600"
+              >
+                {persona.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="relative overflow-hidden bg-foreground py-32">
         <div className="absolute right-0 top-0 h-[600px] w-[600px] rounded-full bg-accent-strong/30 blur-[120px]" />
         <div className="relative z-10 mx-auto max-w-4xl space-y-12 px-6 text-center">
@@ -394,10 +434,10 @@ export default function LandingContent() {
           </h2>
           <div className="flex flex-col items-center justify-center gap-6 sm:flex-row">
             <Button size="lg" className="h-16 rounded-2xl bg-surface-elevated px-12 text-xl font-black text-foreground shadow-2xl hover:bg-surface-base active:scale-95" asChild>
-              <Link href="/api/auth/signin">{t("finalCta.primaryCta")}</Link>
+              <Link href="/api/auth/signin">Start 15-Day Pro Trial</Link>
             </Button>
             <Button size="lg" className="h-16 rounded-2xl border border-white/20 bg-transparent px-12 text-xl font-bold text-white transition-all hover:bg-white/10" asChild>
-              <Link href="/help">{t("finalCta.secondaryCta")}</Link>
+              <Link href="#interactive-demo">Explore Interactive Demo</Link>
             </Button>
           </div>
           <div className="flex flex-wrap justify-center gap-8 pt-8 text-xs font-bold uppercase tracking-widest text-white/70">
