@@ -17,8 +17,8 @@ export function OnboardingHint({
   message: string;
   className?: string;
 }) {
-  const { completedSteps, disabled, isLoading, completeStep } = useOnboarding();
-  if (isLoading || disabled || completedSteps.includes(stepId)) {
+  const { completedSteps, disabled, isDemoUser, isLoading, completeStep } = useOnboarding();
+  if (isLoading || disabled || isDemoUser || completedSteps.includes(stepId)) {
     return null;
   }
 

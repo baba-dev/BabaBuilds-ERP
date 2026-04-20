@@ -35,8 +35,14 @@ function SetupSection({
               <Zap className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold tracking-wider uppercase">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold tracking-wider uppercase inline-flex items-center gap-1.5">
                 {t("workspace_setup", "Workspace setup")}
+                <DashboardTooltip
+                  label={t(
+                    "workspace_setup_help",
+                    "This tracks your first-run setup health. Complete profile, clients, and services to reach 100% and unlock smoother guidance.",
+                  )}
+                />
               </p>
               <p className="text-xs text-zinc-600 dark:text-zinc-400 font-medium leading-tight mt-0.5">
                 {isComplete

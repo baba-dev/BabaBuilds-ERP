@@ -2,11 +2,16 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { ONBOARDING_STEPS, parseCompletedSteps, serializeCompletedSteps, type OnboardingStepId } from "@/lib/onboarding";
+import { ONBOARDING_STEPS, isDemoEmail, parseCompletedSteps, serializeCompletedSteps, type OnboardingStepId } from "@/lib/onboarding";
 
-async function getSessionUserId() {
+async function getSessionUser() {
   const session = await getServerSession(authOptions);
-  return session && (session.user as any)?.id ? (session.user as any).id as string : null;
+  const sessionUser = session?.user as { id?: string; email?: string | null } | undefined;
+  if (!session || !sessionUser?.id) return null;
+  return {
+    id: sessionUser.id,
+    email: sessionUser.email ?? null,
+  };
 }
 
 async function ensureOnboarding(userId: string) {
@@ -31,28 +36,43 @@ function buildResponse(record: Awaited<ReturnType<typeof ensureOnboarding>>) {
 }
 
 export async function GET() {
-  const userId = await getSessionUserId();
-  if (!userId) {
+  const sessionUser = await getSessionUser();
+  if (!sessionUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const record = await ensureOnboarding(userId);
+  if (isDemoEmail(sessionUser.email)) {
+    return NextResponse.json({
+      steps: ONBOARDING_STEPS,
+      completedSteps: [],
+      isFirstLogin: false,
+      disabled: true,
+      dismissedAt: new Date().toISOString(),
+      completedAt: null,
+      isDemoUser: true,
+    });
+  }
+
+  const record = await ensureOnboarding(sessionUser.id);
   return NextResponse.json(buildResponse(record));
 }
 
 export async function PATCH(request: Request) {
-  const userId = await getSessionUserId();
-  if (!userId) {
+  const sessionUser = await getSessionUser();
+  if (!sessionUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (isDemoEmail(sessionUser.email)) {
+    return NextResponse.json({ error: "Onboarding updates are disabled for demo users." }, { status: 403 });
   }
 
   const { action, stepId } = await request.json().catch(() => ({}));
-  const existing = await ensureOnboarding(userId);
+  const existing = await ensureOnboarding(sessionUser.id);
   const now = new Date();
 
   if (action === "dismiss") {
     const updated = await prisma.userOnboarding.update({
-      where: { userId },
+      where: { userId: sessionUser.id },
       data: { dismissedAt: now, isFirstLogin: false },
     });
     return NextResponse.json(buildResponse(updated));
@@ -60,7 +80,7 @@ export async function PATCH(request: Request) {
 
   if (action === "complete") {
     const updated = await prisma.userOnboarding.update({
-      where: { userId },
+      where: { userId: sessionUser.id },
       data: {
         completedAt: now,
         isFirstLogin: false,
@@ -79,7 +99,7 @@ export async function PATCH(request: Request) {
     const updatedSteps = Array.from(new Set([...parsedSteps, stepId as OnboardingStepId]));
     const allDone = updatedSteps.length >= ONBOARDING_STEPS.length;
     const updated = await prisma.userOnboarding.update({
-      where: { userId },
+      where: { userId: sessionUser.id },
       data: {
         completedSteps: serializeCompletedSteps(updatedSteps),
         ...(allDone && { completedAt: now, isFirstLogin: false }),

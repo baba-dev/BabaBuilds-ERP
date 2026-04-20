@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Download, LayoutDashboard, Send, Sparkles, ArrowRight, Users, Briefcase, ReceiptText, X, Building } from "lucide-react";
@@ -36,6 +36,8 @@ import { DashboardTrustPanel } from "./dashboard-trust-panel";
 import { DashboardRightRail } from "./dashboard-right-rail";
 import { dashboardTypography as ty } from "./dashboard-typography";
 import type { DashboardData, RecentInvoiceRow } from "./types";
+import { useOnboarding } from "@/components/onboarding/OnboardingProvider";
+import { FirstLookWelcome } from "@/components/onboarding/FirstLookWelcome";
 
 export default function Dashboard() {
   const t = useTranslations("Dashboard");
@@ -59,6 +61,7 @@ export default function Dashboard() {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("erp_getting_started_dismissed") === "1";
   });
+  const { isFirstLogin, disabled: onboardingDisabled, isDemoUser, isLoading: onboardingLoading } = useOnboarding();
 
   const { fCurrency, currency } = useFormat();
   const currencySymbol = getCurrencySymbol(currency);
@@ -351,7 +354,9 @@ export default function Dashboard() {
   );
 
   // 2.3 FIX: show a getting-started checklist for new workspaces (zero revenue = fresh account)
+  const showFirstLook = !onboardingLoading && !isDemoUser && isFirstLogin && !onboardingDisabled;
   const showGettingStarted =
+    !showFirstLook &&
     !gettingStartedDismissed &&
     !isInitialLoad &&
     (d.financialPulse?.billedRevenue ?? 1) === 0 &&
@@ -383,6 +388,7 @@ export default function Dashboard() {
       }
     >
       <div className="space-y-6">
+        {showFirstLook && <FirstLookWelcome companyName={orgName} />}
         {/* 2.3 FIX — Getting Started checklist: shows for brand-new workspaces with zero activity */}
         {showGettingStarted && (
           <div className="relative rounded-2xl border border-orange-200 dark:border-orange-800/50 bg-gradient-to-br from-orange-50 to-white dark:from-orange-950/30 dark:to-zinc-900/60 p-5 shadow-sm animate-in fade-in slide-in-from-top-2 duration-500">
