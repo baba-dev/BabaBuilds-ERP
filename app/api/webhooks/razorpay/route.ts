@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { prisma } from '@/lib/prisma';
+import { processRazorpaySubscriptionPaymentVerified } from '@/lib/razorpay-subscription';
 
 export async function POST(req: Request) {
   try {
@@ -23,75 +23,22 @@ export async function POST(req: Request) {
 
     const event = JSON.parse(rawBody);
 
-    // Only process payment captures or successful order payments
     if (event.event === 'payment.captured' || event.event === 'order.paid') {
-      const paymentEntity = event.payload.payment.entity;
-      const notes = paymentEntity.notes;
+      const paymentEntity = event.payload?.payment?.entity ?? event.payload?.payment;
+      if (!paymentEntity?.id) {
+        return NextResponse.json({ status: 'ignored' });
+      }
 
+      const notes = paymentEntity.notes as Record<string, string | undefined> | undefined;
       const workspaceId = notes?.workspaceId;
       const interval = notes?.interval;
 
       if (workspaceId && interval) {
-        const workspace = await prisma.workspace.findUnique({
-          where: { id: workspaceId },
-          select: { subscriptionEndsAt: true, subscriptionStatus: true }
-        });
-
-        if (workspace) {
-          const isCurrentlyActivePro = 
-            (workspace.subscriptionStatus === "PRO" || workspace.subscriptionStatus === "TEAM") && 
-            workspace.subscriptionEndsAt && 
-            new Date(workspace.subscriptionEndsAt) > new Date();
-
-          const baseDate = isCurrentlyActivePro 
-            ? new Date(workspace.subscriptionEndsAt!) 
-            : new Date();
-
-          const endsAt = new Date(baseDate);
-          
-          if (interval.includes("MONTHLY")) {
-            endsAt.setMonth(endsAt.getMonth() + 1);
-          } else if (interval === "QUARTERLY") {
-            endsAt.setMonth(endsAt.getMonth() + 3);
-          } else if (interval.includes("YEARLY")) {
-            endsAt.setFullYear(endsAt.getFullYear() + 1);
-          }
-          
-          let planTier = "PRO";
-          if (interval.includes("TEAM")) {
-            planTier = "TEAM";
-          }
-
-          await prisma.workspace.update({
-            where: { id: workspaceId },
-            data: {
-              subscriptionStatus: planTier, 
-              planTier: planTier,
-              planInterval: interval,
-              subscriptionEndsAt: endsAt,
-              billingProviderId: paymentEntity.customer_id || null,
-            },
-          });
-
-          // Record the BillingTransaction securely & idempotently
-          await prisma.billingTransaction.upsert({
-            where: {
-              workspaceId_providerReference: {
-                workspaceId,
-                providerReference: paymentEntity.id
-              }
-            },
-            create: {
-              workspaceId,
-              transactionDate: new Date(),
-              amount: paymentEntity.amount / 100, // Convert poise back to INR
-              status: "PAID",
-              description: `Subscription Upgrade (${interval.replace("_", " ")}) via Webhook`,
-              providerReference: paymentEntity.id,
-              receiptUrl: paymentEntity.receipt_url || null,
-            },
-            update: {} // If webhook retriggers, don't duplicate
-          });
+        try {
+          await processRazorpaySubscriptionPaymentVerified(paymentEntity.id, workspaceId);
+        } catch (e) {
+          console.error('Razorpay webhook subscription finalize failed:', e);
+          return NextResponse.json({ error: 'Processing failed' }, { status: 500 });
         }
       }
     }

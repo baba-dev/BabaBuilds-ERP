@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { ShieldCheck, CheckCircle2, Sparkles, CreditCard, PartyPopper } from "lucide-react";
 import { toast } from "sonner";
@@ -78,6 +79,9 @@ export function ProUpgradeCard({ locale = "en-IN", currency = "INR" }: { locale?
   const [interval, setInterval] = useState<"MONTHLY" | "QUARTERLY" | "YEARLY" | "TEAM_MONTHLY" | "TEAM_YEARLY">("YEARLY");
   const [isLoading, setIsLoading] = useState(false);
   const [isUpgradeSuccess, setIsUpgradeSuccess] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCouponCode, setAppliedCouponCode] = useState<string | null>(null);
+  const [appliedDiscountPercent, setAppliedDiscountPercent] = useState<number | null>(null);
 
   const currencySymbol = getCurrencySymbol(currency, locale);
 
@@ -88,6 +92,53 @@ export function ProUpgradeCard({ locale = "en-IN", currency = "INR" }: { locale?
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(amount);
+  };
+
+  const listPrice = PRICING[interval];
+  const estimatedCharge =
+    appliedDiscountPercent != null && appliedDiscountPercent > 0
+      ? Math.max(0, Math.round(listPrice * (1 - appliedDiscountPercent / 100) * 100) / 100)
+      : listPrice;
+
+  const loadSavedCoupon = useCallback(async () => {
+    try {
+      const res = await fetch("/api/distributor/apply-coupon", { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok || !data?.attribution) return;
+      setAppliedCouponCode(data.attribution.code);
+      setAppliedDiscountPercent(Number(data.attribution.customerDiscountPercent) || 0);
+      setCouponInput(data.attribution.code);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadSavedCoupon();
+  }, [loadSavedCoupon]);
+
+  const applyCoupon = async () => {
+    const toastId = toast.loading("Applying coupon...");
+    try {
+      const res = await fetch("/api/distributor/apply-coupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: couponInput.trim() || "" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Invalid coupon");
+      if (!data.attribution) {
+        setAppliedCouponCode(null);
+        setAppliedDiscountPercent(null);
+        toast.success("Coupon cleared.", { id: toastId });
+        return;
+      }
+      setAppliedCouponCode(data.attribution.code);
+      setAppliedDiscountPercent(Number(data.attribution.customerDiscountPercent) || 0);
+      toast.success("Partner coupon applied.", { id: toastId });
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Could not apply coupon", { id: toastId });
+    }
   };
 
   const handleUpgrade = async () => {
@@ -105,7 +156,10 @@ export function ProUpgradeCard({ locale = "en-IN", currency = "INR" }: { locale?
       const orderRes = await fetch("/api/razorpay/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ interval }),
+        body: JSON.stringify({
+          interval,
+          distributorCouponCode: couponInput.trim() || appliedCouponCode || undefined,
+        }),
       });
       const orderData = await orderRes.json();
 
@@ -139,11 +193,13 @@ export function ProUpgradeCard({ locale = "en-IN", currency = "INR" }: { locale?
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_signature: response.razorpay_signature,
-                interval: interval
               }),
             });
             
-            if (!verifyRes.ok) throw new Error("Verification failed");
+            if (!verifyRes.ok) {
+              const errData = await verifyRes.json().catch(() => ({}));
+              throw new Error(errData?.error || "Verification failed");
+            }
 
             toast.success("Payment successful! You are now a Pro user.", { id: verifyToastId });
             
@@ -250,11 +306,39 @@ export function ProUpgradeCard({ locale = "en-IN", currency = "INR" }: { locale?
           ))}
         </ul>
         <div className="w-full md:w-auto flex flex-col items-center md:items-end gap-3">
+           <div className="w-full max-w-sm space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
+                Partner coupon (optional)
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value)}
+                  placeholder="e.g. ACME-XK2P9Q"
+                  className="font-mono text-xs h-9"
+                />
+                <Button type="button" variant="secondary" size="sm" className="shrink-0 h-9 text-[10px] uppercase font-bold" onClick={() => void applyCoupon()}>
+                  Apply
+                </Button>
+              </div>
+           </div>
            <div className="text-center md:text-right">
-              <p className="text-3xl font-extrabold text-indigo-950 dark:text-zinc-50">{formatMoney(PRICING[interval])}</p>
-              <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
-                Billed {interval.toLowerCase()}
-              </p>
+              {appliedDiscountPercent != null && appliedDiscountPercent > 0 ? (
+                <>
+                  <p className="text-sm line-through text-zinc-400">{formatMoney(listPrice)}</p>
+                  <p className="text-3xl font-extrabold text-indigo-950 dark:text-zinc-50">{formatMoney(estimatedCharge)}</p>
+                  <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
+                    {appliedDiscountPercent}% partner discount · Billed {interval.toLowerCase()}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-3xl font-extrabold text-indigo-950 dark:text-zinc-50">{formatMoney(listPrice)}</p>
+                  <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
+                    Billed {interval.toLowerCase()}
+                  </p>
+                </>
+              )}
            </div>
            <Button 
             onClick={handleUpgrade} 
