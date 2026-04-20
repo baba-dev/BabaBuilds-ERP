@@ -14,6 +14,7 @@
 import 'server-only';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
+import { MODULE_KEYS, isValidModuleKey, type ModuleKey } from '@/lib/module-keys';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODULE REGISTRY
@@ -23,22 +24,8 @@ import { Prisma } from '@prisma/client';
 // - WORKFORCE enhances PAYROLL input quality.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const MODULE_KEYS = [
-  'WORKFORCE',
-  'PAYROLL',
-  'DOCUMENTS',
-  'REVENUE_PIPELINE',
-  'CASH_FLOW',
-  'AR_COLLECTIONS',
-  'TAX_ADVANCED',
-  'REPORTING_CENTER',
-  'IMPORT_MANAGER',
-] as const;
-export type ModuleKey = (typeof MODULE_KEYS)[number];
-
-export function isValidModuleKey(key: unknown): key is ModuleKey {
-  return typeof key === 'string' && (MODULE_KEYS as readonly string[]).includes(key);
-}
+export { MODULE_KEYS, isValidModuleKey };
+export type { ModuleKey };
 
 export const MODULE_LABELS: Record<ModuleKey, string> = {
   WORKFORCE: 'Workforce',

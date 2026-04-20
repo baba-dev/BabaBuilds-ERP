@@ -1,4 +1,4 @@
-import type { ModuleKey } from "@/lib/modules";
+import type { ModuleKey } from '@/lib/module-keys';
 import type { Prisma } from "@prisma/client";
 
 export const DEMO_TEMPLATE_KEYS = ["dm_agency", "software_company", "tax_agency"] as const;
@@ -118,6 +118,8 @@ export type DemoTemplateDefinition = {
   investments: DemoInvestmentDefinition[];
   retainers: DemoRetainerDefinition[];
   modules: Partial<Record<ModuleKey, boolean>>;
+  // Human-maintained declaration of which enabled modules have showcase-oriented seeded data.
+  // Used by validation and runtime safeguards to prevent empty enabled modules in demos.
+  seededModules: ModuleKey[];
   seed?: (ctx: DemoSeedContext) => Promise<void>;
 };
-
