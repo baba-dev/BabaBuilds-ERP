@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
 import { Banknote } from "lucide-react";
+import Link from "next/link";
 import { ColumnVisibilityToggle, DataTable, DataTableToolbar, RowActionsMenu, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
 
 interface AdminBackup {
@@ -410,6 +411,12 @@ export default function SuperAdminPortal() {
             <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">{t('title') || 'Platform Command'}</h1>
             <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{t('desc') || 'System-wide visibility and billing controls.'}</p>
           </div>
+          <Link
+            href="/admin/distributors"
+            className="text-sm font-bold uppercase tracking-widest text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
+          >
+            Distributors →
+          </Link>
         </div>
       </div>
 
