@@ -2,10 +2,12 @@
 
 import * as React from "react";
 import { PanelLeft } from "lucide-react";
+import { useLocale } from "next-intl";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { emitSidebarAnalyticsEvent } from "@/lib/sidebar-analytics";
+import { dirFromLocale } from "@/src/lib/direction";
 
 type SidebarContextValue = {
   open: boolean;
@@ -100,6 +102,9 @@ export function SidebarProvider({
 }
 
 export function Sidebar({ children, className }: { children: React.ReactNode; className?: string }) {
+  const locale = useLocale();
+  const dir = dirFromLocale(locale);
+  const isRtl = dir === "rtl";
   const { isMobile, open, openMobile, setOpenMobile, sidebarWidth, setSidebarWidth } = useSidebar();
   const [isResizing, setIsResizing] = React.useState(false);
 
@@ -107,7 +112,8 @@ export function Sidebar({ children, className }: { children: React.ReactNode; cl
     if (!isResizing) return;
 
     const onMove = (event: MouseEvent) => {
-      setSidebarWidth(event.clientX);
+      const width = isRtl ? window.innerWidth - event.clientX : event.clientX;
+      setSidebarWidth(width);
     };
 
     const onUp = () => setIsResizing(false);
@@ -118,16 +124,17 @@ export function Sidebar({ children, className }: { children: React.ReactNode; cl
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
-  }, [isResizing, setSidebarWidth]);
+  }, [isResizing, isRtl, setSidebarWidth]);
 
   if (isMobile) {
     return (
       <Sheet open={openMobile} onOpenChange={setOpenMobile}>
         <SheetContent
-          side="left"
+          side={isRtl ? "right" : "left"}
           aria-label="Mobile navigation menu"
           className={cn(
-            "w-[280px] border-r border-white/5 bg-black/95 p-0 text-zinc-50 backdrop-blur-3xl",
+            "w-[280px] border-white/5 bg-black/95 p-0 text-zinc-50 backdrop-blur-3xl",
+            isRtl ? "border-l" : "border-r",
             className,
           )}
         >
@@ -144,7 +151,10 @@ export function Sidebar({ children, className }: { children: React.ReactNode; cl
       data-state={open ? "expanded" : "collapsed"}
       style={{ width: open ? sidebarWidth : 72 }}
       className={cn(
-        "relative hidden border-r border-white/5 bg-black/90 shadow-[rgba(0,0,0,0.5)_4px_0px_20px] backdrop-blur-2xl md:sticky md:inset-y-0 md:top-0 md:flex md:h-screen md:self-start",
+        "relative hidden bg-black/90 backdrop-blur-2xl md:sticky md:inset-y-0 md:top-0 md:flex md:h-screen md:self-start",
+        isRtl
+          ? "border-l border-white/5 shadow-[rgba(0,0,0,0.5)_-4px_0px_20px]"
+          : "border-r border-white/5 shadow-[rgba(0,0,0,0.5)_4px_0px_20px]",
         className,
       )}
     >
@@ -154,7 +164,10 @@ export function Sidebar({ children, className }: { children: React.ReactNode; cl
           type="button"
           aria-label="Resize sidebar"
           onMouseDown={() => setIsResizing(true)}
-          className="absolute right-0 top-0 h-full w-1.5 translate-x-1/2 cursor-col-resize bg-transparent hover:bg-indigo-400/30"
+          className={cn(
+            "absolute top-0 h-full w-1.5 cursor-col-resize bg-transparent hover:bg-indigo-400/30",
+            isRtl ? "left-0 -translate-x-1/2" : "right-0 translate-x-1/2",
+          )}
         />
       ) : null}
     </aside>

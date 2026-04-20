@@ -1,7 +1,9 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { dirFromLocale } from "@/src/lib/direction";
 
 type Props = {
   currentPage: number;
@@ -20,6 +22,9 @@ export function DataTablePagination({
   disabled,
   label,
 }: Props) {
+  const locale = useLocale();
+  const isRtl = dirFromLocale(locale) === "rtl";
+
   if (totalPages <= 1) return null;
 
   return (
@@ -27,10 +32,10 @@ export function DataTablePagination({
       <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400">{label ?? `Page ${currentPage} of ${totalPages}`}</span>
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" onClick={onPrev} disabled={disabled || currentPage <= 1}>
-          <ChevronLeft className="mr-1 h-4 w-4" /> Prev
+          {isRtl ? <ChevronRight className="ms-1 h-4 w-4" /> : <ChevronLeft className="me-1 h-4 w-4" />} Prev
         </Button>
         <Button variant="outline" size="sm" onClick={onNext} disabled={disabled || currentPage >= totalPages}>
-          Next <ChevronRight className="ml-1 h-4 w-4" />
+          Next {isRtl ? <ChevronLeft className="ms-1 h-4 w-4" /> : <ChevronRight className="ms-1 h-4 w-4" />}
         </Button>
       </div>
     </div>

@@ -178,12 +178,13 @@ export async function dispatchNotification(payload: NotificationPayload): Promis
     // ── 2. Load Business Profile for Email (SMTP config + branding) ───────
     const profile = await prisma.businessProfile.findUnique({ where: { workspaceId } });
     const companyName = profile?.companyName ?? 'BabaBuilds ERP';
+    const notificationLocale = (workspaceUsers[0]?.user as { locale?: string } | undefined)?.locale ?? 'en-IN';
 
     // ── 3. Build shared content once ─────────────────────────────────────
     const { subject, html: emailHtml, text: emailText } = buildEmailTemplate(
       event,
       data,
-      { companyName, appUrl: APP_URL },
+      { companyName, appUrl: APP_URL, locale: notificationLocale },
     );
 
     const { title: pushTitle, body: pushBody, actionUrl } = buildPushAndInAppContent(event, data);

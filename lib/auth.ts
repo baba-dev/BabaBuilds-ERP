@@ -1,3 +1,4 @@
+import { getLocaleDirection } from "@/lib/i18n";
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import EmailProvider from "next-auth/providers/email";
@@ -197,6 +198,8 @@ export const authOptions: NextAuthOptions = {
               const escapedUrlText = escapeHtmlText(normalizedUrl);
               const escapedUrlHref = escapeHtmlAttribute(normalizedUrl);
               const plainTextBody = `Sign in to BabaBuilds ERP\n${normalizedUrl}\n\nIf you did not request this email you can safely ignore it.`;
+              const userLocale = (await prisma.user.findUnique({ where: { email: identifier }, select: { locale: true } }))?.locale ?? "en-IN";
+              const emailDir = getLocaleDirection(userLocale);
 
               const result = await transport.sendMail({
                 to: identifier,
@@ -204,7 +207,7 @@ export const authOptions: NextAuthOptions = {
                 subject: `Secure Authentication - BabaBuilds ERP`,
                 text: plainTextBody,
                 html: `
-            <body style="background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 60px 20px; margin: 0;">
+            <body dir="${emailDir}" style="background-color: #f4f4f5; font-family: 'Inter', 'Noto Naskh Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 60px 20px; margin: 0; direction: ${emailDir};">
               <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-w: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);">
                 <tr>
                   <td style="padding: 48px 40px; text-align: center;">
@@ -213,7 +216,7 @@ export const authOptions: NextAuthOptions = {
                     <p style="margin: 4px 0 0 0; color: #4f46e5; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">Command Center</p>
                     
                     <h2 style="margin: 40px 0 16px 0; color: #18181b; font-size: 20px; font-weight: 600;">Secure Login Request</h2>
-                    <p style="margin: 0 0 32px 0; color: #52525b; font-size: 15px; line-height: 24px;">
+                    <p style="margin: 0 0 32px 0; color: #52525b; font-size: 15px; line-height: 24px; text-align: ${emailDir === "rtl" ? "right" : "left"};">
                       We received a request to authenticate <strong>${escapedIdentifier}</strong> into the BabaBuilds ERP platform. Click the button below to securely sign in.
                     </p>
                     
