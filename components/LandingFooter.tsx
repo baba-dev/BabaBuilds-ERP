@@ -1,46 +1,45 @@
 "use client";
 
 import Link from "next/link";
-import { Box, Twitter, Linkedin, Github, Mail, Phone, MapPin } from "lucide-react";
+import { Box, Mail, MapPin, ShieldCheck, FileText, LifeBuoy } from "lucide-react";
+import { personaNavigationLinks } from "@/components/landing/persona/persona-config";
 
 export default function LandingFooter() {
+  const keyPersonaLinks = personaNavigationLinks.slice(0, 3);
+
   const sections = [
     {
-      title: "Solutions",
+      title: "Product",
       links: [
-        { name: "Automated Invoicing", href: "#features" },
-        { name: "Retainer Management", href: "#features" },
-        { name: "Global Tax Compliance", href: "#features" },
-        { name: "AI Financial Insights", href: "#features" },
+        { name: "Features", href: "#features" },
+        { name: "Pricing", href: "#pricing" },
+        { name: "Interactive Demo", href: "#demo-launcher" },
       ],
     },
     {
-      title: "Support",
-      links: [
-        { name: "Documentation", href: "/help" },
-        { name: "Knowledge Base", href: "/help" },
-        { name: "Security Audit", href: "#" },
-        { name: "Status", href: "#" },
-      ],
+      title: "By Persona",
+      links: keyPersonaLinks.map((item) => ({
+        name: item.label,
+        href: item.href,
+      })),
     },
     {
-      title: "Company",
+      title: "Legal",
       links: [
-        { name: "About Us", href: "#" },
         { name: "Reseller Program", href: "/reseller" },
-        { name: "Careers", href: "#" },
         { name: "Privacy Policy", href: "/help/privacy" },
         { name: "Terms of Service", href: "/help/terms" },
+        { name: "Help Center", href: "/help" },
       ],
     },
   ];
 
   return (
-    <footer className="bg-zinc-50 dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800 pt-24 pb-12">
+    <footer className="border-t border-zinc-200 bg-zinc-50 pt-20 pb-10 dark:border-zinc-800 dark:bg-zinc-950">
       <div className="max-w-7xl mx-auto px-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 mb-20">
+        <div className="grid grid-cols-1 gap-12 border-b border-zinc-200 pb-12 dark:border-zinc-800 md:grid-cols-[1.3fr_1fr_1fr_1fr]">
           {/* Brand */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="space-y-5">
             <div className="flex items-center gap-3">
               <div className="bg-orange-600 p-2 rounded-xl">
                 <Box className="h-6 w-6 text-white" />
@@ -49,34 +48,29 @@ export default function LandingFooter() {
                 BabaBuilds <span className="text-orange-600">ERP</span>
               </span>
             </div>
-            <p className="text-zinc-500 dark:text-zinc-400 max-w-sm text-lg leading-relaxed">
-              The next generation of financial intelligence for global agencies. Operating in over 40 countries.
+            <p className="max-w-md text-base leading-relaxed text-zinc-600 dark:text-zinc-300">
+              Public-ready ERP platform for invoicing, compliance, and growth operations.
             </p>
-            <div className="flex items-center gap-4">
-              <a href="#" className="p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:bg-orange-600 hover:text-white transition-all">
-                <Twitter className="w-5 h-5" />
-              </a>
-              <a href="#" className="p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:bg-orange-600 hover:text-white transition-all">
-                <Linkedin className="w-5 h-5" />
-              </a>
-              <a href="#" className="p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl hover:bg-orange-600 hover:text-white transition-all">
-                <Github className="w-5 h-5" />
-              </a>
+            <div className="rounded-2xl border border-zinc-200 bg-white/90 px-4 py-3 text-sm text-zinc-700 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-200">
+              <p className="flex items-start gap-2 font-semibold">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
+                Address - Pilani, Rajasthan, India.
+              </p>
             </div>
           </div>
 
           {/* Links */}
           {sections.map((section) => (
-            <div key={section.title} className="space-y-6">
+            <div key={section.title} className="space-y-4">
               <h4 className="font-black text-zinc-900 dark:text-zinc-50 uppercase tracking-widest text-sm">
                 {section.title}
               </h4>
-              <ul className="space-y-4">
+              <ul className="space-y-3">
                 {section.links.map((link) => (
                   <li key={link.name}>
                     <Link
                       href={link.href}
-                      className="text-zinc-500 dark:text-zinc-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-medium"
+                      className="text-zinc-600 dark:text-zinc-300 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-medium"
                     >
                       {link.name}
                     </Link>
@@ -87,35 +81,32 @@ export default function LandingFooter() {
           ))}
         </div>
 
-        <div className="pt-12 border-t border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="space-y-4 text-center md:text-left">
-            <p className="text-sm text-zinc-500 font-medium">
-              © {new Date().getFullYear()} BabaBuilds ERP. All rights reserved. Built with ❤️ for Global Agencies.
+        <div className="pt-8 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-3 text-center md:text-left">
+            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+              © {new Date().getFullYear()} BabaBuilds ERP. All rights reserved.
             </p>
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 font-medium">
-              Legal & policy center:{" "}
-              <a
-                href="https://erp.bababuilds.com/help/privacy"
-                className="text-orange-600 dark:text-orange-400 hover:underline"
-              >
-                erp.bababuilds.com
-              </a>
-            </p>
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-600">
-               <span className="flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
-                 <Box className="w-3 h-3 text-orange-600" /> MSME: UDYAM-RJ-21-0089275
-               </span>
-               <span className="flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
-                 <Box className="w-3 h-3 text-emerald-500" /> WCAG 2.2 Level AA Compliant
-               </span>
+            <div className="flex flex-wrap items-center justify-center gap-3 md:justify-start">
+              <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-semibold text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                Secure billing
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-semibold text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
+                <FileText className="h-3.5 w-3.5 text-orange-500" />
+                GST/VAT ready
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-semibold text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
+                <LifeBuoy className="h-3.5 w-3.5 text-sky-500" />
+                Public support docs
+              </span>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row items-center gap-8 text-sm text-zinc-500 font-medium whitespace-nowrap">
+          <div className="flex flex-col items-center gap-3 text-sm font-medium text-zinc-500 dark:text-zinc-400 md:items-end">
             <span className="flex items-center gap-2">
               <Mail className="w-4 h-4 text-orange-500" /> support@bababuilds.com
             </span>
             <span className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-rose-500" /> Dubai • New Delhi • London
+              <MapPin className="w-4 h-4 text-rose-500" /> Pilani, Rajasthan, India
             </span>
           </div>
         </div>

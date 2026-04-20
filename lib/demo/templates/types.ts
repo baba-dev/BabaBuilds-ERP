@@ -1,7 +1,13 @@
 import type { ModuleKey } from '@/lib/module-keys';
 import type { Prisma } from "@prisma/client";
 
-export const DEMO_TEMPLATE_KEYS = ["dm_agency", "software_company", "tax_agency"] as const;
+export const DEMO_TEMPLATE_KEYS = [
+  "dm_agency",
+  "software_company",
+  "tax_agency",
+  "contractor_builder",
+  "freelancer_consultant",
+] as const;
 export type DemoTemplateKey = (typeof DEMO_TEMPLATE_KEYS)[number];
 
 export type DemoSeedContext = {

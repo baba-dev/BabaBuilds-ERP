@@ -60,7 +60,10 @@ export async function POST(request: Request) {
     const templateKey = isDemoTemplateKey(rawTemplateKey) ? rawTemplateKey : DEFAULT_DEMO_TEMPLATE_KEY;
     if (rawTemplateKey !== undefined && !isDemoTemplateKey(rawTemplateKey)) {
       return NextResponse.json(
-        { error: "Invalid templateKey. Allowed values: dm_agency, software_company, tax_agency" },
+        {
+          error:
+            "Invalid templateKey. Allowed values: dm_agency, software_company, tax_agency, contractor_builder, freelancer_consultant",
+        },
         { status: 400 },
       );
     }

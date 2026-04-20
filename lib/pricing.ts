@@ -1,9 +1,35 @@
 export const PRICING = {
-  MONTHLY: 200,
-  QUARTERLY: 550,
-  YEARLY: 2300,
-  TEAM_MONTHLY: 400,
-  TEAM_YEARLY: 4500,
+  MONTHLY: 1499,
+  QUARTERLY: 4497,
+  YEARLY: 17988,
+  TEAM_MONTHLY: 3499,
+  TEAM_YEARLY: 41988,
+};
+
+export type PricingInterval = keyof typeof PRICING;
+
+const PLAN_INTERVAL_MONTHS: Record<PricingInterval, number> = {
+  MONTHLY: 1,
+  QUARTERLY: 3,
+  YEARLY: 12,
+  TEAM_MONTHLY: 1,
+  TEAM_YEARLY: 12,
+};
+
+export const resolvePricingIntervalByAmount = (amount: number): PricingInterval | null => {
+  const roundedAmount = Math.round(amount);
+  const entry = (Object.entries(PRICING) as Array<[PricingInterval, number]>).find(
+    ([, price]) => price === roundedAmount,
+  );
+  return entry?.[0] ?? null;
+};
+
+export const getMonthlyPriceForInterval = (interval: string | null | undefined) => {
+  if (!interval || !(interval in PRICING)) {
+    return PRICING.MONTHLY;
+  }
+  const typedInterval = interval as PricingInterval;
+  return PRICING[typedInterval] / PLAN_INTERVAL_MONTHS[typedInterval];
 };
 
 /** Max active CRM clients on Free (non-trial). */

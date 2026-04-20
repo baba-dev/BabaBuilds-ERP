@@ -4,6 +4,12 @@ import { seedDemoWorkspace } from '@/lib/demo/seed-workspace';
 import { DEMO_TEMPLATE_KEYS, type DemoTemplateKey } from '@/lib/demo/templates';
 import { MODULE_KEYS } from '@/lib/modules';
 
+type MockedPrisma = typeof prisma & {
+  [key: string]: {
+    [method: string]: ReturnType<typeof vi.fn>;
+  };
+};
+
 vi.mock('@/lib/prisma', () => {
   return {
     prisma: {
@@ -21,14 +27,14 @@ vi.mock('@/lib/prisma', () => {
       workspaceModule: { upsert: vi.fn(), findMany: vi.fn() },
       // optional module tables used by seed hooks
       clientPaymentBehavior: { upsert: vi.fn() },
-      inAppNotification: { createMany: vi.fn() },
+      inAppNotification: { create: vi.fn(), createMany: vi.fn() },
       cashForecastSnapshot: { create: vi.fn() },
       cashForecastPeriod: { create: vi.fn() },
       cashForecastManualAdjustment: { create: vi.fn(), createMany: vi.fn() },
       department: { create: vi.fn() },
       designation: { create: vi.fn() },
       employee: { create: vi.fn() },
-      attendanceRecord: { createMany: vi.fn() },
+      attendanceRecord: { create: vi.fn(), createMany: vi.fn() },
       payrollPeriod: { create: vi.fn() },
       payrollRun: { create: vi.fn() },
       document: { create: vi.fn() },
@@ -48,7 +54,7 @@ describe('demo templates seeding', () => {
   it.each(DEMO_TEMPLATE_KEYS)('enables all optional modules for %s', async (templateKey) => {
     const key = templateKey as DemoTemplateKey;
 
-    const tx = prisma as any;
+    const tx = prisma as MockedPrisma;
     tx.workspace.create.mockResolvedValue({ id: 'ws_1' });
     tx.client.create.mockResolvedValue({ id: 'client_1' });
     tx.client.findMany.mockResolvedValue([{ id: 'client_1', name: 'Client 1' }]);

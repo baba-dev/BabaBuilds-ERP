@@ -2164,8 +2164,8 @@ export default function SettingsWizard() {
           </Dialog>
 
           {/* STICKY SAVE FOOTER */}
-          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200/80 bg-white/85 px-4 py-3 backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/85 md:px-8">
-            <div className="mx-auto w-full max-w-4xl">
+          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200/80 bg-transparent px-4 py-3 dark:border-zinc-800/80 md:px-8">
+            <div className="mx-auto w-full max-w-5xl">
               <FormSubmitBar
                 isSubmitting={isSubmitting}
                 submitText={t('save_button')}
@@ -2175,7 +2175,7 @@ export default function SettingsWizard() {
                     <CheckCircle2 className="w-4 h-4" /> {t("profile_saved")}
                   </span>
                 ) : t("description")}
-                className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl rounded-2xl shadow-2xl transition-all duration-300 hover:border-indigo-500/30"
+                className="bg-transparent rounded-2xl shadow-2xl transition-all duration-300 hover:border-indigo-500/30"
               />
               <FormFieldMessages helpText={isSubmitting ? t("actions.saving") : undefined} className="px-2 pt-2" />
             </div>

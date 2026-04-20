@@ -225,6 +225,7 @@ export default function Dashboard() {
     }
   };
 
+  const showDemoUpgradePrompt = searchParams.get("demo") === "1";
   const baseYear = new Date().getMonth() >= 3 ? new Date().getFullYear() : new Date().getFullYear() - 1;
   const fyOptions = Array.from({ length: 4 }).map((_, idx) => {
     const year = baseYear - 3 + idx;
@@ -388,6 +389,24 @@ export default function Dashboard() {
       }
     >
       <div className="space-y-6">
+        {showDemoUpgradePrompt && (
+          <div className="rounded-2xl border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-4 dark:border-orange-900/50 dark:from-orange-950/35 dark:to-amber-950/25">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-orange-700 dark:text-orange-300">
+                  Interactive demo active
+                </p>
+                <p className="mt-1 text-sm font-semibold text-zinc-800 dark:text-zinc-100">
+                  Like this setup? Start using this setup with your own workspace.
+                </p>
+              </div>
+              <Button asChild className="h-10 rounded-xl font-bold">
+                <Link href="/api/auth/signin">Start using this setup</Link>
+              </Button>
+            </div>
+          </div>
+        )}
+
         {showFirstLook && <FirstLookWelcome companyName={orgName} />}
         {/* 2.3 FIX — Getting Started checklist: shows for brand-new workspaces with zero activity */}
         {showGettingStarted && (
