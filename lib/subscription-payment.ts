@@ -1,7 +1,13 @@
 import { prisma } from "@/lib/prisma";
-import { decimalToNumber } from "@/lib/distributor-coupon";
 import type { SubscriptionIntervalKey } from "@/lib/subscription-checkout";
 import { tierFromInterval } from "@/lib/subscription-checkout";
+import {
+  computeCommissionAmount,
+  couponAllowsTier,
+  couponIsInValidityWindow,
+  resolveEffectiveMargin,
+} from "@/lib/distributor-margin";
+import { DistributorCommissionStatus } from "@prisma/client";
 
 function addBillingPeriod(base: Date, interval: SubscriptionIntervalKey): Date {
   const d = new Date(base);
@@ -25,6 +31,7 @@ export type FinalizeSubscriptionInput = {
   description: string;
   distributorCouponId: string | null;
   billingProviderCustomerId?: string | null;
+  currency?: string;
 };
 
 /**
@@ -34,10 +41,11 @@ export type FinalizeSubscriptionInput = {
 export async function finalizeSubscriptionPayment(input: FinalizeSubscriptionInput) {
   const tier = tierFromInterval(input.interval);
   const verifiedInterval = input.interval;
+  const currency = input.currency ?? "INR";
 
   const workspace = await prisma.workspace.findUnique({
     where: { id: input.workspaceId },
-    select: { subscriptionEndsAt: true, subscriptionStatus: true },
+    select: { subscriptionEndsAt: true, subscriptionStatus: true, hasEverSubscribed: true },
   });
 
   if (!workspace) {
@@ -53,6 +61,10 @@ export async function finalizeSubscriptionPayment(input: FinalizeSubscriptionInp
   const newExpirationDate = addBillingPeriod(baseDate, verifiedInterval);
 
   await prisma.$transaction(async (tx) => {
+    const priorPaidCount = await tx.billingTransaction.count({
+      where: { workspaceId: input.workspaceId, status: "PAID" },
+    });
+
     await tx.workspace.update({
       where: { id: input.workspaceId },
       data: {
@@ -61,6 +73,7 @@ export async function finalizeSubscriptionPayment(input: FinalizeSubscriptionInp
         planInterval: verifiedInterval,
         subscriptionEndsAt: newExpirationDate,
         billingProviderId: input.billingProviderCustomerId ?? input.providerReference,
+        hasEverSubscribed: true,
       },
     });
 
@@ -81,6 +94,8 @@ export async function finalizeSubscriptionPayment(input: FinalizeSubscriptionInp
         receiptUrl: input.receiptUrl ?? null,
         subscriptionListAmount: input.subscriptionListAmount,
         distributorCouponId: input.distributorCouponId,
+        subscriptionCurrency: currency,
+        subscriptionInterval: verifiedInterval,
       },
       update: {},
     });
@@ -93,9 +108,24 @@ export async function finalizeSubscriptionPayment(input: FinalizeSubscriptionInp
     });
     if (!coupon) return;
 
+    if (!couponAllowsTier(coupon.allowedTiers, verifiedInterval)) {
+      return;
+    }
+    if (!couponIsInValidityWindow(coupon.startsAt, coupon.endsAt)) {
+      return;
+    }
+    if (coupon.firstPurchaseOnly && (priorPaidCount > 0 || workspace.hasEverSubscribed)) {
+      return;
+    }
+
+    const { marginPercent, marginBasis } = resolveEffectiveMargin(coupon.distributor, coupon, verifiedInterval);
     const listAmt = input.subscriptionListAmount;
-    const marginPct = decimalToNumber(coupon.marginPercent);
-    const commissionAmount = Number(((Number(listAmt) * marginPct) / 100).toFixed(2));
+    const commissionAmount = computeCommissionAmount(
+      listAmt,
+      input.amountPaid,
+      marginPercent,
+      marginBasis,
+    );
 
     const existing = await tx.distributorCommission.findUnique({
       where: { billingTransactionId: billingTx.id },
@@ -110,8 +140,10 @@ export async function finalizeSubscriptionPayment(input: FinalizeSubscriptionInp
         billingTransactionId: billingTx.id,
         listAmount: listAmt,
         paidAmount: input.amountPaid,
-        marginPercent: coupon.marginPercent,
+        marginPercent,
         commissionAmount,
+        status: DistributorCommissionStatus.PENDING,
+        marginBasisUsed: marginBasis,
       },
     });
 
@@ -120,4 +152,36 @@ export async function finalizeSubscriptionPayment(input: FinalizeSubscriptionInp
       data: { usedCount: { increment: 1 } },
     });
   });
+}
+
+export async function reverseDistributorCommissionForBillingTx(
+  billingTransactionId: string,
+  reason: string,
+): Promise<boolean> {
+  const row = await prisma.distributorCommission.findUnique({
+    where: { billingTransactionId },
+  });
+  if (!row || row.status === DistributorCommissionStatus.VOID || row.status === DistributorCommissionStatus.CLAWED_BACK) {
+    return false;
+  }
+  if (row.status === DistributorCommissionStatus.PAID) {
+    await prisma.distributorCommission.update({
+      where: { id: row.id },
+      data: {
+        status: DistributorCommissionStatus.CLAWED_BACK,
+        clawbackReason: reason,
+        reversedAt: new Date(),
+      },
+    });
+    return true;
+  }
+  await prisma.distributorCommission.update({
+    where: { id: row.id },
+    data: {
+      status: DistributorCommissionStatus.VOID,
+      clawbackReason: reason,
+      reversedAt: new Date(),
+    },
+  });
+  return true;
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { handleAdminApiError, verifySuperAdmin } from "../../authz";
-import { Prisma } from "@prisma/client";
+import { Prisma, DistributorMarginBasis } from "@prisma/client";
 
 const toNumber = (value: Prisma.Decimal | number | null | undefined) => Number(value ?? 0);
 
@@ -30,6 +30,11 @@ export async function GET() {
         distributorName: c.distributor.name,
         customerDiscountPercent: toNumber(c.customerDiscountPercent),
         marginPercent: toNumber(c.marginPercent),
+        marginBasis: c.marginBasis,
+        allowedTiers: c.allowedTiers,
+        firstPurchaseOnly: c.firstPurchaseOnly,
+        startsAt: c.startsAt,
+        endsAt: c.endsAt,
         isActive: c.isActive,
         usedCount: c.usedCount,
         maxUses: c.maxUses,
@@ -64,6 +69,13 @@ export async function POST(req: Request) {
       .padEnd(5, "X");
     const code = `${codeBase}-${randomSuffix(6)}`;
 
+    const marginBasis =
+      body?.marginBasis === "PAID"
+        ? DistributorMarginBasis.PAID
+        : body?.marginBasis === "LIST"
+          ? DistributorMarginBasis.LIST
+          : null;
+
     const coupon = await prisma.distributorCoupon.create({
       data: {
         distributorId,
@@ -72,6 +84,11 @@ export async function POST(req: Request) {
           typeof body?.customerDiscountPercent === "number" ? body.customerDiscountPercent : 10,
         marginPercent:
           typeof body?.marginPercent === "number" ? body.marginPercent : toNumber(distributor.defaultMarginPercent),
+        ...(marginBasis ? { marginBasis } : {}),
+        allowedTiers: typeof body?.allowedTiers === "string" ? body.allowedTiers : "PRO,TEAM",
+        firstPurchaseOnly: body?.firstPurchaseOnly === true,
+        startsAt: body?.startsAt ? new Date(body.startsAt) : null,
+        endsAt: body?.endsAt ? new Date(body.endsAt) : null,
         maxUses: typeof body?.maxUses === "number" ? body.maxUses : null,
       },
     });
@@ -95,13 +112,29 @@ export async function PATCH(req: Request) {
       isActive?: boolean;
       customerDiscountPercent?: number;
       marginPercent?: number;
+      marginBasis?: DistributorMarginBasis | null;
       maxUses?: number | null;
+      allowedTiers?: string;
+      firstPurchaseOnly?: boolean;
+      startsAt?: Date | null;
+      endsAt?: Date | null;
     } = {};
 
     if (typeof body?.isActive === "boolean") data.isActive = body.isActive;
     if (body?.customerDiscountPercent != null) data.customerDiscountPercent = Number(body.customerDiscountPercent);
     if (body?.marginPercent != null) data.marginPercent = Number(body.marginPercent);
+    if (body?.marginBasis === "LIST" || body?.marginBasis === "PAID") {
+      data.marginBasis = body.marginBasis as DistributorMarginBasis;
+    } else if (body?.marginBasis === null) {
+      data.marginBasis = null;
+    }
     if (body?.maxUses === null || typeof body?.maxUses === "number") data.maxUses = body.maxUses;
+    if (typeof body?.allowedTiers === "string") data.allowedTiers = body.allowedTiers;
+    if (typeof body?.firstPurchaseOnly === "boolean") data.firstPurchaseOnly = body.firstPurchaseOnly;
+    if (body?.startsAt === null) data.startsAt = null;
+    else if (body?.startsAt) data.startsAt = new Date(body.startsAt);
+    if (body?.endsAt === null) data.endsAt = null;
+    else if (body?.endsAt) data.endsAt = new Date(body.endsAt);
 
     const coupon = await prisma.distributorCoupon.update({
       where: { id: couponId },

@@ -10,6 +10,11 @@ import {
   type SubscriptionIntervalKey,
 } from "@/lib/subscription-checkout";
 import { finalizeSubscriptionPayment } from "@/lib/subscription-payment";
+import {
+  couponAllowsTier,
+  couponIsInValidityWindow,
+} from "@/lib/distributor-margin";
+import { logDistributorEvent } from "@/lib/observability-distributor";
 
 function getRazorpayClient() {
   const keyId = process.env.RAZORPAY_KEY_ID;
@@ -27,6 +32,48 @@ export type CreateSubscriptionOrderInput = {
   distributorCouponCode?: string | null;
 };
 
+async function assertCouponUsableForCheckout(
+  coupon: {
+    id: string;
+    customerDiscountPercent: Prisma.Decimal | number;
+    distributor: { status: string };
+    maxUses: number | null;
+    usedCount: number;
+    allowedTiers: string;
+    startsAt: Date | null;
+    endsAt: Date | null;
+    firstPurchaseOnly: boolean;
+  },
+  interval: SubscriptionIntervalKey,
+  workspaceId: string,
+  opts?: { skipFirstPurchaseCheck?: boolean },
+) {
+  if (!couponAllowsTier(coupon.allowedTiers, interval)) {
+    throw new Error("This coupon is not valid for the selected plan");
+  }
+  if (!couponIsInValidityWindow(coupon.startsAt, coupon.endsAt)) {
+    throw new Error("This coupon is not valid at this time");
+  }
+  if (coupon.distributor.status !== "ACTIVE") {
+    throw new Error("Invalid or inactive distributor coupon");
+  }
+  if (coupon.maxUses != null && coupon.usedCount >= coupon.maxUses) {
+    throw new Error("This coupon has reached its usage limit");
+  }
+  if (!opts?.skipFirstPurchaseCheck && coupon.firstPurchaseOnly) {
+    const ws = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { hasEverSubscribed: true },
+    });
+    const prior = await prisma.billingTransaction.count({
+      where: { workspaceId, status: "PAID" },
+    });
+    if (prior > 0 || ws?.hasEverSubscribed) {
+      throw new Error("This coupon is only valid for your first subscription purchase");
+    }
+  }
+}
+
 export async function createSubscriptionRazorpayOrder(input: CreateSubscriptionOrderInput) {
   const { workspaceId, userId, interval } = input;
 
@@ -36,25 +83,28 @@ export async function createSubscriptionRazorpayOrder(input: CreateSubscriptionO
 
   let coupon: {
     id: string;
-    customerDiscountPercent: unknown;
+    customerDiscountPercent: Prisma.Decimal | number;
     distributor: { status: string };
     maxUses: number | null;
     usedCount: number;
+    allowedTiers: string;
+    startsAt: Date | null;
+    endsAt: Date | null;
+    firstPurchaseOnly: boolean;
   } | null = null;
 
   const rawCode = input.distributorCouponCode?.trim();
   if (rawCode) {
     const code = normalizeDistributorCouponCode(rawCode);
-    coupon = await prisma.distributorCoupon.findFirst({
+    const found = await prisma.distributorCoupon.findFirst({
       where: { code, isActive: true },
       include: { distributor: { select: { status: true } } },
     });
-    if (!coupon || coupon.distributor.status !== "ACTIVE") {
+    if (!found) {
       throw new Error("Invalid or inactive distributor coupon");
     }
-    if (coupon.maxUses != null && coupon.usedCount >= coupon.maxUses) {
-      throw new Error("This coupon has reached its usage limit");
-    }
+    await assertCouponUsableForCheckout(found, interval, workspaceId);
+    coupon = found;
   } else {
     const attr = await prisma.distributorAttribution.findUnique({
       where: { workspaceId },
@@ -64,7 +114,8 @@ export async function createSubscriptionRazorpayOrder(input: CreateSubscriptionO
         },
       },
     });
-    if (attr?.coupon?.isActive && attr.coupon.distributor.status === "ACTIVE") {
+    if (attr?.coupon?.isActive) {
+      await assertCouponUsableForCheckout(attr.coupon, interval, workspaceId);
       coupon = attr.coupon;
     }
   }
@@ -85,6 +136,7 @@ export async function createSubscriptionRazorpayOrder(input: CreateSubscriptionO
     interval,
     listAmountInr: String(listInr),
     chargeAmountInr: String(chargeInr),
+    currency: "INR",
   };
   if (coupon) {
     notes.distributorCouponId = coupon.id;
@@ -97,6 +149,15 @@ export async function createSubscriptionRazorpayOrder(input: CreateSubscriptionO
     currency: "INR",
     receipt: `sub_${Date.now()}_${userId.substring(0, 5)}`,
     notes,
+  });
+
+  logDistributorEvent("subscription_order_created", {
+    workspaceId,
+    orderId: order.id,
+    interval,
+    listAmountInr: listInr,
+    chargeAmountInr: chargeInr,
+    couponId: coupon?.id ?? null,
   });
 
   return {
@@ -114,6 +175,7 @@ export async function processRazorpaySubscriptionPaymentVerified(paymentId: stri
   const razorpay = getRazorpayClient();
   const payment = await razorpay.payments.fetch(paymentId);
   const amountPaid = Number(payment.amount) / 100;
+  const payCurrency = String((payment as { currency?: string }).currency || "INR").toUpperCase();
 
   const notes = (payment.notes ?? {}) as Record<string, string | undefined>;
   const workspaceId = notes.workspaceId;
@@ -144,6 +206,9 @@ export async function processRazorpaySubscriptionPaymentVerified(paymentId: stri
     if (Math.abs(expectedDiscount - discountPct) > 0.01) {
       throw new Error("Coupon discount mismatch");
     }
+    await assertCouponUsableForCheckout(coupon, interval, workspaceId, {
+      skipFirstPurchaseCheck: true,
+    });
     if (!paidMatchesPlan(amountPaid, interval, expectedDiscount)) {
       throw new Error("Insufficient payment amount for this plan and coupon");
     }
@@ -162,6 +227,15 @@ export async function processRazorpaySubscriptionPaymentVerified(paymentId: stri
       ? (payment as { customer_id: string }).customer_id
       : null;
 
+  logDistributorEvent("subscription_payment_verify", {
+    workspaceId,
+    paymentId,
+    interval,
+    amountPaid,
+    currency: payCurrency,
+    couponId: couponId ?? null,
+  });
+
   await finalizeSubscriptionPayment({
     workspaceId,
     amountPaid,
@@ -172,5 +246,6 @@ export async function processRazorpaySubscriptionPaymentVerified(paymentId: stri
     description,
     distributorCouponId: couponId,
     billingProviderCustomerId: customerId,
+    currency: payCurrency,
   });
 }

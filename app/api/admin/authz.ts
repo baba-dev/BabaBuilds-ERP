@@ -16,6 +16,14 @@ export class AuthzError extends Error {
   }
 }
 
+function superAdminEmails(): Set<string> {
+  const raw = process.env.SUPERADMIN_EMAILS?.trim();
+  const list = raw
+    ? raw.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean)
+    : ["admin@bababuilds.com"];
+  return new Set(list);
+}
+
 export async function verifySuperAdmin() {
   const session = await getServerSession(authOptions);
 
@@ -23,7 +31,8 @@ export async function verifySuperAdmin() {
     throw new AuthzError("UNAUTHORIZED");
   }
 
-  if (session.user?.email?.toLowerCase() !== "admin@bababuilds.com") {
+  const email = session.user?.email?.toLowerCase();
+  if (!email || !superAdminEmails().has(email)) {
     throw new AuthzError("FORBIDDEN", "Admin role required");
   }
 }

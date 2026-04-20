@@ -3,6 +3,14 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { normalizeDistributorCouponCode, decimalToNumber } from "@/lib/distributor-coupon";
+import { couponIsInValidityWindow } from "@/lib/distributor-margin";
+import { checkRateLimit } from "@/lib/rate-limit-memory";
+
+function clientKey(req: Request) {
+  const xf = req.headers.get("x-forwarded-for");
+  const ip = xf?.split(",")[0]?.trim() || "unknown";
+  return `apply-coupon:${ip}`;
+}
 
 export async function GET() {
   try {
@@ -48,6 +56,14 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const limited = checkRateLimit(clientKey(req), 30, 60_000);
+    if (!limited.ok) {
+      return NextResponse.json(
+        { error: "Too many attempts. Try again shortly.", retryAfterMs: limited.retryAfterMs },
+        { status: 429 },
+      );
+    }
+
     const session = await getServerSession(authOptions);
     const workspaceId = (session as { workspaceId?: string } | null)?.workspaceId;
     if (!session || !workspaceId) {
@@ -73,6 +89,26 @@ export async function POST(req: Request) {
 
     if (coupon.maxUses != null && coupon.usedCount >= coupon.maxUses) {
       return NextResponse.json({ error: "This coupon has reached its usage limit" }, { status: 409 });
+    }
+
+    if (!couponIsInValidityWindow(coupon.startsAt, coupon.endsAt)) {
+      return NextResponse.json({ error: "This coupon is not valid at this time" }, { status: 400 });
+    }
+
+    if (coupon.firstPurchaseOnly) {
+      const ws = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { hasEverSubscribed: true },
+      });
+      const prior = await prisma.billingTransaction.count({
+        where: { workspaceId, status: "PAID" },
+      });
+      if (prior > 0 || ws?.hasEverSubscribed) {
+        return NextResponse.json(
+          { error: "This coupon is only valid for your first subscription purchase" },
+          { status: 400 },
+        );
+      }
     }
 
     await prisma.distributorAttribution.upsert({

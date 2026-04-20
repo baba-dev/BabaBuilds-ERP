@@ -3,6 +3,13 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { createSubscriptionRazorpayOrder } from "@/lib/razorpay-subscription";
 import type { SubscriptionIntervalKey } from "@/lib/subscription-checkout";
+import { checkRateLimit } from "@/lib/rate-limit-memory";
+
+function orderKey(req: Request, workspaceId: string) {
+  const xf = req.headers.get("x-forwarded-for");
+  const ip = xf?.split(",")[0]?.trim() || "unknown";
+  return `razorpay-order:${workspaceId}:${ip}`;
+}
 
 export async function POST(req: Request) {
   try {
@@ -15,6 +22,14 @@ export async function POST(req: Request) {
     const userId = (session.user as { id?: string }).id;
     if (!workspaceId || !userId) {
       return NextResponse.json({ error: "Missing workspace context" }, { status: 400 });
+    }
+
+    const rl = checkRateLimit(orderKey(req, workspaceId), 20, 60_000);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: "Too many checkout attempts. Try again shortly.", retryAfterMs: rl.retryAfterMs },
+        { status: 429 },
+      );
     }
 
     const body = await req.json();

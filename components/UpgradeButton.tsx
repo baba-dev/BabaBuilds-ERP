@@ -117,6 +117,12 @@ export function ProUpgradeCard({ locale = "en-IN", currency = "INR" }: { locale?
     void loadSavedCoupon();
   }, [loadSavedCoupon]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const q = new URLSearchParams(window.location.search).get("coupon")?.trim();
+    if (q) setCouponInput(q);
+  }, []);
+
   const applyCoupon = async () => {
     const toastId = toast.loading("Applying coupon...");
     try {

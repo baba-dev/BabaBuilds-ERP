@@ -168,6 +168,25 @@ enum ProposalConversionType {
   MILESTONE_BILLING
 }
 
+enum DistributorCommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+  VOID
+  CLAWED_BACK
+}
+
+/// LIST = margin % × catalog list price; PAID = margin % × amount customer paid
+enum DistributorMarginBasis {
+  LIST
+  PAID
+}
+
+enum DistributorPayoutStatus {
+  DRAFT
+  PAID
+}
+
 // ==========================================
 // DISTRIBUTOR / CHANNEL PARTNERS (subscription coupons & margins)
 // ==========================================
@@ -181,6 +200,12 @@ model Distributor {
   /// Default partner margin % of list price (catalog). Per-coupon can override.
   defaultMarginPercent Decimal @default(0)
 
+  /// Default: commission = margin% × list; PAID = margin% × net paid
+  defaultMarginBasis DistributorMarginBasis @default(LIST)
+
+  /// Optional JSON map of interval -> margin percent, e.g. {"MONTHLY":12,"YEARLY":10}
+  marginByPlanJson Json?
+
   notes String?
 
   createdAt DateTime @default(now())
@@ -189,6 +214,9 @@ model Distributor {
   coupons      DistributorCoupon[]
   attributions DistributorAttribution[]
   commissions  DistributorCommission[]
+  payouts      DistributorPayout[]
+  auditLogs    DistributorAuditLog[]
+  partnerUsers User[]
 }
 
 model DistributorCoupon {
@@ -206,6 +234,17 @@ model DistributorCoupon {
   /// Partner margin % of list price for commission reporting (independent of discount)
   marginPercent Decimal @default(0)
 
+  /// Overrides distributor default when set
+  marginBasis DistributorMarginBasis?
+
+  /// Comma-separated: PRO, TEAM or ALL
+  allowedTiers String @default("PRO,TEAM")
+
+  firstPurchaseOnly Boolean @default(false)
+
+  startsAt DateTime?
+  endsAt   DateTime?
+
   isActive Boolean @default(true)
   maxUses  Int?
   usedCount Int @default(0)
@@ -218,6 +257,44 @@ model DistributorCoupon {
   billingTransactions BillingTransaction[]
 
   @@index([distributorId, isActive])
+}
+
+model DistributorPayout {
+  id String @id @default(cuid())
+
+  distributorId String
+  distributor     Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+
+  status      DistributorPayoutStatus @default(DRAFT)
+  periodLabel String?
+  totalAmount Decimal               @default(0)
+  method      String?
+  reference   String?
+  paidAt      DateTime?
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  commissions DistributorCommission[]
+
+  @@index([distributorId, status, createdAt])
+}
+
+model DistributorAuditLog {
+  id String @id @default(cuid())
+
+  distributorId String?
+  distributor   Distributor? @relation(fields: [distributorId], references: [id], onDelete: SetNull)
+
+  actorEmail String?
+  action     String
+  metadata   Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([distributorId, createdAt])
+  @@index([createdAt])
 }
 
 /// One workspace is attributed to at most one distributor (latest applied coupon wins).
@@ -263,10 +340,23 @@ model DistributorCommission {
   /// Commission = listAmount * marginPercent / 100
   commissionAmount Decimal @default(0)
 
+  status DistributorCommissionStatus @default(PENDING)
+
+  /// Snapshot: LIST or PAID basis used for this row
+  marginBasisUsed DistributorMarginBasis @default(LIST)
+
+  payoutId String?
+  payout   DistributorPayout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+
+  clawbackReason String?
+  reversedAt     DateTime?
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([distributorId, createdAt])
   @@index([workspaceId, createdAt])
+  @@index([status, distributorId])
 }
 
 // ==========================================
@@ -311,6 +401,12 @@ model User {
   inAppNotifications InAppNotification[]
   onboarding         UserOnboarding?
   userPreference     UserPreference?
+
+  /// When set, this user can access the distributor partner portal for this partner record
+  distributorPartnerId String?
+  distributorPartner   Distributor? @relation(fields: [distributorPartnerId], references: [id], onDelete: SetNull)
+
+  @@index([distributorPartnerId])
 }
 
 model UserOnboarding {
@@ -390,6 +486,9 @@ model Workspace {
   planInterval      String? // "MONTHLY", "QUARTERLY", "YEARLY"
   paymentMethodMask String? // e.g., "•••• 4242" or "user@upi"
   billingProviderId String? // Stripe/Razorpay Customer ID
+
+  /// True after at least one successful paid subscription charge (for partner first-purchase coupons)
+  hasEverSubscribed Boolean @default(false)
 
   updatedAt DateTime @default(now()) @updatedAt
 
@@ -565,6 +664,11 @@ model BillingTransaction {
   distributorCoupon       DistributorCoupon? @relation(fields: [distributorCouponId], references: [id], onDelete: SetNull)
 
   distributorCommission DistributorCommission?
+
+  /// ISO 4217 for subscription charges (checkout currency)
+  subscriptionCurrency String? @default("INR")
+  /// e.g. MONTHLY, YEARLY — snapshot at payment time
+  subscriptionInterval String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
