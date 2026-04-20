@@ -555,19 +555,38 @@ export async function generateInvoicePDF({
     page.drawLine({ start: { x: width - 180, y: height - (bankY + 70) }, end: { x: width - 40, y: height - (bankY + 70) }, thickness: 1, color: black });
     drawText('Authorized Signatory', width - 40, bankY + 85, 9, false, 'right', textMuted);
 
+    const workspaceCountryCode = profile.workspace?.countryCode?.trim().toUpperCase() || 'IN';
+    const isIndiaWorkspace = workspaceCountryCode === 'IN';
+    const declarationLines = isIndiaWorkspace
+      ? [
+          "1. GST Exemption: We hereby declare that our aggregate turnover is below the statutory registration threshold",
+          "   prescribed under Section 22 of the CGST Act, 2017. Hence, GST is not applicable on this invoice.",
+          client.isExport
+            ? "2. Export of Service: This supply qualifies as an 'Export of Services' as defined under Section 2(6) of the"
+            : "2. Nature of Supply: This invoice represents a domestic supply of services within the territory of India.",
+          client.isExport
+            ? "   IGST Act, 2017. The recipient and place of supply are located outside India."
+            : "3. MSME Status: The service provider is a registered Micro Enterprise under the MSMED Act, 2006.",
+          client.isExport
+            ? "3. MSME Status: The service provider is a registered Micro Enterprise under the MSMED Act, 2006."
+            : null,
+        ].filter((line): line is string => Boolean(line))
+      : [
+          "1. Tax Treatment: This document applies the workspace's configured tax profile and registration settings.",
+          `   Applicable label: ${profile.taxLabel || 'VAT/Tax'} | Registration field: ${safeTaxIdLabel}.`,
+          client.isExport
+            ? "2. Cross-border Supply: Recipient and place-of-supply details are captured for export/international billing."
+            : "2. Domestic Supply: This invoice is issued as a domestic supply under the workspace's configured jurisdiction.",
+          "3. Compliance Note: Confirm filing obligations with your local tax advisor or authority guidance.",
+        ];
+
+    const declarationHeight = 45 + declarationLines.length * 12;
     const decY = bankY + 95 + (paymentLink ? 15 : 0);
-    drawRect(40, decY, width - 80, 105, bgLight, borderGray);
+    drawRect(40, decY, width - 80, declarationHeight, bgLight, borderGray);
     drawText('Statutory Declarations:', 55, decY + 20, 9, true, 'left', black);
-    drawText("1. GST Exemption: We hereby declare that our aggregate turnover is below the statutory registration threshold", 55, decY + 35, 8, false, 'left', textDark);
-    drawText("   prescribed under Section 22 of the CGST Act, 2017. Hence, GST is not applicable on this invoice.", 55, decY + 47, 8, false, 'left', textDark);
-    
-    if (client.isExport) {
-        drawText("2. Export of Service: This supply qualifies as an 'Export of Services' as defined under Section 2(6) of the", 55, decY + 62, 8, false, 'left', textDark);
-        drawText("   IGST Act, 2017. The recipient and place of supply are located outside India.", 55, decY + 74, 8, false, 'left', textDark);
-    } else {
-        drawText("2. Nature of Supply: This invoice represents a domestic supply of services within the territory of India.", 55, decY + 62, 8, false, 'left', textDark);
-    }
-    drawText("3. MSME Status: The service provider is a registered Micro Enterprise under the MSMED Act, 2006.", 55, decY + 89, 8, false, 'left', textDark);
+    declarationLines.forEach((line, index) => {
+      drawText(line, 55, decY + 35 + index * 12, 8, false, 'left', textDark);
+    });
 
     let metaStringValue = `${profile.companyName} | PAN: ${profile.panNumber}`;
     if (profile.udyamNumber) metaStringValue += ` | MSME: ${profile.udyamNumber}`;

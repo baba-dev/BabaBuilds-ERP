@@ -2,6 +2,10 @@ export type TaxValidationPreset =
   | 'IN_GST_CORE'
   | 'US_SALES_TAX_JURISDICTIONAL'
   | 'SA_ZATCA_EINVOICE'
+  | 'OM_OTA_VAT_CORE'
+  | 'QA_GTA_VAT_PREP'
+  | 'BH_NBR_VAT_CORE'
+  | 'KW_VAT_PREP'
   | 'BR_NFE_DOCUMENT_SERIES'
   | 'MX_CFDI_40'
   | 'DE_VAT_EU_B2B'
@@ -84,6 +88,62 @@ const COUNTRY_PACKS: ComplianceCountryPack[] = [
     validationPreset: 'SA_ZATCA_EINVOICE',
     providerPriority: ['manual_override', 'workspace_override', 'fallback'],
     jurisdictions: [{ code: 'SA', label: 'Saudi Arabia', rate: 0.15, level: 'national' }],
+  },
+  {
+    countryCode: 'OM',
+    countryName: 'Oman',
+    labels: {
+      indirectTaxName: 'VAT',
+      registrationLabel: 'VAT Registration Number',
+      returnLabel: 'VAT Return',
+    },
+    defaultRate: 0.05,
+    allowManualRateCorrection: true,
+    validationPreset: 'OM_OTA_VAT_CORE',
+    providerPriority: ['manual_override', 'workspace_override', 'fallback'],
+    jurisdictions: [{ code: 'OM', label: 'Oman', rate: 0.05, level: 'national' }],
+  },
+  {
+    countryCode: 'QA',
+    countryName: 'Qatar',
+    labels: {
+      indirectTaxName: 'VAT (Preparation)',
+      registrationLabel: 'Tax Registration Number',
+      returnLabel: 'VAT Return (when mandated)',
+    },
+    defaultRate: 0,
+    allowManualRateCorrection: true,
+    validationPreset: 'QA_GTA_VAT_PREP',
+    providerPriority: ['manual_override', 'workspace_override', 'fallback'],
+    jurisdictions: [{ code: 'QA', label: 'Qatar baseline', rate: 0, level: 'national', notes: 'Set manual rate when VAT becomes applicable.' }],
+  },
+  {
+    countryCode: 'BH',
+    countryName: 'Bahrain',
+    labels: {
+      indirectTaxName: 'VAT',
+      registrationLabel: 'VAT Registration Number',
+      returnLabel: 'VAT Return',
+    },
+    defaultRate: 0.1,
+    allowManualRateCorrection: true,
+    validationPreset: 'BH_NBR_VAT_CORE',
+    providerPriority: ['manual_override', 'workspace_override', 'fallback'],
+    jurisdictions: [{ code: 'BH', label: 'Bahrain', rate: 0.1, level: 'national' }],
+  },
+  {
+    countryCode: 'KW',
+    countryName: 'Kuwait',
+    labels: {
+      indirectTaxName: 'VAT (Preparation)',
+      registrationLabel: 'Tax Registration Number',
+      returnLabel: 'VAT Return (when mandated)',
+    },
+    defaultRate: 0,
+    allowManualRateCorrection: true,
+    validationPreset: 'KW_VAT_PREP',
+    providerPriority: ['manual_override', 'workspace_override', 'fallback'],
+    jurisdictions: [{ code: 'KW', label: 'Kuwait baseline', rate: 0, level: 'national', notes: 'Set manual rate when VAT becomes applicable.' }],
   },
   {
     countryCode: 'BR',

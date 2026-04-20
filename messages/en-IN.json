@@ -1252,6 +1252,26 @@
         "newDelhi": "New Delhi"
       }
     },
+    "regionalReadiness": {
+      "title": "Regional readiness for Oman & GCC",
+      "subtitle": "Transparent coverage for invoicing and tax workflows across Gulf markets.",
+      "badgeAdvanced": "Advanced pack available",
+      "badgeCore": "Country-aware core support",
+      "countries": {
+        "oman": "Oman",
+        "uae": "United Arab Emirates",
+        "saudi": "Saudi Arabia",
+        "qatar": "Qatar",
+        "bahrain": "Bahrain",
+        "kuwait": "Kuwait"
+      },
+      "signals": {
+        "vat": "VAT labels and registration terminology adapt by selected country.",
+        "remittance": "Remittance details support local routing conventions (for example, IBAN/SWIFT).",
+        "arabic": "Arabic UI and RTL layout are available for regional teams.",
+        "payments": "Stripe supports global invoice collections; Razorpay remains India/INR only."
+      }
+    },
     "features": {
       "headingPrefix": "Everything you need to",
       "headingHighlight": "scale with speed.",

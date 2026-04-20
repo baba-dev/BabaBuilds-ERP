@@ -55,6 +55,11 @@ export default function LandingContent() {
     { label: "Supported currencies", value: "25+" },
     { label: "Avg. setup time", value: "< 15 min" },
   ];
+  const regionalReadiness = [
+    t("regionalReadiness.items.omanGcc"),
+    t("regionalReadiness.items.advancedPacks"),
+    t("regionalReadiness.items.expandingCoverage"),
+  ];
 
   const features = [
     {
@@ -321,6 +326,18 @@ export default function LandingContent() {
                 <p className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-muted-body">{metric.label}</p>
               </motion.div>
             ))}
+          </div>
+          <div className="mt-8 rounded-2xl border border-border/80 bg-surface-elevated px-6 py-5 shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-body">{t("regionalReadiness.title")}</p>
+            <p className="mt-2 text-sm text-muted-body">{t("regionalReadiness.subtitle")}</p>
+            <ul className="mt-4 space-y-2">
+              {regionalReadiness.map((item) => (
+                <li key={item} className="text-sm text-foreground/90">
+                  <span aria-hidden className="mr-2 text-emerald-500">•</span>
+                  {item}
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>

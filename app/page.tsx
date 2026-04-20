@@ -6,14 +6,16 @@ const SITE_URL = "https://erp.bababuilds.com";
 export const metadata: Metadata = {
   title: "BabaBuilds ERP | Automated Invoicing, Reconciliation & Tax Compliance",
   description:
-    "The global command center for bookkeeping and growth. Automate multi-currency invoices, manage clients, reconcile bank statements with AI, and stay GST/VAT compliant — built for agencies, freelancers, and MSMEs.",
+    "The global command center for bookkeeping and growth. Automate multi-currency invoices, manage clients, reconcile bank statements with AI, and stay GST/VAT compliant with region-aware setup — built for agencies, freelancers, and MSMEs.",
   keywords: [
     "Invoices",
     "Reconcile",
     "ERP for Freelancers",
     "Automated Bookkeeping",
     "GST Compliance",
-    "VAT Compliance Oman",
+    "VAT setup Oman",
+    "VAT setup UAE",
+    "VAT setup Saudi Arabia",
     "MSME Registered",
     "Multi-currency Invoicing",
     "Bank Reconciliation",
@@ -70,7 +72,7 @@ const faqJsonLd = {
       name: "Does BabaBuilds ERP support GST and VAT compliance?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes. BabaBuilds ERP automatically calculates GST (India), VAT (Oman, GCC), and supports zero-rated export invoicing. Tax rates are configurable per jurisdiction and client type.",
+        text: "Yes. BabaBuilds ERP supports GST/VAT workflows with country-aware setup defaults, configurable tax rates, and zero-rated export invoicing. Advanced compliance packs are available for select markets, while additional jurisdictions are supported through core country-aware setup and are being expanded.",
       },
     },
     {
