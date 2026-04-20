@@ -168,6 +168,246 @@ enum ProposalConversionType {
   MILESTONE_BILLING
 }
 
+enum DistributorCommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+  VOID
+  CLAWED_BACK
+}
+
+enum ResellerStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum CouponAudience {
+  RESELLER
+  CUSTOMER_REFERRAL
+}
+
+enum CouponDiscountType {
+  PERCENT
+  FIXED
+}
+
+enum LeadStage {
+  LEAD
+  QUALIFIED
+  WON
+  LOST
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+  VOID
+}
+
+/// LIST = margin % × catalog list price; PAID = margin % × amount customer paid
+enum DistributorMarginBasis {
+  LIST
+  PAID
+}
+
+enum DistributorPayoutStatus {
+  DRAFT
+  PAID
+}
+
+// ==========================================
+// DISTRIBUTOR / CHANNEL PARTNERS (subscription coupons & margins)
+// ==========================================
+
+model Distributor {
+  id     String @id @default(cuid())
+  name   String
+  email  String @unique
+  status String @default("ACTIVE") // ACTIVE | INACTIVE
+
+  /// Default partner margin % of list price (catalog). Per-coupon can override.
+  defaultMarginPercent Decimal @default(0)
+
+  /// Default: commission = margin% × list; PAID = margin% × net paid
+  defaultMarginBasis DistributorMarginBasis @default(LIST)
+
+  /// Optional JSON map of interval -> margin percent, e.g. {"MONTHLY":12,"YEARLY":10}
+  marginByPlanJson Json?
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  coupons      DistributorCoupon[]
+  attributions DistributorAttribution[]
+  commissions  DistributorCommission[]
+  payouts      DistributorPayout[]
+  auditLogs    DistributorAuditLog[]
+  partnerUsers User[]
+}
+
+model DistributorCoupon {
+  id String @id @default(cuid())
+
+  distributorId String
+  distributor     Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+
+  /// Uppercase normalized code (e.g. PARTNER-ABC123)
+  code String @unique
+
+  /// Customer-facing discount % off list subscription price at checkout
+  customerDiscountPercent Decimal @default(0)
+
+  /// Partner margin % of list price for commission reporting (independent of discount)
+  marginPercent Decimal @default(0)
+
+  /// Overrides distributor default when set
+  marginBasis DistributorMarginBasis?
+
+  /// Comma-separated: PRO, TEAM or ALL
+  allowedTiers String @default("PRO,TEAM")
+
+  firstPurchaseOnly Boolean @default(false)
+
+  startsAt DateTime?
+  endsAt   DateTime?
+
+  isActive Boolean @default(true)
+  maxUses  Int?
+  usedCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attributions DistributorAttribution[]
+  commissions  DistributorCommission[]
+  billingTransactions BillingTransaction[]
+
+  @@index([distributorId, isActive])
+}
+
+model DistributorPayout {
+  id String @id @default(cuid())
+
+  distributorId String
+  distributor     Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+
+  status      DistributorPayoutStatus @default(DRAFT)
+  periodLabel String?
+  totalAmount Decimal               @default(0)
+  method      String?
+  reference   String?
+  paidAt      DateTime?
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  commissions DistributorCommission[]
+
+  @@index([distributorId, status, createdAt])
+}
+
+model DistributorAuditLog {
+  id String @id @default(cuid())
+
+  distributorId String?
+  distributor   Distributor? @relation(fields: [distributorId], references: [id], onDelete: SetNull)
+
+  actorEmail String?
+  action     String
+  metadata   Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([distributorId, createdAt])
+  @@index([createdAt])
+}
+
+/// One workspace is attributed to at most one distributor (latest applied coupon wins).
+model DistributorAttribution {
+  id String @id @default(cuid())
+
+  couponId String
+  coupon     DistributorCoupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  distributorId String
+  distributor     Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+
+  workspaceId String    @unique
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  appliedAt DateTime @default(now())
+
+  @@index([distributorId, appliedAt])
+}
+
+/// One commission row per successful subscription payment (billing transaction).
+model DistributorCommission {
+  id String @id @default(cuid())
+
+  distributorId String
+  distributor     Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+
+  couponId String?
+  coupon     DistributorCoupon? @relation(fields: [couponId], references: [id], onDelete: SetNull)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  billingTransactionId String @unique
+  billingTransaction   BillingTransaction @relation(fields: [billingTransactionId], references: [id], onDelete: Cascade)
+
+  /// Catalog list amount (INR) before distributor coupon discount
+  listAmount Decimal @default(0)
+  /// Amount the customer actually paid (INR)
+  paidAmount Decimal @default(0)
+  /// Snapshot of margin % used for this sale
+  marginPercent Decimal @default(0)
+  /// Commission = listAmount * marginPercent / 100
+  commissionAmount Decimal @default(0)
+
+  status DistributorCommissionStatus @default(PENDING)
+
+  /// Snapshot: LIST or PAID basis used for this row
+  marginBasisUsed DistributorMarginBasis @default(LIST)
+
+  payoutId String?
+  payout   DistributorPayout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+
+  clawbackReason String?
+  reversedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([distributorId, createdAt])
+  @@index([workspaceId, createdAt])
+  @@index([status, distributorId])
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+}
+
+enum ReferralRewardType {
+  FREE_MONTH
+  WALLET_CREDIT
+}
+
+enum ReferralRewardStatus {
+  PENDING
+  APPROVED
+  APPLIED
+  CANCELLED
+}
+
 // ==========================================
 // 1. AUTHENTICATION (NextAuth Standard)
 // ==========================================
@@ -210,6 +450,14 @@ model User {
   inAppNotifications InAppNotification[]
   onboarding         UserOnboarding?
   userPreference     UserPreference?
+
+  /// When set, this user can access the distributor partner portal for this partner record
+  distributorPartnerId String?
+  distributorPartner   Distributor? @relation(fields: [distributorPartnerId], references: [id], onDelete: SetNull)
+
+  referralProfile    CustomerReferralProfile?
+
+  @@index([distributorPartnerId])
 }
 
 model UserOnboarding {
@@ -290,6 +538,9 @@ model Workspace {
   paymentMethodMask String? // e.g., "•••• 4242" or "user@upi"
   billingProviderId String? // Stripe/Razorpay Customer ID
 
+  /// True after at least one successful paid subscription charge (for partner first-purchase coupons)
+  hasEverSubscribed Boolean @default(false)
+
   updatedAt DateTime @default(now()) @updatedAt
 
   // RELATIONS
@@ -298,6 +549,10 @@ model Workspace {
   clients                         Client[]
   invoices                        Invoice[]
   billingTransactions             BillingTransaction[]
+  resellerLeads                  ResellerLead[]
+  customerReferralProfiles       CustomerReferralProfile[]
+  referralRedemptions            CustomerReferralRedemption[]
+  referralRewards                CustomerReferralReward[]       @relation("ReferrerWorkspace")
   expenses                        Expense[]
   withholdingEvents               WithholdingEvent[]
   taxCreditEvents                 TaxCreditEvent[]
@@ -338,6 +593,8 @@ model Workspace {
   fileImportAuditLogs             FileImportAuditLog[]
   appActivityLogs                 AppActivityLog[]
   workspaceInvites                WorkspaceInvite[]
+  distributorAttribution         DistributorAttribution?
+  distributorCommissions         DistributorCommission[]
   accountingTransactions          AccountingTransaction[]
   accountingIntegrityRuns         AccountingIntegrityRun[]
   accountingViolationReports      AccountingViolationReport[]
@@ -394,6 +651,193 @@ model Workspace {
   @@index([isDemo])
   @@index([demoExpiresAt])
   @@index([demoTemplateKey])
+}
+
+model ResellerAccount {
+  id String @id @default(cuid())
+
+  name  String
+  email String @unique
+
+  status                   ResellerStatus @default(ACTIVE)
+  defaultCustomerDiscount  Decimal        @default(25)
+  defaultCommissionPercent Decimal        @default(12.5)
+  payoutTerms              String         @default("Net 30")
+  notes                    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  coupons     ResellerCoupon[]
+  leads       ResellerLead[]
+  commissions ResellerCommission[]
+  payouts     ResellerPayout[]
+}
+
+model ResellerCoupon {
+  id String @id @default(cuid())
+
+  resellerId String
+  reseller   ResellerAccount @relation(fields: [resellerId], references: [id], onDelete: Cascade)
+
+  code             String             @unique
+  audience         CouponAudience     @default(RESELLER)
+  discountType     CouponDiscountType @default(PERCENT)
+  discountValue    Decimal            @default(25)
+  commissionPercent Decimal           @default(12.5)
+  firstPurchaseOnly Boolean           @default(true)
+  firstYearOnly     Boolean           @default(true)
+  isActive          Boolean           @default(true)
+  maxUses           Int?
+  usedCount         Int               @default(0)
+  startsAt          DateTime?
+  endsAt            DateTime?
+  metadata          Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leads ResellerLead[]
+
+  @@index([resellerId, isActive])
+}
+
+model ResellerLead {
+  id String @id @default(cuid())
+
+  resellerId String
+  reseller   ResellerAccount @relation(fields: [resellerId], references: [id], onDelete: Cascade)
+
+  couponId String?
+  coupon   ResellerCoupon? @relation(fields: [couponId], references: [id], onDelete: SetNull)
+
+  workspaceId String @unique
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  stage         LeadStage @default(LEAD)
+  conversionAt  DateTime?
+  closedDealValue Decimal?
+  notes         String?
+  metadata      Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  commissions ResellerCommission[]
+
+  @@index([resellerId, stage, createdAt])
+}
+
+model ResellerCommission {
+  id String @id @default(cuid())
+
+  resellerId String
+  reseller   ResellerAccount @relation(fields: [resellerId], references: [id], onDelete: Cascade)
+
+  leadId String?
+  lead   ResellerLead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  billingTransactionId String?
+  billingTransaction   BillingTransaction? @relation(fields: [billingTransactionId], references: [id], onDelete: SetNull)
+
+  dealAmount         Decimal @default(0)
+  commissionPercent  Decimal @default(0)
+  commissionAmount   Decimal @default(0)
+  status             CommissionStatus @default(PENDING)
+  notes              String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  payoutId String?
+  payout   ResellerPayout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+
+  @@index([resellerId, status, createdAt])
+}
+
+model ResellerPayout {
+  id String @id @default(cuid())
+
+  resellerId String
+  reseller   ResellerAccount @relation(fields: [resellerId], references: [id], onDelete: Cascade)
+
+  payoutDate DateTime?
+  method     String?
+  reference  String?
+  totalAmount Decimal @default(0)
+  status      PayoutStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  commissions ResellerCommission[]
+
+  @@index([resellerId, status, createdAt])
+}
+
+model CustomerReferralProfile {
+  id String @id @default(cuid())
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  code           String  @unique
+  isActive       Boolean @default(true)
+  shareLink      String?
+  totalReferrals Int     @default(0)
+  successfulReferrals Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  redemptions CustomerReferralRedemption[]
+
+  @@index([workspaceId, isActive])
+}
+
+model CustomerReferralRedemption {
+  id String @id @default(cuid())
+
+  profileId String
+  profile   CustomerReferralProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  referredWorkspaceId String @unique
+  referredWorkspace   Workspace @relation(fields: [referredWorkspaceId], references: [id], onDelete: Cascade)
+
+  friendDiscountPercent Decimal @default(20)
+  convertedAt           DateTime?
+  metadata              Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rewards CustomerReferralReward[]
+
+  @@index([profileId, createdAt])
+}
+
+model CustomerReferralReward {
+  id String @id @default(cuid())
+
+  redemptionId String
+  redemption   CustomerReferralRedemption @relation(fields: [redemptionId], references: [id], onDelete: Cascade)
+
+  referrerWorkspaceId String
+  referrerWorkspace   Workspace @relation("ReferrerWorkspace", fields: [referrerWorkspaceId], references: [id], onDelete: Cascade)
+
+  rewardType ReferralRewardType   @default(WALLET_CREDIT)
+  rewardStatus ReferralRewardStatus @default(PENDING)
+  walletCreditAmount Decimal?
+  freeMonthsCount     Int?
+  notes               String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([referrerWorkspaceId, rewardStatus, createdAt])
 }
 
 model DemoProvisionAttempt {
@@ -456,11 +900,26 @@ model BillingTransaction {
   providerReference String?
   receiptUrl        String?
 
+  /// Catalog subscription list price (INR) for this charge before distributor coupon discount.
+  subscriptionListAmount Decimal?
+  distributorCouponId     String?
+  distributorCoupon       DistributorCoupon? @relation(fields: [distributorCouponId], references: [id], onDelete: SetNull)
+
+  distributorCommission DistributorCommission?
+
+  /// ISO 4217 for subscription charges (checkout currency)
+  subscriptionCurrency String? @default("INR")
+  /// e.g. MONTHLY, YEARLY — snapshot at payment time
+  subscriptionInterval String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  resellerCommissions ResellerCommission[]
+
   @@unique([workspaceId, providerReference])
   @@index([workspaceId, transactionDate])
+  @@index([distributorCouponId])
 }
 
 model FinancialOperationIdempotency {

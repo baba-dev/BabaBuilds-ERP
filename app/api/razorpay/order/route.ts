@@ -1,22 +1,16 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import Razorpay from "razorpay";
-import { prisma } from "@/lib/prisma";
-import { PLAN_INTERVALS, getPlanPriceFromInterval, getPricingRegion, type PlanInterval, type PricingRegion } from "@/lib/pricing";
+import { createSubscriptionRazorpayOrder } from "@/lib/razorpay-subscription";
+import type { SubscriptionIntervalKey } from "@/lib/subscription-checkout";
+import type { PricingRegion } from "@/lib/pricing";
+import { PRICING_REGIONS } from "@/lib/pricing";
+import { checkRateLimit } from "@/lib/rate-limit-memory";
 
-function getRazorpayClient() {
-  const keyId = process.env.RAZORPAY_KEY_ID;
-  const keySecret = process.env.RAZORPAY_KEY_SECRET;
-
-  if (!keyId || !keySecret) {
-    throw new Error('Razorpay credentials are not configured');
-  }
-
-  return new Razorpay({
-    key_id: keyId,
-    key_secret: keySecret,
-  });
+function orderKey(req: Request, workspaceId: string) {
+  const xf = req.headers.get("x-forwarded-for");
+  const ip = xf?.split(",")[0]?.trim() || "unknown";
+  return `razorpay-order:${workspaceId}:${ip}`;
 }
 
 export async function POST(req: Request) {
@@ -26,52 +20,51 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-    const interval = body?.interval as PlanInterval | undefined;
-    const explicitRegion = body?.pricingRegion as PricingRegion | undefined;
-    if (!interval || !PLAN_INTERVALS.includes(interval) || interval === "QUARTERLY") {
-      return NextResponse.json({ error: "Invalid plan selected" }, { status: 400 });
+    const workspaceId = (session as { workspaceId?: string }).workspaceId;
+    const userId = (session.user as { id?: string }).id;
+    if (!workspaceId || !userId) {
+      return NextResponse.json({ error: "Missing workspace context" }, { status: 400 });
     }
 
-    const workspace = await prisma.workspace.findUnique({
-      where: { id: (session as any).workspaceId },
-      select: { countryCode: true, baseCurrency: true },
-    });
+    const rl = checkRateLimit(orderKey(req, workspaceId), 20, 60_000);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: "Too many checkout attempts. Try again shortly.", retryAfterMs: rl.retryAfterMs },
+        { status: 429 },
+      );
+    }
 
-    const planPrice = getPlanPriceFromInterval({
-      interval,
-      region: getPricingRegion({
-        explicitRegion,
-        billingCountryCode: workspace?.countryCode,
-        explicitCurrency: workspace?.baseCurrency,
-      }),
-    });
-
-    const options = {
-      amount: planPrice.amountMinor,
-      currency: planPrice.currency,
-      receipt: `receipt_${Date.now()}_${(session.user as any).id.substring(0, 5)}`,
-      notes: {
-        userId: (session.user as any).id,
-        workspaceId: (session as any).workspaceId,
-        interval: planPrice.interval,
-        pricingRegion: planPrice.region,
-        pricingCurrency: planPrice.currency,
-        pricingAmountMajor: String(planPrice.amountMajor),
-      },
+    const body = await req.json();
+    const { interval, distributorCouponCode, pricingRegion: rawRegion } = body as {
+      interval?: string;
+      distributorCouponCode?: string | null;
+      pricingRegion?: string | null;
     };
 
-    const razorpay = getRazorpayClient();
-    const order = await razorpay.orders.create(options);
+    const pricingRegion =
+      typeof rawRegion === "string" && PRICING_REGIONS.includes(rawRegion as PricingRegion)
+        ? (rawRegion as PricingRegion)
+        : undefined;
 
-    return NextResponse.json({ 
-      id: order.id, 
-      amount: order.amount, 
-      currency: order.currency 
+    const result = await createSubscriptionRazorpayOrder({
+      workspaceId,
+      userId,
+      interval: interval as SubscriptionIntervalKey,
+      distributorCouponCode: distributorCouponCode ?? undefined,
+      pricingRegion,
     });
 
+    return NextResponse.json({
+      id: result.order.id,
+      amount: result.order.amount,
+      currency: result.order.currency,
+      listAmountInr: result.listAmountInr,
+      chargeAmountInr: result.chargeAmountInr,
+      distributorCouponId: result.distributorCouponId,
+    });
   } catch (error) {
     console.error("Razorpay Order Error:", error);
-    return NextResponse.json({ error: "Failed to initialize checkout" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Failed to initialize checkout";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }

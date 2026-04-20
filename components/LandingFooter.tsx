@@ -26,6 +26,7 @@ export default function LandingFooter() {
     {
       title: "Legal",
       links: [
+        { name: "Reseller Program", href: "/reseller" },
         { name: "Privacy Policy", href: "/help/privacy" },
         { name: "Terms of Service", href: "/help/terms" },
         { name: "Help Center", href: "/help" },

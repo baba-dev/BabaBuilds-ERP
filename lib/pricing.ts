@@ -1,3 +1,8 @@
+/**
+ * Central catalog for subscription pricing by region. Amounts are in major units (e.g. INR rupees, USD dollars).
+ * Annual = 10× monthly (two months free vs paying monthly for a year).
+ */
+
 export const PRICING_REGIONS = ["IN", "US", "EU", "OM", "ROW"] as const;
 export type PricingRegion = (typeof PRICING_REGIONS)[number];
 
@@ -17,10 +22,13 @@ const EU_COUNTRY_CODES = new Set<string>([
   "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE", "IT", "LV", "LT", "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE",
 ]);
 
-const PRICING_MATRIX: Record<PricingRegion, {
-  currency: SupportedCurrency;
-  monthly: Record<PlanId, number>;
-}> = {
+const PRICING_MATRIX: Record<
+  PricingRegion,
+  {
+    currency: SupportedCurrency;
+    monthly: Record<PlanId, number>;
+  }
+> = {
   IN: { currency: "INR", monthly: { pro: 1499, team: 3499 } },
   US: { currency: "USD", monthly: { pro: 5, team: 15 } },
   EU: { currency: "EUR", monthly: { pro: 5, team: 15 } },
@@ -28,7 +36,8 @@ const PRICING_MATRIX: Record<PricingRegion, {
   ROW: { currency: "USD", monthly: { pro: 5, team: 15 } },
 };
 
-const MINOR_UNITS: Record<SupportedCurrency, number> = {
+/** Razorpay "amount" field uses the smallest currency unit; OMR uses 3 decimal places (×1000). */
+export const MINOR_UNITS_PER_MAJOR_UNIT: Record<SupportedCurrency, number> = {
   INR: 100,
   USD: 100,
   EUR: 100,
@@ -56,12 +65,15 @@ export function getPricingRegionFromCountry(countryCode: string | null | undefin
   return "ROW";
 }
 
+/**
+ * Map a workspace/account currency to a pricing region when unambiguous.
+ * USD is ambiguous (US vs ROW share USD); prefer explicit country via getPricingRegion.
+ */
 export function getPricingRegionFromCurrency(currency: string | null | undefined): PricingRegion | null {
   const normalized = currency?.toUpperCase();
   if (normalized === "INR") return "IN";
   if (normalized === "EUR") return "EU";
   if (normalized === "OMR") return "OM";
-  if (normalized === "USD") return "US";
   return null;
 }
 
@@ -173,7 +185,7 @@ export function getPlanPrice(input: {
   const regionConfig = PRICING_MATRIX[region];
   const monthlyAmount = regionConfig.monthly[input.planId];
   const amountMajor = input.billingCycle === "annual" ? monthlyAmount * 10 : monthlyAmount;
-  const amountMinor = Math.round(amountMajor * MINOR_UNITS[regionConfig.currency]);
+  const amountMinor = Math.round(amountMajor * MINOR_UNITS_PER_MAJOR_UNIT[regionConfig.currency]);
 
   return {
     region,
@@ -247,25 +259,54 @@ export function resolvePricingIntervalByAmount(input: {
   return null;
 }
 
-export function formatPlanPrice(price: PlanPrice, locale?: string): string {
-  if (price.currency === "OMR") {
-    return `OMR ${price.amountMajor.toLocaleString(locale ?? "en-OM", { maximumFractionDigits: 0 })}`;
+export function formatMajorInCurrency(amountMajor: number, currency: SupportedCurrency, locale?: string): string {
+  if (currency === "OMR") {
+    return `OMR ${amountMajor.toLocaleString(locale ?? "en-OM", { maximumFractionDigits: 3 })}`;
   }
-
   return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: price.currency,
+    currency,
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(price.amountMajor);
+    maximumFractionDigits: currency === "INR" ? 0 : 2,
+  }).format(amountMajor);
 }
 
+export function formatPlanPrice(price: PlanPrice, locale?: string): string {
+  return formatMajorInCurrency(price.amountMajor, price.currency, locale);
+}
+
+export function normalizeGatewayCurrency(code: string | null | undefined): SupportedCurrency {
+  const u = String(code ?? "INR").toUpperCase();
+  if (isSupportedCurrency(u)) return u;
+  return "INR";
+}
+
+/** Convert Razorpay payment.amount (integer minor units) to major units for the given currency. */
+export function razorpayMinorAmountToMajor(amountMinorRaw: number, currency: SupportedCurrency): number {
+  const divisor = MINOR_UNITS_PER_MAJOR_UNIT[currency];
+  return amountMinorRaw / divisor;
+}
+
+export function majorAmountToRazorpayMinor(amountMajor: number, currency: SupportedCurrency): number {
+  return Math.round(amountMajor * MINOR_UNITS_PER_MAJOR_UNIT[currency]);
+}
+
+/** Round list/charge amounts for stable gateway totals (OMR uses millimes). */
+export function roundMajorAmount(amount: number, currency: SupportedCurrency): number {
+  if (currency === "OMR") return Math.max(0, Math.round(amount * 1000) / 1000);
+  return Math.max(0, Math.round(amount * 100) / 100);
+}
+
+/** India catalog (INR) — backward compatible with previous `PRICING` export. */
 export const PRICING = {
   MONTHLY: PRICING_MATRIX.IN.monthly.pro,
+  QUARTERLY: PRICING_MATRIX.IN.monthly.pro * 3,
   YEARLY: PRICING_MATRIX.IN.monthly.pro * 10,
   TEAM_MONTHLY: PRICING_MATRIX.IN.monthly.team,
   TEAM_YEARLY: PRICING_MATRIX.IN.monthly.team * 10,
-};
+} as const;
+
+export type PricingInterval = keyof typeof PRICING;
 
 export const getMonthlyPriceForInterval = (interval: string | null | undefined, region: PricingRegion = "IN") => {
   const typedInterval = PLAN_INTERVALS.includes((interval ?? "") as PlanInterval)
@@ -273,7 +314,8 @@ export const getMonthlyPriceForInterval = (interval: string | null | undefined, 
     : "MONTHLY";
 
   if (typedInterval === "TEAM_MONTHLY") return getPlanPrice({ planId: "team", billingCycle: "monthly", region }).amountMajor;
-  if (typedInterval === "TEAM_YEARLY") return getPlanPrice({ planId: "team", billingCycle: "annual", region }).amountMajor / 12;
+  if (typedInterval === "TEAM_YEARLY")
+    return getPlanPrice({ planId: "team", billingCycle: "annual", region }).amountMajor / 12;
   if (typedInterval === "YEARLY") return getPlanPrice({ planId: "pro", billingCycle: "annual", region }).amountMajor / 12;
   if (typedInterval === "QUARTERLY") return getPlanPrice({ planId: "pro", billingCycle: "monthly", region }).amountMajor;
   return getPlanPrice({ planId: "pro", billingCycle: "monthly", region }).amountMajor;

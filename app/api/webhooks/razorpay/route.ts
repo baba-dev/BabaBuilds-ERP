@@ -1,99 +1,83 @@
-import { NextResponse } from 'next/server';
-import crypto from 'crypto';
-import { prisma } from '@/lib/prisma';
-import { parsePlanInterval } from '@/lib/pricing';
+import { NextResponse } from "next/server";
+import crypto from "crypto";
+import { processRazorpaySubscriptionPaymentVerified } from "@/lib/razorpay-subscription";
+import { prisma } from "@/lib/prisma";
+import { reverseDistributorCommissionForBillingTx } from "@/lib/subscription-payment";
+import { logDistributorEvent } from "@/lib/observability-distributor";
 
 export async function POST(req: Request) {
   try {
     const rawBody = await req.text();
-    const signature = req.headers.get('x-razorpay-signature');
+    const signature = req.headers.get("x-razorpay-signature");
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
 
     if (!secret || !signature) {
-      return NextResponse.json({ error: 'Missing signature or secret' }, { status: 400 });
+      return NextResponse.json({ error: "Missing signature or secret" }, { status: 400 });
     }
 
-    const expectedSignature = crypto
-      .createHmac('sha256', secret)
-      .update(rawBody)
-      .digest('hex');
+    const expectedSignature = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
 
     if (expectedSignature !== signature) {
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+      return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }
 
     const event = JSON.parse(rawBody);
 
-    // Only process payment captures or successful order payments
-    if (event.event === 'payment.captured' || event.event === 'order.paid') {
-      const paymentEntity = event.payload.payment.entity;
-      const notes = paymentEntity.notes;
+    if (event.event === "payment.captured" || event.event === "order.paid") {
+      const paymentEntity = event.payload?.payment?.entity ?? event.payload?.payment;
+      if (!paymentEntity?.id) {
+        return NextResponse.json({ status: "ignored" });
+      }
 
+      const notes = paymentEntity.notes as Record<string, string | undefined> | undefined;
       const workspaceId = notes?.workspaceId;
       const interval = notes?.interval;
 
       if (workspaceId && interval) {
-        const workspace = await prisma.workspace.findUnique({
-          where: { id: workspaceId },
-          select: { subscriptionEndsAt: true, subscriptionStatus: true }
+        try {
+          await processRazorpaySubscriptionPaymentVerified(paymentEntity.id, workspaceId);
+        } catch (e) {
+          console.error("Razorpay webhook subscription finalize failed:", e);
+          return NextResponse.json({ error: "Processing failed" }, { status: 500 });
+        }
+      }
+    }
+
+    // Refund processed — mark billing row and claw back / void partner commission
+    if (event.event === "refund.processed" || event.event === "refund.created") {
+      const refundEntity = event.payload?.refund?.entity ?? event.payload?.refund;
+      const paymentId =
+        typeof refundEntity?.payment_id === "string"
+          ? refundEntity.payment_id
+          : typeof refundEntity?.paymentId === "string"
+            ? refundEntity.paymentId
+            : null;
+      if (paymentId) {
+        const tx = await prisma.billingTransaction.findFirst({
+          where: { providerReference: paymentId },
+          select: { id: true, workspaceId: true },
         });
-
-        if (workspace) {
-          const isCurrentlyActivePro = 
-            (workspace.subscriptionStatus === "PRO" || workspace.subscriptionStatus === "TEAM") && 
-            workspace.subscriptionEndsAt && 
-            new Date(workspace.subscriptionEndsAt) > new Date();
-
-          const baseDate = isCurrentlyActivePro 
-            ? new Date(workspace.subscriptionEndsAt!) 
-            : new Date();
-
-          const endsAt = new Date(baseDate);
-          const { planId, billingCycle } = parsePlanInterval(interval);
-          if (billingCycle === "annual") {
-            endsAt.setFullYear(endsAt.getFullYear() + 1);
-          } else {
-            endsAt.setMonth(endsAt.getMonth() + 1);
-          }
-          const planTier = planId === "team" ? "TEAM" : "PRO";
-
-          await prisma.workspace.update({
-            where: { id: workspaceId },
-            data: {
-              subscriptionStatus: planTier, 
-              planTier: planTier,
-              planInterval: interval,
-              subscriptionEndsAt: endsAt,
-              billingProviderId: paymentEntity.customer_id || null,
-            },
+        if (tx) {
+          await prisma.billingTransaction.update({
+            where: { id: tx.id },
+            data: { status: "REFUNDED" },
           });
-
-          // Record the BillingTransaction securely & idempotently
-          await prisma.billingTransaction.upsert({
-            where: {
-              workspaceId_providerReference: {
-                workspaceId,
-                providerReference: paymentEntity.id
-              }
-            },
-            create: {
-              workspaceId,
-              transactionDate: new Date(),
-              amount: paymentEntity.amount / 100, // Convert poise back to INR
-              status: "PAID",
-              description: `Subscription Upgrade (${interval.replace("_", " ")}) via Webhook`,
-              providerReference: paymentEntity.id,
-              receiptUrl: paymentEntity.receipt_url || null,
-            },
-            update: {} // If webhook retriggers, don't duplicate
+          const reversed = await reverseDistributorCommissionForBillingTx(
+            tx.id,
+            `Razorpay refund webhook (${event.event})`,
+          );
+          logDistributorEvent("subscription_refund_processed", {
+            workspaceId: tx.workspaceId,
+            paymentId,
+            commissionReversed: reversed,
           });
         }
       }
     }
 
-    return NextResponse.json({ status: 'ok' });
+    return NextResponse.json({ status: "ok" });
   } catch (error) {
-    console.error('Razorpay Webhook Error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error("Razorpay Webhook Error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
