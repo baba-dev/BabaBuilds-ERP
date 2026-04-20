@@ -1228,7 +1228,26 @@
     "nav": {
       "features": "Features",
       "comparison": "Comparison",
-      "pricing": "Pricing"
+      "pricing": "Pricing",
+      "useCases": "Casos de uso"
+    },
+    "useCases": {
+      "agencies": {
+        "title": "Para agencias",
+        "description": "Retainers, propuestas y cobros en un solo flujo."
+      },
+      "contractors": {
+        "title": "Para contratistas",
+        "description": "Facturación por hitos y control de caja de proyectos."
+      },
+      "smallBusinesses": {
+        "title": "Para pequeñas empresas",
+        "description": "Facturación, gastos y registros fiscales listos."
+      },
+      "freelancers": {
+        "title": "Para freelancers",
+        "description": "Flujo propuesta-factura y automatización de retainers."
+      }
     },
     "actions": {
       "dashboard": "Dashboard",

@@ -20,10 +20,14 @@ import {
   Shield,
   UsersRound,
   MonitorSmartphone,
+  BriefcaseBusiness,
+  Building2,
+  Handshake,
 } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import LandingNavbar from "@/components/LandingNavbar";
 import ComparisonTable from "@/components/ComparisonTable";
 import PricingSection from "@/components/PricingSection";
@@ -232,6 +236,39 @@ export default function LandingContent() {
     },
   ];
 
+  const personaCards = [
+    {
+      href: "/for-ca",
+      title: "For CAs & Accountants",
+      description: "Compliance workflows, filing readiness, and client collections in one command center.",
+      icon: Calculator,
+    },
+    {
+      href: "/for-agencies",
+      title: "For Agencies",
+      description: "Retainers, proposals, and invoice pipeline visibility tailored for growth teams.",
+      icon: BriefcaseBusiness,
+    },
+    {
+      href: "/for-contractors",
+      title: "For Contractors & Builders",
+      description: "Milestone billing, vendor expenses, and project cash planning without spreadsheet chaos.",
+      icon: Building2,
+    },
+    {
+      href: "/for-small-businesses",
+      title: "For Small Businesses",
+      description: "Practical invoicing, tax-aware records, and receivables tracking for service operations.",
+      icon: Store,
+    },
+    {
+      href: "/for-freelancers",
+      title: "For Freelancers & Consultants",
+      description: "Proposal-to-invoice flow and retainer automation for solo operators and consultants.",
+      icon: Handshake,
+    },
+  ];
+
   return (
     <div className="overflow-x-hidden bg-surface-base">
       <LandingNavbar />
@@ -308,22 +345,49 @@ export default function LandingContent() {
             initial={reduceMotion ? false : { opacity: 0, y: 60 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4, type: "spring", stiffness: 40 }}
-            className="card-elevated relative mx-auto mt-20 aspect-[16/9] max-w-6xl overflow-hidden rounded-[2.5rem] border-white/20 dark:border-white/10 shadow-[0_30px_100px_-20px_rgba(0,0,0,0.5)]"
+            className="card-elevated relative mx-auto mt-20 max-w-6xl overflow-hidden rounded-[2.5rem] border-white/20 p-8 dark:border-white/10 sm:p-10"
           >
             <HeroMotionDecor />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-surface-base/80" />
-            <div className="absolute left-6 top-6 flex gap-2">
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-surface-base/10 to-surface-base/85" />
+            <div className="absolute left-6 top-6 hidden gap-2 sm:flex">
               <div className="h-3.5 w-3.5 rounded-full bg-rose-500 shadow-sm" />
               <div className="h-3.5 w-3.5 rounded-full bg-amber-500 shadow-sm" />
               <div className="h-3.5 w-3.5 rounded-full bg-emerald-500 shadow-sm" />
             </div>
-            <div className="relative flex h-full flex-col items-center justify-center space-y-6">
-              <div className="grid h-24 w-24 place-items-center rounded-3xl border border-white/20 bg-white/10 shadow-[0_0_50px_rgba(255,255,255,0.1)] backdrop-blur-md dark:bg-white/5">
-                <Sparkles className="h-12 w-12 text-white drop-shadow-xl" />
+            <div className="relative">
+              <div className="mb-6 flex items-center justify-between gap-3">
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-white/80">
+                  {t("hero.dashboardPreview")}
+                </p>
+                <Sparkles className="h-5 w-5 text-orange-300" />
               </div>
-              <p className="text-sm font-black uppercase tracking-[0.25em] text-zinc-100 drop-shadow-md">
-                {t("hero.dashboardPreview")}
-              </p>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {personaCards.map((persona) => (
+                  <Link key={persona.href} href={persona.href} className="group block">
+                    <Card
+                      variant="glass"
+                      className="h-full border-white/20 bg-white/75 backdrop-blur-xl transition-all duration-200 group-hover:-translate-y-0.5 group-hover:border-orange-300/70 group-hover:shadow-xl dark:bg-zinc-950/45"
+                    >
+                      <CardHeader className="space-y-3">
+                        <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-orange-300/40 bg-orange-100/70 text-orange-700 dark:border-orange-700/40 dark:bg-orange-950/50 dark:text-orange-300">
+                          <persona.icon className="h-5 w-5" />
+                        </div>
+                        <CardTitle className="text-base font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+                          {persona.title}
+                        </CardTitle>
+                        <CardDescription className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">
+                          {persona.description}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="mt-auto">
+                        <span className="inline-flex items-center gap-1 text-sm font-bold text-orange-700 transition-colors group-hover:text-orange-600 dark:text-orange-300 dark:group-hover:text-orange-200">
+                          Visit page <ArrowRight className="h-4 w-4" />
+                        </span>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
             </div>
           </motion.div>
         </motion.div>

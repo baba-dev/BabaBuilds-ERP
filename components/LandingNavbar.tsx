@@ -3,12 +3,21 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { Box, Menu, X, ArrowRight } from "lucide-react";
+import {
+  Box,
+  Menu,
+  X,
+  ArrowRight,
+  ChevronDown,
+  BriefcaseBusiness,
+  HardHat,
+  Building2,
+  UserRound,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { personaNavigationLinks } from "@/components/landing/persona/persona-config";
 import { emitMarketingAnalyticsEvent } from "@/lib/marketing-analytics";
 
 export default function LandingNavbar() {
@@ -29,7 +38,33 @@ export default function LandingNavbar() {
     { name: t("nav.features"), href: "#features" },
     { name: t("nav.comparison"), href: "#comparison" },
     { name: t("nav.pricing"), href: "#pricing" },
-    ...personaNavigationLinks.map((item) => ({ name: item.label, href: item.href })),
+    { name: "For CAs", href: "/for-ca" },
+  ];
+  const useCaseLinks = [
+    {
+      name: "For Agencies",
+      href: "/for-agencies",
+      description: "Retainers, proposals, and receivables",
+      icon: BriefcaseBusiness,
+    },
+    {
+      name: "For Contractors",
+      href: "/for-contractors",
+      description: "Milestones, expenses, and cash control",
+      icon: HardHat,
+    },
+    {
+      name: "For Small Businesses",
+      href: "/for-small-businesses",
+      description: "Invoicing, collections, and tax-ready books",
+      icon: Building2,
+    },
+    {
+      name: "For Freelancers",
+      href: "/for-freelancers",
+      description: "Proposal-to-invoice and retainer automation",
+      icon: UserRound,
+    },
   ];
 
   return (
@@ -63,6 +98,32 @@ export default function LandingNavbar() {
               {link.name}
             </Link>
           ))}
+          <div className="group relative">
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 text-sm font-semibold text-zinc-600 transition-colors hover:text-orange-600 dark:text-zinc-400 dark:hover:text-orange-400"
+              aria-haspopup="true"
+            >
+              Use Cases <ChevronDown className="h-4 w-4" />
+            </button>
+            <div className="invisible absolute right-0 top-full z-50 mt-3 w-[28rem] rounded-2xl border border-zinc-200 bg-white p-3 opacity-0 shadow-2xl transition-all duration-200 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 dark:border-zinc-800 dark:bg-zinc-950">
+              <div className="grid grid-cols-2 gap-3">
+                {useCaseLinks.map((useCase) => (
+                  <Link
+                    key={useCase.href}
+                    href={useCase.href}
+                    className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 transition hover:-translate-y-0.5 hover:border-orange-300 hover:bg-orange-50/70 dark:border-zinc-800 dark:bg-zinc-900/70 dark:hover:border-orange-800 dark:hover:bg-orange-950/30"
+                  >
+                    <div className="mb-2 inline-flex rounded-lg bg-white p-2 text-orange-600 ring-1 ring-zinc-200 dark:bg-zinc-900 dark:ring-zinc-700 dark:text-orange-300">
+                      <useCase.icon className="h-4 w-4" />
+                    </div>
+                    <p className="text-sm font-bold text-zinc-900 dark:text-zinc-50">{useCase.name}</p>
+                    <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">{useCase.description}</p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Auth Buttons */}
@@ -149,6 +210,24 @@ export default function LandingNavbar() {
                 {link.name}
               </Link>
             ))}
+            <div className="rounded-2xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-900/60">
+              <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">
+                Use Cases
+              </p>
+              <div className="grid gap-2">
+                {useCaseLinks.map((useCase) => (
+                  <Link
+                    key={useCase.href}
+                    href={useCase.href}
+                    className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-orange-300 hover:text-orange-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-orange-800 dark:hover:text-orange-300"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <useCase.icon className="h-4 w-4 text-orange-500" />
+                    {useCase.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
             <hr className="border-zinc-100 dark:border-zinc-800" />
             {session ? (
               <Button
