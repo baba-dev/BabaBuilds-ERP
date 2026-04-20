@@ -1,147 +1,147 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Check, X, Box, Info } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useMemo } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { Check, X, Box, Info, GitCompare } from "lucide-react";
+import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { emitMarketingAnalyticsEvent } from "@/lib/marketing-analytics";
 
-const features = [
-  {
-    name: "Zero-Effort Retainers",
-    baba: true,
-    tally: false,
-    quickbooks: "Partial",
-    desc: "Auto-appends month names, dates, and dynamic content to recurring invoices without lifting a finger.",
-  },
-  {
-    name: "AI Financial Advisor (BabaBot)",
-    baba: true,
-    tally: false,
-    quickbooks: "Add-on",
-    desc: "Natural language queries about your finances. 'How much did I spend on SEO last quarter?'",
-  },
-  {
-    name: "Multi-Region Tax Compliance",
-    baba: true,
-    tally: "Regional",
-    quickbooks: true,
-    desc: "Region-aware tax labels (VAT, GST, Sales Tax), configurable rates, and country-pack coverage for selected jurisdictions.",
-  },
-  {
-    name: "Unified Proposal-to-Paid Workflow",
-    baba: true,
-    tally: false,
-    quickbooks: true,
-    desc: "Send a proposal, get it signed digitally, and convert to an invoice in 1 click.",
-  },
-  {
-    name: "Self-Healing Bank Reconciliation",
-    baba: true,
-    tally: "Manual",
-    quickbooks: true,
-    desc: "AI matching of bank transactions with invoices and expenses.",
-  },
-  {
-    name: "Integrated Service E-Store",
-    baba: true,
-    tally: false,
-    quickbooks: "Add-on",
-    desc: "A centralized, public-facing shop for selling services directly.",
-  },
-  {
-    name: "Native Apps & PWA Support",
-    baba: true,
-    tally: "Partial",
-    quickbooks: true,
-    desc: "Fully built native applications for Android, iOS & PC.",
-  },
-  {
-    name: "Dedicated CA Audit Portal",
-    baba: true,
-    tally: "Manual",
-    quickbooks: false,
-    desc: "1-click evidence exports for Chartered Accountants to perform year-end audits.",
-  },
-  {
-    name: "Role-Based Team Access",
-    baba: true,
-    tally: "Add-on",
-    quickbooks: "Premium",
-    desc: "Granular permission controls for your team members and accountants.",
-  },
-];
+const ROW_KEYS = [
+  "retainers",
+  "bababot",
+  "tax",
+  "proposal",
+  "recon",
+  "estore",
+  "native",
+  "ca",
+  "roles",
+] as const;
+
+type CellCode = "yes" | "no" | "partial" | "addon" | "regional" | "manual" | "premium";
+
+function ComparisonCell({
+  code,
+  labelYes,
+  labelNo,
+  tStatus,
+}: {
+  code: CellCode;
+  labelYes: string;
+  labelNo: string;
+  tStatus: (key: CellCode) => string;
+}) {
+  if (code === "yes") {
+    return (
+      <div className="flex items-center justify-center" role="img" aria-label={labelYes}>
+        <Check className="h-6 w-6 text-emerald-500/50" aria-hidden />
+      </div>
+    );
+  }
+  if (code === "no") {
+    return (
+      <div className="flex items-center justify-center" role="img" aria-label={labelNo}>
+        <X className="h-6 w-6 text-rose-500/50" aria-hidden />
+      </div>
+    );
+  }
+  return <span className="font-medium text-zinc-500 dark:text-zinc-400">{tStatus(code)}</span>;
+}
 
 export default function ComparisonTable() {
-  return (
-    <section id="comparison" className="py-24 bg-zinc-50 dark:bg-zinc-950/50">
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="text-center space-y-4 mb-20">
-          <h2 className="text-3xl md:text-5xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
-            Why <span className="text-orange-600">BabaBuilds ERP?</span>
-          </h2>
-          <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto">
-            Traditional software treats bookkeeping as a chore. We treat it as an automated superpower.
-          </p>
-        </div>
+  const t = useTranslations("Landing.comparisonSection");
+  const tp1 = useTranslations("LandingPhase1");
+  const reduceMotion = useReducedMotion();
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+  const rows = useMemo(
+    () =>
+      ROW_KEYS.map((key) => ({
+        key,
+        name: t(`rows.${key}.name`),
+        desc: t(`rows.${key}.desc`),
+        tally: t(`rows.${key}.tally`) as CellCode,
+        quickbooks: t(`rows.${key}.quickbooks`) as CellCode,
+      })),
+    [t],
+  );
+
+  const tStatus = (k: CellCode) => t(`statusLabels.${k}`);
+  const labelYes = t("cellYes");
+  const labelNo = t("cellNo");
+
+  return (
+    <section id="comparison" className="bg-zinc-50 py-24 dark:bg-zinc-950/50">
+      <div className="mx-auto max-w-7xl px-6">
+        <motion.div
+          initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.25 }}
+          transition={{ duration: 0.4 }}
+          className="mb-14 space-y-4 text-center"
+        >
+          <p className="inline-flex items-center justify-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-orange-700 dark:text-orange-300">
+            <GitCompare className="h-4 w-4" aria-hidden />
+            {t("eyebrow")}
+          </p>
+          <h2 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 md:text-5xl">{t("title")}</h2>
+          <p className="mx-auto max-w-3xl text-lg text-zinc-600 dark:text-zinc-400">{t("subtitle")}</p>
+        </motion.div>
+
+        <div className="overflow-x-auto rounded-2xl border border-zinc-200/80 dark:border-zinc-800">
+          <table className="w-full border-collapse text-left">
+            <caption className="sr-only">{t("title")}</caption>
             <thead>
-              <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                <th className="py-6 px-4 font-bold text-lg text-zinc-900 dark:text-zinc-50">Feature</th>
-                <th className="py-6 px-4 font-bold text-center text-lg bg-orange-600/5 dark:bg-orange-600/10 text-orange-600">
+              <tr className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/40">
+                <th scope="col" className="px-4 py-6 text-lg font-bold text-zinc-900 dark:text-zinc-50">
+                  {t("table.feature")}
+                </th>
+                <th
+                  scope="col"
+                  className="bg-orange-600/5 px-4 py-6 text-center text-lg font-bold text-orange-600 dark:bg-orange-600/10"
+                >
                   <div className="flex flex-col items-center gap-1">
-                    <Box className="w-6 h-6" />
-                    <span>BabaERP</span>
+                    <Box className="h-6 w-6" aria-hidden />
+                    <span>{t("table.baba")}</span>
                   </div>
                 </th>
-                <th className="py-6 px-4 font-bold text-center text-lg text-zinc-600 dark:text-zinc-400">Tally Prime</th>
-                <th className="py-6 px-4 font-bold text-center text-lg text-zinc-600 dark:text-zinc-400">QuickBooks</th>
+                <th scope="col" className="px-4 py-6 text-center text-lg font-bold text-zinc-600 dark:text-zinc-400">
+                  {t("table.tally")}
+                </th>
+                <th scope="col" className="px-4 py-6 text-center text-lg font-bold text-zinc-600 dark:text-zinc-400">
+                  {t("table.quickbooks")}
+                </th>
               </tr>
             </thead>
             <tbody>
-              {features.map((feature, idx) => (
+              {rows.map((feature, idx) => (
                 <motion.tr
-                  key={feature.name}
-                  initial={{ opacity: 0, y: 10 }}
+                  key={feature.key}
+                  initial={reduceMotion ? false : { opacity: 0, y: 8 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: idx * 0.1 }}
-                  className="border-b border-zinc-100 dark:border-zinc-900 group"
+                  transition={{ delay: reduceMotion ? 0 : idx * 0.06 }}
+                  className="group border-b border-zinc-100 bg-white dark:border-zinc-900 dark:bg-zinc-950/30"
                 >
-                  <td className="py-8 px-4">
+                  <th scope="row" className="px-4 py-8 text-left align-top font-normal">
                     <div className="space-y-1">
-                      <p className="font-bold text-zinc-900 dark:text-zinc-100 text-lg">{feature.name}</p>
-                      <p className="text-sm text-zinc-500 dark:text-zinc-500 max-w-md">{feature.desc}</p>
+                      <p className="text-lg font-bold text-zinc-900 dark:text-zinc-100">{feature.name}</p>
+                      <p className="max-w-md text-sm text-zinc-500 dark:text-zinc-500">{feature.desc}</p>
                     </div>
-                  </td>
-                  <td className="py-8 px-4 text-center bg-orange-600/5 dark:bg-orange-600/10">
+                  </th>
+                  <td className="bg-orange-600/5 px-4 py-8 text-center align-middle dark:bg-orange-600/10">
                     <div className="flex items-center justify-center">
-                      <div className="bg-emerald-500/20 text-emerald-500 p-2 rounded-full">
-                        <Check className="w-6 h-6 stroke-[3px]" />
+                      <div className="rounded-full bg-emerald-500/20 p-2 text-emerald-500">
+                        <Check className="h-6 w-6 stroke-[3px]" aria-hidden />
                       </div>
                     </div>
                   </td>
-                  <td className="py-8 px-4 text-center">
-                    <div className="flex items-center justify-center">
-                      {feature.tally === true ? (
-                        <Check className="w-6 h-6 text-emerald-500/50" />
-                      ) : feature.tally === false ? (
-                        <X className="w-6 h-6 text-rose-500/50" />
-                      ) : (
-                        <span className="text-zinc-500 font-medium">{feature.tally}</span>
-                      )}
-                    </div>
+                  <td className="px-4 py-8 text-center align-middle">
+                    <ComparisonCell code={feature.tally} labelYes={labelYes} labelNo={labelNo} tStatus={tStatus} />
                   </td>
-                  <td className="py-8 px-4 text-center">
-                    <div className="flex items-center justify-center">
-                      {feature.quickbooks === true ? (
-                        <Check className="w-6 h-6 text-emerald-500/50" />
-                      ) : feature.quickbooks === false ? (
-                        <X className="w-6 h-6 text-rose-500/50" />
-                      ) : (
-                        <span className="text-zinc-500 font-medium">{feature.quickbooks}</span>
-                      )}
-                    </div>
+                  <td className="px-4 py-8 text-center align-middle">
+                    <ComparisonCell code={feature.quickbooks} labelYes={labelYes} labelNo={labelNo} tStatus={tStatus} />
                   </td>
                 </motion.tr>
               ))}
@@ -149,16 +149,55 @@ export default function ComparisonTable() {
           </table>
         </div>
 
-        <div className="mt-12 p-6 bg-orange-600/5 dark:bg-orange-600/10 rounded-2xl border border-orange-500/20 flex flex-col sm:flex-row items-center gap-6 justify-between animate-pulse-subtle">
-           <div className="flex items-center gap-4">
-              <Info className="w-8 h-8 text-orange-600" />
-              <p className="text-zinc-700 dark:text-zinc-300 font-medium">
-                Switching is easy. We support <span className="text-orange-600 font-bold">direct data import</span> from most legacy accounting tools.
-              </p>
-           </div>
-           <button className="bg-orange-600 hover:bg-orange-700 text-white font-bold px-8 py-3 rounded-xl transition-all active:scale-95 shadow-lg shadow-orange-600/20">
-              Switch Today
-           </button>
+        <div className="mt-10 rounded-2xl border border-orange-500/20 bg-orange-600/5 p-6 dark:bg-orange-600/10">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-4">
+              <Info className="mt-0.5 h-8 w-8 shrink-0 text-orange-600" aria-hidden />
+              <div>
+                <p className="font-medium text-zinc-700 dark:text-zinc-300">
+                  {t("switchIntro")}{" "}
+                  <span className="font-bold text-orange-600">{t("switchHighlight")}</span> {t("switchOutro")}
+                </p>
+                <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-500">{t("footnote")}</p>
+              </div>
+            </div>
+            <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+              <Button
+                asChild
+                className="rounded-xl bg-orange-600 font-bold shadow-lg shadow-orange-600/20 hover:bg-orange-700"
+              >
+                <Link
+                  href="/api/auth/signin"
+                  onClick={() =>
+                    emitMarketingAnalyticsEvent("marketing_trial_cta_clicked", {
+                      location: "comparison_strip",
+                      label: tp1("cta.startTrial"),
+                    })
+                  }
+                >
+                  {t("ctaTrial")}
+                </Link>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="rounded-xl border-orange-300 font-bold text-orange-800 hover:bg-orange-50 dark:border-orange-800 dark:text-orange-200 dark:hover:bg-orange-950/40"
+              >
+                <Link
+                  href="#features"
+                  onClick={() =>
+                    emitMarketingAnalyticsEvent("marketing_cta_click", {
+                      location: "comparison_strip",
+                      label: t("ctaExplore"),
+                      href: "#features",
+                    })
+                  }
+                >
+                  {t("ctaExplore")}
+                </Link>
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
