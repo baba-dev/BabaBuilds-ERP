@@ -1,9 +1,9 @@
 export const PRICING = {
-  MONTHLY: 200,
-  QUARTERLY: 550,
-  YEARLY: 2300,
-  TEAM_MONTHLY: 400,
-  TEAM_YEARLY: 4500,
+  MONTHLY: 1499,
+  QUARTERLY: 4497,
+  YEARLY: 17988,
+  TEAM_MONTHLY: 3499,
+  TEAM_YEARLY: 41988,
 };
 
 export type PricingInterval = keyof typeof PRICING;
