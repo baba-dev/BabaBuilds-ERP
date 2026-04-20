@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Sparkles, Send, Command, Zap, ShieldCheck, Wallet, SunMoon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -17,16 +18,13 @@ const SAMPLE_PROMPTS = [
   "Show unreconciled transactions needing attention"
 ];
 
-const THEME_CHIP_QUERY =
-  "Switch my UI theme to dark mode (or light mode). You can do this instantly, or manually via Settings → Profile → Regional & Display → UI Theme (/settings/profile).";
-
 const SUGGESTION_CHIPS = [
   { label: "Overdue receivables", icon: <Wallet className="w-3 h-3" /> },
   { label: "Cash flow summary", icon: <Zap className="w-3 h-3" /> },
   { label: "Tax compliance", icon: <ShieldCheck className="w-3 h-3" /> },
   {
+    id: "theme-toggle",
     label: "Change to dark mode / light mode",
-    query: THEME_CHIP_QUERY,
     icon: <SunMoon className="w-3 h-3" />,
   },
 ];
@@ -35,6 +33,7 @@ export function DashboardAIPromptBar() {
   const [prompt, setPrompt] = useState("");
   const [sampleIndex, setSampleIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -52,7 +51,15 @@ export function DashboardAIPromptBar() {
   };
 
   const handleChipClick = (chip: (typeof SUGGESTION_CHIPS)[number]) => {
-    openAIChat({ query: chip.query ?? chip.label, autoSubmit: true });
+    if (chip.id === "theme-toggle") {
+      const nextTheme = resolvedTheme === "dark" ? "light" : "dark";
+      openAIChat({
+        query: `Switch my UI theme to ${nextTheme} mode instantly using UI Theme Control.`,
+        autoSubmit: true,
+      });
+      return;
+    }
+    openAIChat({ query: chip.label, autoSubmit: true });
   };
 
   return (
@@ -138,7 +145,11 @@ export function DashboardAIPromptBar() {
               )}
             >
               {chip.icon}
-              {chip.label}
+              {chip.id === "theme-toggle"
+                ? resolvedTheme === "dark"
+                  ? "Switch to light mode"
+                  : "Switch to dark mode"
+                : chip.label}
             </button>
           ))}
           <div className="ml-auto text-[9px] font-bold text-zinc-400/60 uppercase tracking-tighter">
