@@ -88,11 +88,11 @@ export default function LandingNavbar() {
                   onClick={() =>
                     emitMarketingAnalyticsEvent("interactive_demo_click", {
                       source: "navbar",
-                      label: "Explore Interactive Demo",
+                      label: t("actions.exploreDemo"),
                     })
                   }
                 >
-                  Explore Interactive Demo
+                  {t("actions.exploreDemo")}
                 </Link>
               </Button>
               <Button
@@ -104,11 +104,11 @@ export default function LandingNavbar() {
                   onClick={() =>
                     emitMarketingAnalyticsEvent("trial_cta_click", {
                       source: "navbar",
-                      label: "Start 15-Day Pro Trial",
+                      label: t("actions.startTrial"),
                     })
                   }
                 >
-                  Start 15-Day Pro Trial
+                  {t("actions.startTrial")}
                 </Link>
               </Button>
             </>
@@ -169,11 +169,11 @@ export default function LandingNavbar() {
                     onClick={() =>
                       emitMarketingAnalyticsEvent("interactive_demo_click", {
                         source: "mobile_navbar",
-                        label: "Explore Interactive Demo",
+                        label: t("actions.exploreDemo"),
                       })
                     }
                   >
-                    Explore Interactive Demo
+                    {t("actions.exploreDemo")}
                   </Link>
                 </Button>
                 <Button
@@ -185,11 +185,11 @@ export default function LandingNavbar() {
                     onClick={() =>
                       emitMarketingAnalyticsEvent("trial_cta_click", {
                         source: "mobile_navbar",
-                        label: "Start 15-Day Pro Trial",
+                        label: t("actions.startTrial"),
                       })
                     }
                   >
-                    Start 15-Day Pro Trial
+                    {t("actions.startTrial")}
                   </Link>
                 </Button>
               </div>

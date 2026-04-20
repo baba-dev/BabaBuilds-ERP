@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { Globe2, MoonStar, Sun, ChevronDown, ArrowRight, CheckCircle2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import LandingNavbar from "@/components/LandingNavbar";
 import LandingFooter from "@/components/LandingFooter";
@@ -24,6 +25,7 @@ type PersonaLandingPageProps = {
 };
 
 function FloatingPreferencesWidget() {
+  const tl = useTranslations("LandingPhase1");
   const { resolvedTheme, setTheme } = useTheme();
   const currentLocale = useMemo(() => {
     if (typeof document === "undefined") return "en-IN";
@@ -41,13 +43,13 @@ function FloatingPreferencesWidget() {
   return (
     <div className="fixed bottom-6 right-6 z-40 w-72 rounded-2xl border border-orange-200/80 bg-white/95 p-4 shadow-2xl backdrop-blur dark:border-orange-900/50 dark:bg-zinc-950/90">
       <p className="text-[11px] font-black uppercase tracking-[0.16em] text-orange-700 dark:text-orange-300">
-        Experience Preferences
+        {tl("persona.widget.title")}
       </p>
       <div className="mt-3 space-y-3">
         <label className="block">
           <span className="mb-1 flex items-center gap-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
             <Globe2 className="h-3.5 w-3.5 text-orange-500" />
-            Language
+            {tl("persona.widget.language")}
           </span>
           <div className="relative">
             <select
@@ -72,7 +74,9 @@ function FloatingPreferencesWidget() {
           className="h-10 w-full justify-center gap-2 rounded-xl border-zinc-200 bg-white font-semibold text-zinc-700 hover:bg-orange-50 hover:text-orange-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-orange-300"
         >
           {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
-          Switch to {resolvedTheme === "dark" ? "Light" : "Dark"} Mode
+          {resolvedTheme === "dark"
+            ? tl("persona.widget.switchToLight")
+            : tl("persona.widget.switchToDark")}
         </Button>
       </div>
     </div>
@@ -80,6 +84,7 @@ function FloatingPreferencesWidget() {
 }
 
 export default function PersonaLandingPage({ persona }: PersonaLandingPageProps) {
+  const tl = useTranslations("LandingPhase1");
   return (
     <div className="min-h-screen bg-surface-base">
       <LandingNavbar />
@@ -130,7 +135,7 @@ export default function PersonaLandingPage({ persona }: PersonaLandingPageProps)
 
           <div className="card-elevated rounded-3xl border border-zinc-200/80 p-6 dark:border-zinc-800">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">
-              This is the workflow your team will see
+              {tl("persona.workflowTitle")}
             </p>
             <ol className="mt-4 space-y-3">
               {persona.demoFlow.map((step) => (
@@ -147,7 +152,9 @@ export default function PersonaLandingPage({ persona }: PersonaLandingPageProps)
 
         <section className="mx-auto mt-16 grid max-w-7xl gap-8 lg:grid-cols-2">
           <div className="space-y-4 rounded-3xl border border-zinc-200 bg-white p-7 dark:border-zinc-800 dark:bg-zinc-900/60">
-            <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-50">Pain points we fix first</h2>
+            <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-50">
+              {tl("persona.painPointsTitle")}
+            </h2>
             <ul className="space-y-2">
               {persona.painPoints.map((point) => (
                 <li key={point} className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
@@ -158,7 +165,9 @@ export default function PersonaLandingPage({ persona }: PersonaLandingPageProps)
             </ul>
           </div>
           <div className="space-y-4 rounded-3xl border border-zinc-200 bg-white p-7 dark:border-zinc-800 dark:bg-zinc-900/60">
-            <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-50">Features tailored to this niche</h2>
+            <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-50">
+              {tl("persona.featuresTitle")}
+            </h2>
             <ul className="space-y-2">
               {persona.features.map((feature) => (
                 <li key={feature} className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
@@ -171,7 +180,9 @@ export default function PersonaLandingPage({ persona }: PersonaLandingPageProps)
         </section>
 
         <section className="mx-auto mt-16 max-w-7xl">
-          <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-50 md:text-3xl">Trusted by teams like yours</h2>
+          <h2 className="text-2xl font-black text-zinc-900 dark:text-zinc-50 md:text-3xl">
+            {tl("persona.testimonialsTitle")}
+          </h2>
           <div className="mt-5 grid gap-5 md:grid-cols-2">
             {persona.testimonials.map((testimonial) => (
               <article
@@ -191,7 +202,9 @@ export default function PersonaLandingPage({ persona }: PersonaLandingPageProps)
         </section>
 
         <section className="mx-auto mt-16 max-w-7xl rounded-3xl border border-orange-200 bg-orange-50/70 p-8 dark:border-orange-900/40 dark:bg-orange-950/20">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-orange-700 dark:text-orange-300">Explore by persona</p>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-orange-700 dark:text-orange-300">
+            {tl("persona.exploreByPersona")}
+          </p>
           <div className="mt-4 flex flex-wrap gap-3">
             {personaNavigationLinks.map((item) => (
               <Link

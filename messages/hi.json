@@ -1235,7 +1235,82 @@
       "login": "Log in",
       "getStarted": "Get Started",
       "goToDashboard": "Go to Dashboard",
-      "getStartedFree": "Get Started free"
+      "getStartedFree": "Get Started free",
+      "exploreDemo": "इंटरैक्टिव डेमो देखें",
+      "startTrial": "15-दिन का Pro ट्रायल शुरू करें"
+    }
+  },
+  "LandingPhase1": {
+    "cta": {
+      "startTrial": "15-दिन का Pro ट्रायल शुरू करें",
+      "exploreDemo": "इंटरैक्टिव डेमो देखें"
+    },
+    "exploreByPersona": "पर्सोना के अनुसार देखें",
+    "trustChips": {
+      "secureBilling": "सुरक्षित बिलिंग",
+      "taxWorkflows": "भारतीय/वैश्विक टैक्स वर्कफ़्लो",
+      "gstVat": "GST/VAT सपोर्ट",
+      "proposalsInvoicing": "प्रपोज़ल और इनवॉइसिंग",
+      "multiCurrency": "मल्टी-करेंसी"
+    },
+    "trustMetrics": {
+      "automationsEnabled": "सक्रिय ऑटोमेशन",
+      "invoiceSuccessRate": "इनवॉइस सफलता दर",
+      "supportedCurrencies": "समर्थित मुद्राएँ",
+      "avgSetupTime": "औसत सेटअप समय"
+    },
+    "featurePriorities": {
+      "velocity": "तेज़ी के लिए निर्मित",
+      "automation": "ऑटोमेशन",
+      "intelligence": "इंटेलिजेंस",
+      "control": "नियंत्रण",
+      "confidence": "विश्वास",
+      "forecasting": "पूर्वानुमान",
+      "global": "वैश्विक",
+      "relationships": "संबंध",
+      "conversion": "कन्वर्ज़न",
+      "logistics": "लॉजिस्टिक्स",
+      "commerce": "कॉमर्स",
+      "alerts": "अलर्ट्स",
+      "auditing": "ऑडिटिंग",
+      "security": "सुरक्षा",
+      "offline": "ऑफ़लाइन"
+    },
+    "roleLauncher": {
+      "badge": "इंटरैक्टिव डेमो देखें",
+      "title": "एक क्लिक में भूमिका-विशिष्ट सेटअप में जाएँ।",
+      "description": "पहली झलक के लिए साइनअप की ज़रूरत नहीं। हम तुरंत seeded demo data तैयार करते हैं ताकि विज़िटर बिना रुकावट वास्तविक वर्कफ़्लो देख सकें।",
+      "cards": {
+        "ca": {
+          "title": "CA डेमो आज़माएँ",
+          "description": "GST/TDS blockers, दस्तावेज़ और reconciliation flow वाला compliance-first workspace."
+        },
+        "agency": {
+          "title": "Agency डेमो आज़माएँ",
+          "description": "Retainers, proposals, invoice pipeline और overdue collections संकेत एक ही सेटअप में।"
+        },
+        "contractor": {
+          "title": "Contractor डेमो आज़माएँ",
+          "description": "Builders और teams के लिए milestone billing, expense visibility और project cash planning."
+        }
+      },
+      "footerPrefix": "हर डेमो के अंदर:",
+      "footerTextPart1": "sticky conversion prompt के साथ",
+      "footerQuotedCta": "इस सेटअप को इस्तेमाल करना शुरू करें",
+      "footerTextPart2": "ताकि मूल्यांकन स्वाभाविक रूप से ट्रायल में बदले।"
+    },
+    "persona": {
+      "widget": {
+        "title": "अनुभव प्राथमिकताएँ",
+        "language": "भाषा",
+        "switchToLight": "लाइट मोड पर स्विच करें",
+        "switchToDark": "डार्क मोड पर स्विच करें"
+      },
+      "workflowPreview": "आपकी टीम को यही वर्कफ़्लो दिखाई देगा",
+      "painPointsTitle": "हम पहले जिन समस्याओं को ठीक करते हैं",
+      "featuresTitle": "इस niche के लिए विशेष फीचर्स",
+      "testimonialsTitle": "आप जैसी टीमों का भरोसा",
+      "exploreByPersona": "पर्सोना के अनुसार देखें"
     }
   },
   "AuthModal": {

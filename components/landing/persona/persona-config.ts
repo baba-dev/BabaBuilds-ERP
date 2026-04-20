@@ -305,3 +305,11 @@ export const personaNavigationLinks = personaOrder.map((slug) => {
     href: `/${slug}`,
   };
 });
+
+export const personaDemoRoleLabels: Record<DemoTemplateKey, string> = {
+  dm_agency: "Agency",
+  software_company: "Software Company",
+  tax_agency: "CA",
+  contractor_builder: "Contractor",
+  freelancer_consultant: "Freelancer",
+};

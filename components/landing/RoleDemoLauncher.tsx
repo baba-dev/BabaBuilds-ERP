@@ -1,42 +1,44 @@
 "use client";
 
 import { BriefcaseBusiness, Building2, Calculator, ArrowRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { DemoLaunchButton } from "@/components/landing/persona/DemoLaunchButton";
 
-const roleCards = [
-  {
-    title: "Try CA Demo",
-    description: "Compliance-first workspace with GST/TDS blockers, docs, and reconciliation flow.",
-    templateKey: "tax_agency" as const,
-    icon: Calculator,
-  },
-  {
-    title: "Try Agency Demo",
-    description: "Retainers, proposals, invoice pipeline, and overdue collection signals in one setup.",
-    templateKey: "dm_agency" as const,
-    icon: BriefcaseBusiness,
-  },
-  {
-    title: "Try Contractor Demo",
-    description: "Milestone billing, expense visibility, and project cash planning for builders and teams.",
-    templateKey: "contractor_builder" as const,
-    icon: Building2,
-  },
-];
-
 export default function RoleDemoLauncher() {
+  const tp1 = useTranslations("LandingPhase1");
+  const roleCards = [
+    {
+      title: tp1("roleLauncher.cards.ca.title"),
+      description: tp1("roleLauncher.cards.ca.description"),
+      templateKey: "tax_agency" as const,
+      icon: Calculator,
+    },
+    {
+      title: tp1("roleLauncher.cards.agency.title"),
+      description: tp1("roleLauncher.cards.agency.description"),
+      templateKey: "dm_agency" as const,
+      icon: BriefcaseBusiness,
+    },
+    {
+      title: tp1("roleLauncher.cards.contractor.title"),
+      description: tp1("roleLauncher.cards.contractor.description"),
+      templateKey: "contractor_builder" as const,
+      icon: Building2,
+    },
+  ];
+
   return (
     <section className="border-y border-border bg-zinc-50/70 py-16 dark:bg-zinc-950/40">
       <div className="mx-auto max-w-7xl px-6">
         <div className="mb-8 max-w-3xl space-y-3">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-orange-700 dark:text-orange-300">
-            Explore Interactive Demo
+            {tp1("roleLauncher.badge")}
           </p>
           <h2 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 md:text-4xl">
-            Jump into a role-specific setup in one click.
+            {tp1("roleLauncher.title")}
           </h2>
           <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
-            No signup for first look. We provision seeded demo data instantly so visitors can evaluate real workflows without friction.
+            {tp1("roleLauncher.description")}
           </p>
         </div>
 
@@ -62,9 +64,10 @@ export default function RoleDemoLauncher() {
         </div>
 
         <div className="mt-6 rounded-2xl border border-orange-200/80 bg-orange-50/90 px-4 py-3 text-sm font-medium text-zinc-700 dark:border-orange-900/40 dark:bg-orange-950/20 dark:text-zinc-200">
-          <span className="font-black text-orange-700 dark:text-orange-300">Inside each demo:</span>{" "}
-          sticky conversion prompt with{" "}
-          <span className="font-bold">&quot;Start using this setup&quot;</span> so evaluation naturally transitions to trial.
+          <span className="font-black text-orange-700 dark:text-orange-300">{tp1("roleLauncher.footerPrefix")}</span>{" "}
+          {tp1("roleLauncher.footerTextPart1")}{" "}
+          <span className="font-bold">&quot;{tp1("roleLauncher.footerQuotedCta")}&quot;</span>{" "}
+          {tp1("roleLauncher.footerTextPart2")}
           <ArrowRight className="ml-1 inline h-4 w-4 text-orange-500" />
         </div>
       </div>
