@@ -81,6 +81,7 @@ export default function HeroRevenueLoopVisual() {
           >
             <Link
               href="#demo-launcher"
+              title={t("seeDemo")}
               className="group inline-flex items-center gap-2 text-sm font-black text-orange-700 transition hover:text-orange-600 dark:text-orange-300 dark:hover:text-orange-200"
             >
               {t("seeDemo")}

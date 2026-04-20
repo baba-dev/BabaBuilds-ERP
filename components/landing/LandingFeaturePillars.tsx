@@ -132,8 +132,8 @@ export default function LandingFeaturePillars() {
           className="mb-14 max-w-3xl space-y-4"
         >
           <h2 className="text-3xl font-black tracking-tight text-foreground md:text-5xl">
-            <span className="text-foreground">Everything you need to </span>
-            <span className="text-orange-600 dark:text-orange-400">scale with speed.</span>
+            <span className="text-foreground">{tFeatures("headingPrefix")} </span>
+            <span className="text-orange-600 dark:text-orange-400">{tFeatures("headingHighlight")}</span>
           </h2>
           <p className="text-lg font-medium leading-relaxed text-muted-body">{tFeatures("description")}</p>
         </m.div>

@@ -1206,12 +1206,161 @@
       "subtitle": "Heritage ledgers excel at deep accounting history. We optimize the service-business loop: sell, bill, collect, reconcile, and stay audit-ready—with a live demo that proves it.",
       "footnote": "Coverage varies by region and configuration. Use trials and imports to validate your exact books workflow.",
       "ctaExplore": "Explore features",
-      "ctaTrial": "Start 15-day Pro trial"
+      "ctaTrial": "Start 15-day Pro trial",
+      "switchIntro": "Switching is easy. We support",
+      "switchHighlight": "direct data import",
+      "switchOutro": "from most legacy accounting tools.",
+      "table": {
+        "feature": "Feature",
+        "baba": "BabaERP",
+        "tally": "Tally Prime",
+        "quickbooks": "QuickBooks"
+      },
+      "cellYes": "Yes",
+      "cellNo": "No",
+      "statusLabels": {
+        "partial": "Partial",
+        "addon": "Add-on",
+        "regional": "Regional",
+        "manual": "Manual",
+        "premium": "Premium"
+      },
+      "rows": {
+        "retainers": {
+          "name": "Zero-Effort Retainers",
+          "desc": "Auto-appends month names, dates, and dynamic content to recurring invoices without lifting a finger.",
+          "tally": "no",
+          "quickbooks": "partial"
+        },
+        "bababot": {
+          "name": "AI Financial Advisor (BabaBot)",
+          "desc": "Natural language queries about your finances. 'How much did I spend on SEO last quarter?'",
+          "tally": "no",
+          "quickbooks": "addon"
+        },
+        "tax": {
+          "name": "Multi-Region Tax Compliance",
+          "desc": "Region-aware tax labels (VAT, GST, Sales Tax), configurable rates, and country-pack coverage for selected jurisdictions.",
+          "tally": "regional",
+          "quickbooks": "yes"
+        },
+        "proposal": {
+          "name": "Unified Proposal-to-Paid Workflow",
+          "desc": "Send a proposal, get it signed digitally, and convert to an invoice in 1 click.",
+          "tally": "no",
+          "quickbooks": "yes"
+        },
+        "recon": {
+          "name": "Self-Healing Bank Reconciliation",
+          "desc": "AI matching of bank transactions with invoices and expenses.",
+          "tally": "manual",
+          "quickbooks": "yes"
+        },
+        "estore": {
+          "name": "Integrated Service E-Store",
+          "desc": "A centralized, public-facing shop for selling services directly.",
+          "tally": "no",
+          "quickbooks": "addon"
+        },
+        "native": {
+          "name": "Native Apps & PWA Support",
+          "desc": "Fully built native applications for Android, iOS & PC.",
+          "tally": "partial",
+          "quickbooks": "yes"
+        },
+        "ca": {
+          "name": "Dedicated CA Audit Portal",
+          "desc": "1-click evidence exports for Chartered Accountants to perform year-end audits.",
+          "tally": "manual",
+          "quickbooks": "no"
+        },
+        "roles": {
+          "name": "Role-Based Team Access",
+          "desc": "Granular permission controls for your team members and accountants.",
+          "tally": "addon",
+          "quickbooks": "premium"
+        }
+      }
     },
     "pricingSection": {
       "eyebrow": "Pricing",
       "title": "Start free. Scale when revenue justifies it.",
-      "subtitle": "Transparent limits on Free, full power on Pro, collaboration on Team—no surprise line items."
+      "subtitle": "Transparent limits on Free, full power on Pro, collaboration on Team—no surprise line items.",
+      "gatewayNote": "Payment links use regional gateway routing: Razorpay for India (INR) and Stripe for global collection, including Oman and GCC currencies.",
+      "billing": {
+        "monthly": "Monthly",
+        "annually": "Annually",
+        "bestValue": "Best Value"
+      },
+      "signals": {
+        "setupLabel": "Average setup time",
+        "setupValue": "<15 min",
+        "remindersLabel": "Automated reminders",
+        "remindersValue": "Included",
+        "reconLabel": "Invoice reconciliation",
+        "reconValue": "Real-time"
+      },
+      "badgeHighestValue": "Highest Value",
+      "planFitHeading": "Plan fit",
+      "includedHeading": "What's included",
+      "perMonth": "per month",
+      "perYear": "per year",
+      "perOneTime": "one-time",
+      "msmeLabel": "Official MSME Registered",
+      "udyamId": "UDYAM-RJ-21-0089275",
+      "footerQuestion": "Questions about Pro or Team?",
+      "emailUs": "Email us",
+      "tiers": {
+        "free": {
+          "name": "Free",
+          "description": "Explore the full ERP with sensible limits — one workspace per account.",
+          "cta": "Start Free",
+          "cue": "Validate your workflow before you scale",
+          "planFitDetail": "Best for focused teams with predictable growth",
+          "features": [
+            "5 invoices per calendar month (UTC)",
+            "Up to 3 clients",
+            "Up to 3 published shop listings",
+            "Core CRM, proposals, income & expenses",
+            "Multi-currency support"
+          ]
+        },
+        "pro": {
+          "name": "Pro",
+          "description": "Solo operators: unlimited invoices, gateways, and automation.",
+          "cta": "Go Pro",
+          "cue": "Best for freelancers who bill every month",
+          "planFitDetail": "Optimized for scaling agencies",
+          "features": [
+            "Unlimited invoices",
+            "Stripe & Razorpay on invoices",
+            "AI BabaBot & premium workflows",
+            "Retainer automation",
+            "Up to 3 seats",
+            "20 MB document storage"
+          ]
+        },
+        "team": {
+          "name": "Team",
+          "description": "Collaborate with staff and accountants in the same workspace.",
+          "cta": "Start with Team",
+          "cue": "Best for agencies with multiple operators",
+          "planFitDetail": "Best for focused teams with predictable growth",
+          "features": [
+            "Everything in Pro",
+            "Up to 15 seats",
+            "Role-based access & accountant workflows",
+            "50 MB document storage",
+            "Priority scaling for agencies"
+          ]
+        }
+      }
+    },
+    "trustMetricValues": {
+      "automations": "120+",
+      "invoiceRate": "99.9%",
+      "currencies": "25+",
+      "setupTime": "< 15 min"
     },
     "trust": {
       "title": "Trusted by Modern Agencies in",

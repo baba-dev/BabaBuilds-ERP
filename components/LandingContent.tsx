@@ -49,10 +49,10 @@ export default function LandingContent() {
     t("trust.cities.newDelhi"),
   ];
   const trustMetrics = [
-    { label: tp1("trustMetrics.automationsEnabled"), value: "120+", icon: Workflow },
-    { label: tp1("trustMetrics.invoiceSuccessRate"), value: "99.9%", icon: Percent },
-    { label: tp1("trustMetrics.supportedCurrencies"), value: "25+", icon: Coins },
-    { label: tp1("trustMetrics.avgSetupTime"), value: "< 15 min", icon: Timer },
+    { label: tp1("trustMetrics.automationsEnabled"), value: t("trustMetricValues.automations"), icon: Workflow },
+    { label: tp1("trustMetrics.invoiceSuccessRate"), value: t("trustMetricValues.invoiceRate"), icon: Percent },
+    { label: tp1("trustMetrics.supportedCurrencies"), value: t("trustMetricValues.currencies"), icon: Coins },
+    { label: tp1("trustMetrics.avgSetupTime"), value: t("trustMetricValues.setupTime"), icon: Timer },
   ];
   const regionalReadiness = [
     t("regionalReadiness.signals.vat"),
@@ -69,13 +69,13 @@ export default function LandingContent() {
   const trackTrialClick = (surface: string) => {
     emitMarketingAnalyticsEvent("marketing_trial_cta_clicked", {
       location: surface,
-      label: "Start 15-Day Pro Trial",
+      label: tp1("cta.startTrial"),
     });
   };
   const trackDemoClick = (surface: string) => {
     emitMarketingAnalyticsEvent("marketing_cta_click", {
       location: surface,
-      label: "Explore Interactive Demo",
+      label: tp1("cta.exploreDemo"),
       href: "#demo-launcher",
     });
   };
