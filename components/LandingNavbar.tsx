@@ -39,6 +39,7 @@ export default function LandingNavbar() {
     { name: t("nav.comparison"), href: "#comparison" },
     { name: t("nav.pricing"), href: "#pricing" },
     { name: "For CAs", href: "/for-ca" },
+    { name: "Reseller", href: "/reseller" },
   ];
   const useCaseLinks = [
     {
