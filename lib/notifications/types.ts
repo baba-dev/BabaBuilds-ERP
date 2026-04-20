@@ -21,7 +21,10 @@ export type NotificationEventType =
   | 'RETAINER_CREATED'
   | 'PROPOSAL_ACCEPTED'
   | 'PROPOSAL_VIEWED'
-  | 'SETTINGS_UPDATED';
+  | 'SETTINGS_UPDATED'
+  | 'LEAVE_REQUEST_SUBMITTED'
+  | 'LEAVE_APPROVED'
+  | 'LEAVE_REJECTED';
 
 export interface NotificationPayload {
   event: NotificationEventType;
