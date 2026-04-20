@@ -39,13 +39,7 @@ const currencies: Currency[] = [
   { code: "USD", symbol: "$", rate: 1, decimals: 2 },
   { code: "INR", symbol: "₹", rate: 80, decimals: 0 },
   { code: "EUR", symbol: "€", rate: 0.92, decimals: 0 },
-  { code: "GBP", symbol: "£", rate: 0.79, decimals: 0 },
   { code: "OMR", symbol: "OMR ", rate: 0.385, decimals: 3 },
-  { code: "AED", symbol: "AED ", rate: 3.67, decimals: 0 },
-  { code: "SAR", symbol: "SAR ", rate: 3.75, decimals: 0 },
-  { code: "QAR", symbol: "QAR ", rate: 3.64, decimals: 0 },
-  { code: "KWD", symbol: "KWD ", rate: 0.307, decimals: 3 },
-  { code: "BHD", symbol: "BHD ", rate: 0.376, decimals: 3 },
 ];
 
 const tiers: PricingTier[] = [
