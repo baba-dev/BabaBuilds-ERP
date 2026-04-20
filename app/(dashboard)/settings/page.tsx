@@ -450,7 +450,7 @@ export default function SettingsWizard() {
       headerVariant="compact"
       maxWidthClassName="max-w-4xl"
     >
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-8 pb-40">
           
           {/* IDENTITY & BRANDING */}
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
@@ -2131,19 +2131,21 @@ export default function SettingsWizard() {
           </Dialog>
 
           {/* STICKY SAVE FOOTER */}
-          <div className="sticky bottom-6 z-30">
-            <FormSubmitBar
-              isSubmitting={isSubmitting}
-              submitText={t('save_button')}
-              submittingText={t("actions.saving")}
-              helperText={successMsg ? (
-                <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 animate-in fade-in slide-in-from-right-2">
-                  <CheckCircle2 className="w-4 h-4" /> {t("profile_saved")}
-                </span>
-              ) : t("description")}
-              className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl rounded-2xl shadow-2xl transition-all duration-300 hover:border-indigo-500/30"
-            />
-            <FormFieldMessages helpText={isSubmitting ? t("actions.saving") : undefined} className="px-2 pt-2" />
+          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200/80 bg-white/85 px-4 py-3 backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/85 md:px-8">
+            <div className="mx-auto w-full max-w-4xl">
+              <FormSubmitBar
+                isSubmitting={isSubmitting}
+                submitText={t('save_button')}
+                submittingText={t("actions.saving")}
+                helperText={successMsg ? (
+                  <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 animate-in fade-in slide-in-from-right-2">
+                    <CheckCircle2 className="w-4 h-4" /> {t("profile_saved")}
+                  </span>
+                ) : t("description")}
+                className="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl rounded-2xl shadow-2xl transition-all duration-300 hover:border-indigo-500/30"
+              />
+              <FormFieldMessages helpText={isSubmitting ? t("actions.saving") : undefined} className="px-2 pt-2" />
+            </div>
           </div>
 
         </form>
