@@ -7,9 +7,16 @@ import Link from "next/link";
 import { Box } from "lucide-react";
 import { normalizeLaunchDestination } from "@/lib/launch-routing";
 import { AuthAmbientBackground } from "@/components/auth/AuthAmbientBackground";
+import { isDemoTemplateKey } from "@/lib/demo/templates";
+import type { DemoTemplateKey } from "@/lib/demo/templates";
 
 type LoginPageProps = {
-  searchParams?: Promise<{ callbackUrl?: string; error?: string }>;
+  searchParams?: Promise<{
+    callbackUrl?: string;
+    error?: string;
+    openSandbox?: string;
+    demoTemplate?: string;
+  }>;
 };
 
 export const metadata: Metadata = {
@@ -29,6 +36,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const resolvedSearchParams = await searchParams;
   const callbackUrl = normalizeLaunchDestination(resolvedSearchParams?.callbackUrl ?? "/dashboard");
   const authError = resolvedSearchParams?.error;
+  const openSandboxOnLoad = resolvedSearchParams?.openSandbox === "1";
+  const initialDemoTemplateKey: DemoTemplateKey | undefined = isDemoTemplateKey(
+    resolvedSearchParams?.demoTemplate
+  )
+    ? resolvedSearchParams?.demoTemplate
+    : undefined;
 
   // If already authenticated, go to dashboard
   if (session) {
@@ -53,7 +66,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <span className="text-2xl font-black text-foreground px-2 tracking-tight">BabaBuilds</span>
         </Link>
 
-        <AuthModal variant="embedded" callbackUrl={callbackUrl} authError={authError} />
+        <AuthModal
+          variant="embedded"
+          callbackUrl={callbackUrl}
+          authError={authError}
+          openSandboxOnLoad={openSandboxOnLoad}
+          initialDemoTemplateKey={initialDemoTemplateKey}
+        />
       </div>
     </div>
   );

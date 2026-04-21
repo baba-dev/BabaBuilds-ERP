@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -24,6 +25,7 @@ export function DemoLaunchButton({
   onLaunchStart,
 }: DemoLaunchButtonProps) {
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const launchDemo = async () => {
     if (loading) return;
@@ -52,6 +54,15 @@ export function DemoLaunchButton({
         error?: string;
       };
       if (!response.ok || !data.email || !data.password) {
+        if (data.error === "Security challenge failed: No token.") {
+          const params = new URLSearchParams({
+            openSandbox: "1",
+            demoTemplate: templateKey,
+            callbackUrl: "/dashboard?demo=1",
+          });
+          router.push(`/login?${params.toString()}`);
+          return;
+        }
         throw new Error(data.error || "Unable to provision demo workspace right now.");
       }
 

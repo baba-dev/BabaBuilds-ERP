@@ -33,10 +33,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import type { DemoTemplateKey } from "@/lib/demo/templates/types";
+import { isDemoTemplateKey } from "@/lib/demo/templates";
 
 type AuthModalProps = {
   callbackUrl?: string;
   authError?: string;
+  initialDemoTemplateKey?: DemoTemplateKey;
+  openSandboxOnLoad?: boolean;
   /**
    * `modal`: full-screen overlay (e.g. unauthenticated dashboard prompt).
    * `embedded`: sits in-page on `/login` with the ambient background visible behind it.
@@ -87,6 +90,8 @@ function getDeviceFingerprint(): string {
 export default function AuthModal({
   callbackUrl = "/dashboard",
   authError,
+  initialDemoTemplateKey,
+  openSandboxOnLoad = false,
   variant = "modal",
 }: AuthModalProps) {
   const t = useTranslations("AuthModal");
@@ -101,8 +106,10 @@ export default function AuthModal({
   const [isDemoLoading, setIsDemoLoading] = useState(false);
   const [isPolicyChecking, setIsPolicyChecking] = useState(false);
   const [selectedDemoTemplateKey, setSelectedDemoTemplateKey] =
-    useState<DemoTemplateKey>("dm_agency");
-  const [isSandboxModalOpen, setIsSandboxModalOpen] = useState(false);
+    useState<DemoTemplateKey>(
+      isDemoTemplateKey(initialDemoTemplateKey) ? initialDemoTemplateKey : "dm_agency"
+    );
+  const [isSandboxModalOpen, setIsSandboxModalOpen] = useState(openSandboxOnLoad);
   const [magicLinkPolicyMessage, setMagicLinkPolicyMessage] = useState<string | null>(
     authError === HIGH_RISK_MAGIC_LINK_BLOCKED
       ? t("alerts.highRiskMagicLinkBlocked")
@@ -562,7 +569,7 @@ export default function AuthModal({
                 {t("actions.demoSection")}
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-xl border border-border/80 bg-card/95 p-0 backdrop-blur-sm">
+            <DialogContent className="max-w-[60rem] border border-border/80 bg-card/95 p-0 backdrop-blur-sm">
               <div className="border-b border-border/70 bg-muted/25 p-6">
                 <DialogHeader className="space-y-2">
                   <DialogTitle className="flex items-center gap-2 text-xl font-black tracking-tight">
