@@ -10,8 +10,12 @@ import {
   Loader2,
   CheckCircle2,
   ShieldAlert,
-  Stars,
   ShieldCheck,
+  Building2,
+  Code2,
+  Landmark,
+  Hammer,
+  UserRound,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Turnstile } from "@marsidev/react-turnstile";
@@ -20,6 +24,15 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import type { DemoTemplateKey } from "@/lib/demo/templates/types";
 
 type AuthModalProps = {
   callbackUrl?: string;
@@ -87,9 +100,9 @@ export default function AuthModal({
   const [resendCooldown, setResendCooldown] = useState(0);
   const [isDemoLoading, setIsDemoLoading] = useState(false);
   const [isPolicyChecking, setIsPolicyChecking] = useState(false);
-  const [selectedDemoTemplateKey, setSelectedDemoTemplateKey] = useState<
-    "dm_agency" | "software_company" | "tax_agency"
-  >("dm_agency");
+  const [selectedDemoTemplateKey, setSelectedDemoTemplateKey] =
+    useState<DemoTemplateKey>("dm_agency");
+  const [isSandboxModalOpen, setIsSandboxModalOpen] = useState(false);
   const [magicLinkPolicyMessage, setMagicLinkPolicyMessage] = useState<string | null>(
     authError === HIGH_RISK_MAGIC_LINK_BLOCKED
       ? t("alerts.highRiskMagicLinkBlocked")
@@ -307,6 +320,16 @@ export default function AuthModal({
   };
 
   const isEmbedded = variant === "embedded";
+  const demoTemplateOptions: Array<{
+    key: DemoTemplateKey;
+    icon: typeof Building2;
+  }> = [
+    { key: "dm_agency", icon: Building2 },
+    { key: "software_company", icon: Code2 },
+    { key: "tax_agency", icon: Landmark },
+    { key: "contractor_builder", icon: Hammer },
+    { key: "freelancer_consultant", icon: UserRound },
+  ];
 
   return (
     <div
@@ -348,10 +371,6 @@ export default function AuthModal({
           <div>
             <h2 className="text-2xl font-black tracking-tight">{t("title")}</h2>
             <p className="text-sm text-muted-foreground mt-1">{t("subtitle")}</p>
-            <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-orange-500/25 bg-orange-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-orange-700 dark:text-orange-300">
-              <Stars className="h-3.5 w-3.5" />
-              Million-dollar onboarding flow
-            </div>
           </div>
         </div>
 
@@ -531,113 +550,114 @@ export default function AuthModal({
             Google OAuth is enabled as a primary signup path.
           </div>
 
-          <details className="rounded-xl border border-border bg-muted/40 p-3 group">
-            <summary
-              data-testid="demo-auth-section"
-              className="cursor-pointer list-none text-sm text-muted-foreground group-open:text-foreground"
-            >
-              {t("actions.demoSection")}
-            </summary>
-            <p className="mt-2 text-[11px] text-muted-foreground">
-              Demo sandbox sessions skip onboarding so users can explore instantly.
-            </p>
-
-            <div className="mt-3 space-y-3">
-              <div className="grid grid-cols-1 gap-2">
-                <button
-                  type="button"
-                  disabled={isDemoLoading || isLoading}
-                  onClick={() => setSelectedDemoTemplateKey("dm_agency")}
-                  className={cn(
-                    "w-full rounded-xl border px-3 py-2 text-left transition-colors",
-                    selectedDemoTemplateKey === "dm_agency"
-                      ? "border-orange-500/50 bg-orange-500/10"
-                      : "border-border bg-background/80 hover:bg-muted/60",
-                  )}
-                >
-                  <div className="text-sm font-semibold">{t("demoTemplates.dm_agency.title")}</div>
-                  <div className="text-xs text-muted-foreground">{t("demoTemplates.dm_agency.description")}</div>
-                </button>
-
-                <button
-                  type="button"
-                  disabled={isDemoLoading || isLoading}
-                  onClick={() => setSelectedDemoTemplateKey("software_company")}
-                  className={cn(
-                    "w-full rounded-xl border px-3 py-2 text-left transition-colors",
-                    selectedDemoTemplateKey === "software_company"
-                      ? "border-orange-500/50 bg-orange-500/10"
-                      : "border-border bg-background/80 hover:bg-muted/60",
-                  )}
-                >
-                  <div className="text-sm font-semibold">{t("demoTemplates.software_company.title")}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {t("demoTemplates.software_company.description")}
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  disabled={isDemoLoading || isLoading}
-                  onClick={() => setSelectedDemoTemplateKey("tax_agency")}
-                  className={cn(
-                    "w-full rounded-xl border px-3 py-2 text-left transition-colors",
-                    selectedDemoTemplateKey === "tax_agency"
-                      ? "border-orange-500/50 bg-orange-500/10"
-                      : "border-border bg-background/80 hover:bg-muted/60",
-                  )}
-                >
-                  <div className="text-sm font-semibold">{t("demoTemplates.tax_agency.title")}</div>
-                  <div className="text-xs text-muted-foreground">{t("demoTemplates.tax_agency.description")}</div>
-                </button>
+          <Dialog open={isSandboxModalOpen} onOpenChange={setIsSandboxModalOpen}>
+            <DialogTrigger asChild>
+              <Button
+                type="button"
+                data-testid="demo-auth-section"
+                variant="ghost"
+                disabled={isLoading || isDemoLoading}
+                className="h-auto w-full justify-start rounded-xl border border-border/80 bg-muted/35 px-4 py-3 text-left text-sm font-medium text-muted-foreground hover:bg-muted/55 hover:text-foreground"
+              >
+                {t("actions.demoSection")}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-xl border border-border/80 bg-card/95 p-0 backdrop-blur-sm">
+              <div className="border-b border-border/70 bg-muted/25 p-6">
+                <DialogHeader className="space-y-2">
+                  <DialogTitle className="flex items-center gap-2 text-xl font-black tracking-tight">
+                    <Sparkles className="h-5 w-5 text-orange-500" />
+                    {t("sandboxModal.title")}
+                  </DialogTitle>
+                  <DialogDescription className="text-sm">
+                    {t("sandboxModal.description")}
+                  </DialogDescription>
+                </DialogHeader>
               </div>
 
-              {!isDemoLoading && isProd && (
-                <div className="flex justify-center py-2 scale-90">
-                  <Turnstile
-                    siteKey="0x4AAAAAACvSwAyJa3nVFu2n"
-                    onSuccess={(token) => {
-                      setTurnstileToken(token);
-                      setRequiresTurnstile(false);
-                    }}
-                    options={{ theme: "dark" }}
-                  />
+              <div className="space-y-4 p-6">
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  {demoTemplateOptions.map((template) => {
+                    const Icon = template.icon;
+                    const isSelected = selectedDemoTemplateKey === template.key;
+                    return (
+                      <button
+                        key={template.key}
+                        type="button"
+                        disabled={isDemoLoading || isLoading}
+                        onClick={() => setSelectedDemoTemplateKey(template.key)}
+                        className={cn(
+                          "w-full rounded-xl border p-3 text-left transition-all",
+                          "bg-background/85 hover:bg-muted/45",
+                          "shadow-[inset_0_1px_0_0_color-mix(in_oklab,var(--background)_90%,transparent)]",
+                          isSelected
+                            ? "border-orange-500/70 bg-orange-500/10 ring-1 ring-orange-500/35"
+                            : "border-border/80"
+                        )}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={cn(
+                              "mt-0.5 rounded-lg border p-1.5",
+                              isSelected
+                                ? "border-orange-500/40 bg-orange-500/12 text-orange-600 dark:text-orange-300"
+                                : "border-border bg-background text-muted-foreground"
+                            )}
+                          >
+                            <Icon className="h-4 w-4" />
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-sm font-semibold leading-tight">
+                              {t(`demoTemplates.${template.key}.title`)}
+                            </div>
+                            <div className="text-xs leading-relaxed text-muted-foreground">
+                              {t(`demoTemplates.${template.key}.description`)}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
-              )}
 
-              <Button
-                data-testid="demo-auth-button"
-                onClick={handleDemoSignIn}
-                variant="secondary-info"
-                size="lg"
-                disabled={
-                  isLoading ||
-                  isDemoLoading ||
-                  (!turnstileToken && isProd)
-                }
-                className={cn(
-                  "w-full justify-between rounded-xl py-3 text-muted-foreground hover:text-foreground",
-                  subtleInteractive,
+                {!isDemoLoading && isProd && (
+                  <div className="flex justify-center rounded-lg border border-border/80 bg-muted/25 py-2">
+                    <Turnstile
+                      siteKey="0x4AAAAAACvSwAyJa3nVFu2n"
+                      onSuccess={(token) => {
+                        setTurnstileToken(token);
+                        setRequiresTurnstile(false);
+                      }}
+                      options={{ theme: "dark" }}
+                    />
+                  </div>
                 )}
-              >
-                <div className="flex items-center gap-3">
-                  {isDemoLoading ? (
-                    <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
-                  ) : (
-                    <Sparkles className="w-5 h-5 text-orange-500" />
-                  )}
-                  <span>
-                    {isDemoLoading
-                      ? t("actions.provisioningSandbox")
-                      : t("actions.tryInteractiveDemo")}
-                  </span>
-                </div>
-                {!isDemoLoading && (
-                  <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                )}
-              </Button>
-            </div>
-          </details>
+
+                <Button
+                  data-testid="demo-auth-button"
+                  onClick={handleDemoSignIn}
+                  variant="secondary-info"
+                  size="lg"
+                  disabled={isLoading || isDemoLoading || (!turnstileToken && isProd)}
+                  className={cn("w-full justify-between rounded-xl py-3", subtleInteractive)}
+                >
+                  <div className="flex items-center gap-3">
+                    {isDemoLoading ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-orange-500" />
+                    ) : (
+                      <Sparkles className="h-5 w-5 text-orange-500" />
+                    )}
+                    <span>
+                      {isDemoLoading
+                        ? t("actions.provisioningSandbox")
+                        : t("sandboxModal.cta")}
+                    </span>
+                  </div>
+                  {!isDemoLoading && <ArrowRight className="h-4 w-4 text-muted-foreground" />}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           <div className="pt-1 text-center text-xs text-muted-foreground">
             <div className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1">

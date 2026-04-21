@@ -1602,6 +1602,33 @@
       "contactSupport": "Contact support",
       "demoSection": "Need a sandbox instead?"
     },
+    "sandboxModal": {
+      "title": "Open a sandbox workspace",
+      "description": "Choose a guided setup with realistic data to evaluate workflows before creating your own workspace.",
+      "cta": "Launch sandbox"
+    },
+    "demoTemplates": {
+      "dm_agency": {
+        "title": "Digital Marketing Agency",
+        "description": "Campaign retainers, proposal conversion, and collections workflow."
+      },
+      "software_company": {
+        "title": "Software Company",
+        "description": "Product sprint invoicing, subscription revenue, and team operations."
+      },
+      "tax_agency": {
+        "title": "Tax Agency",
+        "description": "Compliance-heavy workflows with filing, reporting, and audit readiness."
+      },
+      "contractor_builder": {
+        "title": "Contractor & Builder",
+        "description": "Project milestone billing, vendor costs, and site-level cash tracking."
+      },
+      "freelancer_consultant": {
+        "title": "Freelancer & Consultant",
+        "description": "Solo billing loop with proposals, retainers, and lightweight finance control."
+      }
+    },
     "alerts": {
       "emailFailed": "Failed to send login link. Please try again.",
       "highRiskMagicLinkBlocked": "Magic links are disabled for OWNER/ADMIN accounts. Use Google or your enterprise SSO provider.",

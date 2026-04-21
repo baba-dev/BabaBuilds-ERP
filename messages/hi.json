@@ -1592,14 +1592,37 @@
       "continueWithGoogle": "Continue with Google",
       "provisioningSandbox": "Provisioning Sandbox...",
       "tryInteractiveDemo": "Try Interactive Demo",
-      "demoTemplateLabel": "Demo type",
-      "demoTemplateDmAgency": "Digital Marketing Agency",
-      "demoTemplateSoftwareCompany": "Software Company",
-      "demoTemplateTaxAgency": "Tax Agency",
       "resendLink": "Resend link",
       "retry": "Retry",
       "contactSupport": "Contact support",
       "demoSection": "Need a sandbox instead?"
+    },
+    "sandboxModal": {
+      "title": "Choose your sandbox",
+      "description": "Pick a pre-built workspace to explore real flows instantly. You can switch to full signup anytime.",
+      "cta": "Launch sandbox workspace"
+    },
+    "demoTemplates": {
+      "dm_agency": {
+        "title": "Digital Marketing Agency",
+        "description": "Campaign retainers, proposal flow, and receivables tracking built for agency operations."
+      },
+      "software_company": {
+        "title": "Software Company",
+        "description": "Productized services, sprint billing, and SaaS-focused revenue workflows."
+      },
+      "tax_agency": {
+        "title": "Tax Agency",
+        "description": "Compliance-heavy setup with filing workflows, audit trails, and tax operations."
+      },
+      "contractor_builder": {
+        "title": "Contractor & Builder",
+        "description": "Milestone invoicing, vendor cost visibility, and project cash controls."
+      },
+      "freelancer_consultant": {
+        "title": "Freelancer & Consultant",
+        "description": "Lean client workflow for proposals, recurring billing, and payment follow-through."
+      }
     },
     "alerts": {
       "emailFailed": "Failed to send login link. Please try again.",

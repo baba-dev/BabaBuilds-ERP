@@ -1609,6 +1609,33 @@
       "contactSupport": "Contact support",
       "demoSection": "Need a sandbox instead?"
     },
+    "sandboxModal": {
+      "title": "Explore Demo Sandbox",
+      "description": "Pick a pre-seeded workspace and launch instantly to evaluate real workflows.",
+      "cta": "Launch Sandbox Workspace"
+    },
+    "demoTemplates": {
+      "dm_agency": {
+        "title": "Digital Marketing Agency",
+        "description": "Campaign retainers, proposal-to-invoice flow, and collections visibility."
+      },
+      "software_company": {
+        "title": "Software Company",
+        "description": "Productized services, milestone billing, and recurring subscription revenue."
+      },
+      "tax_agency": {
+        "title": "Tax Agency",
+        "description": "Compliance-first setup with filing timelines, audits, and tax workflows."
+      },
+      "contractor_builder": {
+        "title": "Contractor & Builder",
+        "description": "Project billing, vendor-heavy expenses, and progress-linked cash tracking."
+      },
+      "freelancer_consultant": {
+        "title": "Freelancer & Consultant",
+        "description": "Solo operator stack with fast proposals, retainers, and payment follow-ups."
+      }
+    },
     "alerts": {
       "emailFailed": "Failed to send login link. Please try again.",
       "highRiskMagicLinkBlocked": "Magic links are disabled for OWNER/ADMIN accounts. Use Google or your enterprise SSO provider.",
