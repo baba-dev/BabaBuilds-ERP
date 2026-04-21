@@ -1,112 +1,76 @@
 ---
-title: "Configuring Your Business Profile"
-description: "A complete guide to every section in Settings — from company identity and banking to SMTP email, AI keys, and invoice themes."
+title: "Configuring Your Business Profile & Workspace Settings"
+description: "Complete operating guide for Settings, including branding, compliance, SMTP, AI, payment gateway, and optional module controls."
 order: 8
+category: "General"
+tags: ["settings", "configuration", "workspace", "branding", "modules"]
+estimatedMinutes: 12
+isFeatured: true
+dateModified: "2026-04-21"
 ---
 
-# Configuring Your Business Profile
+# Configuring Your Business Profile & Workspace Settings
 
-**Settings** is your ERP's master control panel. Everything configured here appears on your invoices and powers the ERP's features.
+Settings is your ERP control panel. Values here affect invoices, communication, tax fields, and enabled modules.
 
-Navigate to **Settings** in the sidebar.
+## Open Settings
 
----
+1. Go to **Settings** from the sidebar.
+2. Update section values.
+3. Click **Save Configuration**.
 
-## Identity & Branding
+<HelpImage src="/help/diagrams/erp_entrypoint.svg" alt="ERP entry point and navigation to settings" caption="Use Settings as your command center for identity, finance, and module controls." />
 
-| Field | Used On |
+## Identity & branding
+
+| Field | Why it matters |
 |---|---|
-| **Company Name** | All invoice headers |
-| **Proprietor Name** | Authorized signatory line |
-| **Full Address** | Invoice "From" section |
-| **Contact Email** | Invoice footer & email sender |
-| **Phone / Website** | Invoice footer |
-| **Logo** | Top of every invoice PDF (PNG recommended) |
+| Company Name | Appears on invoices and formal docs |
+| Proprietor / Signatory | Printed in signatory area |
+| Address | Billing and compliance context |
+| Contact email and phone | Customer communication |
+| Logo | Brand trust on PDFs |
 
----
+## Compliance and tax identity
 
-## Invoice Theme
-
-Choose your invoice design:
-
-- **Design 1 — Classic**: Traditional black-footer layout with statutory declarations. Ideal for Indian domestic clients.
-- **Design 2 — Modern Agency**: Clean, minimal layout similar to Stripe invoices. Great for international clients.
-
----
-
-## Language
-
-Select your preferred language for the ERP interface:
-
-- 🇬🇧 English (India) — default
-- 🇸🇦 Arabic
-- 🇪🇸 Spanish
-- 🇮🇳 Hindi
-
----
-
-## Compliance & Tax
-
-| Field | Description |
+| Field | Usage |
 |---|---|
-| **PAN Number** | Primary compliance identifier field (commonly PAN for India, can map to local business/tax ID in other regions) |
-| **Udyam Registration** | Secondary business registration field (India MSME or local registration reference) |
-| **GSTIN** | Tax registration field (GSTIN/TRN/VAT number, depending on country setup) |
-| **Default SAC/HSN Code** | Fallback service classification code if none specified per invoice |
+| PAN / Primary tax ID | Core business identifier |
+| Udyam / registration ID | Regional business registration |
+| GSTIN / VAT ID | Tax reporting field |
+| Default SAC/HSN | Service code fallback |
 
----
+## Banking and remittance
 
-## Banking Details
+Set remittance bank details exactly as you want them shown on invoices.
 
-These appear in the **"Bank Details for Remittance"** section of every invoice:
+## SMTP (invoice email sending)
 
-| Field | Description |
-|---|---|
-| **Bank Name** | Your bank (e.g., ICICI Bank) |
-| **Account Name** | Name on the account |
-| **Account Number** | Stored securely, visible only on invoices |
-| **IFSC Code** | Routing identifier field (IFSC / IBAN / SWIFT based on your country setup) |
+Add SMTP host, port, username, password, and from-email, then test by sending a sample invoice to yourself.
 
----
+## AI assistant key
 
-## Email Server (SMTP)
+Add your Groq key to activate BabaBot features. You can rotate or delete keys anytime.
 
-Configure SMTP to enable invoice email delivery:
+## Payment gateways
 
-| Field | Example |
-|---|---|
-| **SMTP Host** | `smtp.gmail.com` |
-| **SMTP Port** | `465` (SSL) or `587` (TLS) |
-| **SMTP Username** | Your email address |
-| **SMTP Password** | App password (not your login password) |
-| **From Email** | `billing@yourcompany.com` |
+Connect Razorpay or Stripe to include pay links in invoice PDFs.
 
-> **Gmail users:** Enable 2FA on your Google account and generate an [App Password](https://myaccount.google.com/apppasswords) to use here.
+See: [Connecting Razorpay & Stripe](/help/payment-gateways)
 
----
+## Optional Sub Systems
 
-## AI Assistant (Groq API Key)
+At the **Workspace Modules** section, you can enable advanced modules from settings:
 
-Enter your **Groq API key** here to enable BabaBot. Get a free key at [console.groq.com](https://console.groq.com).
+- Workforce
+- Payroll
+- Revenue Pipeline
+- Document Vault
+- Cash Flow
+- AR Aging + Collections Centre
+- Reporting Center
+- Import Manager
 
-To remove an existing key, click the **🗑 Delete** icon. BabaBot will stop working until a new key is added.
+See: [Optional Sub Systems — Overview](/help/optional-sub-systems-overview)
 
----
-
-## Payment Gateway
-
-Connect **Razorpay** (INR / India) or **Stripe** (global) to embed payment links in invoices.
-
-See the full guide: [Connecting Razorpay & Stripe](/help/payment-gateways)
-
----
-
-## Saving Your Settings
-
-Click the **Save Configuration** button at the bottom of the page. Settings are applied immediately, and the page will refresh to apply any language changes.
-
----
-
-## Questions?
-
-Our team is available at **admin@bababuilds.com** for any settings or configuration help.
+<Callout type="info">Disabling a module hides it but does not delete its data.</Callout>

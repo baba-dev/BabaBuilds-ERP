@@ -1,122 +1,105 @@
 ---
-title: "Tracking Expenses & Tax Savings"
-description: "How to log business expenses, track tax-saving investments (80C/80D), and use BabaBot to estimate your tax liability."
+title: "Tracking Expenses, Deductions, and Tax Readiness"
+description: "Operational playbook for expense capture, deduction tracking, and tax-readiness workflows backed by ERP metrics and AI prompts."
 order: 7
 category: "Tax & Compliance"
 tags: ["expenses", "tax", "80c", "80d", "gst", "deductions", "bababot"]
 icon: "shield-check"
-estimatedMinutes: 7
+estimatedMinutes: 10
 isFeatured: false
-dateModified: "2026-04-14"
+dateModified: "2026-04-21"
 ---
 
-# Tracking Expenses & Tax Savings
+# Tracking Expenses, Deductions, and Tax Readiness
 
-BabaBuilds ERP helps you track your **business expenses** and **tax-saving investments** so you always have a clear picture of your net profitability and estimated tax liability.
+Use this flow to keep financial records clean and always audit-ready.
 
 ---
 
-## Logging Expenses
+## Expense capture workflow
 
 <Steps>
   <Step title="Open Expenses & Margins">
-    Navigate to <strong>Expenses & Margins</strong> in the sidebar.
+    Create expenses from daily operations.
   </Step>
-  <Step title="Create an expense">
-    Click <strong>Add Expense</strong>.
+  <Step title="Classify correctly">
+    Use consistent categories for reporting quality.
   </Step>
-  <Step title="Fill the fields and save">
-    Use the guide below for what each field means.
+  <Step title="Review weekly">
+    Fix uncategorized or suspicious entries quickly.
   </Step>
 </Steps>
 
-| Field | Description |
+| Field | Guidance |
 |---|---|
-| **Vendor** | Who you paid (e.g., "AWS", "Zomato") |
-| **Amount** | Expense amount |
-| **Category** | Accounting category (e.g., Software, Travel, Meals) |
-| **Date** | Defaults to today |
-| **Description** | Optional note |
+| **Vendor** | Use legal/business name |
+| **Amount** | Gross amount paid |
+| **Category** | Standardized across your org |
+| **Date** | Actual transaction date |
+| **Description** | Include context for audit |
 
 ---
 
-## Using BabaBot to Log Expenses
+## Standard category model
 
-You can log expenses by voice-style commands:
+Recommended categories:
 
-- *"Log ₹12,000 to Adobe under Software"*
-- *"Add a ₹2,500 travel expense to Uber from last Friday"*
-- *"Show me my expenses by category"*
+- Software
+- Travel
+- Meals & Entertainment
+- Professional Services
+- Marketing
+- Office and Operations
 
-BabaBot will categorize and save it automatically.
+Keep category naming stable to preserve trend quality.
 
-<Callout type="tip">
-  If you want more accurate tax estimates, be consistent with categories. “Software”, “Travel”, and “Professional Services” are the biggest sources of reporting clarity.
+---
+
+## Deductions and savings tracking
+
+Track eligible investments and deductions (example buckets):
+
+- Section 80C class instruments
+- Section 80D insurance-related claims
+
+<Callout type="info">
+  Treat ERP as operational tracking; your CA remains final authority for filing treatment.
 </Callout>
 
 ---
 
-## Understanding Expense Categories
+## AI-assisted tax queries (BabaBot)
 
-Suggested categories that align with standard accounting:
+Use prompts like:
 
-- **Software** — Subscriptions, SaaS tools
-- **Travel** — Flights, taxis, fuel
-- **Meals & Entertainment** — Client dinners, team lunches
-- **Office Supplies** — Hardware, stationery
-- **Professional Services** — Chartered accountant, legal fees
-- **Marketing** — Ads, design tools
+- "Show expense totals by category this quarter"
+- "Estimate taxable income after deductions"
+- "List highest cost vendors this month"
 
 ---
 
-## Tax Savings (80C & 80D)
+## Understand tax estimate model
 
-Navigate to **Savings & Tax** in the sidebar to log tax-saving investments.
+`Taxable Income = Revenue - Expenses - Eligible Deductions`
 
-### Section 80C (Limit: ₹1,50,000)
-Log investments in:
-- PPF (Public Provident Fund)
-- ELSS (Equity Linked Savings Scheme)
-- Life Insurance Premium
-- NSC, Tax-saver FDs
-
-### Section 80D (Limit: ₹25,000)
-Log:
-- Health insurance premiums for self and family
-
----
-
-## Reviewing Your Tax Position
-
-The **Dashboard** shows an **Estimated Tax** KPI card at all times.
-
-For a detailed breakdown, ask BabaBot:
-
-- *"Calculate my estimated tax liability"*
-- *"How much have I invested under 80C?"*
-- *"What is my net profit after expenses?"*
-
-BabaBot uses this formula:
-
-```
-Taxable Income = Revenue − Expenses − (80C + 80D deductions)
-Estimated Tax  = Taxable Income × 30%
-```
+`Estimated Tax = Taxable Income x applicable rate`
 
 <HelpImage
   src="/help/diagrams/tax_estimate_model.svg"
   alt="Tax estimate model showing revenue, expenses, deductions, taxable income, and estimated tax"
-  caption="A simple model of how the ERP estimates taxable income (you can always override with your CA’s guidance)."
+  caption="ERP gives decision support; validate filing strategy with your accountant."
 />
 
 ---
 
-## CA Portal
+## Compliance review rhythm
 
-Navigate to **CA Compliance** in the sidebar for a comprehensive compliance view. This portal is designed for your Chartered Accountant to review your financial summary without affecting any data.
+- Weekly: categorize and annotate expenses
+- Monthly: compare tax estimate vs expected liability
+- Quarterly: run CA review package
 
 ---
 
-## Questions?
+## Need help?
 
-Reach out to our team at **admin@bababuilds.com** for expense or tax-related guidance.
+For compliance workflow support, email **admin@bababuilds.com**.

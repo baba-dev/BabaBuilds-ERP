@@ -405,9 +405,9 @@ export default async function DocPage({ params }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_260px] gap-10">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px] gap-8 xl:gap-10">
         {/* Markdown content rendered via MDXRemote with custom components */}
-        <div className={cn(typography.richContent, "max-w-3xl lg:max-w-none")}>
+        <div className={cn(typography.richContent, "max-w-none")}>
           <MDXRemote source={doc.content} components={components as any} />
         </div>
 
