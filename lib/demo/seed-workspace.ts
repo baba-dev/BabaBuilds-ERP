@@ -25,6 +25,7 @@ export async function seedDemoWorkspace(
   params: { userId: string; templateKey: DemoTemplateKey; ttlHours: number },
 ): Promise<{ workspaceId: string; templateKey: DemoTemplateKey }> {
   const template = getDemoTemplate(params.templateKey);
+  const { groqApiKeyPlaintext, ...businessProfileInput } = template.businessProfile;
   const enabledModuleKeys = MODULE_KEYS.filter((moduleKey) => Boolean(template.modules[moduleKey]));
   const missingRequiredModules = getMissingRequiredModules(enabledModuleKeys);
   if (missingRequiredModules.length > 0) {
@@ -61,9 +62,9 @@ export async function seedDemoWorkspace(
   await tx.businessProfile.create({
     data: {
       workspaceId: workspace.id,
-      ...template.businessProfile,
-      ...(template.businessProfile.groqApiKeyPlaintext
-        ? { groqApiKey: encrypt(template.businessProfile.groqApiKeyPlaintext) }
+      ...businessProfileInput,
+      ...(groqApiKeyPlaintext
+        ? { groqApiKey: encrypt(groqApiKeyPlaintext) }
         : {}),
     } as Prisma.BusinessProfileUncheckedCreateInput,
   });
