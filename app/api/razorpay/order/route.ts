@@ -35,9 +35,10 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { interval, distributorCouponCode, pricingRegion: rawRegion } = body as {
+    const { interval, distributorCouponCode, resellerCouponCode, pricingRegion: rawRegion } = body as {
       interval?: string;
       distributorCouponCode?: string | null;
+      resellerCouponCode?: string | null;
       pricingRegion?: string | null;
     };
 
@@ -51,6 +52,7 @@ export async function POST(req: Request) {
       userId,
       interval: interval as SubscriptionIntervalKey,
       distributorCouponCode: distributorCouponCode ?? undefined,
+      resellerCouponCode: resellerCouponCode ?? undefined,
       pricingRegion,
     });
 

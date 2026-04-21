@@ -34,6 +34,16 @@ type CouponItem = {
   conversionRate: number;
   revenue: number;
   renewals: number;
+  leadDetails: Array<{
+    id: string;
+    stage: "LEAD" | "QUALIFIED" | "WON" | "LOST";
+    appliedAt: string;
+    conversionAt: string | null;
+    workspaceId: string;
+    workspaceName: string;
+    paidTransactions: number;
+    revenue: number;
+  }>;
 };
 
 export default function AdminResellersPage() {
@@ -243,6 +253,41 @@ export default function AdminResellersPage() {
                 <p>Renewals: {coupon.renewals}</p>
                 <p>Discount/Comm: {coupon.discountValue}% / {coupon.commissionPercent}%</p>
               </div>
+              {coupon.leadDetails.length > 0 && (
+                <div className="mt-4 overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
+                  <table className="min-w-full text-left text-xs">
+                    <thead className="bg-zinc-50 text-zinc-500 dark:bg-zinc-900/70 dark:text-zinc-300">
+                      <tr>
+                        <th className="px-3 py-2 font-semibold uppercase tracking-wider">Workspace</th>
+                        <th className="px-3 py-2 font-semibold uppercase tracking-wider">Stage</th>
+                        <th className="px-3 py-2 font-semibold uppercase tracking-wider">Applied</th>
+                        <th className="px-3 py-2 font-semibold uppercase tracking-wider">Converted</th>
+                        <th className="px-3 py-2 font-semibold uppercase tracking-wider">Paid Tx</th>
+                        <th className="px-3 py-2 font-semibold uppercase tracking-wider text-right">Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {coupon.leadDetails.map((lead) => (
+                        <tr key={lead.id} className="border-t border-zinc-100 dark:border-zinc-800">
+                          <td className="px-3 py-2">
+                            <p className="font-semibold text-zinc-900 dark:text-zinc-100">{lead.workspaceName}</p>
+                            <p className="text-[10px] text-zinc-500">{lead.workspaceId.slice(0, 8)}...</p>
+                          </td>
+                          <td className="px-3 py-2">
+                            <Badge variant={lead.stage === "WON" ? "default" : "secondary"}>{lead.stage}</Badge>
+                          </td>
+                          <td className="px-3 py-2">{new Date(lead.appliedAt).toLocaleDateString()}</td>
+                          <td className="px-3 py-2">
+                            {lead.conversionAt ? new Date(lead.conversionAt).toLocaleDateString() : "—"}
+                          </td>
+                          <td className="px-3 py-2">{lead.paidTransactions}</td>
+                          <td className="px-3 py-2 text-right font-semibold">${lead.revenue.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           ))}
         </CardContent>

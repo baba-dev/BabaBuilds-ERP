@@ -38,8 +38,17 @@ export type CreateSubscriptionOrderInput = {
   userId: string;
   interval: SubscriptionIntervalKey;
   distributorCouponCode?: string | null;
+  resellerCouponCode?: string | null;
   /** Optional UI override; must be a valid region code or omitted. */
   pricingRegion?: PricingRegion | null;
+};
+
+type CouponResolution = {
+  discountPercent: number;
+  distributorCouponId: string | null;
+  resellerCouponId: string | null;
+  resellerId: string | null;
+  source: "distributor" | "reseller" | null;
 };
 
 async function assertCouponUsableForCheckout(
@@ -104,6 +113,49 @@ export async function createSubscriptionRazorpayOrder(input: CreateSubscriptionO
   } | null = null;
 
   const rawCode = input.distributorCouponCode?.trim();
+  const rawResellerCode = input.resellerCouponCode?.trim();
+  let appliedResellerCouponId: string | null = null;
+  let appliedDistributorCouponId: string | null = null;
+
+  if (rawResellerCode) {
+    const resellerCode = rawResellerCode.toUpperCase();
+    const resellerCoupon = await prisma.resellerCoupon.findFirst({
+      where: { code: resellerCode, isActive: true },
+      include: {
+        reseller: { select: { status: true, id: true } },
+      },
+    });
+    if (!resellerCoupon || resellerCoupon.reseller.status !== "ACTIVE") {
+      throw new Error("Invalid or inactive reseller coupon");
+    }
+    if (resellerCoupon.maxUses != null && resellerCoupon.usedCount >= resellerCoupon.maxUses) {
+      throw new Error("This reseller coupon has reached its usage limit");
+    }
+    if (resellerCoupon.firstPurchaseOnly) {
+      const ws = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { hasEverSubscribed: true },
+      });
+      const prior = await prisma.billingTransaction.count({
+        where: { workspaceId, status: "PAID" },
+      });
+      if (prior > 0 || ws?.hasEverSubscribed) {
+        throw new Error("This reseller coupon is only valid for your first subscription purchase");
+      }
+    }
+    coupon = {
+      id: resellerCoupon.id,
+      customerDiscountPercent: resellerCoupon.discountValue,
+      distributor: { status: "ACTIVE" },
+      maxUses: resellerCoupon.maxUses,
+      usedCount: resellerCoupon.usedCount,
+      allowedTiers: "PRO,TEAM",
+      startsAt: resellerCoupon.startsAt,
+      endsAt: resellerCoupon.endsAt,
+      firstPurchaseOnly: resellerCoupon.firstPurchaseOnly,
+    };
+    appliedResellerCouponId = resellerCoupon.id;
+  }
   if (rawCode) {
     const code = normalizeDistributorCouponCode(rawCode);
     const found = await prisma.distributorCoupon.findFirst({
@@ -115,7 +167,9 @@ export async function createSubscriptionRazorpayOrder(input: CreateSubscriptionO
     }
     await assertCouponUsableForCheckout(found, interval, workspaceId);
     coupon = found;
-  } else {
+    appliedDistributorCouponId = found.id;
+    appliedResellerCouponId = null;
+  } else if (!coupon) {
     const attr = await prisma.distributorAttribution.findUnique({
       where: { workspaceId },
       include: {
@@ -127,6 +181,7 @@ export async function createSubscriptionRazorpayOrder(input: CreateSubscriptionO
     if (attr?.coupon?.isActive) {
       await assertCouponUsableForCheckout(attr.coupon, interval, workspaceId);
       coupon = attr.coupon;
+      appliedDistributorCouponId = attr.coupon.id;
     }
   }
 
@@ -166,7 +221,12 @@ export async function createSubscriptionRazorpayOrder(input: CreateSubscriptionO
     pricingRegion,
   };
   if (coupon) {
-    notes.distributorCouponId = coupon.id;
+    if (appliedDistributorCouponId) {
+      notes.distributorCouponId = appliedDistributorCouponId;
+    }
+    if (appliedResellerCouponId) {
+      notes.resellerCouponId = appliedResellerCouponId;
+    }
     notes.customerDiscountPercent = String(discountPct);
   }
 
@@ -191,7 +251,7 @@ export async function createSubscriptionRazorpayOrder(input: CreateSubscriptionO
     order,
     listAmountInr: listMajor,
     chargeAmountInr: chargeMajor,
-    distributorCouponId: coupon?.id ?? null,
+    distributorCouponId: appliedDistributorCouponId,
   };
 }
 
@@ -244,6 +304,7 @@ export async function processRazorpaySubscriptionPaymentVerified(paymentId: stri
         ? Number(notes.listAmountInr)
         : getListPriceForInterval(interval, region).amountMajor;
   const couponId = notes.distributorCouponId ?? null;
+  const resellerCouponId = notes.resellerCouponId ?? null;
   const discountPct =
     notes.customerDiscountPercent != null ? Number(notes.customerDiscountPercent) : 0;
 
@@ -266,14 +327,53 @@ export async function processRazorpaySubscriptionPaymentVerified(paymentId: stri
       throw new Error("Insufficient payment amount for this plan and coupon");
     }
   } else {
-    if (!paidMatchesPlan(amountPaid, interval, 0, region)) {
+    if (resellerCouponId) {
+      const resellerCoupon = await prisma.resellerCoupon.findFirst({
+        where: { id: resellerCouponId, isActive: true },
+        include: { reseller: { select: { status: true } } },
+      });
+      if (!resellerCoupon || resellerCoupon.reseller.status !== "ACTIVE") {
+        throw new Error("Reseller coupon no longer valid");
+      }
+      const expectedDiscount = decimalToNumber(resellerCoupon.discountValue);
+      if (Math.abs(expectedDiscount - discountPct) > 0.01) {
+        throw new Error("Reseller coupon discount mismatch");
+      }
+      if (!paidMatchesPlan(amountPaid, interval, expectedDiscount, region)) {
+        throw new Error("Insufficient payment amount for this plan and reseller coupon");
+      }
+      await prisma.$transaction(async (tx) => {
+        await tx.resellerCoupon.update({
+          where: { id: resellerCoupon.id },
+          data: { usedCount: { increment: 1 } },
+        });
+        await tx.resellerLead.upsert({
+          where: { workspaceId },
+          create: {
+            workspaceId,
+            resellerId: resellerCoupon.resellerId,
+            couponId: resellerCoupon.id,
+            stage: "WON",
+            conversionAt: new Date(),
+          },
+          update: {
+            resellerId: resellerCoupon.resellerId,
+            couponId: resellerCoupon.id,
+            stage: "WON",
+            conversionAt: new Date(),
+          },
+        });
+      });
+    } else if (!paidMatchesPlan(amountPaid, interval, 0, region)) {
       throw new Error("Insufficient payment amount detected");
     }
   }
 
   const description = couponId
     ? `Subscription (${interval}) via Razorpay — distributor coupon`
-    : `Subscription (${interval}) via Razorpay`;
+    : resellerCouponId
+      ? `Subscription (${interval}) via Razorpay — reseller coupon`
+      : `Subscription (${interval}) via Razorpay`;
 
   const customerId =
     typeof (payment as { customer_id?: string | null }).customer_id === "string"

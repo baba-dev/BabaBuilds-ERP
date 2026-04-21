@@ -30,6 +30,7 @@ export async function GET() {
             id: true,
             stage: true,
             conversionAt: true,
+            createdAt: true,
             workspace: {
               select: {
                 id: true,
@@ -74,6 +75,19 @@ export async function GET() {
         conversionRate,
         revenue,
         renewals,
+        leadDetails: coupon.leads.map((lead) => ({
+          id: lead.id,
+          stage: lead.stage,
+          appliedAt: lead.createdAt,
+          conversionAt: lead.conversionAt,
+          workspaceId: lead.workspace.id,
+          workspaceName: lead.workspace.name,
+          paidTransactions: lead.workspace.billingTransactions.length,
+          revenue: lead.workspace.billingTransactions.reduce(
+            (acc, tx) => acc + toNumber(tx.amount),
+            0,
+          ),
+        })),
         createdAt: coupon.createdAt,
       };
     });
