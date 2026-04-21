@@ -304,9 +304,14 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user, account }) {
       if (!user?.email) return false;
 
-      // Allow the demo credentials provider to bypass phishing-resistant MFA policy checks.
-      // This is strictly scoped to the internal `demo-login` provider used for ephemeral demo accounts.
-      if (account?.provider === "demo-login") {
+      const isDemoCredentialsSignIn =
+        Boolean(user.email?.endsWith("@bababuilds.demo")) &&
+        (account?.provider === "demo-login" || account?.type === "credentials" || !account);
+
+      // Allow demo credential sign-ins to bypass phishing-resistant MFA policy checks.
+      // This is strictly scoped to ephemeral demo accounts and covers edge-cases where
+      // NextAuth may not include `account` metadata during callback execution.
+      if (isDemoCredentialsSignIn) {
         return true;
       }
 
@@ -344,13 +349,6 @@ export const authOptions: NextAuthOptions = {
 
       const isAllowedExceptionMagicLinkSignIn = isExceptionEmail && account?.provider === "email";
       if (hasHighRiskRole(effectiveRoles) && !isPhishingResistantSignIn(account) && !isAllowedExceptionMagicLinkSignIn) {
-        const isDemoCredentialsSignIn =
-          Boolean(user.email?.endsWith("@bababuilds.demo")) &&
-          (account?.provider === "demo-login" || account?.type === "credentials");
-        if (isDemoCredentialsSignIn) {
-          return true;
-        }
-
         const provider = account?.provider ?? "unknown";
         recordAuthFailure({
           reason: "HIGH_RISK_ROLE_REQUIRES_PHISHING_RESISTANT_MFA",
