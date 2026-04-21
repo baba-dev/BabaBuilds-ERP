@@ -141,6 +141,7 @@ export default function BillingSettingsClient({
     if (activeInterval === "TEAM_MONTHLY") return { activePriceLabel: formatPlanPrice(price, locale), intervalText: "Per Month (Team)" };
     if (activeInterval === "TEAM_YEARLY") return { activePriceLabel: formatPlanPrice(price, locale), intervalText: "Per Year (Team)" };
     if (activeInterval === "YEARLY") return { activePriceLabel: formatPlanPrice(price, locale), intervalText: "Per Year" };
+    if (activeInterval === "QUARTERLY") return { activePriceLabel: formatPlanPrice(price, locale), intervalText: "Per Quarter" };
     return { activePriceLabel: formatPlanPrice(price, locale), intervalText: isTeam ? "Team plan" : "Per Month" };
   }, [formatMoney, isPaidSubscription, isTrialing, locale, pricingRegion, workspace.planInterval, workspace.planTier, workspace.subscriptionStatus]);
 
