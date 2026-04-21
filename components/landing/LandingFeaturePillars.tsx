@@ -1,6 +1,6 @@
 "use client";
 
-import { LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
+import { LazyMotion, domAnimation, m, motion, useReducedMotion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
@@ -124,7 +124,7 @@ export default function LandingFeaturePillars() {
   return (
     <section id="features" className="bg-surface-base py-24 md:py-32">
       <div className="mx-auto max-w-7xl px-6">
-        <m.div
+        <motion.div
           initial={reduceMotion ? false : { opacity: 0, y: 14 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.25 }}
@@ -136,7 +136,7 @@ export default function LandingFeaturePillars() {
             <span className="text-orange-600 dark:text-orange-400">{tFeatures("headingHighlight")}</span>
           </h2>
           <p className="text-lg font-medium leading-relaxed text-muted-body">{tFeatures("description")}</p>
-        </m.div>
+        </motion.div>
 
         <LazyMotion features={domAnimation}>
           <div className="grid gap-10 lg:grid-cols-12">

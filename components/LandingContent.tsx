@@ -182,7 +182,7 @@ export default function LandingContent() {
           <p className="mb-8 text-center text-sm font-bold uppercase tracking-[0.2em] text-muted-body">{t("trust.title")}</p>
           <div className="grid gap-4 md:grid-cols-5">
             {trustCities.map((city, idx) => (
-              <m.div
+              <motion.div
                 key={city}
                 initial={reduceMotion ? false : { opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -192,12 +192,12 @@ export default function LandingContent() {
               >
                 <MapPin className="h-4 w-4 shrink-0 text-orange-500/80" aria-hidden />
                 {city}
-              </m.div>
+              </motion.div>
             ))}
           </div>
           <div className="mt-6 grid gap-4 md:grid-cols-4">
             {trustMetrics.map((metric, idx) => (
-              <m.div
+              <motion.div
                 key={metric.label}
                 initial={reduceMotion ? false : { opacity: 0, y: 12 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -210,10 +210,10 @@ export default function LandingContent() {
                 </div>
                 <p className="text-2xl font-black text-foreground">{metric.value}</p>
                 <p className="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-muted-body">{metric.label}</p>
-              </m.div>
+              </motion.div>
             ))}
           </div>
-          <m.div
+          <motion.div
             initial={reduceMotion ? false : { opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.25 }}
@@ -230,7 +230,7 @@ export default function LandingContent() {
                 </li>
               ))}
             </ul>
-          </m.div>
+          </motion.div>
         </div>
       </section>
 
@@ -265,7 +265,7 @@ export default function LandingContent() {
 
       <section className="relative overflow-hidden bg-foreground py-28">
         <div className="pointer-events-none absolute right-0 top-0 h-[600px] w-[600px] rounded-full bg-accent-strong/25 blur-[120px]" />
-        <m.div
+        <motion.div
           initial={reduceMotion ? false : { opacity: 0, scale: 0.98 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true, amount: 0.35 }}
@@ -308,7 +308,7 @@ export default function LandingContent() {
               <Globe className="h-4 w-4 text-orange-400" /> {t("finalCta.badges.globalSupport")}
             </div>
           </div>
-        </m.div>
+        </motion.div>
       </section>
 
       <LandingFooter />
