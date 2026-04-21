@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { createSubscriptionRazorpayOrder } from "@/lib/razorpay-subscription";
 import type { SubscriptionIntervalKey } from "@/lib/subscription-checkout";
+import type { PricingRegion } from "@/lib/pricing";
+import { PRICING_REGIONS } from "@/lib/pricing";
 import { checkRateLimit } from "@/lib/rate-limit-memory";
 
 function orderKey(req: Request, workspaceId: string) {
@@ -33,16 +35,23 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { interval, distributorCouponCode } = body as {
+    const { interval, distributorCouponCode, pricingRegion: rawRegion } = body as {
       interval?: string;
       distributorCouponCode?: string | null;
+      pricingRegion?: string | null;
     };
+
+    const pricingRegion =
+      typeof rawRegion === "string" && PRICING_REGIONS.includes(rawRegion as PricingRegion)
+        ? (rawRegion as PricingRegion)
+        : undefined;
 
     const result = await createSubscriptionRazorpayOrder({
       workspaceId,
       userId,
       interval: interval as SubscriptionIntervalKey,
       distributorCouponCode: distributorCouponCode ?? undefined,
+      pricingRegion,
     });
 
     return NextResponse.json({

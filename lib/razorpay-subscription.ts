@@ -3,12 +3,20 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { normalizeDistributorCouponCode, decimalToNumber } from "@/lib/distributor-coupon";
 import {
-  getListPriceInr,
-  inrToPaise,
+  amountMajorToGatewayMinor,
+  getListPriceForInterval,
   isValidInterval,
   paidMatchesPlan,
   type SubscriptionIntervalKey,
 } from "@/lib/subscription-checkout";
+import {
+  PRICING_REGIONS,
+  getPricingRegion,
+  normalizeGatewayCurrency,
+  razorpayMinorAmountToMajor,
+  roundMajorAmount,
+  type PricingRegion,
+} from "@/lib/pricing";
 import { finalizeSubscriptionPayment } from "@/lib/subscription-payment";
 import {
   couponAllowsTier,
@@ -30,6 +38,8 @@ export type CreateSubscriptionOrderInput = {
   userId: string;
   interval: SubscriptionIntervalKey;
   distributorCouponCode?: string | null;
+  /** Optional UI override; must be a valid region code or omitted. */
+  pricingRegion?: PricingRegion | null;
 };
 
 async function assertCouponUsableForCheckout(
@@ -120,23 +130,40 @@ export async function createSubscriptionRazorpayOrder(input: CreateSubscriptionO
     }
   }
 
-  const listInr = getListPriceInr(interval);
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { countryCode: true, baseCurrency: true },
+  });
+
+  const pricingRegion = getPricingRegion({
+    explicitRegion: input.pricingRegion ?? undefined,
+    billingCountryCode: workspace?.countryCode,
+    explicitCurrency: workspace?.baseCurrency,
+  });
+
+  const listPrice = getListPriceForInterval(interval, pricingRegion);
+  const currency = listPrice.currency;
+  const listMajor = listPrice.amountMajor;
+
   const discountPct = coupon
     ? decimalToNumber(coupon.customerDiscountPercent as Prisma.Decimal | number | null | undefined)
     : 0;
-  const chargeInr = coupon
-    ? Math.max(0, Math.round(listInr * (1 - Math.min(100, Math.max(0, discountPct)) / 100) * 100) / 100)
-    : listInr;
+  const chargeMajor = coupon
+    ? roundMajorAmount(listMajor * (1 - Math.min(100, Math.max(0, discountPct)) / 100), currency)
+    : listMajor;
 
-  const amountPaise = inrToPaise(chargeInr);
+  const amountMinor = amountMajorToGatewayMinor(chargeMajor, currency);
 
   const notes: Record<string, string> = {
     userId,
     workspaceId,
     interval,
-    listAmountInr: String(listInr),
-    chargeAmountInr: String(chargeInr),
-    currency: "INR",
+    listAmountMajor: String(listMajor),
+    chargeAmountMajor: String(chargeMajor),
+    listAmountInr: String(listMajor),
+    chargeAmountInr: String(chargeMajor),
+    currency,
+    pricingRegion,
   };
   if (coupon) {
     notes.distributorCouponId = coupon.id;
@@ -145,8 +172,8 @@ export async function createSubscriptionRazorpayOrder(input: CreateSubscriptionO
 
   const razorpay = getRazorpayClient();
   const order = await razorpay.orders.create({
-    amount: amountPaise,
-    currency: "INR",
+    amount: amountMinor,
+    currency,
     receipt: `sub_${Date.now()}_${userId.substring(0, 5)}`,
     notes,
   });
@@ -155,15 +182,15 @@ export async function createSubscriptionRazorpayOrder(input: CreateSubscriptionO
     workspaceId,
     orderId: order.id,
     interval,
-    listAmountInr: listInr,
-    chargeAmountInr: chargeInr,
+    listAmountInr: listMajor,
+    chargeAmountInr: chargeMajor,
     couponId: coupon?.id ?? null,
   });
 
   return {
     order,
-    listAmountInr: listInr,
-    chargeAmountInr: chargeInr,
+    listAmountInr: listMajor,
+    chargeAmountInr: chargeMajor,
     distributorCouponId: coupon?.id ?? null,
   };
 }
@@ -174,8 +201,8 @@ export async function createSubscriptionRazorpayOrder(input: CreateSubscriptionO
 export async function processRazorpaySubscriptionPaymentVerified(paymentId: string, expectedWorkspaceId: string) {
   const razorpay = getRazorpayClient();
   const payment = await razorpay.payments.fetch(paymentId);
-  const amountPaid = Number(payment.amount) / 100;
-  const payCurrency = String((payment as { currency?: string }).currency || "INR").toUpperCase();
+  const payCurrency = normalizeGatewayCurrency((payment as { currency?: string }).currency);
+  const amountPaid = razorpayMinorAmountToMajor(Number(payment.amount), payCurrency);
 
   const notes = (payment.notes ?? {}) as Record<string, string | undefined>;
   const workspaceId = notes.workspaceId;
@@ -189,7 +216,33 @@ export async function processRazorpaySubscriptionPaymentVerified(paymentId: stri
   }
   const interval = intervalRaw as SubscriptionIntervalKey;
 
-  const listFromNote = notes.listAmountInr != null ? Number(notes.listAmountInr) : getListPriceInr(interval);
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { countryCode: true, baseCurrency: true },
+  });
+
+  const noteRegionRaw = notes.pricingRegion;
+  const explicitRegionFromNote =
+    typeof noteRegionRaw === "string" && PRICING_REGIONS.includes(noteRegionRaw as PricingRegion)
+      ? (noteRegionRaw as PricingRegion)
+      : undefined;
+
+  const region = getPricingRegion({
+    explicitRegion: explicitRegionFromNote,
+    billingCountryCode: workspace?.countryCode,
+    explicitCurrency: workspace?.baseCurrency,
+  });
+
+  if (notes.currency && normalizeGatewayCurrency(notes.currency) !== payCurrency) {
+    throw new Error("Payment currency does not match order");
+  }
+
+  const listFromNote =
+    notes.listAmountMajor != null
+      ? Number(notes.listAmountMajor)
+      : notes.listAmountInr != null
+        ? Number(notes.listAmountInr)
+        : getListPriceForInterval(interval, region).amountMajor;
   const couponId = notes.distributorCouponId ?? null;
   const discountPct =
     notes.customerDiscountPercent != null ? Number(notes.customerDiscountPercent) : 0;
@@ -209,11 +262,11 @@ export async function processRazorpaySubscriptionPaymentVerified(paymentId: stri
     await assertCouponUsableForCheckout(coupon, interval, workspaceId, {
       skipFirstPurchaseCheck: true,
     });
-    if (!paidMatchesPlan(amountPaid, interval, expectedDiscount)) {
+    if (!paidMatchesPlan(amountPaid, interval, expectedDiscount, region)) {
       throw new Error("Insufficient payment amount for this plan and coupon");
     }
   } else {
-    if (!paidMatchesPlan(amountPaid, interval, 0)) {
+    if (!paidMatchesPlan(amountPaid, interval, 0, region)) {
       throw new Error("Insufficient payment amount detected");
     }
   }
