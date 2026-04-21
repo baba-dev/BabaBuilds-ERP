@@ -39,16 +39,16 @@ const planIntervals: Array<{ interval: PlanInterval; label: string }> = [
 ];
 
 const partnerTypes = [
-  "Consultants who manage client operations and finance stack",
-  "Accountants/CA firms offering implementation + advisory",
-  "Digital/automation agencies with recurring retainers",
-  "Local IT partners serving SMB ERP rollouts",
+  "Consultants managing operations + finance tooling for clients",
+  "Accounting and CA firms offering implementation + advisory",
+  "Digital and automation agencies with recurring retainers",
+  "Local IT partners leading SMB ERP rollouts",
 ];
 
 const supportItems = [
-  "Sales deck, objection handling sheets, and ROI calculator",
-  "Co-branded launch collateral and onboarding checklist",
-  "Partner enablement sessions with live product demos",
+  "Sales decks, objection handling scripts, and ROI calculator",
+  "Co-branded launch assets and onboarding checklist",
+  "Enablement sessions with live product walkthroughs",
   "Dedicated partner support channel with priority turnaround",
 ];
 
@@ -210,7 +210,7 @@ export default function ResellerLandingClient() {
               </h1>
               <p className="max-w-2xl text-lg font-medium leading-relaxed text-muted-body md:text-xl">
                 Build a predictable acquisition channel by helping clients modernize invoicing, compliance, and
-                operations. Partners get customer discounts plus commission upside on closed deals.
+                operations. Offer customer discounts, close faster, and earn recurring commission upside.
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button asChild className="h-12 gap-2 rounded-2xl px-7 font-black">
@@ -232,7 +232,7 @@ export default function ResellerLandingClient() {
                     key={metric.title}
                     className="rounded-2xl border border-border/80 bg-surface-elevated px-4 py-4 shadow-sm"
                   >
-                    <p className="text-[11px] font-black uppercase tracking-[0.16em] text-muted-body">{metric.title}</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-body">{metric.title}</p>
                     <p className="mt-2 text-sm font-bold text-foreground">{metric.value}</p>
                   </div>
                 ))}
@@ -250,8 +250,9 @@ export default function ResellerLandingClient() {
                   <CardTitle className="flex items-center gap-2 text-2xl">
                     <BadgeDollarSign className="h-6 w-6 text-orange-500" /> Live Partner Pricing
                   </CardTitle>
-                  <CardDescription>
-                    Apply reseller coupon, preview discounted price instantly, and continue to secure checkout.
+                  <CardDescription className="text-sm leading-relaxed">
+                    Apply your reseller code, preview discount impact instantly, then continue to checkout with the
+                    same pricing context.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5">
@@ -269,7 +270,11 @@ export default function ResellerLandingClient() {
                     ))}
                   </div>
 
-                  <div className="grid gap-2 sm:grid-cols-5">
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-body">
+                      Pricing region
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-5">
                     {(["IN", "US", "EU", "OM", "ROW"] as PricingRegion[]).map((region) => (
                       <Button
                         key={region}
@@ -282,6 +287,7 @@ export default function ResellerLandingClient() {
                         {region}
                       </Button>
                     ))}
+                  </div>
                   </div>
 
                   <form onSubmit={onApplyCoupon} className="space-y-2">
@@ -298,6 +304,9 @@ export default function ResellerLandingClient() {
                         {applyingCoupon ? "Applying..." : "Apply"}
                       </Button>
                     </div>
+                    <p className="text-[11px] text-muted-body">
+                      Use an admin-generated reseller code. Your applied code will carry into checkout.
+                    </p>
                   </form>
 
                   <div className="rounded-2xl border border-border/80 bg-surface-base p-4">
@@ -317,13 +326,19 @@ export default function ResellerLandingClient() {
                             {formatMajorInCurrency(discountedAmount, selectedPlan.currency)}
                           </p>
                         </div>
+                        <p className="mt-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                          You save{" "}
+                          {formatMajorInCurrency(selectedPlan.amountMajor - discountedAmount, selectedPlan.currency)}
+                        </p>
                         <Button type="button" variant="ghost" onClick={clearCoupon} className="mt-2 px-0 text-xs">
                           Clear coupon
                         </Button>
                       </>
                     ) : (
                       <>
-                        <p className="text-xs font-black uppercase tracking-[0.16em] text-muted-body">Current price</p>
+                        <p className="text-xs font-black uppercase tracking-[0.16em] text-muted-body">
+                          Current list price
+                        </p>
                         <p className="mt-2 text-3xl font-black text-foreground">
                           {formatMajorInCurrency(selectedPlan.amountMajor, selectedPlan.currency)}
                         </p>
@@ -350,7 +365,7 @@ export default function ResellerLandingClient() {
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-body">
                 {partnerTypes.map((item) => (
-                  <p key={item}>• {item}</p>
+                  <p key={item} className="leading-relaxed">• {item}</p>
                 ))}
               </CardContent>
             </Card>
@@ -362,7 +377,7 @@ export default function ResellerLandingClient() {
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-body">
                 {supportItems.map((item) => (
-                  <p key={item}>• {item}</p>
+                  <p key={item} className="leading-relaxed">• {item}</p>
                 ))}
               </CardContent>
             </Card>
@@ -374,7 +389,7 @@ export default function ResellerLandingClient() {
             <div className="mb-8 max-w-3xl">
               <p className="text-xs font-black uppercase tracking-[0.16em] text-muted-body">Secure partner intake</p>
               <h2 className="mt-2 text-3xl font-black tracking-tight text-foreground md:text-4xl">
-                Send us your reseller query
+                Tell us about your partner motion
               </h2>
               <p className="mt-3 text-sm text-muted-body">
                 This form is protected with anti-bot checks and rate limiting. Share your goals and our partner team
@@ -451,7 +466,7 @@ export default function ResellerLandingClient() {
                     />
                   </div>
                   <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="message">How do you plan to sell BabaBuilds ERP?</Label>
+                    <Label htmlFor="message">How do you plan to position BabaBuilds ERP?</Label>
                     <Textarea
                       id="message"
                       value={queryForm.message}
@@ -488,6 +503,12 @@ export default function ResellerLandingClient() {
 
         <section className="border-t border-border py-16">
           <div className="mx-auto max-w-7xl px-6">
+            <div className="mb-6">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-muted-body">How the system works</p>
+              <h2 className="mt-2 text-2xl font-black tracking-tight text-foreground md:text-3xl">
+                Built for transparent reseller growth
+              </h2>
+            </div>
             <div className="grid gap-4 md:grid-cols-3">
               <Card>
                 <CardHeader>
