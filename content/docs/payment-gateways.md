@@ -128,3 +128,16 @@ Share the failing invoice number and gateway type with **admin@bababuilds.com**.
 - **Last reviewed:** 2026-04-21
 - **Owner:** Billing & Payments Team
 - **Audience:** Founders, Finance Ops
+
+---
+
+## FAQ
+
+### Can I connect both Stripe and Razorpay?
+Yes, but set one as your active operational default for predictable behavior.
+
+### Do old invoices get payment links after gateway setup?
+No. Generate or reissue invoices after gateway connection to ensure links are present.
+
+### What if a key is leaked?
+Rotate it immediately in your gateway dashboard and update ERP settings.

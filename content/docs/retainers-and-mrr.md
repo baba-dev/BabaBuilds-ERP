@@ -127,3 +127,16 @@ For retainer setup guidance, email **admin@bababuilds.com**.
 - **Last reviewed:** 2026-04-21
 - **Owner:** Revenue Operations Team
 - **Audience:** Founders, Sales Ops, Finance Ops
+
+---
+
+## FAQ
+
+### Do retainers auto-generate invoices?
+Not by default. Keep invoice generation as an explicit control step.
+
+### How often should I review retainer health?
+Weekly for status drift and monthly for renewal risk.
+
+### Can paused retainers return to active?
+Yes. Re-activate once scope and payment terms are confirmed.

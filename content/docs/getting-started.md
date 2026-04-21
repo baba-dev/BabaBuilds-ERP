@@ -106,3 +106,16 @@ See: [Optional Sub Systems — Overview](/help/optional-sub-systems-overview)
 ## Need help?
 
 Email **admin@bababuilds.com** with screenshots of the step where you’re blocked.
+
+---
+
+## FAQ
+
+### Do I need to complete every Settings field before first invoice?
+No. Start with company identity, tax basics, and bank details. You can refine other fields later.
+
+### Can I invite my team right after setup?
+Yes. Once basic settings are saved, you can onboard team members and assign operational responsibilities.
+
+### What should I do if my first invoice fails?
+Check client data, required fields, and SMTP/gateway setup. Then retry from a fresh draft.

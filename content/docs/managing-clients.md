@@ -109,3 +109,16 @@ Email **admin@bababuilds.com** with the client name and issue details.
 - **Last reviewed:** 2026-04-21
 - **Owner:** Revenue Operations Team
 - **Audience:** Founders, Account Managers, Finance Ops
+
+---
+
+## FAQ
+
+### Should I create separate client entries per branch/location?
+Create separate records when billing/tax details differ. Otherwise keep one clean master record.
+
+### Can I mark a client inactive without deleting history?
+Yes. Use status management; historical invoices remain intact.
+
+### Why does export treatment look wrong?
+Check country and export toggle in the client profile before invoice generation.

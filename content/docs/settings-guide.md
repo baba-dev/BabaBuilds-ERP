@@ -115,3 +115,16 @@ See: [Optional Sub Systems — Overview](/help/optional-sub-systems-overview)
 - **Last reviewed:** 2026-04-21
 - **Owner:** Product Operations Team
 - **Audience:** Founders, Admins, Finance Leads
+
+---
+
+## FAQ
+
+### Will changing settings update old invoices?
+No. Changes apply to newly generated invoices and future operations.
+
+### Can I disable optional modules later?
+Yes. Modules can be disabled without deleting underlying data.
+
+### How often should I review Settings?
+At least once a month, and immediately after any legal, tax, or bank detail change.

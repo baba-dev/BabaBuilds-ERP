@@ -102,3 +102,16 @@ Email **admin@bababuilds.com** for setup and prompt-engineering help.
 - **Last reviewed:** 2026-04-21
 - **Owner:** AI Product Team
 - **Audience:** All users
+
+---
+
+## FAQ
+
+### Does BabaBot replace manual review?
+No. Use it to accelerate work, then validate important outputs before final actions.
+
+### What makes prompts more accurate?
+Include context: client name, amount, month, and desired action.
+
+### Can BabaBot access other workspaces?
+No. It is scoped to your active workspace context.

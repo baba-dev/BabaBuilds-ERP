@@ -143,3 +143,16 @@ For compliance workflow support, email **admin@bababuilds.com**.
 - **Last reviewed:** 2026-04-21
 - **Owner:** Finance Operations Team
 - **Audience:** Founders, Finance Ops, CAs
+
+---
+
+## FAQ
+
+### Is ERP tax estimate the final number for filing?
+No. It is an operational estimate; final filing should be validated by your CA/tax advisor.
+
+### How frequently should I update deductions?
+Update whenever you invest, and do a weekly review during high-activity periods.
+
+### What is the biggest quality mistake in expense tracking?
+Inconsistent category naming. Standardization improves every downstream report.

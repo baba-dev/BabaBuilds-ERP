@@ -157,3 +157,16 @@ Before sending, verify:
 ## Need help?
 
 Email **admin@bababuilds.com** with invoice number and issue summary.
+
+---
+
+## FAQ
+
+### Can I edit a generated invoice PDF directly?
+No. Update invoice data in ERP and generate a new version to keep records clean.
+
+### Why is my invoice number not sequential to last month?
+Numbering follows financial-year sequence and integrity controls, not just monthly grouping.
+
+### Can I resend an invoice without regenerating?
+Yes. Use the re-send action from invoice history where available.
