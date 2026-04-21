@@ -13,7 +13,7 @@ export default function TurnstileWidget({ onVerify }: Props) {
         siteKey="0x4AAAAAACvSwAyJa3nVFu2n"
         onSuccess={(token) => onVerify(token)}
         options={{
-          theme: "light",
+          theme: "auto",
           size: "normal",
         }}
       />

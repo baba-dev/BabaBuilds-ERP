@@ -132,8 +132,12 @@ export function ProUpgradeCard({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const q = new URLSearchParams(window.location.search).get("coupon")?.trim();
-    if (q) setCouponInput(q);
+    const q =
+      new URLSearchParams(window.location.search).get("coupon")?.trim() ||
+      new URLSearchParams(window.location.search).get("resellerCode")?.trim();
+    const localCode = window.localStorage.getItem("resellerCouponCode")?.trim();
+    const nextCode = q || localCode || "";
+    if (nextCode) setCouponInput(nextCode);
   }, []);
 
   const applyCoupon = async () => {
@@ -149,11 +153,18 @@ export function ProUpgradeCard({
       if (!data.attribution) {
         setAppliedCouponCode(null);
         setAppliedDiscountPercent(null);
+        setCouponInput("");
+        if (typeof window !== "undefined") {
+          window.localStorage.removeItem("resellerCouponCode");
+        }
         toast.success("Coupon cleared.", { id: toastId });
         return;
       }
       setAppliedCouponCode(data.attribution.code);
       setAppliedDiscountPercent(Number(data.attribution.customerDiscountPercent) || 0);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("resellerCouponCode", data.attribution.code);
+      }
       toast.success("Partner coupon applied.", { id: toastId });
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Could not apply coupon", { id: toastId });
@@ -178,6 +189,7 @@ export function ProUpgradeCard({
         body: JSON.stringify({
           interval,
           distributorCouponCode: couponInput.trim() || appliedCouponCode || undefined,
+          resellerCouponCode: couponInput.trim() || appliedCouponCode || undefined,
           pricingRegion,
         }),
       });
