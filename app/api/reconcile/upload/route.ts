@@ -133,7 +133,7 @@ export async function POST(request: Request) {
       transactions = await parseBankPdfToTransactions(buffer);
       parseMeta = { format: "PDF", rowCount: transactions.length };
     } else if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
-      const rows = excelBufferToGrid(buffer);
+      const rows = await excelBufferToGrid(buffer);
       const parseResult = parseBankStatementFromRows(rows, {
         datePreference,
         encoding: "xlsx",

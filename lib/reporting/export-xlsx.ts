@@ -1,13 +1,5 @@
 import 'server-only';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const XLSX = require('xlsx') as {
-  utils: {
-    aoa_to_sheet: (data: unknown[][]) => object;
-    book_new: () => object;
-    book_append_sheet: (wb: object, ws: object, name: string) => void;
-  };
-  write: (wb: object, opts: { type: string; bookType: string }) => Buffer;
-};
+import ExcelJS from 'exceljs';
 
 type ColumnMeta = { key: string; label: string; format?: string };
 
@@ -23,7 +15,7 @@ function colLetter(n: number): string {
   return s;
 }
 
-export function buildReportWorkbook(params: {
+export async function buildReportWorkbook(params: {
   reportTitle: string;
   workspaceName: string;
   generatedAt: Date;
@@ -52,20 +44,14 @@ export function buildReportWorkbook(params: {
     ...params.rows.map((row) => params.columns.map((col) => row[col.key] ?? '')),
   ];
 
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Report');
+  wsData.forEach((row) => worksheet.addRow(row));
   const endCol = colLetter(params.columns.length);
-  (ws as { '!autofilter'?: { ref: string } })['!autofilter'] = {
-    ref: `A${headerRowIndex1Based}:${endCol}${headerRowIndex1Based}`,
-  };
-  (ws as { '!freeze'?: { xSplit: number; ySplit: number } })['!freeze'] = {
-    xSplit: 0,
-    ySplit: headerRowIndex1Based,
-  };
+  worksheet.autoFilter = `A${headerRowIndex1Based}:${endCol}${headerRowIndex1Based}`;
+  worksheet.views = [{ state: 'frozen', xSplit: 0, ySplit: headerRowIndex1Based }];
 
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Report');
-
-  const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(buffer);
 }
 
