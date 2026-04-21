@@ -12,14 +12,7 @@ import {
   segmentedControlItemClass,
 } from "@/components/ui/segmented-control";
 import { cn } from "@/lib/utils";
-import {
-  type BillingCycle,
-  formatPlanPrice,
-  getPlanPrice,
-  getPricingRegionFromLocale,
-  type PlanId,
-  type PricingRegion,
-} from "@/lib/pricing";
+import { type BillingCycle, formatPlanPrice, getPlanPrice, getPricingRegionFromLocale, type PlanId, type PricingRegion } from "@/lib/pricing";
 
 type TierId = "tier-free" | "tier-pro" | "tier-team";
 
@@ -70,7 +63,6 @@ export default function PricingSection() {
   const [pricingRegion, setPricingRegion] = useState<PricingRegion>(defaultRegion);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annually">("monthly");
   const reduceMotion = useReducedMotion();
-
   const normalizedCycle: BillingCycle = billingCycle === "annually" ? "annual" : "monthly";
 
   const planSignals = useMemo(

@@ -11,8 +11,8 @@ type WorkspaceSummary = {
   subscriptionStatus: string;
   subscriptionEndsAt: Date | null;
   billingProviderId: string | null;
-  countryCode: string;
-  baseCurrency: string;
+  countryCode: string | null;
+  baseCurrency: string | null;
   _count: { clients: number };
 };
 

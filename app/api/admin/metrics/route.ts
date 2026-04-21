@@ -15,7 +15,7 @@ export async function GET() {
     // 2a. Real MRR calculation based on current pricing constants
     const workspaces = await prisma.workspace.findMany({
       where: { subscriptionStatus: { in: ["PRO", "TEAM"] } },
-      select: { planInterval: true, countryCode: true },
+      select: { planInterval: true, countryCode: true }
     });
 
     const mrr = workspaces.reduce(

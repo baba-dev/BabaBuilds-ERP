@@ -38,6 +38,8 @@ export type CreateSubscriptionOrderInput = {
   userId: string;
   interval: SubscriptionIntervalKey;
   distributorCouponCode?: string | null;
+  /** Optional UI override; must be a valid region code or omitted. */
+  pricingRegion?: PricingRegion | null;
 };
 
 async function assertCouponUsableForCheckout(
@@ -134,6 +136,7 @@ export async function createSubscriptionRazorpayOrder(input: CreateSubscriptionO
   });
 
   const pricingRegion = getPricingRegion({
+    explicitRegion: input.pricingRegion ?? undefined,
     billingCountryCode: workspace?.countryCode,
     explicitCurrency: workspace?.baseCurrency,
   });

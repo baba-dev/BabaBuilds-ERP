@@ -178,6 +178,7 @@ export function ProUpgradeCard({
         body: JSON.stringify({
           interval,
           distributorCouponCode: couponInput.trim() || appliedCouponCode || undefined,
+          pricingRegion,
         }),
       });
       const orderData = await orderRes.json();
@@ -212,6 +213,7 @@ export function ProUpgradeCard({
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_signature: response.razorpay_signature,
+                pricingRegion,
               }),
             });
             
