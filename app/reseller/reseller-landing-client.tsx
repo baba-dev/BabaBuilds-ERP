@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { m, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
@@ -379,6 +380,50 @@ export default function ResellerLandingClient() {
                 {supportItems.map((item) => (
                   <p key={item} className="leading-relaxed">• {item}</p>
                 ))}
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        <section className="bg-surface-base py-14">
+          <div className="mx-auto max-w-7xl px-6">
+            <Card className="overflow-hidden border-border/80 bg-gradient-to-br from-surface-elevated to-surface-base">
+              <CardContent className="grid gap-8 p-6 md:grid-cols-[1.1fr_0.9fr] md:items-center md:p-8">
+                <div className="space-y-4">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-muted-body">
+                    Official regional partner
+                  </p>
+                  <h2 className="text-2xl font-black tracking-tight text-foreground md:text-3xl">
+                    Aiwa Media Group is our official Oman reseller and GCC support partner
+                  </h2>
+                  <p className="text-sm leading-relaxed text-muted-body md:text-base">
+                    For businesses in Oman and across GCC regions, Aiwa Media Group provides localized onboarding,
+                    solution consulting, and partner-led implementation support for BabaBuilds ERP.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="rounded-full border border-border/80 bg-surface-elevated px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-foreground/90">
+                      Oman-focused coverage
+                    </span>
+                    <span className="rounded-full border border-border/80 bg-surface-elevated px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-foreground/90">
+                      GCC reseller support
+                    </span>
+                  </div>
+                  <Button asChild className="h-11 rounded-xl px-6 font-black">
+                    <Link href="https://aiwamediagroup.com/" target="_blank" rel="noopener noreferrer">
+                      Visit Aiwa Media Group <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+                <div className="rounded-2xl border border-border/80 bg-white p-4 shadow-sm dark:bg-zinc-950">
+                  <Image
+                    src="/aiwa-media-group-logo.png"
+                    alt="Aiwa Media Group logo"
+                    width={980}
+                    height={390}
+                    className="h-auto w-full rounded-lg object-contain"
+                    priority={false}
+                  />
+                </div>
               </CardContent>
             </Card>
           </div>
