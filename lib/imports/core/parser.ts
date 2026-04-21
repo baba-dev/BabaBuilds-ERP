@@ -1,5 +1,5 @@
 import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { z } from 'zod';
 import type { ParsedTabularFile } from '@/lib/imports/core/types';
 
@@ -57,13 +57,16 @@ export async function parseImportFile(file: File): Promise<ParsedTabularFile> {
     const parsed = Papa.parse<string[]>(text, { skipEmptyLines: 'greedy' });
     rawRows = (parsed.data as unknown[][]).map((row) => (Array.isArray(row) ? row.map(sanitizeCell) : []));
   } else {
-    const buff = Buffer.from(await file.arrayBuffer());
-    const wb = XLSX.read(buff, { type: 'buffer', cellDates: false });
-    const first = wb.SheetNames[0];
-    if (!first) throw new Error('No worksheet found.');
-    const sheet = wb.Sheets[first];
-    const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: '', raw: false });
-    rawRows = matrix.map((row) => (Array.isArray(row) ? row.map(sanitizeCell) : []));
+    const buff = Buffer.from(await file.arrayBuffer()) as unknown as import('buffer').Buffer;
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buff as any);
+    const sheet = workbook.worksheets[0];
+    if (!sheet) throw new Error('No worksheet found.');
+    const matrix = sheet.getSheetValues().slice(1).map((row) => {
+      if (!Array.isArray(row)) return [];
+      return row.slice(1).map((cell) => sanitizeCell(String(cell ?? '')));
+    });
+    rawRows = matrix;
   }
 
   if (rawRows.length === 0) throw new Error('File appears empty.');

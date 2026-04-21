@@ -100,7 +100,7 @@ export async function POST(request: Request) {
     const lower = fileName.toLowerCase();
     let rows: string[][];
     if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
-      rows = excelBufferToGrid(buffer);
+      rows = await excelBufferToGrid(buffer);
     } else {
       const { text } = decodeBankStatementBuffer(buffer);
       rows = parseRows(text, delimiter);

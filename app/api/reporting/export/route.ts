@@ -33,12 +33,12 @@ const [result, workspace] = await Promise.all([
     ]);
 
     const generatedAt = new Date();
-    const buffer = buildReportWorkbook({
+    const buffer = await buildReportWorkbook({
       reportTitle: preset.title,
       workspaceName: workspace?.name ?? 'Workspace',
       generatedAt,
-methodology: preset.methodology,
-accountingPolicyRefs: preset.accountingPolicyRefs,
+      methodology: preset.methodology,
+      accountingPolicyRefs: preset.accountingPolicyRefs,
       rows: result.rows,
       columns: preset.columns,
     });
