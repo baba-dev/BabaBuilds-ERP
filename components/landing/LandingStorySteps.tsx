@@ -1,6 +1,6 @@
 "use client";
 
-import { LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
+import { LazyMotion, domAnimation, m, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
   ChevronDown,
@@ -23,7 +23,7 @@ export default function LandingStorySteps() {
     <section className="relative border-y border-border/80 bg-gradient-to-b from-orange-50/40 via-surface-base to-surface-base py-20 dark:from-orange-950/15 dark:via-zinc-950 dark:to-zinc-950">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-400/30 to-transparent dark:via-orange-500/20" />
       <div className="mx-auto max-w-7xl px-6">
-        <m.div
+        <motion.div
           initial={reduceMotion ? false : { opacity: 0, y: 14 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
@@ -38,7 +38,7 @@ export default function LandingStorySteps() {
           </p>
           <h2 className="text-3xl font-black tracking-tight text-foreground md:text-4xl lg:text-5xl">{t("title")}</h2>
           <p className="text-lg font-medium leading-relaxed text-muted-body">{t("subtitle")}</p>
-        </m.div>
+        </motion.div>
 
         <LazyMotion features={domAnimation}>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
