@@ -569,7 +569,7 @@ export default function AuthModal({
                 {t("actions.demoSection")}
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-[60rem] border border-border/80 bg-card/95 p-0 backdrop-blur-sm">
+            <DialogContent className="sm:max-w-[45rem] border border-border/80 bg-card/95 p-0 backdrop-blur-sm">
               <div className="border-b border-border/70 bg-muted/25 p-6">
                 <DialogHeader className="space-y-2">
                   <DialogTitle className="flex items-center gap-2 text-xl font-black tracking-tight">
