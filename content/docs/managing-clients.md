@@ -83,3 +83,29 @@ Example prompts:
 ## Need help?
 
 Email **admin@bababuilds.com** with the client name and issue details.
+
+---
+
+## Troubleshooting
+
+| Problem | Likely reason | Fix |
+|---|---|---|
+| Wrong details showing on invoice | CRM record is outdated | Update client record before creating next invoice |
+| Export tax treatment incorrect | Export toggle not set correctly | Edit client and verify export status |
+| Invoice emails bouncing | Email field typo | Correct email and resend from invoice history |
+
+---
+
+## Related guides
+
+- [Generating, Sending, and Collecting Invoices](/help/generating-invoices)
+- [Setting Up Retainers, MRR, and Renewal Operations](/help/retainers-and-mrr)
+- [Using BabaBot — AI Assistant for Finance Operations](/help/ai-bababot)
+
+---
+
+## Article info
+
+- **Last reviewed:** 2026-04-21
+- **Owner:** Revenue Operations Team
+- **Audience:** Founders, Account Managers, Finance Ops

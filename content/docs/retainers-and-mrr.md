@@ -101,3 +101,29 @@ Use this standard flow each cycle:
 ## Need help?
 
 For retainer setup guidance, email **admin@bababuilds.com**.
+
+---
+
+## Troubleshooting
+
+| Problem | Likely reason | Fix |
+|---|---|---|
+| MRR number seems lower than expected | Retainers are paused/cancelled | Review status and reactivate valid contracts |
+| Renewal got missed | No review cadence | Add monthly renewal review routine |
+| Retainer exists but no invoice sent | Invoices are manual step | Generate invoice from cycle checklist |
+
+---
+
+## Related guides
+
+- [Managing Your Client CRM](/help/managing-clients)
+- [Generating, Sending, and Collecting Invoices](/help/generating-invoices)
+- [Optional Module: Revenue Pipeline](/help/optional-sub-system-revenue-pipeline)
+
+---
+
+## Article info
+
+- **Last reviewed:** 2026-04-21
+- **Owner:** Revenue Operations Team
+- **Audience:** Founders, Sales Ops, Finance Ops

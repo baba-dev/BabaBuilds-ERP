@@ -103,3 +103,43 @@ Use prompts like:
 ## Need help?
 
 For compliance workflow support, email **admin@bababuilds.com**.
+
+---
+
+## Troubleshooting
+
+| Problem | Likely reason | Fix |
+|---|---|---|
+| Expense report looks inconsistent | Categories are not standardized | Normalize category names and reclassify old entries |
+| Tax estimate looks too high | Deductions not logged | Update 80C/80D entries and recheck dashboard |
+| Missing expense in totals | Date or workspace mismatch | Verify expense date and current workspace |
+
+---
+
+## Do / Don’t
+
+### Do
+- Add expenses weekly, not in bulk at year-end
+- Keep descriptions meaningful for audit clarity
+- Review high-value expense entries with finance owner
+
+### Don’t
+- Use random category names for similar spend
+- Treat estimated tax as final filing output
+- Skip periodic review cycles
+
+---
+
+## Related guides
+
+- [Configuring Your Business Profile & Workspace Settings](/help/settings-guide)
+- [Using BabaBot — AI Assistant for Finance Operations](/help/ai-bababot)
+- [Optional Module: Reporting Center](/help/optional-sub-system-reporting-center)
+
+---
+
+## Article info
+
+- **Last reviewed:** 2026-04-21
+- **Owner:** Finance Operations Team
+- **Audience:** Founders, Finance Ops, CAs

@@ -87,3 +87,44 @@ Expected behavior:
 ## Need help?
 
 Share the failing invoice number and gateway type with **admin@bababuilds.com**.
+
+---
+
+## Troubleshooting
+
+| Problem | What it usually means | What to do |
+|---|---|---|
+| Payment link not showing in PDF | Gateway is not fully connected | Re-open Settings, save keys again, and generate a fresh invoice |
+| Checkout page errors | API keys are expired/incorrect | Rotate keys in gateway dashboard and update in ERP |
+| Wrong currency shown | Gateway/currency setup mismatch | Verify workspace currency and gateway-supported currency |
+| Client says payment failed | Network or card/auth issue | Ask client to retry and check gateway logs for failure reason |
+
+---
+
+## Do / Don’t
+
+### Do
+- Use test mode first before going live
+- Rotate keys periodically
+- Send one internal test invoice after key updates
+
+### Don’t
+- Share secret keys in chat or email
+- Keep old compromised keys active
+- Assume old PDFs update automatically after settings changes
+
+---
+
+## Related guides
+
+- [Generating, Sending, and Collecting Invoices](/help/generating-invoices)
+- [Configuring Your Business Profile & Workspace Settings](/help/settings-guide)
+- [Optional Module: AR Aging + Collections Centre](/help/optional-sub-system-ar-collections)
+
+---
+
+## Article info
+
+- **Last reviewed:** 2026-04-21
+- **Owner:** Billing & Payments Team
+- **Audience:** Founders, Finance Ops

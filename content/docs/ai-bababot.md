@@ -76,3 +76,29 @@ BabaBot is your in-product AI operator for daily ERP tasks.
 ## Need Help?
 
 Email **admin@bababuilds.com** for setup and prompt-engineering help.
+
+---
+
+## Troubleshooting
+
+| Problem | Likely reason | Fix |
+|---|---|---|
+| BabaBot not opening | UI session issue | Refresh page and retry the chat button |
+| BabaBot replies are generic | Prompt lacks context | Mention client, month, amount, and action in prompt |
+| Action was not what you expected | Ambiguous instruction | Use specific instruction with confirmation details |
+
+---
+
+## Related guides
+
+- [Configuring Your Business Profile & Workspace Settings](/help/settings-guide)
+- [Generating, Sending, and Collecting Invoices](/help/generating-invoices)
+- [Tracking Expenses, Deductions, and Tax Readiness](/help/expenses-and-tax)
+
+---
+
+## Article info
+
+- **Last reviewed:** 2026-04-21
+- **Owner:** AI Product Team
+- **Audience:** All users

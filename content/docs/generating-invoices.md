@@ -115,6 +115,45 @@ Before sending, verify:
 
 ---
 
+## Troubleshooting
+
+| Problem | What it usually means | What to do |
+|---|---|---|
+| PDF not generating | Missing required fields or temporary service failure | Recheck client, date, and line items; retry once |
+| Email not delivered | SMTP is not configured or credentials expired | Go to Settings and verify SMTP host/port/app password |
+| Wrong tax mode on invoice | Client export/domestic flag is incorrect | Fix client tax profile in CRM and regenerate |
+| No payment link in PDF | Gateway not connected or not active | Reconnect Stripe/Razorpay and generate a fresh invoice |
+
+---
+
+## Do / Don't
+
+**Do**
+- Keep line items specific (deliverable + period).
+- Send a test invoice to yourself after major settings changes.
+- Review totals and taxes before final send.
+
+**Don't**
+- Reuse vague descriptions like "Services rendered".
+- Assume old invoices will auto-update after settings changes.
+- Share invoice PDFs without checking remittance details.
+
+---
+
+## Related guides
+
+- [Configuring Your Business Profile & Workspace Settings](/help/settings-guide)
+- [Connecting Razorpay & Stripe](/help/payment-gateways)
+- [Optional Module: AR Aging + Collections Centre](/help/optional-sub-system-ar-collections)
+
+---
+
+## Article details
+
+- **Last reviewed:** 2026-04-21
+- **Owner:** Finance Operations Docs
+- **Audience:** Founders, Finance Ops, Billing Managers
+
 ## Need help?
 
 Email **admin@bababuilds.com** with invoice number and issue summary.

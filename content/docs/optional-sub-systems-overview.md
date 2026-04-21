@@ -50,3 +50,29 @@ BabaBuilds ERP includes advanced modules you can turn on from **Settings → Wor
 - [AR Aging + Collections module](/help/optional-sub-system-ar-collections)
 - [Reporting Center module](/help/optional-sub-system-reporting-center)
 - [Import Manager module](/help/optional-sub-system-import-manager)
+
+---
+
+## Troubleshooting
+
+| Problem | Likely reason | Fix |
+|---|---|---|
+| Module card is not visible | Insufficient permissions | Ask workspace admin to enable/manage settings |
+| Module enabled but page unavailable | Navigation/session not refreshed | Refresh app and re-open module page |
+| Team confusion after enabling module | No rollout SOP | Share module-specific article and setup checklist |
+
+---
+
+## Related guides
+
+- [Configuring Your Business Profile & Workspace Settings](/help/settings-guide)
+- [Optional Module: Workforce](/help/optional-sub-system-workforce)
+- [Optional Module: Payroll](/help/optional-sub-system-payroll)
+
+---
+
+## Article info
+
+- **Last reviewed:** 2026-04-21
+- **Owner:** Product Operations Team
+- **Audience:** Workspace Admins, Team Leads

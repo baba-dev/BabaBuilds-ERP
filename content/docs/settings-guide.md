@@ -74,3 +74,44 @@ At the **Workspace Modules** section, you can enable advanced modules from setti
 See: [Optional Sub Systems — Overview](/help/optional-sub-systems-overview)
 
 <Callout type="info">Disabling a module hides it but does not delete its data.</Callout>
+
+---
+
+## Troubleshooting
+
+| Problem | Likely reason | Fix |
+|---|---|---|
+| Invoices still show old business details | Changes were not saved | Click **Save Configuration** and generate a new invoice |
+| Invoice emails are not sent | SMTP is invalid or blocked | Recheck SMTP host/port/password and test with your own email |
+| BabaBot not responding | API key missing/invalid | Re-add Groq key in Settings and retry |
+| Module does not appear after enabling | Feature toggle not completed | Re-open Workspace Modules and confirm it is ON |
+
+---
+
+## Do / Don’t
+
+### Do
+- Save after each major section update
+- Keep tax and bank information aligned to official records
+- Test one flow after every settings change
+
+### Don’t
+- Leave partial business identity fields empty
+- Use personal remittance details for business invoices
+- Enable optional modules your team will not use
+
+---
+
+## Related guides
+
+- [Optional Sub Systems — Overview](/help/optional-sub-systems-overview)
+- [Connecting Razorpay & Stripe](/help/payment-gateways)
+- [Using BabaBot — AI Assistant for Finance Operations](/help/ai-bababot)
+
+---
+
+## Article info
+
+- **Last reviewed:** 2026-04-21
+- **Owner:** Product Operations Team
+- **Audience:** Founders, Admins, Finance Leads
