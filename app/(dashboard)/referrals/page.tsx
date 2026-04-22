@@ -558,7 +558,7 @@ export default function ReferralsPage() {
                   <span>Help hub and implementation support docs</span>
                   <ArrowUpRight className="h-4 w-4" />
                 </Link>
-                <Link href="/dashboard/settings/billing" className="flex items-center justify-between rounded-xl border border-border/70 px-4 py-3 hover:bg-muted/40">
+                <Link href="/settings/billing" className="flex items-center justify-between rounded-xl border border-border/70 px-4 py-3 hover:bg-muted/40">
                   <span>Checkout validation + billing settings</span>
                   <ArrowUpRight className="h-4 w-4" />
                 </Link>

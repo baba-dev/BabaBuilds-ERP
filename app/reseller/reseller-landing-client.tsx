@@ -191,8 +191,8 @@ export default function ResellerLandingClient() {
   };
 
   const checkoutHref = coupon?.code
-    ? `/dashboard/settings/billing?resellerCode=${encodeURIComponent(coupon.code)}`
-    : "/dashboard/settings/billing";
+    ? `/settings/billing?resellerCode=${encodeURIComponent(coupon.code)}`
+    : "/settings/billing";
 
   return (
     <div className="overflow-x-hidden bg-surface-base">
@@ -220,7 +220,7 @@ export default function ResellerLandingClient() {
                   </Link>
                 </Button>
                 <Button asChild variant="outline" className="h-12 rounded-2xl px-7 font-bold">
-                  <Link href="/dashboard/referrals">Go to Reseller Dashboard</Link>
+                  <Link href="/referrals">Go to Reseller Dashboard</Link>
                 </Button>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
