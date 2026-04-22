@@ -1,0 +1,125 @@
+{
+  "auditDate": "2026-04-22",
+  "sourceAudit": "docs/production-readiness-audit-2026-04-22.md",
+  "statusLegend": {
+    "OPEN": "Finding requires remediation before release criteria can pass.",
+    "IN_PROGRESS": "Work has started, but closure evidence is incomplete.",
+    "BLOCKED": "Remediation blocked by dependency; mitigation and owner required.",
+    "DONE": "Code and evidence complete; closure criteria met."
+  },
+  "findings": [
+    {
+      "id": "PRA-001",
+      "title": "Document OCR jobs use UNCONFIGURED provider in upload path",
+      "severity": "P0",
+      "area": "api/documents",
+      "status": "OPEN",
+      "owner": "",
+      "closureCriteria": [
+        "Upload path selects a real provider strategy or returns explicit DISABLED capability result.",
+        "No production code path persists provider=UNCONFIGURED OCR jobs.",
+        "Automated tests cover enabled and disabled OCR paths."
+      ],
+      "evidence": {
+        "codePaths": [
+          "app/api/documents/upload/route.ts"
+        ],
+        "tests": [],
+        "docs": []
+      },
+      "sla": "release_blocker"
+    },
+    {
+      "id": "PRA-002",
+      "title": "Chat tool dispatch has generic unimplemented fallback",
+      "severity": "P1",
+      "area": "api/chat",
+      "status": "OPEN",
+      "owner": "",
+      "closureCriteria": [
+        "Tool dispatch uses explicit typed allowlist for all executable tools.",
+        "Unsupported tool names emit structured telemetry and user-safe fallback.",
+        "Contract tests verify behavior for supported/unsupported tool calls."
+      ],
+      "evidence": {
+        "codePaths": [
+          "app/api/chat/route.ts"
+        ],
+        "tests": [],
+        "docs": []
+      },
+      "sla": "before_production_gate"
+    },
+    {
+      "id": "PRA-003",
+      "title": "Billing cancellation endpoint mutates local state without provider handshake",
+      "severity": "P1",
+      "area": "api/billing",
+      "status": "OPEN",
+      "owner": "",
+      "closureCriteria": [
+        "Cancellation endpoint performs provider-side cancellation or queues it transactionally.",
+        "Local subscription state transitions are idempotent and reconciled against provider source-of-truth.",
+        "Tests cover retry and already-cancelled scenarios."
+      ],
+      "evidence": {
+        "codePaths": [
+          "app/api/settings/billing/subscription/cancel/route.ts"
+        ],
+        "tests": [],
+        "docs": []
+      },
+      "sla": "before_production_gate"
+    },
+    {
+      "id": "PRA-004",
+      "title": "Broken internal links from dashboard/reseller flows",
+      "severity": "P1",
+      "area": "frontend/routing",
+      "status": "IN_PROGRESS",
+      "owner": "",
+      "closureCriteria": [
+        "Audited links resolve to valid internal pages.",
+        "Automated regression test asserts route targets map to existing pages.",
+        "Deterministic route/link audit report generated in CI."
+      ],
+      "evidence": {
+        "codePaths": [
+          "app/(dashboard)/dashboard/dashboard-right-rail.tsx",
+          "app/(dashboard)/referrals/page.tsx",
+          "app/reseller/reseller-landing-client.tsx",
+          "tests/dashboard/production-readiness-route-audit.test.ts",
+          "scripts/route-integrity-report.mjs"
+        ],
+        "tests": [
+          "tests/dashboard/production-readiness-route-audit.test.ts"
+        ],
+        "docs": [
+          "docs/reports/route-integrity-report.json"
+        ]
+      },
+      "sla": "before_production_gate"
+    },
+    {
+      "id": "PRA-005",
+      "title": "Material any/type-safety debt in critical paths",
+      "severity": "P2",
+      "area": "typing/quality",
+      "status": "OPEN",
+      "owner": "",
+      "closureCriteria": [
+        "Critical-path modules maintain explicit interfaces for API payloads.",
+        "Per-release explicit-any budget is tracked and ratcheted down.",
+        "Lint baseline and non-regression checks are enforced."
+      ],
+      "evidence": {
+        "codePaths": [
+          "app/api/chat/route.ts"
+        ],
+        "tests": [],
+        "docs": []
+      },
+      "sla": "planned_improvement"
+    }
+  ]
+}

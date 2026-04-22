@@ -1,0 +1,834 @@
+{
+  "generatedAt": "2026-04-22T13:46:20.044Z",
+  "summary": {
+    "knownRoutes": 80,
+    "checkedReferencedRoutes": 73,
+    "brokenReferencedRoutes": 11
+  },
+  "gate": {
+    "pass": false,
+    "criteria": "No broken internal page routes referenced by source files in app/components/content."
+  },
+  "brokenRoutes": [
+    {
+      "route": "/help/category/getting-started",
+      "exists": false,
+      "references": [
+        "app/help/page.tsx"
+      ]
+    },
+    {
+      "route": "/help/category/invoicing",
+      "exists": false,
+      "references": [
+        "app/help/page.tsx"
+      ]
+    },
+    {
+      "route": "/help/category/payments",
+      "exists": false,
+      "references": [
+        "app/help/page.tsx"
+      ]
+    },
+    {
+      "route": "/help/category/tax-and-compliance",
+      "exists": false,
+      "references": [
+        "app/help/page.tsx"
+      ]
+    },
+    {
+      "route": "/help/expenses-and-tax",
+      "exists": false,
+      "references": [
+        "app/help/page.tsx"
+      ]
+    },
+    {
+      "route": "/help/generating-invoices",
+      "exists": false,
+      "references": [
+        "app/help/page.tsx"
+      ]
+    },
+    {
+      "route": "/help/payment-gateways",
+      "exists": false,
+      "references": [
+        "app/help/page.tsx"
+      ]
+    },
+    {
+      "route": "/help/privacy",
+      "exists": false,
+      "references": [
+        "components/AuthModal.tsx",
+        "components/LandingFooter.tsx"
+      ]
+    },
+    {
+      "route": "/help/settings-guide",
+      "exists": false,
+      "references": [
+        "app/help/page.tsx"
+      ]
+    },
+    {
+      "route": "/help/terms",
+      "exists": false,
+      "references": [
+        "components/AuthModal.tsx",
+        "components/LandingFooter.tsx"
+      ]
+    },
+    {
+      "route": "/ledger",
+      "exists": false,
+      "references": [
+        "app/(dashboard)/income/page.tsx",
+        "app/(dashboard)/launch/page.tsx"
+      ]
+    }
+  ],
+  "checkedRoutes": [
+    {
+      "route": "/",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/income/page.tsx",
+        "app/(dashboard)/launch/page.tsx",
+        "app/(dashboard)/proposals/[id]/actions.ts",
+        "app/(dashboard)/settings/billing/page.tsx",
+        "app/api/admin/backups/utils.ts",
+        "app/api/admin/maintenance/route.ts",
+        "app/api/ca-portal/export/zip/route.ts",
+        "app/api/chat/route.ts",
+        "app/api/clients/[id]/route.ts",
+        "app/api/cron/process-retainers/route.ts",
+        "app/api/documents/upload/route.ts",
+        "app/api/expenses/[id]/route.ts",
+        "app/api/generate/route.ts",
+        "app/api/inventory/products/[id]/route.ts",
+        "app/api/invoices/[id]/pay/route.ts",
+        "app/api/invoices/[id]/resend/route.ts",
+        "app/api/settings/route.ts",
+        "app/api/user/profile/route.ts",
+        "app/documents/[...path]/route.ts",
+        "app/help/HelpSidebar.tsx",
+        "app/invite/[token]/page.tsx",
+        "app/invoices/[...path]/route.ts",
+        "app/invoices/public/[token]/[...path]/route.ts",
+        "app/login/page.tsx",
+        "app/logos/[...path]/route.ts",
+        "app/manifest.ts",
+        "app/products/[...path]/route.ts",
+        "app/receipts/[...path]/route.ts",
+        "app/shop/[slug]/ShopClient.tsx",
+        "app/shop/[slug]/page.tsx",
+        "app/signatures/[...path]/route.ts",
+        "app/uploads/service-hero/[...path]/route.ts",
+        "app/uploads/share-target/[...path]/route.ts",
+        "components/LandingNavbar.tsx",
+        "components/PWARegistration.tsx",
+        "components/invoice/InvoiceGeneratorForm.tsx",
+        "components/notifications/CommsHub.tsx"
+      ]
+    },
+    {
+      "route": "/admin",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/dashboard/dashboard-right-rail.tsx",
+        "app/api/dashboard/route.ts"
+      ]
+    },
+    {
+      "route": "/admin/distributors",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/admin/page.tsx"
+      ]
+    },
+    {
+      "route": "/ar-collections",
+      "exists": true,
+      "references": [
+        "app/api/dashboard/route.ts",
+        "components/navigation/nav-config.ts"
+      ]
+    },
+    {
+      "route": "/ca-portal",
+      "exists": true,
+      "references": [
+        "app/api/open-file/route.ts",
+        "components/navigation/nav-config.ts",
+        "components/navigation/sidebar-items.ts"
+      ]
+    },
+    {
+      "route": "/cash-flow",
+      "exists": true,
+      "references": [
+        "app/api/dashboard/route.ts"
+      ]
+    },
+    {
+      "route": "/cash-flow/alerts",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/cash-flow/_components/cash-flow-subnav.tsx"
+      ]
+    },
+    {
+      "route": "/cash-flow/assumptions",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/cash-flow/_components/cash-flow-subnav.tsx",
+        "app/(dashboard)/cash-flow/_components/primitives/line-item-detail-sheet.tsx",
+        "app/(dashboard)/cash-flow/_components/primitives/state.tsx",
+        "app/(dashboard)/cash-flow/scenarios/page.tsx"
+      ]
+    },
+    {
+      "route": "/cash-flow/inflows",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/cash-flow/_components/cash-flow-subnav.tsx"
+      ]
+    },
+    {
+      "route": "/cash-flow/manual-adjustments",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/cash-flow/_components/cash-flow-subnav.tsx"
+      ]
+    },
+    {
+      "route": "/cash-flow/outflows",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/cash-flow/_components/cash-flow-subnav.tsx"
+      ]
+    },
+    {
+      "route": "/cash-flow/overview",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/cash-flow/_components/cash-flow-subnav.tsx",
+        "app/(dashboard)/cash-flow/page.tsx",
+        "app/(dashboard)/reconciliation/page.tsx",
+        "components/navigation/nav-config.ts"
+      ]
+    },
+    {
+      "route": "/cash-flow/scenarios",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/cash-flow/_components/cash-flow-subnav.tsx"
+      ]
+    },
+    {
+      "route": "/cash-flow/variance",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/cash-flow/_components/cash-flow-subnav.tsx"
+      ]
+    },
+    {
+      "route": "/clients",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/clients/page.tsx",
+        "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
+        "app/(dashboard)/dashboard/page.tsx",
+        "app/(dashboard)/launch/page.tsx",
+        "app/(dashboard)/proposals/page.tsx",
+        "app/(dashboard)/settings/profile/page.tsx",
+        "app/api/chat/route.ts",
+        "app/manifest.ts",
+        "app/sw.ts",
+        "components/navigation/nav-config.ts",
+        "components/navigation/sidebar-items.ts",
+        "components/onboarding/FirstLookWelcome.tsx"
+      ]
+    },
+    {
+      "route": "/dashboard",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/admin/layout.tsx",
+        "app/(dashboard)/ar-collections/layout.tsx",
+        "app/(dashboard)/cash-flow/layout.tsx",
+        "app/(dashboard)/documents/compliance/page.tsx",
+        "app/(dashboard)/documents/layout.tsx",
+        "app/(dashboard)/documents/page.tsx",
+        "app/(dashboard)/documents/settings/page.tsx",
+        "app/(dashboard)/documents/vault/page.tsx",
+        "app/(dashboard)/inbox/import/page.tsx",
+        "app/(dashboard)/layout.tsx",
+        "app/(dashboard)/partner/page.tsx",
+        "app/(dashboard)/payroll/layout.tsx",
+        "app/(dashboard)/reporting/layout.tsx",
+        "app/(dashboard)/settings/billing/page.tsx",
+        "app/(dashboard)/settings/profile/page.tsx",
+        "app/(dashboard)/workforce/layout.tsx",
+        "app/api/chat/route.ts",
+        "app/api/user/profile/route.ts",
+        "app/login/page.tsx",
+        "app/manifest.ts",
+        "app/sw.ts",
+        "components/AuthModal.tsx",
+        "components/LandingNavbar.tsx",
+        "components/app-sidebar.tsx",
+        "components/landing/persona/DemoLaunchButton.tsx",
+        "components/navigation/nav-config.ts",
+        "components/navigation/nav-main.tsx",
+        "components/navigation/sidebar-items.ts",
+        "components/onboarding/FirstLookWelcome.tsx",
+        "components/setup/SetupWizard.tsx"
+      ]
+    },
+    {
+      "route": "/documents",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/documents/inbox/page.tsx",
+        "app/api/dashboard/route.ts",
+        "components/navigation/nav-config.ts"
+      ]
+    },
+    {
+      "route": "/documents/inbox",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/documents/page.tsx",
+        "app/(dashboard)/documents/vault/page.tsx",
+        "components/documents/LinkedDocumentsPanel.tsx"
+      ]
+    },
+    {
+      "route": "/documents/settings",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/documents/inbox/page.tsx"
+      ]
+    },
+    {
+      "route": "/documents/vault",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/documents/compliance/page.tsx",
+        "app/(dashboard)/documents/inbox/page.tsx",
+        "app/(dashboard)/documents/page.tsx"
+      ]
+    },
+    {
+      "route": "/expenses",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
+        "app/api/open-file/route.ts",
+        "app/manifest.ts",
+        "app/sw.ts",
+        "components/navigation/nav-config.ts",
+        "components/navigation/sidebar-items.ts"
+      ]
+    },
+    {
+      "route": "/for-agencies",
+      "exists": true,
+      "references": [
+        "components/LandingNavbar.tsx",
+        "components/landing/LandingPersonaHub.tsx"
+      ]
+    },
+    {
+      "route": "/for-ca",
+      "exists": true,
+      "references": [
+        "components/LandingNavbar.tsx",
+        "components/landing/LandingPersonaHub.tsx"
+      ]
+    },
+    {
+      "route": "/for-contractors",
+      "exists": true,
+      "references": [
+        "components/LandingNavbar.tsx",
+        "components/landing/LandingPersonaHub.tsx"
+      ]
+    },
+    {
+      "route": "/for-freelancers",
+      "exists": true,
+      "references": [
+        "components/LandingNavbar.tsx",
+        "components/landing/LandingPersonaHub.tsx"
+      ]
+    },
+    {
+      "route": "/for-small-businesses",
+      "exists": true,
+      "references": [
+        "components/LandingNavbar.tsx",
+        "components/landing/LandingPersonaHub.tsx"
+      ]
+    },
+    {
+      "route": "/help",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
+        "app/(dashboard)/dashboard/help/page.tsx",
+        "app/(dashboard)/referrals/page.tsx",
+        "app/help-hub/page.tsx",
+        "app/help/[slug]/page.tsx",
+        "app/help/category/[categorySlug]/page.tsx",
+        "app/sitemap.ts",
+        "components/AIChatbot.tsx",
+        "components/AuthModal.tsx",
+        "components/LandingFooter.tsx",
+        "components/SetupGatekeeper.tsx",
+        "components/notifications/CommsHub.tsx"
+      ]
+    },
+    {
+      "route": "/help/category/getting-started",
+      "exists": false,
+      "references": [
+        "app/help/page.tsx"
+      ]
+    },
+    {
+      "route": "/help/category/invoicing",
+      "exists": false,
+      "references": [
+        "app/help/page.tsx"
+      ]
+    },
+    {
+      "route": "/help/category/payments",
+      "exists": false,
+      "references": [
+        "app/help/page.tsx"
+      ]
+    },
+    {
+      "route": "/help/category/tax-and-compliance",
+      "exists": false,
+      "references": [
+        "app/help/page.tsx"
+      ]
+    },
+    {
+      "route": "/help/expenses-and-tax",
+      "exists": false,
+      "references": [
+        "app/help/page.tsx"
+      ]
+    },
+    {
+      "route": "/help/generating-invoices",
+      "exists": false,
+      "references": [
+        "app/help/page.tsx"
+      ]
+    },
+    {
+      "route": "/help/payment-gateways",
+      "exists": false,
+      "references": [
+        "app/help/page.tsx"
+      ]
+    },
+    {
+      "route": "/help/privacy",
+      "exists": false,
+      "references": [
+        "components/AuthModal.tsx",
+        "components/LandingFooter.tsx"
+      ]
+    },
+    {
+      "route": "/help/settings-guide",
+      "exists": false,
+      "references": [
+        "app/help/page.tsx"
+      ]
+    },
+    {
+      "route": "/help/terms",
+      "exists": false,
+      "references": [
+        "components/AuthModal.tsx",
+        "components/LandingFooter.tsx"
+      ]
+    },
+    {
+      "route": "/import-manager",
+      "exists": true,
+      "references": [
+        "components/navigation/nav-config.ts"
+      ]
+    },
+    {
+      "route": "/inbox/import",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/dashboard/intelligence-suggestion-routes.ts",
+        "app/api/dashboard/route.ts"
+      ]
+    },
+    {
+      "route": "/income",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
+        "app/(dashboard)/dashboard/page.tsx",
+        "app/(dashboard)/income/page.tsx",
+        "app/api/chat/route.ts",
+        "app/api/dashboard/route.ts",
+        "app/api/open-file/route.ts",
+        "components/invoice/InvoiceGeneratorForm.tsx",
+        "components/navigation/nav-config.ts",
+        "components/navigation/sidebar-items.ts"
+      ]
+    },
+    {
+      "route": "/inventory",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/inventory/purchase-orders/page.tsx",
+        "components/navigation/nav-config.ts",
+        "components/navigation/sidebar-items.ts"
+      ]
+    },
+    {
+      "route": "/invoice",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/dashboard/dashboard-quick-actions.tsx",
+        "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
+        "app/(dashboard)/dashboard/intelligence-suggestion-routes.ts",
+        "app/(dashboard)/income/page.tsx",
+        "app/(dashboard)/settings/profile/page.tsx",
+        "app/api/chat/route.ts",
+        "app/manifest.ts",
+        "app/sw.ts",
+        "components/invoice/InvoiceGeneratorForm.tsx"
+      ]
+    },
+    {
+      "route": "/launch",
+      "exists": true,
+      "references": [
+        "app/manifest.ts"
+      ]
+    },
+    {
+      "route": "/ledger",
+      "exists": false,
+      "references": [
+        "app/(dashboard)/income/page.tsx",
+        "app/(dashboard)/launch/page.tsx"
+      ]
+    },
+    {
+      "route": "/login",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/inbox/import/page.tsx",
+        "app/(dashboard)/layout.tsx",
+        "app/(dashboard)/proposals/[id]/actions.ts",
+        "app/(dashboard)/proposals/[id]/page.tsx",
+        "app/(dashboard)/proposals/pipeline/page.tsx",
+        "app/share-target/route.ts",
+        "app/sitemap.ts",
+        "components/AuthModal.tsx",
+        "components/layout/DashboardShell.tsx"
+      ]
+    },
+    {
+      "route": "/offline",
+      "exists": true,
+      "references": [
+        "app/sw.ts"
+      ]
+    },
+    {
+      "route": "/open-file",
+      "exists": true,
+      "references": [
+        "app/manifest.ts"
+      ]
+    },
+    {
+      "route": "/partner",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/admin/distributors/page.tsx"
+      ]
+    },
+    {
+      "route": "/payments/failure",
+      "exists": true,
+      "references": [
+        "app/api/payments/verify-redirect/route.ts"
+      ]
+    },
+    {
+      "route": "/payments/success",
+      "exists": true,
+      "references": [
+        "app/api/payments/verify-redirect/route.ts"
+      ]
+    },
+    {
+      "route": "/payroll",
+      "exists": true,
+      "references": [
+        "app/api/dashboard/route.ts",
+        "components/navigation/nav-config.ts"
+      ]
+    },
+    {
+      "route": "/payroll/settings",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/payroll/page.tsx",
+        "app/(dashboard)/payroll/runs/[id]/page.tsx"
+      ]
+    },
+    {
+      "route": "/proposals",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/dashboard/dashboard-quick-actions.tsx",
+        "app/(dashboard)/dashboard/dashboard-sales-shop-panel.tsx",
+        "app/(dashboard)/launch/page.tsx",
+        "app/(dashboard)/proposals/[id]/actions.ts",
+        "app/(dashboard)/proposals/[id]/page.tsx",
+        "app/(dashboard)/proposals/page.tsx",
+        "app/(dashboard)/proposals/pipeline/page.tsx",
+        "app/(dashboard)/shop/page.tsx",
+        "app/api/chat/route.ts",
+        "app/api/dashboard/route.ts",
+        "app/sw.ts",
+        "components/navigation/nav-config.ts",
+        "components/navigation/sidebar-items.ts"
+      ]
+    },
+    {
+      "route": "/proposals/pipeline",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/dashboard/dashboard-proposal-pipeline-summary.tsx",
+        "app/(dashboard)/proposals/pipeline/page.tsx",
+        "components/navigation/nav-config.ts"
+      ]
+    },
+    {
+      "route": "/reconciliation",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/dashboard/dashboard-quick-actions.tsx",
+        "app/(dashboard)/dashboard/dashboard-trust-panel.tsx",
+        "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
+        "app/(dashboard)/dashboard/intelligence-suggestion-routes.ts",
+        "app/(dashboard)/reconciliation/settings-page-client.tsx",
+        "app/api/dashboard/route.ts",
+        "app/api/open-file/route.ts",
+        "app/manifest.ts",
+        "components/navigation/nav-config.ts",
+        "components/navigation/sidebar-items.ts"
+      ]
+    },
+    {
+      "route": "/referrals",
+      "exists": true,
+      "references": [
+        "app/reseller/reseller-landing-client.tsx",
+        "components/navigation/sidebar-items.ts"
+      ]
+    },
+    {
+      "route": "/reporting",
+      "exists": true,
+      "references": [
+        "app/api/dashboard/route.ts",
+        "components/navigation/nav-config.ts",
+        "components/reporting/reporting-center.tsx"
+      ]
+    },
+    {
+      "route": "/reseller",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/referrals/page.tsx",
+        "components/LandingFooter.tsx",
+        "components/LandingNavbar.tsx"
+      ]
+    },
+    {
+      "route": "/retainers",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
+        "app/(dashboard)/proposals/[id]/actions.ts",
+        "app/(dashboard)/proposals/[id]/page.tsx",
+        "app/(dashboard)/retainers/page.tsx",
+        "app/(dashboard)/services/page.tsx",
+        "app/api/chat/route.ts",
+        "components/navigation/nav-config.ts",
+        "components/navigation/sidebar-items.ts"
+      ]
+    },
+    {
+      "route": "/services",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/proposals/page.tsx",
+        "app/(dashboard)/shop/page.tsx",
+        "app/api/chat/route.ts",
+        "components/navigation/nav-config.ts",
+        "components/navigation/sidebar-items.ts",
+        "components/onboarding/FirstLookWelcome.tsx"
+      ]
+    },
+    {
+      "route": "/settings",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/ar-collections/layout.tsx",
+        "app/(dashboard)/cash-flow/layout.tsx",
+        "app/(dashboard)/dashboard/dashboard-right-rail.tsx",
+        "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
+        "app/(dashboard)/dashboard/intelligence-suggestion-routes.ts",
+        "app/(dashboard)/dashboard/page.tsx",
+        "app/(dashboard)/import-manager/layout.tsx",
+        "app/(dashboard)/proposals/pipeline/page.tsx",
+        "app/(dashboard)/reconciliation/page.tsx",
+        "app/(dashboard)/reporting/layout.tsx",
+        "app/(dashboard)/settings/page.tsx",
+        "app/(dashboard)/settings/team/page.tsx",
+        "app/api/chat/route.ts",
+        "app/api/dashboard/route.ts",
+        "components/AIChatbot.tsx",
+        "components/navigation/nav-secondary.tsx",
+        "components/navigation/sidebar-items.ts",
+        "components/onboarding/FirstLookWelcome.tsx"
+      ]
+    },
+    {
+      "route": "/settings/billing",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/dashboard/dashboard-health-strip.tsx",
+        "app/(dashboard)/referrals/page.tsx",
+        "app/reseller/reseller-landing-client.tsx",
+        "components/notifications/CommsHub.tsx"
+      ]
+    },
+    {
+      "route": "/settings/profile",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/dashboard/page.tsx",
+        "components/notifications/CommsHub.tsx"
+      ]
+    },
+    {
+      "route": "/settings/team",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/settings/page.tsx",
+        "components/rbac/access-denied.tsx"
+      ]
+    },
+    {
+      "route": "/setup",
+      "exists": true,
+      "references": [
+        "app/login/page.tsx"
+      ]
+    },
+    {
+      "route": "/shop",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/dashboard/dashboard-quick-actions.tsx",
+        "app/(dashboard)/dashboard/dashboard-sales-shop-panel.tsx",
+        "app/(dashboard)/dashboard/intelligence-suggestion-routes.ts",
+        "app/(dashboard)/dashboard/page.tsx",
+        "app/(dashboard)/proposals/[id]/actions.ts",
+        "app/(dashboard)/settings/shop/page.tsx",
+        "components/navigation/nav-config.ts",
+        "components/navigation/sidebar-items.ts"
+      ]
+    },
+    {
+      "route": "/tax",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
+        "app/(dashboard)/tax/page.tsx",
+        "app/api/chat/route.ts",
+        "app/api/dashboard/route.ts",
+        "app/sw.ts",
+        "components/navigation/nav-config.ts",
+        "components/navigation/sidebar-items.ts"
+      ]
+    },
+    {
+      "route": "/workforce",
+      "exists": true,
+      "references": [
+        "app/api/dashboard/route.ts",
+        "components/navigation/nav-config.ts",
+        "components/workforce/WorkforceLayout.tsx"
+      ]
+    },
+    {
+      "route": "/workforce/attendance",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/workforce/page.tsx",
+        "components/workforce/WorkforceLayout.tsx"
+      ]
+    },
+    {
+      "route": "/workforce/leave",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/workforce/page.tsx",
+        "components/workforce/WorkforceLayout.tsx"
+      ]
+    },
+    {
+      "route": "/workforce/people",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/workforce/page.tsx",
+        "app/(dashboard)/workforce/people/[id]/page.tsx",
+        "components/workforce/WorkforceLayout.tsx"
+      ]
+    },
+    {
+      "route": "/workforce/reports",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/workforce/page.tsx",
+        "components/workforce/WorkforceLayout.tsx"
+      ]
+    },
+    {
+      "route": "/workforce/settings",
+      "exists": true,
+      "references": [
+        "components/workforce/WorkforceLayout.tsx"
+      ]
+    }
+  ]
+}

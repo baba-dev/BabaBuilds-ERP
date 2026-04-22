@@ -11,6 +11,7 @@
     "validate": "npm run lint && npm run typecheck && npm run build",
     "check:locales": "node scripts/check-locales.js",
     "check:kpi-impact": "node scripts/check-dashboard-kpi-coverage.js",
+    "audit:routes": "node scripts/route-integrity-report.mjs",
     "validate:demos": "npx tsx scripts/validate-demo-templates.ts",
     "codex:quick": "bash scripts/codex-quick-check.sh",
     "backfill:smtp-passwords": "node scripts/backfill-smtp-password-encryption.js",
