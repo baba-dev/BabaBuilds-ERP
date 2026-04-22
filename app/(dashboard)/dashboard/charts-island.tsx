@@ -1,6 +1,6 @@
 "use client";
 
-import { 
+import {
   BarChart3, 
   TrendingUp, 
   Clock, 
@@ -9,7 +9,8 @@ import {
   CheckCircle2, 
   AlertCircle,
   ArrowUpRight,
-  Sparkles
+  Sparkles,
+  Lock
 } from "lucide-react";
 import { useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
@@ -29,6 +30,7 @@ import { withChartTokenColors } from "@/components/charts/chart-colors";
 import { Badge } from "@/components/ui/badge";
 import type { DashboardData } from "./types";
 import { dashboardTypography as ty } from "./dashboard-typography";
+import { DashboardTooltip } from "./dashboard-tooltip";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -56,9 +58,11 @@ const itemVariants: Variants = {
 export function ChartsIsland({
   charts,
   fCurrency,
+  canViewCharts = true,
 }: {
   charts: DashboardData["charts"];
   fCurrency: (value: number) => string;
+  canViewCharts?: boolean;
 }) {
   const t = useTranslations("Dashboard");
   const tr = (key: string, fallback: string, values?: Record<string, any>) =>
@@ -130,13 +134,22 @@ export function ChartsIsland({
       .filter((s): s is RingSegment => s !== null);
   }, [serviceOrderHealth, totalOrders, hasOrderData]);
 
+  const lockedClassName = !canViewCharts ? "opacity-50 grayscale pointer-events-none select-none" : "";
+
   return (
     <motion.div 
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="grid grid-cols-1 xl:grid-cols-2 gap-6"
+      className={`grid grid-cols-1 xl:grid-cols-2 gap-6 ${lockedClassName}`}
     >
+      {!canViewCharts && (
+        <div className="xl:col-span-2 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/40 px-4 py-3 flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
+          <Lock className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
+          <span>You do not have permission to view finance charts.</span>
+          <DashboardTooltip label="Your role has limited finance/chart visibility. Contact your workspace admin to request access." />
+        </div>
+      )}
       {/* Revenue vs Expenses */}
       <motion.div variants={itemVariants}>
         <ChartCard 

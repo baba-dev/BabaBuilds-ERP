@@ -8,7 +8,6 @@ import { prisma } from "@/lib/prisma";
 import { createTransport } from "nodemailer"; // 1. ADDED IMPORT
 import addressparser from "nodemailer/lib/addressparser";
 import { recordAuthFailure } from "@/lib/auth-observability";
-import { normalizeLaunchDestination } from "@/lib/launch-routing";
 import { logActivity } from "@/lib/activity-log";
 import {
   HIGH_RISK_MAGIC_LINK_ERROR_CODE,
@@ -552,7 +551,7 @@ export const authOptions: NextAuthOptions = {
         if (isRootRelativeCallback(url) || isAuthErrorRoute(url)) {
           return `${baseUrl}${url}`;
         }
-        return `${baseUrl}${normalizeLaunchDestination(url)}`;
+        return `${baseUrl}${CANONICAL_DASHBOARD_ROUTE}`;
       }
 
       try {
@@ -561,14 +560,13 @@ export const authOptions: NextAuthOptions = {
           if (target.pathname === "/" || target.pathname === LOGIN_ROUTE) {
             return `${baseUrl}${target.search}${target.hash}`;
           }
-          const normalized = normalizeLaunchDestination(`${target.pathname}${target.search}${target.hash}`);
-          return `${baseUrl}${normalized}`;
+          return `${baseUrl}${CANONICAL_DASHBOARD_ROUTE}`;
         }
       } catch {
         return `${baseUrl}${CANONICAL_DASHBOARD_ROUTE}`;
       }
 
-      return url;
+      return `${baseUrl}${CANONICAL_DASHBOARD_ROUTE}`;
     },
 
     async session({ session, token }) {

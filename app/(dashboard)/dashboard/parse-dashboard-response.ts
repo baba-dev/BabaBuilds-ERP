@@ -35,8 +35,10 @@ export const parseDashboardResponse = (payload: unknown) => {
   const operations = asRecord(obj.operations);
   const trust = asRecord(obj.trust);
   const charts = asRecord(obj.charts);
+  const permissions = asRecord(obj.permissions);
+  const optionalModules = Array.isArray(obj.optionalModules) ? obj.optionalModules : [];
 
-  if (!health || !attention || !financialPulse || !salesAndShop || !operations || !trust || !charts || !Array.isArray(obj.recentInvoices)) {
+  if (!health || !attention || !financialPulse || !salesAndShop || !operations || !trust || !charts || !permissions || !Array.isArray(obj.recentInvoices)) {
     return null;
   }
 
@@ -118,6 +120,8 @@ export const parseDashboardResponse = (payload: unknown) => {
         };
       }),
     },
+    permissions,
+    optionalModules,
     countryCode: (obj.countryCode as string) || "IN",
   };
 };

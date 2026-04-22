@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { format, addDays } from "date-fns";
-import { FileText, Plus, Trash2, ArrowLeft, Send, Copy, CheckCircle2, Building2, Briefcase, Loader2 } from "lucide-react";
+import { FileText, Plus, Trash2, ArrowLeft, Send, Copy, CheckCircle2, Building2, Briefcase, Loader2, FileSignature } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -699,10 +699,13 @@ export default function ProposalsEngine() {
   return (
     <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8 pb-20 transition-colors duration-300">
       <div className={`${view === 'list' ? 'max-w-7xl' : 'max-w-4xl'} mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out`}>
-        <div className="sticky top-0 z-20 -mx-4 px-4 py-4 md:-mx-8 md:px-8 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200/50 dark:border-zinc-800/50 transition-all duration-300">
+        <div className="sticky top-0 z-20 -mx-4 px-4 py-3 md:-mx-8 md:px-8 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200/50 dark:border-zinc-800/50 transition-all duration-300">
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 max-w-7xl mx-auto w-full">
-            <div className="space-y-1.5">
-              <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            <div className="space-y-1">
+              <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-3">
+                <div className="p-2.5 bg-indigo-600/10 dark:bg-indigo-500/20 rounded-xl border border-indigo-200/50 dark:border-indigo-400/20">
+                  <FileSignature className="w-6 h-6 text-indigo-700 dark:text-indigo-300" />
+                </div>
                 {view === 'list' ? t('title') : t('draft_new')}
               </h1>
               <p className="text-zinc-500 dark:text-zinc-400 font-medium text-sm max-w-xl">

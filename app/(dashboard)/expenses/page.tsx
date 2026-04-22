@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { UploadCloud, TrendingDown, Wallet, ShieldCheck, FileText, ArrowRight, Sparkles, Trash2, Edit } from "lucide-react";
+import { UploadCloud, TrendingDown, Wallet, ShieldCheck, FileText, ArrowRight, Sparkles, Trash2, Edit, Receipt } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -335,6 +335,7 @@ export default function ExpenseTracker() {
     <DashboardPageShell
       title={t('title')}
       description={t('description')}
+      icon={<Receipt className="w-6 h-6 text-accent-strong" />}
       animated={false}
     >
 

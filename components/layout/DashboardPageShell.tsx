@@ -112,17 +112,17 @@ export function DashboardPageShell({
 
 
   return (
-    <div className="min-h-full bg-surface-base p-4 transition-colors duration-300 md:p-8">
-      <div className={cn("mx-auto space-y-8", maxWidthClassName, animated && animationClassName)}>
+    <div className="min-h-full bg-surface-base p-4 transition-colors duration-300 md:p-6">
+      <div className={cn("mx-auto space-y-6", maxWidthClassName, animated && animationClassName)}>
         <header
           className={cn(
             "sticky top-0 z-20 -mx-4 rounded-b-2xl border-b border-border/70 px-4 backdrop-blur-md transition-all duration-200 ease-out md:-mx-8 md:px-8",
             headerToneClassName,
-            isCompactHeader ? "py-3" : "py-4",
+            isCompactHeader ? "py-2.5" : "py-3",
             headerClassName,
           )}
         >
-          <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
+          <div className="mx-auto flex w-full max-w-7xl flex-col gap-3">
             <div className="flex items-center justify-between gap-3">
               <div className={tx(ty.labelUpper, "text-muted-foreground flex items-center gap-2")}>
                 <SidebarTrigger className="md:hidden" />
@@ -131,8 +131,8 @@ export function DashboardPageShell({
               {/* Desktop-only action placement for non-compact header handled below */}
             </div>
 
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-              <div className="space-y-1.5">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+              <div className="space-y-1">
                 <div className="flex items-center gap-3">
                   {icon ? (
                     <div className="rounded-xl border border-border/70 bg-[color:var(--color-panel-muted,var(--color-muted))] p-2.5 text-[color:var(--color-accent-info,var(--color-accent-strong))] shadow-xs transition-all duration-200 ease-out">

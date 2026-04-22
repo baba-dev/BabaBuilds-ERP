@@ -11,6 +11,7 @@ import { estimateTax } from "@/lib/tax/engine";
 import { getCurrentFinancialYear } from "@/lib/financial-year";
 import { getTaxReadinessSummary } from "@/lib/tax/return-prep";
 import { checkPermission } from "@/lib/rbac";
+import { getEnabledModules, MODULE_DESCRIPTIONS, MODULE_LABELS, type ModuleKey } from "@/lib/modules";
 import { buildMonthlyChartBuckets, resolveMonthlyBucketTimeZone } from "./monthly-series";
 import { describeKpiPeriod, getFyDateRange } from "./sales-shop-kpi-periods";
 import {
@@ -81,6 +82,22 @@ async function buildDashboardPayload(
 
   const canViewTaxReadiness =
     Boolean(userId) && (await checkPermission(userId!, workspaceId, "tax.readiness.view"));
+  const [
+    canViewAccounting,
+    canViewOperations,
+    canViewSales,
+    canManageBilling,
+    canRunTaxReadiness,
+  ] = userId
+    ? await Promise.all([
+        checkPermission(userId, workspaceId, "accounting.view"),
+        checkPermission(userId, workspaceId, "inventory.view"),
+        checkPermission(userId, workspaceId, "proposals.view"),
+        checkPermission(userId, workspaceId, "billing.manage"),
+        checkPermission(userId, workspaceId, "tax.readiness.run"),
+      ])
+    : [false, false, false, false, false];
+  const enabledModules = await getEnabledModules(workspaceId);
 
   const [
     workspace,
@@ -812,6 +829,23 @@ async function buildDashboardPayload(
     shopRevenueThisMonth: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
     ordersLast30Days: describeKpiPeriod({ type: "ROLLING_30D", now, fy, fyRange }),
   };
+  const optionalModuleRouteMap: Record<ModuleKey, string> = {
+    WORKFORCE: "/workforce",
+    PAYROLL: "/payroll",
+    DOCUMENTS: "/documents",
+    REVENUE_PIPELINE: "/proposals",
+    CASH_FLOW: "/cash-flow",
+    AR_COLLECTIONS: "/ar-collections",
+    TAX_ADVANCED: "/tax",
+    REPORTING_CENTER: "/reporting",
+    IMPORT_MANAGER: "/inbox/import",
+  };
+  const optionalModules = Array.from(enabledModules).map((moduleKey) => ({
+    moduleKey,
+    label: MODULE_LABELS[moduleKey],
+    description: MODULE_DESCRIPTIONS[moduleKey],
+    href: optionalModuleRouteMap[moduleKey] ?? "/settings",
+  }));
 
   return {
     health: {
@@ -964,6 +998,17 @@ async function buildDashboardPayload(
       ...invoice,
       status: invoice.status || INVOICE_STATUS.PENDING,
     })),
+    permissions: {
+      canViewFinance: canViewAccounting,
+      canViewOperations,
+      canViewSalesShop: canViewSales,
+      canViewCharts: canViewAccounting,
+      canViewRecentLedger: canViewAccounting,
+      canViewTrust: canViewAccounting,
+      canRunIntegrityScan: canRunTaxReadiness,
+      canManageBilling,
+    },
+    optionalModules,
 
     telemetry: {
       queryTimingsMs,

@@ -142,6 +142,7 @@ export default function ServiceCatalog() {
   return (
     <DashboardPageShell
       title="Service Catalogue"
+      icon={<Briefcase className="w-6 h-6 text-accent-strong" />}
       description="Build and maintain your service offerings for invoices, proposals, and your shop."
       primaryAction={
         <div className="flex items-center gap-3">
@@ -149,7 +150,7 @@ export default function ServiceCatalog() {
             <Button
               onClick={() => window.open(`/shop/${shopSlug}`, "_blank")}
               variant="outline"
-              className="hidden md:flex items-center gap-2 border-orange-200 dark:border-orange-800/50 text-orange-800 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/40 text-xs font-bold uppercase tracking-wider h-11"
+              className="hidden md:flex items-center gap-2 text-xs font-bold uppercase tracking-wider h-11"
             >
               <ExternalLink className="w-4 h-4" /> View Live Shop
             </Button>

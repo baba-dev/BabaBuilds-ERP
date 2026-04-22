@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { useTranslations } from "next-intl";
-import { PiggyBank, ShieldPlus, Landmark, TrendingUp, Calculator, AlertCircle, CheckCircle2, Globe2, CircleHelp } from "lucide-react";
+import { ShieldPlus, Landmark, Calculator, AlertCircle, CheckCircle2, Globe2, CircleHelp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -96,7 +96,18 @@ export default function WealthAndTaxPlanner() {
   const [amount, setAmount] = useState("");
 
   // Tax Settings State
-  const [hasSeniorParents, setHasSeniorParents] = useState(false);
+  const [taxEstimate, setTaxEstimate] = useState<{
+    amount: string;
+    ratePercent: number | null;
+    basis: {
+      method: string;
+      countryCode: string | null;
+      taxableIncome: string;
+      deductions: string;
+      providerRatePercent: number | null;
+    };
+    disclaimerKey: string;
+  } | null>(null);
   const [taxOverrideOpen, setTaxOverrideOpen] = useState(false);
   const [taxOverrides, setTaxOverrides] = useState<TaxOverrideWindow[]>([]);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(["date", "asset", "category", "amount"]);
@@ -131,7 +142,6 @@ export default function WealthAndTaxPlanner() {
         const isFresh = (Date.now() - timestamp) < 10000;
         
         if (isFresh && data && path === '/tax') {
-          if (data.date) setDate(data.date);
           if (data.category) setCategory(data.category);
           if (data.assetName || data.title) setAssetName(data.assetName || data.title);
           if (data.amount) setAmount(data.amount.toString());
@@ -143,6 +153,33 @@ export default function WealthAndTaxPlanner() {
       }
     }
   }, []);
+
+  const fetchTaxEstimate = useCallback(async (revenueValue: number, deductionsValue: number) => {
+    try {
+      const res = await fetch("/api/tax/estimate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          country: countryCode,
+          revenue: revenueValue,
+          deductions: deductionsValue,
+          date,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to estimate tax");
+      const payload = await res.json();
+      setTaxEstimate(payload?.taxEstimate ?? null);
+    } catch (err) {
+      setTaxEstimate(null);
+      console.error("Tax estimate fetch failed", err);
+    }
+  }, [countryCode, date]);
+
+  useEffect(() => {
+    if (isLoading) return;
+    const currentDeductions = investments.reduce((sum, inv) => sum + toSafeNumber(inv?.amount), 0);
+    void fetchTaxEstimate(totalRevenue, currentDeductions);
+  }, [date, countryCode, isLoading, investments, totalRevenue, fetchTaxEstimate]);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -211,42 +248,10 @@ export default function WealthAndTaxPlanner() {
   // --- WEALTH CALCULATIONS (Global) ---
   const totalNetWorth = investments.reduce((sum, inv) => sum + toSafeNumber(inv?.amount), 0);
   
-  // --- TAX CALCULATIONS (Indian FY25-26 / AY26-27 Estimation) ---
-  // These will safely equal 0 if not used by the UI
-  const presumptiveIncome = totalRevenue * 0.5; 
-
-  const raw80C = investments.filter(i => i.category === '80C (LIC, PPF, ELSS)').reduce((sum, i) => sum + toSafeNumber(i?.amount), 0);
-  const eligible80C = Math.min(raw80C, 150000);
-  const percent80C = (eligible80C / 150000) * 100;
-
-  const raw80D = investments.filter(i => i.category === '80D (Health Insurance)').reduce((sum, i) => sum + toSafeNumber(i?.amount), 0);
-  const max80DLimit = hasSeniorParents ? 75000 : 25000;
-  const eligible80D = Math.min(raw80D, max80DLimit);
-
-  const calculateOldRegime = (income: number) => {
-    const taxable = Math.max(0, income - eligible80C - eligible80D);
-    if (taxable <= 500000) return 0; 
-    let tax = 0;
-    if (taxable > 250000) tax += Math.min(taxable - 250000, 250000) * 0.05;
-    if (taxable > 500000) tax += Math.min(taxable - 500000, 500000) * 0.20;
-    if (taxable > 1000000) tax += (taxable - 1000000) * 0.30;
-    return tax;
-  };
-
-  const calculateNewRegime = (income: number) => {
-    if (income <= 700000) return 0; 
-    let tax = 0;
-    if (income > 300000) tax += Math.min(income - 300000, 300000) * 0.05;
-    if (income > 600000) tax += Math.min(income - 600000, 300000) * 0.10;
-    if (income > 900000) tax += Math.min(income - 900000, 300000) * 0.15;
-    if (income > 1200000) tax += Math.min(income - 1200000, 300000) * 0.20;
-    if (income > 1500000) tax += (income - 1500000) * 0.30;
-    return tax;
-  };
-
-  const oldTax = calculateOldRegime(presumptiveIncome);
-  const newTax = calculateNewRegime(presumptiveIncome);
-  const isOldBetter = oldTax < newTax;
+  const estimatedTaxAmount = Number(taxEstimate?.amount ?? 0);
+  const estimatedTaxableBase = Number(taxEstimate?.basis?.taxableIncome ?? 0);
+  const estimatedRate = taxEstimate?.ratePercent ?? taxEstimate?.basis?.providerRatePercent ?? 0;
+  const estimateMethod = taxEstimate?.basis?.method ?? "fallback";
   const filteredInvestments = investments.filter((inv) =>
     `${inv.assetName} ${inv.category}`.toLowerCase().includes(tableState.search.toLowerCase()),
   );
@@ -259,8 +264,8 @@ export default function WealthAndTaxPlanner() {
       accessor: (row) => row.category,
       cell: (row) => (
         <span className={`text-xs uppercase tracking-wider px-2 py-1 rounded-md font-bold ${
-          row.category.includes("80C") ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400" :
-          row.category.includes("80D") ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" :
+          row.category.includes("Tax-deductible") ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400" :
+          row.category.includes("Insurance") ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" :
           row.category.includes("Gold") ? "bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800/50" :
           "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"
         }`}>
@@ -305,7 +310,7 @@ export default function WealthAndTaxPlanner() {
       if (res.ok) {
         setAssetName(""); setAmount(""); setCategory("");
         toast.success("Investment logged successfully.", { id: toastId });
-        fetchData();
+        await fetchData();
       } else {
         toast.error("Failed to save investment. Please try again.", { id: toastId });
       }
@@ -371,55 +376,51 @@ export default function WealthAndTaxPlanner() {
             </CardContent>
           </Card>
 
-          {/* JURISDICTIONAL TOGGLE: Indian 80C vs Global Estimate */}
-          {countryCode === "IN" ? (
-            <>
-              <Card className="shadow-sm border-emerald-200 dark:border-emerald-900/50 bg-white dark:bg-zinc-900">
+          <Card className="shadow-sm border-emerald-200 dark:border-emerald-900/50 bg-white dark:bg-zinc-900">
                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                  <CardTitle className="text-xs font-bold uppercase tracking-widest text-emerald-800 dark:text-emerald-400">{t('sec_80c')}</CardTitle>
+                  <CardTitle className="text-xs font-bold uppercase tracking-widest text-emerald-800 dark:text-emerald-400">Estimated Taxable Base</CardTitle>
                   <ShieldPlus className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{fCurrency(eligible80C)}</div>
+                  <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{fCurrency(estimatedTaxableBase)}</div>
                   <div className="mt-4 space-y-2">
                     <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
-                      <span>{t('limit_15_lakhs')}</span>
-                      <span>{t('utilized', { percent: percent80C.toFixed(0) })}</span>
+                      <span>Resolved from policy engine</span>
+                      <span>{taxEstimate?.basis?.countryCode ?? countryCode}</span>
                     </div>
-                    <Progress value={percent80C} className="h-2 bg-zinc-100 dark:bg-zinc-800 [&>div]:bg-emerald-500" />
+                    <Progress value={Math.min(Math.max(estimatedRate, 0), 100)} className="h-2 bg-zinc-100 dark:bg-zinc-800 [&>div]:bg-emerald-500" />
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
                  <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                  <CardTitle className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{t('presumptive')}</CardTitle>
+                  <CardTitle className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Estimated Tax Liability</CardTitle>
                   <Calculator className="h-4 w-4 text-zinc-400 dark:text-zinc-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{fCurrency(presumptiveIncome)}</div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mt-1">{t('tax_baseline')}</p>
+                  <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{fCurrency(estimatedTaxAmount)}</div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mt-1">
+                    {estimateMethod.replaceAll("_", " ")} · {estimatedRate.toFixed(2)}%
+                  </p>
                 </CardContent>
               </Card>
-            </>
-          ) : (
-             <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 md:col-span-2 flex flex-col justify-center items-center p-6 text-center">
-                <Globe2 className="w-6 h-6 text-zinc-300 dark:text-zinc-600 mb-2" />
-                <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{t('regional_compliance')}</h3>
-                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1 max-w-md">{t('regional_desc')}</p>
-             </Card>
-          )}
+          <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 md:col-span-2 flex flex-col justify-center items-center p-6 text-center">
+            <Globe2 className="w-6 h-6 text-zinc-300 dark:text-zinc-600 mb-2" />
+            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Jurisdiction-aware estimate</h3>
+            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1 max-w-md">
+              All tax estimates are resolved from backend policy rules and overrides for your selected country.
+            </p>
+          </Card>
         </div>
 
-        {/* MIDDLE ROW: TAX REGIME COMPARATOR (Only show for India) */}
-        {countryCode === "IN" && (
-          <div className="bg-zinc-900 dark:bg-zinc-950 rounded-xl p-6 text-white shadow-xl border dark:border-zinc-800">
+        <div className="bg-zinc-900 dark:bg-zinc-950 rounded-xl p-6 text-white shadow-xl border dark:border-zinc-800">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-zinc-800 pb-4">
               <div className="flex items-center gap-2">
                 <AlertCircle className="text-amber-400 h-5 w-5" />
                 <h2 className="text-lg font-bold tracking-tight flex flex-wrap items-center gap-2">
-                  <span>{t('advance_tax')}</span>
-                  <span className="text-sm font-medium text-zinc-400">{t('fy_estimate')}</span>
+                  <span>Tax estimate engine output</span>
+                  <span className="text-sm font-medium text-zinc-400">{taxEstimate?.disclaimerKey ?? "FALLBACK_RULE"}</span>
                   {taxAdvancedEnabled && (
                     <Button
                       type="button"
@@ -433,40 +434,30 @@ export default function WealthAndTaxPlanner() {
                   )}
                 </h2>
               </div>
-              <div className="flex items-center gap-3 bg-zinc-800/50 dark:bg-zinc-900 px-3 py-2 rounded-lg border border-zinc-700 dark:border-zinc-800">
-                <input
-                  type="checkbox"
-                  id="seniorParents"
-                  checked={hasSeniorParents}
-                  onChange={(e) => setHasSeniorParents(e.target.checked)}
-                  className="w-4 h-4 rounded border-zinc-500 bg-zinc-700 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-zinc-900 accent-indigo-500"
-                />
-                <Label htmlFor="seniorParents" className="text-xs font-bold uppercase tracking-wider text-zinc-300 cursor-pointer">
-                  {t('include_parents')}
-                </Label>
-              </div>
+              <Badge variant="secondary" className="bg-zinc-800 text-zinc-300 border-zinc-700">
+                Method: {estimateMethod}
+              </Badge>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className={`p-4 rounded-lg border transition-colors ${isOldBetter ? 'border-emerald-500 bg-emerald-950/30' : 'border-zinc-800 dark:border-zinc-800/50 bg-zinc-900/50'}`}>
+              <div className="p-4 rounded-lg border transition-colors border-zinc-800 dark:border-zinc-800/50 bg-zinc-900/50">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-zinc-400 font-bold text-xs uppercase tracking-widest">{t('old_regime')}</h3>
-                  {isOldBetter && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+                  <h3 className="text-zinc-400 font-bold text-xs uppercase tracking-widest">Estimated tax</h3>
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                 </div>
-                <div className="text-3xl font-bold mb-1">{fCurrency(oldTax)}</div>
-                <p className="text-xs font-bold tracking-widest text-zinc-500 uppercase">{t('old_regime_desc', { amount: fCurrency(eligible80C + eligible80D) })}</p>
+                <div className="text-3xl font-bold mb-1">{fCurrency(estimatedTaxAmount)}</div>
+                <p className="text-xs font-bold tracking-widest text-zinc-500 uppercase">Computed via API policy engine</p>
               </div>
               
-              <div className={`p-4 rounded-lg border transition-colors ${!isOldBetter ? 'border-emerald-500 bg-emerald-950/30' : 'border-zinc-800 dark:border-zinc-800/50 bg-zinc-900/50'}`}>
+              <div className="p-4 rounded-lg border transition-colors border-zinc-800 dark:border-zinc-800/50 bg-zinc-900/50">
                  <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-zinc-400 font-bold text-xs uppercase tracking-widest">{t('new_regime')}</h3>
-                  {!isOldBetter && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+                  <h3 className="text-zinc-400 font-bold text-xs uppercase tracking-widest">Effective rate</h3>
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                 </div>
-                <div className="text-3xl font-bold mb-1">{fCurrency(newTax)}</div>
-                <p className="text-xs font-bold tracking-widest text-zinc-500 uppercase">{t('new_regime_desc')}</p>
+                <div className="text-3xl font-bold mb-1">{estimatedRate.toFixed(2)}%</div>
+                <p className="text-xs font-bold tracking-widest text-zinc-500 uppercase">{taxEstimate?.basis?.countryCode ?? countryCode}</p>
               </div>
             </div>
           </div>
-        )}
 
         {/* BOTTOM ROW: FORM & LEDGER */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -492,7 +483,7 @@ export default function WealthAndTaxPlanner() {
                         <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-widest">Override mode selector</Label>
                         <HelpTooltip copy={TAX_HELP_COPY.manual_override_warning} />
                       </div>
-                      <Select defaultValue="auto">
+                      <Select value="auto" disabled>
                         <SelectTrigger className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold text-xs">
                           <SelectValue placeholder="Select mode" />
                         </SelectTrigger>
@@ -508,7 +499,7 @@ export default function WealthAndTaxPlanner() {
                         <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-widest">Scope selector</Label>
                         <HelpTooltip copy={TAX_HELP_COPY.scope_hint_country_vs_region} />
                       </div>
-                      <Select defaultValue="country">
+                      <Select value="country" disabled>
                         <SelectTrigger className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold text-xs">
                           <SelectValue placeholder="Select scope" />
                         </SelectTrigger>
@@ -547,12 +538,8 @@ export default function WealthAndTaxPlanner() {
                         <SelectValue placeholder={t('select_type')} />
                       </SelectTrigger>
                       <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
-                        {countryCode === "IN" && (
-                          <>
-                            <SelectItem value="80C (LIC, PPF, ELSS)" className="dark:focus:bg-zinc-800 dark:text-zinc-100 text-xs font-bold">80C (LIC, PPF, ELSS)</SelectItem>
-                            <SelectItem value="80D (Health Insurance)" className="dark:focus:bg-zinc-800 dark:text-zinc-100 text-xs font-bold">80D (Health Insurance)</SelectItem>
-                          </>
-                        )}
+                        <SelectItem value="Tax-deductible savings" className="dark:focus:bg-zinc-800 dark:text-zinc-100 text-xs font-bold">Tax-deductible savings</SelectItem>
+                        <SelectItem value="Insurance contributions" className="dark:focus:bg-zinc-800 dark:text-zinc-100 text-xs font-bold">Insurance contributions</SelectItem>
                         <SelectItem value="Equity / Mutual Funds" className="dark:focus:bg-zinc-800 dark:text-zinc-100 text-xs font-bold">Equity / Mutual Funds</SelectItem>
                         <SelectItem value="Fixed Deposit (FD)" className="dark:focus:bg-zinc-800 dark:text-zinc-100 text-xs font-bold">Fixed Deposit (FD)</SelectItem>
                         <SelectItem value="Gold / Precious Metals" className="dark:focus:bg-zinc-800 dark:text-zinc-100 text-xs font-bold">Gold / Precious Metals</SelectItem>        

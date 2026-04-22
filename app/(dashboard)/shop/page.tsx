@@ -21,6 +21,7 @@ import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -406,20 +407,31 @@ export default function ShopDashboardPage() {
             <Button
               onClick={() => window.open(`/shop/${shopSlug}`, "_blank")}
               variant="outline"
-              className="hidden md:flex items-center gap-2 border-orange-200 dark:border-orange-800/50 text-orange-800 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/40 text-xs font-bold uppercase tracking-wider h-11"
+              className="hidden md:flex items-center gap-2 text-xs font-bold uppercase tracking-wider h-11"
             >
               <ExternalLink className="w-4 h-4" /> View Live Shop
             </Button>
           ) : null}
-          <Button
-            onClick={createProposalDraft}
-            disabled={isCreatingProposalDraft || selectedServiceIds.length === 0 || publishedServices.length === 0}
-            variant="outline"
-            className="hidden md:flex items-center gap-2 border-orange-200 dark:border-orange-800/50 text-orange-800 dark:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/40 text-xs font-bold uppercase tracking-wider h-11"
-          >
-            {isCreatingProposalDraft ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSignature className="w-4 h-4" />}
-            Create Proposal
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="hidden md:inline-flex">
+                  <Button
+                    onClick={createProposalDraft}
+                    disabled={isCreatingProposalDraft || selectedServiceIds.length === 0 || publishedServices.length === 0}
+                    variant="outline"
+                    className="items-center gap-2 text-xs font-bold uppercase tracking-wider h-11"
+                  >
+                    {isCreatingProposalDraft ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSignature className="w-4 h-4" />}
+                    Create Proposal
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs text-xs leading-relaxed">
+                Build a draft from selected published services. Curate the selection in “Proposal Draft Builder” to pre-fill line items and pricing.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <Button
             onClick={() => setServiceDialogOpen(true)}
             className="btn-primary w-full md:w-auto shrink-0 text-xs uppercase tracking-wider h-11"

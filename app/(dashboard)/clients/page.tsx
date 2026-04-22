@@ -229,6 +229,7 @@ export default function ClientCRM() {
   return (
     <DashboardPageShell
       title={t('title')}
+      icon={<Users className="w-6 h-6 text-accent-strong" />}
       description={t('description')}
       primaryAction={
         <Button 
