@@ -29,8 +29,9 @@ async function main() {
   await page.getByLabel("Search Help Center articles").fill("invoice");
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${artifactsDir}/help_search_dropdown.png`, fullPage: false });
-  // Click a deterministic result (avoids picking /help/category/*)
-  const resultLink = page.getByRole("link", { name: /Generating & Sending Invoices/i }).first();
+  // Click deterministic article link by href to avoid text drift issues.
+  const resultLink = page.locator('a[href="/help/generating-invoices"]').first();
+  await resultLink.waitFor({ state: "visible", timeout: 15000 });
   await resultLink.click();
 
   // article page

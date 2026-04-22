@@ -1,37 +1,21 @@
 ---
 title: "Optional Module: Reporting Center"
-description: "Enable Reporting Center for controlled analytics, preset reports, and polished exports for leadership."
+description: "Enable Reporting Center for governed analytics, preset reports, and export workflows."
 order: 18
 category: "Optional Sub Systems"
-tags: ["reporting", "analytics", "exports", "sql"]
+tags: ["reporting", "analytics", "exports"]
 estimatedMinutes: 8
-dateModified: "2026-04-21"
+dateModified: "2026-04-22"
 ---
 
 # Optional Module: Reporting Center
 
-Reporting Center provides a governed analytics workspace for business and finance teams.
+Reporting Center gives role-aware reporting with curated presets and workbook exports.
 
-## Enable from Settings
+## Screenshots
 
-1. Open **Settings → Workspace Modules**
-2. Toggle **Reporting Center** ON
+<HelpImage src="/help/screenshots/help-optional-reporting-center-01-overview.png" alt="Reporting Center overview page" caption="Preset report gallery and reporting hub overview." />
 
-<HelpImage src="/help/diagrams/erp_entrypoint.svg" alt="Reporting Center module card in settings" caption="Screenshot target: Reporting Center enabled state in Settings." />
+<HelpImage src="/help/screenshots/help-optional-reporting-center-02-primary-action.png" alt="Reporting Center primary actions" caption="Run report, inspect data, and apply filters." />
 
----
-
-## Key capabilities
-
-- Preset report gallery
-- Workspace-scoped query execution
-- Preview tables and filters
-- XLSX export with metadata
-
----
-
-## Screenshot targets for this article
-
-1. Reporting Center toggle card
-2. Preset report gallery
-3. Report preview/export screen
+<HelpImage src="/help/screenshots/help-optional-reporting-center-03-detail.png" alt="Reporting Center detail" caption="Detailed report output with export context." />

@@ -1,37 +1,21 @@
 ---
 title: "Optional Module: AR Aging + Collections Centre"
-description: "Enable AR Collections to prioritize overdue invoices, automate reminders, and improve receivables recovery."
+description: "Enable AR Collections to prioritize overdue invoices and run reminder/collection workflows."
 order: 17
 category: "Optional Sub Systems"
 tags: ["ar", "collections", "aging", "receivables"]
 estimatedMinutes: 8
-dateModified: "2026-04-21"
+dateModified: "2026-04-22"
 ---
 
 # Optional Module: AR Aging + Collections Centre
 
-This module helps your team reduce outstanding receivables systematically.
+AR Collections improves recovery by surfacing aging buckets, priority queues, and follow-up actions.
 
-## Enable from Settings
+## Screenshots
 
-1. Open **Settings → Workspace Modules**
-2. Toggle **AR Aging + Collections Centre** ON
+<HelpImage src="/help/screenshots/help-optional-ar-collections-01-overview.png" alt="AR Collections overview page" caption="Aging and collections overview." />
 
-<HelpImage src="/help/diagrams/erp_entrypoint.svg" alt="AR Collections module toggle in settings" caption="Screenshot target: AR Collections card enabled in Settings." />
+<HelpImage src="/help/screenshots/help-optional-ar-collections-02-primary-action.png" alt="AR Collections action screen" caption="Priority queue and reminder actions." />
 
----
-
-## What unlocks
-
-- Aging bucket visibility
-- Priority collections queue
-- Reminder actions (email/manual)
-- Promise-to-pay tracking
-
----
-
-## Screenshot targets for this article
-
-1. AR Collections toggle card
-2. Aging buckets screen
-3. Collections queue/reminder action view
+<HelpImage src="/help/screenshots/help-optional-ar-collections-03-detail.png" alt="AR Collections detail view" caption="Detailed receivable follow-up context." />

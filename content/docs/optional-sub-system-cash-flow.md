@@ -1,37 +1,21 @@
 ---
 title: "Optional Module: Cash Flow"
-description: "Enable Cash Flow for forecast snapshots, scenario planning, and proactive liquidity monitoring."
+description: "Enable Cash Flow for forecast snapshots, scenario planning, and liquidity monitoring."
 order: 16
 category: "Optional Sub Systems"
 tags: ["cash flow", "forecast", "liquidity", "planning"]
 estimatedMinutes: 8
-dateModified: "2026-04-21"
+dateModified: "2026-04-22"
 ---
 
 # Optional Module: Cash Flow
 
-Cash Flow gives forward-looking finance visibility, not just historical reporting.
+Cash Flow helps you predict liquidity risk and compare planned vs expected inflows/outflows.
 
-## Enable from Settings
+## Screenshots
 
-1. Open **Settings → Workspace Modules**
-2. Toggle **Cash Flow** ON
+<HelpImage src="/help/screenshots/help-optional-cash-flow-01-overview.png" alt="Cash Flow overview page" caption="Cash Flow summary page for forecast snapshots." />
 
-<HelpImage src="/help/diagrams/erp_entrypoint.svg" alt="Cash Flow module toggle card in settings" caption="Screenshot target: Cash Flow module enabled in Settings." />
+<HelpImage src="/help/screenshots/help-optional-cash-flow-02-primary-action.png" alt="Cash Flow primary action area" caption="Primary controls for assumptions/scenarios and liquidity signals." />
 
----
-
-## Core capabilities
-
-- Forecast snapshots
-- Assumption profiles
-- Variance analysis
-- Liquidity risk alerts
-
----
-
-## Screenshot targets for this article
-
-1. Cash Flow toggle card
-2. Cash flow dashboard summary
-3. Scenario or assumptions page
+<HelpImage src="/help/screenshots/help-optional-cash-flow-03-detail.png" alt="Cash Flow detail section" caption="Detailed planning and variance context." />
