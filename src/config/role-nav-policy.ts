@@ -2,16 +2,20 @@ export const NAV_ITEMS = {
   DASHBOARD: { key: 'dashboard', route: '/dashboard' },
   CLIENT_CRM: { key: 'client_crm', route: '/clients' },
   SERVICE_CATALOG: { key: 'service_catalog', route: '/services' },
-  QUOTES_AND_PROPOSALS: { key: 'quotes_proposals', route: '/proposals' },
+  QUOTES_PROPOSALS: { key: 'quotes_proposals', route: '/proposals' },
   SHOP: { key: 'shop', route: '/shop' },
-  INVENTORY_HUB: { key: 'inventory', route: '/inventory' },
+  INVENTORY_HUB: { key: 'inventory_hub', route: '/inventory' },
   RETAINERS_HUB: { key: 'retainers_hub', route: '/retainers' },
+  CASH_FLOW: { key: 'cash_flow', route: '/cash-flow' },
   AR_COLLECTIONS: { key: 'ar_collections', route: '/ar-collections' },
-  EXPENSES_AND_MARGINS: { key: 'expenses_margins', route: '/expenses' },
+  EXPENSES_MARGINS: { key: 'expenses_margins', route: '/expenses' },
   AI_RECONCILIATION: { key: 'ai_reconciliation', route: '/reconciliation' },
+  PAYROLL: { key: 'payroll', route: '/payroll' },
   INVOICES_AND_EARNINGS: { key: 'invoices_and_earnings', route: '/income' },
-  SAVINGS_AND_TAX: { key: 'savings_tax', route: '/tax' },
+  SAVINGS_TAX: { key: 'savings_tax', route: '/tax' },
   CA_COMPLIANCE: { key: 'ca_compliance', route: '/ca-portal' },
+  REPORTING_CENTER: { key: 'reporting_center', route: '/reporting' },
+  SETTINGS: { key: 'settings', route: '/settings' },
 } as const;
 
 export type NavModule = keyof typeof NAV_ITEMS;
@@ -43,7 +47,7 @@ export const ROLE_NAV_ALLOWLIST: Readonly<Record<AppRole, readonly NavModule[]>>
     'DASHBOARD',
     'CLIENT_CRM',
     'SERVICE_CATALOG',
-    'QUOTES_AND_PROPOSALS',
+    'QUOTES_PROPOSALS',
     'SHOP',
     'INVOICES_AND_EARNINGS',
     'AR_COLLECTIONS',
@@ -52,10 +56,13 @@ export const ROLE_NAV_ALLOWLIST: Readonly<Record<AppRole, readonly NavModule[]>>
     'DASHBOARD',
     'INVOICES_AND_EARNINGS',
     'AR_COLLECTIONS',
-    'EXPENSES_AND_MARGINS',
+    'EXPENSES_MARGINS',
+    'CASH_FLOW',
+    'PAYROLL',
     'AI_RECONCILIATION',
-    'SAVINGS_AND_TAX',
+    'SAVINGS_TAX',
     'CA_COMPLIANCE',
+    'REPORTING_CENTER',
   ],
   OPS: ['DASHBOARD', 'INVENTORY_HUB', 'RETAINERS_HUB', 'SERVICE_CATALOG', 'SHOP'],
 
@@ -69,13 +76,13 @@ const ROUTE_ALIASES: Readonly<Partial<Record<NavModule, readonly string[]>>> = {
   INVOICES_AND_EARNINGS: ['/invoice', '/ledger'],
 };
 
-function normalizeRole(role: string): AppRole | null {
+export function normalizeRole(role: string): AppRole | null {
   const normalized = role.trim().toUpperCase();
   const knownRoles = new Set<AppRole>(['OWNER', 'SALES', 'FINANCE', 'OPS', 'ADMIN', 'MEMBER', 'VIEWER']);
   return knownRoles.has(normalized as AppRole) ? (normalized as AppRole) : null;
 }
 
-function normalizeRoutePath(route: string): string {
+export function normalizeRoutePath(route: string): string {
   const [pathOnly] = route.split(/[?#]/, 1);
   const normalized = pathOnly.trim();
 
@@ -102,6 +109,12 @@ function getModuleByRoute(route: string): NavModule | null {
   }
 
   return null;
+}
+
+export function navItemIdToModule(itemId: string): NavModule | null {
+  const entries = Object.entries(NAV_ITEMS) as Array<[NavModule, (typeof NAV_ITEMS)[NavModule]]>;
+  const match = entries.find(([, item]) => item.key === itemId);
+  return match?.[0] ?? null;
 }
 
 export function getAllowedNavModulesForRole(role: string): readonly NavModule[] {

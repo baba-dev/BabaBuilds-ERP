@@ -6,6 +6,7 @@ import {
   canAccessNavModule,
   canAccessRoute,
   getAllowedNavModulesForRole,
+  navItemIdToModule,
   type AppRole,
   type NavModule,
 } from './role-nav-policy';
@@ -14,8 +15,8 @@ const allModules = Object.keys(NAV_ITEMS) as NavModule[];
 
 const expectedAllowlistByRole: Record<AppRole, NavModule[]> = {
   OWNER: allModules,
-  SALES: ['DASHBOARD', 'CLIENT_CRM', 'SERVICE_CATALOG', 'QUOTES_AND_PROPOSALS', 'SHOP', 'INVOICES_AND_EARNINGS', 'AR_COLLECTIONS'],
-  FINANCE: ['DASHBOARD', 'INVOICES_AND_EARNINGS', 'AR_COLLECTIONS', 'EXPENSES_AND_MARGINS', 'AI_RECONCILIATION', 'SAVINGS_AND_TAX', 'CA_COMPLIANCE'],
+  SALES: ['DASHBOARD', 'CLIENT_CRM', 'SERVICE_CATALOG', 'QUOTES_PROPOSALS', 'SHOP', 'INVOICES_AND_EARNINGS', 'AR_COLLECTIONS'],
+  FINANCE: ['DASHBOARD', 'INVOICES_AND_EARNINGS', 'AR_COLLECTIONS', 'EXPENSES_MARGINS', 'CASH_FLOW', 'PAYROLL', 'AI_RECONCILIATION', 'SAVINGS_TAX', 'CA_COMPLIANCE', 'REPORTING_CENTER'],
   OPS: ['DASHBOARD', 'INVENTORY_HUB', 'RETAINERS_HUB', 'SERVICE_CATALOG', 'SHOP'],
 
   // legacy workspace roles should not be denied by default
@@ -56,6 +57,19 @@ test('invoice route aliases resolve to invoices module authorization', () => {
 
   assert.equal(canAccessRoute('OPS', '/invoice'), false);
   assert.equal(canAccessRoute('OPS', '/ledger'), false);
+});
+
+test('all nav item keys resolve to role-policy modules', () => {
+  const itemKeys = Object.values(NAV_ITEMS).map((item) => item.key);
+  for (const key of itemKeys) {
+    assert.ok(navItemIdToModule(key), `Expected navItemIdToModule to resolve key: ${key}`);
+  }
+});
+
+test('settings route is controlled by role policy', () => {
+  assert.equal(canAccessRoute('OWNER', '/settings'), true);
+  assert.equal(canAccessRoute('ADMIN', '/settings'), true);
+  assert.equal(canAccessRoute('FINANCE', '/settings'), false);
 });
 
 test('route authorization normalizes trailing slash and query/hash', () => {

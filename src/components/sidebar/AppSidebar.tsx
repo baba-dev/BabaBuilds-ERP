@@ -5,13 +5,13 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { Box } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { NavUser } from "@/components/navigation/nav-user";
 import { Sidebar, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { navIconMap } from "@/src/config/nav-icons";
-import { type AppRole, navigationGroups } from "@/src/config/navigation";
-import { filterByRole } from "@/src/lib/nav/filterByRole";
+import { navigationGroups, type NavGroup } from "@/src/config/navigation";
+import { getAllowedNavModulesForRole, navItemIdToModule, normalizeRole } from "@/src/config/role-nav-policy";
 import { filterByFlag } from "@/src/lib/nav/filterByFlag";
 
 function SidebarBrand() {
@@ -44,7 +44,7 @@ export function AppSidebar() {
     aiReconciliation: false,
   });
 
-  const role = (session?.user as { role?: AppRole } | undefined)?.role;
+  const sessionRole = ((session?.user as { role?: string } | undefined)?.role ?? "").toUpperCase();
 
   useEffect(() => {
     let active = true;
@@ -71,7 +71,27 @@ export function AppSidebar() {
     };
   }, []);
 
-  const visibleGroups = filterByFlag(filterByRole(navigationGroups, role), featureFlags);
+  const policyRole = normalizeRole(sessionRole);
+  const allowedPolicyModules = useMemo(
+    () => new Set(policyRole ? getAllowedNavModulesForRole(policyRole) : []),
+    [policyRole],
+  );
+
+  const rolePolicyFilteredGroups = useMemo((): NavGroup[] => {
+    if (!policyRole) return navigationGroups;
+
+    return navigationGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => {
+          const navModule = navItemIdToModule(item.id);
+          return navModule ? allowedPolicyModules.has(navModule) : true;
+        }),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [allowedPolicyModules, policyRole]);
+
+  const visibleGroups = filterByFlag(rolePolicyFilteredGroups, featureFlags);
 
   return (
     <Sidebar>
