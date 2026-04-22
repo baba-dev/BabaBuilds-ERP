@@ -4,43 +4,29 @@ export const NAV_ITEMS = {
   SERVICE_CATALOG: { key: 'service_catalog', route: '/services' },
   QUOTES_PROPOSALS: { key: 'quotes_proposals', route: '/proposals' },
   SHOP: { key: 'shop', route: '/shop' },
+  IMPORT_MANAGER: { key: 'import_manager', route: '/import-manager' },
   INVENTORY_HUB: { key: 'inventory_hub', route: '/inventory' },
+  DOCUMENTS: { key: 'documents', route: '/documents' },
+  WORKFORCE: { key: 'workforce', route: '/workforce' },
   RETAINERS_HUB: { key: 'retainers_hub', route: '/retainers' },
-  CASH_FLOW: { key: 'cash_flow', route: '/cash-flow' },
-  AR_COLLECTIONS: { key: 'ar_collections', route: '/ar-collections' },
+  INVOICES_AND_EARNINGS: { key: 'invoices_and_earnings', route: '/income' },
+  REPORTING_CENTER: { key: 'reporting_center', route: '/reporting' },
   EXPENSES_MARGINS: { key: 'expenses_margins', route: '/expenses' },
   AI_RECONCILIATION: { key: 'ai_reconciliation', route: '/reconciliation' },
+  CASH_FLOW: { key: 'cash_flow', route: '/cash-flow' },
+  AR_COLLECTIONS: { key: 'ar_collections', route: '/ar-collections' },
   PAYROLL: { key: 'payroll', route: '/payroll' },
-  INVOICES_AND_EARNINGS: { key: 'invoices_and_earnings', route: '/income' },
   SAVINGS_TAX: { key: 'savings_tax', route: '/tax' },
   CA_COMPLIANCE: { key: 'ca_compliance', route: '/ca-portal' },
-  REPORTING_CENTER: { key: 'reporting_center', route: '/reporting' },
   SETTINGS: { key: 'settings', route: '/settings' },
 } as const;
 
 export type NavModule = keyof typeof NAV_ITEMS;
 
-/**
- * Business-oriented roles + currently deployed workspace roles.
- */
-export type AppRole =
-  | 'OWNER'
-  | 'SALES'
-  | 'FINANCE'
-  | 'OPS'
-  | 'ADMIN'
-  | 'MEMBER'
-  | 'VIEWER';
+export type AppRole = 'OWNER' | 'SALES' | 'FINANCE' | 'OPS' | 'ADMIN' | 'MEMBER' | 'VIEWER';
 
 const ALL_MODULES = Object.keys(NAV_ITEMS) as NavModule[];
 
-/**
- * Explicit allow-list by role.
- *
- * Secure defaults:
- * - Missing role -> denied.
- * - Missing module mapping -> denied.
- */
 export const ROLE_NAV_ALLOWLIST: Readonly<Record<AppRole, readonly NavModule[]>> = {
   OWNER: ALL_MODULES,
   SALES: [
@@ -64,9 +50,7 @@ export const ROLE_NAV_ALLOWLIST: Readonly<Record<AppRole, readonly NavModule[]>>
     'CA_COMPLIANCE',
     'REPORTING_CENTER',
   ],
-  OPS: ['DASHBOARD', 'INVENTORY_HUB', 'RETAINERS_HUB', 'SERVICE_CATALOG', 'SHOP'],
-
-  // Backward-compatibility with currently deployed workspace roles.
+  OPS: ['DASHBOARD', 'INVENTORY_HUB', 'RETAINERS_HUB', 'WORKFORCE', 'DOCUMENTS', 'SERVICE_CATALOG', 'SHOP'],
   ADMIN: ALL_MODULES,
   MEMBER: ALL_MODULES,
   VIEWER: ALL_MODULES,

@@ -10,7 +10,9 @@ import { NavUser } from "@/components/navigation/nav-user";
 import { Sidebar, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { navIconMap } from "@/src/config/nav-icons";
-import { navigationGroups, type NavGroup } from "@/src/config/navigation";
+import { isSidebarBadgeModuleKey, navigationGroups, type NavGroup } from "@/src/config/navigation";
+import { NavItemBadge } from "@/src/components/sidebar/NavItemBadge";
+import { useSidebarBadges } from "@/src/hooks/useSidebarBadges";
 import { getAllowedNavModulesForRole, navItemIdToModule, normalizeRole } from "@/src/config/role-nav-policy";
 import { filterByFlag } from "@/src/lib/nav/filterByFlag";
 
@@ -40,9 +42,11 @@ export function AppSidebar() {
   const t = useTranslations("Sidebar");
   const { open, isMobile } = useSidebar();
   const { data: session } = useSession();
+  const { badges } = useSidebarBadges();
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({
     aiReconciliation: false,
   });
+  const [enabledModules, setEnabledModules] = useState<Set<string> | null>(null);
 
   const sessionRole = ((session?.user as { role?: string } | undefined)?.role ?? "").toUpperCase();
 
@@ -64,13 +68,39 @@ export function AppSidebar() {
       }
     }
 
+    async function loadEnabledModules() {
+      try {
+        const response = await fetch('/api/workspace/modules', { cache: 'no-store' });
+        if (!response.ok) {
+          return;
+        }
+        const payload = (await response.json()) as { modules?: string[] };
+        if (!active) return;
+        setEnabledModules(new Set(Array.isArray(payload.modules) ? payload.modules : []));
+      } catch {
+        // keep last-known module state during transient failures
+      }
+    }
+
     void loadRuntimeFlags();
+    void loadEnabledModules();
 
     return () => {
       active = false;
     };
   }, []);
 
+  const moduleAwareGroups = useMemo((): NavGroup[] => {
+    const moduleSet = enabledModules;
+    if (!moduleSet) return navigationGroups;
+
+    return navigationGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => !item.moduleKey || moduleSet.has(item.moduleKey)),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [enabledModules]);
   const policyRole = normalizeRole(sessionRole);
   const allowedPolicyModules = useMemo(
     () => new Set(policyRole ? getAllowedNavModulesForRole(policyRole) : []),
@@ -78,9 +108,9 @@ export function AppSidebar() {
   );
 
   const rolePolicyFilteredGroups = useMemo((): NavGroup[] => {
-    if (!policyRole) return navigationGroups;
+    if (!policyRole) return moduleAwareGroups;
 
-    return navigationGroups
+    return moduleAwareGroups
       .map((group) => ({
         ...group,
         items: group.items.filter((item) => {
@@ -89,7 +119,7 @@ export function AppSidebar() {
         }),
       }))
       .filter((group) => group.items.length > 0);
-  }, [allowedPolicyModules, policyRole]);
+  }, [allowedPolicyModules, moduleAwareGroups, policyRole]);
 
   const visibleGroups = filterByFlag(rolePolicyFilteredGroups, featureFlags);
 
@@ -108,6 +138,8 @@ export function AppSidebar() {
                 {group.items.map((item) => {
                   const Icon = navIconMap[item.icon];
                   const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                  const badgeKey = item.badgeSource;
+                  const badgeState = badgeKey && isSidebarBadgeModuleKey(badgeKey) ? badges[badgeKey] : null;
 
                   return (
                     <Link
@@ -122,6 +154,13 @@ export function AppSidebar() {
                     >
                       <Icon className="h-4 w-4 shrink-0" />
                       {(open || isMobile) && <span className="truncate">{t(item.label)}</span>}
+                      <NavItemBadge
+                        badge={badgeState?.badge ?? null}
+                        isLoading={badgeState?.isLoading ?? false}
+                        isStale={badgeState?.isStale ?? false}
+                        hasError={badgeState?.hasError ?? false}
+                        collapsed={!open && !isMobile}
+                      />
                     </Link>
                   );
                 })}

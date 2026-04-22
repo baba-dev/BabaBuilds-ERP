@@ -1,5 +1,6 @@
 import { Prisma, type AccountingLineSide } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { getPostingTemplate } from '@/lib/accounting/events';
 
 export const PAYROLL_POSTING_OPERATION = 'PAYROLL_RUN_POST';
 
@@ -13,6 +14,7 @@ export const PAYROLL_ACCOUNT_CODES = {
 } as const;
 
 const ACCOUNT_CODES = PAYROLL_ACCOUNT_CODES;
+const MANUAL_ADJUSTMENT_TEMPLATE = getPostingTemplate('MANUAL_ADJUSTMENT');
 
 export type PayrollRunPostingInput = {
   runId: string;
@@ -90,6 +92,10 @@ export function buildPayrollJournalPayload(input: {
   const benefitsLiability = toAmount(input.benefitsLiability);
   const wagesPayable = toAmount(input.wagesPayable);
   const cashClearing = wagesPayable;
+
+  if (!MANUAL_ADJUSTMENT_TEMPLATE) {
+    throw new Error('ACCOUNTING_TEMPLATE_MISSING: MANUAL_ADJUSTMENT');
+  }
 
   const lines: PayrollJournalLine[] = [
     {

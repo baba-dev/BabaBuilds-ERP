@@ -7,6 +7,7 @@ import { isModuleEnabled } from '@/lib/modules';
 import { getWorkspaceIdForUser } from '@/lib/payroll/settings';
 import { RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
 import { requirePayrollPermission } from '@/lib/security/payroll-policy';
+import { getPayrollAdapterStatus } from '@/lib/payroll/integrations/workforce-adapter';
 import type {
   PayrollOverviewResponseDto,
   PayrollPeriodSummaryDto,
@@ -72,7 +73,9 @@ export async function GET() {
       throw err;
     }
 
-    const periods = await prisma.payrollPeriod.findMany({
+    const [adapterStatus, periods] = await Promise.all([
+      getPayrollAdapterStatus(workspaceId),
+      prisma.payrollPeriod.findMany({
       where: { workspaceId },
       orderBy: { startDate: 'desc' },
       take: 12,
@@ -82,7 +85,8 @@ export async function GET() {
           take: 1,
         },
       },
-    });
+    }),
+    ]);
 
     const periodIds = periods.map((p) => p.id);
 
@@ -152,6 +156,7 @@ export async function GET() {
         runCount: runsInWindow.length,
       },
       statusCounts,
+      adapterStatus,
     };
 
     return NextResponse.json(payload);

@@ -137,6 +137,20 @@ export default function PayrollOverviewPage() {
                 <h2 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
                   {data?.periods[0] ? formatPeriodLabel(data.periods[0].startDate, data.periods[0].endDate) : "No periods yet"}
                 </h2>
+                {data?.adapterStatus ? (
+                  <div className="mt-3">
+                    <Badge
+                      className={cn(
+                        "rounded-full px-3 py-1 text-xs",
+                        data.adapterStatus.source === "WORKFORCE"
+                          ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                          : "bg-zinc-500/10 text-zinc-700 dark:text-zinc-300",
+                      )}
+                    >
+                      {data.adapterStatus.badgeLabel}
+                    </Badge>
+                  </div>
+                ) : null}
               </div>
               <div className="flex flex-wrap gap-2">
                 {periodStatuses.map((status) => (
