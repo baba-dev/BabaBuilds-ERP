@@ -10,11 +10,10 @@ import { NavUser } from "@/components/navigation/nav-user";
 import { Sidebar, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { navIconMap } from "@/src/config/nav-icons";
-import { type AppRole, isSidebarBadgeModuleKey, navigationGroups, type NavGroup } from "@/src/config/navigation";
+import { isSidebarBadgeModuleKey, navigationGroups, type NavGroup } from "@/src/config/navigation";
 import { NavItemBadge } from "@/src/components/sidebar/NavItemBadge";
 import { useSidebarBadges } from "@/src/hooks/useSidebarBadges";
 import { getAllowedNavModulesForRole, navItemIdToModule, normalizeRole } from "@/src/config/role-nav-policy";
-import { filterByRole } from "@/src/lib/nav/filterByRole";
 import { filterByFlag } from "@/src/lib/nav/filterByFlag";
 
 function SidebarBrand() {
@@ -50,7 +49,6 @@ export function AppSidebar() {
   const [enabledModules, setEnabledModules] = useState<Set<string> | null>(null);
 
   const sessionRole = ((session?.user as { role?: string } | undefined)?.role ?? "").toUpperCase();
-  const role = sessionRole as AppRole;
 
   useEffect(() => {
     let active = true;
@@ -103,7 +101,6 @@ export function AppSidebar() {
       }))
       .filter((group) => group.items.length > 0);
   }, [enabledModules]);
-
   const policyRole = normalizeRole(sessionRole);
   const allowedPolicyModules = useMemo(
     () => new Set(policyRole ? getAllowedNavModulesForRole(policyRole) : []),
@@ -124,7 +121,7 @@ export function AppSidebar() {
       .filter((group) => group.items.length > 0);
   }, [allowedPolicyModules, moduleAwareGroups, policyRole]);
 
-  const visibleGroups = filterByFlag(filterByRole(rolePolicyFilteredGroups, role), featureFlags);
+  const visibleGroups = filterByFlag(rolePolicyFilteredGroups, featureFlags);
 
   return (
     <Sidebar>

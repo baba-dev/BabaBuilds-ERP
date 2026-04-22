@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 import type { CAExpenseRow, CAInvoiceRow, CAPortalPayload, CAPortalSummary } from "@/lib/ca-portal/types";
 import { getCurrentFinancialYear } from "@/lib/financial-year";
+import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 
 
 const defaultSummary: CAPortalSummary = {
@@ -405,41 +406,37 @@ export default function CAPortal() {
   ];
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto space-y-6">
-        
-        {/* Header Section */}
-        <div className="sticky top-0 z-20 -mx-4 px-4 py-4 md:-mx-8 md:px-8 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200/50 dark:border-zinc-800/50 transition-all duration-300">
-          <div className="max-w-7xl mx-auto w-full flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50">{t('title')}</h1>
-              <p className="text-zinc-500 dark:text-zinc-400 mt-1.5 font-medium text-sm">{t('description')}</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="space-y-1">
-                <label className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{t('financial_year')}</label>
-                <Select value={fy} onValueChange={setFy}>
-                  <SelectTrigger className="w-[180px] bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 font-bold dark:text-zinc-100">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
-                    <SelectItem value="23-24">FY 2023-24</SelectItem>
-                    <SelectItem value="24-25">FY 2024-25</SelectItem>
-                    <SelectItem value="25-26">FY 2025-26</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center gap-2 mt-5">
-                <Button onClick={handleExportCSV} disabled={isExportingCSV} variant="outline" className="border-orange-200 text-orange-800 hover:bg-orange-50 dark:border-orange-900/50 dark:text-orange-300 dark:hover:bg-orange-950/40">
-                  {isExportingCSV ? t('generating') : <><DownloadCloud className="w-4 h-4 mr-2" /> {t('export_csv')}</>}
-                </Button>
-                <Button onClick={handleExportZIP} disabled={isExportingZIP} className="btn-primary">
-                  {isExportingZIP ? t('zipping') : <><FolderArchive className="w-4 h-4 mr-2" /> {t('download_zip')}</>}
-                </Button>
-              </div>
-            </div>
-          </div>
+    <DashboardPageShell
+      title={t('title')}
+      description={t('description')}
+      icon={<Landmark className="w-6 h-6 text-accent-strong" />}
+      animated={false}
+      primaryAction={
+        <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={handleExportCSV} disabled={isExportingCSV} variant="outline" className="text-xs font-bold uppercase tracking-wider">
+            {isExportingCSV ? t('generating') : <><DownloadCloud className="w-4 h-4 mr-2" /> {t('export_csv')}</>}
+          </Button>
+          <Button onClick={handleExportZIP} disabled={isExportingZIP} className="btn-primary">
+            {isExportingZIP ? t('zipping') : <><FolderArchive className="w-4 h-4 mr-2" /> {t('download_zip')}</>}
+          </Button>
         </div>
+      }
+      secondaryActions={
+        <div className="space-y-1">
+          <label className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{t('financial_year')}</label>
+          <Select value={fy} onValueChange={setFy}>
+            <SelectTrigger className="w-[180px] bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 font-bold dark:text-zinc-100">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
+              <SelectItem value="23-24">FY 2023-24</SelectItem>
+              <SelectItem value="24-25">FY 2024-25</SelectItem>
+              <SelectItem value="25-26">FY 2025-26</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      }
+    >
 
         <div className={`p-4 rounded-xl border flex items-start gap-4 ${isGstLiable ? "bg-rose-50 border-rose-200 dark:bg-rose-950/20 dark:border-rose-900/50" : "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/50"}`}>
           <div className={`p-2 rounded-lg ${isGstLiable ? "bg-rose-100 dark:bg-rose-900/50" : "bg-emerald-100 dark:bg-emerald-900/50"}`}>
@@ -580,7 +577,6 @@ export default function CAPortal() {
           </Tabs>
         </Card>
 
-      </div>
-    </div>
+    </DashboardPageShell>
   );
 }

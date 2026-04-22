@@ -10,7 +10,9 @@ import {
   ReceiptText 
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import type { DashboardData } from "./types";
 import { DashboardTooltip } from "./dashboard-tooltip";
 import { cn } from "@/lib/utils";
@@ -123,6 +125,14 @@ export function DashboardTrustPanel({ trust }: { trust: DashboardData["trust"] }
             })}
           </div>
         </div>
+
+        {trust.integrityStatus === "NOT_RUN" && (
+          <div className="mt-4 flex justify-end">
+            <Button asChild variant="outline" size="sm" className="h-8 text-[11px] font-bold uppercase tracking-wider">
+              <Link href="/reconciliation">{tr("run_initial_scan", "Run initial scan")}</Link>
+            </Button>
+          </div>
+        )}
 
         {/* Subtle Background Pattern */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 blur-[60px] rounded-full -mr-16 -mt-16" />

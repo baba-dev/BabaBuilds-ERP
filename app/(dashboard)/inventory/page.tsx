@@ -18,6 +18,7 @@ import { ProductFormModal } from "@/components/inventory/ProductFormModal";
 import { ProductCard } from "@/components/inventory/ProductCard";
 import { QuickAdjustModal } from "@/components/inventory/QuickAdjustModal";
 import { LayoutGrid, List, MapPin, RefreshCw } from "lucide-react";
+import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 
 export default function InventoryHub() {
   const [view, setView] = useState<'list' | 'draft_po'>('list');
@@ -195,38 +196,24 @@ export default function InventoryHub() {
   ];
 
   return (
-    <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8 pb-20 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
-        
-        {/* Header & Metrics */}
-        <div className="sticky top-0 z-20 -mx-4 px-4 py-4 md:-mx-8 md:px-8 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200/50 dark:border-zinc-800/50 transition-all duration-300">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 max-w-7xl mx-auto w-full">
-            <div className="space-y-1.5">
-              <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-3">
-                <div className="p-2.5 bg-orange-500/10 dark:bg-orange-500/20 rounded-xl border border-orange-200/50 dark:border-orange-400/25">
-                  <Archive className="w-6 h-6 text-orange-700 dark:text-orange-300" />
-                </div>
-                Inventory Overview
-              </h1>
-              <p className="text-zinc-500 dark:text-zinc-400 font-medium text-sm">
-                Real-time stock tracking and replenishment.
-              </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="bg-white/50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 px-5 py-2.5 rounded-xl shadow-sm text-center sm:text-right backdrop-blur-sm">
-                <p className="text-xs uppercase font-bold text-zinc-400 dark:text-zinc-500 tracking-widest">Total Value</p>
-                <p className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">{fCurrency(totalValue)}</p>
-              </div>
-              <Button
-                className="btn-primary w-full sm:w-auto shrink-0 text-xs uppercase tracking-wider h-10 px-5"
-                onClick={() => setFormModalOpen(true)}
-              >
-                <Plus className="w-4 h-4 mr-2" /> New Product
-              </Button>
-            </div>
-          </div>
-        </div>
+    <DashboardPageShell
+      title="Inventory Overview"
+      description="Real-time stock tracking and replenishment."
+      icon={<Archive className="w-6 h-6 text-accent-strong" />}
+      kpiCard={{
+        label: "Total Value",
+        value: fCurrency(totalValue),
+        tone: "positive",
+      }}
+      primaryAction={
+        <Button
+          className="btn-primary w-full sm:w-auto shrink-0 text-xs uppercase tracking-wider h-10 px-5"
+          onClick={() => setFormModalOpen(true)}
+        >
+          <Plus className="w-4 h-4 mr-2" /> New Product
+        </Button>
+      }
+    >
 
         {/* Filters and Search */}
         <div className="flex flex-col md:flex-row items-center gap-4 justify-between">
@@ -357,8 +344,6 @@ export default function InventoryHub() {
           </div>
         )}
 
-      </div>
-      
       {/* Modals */}
       <QuickAdjustModal 
         open={adjustModalOpen} 
@@ -389,6 +374,6 @@ export default function InventoryHub() {
         onOpenChange={setFormModalOpen}
         onSuccess={fetchProducts}
       />
-    </div>
+    </DashboardPageShell>
   );
 }

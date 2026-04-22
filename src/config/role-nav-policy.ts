@@ -1,5 +1,3 @@
-import type { NavItemId } from '@/src/config/navigation';
-
 export const NAV_ITEMS = {
   DASHBOARD: { key: 'dashboard', route: '/dashboard' },
   CLIENT_CRM: { key: 'client_crm', route: '/clients' },
@@ -21,7 +19,7 @@ export const NAV_ITEMS = {
   SAVINGS_TAX: { key: 'savings_tax', route: '/tax' },
   CA_COMPLIANCE: { key: 'ca_compliance', route: '/ca-portal' },
   SETTINGS: { key: 'settings', route: '/settings' },
-} as const satisfies Record<string, { key: NavItemId; route: string }>;
+} as const;
 
 export type NavModule = keyof typeof NAV_ITEMS;
 
@@ -97,7 +95,7 @@ function getModuleByRoute(route: string): NavModule | null {
   return null;
 }
 
-export function navItemIdToModule(itemId: NavItemId): NavModule | null {
+export function navItemIdToModule(itemId: string): NavModule | null {
   const entries = Object.entries(NAV_ITEMS) as Array<[NavModule, (typeof NAV_ITEMS)[NavModule]]>;
   const match = entries.find(([, item]) => item.key === itemId);
   return match?.[0] ?? null;

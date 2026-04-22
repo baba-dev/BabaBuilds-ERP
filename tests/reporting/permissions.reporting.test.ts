@@ -17,5 +17,4 @@ it('viewer can view but not run or export', () => {
 it('staff does not get reporting center', () => {
   expect(hasPermission('STAFF', 'reporting_center.view')).toBe(false);
 });
-  });
 });

@@ -32,6 +32,7 @@ import {
   resolveLedgerMalformedJsonToastKey,
 } from "./fetch-invoices-response";
 import InvoiceGeneratorForm from "@/components/invoice/InvoiceGeneratorForm";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function InvoicesAndEarnings() {
   const t = useTranslations("Ledger");
@@ -398,13 +399,22 @@ export default function InvoicesAndEarnings() {
       icon={<ReceiptText className="w-6 h-6 text-accent-strong" />}
       animated={false}
       primaryAction={
-        <Button
-          id="new-invoice-btn"
-          onClick={() => setNewInvoiceModalOpen(true)}
-          className="btn-primary w-full sm:w-auto shrink-0 text-xs uppercase tracking-wider h-12 px-6"
-        >
-          <FilePlus className="w-4 h-4 mr-2" /> New Invoice
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                id="new-invoice-btn"
+                onClick={() => setNewInvoiceModalOpen(true)}
+                className="btn-primary w-full sm:w-auto shrink-0 text-xs uppercase tracking-wider h-12 px-6"
+              >
+                <FilePlus className="w-4 h-4 mr-2" /> New Invoice
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs text-xs leading-relaxed">
+              Generate a tax-ready invoice with optional payment link and instant email delivery from your configured SMTP.
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       }
     >
 

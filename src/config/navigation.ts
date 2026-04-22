@@ -40,7 +40,6 @@ export type NavItem = {
   icon: NavIconName;
   group: NavGroupName;
   moduleKey?: ModuleKey;
-  roleVisibility?: AppRole[];
   featureFlag?: string;
   keywords?: string[];
   badgeSource?: SidebarModuleKey;
@@ -60,7 +59,7 @@ const navItems: NavItem[] = [
 
   { id: "quotes_proposals", label: "quotes_proposals", href: "/proposals", icon: "quotesAndProposals", group: "Setup Business", keywords: ["quotes", "proposals"], pinnable: true },
   { id: "shop", label: "shop", href: "/shop", icon: "shop", group: "Setup Business", keywords: ["store", "shop"], pinnable: true },
-  { id: "import_manager", label: "import_manager", href: "/import-manager", icon: "serviceCatalog", group: "Setup Business", moduleKey: "IMPORT_MANAGER", roleVisibility: ["OWNER", "ADMIN"], keywords: ["import", "csv", "xlsx"], pinnable: false },
+  { id: "import_manager", label: "import_manager", href: "/import-manager", icon: "serviceCatalog", group: "Setup Business", moduleKey: "IMPORT_MANAGER", keywords: ["import", "csv", "xlsx"], pinnable: false },
 
   { id: "inventory_hub", label: "inventory", href: "/inventory", icon: "inventoryHub", group: "Run Operations", keywords: ["inventory", "stock"], pinnable: true },
   { id: "documents", label: "documents", href: "/documents", icon: "inventoryHub", group: "Run Operations", moduleKey: "DOCUMENTS", keywords: ["documents", "ocr"], pinnable: true },
@@ -68,7 +67,7 @@ const navItems: NavItem[] = [
   { id: "retainers_hub", label: "retainers_hub", href: "/retainers", icon: "retainersHub", group: "Run Operations", keywords: ["retainers", "mrr"], pinnable: true },
 
   { id: "invoices_and_earnings", label: "invoices_and_earnings", href: "/income", icon: "invoicesAndEarnings", group: "Get Paid & Track Money", keywords: ["income", "invoices"], badgeSource: "invoices_and_earnings", pinnable: true },
-  { id: "reporting_center", label: "reporting_center", href: "/reporting", icon: "reportingCenter", group: "Get Paid & Track Money", moduleKey: "REPORTING_CENTER", roleVisibility: ["OWNER", "ADMIN"], keywords: ["reports", "analytics", "reporting"], pinnable: true },
+  { id: "reporting_center", label: "reporting_center", href: "/reporting", icon: "reportingCenter", group: "Get Paid & Track Money", moduleKey: "REPORTING_CENTER", keywords: ["reports", "analytics", "reporting"], pinnable: true },
   { id: "expenses_margins", label: "expenses_margins", href: "/expenses", icon: "expensesAndMargins", group: "Get Paid & Track Money", keywords: ["expenses", "margins"], pinnable: true },
   { id: "ai_reconciliation", label: "ai_reconciliation", href: "/reconciliation", icon: "aiReconciliation", group: "Get Paid & Track Money", featureFlag: "aiReconciliation", keywords: ["bank", "reconcile"], pinnable: true },
   { id: "cash_flow", label: "cash_flow", href: "/cash-flow", icon: "retainersHub", group: "Get Paid & Track Money", moduleKey: "CASH_FLOW", keywords: ["cash", "forecast", "liquidity"], pinnable: true },
@@ -76,7 +75,7 @@ const navItems: NavItem[] = [
   { id: "payroll", label: "payroll", href: "/payroll", icon: "caCompliance", group: "Get Paid & Track Money", moduleKey: "PAYROLL", keywords: ["payroll", "salary", "wages"], pinnable: true },
 
   { id: "savings_tax", label: "savings_tax", href: "/tax", icon: "savingsAndTax", group: "Taxes & Compliance", keywords: ["tax", "savings"], pinnable: true },
-  { id: "ca_compliance", label: "ca_compliance", href: "/ca-portal", icon: "caCompliance", group: "Taxes & Compliance", roleVisibility: ["OWNER", "ADMIN"], keywords: ["ca", "compliance"], badgeSource: "ca_compliance", pinnable: false },
+  { id: "ca_compliance", label: "ca_compliance", href: "/ca-portal", icon: "caCompliance", group: "Taxes & Compliance", keywords: ["ca", "compliance"], badgeSource: "ca_compliance", pinnable: false },
 
   { id: "settings", label: "settings", href: "/settings", icon: "settings", group: "System", keywords: ["preferences", "configuration"], pinnable: false },
 ];

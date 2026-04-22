@@ -2,7 +2,6 @@ import {
   Archive,
   Box,
   Briefcase,
-  CircleHelp,
   HandCoins,
   FileSignature,
   Landmark,
@@ -61,7 +60,6 @@ export const appNavItems: AppNavItem[] = [
   { key: "workforce", path: "/workforce", icon: Users2, requiresModule: "WORKFORCE" },
   { key: "payroll", path: "/payroll", icon: Wallet, requiresModule: "PAYROLL" },
   { key: "import_manager", path: "/import-manager", icon: UploadCloud, badge: "New", requiresModule: "IMPORT_MANAGER" },
-  { key: "help_center", path: "/dashboard/help", icon: CircleHelp },
 ];
 
 export function filterAppNavItems(items: AppNavItem[]) {

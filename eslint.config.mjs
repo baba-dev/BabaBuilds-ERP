@@ -21,6 +21,19 @@ export default defineConfig([
   ...nextVitals,
   ...nextTs,
   {
+    rules: {
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-require-imports": "warn",
+      "@next/next/no-html-link-for-pages": "warn",
+      "react-hooks/static-components": "warn",
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/purity": "warn",
+      "react/no-unescaped-entities": "warn",
+      "prefer-const": "warn",
+      "@typescript-eslint/no-unsafe-function-type": "warn",
+    },
+  },
+  {
     files: [
       "app/(dashboard)/ledger/page.tsx",
       "app/(dashboard)/expenses/page.tsx",

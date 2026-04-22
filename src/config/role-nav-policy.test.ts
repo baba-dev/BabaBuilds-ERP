@@ -6,6 +6,7 @@ import {
   canAccessNavModule,
   canAccessRoute,
   getAllowedNavModulesForRole,
+  navItemIdToModule,
   type AppRole,
   type NavModule,
 } from './role-nav-policy';
@@ -73,4 +74,29 @@ test('invoice route aliases resolve to invoices module authorization', () => {
 
   assert.equal(canAccessRoute('OPS', '/invoice'), false);
   assert.equal(canAccessRoute('OPS', '/ledger'), false);
+});
+
+test('all nav item keys resolve to role-policy modules', () => {
+  const itemKeys = Object.values(NAV_ITEMS).map((item) => item.key);
+  for (const key of itemKeys) {
+    assert.ok(navItemIdToModule(key), `Expected navItemIdToModule to resolve key: ${key}`);
+  }
+});
+
+test('settings route is controlled by role policy', () => {
+  assert.equal(canAccessRoute('OWNER', '/settings'), true);
+  assert.equal(canAccessRoute('ADMIN', '/settings'), true);
+  assert.equal(canAccessRoute('FINANCE', '/settings'), false);
+});
+
+test('route authorization normalizes trailing slash and query/hash', () => {
+  assert.equal(canAccessRoute('FINANCE', '/income/'), true);
+  assert.equal(canAccessRoute('FINANCE', '/ledger?tab=monthly#summary'), true);
+  assert.equal(canAccessRoute('INTERN', '/dashboard?x=1'), false);
+});
+
+test('deny by default when role or module mapping is missing', () => {
+  assert.deepEqual(getAllowedNavModulesForRole('INTERN'), []);
+  assert.equal(canAccessRoute('INTERN', '/dashboard'), false);
+  assert.equal(canAccessRoute('OWNER', '/non-existent'), false);
 });

@@ -1,96 +1,121 @@
 ---
 title: "Getting Started with BabaBuilds ERP"
-description: "A quick introduction to your ERP — what it does, how to log in, and how to set up your first profile."
+description: "Onboarding walkthrough from first login to first invoice, with practical setup order for faster go-live."
 order: 1
 category: "Getting Started"
-tags: ["onboarding", "setup", "workspace"]
-estimatedMinutes: 6
+tags: ["onboarding", "setup", "workspace", "first invoice"]
+estimatedMinutes: 8
 isFeatured: true
 icon: "Rocket"
-dateModified: "2026-04-14"
+dateModified: "2026-04-21"
 ---
 
 # Getting Started with BabaBuilds ERP
 
-Welcome to **BabaBuilds ERP** — your all‑in‑one financial command center for modern agencies.
+Welcome to BabaBuilds ERP. This guide helps you go from a new workspace to your first professional invoice in a few focused steps.
 
-<Callout type="tip">
-  If you’re setting up a new workspace, start here, then jump to{" "}
-  <a href="/help/settings-guide">Configuring Your Business Profile</a>.
-</Callout>
+## What you can run from one workspace
 
----
-
-## What Is BabaBuilds ERP?
-
-BabaBuilds ERP is a tool built for freelancers and agency owners to:
-
-- Generate professional tax invoices (with PDF download & email delivery)
-- Manage your client CRM and retainer contracts
-- Track expenses, investments, and estimated taxes
-- Get AI-powered financial insights from your built-in assistant, **BabaBot**
-- Collect online payments via Razorpay or Stripe embedded directly in invoices
+- Invoicing and collections
+- Client and retainer management
+- Expense and tax visibility
+- Payment links (Stripe / Razorpay)
+- Optional advanced subsystems (cash flow, payroll, documents, reporting)
 
 ---
 
-## 1) Log in
+## Step 1 — Sign in and confirm workspace
 
 <Steps>
-<Step title="Open the ERP">
-Visit **erp.bababuilds.com**.
-
-<HelpImage
-  src="/help/diagrams/erp_entrypoint.svg"
-  alt="Entry points into BabaBuilds ERP"
-  caption="You can start from the landing site or go straight to your ERP workspace."
-/>
-</Step>
-<Step title="Sign in">
-Click **Sign in** and choose the account you want to associate with the workspace.
-</Step>
-<Step title="Confirm you’re in the right workspace">
-If you manage multiple brands/teams, make sure you’re using the correct workspace before adding clients and billing.
-</Step>
+  <Step title="Log in to ERP">
+    Open **erp.bababuilds.com** and sign in.
+  </Step>
+  <Step title="Confirm workspace">
+    If you manage multiple brands, verify the active workspace before entering data.
+  </Step>
 </Steps>
 
-> Your workspace is isolated from all other users. No one else can see your data.
+<HelpImage src="/help/diagrams/erp_entrypoint.svg" alt="User entering ERP workspace to begin onboarding" caption="Start in the correct workspace to avoid data being saved under the wrong business." />
 
 ---
 
-## 2) Complete your business profile (required)
+## Step 2 — Complete Settings first
 
-After signing in for the first time, you will be taken to the **Settings Wizard**. This is the most important first step.
+Open **Settings** and complete:
 
-Fill in the following fields:
+- Company identity and logo
+- Tax and compliance IDs
+- Bank remittance details
+- SMTP (if sending invoice emails)
+- Payment gateway (optional)
 
-- **Company Name** — appears on all invoices
-- **Proprietor Name** — the authorized signatory
-- **Full Address** — used in invoice headers
-- **Contact Email** — your business email
-- **PAN Number** — mandatory for compliance
-- **Bank Details** — used for the payment remittance section on invoices
-
-Click **Save Configuration** when done.
+See full guide: [Configuring Your Business Profile & Workspace Settings](/help/settings-guide)
 
 ---
 
-## 3) Add your first client
+## Step 3 — Add core master data
 
-Navigate to **Client CRM** in the sidebar. Click **Add New Client** and fill in:
+Before invoicing, add these records:
 
-- Client name, address, country
-- Email (for invoice delivery)
-- GST/Tax ID (if applicable)
-- Whether it is an **Export** client (zero-rated supply)
+1. **Client CRM** entries
+2. **Service Catalog** items
+3. Retainer details (if recurring billing)
 
----
-
-## 4) Generate your first invoice
-
-Go to **New Invoice** in the sidebar. Select your client, choose the billing month, add your services, and click **Generate Invoice**. Your PDF will be available for download and email delivery instantly.
+This prevents repetitive manual entry during invoice creation.
 
 ---
 
-## If you get stuck
+## Step 4 — Generate your first invoice
 
-If you run into any issues, reach out to our team at **admin@bababuilds.com** and we will get back to you within one business day.
+1. Open **Invoices & Earnings** / **New Invoice**
+2. Select client and billing period
+3. Add service line items
+4. Generate PDF
+5. Send via email (if SMTP configured)
+
+See: [Generating, Sending, and Collecting Invoices](/help/generating-invoices)
+
+---
+
+## Step 5 — Enable optional subsystems as needed
+
+From **Settings → Workspace Modules**, enable only what your team will actively use.
+
+Common rollout order:
+
+1. Document Vault
+2. Cash Flow
+3. Reporting Center
+4. Payroll + Workforce
+
+See: [Optional Sub Systems — Overview](/help/optional-sub-systems-overview)
+
+---
+
+## Recommended first-week checklist
+
+- [ ] Business profile completed
+- [ ] 3–5 clients added
+- [ ] 3–5 service templates added
+- [ ] Test invoice sent to your own email
+- [ ] Payment gateway tested (if enabled)
+- [ ] At least one advanced module enabled and verified
+
+---
+
+## Need help?
+
+Email **admin@bababuilds.com** with screenshots of the step where you’re blocked.
+
+---
+
+## FAQ
+
+### Do I need to complete every Settings field before first invoice?
+No. Start with company identity, tax basics, and bank details. You can refine other fields later.
+
+### Can I invite my team right after setup?
+Yes. Once basic settings are saved, you can onboard team members and assign operational responsibilities.
+
+### What should I do if my first invoice fails?
+Check client data, required fields, and SMTP/gateway setup. Then retry from a fresh draft.

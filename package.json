@@ -18,6 +18,10 @@
     "test:unit": "vitest run tests/sidebar/sidebar-rules.unit.test.ts",
     "test:integration": "vitest run tests/sidebar/mobile-drawer-parity.integration.test.ts",
     "test:smoke": "playwright test tests/smoke",
+    "test:browser:install": "npx playwright install --with-deps chromium",
+    "test:browser:smoke": "playwright test tests/smoke --project=chromium",
+    "test:browser:headed": "playwright test tests/smoke --project=chromium --headed",
+    "test:browser:ui": "playwright test tests/smoke --project=chromium --ui",
     "test:payments": "vitest run tests/payments && playwright test tests/payments",
     "test": "vitest run"
   },

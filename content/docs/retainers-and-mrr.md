@@ -1,91 +1,142 @@
 ---
-title: "Setting Up Retainers & MRR"
-description: "How to create recurring retainer contracts and track your Monthly Recurring Revenue (MRR) on the dashboard."
+title: "Setting Up Retainers, MRR, and Renewal Operations"
+description: "Recurring revenue operations guide with retainer setup, health monitoring, and renewal discipline."
 order: 4
 category: "Retainers"
-tags: ["retainers", "mrr", "arr", "recurring", "billing"]
+tags: ["retainers", "mrr", "arr", "recurring", "renewal"]
 icon: "Box"
-estimatedMinutes: 8
+estimatedMinutes: 10
 isFeatured: true
+dateModified: "2026-04-21"
 ---
 
-# Setting Up Retainers & MRR
+# Setting Up Retainers, MRR, and Renewal Operations
 
-**Retainers** are recurring billing agreements with clients. BabaBuilds ERP tracks them as part of your **Monthly Recurring Revenue (MRR)** — the clearest signal of agency stability.
-
----
-
-## What Is MRR?
-
-MRR (Monthly Recurring Revenue) is the total predictable revenue you receive each month from active retainer clients. The **Dashboard** shows your MRR and ARR (Annual Run Rate) at a glance.
+Retainers provide predictable revenue. This guide helps you run them with discipline and visibility.
 
 ---
 
-## Create a retainer
+## Define retainer contracts
+
+Capture:
+
+- Client
+- Service scope
+- Billing amount
+- Frequency (monthly/quarterly/annual)
+- Next billing date
+- Status (active/paused/cancelled)
+
+---
+
+## Create a retainer in ERP
 
 <Steps>
   <Step title="Open Retainers Hub">
-    Navigate to <strong>Retainers Hub</strong> in the sidebar.\n\nTip: You can also ask BabaBot: <em>\"Show me all active retainers\"</em>.
+    Navigate to **Retainers Hub**.
   </Step>
-  <Step title="Create a new retainer">
-    Click <strong>New Retainer</strong>.
+  <Step title="Create New Retainer">
+    Enter contract and billing values.
   </Step>
-  <Step title="Enter the contract details">
-    Fill in the details below.
+  <Step title="Save and verify">
+    Confirm it appears in MRR widgets.
   </Step>
 </Steps>
 
-| Field | Description |
-|---|---|
-| **Client** | Select from your CRM |
-| **Service Name** | What you are delivering monthly |
-| **Amount** | Recurring billing amount |
-| **Frequency** | Monthly, Quarterly, or Annually |
-| **Next Billing Date** | When the retainer kicks in |
+---
 
-Click <strong>Create Retainer</strong>. The retainer becomes <strong>ACTIVE</strong> and appears in your MRR widget.
+## MRR and ARR interpretation
+
+- **MRR:** predictable monthly recurring revenue
+- **ARR:** annualized run-rate derived from MRR
+
+Use these KPIs for hiring, budgeting, and risk planning.
 
 ---
 
-## Using BabaBot to Create Retainers
+## Retainer health operations
 
-You can ask BabaBot:
+Track health by payment timeliness and renewal status:
 
-- *"Set up a monthly retainer for Acme Corp for Social Media Management for ₹25,000"*
-- *"Show me all active retainers"*
-- *"Pause the SEO retainer for Globex Corp"*
+- Green: on track
+- Amber: approaching risk
+- Red: overdue / retention risk
 
----
-
-## Retainer Health Indicators
-
-On the Dashboard's **Retainer Radar** widget, each retainer shows a health indicator:
-
-- 🟢 **Green** — Payment is up to date
-- 🟡 **Amber** — Payment is approaching overdue
-- 🔴 **Red** — Overdue / at risk
+Run weekly reviews for amber/red accounts.
 
 ---
 
-## Pause or cancel a retainer
+## Renewal playbook
 
-From the Retainers Hub, click the status dropdown on any retainer to change it to **Paused** or **Cancelled**. A paused retainer is excluded from MRR calculations.
+30-45 days before renewal:
 
----
-
-## Generate an invoice from a retainer
-
-Retainers do not auto-generate invoices. When the billing date arrives:
-
-1. Go to **New Invoice**
-2. Select the retainer client
-3. Add the retainer service as a line item
-4. Generate as usual
-
-> **Tip:** BabaBot can draft the invoice for you — just say *"Draft an invoice for Acme Corp for Social Media Management for ₹25,000."*
+1. Review delivered outcomes
+2. Propose scope evolution
+3. Confirm new billing values
+4. Update retainer record before next cycle
 
 ---
 
-## Questions?
+## Invoice from retainer
 
-Contact **admin@bababuilds.com** for retainer or billing setup assistance.
+Retainers guide billing intent; invoice generation is still an explicit operational step.
+
+Use this standard flow each cycle:
+
+1. Open New Invoice
+2. Select retainer client
+3. Add contracted service line
+4. Generate and send
+
+---
+
+## BabaBot prompts for retainers
+
+- "Show active retainers and total MRR"
+- "Pause retainer for Client X"
+- "List retainers due for renewal this month"
+
+---
+
+## Need help?
+
+For retainer setup guidance, email **admin@bababuilds.com**.
+
+---
+
+## Troubleshooting
+
+| Problem | Likely reason | Fix |
+|---|---|---|
+| MRR number seems lower than expected | Retainers are paused/cancelled | Review status and reactivate valid contracts |
+| Renewal got missed | No review cadence | Add monthly renewal review routine |
+| Retainer exists but no invoice sent | Invoices are manual step | Generate invoice from cycle checklist |
+
+---
+
+## Related guides
+
+- [Managing Your Client CRM](/help/managing-clients)
+- [Generating, Sending, and Collecting Invoices](/help/generating-invoices)
+- [Optional Module: Revenue Pipeline](/help/optional-sub-system-revenue-pipeline)
+
+---
+
+## Article info
+
+- **Last reviewed:** 2026-04-21
+- **Owner:** Revenue Operations Team
+- **Audience:** Founders, Sales Ops, Finance Ops
+
+---
+
+## FAQ
+
+### Do retainers auto-generate invoices?
+Not by default. Keep invoice generation as an explicit control step.
+
+### How often should I review retainer health?
+Weekly for status drift and monthly for renewal risk.
+
+### Can paused retainers return to active?
+Yes. Re-activate once scope and payment terms are confirmed.

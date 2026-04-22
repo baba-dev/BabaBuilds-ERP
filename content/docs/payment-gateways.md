@@ -1,109 +1,143 @@
 ---
 title: "Connecting Razorpay & Stripe"
-description: "PRO feature: How to connect your payment gateway and start collecting online payments directly from your invoice PDFs."
+description: "Set up payment gateways, validate keys, and ensure every invoice includes actionable online payment links."
 order: 5
 category: "Payments"
-tags:
-  - "Stripe"
-  - "Razorpay"
-  - "Payments"
-  - "Invoice payments"
+tags: ["Stripe", "Razorpay", "Payments", "Invoice payments", "gateway"]
 icon: "CreditCard"
-estimatedMinutes: 8
+estimatedMinutes: 9
 isFeatured: true
+dateModified: "2026-04-21"
 ---
 
 # Connecting Razorpay & Stripe
 
-<Callout type="warn">This is a PRO feature. Upgrade your plan to enable payment gateway integration.</Callout>
+Enable online collections by connecting your payment gateway in Settings.
 
-Once connected, BabaBuilds ERP automatically embeds a **clickable payment link** in every invoice PDF you generate. Your clients can pay directly from the PDF — no extra steps.
+<Callout type="warn">Gateway integration is available on eligible plans.</Callout>
 
-<Callout type="info">Regional readiness note: Stripe supports global collections (including GCC currencies supported by your Stripe account). Razorpay is India-specific and INR-only.</Callout>
+## Choose the right gateway
 
----
-
-## Which Gateway Should I Use?
-
-| Gateway | Best For | Currency |
+| Gateway | Best for | Currency profile |
 |---|---|---|
-| **Razorpay** 🇮🇳 | Indian businesses billing in INR | INR only |
-| **Stripe** 🌐 | Global businesses, international clients | 135+ currencies |
-
-> If you are Indian and mostly bill domestic clients, use **Razorpay**. If you bill internationally or receive USD/EUR, use **Stripe**.
+| **Razorpay** | India-first billing | INR-centric |
+| **Stripe** | Global businesses | Multi-currency |
 
 ---
 
-## Connecting Razorpay (Indian Users)
+## Setup path in ERP
 
-<Steps>
-  <Step title="Get your Razorpay API keys">
-    1. Log in to your [Razorpay Dashboard](https://dashboard.razorpay.com/)\n    2. Go to **Settings → API Keys → Generate Key**\n    3. Copy your **Key ID** and **Key Secret**
-  </Step>
-  <Step title="Connect Razorpay inside BabaBuilds ERP">
-    1. Go to **Settings → Payment Gateway**\n    2. Select the **Razorpay** tab\n    3. Enter your **Key ID** and **Key Secret**\n    4. Click **Save Configuration**
-  </Step>
-  <Step title="Verify the result">
-    Generate a test invoice and confirm a **Pay securely online** link appears in the PDF.
-  </Step>
-</Steps>
-
-Your Key Secret is encrypted with **AES-256-GCM** before storage and is never visible again after saving. Only the last 4 characters of the Key ID are shown.
+1. Open **Settings**
+2. Go to **Payment Gateway**
+3. Select Razorpay or Stripe tab
+4. Paste credentials
+5. Save configuration
 
 ---
 
-## Connecting Stripe (Global Users)
+## Razorpay setup
 
-<Steps>
-  <Step title="Get your Stripe API keys">
-    1. Log in to your [Stripe Dashboard](https://dashboard.stripe.com/)\n    2. Go to **Developers → API Keys**\n    3. Copy your **Publishable Key** (starts with `pk_`) and **Secret Key** (starts with `sk_`)
-  </Step>
-  <Step title="Connect Stripe inside BabaBuilds ERP">
-    1. Go to **Settings → Payment Gateway**\n    2. Select the **Stripe** tab\n    3. Enter both keys\n    4. Click **Save Configuration**
-  </Step>
-  <Step title="Verify the result">
-    Generate a test invoice and confirm a payment link appears in the PDF.\n\n    <Callout type="tip">Use test keys in a non-production Stripe account first.</Callout>
-  </Step>
-</Steps>
+- Get Key ID + Secret from Razorpay dashboard
+- Paste in ERP and save
+- Generate test invoice and verify payment link
 
----
+## Stripe setup
 
-## Setting Your Default Gateway
+- Get Publishable + Secret keys
+- Paste in ERP and save
+- Generate test invoice and verify payment link
 
-In **Settings → Payment Gateway**, use the **Default Gateway** selector to choose which gateway generates links on new invoices. Only one gateway is active at a time.
+<Callout type="tip">
+  Use test keys first, then switch to live keys once your team confirms end-to-end behavior.
+</Callout>
 
 ---
 
-## How Payment Links Appear in Invoices
+## Security and key handling
 
-After connecting a gateway, every new invoice PDF will contain a line like:
-
-> `Pay securely online: https://rzp.io/i/xxxxxx`
-
-This text is a real, clickable hyperlink in PDF viewers. Clients can click it to pay instantly.
-
-<HelpImage src="/help/diagrams/invoice_workflow.svg" alt="Invoice workflow diagram" caption="Invoice workflow: draft → generate PDF → send → get paid → reconcile." />
+- Secrets are encrypted at rest
+- Full secret is not shown after save
+- Rotate keys periodically
+- Remove keys immediately if compromised
 
 ---
 
-## Rotating or Removing Keys
+## Verify payment-link output in invoice PDF
 
-On the Gateway settings panel:
+Expected behavior:
 
-- Click **Change** to replace your current secret key
-- Click the **🗑 Delete** button to instantly revoke and remove the stored key
+- Invoice PDF contains clear call to action
+- Link opens gateway checkout page
+- Transaction is traceable in your own gateway console
 
-After deletion, new invoices will be generated without payment links until you reconnect.
-
----
-
-## Currency Restrictions
-
-- **Razorpay** only works when your workspace base currency is **INR**. If you are a non-Indian agency, Razorpay will be disabled automatically.
-- **Stripe** works with any currency supported by your Stripe account.
+<HelpImage src="/help/diagrams/payments_flow.svg" alt="Flow of invoice payment through connected gateway" caption="Connected gateways close the loop from invoice delivery to collections." />
 
 ---
 
-## Need Help?
+## Troubleshooting quick map
 
-Contact our team at **admin@bababuilds.com** for gateway configuration support.
+| Symptom | Likely cause | Action |
+|---|---|---|
+| No pay link in PDF | Gateway not active | Recheck Settings and save |
+| Payment fails on checkout | Invalid/expired API key | Rotate keys |
+| Wrong currency behavior | Gateway/currency mismatch | Review workspace and gateway currency setup |
+
+---
+
+## Need help?
+
+Share the failing invoice number and gateway type with **admin@bababuilds.com**.
+
+---
+
+## Troubleshooting
+
+| Problem | What it usually means | What to do |
+|---|---|---|
+| Payment link not showing in PDF | Gateway is not fully connected | Re-open Settings, save keys again, and generate a fresh invoice |
+| Checkout page errors | API keys are expired/incorrect | Rotate keys in gateway dashboard and update in ERP |
+| Wrong currency shown | Gateway/currency setup mismatch | Verify workspace currency and gateway-supported currency |
+| Client says payment failed | Network or card/auth issue | Ask client to retry and check gateway logs for failure reason |
+
+---
+
+## Do / Don’t
+
+### Do
+- Use test mode first before going live
+- Rotate keys periodically
+- Send one internal test invoice after key updates
+
+### Don’t
+- Share secret keys in chat or email
+- Keep old compromised keys active
+- Assume old PDFs update automatically after settings changes
+
+---
+
+## Related guides
+
+- [Generating, Sending, and Collecting Invoices](/help/generating-invoices)
+- [Configuring Your Business Profile & Workspace Settings](/help/settings-guide)
+- [Optional Module: AR Aging + Collections Centre](/help/optional-sub-system-ar-collections)
+
+---
+
+## Article info
+
+- **Last reviewed:** 2026-04-21
+- **Owner:** Billing & Payments Team
+- **Audience:** Founders, Finance Ops
+
+---
+
+## FAQ
+
+### Can I connect both Stripe and Razorpay?
+Yes, but set one as your active operational default for predictable behavior.
+
+### Do old invoices get payment links after gateway setup?
+No. Generate or reissue invoices after gateway connection to ensure links are present.
+
+### What if a key is leaked?
+Rotate it immediately in your gateway dashboard and update ERP settings.

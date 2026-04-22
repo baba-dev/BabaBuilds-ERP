@@ -20,6 +20,50 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Browser test system (Playwright)
+
+This repo includes Playwright so we can validate rendering and key user flows in a real browser.
+
+### One-time setup
+
+```bash
+npm install
+npm run test:browser:install
+```
+
+This installs the Chromium browser binary and Linux dependencies used by the smoke suite.
+
+### Run browser smoke tests
+
+```bash
+npm run test:browser:smoke
+```
+
+Notes:
+- Tests run against `http://localhost:3000`.
+- Playwright will start the Next.js dev server automatically using `npm run dev` from `playwright.config.ts`.
+- If you want to target an already-running app, set `BASE_URL` before running tests.
+
+### Interactive browser checks
+
+Headed run (visible browser window, if display is available):
+
+```bash
+npm run test:browser:headed
+```
+
+Playwright UI mode for test exploration/debugging:
+
+```bash
+npm run test:browser:ui
+```
+
+### Existing browser suites
+
+- `tests/smoke/ui-pages.spec.ts` — critical public route rendering checks
+- `tests/smoke/landing-persona-funnel.spec.ts` — landing funnel CTA visibility
+- `tests/smoke/demo-route-audit.spec.ts` — authenticated demo route audit with telemetry
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

@@ -1,92 +1,117 @@
 ---
-title: "Using BabaBot — Your AI Assistant"
-description: "How to use BabaBot, the built-in AI assistant, to manage invoices, clients, expenses, and get financial insights."
+title: "Using BabaBot — AI Assistant for Finance Operations"
+description: "How to use BabaBot for invoice workflows, CRM commands, expense tracking, reminders, and operational decision support."
 order: 6
+category: "General"
+tags: ["bababot", "ai", "assistant", "automation"]
+estimatedMinutes: 8
+isFeatured: true
+icon: "Sparkles"
+dateModified: "2026-04-21"
 ---
 
-# Using BabaBot — Your AI Assistant
+# Using BabaBot — AI Assistant for Finance Operations
 
-**BabaBot** is your built-in AI Executive Assistant, powered by Groq. It is directly connected to your ERP data and can read, create, and update records — all from a simple chat interface.
-
----
-
-## Opening BabaBot
-
-Click the **purple chat button** (💬) in the bottom-right corner of any page.
-
----
-
-## Setting Up Your API Key
-
-BabaBot requires a **Groq API Key** (free tier available at [console.groq.com](https://console.groq.com)):
-
-1. Go to **Settings → AI Assistant**
-2. Paste your Groq API key (starts with `gsk_...`)
-3. Click **Save Configuration**
+BabaBot is your in-product AI operator for daily ERP tasks.
 
 ---
 
-## What BabaBot Can Do
+## Enable BabaBot
 
-### 📊 Financial Insights
-- *"Give me an executive summary of my finances"*
-- *"How close am I to the GST registration threshold?"*
-- *"Calculate my estimated tax liability for this year"*
-
-### 🧾 Invoice Operations
-- *"Show me all overdue invoices"*
-- *"Mark invoice INV/25-26/007 as paid"*
-- *"Draft an invoice for Acme Corp for ₹50,000"*
-
-### 👥 Client Management
-- *"Add a new client: Stark Industries, New York, USA"*
-- *"What is the lifetime value of Globex Corporation?"*
-- *"Show me full ledger for Acme Corp"*
-
-### 📦 Retainers
-- *"Show me all active retainers"*
-- *"Set up a monthly retainer for Acme Corp for SEO for ₹30,000"*
-
-### 💸 Expenses
-- *"Log a ₹5,000 expense to AWS under Software"*
-- *"Give me a breakdown of all my expenses by category"*
-
-### 🗓 Tasks & Reminders
-- *"Remind me to follow up with Acme Corp next week"*
-- BabaBot automatically creates a task in your system
+1. Open **Settings**
+2. Add your Groq API key
+3. Save configuration
+4. Open chat from floating button
 
 ---
 
-## Auto-Fill Forms (AI Navigation)
+## What BabaBot handles well
 
-If you ask BabaBot to *"Draft an invoice for Globex Corp for ₹75,000 for web development"*, it will:
+### Finance questions
 
-1. Navigate you to the **New Invoice** page
-2. Pre-fill the client, amount, and service description for you
+- Revenue snapshots
+- Expense trends
+- Tax estimate prompts
 
-Just review and click Generate.
+### Operational actions
+
+- Draft invoice context
+- CRM updates
+- Retainer lookups
+- Task/reminder creation
+
+### Management reporting
+
+- Summary narratives
+- Variance pointers
+- Follow-up action suggestions
 
 ---
 
-## Expanding the Chat Window
+## High-value prompt examples
 
-Click the **↗ Expand** button in the chatbot header for a full-screen chat experience — helpful for complex multi-step operations.
-
----
-
-## Clearing Chat History
-
-Click the **🗑 Trash** icon in the chatbot header. Chat history is stored locally per-workspace and is never sent to our servers.
+- "Summarize current month revenue, expenses, and margin"
+- "Show overdue invoices above 50,000"
+- "Draft invoice for Client X for SEO retainer"
+- "List clients with zero invoices in last 60 days"
 
 ---
 
-## Privacy & Security
+## Responsible usage guidelines
 
-- BabaBot uses **your own Groq API key** — we never store or proxy your key.
-- All data fetched by BabaBot is restricted strictly to **your workspace** — other tenants' data is never accessible.
+- Confirm outputs before final actions
+- Use consistent client names for accuracy
+- Treat AI outputs as operational support, not legal/tax advice
+
+---
+
+## Privacy notes
+
+- API key is workspace-controlled
+- Data scope is restricted to your workspace context
+- Chat should avoid unnecessary personal data
 
 ---
 
 ## Need Help?
 
-For AI or API key issues, contact **admin@bababuilds.com**.
+Email **admin@bababuilds.com** for setup and prompt-engineering help.
+
+---
+
+## Troubleshooting
+
+| Problem | Likely reason | Fix |
+|---|---|---|
+| BabaBot not opening | UI session issue | Refresh page and retry the chat button |
+| BabaBot replies are generic | Prompt lacks context | Mention client, month, amount, and action in prompt |
+| Action was not what you expected | Ambiguous instruction | Use specific instruction with confirmation details |
+
+---
+
+## Related guides
+
+- [Configuring Your Business Profile & Workspace Settings](/help/settings-guide)
+- [Generating, Sending, and Collecting Invoices](/help/generating-invoices)
+- [Tracking Expenses, Deductions, and Tax Readiness](/help/expenses-and-tax)
+
+---
+
+## Article info
+
+- **Last reviewed:** 2026-04-21
+- **Owner:** AI Product Team
+- **Audience:** All users
+
+---
+
+## FAQ
+
+### Does BabaBot replace manual review?
+No. Use it to accelerate work, then validate important outputs before final actions.
+
+### What makes prompts more accurate?
+Include context: client name, amount, month, and desired action.
+
+### Can BabaBot access other workspaces?
+No. It is scoped to your active workspace context.

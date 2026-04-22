@@ -1,108 +1,172 @@
 ---
-title: "Generating & Sending Invoices"
-description: "Step-by-step guide to creating professional tax invoices, sending them by email, and downloading PDFs."
+title: "Generating, Sending, and Collecting Invoices"
+description: "Advanced guide to drafting invoices, delivering PDFs, avoiding duplicates, and accelerating collections with payment links."
 order: 2
 category: "Invoicing"
 tags: ["invoice", "pdf", "email", "smtp", "numbering"]
-estimatedMinutes: 7
+estimatedMinutes: 10
 isFeatured: true
 icon: "ReceiptText"
 ---
 
-# Generating & Sending Invoices
+# Generating, Sending, and Collecting Invoices
 
-BabaBuilds ERP generates legally compliant **Tax Invoices** (or **Export of Services** invoices for international clients) as beautifully formatted PDFs.
+This guide covers the complete invoice lifecycle: draft, validate, generate, send, and collect.
 
-<HelpImage src="/help/diagrams/invoice_workflow.svg" alt="Invoice workflow diagram" caption="From draft → PDF → email → payment link." />
+<HelpImage src="/help/diagrams/invoice_workflow.svg" alt="Invoice lifecycle from draft to paid status" caption="Use this lifecycle as your standard invoicing process." />
 
-## Before You Begin
+## Before you start
 
-Make sure you have:
+Ensure these prerequisites are done:
 
-- Completed your **Business Profile** (Settings → Business Profile)
-- Added at least one **Client** (Client CRM)
-- Added your **Services** to the catalog (Service Catalog)
-
----
-
-## Step 1: Open the Invoice Generator
-
-Click **New Invoice** in the left sidebar.
+- Settings profile is complete
+- Client exists in CRM
+- Service line items are ready
+- SMTP is configured (for email)
+- Gateway is connected (optional, for payment links)
 
 ---
 
-## Step 2: Fill In the Invoice Details
-
-| Field | Description |
-|---|---|
-| **Select Client** | Choose a client from your CRM |
-| **Billing Month** | The period this invoice covers (e.g., "March 2025") |
-| **Invoice Date** | Defaults to today; can be customised |
-| **SAC/HSN Code** | Service classification code (defaults to your profile setting) |
-| **Services** | Add one or more line items with name and amount |
-
----
-
-## Step 3: Choose Your Invoice Design
-
-Two designs are available (configurable in **Settings**):
-
-- **Design 1 — Classic**: Traditional layout with a black footer banner and statutory declarations. Best for Indian domestic clients.
-- **Design 2 — Modern Agency**: Minimal, Stripe-inspired layout. Great for international billing.
-
----
-
-## Step 4: Generate the Invoice
-
-Click **Generate Invoice**. The system will:
+## Step-by-step invoice flow
 
 <Steps>
-  <Step title="Assign a unique invoice number">
-    Example: `INV/25-26/001` (invoice 1 in Financial Year 2025–26).
+  <Step title="Open New Invoice">
+    Go to **Invoices & Earnings** and click **New Invoice**.
   </Step>
-  <Step title="Generate the PDF">
-    The PDF is generated and stored in your workspace for download and re-sending.
+  <Step title="Select client and period">
+    Choose the client and billing month/date.
   </Step>
-  <Step title="Embed a payment link (optional)">
-    If you connected Razorpay or Stripe, a clickable payment link appears in the PDF.
+  <Step title="Add service lines">
+    Add deliverables with clear names, rates, and totals.
   </Step>
-  <Step title="Post to your ledger">
-    The invoice is stored and contributes to revenue and receivables reporting.
+  <Step title="Review taxes and totals">
+    Confirm applicable tax logic and net payable amount.
+  </Step>
+  <Step title="Generate PDF">
+    Click **Generate Invoice**. The system assigns an invoice number and stores the PDF.
   </Step>
 </Steps>
 
 ---
 
-## Step 5: Email the Invoice
+## Invoice numbering logic
 
-Enable the **Send Invoice via Email** toggle before clicking Generate. The invoice PDF will be attached and sent to your client's email address using your configured SMTP server.
+Format: `INV/FY/SEQ`
+
+Example: `INV/26-27/014`
+
+- `26-27`: financial year
+- `014`: sequence number in that year
+
+Numbers are unique and traceable for audit.
+
+---
+
+## Send invoice by email
+
+Enable **Send Invoice via Email** before generating, or re-send from invoice history later.
 
 <Callout type="tip">
-  Configure SMTP in **Settings → Email Server** to enable this feature.
+  Send a test invoice to yourself after any SMTP change.
 </Callout>
 
 ---
 
-## Duplicate Protection
+## Accept online payments from invoice
 
-If you click Generate twice within 60 seconds for an identical invoice, the system will detect it and block the second request to prevent duplicate billing.
+When Stripe/Razorpay is active, PDF includes a clickable payment link.
 
----
+Client flow:
 
-## Downloading & Re-sending
+1. Open PDF
+2. Click pay link
+3. Complete payment
+4. Payment updates in records (based on your workflow)
 
-From the **Dashboard** or **Ledger**, click the **Download** icon (⬇) to get the PDF. Click the **Send** icon (✈) to re-send the invoice email to your client.
-
----
-
-## Invoice Numbering
-
-Invoice numbers follow this format: `INV/FY/SEQ`
-
-Example: `INV/25-26/007` → Invoice #7 in Financial Year 2025–26.
+See: [Connecting Razorpay & Stripe](/help/payment-gateways)
 
 ---
 
-## Questions?
+## Duplicate generation protection
 
-Reach out to **admin@bababuilds.com** for billing-related support.
+If an identical invoice is generated repeatedly in a short window, ERP blocks duplicate creation to protect against double-billing.
+
+---
+
+## Re-send, download, and recovery operations
+
+From invoice list/dashboard:
+
+- **Download** for offline sharing
+- **Re-send** for missed client emails
+- Follow collections workflow for overdue invoices
+
+---
+
+## Invoice quality checklist
+
+Before sending, verify:
+
+- Client legal details
+- Tax treatment (domestic/export)
+- Bank details on PDF
+- Line item descriptions are specific
+- Payment terms are clear
+
+---
+
+## Troubleshooting
+
+| Problem | What it usually means | What to do |
+|---|---|---|
+| PDF not generating | Missing required fields or temporary service failure | Recheck client, date, and line items; retry once |
+| Email not delivered | SMTP is not configured or credentials expired | Go to Settings and verify SMTP host/port/app password |
+| Wrong tax mode on invoice | Client export/domestic flag is incorrect | Fix client tax profile in CRM and regenerate |
+| No payment link in PDF | Gateway not connected or not active | Reconnect Stripe/Razorpay and generate a fresh invoice |
+
+---
+
+## Do / Don't
+
+**Do**
+- Keep line items specific (deliverable + period).
+- Send a test invoice to yourself after major settings changes.
+- Review totals and taxes before final send.
+
+**Don't**
+- Reuse vague descriptions like "Services rendered".
+- Assume old invoices will auto-update after settings changes.
+- Share invoice PDFs without checking remittance details.
+
+---
+
+## Related guides
+
+- [Configuring Your Business Profile & Workspace Settings](/help/settings-guide)
+- [Connecting Razorpay & Stripe](/help/payment-gateways)
+- [Optional Module: AR Aging + Collections Centre](/help/optional-sub-system-ar-collections)
+
+---
+
+## Article details
+
+- **Last reviewed:** 2026-04-21
+- **Owner:** Finance Operations Docs
+- **Audience:** Founders, Finance Ops, Billing Managers
+
+## Need help?
+
+Email **admin@bababuilds.com** with invoice number and issue summary.
+
+---
+
+## FAQ
+
+### Can I edit a generated invoice PDF directly?
+No. Update invoice data in ERP and generate a new version to keep records clean.
+
+### Why is my invoice number not sequential to last month?
+Numbering follows financial-year sequence and integrity controls, not just monthly grouping.
+
+### Can I resend an invoice without regenerating?
+Yes. Use the re-send action from invoice history where available.

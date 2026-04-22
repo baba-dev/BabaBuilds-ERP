@@ -22,7 +22,6 @@ export type SidebarItemId =
   | "workforce"
   | "payroll"
   | "import_manager"
-  | "help_center"
   | "settings";
 
 export type UserPreferences = {
@@ -61,7 +60,6 @@ const ALLOWED_IDS = new Set<SidebarItemId>([
   "workforce",
   "payroll",
   "import_manager",
-  "help_center",
   "settings",
 ]);
 
