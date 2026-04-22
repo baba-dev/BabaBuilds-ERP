@@ -17,11 +17,13 @@ import { dashboardTypography as ty } from "./dashboard-typography";
 function SetupSection({ 
   completion, 
   isComplete, 
-  t 
+  t,
+  onOpenDetails,
 }: { 
   completion: number; 
   isComplete: boolean; 
   t: (k: string, f: string) => string;
+  onOpenDetails?: () => void;
 }) {
   return (
     <Card className="group relative overflow-hidden p-5 border-zinc-200 dark:border-zinc-800/60 bg-white dark:bg-zinc-950/50 shadow-sm transition-all">
@@ -68,15 +70,15 @@ function SetupSection({
 
           {!isComplete && (
             <Button
-              asChild
               size="sm"
               variant="outline"
+              onClick={onOpenDetails}
               className="w-full h-9 justify-between text-[11px] font-bold uppercase tracking-wider border-zinc-200 dark:border-zinc-800 bg-white/70 dark:bg-zinc-950/40 hover:bg-orange-50/60 dark:hover:bg-orange-500/10 hover:border-orange-200/70 dark:hover:border-orange-500/30 transition-colors"
             >
-              <Link href="/onboarding">
+              <span className="inline-flex w-full items-center justify-between">
                 {t("continue_setup", "Continue setup")}
                 <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
-              </Link>
+              </span>
             </Button>
           )}
 
@@ -128,6 +130,17 @@ function SubscriptionSection({
             <Clock className="w-3.5 h-3.5 text-orange-500/50" />
             {t("active_billing", "Billing cycle active")}
           </p>
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 text-[11px] font-bold uppercase tracking-wider border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/40 hover:bg-orange-50 dark:hover:bg-orange-500/10"
+          >
+            <Link href="/settings/billing">
+              {t("open_billing", "Open billing")}
+              <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+            </Link>
+          </Button>
         </div>
       </div>
     </Card>
@@ -138,7 +151,13 @@ function SubscriptionSection({
 
 // --- Main Layout ---
 
-export function DashboardHealthStrip({ health }: { health: DashboardData["health"] }) {
+export function DashboardHealthStrip({
+  health,
+  onOpenSetupDetails,
+}: {
+  health: DashboardData["health"];
+  onOpenSetupDetails?: () => void;
+}) {
   const t = useTranslations("Dashboard");
   const tr = (key: string, fallback: string, values?: Record<string, unknown>) => {
     if (typeof t.has === "function" && !t.has(key as never)) return fallback;
@@ -155,7 +174,7 @@ export function DashboardHealthStrip({ health }: { health: DashboardData["health
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr_2fr] gap-5">
-        <SetupSection completion={health.setupCompletion} isComplete={health.setupComplete} t={tr} />
+        <SetupSection completion={health.setupCompletion} isComplete={health.setupComplete} t={tr} onOpenDetails={onOpenSetupDetails} />
         <SubscriptionSection tier={health.planTier} state={health.subscriptionState} t={tr} />
 
         <Card className="group relative overflow-hidden p-5 border-zinc-200 dark:border-zinc-800/60 bg-white dark:bg-zinc-950/50 shadow-sm">

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { Download, LayoutDashboard, Send, Sparkles, ArrowRight, Users, Briefcase, ReceiptText, X, Building } from "lucide-react";
+import { Download, LayoutDashboard, Send, Sparkles, ArrowRight, Users, Briefcase, ReceiptText, X, Building, Lock, Puzzle, ShieldCheck, CircleAlert, HandCoins, PlugZap } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -17,7 +17,9 @@ import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { PageErrorState } from "@/components/states/PageErrorState";
 import { PageLoadingState } from "@/components/states/PageLoadingState";
@@ -226,6 +228,7 @@ export default function Dashboard() {
   };
 
   const showDemoUpgradePrompt = searchParams.get("demo") === "1";
+  const [setupDetailsOpen, setSetupDetailsOpen] = useState(false);
   const baseYear = new Date().getMonth() >= 3 ? new Date().getFullYear() : new Date().getFullYear() - 1;
   const fyOptions = Array.from({ length: 4 }).map((_, idx) => {
     const year = baseYear - 3 + idx;
@@ -367,6 +370,84 @@ export default function Dashboard() {
     localStorage.setItem("erp_getting_started_dismissed", "1");
     setGettingStartedDismissed(true);
   };
+  const permissionFlags = d.permissions ?? {
+    canViewSales: true,
+    canViewOperations: true,
+    canViewTrust: true,
+    canViewCharts: true,
+  };
+
+  const lockOverlayClassName =
+    "relative before:pointer-events-none before:absolute before:inset-0 before:rounded-2xl before:bg-zinc-200/35 before:dark:bg-zinc-950/55 before:backdrop-blur-[1px]";
+
+  const moduleLockTooltip = tr(
+    "permission_locked_module",
+    "You don't have permission to view this module.",
+  );
+
+  const setupChecklist = useMemo(() => {
+    const checks = [
+      {
+        id: "setup-profile",
+        title: tr("setup_profile_title", "Business profile"),
+        description: tr(
+          "setup_profile_desc",
+          "Complete company profile details in Settings.",
+        ),
+        href: "/settings/profile",
+        done: Boolean(orgName),
+      },
+      {
+        id: "setup-integrations",
+        title: tr("setup_integrations_title", "Core integrations"),
+        description: tr(
+          "setup_integrations_desc",
+          "Configure payment + SMTP integrations for billing workflow.",
+        ),
+        href: "/settings",
+        done: (d.health?.integrationReadiness?.summary?.healthy ?? 0) >= 2,
+      },
+      {
+        id: "setup-clients",
+        title: tr("setup_clients_title", "Client and service setup"),
+        description: tr(
+          "setup_clients_desc",
+          "Add at least one client and service before invoicing.",
+        ),
+        href: "/clients",
+        done: (d.recentInvoices?.length ?? 0) > 0 || (d.salesAndShop?.publishedServices ?? 0) > 0,
+      },
+      {
+        id: "setup-first-invoice",
+        title: tr("setup_invoice_title", "First invoice"),
+        description: tr(
+          "setup_invoice_desc",
+          "Create and send your first invoice to activate ledger flow.",
+        ),
+        href: "/income",
+        done: (d.recentInvoices?.length ?? 0) > 0,
+      },
+    ];
+    return checks;
+  }, [d.health?.integrationReadiness?.summary?.healthy, d.recentInvoices?.length, d.salesAndShop?.publishedServices, orgName, tr]);
+
+  const pendingSetupChecklist = setupChecklist.filter((item) => !item.done);
+  const lockableCardClassName = (locked: boolean) =>
+    locked ? `${lockOverlayClassName} cursor-not-allowed select-none` : "";
+
+  const optionalModuleCards = (d.optionalModules ?? []).map((module) => {
+    const icon =
+      module.moduleKey === "CASH_FLOW"
+        ? <HandCoins className="h-4 w-4" />
+        : module.moduleKey === "REPORTING_CENTER"
+          ? <Puzzle className="h-4 w-4" />
+          : module.moduleKey === "TAX_ADVANCED"
+            ? <ShieldCheck className="h-4 w-4" />
+            : module.moduleKey === "IMPORT_MANAGER"
+              ? <PlugZap className="h-4 w-4" />
+              : <Puzzle className="h-4 w-4" />;
+    return { ...module, icon };
+  });
 
   return (
     <DashboardPageShell
@@ -438,7 +519,7 @@ export default function Dashboard() {
                   icon: <Briefcase className="w-4 h-4" />,
                   label: tr("step_add_service", "Add a service"),
                   desc: tr("step_add_service_desc", "What will you charge for?"),
-                  href: "/services",
+                  href: "/shop",
                   color: "amber",
                 },
                 {
@@ -476,7 +557,11 @@ export default function Dashboard() {
           </div>
         )}
 
-        {!d.health ? <SkeletonBlock className="h-12 w-full" /> : <DashboardHealthStrip health={d.health} />}
+        {!d.health ? (
+          <SkeletonBlock className="h-12 w-full" />
+        ) : (
+          <DashboardHealthStrip health={d.health} onOpenSetupDetails={() => setSetupDetailsOpen(true)} />
+        )}
 
         {!d.attention ? (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -494,16 +579,84 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
           <div className="lg:col-span-1 2xl:col-span-2 space-y-6">
-            {!d.salesAndShop ? <SkeletonBlock className="h-64" /> : <DashboardSalesAndShopPanel salesAndShop={d.salesAndShop} fCurrency={fCurrency} />}
+            {!d.salesAndShop ? (
+              <SkeletonBlock className="h-64" />
+            ) : (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div
+                      className={!permissionFlags.canViewSales ? lockOverlayClassName : undefined}
+                      aria-disabled={!permissionFlags.canViewSales}
+                    >
+                      <DashboardSalesAndShopPanel salesAndShop={d.salesAndShop} fCurrency={fCurrency} />
+                    </div>
+                  </TooltipTrigger>
+                  {!permissionFlags.canViewSales ? (
+                    <TooltipContent>{moduleLockTooltip}</TooltipContent>
+                  ) : null}
+                </Tooltip>
+              </TooltipProvider>
+            )}
 
-            {!d.operations ? <SkeletonBlock className="h-48" /> : <DashboardOperationsPanel operations={d.operations} />}
+            {!d.operations ? (
+              <SkeletonBlock className="h-48" />
+            ) : (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div
+                      className={!permissionFlags.canViewOperations ? lockOverlayClassName : undefined}
+                      aria-disabled={!permissionFlags.canViewOperations}
+                    >
+                      <DashboardOperationsPanel operations={d.operations} />
+                    </div>
+                  </TooltipTrigger>
+                  {!permissionFlags.canViewOperations ? (
+                    <TooltipContent>{moduleLockTooltip}</TooltipContent>
+                  ) : null}
+                </Tooltip>
+              </TooltipProvider>
+            )}
 
-            {!d.trust ? <SkeletonBlock className="h-48" /> : <DashboardTrustPanel trust={d.trust} />}
+            {!d.trust ? (
+              <SkeletonBlock className="h-48" />
+            ) : (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div
+                      className={!permissionFlags.canViewTrust ? lockOverlayClassName : undefined}
+                      aria-disabled={!permissionFlags.canViewTrust}
+                    >
+                      <DashboardTrustPanel trust={d.trust} />
+                    </div>
+                  </TooltipTrigger>
+                  {!permissionFlags.canViewTrust ? (
+                    <TooltipContent>{moduleLockTooltip}</TooltipContent>
+                  ) : null}
+                </Tooltip>
+              </TooltipProvider>
+            )}
 
             {!d.charts ? (
               <SkeletonBlock className="h-80" />
             ) : islandsEnabled ? (
-              <ChartsIsland charts={d.charts} fCurrency={fCurrency} />
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div
+                      className={!permissionFlags.canViewCharts ? lockOverlayClassName : undefined}
+                      aria-disabled={!permissionFlags.canViewCharts}
+                    >
+                      <ChartsIsland charts={d.charts} fCurrency={fCurrency} />
+                    </div>
+                  </TooltipTrigger>
+                  {!permissionFlags.canViewCharts ? (
+                    <TooltipContent>{moduleLockTooltip}</TooltipContent>
+                  ) : null}
+                </Tooltip>
+              </TooltipProvider>
             ) : (
               <Card className="p-5 border-zinc-200 dark:border-zinc-800">
                 <CardTitle className={ty.sectionTitle}>
@@ -567,6 +720,11 @@ export default function Dashboard() {
                             {tr(getInvoiceStatusBadgeKey(toInvoiceStatus(invoice.status)), toInvoiceStatus(invoice.status))}
                           </Badge>
                         </div>
+                        {toInvoiceStatus(invoice.status) === INVOICE_STATUS.PAID ? (
+                          <Badge className="mt-2 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-[0.16em]">
+                            PAID
+                          </Badge>
+                        ) : null}
                       </div>
                     </div>
                     <div className="pt-2.5 border-t border-zinc-100 dark:border-zinc-800/50">
@@ -587,6 +745,39 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+
+        {optionalModuleCards.length > 0 ? (
+          <Card className="border border-zinc-200 dark:border-zinc-800/70 bg-white dark:bg-zinc-900/40">
+            <CardHeader className="pb-3">
+              <CardTitle className={ty.sectionTitle}>
+                {tr("optional_modules_active", "Activated optional modules")}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {tr("optional_modules_active_desc", "Quick access to modules currently enabled for this workspace.")}
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {optionalModuleCards.map((module) => (
+                  <Link
+                    key={module.moduleKey}
+                    href={module.href}
+                    className="group rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50/70 dark:bg-zinc-950/30 hover:border-orange-300 dark:hover:border-orange-700/60 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="rounded-lg p-2 bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                        {module.icon}
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-zinc-400 group-hover:text-orange-500 transition-colors" />
+                    </div>
+                    <p className="mt-2 text-sm font-semibold text-foreground">{module.label}</p>
+                    <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{module.description}</p>
+                  </Link>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
 
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -641,6 +832,54 @@ export default function Dashboard() {
         selectedInvoiceRemaining={selectedInvoiceRemaining}
         fCurrency={fCurrency}
       />
+
+      <Dialog open={setupDetailsOpen} onOpenChange={setSetupDetailsOpen}>
+        <DialogContent className="max-w-2xl border-zinc-200 dark:border-zinc-800">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">
+              {tr("setup_dialog_title", "Complete your workspace setup")}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              {pendingSetupChecklist.length > 0
+                ? tr(
+                    "setup_dialog_desc_pending",
+                    "Here is exactly what is still missing and where to configure it.",
+                  )
+                : tr(
+                    "setup_dialog_desc_done",
+                    "Great news. Your setup is complete and all core workspace prerequisites are configured.",
+                  )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {pendingSetupChecklist.length === 0 ? (
+            <div className="rounded-xl border border-emerald-200/70 dark:border-emerald-900/50 bg-emerald-50/60 dark:bg-emerald-950/20 p-4 text-emerald-700 dark:text-emerald-300 text-sm flex items-start gap-2">
+              <ShieldCheck className="h-4 w-4 mt-0.5" />
+              {tr("setup_dialog_done_note", "Nothing is missing. Your workspace is fully configured.")}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pendingSetupChecklist.map((item) => (
+                <div key={item.id} className="rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 bg-white dark:bg-zinc-900/30">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{item.description}</p>
+                    </div>
+                    <CircleAlert className="h-4 w-4 text-amber-500 mt-0.5" />
+                  </div>
+                  <Button asChild size="sm" variant="outline" className="mt-3">
+                    <Link href={item.href} onClick={() => setSetupDetailsOpen(false)}>
+                      {tr("setup_fix_now", "Fix now")}
+                      <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                    </Link>
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardPageShell>
   );
 }

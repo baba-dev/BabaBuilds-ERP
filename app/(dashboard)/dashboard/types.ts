@@ -14,6 +14,22 @@ export type RecentInvoiceRow = {
 export type IntegrationStatus = "healthy" | "partial" | "missing";
 
 export type DashboardData = {
+  permissions: {
+    canViewAccounting: boolean;
+    canViewOperations: boolean;
+    canViewSales: boolean;
+    canViewCharts: boolean;
+    canViewRecentLedger: boolean;
+    canViewTrust: boolean;
+    canRunIntegrityScan: boolean;
+    canManageBilling: boolean;
+  };
+  optionalModules: Array<{
+    moduleKey: string;
+    label: string;
+    description: string;
+    href: string;
+  }>;
   health: {
     setupCompletion: number;
     onboardingProgress: number;

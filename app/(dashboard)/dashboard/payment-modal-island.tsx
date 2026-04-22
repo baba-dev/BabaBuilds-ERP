@@ -60,7 +60,16 @@ export function PaymentModalIsland({
             <Label htmlFor="amount-received" className={ty.labelUpper}>{t("actual_received", "Amount received", { currency })}</Label>
             <div className="relative">
               <span className={tx(ty.helper, "absolute left-3 top-2.5")}>{currencySymbol}</span>
-              <Input id="amount-received" type="number" step="0.01" className="pl-8 h-11 bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800" value={amountReceived} onChange={(e) => setAmountReceived(e.target.value)} required />
+              <Input
+                id="amount-received"
+                type="number"
+                step="0.01"
+                min="0.01"
+                className="pl-8 h-11 bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
+                value={amountReceived}
+                onChange={(e) => setAmountReceived(e.target.value)}
+                required
+              />
             </div>
             <p className={ty.helperXs}>Billed: {fCurrency(selectedInvoiceBilled)} · Already received: {fCurrency(selectedInvoiceReceived)} · Remaining: {fCurrency(selectedInvoiceRemaining)}</p>
           </div>

@@ -194,7 +194,7 @@ function IntelligenceAssistantSection({ data, tr, mood, aiState }: { data: Dashb
             <p className={ty.cardTitle}>
               {tr("ai_setup_incomplete_headline", "AI Setup Incomplete")}
             </p>
-            <p className={`${ty.helper} mt-1.5 line-clamp-3`}>
+            <p className={`${ty.helper} mt-1.5 line-clamp-3 text-muted-foreground`}>
               {tr("ai_setup_incomplete_body", "Add your Groq API key in Business Settings to complete setup and unlock strategic suggestions, automated finance guidance, and deeper workspace analysis.")}
             </p>
             <Link href="/settings">
@@ -213,14 +213,14 @@ function IntelligenceAssistantSection({ data, tr, mood, aiState }: { data: Dashb
     return (
       <div className="p-6 bg-zinc-50/50 dark:bg-zinc-800/20">
         <div className="flex gap-4 items-start">
-          <div className="h-10 w-10 shrink-0 rounded-xl bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 dark:text-zinc-400 shadow-sm">
+          <div className="h-10 w-10 shrink-0 rounded-xl bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-muted-foreground shadow-sm">
             <Bot className="w-5 h-5" />
           </div>
           <div className="flex-1">
             <p className={ty.cardTitle}>
               {tr("ai_fallback_headline", "Standard Intelligence Active")}
             </p>
-            <p className={`${ty.helper} mt-1.5 line-clamp-2`}>
+            <p className={`${ty.helper} mt-1.5 line-clamp-2 text-muted-foreground`}>
               {tr("ai_fallback_body", "Using baseline rules instead of neural models due to connection limits.")}
             </p>
           </div>
@@ -235,7 +235,7 @@ function IntelligenceAssistantSection({ data, tr, mood, aiState }: { data: Dashb
         <div className="flex -space-x-2">
           {[1,2,3].map(i => (
             <div key={i} className="h-7 w-7 rounded-full border-2 border-white dark:border-zinc-900 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shadow-sm">
-               <Bot className="w-4 h-4 text-zinc-400" />
+               <Bot className="w-4 h-4 text-muted-foreground" />
             </div>
           ))}
         </div>
@@ -272,7 +272,7 @@ function RecentActivitySection({ data, tr }: { data: DashboardData, tr: any }) {
             <p className={ty.cardTitle}>
               {tr("activity_quiet_title", "Operational Calm")}
             </p>
-            <p className={`${ty.helper} mt-1.5 max-w-[220px]`}>
+              <p className={`${ty.helper} mt-1.5 max-w-[220px] text-muted-foreground`}>
               {tr("activity_quiet_desc", "Billing, reconciliation, and workflow events will appear here as your workspace becomes active.")}
             </p>
           </div>
@@ -287,7 +287,7 @@ function RecentActivitySection({ data, tr }: { data: DashboardData, tr: any }) {
                 {item.action}
               </p>
               <div className="flex items-center gap-2.5 mt-2">
-                <span className="text-xs font-medium text-zinc-400 dark:text-zinc-500">
+                <span className="text-xs font-medium text-muted-foreground">
                   {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
                 </span>
                 <span className="w-1 h-1 rounded-full bg-zinc-200 dark:bg-zinc-800" />
@@ -331,7 +331,7 @@ function RecentNotificationsSection({ data, tr, mood }: { data: DashboardData, t
                  {tr("no_active_interruptions", "Workspace Silent")}
                </p>
              </div>
-             <p className={`${ty.helper} mt-1.5`}>
+             <p className={`${ty.helper} mt-1.5 text-muted-foreground`}>
                {tr("workspace_quiet_note", "No active interruptions. Your workspace is operating quietly right now.")}
              </p>
           </div>
@@ -358,7 +358,7 @@ function RecentNotificationsSection({ data, tr, mood }: { data: DashboardData, t
                   }`}>
                     {n.severity.toUpperCase()}
                   </Badge>
-                  <span className={`${ty.labelUpper} cursor-help hover:text-zinc-500 transition-colors`}>{tr("action_required", "Action Required")}</span>
+                  <span className={`${ty.labelUpper} cursor-help hover:text-foreground transition-colors`}>{tr("action_required", "Action Required")}</span>
                 </div>
               </div>
             </div>
@@ -405,9 +405,9 @@ function SuggestedActionsSection({ data, tr, mood }: { data: DashboardData, tr: 
                 <span className={`${ty.cardTitle} group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors`}>
                   {action.label}
                 </span>
-                <ChevronRight className="w-4.5 h-4.5 text-zinc-300 dark:text-zinc-700 group-hover:translate-x-1.5 transition-transform" />
+                <ChevronRight className="w-4.5 h-4.5 text-muted-foreground group-hover:translate-x-1.5 transition-transform" />
               </div>
-              <p className={`${ty.helper} mt-1.5 line-clamp-2 leading-normal`}>
+              <p className={`${ty.helper} mt-1.5 line-clamp-2 leading-normal text-muted-foreground`}>
                 {action.desc}
               </p>
             </div>
@@ -604,12 +604,12 @@ function SyncImportHealthSection({
               onClick={handleRefresh}
               disabled={isRefreshing}
               aria-label={tr("refresh_sync_pipeline", "Refresh sync pipeline status")}
-              className="h-10 w-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center text-zinc-400 hover:text-orange-600 hover:border-orange-500/50 transition-all shadow-sm active:scale-90 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:text-zinc-400 disabled:hover:border-zinc-100 dark:disabled:hover:border-zinc-800"
+              className="h-10 w-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center text-muted-foreground hover:text-orange-600 hover:border-orange-500/50 transition-all shadow-sm active:scale-90 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:text-muted-foreground disabled:hover:border-zinc-100 dark:disabled:hover:border-zinc-800"
             >
               <RefreshCw className={`w-5 h-5 ${isRefreshing ? "animate-spin" : ""}`} />
             </button>
           ) : (
-            <div className="h-10 px-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center gap-2 text-zinc-400 cursor-default select-none">
+            <div className="h-10 px-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center gap-2 text-muted-foreground cursor-default select-none">
               <RefreshCw className="w-4 h-4" />
               <span className="text-xs font-medium">{tr("sync_status_live", "Status updates live")}</span>
             </div>
