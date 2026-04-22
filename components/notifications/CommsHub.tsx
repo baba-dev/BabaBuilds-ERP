@@ -79,19 +79,19 @@ interface NotificationItemProps {
 }
 
 const typography = {
-  title: 'text-lg font-semibold tracking-tight text-zinc-100',
-  subtitle: 'text-sm text-zinc-400',
-  metadata: 'text-[11px] font-medium uppercase tracking-wider text-zinc-500',
+  title: 'text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100',
+  subtitle: 'text-sm text-zinc-600 dark:text-zinc-400',
+  metadata: 'text-[11px] font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-500',
 };
 
 const cardSurfaceClass =
-  'rounded-2xl border border-zinc-800/60 bg-zinc-900/45 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.03)]';
+  'rounded-2xl border border-zinc-200/70 bg-white/90 shadow-sm dark:border-zinc-800/60 dark:bg-zinc-900/55 dark:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.03)]';
 
 const iconContainerClass =
-  'flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 text-zinc-300 transition-colors group-hover:bg-indigo-600/20 group-hover:text-indigo-300';
+  'flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 transition-colors group-hover:bg-indigo-100 group-hover:text-indigo-700 dark:bg-zinc-900 dark:text-zinc-300 dark:group-hover:bg-indigo-600/20 dark:group-hover:text-indigo-300';
 
 const badgeClass =
-  'inline-flex items-center rounded-full border border-zinc-700/70 bg-zinc-800/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-300';
+  'inline-flex items-center rounded-full border border-zinc-300/80 bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-700 dark:border-zinc-700/70 dark:bg-zinc-800/70 dark:text-zinc-300';
 
 function NotificationItem({ notification: n, onRead }: NotificationItemProps) {
   const accent = EVENT_ACCENT[n.eventType] ?? 'border-l-zinc-500';
@@ -123,7 +123,7 @@ function NotificationItem({ notification: n, onRead }: NotificationItemProps) {
             asChild
             variant="ghost"
             size="icon-sm"
-            className="h-9 w-9 touch-manipulation rounded-lg text-zinc-400 hover:bg-indigo-500/20 hover:text-indigo-300 focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+            className="h-9 w-9 touch-manipulation rounded-lg text-zinc-500 hover:bg-indigo-100 hover:text-indigo-700 focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-zinc-400 dark:hover:bg-indigo-500/20 dark:hover:text-indigo-300 dark:focus-visible:ring-offset-zinc-950"
             title="View Details"
           >
             <a href={n.actionUrl} onClick={() => onRead(n.id)}>
@@ -138,7 +138,7 @@ function NotificationItem({ notification: n, onRead }: NotificationItemProps) {
           type="button"
           variant="ghost"
           size="icon-sm"
-          className="h-9 w-9 touch-manipulation rounded-lg text-zinc-400 hover:bg-emerald-500/20 hover:text-emerald-300 focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
+          className="h-9 w-9 touch-manipulation rounded-lg text-zinc-500 hover:bg-emerald-100 hover:text-emerald-700 focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-zinc-400 dark:hover:bg-emerald-500/20 dark:hover:text-emerald-300 dark:focus-visible:ring-offset-zinc-950"
           title="Mark as Read"
         >
           <Check className="h-4 w-4" />
@@ -200,15 +200,15 @@ function CommsHubInner({
         <div className={cn('flex items-center', isMobile ? 'gap-2.5' : 'gap-3')}>
           <div
             className={cn(
-              'flex items-center justify-center rounded-2xl bg-indigo-600/20 text-indigo-400 shadow-lg shadow-indigo-500/10',
+              'flex items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700 shadow-lg shadow-indigo-500/10 dark:bg-indigo-600/20 dark:text-indigo-400',
               isMobile ? 'h-10 w-10' : 'h-12 w-12',
             )}
           >
             <Zap className={cn(isMobile ? 'h-5 w-5' : 'h-6 w-6')} />
           </div>
           <div>
-            <DialogTitle className="text-lg font-semibold text-zinc-100">Comms Hub</DialogTitle>
-            <DialogDescription className="text-sm text-zinc-400">
+            <DialogTitle className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Comms Hub</DialogTitle>
+            <DialogDescription className="text-sm text-zinc-600 dark:text-zinc-400">
               Updates on billing, clients, and account activity.
             </DialogDescription>
           </div>
@@ -217,7 +217,7 @@ function CommsHubInner({
 
       <Tabs defaultValue="inbox" className="w-full">
         <div className={cn(isMobile ? 'px-4' : 'px-8')}>
-          <TabsList className="h-auto w-full justify-start gap-8 rounded-none border-b border-zinc-800/50 bg-transparent p-0">
+          <TabsList className="h-auto w-full justify-start gap-8 rounded-none border-b border-zinc-200/80 bg-transparent p-0 dark:border-zinc-800/50">
             <TabsTrigger value="inbox" className={tabTriggerClasses}>
               <div className="flex items-center gap-2">
                 <Bell className="h-4 w-4" />
@@ -253,7 +253,7 @@ function CommsHubInner({
                   onClick={markAllRead}
                   variant="ghost"
                   size="sm"
-                  className="h-8 text-[11px] font-bold uppercase tracking-wider text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300"
+                  className="h-8 text-[11px] font-bold uppercase tracking-wider text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                 >
                   <CheckCheck className="mr-2 h-3.5 w-3.5" />
                   Clear All
@@ -290,8 +290,8 @@ function CommsHubInner({
                   {session.name?.[0] || 'U'}
                 </div>
                 <div className="min-w-0">
-                  <h4 className="truncate text-lg font-bold text-white">{session.name}</h4>
-                  <p className="truncate text-sm text-zinc-400">{session.email}</p>
+                  <h4 className="truncate text-lg font-bold text-zinc-900 dark:text-white">{session.name}</h4>
+                  <p className="truncate text-sm text-zinc-600 dark:text-zinc-400">{session.email}</p>
                   <div className="mt-2 flex items-center gap-2">
                     <span className={cn(badgeClass, 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300')}>
                       Professional Plan
@@ -304,35 +304,35 @@ function CommsHubInner({
 
               <div className="grid grid-cols-2 gap-3">
                 <Link href="/settings/profile" className="block">
-                  <div className={cn(cardSurfaceClass, 'group flex flex-col gap-3 p-5 text-left transition-all hover:border-zinc-700/80 hover:bg-zinc-900/70')}>
+                  <div className={cn(cardSurfaceClass, 'group flex flex-col gap-3 p-5 text-left transition-all hover:border-zinc-300/90 hover:bg-zinc-100/80 dark:hover:border-zinc-700/80 dark:hover:bg-zinc-900/70')}>
                     <div className={iconContainerClass}>
                       <User className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className={cn(typography.subtitle, 'font-semibold text-zinc-100')}>Profile Settings</p>
+                      <p className={cn(typography.subtitle, 'font-semibold text-zinc-900 dark:text-zinc-100')}>Profile Settings</p>
                       <p className={typography.metadata}>Manage your personal info</p>
                     </div>
                   </div>
                 </Link>
                 <Link href="/settings/billing" className="block">
-                  <div className={cn(cardSurfaceClass, 'group flex flex-col gap-3 p-5 text-left transition-all hover:border-zinc-700/80 hover:bg-zinc-900/70')}>
+                  <div className={cn(cardSurfaceClass, 'group flex flex-col gap-3 p-5 text-left transition-all hover:border-zinc-300/90 hover:bg-zinc-100/80 dark:hover:border-zinc-700/80 dark:hover:bg-zinc-900/70')}>
                     <div className={iconContainerClass}>
                       <CreditCard className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className={cn(typography.subtitle, 'font-semibold text-zinc-100')}>Billing &amp; Plan</p>
+                      <p className={cn(typography.subtitle, 'font-semibold text-zinc-900 dark:text-zinc-100')}>Billing &amp; Plan</p>
                       <p className={typography.metadata}>View invoices &amp; upgrade</p>
                     </div>
                   </div>
                 </Link>
                 <Link href="/help" className="block">
-                  <div className={cn(cardSurfaceClass, 'group flex flex-col gap-3 p-5 text-left transition-all hover:border-zinc-700/80 hover:bg-zinc-900/70')}>
+                  <div className={cn(cardSurfaceClass, 'group flex flex-col gap-3 p-5 text-left transition-all hover:border-zinc-300/90 hover:bg-zinc-100/80 dark:hover:border-zinc-700/80 dark:hover:bg-zinc-900/70')}>
                     <div className={cn(iconContainerClass, 'group-hover:bg-sky-600/20 group-hover:text-sky-300')}>
                       <LifeBuoy className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className={cn(typography.subtitle, 'font-semibold text-zinc-100')}>Help Center</p>
-                      <p className={typography.metadata}>Guides and support</p>
+                      <p className={cn(typography.subtitle, 'font-semibold text-zinc-900 dark:text-zinc-100')}>Help</p>
+                      <p className={typography.metadata}>Open /help knowledge base</p>
                     </div>
                   </div>
                 </Link>
@@ -367,7 +367,7 @@ function CommsHubInner({
         </div>
       </Tabs>
 
-      <div className={cn('flex items-center justify-between border-t border-zinc-800/50 bg-white/[0.02]', isMobile ? 'px-4 py-3' : 'px-8 py-4')}>
+      <div className={cn('flex items-center justify-between border-t border-zinc-200/80 bg-zinc-50/80 dark:border-zinc-800/50 dark:bg-white/[0.02]', isMobile ? 'px-4 py-3' : 'px-8 py-4')}>
         <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">BabaBuilds ERP Core</p>
         <p className="text-[10px] text-zinc-600">v2.4.0-stable</p>
       </div>
@@ -400,7 +400,7 @@ export function CommsHub() {
       <SheetContent
         side={mobileSheetSide}
         className={cn(
-          'overflow-hidden border-zinc-800/50 bg-zinc-950/95 p-0 shadow-2xl backdrop-blur-2xl',
+          'overflow-hidden border-zinc-200/70 bg-white/95 p-0 text-zinc-900 shadow-2xl backdrop-blur-2xl dark:border-zinc-800/50 dark:bg-zinc-950/95 dark:text-zinc-100',
           mobileSheetSide === 'bottom' && 'max-h-[90dvh] rounded-t-3xl border-x border-t',
           mobileSheetSide === 'right' && 'w-full max-w-none border-l',
         )}
@@ -411,7 +411,7 @@ export function CommsHub() {
   }
 
   return (
-    <DialogContent className="max-w-2xl overflow-hidden border-zinc-800/50 bg-zinc-950/90 p-0 shadow-2xl backdrop-blur-2xl sm:rounded-3xl">
+    <DialogContent className="max-w-4xl overflow-hidden border-zinc-200/70 bg-white/95 p-0 text-zinc-900 shadow-2xl backdrop-blur-2xl dark:border-zinc-800/50 dark:bg-zinc-950/90 dark:text-zinc-100 sm:rounded-3xl">
       {sharedContent}
     </DialogContent>
   );

@@ -32,6 +32,7 @@ import { getCurrencySymbol } from "@/lib/currency";
 import { useTranslations } from "next-intl";
 import { TaxRateModal } from "@/components/invoice/tax-rate-modal";
 import { DataTable, type DataTableColumnDef } from "@/components/data-table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Retainer {
   id: string;
@@ -651,7 +652,7 @@ export default function RetainersHub() {
         {/* Header & Metrics */}
         <div className="sticky top-0 z-20 -mx-4 px-4 py-4 md:-mx-8 md:px-8 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200/50 dark:border-zinc-800/50 transition-all duration-300">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 max-w-7xl mx-auto w-full">
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-3">
                 <div className="p-2.5 bg-indigo-600/10 dark:bg-indigo-500/20 rounded-xl border border-indigo-200/50 dark:border-indigo-400/20">
                   <Repeat className="w-6 h-6 text-indigo-700 dark:text-indigo-400" />
@@ -663,9 +664,24 @@ export default function RetainersHub() {
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               {renderKpiCardForView(view)}
-              {view === 'list' ? renderListHeaderActions() : renderBuilderHeaderActions()}
+              {view === 'list' ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex">
+                        {renderListHeaderActions()}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs text-xs leading-relaxed">
+                      Start a recurring billing loop for one client-service pair. The first invoice date sets the cadence for all future cycles.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                renderBuilderHeaderActions()
+              )}
             </div>
           </div>
         </div>

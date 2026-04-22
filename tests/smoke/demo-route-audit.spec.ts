@@ -39,7 +39,7 @@ const EXTRA_ROUTES = [
   "/launch",
   "/admin",
   "/offline",
-  "/help-hub",
+  "/help",
 ] as const;
 
 function snapshotCounts(telemetry: {
