@@ -41,6 +41,11 @@ export type PayrollOverviewResponseDto = {
   periods: PayrollPeriodSummaryDto[];
   kpis: PayrollOverviewKpisDto;
   statusCounts: PayrollStatusCountDto[];
+  adapterStatus: {
+    source: 'WORKFORCE' | 'STANDALONE';
+    workforceModuleEnabled: boolean;
+    badgeLabel: string;
+  };
 };
 
 export type PayrollLineItemDto = {

@@ -5,12 +5,15 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { Box } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { NavUser } from "@/components/navigation/nav-user";
 import { Sidebar, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { navIconMap } from "@/src/config/nav-icons";
-import { type AppRole, navigationGroups } from "@/src/config/navigation";
+import { type AppRole, isSidebarBadgeModuleKey, navigationGroups, type NavGroup } from "@/src/config/navigation";
+import { NavItemBadge } from "@/src/components/sidebar/NavItemBadge";
+import { useSidebarBadges } from "@/src/hooks/useSidebarBadges";
+import { getAllowedNavModulesForRole, navItemIdToModule, normalizeRole } from "@/src/config/role-nav-policy";
 import { filterByRole } from "@/src/lib/nav/filterByRole";
 import { filterByFlag } from "@/src/lib/nav/filterByFlag";
 
@@ -40,11 +43,14 @@ export function AppSidebar() {
   const t = useTranslations("Sidebar");
   const { open, isMobile } = useSidebar();
   const { data: session } = useSession();
+  const { badges } = useSidebarBadges();
   const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({
     aiReconciliation: false,
   });
+  const [enabledModules, setEnabledModules] = useState<Set<string> | null>(null);
 
-  const role = (session?.user as { role?: AppRole } | undefined)?.role;
+  const sessionRole = ((session?.user as { role?: string } | undefined)?.role ?? "").toUpperCase();
+  const role = sessionRole as AppRole;
 
   useEffect(() => {
     let active = true;
@@ -64,14 +70,61 @@ export function AppSidebar() {
       }
     }
 
+    async function loadEnabledModules() {
+      try {
+        const response = await fetch('/api/workspace/modules', { cache: 'no-store' });
+        if (!response.ok) {
+          return;
+        }
+        const payload = (await response.json()) as { modules?: string[] };
+        if (!active) return;
+        setEnabledModules(new Set(Array.isArray(payload.modules) ? payload.modules : []));
+      } catch {
+        // keep last-known module state during transient failures
+      }
+    }
+
     void loadRuntimeFlags();
+    void loadEnabledModules();
 
     return () => {
       active = false;
     };
   }, []);
 
-  const visibleGroups = filterByFlag(filterByRole(navigationGroups, role), featureFlags);
+  const moduleAwareGroups = useMemo((): NavGroup[] => {
+    const moduleSet = enabledModules;
+    if (!moduleSet) return navigationGroups;
+
+    return navigationGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => !item.moduleKey || moduleSet.has(item.moduleKey)),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [enabledModules]);
+
+  const policyRole = normalizeRole(sessionRole);
+  const allowedPolicyModules = useMemo(
+    () => new Set(policyRole ? getAllowedNavModulesForRole(policyRole) : []),
+    [policyRole],
+  );
+
+  const rolePolicyFilteredGroups = useMemo((): NavGroup[] => {
+    if (!policyRole) return moduleAwareGroups;
+
+    return moduleAwareGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => {
+          const navModule = navItemIdToModule(item.id);
+          return navModule ? allowedPolicyModules.has(navModule) : true;
+        }),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [allowedPolicyModules, moduleAwareGroups, policyRole]);
+
+  const visibleGroups = filterByFlag(filterByRole(rolePolicyFilteredGroups, role), featureFlags);
 
   return (
     <Sidebar>
@@ -88,6 +141,8 @@ export function AppSidebar() {
                 {group.items.map((item) => {
                   const Icon = navIconMap[item.icon];
                   const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                  const badgeKey = item.badgeSource;
+                  const badgeState = badgeKey && isSidebarBadgeModuleKey(badgeKey) ? badges[badgeKey] : null;
 
                   return (
                     <Link
@@ -102,6 +157,13 @@ export function AppSidebar() {
                     >
                       <Icon className="h-4 w-4 shrink-0" />
                       {(open || isMobile) && <span className="truncate">{t(item.label)}</span>}
+                      <NavItemBadge
+                        badge={badgeState?.badge ?? null}
+                        isLoading={badgeState?.isLoading ?? false}
+                        isStale={badgeState?.isStale ?? false}
+                        hasError={badgeState?.hasError ?? false}
+                        collapsed={!open && !isMobile}
+                      />
                     </Link>
                   );
                 })}

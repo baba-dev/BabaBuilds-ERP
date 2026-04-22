@@ -1,49 +1,41 @@
+import type { NavItemId } from '@/src/config/navigation';
+
 export const NAV_ITEMS = {
   DASHBOARD: { key: 'dashboard', route: '/dashboard' },
   CLIENT_CRM: { key: 'client_crm', route: '/clients' },
   SERVICE_CATALOG: { key: 'service_catalog', route: '/services' },
-  QUOTES_AND_PROPOSALS: { key: 'quotes_proposals', route: '/proposals' },
+  QUOTES_PROPOSALS: { key: 'quotes_proposals', route: '/proposals' },
   SHOP: { key: 'shop', route: '/shop' },
-  INVENTORY_HUB: { key: 'inventory', route: '/inventory' },
+  IMPORT_MANAGER: { key: 'import_manager', route: '/import-manager' },
+  INVENTORY_HUB: { key: 'inventory_hub', route: '/inventory' },
+  DOCUMENTS: { key: 'documents', route: '/documents' },
+  WORKFORCE: { key: 'workforce', route: '/workforce' },
   RETAINERS_HUB: { key: 'retainers_hub', route: '/retainers' },
-  AR_COLLECTIONS: { key: 'ar_collections', route: '/ar-collections' },
-  EXPENSES_AND_MARGINS: { key: 'expenses_margins', route: '/expenses' },
-  AI_RECONCILIATION: { key: 'ai_reconciliation', route: '/reconciliation' },
   INVOICES_AND_EARNINGS: { key: 'invoices_and_earnings', route: '/income' },
-  SAVINGS_AND_TAX: { key: 'savings_tax', route: '/tax' },
+  REPORTING_CENTER: { key: 'reporting_center', route: '/reporting' },
+  EXPENSES_MARGINS: { key: 'expenses_margins', route: '/expenses' },
+  AI_RECONCILIATION: { key: 'ai_reconciliation', route: '/reconciliation' },
+  CASH_FLOW: { key: 'cash_flow', route: '/cash-flow' },
+  AR_COLLECTIONS: { key: 'ar_collections', route: '/ar-collections' },
+  PAYROLL: { key: 'payroll', route: '/payroll' },
+  SAVINGS_TAX: { key: 'savings_tax', route: '/tax' },
   CA_COMPLIANCE: { key: 'ca_compliance', route: '/ca-portal' },
-} as const;
+  SETTINGS: { key: 'settings', route: '/settings' },
+} as const satisfies Record<string, { key: NavItemId; route: string }>;
 
 export type NavModule = keyof typeof NAV_ITEMS;
 
-/**
- * Business-oriented roles + currently deployed workspace roles.
- */
-export type AppRole =
-  | 'OWNER'
-  | 'SALES'
-  | 'FINANCE'
-  | 'OPS'
-  | 'ADMIN'
-  | 'MEMBER'
-  | 'VIEWER';
+export type AppRole = 'OWNER' | 'SALES' | 'FINANCE' | 'OPS' | 'ADMIN' | 'MEMBER' | 'VIEWER';
 
 const ALL_MODULES = Object.keys(NAV_ITEMS) as NavModule[];
 
-/**
- * Explicit allow-list by role.
- *
- * Secure defaults:
- * - Missing role -> denied.
- * - Missing module mapping -> denied.
- */
 export const ROLE_NAV_ALLOWLIST: Readonly<Record<AppRole, readonly NavModule[]>> = {
   OWNER: ALL_MODULES,
   SALES: [
     'DASHBOARD',
     'CLIENT_CRM',
     'SERVICE_CATALOG',
-    'QUOTES_AND_PROPOSALS',
+    'QUOTES_PROPOSALS',
     'SHOP',
     'INVOICES_AND_EARNINGS',
     'AR_COLLECTIONS',
@@ -52,14 +44,15 @@ export const ROLE_NAV_ALLOWLIST: Readonly<Record<AppRole, readonly NavModule[]>>
     'DASHBOARD',
     'INVOICES_AND_EARNINGS',
     'AR_COLLECTIONS',
-    'EXPENSES_AND_MARGINS',
+    'EXPENSES_MARGINS',
+    'CASH_FLOW',
+    'PAYROLL',
     'AI_RECONCILIATION',
-    'SAVINGS_AND_TAX',
+    'SAVINGS_TAX',
     'CA_COMPLIANCE',
+    'REPORTING_CENTER',
   ],
-  OPS: ['DASHBOARD', 'INVENTORY_HUB', 'RETAINERS_HUB', 'SERVICE_CATALOG', 'SHOP'],
-
-  // Backward-compatibility with currently deployed workspace roles.
+  OPS: ['DASHBOARD', 'INVENTORY_HUB', 'RETAINERS_HUB', 'WORKFORCE', 'DOCUMENTS', 'SERVICE_CATALOG', 'SHOP'],
   ADMIN: ALL_MODULES,
   MEMBER: ALL_MODULES,
   VIEWER: ALL_MODULES,
@@ -69,13 +62,13 @@ const ROUTE_ALIASES: Readonly<Partial<Record<NavModule, readonly string[]>>> = {
   INVOICES_AND_EARNINGS: ['/invoice', '/ledger'],
 };
 
-function normalizeRole(role: string): AppRole | null {
+export function normalizeRole(role: string): AppRole | null {
   const normalized = role.trim().toUpperCase();
   const knownRoles = new Set<AppRole>(['OWNER', 'SALES', 'FINANCE', 'OPS', 'ADMIN', 'MEMBER', 'VIEWER']);
   return knownRoles.has(normalized as AppRole) ? (normalized as AppRole) : null;
 }
 
-function normalizeRoutePath(route: string): string {
+export function normalizeRoutePath(route: string): string {
   const [pathOnly] = route.split(/[?#]/, 1);
   const normalized = pathOnly.trim();
 
@@ -102,6 +95,12 @@ function getModuleByRoute(route: string): NavModule | null {
   }
 
   return null;
+}
+
+export function navItemIdToModule(itemId: NavItemId): NavModule | null {
+  const entries = Object.entries(NAV_ITEMS) as Array<[NavModule, (typeof NAV_ITEMS)[NavModule]]>;
+  const match = entries.find(([, item]) => item.key === itemId);
+  return match?.[0] ?? null;
 }
 
 export function getAllowedNavModulesForRole(role: string): readonly NavModule[] {

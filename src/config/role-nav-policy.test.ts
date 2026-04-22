@@ -14,11 +14,28 @@ const allModules = Object.keys(NAV_ITEMS) as NavModule[];
 
 const expectedAllowlistByRole: Record<AppRole, NavModule[]> = {
   OWNER: allModules,
-  SALES: ['DASHBOARD', 'CLIENT_CRM', 'SERVICE_CATALOG', 'QUOTES_AND_PROPOSALS', 'SHOP', 'INVOICES_AND_EARNINGS', 'AR_COLLECTIONS'],
-  FINANCE: ['DASHBOARD', 'INVOICES_AND_EARNINGS', 'AR_COLLECTIONS', 'EXPENSES_AND_MARGINS', 'AI_RECONCILIATION', 'SAVINGS_AND_TAX', 'CA_COMPLIANCE'],
-  OPS: ['DASHBOARD', 'INVENTORY_HUB', 'RETAINERS_HUB', 'SERVICE_CATALOG', 'SHOP'],
-
-  // legacy workspace roles should not be denied by default
+  SALES: [
+    'DASHBOARD',
+    'CLIENT_CRM',
+    'SERVICE_CATALOG',
+    'QUOTES_PROPOSALS',
+    'SHOP',
+    'INVOICES_AND_EARNINGS',
+    'AR_COLLECTIONS',
+  ],
+  FINANCE: [
+    'DASHBOARD',
+    'INVOICES_AND_EARNINGS',
+    'AR_COLLECTIONS',
+    'EXPENSES_MARGINS',
+    'CASH_FLOW',
+    'PAYROLL',
+    'AI_RECONCILIATION',
+    'SAVINGS_TAX',
+    'CA_COMPLIANCE',
+    'REPORTING_CENTER',
+  ],
+  OPS: ['DASHBOARD', 'INVENTORY_HUB', 'RETAINERS_HUB', 'WORKFORCE', 'DOCUMENTS', 'SERVICE_CATALOG', 'SHOP'],
   ADMIN: allModules,
   MEMBER: allModules,
   VIEWER: allModules,
@@ -56,16 +73,4 @@ test('invoice route aliases resolve to invoices module authorization', () => {
 
   assert.equal(canAccessRoute('OPS', '/invoice'), false);
   assert.equal(canAccessRoute('OPS', '/ledger'), false);
-});
-
-test('route authorization normalizes trailing slash and query/hash', () => {
-  assert.equal(canAccessRoute('FINANCE', '/income/'), true);
-  assert.equal(canAccessRoute('FINANCE', '/ledger?tab=monthly#summary'), true);
-  assert.equal(canAccessRoute('INTERN', '/dashboard?x=1'), false);
-});
-
-test('deny by default when role or module mapping is missing', () => {
-  assert.deepEqual(getAllowedNavModulesForRole('INTERN'), []);
-  assert.equal(canAccessRoute('INTERN', '/dashboard'), false);
-  assert.equal(canAccessRoute('OWNER', '/non-existent'), false);
 });

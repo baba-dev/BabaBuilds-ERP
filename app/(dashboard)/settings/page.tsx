@@ -73,6 +73,9 @@ export default function SettingsWizard() {
   const [importManagerEnabled, setImportManagerEnabled] = useState(false);
   const [importManagerLoading, setImportManagerLoading] = useState(false);
   const [showDisableImportManagerConfirm, setShowDisableImportManagerConfirm] = useState(false);
+  const [taxAdvancedEnabled, setTaxAdvancedEnabled] = useState(false);
+  const [taxAdvancedLoading, setTaxAdvancedLoading] = useState(false);
+  const [showDisableTaxAdvancedConfirm, setShowDisableTaxAdvancedConfirm] = useState(false);
   // Team invite state
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("MEMBER");
@@ -138,8 +141,8 @@ export default function SettingsWizard() {
           setReportingCenterEnabled(d.modules.includes('REPORTING_CENTER'));
           setArCollectionsEnabled(d.modules.includes('AR_COLLECTIONS'));
           setRevenuePipelineEnabled(d.modules.includes('REVENUE_PIPELINE'));
-          setReportingCenterEnabled(d.modules.includes('REPORTING_CENTER'));
           setImportManagerEnabled(d.modules.includes('IMPORT_MANAGER'));
+          setTaxAdvancedEnabled(d.modules.includes('TAX_ADVANCED'));
         }
       })
       .catch(() => {});
@@ -1733,6 +1736,69 @@ export default function SettingsWizard() {
                 </div>
               </div>
 
+              {/* Tax Advanced module card */}
+              <div className={cn(
+                "rounded-xl border-2 p-5 transition-all duration-200",
+                taxAdvancedEnabled
+                  ? "border-blue-500/50 bg-blue-50/30 dark:bg-blue-950/10"
+                  : "border-zinc-200 dark:border-zinc-800"
+              )}>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className={cn(
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all",
+                      taxAdvancedEnabled ? "bg-blue-600 shadow-lg shadow-blue-500/20" : "bg-zinc-100 dark:bg-zinc-800"
+                    )}>
+                      <ShieldCheck className={cn("h-5 w-5", taxAdvancedEnabled ? "text-white" : "text-zinc-500")} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Tax Advanced</p>
+                        <Badge variant="outline" className={cn(
+                          "text-[10px] font-bold uppercase",
+                          taxAdvancedEnabled
+                            ? "border-blue-500/30 text-blue-600 dark:text-blue-400"
+                            : "border-zinc-300 dark:border-zinc-700 text-zinc-500"
+                        )}>
+                          {taxAdvancedEnabled ? "Enabled" : "Disabled"}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2 max-w-sm">
+                        Tax readiness pipelines, override governance, import diagnostics, and audit-grade tax operations in the Tax workspace.
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="tax-advanced-module-toggle"
+                    checked={taxAdvancedEnabled}
+                    disabled={taxAdvancedLoading}
+                    onCheckedChange={async (checked) => {
+                      if (!checked) {
+                        setShowDisableTaxAdvancedConfirm(true);
+                        return;
+                      }
+                      setTaxAdvancedLoading(true);
+                      try {
+                        const res = await fetch('/api/workspace/modules', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ moduleKey: 'TAX_ADVANCED', enabled: true }),
+                        });
+                        if (res.ok) {
+                          setTaxAdvancedEnabled(true);
+                          toast.success('Tax Advanced module enabled');
+                        } else {
+                          toast.error('Failed to enable module');
+                        }
+                      } finally {
+                        setTaxAdvancedLoading(false);
+                      }
+                    }}
+                    className="data-[state=checked]:bg-blue-600 shrink-0 mt-1"
+                  />
+                </div>
+              </div>
+
               {/* Import Manager module card */}
               <div className={cn(
                 "rounded-xl border-2 p-5 transition-all duration-200",
@@ -2115,6 +2181,49 @@ export default function SettingsWizard() {
                   className="bg-rose-600 hover:bg-rose-500 text-white border-none"
                 >
                   {arCollectionsLoading ? 'Disabling...' : 'Disable AR Collections'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={showDisableTaxAdvancedConfirm} onOpenChange={setShowDisableTaxAdvancedConfirm}>
+            <DialogContent className="sm:max-w-md bg-zinc-950 border-white/10">
+              <DialogHeader>
+                <DialogTitle className="text-zinc-50 flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-400" /> Disable Tax Advanced?
+                </DialogTitle>
+                <DialogDescription className="text-zinc-400">
+                  Tax operations history, readiness runs, and override records will be <strong className="text-zinc-200">preserved</strong>.
+                  Advanced tax workflows will be hidden until re-enabled.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="ghost" onClick={() => setShowDisableTaxAdvancedConfirm(false)} className="text-zinc-400">Cancel</Button>
+                <Button
+                  id="confirm-disable-tax-advanced"
+                  disabled={taxAdvancedLoading}
+                  onClick={async () => {
+                    setTaxAdvancedLoading(true);
+                    try {
+                      const res = await fetch('/api/workspace/modules', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ moduleKey: 'TAX_ADVANCED', enabled: false }),
+                      });
+                      if (res.ok) {
+                        setTaxAdvancedEnabled(false);
+                        setShowDisableTaxAdvancedConfirm(false);
+                        toast.success('Tax Advanced module disabled');
+                      } else {
+                        toast.error('Failed to disable module');
+                      }
+                    } finally {
+                      setTaxAdvancedLoading(false);
+                    }
+                  }}
+                  className="bg-rose-600 hover:bg-rose-500 text-white border-none"
+                >
+                  {taxAdvancedLoading ? 'Disabling...' : 'Disable Tax Advanced'}
                 </Button>
               </div>
             </DialogContent>
