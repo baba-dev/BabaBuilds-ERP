@@ -258,7 +258,7 @@ function RecentActivitySection({ data, tr }: { data: DashboardData, tr: any }) {
           {tr("workspace_signals", "Workspace Stream")}
         </h4>
         {hasActivity && (
-          <Link href="/logs" className={`${ty.labelUpper} text-orange-600 dark:text-orange-400 hover:underline opacity-80 hover:opacity-100 transition-all inline-flex items-center gap-1 group`}>
+          <Link href="/admin" className={`${ty.labelUpper} text-orange-600 dark:text-orange-400 hover:underline opacity-80 hover:opacity-100 transition-all inline-flex items-center gap-1 group`}>
             {tr("audit_feed", "Audit Feed")}
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
           </Link>
