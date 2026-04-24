@@ -12,7 +12,7 @@ type EntityType = "client" | "invoice" | "proposal";
 
 const ENTITY_ROUTE_MAP: Record<EntityType, string> = {
   client: "/clients",
-  invoice: "/ledger",
+  invoice: "/income",
   proposal: "/proposals",
 };
 

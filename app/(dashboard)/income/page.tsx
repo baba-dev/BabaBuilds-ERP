@@ -97,7 +97,7 @@ export default function InvoicesAndEarnings() {
 
         // If AI aimed at ledger or income, handle pay-modal autofill; if aimed at invoice, open the modal
         if (isFresh && data) {
-          if (path === "/income" || path === "/ledger") {
+          if (path === "/income") {
             if (data.invoiceNumber || data.client) {
               const matchedInvoice = invoices.find((inv) =>
                 (data.invoiceNumber && inv.invoiceNumber.toLowerCase().includes(data.invoiceNumber.toLowerCase())) ||

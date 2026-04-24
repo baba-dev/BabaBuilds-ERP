@@ -52,6 +52,7 @@ function walk(dir) {
 
 function listAppRoutes() {
   const routes = new Set();
+  const routePatterns = [];
 
   function walkApp(dir, segments = []) {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -59,7 +60,19 @@ function listAppRoutes() {
     if (hasPage) {
       const routeSegments = segments.filter((seg) => !seg.startsWith('('));
       const route = `/${routeSegments.join('/')}`.replace(/\/+/g, '/');
-      routes.add(route === '/' ? '/' : route.replace(/\/$/, ''));
+      const normalized = route === '/' ? '/' : route.replace(/\/$/, '');
+      routes.add(normalized);
+      const regex = new RegExp(
+        `^${normalized
+          .split('/')
+          .map((part) => {
+            if (!part) return '';
+            if (part.startsWith('[') && part.endsWith(']')) return '[^/]+';
+            return part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          })
+          .join('/')}$`,
+      );
+      routePatterns.push({ route: normalized, regex });
     }
 
     for (const entry of entries) {
@@ -69,7 +82,7 @@ function listAppRoutes() {
   }
 
   walkApp(appDir, []);
-  return routes;
+  return { routes, routePatterns };
 }
 
 function normalizeRoute(route) {
@@ -114,19 +127,24 @@ function collectRouteReferences(files) {
   return usage;
 }
 
+function matchesKnownRoute(route, knownRoutes, routePatterns) {
+  if (knownRoutes.has(route)) return true;
+  return routePatterns.some((p) => p.regex.test(route));
+}
+
 function dedupe(arr) {
   return [...new Set(arr)];
 }
 
 function buildReport() {
   const sourceFiles = sourceRoots.flatMap((root) => walk(root));
-  const knownRoutes = listAppRoutes();
+  const { routes: knownRoutes, routePatterns } = listAppRoutes();
   const usage = collectRouteReferences(sourceFiles);
 
   const checkedRoutes = [];
   const brokenRoutes = [];
   for (const [route, files] of usage.entries()) {
-    const exists = knownRoutes.has(route);
+    const exists = matchesKnownRoute(route, knownRoutes, routePatterns);
     const entry = {
       route,
       exists,
