@@ -112,7 +112,7 @@ async function generateRetainerPDF(
   const cfLinkBlue = rgb(0, 0.33, 0.70);  
 
   const drawText = (text: string, x: number, y: number, size: number, isBold = false, align = 'left', color = textDark, isItalic = false) => {
-    let currentFont = isBold ? fontBold : (isItalic ? fontOblique : font);
+    const currentFont = isBold ? fontBold : (isItalic ? fontOblique : font);
     let textX = x;
     if (align === 'right') textX = x - currentFont.widthOfTextAtSize(text, size);
     else if (align === 'center') textX = x - (currentFont.widthOfTextAtSize(text, size) / 2);
@@ -214,7 +214,7 @@ async function generateRetainerPDF(
     drawMeta(safeTaxIdLabel, profile.gstin || "N/A");
     drawMeta("Company name", profile.companyName);
 
-    let billY = 170;
+    const billY = 170;
     drawText(profile.companyName, leftMargin, billY, 9, true, 'left', black);
     const profileAddr = profile.address.split(', ');
     drawText(profileAddr[0] || "", leftMargin, billY + 14, 9, false, 'left', textDark);
@@ -231,7 +231,7 @@ async function generateRetainerPDF(
     drawText(client.country, rightColX, billY + 56, 9, false, 'left', textDark);
     if (client.email) drawText(client.email, rightColX, billY + 70, 9, false, 'left', textDark);
 
-    let calloutY = 270;
+    const calloutY = 270;
     const bigDueText = `${currencyCode} ${formattedTotal} due ${dueDate.toLocaleDateString(userLocale, { month: 'long', day: 'numeric', year: 'numeric' })}`;
     drawText(bigDueText, leftMargin, calloutY, 14, true, 'left', black);
     drawText(`Service Classification: ${retainer.sacCode || profile.defaultSacCode || 'N/A'}`, leftMargin, calloutY + 24, 9, false, 'left', textMuted);

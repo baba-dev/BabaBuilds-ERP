@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,8 +51,8 @@ export function CashFlowPeriodBreakdown({
 
   // Open a focused period when deep-linked.
   // We keep this client-only and local to avoid forcing state into parent pages.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useMemo(() => {
+   
+  useEffect(() => {
     if (!defaultOpenPeriodId) return;
     setOpen((prev) => (prev[defaultOpenPeriodId] ? prev : { ...prev, [defaultOpenPeriodId]: true }));
   }, [defaultOpenPeriodId]);

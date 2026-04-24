@@ -1,17 +1,15 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { format } from "date-fns";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import type { ReactNode } from "react";
 import {
-  Package, Plus, Search, Archive, AlertTriangle, AlertCircle, ArrowLeft, ArrowUpRight, ArrowDownRight, Tag, Activity
+  Package, Plus, Search, Archive, AlertCircle, ArrowDownRight
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useFormat } from "@/hooks/use-format";
-import { getCurrencySymbol } from "@/lib/currency";
 import { InventoryDetailSheet } from "@/components/inventory/InventoryDetailSheet";
 import { MobileScanner } from "@/components/inventory/MobileScanner";
 import { ProductFormModal } from "@/components/inventory/ProductFormModal";
@@ -20,33 +18,49 @@ import { QuickAdjustModal } from "@/components/inventory/QuickAdjustModal";
 import { LayoutGrid, List, MapPin, RefreshCw } from "lucide-react";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 
+type InventoryProduct = {
+  id: string;
+  sku: string;
+  name: string;
+  category: string | null;
+  currentStock: number;
+  safetyStock: number;
+  status: string;
+  location: string | null;
+  costPrice: number;
+};
+
+type ProductColumn = {
+  id: string;
+  header: ReactNode;
+  accessor?: (p: InventoryProduct) => ReactNode;
+  className?: string;
+  sortable?: boolean;
+  sortAccessor?: (p: InventoryProduct) => number | string;
+  cell?: (p: InventoryProduct) => ReactNode;
+};
+
 export default function InventoryHub() {
-  const [view, setView] = useState<'list' | 'draft_po'>('list');
   const [isLoading, setIsLoading] = useState(true);
 
   // Globalization
-  const { fCurrency, currency, locale } = useFormat();
-  const currencySymbol = getCurrencySymbol(currency, locale);
+  const { fCurrency } = useFormat();
 
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<InventoryProduct[]>([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
-  const [selectedProductForAdjust, setSelectedProductForAdjust] = useState<any>(null);
+  const [selectedProductForAdjust, setSelectedProductForAdjust] = useState<InventoryProduct | null>(null);
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
-  const [selectedProductForDetail, setSelectedProductForDetail] = useState<any>(null);
+  const [selectedProductForDetail, setSelectedProductForDetail] = useState<InventoryProduct | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
   
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'list'|'grid'>('list');
 
-  useEffect(() => {
-    fetchProducts({ mode: 'reset' });
-  }, [view]);
-
-  const fetchProducts = async ({ mode }: { mode: 'reset' | 'more' } = { mode: 'reset' }) => {
+  const fetchProducts = useCallback(async ({ mode }: { mode: 'reset' | 'more' } = { mode: 'reset' }) => {
     setIsLoading(true);
     try {
       const limit = 200;
@@ -72,21 +86,25 @@ export default function InventoryHub() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [globalFilter, nextCursor]);
+
+  useEffect(() => {
+    fetchProducts({ mode: 'reset' });
+  }, [fetchProducts]);
 
   useEffect(() => {
     const id = window.setTimeout(() => {
       fetchProducts({ mode: 'reset' }).catch(() => undefined);
     }, 250);
     return () => window.clearTimeout(id);
-  }, [globalFilter]);
+  }, [fetchProducts, globalFilter]);
 
-  const openAdjustModal = (product: any) => {
+  const openAdjustModal = (product: InventoryProduct) => {
     setSelectedProductForAdjust(product);
     setAdjustModalOpen(true);
   };
 
-  const openDetailSheet = (product: any) => {
+  const openDetailSheet = (product: InventoryProduct) => {
     setSelectedProductForDetail(product);
     setDetailSheetOpen(true);
   };
@@ -94,23 +112,21 @@ export default function InventoryHub() {
   // Metrics
   const totalValue = products.reduce((sum, p) => sum + (p.currentStock * p.costPrice), 0);
   const outOfStockCount = products.filter(p => p.currentStock === 0).length;
-  const lowStockCount = products.filter(p => p.currentStock > 0 && p.currentStock <= p.safetyStock).length;
-
   const filteredProducts = useMemo(() => products, [products]);
 
-  const productColumns: { id: string; header: any; accessor?: (p: any) => any; className?: string; sortable?: boolean; sortAccessor?: (p: any) => any; cell?: (p: any) => any }[] = [
+  const productColumns: ProductColumn[] = [
     {
       id: "sku",
       header: "SKU",
-      accessor: (p: any) => p.sku,
+      accessor: (p) => p.sku,
       className: "px-6 py-4 w-[100px] text-zinc-500 font-mono text-xs font-bold",
     },
     {
       id: "product",
       header: "Product",
-      accessor: (p: any) => p.name,
+      accessor: (p) => p.name,
       className: "px-2 py-4",
-      cell: (p: any) => (
+      cell: (p) => (
         <div className="flex flex-col">
           <span className="font-extrabold text-[13px] text-zinc-900 dark:text-zinc-100 cursor-pointer hover:text-orange-600 dark:hover:text-orange-400 transition-colors" onClick={() => openDetailSheet(p)}>
             {p.name}
@@ -123,9 +139,9 @@ export default function InventoryHub() {
       id: "stock",
       header: "Stock",
       sortable: true,
-      sortAccessor: (p: any) => p.currentStock,
+      sortAccessor: (p) => p.currentStock,
       className: "px-2 py-4 font-bold text-sm",
-      cell: (p: any) => {
+      cell: (p) => {
         const isDanger = p.currentStock === 0;
         const isCritical = p.currentStock > 0 && p.currentStock <= (p.safetyStock / 2);
         const isWarning = p.currentStock > 0 && p.currentStock <= p.safetyStock && !isCritical;
@@ -143,7 +159,7 @@ export default function InventoryHub() {
       id: "level",
       header: "Level",
       className: "px-2 py-4 w-[100px]",
-      cell: (p: any) => {
+      cell: (p) => {
         const isDanger = p.currentStock === 0;
         const isCritical = p.currentStock > 0 && p.currentStock <= (p.safetyStock / 2);
         const fillWidth = Math.min((p.currentStock / (p.safetyStock * 3 || 10)) * 100, 100);
@@ -161,9 +177,9 @@ export default function InventoryHub() {
     {
       id: "status",
       header: "Status",
-      accessor: (p: any) => p.status,
+      accessor: (p) => p.status,
       className: "px-2 py-4 text-xs font-bold",
-      cell: (p: any) => {
+      cell: (p) => {
         if (p.currentStock === 0) return <span className="text-rose-600 text-[11px] font-medium tracking-wide">Out of Stock</span>;
         if (p.currentStock <= (p.safetyStock / 2)) return <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] tracking-wide">Critical</span>;
         if (p.currentStock <= p.safetyStock) return <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-400 text-[10px] tracking-wide">Low Stock</span>;
@@ -174,7 +190,7 @@ export default function InventoryHub() {
       id: "location",
       header: "Location",
       className: "px-2 py-4 text-[11px] font-medium text-zinc-500 whitespace-nowrap",
-      cell: (p: any) => p.location ? (
+      cell: (p) => p.location ? (
         <span className="flex items-center gap-1.5"><MapPin className="w-3 h-3 opacity-60" /> {p.location}</span>
       ) : <span className="text-zinc-300 dark:text-zinc-700">-</span>
     },
@@ -182,9 +198,9 @@ export default function InventoryHub() {
       id: "value",
       header: "Value",
       sortable: true,
-      sortAccessor: (p: any) => p.currentStock * p.costPrice,
+      sortAccessor: (p) => p.currentStock * p.costPrice,
       className: "font-semibold text-[13px] text-zinc-800 dark:text-zinc-200 text-right px-6",
-      cell: (p: any) => (
+      cell: (p) => (
         <div className="flex items-center justify-end gap-3">
           {fCurrency(p.currentStock * (p.costPrice || 0))}
           <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100" onClick={(e) => { e.stopPropagation(); openAdjustModal(p); }}>
@@ -281,7 +297,7 @@ export default function InventoryHub() {
                   <tr>
                     {productColumns.map(col => (
                       <th key={col.id as string} className="px-4 py-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest bg-transparent">
-                        {col.header as any}
+                        {col.header}
                       </th>
                     ))}
                   </tr>

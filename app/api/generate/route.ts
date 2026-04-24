@@ -5,7 +5,6 @@ import { authOptions } from "@/lib/auth";
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import { generateInvoicePDF } from '@/lib/pdf/generator';
 import fs from 'fs';
-import path from 'path';
 import { Prisma } from "@prisma/client";
 import crypto from 'crypto';
 import { calculateInvoiceTotals } from '@/lib/invoice/totals';
@@ -20,6 +19,7 @@ import { determineAndPersistTax } from '@/src/server/tax/service';
 import { createPrismaTaxPersistence } from '@/lib/tax/prisma-tax-persistence';
 import { appendTaxAuditEvent, newTaxCorrelationId } from '@/lib/tax/audit';
 import { buildInvoiceDeliveryEmail } from '@/lib/notifications/transactional-email-templates';
+import type { PDFService } from '@/lib/pdf/generator';
 import {
   assertFreeTierMonthlyInvoiceAllowed,
   canInjectGatewayPaymentLinks,
@@ -30,13 +30,61 @@ const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
 const IDEMPOTENCY_PENDING = "PENDING";
 const IDEMPOTENCY_CONSUMED = "CONSUMED";
 
-function canonicalize(value: any): any {
+type JsonLike = null | boolean | number | string | JsonLike[] | { [key: string]: JsonLike };
+
+type SessionWithWorkspace = {
+  workspaceId?: string;
+  user?: {
+    id?: string | null;
+    email?: string | null;
+  };
+};
+
+type ServiceInput = {
+  title?: string;
+  amount?: number | string;
+  productId?: string;
+  quantity?: number;
+  unitPrice?: number | string;
+  sac?: {
+    igstRate?: number | null;
+  };
+  taxRate?: number | null;
+};
+
+type SanitizedService = ServiceInput & {
+  title: string;
+  amount: number;
+  amountDecimal: Prisma.Decimal;
+  nicDetails: string;
+};
+
+type PrismaInvoiceItemCreateData = {
+  productId: string | null;
+  description: string;
+  quantity: number;
+  unitPrice: Prisma.Decimal;
+  taxRate: number;
+  totalAmount: Prisma.Decimal;
+};
+
+type ProfileSettings = {
+  defaultTaxRate?: number | null;
+  invoiceTheme?: string | null;
+  defaultGateway?: string | null;
+  razorpayKeyId?: string | null;
+  razorpayKeySecret?: string | null;
+  stripePublishableKey?: string | null;
+  stripeSecretKey?: string | null;
+};
+
+function canonicalize(value: JsonLike): JsonLike {
   if (Array.isArray(value)) return value.map(canonicalize);
   if (value && typeof value === "object") {
     const sortedKeys = Object.keys(value).sort();
-    const result: Record<string, any> = {};
+    const result: Record<string, JsonLike> = {};
     for (const key of sortedKeys) {
-      result[key] = canonicalize(value[key]);
+      result[key] = canonicalize((value as Record<string, JsonLike>)[key]);
     }
     return result;
   }
@@ -44,7 +92,7 @@ function canonicalize(value: any): any {
 }
 
 function buildRequestHash(payload: unknown): string {
-  const canonicalPayload = canonicalize(payload);
+  const canonicalPayload = canonicalize(payload as JsonLike);
   return crypto.createHash("sha256").update(JSON.stringify(canonicalPayload)).digest("hex");
 }
 
@@ -61,15 +109,25 @@ export async function POST(request: Request) {
 
   try {
     // 1. SECURITY LOCK
-    const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    const session = (await getServerSession(authOptions)) as SessionWithWorkspace | null;
+    if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    workspaceId = (session as any).workspaceId;
-    actorId = (session as any)?.user?.id ?? null;
-    actorEmail = (session as any)?.user?.email ?? null;
+    workspaceId = session.workspaceId;
+    actorId = session.user?.id ?? null;
+    actorEmail = session.user?.email ?? null;
 
-    const body = await request.json();
+    const body = (await request.json()) as {
+      idempotencyKey?: string;
+      clientId?: string;
+      billingMonth?: string;
+      sacCode?: string;
+      services?: ServiceInput[];
+      customDate?: string;
+      sendEmail?: boolean;
+      status?: string;
+      taxRateOverride?: number;
+    };
     idempotencyKey = request.headers.get("Idempotency-Key")?.trim() || body?.idempotencyKey?.trim() || null;
     const idempotencyBody = { ...body };
     delete idempotencyBody.idempotencyKey;
@@ -97,7 +155,7 @@ export async function POST(request: Request) {
 
           if (existing.status === IDEMPOTENCY_CONSUMED) {
             if (existing.responseBody) {
-              return NextResponse.json(existing.responseBody as any, { status: 200 });
+              return NextResponse.json(existing.responseBody, { status: 200 });
             }
             if (existing.invoice) {
               return NextResponse.json({
@@ -137,11 +195,14 @@ export async function POST(request: Request) {
     }
 
     const { clientId, billingMonth, sacCode, services, customDate, sendEmail: shouldSendEmail, status: rawStatus, taxRateOverride } = body;
+    const billingMonthValue = typeof billingMonth === "string" ? billingMonth : "";
+    const servicesInput: ServiceInput[] = Array.isArray(services) ? services : [];
+    const taxRateOverrideValue = typeof taxRateOverride === 'number' ? taxRateOverride : undefined;
     const normalizedStatus = toInvoiceStatus(rawStatus);
     const validationErrors: Array<{ field: string; message: string; index?: number }> = [];
 
     if (!clientId) return NextResponse.json({ error: "No client selected." }, { status: 400 });
-    if (typeof billingMonth !== "string" || billingMonth.trim().length === 0) {
+    if (billingMonthValue.trim().length === 0) {
       validationErrors.push({
         field: "billingMonth",
         message: "Billing month is required and must be a non-empty string.",
@@ -159,7 +220,7 @@ export async function POST(request: Request) {
       }
     }
 
-    if (!Array.isArray(services) || services.length === 0) {
+    if (servicesInput.length === 0) {
       validationErrors.push({
         field: "services",
         message: "At least one service is required.",
@@ -175,8 +236,8 @@ export async function POST(request: Request) {
 
     // --- 🚨 SECURITY PATCH: Prevent malformed service payloads / NaN Poisoning ---
     const MAX_SERVICE_TITLE_LENGTH = 200;
-    const sanitizedServices = services
-      .map((s: any, index: number) => {
+    const sanitizedServices: SanitizedService[] = servicesInput
+      .map((s: ServiceInput, index: number): SanitizedService => {
         const title = typeof s?.title === "string" ? s.title.trim() : "";
         if (!title) {
           validationErrors.push({
@@ -201,7 +262,13 @@ export async function POST(request: Request) {
           });
         }
 
-        return { ...s, title, amount: amt, amountDecimal: toDecimal(amt).toDecimalPlaces(2) };
+        return {
+          ...s,
+          title,
+          amount: amt,
+          amountDecimal: toDecimal(amt).toDecimalPlaces(2),
+          nicDetails: '',
+        };
       });
 
     if (validationErrors.length > 0) {
@@ -230,7 +297,7 @@ export async function POST(request: Request) {
     const dueDate = new Date(date);
     dueDate.setDate(dueDate.getDate() + 7);
 
-    const serviceDesc = sanitizedServices.map((s: any) => s.title).join(" + ");
+    const serviceDesc = sanitizedServices.map((s) => s.title).join(" + ");
     if (!serviceDesc.trim()) {
       return NextResponse.json(
         {
@@ -262,7 +329,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (billingMonth.trim().length > 100) {
+    if (billingMonthValue.trim().length > 100) {
       return NextResponse.json(
         {
           error: "Validation failed",
@@ -285,14 +352,15 @@ export async function POST(request: Request) {
     if (!profile) return NextResponse.json({ error: "Business profile missing. Please complete Settings Wizard." }, { status: 400 });
     const countryCode = profile.workspace?.countryCode || "IN";
     const serviceTaxRates = sanitizedServices
-      .map((service: any) => service?.sac?.igstRate ?? service?.taxRate ?? null)
-      .filter((rate: any) => rate !== null && rate !== undefined);
+      .map((service: SanitizedService) => service.sac?.igstRate ?? service.taxRate ?? null)
+      .filter((rate: number | null): rate is number => rate !== null && rate !== undefined);
+    const profileSettings = profile as typeof profile & ProfileSettings;
     const taxResolution = resolveTaxRate({
       countryCode,
       isTaxExempt: Boolean(client.isExport),
       serviceTaxRates,
-      workspaceDefaultTaxRate: (profile as any).defaultTaxRate,
-      taxRateOverride,
+      workspaceDefaultTaxRate: profileSettings.defaultTaxRate,
+      taxRateOverride: taxRateOverrideValue,
     });
 
     if (taxResolution.requiresUserInput) {
@@ -306,7 +374,7 @@ export async function POST(request: Request) {
       }, { status: 422 });
     }
 
-    if (taxResolution.source === 'override' && taxRateOverride !== undefined && taxRateOverride !== null && taxRateOverride !== '') {
+    if (taxResolution.source === 'override' && taxRateOverrideValue !== undefined) {
       await prisma.businessProfile.update({
         where: { workspaceId },
         data: { defaultTaxRate: taxResolution.taxRate },
@@ -339,7 +407,6 @@ export async function POST(request: Request) {
 
     const paidFeatures = canInjectGatewayPaymentLinks(billingSnapshot);
     const userLocale = profile.workspace?.countryCode === "IN" ? "en-IN" : "en-US";
-    const invoiceTheme = (profile as any).invoiceTheme || "DESIGN_1";
     const baseCurrency = profile.workspace?.baseCurrency || 'INR';
     const invoiceDueDate = new Date(invoiceDate);
     invoiceDueDate.setDate(invoiceDueDate.getDate() + 7);
@@ -349,7 +416,7 @@ export async function POST(request: Request) {
     const currentMonth = invoiceDate.getMonth() + 1;
     const currentYear = invoiceDate.getFullYear();
     const shortYear = currentYear.toString().slice(-2);
-    let fy = currentMonth <= 3
+    const fy = currentMonth <= 3
       ? `${parseInt(shortYear) - 1}-${shortYear}`
       : `${shortYear}-${parseInt(shortYear) + 1}`;
 
@@ -396,21 +463,21 @@ export async function POST(request: Request) {
         let providerGateway: string | null = null;
 
         if (paidFeatures) {
-          const defaultGateway = (profile as any).defaultGateway || 'RAZORPAY';
+          const defaultGateway = profileSettings.defaultGateway || 'RAZORPAY';
 
           if (
             defaultGateway === 'RAZORPAY' &&
             baseCurrency === 'INR' &&
-            (profile as any).razorpayKeyId &&
-            (profile as any).razorpayKeySecret
+            profileSettings.razorpayKeyId &&
+            profileSettings.razorpayKeySecret
           ) {
             try {
               const { decrypt } = await import('@/lib/encryption');
               const { generateTenantPaymentLink } = await import('@/lib/razorpay-links');
 
-              let decryptedSecret = (profile as any).razorpayKeySecret as string;
+              let decryptedSecret = profileSettings.razorpayKeySecret as string;
               try {
-                decryptedSecret = decrypt((profile as any).razorpayKeySecret);
+                decryptedSecret = decrypt(profileSettings.razorpayKeySecret);
               } catch {
                 // Legacy compatibility: older rows may still store plaintext.
                 // We keep runtime behavior permissive so payment links continue working.
@@ -426,7 +493,7 @@ export async function POST(request: Request) {
                   name: client.name,
                   email: client.email ?? undefined,
                 },
-                tenantKeyId: (profile as any).razorpayKeyId,
+                tenantKeyId: profileSettings.razorpayKeyId,
                 tenantKeySecret: decryptedSecret,
               });
 
@@ -442,16 +509,16 @@ export async function POST(request: Request) {
 
           } else if (
             defaultGateway === 'STRIPE' &&
-            (profile as any).stripePublishableKey &&
-            (profile as any).stripeSecretKey
+            profileSettings.stripePublishableKey &&
+            profileSettings.stripeSecretKey
           ) {
             try {
               const { decrypt } = await import('@/lib/encryption');
               const { generateStripePaymentLink } = await import('@/lib/stripe-links');
 
-              let decryptedSecret = (profile as any).stripeSecretKey as string;
+              let decryptedSecret = profileSettings.stripeSecretKey as string;
               try {
-                decryptedSecret = decrypt((profile as any).stripeSecretKey);
+                decryptedSecret = decrypt(profileSettings.stripeSecretKey);
               } catch {
                 // Legacy compatibility for historical plaintext rows.
                 console.warn('[generate] Using legacy plaintext Stripe secret fallback for payment link generation.');
@@ -481,13 +548,25 @@ export async function POST(request: Request) {
         // --- PDF GENERATION ENGINE ---
         const pdfBytes = await generateInvoicePDF({
           profile,
-          client: client as any,
+          client: {
+            name: client.name,
+            address: client.address,
+            country: client.country,
+            email: client.email,
+            taxId: client.taxId,
+            isExport: client.isExport,
+            logoUrl: client.logoUrl,
+          },
           invoiceNumber,
           date: invoiceDate,
           dueDate: invoiceDueDate,
-          billingMonth,
-          sacCode,
-          services: sanitizedServices,
+          billingMonth: billingMonthValue,
+          sacCode: sacCode ?? null,
+          services: sanitizedServices.map((s): PDFService => ({
+            title: s.title,
+            nicDetails: '',
+            amount: s.amount,
+          })),
           totals,
           formattedTotal,
           baseCurrency,
@@ -506,7 +585,7 @@ export async function POST(request: Request) {
               workspaceId,
               invoiceNumber,
               financialYear: fy,
-              billingMonth,
+              billingMonth: billingMonthValue,
               invoiceDate,
               clientName: client.name,
               clientId: client.id,
@@ -523,8 +602,11 @@ export async function POST(request: Request) {
               providerGateway,
               providerPaymentLinkId,
               items: {
-                create: sanitizedServices.map((s: any) => ({
-                  productId: validProductIds.has(s.productId) ? s.productId : null,
+                create: sanitizedServices.map((s): PrismaInvoiceItemCreateData => ({
+                  productId:
+                    typeof s.productId === 'string' && validProductIds.has(s.productId)
+                      ? s.productId
+                      : null,
                   description: s.title,
                   quantity: s.quantity || 1,
                   unitPrice: toDecimal(s.unitPrice || s.amount).toDecimalPlaces(2),
@@ -532,7 +614,7 @@ export async function POST(request: Request) {
                   totalAmount: toDecimal(s.amount).toDecimalPlaces(2),
                 })),
               },
-            } as any,
+            },
           });
 
           await determineAndPersistTax(createPrismaTaxPersistence(tx), {
@@ -621,7 +703,7 @@ export async function POST(request: Request) {
             companyName: profile.companyName,
             clientName: client.name,
             invoiceNumber: currentInvoiceNumber,
-            billingMonth,
+            billingMonth: billingMonthValue,
             amountFormatted: `${baseCurrency} ${formattedTotal}`,
           });
           await sendEmail({
@@ -634,9 +716,9 @@ export async function POST(request: Request) {
             attachments: [{ filename: finalPdfFilename, path: finalPdfPath }],
           });
           emailStatus = "Success";
-        } catch (emailErr: any) {
+        } catch (emailErr: unknown) {
           console.error("Email Error:", emailErr);
-          emailStatus = `Failed: ${emailErr.message}`;
+          emailStatus = `Failed: ${emailErr instanceof Error ? emailErr.message : 'Unknown email error'}`;
         }
       }
     }
@@ -677,7 +759,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(successResponse);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Invoice Generation Error:", error);
 
     if (generatedPdfPath && fs.existsSync(generatedPdfPath)) {
@@ -711,10 +793,13 @@ export async function POST(request: Request) {
         invoiceId: createdInvoiceId,
         invoiceNumber: currentInvoiceNumber || null,
         idempotencyKeyPresent: Boolean(idempotencyKey),
-        errorMessage: error?.message || "Unknown invoice generation error",
+        errorMessage: error instanceof Error ? error.message : "Unknown invoice generation error",
       },
     });
 
-    return NextResponse.json({ error: error.message || 'Failed to generate invoice' }, { status: 400 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to generate invoice' },
+      { status: 400 },
+    );
   }
 }

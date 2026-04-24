@@ -16,7 +16,7 @@ async function main() {
   const page = await context.newPage();
   page.on("console", (msg) => {
     // Keep the smoke test resilient; log for debugging only.
-    // eslint-disable-next-line no-console
+     
     console.log(`[browser:${msg.type()}] ${msg.text()}`);
   });
 

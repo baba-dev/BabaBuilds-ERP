@@ -35,7 +35,7 @@ export default function CashFlowInflowsPage() {
   useEffect(() => {
     setHorizonType(urlCtx.horizonType);
     setScenarioTag(urlCtx.scenarioTag);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [urlCtx.horizonType, urlCtx.scenarioTag]);
 
   const load = async () => {
