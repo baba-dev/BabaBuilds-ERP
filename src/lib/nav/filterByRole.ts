@@ -8,7 +8,7 @@ export function filterByRole(groups: NavGroup[], role?: AppRole): NavGroup[] {
   return groups
     .map((group) => ({
       ...group,
-      items: group.items.filter((item) => !item.roleVisibility || item.roleVisibility.includes(role)),
+      items: group.items,
     }))
     .filter((group) => group.items.length > 0);
 }

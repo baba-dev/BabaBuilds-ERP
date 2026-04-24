@@ -329,14 +329,6 @@ export default function Dashboard() {
     },
   ];
 
-  if (isInitialLoad) {
-    return <PageLoadingState title={tr("loading", "Loading dashboard")} description={tr("loading_desc", "Preparing command center")} className="min-h-screen" />;
-  }
-
-  if (error && Object.keys(data).length === 0) {
-    return <PageErrorState title={tr("sync_issue_title", "Dashboard unavailable")} description={error} className="min-h-screen" onRetry={() => loadAllData(selectedFy)} />;
-  }
-
   const d = data as DashboardData;
   const isReady = Boolean(
     d.health &&
@@ -448,6 +440,14 @@ export default function Dashboard() {
               : <Puzzle className="h-4 w-4" />;
     return { ...module, icon };
   });
+
+  if (isInitialLoad) {
+    return <PageLoadingState title={tr("loading", "Loading dashboard")} description={tr("loading_desc", "Preparing command center")} className="min-h-screen" />;
+  }
+
+  if (error && Object.keys(data).length === 0) {
+    return <PageErrorState title={tr("sync_issue_title", "Dashboard unavailable")} description={error} className="min-h-screen" onRetry={() => loadAllData(selectedFy)} />;
+  }
 
   return (
     <DashboardPageShell
