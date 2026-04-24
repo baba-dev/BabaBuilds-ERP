@@ -1,96 +1,15 @@
 {
-  "generatedAt": "2026-04-22T13:46:20.044Z",
+  "generatedAt": "2026-04-24T07:16:40.029Z",
   "summary": {
     "knownRoutes": 80,
-    "checkedReferencedRoutes": 73,
-    "brokenReferencedRoutes": 11
+    "checkedReferencedRoutes": 72,
+    "brokenReferencedRoutes": 0
   },
   "gate": {
-    "pass": false,
+    "pass": true,
     "criteria": "No broken internal page routes referenced by source files in app/components/content."
   },
-  "brokenRoutes": [
-    {
-      "route": "/help/category/getting-started",
-      "exists": false,
-      "references": [
-        "app/help/page.tsx"
-      ]
-    },
-    {
-      "route": "/help/category/invoicing",
-      "exists": false,
-      "references": [
-        "app/help/page.tsx"
-      ]
-    },
-    {
-      "route": "/help/category/payments",
-      "exists": false,
-      "references": [
-        "app/help/page.tsx"
-      ]
-    },
-    {
-      "route": "/help/category/tax-and-compliance",
-      "exists": false,
-      "references": [
-        "app/help/page.tsx"
-      ]
-    },
-    {
-      "route": "/help/expenses-and-tax",
-      "exists": false,
-      "references": [
-        "app/help/page.tsx"
-      ]
-    },
-    {
-      "route": "/help/generating-invoices",
-      "exists": false,
-      "references": [
-        "app/help/page.tsx"
-      ]
-    },
-    {
-      "route": "/help/payment-gateways",
-      "exists": false,
-      "references": [
-        "app/help/page.tsx"
-      ]
-    },
-    {
-      "route": "/help/privacy",
-      "exists": false,
-      "references": [
-        "components/AuthModal.tsx",
-        "components/LandingFooter.tsx"
-      ]
-    },
-    {
-      "route": "/help/settings-guide",
-      "exists": false,
-      "references": [
-        "app/help/page.tsx"
-      ]
-    },
-    {
-      "route": "/help/terms",
-      "exists": false,
-      "references": [
-        "components/AuthModal.tsx",
-        "components/LandingFooter.tsx"
-      ]
-    },
-    {
-      "route": "/ledger",
-      "exists": false,
-      "references": [
-        "app/(dashboard)/income/page.tsx",
-        "app/(dashboard)/launch/page.tsx"
-      ]
-    }
-  ],
+  "brokenRoutes": [],
   "checkedRoutes": [
     {
       "route": "/",
@@ -396,56 +315,56 @@
     },
     {
       "route": "/help/category/getting-started",
-      "exists": false,
+      "exists": true,
       "references": [
         "app/help/page.tsx"
       ]
     },
     {
       "route": "/help/category/invoicing",
-      "exists": false,
+      "exists": true,
       "references": [
         "app/help/page.tsx"
       ]
     },
     {
       "route": "/help/category/payments",
-      "exists": false,
+      "exists": true,
       "references": [
         "app/help/page.tsx"
       ]
     },
     {
       "route": "/help/category/tax-and-compliance",
-      "exists": false,
+      "exists": true,
       "references": [
         "app/help/page.tsx"
       ]
     },
     {
       "route": "/help/expenses-and-tax",
-      "exists": false,
+      "exists": true,
       "references": [
         "app/help/page.tsx"
       ]
     },
     {
       "route": "/help/generating-invoices",
-      "exists": false,
+      "exists": true,
       "references": [
         "app/help/page.tsx"
       ]
     },
     {
       "route": "/help/payment-gateways",
-      "exists": false,
+      "exists": true,
       "references": [
         "app/help/page.tsx"
       ]
     },
     {
       "route": "/help/privacy",
-      "exists": false,
+      "exists": true,
       "references": [
         "components/AuthModal.tsx",
         "components/LandingFooter.tsx"
@@ -453,14 +372,14 @@
     },
     {
       "route": "/help/settings-guide",
-      "exists": false,
+      "exists": true,
       "references": [
         "app/help/page.tsx"
       ]
     },
     {
       "route": "/help/terms",
-      "exists": false,
+      "exists": true,
       "references": [
         "components/AuthModal.tsx",
         "components/LandingFooter.tsx"
@@ -488,6 +407,7 @@
         "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
         "app/(dashboard)/dashboard/page.tsx",
         "app/(dashboard)/income/page.tsx",
+        "app/(dashboard)/launch/page.tsx",
         "app/api/chat/route.ts",
         "app/api/dashboard/route.ts",
         "app/api/open-file/route.ts",
@@ -525,14 +445,6 @@
       "exists": true,
       "references": [
         "app/manifest.ts"
-      ]
-    },
-    {
-      "route": "/ledger",
-      "exists": false,
-      "references": [
-        "app/(dashboard)/income/page.tsx",
-        "app/(dashboard)/launch/page.tsx"
       ]
     },
     {
