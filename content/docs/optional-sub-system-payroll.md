@@ -1,47 +1,28 @@
 ---
 title: "Optional Module: Payroll"
-description: "Enable Payroll and configure salary components, schedules, and controlled payroll runs."
+description: "Enable Payroll and configure salary components, payroll schedules, and controlled run operations."
 order: 13
 category: "Optional Sub Systems"
 tags: ["payroll", "salary", "compliance", "runs"]
 estimatedMinutes: 9
-dateModified: "2026-04-21"
+dateModified: "2026-04-22"
 ---
 
 # Optional Module: Payroll
 
-Payroll supports salary processing, posting controls, and compliance-ready workflows.
+Payroll supports end-to-end salary processing with controlled run lifecycle and posting safeguards.
 
-## Enable from Settings
+## Screenshots
 
-1. Open **Settings → Workspace Modules**
-2. Toggle **Payroll** ON
-3. Confirm activation
+<HelpImage src="/help/screenshots/help-optional-payroll-01-overview.png" alt="Payroll landing page" caption="Payroll overview page after module enablement." />
 
-<HelpImage src="/help/diagrams/erp_entrypoint.svg" alt="Settings module card for Payroll enablement" caption="Screenshot target: Payroll module card enabled state." />
+<HelpImage src="/help/screenshots/help-optional-payroll-02-primary-action.png" alt="Payroll primary action area" caption="Configure payroll cycle, components, and run readiness checks." />
 
----
+<HelpImage src="/help/screenshots/help-optional-payroll-03-detail.png" alt="Payroll detailed section" caption="Detailed payroll controls and execution context." />
 
-## Post-enable setup
+## Operating workflow
 
-- Salary components
-- Payment schedule
-- Statutory rules
-- Default cost allocations
-
----
-
-## Operational workflow
-
-1. Prepare payroll period
-2. Validate readiness checks
-3. Execute run
-4. Post and export
-
----
-
-## Screenshot targets for this article
-
-1. Payroll toggle card in Settings
-2. Payroll settings page
-3. Payroll run detail page
+1. Configure payroll settings and components.
+2. Validate period readiness.
+3. Execute payroll run.
+4. Post/export payroll outputs for accounting/compliance.

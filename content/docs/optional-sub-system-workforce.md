@@ -1,47 +1,34 @@
 ---
 title: "Optional Module: Workforce"
-description: "Enable Workforce from Settings and set up people operations, attendance, leave, and HR structures."
+description: "Enable Workforce and run people operations with attendance, leave, and employee records."
 order: 12
 category: "Optional Sub Systems"
 tags: ["workforce", "hr", "attendance", "leave"]
 estimatedMinutes: 8
-dateModified: "2026-04-21"
+dateModified: "2026-04-22"
 ---
 
 # Optional Module: Workforce
 
-Enable Workforce to run people operations inside ERP.
+Workforce gives your team a structured HR workspace for people data, attendance, and leave approvals.
 
-## Enable from Settings
+## What this page is for
 
-1. Open **Settings → Workspace Modules**
-2. Find **Workforce** card
-3. Toggle ON and confirm
+- Create and maintain employee records
+- Track attendance and leave
+- Build department-level people visibility
 
-<HelpImage src="/help/diagrams/erp_entrypoint.svg" alt="Settings area where Workforce module can be enabled" caption="Screenshot target: Workforce module card toggle in Settings." />
+## Screenshots
 
----
+<HelpImage src="/help/screenshots/help-optional-workforce-01-overview.png" alt="Workforce module landing page in dashboard" caption="Use this as the main people-operations control page." />
 
-## What unlocks after enabling
+<HelpImage src="/help/screenshots/help-optional-workforce-02-primary-action.png" alt="Workforce page showing primary action area" caption="Primary actions: add people, manage attendance, and process leave." />
 
-- Employee directory
-- Attendance tracking
-- Leave requests and balances
-- Departments and designations
+<HelpImage src="/help/screenshots/help-optional-workforce-03-detail.png" alt="Workforce page detail section" caption="Operational detail view for HR workflows." />
 
----
+## Operating checklist
 
-## First setup checklist
-
-- Add departments
-- Add designations
-- Add employee records
-- Configure leave types and holidays
-
----
-
-## Screenshot targets for this article
-
-1. Workforce toggle card in Settings
-2. Workforce landing page
-3. Leave settings or people list view
+1. Add teams/departments.
+2. Add employee profiles.
+3. Configure leave policy and attendance process.
+4. Review pending approvals daily.

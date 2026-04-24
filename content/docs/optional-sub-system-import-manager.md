@@ -1,38 +1,21 @@
 ---
 title: "Optional Module: Import Manager"
-description: "Enable Import Manager to run controlled CSV/XLSX imports with mapping, validation, and safe execution modes."
+description: "Enable Import Manager for controlled CSV/XLSX imports with mapping and validation."
 order: 19
 category: "Optional Sub Systems"
 tags: ["import", "bulk", "migration", "csv", "xlsx"]
 estimatedMinutes: 8
-dateModified: "2026-04-21"
+dateModified: "2026-04-22"
 ---
 
 # Optional Module: Import Manager
 
-Import Manager helps migrate or bulk-update operational records safely.
+Import Manager handles safe bulk create/upsert workflows using preview-first validation.
 
-## Enable from Settings
+## Screenshots
 
-1. Open **Settings → Workspace Modules**
-2. Toggle **Import Manager** ON
+<HelpImage src="/help/screenshots/help-optional-import-manager-01-overview.png" alt="Import Manager overview page" caption="Import Manager hub and run context." />
 
-<HelpImage src="/help/diagrams/erp_entrypoint.svg" alt="Import Manager module card in settings" caption="Screenshot target: Import Manager toggle in Settings." />
+<HelpImage src="/help/screenshots/help-optional-import-manager-02-primary-action.png" alt="Import Manager mapping/validation screen" caption="Primary mapping and validation experience." />
 
----
-
-## Core workflow
-
-1. Download template or upload file
-2. Map columns
-3. Validate and preview
-4. Execute create/upsert run
-5. Review run logs
-
----
-
-## Screenshot targets for this article
-
-1. Import Manager toggle card
-2. Import mapping screen
-3. Validation preview or run history view
+<HelpImage src="/help/screenshots/help-optional-import-manager-03-detail.png" alt="Import Manager detail view" caption="Validation detail and run-history context." />

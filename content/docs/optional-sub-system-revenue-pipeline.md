@@ -1,37 +1,21 @@
 ---
 title: "Optional Module: Revenue Pipeline"
-description: "Enable Revenue Pipeline and track proposal stages, stalled deals, and conversion blockers."
+description: "Enable Revenue Pipeline to track proposal stages, stalled deals, and conversion blockers."
 order: 14
 category: "Optional Sub Systems"
 tags: ["pipeline", "proposals", "sales"]
 estimatedMinutes: 7
-dateModified: "2026-04-21"
+dateModified: "2026-04-22"
 ---
 
 # Optional Module: Revenue Pipeline
 
-Revenue Pipeline gives structured visibility into proposal progress and conversion risk.
+Revenue Pipeline gives a stage-wise view of proposal movement and highlights bottlenecks before revenue slips.
 
-## Enable from Settings
+## Screenshots
 
-1. Open **Settings → Workspace Modules**
-2. Toggle **Revenue Pipeline** ON
+<HelpImage src="/help/screenshots/help-optional-revenue-pipeline-01-overview.png" alt="Revenue Pipeline overview page" caption="Pipeline overview with stage visibility." />
 
-<HelpImage src="/help/diagrams/erp_entrypoint.svg" alt="Revenue Pipeline module card in settings" caption="Screenshot target: Revenue Pipeline toggle in Settings." />
+<HelpImage src="/help/screenshots/help-optional-revenue-pipeline-02-primary-action.png" alt="Revenue Pipeline primary action area" caption="Focus on stalled/at-risk deals and suggested actions." />
 
----
-
-## Key capabilities
-
-- Stage-wise proposal view
-- Stalled-deal detection
-- Conversion and aging insights
-- Follow-up action cues
-
----
-
-## Screenshot targets for this article
-
-1. Revenue Pipeline toggle card
-2. Proposals pipeline board/list
-3. Stalled deal detail or stage analytics
+<HelpImage src="/help/screenshots/help-optional-revenue-pipeline-03-detail.png" alt="Revenue Pipeline detail section" caption="Detailed stage and conversion diagnostics." />
