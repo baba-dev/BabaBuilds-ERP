@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import Groq from 'groq-sdk';
+import type { ChatCompletionMessageParam } from 'groq-sdk/resources/chat/completions';
 import { decrypt } from '@/lib/encryption';
 import nodemailer from 'nodemailer';
 import dns from 'dns';
@@ -26,6 +27,49 @@ import { listPublicPresets } from '@/lib/reporting/presets';
 import { checkPermission } from '@/lib/rbac';
 
 const lookupAsync = promisify(dns.lookup);
+type PrismaWithOptionalModels = typeof prisma & {
+  task: {
+    create: (args: {
+      data: {
+        title: string;
+        description: string;
+        dueDate: Date | null;
+        workspaceId: string;
+        status: string;
+      };
+    }) => Promise<{ id: string }>;
+  };
+  bankTransaction: {
+    findMany: (args: {
+      where: { workspaceId: string; isReconciled: boolean; amount: { gt: number } };
+      orderBy: { date: 'desc' };
+      take: number;
+    }) => Promise<unknown[]>;
+  };
+};
+const prismaWithOptionalModels = prisma as PrismaWithOptionalModels;
+
+type SessionActor = {
+  workspaceId?: string;
+  businessRole?: string | null;
+  user?: { id?: string; role?: string | null };
+};
+
+type ToolArgs = Record<string, unknown>;
+type ToolHandler = (args: ToolArgs, workspaceId: string) => Promise<string>;
+type GroqMessage = ChatCompletionMessageParam;
+
+function asString(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function asOptionalString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
+function asNumber(value: unknown): number {
+  return typeof value === 'number' ? value : Number(value ?? 0);
+}
 
 function isProbablyGroqKey(value: string) {
   const trimmed = value.trim();
@@ -35,13 +79,21 @@ function isProbablyGroqKey(value: string) {
   return true;
 }
 
-function groqErrorToHttp(error: any): { status: number; code: string; message: string } {
-  const status = Number(error?.status) || Number(error?.response?.status) || 0;
+function groqErrorToHttp(error: unknown): { status: number; code: string; message: string } {
+  const err = error as {
+    status?: number;
+    response?: { status?: number };
+    error?: { code?: string };
+    code?: string;
+    name?: string;
+    type?: string;
+  };
+  const status = Number(err?.status) || Number(err?.response?.status) || 0;
   const upstreamCode =
-    error?.error?.code ||
-    error?.code ||
-    error?.name ||
-    error?.type ||
+    err?.error?.code ||
+    err?.code ||
+    err?.name ||
+    err?.type ||
     'unknown_error';
 
   if (status === 401 || upstreamCode === 'invalid_api_key') {
@@ -230,7 +282,7 @@ async function getServiceCatalog(workspaceId: string) {
 
 async function getProposals(workspaceId: string, status?: string) {
   try {
-    const query: any = { workspaceId };
+    const query: { workspaceId: string; status?: string } = { workspaceId };
     if (status) query.status = status.toUpperCase();
 
     const proposals = await prisma.proposal.findMany({
@@ -262,7 +314,7 @@ async function createTask(
   workspaceId: string,
 ) {
   try {
-    const task = await (prisma as any).task.create({
+    const task = await prismaWithOptionalModels.task.create({
       data: {
         title,
         description: description || '',
@@ -425,10 +477,11 @@ async function sendInvoiceReminder(invoiceNumber: string, workspaceId: string) {
       success: true,
       message: `Payment reminder email successfully sent to ${invoice.clientName} (${email}) for Invoice ${invoiceNumber}.`,
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : 'Unknown error';
     console.error('[AI Reminder] Send failed:', e);
     return JSON.stringify({
-      error: `Failed to send reminder email: ${e?.message || 'Unknown error'}`,
+      error: `Failed to send reminder email: ${message}`,
     });
   }
 }
@@ -513,7 +566,7 @@ async function searchClients(query: string, workspaceId: string) {
     }
 
     return JSON.stringify(
-      clients.map((c: any) => ({
+      clients.map((c) => ({
         name: c.name,
         email: c.email,
         status: c.status,
@@ -552,7 +605,7 @@ async function getClientLedger(clientName: string, workspaceId: string) {
 
     return JSON.stringify({
       client: client.name,
-      status: (client as any).status,
+      status: client.status,
       recentInvoices: client.invoices,
       activeRetainers: client.retainers,
       recentProposals: client.proposals,
@@ -618,7 +671,7 @@ async function getExpensesSummary(workspaceId: string) {
 
 async function getUnreconciledBankLines(workspaceId: string) {
   try {
-    const lines = await (prisma as any).bankTransaction.findMany({
+    const lines = await prismaWithOptionalModels.bankTransaction.findMany({
       where: { workspaceId, isReconciled: false, amount: { gt: 0 } },
       orderBy: { date: 'desc' },
       take: 5,
@@ -1114,16 +1167,16 @@ async function predictStockouts(workspaceId: string) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    const session = (await getServerSession(authOptions)) as SessionActor | null;
+    if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
     const actorRole = String(
-      (session as any).businessRole || (session as any).user?.role || '',
+      session.businessRole || session.user?.role || '',
     ).toUpperCase();
-    const actorUserId = (session as any).user?.id as string | undefined;
+    const actorUserId = session.user?.id;
 
     const parsedBody = chatRequestSchema.safeParse(await request.json());
     if (!parsedBody.success) {
@@ -1216,7 +1269,7 @@ ${
       maxRetries: 2,
     });
 
-    const messages: any[] = [
+    const messages: GroqMessage[] = [
       { role: 'system', content: systemPrompt },
       ...safeHistory,
       { role: 'user', content: message },
@@ -1723,7 +1776,7 @@ ${
         messages,
         model: 'llama-3.1-8b-instant',
         temperature: 0.2,
-        tools: tools as any,
+        tools: tools as unknown as never[],
         tool_choice: 'auto',
       },
       { timeout: 12_000, maxRetries: 2 },
@@ -1735,8 +1788,8 @@ ${
     if (responseMessage?.tool_calls && responseMessage.tool_calls.length > 0) {
       messages.push(responseMessage);
 
-      const toolPromises = responseMessage.tool_calls.map(async (toolCall: any) => {
-        let args: any = {};
+      const toolPromises = responseMessage.tool_calls.map(async (toolCall) => {
+        let args: ToolArgs = {};
         let dbResult = '';
         let action: ToolAction | null = null;
 
@@ -1754,43 +1807,65 @@ ${
           };
         }
 
-        const toolHandlers: Record<string, Function> = {
-          lookup_invoice_details: (a: any, wid: string) => lookupInvoiceDetails(a.invoice_number, wid),
-          get_client_summary: (a: any, wid: string) => getClientSummary(a.client_name, wid),
-          get_tax_summary: (_a: any, wid: string) => getTaxSummary(wid),
-          get_service_catalog: (_a: any, wid: string) => getServiceCatalog(wid),
-          get_proposals: (a: any, wid: string) => getProposals(wid, a.status),
-          create_task: (a: any, wid: string) => createTask(a.title, a.description, a.dueDate, wid),
-          get_overdue_invoices: (_a: any, wid: string) => getOverdueInvoices(wid),
-          mark_invoice_paid: (a: any, wid: string) => markInvoicePaid(a.invoice_number, wid),
-          send_invoice_reminder: (a: any, wid: string) => sendInvoiceReminder(a.invoice_number, wid),
-          create_client: (a: any, wid: string) =>
-            createClient(a.name, a.email, a.taxId, a.address, a.country, wid),
-          update_client_status: (a: any, wid: string) =>
-            updateClientStatus(a.client_name, a.status, wid),
-          search_clients: (a: any, wid: string) => searchClients(a.query, wid),
-          get_client_ledger: (a: any, wid: string) => getClientLedger(a.client_name, wid),
-          log_expense: (a: any, wid: string) =>
-            logExpense(a.vendor, a.amount, a.category, a.description, a.dateString, wid),
-          get_expenses_summary: (_a: any, wid: string) => getExpensesSummary(wid),
-          get_unreconciled_transactions: (_a: any, wid: string) => getUnreconciledBankLines(wid),
-          auto_reconcile: (a: any, wid: string) => autoReconcile(a.transactionId, a.invoiceNumber, wid),
-          update_proposal_status: (a: any, wid: string) =>
-            updateProposalStatus(a.proposal_no, a.status, wid),
-          convert_to_invoice: (a: any, wid: string) =>
-            convertProposalToInvoice(a.proposal_no, wid),
-          add_service_to_catalog: (a: any, wid: string) =>
-            addServiceToCatalog(a.name, a.default_price, a.description, wid),
-          create_retainer: (a: any, wid: string) =>
-            createRetainer(a.client_name, a.service_name, a.amount, a.frequency, a.start_date, wid),
-          update_retainer_status: (a: any, wid: string) =>
-            updateRetainerStatus(a.service_name, a.client_name, a.status, wid),
-          get_active_retainers: (_a: any, wid: string) => getActiveRetainers(wid),
-          log_investment: (a: any, wid: string) =>
-            logInvestment(a.asset_name, a.amount, a.category, a.date_string, wid),
-          get_investments_list: (_a: any, wid: string) => getInvestmentsList(wid),
-          calculate_estimated_tax: (_a: any, wid: string) => calculateEstimatedTax(wid),
-          predict_stockouts: (_a: any, wid: string) => predictStockouts(wid),
+        const toolHandlers: Record<string, ToolHandler> = {
+          lookup_invoice_details: (a, wid) => lookupInvoiceDetails(asString(a.invoice_number), wid),
+          get_client_summary: (a, wid) => getClientSummary(asString(a.client_name), wid),
+          get_tax_summary: (_a, wid) => getTaxSummary(wid),
+          get_service_catalog: (_a, wid) => getServiceCatalog(wid),
+          get_proposals: (a, wid) => getProposals(wid, asOptionalString(a.status)),
+          create_task: (a, wid) =>
+            createTask(asString(a.title), asString(a.description), asOptionalString(a.dueDate), wid),
+          get_overdue_invoices: (_a, wid) => getOverdueInvoices(wid),
+          mark_invoice_paid: (a, wid) => markInvoicePaid(asString(a.invoice_number), wid),
+          send_invoice_reminder: (a, wid) => sendInvoiceReminder(asString(a.invoice_number), wid),
+          create_client: (a, wid) =>
+            createClient(
+              asString(a.name),
+              asOptionalString(a.email),
+              asOptionalString(a.taxId),
+              asString(a.address),
+              asString(a.country),
+              wid,
+            ),
+          update_client_status: (a, wid) =>
+            updateClientStatus(asString(a.client_name), asString(a.status), wid),
+          search_clients: (a, wid) => searchClients(asString(a.query), wid),
+          get_client_ledger: (a, wid) => getClientLedger(asString(a.client_name), wid),
+          log_expense: (a, wid) =>
+            logExpense(
+              asString(a.vendor),
+              asNumber(a.amount),
+              asString(a.category),
+              asOptionalString(a.description),
+              asOptionalString(a.dateString),
+              wid,
+            ),
+          get_expenses_summary: (_a, wid) => getExpensesSummary(wid),
+          get_unreconciled_transactions: (_a, wid) => getUnreconciledBankLines(wid),
+          auto_reconcile: (a, wid) =>
+            autoReconcile(asString(a.transactionId), asString(a.invoiceNumber), wid),
+          update_proposal_status: (a, wid) =>
+            updateProposalStatus(asString(a.proposal_no), asString(a.status), wid),
+          convert_to_invoice: (a, wid) => convertProposalToInvoice(asString(a.proposal_no), wid),
+          add_service_to_catalog: (a, wid) =>
+            addServiceToCatalog(asString(a.name), asNumber(a.default_price), asOptionalString(a.description), wid),
+          create_retainer: (a, wid) =>
+            createRetainer(
+              asString(a.client_name),
+              asString(a.service_name),
+              asNumber(a.amount),
+              asString(a.frequency),
+              asOptionalString(a.start_date),
+              wid,
+            ),
+          update_retainer_status: (a, wid) =>
+            updateRetainerStatus(asString(a.service_name), asString(a.client_name), asString(a.status), wid),
+          get_active_retainers: (_a, wid) => getActiveRetainers(wid),
+          log_investment: (a, wid) =>
+            logInvestment(asString(a.asset_name), asNumber(a.amount), asString(a.category), asOptionalString(a.date_string), wid),
+          get_investments_list: (_a, wid) => getInvestmentsList(wid),
+          calculate_estimated_tax: (_a, wid) => calculateEstimatedTax(wid),
+          predict_stockouts: (_a, wid) => predictStockouts(wid),
         };
 
         if (
@@ -1823,11 +1898,14 @@ ${
         } else if (toolCall.function.name === 'open_reporting_center') {
           action = {
             type: 'NAVIGATE',
-            path: `/reporting/${args.presetId}`,
-            payload: args.filters || null,
+            path: `/reporting/${asString(args.presetId)}`,
+            payload:
+              typeof args.filters === 'object' && args.filters !== null
+                ? (args.filters as Record<string, unknown>)
+                : null,
           };
           dbResult = JSON.stringify({
-            status: `Opening Reporting Center preset ${args.presetId}.`,
+            status: `Opening Reporting Center preset ${asString(args.presetId)}.`,
           });
         } else if (toolHandlers[toolCall.function.name]) {
           dbResult = await toolHandlers[toolCall.function.name](args, workspaceId);
@@ -1836,9 +1914,9 @@ ${
             type: 'NAVIGATE',
             path: '/proposals',
             payload: {
-              clientName: args.client_name,
-              title: args.title,
-              totalAmount: args.total_amount,
+              clientName: asString(args.client_name),
+              title: asString(args.title),
+              totalAmount: asNumber(args.total_amount),
             },
           };
           dbResult = JSON.stringify({
@@ -1855,15 +1933,27 @@ ${
             },
           };
           dbResult = JSON.stringify({
-            status: `Success. Pushed actionPayload to UI to load invoice form for ${args.client_name}.`,
+            status: `Success. Pushed actionPayload to UI to load invoice form for ${asString(args.client_name)}.`,
           });
         } else if (toolCall.function.name === 'ui_navigate') {
-          action = { type: 'NAVIGATE', path: args.path, payload: args.payload || null };
+          action = {
+            type: 'NAVIGATE',
+            path: asString(args.path),
+            payload:
+              typeof args.payload === 'object' && args.payload !== null
+                ? (args.payload as Record<string, unknown>)
+                : null,
+          };
           dbResult = JSON.stringify({
-            status: `Success. Redirected user to ${args.path} and injected payload data.`,
+            status: `Success. Redirected user to ${asString(args.path)} and injected payload data.`,
           });
         } else if (toolCall.function.name === 'set_ui_theme') {
-          action = { type: 'SET_THEME', theme: args.theme };
+          const themeArg = asString(args.theme);
+          const theme: 'light' | 'dark' | 'system' =
+            themeArg === 'light' || themeArg === 'dark' || themeArg === 'system'
+              ? themeArg
+              : 'system';
+          action = { type: 'SET_THEME', theme };
           dbResult = JSON.stringify({
             status: `Success. Updated theme to ${args.theme}.`,
           });
@@ -1887,9 +1977,8 @@ ${
       for (const result of toolResults) {
         if (result.action && !actionPayload) actionPayload = result.action as ToolAction;
         messages.push({
-          role: result.role,
+          role: 'tool',
           tool_call_id: result.tool_call_id,
-          name: result.name,
           content: result.content,
         });
       }
@@ -1913,7 +2002,7 @@ ${
       reply: responseMessage?.content || "I couldn't process that.",
       action: null,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Chat Error Server Log:', error);
     const mapped = groqErrorToHttp(error);
     return NextResponse.json(
