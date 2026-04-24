@@ -42,7 +42,7 @@ async function capture(page, fileName, opts = {}) {
   const target = path.join(outputDir, fileName);
   await page.waitForTimeout(opts.delayMs ?? 400);
   await page.screenshot({ path: target, fullPage: opts.fullPage ?? true });
-  // eslint-disable-next-line no-console
+   
   console.log(`captured: ${target}`);
 }
 
@@ -74,7 +74,7 @@ async function captureModuleSet(page, modules, segment) {
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight * 0.7));
       await capture(page, `${segment}-${mod.key}-03-detail.png`, { fullPage: false, delayMs: 350 });
     } catch (error) {
-      // eslint-disable-next-line no-console
+       
       console.error(`failed module ${mod.key}:`, error);
     }
   }
@@ -88,7 +88,7 @@ async function main() {
   const page = await context.newPage();
 
   page.on("console", (msg) => {
-    // eslint-disable-next-line no-console
+     
     console.log(`[browser:${msg.type()}] ${msg.text()}`);
   });
 
@@ -106,7 +106,7 @@ async function main() {
 }
 
 main().catch((err) => {
-  // eslint-disable-next-line no-console
+   
   console.error(err);
   process.exit(1);
 });

@@ -22,7 +22,7 @@ export function applyReconciliationRules(
   const sorted = [...rules].sort((a, b) => a.priority - b.priority);
   return rows.map((row) => {
     const hay = `${row.description} ${row.reference ?? ""}`.toLowerCase();
-    let out: RuleAugmentedTxn = { ...row };
+    const out: RuleAugmentedTxn = { ...row };
     for (const r of sorted) {
       const p = r.pattern.trim().toLowerCase();
       if (!p) continue;

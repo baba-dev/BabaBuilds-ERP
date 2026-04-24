@@ -349,7 +349,7 @@ export async function POST(request: Request) {
     const currentMonth = invoiceDate.getMonth() + 1;
     const currentYear = invoiceDate.getFullYear();
     const shortYear = currentYear.toString().slice(-2);
-    let fy = currentMonth <= 3
+    const fy = currentMonth <= 3
       ? `${parseInt(shortYear) - 1}-${shortYear}`
       : `${shortYear}-${parseInt(shortYear) + 1}`;
 

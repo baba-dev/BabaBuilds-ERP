@@ -23,8 +23,8 @@ export async function createCommercialActionTask(
   }
 
   let title = '';
-  let description = `Auto-generated commercial workflow task. Origin Proposal ID: ${proposalId}`;
-  let dueDate = new Date();
+  const description = `Auto-generated commercial workflow task. Origin Proposal ID: ${proposalId}`;
+  const dueDate = new Date();
 
   switch (actionType) {
     case 'CHASE_PAYMENT':

@@ -192,7 +192,7 @@ export async function POST(req: Request) {
         let notFoundCount = 0;
         let failedCount = 0;
         let dbUpdatedCount = 0;
-        let missingFiles: string[] = [];
+        const missingFiles: string[] = [];
         
         // 1. Fetch all invoices marked as Paid (System-wide for Super Admin)
         const paidInvoices = await prisma.invoice.findMany({
@@ -347,7 +347,7 @@ export async function POST(req: Request) {
                     paymentLink: null
                 });
 
-                let relativePath = inv.pdfPath.startsWith('/') ? inv.pdfPath.substring(1) : inv.pdfPath;
+                const relativePath = inv.pdfPath.startsWith('/') ? inv.pdfPath.substring(1) : inv.pdfPath;
                 const fullPath = path.join(process.cwd(), 'public', relativePath);
                 
                 if (!fs.existsSync(path.dirname(fullPath))) {

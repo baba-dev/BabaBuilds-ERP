@@ -79,7 +79,7 @@ export default function CashFlowManualAdjustmentsPage() {
 
   useEffect(() => {
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   const onCreate = async () => {
