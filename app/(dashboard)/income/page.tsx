@@ -235,8 +235,13 @@ export default function InvoicesAndEarnings() {
         toast.success(t("toast.success.payment_logged"));
         fetchInvoices(currentPage);
       } else {
-        const errorData = await res.json();
-        toast.error(errorData.error || t("toast.error.log_payment"));
+        const errorData = await res.json().catch(() => null);
+        const errorMessage =
+          (typeof errorData?.error === "string" ? errorData.error : null) ||
+          (typeof errorData?.error?.message === "string" ? errorData.error.message : null) ||
+          (typeof errorData?.message === "string" ? errorData.message : null) ||
+          t("toast.error.log_payment");
+        toast.error(errorMessage);
       }
     } catch {
       console.error("Payment logging failed");
