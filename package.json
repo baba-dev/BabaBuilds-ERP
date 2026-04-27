@@ -24,7 +24,8 @@
     "test:browser:headed": "playwright test tests/smoke --project=chromium --headed",
     "test:browser:ui": "playwright test tests/smoke --project=chromium --ui",
     "test:payments": "vitest run tests/payments && playwright test tests/payments",
-    "test": "vitest run"
+    "test": "vitest run",
+    "invoices:samples": "npx tsx scripts/render-sample-invoices.ts"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.4.2",
