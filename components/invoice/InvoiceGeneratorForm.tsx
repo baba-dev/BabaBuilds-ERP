@@ -22,6 +22,7 @@ import { getBustedUrl } from "@/lib/cache-buster";
 import { getConflictPolicy, queueOfflineMutation } from "@/lib/offline-sync";
 import { cn } from "@/lib/utils";
 import { dirFromLocale } from "@/src/lib/direction";
+import { buildInvoiceGenerateErrorMessage } from "@/lib/invoice/generate-error-message";
 
 const isLikelyOfflineError = (error: unknown) => {
   if (typeof navigator !== "undefined" && !navigator.onLine) return true;
@@ -58,7 +59,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
   const [clients, setClients] = useState<any[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [existingInvoices, setExistingInvoices] = useState<Array<{ billingMonth: string; clientId: string | null }>>([]);
-  const [billingMonth, setBillingMonth] = useState("");
+  const [billingMonth, setBillingMonth] = useState(() => format(new Date(), "MMMM yyyy"));
   const [invoiceDate, setInvoiceDate] = useState<Date>(new Date());
   const [isMounted, setIsMounted] = useState(false);
 
@@ -74,7 +75,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
 
   useEffect(() => {
     setIsMounted(true);
-    setBillingMonth(format(new Date(), "MMMM yyyy"));
+    setBillingMonth((current) => current || format(new Date(), "MMMM yyyy"));
 
     setIsLoadingServices(true);
     Promise.all([
@@ -255,8 +256,18 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedClientId) { setError("No client selected. Please select a client from the CRM."); return; }
+    if (!billingMonth.trim()) { setError("Billing month is required. Please select a cycle period."); return; }
 
     setIsGenerating(true); setError(null); setSuccessData(null);
+
+    const hasInvalidProductQty = activeServices.some(
+      (s) => Boolean(s.isProduct) && (!Number.isFinite(Number(s.quantity)) || Number(s.quantity) < 1),
+    );
+    if (hasInvalidProductQty) {
+      setError("Product quantity must be at least 1.");
+      setIsGenerating(false);
+      return;
+    }
 
     const validServices = activeServices.filter((s) => Number(s.amount) > 0);
     if (validServices.length === 0) {
@@ -281,7 +292,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
         }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
       if (!response.ok) {
         if (response.status === 422 && data?.code === "TAX_RATE_REQUIRED") {
           setTaxRateMeta({
@@ -292,7 +303,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
           setTaxRateModalOpen(true);
           return;
         }
-        throw new Error(data.error || "Failed to generate");
+        throw new Error(buildInvoiceGenerateErrorMessage(data));
       }
 
       const result = {
@@ -351,8 +362,8 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
           taxRateOverride: Number(taxRateInput),
         }),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to generate");
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(buildInvoiceGenerateErrorMessage(data));
 
       const result = {
         pdfPath: data.invoice.pdfPath,
