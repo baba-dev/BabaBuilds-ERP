@@ -164,7 +164,7 @@ enum AccountingLineSide {
 enum ProposalConversionType {
   ONE_TIME_INVOICE
   RETAINER
-  SERVICE_ORDER
+  SHOP_ORDER
   MILESTONE_BILLING
 }
 
@@ -611,7 +611,7 @@ model Workspace {
   inventoryMovements InventoryMovement[]
   purchaseOrders     PurchaseOrder[]
   accountingEntries  AccountingEntry[]
-  serviceOrders      ServiceOrder[]
+  shopOrders         ShopOrder[]
 
   // Workforce Module
   workspaceModules  WorkspaceModule[]
@@ -1272,7 +1272,7 @@ model Invoice {
   taxDecisionAuditLogs TaxDecisionAuditLog[]
   taxableEvents        TaxableEvent[]
   items                InvoiceItem[]
-  linkedServiceOrders  ServiceOrder[]        @relation("ServiceOrderLinkedInvoice")
+  linkedShopOrders     ShopOrder[]           @relation("ShopOrderLinkedInvoice")
 
   sourceProposalId      String?
   sourceProposal        Proposal?                     @relation("ProposalToInvoice", fields: [sourceProposalId], references: [id])
@@ -2198,7 +2198,6 @@ model ServiceTemplate {
   // E-STORE FIELDS
   longDescription String? // Rich HTML/markdown from Tiptap — shown on shop page
   imageUrl        String? // Hero image path e.g. /uploads/service-hero/xxx.webp
-  showInShop      Boolean @default(false) // Publishes service to workspace public shop
 
   // Relational Links to the Global Dictionaries
   nicCodeId String?
@@ -2208,10 +2207,8 @@ model ServiceTemplate {
   sacCode   SACCode? @relation(fields: [sacCodeId], references: [id])
 
   proposalItems ProposalItem[]
-  serviceOrders ServiceOrder[]
 
   @@index([workspaceId])
-  @@index([workspaceId, showInShop])
 }
 
 model Proposal {
@@ -2252,7 +2249,7 @@ model Proposal {
   billingMilestones      BillingMilestone[]
   generatedInvoices      Invoice[]            @relation("ProposalToInvoice")
   generatedRetainers     Retainer[]           @relation("ProposalToRetainer")
-  generatedServiceOrders ServiceOrder[]       @relation("ProposalToServiceOrder")
+  generatedShopOrders    ShopOrder[]          @relation("ProposalToShopOrder")
 
   subtotal     Decimal
   estimatedTax Decimal @default(0)
@@ -2576,6 +2573,7 @@ model Product {
   movements     InventoryMovement[]
   invoiceItems  InvoiceItem[]
   purchaseItems PurchaseOrderItem[]
+  shopOrderItems ShopOrderItem[]
 
   @@unique([sku, workspaceId])
   @@index([workspaceId])
@@ -2662,13 +2660,10 @@ model PurchaseOrderItem {
 // 9. E-STORE / SHOP
 // ==========================================
 
-model ServiceOrder {
+model ShopOrder {
   id          String    @id @default(cuid())
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  serviceTemplateId String
-  serviceTemplate   ServiceTemplate @relation(fields: [serviceTemplateId], references: [id], onDelete: Restrict)
 
   // Buyer info (unauthenticated customer)
   buyerName  String
@@ -2677,6 +2672,8 @@ model ServiceOrder {
   buyerNote  String? // Optional message / requirements from buyer
 
   // Pricing snapshot (frozen at time of order)
+  subtotal Decimal @default(0)
+  taxTotal Decimal @default(0)
   amount   Decimal
   currency String  @default("INR")
 
@@ -2693,11 +2690,12 @@ model ServiceOrder {
 
   // Linked ERP invoice (auto-generated on payment success, nulled if invoice deleted)
   linkedInvoiceId String?
-  linkedInvoice   Invoice? @relation("ServiceOrderLinkedInvoice", fields: [linkedInvoiceId], references: [id], onDelete: SetNull)
+  linkedInvoice   Invoice? @relation("ShopOrderLinkedInvoice", fields: [linkedInvoiceId], references: [id], onDelete: SetNull)
 
   sourceProposalId    String?
-  sourceProposal      Proposal?            @relation("ProposalToServiceOrder", fields: [sourceProposalId], references: [id])
+  sourceProposal      Proposal?            @relation("ProposalToShopOrder", fields: [sourceProposalId], references: [id])
   proposalConversions ProposalConversion[]
+  items               ShopOrderItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2706,6 +2704,23 @@ model ServiceOrder {
   @@index([workspaceId, createdAt(sort: Desc)])
   @@index([razorpayOrderId])
   @@index([stripePaymentIntentId])
+}
+
+model ShopOrderItem {
+  id          String    @id @default(cuid())
+  shopOrderId String
+  shopOrder   ShopOrder @relation(fields: [shopOrderId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  productName String
+  sku         String
+  quantity    Int
+  unitPrice   Decimal
+  taxRate     Float   @default(0)
+  lineTotal   Decimal
+  lineTax     Decimal @default(0)
 }
 
 model UserPreference {
@@ -2732,8 +2747,8 @@ model ProposalConversion {
   retainerId String?
   retainer   Retainer? @relation(fields: [retainerId], references: [id], onDelete: SetNull)
 
-  serviceOrderId String?
-  serviceOrder   ServiceOrder? @relation(fields: [serviceOrderId], references: [id], onDelete: SetNull)
+  shopOrderId String?
+  shopOrder   ShopOrder? @relation(fields: [shopOrderId], references: [id], onDelete: SetNull)
 
   convertedAt       DateTime @default(now())
   convertedByUserId String?

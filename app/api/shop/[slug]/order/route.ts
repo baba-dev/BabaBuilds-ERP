@@ -4,6 +4,7 @@ import { decrypt } from '@/lib/encryption';
 import Razorpay from 'razorpay';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
 import { logActivity } from '@/lib/security/activity-log';
+import { Prisma } from '@prisma/client';
 
 type BusinessProfileWithSecrets = {
   stripeSecretKey?: string | null;
@@ -12,42 +13,100 @@ type BusinessProfileWithSecrets = {
 /**
  * POST /api/shop/[slug]/order
  * Public endpoint — no auth required.
- * Creates a payment order (Razorpay or Stripe) for a shop service purchase.
+ * Creates a payment order (Razorpay or Stripe) for a product checkout.
  */
 export async function POST(request: Request, context: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await context.params;
     const body = await request.json();
-    const { serviceId, buyerName, buyerEmail, buyerPhone, buyerNote } = body;
+    const { items, buyerName, buyerEmail, buyerPhone, buyerNote } = body as {
+      items?: unknown[];
+      buyerName?: string;
+      buyerEmail?: string;
+      buyerPhone?: string;
+      buyerNote?: string;
+    };
 
-    if (!serviceId || !buyerName || !buyerEmail) {
+    if (!Array.isArray(items) || items.length === 0 || !buyerName || !buyerEmail) {
       return NextResponse.json({ error: 'Missing required buyer information.' }, { status: 400 });
     }
 
     // Load workspace profile
     const profile = await prisma.businessProfile.findUnique({
       where: { shopSlug: slug.toLowerCase() },
-      include: {
-        workspace: {
-          include: {
-            serviceTemplates: {
-              where: { id: serviceId, showInShop: true },
-            },
-          },
-        },
-      },
+      include: { workspace: true },
     });
 
     if (!profile || !profile.shopEnabled) {
       return NextResponse.json({ error: 'Shop not found.' }, { status: 404 });
     }
 
-    const service = profile.workspace.serviceTemplates[0];
-    if (!service) {
-      return NextResponse.json({ error: 'Service not found or not available in shop.' }, { status: 404 });
+    const normalizedItems = items
+      .map((item: unknown) => {
+        if (!item || typeof item !== 'object') return null;
+        const productId = String((item as { productId?: unknown }).productId || '').trim();
+        const quantity = Number((item as { quantity?: unknown }).quantity ?? 0);
+        return productId && Number.isFinite(quantity) && quantity > 0
+          ? { productId, quantity: Math.floor(quantity) }
+          : null;
+      })
+      .filter((item: { productId: string; quantity: number } | null): item is { productId: string; quantity: number } => Boolean(item));
+
+    if (normalizedItems.length === 0) {
+      return NextResponse.json({ error: 'No valid product lines were provided.' }, { status: 400 });
     }
 
-    const amount   = Number(service.defaultPrice);
+    const requestedProductIds = Array.from(new Set(normalizedItems.map((item: { productId: string }) => item.productId)));
+    const products = await prisma.product.findMany({
+      where: {
+        workspaceId: profile.workspaceId,
+        id: { in: requestedProductIds },
+      },
+      select: {
+        id: true,
+        name: true,
+        sku: true,
+        baselinePrice: true,
+        currentStock: true,
+      },
+    });
+    const productById = new Map(products.map((product) => [product.id, product]));
+
+    const lineItems: Array<{
+      productId: string;
+      productName: string;
+      sku: string;
+      quantity: number;
+      unitPrice: Prisma.Decimal;
+      lineTotal: Prisma.Decimal;
+    }> = [];
+
+    for (const item of normalizedItems) {
+      const product = productById.get(item.productId);
+      if (!product) {
+        return NextResponse.json({ error: `Product ${item.productId} is not available in this shop.` }, { status: 404 });
+      }
+      if (item.quantity > product.currentStock) {
+        return NextResponse.json(
+          { error: `Insufficient stock for ${product.name}. Requested ${item.quantity}, available ${product.currentStock}.` },
+          { status: 409 },
+        );
+      }
+      const unitPrice = new Prisma.Decimal(product.baselinePrice ?? 0);
+      const lineTotal = unitPrice.mul(item.quantity);
+      lineItems.push({
+        productId: product.id,
+        productName: product.name,
+        sku: product.sku,
+        quantity: item.quantity,
+        unitPrice,
+        lineTotal,
+      });
+    }
+
+    const subtotalDecimal = lineItems.reduce((sum, item) => sum.plus(item.lineTotal), new Prisma.Decimal(0));
+    const amountDecimal = subtotalDecimal;
+    const amount = Number(amountDecimal.toFixed(2));
     const currency = profile.workspace ? 'INR' : 'INR'; // extend for multi-currency later
 
     // Determine which gateway to use
@@ -63,19 +122,33 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
     }
 
     // Create DB record in PENDING state
-    const order = await prisma.serviceOrder.create({
+    const order = await prisma.shopOrder.create({
       data: {
-        workspaceId:       profile.workspaceId,
-        serviceTemplateId: service.id,
+        workspaceId: profile.workspaceId,
         buyerName,
         buyerEmail,
-        buyerPhone:        buyerPhone || null,
-        buyerNote:         buyerNote  || null,
-        amount,
+        buyerPhone: buyerPhone || null,
+        buyerNote: buyerNote || null,
+        subtotal: subtotalDecimal,
+        taxTotal: 0,
+        amount: amountDecimal,
         currency,
         gateway,
         status: 'PENDING',
+        items: {
+          create: lineItems.map((item) => ({
+            productId: item.productId,
+            productName: item.productName,
+            sku: item.sku,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            taxRate: 0,
+            lineTax: 0,
+            lineTotal: item.lineTotal,
+          })),
+        },
       },
+      include: { items: true },
     });
 
     dispatchNotification({
@@ -83,7 +156,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
       workspaceId: profile.workspaceId,
       data: {
         orderId: order.id,
-        serviceName: service.name,
+        itemCount: order.items.length,
         buyerName,
         buyerEmail,
         amount: `${currency} ${amount}`,
@@ -100,13 +173,17 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
         email: buyerEmail,
       },
       entity: {
-        type: 'service_order',
+        type: 'shop_order',
         id: order.id,
       },
       metadata: {
         source: 'public_shop',
-        serviceTemplateId: service.id,
-        serviceName: service.name,
+        items: order.items.map((item) => ({
+          productId: item.productId,
+          productName: item.productName,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice.toString(),
+        })),
         gateway,
         amount,
         currency,
@@ -123,10 +200,10 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
         amount:   Math.round(amount * 100), // paise
         currency: 'INR',
         receipt:  `shop_${order.id.substring(0, 10)}`,
-        notes:    { serviceOrderId: order.id, serviceName: service.name, buyerEmail },
+        notes:    { shopOrderId: order.id, buyerEmail },
       });
 
-      await prisma.serviceOrder.update({
+      await prisma.shopOrder.update({
         where: { id: order.id },
         data:  { razorpayOrderId: rzpOrder.id },
       });
@@ -140,7 +217,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
         keyId:      profile.razorpayKeyId,
         prefill:    { name: buyerName, email: buyerEmail, contact: buyerPhone || '' },
         shopName:   profile.companyName,
-        serviceName: service.name,
+        itemCount: order.items.length,
       });
     }
 
@@ -152,22 +229,22 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
 
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
-        line_items: [{
+        line_items: lineItems.map((item) => ({
           price_data: {
-            currency:    'usd',
-            unit_amount: Math.round(amount * 100),
-            product_data: { name: service.name, description: service.description || undefined },
+            currency: 'usd',
+            unit_amount: Math.round(Number(item.unitPrice.toFixed(2)) * 100),
+            product_data: { name: item.productName, description: `SKU ${item.sku}` },
           },
-          quantity: 1,
-        }],
+          quantity: item.quantity,
+        })),
         mode:         'payment',
         success_url:  `${process.env.NEXTAUTH_URL}/shop/${slug}?payment=success&order=${order.id}`,
         cancel_url:   `${process.env.NEXTAUTH_URL}/shop/${slug}?payment=cancelled`,
-        metadata:     { serviceOrderId: order.id, buyerEmail },
+        metadata:     { shopOrderId: order.id, buyerEmail },
         customer_email: buyerEmail,
       });
 
-      await prisma.serviceOrder.update({
+      await prisma.shopOrder.update({
         where: { id: order.id },
         data:  { stripeSessionId: session.id },
       });

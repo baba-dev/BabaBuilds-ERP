@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Briefcase, Loader2, ShieldCheck, Store } from "lucide-react";
+import { Briefcase, Loader2, ShieldCheck } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileUploadField } from "@/components/forms/file-upload-field";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
@@ -21,7 +20,6 @@ export type ServiceFormService = {
   longDescription?: string;
   defaultPrice: number;
   imageUrl?: string;
-  showInShop: boolean;
   nicCode?: { id?: string; code: string; description: string };
   sacCode?: { id?: string; code: string; description: string; igstRate: number };
 };
@@ -36,8 +34,6 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   service?: ServiceFormService | null;
   onSuccess?: () => void;
-  planTier?: "FREE" | "PRO" | "TEAM";
-  publishedCount?: number;
 };
 
 const EMPTY_FORM = {
@@ -47,7 +43,6 @@ const EMPTY_FORM = {
   defaultPrice: "",
   nicCodeId: "",
   sacCodeId: "",
-  showInShop: false,
   imageUrl: "",
 };
 
@@ -97,11 +92,10 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSuccess }: Pr
         defaultPrice: String(service.defaultPrice),
         nicCodeId: mappedNicCodeId,
         sacCodeId: mappedSacCodeId,
-        showInShop: service.showInShop,
         imageUrl: service.imageUrl || "",
       });
     } else {
-      setForm({ ...EMPTY_FORM, showInShop: true });
+      setForm({ ...EMPTY_FORM });
     }
     setImageFile(null);
   }, [open, service, mappedNicCodeId, mappedSacCodeId]);
@@ -119,7 +113,6 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSuccess }: Pr
       fd.append("defaultPrice", form.defaultPrice);
       fd.append("nicCodeId", form.nicCodeId);
       fd.append("sacCodeId", form.sacCodeId);
-      fd.append("showInShop", String(form.showInShop));
       if (imageFile) fd.append("serviceImage", imageFile);
       if (service) fd.append("existingImageUrl", form.imageUrl);
 
@@ -157,7 +150,7 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSuccess }: Pr
                   {service ? "Edit Service" : "Add Service"}
                 </DialogTitle>
                 <DialogDescription className="text-zinc-500 dark:text-zinc-400 mt-1 text-xs font-medium">
-                  {service ? "Update the service details and shop visibility." : "Configure your service for invoicing and the public shop."}
+                  {service ? "Update the service details." : "Configure your service for invoicing and proposals."}
                 </DialogDescription>
               </div>
             </div>
@@ -186,27 +179,19 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSuccess }: Pr
             </div>
 
             <div className="space-y-2">
-              <Label className="font-bold text-zinc-700 dark:text-zinc-300 text-xs uppercase tracking-wider">Shop Description <span className="text-zinc-400 font-normal">(shown on your public shop)</span></Label>
-              <RichTextEditor value={form.longDescription} onChange={(html) => setForm((f) => ({ ...f, longDescription: html }))} placeholder="Describe what's included, deliverables, turnaround time..." />
+              <Label className="font-bold text-zinc-700 dark:text-zinc-300 text-xs uppercase tracking-wider">Detailed Description <span className="text-zinc-400 font-normal">(optional)</span></Label>
+              <RichTextEditor value={form.longDescription} onChange={(html) => setForm((f) => ({ ...f, longDescription: html }))} placeholder="Describe deliverables, scope, and terms..." />
             </div>
 
             <div className="space-y-2">
-              <Label className="font-bold text-zinc-700 dark:text-zinc-300 text-xs uppercase tracking-wider">Hero Image <span className="text-zinc-400 font-normal">(displayed on shop card)</span></Label>
+              <Label className="font-bold text-zinc-700 dark:text-zinc-300 text-xs uppercase tracking-wider">Service Image <span className="text-zinc-400 font-normal">(optional)</span></Label>
               {form.imageUrl && !imageFile && (
                 <div className="relative w-full h-32 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 mb-2">
                   <img src={form.imageUrl} alt="Current" className="w-full h-full object-cover" />
                   <button type="button" onClick={() => setForm((f) => ({ ...f, imageUrl: "" }))} className="absolute top-2 right-2 p-1 bg-rose-600 text-white rounded-md text-[10px] font-bold">Remove</button>
                 </div>
               )}
-              <FileUploadField accept="image/*" onFileSelect={setImageFile} helpText="PNG, JPG or WEBP · recommended 1200×600px" inputClassName="dark:bg-zinc-900 dark:border-zinc-800" />
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-800/30 rounded-xl">
-              <div>
-                <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-2"><Store className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />Show in Public Shop</p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Publish this service on your shop page so clients can browse and buy.</p>
-              </div>
-              <Switch checked={form.showInShop} onCheckedChange={(v) => setForm((f) => ({ ...f, showInShop: v }))} className="data-[state=checked]:bg-indigo-600" />
+              <FileUploadField accept="image/*" onFileSelect={setImageFile} helpText="PNG, JPG or WEBP" inputClassName="dark:bg-zinc-900 dark:border-zinc-800" />
             </div>
 
             <div className="p-5 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800/80 rounded-xl space-y-4">

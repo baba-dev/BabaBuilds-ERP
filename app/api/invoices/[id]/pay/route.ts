@@ -220,37 +220,6 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
       const updatedInvoice = await tx.invoice.findUniqueOrThrow({ where: { id: invoiceId } });
 
-      const becamePaidNow = newStatus === INVOICE_STATUS.PAID && existingInvoice.status !== INVOICE_STATUS.PAID;
-
-      if (becamePaidNow && existingInvoice.items && existingInvoice.items.length > 0) {
-        for (const item of existingInvoice.items) {
-          if (item.productId) {
-            const product = await tx.product.findFirst({ where: { id: item.productId, workspaceId } });
-            if (product) {
-              // Clamp to 0 — stock cannot go negative. The movement log still records
-              // the full quantity so over-shipments are visible in inventory history.
-              const newStock = Math.max(0, product.currentStock - item.quantity);
-              await tx.product.update({
-                where: { id: item.productId },
-                data: {
-                  currentStock: newStock,
-                  status: newStock <= 0 ? "OUT_OF_STOCK" : (newStock <= product.safetyStock ? "LOW_STOCK" : "IN_STOCK"),
-                },
-              });
-              await tx.inventoryMovement.create({
-                data: {
-                  workspaceId,
-                  productId: item.productId,
-                  type: "OUT",
-                  quantity: -item.quantity, // record actual quantity even if it exceeded stock
-                  reason: `Invoice #${updatedInvoice.invoiceNumber} Payment`,
-                  referenceId: updatedInvoice.id,
-                },
-              });
-            }
-          }
-        }
-      }
       return { kind: 'ok' as const, existingInvoice, updatedInvoice, newStatus };
     });
 

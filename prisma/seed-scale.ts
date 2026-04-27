@@ -4,7 +4,7 @@ const prisma = new PrismaClient();
 
 type SeedOptions = {
   invoices: number;
-  serviceOrders: number;
+  shopOrders: number;
   products: number;
   clients: number;
   workspaceName: string;
@@ -12,7 +12,7 @@ type SeedOptions = {
 
 const DEFAULTS: SeedOptions = {
   invoices: 10_000,
-  serviceOrders: 5_000,
+  shopOrders: 5_000,
   products: 2_000,
   clients: 300,
   workspaceName: "Scale Test Workspace",
@@ -53,7 +53,7 @@ function billingMonthLabel(d: Date) {
 async function main() {
   const opts: SeedOptions = {
     invoices: Number(process.env.SEED_INVOICES ?? DEFAULTS.invoices),
-    serviceOrders: Number(process.env.SEED_SERVICE_ORDERS ?? DEFAULTS.serviceOrders),
+    shopOrders: Number(process.env.SEED_SHOP_ORDERS ?? DEFAULTS.shopOrders),
     products: Number(process.env.SEED_PRODUCTS ?? DEFAULTS.products),
     clients: Number(process.env.SEED_CLIENTS ?? DEFAULTS.clients),
     workspaceName: process.env.SEED_WORKSPACE_NAME ?? DEFAULTS.workspaceName,
@@ -281,18 +281,19 @@ async function main() {
     if (i % 2000 === 0) console.log(`Invoices seeded: ${Math.min(i + chunk.length, invoiceRows.length)}`);
   }
 
-  // Service orders (public shop orders / transactions stand-in)
-  const orderRows: Array<Prisma.ServiceOrderCreateManyInput> = [];
+  // Shop orders (public shop orders / transactions stand-in)
+  const orderRows: Array<Prisma.ShopOrderCreateManyInput> = [];
   const orderStatuses = ["PENDING", "PAID", "FAILED"] as const;
-  for (let i = 0; i < opts.serviceOrders; i++) {
+  for (let i = 0; i < opts.shopOrders; i++) {
     const ageDays = Math.floor(rand() * 365);
     const createdAt = daysAgo(ageDays, now);
     const amount = 200 + rand() * 40_000;
     orderRows.push({
       workspaceId,
-      serviceTemplateId: "seed-service-template", // not enforced by FK? it is required; relation is Restrict. We'll use a real template below.
       buyerName: `Buyer ${i + 1}`,
       buyerEmail: `buyer${i + 1}@local.test`,
+      subtotal: amount.toFixed(2),
+      taxTotal: "0",
       amount: amount.toFixed(2),
       currency: "INR",
       status: pick([...orderStatuses], i),
@@ -301,30 +302,10 @@ async function main() {
     });
   }
 
-  // Ensure a service template exists for FK.
-  const st = await prisma.serviceTemplate.upsert({
-    where: { id: `${workspaceId}-seed-service-template` },
-    update: {
-      name: "Seed Service",
-      description: "Seeded service template",
-      defaultPrice: "1000",
-      showInShop: true,
-    },
-    create: {
-      id: `${workspaceId}-seed-service-template`,
-      workspaceId,
-      name: "Seed Service",
-      description: "Seeded service template",
-      defaultPrice: "1000",
-      showInShop: true,
-    },
-  });
-  for (const row of orderRows) row.serviceTemplateId = st.id;
-
   for (let i = 0; i < orderRows.length; i += chunkSize) {
     const chunk = orderRows.slice(i, i + chunkSize);
-    await prisma.serviceOrder.createMany({ data: chunk });
-    if (i % 2000 === 0) console.log(`Service orders seeded: ${Math.min(i + chunk.length, orderRows.length)}`);
+    await prisma.shopOrder.createMany({ data: chunk });
+    if (i % 2000 === 0) console.log(`Shop orders seeded: ${Math.min(i + chunk.length, orderRows.length)}`);
   }
 
   console.log("✅ Scale seed complete.");

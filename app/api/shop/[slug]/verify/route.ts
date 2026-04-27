@@ -13,15 +13,15 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
   try {
     const { slug } = await context.params;
     const body = await request.json();
-    const { serviceOrderId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = body;
+    const { shopOrderId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = body;
 
-    if (!serviceOrderId) return NextResponse.json({ error: 'Missing order reference.' }, { status: 400 });
+    if (!shopOrderId) return NextResponse.json({ error: 'Missing order reference.' }, { status: 400 });
 
     // Load the order + workspace profile
-    const order = await prisma.serviceOrder.findFirst({
-      where:   { id: serviceOrderId },
+    const order = await prisma.shopOrder.findFirst({
+      where:   { id: shopOrderId },
       include: {
-        serviceTemplate: true,
+        items: true,
         workspace: {
           include: { businessProfile: true },
         },
@@ -46,11 +46,11 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
         .digest('hex');
 
       if (expectedSig !== razorpaySignature) {
-        await prisma.serviceOrder.update({ where: { id: order.id }, data: { status: 'FAILED' } });
+        await prisma.shopOrder.update({ where: { id: order.id }, data: { status: 'FAILED' } });
         return NextResponse.json({ error: 'Payment signature verification failed.' }, { status: 400 });
       }
 
-      await prisma.serviceOrder.update({
+      await prisma.shopOrder.update({
         where: { id: order.id },
         data:  { razorpayPaymentId, razorpaySignature, status: 'PAID' },
       });
@@ -88,7 +88,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
           billingMonth,
           invoiceDate,
           clientName:         order.buyerName,
-          serviceDescription: `${order.serviceTemplate.name} [E-Commerce Sale]`,
+          serviceDescription: `Shop Product Sale`,
           subtotal:           order.amount,
           taxRate:            0,
           taxAmount:          0,
@@ -100,21 +100,20 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
           amountReceived:     Number(order.amount),
           dateReceived:       new Date(),
           items: {
-            create: [
-              {
-                description: `${order.serviceTemplate.name} — E-Commerce Shop Purchase`,
-                quantity: 1,
-                unitPrice: order.amount,
-                taxRate: 0,
-                totalAmount: order.amount,
-              }
-            ]
+            create: order.items.map((item) => ({
+              productId: item.productId,
+              description: `${item.productName} — E-Commerce Shop Purchase`,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              taxRate: item.taxRate,
+              totalAmount: item.lineTotal,
+            })),
           }
         },
       });
 
       // Link invoice to order
-      await prisma.serviceOrder.update({
+      await prisma.shopOrder.update({
         where: { id: order.id },
         data:  { linkedInvoiceId: invoice.id },
       });

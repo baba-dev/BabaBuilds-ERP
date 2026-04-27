@@ -44,7 +44,7 @@ export const IMPORT_ADAPTERS: Record<ImportEntityKey, ImportAdapter> = {
   shop_items: {
     entity: 'shop_items',
     label: 'Shop Items',
-    description: 'Import storefront-ready service listings.',
+    description: 'Import storefront-ready product listings.',
     fields: [
       { key: 'name', label: 'Name', required: true, synonyms: ['item name', 'product name'] },
       { key: 'sku', label: 'SKU', synonyms: ['code', 'item code'] },
@@ -55,7 +55,7 @@ export const IMPORT_ADAPTERS: Record<ImportEntityKey, ImportAdapter> = {
       { key: 'taxRate', label: 'Tax Rate', synonyms: ['tax'] },
     ],
     previewColumns: ['name', 'sku', 'price', 'category', 'active'],
-    sampleRow: { name: 'Website Audit Package', sku: 'WAP-001', description: 'One-time website audit', price: '299', category: 'Audit', active: 'true', taxRate: '18' },
+    sampleRow: { name: 'Ergonomic Keyboard', sku: 'KEY-001', description: 'Low-profile wireless keyboard', price: '299', category: 'Peripherals', active: 'true', taxRate: '18' },
   },
   inventory: {
     entity: 'inventory',
