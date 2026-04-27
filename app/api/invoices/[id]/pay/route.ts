@@ -18,7 +18,7 @@ import { withPermission } from '@/lib/rbac';
 import { appendTaxAuditEvent, newTaxCorrelationId } from '@/lib/tax/audit';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
 import { resolveInvoicePdfStoragePath } from '@/lib/invoice/pdf-storage';
-import { applyInvoiceStatusStamp } from '@/lib/invoice/pdf-stamp';
+import { applyInvoiceStatusStamp, getInvoiceStampDescriptor } from '@/lib/invoice/pdf-stamp';
 
 import { 
   getWorkspaceId,
@@ -277,13 +277,16 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     if (statusChanged) {
       const resolvedPdfPath = resolveInvoicePdfStoragePath(updatedInvoice);
       if (resolvedPdfPath) {
-        const stamped = await applyInvoiceStatusStamp({
-          sourcePdfPath: resolvedPdfPath,
-          targetStatus: newStatus,
-          dateReceived,
+        const stampDescriptor = getInvoiceStampDescriptor({
+          status: newStatus,
+          dateReceivedIso: dateReceived,
         });
-        if (stamped) {
-          fs.writeFileSync(resolvedPdfPath, stamped);
+        if (stampDescriptor) {
+          await applyInvoiceStatusStamp({
+            filePath: resolvedPdfPath,
+            stampLabel: stampDescriptor.stampLabel,
+            receivedDateText: stampDescriptor.receivedDateText,
+          });
         }
       }
     }
