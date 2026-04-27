@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuration
-BACKUP_DIR="/c/Users/123/Desktop/BabaERP/backups"
+BACKUP_DIR="${BACKUP_DIR:-$PWD/backups}"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 BACKUP_PATH="$BACKUP_DIR/$TIMESTAMP"
 RETENTION_COUNT=5
