@@ -17,6 +17,8 @@ import { computeWithheldAmount, defaultDepositDueDate, deriveReturnPeriodKey } f
 import { withPermission } from '@/lib/rbac';
 import { appendTaxAuditEvent, newTaxCorrelationId } from '@/lib/tax/audit';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
+import { resolveInvoicePdfStoragePath } from '@/lib/invoice/pdf-storage';
+import { applyInvoiceStatusStamp } from '@/lib/invoice/pdf-stamp';
 
 import { 
   getWorkspaceId,
@@ -268,75 +270,21 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       );
     }
 
-    const { PDFDocument, rgb, degrees, StandardFonts } = await import('pdf-lib');
     const { existingInvoice, updatedInvoice, newStatus } = transitionResult;
+    const statusChanged = newStatus !== toInvoiceStatus(existingInvoice.status);
     const becamePaidNow = newStatus === INVOICE_STATUS.PAID && existingInvoice.status !== INVOICE_STATUS.PAID;
 
-    if (becamePaidNow) {
-      let relativePath = updatedInvoice.pdfPath.startsWith('/')
-        ? updatedInvoice.pdfPath.substring(1)
-        : updatedInvoice.pdfPath;
-      let fullPdfPath = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', relativePath);
-
-      let fileExists = fs.existsSync(fullPdfPath);
-
-      if (!fileExists) {
-        const sanitizedFilename = (updatedInvoice.invoiceNumber || "").replace(/\//g, '_') + ".pdf";
-        const sanitizedRelative = `invoices/${updatedInvoice.workspaceId}/${sanitizedFilename}`;
-        const sanitizedFull = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', sanitizedRelative);
-
-        if (fs.existsSync(sanitizedFull)) {
-          fullPdfPath = sanitizedFull;
-          relativePath = sanitizedRelative;
-          fileExists = true;
-
-          await prisma.invoice.update({
-            where: { id: updatedInvoice.id },
-            data: { pdfPath: `/${sanitizedRelative}` },
-          });
-        }
-      }
-
-      if (fileExists) {
-        const existingPdfBytes = fs.readFileSync(fullPdfPath);
-        const pdfDoc = await PDFDocument.load(existingPdfBytes);
-
-        const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-
-        const pages = pdfDoc.getPages();
-        const paymentDateObj = new Date(dateReceived);
-        const formattedDate = paymentDateObj.toLocaleDateString('en-GB', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-        }).toUpperCase();
-
-        pages.forEach(page => {
-          const { width, height } = page.getSize();
-
-          page.drawText('PAID', {
-            x: width / 2 - 140,
-            y: height / 2 - 50,
-            size: 130,
-            font: fontBold,
-            color: rgb(0.85, 0.15, 0.15),
-            opacity: 0.10,
-            rotate: degrees(45),
-          });
-
-          page.drawText(`RECEIVED: ${formattedDate}`, {
-            x: width / 2 - 110,
-            y: height / 2 - 130,
-            size: 24,
-            font: fontBold,
-            color: rgb(0.85, 0.15, 0.15),
-            opacity: 0.10,
-            rotate: degrees(45),
-          });
+    if (statusChanged) {
+      const resolvedPdfPath = resolveInvoicePdfStoragePath(updatedInvoice);
+      if (resolvedPdfPath) {
+        const stamped = await applyInvoiceStatusStamp({
+          sourcePdfPath: resolvedPdfPath,
+          targetStatus: newStatus,
+          dateReceived,
         });
-
-        const pdfBytes = await pdfDoc.save();
-        fs.writeFileSync(fullPdfPath, pdfBytes);
+        if (stamped) {
+          fs.writeFileSync(resolvedPdfPath, stamped);
+        }
       }
     }
 

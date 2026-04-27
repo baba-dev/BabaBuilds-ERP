@@ -1,6 +1,5 @@
 import { PDFDocument, PDFPage, PDFArray, PDFName, PDFString, rgb, StandardFonts, degrees } from 'pdf-lib';
 import fs from 'fs';
-import path from 'path';
 import { buildPrivatePath } from '@/lib/uploads/private-storage';
 import type { InvoiceTotals } from '@/lib/invoice/totals';
 import { canUsePaymentGateways } from '@/lib/entitlements';
@@ -75,6 +74,36 @@ export interface PDFParams {
   /** When true, show small “Make yours” footer (Free plan, non-trial). Omit to infer from profile.workspace. */
   showFreePlanFooter?: boolean;
 }
+
+export type InvoiceWatermarkKind = "NONE" | "PARTIAL" | "PAID";
+
+const normalizeInvoiceWatermark = (status: string | null | undefined): InvoiceWatermarkKind => {
+  if (!status || typeof status !== "string") return "NONE";
+  const normalized = status.trim().toUpperCase();
+  if (normalized === "PAID") return "PAID";
+  if (normalized === "PARTIALLY_PAID" || normalized === "PARTIALLY PAID") return "PARTIAL";
+  return "NONE";
+};
+
+const drawInvoiceWatermark = (
+  page: PDFPage,
+  fontBold: import("pdf-lib").PDFFont,
+  kind: InvoiceWatermarkKind
+) => {
+  if (kind === "NONE") return;
+  const { width, height } = page.getSize();
+  const mainText = kind === "PAID" ? "PAID" : "PARTIAL PAID";
+  const xOffset = kind === "PAID" ? 140 : 235;
+  page.drawText(mainText, {
+    x: width / 2 - xOffset,
+    y: height / 2 - 50,
+    size: kind === "PAID" ? 130 : 96,
+    font: fontBold,
+    color: rgb(0.85, 0.15, 0.15),
+    opacity: 0.10,
+    rotate: degrees(45),
+  });
+};
 
 export async function generateInvoicePDF({
   profile,
@@ -472,9 +501,9 @@ export async function generateInvoicePDF({
     
     let currentY = 335; 
     
-    const isPaidStatus = typeof status === "string" && status.trim().toUpperCase() === "PAID";
-    if (isPaidStatus) {
-      drawWatermark('PAID');
+    const watermarkKind = normalizeInvoiceWatermark(status);
+    if (watermarkKind !== "NONE") {
+      drawInvoiceWatermark(page, fontBold, watermarkKind);
     }
 
     let displaySac: string | undefined = typeof sacCode === 'string' ? sacCode : undefined;
@@ -623,3 +652,5 @@ export async function generateInvoicePDF({
 
   return await pdfDoc.save();
 }
+
+export { normalizeInvoiceWatermark, drawInvoiceWatermark };
