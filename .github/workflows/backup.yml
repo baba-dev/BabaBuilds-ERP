@@ -13,8 +13,10 @@ jobs:
   backup:
     name: Perform Backup
     runs-on: [self-hosted, linux, x64, erp-ci]
+    env:
+      BACKUP_DIR: ${{ github.workspace }}/backups
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       
       - name: Ensure Scripts are Executable
         run: chmod +x scripts/backup.sh
@@ -24,6 +26,5 @@ jobs:
         
       - name: Verify Backup Result
         run: |
-          BACKUP_DIR="/c/Users/123/Desktop/BabaERP/backups"
           echo "Current backups in $BACKUP_DIR:"
           ls -lh "$BACKUP_DIR"

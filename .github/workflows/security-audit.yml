@@ -13,20 +13,34 @@ jobs:
   security-audit:
     name: NPM Audit & Fix
     runs-on: [self-hosted, linux, x64, erp-ci]
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
           
       - name: Run Audit
-        run: npm audit || true # Don't fail the build here so we can try to fix it
+        run: npm audit > npm-audit-before.txt || true # Report-only; unresolved advisories are handled below.
         
       - name: Run Audit Fix
-        run: npm audit fix
+        run: npm audit fix || true
+
+      - name: Run Audit After Fix
+        run: npm audit > npm-audit-after.txt || true
+
+      - name: Upload Audit Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-reports
+          path: |
+            npm-audit-before.txt
+            npm-audit-after.txt
+          retention-days: 30
         
       - name: Create Pull Request if changes detected
         uses: peter-evans/create-pull-request@v6
