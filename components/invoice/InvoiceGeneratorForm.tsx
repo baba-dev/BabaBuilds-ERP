@@ -303,7 +303,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
           setTaxRateModalOpen(true);
           return;
         }
-        throw new Error(buildInvoiceGenerateErrorMessage(data));
+        throw new Error(buildInvoiceGenerateErrorMessage(data, "Failed to generate invoice."));
       }
 
       const result = {
@@ -363,7 +363,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
         }),
       });
       const data = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(buildInvoiceGenerateErrorMessage(data));
+      if (!response.ok) throw new Error(buildInvoiceGenerateErrorMessage(data, "Failed to generate invoice."));
 
       const result = {
         pdfPath: data.invoice.pdfPath,
