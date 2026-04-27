@@ -73,6 +73,16 @@ test('validatePaymentBusinessRules rejects non-payable statuses', () => {
   }
 });
 
+test('validatePaymentBusinessRules accepts legacy "Partially Paid" status', () => {
+  const result = validatePaymentBusinessRules({
+    invoiceStatus: 'Partially Paid',
+    cumulativeAmountReceived: d(400),
+    invoiceGrandTotal: d(1000),
+  });
+
+  assert.equal(result.ok, true);
+});
+
 test('two-step partial payments remain PARTIALLY_PAID until fully settled', () => {
   const invoiceGrandTotal = d(1000);
   let existingReceived = d(0);

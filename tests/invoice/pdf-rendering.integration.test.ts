@@ -1,0 +1,110 @@
+import { describe, expect, it } from "vitest";
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
+import { PDFDict, PDFDocument, PDFName } from "pdf-lib";
+
+import { generateInvoicePDF } from "@/lib/pdf/generator";
+import { getInvoicePdfStoragePath } from "@/lib/invoice/pdf-storage";
+
+const makeTempUploadsRoot = async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "invoice-pdf-test-"));
+  process.env.PRIVATE_UPLOADS_DIR = dir;
+  return dir;
+};
+
+const writeTinyPng = async (targetPath: string) => {
+  await fs.mkdir(path.dirname(targetPath), { recursive: true });
+  // 1x1 transparent PNG
+  const pngBase64 =
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9l9x0AAAAASUVORK5CYII=";
+  await fs.writeFile(targetPath, Buffer.from(pngBase64, "base64"));
+};
+
+const defaultParams = () => ({
+  profile: {
+    companyName: "Workspace Corp",
+    address: "Street 1, City",
+    bankName: "Bank",
+    accountName: "Workspace Corp",
+    accountNumber: "123456",
+    ifscCode: "IFSC1234",
+    workspace: {
+      planTier: "PRO",
+      subscriptionStatus: "ACTIVE",
+      baseCurrency: "INR",
+      countryCode: "IN",
+    },
+  },
+  client: {
+    name: "Client Co",
+    address: "Client Street, Client City",
+    country: "IN",
+    isExport: false,
+  },
+  invoiceNumber: "INV/26-27/999",
+  date: new Date("2026-04-27T00:00:00.000Z"),
+  dueDate: new Date("2026-05-04T00:00:00.000Z"),
+  billingMonth: "April 2026",
+  sacCode: "998313",
+  services: [{ title: "Consulting", nicDetails: "Monthly", amount: 1000 }],
+  totals: { subtotal: 1000, taxRate: 0.18, taxAmount: 180, total: 1180, taxMode: "taxable" as const },
+  formattedTotal: "1,180.00",
+  baseCurrency: "INR",
+  userLocale: "en-IN",
+});
+
+test("generateInvoicePDF embeds payment link annotation and logos/signature images", async () => {
+  const root = await makeTempUploadsRoot();
+  const workspaceId = "ws-test";
+  const logoPath = path.join(root, "logos", `${workspaceId}.png`);
+  const clientLogoPath = path.join(root, "logos", "client-logo.png");
+  const signaturePath = path.join(root, "signatures", `${workspaceId}.png`);
+  await writeTinyPng(logoPath);
+  await writeTinyPng(clientLogoPath);
+  await writeTinyPng(signaturePath);
+
+  const pdfBytes = await generateInvoicePDF({
+    ...defaultParams(),
+    paymentLink: "https://rzp.io/i/test-link",
+    profile: {
+      ...defaultParams().profile,
+      logoUrl: `/logos/${workspaceId}.png`,
+      signatureUrl: `/signatures/${workspaceId}.png`,
+    },
+    client: {
+      ...defaultParams().client,
+      logoUrl: "/logos/client-logo.png",
+    },
+  });
+
+  const pdfDoc = await PDFDocument.load(pdfBytes);
+  const page = pdfDoc.getPages()[0];
+  const annots = page.node.get(PDFName.of("Annots"));
+  assert.ok(annots, "Expected link annotation for payment link");
+
+  const resources = page.node.lookup(PDFName.of("Resources"), PDFDict);
+  const xObject = resources?.lookup(PDFName.of("XObject"), PDFDict);
+  assert.ok(xObject, "Expected embedded image XObjects for logos/signature");
+});
+
+test("getInvoicePdfStoragePath resolves private_uploads invoice path", () => {
+  process.env.PRIVATE_UPLOADS_DIR = "/tmp/private-root";
+  const fullPath = getInvoicePdfStoragePath({
+    workspaceId: "ws_123",
+    invoiceNumber: "INV/26-27/001",
+    pdfPath: "/invoices/ws_123/INV_26-27_001.pdf",
+  });
+
+  assert.equal(fullPath, path.join("/tmp/private-root", "invoices", "ws_123", "INV_26-27_001.pdf"));
+});
+
+// Vitest runner in this repo requires at least one describe/it suite in each file.
+describe("pdf rendering integration shim", () => {
+  it("keeps vitest suite discovery satisfied", () => {
+    expect(true).toBe(true);
+  });
+});

@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import { INVOICE_STATUS, type InvoiceStatusValue } from '@/lib/invoice-status';
+import { INVOICE_STATUS, toInvoiceStatus, type InvoiceStatusValue } from '@/lib/invoice-status';
 import { parseInvoicePaymentPayload } from '@/lib/types/business';
 
 export type PaymentValidationErrorCode =
@@ -96,8 +96,9 @@ export const validatePaymentBusinessRules = ({
   invoiceGrandTotal: Prisma.Decimal;
   allowOverpayment?: boolean;
 }): ValidationResult<undefined, 'INVOICE_STATUS_NOT_PAYABLE' | 'OVERPAYMENT_NOT_ALLOWED'> => {
+  const normalizedInvoiceStatus = toInvoiceStatus(invoiceStatus);
   const payableStatuses = new Set<string>([INVOICE_STATUS.PENDING, INVOICE_STATUS.PARTIALLY_PAID]);
-  if (!payableStatuses.has(invoiceStatus)) {
+  if (!payableStatuses.has(normalizedInvoiceStatus)) {
     return {
       ok: false,
       error: { code: 'INVOICE_STATUS_NOT_PAYABLE', message: 'Invoice is not payable in its current status.' },
