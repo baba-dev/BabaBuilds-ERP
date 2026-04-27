@@ -7,7 +7,7 @@ import path from "node:path";
 
 import { PDFDict, PDFDocument, PDFName } from "pdf-lib";
 
-import { generateInvoicePDF } from "@/lib/pdf/generator";
+import { drawInvoiceWatermark, generateInvoicePDF } from "@/lib/pdf/generator";
 import { getInvoicePdfStoragePath } from "@/lib/invoice/pdf-storage";
 
 const makeTempUploadsRoot = async () => {
@@ -22,6 +22,12 @@ const writeTinyPng = async (targetPath: string) => {
   const pngBase64 =
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9l9x0AAAAASUVORK5CYII=";
   await fs.writeFile(targetPath, Buffer.from(pngBase64, "base64"));
+};
+
+const writeTinyWebp = async (targetPath: string) => {
+  await fs.mkdir(path.dirname(targetPath), { recursive: true });
+  const webpBase64 = "UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEAAkA4JaQAA3AA/vuUAAA=";
+  await fs.writeFile(targetPath, Buffer.from(webpBase64, "base64"));
 };
 
 const defaultParams = () => ({
@@ -89,6 +95,41 @@ test("generateInvoicePDF embeds payment link annotation and logos/signature imag
   const resources = page.node.lookup(PDFName.of("Resources"), PDFDict);
   const xObject = resources?.lookup(PDFName.of("XObject"), PDFDict);
   assert.ok(xObject, "Expected embedded image XObjects for logos/signature");
+});
+
+test("generateInvoicePDF loads webp workspace logo without falling back", async () => {
+  const root = await makeTempUploadsRoot();
+  const workspaceId = "ws-test-webp";
+  const logoPath = path.join(root, "logos", workspaceId, "logo.webp");
+  await writeTinyWebp(logoPath);
+
+  const pdfBytes = await generateInvoicePDF({
+    ...defaultParams(),
+    profile: {
+      ...defaultParams().profile,
+      logoUrl: `/logos/${workspaceId}/logo.webp`,
+    },
+  });
+
+  const pdfDoc = await PDFDocument.load(pdfBytes);
+  const page = pdfDoc.getPages()[0];
+  const resources = page.node.lookup(PDFName.of("Resources"), PDFDict);
+  const xObject = resources?.lookup(PDFName.of("XObject"), PDFDict);
+  assert.ok(xObject, "Expected embedded image XObjects for webp logo");
+});
+
+test("drawInvoiceWatermark keeps PARTIAL stamp within page bounds", async () => {
+  const doc = await PDFDocument.create();
+  const page = doc.addPage([595.28, 841.89]);
+  const fontBold = await doc.embedFont("Helvetica-Bold");
+
+  const placement = drawInvoiceWatermark(page, fontBold, "PARTIAL");
+  assert.ok(placement, "Expected partial watermark placement");
+  assert.ok(placement!.x >= 0, "Watermark should start within page");
+  assert.ok(
+    placement!.x + placement!.renderedWidth <= page.getSize().width,
+    "Watermark should end within page"
+  );
 });
 
 test("getInvoicePdfStoragePath resolves private_uploads invoice path", () => {

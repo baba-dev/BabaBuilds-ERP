@@ -541,7 +541,21 @@ export async function POST(request: Request) {
               // Non-fatal — PDF still generates without the link
               console.error('[generate] Stripe link generation failed (non-fatal):', stripeErr);
             }
+          } else if (defaultGateway === 'RAZORPAY') {
+            if (baseCurrency !== 'INR') {
+              console.info(`[generate] Razorpay link skipped: unsupported currency "${baseCurrency}" (requires INR).`);
+            } else if (!profileSettings.razorpayKeyId || !profileSettings.razorpayKeySecret) {
+              console.info('[generate] Razorpay link skipped: missing Razorpay credentials in workspace settings.');
+            }
+          } else if (defaultGateway === 'STRIPE') {
+            if (!profileSettings.stripePublishableKey || !profileSettings.stripeSecretKey) {
+              console.info('[generate] Stripe link skipped: missing Stripe credentials in workspace settings.');
+            }
+          } else {
+            console.info(`[generate] Payment link skipped: unsupported default gateway "${String(defaultGateway)}".`);
           }
+        } else {
+          console.info('[generate] Payment link skipped: workspace is not eligible for gateway links under current billing plan/trial state.');
         }
         // ──────────────────────────────────────────────────────────────────────
 
