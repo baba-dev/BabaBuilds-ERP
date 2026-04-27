@@ -451,7 +451,7 @@ export async function generateInvoicePDF({
       ? await loadLogo(profile.logoUrl, 40, 30, 180, 45)
       : false;
     if (!profileLogoLoaded) {
-      drawText(profile.companyName, 40, 50, 18, true, 'left', black);
+      drawText(profile.companyName, 40, 46, 18, true, 'left', black);
     }
 
     drawText('INVOICE',    width - 40, 45, 24, true,  'right', black);
@@ -470,16 +470,17 @@ export async function generateInvoicePDF({
     if (line2) drawText(line2, 40, 170, 10, false, 'left', textDark);
 
     drawText('To:', 320, 110, 9, true, 'left', textMuted);
-    if (client.logoUrl) await loadLogo(client.logoUrl, 320, 118, 140, 35); 
-    drawText(client.name,     320, 165, 11, true,  'left', black);
+    const clientLogoLoaded = client.logoUrl ? await loadLogo(client.logoUrl, 320, 118, 140, 35) : false;
+    const clientNameY = clientLogoLoaded ? 165 : 125;
+    drawText(client.name,     320, clientNameY, 11, true,  'left', black);
     
     const clientAddrParts = client.address.split(', ');
     const clientLine1 = clientAddrParts.slice(0, Math.ceil(clientAddrParts.length / 2)).join(', ');
     const clientLine2 = clientAddrParts.slice(Math.ceil(clientAddrParts.length / 2)).join(', ');
-    drawText(clientLine1,  320, 180, 9,  false, 'left', textMuted);
-    if (clientLine2) drawText(clientLine2,  320, 195, 9,  false, 'left', textMuted);
+    drawText(clientLine1,  320, clientNameY + 15, 9,  false, 'left', textMuted);
+    if (clientLine2) drawText(clientLine2,  320, clientNameY + 30, 9,  false, 'left', textMuted);
     
-    drawText(client.country,  320, clientLine2 ? 210 : 195, 10, true,  'left', textDark);
+    drawText(client.country,  320, clientNameY + (clientLine2 ? 45 : 30), 10, true,  'left', textDark);
 
     drawRect(40, 220, width - 80, 50, bgLight, borderGray); 
     drawText('Invoice No:',     55,  240, 9,  true,  'left', textMuted);
@@ -540,7 +541,7 @@ export async function generateInvoicePDF({
     drawText('Total Amount',            width - 175, currentY + 92, 11, true, 'right', white);
     drawText(`${currencyCode} ${totals.total.toLocaleString(userLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, width - 55, currentY + 92, 11, true, 'right', white);
 
-    const bankY = currentY + 130;
+    const bankY = currentY + 118;
 
     if (paymentLink) {
       const normalizedPaymentLink = String(paymentLink).trim();
