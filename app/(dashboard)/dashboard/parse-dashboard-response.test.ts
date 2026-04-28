@@ -58,7 +58,7 @@ const basePayload = {
     orderChangeVsPrior30DaysPct: 100,
     availableProducts: 2,
     topProducts: [{ productName: "SEO Package", orderCount: 2, revenue: "1000.99" }],
-    recentShopOrders: [{ id: "s1", itemLabel: "SEO Package", buyerName: "Alex", amount: "200.00", status: "PAID", createdAt: "2026-04-01" }],
+    recentShopOrders: [{ id: "s1", itemSummary: "SEO Package", buyerName: "Alex", amount: "200.00", status: "PAID", createdAt: "2026-04-01" }],
   },
   operations: {
     hasOperationalData: true,

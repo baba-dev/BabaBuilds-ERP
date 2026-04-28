@@ -2566,6 +2566,10 @@ model Product {
   barcode  String? // For zero-latency search
   imageUrl String? // Product image
   location String? // e.g., "Warehouse A", "Van 1"
+  showInShop      Boolean @default(false)
+  shopSortOrder   Int?
+  shopDescription String?
+  shopImageUrl    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2577,6 +2581,7 @@ model Product {
 
   @@unique([sku, workspaceId])
   @@index([workspaceId])
+  @@index([workspaceId, showInShop, currentStock])
 }
 
 model InvoiceItem {

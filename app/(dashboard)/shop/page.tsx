@@ -34,6 +34,7 @@ type ProductCatalogItem = {
   baselinePrice?: number | string | null;
   currentStock?: number;
   status?: string;
+  showInShop?: boolean;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -125,7 +126,9 @@ export default function ShopDashboardPage() {
 
       setOrders(Array.isArray(ordersData.orders) ? ordersData.orders : []);
       setShopOverview(ordersData.overview ?? { totalOrders: 0, statusCounts: { PAID: 0, PENDING: 0, FAILED: 0, REFUNDED: 0 }, paidRevenue: 0 });
-      const parsedProducts = Array.isArray(productsData) ? productsData : [];
+      const parsedProducts = Array.isArray(productsData)
+        ? productsData.filter((product: ProductCatalogItem) => Boolean(product.showInShop))
+        : [];
       setProducts(parsedProducts);
       setShopSlug(settingsData?.shopSlug || null);
       const accent = settingsData?.shopAccentColor || "#6366f1";

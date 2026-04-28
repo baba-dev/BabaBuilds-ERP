@@ -341,7 +341,7 @@ async function buildDashboardPayload(
 
     timed("products.published", () =>
       prisma.product.count({
-        where: { workspaceId },
+        where: { workspaceId, showInShop: true },
       })
     ),
 

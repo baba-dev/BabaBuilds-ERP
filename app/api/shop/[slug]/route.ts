@@ -16,8 +16,8 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
         workspace: {
           include: {
             products: {
-              where: { currentStock: { gt: 0 } },
-              orderBy: { name: 'asc' },
+              where: { currentStock: { gt: 0 }, showInShop: true },
+              orderBy: [{ shopSortOrder: 'asc' }, { name: 'asc' }],
             },
           },
         },
@@ -57,11 +57,11 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
         id: product.id,
         sku: product.sku,
         name: product.name,
-        description: product.description,
+        description: product.shopDescription || product.description,
         category: product.category,
-        imageUrl: product.imageUrl,
+        imageUrl: product.shopImageUrl || product.imageUrl,
         price: Number(product.baselinePrice),
-        stock: product.currentStock,
+        currentStock: product.currentStock,
       })),
     });
   } catch (error) {

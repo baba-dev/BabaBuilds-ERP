@@ -2,12 +2,11 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { decrypt } from '@/lib/encryption';
 import crypto from 'crypto';
-import { assertFreeTierMonthlyInvoiceAllowed } from '@/lib/entitlements';
+import { commitShopOrderPayment } from '@/lib/shop/commit-shop-order-payment';
 
 /**
  * POST /api/shop/[slug]/verify
- * Verifies Razorpay payment signature, marks order PAID,
- * auto-generates an ERP invoice, and optionally emails the buyer.
+ * Verifies Razorpay payment signature and commits payment state.
  */
 export async function POST(request: Request, context: { params: Promise<{ slug: string }> }) {
   try {
@@ -19,9 +18,8 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
 
     // Load the order + workspace profile
     const order = await prisma.shopOrder.findFirst({
-      where:   { id: shopOrderId },
+      where:   { id: shopOrderId, workspace: { businessProfile: { shopSlug: slug.toLowerCase() } } },
       include: {
-        items: true,
         workspace: {
           include: { businessProfile: true },
         },
@@ -29,7 +27,9 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
     });
 
     if (!order) return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
-    if (order.status === 'PAID') return NextResponse.json({ success: true, alreadyPaid: true });
+    if (order.status !== 'PENDING' && order.status !== 'PAID') {
+      return NextResponse.json({ error: `Order not payable in ${order.status} state.` }, { status: 409 });
+    }
 
     const profile = order.workspace.businessProfile;
     if (!profile) return NextResponse.json({ error: 'Workspace not configured.' }, { status: 400 });
@@ -38,6 +38,9 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
     if (order.gateway === 'RAZORPAY') {
       if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
         return NextResponse.json({ error: 'Missing Razorpay payment details.' }, { status: 400 });
+      }
+      if (!order.razorpayOrderId || razorpayOrderId !== order.razorpayOrderId) {
+        return NextResponse.json({ error: 'Gateway order mismatch.' }, { status: 400 });
       }
       const decryptedSecret = decrypt(profile.razorpayKeySecret!);
       const expectedSig     = crypto
@@ -49,83 +52,34 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
         await prisma.shopOrder.update({ where: { id: order.id }, data: { status: 'FAILED' } });
         return NextResponse.json({ error: 'Payment signature verification failed.' }, { status: 400 });
       }
-
-      await prisma.shopOrder.update({
-        where: { id: order.id },
-        data:  { razorpayPaymentId, razorpaySignature, status: 'PAID' },
-      });
     }
-
-    // ── Auto-generate ERP Invoice ─────────────────────────────────────────────
-    try {
-      const workspaceId   = order.workspaceId;
-      const invoiceDate = new Date();
-      const invoiceLimit = await assertFreeTierMonthlyInvoiceAllowed(workspaceId, invoiceDate);
-      if (invoiceLimit) {
-        console.error('Shop invoice blocked by free-tier monthly limit:', invoiceLimit.message);
-        throw new Error(invoiceLimit.message);
-      }
-
-      const financialYear = invoiceDate.getFullYear().toString();
-      const billingMonth  = invoiceDate.toLocaleString('default', { month: 'long' });
-
-      // Get next invoice number
-      const lastInvoice = await prisma.invoice.findFirst({
-        where:   { workspaceId },
-        orderBy: { createdAt: 'desc' },
-        select:  { invoiceNumber: true },
-      });
-      const nextNum       = lastInvoice
-        ? String(parseInt(lastInvoice.invoiceNumber.replace(/\D/g, '') || '0') + 1).padStart(4, '0')
-        : '0001';
-      const invoiceNumber = `SHOP-${nextNum}`;
-
-      const invoice = await prisma.invoice.create({
-        data: {
-          workspaceId,
-          invoiceNumber,
-          financialYear,
-          billingMonth,
-          invoiceDate,
-          clientName:         order.buyerName,
-          serviceDescription: `Shop Product Sale`,
-          subtotal:           order.amount,
-          taxRate:            0,
-          taxAmount:          0,
-          grandTotal:         order.amount,
-          taxMode:            'exempt',
-          totalAmount:        order.amount,
-          pdfPath:            '',
-          status:             'PAID',
-          amountReceived:     Number(order.amount),
-          dateReceived:       new Date(),
-          items: {
-            create: order.items.map((item) => ({
-              productId: item.productId,
-              description: `${item.productName} — E-Commerce Shop Purchase`,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              taxRate: item.taxRate,
-              totalAmount: item.lineTotal,
-            })),
-          }
-        },
-      });
-
-      // Link invoice to order
-      await prisma.shopOrder.update({
-        where: { id: order.id },
-        data:  { linkedInvoiceId: invoice.id },
-      });
-    } catch (invoiceErr) {
-      // Non-fatal: log but don't fail the payment confirmation  
-      console.error('Auto-invoice generation failed (non-fatal):', invoiceErr);
+    const commitResult = await commitShopOrderPayment({
+      workspaceId: order.workspaceId,
+      expectedSlug: slug,
+      shopOrderId: order.id,
+      source: "VERIFY",
+      gatewayBinding: {
+        gateway: "RAZORPAY",
+        orderId: razorpayOrderId,
+        paymentId: razorpayPaymentId,
+        signature: razorpaySignature,
+      },
+    });
+    if (!commitResult.ok) {
+      const status =
+        commitResult.code === "ORDER_NOT_FOUND" ? 404 :
+        commitResult.code === "VERIFY_BINDING_FAILED" ? 400 :
+        commitResult.code === "ORDER_NOT_PAYABLE" ? 409 :
+        commitResult.code === "STOCK_COMMIT_FAILED" ? 409 :
+        400;
+      return NextResponse.json({ error: commitResult.message, code: commitResult.code }, { status });
     }
 
     return NextResponse.json({
       success: true,
       message: 'Payment verified. Thank you for your purchase!',
-      orderId: order.id,
+      orderId: commitResult.orderId,
+      alreadyPaid: commitResult.alreadyPaid,
     });
   } catch (error) {
     console.error('Shop verify error:', error);

@@ -66,16 +66,18 @@ async function processRow(args: {
     const existing = await tx.product.findUnique({ where: { sku_workspaceId: { sku, workspaceId } } });
     if (existing && mode === 'create_only') return 'skipped' as const;
 
+    const normalizedStock = Number(data.currentStock ?? data.stock ?? data.quantity ?? 0);
     const payload = {
       sku,
       name,
       description: String(data.description || '') || null,
       category: String(data.category || '') || null,
-      currentStock: Number(data.currentStock ?? 0),
+      currentStock: normalizedStock,
       safetyStock: Number(data.reorderLevel ?? 5),
       costPrice: asDecimal(data.unitCost ?? 0),
-      baselinePrice: asDecimal(data.sellingPrice ?? 0),
-      status: Number(data.currentStock ?? 0) > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK',
+      baselinePrice: asDecimal(data.sellingPrice ?? data.price ?? 0),
+      status: normalizedStock > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK',
+      showInShop: preview.entity === 'shop_items' ? Boolean(data.isPublished ?? data.active ?? true) : undefined,
     };
 
     if (existing) {

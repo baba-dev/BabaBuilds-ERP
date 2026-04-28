@@ -27,6 +27,9 @@ import {
   validatePaymentBusinessRules 
 } from './logic';
 
+const inventoryStatusFor = (stock: number, safetyStock: number) =>
+  stock <= 0 ? 'OUT_OF_STOCK' : stock <= safetyStock ? 'LOW_STOCK' : 'IN_STOCK';
+
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   let idempotencyContext: { workspaceId: string; operation: string; idempotencyKey: string } | null = null;
   let idempotencyConsumed = false;
@@ -216,6 +219,59 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
             withholdingDepositDueAt: depositDueAt,
           },
         });
+      }
+
+      if (newStatus === INVOICE_STATUS.PAID && existingInvoice.status !== INVOICE_STATUS.PAID) {
+        for (const item of existingInvoice.items) {
+          if (!item.productId || item.quantity <= 0) continue;
+
+          const updatedProduct = await tx.product.updateMany({
+            where: {
+              id: item.productId,
+              workspaceId,
+              currentStock: { gte: item.quantity },
+            },
+            data: { currentStock: { decrement: item.quantity } },
+          });
+
+          if (updatedProduct.count === 0) {
+            throw new Error(`INVOICE_STOCK_COMMIT_FAILED:${item.productId}`);
+          }
+
+          const refreshed = await tx.product.findUnique({
+            where: { id: item.productId },
+            select: { currentStock: true, safetyStock: true },
+          });
+          if (refreshed) {
+            await tx.product.update({
+              where: { id: item.productId },
+              data: { status: inventoryStatusFor(refreshed.currentStock, refreshed.safetyStock) },
+            });
+          }
+
+          const movementReason = `Invoice payment stock commit [invoice:${existingInvoice.id}:${item.productId}]`;
+          const existingMovement = await tx.inventoryMovement.findFirst({
+            where: {
+              workspaceId,
+              productId: item.productId,
+              referenceId: existingInvoice.id,
+              reason: movementReason,
+            },
+            select: { id: true },
+          });
+          if (!existingMovement) {
+            await tx.inventoryMovement.create({
+              data: {
+                workspaceId,
+                productId: item.productId,
+                type: 'OUT',
+                quantity: -item.quantity,
+                reason: movementReason,
+                referenceId: existingInvoice.id,
+              },
+            });
+          }
+        }
       }
 
       const updatedInvoice = await tx.invoice.findUniqueOrThrow({ where: { id: invoiceId } });
