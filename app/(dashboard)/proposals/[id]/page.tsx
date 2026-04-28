@@ -11,7 +11,6 @@ import { formatCurrency } from "@/lib/currency";
 import {
   convertProposalToInvoiceFormAction,
   convertProposalToRetainerFormAction,
-  convertProposalToServiceOrderFormAction,
 } from "./actions";
 import { getTranslations } from "next-intl/server";
 import { FREE_TIER_MONTHLY_INVOICE_LIMIT } from "@/lib/pricing";
@@ -31,12 +30,6 @@ export default async function ProposalDetailPage({
   const billingQuery = searchParams ? await searchParams : {};
   const showInvoiceLimitNotice = billingQuery.billing === "free_invoice_month";
 
-  const serviceTemplates = await prisma.serviceTemplate.findMany({
-    where: { workspaceId: session.workspaceId },
-    select: { id: true, name: true },
-    orderBy: { name: "asc" },
-  });
-
   const proposal = await prisma.proposal.findUnique({
     where: { 
       id,
@@ -46,7 +39,7 @@ export default async function ProposalDetailPage({
       client: true,
       items: true,
       conversions: {
-        include: { invoice: true, retainer: true, serviceOrder: true }
+        include: { invoice: true, retainer: true, shopOrder: true }
       },
       generatedInvoices: true,
       generatedRetainers: true
@@ -150,17 +143,17 @@ export default async function ProposalDetailPage({
                                   ? t("artifacts.invoiceLabel", { invoiceNumber: conv.invoice.invoiceNumber })
                                   : conv.retainer
                                     ? t("artifacts.retainerLabel")
-                                    : conv.serviceOrder
-                                      ? t("artifacts.serviceOrderLabel")
+                                    : conv.shopOrder
+                                      ? t("artifacts.shopOrderLabel")
                                       : t("artifacts.conversionLabel")}
                               </p>
                               <p className="text-xs text-zinc-500">
-                                {conv.invoice ? formatMoney(conv.invoice.totalAmount) : conv.retainer ? formatMoney(conv.retainer.amount) : conv.serviceOrder ? formatMoney(conv.serviceOrder.totalAmount ?? 0) : ""}
+                                {conv.invoice ? formatMoney(conv.invoice.totalAmount) : conv.retainer ? formatMoney(conv.retainer.amount) : conv.shopOrder ? formatMoney(conv.shopOrder.amount ?? 0) : ""}
                               </p>
                             </div>
                           </div>
                           <span className="px-2 py-1 bg-zinc-200 text-xs font-bold rounded">
-                            {conv.invoice?.status || conv.retainer?.status || conv.serviceOrder?.status || conv.conversionType}
+                            {conv.invoice?.status || conv.retainer?.status || conv.shopOrder?.status || conv.conversionType}
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-2 text-xs">
@@ -239,42 +232,6 @@ export default async function ProposalDetailPage({
                     </button>
                   </form>
 
-                  <form action={convertProposalToServiceOrderFormAction} className="space-y-2">
-                    <input type="hidden" name="proposalId" value={proposal.id} />
-                    <select
-                      name="serviceTemplateId"
-                      className="h-10 rounded-md border border-emerald-200 bg-white px-3 text-sm font-semibold text-zinc-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 dark:border-emerald-800/40 dark:bg-zinc-950 dark:text-zinc-50"
-                      defaultValue={serviceTemplates[0]?.id || ""}
-                    >
-                      {serviceTemplates.length === 0 ? (
-                        <option value="">{t("conversion.noServiceTemplates")}</option>
-                      ) : (
-                        serviceTemplates.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                    <input
-                      name="buyerEmail"
-                      placeholder={t("conversion.buyerEmailPlaceholder")}
-                      className="h-10 rounded-md border border-emerald-200 bg-white px-3 text-sm font-semibold text-zinc-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 dark:border-emerald-800/40 dark:bg-zinc-950 dark:text-zinc-50"
-                      defaultValue={proposal.client.email || ""}
-                    />
-                    <textarea
-                      name="buyerNote"
-                      placeholder={t("conversion.buyerNotePlaceholder")}
-                      className="min-h-[72px] rounded-md border border-emerald-200 bg-white px-3 py-2 text-sm font-medium text-zinc-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 dark:border-emerald-800/40 dark:bg-zinc-950 dark:text-zinc-50"
-                    />
-                    <button
-                      type="submit"
-                      disabled={serviceTemplates.length === 0}
-                      className="w-full bg-white dark:bg-zinc-900 border border-emerald-200 dark:border-emerald-800/40 text-emerald-800 dark:text-emerald-300 font-bold tracking-widest uppercase text-xs h-10 rounded shadow-sm hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all"
-                    >
-                      {t("conversion.convertToServiceOrder")}
-                    </button>
-                  </form>
                 </div>
               </div>
             )}

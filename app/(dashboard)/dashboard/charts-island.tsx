@@ -96,11 +96,11 @@ export function ChartsIsland({
   const hasProposalData = useMemo(() => funnelData.some(d => d.value > 0), [funnelData]);
 
   // Order Health Logic - Memoized
-  const serviceOrderHealth = useMemo(() => withChartTokenColors(
-    charts.serviceOrderHealth.map((row) => ({ name: row.status, value: row.value })),
-  ), [charts.serviceOrderHealth]);
+  const shopOrderHealth = useMemo(() => withChartTokenColors(
+    charts.shopOrderHealth.map((row) => ({ name: row.status, value: row.value })),
+  ), [charts.shopOrderHealth]);
 
-  const totalOrders = useMemo(() => serviceOrderHealth.reduce((acc, curr) => acc + curr.value, 0), [serviceOrderHealth]);
+  const totalOrders = useMemo(() => shopOrderHealth.reduce((acc, curr) => acc + curr.value, 0), [shopOrderHealth]);
   const hasOrderData = totalOrders > 0;
 
   // Aging Logic - Memoized
@@ -113,7 +113,7 @@ export function ChartsIsland({
     let cumulativePercentage = 0;
     const dashArray = 2 * Math.PI * 42;
     
-    return serviceOrderHealth
+    return shopOrderHealth
       .map((segment): RingSegment | null => {
         const percentage = (segment.value / totalOrders) * 100;
         if (percentage === 0) return null;
@@ -132,7 +132,7 @@ export function ChartsIsland({
         };
       })
       .filter((s): s is RingSegment => s !== null);
-  }, [serviceOrderHealth, totalOrders, hasOrderData]);
+  }, [shopOrderHealth, totalOrders, hasOrderData]);
 
   const lockedClassName = !canViewCharts ? "opacity-50 grayscale pointer-events-none select-none" : "";
 
@@ -351,7 +351,7 @@ export function ChartsIsland({
           description={tr("chart_shop_order_health_desc", "Paid vs pending vs failed storefront orders.")} 
           hasData={hasOrderData} 
           noDataLabel={tr("chart_no_shop_orders", "No shop orders")} 
-          noDataHint={tr("chart_no_shop_orders_hint", "Service order health appears after public shop activity.")} 
+          noDataHint={tr("chart_no_shop_orders_hint", "Shop order health appears after public shop activity.")} 
           noDataIcon={Activity}
           icon={Activity}
           headerAction={
@@ -399,7 +399,7 @@ export function ChartsIsland({
             </div>
 
             <div className="mt-8 grid grid-cols-3 w-full gap-2">
-              {serviceOrderHealth.map((segment, i: number) => (
+              {shopOrderHealth.map((segment, i: number) => (
                 <div key={i} className="flex flex-col items-center">
                   <div className="flex items-center gap-1.5 mb-1">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: segment.color }} />

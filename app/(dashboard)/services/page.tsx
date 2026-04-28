@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Plus, Briefcase, FileText, Trash2, ShieldCheck, Tag, Loader2,
-  Pencil, Store, Eye, EyeOff, ExternalLink, Repeat,
+  Pencil, ExternalLink, Repeat,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,9 +33,7 @@ export default function ServiceCatalog() {
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [shopSlug, setShopSlug] = useState<string | null>(null);
-  
   const [planTier, setPlanTier] = useState<PlanTier>("FREE");
-  const publishedCount = services.filter((s) => s.showInShop).length;
 
   const industryLabel = countryCode === "IN" ? "NIC Code" : "Industry Class";
   const taxClassLabel = countryCode === "IN" ? "SAC/HSN Code" : "Service Class";
@@ -97,35 +95,6 @@ export default function ServiceCatalog() {
     }
   };
 
-    const toggleShopStatus = async (srv: Service) => {
-    // FIX: Check publishedCount directly instead of the deleted variable
-    if (!srv.showInShop && planTier === "FREE" && publishedCount >= 3) {
-      toast.error("Free plan allows up to 3 published services. Upgrade your plan to publish more.");
-      return;
-    }
-
-    const fd = new FormData();
-    fd.append("name", srv.name);
-    fd.append("description", srv.description || "");
-    fd.append("longDescription", srv.longDescription || "");
-    fd.append("defaultPrice", String(srv.defaultPrice));
-    fd.append("showInShop", String(!srv.showInShop));
-    fd.append("existingImageUrl", srv.imageUrl || "");
-    
-    const res = await fetch(`/api/services/${srv.id}`, { method: "PATCH", body: fd });
-    if (res.ok) {
-      toast.success(srv.showInShop ? "Removed from shop." : "Now live in your shop!");
-      fetchData();
-    } else {
-      const err = await res.json().catch(() => null);
-      if (err?.code === "PLAN_LIMIT_REACHED" || err?.details?.requiresUpgrade) {
-        toast.error(err?.details?.message || "Free plan allows up to 3 published services. Upgrade your plan to publish more.");
-      } else {
-        toast.error("Failed to update shop visibility.");
-      }
-    }
-  };
-
   const launchRetainerWizard = (srv: Service) => {
     sessionStorage.setItem('erp_ai_payload', JSON.stringify({
       path: '/retainers',
@@ -143,7 +112,7 @@ export default function ServiceCatalog() {
     <DashboardPageShell
       title="Service Catalogue"
       icon={<Briefcase className="w-6 h-6 text-accent-strong" />}
-      description="Build and maintain your service offerings for invoices, proposals, and your shop."
+      description="Build and maintain your service offerings for invoices, proposals, and retainers."
       primaryAction={
         <div className="flex items-center gap-3">
           {shopSlug && (
@@ -176,8 +145,6 @@ export default function ServiceCatalog() {
         onOpenChange={setOpen}
         service={editingService}
         onSuccess={fetchData}
-        planTier={planTier}
-        publishedCount={publishedCount}
       />
 
       <AlertDialog open={!!serviceToDelete} onOpenChange={(o) => !o && setServiceToDelete(null)}>
@@ -225,9 +192,6 @@ export default function ServiceCatalog() {
               <CardHeader className={`pb-4 pt-5 px-5 border-b border-zinc-100 dark:border-zinc-800/80 ${srv.imageUrl ? "pt-4" : ""}`}>
                 <div className="flex items-start justify-between gap-3 pr-10">
                   <CardTitle className="text-lg font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight leading-tight">{srv.name}</CardTitle>
-                  <button onClick={() => toggleShopStatus(srv)} title={srv.showInShop ? "Live in shop — click to unpublish" : "Click to publish to shop"} className={`shrink-0 flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold transition-all ${srv.showInShop ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 hover:bg-rose-100 hover:text-rose-700" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:bg-emerald-100 hover:text-emerald-700"}`}>
-                    {srv.showInShop ? <><Eye className="w-2.5 h-2.5" /> LIVE</> : <><EyeOff className="w-2.5 h-2.5" /> PRIVATE</>}
-                  </button>
                 </div>
                 {srv.description && <CardDescription className="line-clamp-2 mt-1.5 text-xs text-zinc-500 dark:text-zinc-400 font-medium">{srv.description}</CardDescription>}
                 <div className="mt-4"><Badge variant="secondary" className="bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-400/20 text-sm font-bold tracking-tight px-3 py-1">{fCurrency(srv.defaultPrice)}</Badge></div>
@@ -270,7 +234,7 @@ export default function ServiceCatalog() {
               <div className="flex flex-col items-center">
                 <div className="w-16 h-16 rounded-full bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center mb-4"><Briefcase className="w-7 h-7 text-zinc-400 dark:text-zinc-500" /></div>
                 <h3 className="text-base font-extrabold text-zinc-900 dark:text-zinc-100 uppercase tracking-widest">Catalogue is empty</h3>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2 max-w-sm mx-auto font-medium leading-relaxed">Start by adding your first service. Toggle &quot;Show in Shop&quot; to publish it to your public storefront.</p>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2 max-w-sm mx-auto font-medium leading-relaxed">Start by adding your first service to speed up invoices, proposals, and retainers.</p>
                 <Button onClick={openAddDialog} variant="outline" className="mt-6 border-indigo-200 dark:border-indigo-800/50 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-50 text-xs font-bold uppercase tracking-wider h-10 px-6">Create First Service</Button>
               </div>
             </div>

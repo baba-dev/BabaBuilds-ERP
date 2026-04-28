@@ -7,7 +7,6 @@ import { logActivity } from '@/lib/activity-log';
 import { apiError } from '@/lib/api-error';
 import { scanBuffer } from '@/lib/security/clamav';
 import { buildPrivatePath, ensureDir, sniffAllowedContent, uniqueStoredName } from '@/lib/uploads/private-storage';
-import { FREE_TIER_PUBLISHED_SERVICES_LIMIT, shouldApplyFreeTierLimits } from '@/lib/entitlements';
 
 type SessionContext = {
   workspaceId?: string;
@@ -33,42 +32,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const defaultPrice = formData.get('defaultPrice') as string;
     const nicCodeId = formData.get('nicCodeId') as string | null;
     const sacCodeId = formData.get('sacCodeId') as string | null;
-    const showInShop = formData.get('showInShop') === 'true';
-
-    const workspace = await prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      select: {
-        planTier: true,
-        subscriptionStatus: true,
-        subscriptionEndsAt: true,
-        _count: {
-          select: {
-            serviceTemplates: {
-              where: {
-                showInShop: true,
-                id: { not: id },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!workspace) {
-      return apiError(404, "Workspace not found", "WORKSPACE_NOT_FOUND");
-    }
-
-    if (
-      showInShop &&
-      !existing.showInShop &&
-      shouldApplyFreeTierLimits(workspace) &&
-      workspace._count.serviceTemplates >= FREE_TIER_PUBLISHED_SERVICES_LIMIT
-    ) {
-      return apiError(403, "Upgrade Required", "PLAN_LIMIT_REACHED", {
-        message: `You have reached the limit of ${FREE_TIER_PUBLISHED_SERVICES_LIMIT} published services on the Free plan. Upgrade to Pro for unlimited published services.`,
-        requiresUpgrade: true,
-      });
-    }
+    const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { id: true } });
+    if (!workspace) return apiError(404, "Workspace not found", "WORKSPACE_NOT_FOUND");
 
     let imageUrl: string | null = (formData.get('existingImageUrl') as string) || null;
 
@@ -108,14 +73,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         defaultPrice: Number(defaultPrice),
         nicCodeId: nicCodeId || null,
         sacCodeId: sacCodeId || null,
-        showInShop,
         imageUrl,
       },
       include: { nicCode: true, sacCode: true },
     });
 
     logActivity({
-      action: existing.showInShop !== showInShop ? 'shop.service.visibility' : 'shop.service.update',
+      action: 'shop.service.update',
       outcome: 'success',
       entityType: 'serviceTemplate',
       entityId: updated.id,
@@ -123,8 +87,6 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       actorId: session.user?.id ?? null,
       actorEmail: session.user?.email ?? null,
       metadata: {
-        oldShowInShop: existing.showInShop,
-        newShowInShop: showInShop,
         name: updated.name,
       },
     });

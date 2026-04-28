@@ -27,13 +27,12 @@ export async function POST(request: Request) {
     const templates = await prisma.serviceTemplate.findMany({
       where: {
         workspaceId: session.workspaceId,
-        showInShop: true,
         id: { in: uniqueIds },
       },
     });
 
     if (templates.length === 0) {
-      return NextResponse.json({ error: "No published services found for this request." }, { status: 404 });
+      return NextResponse.json({ error: "No services found for this request." }, { status: 404 });
     }
 
     const templateMap = new Map<string, (typeof templates)[number]>(templates.map((template) => [template.id, template]));

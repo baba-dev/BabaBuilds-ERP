@@ -7,7 +7,6 @@ import { logActivity } from '@/lib/activity-log';
 import { apiError } from '@/lib/api-error';
 import { scanBuffer } from '@/lib/security/clamav';
 import { buildPrivatePath, ensureDir, sniffAllowedContent, uniqueStoredName } from '@/lib/uploads/private-storage';
-import { FREE_TIER_PUBLISHED_SERVICES_LIMIT, shouldApplyFreeTierLimits } from '@/lib/entitlements';
 
 type SessionContext = {
   workspaceId?: string;
@@ -48,32 +47,8 @@ export async function POST(request: Request) {
     const defaultPrice = formData.get('defaultPrice') as string;
     const nicCodeId = formData.get('nicCodeId') as string | null;
     const sacCodeId = formData.get('sacCodeId') as string | null;
-    const showInShop = formData.get('showInShop') === 'true';
-
-    const workspace = await prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      select: {
-        planTier: true,
-        subscriptionStatus: true,
-        subscriptionEndsAt: true,
-        _count: { select: { serviceTemplates: { where: { showInShop: true } } } },
-      },
-    });
-
-    if (!workspace) {
-      return apiError(404, "Workspace not found", "WORKSPACE_NOT_FOUND");
-    }
-
-    if (
-      showInShop &&
-      shouldApplyFreeTierLimits(workspace) &&
-      workspace._count.serviceTemplates >= FREE_TIER_PUBLISHED_SERVICES_LIMIT
-    ) {
-      return apiError(403, "Upgrade Required", "PLAN_LIMIT_REACHED", {
-        message: `You have reached the limit of ${FREE_TIER_PUBLISHED_SERVICES_LIMIT} published services on the Free plan. Upgrade to Pro for unlimited published services.`,
-        requiresUpgrade: true,
-      });
-    }
+    const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { id: true } });
+    if (!workspace) return apiError(404, "Workspace not found", "WORKSPACE_NOT_FOUND");
 
     let imageUrl: string | null = null;
 
@@ -113,21 +88,20 @@ export async function POST(request: Request) {
         defaultPrice: Number(defaultPrice),
         nicCodeId: nicCodeId || null,
         sacCodeId: sacCodeId || null,
-        showInShop,
         imageUrl,
       },
       include: { nicCode: true, sacCode: true },
     });
 
     logActivity({
-      action: 'shop.service.create',
+      action: 'service.create',
       outcome: 'success',
       entityType: 'serviceTemplate',
       entityId: newService.id,
       workspaceId,
       actorId: session.user?.id ?? null,
       actorEmail: session.user?.email ?? null,
-      metadata: { showInShop, name: newService.name },
+      metadata: { name: newService.name },
     });
 
     return NextResponse.json({ success: true, service: newService });

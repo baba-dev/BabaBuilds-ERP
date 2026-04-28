@@ -6,9 +6,7 @@ import {
   Check,
   Clock,
   ExternalLink,
-  FileSignature,
   Loader2,
-  Plus,
   Search,
   ShoppingBag,
   ShoppingCart,
@@ -26,22 +24,19 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useFormat } from "@/hooks/use-format";
-import { ServiceFormDialog, ServiceFormService } from "@/components/services/ServiceFormDialog";
 
-type Service = ServiceFormService;
-type PlanTier = "FREE" | "PRO" | "TEAM";
-
-type ServiceCatalogItem = {
+type ProductCatalogItem = {
   id: string;
+  sku: string;
   name: string;
   description?: string | null;
-  longDescription?: string | null;
-  defaultPrice?: number | string | null;
-  showInShop: boolean;
+  category?: string | null;
+  baselinePrice?: number | string | null;
+  currentStock?: number;
+  status?: string;
+  showInShop?: boolean;
   createdAt?: string;
   updatedAt?: string;
-  nicCode?: { code?: string | null; title?: string | null } | null;
-  sacCode?: { code?: string | null; title?: string | null } | null;
 };
 
 type ShopOrder = {
@@ -53,7 +48,7 @@ type ShopOrder = {
   currency: string;
   gateway?: string;
   createdAt: string;
-  serviceTemplate: { name: string };
+  items: Array<{ productName: string; quantity: number }>;
 };
 
 type ShopOverview = {
@@ -87,65 +82,55 @@ const DATA_SEGMENTS = ["ALL", "ORDERS", "CATALOG"] as const;
 type DataSegment = (typeof DATA_SEGMENTS)[number];
 
 type OrderRow = { kind: "order"; id: string; order: ShopOrder };
-type CatalogRow = { kind: "catalog"; id: string; service: ServiceCatalogItem };
+type CatalogRow = { kind: "catalog"; id: string; product: ProductCatalogItem };
 type ShopRow = OrderRow | CatalogRow;
 
 export default function ShopDashboardPage() {
   const { fCurrency } = useFormat();
   const [orders, setOrders] = useState<ShopOrder[]>([]);
-  const [services, setServices] = useState<ServiceCatalogItem[]>([]);
-  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
+  const [products, setProducts] = useState<ProductCatalogItem[]>([]);
   const [shopOverview, setShopOverview] = useState<ShopOverview>({
     totalOrders: 0,
     statusCounts: { PAID: 0, PENDING: 0, FAILED: 0, REFUNDED: 0 },
     paidRevenue: 0,
   });
   const [shopSlug, setShopSlug] = useState<string | null>(null);
-  const [planTier, setPlanTier] = useState<PlanTier>("FREE");
   const [shopAccentColor, setShopAccentColor] = useState("#6366f1");
   const [accentDraft, setAccentDraft] = useState("#6366f1");
   const [isSavingAccent, setIsSavingAccent] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCreatingProposalDraft, setIsCreatingProposalDraft] = useState(false);
   const [orderFilter, setOrderFilter] = useState("ALL");
-  const [serviceFilter, setServiceFilter] = useState("ALL");
+  const [productFilter, setProductFilter] = useState("ALL");
   const [dataSegment, setDataSegment] = useState<DataSegment>("ALL");
   const [orderSearch, setOrderSearch] = useState("");
   const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
-  const [serviceDialogOpen, setServiceDialogOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [ordersRes, servicesRes, settingsRes] = await Promise.all([
+      const [ordersRes, productsRes, settingsRes] = await Promise.all([
         fetch("/api/shop/orders?status=ALL"),
-        fetch("/api/services"),
+        fetch("/api/inventory/products?limit=200"),
         fetch("/api/settings"),
       ]);
 
-      const [ordersData, servicesData, settingsData] = await Promise.all([
+      const [ordersData, productsData, settingsData] = await Promise.all([
         ordersRes.json().catch(() => null),
-        servicesRes.json().catch(() => null),
+        productsRes.json().catch(() => null),
         settingsRes.json().catch(() => null),
       ]);
 
       if (!ordersRes.ok) throw new Error((ordersData as any)?.error || "Failed to load orders.");
-      if (!servicesRes.ok) throw new Error((servicesData as any)?.error || "Failed to load services.");
+      if (!productsRes.ok) throw new Error((productsData as any)?.error || "Failed to load products.");
       if (!settingsRes.ok) throw new Error((settingsData as any)?.error || "Failed to load shop settings.");
 
       setOrders(Array.isArray(ordersData.orders) ? ordersData.orders : []);
       setShopOverview(ordersData.overview ?? { totalOrders: 0, statusCounts: { PAID: 0, PENDING: 0, FAILED: 0, REFUNDED: 0 }, paidRevenue: 0 });
-      const parsedServices = Array.isArray(servicesData) ? servicesData : [];
-      setServices(parsedServices);
-      const publishedServices = parsedServices.filter((service: ServiceCatalogItem) => service.showInShop);
-      setSelectedServiceIds((current) => {
-        if (current.length > 0) {
-          return current.filter((id) => publishedServices.some((service: ServiceCatalogItem) => service.id === id));
-        }
-        return publishedServices.map((service: ServiceCatalogItem) => service.id);
-      });
+      const parsedProducts = Array.isArray(productsData)
+        ? productsData.filter((product: ProductCatalogItem) => Boolean(product.showInShop))
+        : [];
+      setProducts(parsedProducts);
       setShopSlug(settingsData?.shopSlug || null);
-      setPlanTier((settingsData?.planTier as PlanTier) || "FREE");
       const accent = settingsData?.shopAccentColor || "#6366f1";
       setShopAccentColor(accent);
       setAccentDraft(accent);
@@ -161,20 +146,19 @@ export default function ShopDashboardPage() {
     fetchData();
   }, [fetchData]);
 
-  const serviceFilterOptions = useMemo(() => {
-    const names = services
-      .filter((service) => service.showInShop)
-      .map((service) => service.name)
+  const productFilterOptions = useMemo(() => {
+    const names = products
+      .map((product) => product.name)
       .sort((a, b) => a.localeCompare(b));
 
     return ["ALL", ...new Set(names)];
-  }, [services]);
+  }, [products]);
 
   useEffect(() => {
-    if (!serviceFilterOptions.includes(serviceFilter)) {
-      setServiceFilter("ALL");
+    if (!productFilterOptions.includes(productFilter)) {
+      setProductFilter("ALL");
     }
-  }, [serviceFilter, serviceFilterOptions]);
+  }, [productFilter, productFilterOptions]);
 
   const filteredRows = useMemo<ShopRow[]>(() => {
     const q = orderSearch.toLowerCase();
@@ -183,36 +167,32 @@ export default function ShopDashboardPage() {
         const matchesSearch =
           o.buyerName.toLowerCase().includes(q) ||
           o.buyerEmail.toLowerCase().includes(q) ||
-          o.serviceTemplate.name.toLowerCase().includes(q);
+          o.items.some((item) => item.productName.toLowerCase().includes(q));
         const matchesFilter = orderFilter === "ALL" ? true : o.status === orderFilter;
-        const matchesService = serviceFilter === "ALL" ? true : o.serviceTemplate.name === serviceFilter;
-        return matchesSearch && matchesFilter && matchesService;
+        const matchesProduct =
+          productFilter === "ALL" ? true : o.items.some((item) => item.productName === productFilter);
+        return matchesSearch && matchesFilter && matchesProduct;
       })
       .map((order) => ({ kind: "order", id: order.id, order }));
 
-    const catalogRows: CatalogRow[] = services
-      .filter((s) => {
+    const catalogRows: CatalogRow[] = products
+      .filter((p) => {
         const searchable = [
-          s.name,
-          s.description ?? "",
-          s.longDescription ?? "",
-          s.nicCode?.code ?? "",
-          s.nicCode?.title ?? "",
-          s.sacCode?.code ?? "",
-          s.sacCode?.title ?? "",
+          p.name,
+          p.description ?? "",
+          p.sku ?? "",
+          p.category ?? "",
         ].join(" ").toLowerCase();
         const matchesSearch = searchable.includes(q);
-        const matchesService = serviceFilter === "ALL" ? true : s.name === serviceFilter;
-        return matchesSearch && matchesService;
+        const matchesProduct = productFilter === "ALL" ? true : p.name === productFilter;
+        return matchesSearch && matchesProduct;
       })
-      .map((service) => ({ kind: "catalog", id: service.id, service }));
+      .map((product) => ({ kind: "catalog", id: product.id, product }));
 
     if (dataSegment === "ORDERS") return orderRows;
     if (dataSegment === "CATALOG") return catalogRows;
     return [...catalogRows, ...orderRows];
-  }, [orderSearch, orderFilter, serviceFilter, orders, services, dataSegment]);
-
-  const publishedServices = useMemo(() => services.filter((service) => service.showInShop), [services]);
+  }, [orderSearch, orderFilter, productFilter, orders, products, dataSegment]);
 
   const stats = useMemo(() => ({
     totalOrders: shopOverview.totalOrders,
@@ -220,10 +200,9 @@ export default function ShopDashboardPage() {
     pendingOrders: shopOverview.statusCounts.PENDING,
     failedOrders: shopOverview.statusCounts.FAILED,
     refundedOrders: shopOverview.statusCounts.REFUNDED,
-    publishedServices: services.filter((s) => s.showInShop).length,
-    totalServices: services.length,
+    totalProducts: products.length,
     grossRevenue: Number(shopOverview.paidRevenue || 0),
-  }), [shopOverview, services]);
+  }), [shopOverview, products]);
 
   const statusConfig: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
     PAID: { label: "Paid", className: "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-400", icon: <Check className="w-3 h-3" /> },
@@ -236,7 +215,7 @@ export default function ShopDashboardPage() {
     if (orderSearch.trim()) {
       return {
         title: "No matches found",
-        description: "Try a different keyword for buyers, services, or catalog metadata.",
+        description: "Try a different keyword for buyers, products, or catalog metadata.",
       };
     }
     if (dataSegment === "ORDERS") {
@@ -247,8 +226,8 @@ export default function ShopDashboardPage() {
     }
     if (dataSegment === "CATALOG") {
       return {
-        title: "No catalog services yet",
-        description: "Add services to your catalog to publish and sell them in your shop.",
+        title: "No catalog products yet",
+        description: "Add products in Inventory to sell them in your shop.",
       };
     }
     return {
@@ -281,63 +260,6 @@ export default function ShopDashboardPage() {
       toast.error("Failed to delete order.");
     }
     setDeletingOrderId(null);
-  };
-
-  const toggleServiceSelection = (serviceId: string) => {
-    setSelectedServiceIds((current) => (
-      current.includes(serviceId)
-        ? current.filter((id) => id !== serviceId)
-        : [...current, serviceId]
-    ));
-  };
-
-  const toggleSelectAllPublished = () => {
-    setSelectedServiceIds((current) => (
-      current.length === publishedServices.length
-        ? []
-        : publishedServices.map((service) => service.id)
-    ));
-  };
-
-  const createProposalDraft = async () => {
-    if (selectedServiceIds.length === 0) {
-      toast.error("Select at least one published service.");
-      return;
-    }
-
-    setIsCreatingProposalDraft(true);
-    const toastId = toast.loading("Preparing proposal draft...");
-
-    try {
-      const res = await fetch("/api/proposals/draft-from-services", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serviceTemplateIds: selectedServiceIds }),
-      });
-      const payload = await res.json().catch(() => null);
-
-      if (!res.ok || !payload?.draft) {
-        throw new Error(payload?.error || "Could not prepare a proposal draft.");
-      }
-
-      sessionStorage.setItem("erp_ai_payload", JSON.stringify({
-        path: "/proposals",
-        data: {
-          title: payload.draft.title,
-          items: payload.draft.items,
-          source: "shop",
-        },
-        timestamp: Date.now(),
-      }));
-
-      toast.success("Draft prepared. Redirecting to Proposals...", { id: toastId });
-      window.location.href = "/proposals";
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to create proposal draft.";
-      toast.error(message, { id: toastId });
-    } finally {
-      setIsCreatingProposalDraft(false);
-    }
   };
 
   const saveAccentColor = async () => {
@@ -412,92 +334,15 @@ export default function ShopDashboardPage() {
               <ExternalLink className="w-4 h-4" /> View Live Shop
             </Button>
           ) : null}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="hidden md:inline-flex">
-                  <Button
-                    onClick={createProposalDraft}
-                    disabled={isCreatingProposalDraft || selectedServiceIds.length === 0 || publishedServices.length === 0}
-                    variant="outline"
-                    className="items-center gap-2 text-xs font-bold uppercase tracking-wider h-11"
-                  >
-                    {isCreatingProposalDraft ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSignature className="w-4 h-4" />}
-                    Create Proposal
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs text-xs leading-relaxed">
-                Build a draft from selected published services. Curate the selection in “Proposal Draft Builder” to pre-fill line items and pricing.
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
           <Button
-            onClick={() => setServiceDialogOpen(true)}
+            onClick={() => window.location.assign("/inventory")}
             className="btn-primary w-full md:w-auto shrink-0 text-xs uppercase tracking-wider h-11"
           >
-            <Plus className="w-4 h-4 md:mr-2" /> <span className="md:inline">Add Item</span>
+            <ShoppingBag className="w-4 h-4 md:mr-2" /> <span className="md:inline">Manage Products</span>
           </Button>
         </div>
       }
     >
-      <ServiceFormDialog
-        open={serviceDialogOpen}
-        onOpenChange={setServiceDialogOpen}
-        onSuccess={fetchData}
-        planTier={planTier}
-        publishedCount={stats.publishedServices}
-      />
-
-      <Card className="mb-6 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950/40">
-        <CardHeader className="pb-3 flex flex-row items-center justify-between">
-          <CardTitle className="text-xs uppercase tracking-widest text-zinc-500">Proposal Draft Builder</CardTitle>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="text-[11px] font-bold uppercase tracking-widest"
-            onClick={toggleSelectAllPublished}
-            disabled={publishedServices.length === 0}
-          >
-            {selectedServiceIds.length === publishedServices.length && publishedServices.length > 0 ? "Clear" : "Select all"}
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {publishedServices.length === 0 ? (
-            <p className="text-xs text-zinc-500">Publish services in the Services page to build proposal drafts from Shop.</p>
-          ) : (
-            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-              {publishedServices.map((service) => {
-                const checked = selectedServiceIds.includes(service.id);
-                return (
-                  <label
-                    key={service.id}
-                    className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                      checked
-                        ? "border-indigo-300 bg-indigo-50/70 dark:border-indigo-800 dark:bg-indigo-950/30"
-                        : "border-zinc-200 dark:border-zinc-800 hover:border-indigo-200"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleServiceSelection(service.id)}
-                      className="mt-1 h-4 w-4 rounded border-zinc-300"
-                    />
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">{service.name}</p>
-                      <p className="text-xs text-zinc-500 truncate">{service.description || "No description"}</p>
-                      <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-300 mt-1">{fCurrency(Number(service.defaultPrice || 0))}</p>
-                    </div>
-                  </label>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <Card className="border-indigo-200/60 dark:border-indigo-800/40 bg-gradient-to-br from-indigo-50/70 to-white dark:from-indigo-950/30 dark:to-zinc-900">
           <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2"><ShoppingCart className="w-3.5 h-3.5" />Total Orders</CardTitle></CardHeader>
@@ -515,10 +360,10 @@ export default function ShopDashboardPage() {
           <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2"><Store className="w-3.5 h-3.5" />Shop Catalog</CardTitle></CardHeader>
           <CardContent>
             <p className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">
-              {planTier === "FREE" ? `${stats.publishedServices}/3` : stats.publishedServices}
+              {stats.totalProducts}
             </p>
             <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mt-1">
-              {planTier === "FREE" ? `${stats.publishedServices}/3 Services Published` : `${stats.publishedServices} Services Published`}
+              Products in Inventory
             </p>
           </CardContent>
         </Card>
@@ -582,17 +427,17 @@ export default function ShopDashboardPage() {
         <div className="flex flex-col md:flex-row items-start md:items-center gap-4 justify-between">
           <div className="relative w-full md:w-80">
             <Search className="absolute left-3 top-3 w-4 h-4 text-zinc-400" />
-            <Input placeholder="Search buyers, services, or catalog metadata..." value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)} className="pl-9 h-10 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 font-bold focus-visible:ring-indigo-500" />
+            <Input placeholder="Search buyers, products, or catalog metadata..." value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)} className="pl-9 h-10 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 font-bold focus-visible:ring-indigo-500" />
           </div>
           <div className="flex items-center gap-3 w-full md:w-auto">
             <select
-              value={serviceFilter}
-              onChange={(e) => setServiceFilter(e.target.value)}
+              value={productFilter}
+              onChange={(e) => setProductFilter(e.target.value)}
               className="h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-xs font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-300"
             >
-              {serviceFilterOptions.map((serviceName) => (
-                <option key={serviceName} value={serviceName}>
-                  {serviceName === "ALL" ? "All Services" : serviceName}
+              {productFilterOptions.map((productName) => (
+                <option key={productName} value={productName}>
+                  {productName === "ALL" ? "All Products" : productName}
                 </option>
               ))}
             </select>
@@ -623,7 +468,7 @@ export default function ShopDashboardPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead className="border-b border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/50">
-                  <tr>{["Type", "Date", "Buyer / Visibility", "Service", "Amount", "Channel", "Status", "Actions"].map((h) => (<th key={h} className="px-4 py-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{h}</th>))}</tr>
+                  <tr>{["Type", "Date", "Buyer / Visibility", "Products", "Amount", "Channel", "Status", "Actions"].map((h) => (<th key={h} className="px-4 py-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{h}</th>))}</tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
                   {filteredRows.map((row) => {
@@ -636,7 +481,9 @@ export default function ShopDashboardPage() {
                           <td className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Order</td>
                           <td className="px-4 py-4 text-xs text-zinc-500 whitespace-nowrap">{format(new Date(o.createdAt), "dd MMM yyyy")}</td>
                           <td className="px-4 py-4"><p className="font-bold text-[13px] text-zinc-900 dark:text-zinc-100">{o.buyerName}</p><p className="text-[11px] text-zinc-500">{o.buyerEmail}</p></td>
-                          <td className="px-4 py-4 text-[13px] font-semibold text-zinc-700 dark:text-zinc-300 max-w-[220px] truncate">{o.serviceTemplate.name}</td>
+                          <td className="px-4 py-4 text-[13px] font-semibold text-zinc-700 dark:text-zinc-300 max-w-[260px] truncate">
+                            {o.items.map((item) => `${item.productName} x${item.quantity}`).join(", ")}
+                          </td>
                           <td className="px-4 py-4 font-bold text-[13px] text-zinc-800 dark:text-zinc-200">{fCurrency(orderAmount)}</td>
                           <td className="px-4 py-4"><span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">{o.gateway || "—"}</span></td>
                           <td className="px-4 py-4"><span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${sc.className}`}>{sc.icon} {sc.label}</span></td>
@@ -652,30 +499,30 @@ export default function ShopDashboardPage() {
                       );
                     }
 
-                    const s = row.service;
-                    const serviceAmount = Number(s.defaultPrice || 0);
+                    const p = row.product;
+                    const productAmount = Number(p.baselinePrice || 0);
                     return (
-                      <tr key={`catalog-${s.id}`} className="hover:bg-zinc-50/80 dark:hover:bg-zinc-900/50 transition-colors">
+                      <tr key={`catalog-${p.id}`} className="hover:bg-zinc-50/80 dark:hover:bg-zinc-900/50 transition-colors">
                         <td className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-sky-600 dark:text-sky-400">Catalog</td>
                         <td className="px-4 py-4 text-xs text-zinc-500 whitespace-nowrap">
-                          {format(new Date(s.updatedAt || s.createdAt || Date.now()), "dd MMM yyyy")}
+                          {format(new Date(p.updatedAt || p.createdAt || Date.now()), "dd MMM yyyy")}
                         </td>
                         <td className="px-4 py-4 text-[11px] text-zinc-500">
-                          <span className="font-bold uppercase tracking-wider">{s.showInShop ? "Published" : "Private"}</span>
+                          <span className="font-bold uppercase tracking-wider">Product</span>
                         </td>
                         <td className="px-4 py-4">
-                          <p className="font-semibold text-[13px] text-zinc-700 dark:text-zinc-300 max-w-[240px] truncate">{s.name}</p>
-                          <p className="text-[11px] text-zinc-500 max-w-[260px] truncate">{s.description || s.longDescription || "No description provided"}</p>
+                          <p className="font-semibold text-[13px] text-zinc-700 dark:text-zinc-300 max-w-[240px] truncate">{p.name}</p>
+                          <p className="text-[11px] text-zinc-500 max-w-[260px] truncate">{p.description || p.category || "No description provided"}</p>
                         </td>
-                        <td className="px-4 py-4 font-bold text-[13px] text-zinc-800 dark:text-zinc-200">{fCurrency(serviceAmount)}</td>
+                        <td className="px-4 py-4 font-bold text-[13px] text-zinc-800 dark:text-zinc-200">{fCurrency(productAmount)}</td>
                         <td className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Catalog</td>
                         <td className="px-4 py-4">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${s.showInShop ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-400" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"}`}>
-                            {s.showInShop ? <Check className="w-3 h-3" /> : <Clock className="w-3 h-3" />} {s.showInShop ? "Live" : "Private"}
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${Number(p.currentStock ?? 0) > 0 ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-400" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"}`}>
+                            {Number(p.currentStock ?? 0) > 0 ? <Check className="w-3 h-3" /> : <Clock className="w-3 h-3" />} {Number(p.currentStock ?? 0) > 0 ? "In Stock" : "Out of Stock"}
                           </span>
                         </td>
                         <td className="px-4 py-4">
-                          <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase tracking-widest" onClick={() => window.location.assign("/services")}>
+                          <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase tracking-widest" onClick={() => window.location.assign("/inventory")}>
                             Manage
                           </Button>
                         </td>

@@ -49,16 +49,16 @@ const basePayload = {
     acceptedAwaitingInvoicing: 1,
     shopEnabled: true,
     publicShopOrders: { total: 3, paid: 2, pending: 1, failed: 0 },
-    serviceOrderConversion: 66,
+    shopOrderConversion: 66,
     shopRevenueThisMonth: "399.50",
     shopRevenuePreviousMonth: "210.00",
     revenueChangeVsPriorMonthPct: 90.2,
     ordersLast30Days: 4,
     ordersPrior30Days: 2,
     orderChangeVsPrior30DaysPct: 100,
-    publishedServices: 2,
-    topServices: [{ serviceName: "SEO", orderCount: 2, revenue: "1000.99" }],
-    recentServiceOrders: [{ id: "s1", serviceName: "SEO", buyerName: "Alex", amount: "200.00", status: "PAID", createdAt: "2026-04-01" }],
+    availableProducts: 2,
+    topProducts: [{ productName: "SEO Package", orderCount: 2, revenue: "1000.99" }],
+    recentShopOrders: [{ id: "s1", itemSummary: "SEO Package", buyerName: "Alex", amount: "200.00", status: "PAID", createdAt: "2026-04-01" }],
   },
   operations: {
     hasOperationalData: true,
@@ -84,7 +84,7 @@ const basePayload = {
     receivablesAging: [{ bucket: "0-30", value: "30" }],
     reconciliation: [{ name: "Ledger", reconciled: 3, unreconciled: 2 }],
     proposalFunnel: [{ stage: "Accepted", value: 4 }],
-    serviceOrderHealth: [{ status: "PAID", value: 2 }],
+    shopOrderHealth: [{ status: "PAID", value: 2 }],
   },
   recentInvoices: [],
 };
@@ -98,7 +98,7 @@ test("parses serialized money values from dashboard payload", () => {
   assert.equal(parsed?.salesAndShop.shopRevenuePreviousMonth, 210);
   assert.equal(parsed?.salesAndShop.revenueChangeVsPriorMonthPct, 90.2);
   assert.equal(parsed?.salesAndShop.orderChangeVsPrior30DaysPct, 100);
-  assert.equal(parsed?.salesAndShop.topServices[0].revenue, 1000.99);
+  assert.equal(parsed?.salesAndShop.topProducts[0].revenue, 1000.99);
   assert.equal(parsed?.charts.revenueVsExpense[0].revenue, 100);
 });
 

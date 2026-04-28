@@ -83,7 +83,7 @@ export default async function PipelineDashboardPage({
       include: {
         client: true,
         conversions: {
-          include: { invoice: true, retainer: true, serviceOrder: true },
+          include: { invoice: true, retainer: true, shopOrder: true },
         },
       },
       orderBy: { dateCreated: "desc" },
@@ -136,7 +136,7 @@ export default async function PipelineDashboardPage({
     include: {
       client: true,
       conversions: {
-        include: { invoice: true, retainer: true, serviceOrder: true }
+        include: { invoice: true, retainer: true, shopOrder: true }
       }
     },
     orderBy: { dateCreated: 'desc' }

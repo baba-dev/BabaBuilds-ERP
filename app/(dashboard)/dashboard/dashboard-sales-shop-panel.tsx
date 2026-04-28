@@ -204,7 +204,7 @@ export function DashboardSalesAndShopPanel({
         </Card>
       </motion.div>
 
-      {/* CARD 2: PUBLIC SHOP & SERVICE ORDERS */}
+      {/* CARD 2: PUBLIC SHOP & PRODUCT ORDERS */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -222,7 +222,7 @@ export function DashboardSalesAndShopPanel({
                   {tr("commerce_pulse", "Commerce pulse")}
                 </h3>
                 <p className={ty.cardSubtitle}>
-                  {tr("commerce_pulse_subtitle", "Public shop & service performance")}
+                  {tr("commerce_pulse_subtitle", "Public shop & product performance")}
                 </p>
               </div>
             </div>

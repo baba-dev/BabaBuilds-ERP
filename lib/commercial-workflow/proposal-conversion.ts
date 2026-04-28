@@ -10,7 +10,7 @@ export async function createProposalConversion({
   actorUserId,
   invoiceId,
   retainerId,
-  serviceOrderId,
+  shopOrderId,
 }: {
   workspaceId: string;
   proposalId: string;
@@ -18,7 +18,7 @@ export async function createProposalConversion({
   actorUserId: string | null;
   invoiceId?: string;
   retainerId?: string;
-  serviceOrderId?: string;
+  shopOrderId?: string;
 }) {
   return prisma.$transaction(async (tx) => {
     // 1. Calculate and update Proposal's firstConvertedAt safely
@@ -49,7 +49,7 @@ export async function createProposalConversion({
         convertedByUserId: actorUserId,
         invoiceId: invoiceId || null,
         retainerId: retainerId || null,
-        serviceOrderId: serviceOrderId || null,
+        shopOrderId: shopOrderId || null,
       },
     });
 

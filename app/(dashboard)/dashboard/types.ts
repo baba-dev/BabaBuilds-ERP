@@ -73,20 +73,20 @@ export type DashboardData = {
     acceptedAwaitingInvoicing: number;
     shopEnabled: boolean;
     publicShopOrders: { total: number; paid: number; pending: number; failed: number };
-    serviceOrderConversion: number;
+    shopOrderConversion: number;
     shopRevenueThisMonth: number;
     shopRevenuePreviousMonth: number;
     revenueChangeVsPriorMonthPct: number | null;
     ordersLast30Days: number;
     ordersPrior30Days: number;
     orderChangeVsPrior30DaysPct: number | null;
-    publishedServices: number;
-    topServices: Array<{ serviceName: string; orderCount: number; revenue: number }>;
+    publishedProducts: number;
+    topProducts: Array<{ productName: string; orderCount: number; revenue: number }>;
     kpiPeriods: Record<
-      "proposalFunnel" | "acceptedAwaitingInvoicing" | "publicShopOrders" | "serviceOrderConversion" | "topServices" | "shopRevenueThisMonth" | "ordersLast30Days",
+      "proposalFunnel" | "acceptedAwaitingInvoicing" | "publicShopOrders" | "shopOrderConversion" | "topProducts" | "shopRevenueThisMonth" | "ordersLast30Days",
       { type: "FY" | "ROLLING_30D" | "ALL_TIME"; period: string; start: string | null; endExclusive: string | null }
     >;
-    recentServiceOrders: Array<{ id: string; serviceName: string; buyerName: string; amount: number; status: string; createdAt: string | Date }>;
+    recentShopOrders: Array<{ id: string; itemSummary: string; buyerName: string; amount: number; status: string; createdAt: string | Date }>;
   };
   operations: {
     hasOperationalData: boolean;
@@ -112,7 +112,7 @@ export type DashboardData = {
     receivablesAging: Array<{ bucket: string; value: number }>;
     reconciliation: Array<{ name: string; reconciled: number; unreconciled: number }>;
     proposalFunnel: Array<{ stage: string; value: number }>;
-    serviceOrderHealth: Array<{ status: string; value: number }>;
+    shopOrderHealth: Array<{ status: string; value: number }>;
   };
   recentInvoices: RecentInvoiceRow[];
   countryCode: string;
