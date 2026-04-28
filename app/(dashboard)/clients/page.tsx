@@ -451,14 +451,14 @@ export default function ClientCRM() {
                     <button 
                       onClick={() => handleEdit(client)} 
                       aria-label={t("a11y.edit_client", { name: client.name })}
-                      className="p-2 bg-accent-soft text-accent-strong rounded-lg opacity-100 sm:opacity-0 xl:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-accent-strong hover:text-white shadow-sm sm:shadow-none hover:shadow-md active:scale-95" 
+                      className="p-2 bg-accent-soft text-accent-strong rounded-lg opacity-100 transition-all duration-300 hover:bg-accent-strong hover:text-white shadow-sm hover:shadow-md active:scale-95" 
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={() => setClientToDelete(client.id)} 
                       aria-label={t("a11y.delete_client", { name: client.name })}
-                      className="p-2 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg opacity-100 sm:opacity-0 xl:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-rose-600 dark:hover:bg-rose-600 hover:text-white dark:hover:text-white shadow-sm sm:shadow-none hover:shadow-md active:scale-95" 
+                      className="p-2 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg opacity-100 transition-all duration-300 hover:bg-rose-600 dark:hover:bg-rose-600 hover:text-white dark:hover:text-white shadow-sm hover:shadow-md active:scale-95" 
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
