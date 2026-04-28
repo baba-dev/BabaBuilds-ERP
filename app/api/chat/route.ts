@@ -31,6 +31,7 @@ import {
   setShopStatus,
   updateShopAnnouncement,
 } from '@/lib/shop/ai-tools';
+import { getAllowedShopTools, getShopToolPermissionMap } from '@/lib/ai/chat/shop-tool-access';
 
 const lookupAsync = promisify(dns.lookup);
 type PrismaWithOptionalModels = typeof prisma & {
@@ -1289,7 +1290,7 @@ ${
 }
 ${
   shopModuleEnabled && shopCanView
-    ? `7. PUBLIC SHOP: The storefront lives at /shop and the public page at /shop/<slug>. Use get_shop_summary for an at-a-glance status, get_top_shop_products for sales trends${shopCanManageSettings ? ', set_shop_status to flip the master toggle' : ''}${shopCanManageContent ? ', update_shop_announcement to push a banner, and open_shop_dashboard to send the user to the editor' : ''}.`
+    ? `7. PUBLIC SHOP: The storefront lives at /shop and the public page at /shop/<slug>. ${shopCanViewOrders ? 'Use get_shop_summary for commerce metrics/status and get_top_shop_products for sales trends.' : 'You can discuss storefront configuration/status, but do NOT access order or revenue metrics without shop.orders.view.'}${shopCanManageSettings ? ' Use set_shop_status to flip the master toggle.' : ''}${shopCanManageContent ? ' Use update_shop_announcement to push a banner, and open_shop_dashboard to send the user to the editor.' : ''}`
     : '7. PUBLIC SHOP: This workspace either has the Shop module disabled or you lack shop.view; do not call shop tools.'
 }`;
 
@@ -1800,19 +1801,25 @@ ${
         : [];
 
     // Shop tools: scoped to (a) module enabled and (b) per-permission gating.
-    const shopTools = shopModuleEnabled && shopCanView
+    const shopTools = getAllowedShopTools({
+      moduleEnabled: shopModuleEnabled,
+      canView: shopCanView,
+      canViewOrders: shopCanViewOrders,
+      canManageSettings: shopCanManageSettings,
+      canManageContent: shopCanManageContent,
+    })
       ? [
-          {
-            type: 'function',
-            function: {
-              name: 'get_shop_summary',
-              description:
-                'Summarise the public shop: enabled flag, public URL, order status counts, paid revenue, pending pipeline, and the 5 most recent orders. Requires shop.view.',
-              parameters: { type: 'object', properties: {} },
-            },
-          },
           ...(shopCanViewOrders
             ? [
+                {
+                  type: 'function',
+                  function: {
+                    name: 'get_shop_summary',
+                    description:
+                      'Summarise the public shop: enabled flag, public URL, order status counts, paid revenue, pending pipeline, and the 5 most recent orders. Requires shop.orders.view.',
+                    parameters: { type: 'object', properties: {} },
+                  },
+                },
                 {
                   type: 'function',
                   function: {
@@ -1974,13 +1981,13 @@ ${
             updateShopAnnouncement(wid, asString((a as { announcement?: unknown }).announcement)),
         };
 
-        const shopToolPermissionMap: Record<string, boolean> = {
-          get_shop_summary: shopCanView,
-          get_top_shop_products: shopCanViewOrders,
-          set_shop_status: shopCanManageSettings,
-          update_shop_announcement: shopCanManageContent,
-          open_shop_dashboard: shopCanManageContent,
-        };
+        const shopToolPermissionMap: Record<string, boolean> = getShopToolPermissionMap({
+          moduleEnabled: shopModuleEnabled,
+          canView: shopCanView,
+          canViewOrders: shopCanViewOrders,
+          canManageSettings: shopCanManageSettings,
+          canManageContent: shopCanManageContent,
+        });
         const isShopTool = toolCall.function.name in shopToolPermissionMap;
 
         if (

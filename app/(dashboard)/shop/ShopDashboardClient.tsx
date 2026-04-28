@@ -32,6 +32,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useFormat } from "@/hooks/use-format";
+import { getShopDashboardLoadPlan } from "./load-plan";
 
 type ProductCatalogItem = {
   id: string;
@@ -72,20 +73,6 @@ type ShopOverview = {
 
 const ORDER_STATUSES = ["ALL", "PAID", "PENDING", "FAILED", "REFUNDED"];
 const ACCENT_SWATCHES = ["#6366f1", "#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#a855f7", "#111827"];
-const SETTINGS_REQUIRED_FIELDS = [
-  "companyName",
-  "proprietorName",
-  "address",
-  "email",
-  "panNumber",
-  "bankName",
-  "accountName",
-  "accountNumber",
-  "ifscCode",
-  "invoiceTheme",
-  "defaultSacCode",
-] as const;
-
 const DATA_SEGMENTS = ["ALL", "ORDERS", "CATALOG"] as const;
 type DataSegment = (typeof DATA_SEGMENTS)[number];
 
@@ -149,6 +136,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
   const [dataSegment, setDataSegment] = useState<DataSegment>("ALL");
   const [orderSearch, setOrderSearch] = useState("");
   const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
+  const [ordersLoadError, setOrdersLoadError] = useState<string | null>(null);
 
   // Storefront content blocks (About, Social, FAQ, Announcement, AI Assist)
   const [content, setContent] = useState<ShopContentDraft>(EMPTY_CONTENT_DRAFT);
@@ -164,30 +152,48 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [ordersRes, productsRes, settingsRes] = await Promise.all([
-        fetch("/api/shop/orders?status=ALL"),
+      const loadPlan = getShopDashboardLoadPlan(abilities.canViewOrders);
+      const [ordersRes, productsRes, shopSettingsRes] = await Promise.all([
+        loadPlan.fetchOrders ? fetch("/api/shop/orders?status=ALL") : Promise.resolve(null),
         fetch("/api/inventory/products?limit=200"),
-        fetch("/api/settings"),
+        fetch("/api/shop/settings"),
       ]);
 
-      const [ordersData, productsData, settingsData] = await Promise.all([
-        ordersRes.json().catch(() => null),
+      const [ordersData, productsData, shopSettingsData] = await Promise.all([
+        ordersRes ? ordersRes.json().catch(() => null) : Promise.resolve(null),
         productsRes.json().catch(() => null),
-        settingsRes.json().catch(() => null),
+        shopSettingsRes.json().catch(() => null),
       ]);
 
-      if (!ordersRes.ok) throw new Error((ordersData as any)?.error || "Failed to load orders.");
       if (!productsRes.ok) throw new Error((productsData as any)?.error || "Failed to load products.");
-      if (!settingsRes.ok) throw new Error((settingsData as any)?.error || "Failed to load shop settings.");
+      if (!shopSettingsRes.ok) throw new Error((shopSettingsData as any)?.error || "Failed to load shop settings.");
+      if (ordersRes && !ordersRes.ok) {
+        throw new Error((ordersData as any)?.error || "Failed to load orders.");
+      }
 
-      setOrders(Array.isArray(ordersData.orders) ? ordersData.orders : []);
-      setShopOverview(ordersData.overview ?? { totalOrders: 0, statusCounts: { PAID: 0, PENDING: 0, FAILED: 0, REFUNDED: 0 }, paidRevenue: 0 });
+      if (abilities.canViewOrders) {
+        setOrders(Array.isArray(ordersData?.orders) ? ordersData.orders : []);
+        setShopOverview(
+          ordersData?.overview ?? {
+            totalOrders: 0,
+            statusCounts: { PAID: 0, PENDING: 0, FAILED: 0, REFUNDED: 0 },
+            paidRevenue: 0,
+          },
+        );
+      } else {
+        setOrders([]);
+        setShopOverview({
+          totalOrders: 0,
+          statusCounts: { PAID: 0, PENDING: 0, FAILED: 0, REFUNDED: 0 },
+          paidRevenue: 0,
+        });
+      }
       const parsedProducts = Array.isArray(productsData)
         ? productsData.filter((product: ProductCatalogItem) => Boolean(product.showInShop))
         : [];
       setProducts(parsedProducts);
-      setShopSlug(settingsData?.shopSlug || null);
-      const accent = settingsData?.shopAccentColor || "#6366f1";
+      setShopSlug(shopSettingsData?.shopSlug || null);
+      const accent = shopSettingsData?.shopAccentColor || "#6366f1";
       setShopAccentColor(accent);
       setAccentDraft(accent);
     } catch (err: unknown) {
@@ -196,7 +202,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [abilities.canViewOrders]);
 
   useEffect(() => {
     fetchData();
@@ -422,52 +428,34 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
   };
 
   const saveAccentColor = async () => {
+    if (!abilities.canManageSettings) {
+      toast.error("You do not have permission to manage shop branding settings.");
+      return;
+    }
     const previous = shopAccentColor;
     setIsSavingAccent(true);
     setShopAccentColor(accentDraft);
     const toastId = toast.loading("Saving branding color...");
 
     try {
-      const settingsRes = await fetch("/api/settings");
-      if (!settingsRes.ok) {
-        setShopAccentColor(previous);
-        toast.error("Failed to load current settings.", { id: toastId });
-        return;
-      }
-      const settingsData = await settingsRes.json();
-
-      const missingRequired = SETTINGS_REQUIRED_FIELDS.filter((field) => {
-        if (
-          ["bankName", "accountName", "accountNumber", "ifscCode"].includes(field) &&
-          settingsData?.primaryBankAccount?.source === "BANK_ACCOUNT"
-        ) {
-          return false;
-        }
-        const value = settingsData?.[field];
-        return value === null || value === undefined || value === "";
+      const res = await fetch("/api/shop/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accentColor: accentDraft }),
       });
-      if (missingRequired.length > 0) {
-        setShopAccentColor(previous);
-        toast.error("Complete business profile setup in Settings before updating branding.", { id: toastId });
-        return;
-      }
-
-      const body = new FormData();
-      SETTINGS_REQUIRED_FIELDS.forEach((field) => {
-        body.append(field, String(settingsData[field]));
-      });
-      body.append("shopAccentColor", accentDraft);
-      body.append("shopSlug", settingsData?.shopSlug || "");
-      body.append("shopTagline", settingsData?.shopTagline || "");
-      body.append("shopEnabled", String(!!settingsData?.shopEnabled));
-      const res = await fetch("/api/settings", { method: "POST", body });
 
       if (!res.ok) {
         setShopAccentColor(previous);
-        toast.error("Failed to save branding color.", { id: toastId });
+        const payload = await res.json().catch(() => null);
+        toast.error(payload?.error || "Failed to save branding color.", { id: toastId });
         return;
       }
 
+      const payload = await res.json().catch(() => null);
+      if (payload?.settings?.shopAccentColor) {
+        setShopAccentColor(payload.settings.shopAccentColor);
+        setAccentDraft(payload.settings.shopAccentColor);
+      }
       toast.success("Branding color saved.", { id: toastId });
     } catch {
       setShopAccentColor(previous);
@@ -503,18 +491,35 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
       }
     >
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        <Card className="border-indigo-200/60 dark:border-indigo-800/40 bg-gradient-to-br from-indigo-50/70 to-white dark:from-indigo-950/30 dark:to-zinc-900">
-          <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2"><ShoppingCart className="w-3.5 h-3.5" />Total Orders</CardTitle></CardHeader>
-          <CardContent><p className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">{stats.totalOrders}</p></CardContent>
-        </Card>
-        <Card className="border-emerald-200/60 dark:border-emerald-800/40 bg-gradient-to-br from-emerald-50/70 to-white dark:from-emerald-950/20 dark:to-zinc-900">
-          <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2"><Wallet className="w-3.5 h-3.5" />Gross Revenue</CardTitle></CardHeader>
-          <CardContent><p className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">{fCurrency(stats.grossRevenue)}</p><p className="text-xs font-semibold uppercase tracking-widest text-emerald-700 dark:text-emerald-400 mt-1">{stats.paidOrders} paid orders</p></CardContent>
-        </Card>
-        <Card className="border-amber-200/60 dark:border-amber-800/40 bg-gradient-to-br from-amber-50/70 to-white dark:from-amber-950/20 dark:to-zinc-900">
-          <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2"><Clock className="w-3.5 h-3.5" />Pending</CardTitle></CardHeader>
-          <CardContent><p className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">{stats.pendingOrders}</p><p className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mt-1">{stats.failedOrders} failed · {stats.refundedOrders} refunded</p></CardContent>
-        </Card>
+        {abilities.canViewOrders ? (
+          <>
+            <Card className="border-indigo-200/60 dark:border-indigo-800/40 bg-gradient-to-br from-indigo-50/70 to-white dark:from-indigo-950/30 dark:to-zinc-900">
+              <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2"><ShoppingCart className="w-3.5 h-3.5" />Total Orders</CardTitle></CardHeader>
+              <CardContent><p className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">{stats.totalOrders}</p></CardContent>
+            </Card>
+            <Card className="border-emerald-200/60 dark:border-emerald-800/40 bg-gradient-to-br from-emerald-50/70 to-white dark:from-emerald-950/20 dark:to-zinc-900">
+              <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2"><Wallet className="w-3.5 h-3.5" />Gross Revenue</CardTitle></CardHeader>
+              <CardContent><p className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">{fCurrency(stats.grossRevenue)}</p><p className="text-xs font-semibold uppercase tracking-widest text-emerald-700 dark:text-emerald-400 mt-1">{stats.paidOrders} paid orders</p></CardContent>
+            </Card>
+            <Card className="border-amber-200/60 dark:border-amber-800/40 bg-gradient-to-br from-amber-50/70 to-white dark:from-amber-950/20 dark:to-zinc-900">
+              <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2"><Clock className="w-3.5 h-3.5" />Pending</CardTitle></CardHeader>
+              <CardContent><p className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">{stats.pendingOrders}</p><p className="text-xs font-semibold uppercase tracking-widest text-zinc-500 mt-1">{stats.failedOrders} failed · {stats.refundedOrders} refunded</p></CardContent>
+            </Card>
+          </>
+        ) : (
+          <Card className="md:col-span-2 xl:col-span-3 border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/40">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                <Lock className="w-3.5 h-3.5" /> Orders & Revenue
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-zinc-600 dark:text-zinc-300">
+                Your role can access storefront content and catalog data, but shop order and revenue metrics require <code>shop.orders.view</code>.
+              </p>
+            </CardContent>
+          </Card>
+        )}
         <Card className="border-sky-200/60 dark:border-sky-800/40 bg-gradient-to-br from-sky-50/70 to-white dark:from-sky-950/20 dark:to-zinc-900">
           <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2"><Store className="w-3.5 h-3.5" />Shop Catalog</CardTitle></CardHeader>
           <CardContent>
@@ -530,8 +535,13 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
 
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <Card className="border-zinc-200 dark:border-zinc-800">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-3 flex-row items-start justify-between gap-4 space-y-0">
             <CardTitle className="text-sm font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-200">Branding</CardTitle>
+            {!abilities.canManageSettings ? (
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2 py-1 rounded-md">
+                <Lock className="w-3 h-3" /> Read-only
+              </span>
+            ) : null}
           </CardHeader>
           <CardContent className="pt-0">
             <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
@@ -540,6 +550,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
                   type="color"
                   value={accentDraft}
                   onChange={(e) => setAccentDraft(e.target.value)}
+                  disabled={!abilities.canManageSettings || isSavingAccent}
                   className="h-10 w-10 rounded-md border border-zinc-200 dark:border-zinc-700 bg-transparent cursor-pointer"
                   aria-label="Shop accent color"
                 />
@@ -558,8 +569,9 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
                   <button
                     key={swatch}
                     type="button"
+                    disabled={!abilities.canManageSettings || isSavingAccent}
                     onClick={() => setAccentDraft(swatch)}
-                    className={`h-7 w-7 rounded-full border-2 transition-all ${accentDraft.toLowerCase() === swatch.toLowerCase() ? "border-zinc-900 dark:border-zinc-100 scale-105" : "border-transparent hover:scale-105"}`}
+                    className={`h-7 w-7 rounded-full border-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed ${accentDraft.toLowerCase() === swatch.toLowerCase() ? "border-zinc-900 dark:border-zinc-100 scale-105" : "border-transparent hover:scale-105"}`}
                     style={{ backgroundColor: swatch }}
                     aria-label={`Use ${swatch} accent`}
                     title={swatch}
@@ -568,7 +580,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
               </div>
 
               <div className="flex items-center gap-2 lg:ml-auto">
-                <Button type="button" onClick={saveAccentColor} disabled={isSavingAccent || accentDraft === shopAccentColor} className="h-9 text-xs font-bold uppercase tracking-wider">
+                <Button type="button" onClick={saveAccentColor} disabled={!abilities.canManageSettings || isSavingAccent || accentDraft === shopAccentColor} className="h-9 text-xs font-bold uppercase tracking-wider">
                   {isSavingAccent ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
                   Save
                 </Button>
@@ -855,7 +867,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
           </div>
         </div>
 
-        {dataSegment !== "CATALOG" && (
+        {abilities.canViewOrders && dataSegment !== "CATALOG" && (
           <div className="flex bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-1 gap-1 h-10 w-fit">
             {ORDER_STATUSES.map((s) => (
               <button key={s} onClick={() => setOrderFilter(s)} className={`px-3 py-1 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all ${orderFilter === s ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-sm" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"}`}>
@@ -867,6 +879,15 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
 
         {isLoading ? (
           <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-indigo-500/50" /></div>
+        ) : !abilities.canViewOrders && dataSegment !== "CATALOG" ? (
+          <Card className="border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/40">
+            <CardContent className="py-10 text-center">
+              <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Order access restricted</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                Switch to <strong>Catalog</strong> view or request <code>shop.orders.view</code> permission.
+              </p>
+            </CardContent>
+          </Card>
         ) : (
           <div className="bg-white dark:bg-zinc-950/50 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
             <div className="overflow-x-auto">

@@ -86,13 +86,18 @@ describe('shop content helpers', () => {
     expect(update.shopFaqJson).toBeNull();
   });
 
-  it('coerces boolean for showAiAssist and ignores unknown fields', () => {
+  it('parses showAiAssist strictly and ignores unknown fields', () => {
     const update = buildShopContentUpdate({
       showAiAssist: 'truthy',
       randomField: 'ignored',
     });
-    expect(update.shopShowAiAssist).toBe(true);
+    expect(update.shopShowAiAssist).toBeUndefined();
     expect((update as Record<string, unknown>).randomField).toBeUndefined();
+  });
+
+  it('parses string booleans for showAiAssist', () => {
+    expect(buildShopContentUpdate({ showAiAssist: 'false' }).shopShowAiAssist).toBe(false);
+    expect(buildShopContentUpdate({ showAiAssist: 'true' }).shopShowAiAssist).toBe(true);
   });
 
   it('returns empty patch for unknown / non-object input', () => {

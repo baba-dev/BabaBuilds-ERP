@@ -198,7 +198,13 @@ export function buildShopContentUpdate(input: unknown): {
     out.shopFaqJson = normalized.length === 0 ? null : JSON.stringify(normalized);
   }
   if ('showAiAssist' in patch) {
-    out.shopShowAiAssist = Boolean(patch.showAiAssist);
+    if (typeof patch.showAiAssist === 'boolean') {
+      out.shopShowAiAssist = patch.showAiAssist;
+    } else if (typeof patch.showAiAssist === 'string') {
+      const normalized = patch.showAiAssist.trim().toLowerCase();
+      if (normalized === 'true') out.shopShowAiAssist = true;
+      if (normalized === 'false') out.shopShowAiAssist = false;
+    }
   }
 
   return out;
