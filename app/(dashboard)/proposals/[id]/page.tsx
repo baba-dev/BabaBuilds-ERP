@@ -39,7 +39,7 @@ export default async function ProposalDetailPage({
       client: true,
       items: true,
       conversions: {
-        include: { invoice: true, retainer: true, shopOrder: true }
+        include: { invoice: true, retainer: true }
       },
       generatedInvoices: true,
       generatedRetainers: true
