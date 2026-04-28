@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   Users, Plus, Globe, Building2, Mail, Phone, Briefcase, FileText, 
   Image as ImageIcon, CheckCircle2, Trash2, Pencil, AlertCircle, ChevronLeft, ChevronRight, Loader2 
@@ -226,6 +226,14 @@ export default function ClientCRM() {
     })();
   }, [hasHandledProtocolRecord, searchParams]);
 
+  const sortedClients = useMemo(
+    () =>
+      [...clients].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+      ),
+    [clients]
+  );
+
   return (
     <DashboardPageShell
       title={t('title')}
@@ -252,7 +260,7 @@ export default function ClientCRM() {
         <ResponsiveDialog 
           open={open} 
           onOpenChange={(v) => { if(!v) resetForm(); setOpen(v); }}
-          desktopClassName="sm:max-w-[550px] p-0 overflow-hidden border-none shadow-2xl bg-surface-elevated dark:backdrop-blur-xl border border-border"
+          desktopClassName="sm:max-w-[688px] p-0 overflow-hidden border-none shadow-2xl bg-surface-elevated dark:backdrop-blur-xl border border-border"
           title={
             <div className="flex items-center gap-3.5 px-6 pt-6 pb-2">
               <div className="p-2.5 bg-accent-soft rounded-xl border border-accent-strong/25">
@@ -273,6 +281,7 @@ export default function ClientCRM() {
               <Button type="button" variant="outline" onClick={() => setOpen(false)} className="bg-surface-elevated border-border text-muted-body hover:bg-surface-base text-xs font-bold uppercase tracking-widest px-5 mt-2 sm:mt-0">{t('cancel')}</Button>
               <FormSubmitBar
                 isSubmitting={isSubmitting}
+                formId="client-form"
                 submitText={isEditing ? t('update_client') : t('register_client')}
                 submittingText={t('saving')}
                 helperText={isEditing ? t("helper_edit") : t("helper_create")}
@@ -436,7 +445,7 @@ export default function ClientCRM() {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {clients.map((client) => (
+              {sortedClients.map((client) => (
                 <Card key={client.id} className="group relative hover:shadow-xl hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-all duration-300 border-border bg-surface-elevated overflow-hidden flex flex-col">
                   <div className="absolute top-4 right-4 flex gap-2 z-10">
                     <button 
@@ -503,7 +512,7 @@ export default function ClientCRM() {
                     <div className="pt-4 mt-auto border-t border-dashed border-border">
                       <div className="flex flex-col">
                         <p className="text-xs uppercase font-bold text-muted-body tracking-widest">
-                          {taxIdLabel}
+                          Tax Identification
                         </p>
                         <p className={`text-xs font-mono font-bold mt-1 ${client.taxId ? 'text-foreground/90' : 'text-muted-body/70'}`}>
                           {client.taxId || t('unregistered')}
