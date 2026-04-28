@@ -5,6 +5,7 @@ import Razorpay from 'razorpay';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
 import { logActivity } from '@/lib/security/activity-log';
 import { Prisma } from '@prisma/client';
+import { isModuleEnabled } from '@/lib/modules';
 
 type BusinessProfileWithSecrets = {
   stripeSecretKey?: string | null;
@@ -38,6 +39,10 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
     });
 
     if (!profile || !profile.shopEnabled) {
+      return NextResponse.json({ error: 'Shop not found.' }, { status: 404 });
+    }
+
+    if (!(await isModuleEnabled(profile.workspaceId, 'SHOP'))) {
       return NextResponse.json({ error: 'Shop not found.' }, { status: 404 });
     }
 

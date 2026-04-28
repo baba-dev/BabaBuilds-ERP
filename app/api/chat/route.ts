@@ -25,6 +25,12 @@ import { assertFreeTierMonthlyInvoiceAllowed } from '@/lib/entitlements';
 import { isModuleEnabled } from '@/lib/modules';
 import { listPublicPresets } from '@/lib/reporting/presets';
 import { checkPermission } from '@/lib/rbac';
+import {
+  getShopSummary,
+  getTopShopProducts,
+  setShopStatus,
+  updateShopAnnouncement,
+} from '@/lib/shop/ai-tools';
 
 const lookupAsync = promisify(dns.lookup);
 type PrismaWithOptionalModels = typeof prisma & {
@@ -1246,6 +1252,25 @@ export async function POST(request: Request) {
       reportingCanNavigateRun = run;
     }
 
+    // Shop / public storefront — gates separate tools by permission tier.
+    const shopModuleEnabled = await isModuleEnabled(workspaceId, 'SHOP');
+    let shopCanView = false;
+    let shopCanViewOrders = false;
+    let shopCanManageContent = false;
+    let shopCanManageSettings = false;
+    if (actorUserId && shopModuleEnabled) {
+      const [view, viewOrders, manageContent, manageSettings] = await Promise.all([
+        checkPermission(actorUserId, workspaceId, 'shop.view'),
+        checkPermission(actorUserId, workspaceId, 'shop.orders.view'),
+        checkPermission(actorUserId, workspaceId, 'shop.content.manage'),
+        checkPermission(actorUserId, workspaceId, 'shop.settings.manage'),
+      ]);
+      shopCanView = view;
+      shopCanViewOrders = viewOrders;
+      shopCanManageContent = manageContent;
+      shopCanManageSettings = manageSettings;
+    }
+
     const systemPrompt = `You are the Elite CFO & Executive AI Assistant for ${profile?.companyName || 'this business'}. 
     Current Workspace ID: ${workspaceId}.
     Current FY Revenue: ₹${totalRevenue.toLocaleString('en-IN')}.
@@ -1261,6 +1286,11 @@ ${
   reportingModuleEnabled && reportingCanList
     ? `6. REPORTING CENTER: Curated workspace reports live at /reporting. Use list_reporting_presets for titles (when available). Use open_reporting_center only when the user should open the Reporting Center UI with a preset${reportingCanNavigateRun ? ' (user has run access).' : ' — if they cannot run queries, suggest they ask an Admin for reporting_center.query.run.'}`
     : ''
+}
+${
+  shopModuleEnabled && shopCanView
+    ? `7. PUBLIC SHOP: The storefront lives at /shop and the public page at /shop/<slug>. Use get_shop_summary for an at-a-glance status, get_top_shop_products for sales trends${shopCanManageSettings ? ', set_shop_status to flip the master toggle' : ''}${shopCanManageContent ? ', update_shop_announcement to push a banner, and open_shop_dashboard to send the user to the editor' : ''}.`
+    : '7. PUBLIC SHOP: This workspace either has the Shop module disabled or you lack shop.view; do not call shop tools.'
 }`;
 
     const groq = new Groq({
@@ -1769,7 +1799,78 @@ ${
           ]
         : [];
 
-    const tools = [...baseTools, ...reportingTools];
+    // Shop tools: scoped to (a) module enabled and (b) per-permission gating.
+    const shopTools = shopModuleEnabled && shopCanView
+      ? [
+          {
+            type: 'function',
+            function: {
+              name: 'get_shop_summary',
+              description:
+                'Summarise the public shop: enabled flag, public URL, order status counts, paid revenue, pending pipeline, and the 5 most recent orders. Requires shop.view.',
+              parameters: { type: 'object', properties: {} },
+            },
+          },
+          ...(shopCanViewOrders
+            ? [
+                {
+                  type: 'function',
+                  function: {
+                    name: 'get_top_shop_products',
+                    description:
+                      'Return the top 5 best-selling products from PAID shop orders in the last 30 days, ranked by revenue. Requires shop.orders.view.',
+                    parameters: { type: 'object', properties: {} },
+                  },
+                },
+              ]
+            : []),
+          ...(shopCanManageSettings
+            ? [
+                {
+                  type: 'function',
+                  function: {
+                    name: 'set_shop_status',
+                    description:
+                      'Turn the public shop on or off (master toggle). Refuses if no shop slug is configured. Requires shop.settings.manage.',
+                    parameters: {
+                      type: 'object',
+                      properties: { enabled: { type: 'boolean' } },
+                      required: ['enabled'],
+                    },
+                  },
+                },
+              ]
+            : []),
+          ...(shopCanManageContent
+            ? [
+                {
+                  type: 'function',
+                  function: {
+                    name: 'update_shop_announcement',
+                    description:
+                      'Set or clear the announcement banner shown above the public shop hero. Pass an empty string to clear. Capped at 240 characters. Requires shop.content.manage.',
+                    parameters: {
+                      type: 'object',
+                      properties: { announcement: { type: 'string' } },
+                      required: ['announcement'],
+                    },
+                  },
+                },
+                {
+                  type: 'function',
+                  function: {
+                    name: 'open_shop_dashboard',
+                    description:
+                      'Navigate the user to the Shop Command Center where they can edit storefront content (About / Social / FAQ / Announcement / AI Assist).',
+                    parameters: { type: 'object', properties: {} },
+                  },
+                },
+              ]
+            : []),
+        ]
+      : [];
+
+    const tools = [...baseTools, ...reportingTools, ...shopTools];
 
     const initialResponse = await groq.chat.completions.create(
       {
@@ -1866,7 +1967,21 @@ ${
           get_investments_list: (_a, wid) => getInvestmentsList(wid),
           calculate_estimated_tax: (_a, wid) => calculateEstimatedTax(wid),
           predict_stockouts: (_a, wid) => predictStockouts(wid),
+          get_shop_summary: (_a, wid) => getShopSummary(wid),
+          get_top_shop_products: (_a, wid) => getTopShopProducts(wid),
+          set_shop_status: (a, wid) => setShopStatus(wid, Boolean((a as { enabled?: unknown }).enabled)),
+          update_shop_announcement: (a, wid) =>
+            updateShopAnnouncement(wid, asString((a as { announcement?: unknown }).announcement)),
         };
+
+        const shopToolPermissionMap: Record<string, boolean> = {
+          get_shop_summary: shopCanView,
+          get_top_shop_products: shopCanViewOrders,
+          set_shop_status: shopCanManageSettings,
+          update_shop_announcement: shopCanManageContent,
+          open_shop_dashboard: shopCanManageContent,
+        };
+        const isShopTool = toolCall.function.name in shopToolPermissionMap;
 
         if (
           isReportingTool(toolCall.function.name) &&
@@ -1882,10 +1997,21 @@ ${
             error:
               'Reporting Center is disabled for this workspace or your role cannot use this reporting action.',
           });
+        } else if (
+          isShopTool &&
+          (!shopModuleEnabled || !shopToolPermissionMap[toolCall.function.name])
+        ) {
+          dbResult = JSON.stringify({
+            error:
+              'Shop is disabled for this workspace or your role cannot use this shop action.',
+          });
         } else if (!canExecuteToolForRole(toolCall.function.name, actorRole)) {
           dbResult = JSON.stringify({
             error: `Tool ${toolCall.function.name} requires elevated permissions for your workspace role.`,
           });
+        } else if (toolCall.function.name === 'open_shop_dashboard') {
+          action = { type: 'NAVIGATE', path: '/shop', payload: null };
+          dbResult = JSON.stringify({ status: 'Opening Shop Command Center.' });
         } else if (toolCall.function.name === 'list_reporting_presets') {
           dbResult = JSON.stringify({
             presets: listPublicPresets().map((p) => ({

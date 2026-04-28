@@ -16,6 +16,9 @@ const WRITE_TOOLS = new Set<string>([
   "draft_invoice",
   "ui_navigate",
   "set_ui_theme",
+  "set_shop_status",
+  "update_shop_announcement",
+  "open_shop_dashboard",
 ]);
 
 const WRITE_ALLOWED_ROLES = new Set<string>([

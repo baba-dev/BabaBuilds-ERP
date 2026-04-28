@@ -35,7 +35,7 @@ export const appNavItems: AppNavItem[] = [
   { key: "dashboard", path: "/dashboard", icon: LayoutDashboard },
   { key: "revenue_pipeline", path: "/proposals/pipeline", icon: Target, badge: "AI", requiresModule: "REVENUE_PIPELINE" },
   { key: "service_catalog", path: "/services", icon: Briefcase },
-  { key: "shop", path: "/shop", icon: Store, badge: "New" },
+  { key: "shop", path: "/shop", icon: Store, badge: "New", requiresModule: "SHOP", requiresPermission: "shop.view" },
   { key: "inventory", path: "/inventory", icon: Archive },
   { key: "client_crm", path: "/clients", icon: Users },
   { key: "quotes_proposals", path: "/proposals", icon: FileSignature },

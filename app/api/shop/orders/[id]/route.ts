@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
 import { logActivity } from '@/lib/security/activity-log';
 import { commitShopOrderPayment } from '@/lib/shop/commit-shop-order-payment';
+import { withPermission } from '@/lib/rbac';
+import { isModuleEnabled } from '@/lib/modules';
 
 type SessionContext = {
   workspaceId?: string;
@@ -15,10 +17,23 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   try {
     const session = await getServerSession(authOptions);
     const sessionCtx = session as SessionContext | null;
-    if (!sessionCtx || !sessionCtx.workspaceId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!sessionCtx || !sessionCtx.workspaceId || !sessionCtx.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const workspaceId = sessionCtx.workspaceId;
+    const userId = sessionCtx.user.id;
     const { id } = await context.params;
+
+    if (!(await isModuleEnabled(workspaceId, 'SHOP'))) {
+      return NextResponse.json(
+        { error: 'Shop module is disabled for this workspace.', code: 'SHOP_MODULE_DISABLED' },
+        { status: 409 },
+      );
+    }
+
+    const perm = await withPermission(userId, workspaceId, 'shop.orders.manage');
+    if (!perm.granted) return perm.response;
     const body = await request.json();
     const { status } = body;
 
@@ -125,10 +140,23 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
   try {
     const session = await getServerSession(authOptions);
     const sessionCtx = session as SessionContext | null;
-    if (!sessionCtx || !sessionCtx.workspaceId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!sessionCtx || !sessionCtx.workspaceId || !sessionCtx.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const workspaceId = sessionCtx.workspaceId;
+    const userId = sessionCtx.user.id;
     const { id } = await context.params;
+
+    if (!(await isModuleEnabled(workspaceId, 'SHOP'))) {
+      return NextResponse.json(
+        { error: 'Shop module is disabled for this workspace.', code: 'SHOP_MODULE_DISABLED' },
+        { status: 409 },
+      );
+    }
+
+    const perm = await withPermission(userId, workspaceId, 'shop.orders.manage');
+    if (!perm.granted) return perm.response;
 
     const existing = await prisma.shopOrder.findFirst({ where: { id, workspaceId } });
     if (!existing) return NextResponse.json({ error: 'Order not found.' }, { status: 404 });

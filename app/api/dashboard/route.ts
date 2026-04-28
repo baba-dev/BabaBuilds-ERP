@@ -841,6 +841,7 @@ async function buildDashboardPayload(
     TAX_ADVANCED: "/tax",
     REPORTING_CENTER: "/reporting",
     IMPORT_MANAGER: "/inbox/import",
+    SHOP: "/shop",
   };
   const optionalModules = Array.from(enabledModules).map((moduleKey) => ({
     moduleKey,

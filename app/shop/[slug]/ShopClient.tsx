@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Mail, Phone, Globe, MapPin, ShoppingCart, X, Check, Loader2, Sparkles, ExternalLink } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import {
+  Mail, Phone, Globe, MapPin, ShoppingCart, X, Check, Loader2, Sparkles, ExternalLink,
+  Info, MessageCircleQuestion, Send, ChevronDown, Megaphone, Bot,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,11 +14,28 @@ import { toast } from "sonner";
 import Script from "next/script";
 import DOMPurify from 'dompurify';
 
+type SocialPlatform =
+  | "website" | "instagram" | "facebook" | "x" | "linkedin"
+  | "youtube" | "whatsapp" | "tiktok" | "pinterest" | "github" | "custom";
+
+type SocialLink = { platform: SocialPlatform; url: string; label?: string };
+type FaqEntry = { q: string; a: string };
+
+interface ShopContent {
+  announcement: string | null;
+  aboutMd: string | null;
+  footerNote: string | null;
+  social: SocialLink[];
+  faq: FaqEntry[];
+  showAiAssist: boolean;
+}
+
 interface ShopData {
   shop: {
     slug: string; companyName: string; tagline: string | null; logoUrl: string | null;
     accentColor: string; email: string; phone: string | null; website: string | null; address: string;
   };
+  content?: ShopContent;
   checkout: {
     available: boolean; gateway: "RAZORPAY" | "STRIPE" | null;
     razorpayKeyId: string | null; stripePublishableKey: string | null;
@@ -24,6 +44,34 @@ interface ShopData {
     id: string; name: string; description: string | null;
     imageUrl: string | null; price: number; sku: string; currentStock: number;
   }[];
+}
+
+const PLATFORM_LABELS: Record<SocialPlatform, string> = {
+  website: "Website",
+  instagram: "Instagram",
+  facebook: "Facebook",
+  x: "X (Twitter)",
+  linkedin: "LinkedIn",
+  youtube: "YouTube",
+  whatsapp: "WhatsApp",
+  tiktok: "TikTok",
+  pinterest: "Pinterest",
+  github: "GitHub",
+  custom: "Link",
+};
+
+function PlatformIcon({ platform }: { platform: SocialPlatform }) {
+  if (platform === "website" || platform === "custom") {
+    return <Globe className="w-4 h-4" />;
+  }
+  return (
+    <span
+      aria-hidden
+      className="inline-flex items-center justify-center w-4 h-4 text-[10px] font-black"
+    >
+      {PLATFORM_LABELS[platform].charAt(0)}
+    </span>
+  );
 }
 
 const formatPrice = (price: number) =>
@@ -205,13 +253,222 @@ function BuyModal({
   );
 }
 
+// ── Lightweight, sandboxed Markdown → HTML for shop About text ────────────────
+// We deliberately keep a tiny converter (no third-party Markdown lib at the
+// shop runtime) and run the result through DOMPurify, allowing only basic
+// formatting. Any HTML-like input is escaped first, so authors can't smuggle
+// raw HTML through admin.
+function renderMarkdownLite(md: string): string {
+  const escape = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  const inline = (s: string) => {
+    let out = escape(s);
+    out = out.replace(
+      /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+      (_m, label, url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`,
+    );
+    out = out.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    out = out.replace(/(^|[^*])\*([^*]+)\*/g, "$1<em>$2</em>");
+    out = out.replace(/`([^`]+)`/g, "<code>$1</code>");
+    return out;
+  };
+
+  const lines = md.replace(/\r\n/g, "\n").split("\n");
+  const blocks: string[] = [];
+  let paragraph: string[] = [];
+  let listBuf: string[] = [];
+
+  const flushParagraph = () => {
+    if (paragraph.length) {
+      blocks.push(`<p>${inline(paragraph.join(" "))}</p>`);
+      paragraph = [];
+    }
+  };
+  const flushList = () => {
+    if (listBuf.length) {
+      blocks.push(`<ul>${listBuf.map((item) => `<li>${inline(item)}</li>`).join("")}</ul>`);
+      listBuf = [];
+    }
+  };
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) { flushParagraph(); flushList(); continue; }
+    const headingMatch = /^(#{1,3})\s+(.*)$/.exec(line);
+    if (headingMatch) {
+      flushParagraph(); flushList();
+      const level = headingMatch[1].length;
+      blocks.push(`<h${level}>${inline(headingMatch[2])}</h${level}>`);
+      continue;
+    }
+    const liMatch = /^[-*]\s+(.*)$/.exec(line);
+    if (liMatch) {
+      flushParagraph();
+      listBuf.push(liMatch[1]);
+      continue;
+    }
+    flushList();
+    paragraph.push(line);
+  }
+  flushParagraph(); flushList();
+  return blocks.join("\n");
+}
+
+function FaqAccordion({ faq, accent }: { faq: FaqEntry[]; accent: string }) {
+  const [openIdx, setOpenIdx] = useState<number | null>(0);
+  return (
+    <div className="space-y-3">
+      {faq.map((entry, i) => {
+        const isOpen = openIdx === i;
+        return (
+          <div
+            key={`${entry.q}-${i}`}
+            className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden"
+          >
+            <button
+              type="button"
+              onClick={() => setOpenIdx(isOpen ? null : i)}
+              className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-zinc-50/70 dark:hover:bg-zinc-800/40"
+              aria-expanded={isOpen}
+            >
+              <span className="text-sm font-bold text-zinc-900 dark:text-zinc-50">{entry.q}</span>
+              <ChevronDown
+                className={`w-4 h-4 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                style={{ color: accent }}
+              />
+            </button>
+            {isOpen && (
+              <div className="px-5 pb-5 text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed whitespace-pre-line">
+                {entry.a}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function AiAssistButton({
+  shop,
+  accent,
+}: {
+  shop: ShopData["shop"];
+  accent: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", question: "" });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim() || !form.email.trim() || !form.question.trim()) {
+      toast.error("Please fill all fields.");
+      return;
+    }
+    setSubmitting(true);
+    const subject = `Shop AI Assist: question from ${form.name}`;
+    const body = `Hi ${shop.companyName} team,\n\nA visitor asked the following from your AI Assist drawer:\n\n${form.question}\n\nReply-to: ${form.name} <${form.email}>\n`;
+    try {
+      window.location.href = `mailto:${shop.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      toast.success("Opening your email client with the question pre-filled.");
+      setOpen(false);
+      setForm({ name: "", email: "", question: "" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full px-5 py-3 text-sm font-bold text-white shadow-2xl transition-transform active:scale-95 hover:scale-105"
+        style={{ background: accent, boxShadow: `0 12px 32px ${accent}55` }}
+      >
+        <Bot className="w-4 h-4" /> AI Assist
+      </button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-[460px] p-0 overflow-hidden border-none shadow-2xl">
+          <div className="px-6 pt-6 pb-5 bg-zinc-50/80 dark:bg-zinc-900/40 border-b border-zinc-100 dark:border-zinc-800">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-2">
+                <Bot className="w-5 h-5" style={{ color: accent }} /> Ask {shop.companyName}
+              </DialogTitle>
+              <DialogDescription className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">
+                Drop a question and the team will get back to you. Your message goes straight to {shop.email}.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <form onSubmit={handleSubmit} className="p-6 space-y-4 bg-white dark:bg-zinc-950">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">Name</Label>
+                <Input
+                  required value={form.name}
+                  onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))}
+                  placeholder="Your name" className="h-10"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">Email</Label>
+                <Input
+                  required type="email" value={form.email}
+                  onChange={(e) => setForm((s) => ({ ...s, email: e.target.value }))}
+                  placeholder="you@example.com" className="h-10"
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">Your question</Label>
+              <Textarea
+                required value={form.question}
+                onChange={(e) => setForm((s) => ({ ...s, question: e.target.value }))}
+                placeholder="e.g. Do you ship to my city? Any volume discounts?"
+                rows={4}
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} className="flex-1 text-xs font-bold uppercase tracking-widest">
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 text-xs font-bold uppercase tracking-widest"
+                style={{ background: accent }}
+              >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : (<><Send className="w-3.5 h-3.5 mr-1.5" /> Send</>)}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 // ── Main Shop Client ──────────────────────────────────────────────────────────
 export function ShopClient({ data }: { data: ShopData }) {
-  const { shop, checkout, products } = data;
+  const { shop, checkout, products, content } = data;
   const [selectedProduct, setSelectedProduct] = useState<ShopData["products"][0] | null>(null);
   const [confetti, setConfetti] = useState(false);
 
   useConfetti(confetti);
+
+  const aboutMd = content?.aboutMd ?? null;
+  const aboutHtml = useMemo(() => {
+    if (!aboutMd) return null;
+    const raw = renderMarkdownLite(aboutMd);
+    if (typeof window === "undefined") return raw;
+    return DOMPurify.sanitize(raw, {
+      ALLOWED_TAGS: ["p", "h1", "h2", "h3", "ul", "ol", "li", "strong", "em", "a", "code", "br"],
+      ALLOWED_ATTR: ["href", "target", "rel"],
+    });
+  }, [aboutMd]);
 
   // Apply accent color as CSS variable
   useEffect(() => {
@@ -236,6 +493,20 @@ export function ShopClient({ data }: { data: ShopData }) {
       )}
 
       <div className="min-h-screen bg-white dark:bg-zinc-950 transition-colors">
+        {/* ── ANNOUNCEMENT BAR ─────────────────────────────────────────────── */}
+        {content?.announcement ? (
+          <div
+            className="w-full py-2 px-4 text-center text-xs font-semibold tracking-wide text-white"
+            style={{ background: shop.accentColor }}
+            role="status"
+          >
+            <span className="inline-flex items-center gap-2">
+              <Megaphone className="w-3.5 h-3.5" />
+              {content.announcement}
+            </span>
+          </div>
+        ) : null}
+
         {/* ── HERO ─────────────────────────────────────────────────────────── */}
         <section className="relative overflow-hidden">
           {/* Animated gradient mesh */}
@@ -374,8 +645,81 @@ export function ShopClient({ data }: { data: ShopData }) {
           )}
         </section>
 
+        {/* ── ABOUT US ──────────────────────────────────────────────────────── */}
+        {aboutHtml ? (
+          <section className="max-w-4xl mx-auto px-6 py-12">
+            <div className="rounded-3xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-8 md:p-10">
+              <div className="flex items-center gap-2 mb-4">
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{ background: `${shop.accentColor}20`, color: shop.accentColor }}
+                >
+                  <Info className="w-4 h-4" />
+                </div>
+                <h2 className="text-xl md:text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+                  About {shop.companyName}
+                </h2>
+              </div>
+              <div
+                className="prose prose-zinc dark:prose-invert max-w-none text-sm md:text-base leading-relaxed text-zinc-600 dark:text-zinc-300 [&_a]:text-[color:var(--shop-accent)] [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_strong]:text-zinc-900 dark:[&_strong]:text-zinc-50 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:my-1"
+                dangerouslySetInnerHTML={{ __html: aboutHtml }}
+              />
+            </div>
+          </section>
+        ) : null}
+
+        {/* ── SOCIAL PROFILES ───────────────────────────────────────────────── */}
+        {content?.social && content.social.length > 0 ? (
+          <section className="max-w-5xl mx-auto px-6 py-8">
+            <p className="text-center text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-400 mb-4">
+              Connect with us
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {content.social.map((link, i) => (
+                <a
+                  key={`${link.platform}-${i}`}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-xs font-bold text-zinc-600 dark:text-zinc-300 hover:border-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-50 transition-colors"
+                  style={{ borderColor: `${shop.accentColor}30` }}
+                >
+                  <PlatformIcon platform={link.platform} />
+                  {link.label || PLATFORM_LABELS[link.platform]}
+                </a>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {/* ── FAQ ───────────────────────────────────────────────────────────── */}
+        {content?.faq && content.faq.length > 0 ? (
+          <section className="max-w-3xl mx-auto px-6 py-12">
+            <div className="text-center mb-8">
+              <div
+                className="inline-flex items-center justify-center w-10 h-10 rounded-xl mb-3"
+                style={{ background: `${shop.accentColor}18`, color: shop.accentColor }}
+              >
+                <MessageCircleQuestion className="w-5 h-5" />
+              </div>
+              <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+                Frequently asked questions
+              </h2>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">
+                Quick answers to what people usually ask before buying.
+              </p>
+            </div>
+            <FaqAccordion faq={content.faq} accent={shop.accentColor} />
+          </section>
+        ) : null}
+
         {/* ── FOOTER ────────────────────────────────────────────────────────── */}
-        <footer className="border-t border-zinc-100 dark:border-zinc-800 py-8 text-center">
+        <footer className="border-t border-zinc-100 dark:border-zinc-800 py-8 text-center space-y-2">
+          {content?.footerNote ? (
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto px-4">
+              {content.footerNote}
+            </p>
+          ) : null}
           <p className="text-xs text-zinc-400 dark:text-zinc-600 font-medium">
             Powered by{" "}
             <a href="/" className="font-bold text-zinc-500 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
@@ -384,6 +728,11 @@ export function ShopClient({ data }: { data: ShopData }) {
           </p>
         </footer>
       </div>
+
+      {/* ── AI ASSIST DRAWER ────────────────────────────────────────────────── */}
+      {content?.showAiAssist !== false ? (
+        <AiAssistButton shop={shop} accent={shop.accentColor} />
+      ) : null}
 
       {/* Buy Modal */}
       {selectedProduct && (

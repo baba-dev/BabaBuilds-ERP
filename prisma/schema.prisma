@@ -1162,6 +1162,14 @@ model BusinessProfile {
   shopEnabled     Boolean @default(false) // Master on/off for the public shop
   shopAccentColor String? @default("#6366f1") // HSL accent color for shop branding
 
+  // PUBLIC SHOP — content blocks (admin-editable, rendered on /shop/<slug>)
+  shopAnnouncement String? // Optional thin banner shown above the hero (e.g. promo / shipping notice)
+  shopAboutMd      String? // Markdown body for the "About Us" section (sanitized at render time)
+  shopFooterNote   String? // Optional fine-print / shop-specific footer note (plain text)
+  shopSocialJson   String? // JSON: array of { platform, url } pairs (instagram, facebook, x, linkedin, youtube, whatsapp, custom)
+  shopFaqJson      String? // JSON: array of { q, a } FAQ entries (capped server-side)
+  shopShowAiAssist Boolean @default(true) // Show in-shop "AI Assist" lead-capture drawer for buyers
+
   // EMAIL SERVER (SMTP)
   smtpHost      String?
   smtpPort      Int?

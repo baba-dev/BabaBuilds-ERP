@@ -14,7 +14,13 @@
 import 'server-only';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
-import { MODULE_KEYS, isValidModuleKey, type ModuleKey } from '@/lib/module-keys';
+import {
+  MODULE_KEYS,
+  isValidModuleKey,
+  isDefaultEnabledModule,
+  DEFAULT_ENABLED_MODULE_KEYS,
+  type ModuleKey,
+} from '@/lib/module-keys';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MODULE REGISTRY
@@ -37,6 +43,7 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   TAX_ADVANCED: 'Tax Advanced',
   REPORTING_CENTER: 'Reporting Center',
   IMPORT_MANAGER: 'Import Manager',
+  SHOP: 'Public Shop (E-Store)',
 };
 
 export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
@@ -58,6 +65,8 @@ export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
     'Enterprise-ready reporting workspace with curated finance/compliance presets, governed query execution, and polished exports.',
   IMPORT_MANAGER:
     'Universal import workspace with template downloads, intelligent mapping, strict validation, preview-first workflows, and safe create/upsert execution.',
+  SHOP:
+    'Public storefront for clients to browse your catalog, place orders, and pay via Razorpay/Stripe — including content sections (About, Social, FAQ) editable from the dashboard.',
 };
 
 export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
@@ -132,6 +141,13 @@ export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
     'Create-only and upsert execution modes with workspace-scoped writes',
     'Run history with actor, source mode, AI usage, and execution summary',
   ],
+  SHOP: [
+    'Public storefront at /shop/<slug> with hero, products, contact, and JSON-LD SEO',
+    'Editable content blocks (About Us, Social profiles, FAQ, custom announcement)',
+    'Optional in-shop AI Assist drawer for buyers to capture leads / questions',
+    'Order management with status workflow and gateway-aware checkout (Razorpay / Stripe)',
+    'RBAC-scoped admin tools: separate orders, content, and settings permissions',
+  ],
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -153,7 +169,11 @@ export class ModuleDisabledError extends Error {
 
 /**
  * Returns whether a specific module is currently enabled for a workspace.
- * Returns false if no record exists (modules are opt-in).
+ *
+ * - If a WorkspaceModule record exists, its `isEnabled` flag wins.
+ * - If no record exists and the module is in DEFAULT_ENABLED_MODULE_KEYS,
+ *   the module is treated as enabled (back-compat for legacy modules like SHOP).
+ * - Otherwise (no record, not default-enabled), the module is disabled.
  */
 export async function isModuleEnabled(
   workspaceId: string,
@@ -163,19 +183,35 @@ export async function isModuleEnabled(
     where: { workspaceId_moduleKey: { workspaceId, moduleKey } },
     select: { isEnabled: true },
   });
-  return record?.isEnabled === true;
+  if (record) return record.isEnabled === true;
+  return isDefaultEnabledModule(moduleKey);
 }
 
 /**
  * Returns the set of enabled module keys for a workspace.
  * Used by sidebar/dashboard to determine which optional items to render.
+ *
+ * Includes default-enabled modules (e.g. SHOP) when the workspace has no
+ * explicit record for them, preserving the legacy out-of-the-box experience.
  */
 export async function getEnabledModules(workspaceId: string): Promise<Set<ModuleKey>> {
   const records = await prisma.workspaceModule.findMany({
-    where: { workspaceId, isEnabled: true },
-    select: { moduleKey: true },
+    where: { workspaceId },
+    select: { moduleKey: true, isEnabled: true },
   });
-  return new Set(records.map((r) => r.moduleKey as ModuleKey));
+
+  const explicit = new Map<string, boolean>(records.map((r) => [r.moduleKey, r.isEnabled]));
+  const enabled = new Set<ModuleKey>();
+
+  for (const key of MODULE_KEYS) {
+    if (explicit.has(key)) {
+      if (explicit.get(key) === true) enabled.add(key);
+    } else if (DEFAULT_ENABLED_MODULE_KEYS.has(key)) {
+      enabled.add(key);
+    }
+  }
+
+  return enabled;
 }
 
 /**
