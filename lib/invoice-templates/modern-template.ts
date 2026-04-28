@@ -25,6 +25,40 @@ const modernTemplate: InvoiceTemplate = {
     const cfOrange = rgb(0.95, 0.5, 0.12);
     const cfLinkBlue = rgb(0.33, 0.7, 0);
 
+    const drawContinuationHeader = (
+      targetPage: import("pdf-lib").PDFPage,
+      targetHeight: number,
+      pageIndex: number,
+      totalPages?: number,
+    ) => {
+      const topY = 22;
+      const pageLabel = totalPages ? `Page ${pageIndex} of ${totalPages}` : `Page ${pageIndex}`;
+      drawText(targetPage, targetHeight, fonts, `Invoice: ${vm.invoiceNumber}`, leftMargin, topY, 8, { isBold: true, color: textMuted });
+      drawText(targetPage, targetHeight, fonts, `Client: ${vm.clientRaw.name}`, leftMargin, topY + 11, 8, { color: textMuted });
+      drawText(targetPage, targetHeight, fonts, pageLabel, rightMargin, topY, 8, { align: "right", color: textMuted });
+      drawText(targetPage, targetHeight, fonts, "Continued", rightMargin, topY + 11, 8, { align: "right", color: textMuted });
+      targetPage.drawLine({
+        start: { x: leftMargin, y: targetHeight - 38 },
+        end: { x: rightMargin, y: targetHeight - 38 },
+        thickness: 0.5,
+        color: borderGray,
+      });
+    };
+
+    const drawPageFooter = (
+      targetPage: import("pdf-lib").PDFPage,
+      targetHeight: number,
+      pageIndex: number,
+      totalPages: number,
+    ) => {
+      targetPage.drawLine({ start: { x: leftMargin, y: 45 }, end: { x: rightMargin, y: 45 }, thickness: 0.5, color: borderGray });
+      drawText(targetPage, targetHeight, fonts, `Page ${pageIndex} of ${totalPages}`, rightMargin, targetHeight - 30, 8, { align: "right", color: textMuted });
+    };
+
+    paginator.onFinalize((targetPage, pageIndex, totalPages) => {
+      drawPageFooter(targetPage, targetPage.getSize().height, pageIndex, totalPages);
+    });
+
     drawRect(page, height, 0, 0, width, 6, cfOrange);
     drawText(page, height, fonts, "Invoice", leftMargin, 41, 22, { isBold: true, color: black });
     if (vm.profile.logoUrl) {
@@ -99,7 +133,8 @@ const modernTemplate: InvoiceTemplate = {
       page = ensuredPage;
       const pageHeight = page.getSize().height;
       if (ensuredPage !== previousPage) {
-        tableY = 120;
+        drawContinuationHeader(page, pageHeight, paginator.pageNumber());
+        tableY = 52;
         drawTableHeader(page, pageHeight, tableY);
         tableY += 30;
       }
@@ -177,8 +212,6 @@ const modernTemplate: InvoiceTemplate = {
       });
     }
 
-    page.drawLine({ start: { x: leftMargin, y: 45 }, end: { x: rightMargin, y: 45 }, thickness: 0.5, color: borderGray });
-    drawText(page, activeHeight, fonts, `Page ${paginator.pageNumber()} of ${paginator.pageCount()}`, rightMargin, activeHeight - 30, 8, { align: "right", color: textMuted });
   },
 };
 

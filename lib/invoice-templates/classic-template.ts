@@ -26,6 +26,27 @@ const classicTemplate: InvoiceTemplate = {
     const leftMargin = 40;
     const rightMargin = width - 40;
     const clientSectionX = 320;
+    const headerYOffset = 74;
+
+    const drawContinuationHeader = (targetPage: import("pdf-lib").PDFPage, pageIndex: number, totalPages: number) => {
+      const h = targetPage.getSize().height;
+      drawText(targetPage, h, fonts, `Invoice: ${vm.invoiceNumber}`, leftMargin, 32, 8, { isBold: true, color: textMuted });
+      drawText(targetPage, h, fonts, `Client: ${vm.clientRaw.name}`, leftMargin + 180, 32, 8, { color: textMuted });
+      drawText(targetPage, h, fonts, `Page ${pageIndex} of ${totalPages}`, rightMargin, 32, 8, { align: "right", color: textMuted });
+      drawRect(targetPage, h, leftMargin, headerYOffset, width - 80, 25, black);
+      drawText(targetPage, h, fonts, "Classification", 50, headerYOffset + 17, 9, { isBold: true, color: white });
+      drawText(targetPage, h, fonts, "Description of Services", 180, headerYOffset + 17, 9, { isBold: true, color: white });
+      drawText(targetPage, h, fonts, `Amount (${vm.baseCurrency})`, width - 50, headerYOffset + 17, 9, { isBold: true, align: "right", color: white });
+    };
+
+    paginator.onFinalize((targetPage, pageIndex, totalPages) => {
+      const h = targetPage.getSize().height;
+      targetPage.drawLine({ start: { x: leftMargin, y: 45 }, end: { x: rightMargin, y: 45 }, thickness: 0.5, color: borderGray });
+      drawText(targetPage, h, fonts, `Page ${pageIndex} of ${totalPages}`, rightMargin, h - 30, 8, { align: "right", color: textMuted });
+      if (pageIndex > 1) {
+        drawContinuationHeader(targetPage, pageIndex, totalPages);
+      }
+    });
 
     const drawHeader = async () => {
       const loaded = vm.profile.logoUrl
@@ -97,22 +118,14 @@ const classicTemplate: InvoiceTemplate = {
       drawInvoiceWatermark(page, fonts.bold, vm.watermarkKind);
     }
 
-    const drawServicesHeader = () => {
-      drawRect(page, height, leftMargin, 290, width - 80, 25, black);
-      drawText(page, height, fonts, "Classification", 50, 307, 9, { isBold: true, color: white });
-      drawText(page, height, fonts, "Description of Services", 180, 307, 9, { isBold: true, color: white });
-      drawText(page, height, fonts, `Amount (${vm.baseCurrency})`, width - 50, 307, 9, { isBold: true, align: "right", color: white });
-    };
-
     let currentY = 335;
     for (const service of vm.services) {
-      const titleLines = wrapTextByWidth(fonts.bold, service.titleClamped, 300, 10).slice(0, 3);
+      const titleLines = wrapTextByWidth(fonts.bold, service.title, 300, 10);
       const rowHeight = Math.max(40, titleLines.length * 12 + 24);
       const rowPage = paginator.ensureRoom(currentY + rowHeight + 250, 70);
       if (rowPage !== page) {
         page = rowPage;
-        currentY = 335;
-        drawServicesHeader();
+        currentY = headerYOffset + 40;
       }
 
       drawText(page, height, fonts, vm.sacCodeShort, 50, currentY, 10, { color: textDark });
@@ -243,11 +256,16 @@ const classicTemplate: InvoiceTemplate = {
     drawText(page, height, fonts, metaStringValue, width / 2, height - 43, 9, { align: "center", color: white });
     drawText(page, height, fonts, contactString, width / 2, height - 24, 9, { align: "center", color: white });
     if (vm.showFreePlanFooter) {
-      drawText(page, height, fonts, "This document was prepared on erp.bababuilds.com | Make yours.", width / 2, height - 9, 7, {
-        align: "center",
-        color: rgb(0.5, 0.5, 0.5),
-        isItalic: true,
-      });
+      const totalPages = paginator.pageCount();
+      for (let idx = 0; idx < totalPages; idx += 1) {
+        const targetPage = paginator.getPage(idx);
+        const pageHeight = targetPage.getSize().height;
+        drawText(targetPage, pageHeight, fonts, "This document was prepared on erp.bababuilds.com | Make yours.", width / 2, pageHeight - 9, 7, {
+          align: "center",
+          color: rgb(0.5, 0.5, 0.5),
+          isItalic: true,
+        });
+      }
     }
   },
 };

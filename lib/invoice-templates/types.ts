@@ -31,6 +31,7 @@ export interface Paginator {
   pageNumber(): number;
   pageCount(): number;
   onPageAdded(handler: (page: PDFPage, pageNumber: number) => void): void;
+  onFinalize(handler: (page: PDFPage, pageIndex: number, totalPages: number) => void): void;
   finalize(): void;
 }
 

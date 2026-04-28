@@ -1,6 +1,4 @@
 import { describe, expect, it } from "vitest";
-import test from "node:test";
-import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -68,137 +66,129 @@ const defaultParams = () => ({
   userLocale: "en-IN",
 });
 
-test("generateInvoicePDF embeds payment link annotation and logos/signature images", async () => {
-  const root = await makeTempUploadsRoot();
-  const workspaceId = "ws-test";
-  const logoPath = path.join(root, "logos", `${workspaceId}.png`);
-  const clientLogoPath = path.join(root, "logos", "client-logo.png");
-  const signaturePath = path.join(root, "signatures", `${workspaceId}.png`);
-  await writeTinyPng(logoPath);
-  await writeTinyPng(clientLogoPath);
-  await writeTinyPng(signaturePath);
+describe("pdf rendering integration", () => {
+  it("generateInvoicePDF embeds payment link annotation and logos/signature images", async () => {
+    const root = await makeTempUploadsRoot();
+    const workspaceId = "ws-test";
+    const logoPath = path.join(root, "logos", `${workspaceId}.png`);
+    const clientLogoPath = path.join(root, "logos", "client-logo.png");
+    const signaturePath = path.join(root, "signatures", `${workspaceId}.png`);
+    await writeTinyPng(logoPath);
+    await writeTinyPng(clientLogoPath);
+    await writeTinyPng(signaturePath);
 
-  const pdfBytes = await generateInvoicePDF({
-    ...defaultParams(),
-    paymentLink: "https://rzp.io/i/test-link",
-    profile: {
-      ...defaultParams().profile,
-      logoUrl: `/logos/${workspaceId}.png`,
-      signatureUrl: `/signatures/${workspaceId}.png`,
-    },
-    client: {
-      ...defaultParams().client,
-      logoUrl: "/logos/client-logo.png",
-    },
+    const pdfBytes = await generateInvoicePDF({
+      ...defaultParams(),
+      paymentLink: "https://rzp.io/i/test-link",
+      profile: {
+        ...defaultParams().profile,
+        logoUrl: `/logos/${workspaceId}.png`,
+        signatureUrl: `/signatures/${workspaceId}.png`,
+      },
+      client: {
+        ...defaultParams().client,
+        logoUrl: "/logos/client-logo.png",
+      },
+    });
+
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+    const page = pdfDoc.getPages()[0];
+    const annots = page.node.get(PDFName.of("Annots"));
+    expect(annots).toBeTruthy();
+
+    const resources = page.node.lookup(PDFName.of("Resources"), PDFDict);
+    const xObject = resources?.lookup(PDFName.of("XObject"), PDFDict);
+    expect(xObject).toBeTruthy();
   });
 
-  const pdfDoc = await PDFDocument.load(pdfBytes);
-  const page = pdfDoc.getPages()[0];
-  const annots = page.node.get(PDFName.of("Annots"));
-  assert.ok(annots, "Expected link annotation for payment link");
+  it("generateInvoicePDF loads webp workspace logo without falling back", async () => {
+    const root = await makeTempUploadsRoot();
+    const workspaceId = "ws-test-webp";
+    const logoPath = path.join(root, "logos", workspaceId, "logo.webp");
+    await writeTinyWebp(logoPath);
 
-  const resources = page.node.lookup(PDFName.of("Resources"), PDFDict);
-  const xObject = resources?.lookup(PDFName.of("XObject"), PDFDict);
-  assert.ok(xObject, "Expected embedded image XObjects for logos/signature");
-});
+    const pdfBytes = await generateInvoicePDF({
+      ...defaultParams(),
+      profile: {
+        ...defaultParams().profile,
+        logoUrl: `/logos/${workspaceId}/logo.webp`,
+      },
+    });
 
-test("generateInvoicePDF loads webp workspace logo without falling back", async () => {
-  const root = await makeTempUploadsRoot();
-  const workspaceId = "ws-test-webp";
-  const logoPath = path.join(root, "logos", workspaceId, "logo.webp");
-  await writeTinyWebp(logoPath);
-
-  const pdfBytes = await generateInvoicePDF({
-    ...defaultParams(),
-    profile: {
-      ...defaultParams().profile,
-      logoUrl: `/logos/${workspaceId}/logo.webp`,
-    },
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+    const page = pdfDoc.getPages()[0];
+    const resources = page.node.lookup(PDFName.of("Resources"), PDFDict);
+    const xObject = resources?.lookup(PDFName.of("XObject"), PDFDict);
+    expect(xObject).toBeTruthy();
   });
 
-  const pdfDoc = await PDFDocument.load(pdfBytes);
-  const page = pdfDoc.getPages()[0];
-  const resources = page.node.lookup(PDFName.of("Resources"), PDFDict);
-  const xObject = resources?.lookup(PDFName.of("XObject"), PDFDict);
-  assert.ok(xObject, "Expected embedded image XObjects for webp logo");
-});
+  it("generateInvoicePDF creates multipage output for many DESIGN_1 items", async () => {
+    const services = Array.from({ length: 48 }, (_, idx) => ({
+      title: `Long consulting line item ${idx + 1} for pagination validation`,
+      nicDetails: "Monthly",
+      amount: 1000 + idx,
+    }));
+    const subtotal = services.reduce((sum, item) => sum + item.amount, 0);
+    const taxAmount = Math.round(subtotal * 0.18 * 100) / 100;
+    const total = subtotal + taxAmount;
+    const pdfBytes = await generateInvoicePDF({
+      ...defaultParams(),
+      services,
+      totals: { subtotal, taxRate: 0.18, taxAmount, total, taxMode: "taxable" },
+      formattedTotal: total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      profile: {
+        ...defaultParams().profile,
+        invoiceTheme: "DESIGN_1",
+      },
+    });
 
-test("generateInvoicePDF creates multipage output for many DESIGN_1 items", async () => {
-  const services = Array.from({ length: 48 }, (_, idx) => ({
-    title: `Long consulting line item ${idx + 1} for pagination validation`,
-    nicDetails: "Monthly",
-    amount: 1000 + idx,
-  }));
-  const subtotal = services.reduce((sum, item) => sum + item.amount, 0);
-  const taxAmount = Math.round(subtotal * 0.18 * 100) / 100;
-  const total = subtotal + taxAmount;
-  const pdfBytes = await generateInvoicePDF({
-    ...defaultParams(),
-    services,
-    totals: { subtotal, taxRate: 0.18, taxAmount, total, taxMode: "taxable" },
-    formattedTotal: total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-    profile: {
-      ...defaultParams().profile,
-      invoiceTheme: "DESIGN_1",
-    },
+    const pageCount = await countPages(pdfBytes);
+    expect(pageCount).toBeGreaterThan(1);
   });
 
-  const pageCount = await countPages(pdfBytes);
-  assert.ok(pageCount > 1, "Expected DESIGN_1 to paginate for many service rows");
-});
+  it("generateInvoicePDF creates multipage output for many DESIGN_2 items", async () => {
+    const services = Array.from({ length: 48 }, (_, idx) => ({
+      title: `Long consulting line item ${idx + 1} for pagination validation`,
+      nicDetails: "Monthly",
+      amount: 1000 + idx,
+    }));
+    const subtotal = services.reduce((sum, item) => sum + item.amount, 0);
+    const taxAmount = Math.round(subtotal * 0.18 * 100) / 100;
+    const total = subtotal + taxAmount;
+    const pdfBytes = await generateInvoicePDF({
+      ...defaultParams(),
+      services,
+      totals: { subtotal, taxRate: 0.18, taxAmount, total, taxMode: "taxable" },
+      formattedTotal: total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      profile: {
+        ...defaultParams().profile,
+        invoiceTheme: "DESIGN_2",
+      },
+    });
 
-test("generateInvoicePDF creates multipage output for many DESIGN_2 items", async () => {
-  const services = Array.from({ length: 48 }, (_, idx) => ({
-    title: `Long consulting line item ${idx + 1} for pagination validation`,
-    nicDetails: "Monthly",
-    amount: 1000 + idx,
-  }));
-  const subtotal = services.reduce((sum, item) => sum + item.amount, 0);
-  const taxAmount = Math.round(subtotal * 0.18 * 100) / 100;
-  const total = subtotal + taxAmount;
-  const pdfBytes = await generateInvoicePDF({
-    ...defaultParams(),
-    services,
-    totals: { subtotal, taxRate: 0.18, taxAmount, total, taxMode: "taxable" },
-    formattedTotal: total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-    profile: {
-      ...defaultParams().profile,
-      invoiceTheme: "DESIGN_2",
-    },
+    const pageCount = await countPages(pdfBytes);
+    expect(pageCount).toBeGreaterThan(1);
   });
 
-  const pageCount = await countPages(pdfBytes);
-  assert.ok(pageCount > 1, "Expected DESIGN_2 to paginate for many service rows");
-});
+  it("drawInvoiceWatermark keeps PARTIAL stamp within page bounds", async () => {
+    const doc = await PDFDocument.create();
+    const page = doc.addPage([595.28, 841.89]);
+    const fontBold = await doc.embedFont("Helvetica-Bold");
 
-test("drawInvoiceWatermark keeps PARTIAL stamp within page bounds", async () => {
-  const doc = await PDFDocument.create();
-  const page = doc.addPage([595.28, 841.89]);
-  const fontBold = await doc.embedFont("Helvetica-Bold");
-
-  const placement = drawInvoiceWatermark(page, fontBold, "PARTIAL");
-  assert.ok(placement, "Expected partial watermark placement");
-  assert.ok(placement!.x >= 0, "Watermark should start within page");
-  assert.ok(
-    placement!.x + placement!.renderedWidth <= page.getSize().width,
-    "Watermark should end within page"
-  );
-});
-
-test("getInvoicePdfStoragePath resolves private_uploads invoice path", () => {
-  process.env.PRIVATE_UPLOADS_DIR = "/tmp/private-root";
-  const fullPath = getInvoicePdfStoragePath({
-    workspaceId: "ws_123",
-    invoiceNumber: "INV/26-27/001",
-    pdfPath: "/invoices/ws_123/INV_26-27_001.pdf",
+    const placement = drawInvoiceWatermark(page, fontBold, "PARTIAL");
+    expect(placement).toBeTruthy();
+    expect(placement!.x).toBeGreaterThanOrEqual(0);
+    expect(placement!.x + placement!.renderedWidth).toBeLessThanOrEqual(page.getSize().width);
   });
 
-  assert.equal(fullPath, path.join("/tmp/private-root", "invoices", "ws_123", "INV_26-27_001.pdf"));
-});
+  it("getInvoicePdfStoragePath resolves private_uploads invoice path", () => {
+    process.env.PRIVATE_UPLOADS_DIR = "/tmp/private-root";
+    const fullPath = getInvoicePdfStoragePath({
+      workspaceId: "ws_123",
+      invoiceNumber: "INV/26-27/001",
+      pdfPath: "/invoices/ws_123/INV_26-27_001.pdf",
+    });
 
-// Vitest runner in this repo requires at least one describe/it suite in each file.
-describe("pdf rendering integration shim", () => {
-  it("keeps vitest suite discovery satisfied", () => {
-    expect(true).toBe(true);
+    expect(fullPath).toEqual(path.join("/tmp/private-root", "invoices", "ws_123", "INV_26-27_001.pdf"));
   });
 });

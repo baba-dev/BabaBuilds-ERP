@@ -140,20 +140,16 @@ export interface InvoiceViewModel {
 
 const DEFAULT_TEXT = "Not configured";
 
-const truncateForDisplay = (value: string | null | undefined, max: number): string => {
-  const safe = typeof value === "string" ? value.trim() : "";
-  if (safe.length <= max) return safe;
-  return `${safe.slice(0, Math.max(0, max - 3))}...`;
-};
+const sanitizeDisplayText = (value: string | null | undefined): string => (typeof value === "string" ? value.trim() : "");
 
 const splitAddress = (value: string | null | undefined): InvoiceAddress => {
   const full = typeof value === "string" ? value.trim() : "";
   if (!full) return { full: "", lines: [] };
   const parts = full.split(", ").filter(Boolean);
-  if (parts.length <= 1) return { full, lines: [truncateForDisplay(full, 120)] };
+  if (parts.length <= 1) return { full, lines: [sanitizeDisplayText(full)] };
   const mid = Math.ceil(parts.length / 2);
-  const line1 = truncateForDisplay(parts.slice(0, mid).join(", "), 120);
-  const line2 = truncateForDisplay(parts.slice(mid).join(", "), 120);
+  const line1 = sanitizeDisplayText(parts.slice(0, mid).join(", "));
+  const line2 = sanitizeDisplayText(parts.slice(mid).join(", "));
   return { full, lines: [line1, line2].filter(Boolean) };
 };
 
@@ -242,10 +238,10 @@ export const buildInvoiceViewModel = ({
     invoiceNumber,
     date,
     dueDate,
-    billingMonth: truncateForDisplay(billingMonth, 100),
+    billingMonth: sanitizeDisplayText(billingMonth),
     services: services.map((service) => ({
       title: service.title,
-      titleClamped: truncateForDisplay(service.title, 200),
+      titleClamped: sanitizeDisplayText(service.title),
       nicDetails: service.nicDetails || "",
       amount: service.amount,
       amountFormatted: service.amount.toLocaleString(userLocale, { minimumFractionDigits: 2 }),
