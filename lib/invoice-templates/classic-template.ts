@@ -46,6 +46,13 @@ const classicTemplate: InvoiceTemplate = {
       if (pageIndex > 1) {
         drawContinuationHeader(targetPage, pageIndex, totalPages);
       }
+      if (vm.showFreePlanFooter) {
+        drawText(targetPage, h, fonts, "This document was prepared on erp.bababuilds.com | Make yours.", width / 2, h - 9, 7, {
+          align: "center",
+          color: rgb(0.5, 0.5, 0.5),
+          isItalic: true,
+        });
+      }
     });
 
     const drawHeader = async () => {
@@ -255,18 +262,6 @@ const classicTemplate: InvoiceTemplate = {
     drawRect(page, height, 0, height - 72, width, 72, black);
     drawText(page, height, fonts, metaStringValue, width / 2, height - 43, 9, { align: "center", color: white });
     drawText(page, height, fonts, contactString, width / 2, height - 24, 9, { align: "center", color: white });
-    if (vm.showFreePlanFooter) {
-      const totalPages = paginator.pageCount();
-      for (let idx = 0; idx < totalPages; idx += 1) {
-        const targetPage = paginator.getPage(idx);
-        const pageHeight = targetPage.getSize().height;
-        drawText(targetPage, pageHeight, fonts, "This document was prepared on erp.bababuilds.com | Make yours.", width / 2, pageHeight - 9, 7, {
-          align: "center",
-          color: rgb(0.5, 0.5, 0.5),
-          isItalic: true,
-        });
-      }
-    }
   },
 };
 
