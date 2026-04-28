@@ -42,11 +42,11 @@ export const parseDashboardResponse = (payload: unknown) => {
     return null;
   }
 
-  const topServices = Array.isArray(salesAndShop.topServices) ? salesAndShop.topServices : [];
-  const recentServiceOrders = Array.isArray(salesAndShop.recentServiceOrders) ? salesAndShop.recentServiceOrders : [];
+  const topProducts = Array.isArray(salesAndShop.topProducts) ? salesAndShop.topProducts : [];
+  const recentShopOrders = Array.isArray(salesAndShop.recentShopOrders) ? salesAndShop.recentShopOrders : [];
   const receivablesAging = Array.isArray(charts.receivablesAging) ? charts.receivablesAging : [];
   const proposalFunnel = Array.isArray(charts.proposalFunnel) ? charts.proposalFunnel : [];
-  const serviceOrderHealth = Array.isArray(charts.serviceOrderHealth) ? charts.serviceOrderHealth : [];
+  const shopOrderHealth = Array.isArray(charts.shopOrderHealth) ? charts.shopOrderHealth : [];
   const revenueVsExpense = Array.isArray(charts.revenueVsExpense) ? charts.revenueVsExpense : [];
   const recurringRevenue = Array.isArray(charts.recurringRevenue) ? charts.recurringRevenue : [];
 
@@ -65,7 +65,7 @@ export const parseDashboardResponse = (payload: unknown) => {
     },
     salesAndShop: {
       ...salesAndShop,
-      serviceOrderConversion: asNumber(salesAndShop.serviceOrderConversion),
+      shopOrderConversion: asNumber(salesAndShop.shopOrderConversion),
       shopRevenueThisMonth: parseApiMoney(salesAndShop.shopRevenueThisMonth as string | number),
       shopRevenuePreviousMonth: parseApiMoney(salesAndShop.shopRevenuePreviousMonth as string | number),
       revenueChangeVsPriorMonthPct:
@@ -78,9 +78,9 @@ export const parseDashboardResponse = (payload: unknown) => {
         typeof salesAndShop.orderChangeVsPrior30DaysPct === "number" && Number.isFinite(salesAndShop.orderChangeVsPrior30DaysPct)
           ? salesAndShop.orderChangeVsPrior30DaysPct
           : null,
-      publishedServices: asNumber(salesAndShop.publishedServices as unknown),
-      topServices: mapMoneyArray(topServices, "revenue"),
-      recentServiceOrders: mapMoneyArray(recentServiceOrders, "amount"),
+      publishedProducts: asNumber(salesAndShop.publishedProducts as unknown),
+      topProducts: mapMoneyArray(topProducts, "revenue"),
+      recentShopOrders: mapMoneyArray(recentShopOrders, "amount"),
     },
     charts: {
       ...charts,
@@ -111,7 +111,7 @@ export const parseDashboardResponse = (payload: unknown) => {
           value: asNumber(row.value),
         };
       }),
-      serviceOrderHealth: serviceOrderHealth.map((point) => {
+      shopOrderHealth: shopOrderHealth.map((point) => {
         const row = asRecord(point);
         if (!row) return point;
         return {

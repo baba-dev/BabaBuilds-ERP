@@ -11,9 +11,14 @@ interface ShopData {
     available: boolean; gateway: "RAZORPAY" | "STRIPE" | null;
     razorpayKeyId: string | null; stripePublishableKey: string | null;
   };
-  services: {
-    id: string; name: string; description: string | null; longDescription: string | null;
-    imageUrl: string | null; price: number; sacCode: string | null; taxRate: number;
+  products: {
+    id: string;
+    sku: string;
+    name: string;
+    description: string | null;
+    imageUrl: string | null;
+    price: number;
+    currentStock: number;
   }[];
 }
 
@@ -46,7 +51,7 @@ function toAbsoluteUrl(value: string | null | undefined): string | undefined {
 function buildStorefrontJsonLd(data: ShopData) {
   const canonicalUrl = `${BASE_URL}/shop/${data.shop.slug}`;
   const organizationId = `${canonicalUrl}#organization`;
-  const itemListId = `${canonicalUrl}#services`;
+  const itemListId = `${canonicalUrl}#products`;
   const shopImage = toAbsoluteUrl(data.shop.logoUrl) ?? `${BASE_URL}${FALLBACK_SOCIAL_IMAGE}`;
 
   return {
@@ -71,29 +76,30 @@ function buildStorefrontJsonLd(data: ShopData) {
       {
         "@type": "ItemList",
         "@id": itemListId,
-        name: `${data.shop.companyName} Services`,
+        name: `${data.shop.companyName} Products`,
         itemListOrder: "https://schema.org/ItemListOrderAscending",
-        numberOfItems: data.services.length,
-        itemListElement: data.services.map((service, index) => ({
+        numberOfItems: data.products.length,
+        itemListElement: data.products.map((product, index) => ({
           "@type": "ListItem",
           position: index + 1,
-          url: `${canonicalUrl}#service-${service.id}`,
+          url: `${canonicalUrl}#product-${product.id}`,
           item: {
-            "@type": "Service",
-            "@id": `${canonicalUrl}#service-${service.id}`,
-            name: service.name,
-            description: service.longDescription || service.description || `Service by ${data.shop.companyName}`,
-            image: toAbsoluteUrl(service.imageUrl) || shopImage,
+            "@type": "Product",
+            "@id": `${canonicalUrl}#product-${product.id}`,
+            name: product.name,
+            description: product.description || `Product by ${data.shop.companyName}`,
+            image: toAbsoluteUrl(product.imageUrl) || shopImage,
             provider: { "@id": organizationId },
-            url: `${canonicalUrl}#service-${service.id}`,
+            sku: product.sku,
+            url: `${canonicalUrl}#product-${product.id}`,
             offers: {
               "@type": "Offer",
-              price: service.price.toFixed(2),
+              price: product.price.toFixed(2),
               priceCurrency: "INR",
-              availability: data.checkout.available
+              availability: data.checkout.available && product.currentStock > 0
                 ? "https://schema.org/InStock"
                 : "https://schema.org/OutOfStock",
-              url: `${canonicalUrl}#service-${service.id}`,
+              url: `${canonicalUrl}#product-${product.id}`,
             },
           },
         })),
@@ -130,8 +136,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 
   const { shop } = data;
-  const title       = `${shop.companyName} — Services & Shop`;
-  const description = shop.tagline || `Browse and purchase services from ${shop.companyName}.`;
+  const title       = `${shop.companyName} — Products & Shop`;
+  const description = shop.tagline || `Browse and purchase products from ${shop.companyName}.`;
   const primaryImage = shop.logoUrl || FALLBACK_SOCIAL_IMAGE;
   const openGraphImages = shop.logoUrl
     ? [{ url: shop.logoUrl, width: 1200, height: 630, alt: `${shop.companyName} logo` }]

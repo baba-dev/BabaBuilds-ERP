@@ -407,7 +407,7 @@ export default function Dashboard() {
           "Add at least one client and service before invoicing.",
         ),
         href: "/clients",
-        done: (d.recentInvoices?.length ?? 0) > 0 || (d.salesAndShop?.publishedServices ?? 0) > 0,
+        done: (d.recentInvoices?.length ?? 0) > 0 || (d.salesAndShop?.publishedProducts ?? 0) > 0,
       },
       {
         id: "setup-first-invoice",
@@ -421,7 +421,7 @@ export default function Dashboard() {
       },
     ];
     return checks;
-  }, [d.health?.integrationReadiness?.summary?.healthy, d.recentInvoices?.length, d.salesAndShop?.publishedServices, orgName, tr]);
+  }, [d.health?.integrationReadiness?.summary?.healthy, d.recentInvoices?.length, d.salesAndShop?.publishedProducts, orgName, tr]);
 
   const pendingSetupChecklist = setupChecklist.filter((item) => !item.done);
   const lockableCardClassName = (locked: boolean) =>

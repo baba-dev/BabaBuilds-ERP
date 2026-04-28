@@ -20,9 +20,9 @@ interface ShopData {
     available: boolean; gateway: "RAZORPAY" | "STRIPE" | null;
     razorpayKeyId: string | null; stripePublishableKey: string | null;
   };
-  services: {
-    id: string; name: string; description: string | null; longDescription: string | null;
-    imageUrl: string | null; price: number; sacCode: string | null; taxRate: number;
+  products: {
+    id: string; name: string; description: string | null;
+    imageUrl: string | null; price: number; sku: string; currentStock: number;
   }[];
 }
 
@@ -72,9 +72,9 @@ function useConfetti(trigger: boolean) {
 
 // ── Buy Modal ─────────────────────────────────────────────────────────────────
 function BuyModal({
-  service, slug, checkout, onClose, onSuccess,
+  product, slug, checkout, onClose, onSuccess,
 }: {
-  service: ShopData["services"][0];
+  product: ShopData["products"][0];
   slug: string;
   checkout: ShopData["checkout"];
   onClose: () => void;
@@ -91,7 +91,7 @@ function BuyModal({
       const res  = await fetch(`/api/shop/${slug}/order`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ serviceId: service.id, ...buyer }),
+        body: JSON.stringify({ items: [{ productId: product.id, quantity: 1 }], ...buyer }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error || "Failed to start checkout."); setLoading(false); return; }
@@ -109,7 +109,7 @@ function BuyModal({
           currency:    data.currency,
           order_id:    data.rpOrderId,
           name:        data.shopName,
-          description: data.serviceName,
+          description: product.name,
           prefill:     data.prefill,
           theme:       { color: "#6366f1" },
           handler: async (response: any) => {
@@ -117,7 +117,7 @@ function BuyModal({
               method:  "POST",
               headers: { "Content-Type": "application/json" },
               body:    JSON.stringify({
-                serviceOrderId:    data.orderId,
+                shopOrderId: data.orderId,
                 razorpayOrderId:   response.razorpay_order_id,
                 razorpayPaymentId: response.razorpay_payment_id,
                 razorpaySignature: response.razorpay_signature,
@@ -147,7 +147,7 @@ function BuyModal({
             </div>
             <h2 className="text-2xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight">Payment Successful!</h2>
             <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed">
-              Thank you for your purchase of <strong>{service.name}</strong>. An invoice has been prepared and will be shared with you shortly.
+              Thank you for your purchase of <strong>{product.name}</strong>. An invoice has been prepared and will be shared with you shortly.
             </p>
             <Button onClick={onClose} className="mt-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8">Close</Button>
           </div>
@@ -161,15 +161,15 @@ function BuyModal({
             <div className="px-6 pt-6 pb-5 bg-zinc-50/80 dark:bg-zinc-900/40 border-b border-zinc-100 dark:border-zinc-800">
               <DialogHeader>
                 <DialogTitle className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                  Purchase — {service.name}
+                  Purchase — {product.name}
                 </DialogTitle>
                 <DialogDescription className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">
                   Enter your details to complete the checkout.
                 </DialogDescription>
               </DialogHeader>
               <div className="mt-4 px-4 py-3 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-800/30 rounded-xl flex items-center justify-between">
-                <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">{service.name}</span>
-                <span className="text-lg font-black text-indigo-700 dark:text-indigo-300">{formatPrice(service.price)}</span>
+                <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">{product.name}</span>
+                <span className="text-lg font-black text-indigo-700 dark:text-indigo-300">{formatPrice(product.price)}</span>
               </div>
             </div>
             <form onSubmit={handleBuy} className="p-6 space-y-4 bg-white dark:bg-zinc-950">
@@ -194,7 +194,7 @@ function BuyModal({
               <div className="flex gap-3 pt-2">
                 <Button type="button" variant="outline" onClick={onClose} className="flex-1 text-xs font-bold uppercase tracking-widest">Cancel</Button>
                 <Button type="submit" disabled={loading} className="flex-1 text-xs font-bold uppercase tracking-widest" style={{ background: "#6366f1" }}>
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : `Pay ${formatPrice(service.price)}`}
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : `Pay ${formatPrice(product.price)}`}
                 </Button>
               </div>
             </form>
@@ -207,10 +207,9 @@ function BuyModal({
 
 // ── Main Shop Client ──────────────────────────────────────────────────────────
 export function ShopClient({ data }: { data: ShopData }) {
-  const { shop, checkout, services } = data;
-  const [selectedService, setSelectedService] = useState<ShopData["services"][0] | null>(null);
+  const { shop, checkout, products } = data;
+  const [selectedProduct, setSelectedProduct] = useState<ShopData["products"][0] | null>(null);
   const [confetti, setConfetti] = useState(false);
-  const [expandedService, setExpandedService] = useState<string | null>(null);
 
   useConfetti(confetti);
 
@@ -292,37 +291,37 @@ export function ShopClient({ data }: { data: ShopData }) {
           </div>
         </section>
 
-        {/* ── SERVICES ──────────────────────────────────────────────────────── */}
+        {/* ── PRODUCTS ──────────────────────────────────────────────────────── */}
         <section className="max-w-5xl mx-auto px-6 py-16">
           <div className="text-center mb-12">
             <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 mb-2">
-              Our Services
+              Shop Products
             </h2>
             <p className="text-zinc-500 dark:text-zinc-400 font-medium">
-              {services.length} service{services.length !== 1 ? "s" : ""} available · Click any card to learn more
+              {products.length} product{products.length !== 1 ? "s" : ""} available
             </p>
           </div>
 
-          {services.length === 0 ? (
+          {products.length === 0 ? (
             <div className="text-center py-20 text-zinc-400">
               <Sparkles className="w-10 h-10 mx-auto mb-4 opacity-50" />
-              <p className="font-bold text-lg">No services available yet.</p>
+              <p className="font-bold text-lg">No products available yet.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {services.map((service, i) => (
+              {products.map((product, i) => (
                 <div
-                  key={service.id}
-                  id={`service-${service.id}`}
+                  key={product.id}
+                  id={`product-${product.id}`}
                   className="group bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300"
                   style={{ animationDelay: `${i * 80}ms`, animation: "shopCardIn 0.5s ease both" }}
                 >
                   {/* Hero image */}
-                  {service.imageUrl ? (
+                  {product.imageUrl ? (
                     <div className="h-44 overflow-hidden">
                       <img
-                        src={service.imageUrl}
-                        alt={service.name}
+                        src={product.imageUrl}
+                        alt={product.name}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     </div>
@@ -334,47 +333,26 @@ export function ShopClient({ data }: { data: ShopData }) {
                   )}
 
                   <div className="p-5 space-y-3">
-                    <h3 className="font-extrabold text-zinc-900 dark:text-zinc-50 text-lg tracking-tight leading-tight">{service.name}</h3>
+                    <h3 className="font-extrabold text-zinc-900 dark:text-zinc-50 text-lg tracking-tight leading-tight">{product.name}</h3>
 
-                    {service.description && (
+                    {product.description && (
                       <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed line-clamp-2">
-                        {service.description}
+                        {product.description}
                       </p>
                     )}
 
-                    {/* Long description expand */}
-                    {service.longDescription && (
-                      <>
-                        {expandedService === service.id && (
-                          <div
-                            className="prose prose-sm dark:prose-invert max-w-none text-zinc-600 dark:text-zinc-400 leading-relaxed border-t border-zinc-100 dark:border-zinc-800 pt-3"
-                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(service.longDescription) }}
-                          />
-                        )}
-                        <button
-                          onClick={() => setExpandedService(expandedService === service.id ? null : service.id)}
-                          className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 hover:underline"
-                        >
-                          {expandedService === service.id ? "Show less ↑" : "Read more ↓"}
-                        </button>
-                      </>
-                    )}
-
-                    {/* SAC badge */}
-                    {service.sacCode && (
-                      <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                        SAC {service.sacCode} · {service.taxRate}% Tax
-                      </div>
-                    )}
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+                      SKU {product.sku} · Stock {product.currentStock}
+                    </div>
 
                     <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800">
                       <span className="text-2xl font-black text-zinc-900 dark:text-zinc-50">
-                        {formatPrice(service.price)}
+                        {formatPrice(product.price)}
                       </span>
 
-                      {checkout.available ? (
+                      {checkout.available && product.currentStock > 0 ? (
                         <button
-                          onClick={() => setSelectedService(service)}
+                          onClick={() => setSelectedProduct(product)}
                           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white transition-all active:scale-95 hover:opacity-90 shadow-lg"
                           style={{ background: shop.accentColor, boxShadow: `0 4px 15px ${shop.accentColor}40` }}
                         >
@@ -382,7 +360,7 @@ export function ShopClient({ data }: { data: ShopData }) {
                         </button>
                       ) : (
                         <a
-                          href={`mailto:${shop.email}?subject=Enquiry: ${encodeURIComponent(service.name)}&body=Hi, I am interested in ${encodeURIComponent(service.name)}.`}
+                          href={`mailto:${shop.email}?subject=Enquiry: ${encodeURIComponent(product.name)}&body=Hi, I am interested in ${encodeURIComponent(product.name)}.`}
                           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all"
                         >
                           <Mail className="w-4 h-4" /> Contact Us
@@ -408,13 +386,13 @@ export function ShopClient({ data }: { data: ShopData }) {
       </div>
 
       {/* Buy Modal */}
-      {selectedService && (
+      {selectedProduct && (
         <BuyModal
-          service={selectedService}
+          product={selectedProduct}
           slug={shop.slug}
           checkout={checkout}
-          onClose={() => setSelectedService(null)}
-          onSuccess={() => { setConfetti(true); setSelectedService(null); }}
+          onClose={() => setSelectedProduct(null)}
+          onSuccess={() => { setConfetti(true); setSelectedProduct(null); }}
         />
       )}
 

@@ -10,7 +10,7 @@ describe("dashboard query performance budget", () => {
     expect(source).toContain("prisma.investment.aggregate");
     expect(source).toContain("prisma.bankTransaction.groupBy");
     expect(source).toContain("prisma.proposal.groupBy");
-    expect(source).toContain("prisma.serviceOrder.groupBy");
+    expect(source).toContain("prisma.shopOrder.groupBy");
     expect(source).toContain("prisma.accountingViolationReport.count");
   });
 

@@ -29,22 +29,22 @@ export async function GET(request: Request) {
     };
 
     const [orders, total, allStatusCounts, paidAgg] = await Promise.all([
-      prisma.serviceOrder.findMany({
+      prisma.shopOrder.findMany({
         where: orderWhere,
         include: {
-          serviceTemplate: { select: { name: true, defaultPrice: true } },
+          items: { select: { productName: true, quantity: true, unitPrice: true } },
         },
         orderBy: { createdAt: 'desc' },
         take: limit,
         skip: (page - 1) * limit,
       }),
-      prisma.serviceOrder.count({ where: orderWhere }),
-      prisma.serviceOrder.groupBy({
+      prisma.shopOrder.count({ where: orderWhere }),
+      prisma.shopOrder.groupBy({
         by: ['status'],
         where: { workspaceId },
         _count: { _all: true },
       }),
-      prisma.serviceOrder.aggregate({
+      prisma.shopOrder.aggregate({
         where: { workspaceId, status: 'PAID' },
         _sum: { amount: true },
       }),

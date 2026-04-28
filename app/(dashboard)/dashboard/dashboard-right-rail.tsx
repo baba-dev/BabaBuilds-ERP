@@ -111,7 +111,7 @@ function deriveWorkspaceMood(data: DashboardData): WorkspaceMood {
     return 'warning';
   }
   
-  if ((!data.salesAndShop.shopEnabled && data.salesAndShop.publishedServices > 0) || data.salesAndShop.acceptedAwaitingInvoicing > 0) {
+  if ((!data.salesAndShop.shopEnabled && data.salesAndShop.publishedProducts > 0) || data.salesAndShop.acceptedAwaitingInvoicing > 0) {
     return 'opportunity';
   }
   
@@ -462,7 +462,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
     });
   }
 
-  if (!data.salesAndShop.shopEnabled && data.salesAndShop.publishedServices > 0) {
+  if (!data.salesAndShop.shopEnabled && data.salesAndShop.publishedProducts > 0) {
     suggestions.push({
       label: tr("action_launch_store", "Enable Storefront Publicly"),
       desc: tr("action_launch_store_desc", "Your published services are ready for public orders. Growth signal is active."),

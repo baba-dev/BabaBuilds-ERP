@@ -116,17 +116,17 @@ async function buildDashboardPayload(
     openTaskCount,
     urgentTaskCount,
     blockedTaskCount,
-    publishedServices,
+    publishedProducts,
     lowStockProducts,
     openPurchaseOrders,
     inventoryMovements,
-    serviceOrderStatusGroups,
+    shopOrderStatusGroups,
     paidOrderRevenueThisMonth,
     paidOrderRevenuePreviousMonth,
     ordersLast30Days,
     ordersPrior30Days,
-    topServiceOrderGroups,
-    recentServiceOrders,
+    topProductOrderGroups,
+    recentShopOrders,
     integrityRuns,
     violationCount,
     criticalViolationCount,
@@ -339,8 +339,8 @@ async function buildDashboardPayload(
       })
     ),
 
-    timed("services.published", () =>
-      prisma.serviceTemplate.count({
+    timed("products.published", () =>
+      prisma.product.count({
         where: { workspaceId, showInShop: true },
       })
     ),
@@ -370,7 +370,7 @@ async function buildDashboardPayload(
     ),
 
     timed("orders.status_group", () =>
-      prisma.serviceOrder.groupBy({
+      prisma.shopOrder.groupBy({
         where: { 
           workspaceId,
           ...(fyRange ? { createdAt: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}),
@@ -381,7 +381,7 @@ async function buildDashboardPayload(
     ),
 
     timed("orders.revenue_month", () =>
-      prisma.serviceOrder.aggregate({
+      prisma.shopOrder.aggregate({
         where: {
           workspaceId,
           status: "PAID",
@@ -392,7 +392,7 @@ async function buildDashboardPayload(
     ),
 
     timed("orders.revenue_prev_month", () =>
-      prisma.serviceOrder.aggregate({
+      prisma.shopOrder.aggregate({
         where: {
           workspaceId,
           status: "PAID",
@@ -403,13 +403,13 @@ async function buildDashboardPayload(
     ),
 
     timed("orders.last_30d", () =>
-      prisma.serviceOrder.count({
+      prisma.shopOrder.count({
         where: { workspaceId, createdAt: { gte: thirtyDaysBack } },
       })
     ),
 
     timed("orders.prior_30d", () =>
-      prisma.serviceOrder.count({
+      prisma.shopOrder.count({
         where: {
           workspaceId,
           createdAt: { gte: sixtyDaysBack, lt: thirtyDaysBack },
@@ -417,22 +417,24 @@ async function buildDashboardPayload(
       })
     ),
 
-    timed("orders.top_services", () =>
-      prisma.serviceOrder.groupBy({
-        where: { 
-          workspaceId,
-          ...(fyRange ? { createdAt: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}),
+    timed("orders.top_products", () =>
+      prisma.shopOrderItem.groupBy({
+        where: {
+          shopOrder: {
+            workspaceId,
+            ...(fyRange ? { createdAt: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}),
+          },
         },
-        by: ["serviceTemplateId"],
+        by: ["productId", "productName"],
         _count: { _all: true },
-        _sum: { amount: true },
+        _sum: { lineTotal: true },
       })
     ),
 
     timed("orders.recent", () =>
-      prisma.serviceOrder.findMany({
+      prisma.shopOrder.findMany({
         where: { workspaceId },
-        include: { serviceTemplate: { select: { name: true } } },
+        include: { items: { select: { productName: true }, take: 1 } },
         orderBy: { createdAt: "desc" },
         take: 5,
       })
@@ -500,7 +502,7 @@ async function buildDashboardPayload(
       : Promise.resolve(0),
     timed("orders.pending_buckets", async () => {
       // Avoid pulling all orders into memory; we only need pending/failed aging buckets.
-      const pendingOrders = await prisma.serviceOrder.findMany({
+      const pendingOrders = await prisma.shopOrder.findMany({
         where: {
           workspaceId,
           status: { in: ["PENDING", "FAILED"] },
@@ -544,7 +546,7 @@ async function buildDashboardPayload(
     ? toDecimal(investmentAggregate._sum.amount ?? 0)
     : new Prisma.Decimal(0);
 
-  const serviceOrderByStatus = serviceOrderStatusGroups.reduce<Record<string, number>>(
+  const shopOrderByStatus = shopOrderStatusGroups.reduce<Record<string, number>>(
     (acc, group) => {
       const status = String(group.status || "PENDING").toUpperCase();
       acc[status] = group._count._all;
@@ -553,9 +555,9 @@ async function buildDashboardPayload(
     {}
   );
 
-  const paidOrders = serviceOrderByStatus.PAID ?? 0;
-  const pendingOrders = serviceOrderByStatus.PENDING ?? 0;
-  const failedOrders = serviceOrderByStatus.FAILED ?? 0;
+  const paidOrders = shopOrderByStatus.PAID ?? 0;
+  const pendingOrders = shopOrderByStatus.PENDING ?? 0;
+  const failedOrders = shopOrderByStatus.FAILED ?? 0;
   const pendingOrdersCount = pendingOrders + failedOrders;
 
   const receivables = (canViewFinance
@@ -630,32 +632,32 @@ async function buildDashboardPayload(
 
   const conversion = asPct(paidOrders, Math.max(1, paidOrders + pendingOrders + failedOrders));
 
-  const topServiceTemplateIds = topServiceOrderGroups
-    .filter((group) => Boolean(group.serviceTemplateId))
-    .sort((a, b) => b._count._all - a._count._all)
+  const topProductIds = topProductOrderGroups
+    .filter((group) => Boolean(group.productId))
+    .sort((a, b) => Number((b._count as { _all?: number } | undefined)?._all ?? 0) - Number((a._count as { _all?: number } | undefined)?._all ?? 0))
     .slice(0, 4)
-    .map((group) => group.serviceTemplateId as string);
+    .map((group) => group.productId as string);
 
-  const topServiceTemplates = topServiceTemplateIds.length
-    ? await timed("orders.top_service_names", () =>
-        prisma.serviceTemplate.findMany({
-          where: { id: { in: topServiceTemplateIds } },
+  const topProductsData = topProductIds.length
+    ? await timed("orders.top_product_names", () =>
+        prisma.product.findMany({
+          where: { id: { in: topProductIds } },
           select: { id: true, name: true },
         })
       )
     : [];
 
-  const topServiceNameById = new Map(topServiceTemplates.map((row) => [row.id, row.name]));
+  const topProductNameById = new Map(topProductsData.map((row) => [row.id, row.name]));
 
-  const topServices = topServiceOrderGroups
-    .sort((a, b) => b._count._all - a._count._all)
+  const topProducts = topProductOrderGroups
+    .sort((a, b) => Number((b._count as { _all?: number } | undefined)?._all ?? 0) - Number((a._count as { _all?: number } | undefined)?._all ?? 0))
     .slice(0, 4)
     .map((group) => ({
-      serviceName:
-        (group.serviceTemplateId && topServiceNameById.get(group.serviceTemplateId)) ??
-        "Unknown service",
-      orderCount: group._count._all,
-      revenue: serializeMoney(toDecimal(group._sum.amount ?? 0)),
+      productName:
+        (group.productId && topProductNameById.get(group.productId)) ??
+        "Unknown product",
+      orderCount: Number((group._count as { _all?: number } | undefined)?._all ?? 0),
+      revenue: serializeMoney(toDecimal((group._sum as { lineTotal?: number | string | Prisma.Decimal | null } | undefined)?.lineTotal ?? 0)),
     }));
 
   const bucketTimeZone = resolveMonthlyBucketTimeZone(
@@ -824,8 +826,8 @@ async function buildDashboardPayload(
     proposalFunnel: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
     acceptedAwaitingInvoicing: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
     publicShopOrders: describeKpiPeriod({ type: "ALL_TIME", now, fy, fyRange }),
-    serviceOrderConversion: describeKpiPeriod({ type: "ALL_TIME", now, fy, fyRange }),
-    topServices: describeKpiPeriod({ type: "ALL_TIME", now, fy, fyRange }),
+    shopOrderConversion: describeKpiPeriod({ type: "ALL_TIME", now, fy, fyRange }),
+    topProducts: describeKpiPeriod({ type: "ALL_TIME", now, fy, fyRange }),
     shopRevenueThisMonth: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
     ordersLast30Days: describeKpiPeriod({ type: "ROLLING_30D", now, fy, fyRange }),
   };
@@ -897,24 +899,24 @@ async function buildDashboardPayload(
       acceptedAwaitingInvoicing: acceptedUninvoicedProposals,
       shopEnabled: Boolean(profile?.shopEnabled),
       publicShopOrders: {
-        total: Object.values(serviceOrderByStatus).reduce((sum, value) => sum + value, 0),
+        total: Object.values(shopOrderByStatus).reduce((sum, value) => sum + value, 0),
         paid: paidOrders,
         pending: pendingOrders,
         failed: failedOrders,
       },
-      serviceOrderConversion: conversion,
+      shopOrderConversion: conversion,
       shopRevenueThisMonth: serializeMoney(shopRevenueThisMonth),
       shopRevenuePreviousMonth: serializeMoney(shopRevenuePreviousMonth),
       revenueChangeVsPriorMonthPct: revenueDeltaPct,
       ordersLast30Days,
       ordersPrior30Days,
       orderChangeVsPrior30DaysPct: orderDeltaPct,
-      publishedServices,
-      topServices,
+      publishedProducts,
+      topProducts,
       kpiPeriods: salesAndShopKpiPeriods,
-      recentServiceOrders: recentServiceOrders.map((order) => ({
+      recentShopOrders: recentShopOrders.map((order) => ({
         id: order.id,
-        serviceName: order.serviceTemplate?.name ?? "Unknown service",
+        productName: order.items[0]?.productName ?? "Unknown product",
         buyerName: order.buyerName,
         amount: serializeMoney(order.amount),
         status: order.status,
@@ -987,7 +989,7 @@ async function buildDashboardPayload(
         { stage: "Invoiced", value: funnel.invoiced },
         { stage: "Declined", value: funnel.declined },
       ],
-      serviceOrderHealth: [
+      orderHealth: [
         { status: "Paid", value: paidOrders },
         { status: "Pending", value: pendingOrders },
         { status: "Failed", value: failedOrders },

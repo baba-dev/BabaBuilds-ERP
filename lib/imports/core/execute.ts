@@ -39,7 +39,7 @@ async function processRow(args: {
     return 'imported' as const;
   }
 
-  if (preview.entity === 'services' || preview.entity === 'shop_items') {
+  if (preview.entity === 'services') {
     const name = String(data.name || '').trim();
     const existing = await tx.serviceTemplate.findFirst({ where: { workspaceId, name } });
     if (existing && mode === 'create_only') return 'skipped' as const;
@@ -48,7 +48,7 @@ async function processRow(args: {
       name,
       description: String(data.description || '') || null,
       defaultPrice: asDecimal(data.defaultPrice ?? data.price ?? 0),
-      showInShop: preview.entity === 'shop_items' ? Boolean(data.active ?? true) : Boolean(data.active ?? true),
+      // Service templates are no longer sold directly in Shop.
     };
 
     if (existing) {
@@ -60,22 +60,24 @@ async function processRow(args: {
     return 'imported' as const;
   }
 
-  if (preview.entity === 'inventory') {
+  if (preview.entity === 'inventory' || preview.entity === 'shop_items') {
     const sku = String(data.sku || '').trim();
     const name = String(data.name || '').trim();
     const existing = await tx.product.findUnique({ where: { sku_workspaceId: { sku, workspaceId } } });
     if (existing && mode === 'create_only') return 'skipped' as const;
 
+    const normalizedStock = Number(data.currentStock ?? data.stock ?? data.quantity ?? 0);
     const payload = {
       sku,
       name,
       description: String(data.description || '') || null,
       category: String(data.category || '') || null,
-      currentStock: Number(data.currentStock ?? 0),
+      currentStock: normalizedStock,
       safetyStock: Number(data.reorderLevel ?? 5),
       costPrice: asDecimal(data.unitCost ?? 0),
-      baselinePrice: asDecimal(data.sellingPrice ?? 0),
-      status: Number(data.currentStock ?? 0) > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK',
+      baselinePrice: asDecimal(data.sellingPrice ?? data.price ?? 0),
+      status: normalizedStock > 0 ? 'IN_STOCK' : 'OUT_OF_STOCK',
+      showInShop: preview.entity === 'shop_items' ? Boolean(data.isPublished ?? data.active ?? true) : undefined,
     };
 
     if (existing) {

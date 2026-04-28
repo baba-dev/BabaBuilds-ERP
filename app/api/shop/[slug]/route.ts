@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 /**
  * GET /api/shop/[slug]
  * Public endpoint — no auth required.
- * Returns workspace branding + shop-enabled services for the public storefront.
+ * Returns workspace branding + sellable products for the public storefront.
  */
 export async function GET(_req: Request, context: { params: Promise<{ slug: string }> }) {
   try {
@@ -15,10 +15,9 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
       include: {
         workspace: {
           include: {
-            serviceTemplates: {
-              where: { showInShop: true },
-              include: { sacCode: true },
-              orderBy: { name: 'asc' },
+            products: {
+              where: { currentStock: { gt: 0 }, showInShop: true },
+              orderBy: [{ shopSortOrder: 'asc' }, { name: 'asc' }],
             },
           },
         },
@@ -54,15 +53,15 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
         razorpayKeyId:  activeGateway === 'RAZORPAY' ? profile.razorpayKeyId : null,
         stripePublishableKey: activeGateway === 'STRIPE' ? profile.stripePublishableKey : null,
       },
-      services: profile.workspace.serviceTemplates.map((s) => ({
-        id:             s.id,
-        name:           s.name,
-        description:    s.description,
-        longDescription: s.longDescription,
-        imageUrl:       s.imageUrl,
-        price:          Number(s.defaultPrice),
-        sacCode:        s.sacCode?.code || null,
-        taxRate:        s.sacCode?.igstRate || 0,
+      products: profile.workspace.products.map((product) => ({
+        id: product.id,
+        sku: product.sku,
+        name: product.name,
+        description: product.shopDescription || product.description,
+        category: product.category,
+        imageUrl: product.shopImageUrl || product.imageUrl,
+        price: Number(product.baselinePrice),
+        currentStock: product.currentStock,
       })),
     });
   } catch (error) {

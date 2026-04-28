@@ -1,4 +1,4 @@
-import { Proposal, Invoice, ProposalConversion, Retainer, ServiceOrder } from '@prisma/client';
+import { Proposal, Invoice, ProposalConversion, Retainer, ShopOrder } from '@prisma/client';
 
 export type PipelineStage = 
   | 'DRAFT'
@@ -32,7 +32,7 @@ export type NextBestAction =
 type ConversionWithArtifacts = ProposalConversion & {
   invoice?: Invoice | null;
   retainer?: Retainer | null;
-  serviceOrder?: ServiceOrder | null;
+  shopOrder?: ShopOrder | null;
 };
 
 export interface PipelineRow {
