@@ -97,12 +97,23 @@ const classicTemplate: InvoiceTemplate = {
       drawInvoiceWatermark(page, fonts.bold, vm.watermarkKind);
     }
 
+    const drawServicesHeader = () => {
+      drawRect(page, height, leftMargin, 290, width - 80, 25, black);
+      drawText(page, height, fonts, "Classification", 50, 307, 9, { isBold: true, color: white });
+      drawText(page, height, fonts, "Description of Services", 180, 307, 9, { isBold: true, color: white });
+      drawText(page, height, fonts, `Amount (${vm.baseCurrency})`, width - 50, 307, 9, { isBold: true, align: "right", color: white });
+    };
+
     let currentY = 335;
     for (const service of vm.services) {
       const titleLines = wrapTextByWidth(fonts.bold, service.titleClamped, 300, 10).slice(0, 3);
       const rowHeight = Math.max(40, titleLines.length * 12 + 24);
-      paginator.ensureRoom(currentY + rowHeight + 250, 70);
-      page = paginator.currentPage();
+      const rowPage = paginator.ensureRoom(currentY + rowHeight + 250, 70);
+      if (rowPage !== page) {
+        page = rowPage;
+        currentY = 335;
+        drawServicesHeader();
+      }
 
       drawText(page, height, fonts, vm.sacCodeShort, 50, currentY, 10, { color: textDark });
       titleLines.forEach((line, index) => {

@@ -10,6 +10,11 @@ import { PDFDict, PDFDocument, PDFName } from "pdf-lib";
 import { drawInvoiceWatermark, generateInvoicePDF } from "@/lib/pdf/generator";
 import { getInvoicePdfStoragePath } from "@/lib/invoice/pdf-storage";
 
+const countPages = async (pdfBytes: Uint8Array) => {
+  const doc = await PDFDocument.load(pdfBytes);
+  return doc.getPageCount();
+};
+
 const makeTempUploadsRoot = async () => {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "invoice-pdf-test-"));
   process.env.PRIVATE_UPLOADS_DIR = dir;
@@ -116,6 +121,54 @@ test("generateInvoicePDF loads webp workspace logo without falling back", async 
   const resources = page.node.lookup(PDFName.of("Resources"), PDFDict);
   const xObject = resources?.lookup(PDFName.of("XObject"), PDFDict);
   assert.ok(xObject, "Expected embedded image XObjects for webp logo");
+});
+
+test("generateInvoicePDF creates multipage output for many DESIGN_1 items", async () => {
+  const services = Array.from({ length: 48 }, (_, idx) => ({
+    title: `Long consulting line item ${idx + 1} for pagination validation`,
+    nicDetails: "Monthly",
+    amount: 1000 + idx,
+  }));
+  const subtotal = services.reduce((sum, item) => sum + item.amount, 0);
+  const taxAmount = Math.round(subtotal * 0.18 * 100) / 100;
+  const total = subtotal + taxAmount;
+  const pdfBytes = await generateInvoicePDF({
+    ...defaultParams(),
+    services,
+    totals: { subtotal, taxRate: 0.18, taxAmount, total, taxMode: "taxable" },
+    formattedTotal: total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    profile: {
+      ...defaultParams().profile,
+      invoiceTheme: "DESIGN_1",
+    },
+  });
+
+  const pageCount = await countPages(pdfBytes);
+  assert.ok(pageCount > 1, "Expected DESIGN_1 to paginate for many service rows");
+});
+
+test("generateInvoicePDF creates multipage output for many DESIGN_2 items", async () => {
+  const services = Array.from({ length: 48 }, (_, idx) => ({
+    title: `Long consulting line item ${idx + 1} for pagination validation`,
+    nicDetails: "Monthly",
+    amount: 1000 + idx,
+  }));
+  const subtotal = services.reduce((sum, item) => sum + item.amount, 0);
+  const taxAmount = Math.round(subtotal * 0.18 * 100) / 100;
+  const total = subtotal + taxAmount;
+  const pdfBytes = await generateInvoicePDF({
+    ...defaultParams(),
+    services,
+    totals: { subtotal, taxRate: 0.18, taxAmount, total, taxMode: "taxable" },
+    formattedTotal: total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    profile: {
+      ...defaultParams().profile,
+      invoiceTheme: "DESIGN_2",
+    },
+  });
+
+  const pageCount = await countPages(pdfBytes);
+  assert.ok(pageCount > 1, "Expected DESIGN_2 to paginate for many service rows");
 });
 
 test("drawInvoiceWatermark keeps PARTIAL stamp within page bounds", async () => {

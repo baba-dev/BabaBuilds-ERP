@@ -72,22 +72,37 @@ const modernTemplate: InvoiceTemplate = {
     );
     drawText(page, height, fonts, `Service Classification: ${vm.sacCodeDisplay || "N/A"}`, leftMargin, calloutY + 24, 9, { color: textMuted });
 
-    let tableY = 340;
     const qtyX = rightMargin - 150;
     const priceX = rightMargin - 80;
-    drawText(page, height, fonts, "Description", leftMargin, tableY, 8, { color: textDark });
-    drawText(page, height, fonts, "Qty", qtyX, tableY, 8, { align: "right", color: textDark });
-    drawText(page, height, fonts, "Unit price", priceX, tableY, 8, { align: "right", color: textDark });
-    drawText(page, height, fonts, "Amount", rightMargin, tableY, 8, { align: "right", color: textDark });
-    page.drawLine({ start: { x: leftMargin, y: height - (tableY + 12) }, end: { x: rightMargin, y: height - (tableY + 12) }, thickness: 1, color: black });
+    const drawTableHeader = (targetPage: import("pdf-lib").PDFPage, targetHeight: number, yTop: number) => {
+      drawText(targetPage, targetHeight, fonts, "Description", leftMargin, yTop, 8, { color: textDark });
+      drawText(targetPage, targetHeight, fonts, "Qty", qtyX, yTop, 8, { align: "right", color: textDark });
+      drawText(targetPage, targetHeight, fonts, "Unit price", priceX, yTop, 8, { align: "right", color: textDark });
+      drawText(targetPage, targetHeight, fonts, "Amount", rightMargin, yTop, 8, { align: "right", color: textDark });
+      targetPage.drawLine({
+        start: { x: leftMargin, y: targetHeight - (yTop + 12) },
+        end: { x: rightMargin, y: targetHeight - (yTop + 12) },
+        thickness: 1,
+        color: black,
+      });
+    };
+
+    let tableY = 340;
+    drawTableHeader(page, height, tableY);
 
     tableY += 30;
     for (const service of vm.services) {
       const titleLines = wrapTextByWidth(fonts.regular, service.titleClamped, 260, 9);
       const rowHeight = Math.max(35, titleLines.length * 12 + 20);
-      paginator.ensureRoom(tableY + rowHeight + 140, 55);
-      page = paginator.currentPage();
+      const previousPage = page;
+      const ensuredPage = paginator.ensureRoom(tableY + rowHeight + 300, 55);
+      page = ensuredPage;
       const pageHeight = page.getSize().height;
+      if (ensuredPage !== previousPage) {
+        tableY = 120;
+        drawTableHeader(page, pageHeight, tableY);
+        tableY += 30;
+      }
       let lineY = tableY;
       for (const line of titleLines.slice(0, 3)) {
         drawText(page, pageHeight, fonts, line, leftMargin, lineY, 9, { color: black });
