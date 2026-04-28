@@ -73,7 +73,6 @@ const makeParams = (
     paymentLink: null,
     status: "PENDING",
     ...overrides,
-    totals: overrides.totals ?? totals,
   };
 };
 
