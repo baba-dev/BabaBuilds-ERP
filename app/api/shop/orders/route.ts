@@ -2,21 +2,39 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { withPermission } from '@/lib/rbac';
+import { isModuleEnabled } from '@/lib/modules';
 
 type SessionContext = {
   workspaceId?: string;
+  user?: { id?: string | null };
 };
 
 /**
  * GET  /api/shop/orders          — list orders for the workspace (paginated)
+ *
+ * Requires:
+ *   - SHOP module enabled for the workspace
+ *   - `shop.orders.view` permission
  */
 export async function GET(request: Request) {
   try {
     const session = (await getServerSession(authOptions)) as SessionContext | null;
-    if (!session?.workspaceId) {
+    if (!session?.workspaceId || !session.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const workspaceId = session.workspaceId;
+    const userId = session.user.id;
+
+    if (!(await isModuleEnabled(workspaceId, 'SHOP'))) {
+      return NextResponse.json(
+        { error: 'Shop module is disabled for this workspace.', code: 'SHOP_MODULE_DISABLED' },
+        { status: 409 },
+      );
+    }
+
+    const perm = await withPermission(userId, workspaceId, 'shop.orders.view');
+    if (!perm.granted) return perm.response;
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');

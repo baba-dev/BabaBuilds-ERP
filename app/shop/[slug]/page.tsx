@@ -2,11 +2,31 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ShopClient } from "./ShopClient";
 
+type SocialLink = {
+  platform:
+    | "website" | "instagram" | "facebook" | "x" | "linkedin"
+    | "youtube" | "whatsapp" | "tiktok" | "pinterest" | "github" | "custom";
+  url: string;
+  label?: string;
+};
+
+type FaqEntry = { q: string; a: string };
+
+interface ShopContent {
+  announcement: string | null;
+  aboutMd: string | null;
+  footerNote: string | null;
+  social: SocialLink[];
+  faq: FaqEntry[];
+  showAiAssist: boolean;
+}
+
 interface ShopData {
   shop: {
     slug: string; companyName: string; tagline: string | null; logoUrl: string | null;
     accentColor: string; email: string; phone: string | null; website: string | null; address: string;
   };
+  content?: ShopContent;
   checkout: {
     available: boolean; gateway: "RAZORPAY" | "STRIPE" | null;
     razorpayKeyId: string | null; stripePublishableKey: string | null;

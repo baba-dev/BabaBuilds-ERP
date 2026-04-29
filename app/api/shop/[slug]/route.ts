@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { isModuleEnabled } from '@/lib/modules';
+import { readShopContent } from '@/lib/shop/content';
 
 /**
  * GET /api/shop/[slug]
  * Public endpoint — no auth required.
  * Returns workspace branding + sellable products for the public storefront.
+ *
+ * Returns 404 if either the per-workspace `shopEnabled` toggle is off OR the
+ * SHOP optional module has been explicitly disabled by an admin.
  */
 export async function GET(_req: Request, context: { params: Promise<{ slug: string }> }) {
   try {
@@ -28,12 +33,19 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
       return NextResponse.json({ error: 'Shop not found or not active' }, { status: 404 });
     }
 
+    const moduleEnabled = await isModuleEnabled(profile.workspaceId, 'SHOP');
+    if (!moduleEnabled) {
+      return NextResponse.json({ error: 'Shop not found or not active' }, { status: 404 });
+    }
+
     // Determine checkout capability (Razorpay or Stripe configured?)
     const hasRazorpay = !!(profile.razorpayKeyId && profile.razorpayKeySecret);
     const hasStripe   = !!(profile.stripePublishableKey && (profile as any).stripeSecretKey);
     const activeGateway = hasRazorpay && profile.defaultGateway !== 'STRIPE'
       ? 'RAZORPAY'
       : hasStripe ? 'STRIPE' : null;
+
+    const content = readShopContent(profile);
 
     return NextResponse.json({
       shop: {
@@ -47,6 +59,7 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
         website:        profile.website      || null,
         address:        profile.address,
       },
+      content,
       checkout: {
         available:      !!activeGateway,
         gateway:        activeGateway,        // 'RAZORPAY' | 'STRIPE' | null
