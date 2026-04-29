@@ -285,18 +285,22 @@ export async function loadForecastSourceData(args: {
   now: Date;
 }): Promise<ForecastSourceData> {
   const { workspaceId, startDate, endDate } = args;
+  const loadStartedAt = Date.now();
 
   const [accounts, bankTransactions, invoices, retainers, purchaseOrders, manualAdjustments, paymentBehaviors, payrollTransactions] = await Promise.all([
     prisma.bankAccount.findMany({
       where: { workspaceId },
+      orderBy: { id: "asc" },
       select: { id: true, openingBalance: true, openingBalanceDate: true },
     }),
     prisma.bankTransaction.findMany({
       where: { workspaceId, date: { gte: startDate, lte: endDate } },
+      orderBy: [{ date: "asc" }, { id: "asc" }],
       select: { id: true, date: true, description: true, amount: true, accountId: true },
     }),
     prisma.invoice.findMany({
       where: { workspaceId, status: { in: ["PENDING", "PARTIALLY_PAID"] } },
+      orderBy: [{ expectedPaymentDate: "asc" }, { dueDate: "asc" }, { invoiceDate: "asc" }, { id: "asc" }],
       select: {
         id: true,
         invoiceNumber: true,
@@ -312,20 +316,28 @@ export async function loadForecastSourceData(args: {
       },
     }),
     prisma.retainer.findMany({
-      where: { workspaceId, status: "ACTIVE" },
+      where: { workspaceId, status: "ACTIVE", nextBillingDate: { lte: endDate } },
+      orderBy: [{ nextBillingDate: "asc" }, { id: "asc" }],
       select: { id: true, amount: true, frequency: true, status: true, nextBillingDate: true, serviceName: true, client: { select: { name: true } } },
     }),
     prisma.purchaseOrder.findMany({
-      where: { workspaceId, status: { not: "CANCELLED" } },
+      where: {
+        workspaceId,
+        status: { not: "CANCELLED" },
+        OR: [{ expectedPaymentDate: { lte: endDate } }, { expectedDate: { lte: endDate } }],
+      },
+      orderBy: [{ expectedPaymentDate: "asc" }, { expectedDate: "asc" }, { id: "asc" }],
       select: { id: true, poNumber: true, supplier: true, status: true, expectedDate: true, expectedPaymentDate: true, totalAmount: true },
     }),
     prisma.cashForecastManualAdjustment.findMany({
       where: { workspaceId, date: { gte: startDate, lte: endDate } },
+      orderBy: [{ date: "asc" }, { id: "asc" }],
       select: { id: true, date: true, amount: true, direction: true, reason: true, category: true },
     }),
     prisma.clientPaymentBehavior.findMany({
       where: { workspaceId },
-      select: { clientId: true, avgDaysToPay: true, medianDaysToPay: true, onTimeRate: true, lateRate: true, partialPaymentRate: true, lastComputedAt: true },
+      orderBy: { clientId: "asc" },
+      select: { clientId: true, avgDaysToPay: true, medianDaysToPay: true, onTimeRate: true, lateRate: true, partialPaymentRate: true },
     }),
     prisma.accountingTransaction.findMany({
       where: {
@@ -333,6 +345,7 @@ export async function loadForecastSourceData(args: {
         sourceTable: 'PAYROLL_RUN',
         postedAt: { gte: startDate, lte: endDate },
       },
+      orderBy: [{ postedAt: "asc" }, { id: "asc" }],
       select: {
         id: true,
         sourceId: true,
@@ -350,22 +363,35 @@ export async function loadForecastSourceData(args: {
   // Opening cash: sum across accounts as of startDate using openingBalance + tx between openingBalanceDate..startDate.
   // For v1, if there are no accounts configured, opening cash is 0.
   let openingCash = new Prisma.Decimal(0);
+  let txUpToStartCount = 0;
+  const openingCashComputationStartedAt = Date.now();
   if (accounts.length > 0) {
     const txUpToStart = await prisma.bankTransaction.findMany({
       where: { workspaceId, date: { lt: startDate } },
+      orderBy: [{ date: "asc" }, { id: "asc" }],
       select: { amount: true, date: true, accountId: true },
     });
+    txUpToStartCount = txUpToStart.length;
 
-    for (const acc of accounts) {
-      let cash = toDecimal(acc.openingBalance);
-      for (const tx of txUpToStart) {
-        if (acc.id && tx.accountId && tx.accountId !== acc.id) continue;
-        if (tx.date < acc.openingBalanceDate) continue;
-        cash = cash.plus(toDecimal(tx.amount));
-      }
-      openingCash = openingCash.plus(cash);
+    const accountById = new Map(accounts.map((acc) => [acc.id, acc]));
+    const txSumsByAccountId = txUpToStart.reduce<Map<string, Prisma.Decimal>>((acc, tx) => {
+      if (!tx.accountId) return acc;
+      const account = accountById.get(tx.accountId);
+      if (!account) return acc;
+      if (tx.date < account.openingBalanceDate) return acc;
+      const current = acc.get(tx.accountId) ?? new Prisma.Decimal(0);
+      acc.set(tx.accountId, current.plus(toDecimal(tx.amount)));
+      return acc;
+    }, new Map<string, Prisma.Decimal>());
+
+    for (const account of accounts) {
+      const openingBalance = toDecimal(account.openingBalance);
+      const accountTxSum = txSumsByAccountId.get(account.id) ?? new Prisma.Decimal(0);
+      openingCash = openingCash.plus(openingBalance.plus(accountTxSum));
     }
   }
+  const openingCashComputationMs = Date.now() - openingCashComputationStartedAt;
+  const elapsedMs = Date.now() - loadStartedAt;
 
   return {
     openingCash,
@@ -405,6 +431,23 @@ export async function loadForecastSourceData(args: {
     workspaceDefaults: {
       invoicePaymentTermsDays: 15,
       minimumCashThreshold: 0,
+    },
+    debug: {
+      telemetry: {
+        elapsedMs,
+        openingCashComputationMs,
+        counts: {
+          accounts: accounts.length,
+          bankTransactions: bankTransactions.length,
+          invoices: invoices.length,
+          retainers: retainers.length,
+          purchaseOrders: purchaseOrders.length,
+          manualAdjustments: manualAdjustments.length,
+          clientPaymentBehaviors: paymentBehaviors.length,
+          payrollTransactions: payrollTransactions.length,
+          txUpToStart: txUpToStartCount,
+        },
+      },
     },
   };
 }
@@ -485,4 +528,3 @@ export function buildForecastLinesFromSources(args: {
   // Filter to horizon range.
   return lines.filter((l) => l.expectedDate >= args.startDate && l.expectedDate <= args.endDate);
 }
-
