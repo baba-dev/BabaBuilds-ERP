@@ -136,7 +136,6 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
   const [dataSegment, setDataSegment] = useState<DataSegment>("ALL");
   const [orderSearch, setOrderSearch] = useState("");
   const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
-  const [ordersLoadError, setOrdersLoadError] = useState<string | null>(null);
 
   // Storefront content blocks (About, Social, FAQ, Announcement, AI Assist)
   const [content, setContent] = useState<ShopContentDraft>(EMPTY_CONTENT_DRAFT);
@@ -441,7 +440,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
       const res = await fetch("/api/shop/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accentColor: accentDraft }),
+        body: JSON.stringify({ shopAccentColor: accentDraft }),
       });
 
       if (!res.ok) {
@@ -452,9 +451,9 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
       }
 
       const payload = await res.json().catch(() => null);
-      if (payload?.settings?.shopAccentColor) {
-        setShopAccentColor(payload.settings.shopAccentColor);
-        setAccentDraft(payload.settings.shopAccentColor);
+      if (typeof payload?.shopAccentColor === "string" && payload.shopAccentColor) {
+        setShopAccentColor(payload.shopAccentColor);
+        setAccentDraft(payload.shopAccentColor);
       }
       toast.success("Branding color saved.", { id: toastId });
     } catch {

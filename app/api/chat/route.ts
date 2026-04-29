@@ -1801,15 +1801,17 @@ ${
         : [];
 
     // Shop tools: scoped to (a) module enabled and (b) per-permission gating.
-    const shopTools = getAllowedShopTools({
+    const allowedShopTools = new Set(
+      getAllowedShopTools({
       moduleEnabled: shopModuleEnabled,
       canView: shopCanView,
       canViewOrders: shopCanViewOrders,
       canManageSettings: shopCanManageSettings,
       canManageContent: shopCanManageContent,
-    })
-      ? [
-          ...(shopCanViewOrders
+      }),
+    );
+    const shopTools = [
+          ...(allowedShopTools.has('get_shop_summary')
             ? [
                 {
                   type: 'function',
@@ -1831,7 +1833,7 @@ ${
                 },
               ]
             : []),
-          ...(shopCanManageSettings
+          ...(allowedShopTools.has('set_shop_status')
             ? [
                 {
                   type: 'function',
@@ -1848,7 +1850,7 @@ ${
                 },
               ]
             : []),
-          ...(shopCanManageContent
+          ...(allowedShopTools.has('update_shop_announcement')
             ? [
                 {
                   type: 'function',
@@ -1863,6 +1865,10 @@ ${
                     },
                   },
                 },
+              ]
+            : []),
+          ...(allowedShopTools.has('open_shop_dashboard')
+            ? [
                 {
                   type: 'function',
                   function: {
@@ -1874,8 +1880,7 @@ ${
                 },
               ]
             : []),
-        ]
-      : [];
+        ];
 
     const tools = [...baseTools, ...reportingTools, ...shopTools];
 
@@ -1976,7 +1981,16 @@ ${
           predict_stockouts: (_a, wid) => predictStockouts(wid),
           get_shop_summary: (_a, wid) => getShopSummary(wid),
           get_top_shop_products: (_a, wid) => getTopShopProducts(wid),
-          set_shop_status: (a, wid) => setShopStatus(wid, Boolean((a as { enabled?: unknown }).enabled)),
+          set_shop_status: (a, wid) => {
+            const rawEnabled = (a as { enabled?: unknown }).enabled;
+            const parsedEnabled =
+              typeof rawEnabled === 'boolean'
+                ? rawEnabled
+                : typeof rawEnabled === 'string'
+                  ? rawEnabled.trim().toLowerCase() === 'true'
+                  : false;
+            return setShopStatus(wid, parsedEnabled);
+          },
           update_shop_announcement: (a, wid) =>
             updateShopAnnouncement(wid, asString((a as { announcement?: unknown }).announcement)),
         };
