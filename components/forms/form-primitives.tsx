@@ -76,6 +76,7 @@ type FormSubmitBarProps = {
   submittingText?: string;
   helperText?: ReactNode;
   className?: string;
+  formId?: string;
 };
 
 export function FormSubmitBar({
@@ -85,12 +86,14 @@ export function FormSubmitBar({
   submittingText = "Saving...",
   helperText,
   className,
+  formId,
 }: FormSubmitBarProps) {
   return (
     <div className={cn("w-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-900/40 p-4 md:p-5 flex flex-col md:flex-row md:items-center gap-4 md:justify-between", className)}>
       <div className="min-h-5 text-xs font-medium text-zinc-500 dark:text-zinc-400">{helperText}</div>
       <Button
         type="submit"
+        form={formId}
         disabled={isSubmitting || isDisabled}
         className="w-full md:w-auto min-w-44 bg-indigo-600 hover:bg-indigo-700 text-white font-bold uppercase tracking-widest text-xs"
       >

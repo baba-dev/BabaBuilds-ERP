@@ -206,10 +206,7 @@ export async function PATCH(
 
     // 2. Perform Update
     const updatedClient = await prisma.client.update({
-      where: { 
-        id: clientId,
-        workspaceId: workspaceId // Re-enforced multi-tenant security
-      },
+      where: { id: clientId },
       data: {
         name,
         address,
