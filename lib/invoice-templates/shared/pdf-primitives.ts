@@ -152,7 +152,15 @@ export const loadLogo = async (
     const kind = parts.shift();
     if (!kind) return false;
     const fullPath = buildPrivatePath(kind as never, parts);
-    if (!fs.existsSync(fullPath)) return false;
+    const fileExists = fs.existsSync(fullPath);
+    if (!fileExists) {
+      console.warn("[invoice-logo] File not found for logo path", {
+        logoUrl,
+        relativeLogoPath,
+        fullPath,
+      });
+      return false;
+    }
 
     const imageData = fs.readFileSync(fullPath);
     let image;
@@ -177,7 +185,10 @@ export const loadLogo = async (
     });
     return true;
   } catch (error) {
-    console.log(`Logo load failed: ${logoUrl}`, error);
+    console.warn("[invoice-logo] Logo load failed", {
+      logoUrl,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return false;
   }
 };

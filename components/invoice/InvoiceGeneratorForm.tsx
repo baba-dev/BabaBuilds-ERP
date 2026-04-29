@@ -31,7 +31,12 @@ const isLikelyOfflineError = (error: unknown) => {
 
 interface InvoiceGeneratorFormProps {
   /** Called with the generated invoice data after a successful submission. Pass to close the modal. */
-  onSuccess?: (data: { pdfPath: string; invoiceNumber: string; emailStatus?: string }) => void;
+  onSuccess?: (data: {
+    pdfPath: string;
+    invoiceNumber: string;
+    emailStatus?: string;
+    paymentLinkStatus?: { attempted: boolean; created: boolean; skipReason: string | null };
+  }) => void;
   /** When true, the form is rendered in a compact modal context (no outer Card chrome). */
   inModal?: boolean;
 }
@@ -39,7 +44,12 @@ interface InvoiceGeneratorFormProps {
 export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: InvoiceGeneratorFormProps) {
   const t = useTranslations("Invoice");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [successData, setSuccessData] = useState<{ pdfPath: string; invoiceNumber: string; emailStatus?: string } | null>(null);
+  const [successData, setSuccessData] = useState<{
+    pdfPath: string;
+    invoiceNumber: string;
+    emailStatus?: string;
+    paymentLinkStatus?: { attempted: boolean; created: boolean; skipReason: string | null };
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // --- GLOBALIZATION ENGINE ---
@@ -310,6 +320,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
         pdfPath: data.invoice.pdfPath,
         invoiceNumber: data.invoice.invoiceNumber,
         emailStatus: data.emailStatus,
+        paymentLinkStatus: data.paymentLinkStatus,
       };
       setSuccessData(result);
       setServices(services.map((s) => ({ ...s, selected: false, amount: "" })));
@@ -369,6 +380,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
         pdfPath: data.invoice.pdfPath,
         invoiceNumber: data.invoice.invoiceNumber,
         emailStatus: data.emailStatus,
+        paymentLinkStatus: data.paymentLinkStatus,
       };
       setSuccessData(result);
       setServices(services.map((s) => ({ ...s, selected: false, amount: "" })));
@@ -608,6 +620,12 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
               <div className={`p-4 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center sm:justify-start gap-2 border shadow-sm ${successData.emailStatus === "Success" ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-500/10 dark:border-blue-900/50 dark:text-blue-400" : "bg-red-50 border-red-200 text-red-700 dark:bg-red-500/10 dark:border-red-900/50 dark:text-red-400"}`}>
                 <Mail className="w-4 h-4" />
                 {t("email_delivery_status", { status: successData.emailStatus || "Unknown" })}
+              </div>
+            )}
+            {successData.paymentLinkStatus && !successData.paymentLinkStatus.created && (
+              <div className="p-4 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center sm:justify-start gap-2 border shadow-sm bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-500/10 dark:border-amber-900/50 dark:text-amber-400">
+                <AlertCircle className="w-4 h-4" />
+                Payment link was not added ({successData.paymentLinkStatus.skipReason ?? "UNKNOWN_REASON"}).
               </div>
             )}
           </div>
