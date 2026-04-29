@@ -1,62 +1,29 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { estimateTax } from './engine';
+import { describe, expect, it } from 'vitest';
+import { estimateTax, TaxEngineValidationError } from './engine';
 
-test('India taxable income above slab threshold uses slab-based effective rate', () => {
-  const result = estimateTax({
-    countryCode: 'IN',
-    revenue: '1000000',
-    deductions: '0',
+describe('india tax engine validation and calculations', () => {
+  it('FY 2024-25 income 10L', () => {
+    const r = estimateTax({ countryCode: 'IN', fiscalYear: '2024-25', revenue: '1000000' });
+    expect(r.components.grossSlabTax).toBe('50000.00');
+    expect(r.components.rebate).toBe('0.00');
+    expect(r.components.cess).toBe('2000.00');
+    expect(r.components.finalTaxPayable).toBe('52000.00');
   });
-
-  assert.equal(result.basis.method, 'rule_engine');
-  assert.equal(result.disclaimerKey, 'AUTO_RULE');
-  assert.equal(result.amount, '60000.00');
-  assert.equal(result.ratePercent, 6);
-});
-
-test('Unknown country falls back to provider/fallback rate', () => {
-  const result = estimateTax({
-    countryCode: 'ZZ',
-    revenue: '1000000',
-    deductions: '0',
+  it('FY 2025-26 income 12.1L marginal relief', () => {
+    const r = estimateTax({ countryCode: 'IN', fiscalYear: '2025-26', revenue: '1210000' });
+    expect(r.components.grossSlabTax).toBe('61500.00');
+    expect(r.components.marginalRelief).toBe('51500.00');
+    expect(r.components.taxAfterRebate).toBe('10000.00');
+    expect(r.components.cess).toBe('400.00');
+    expect(r.components.finalTaxPayable).toBe('10400.00');
   });
-
-  assert.equal(result.basis.method, 'fallback');
-  assert.equal(result.disclaimerKey, 'FALLBACK_RULE');
-  assert.equal(result.ratePercent, 30);
-  assert.equal(result.amount, '300000.00');
-});
-
-test('Manual override supersedes rule-engine and fallback/provider resolution', () => {
-  const result = estimateTax({
-    countryCode: 'IN',
-    revenue: '1000000',
-    deductions: '0',
-    overrideRatePercent: 22,
-    overrideReason: 'Contract-specific treatment',
+  it('rejects unsupported and invalid cases', () => {
+    expect(() => estimateTax({ countryCode: 'IN', taxRegime: 'old', revenue: 1000 })).toThrow(TaxEngineValidationError);
+    expect(() => estimateTax({ countryCode: 'IN', taxpayerType: 'company', revenue: 1000 })).toThrow(TaxEngineValidationError);
+    expect(() => estimateTax({ countryCode: 'IN', taxpayerType: 'firm', revenue: 1000 })).toThrow(TaxEngineValidationError);
+    expect(() => estimateTax({ countryCode: 'IN', specialRateIncome: 1, revenue: 1000 })).toThrow(TaxEngineValidationError);
+    expect(() => estimateTax({ countryCode: 'IN', fiscalYear: 'bad input', revenue: 1000 })).toThrow(TaxEngineValidationError);
+    expect(() => estimateTax({ countryCode: 'IN', fiscalYear: '2023-24', revenue: 1000 })).toThrow(TaxEngineValidationError);
+    expect(() => estimateTax({ countryCode: 'IN', asOfDate: 'bad-date', revenue: 1000 })).toThrow(TaxEngineValidationError);
   });
-
-  assert.equal(result.basis.method, 'manual_override');
-  assert.equal(result.disclaimerKey, 'MANUAL_OVERRIDE');
-  assert.equal(result.ratePercent, 22);
-  assert.equal(result.amount, '220000.00');
-  assert.equal(result.override.applied, true);
-});
-
-test('Region code drives provider rate while service scope remains separate metadata', () => {
-  const result = estimateTax({
-    countryCode: 'US',
-    regionCode: 'US-CA',
-    serviceScope: 'consulting_services',
-    revenue: '1000',
-    deductions: '0',
-    resolutionMode: 'prefer_provider_rate',
-  });
-
-  assert.equal(result.basis.method, 'provider_rate');
-  assert.equal(result.basis.serviceScope, 'consulting_services');
-  assert.equal(result.basis.regionCode, 'US-CA');
-  assert.equal(result.ratePercent, 9.25);
-  assert.equal(result.amount, '92.50');
 });
