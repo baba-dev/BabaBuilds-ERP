@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { requirePermission, checkPermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
+import { requirePermission, checkPermissionSilent, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
 import { requireModule, ModuleDisabledError } from '@/lib/modules';
 import { getEmployeeByUserId } from '@/lib/workforce/index';
 
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     const employeeId = searchParams.get('employeeId');
 
     // STAFF can only view their own
-    const canManage = await checkPermission(session.user.id, wid, 'workforce.attendance.manage');
+    const canManage = await checkPermissionSilent(session.user.id, wid, 'workforce.attendance.manage');
     let scopedEmployeeId = employeeId;
     if (!canManage) {
       const emp = await getEmployeeByUserId(wid, session.user.id);
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json() as { employeeId?: string; date?: string; status?: string; checkInAt?: string; checkOutAt?: string; notes?: string };
-    const canManage = await checkPermission(session.user.id, wid, 'workforce.attendance.manage');
+    const canManage = await checkPermissionSilent(session.user.id, wid, 'workforce.attendance.manage');
 
     let targetEmployeeId = body.employeeId;
 

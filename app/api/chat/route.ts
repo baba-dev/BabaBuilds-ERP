@@ -24,7 +24,7 @@ import {
 import { assertFreeTierMonthlyInvoiceAllowed } from '@/lib/entitlements';
 import { isModuleEnabled } from '@/lib/modules';
 import { listPublicPresets } from '@/lib/reporting/presets';
-import { checkPermission } from '@/lib/rbac';
+import { checkPermissionSilent } from '@/lib/rbac';
 import {
   getShopSummary,
   getTopShopProducts,
@@ -1246,8 +1246,8 @@ export async function POST(request: Request) {
 
     if (actorUserId && reportingModuleEnabled) {
       const [view, run] = await Promise.all([
-        checkPermission(actorUserId, workspaceId, 'reporting_center.view'),
-        checkPermission(actorUserId, workspaceId, 'reporting_center.query.run'),
+        checkPermissionSilent(actorUserId, workspaceId, 'reporting_center.view'),
+        checkPermissionSilent(actorUserId, workspaceId, 'reporting_center.query.run'),
       ]);
       reportingCanList = view;
       reportingCanNavigateRun = run;
@@ -1261,10 +1261,10 @@ export async function POST(request: Request) {
     let shopCanManageSettings = false;
     if (actorUserId && shopModuleEnabled) {
       const [view, viewOrders, manageContent, manageSettings] = await Promise.all([
-        checkPermission(actorUserId, workspaceId, 'shop.view'),
-        checkPermission(actorUserId, workspaceId, 'shop.orders.view'),
-        checkPermission(actorUserId, workspaceId, 'shop.content.manage'),
-        checkPermission(actorUserId, workspaceId, 'shop.settings.manage'),
+        checkPermissionSilent(actorUserId, workspaceId, 'shop.view'),
+        checkPermissionSilent(actorUserId, workspaceId, 'shop.orders.view'),
+        checkPermissionSilent(actorUserId, workspaceId, 'shop.content.manage'),
+        checkPermissionSilent(actorUserId, workspaceId, 'shop.settings.manage'),
       ]);
       shopCanView = view;
       shopCanViewOrders = viewOrders;

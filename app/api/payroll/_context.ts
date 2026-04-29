@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isModuleEnabled } from '@/lib/modules';
 import { getWorkspaceIdForUser } from '@/lib/payroll/settings';
-import { RbacDeniedError, rbacDeniedResponse, checkPermission } from '@/lib/rbac';
+import { RbacDeniedError, rbacDeniedResponse, checkPermissionsSilent } from '@/lib/rbac';
 import type { PayrollAction } from '@/lib/security/payroll-policy';
 import { requirePayrollPermission } from '@/lib/security/payroll-policy';
 
@@ -72,11 +72,14 @@ export async function getPayrollRunActionCapabilities(
   canReturnReview: boolean;
   canPost: boolean;
 }> {
-  const [prep, appr, post] = await Promise.all([
-    checkPermission(userId, workspaceId, 'payroll.prepare'),
-    checkPermission(userId, workspaceId, 'payroll.approve'),
-    checkPermission(userId, workspaceId, 'payroll.post'),
+  const grants = await checkPermissionsSilent(userId, workspaceId, [
+    'payroll.prepare',
+    'payroll.approve',
+    'payroll.post',
   ]);
+  const prep = grants['payroll.prepare'];
+  const appr = grants['payroll.approve'];
+  const post = grants['payroll.post'];
 
   const blocked = isPostedFinancially || status === 'POSTED';
 

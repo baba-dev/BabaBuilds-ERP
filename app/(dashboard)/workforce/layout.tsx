@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isModuleEnabled } from "@/lib/modules";
-import { checkPermission } from "@/lib/rbac";
+import { checkPermissionSilent } from "@/lib/rbac";
 import type { ReactNode } from "react";
 
 async function getWorkspaceId(userId: string) {
@@ -24,7 +24,7 @@ export default async function WorkforceLayout({ children }: { children: ReactNod
   // Guard: redirect to dashboard if module disabled
   const [moduleEnabled, canView] = await Promise.all([
     isModuleEnabled(workspaceId, "WORKFORCE"),
-    checkPermission(session.user.id, workspaceId, "workforce.view"),
+    checkPermissionSilent(session.user.id, workspaceId, "workforce.view"),
   ]);
 
   if (!moduleEnabled || !canView) {

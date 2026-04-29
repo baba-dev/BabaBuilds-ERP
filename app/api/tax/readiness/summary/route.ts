@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { getTaxReadinessSummary } from "@/lib/tax/return-prep";
-import { checkPermission } from "@/lib/rbac";
+import { checkPermissionSilent } from "@/lib/rbac";
 import { taxAdvancedModuleDisabledResponse } from "@/lib/tax/module-gate";
 
 type SessionWithWorkspace = {
@@ -22,7 +22,7 @@ export async function GET() {
     const moduleDisabledResponse = await taxAdvancedModuleDisabledResponse(workspaceId);
     if (moduleDisabledResponse) return moduleDisabledResponse;
 
-    const canView = await checkPermission(userId, workspaceId, "tax.readiness.view");
+    const canView = await checkPermissionSilent(userId, workspaceId, "tax.readiness.view");
     const summary = await getTaxReadinessSummary(workspaceId, { includeSummary: canView });
     return NextResponse.json({ data: summary });
   } catch (error) {
