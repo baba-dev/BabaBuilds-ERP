@@ -1261,10 +1261,10 @@ export async function POST(request: Request) {
     let shopCanManageSettings = false;
     if (actorUserId && shopModuleEnabled) {
       const [view, viewOrders, manageContent, manageSettings] = await Promise.all([
-        checkPermission(actorUserId, workspaceId, 'shop.view'),
-        checkPermission(actorUserId, workspaceId, 'shop.orders.view'),
-        checkPermission(actorUserId, workspaceId, 'shop.content.manage'),
-        checkPermission(actorUserId, workspaceId, 'shop.settings.manage'),
+        checkPermissionSilent(actorUserId, workspaceId, 'shop.view'),
+        checkPermissionSilent(actorUserId, workspaceId, 'shop.orders.view'),
+        checkPermissionSilent(actorUserId, workspaceId, 'shop.content.manage'),
+        checkPermissionSilent(actorUserId, workspaceId, 'shop.settings.manage'),
       ]);
       shopCanView = view;
       shopCanViewOrders = viewOrders;
