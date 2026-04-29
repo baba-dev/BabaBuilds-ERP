@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { requirePermission, checkPermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
+import { requirePermission, checkPermissionSilent, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
 import { requireModule, ModuleDisabledError } from '@/lib/modules';
 import { getEmployeeByUserId } from '@/lib/workforce/index';
 import {
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status') ?? '';
-    const canApprove = await checkPermission(session.user.id, wid, 'workforce.leave.approve');
+    const canApprove = await checkPermissionSilent(session.user.id, wid, 'workforce.leave.approve');
 
     // Role-scoped: STAFF sees own requests only
     let employeeIdFilter: string | undefined;
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json() as { employeeId?: string; leaveTypeId?: string; startDate?: string; endDate?: string; days?: number; reason?: string };
-    const canManage = await checkPermission(session.user.id, wid, 'workforce.leave.manage');
+    const canManage = await checkPermissionSilent(session.user.id, wid, 'workforce.leave.manage');
 
     let targetEmployeeId = canManage ? body.employeeId : undefined;
     if (!targetEmployeeId) {

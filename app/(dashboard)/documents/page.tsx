@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { checkPermission } from "@/lib/rbac";
+import { checkPermissionSilent } from "@/lib/rbac";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StorageMeter } from "@/components/documents/StorageMeter";
@@ -23,7 +23,7 @@ export default async function DocumentsOverviewPage() {
   const workspaceId = await getWorkspaceId(session.user.id);
   if (!workspaceId) redirect("/dashboard");
 
-  const canView = await checkPermission(session.user.id, workspaceId, "documents.view");
+  const canView = await checkPermissionSilent(session.user.id, workspaceId, "documents.view");
   if (!canView) redirect("/dashboard");
 
   const [quota, inboxCount, unlinkedCount] = await Promise.all([

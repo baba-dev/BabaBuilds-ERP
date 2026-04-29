@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isModuleEnabled } from "@/lib/modules";
-import { checkPermission } from "@/lib/rbac";
+import { checkPermissionSilent } from "@/lib/rbac";
 import type { ReactNode } from "react";
 
 async function getWorkspaceId(userId: string) {
@@ -23,7 +23,7 @@ export default async function PayrollLayout({ children }: { children: ReactNode 
 
   const [moduleEnabled, canView] = await Promise.all([
     isModuleEnabled(workspaceId, "PAYROLL"),
-    checkPermission(session.user.id, workspaceId, "payroll.view"),
+    checkPermissionSilent(session.user.id, workspaceId, "payroll.view"),
   ]);
 
   if (!moduleEnabled || !canView) {

@@ -13,7 +13,7 @@ import {
   uniqueStoredName,
 } from '@/lib/uploads/private-storage';
 import { buildPrivatePath } from '@/lib/uploads/private-storage';
-import { checkPermission } from '@/lib/rbac';
+import { checkPermissionSilent } from '@/lib/rbac';
 
 type ImportFlow = 'expenses' | 'invoices' | 'reconciliation' | 'withholding_certificates';
 type ImportStatus = 'IMPORTED' | 'UNSUPPORTED' | 'PERMISSION_DENIED' | 'FAILED';
@@ -263,8 +263,8 @@ export async function POST(request: Request) {
       }
 
       const [canIngest, canUpload] = await Promise.all([
-        checkPermission(actor.userId, workspaceId, 'tax.withholding.ingest'),
-        checkPermission(actor.userId, workspaceId, 'documents.upload'),
+        checkPermissionSilent(actor.userId, workspaceId, 'tax.withholding.ingest'),
+        checkPermissionSilent(actor.userId, workspaceId, 'documents.upload'),
       ]);
       if (!canIngest || !canUpload) {
         await logAudit({

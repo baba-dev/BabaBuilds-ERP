@@ -2,29 +2,31 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { checkPermission } from '@/lib/rbac';
+import { requirePermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
 import { getGstWorkspaceSummary } from '@/lib/tax/gst-workspace-summary';
 
 export async function GET(request: Request) {
-  const session = await getServerSession(authOptions);
-  const workspaceId = (session as { workspaceId?: string } | null)?.workspaceId;
-  const userId = (session?.user as { id?: string } | undefined)?.id;
-  if (!workspaceId || !userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  try {
+    const session = await getServerSession(authOptions);
+    const workspaceId = (session as { workspaceId?: string } | null)?.workspaceId;
+    const userId = (session?.user as { id?: string } | undefined)?.id;
+    if (!workspaceId || !userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-  const canView = await checkPermission(userId, workspaceId, 'tax.view');
-  if (!canView) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+    await requirePermission(userId, workspaceId, 'tax.view');
 
-  const { searchParams } = new URL(request.url);
-  const asOfParam = searchParams.get('asOf');
-  const asOf = asOfParam ? new Date(asOfParam) : new Date();
-  if (Number.isNaN(asOf.getTime())) {
-    return NextResponse.json({ error: 'Invalid asOf' }, { status: 400 });
-  }
+    const { searchParams } = new URL(request.url);
+    const asOfParam = searchParams.get('asOf');
+    const asOf = asOfParam ? new Date(asOfParam) : new Date();
+    if (Number.isNaN(asOf.getTime())) {
+      return NextResponse.json({ error: 'Invalid asOf' }, { status: 400 });
+    }
 
-  const summary = await getGstWorkspaceSummary(prisma, workspaceId, asOf);
-  return NextResponse.json({ data: summary });
+    const summary = await getGstWorkspaceSummary(prisma, workspaceId, asOf);
+    return NextResponse.json({ data: summary });
+  } catch (error) {
+    if (error instanceof RbacDeniedError) return rbacDeniedResponse(error);
+    throw error;
+  }
 }

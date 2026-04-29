@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isModuleEnabled } from '@/lib/modules';
-import { checkPermission } from '@/lib/rbac';
+import { checkPermissionSilent } from '@/lib/rbac';
 import { getActiveWorkspaceIdForUser } from '@/lib/workspace-scope';
 
 export const metadata: Metadata = {
@@ -21,7 +21,7 @@ export default async function ArCollectionsLayout({ children }: { children: Reac
 
   const [enabled, canView] = await Promise.all([
     isModuleEnabled(workspaceId, 'AR_COLLECTIONS'),
-    checkPermission(session.user.id, workspaceId, 'invoices.view'),
+    checkPermissionSilent(session.user.id, workspaceId, 'invoices.view'),
   ]);
 
   if (!enabled || !canView) {

@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { checkPermission } from '@/lib/rbac';
+import { checkPermissionSilent } from '@/lib/rbac';
 import { isModuleEnabled } from '@/lib/modules';
 import { getWorkforceSummary } from '@/lib/workforce/index';
 
@@ -23,7 +23,7 @@ export async function GET() {
 
     const [moduleEnabled, canView] = await Promise.all([
       isModuleEnabled(wu.workspaceId, 'WORKFORCE'),
-      checkPermission(session.user.id, wu.workspaceId, 'workforce.view'),
+      checkPermissionSilent(session.user.id, wu.workspaceId, 'workforce.view'),
     ]);
 
     if (!moduleEnabled || !canView) {

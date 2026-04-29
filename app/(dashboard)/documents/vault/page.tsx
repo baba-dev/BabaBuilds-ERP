@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { checkPermission } from "@/lib/rbac";
+import { checkPermissionSilent } from "@/lib/rbac";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -26,7 +26,7 @@ export default async function DocumentsVaultPage() {
   const workspaceId = await getWorkspaceId(session.user.id);
   if (!workspaceId) redirect("/dashboard");
 
-  const canView = await checkPermission(session.user.id, workspaceId, "documents.view");
+  const canView = await checkPermissionSilent(session.user.id, workspaceId, "documents.view");
   if (!canView) redirect("/dashboard");
 
   const [quota, docs] = await Promise.all([

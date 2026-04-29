@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
-import { checkPermission } from '@/lib/rbac';
+import { checkPermissionSilent } from '@/lib/rbac';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ShieldCheck } from 'lucide-react';
@@ -22,7 +22,7 @@ export default async function DocumentsCompliancePage() {
   if (!workspaceId) redirect('/dashboard');
 
   const [canView, quota] = await Promise.all([
-    checkPermission(session.user.id, workspaceId, 'documents.compliance.view'),
+    checkPermissionSilent(session.user.id, workspaceId, 'documents.compliance.view'),
     getWorkspaceQuotaSnapshot(workspaceId),
   ]);
 
