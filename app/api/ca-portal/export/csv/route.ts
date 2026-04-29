@@ -9,11 +9,17 @@ const MAX_CSV_RECORDS = 120000;
 
 // Reusing the exact same date math to ensure data matches the UI perfectly
 function getFinancialYearDates(fyString: string) {
-  const parts = fyString.split('-');
-  if (parts.length !== 2) throw new Error('Invalid FY format');
+  if (!/^\d{2}-\d{2}$/.test(fyString)) {
+    throw new Error('Invalid FY format');
+  }
 
-  const startYear = 2000 + parseInt(parts[0]);
-  const endYear = 2000 + parseInt(parts[1]);
+  const [startYY, endYY] = fyString.split('-').map((part) => parseInt(part, 10));
+  const startYear = 2000 + startYY;
+  const endYear = 2000 + endYY;
+
+  if (endYear !== startYear + 1) {
+    throw new Error('Invalid FY range');
+  }
 
   const startDate = new Date(Date.UTC(startYear, 3, 1, 0, 0, 0));
   const endDate = new Date(Date.UTC(endYear, 2, 31, 23, 59, 59, 999));
@@ -37,17 +43,6 @@ const escapeCsv = (str: string | null | undefined) => {
   return `"${cleanStr}"`; // Wrap in quotes
 };
 
-type LedgerRow = {
-  date: Date;
-  type: 'INCOME' | 'EXPENSE';
-  reference: string;
-  party: string;
-  category: string;
-  description: string;
-  amount: number;
-  status: string;
-};
-
 export async function GET(request: Request) {
   try {
     // 1. SECURITY LOCK
@@ -61,7 +56,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const fy = searchParams.get('fy') || '25-26';
 
-    let dateFilter;
+    let dateFilter: { gte: Date; lte: Date };
     try {
       const { startDate, endDate } = getFinancialYearDates(fy);
       dateFilter = { gte: startDate, lte: endDate };
@@ -69,7 +64,7 @@ export async function GET(request: Request) {
       return NextResponse.json(
         {
           error: 'INVALID_FINANCIAL_YEAR',
-          message: 'Invalid Financial Year format. Use YY-YY (example: 25-26).',
+          message: 'Invalid Financial Year format. Use YY-YY consecutive years (example: 25-26).',
         },
         { status: 422 }
       );
@@ -110,92 +105,96 @@ export async function GET(request: Request) {
 
     const encoder = new TextEncoder();
 
-    const stream = new ReadableStream<Uint8Array>({
-      async start(controller) {
-        const writeRow = (row: LedgerRow) => {
-          const line = [
-            escapeCsv(format(new Date(row.date), 'dd-MMM-yyyy')),
-            escapeCsv(row.type),
-            escapeCsv(row.reference),
-            escapeCsv(row.party),
-            escapeCsv(row.category),
-            escapeCsv(row.description),
-            row.amount.toFixed(2),
-            escapeCsv(row.status),
-          ].join(',');
-          controller.enqueue(encoder.encode(`${line}\n`));
-        };
+    async function* csvLineIterator() {
+      yield `${headers.join(',')}\n`;
 
-        controller.enqueue(encoder.encode(`${headers.join(',')}\n`));
+      let invoiceCursorId: string | undefined;
+      let expenseCursorId: string | undefined;
+      let invoiceBuffer: Awaited<ReturnType<typeof prisma.invoice.findMany>> = [];
+      let expenseBuffer: Awaited<ReturnType<typeof prisma.expense.findMany>> = [];
+      let invoiceIndex = 0;
+      let expenseIndex = 0;
 
-        let invoiceCursorId: string | undefined;
-        let expenseCursorId: string | undefined;
-        let invoiceBuffer: Awaited<ReturnType<typeof prisma.invoice.findMany>> = [];
-        let expenseBuffer: Awaited<ReturnType<typeof prisma.expense.findMany>> = [];
-
-        while (true) {
-          if (invoiceBuffer.length === 0) {
-            invoiceBuffer = await prisma.invoice.findMany({
-              where: { workspaceId, invoiceDate: dateFilter },
-              orderBy: [{ invoiceDate: 'asc' }, { id: 'asc' }],
-              take: CSV_BATCH_SIZE,
-              ...(invoiceCursorId ? { cursor: { id: invoiceCursorId }, skip: 1 } : {}),
-            });
-            invoiceCursorId = invoiceBuffer.at(-1)?.id;
-          }
-
-          if (expenseBuffer.length === 0) {
-            expenseBuffer = await prisma.expense.findMany({
-              where: { workspaceId, date: dateFilter },
-              orderBy: [{ date: 'asc' }, { id: 'asc' }],
-              take: CSV_BATCH_SIZE,
-              ...(expenseCursorId ? { cursor: { id: expenseCursorId }, skip: 1 } : {}),
-            });
-            expenseCursorId = expenseBuffer.at(-1)?.id;
-          }
-
-          const nextInvoice = invoiceBuffer[0];
-          const nextExpense = expenseBuffer[0];
-
-          if (!nextInvoice && !nextExpense) {
-            break;
-          }
-
-          const takeInvoice =
-            !!nextInvoice &&
-            (!nextExpense ||
-              nextInvoice.invoiceDate.getTime() < nextExpense.date.getTime() ||
-              (nextInvoice.invoiceDate.getTime() === nextExpense.date.getTime() &&
-                nextInvoice.id.localeCompare(nextExpense.id) <= 0));
-
-          if (takeInvoice && nextInvoice) {
-            writeRow({
-              date: nextInvoice.invoiceDate,
-              type: 'INCOME',
-              reference: nextInvoice.invoiceNumber,
-              party: nextInvoice.clientName,
-              category: `SAC: ${nextInvoice.sacCode || (profile as any)?.defaultSacCode || '998313'}`,
-              description: nextInvoice.serviceDescription || 'Services Rendered',
-              amount: Number(nextInvoice.totalAmount),
-              status: nextInvoice.status.toUpperCase(),
-            });
-            invoiceBuffer.shift();
-          } else if (nextExpense) {
-            writeRow({
-              date: nextExpense.date,
-              type: 'EXPENSE',
-              reference: '-',
-              party: nextExpense.vendor,
-              category: nextExpense.category,
-              description: nextExpense.description || 'Business Expense',
-              amount: Number(nextExpense.amount),
-              status: 'PAID',
-            });
-            expenseBuffer.shift();
-          }
+      while (true) {
+        if (invoiceIndex >= invoiceBuffer.length) {
+          invoiceBuffer = await prisma.invoice.findMany({
+            where: { workspaceId, invoiceDate: dateFilter },
+            orderBy: [{ invoiceDate: 'asc' }, { id: 'asc' }],
+            take: CSV_BATCH_SIZE,
+            ...(invoiceCursorId ? { cursor: { id: invoiceCursorId }, skip: 1 } : {}),
+          });
+          invoiceCursorId = invoiceBuffer.at(-1)?.id;
+          invoiceIndex = 0;
         }
 
-        controller.close();
+        if (expenseIndex >= expenseBuffer.length) {
+          expenseBuffer = await prisma.expense.findMany({
+            where: { workspaceId, date: dateFilter },
+            orderBy: [{ date: 'asc' }, { id: 'asc' }],
+            take: CSV_BATCH_SIZE,
+            ...(expenseCursorId ? { cursor: { id: expenseCursorId }, skip: 1 } : {}),
+          });
+          expenseCursorId = expenseBuffer.at(-1)?.id;
+          expenseIndex = 0;
+        }
+
+        const nextInvoice = invoiceBuffer[invoiceIndex];
+        const nextExpense = expenseBuffer[expenseIndex];
+
+        if (!nextInvoice && !nextExpense) {
+          break;
+        }
+
+        const takeInvoice =
+          !!nextInvoice &&
+          (!nextExpense ||
+            nextInvoice.invoiceDate.getTime() < nextExpense.date.getTime() ||
+            (nextInvoice.invoiceDate.getTime() === nextExpense.date.getTime() &&
+              nextInvoice.id.localeCompare(nextExpense.id) <= 0));
+
+        if (takeInvoice && nextInvoice) {
+          const line = [
+            escapeCsv(format(new Date(nextInvoice.invoiceDate), 'dd-MMM-yyyy')),
+            escapeCsv('INCOME'),
+            escapeCsv(nextInvoice.invoiceNumber),
+            escapeCsv(nextInvoice.clientName),
+            escapeCsv(`SAC: ${nextInvoice.sacCode || (profile as any)?.defaultSacCode || '998313'}`),
+            escapeCsv(nextInvoice.serviceDescription || 'Services Rendered'),
+            nextInvoice.totalAmount.toFixed(2),
+            escapeCsv(nextInvoice.status.toUpperCase()),
+          ].join(',');
+          yield `${line}\n`;
+          invoiceIndex += 1;
+        } else if (nextExpense) {
+          const line = [
+            escapeCsv(format(new Date(nextExpense.date), 'dd-MMM-yyyy')),
+            escapeCsv('EXPENSE'),
+            escapeCsv('-'),
+            escapeCsv(nextExpense.vendor),
+            escapeCsv(nextExpense.category),
+            escapeCsv(nextExpense.description || 'Business Expense'),
+            nextExpense.amount.toFixed(2),
+            escapeCsv('PAID'),
+          ].join(',');
+          yield `${line}\n`;
+          expenseIndex += 1;
+        }
+      }
+    }
+
+    const iterator = csvLineIterator();
+    const stream = new ReadableStream<Uint8Array>({
+      async pull(controller) {
+        const next = await iterator.next();
+        if (next.done) {
+          controller.close();
+          return;
+        }
+
+        controller.enqueue(encoder.encode(next.value));
+      },
+      async cancel() {
+        await iterator.return?.();
       },
     });
 
