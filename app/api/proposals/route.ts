@@ -16,6 +16,11 @@ type ProposalItemInput = {
   quantity: number;
   unitPrice: number;
 };
+type ProposalMediaItemInput = {
+  type: "image" | "video";
+  url: string;
+  title?: string;
+};
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 
 export async function GET() {
@@ -54,12 +59,13 @@ export async function POST(request: Request) {
     if (!perm.granted) return perm.response;
 
     const body = await request.json();
-    const { clientId, title, validUntil, items, taxRateOverride } = body as {
+    const { clientId, title, validUntil, items, taxRateOverride, richMedia } = body as {
       clientId: string;
       title: string;
       validUntil: string;
       items: ProposalItemInput[];
       taxRateOverride?: number;
+      richMedia?: ProposalMediaItemInput[];
     };
 
     const client = await prisma.client.findFirst({ 
@@ -153,6 +159,15 @@ export async function POST(request: Request) {
     const subtotal = totals.subtotal;
     const estimatedTax = totals.taxAmount;
     const totalAmount = totals.total;
+    const normalizedRichMedia = Array.isArray(richMedia)
+      ? richMedia
+          .map((media) => ({
+            type: media.type === "video" ? "video" : "image",
+            url: String(media.url ?? "").trim(),
+            title: typeof media.title === "string" ? media.title.trim() : "",
+          }))
+          .filter((media) => media.url.length > 0)
+      : [];
 
     const newProposal = await prisma.proposal.create({
       data: {
@@ -164,6 +179,10 @@ export async function POST(request: Request) {
         subtotal,
         estimatedTax,
         totalAmount,
+        declineReason:
+          normalizedRichMedia.length > 0
+            ? JSON.stringify({ richMedia: normalizedRichMedia })
+            : null,
         status: "SENT",
         items: {
           create: items.map((item) => {

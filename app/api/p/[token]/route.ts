@@ -16,7 +16,24 @@ export async function GET(
     });
 
     if (!proposal) return NextResponse.json({ error: "Proposal not found." }, { status: 404 });
-    return NextResponse.json({ proposal });
+    let richSections: Array<{ title: string; body?: string; mediaUrl?: string }> = [];
+    if (proposal.declineReason) {
+      try {
+        const parsed = JSON.parse(proposal.declineReason) as { richSections?: Array<{ title?: string; body?: string; mediaUrl?: string }> };
+        if (Array.isArray(parsed.richSections)) {
+          richSections = parsed.richSections
+            .map((section) => ({
+              title: String(section.title ?? "").trim(),
+              body: typeof section.body === "string" ? section.body : "",
+              mediaUrl: typeof section.mediaUrl === "string" ? section.mediaUrl : "",
+            }))
+            .filter((section) => section.title.length > 0);
+        }
+      } catch {
+        // ignore non-json decline reason payloads from older records
+      }
+    }
+    return NextResponse.json({ proposal: { ...proposal, richSections } });
   } catch (error) {
     return NextResponse.json({ error: "Failed to load proposal." }, { status: 500 });
   }

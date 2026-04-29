@@ -29,6 +29,7 @@ import { CLIENT_LOGO_ACCEPT_ATTR, CLIENT_LOGO_HELP_TEXT } from "@/lib/uploads/cl
 import { type ClientDto, type ApiEnvelope } from "@/lib/types/business";
 import { useSearchParams } from "next/navigation";
 import { OnboardingHint } from "@/components/onboarding/OnboardingHint";
+import { cn } from "@/lib/utils";
 
 export default function ClientCRM() {
   const t = useTranslations('Clients');
@@ -46,6 +47,7 @@ export default function ClientCRM() {
   // --- NEW: PAGINATION STATE ---
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   // --- GLOBALIZATION ENGINE ---
   const { 
@@ -444,6 +446,35 @@ export default function ClientCRM() {
           </div>
         ) : (
           <>
+            <div className="mb-4 flex items-center justify-end">
+              <div className="flex bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-1 gap-1 h-10">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("grid")}
+                  className={cn(
+                    "px-3 py-1 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all",
+                    viewMode === "grid"
+                      ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-sm"
+                      : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300",
+                  )}
+                >
+                  Grid
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("list")}
+                  className={cn(
+                    "px-3 py-1 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all",
+                    viewMode === "list"
+                      ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-sm"
+                      : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300",
+                  )}
+                >
+                  List
+                </button>
+              </div>
+            </div>
+            {viewMode === "grid" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {sortedClients.map((client) => (
                 <Card key={client.id} className="group relative hover:shadow-xl hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-all duration-300 border-border bg-surface-elevated overflow-hidden flex flex-col">
@@ -523,6 +554,66 @@ export default function ClientCRM() {
                 </Card>
               ))}
             </div>
+            ) : (
+              <div className="bg-white dark:bg-zinc-950/50 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="border-b border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/50">
+                      <tr>
+                        {["Client", "Country", "Contact", "Tax", "Type", "Actions"].map((h) => (
+                          <th key={h} className="px-4 py-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
+                      {sortedClients.map((client) => (
+                        <tr key={client.id} className="hover:bg-zinc-50/80 dark:hover:bg-zinc-900/50 transition-colors">
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-9 w-9 border border-border">
+                                <AvatarImage src={getBustedUrl(client.logoUrl, client.updatedAt)} alt={client.name} />
+                                <AvatarFallback className="bg-surface-base text-muted-body text-xs font-bold">
+                                  <Building2 className="w-4 h-4" />
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-bold text-[13px] text-zinc-900 dark:text-zinc-100">{client.name}</p>
+                                <p className="text-[11px] text-zinc-500">{client.address}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 text-xs text-zinc-600 dark:text-zinc-300">{client.country}</td>
+                          <td className="px-4 py-4 text-xs text-zinc-600 dark:text-zinc-300">
+                            <p>{client.email || "-"}</p>
+                            <p>{client.phone || "-"}</p>
+                          </td>
+                          <td className="px-4 py-4 text-xs font-mono text-zinc-600 dark:text-zinc-300">{client.taxId || t('unregistered')}</td>
+                          <td className="px-4 py-4">
+                            {client.isExport ? (
+                              <Badge className="bg-accent-soft text-accent-strong border border-accent-strong/30 text-xs font-bold uppercase tracking-widest px-2 py-0.5 shadow-none">{t('export')}</Badge>
+                            ) : (
+                              <Badge className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 text-xs font-bold uppercase tracking-widest px-2 py-0.5 shadow-none">{t('domestic')}</Badge>
+                            )}
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-2">
+                              <button onClick={() => handleEdit(client)} className="p-2 bg-accent-soft text-accent-strong rounded-lg hover:bg-accent-strong hover:text-white transition-all">
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => setClientToDelete(client.id)} className="p-2 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg hover:bg-rose-600 hover:text-white transition-all">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* --- PAGINATION CONTROLS --- */}
             {totalPages > 1 && (

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { Download, LayoutDashboard, Send, Sparkles, ArrowRight, Users, Briefcase, ReceiptText, X, Building, Lock, Puzzle, ShieldCheck, CircleAlert, HandCoins, PlugZap } from "lucide-react";
+import { Download, LayoutDashboard, Send, Sparkles, ArrowRight, Users, Briefcase, ReceiptText, X, Building, Lock, CircleAlert, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -462,20 +462,6 @@ export default function Dashboard() {
   const lockableCardClassName = (locked: boolean) =>
     locked ? `${lockOverlayClassName} cursor-not-allowed select-none` : "";
 
-  const optionalModuleCards = (d.optionalModules ?? []).map((module) => {
-    const icon =
-      module.moduleKey === "CASH_FLOW"
-        ? <HandCoins className="h-4 w-4" />
-        : module.moduleKey === "REPORTING_CENTER"
-          ? <Puzzle className="h-4 w-4" />
-          : module.moduleKey === "TAX_ADVANCED"
-            ? <ShieldCheck className="h-4 w-4" />
-            : module.moduleKey === "IMPORT_MANAGER"
-              ? <PlugZap className="h-4 w-4" />
-              : <Puzzle className="h-4 w-4" />;
-    return { ...module, icon };
-  });
-
   if (isInitialLoad) {
     return <PageLoadingState title={tr("loading", "Loading dashboard")} description={tr("loading_desc", "Preparing command center")} className="min-h-screen" />;
   }
@@ -805,39 +791,6 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
-
-        {optionalModuleCards.length > 0 ? (
-          <Card className="border border-zinc-200 dark:border-zinc-800/70 bg-white dark:bg-zinc-900/40">
-            <CardHeader className="pb-3">
-              <CardTitle className={ty.sectionTitle}>
-                {tr("optional_modules_active", "Activated optional modules")}
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {tr("optional_modules_active_desc", "Quick access to modules currently enabled for this workspace.")}
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {optionalModuleCards.map((module) => (
-                  <Link
-                    key={module.moduleKey}
-                    href={module.href}
-                    className="group rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 bg-zinc-50/70 dark:bg-zinc-950/30 hover:border-orange-300 dark:hover:border-orange-700/60 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="rounded-lg p-2 bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400">
-                        {module.icon}
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-zinc-400 group-hover:text-orange-500 transition-colors" />
-                    </div>
-                    <p className="mt-2 text-sm font-semibold text-foreground">{module.label}</p>
-                    <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{module.description}</p>
-                  </Link>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ) : null}
 
         <motion.div
           initial={{ opacity: 0, y: 10 }}

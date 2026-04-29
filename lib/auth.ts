@@ -162,8 +162,8 @@ function inferProviderFromMetadata(metadata: Record<string, unknown> | undefined
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt", maxAge: 60 * 60 * 8, updateAge: 60 * 30 },
-  jwt: { maxAge: 60 * 60 * 8 },
+  session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24 },
+  jwt: { maxAge: 60 * 60 * 24 * 7 },
   logger: {
     error(code, metadata) {
       const provider = inferProviderFromMetadata(metadata as Record<string, unknown> | undefined);

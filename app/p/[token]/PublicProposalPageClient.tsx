@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import { format } from "date-fns";
-import { CheckCircle2, FileText, Building2, MessageSquareDashed } from "lucide-react";
+import { CheckCircle2, FileText, Building2, MessageSquareDashed, Image as ImageIcon, Video } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -159,6 +159,23 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
               </div>
             </div>
 
+            {proposal.richSections?.length > 0 ? (
+              <div className="space-y-5 mb-10">
+                <h3 className="text-lg font-bold text-zinc-900">Proposal Highlights</h3>
+                {proposal.richSections.map((section: any, idx: number) => (
+                  <div key={`${section.title}-${idx}`} className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                    <p className="text-sm font-bold text-zinc-900">{section.title}</p>
+                    {section.body ? <p className="text-sm text-zinc-600 mt-2 whitespace-pre-wrap">{section.body}</p> : null}
+                    {section.mediaUrl ? (
+                      <a href={section.mediaUrl} target="_blank" rel="noreferrer" className="inline-flex mt-3 text-xs font-semibold text-indigo-600 hover:underline">
+                        View attached media
+                      </a>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
             {/* Scope of Work */}
             <div className="space-y-6 mb-12">
               <h3 className="text-lg font-bold text-zinc-900">Scope of Work & Investment</h3>
@@ -177,6 +194,29 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
                 ))}
               </div>
             </div>
+
+            {Array.isArray(proposal.richMedia) && proposal.richMedia.length > 0 ? (
+              <div className="space-y-4 mb-12">
+                <h3 className="text-lg font-bold text-zinc-900">Rich Media</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {proposal.richMedia.map((media: any, idx: number) => (
+                    <a
+                      key={`${media.url}-${idx}`}
+                      href={media.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-lg border border-zinc-200 bg-white p-4 hover:border-indigo-300 transition-colors"
+                    >
+                      <p className="text-sm font-bold text-zinc-900 flex items-center gap-2">
+                        {media.kind === "video" ? <Video className="w-4 h-4 text-indigo-600" /> : <ImageIcon className="w-4 h-4 text-indigo-600" />}
+                        {media.title || (media.kind === "video" ? "Video attachment" : "Image attachment")}
+                      </p>
+                      <p className="mt-1 text-xs text-zinc-500 break-all">{media.url}</p>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             {/* Totals */}
             <div className="flex justify-end pt-6 border-t border-zinc-200 mb-12">

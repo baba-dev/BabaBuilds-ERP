@@ -17,6 +17,7 @@ import { ProductCard } from "@/components/inventory/ProductCard";
 import { QuickAdjustModal } from "@/components/inventory/QuickAdjustModal";
 import { LayoutGrid, List, MapPin, RefreshCw } from "lucide-react";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
+import { Card, CardContent } from "@/components/ui/card";
 
 type InventoryProduct = {
   id: string;
@@ -216,11 +217,18 @@ export default function InventoryHub() {
       title="Inventory Overview"
       description="Real-time stock tracking and replenishment."
       icon={<Archive className="w-6 h-6 text-accent-strong" />}
-      kpiCard={{
-        label: "Total Value",
-        value: fCurrency(totalValue),
-        tone: "positive",
-      }}
+      kpiCard={
+        <Card className="border-emerald-200/60 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-50/80 to-white dark:from-emerald-950/30 dark:to-zinc-900/80 shadow-sm">
+          <CardContent className="px-5 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700/80 dark:text-emerald-300/80">
+              Total Value
+            </p>
+            <p className="text-2xl font-black tracking-tight text-emerald-700 dark:text-emerald-300">
+              {fCurrency(totalValue)}
+            </p>
+          </CardContent>
+        </Card>
+      }
       primaryAction={
         <Button
           className="btn-primary w-full sm:w-auto shrink-0 text-xs uppercase tracking-wider h-10 px-5"
