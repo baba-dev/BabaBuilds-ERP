@@ -166,6 +166,7 @@ export const freelancerConsultantTemplate: DemoTemplateDefinition = {
     AR_COLLECTIONS: true,
     REPORTING_CENTER: true,
     IMPORT_MANAGER: true,
+    SHOP: true,
   },
   seededModules: [
     "WORKFORCE",
@@ -177,6 +178,7 @@ export const freelancerConsultantTemplate: DemoTemplateDefinition = {
     "TAX_ADVANCED",
     "REPORTING_CENTER",
     "IMPORT_MANAGER",
+    "SHOP",
   ],
   seed: async ({ tx, workspaceId, userId, now }) => {
     const dept = await tx.department.create({

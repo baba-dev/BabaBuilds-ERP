@@ -207,6 +207,13 @@ export const PERMISSION_KEYS = [
   'documents.personal.view',
   'documents.personal.manage',
   'documents.settings.manage',
+
+  // Shop / Public Storefront (only surfaced when Shop module is enabled)
+  'shop.view',                // Access the Shop dashboard / Command Center
+  'shop.orders.view',         // View incoming buyer orders (read-only)
+  'shop.orders.manage',       // Update status, mark paid/refunded/fulfilled, delete
+  'shop.content.manage',      // Edit storefront content (About, social, FAQ, announcement, AI Assist)
+  'shop.settings.manage',     // Toggle shop on/off, change slug, branding, gateways
 ] as const;
 
 export type Permission = (typeof PERMISSION_KEYS)[number];
@@ -297,6 +304,17 @@ export const PERMISSION_MODULE_GROUPS: { module: string; label: string; keys: Pe
       'documents.settings.manage',
     ],
   },
+  {
+    module: 'shop',
+    label: 'Shop / Storefront',
+    keys: [
+      'shop.view',
+      'shop.orders.view',
+      'shop.orders.manage',
+      'shop.content.manage',
+      'shop.settings.manage',
+    ],
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -364,6 +382,12 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'documents.personal.view',
     'documents.personal.manage',
     'documents.settings.manage',
+
+    // Shop — full control
+    'shop.view',
+    'shop.orders.view', 'shop.orders.manage',
+    'shop.content.manage',
+    'shop.settings.manage',
   ],
 
   ADMIN: [
@@ -417,6 +441,12 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'documents.personal.view',
     'documents.personal.manage',
     'documents.settings.manage',
+
+    // Shop — full operational control
+    'shop.view',
+    'shop.orders.view', 'shop.orders.manage',
+    'shop.content.manage',
+    'shop.settings.manage',
   ],
 
   FINANCE_MANAGER: [
@@ -457,6 +487,10 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'documents.archive',
     'documents.restore',
     'documents.compliance.view',
+
+    // Shop — visibility into orders for revenue/AR tracking; no content/settings
+    'shop.view',
+    'shop.orders.view',
   ],
 
   ACCOUNTANT: [
@@ -486,6 +520,10 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     // Documents — view (audit evidence)
     'documents.view',
     'documents.compliance.view',
+
+    // Shop — read-only for audit
+    'shop.view',
+    'shop.orders.view',
   ],
 
   SALES_MANAGER: [
@@ -499,6 +537,11 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'reporting_center.view', 'reporting_center.query.run', 'reporting_center.export',
     'clients.view', 'clients.manage',
     // NOT: expenses admin, purchase_orders, inventory, accounting, tax, financial exports
+
+    // Shop — sales side: read storefront, manage orders + content; no settings
+    'shop.view',
+    'shop.orders.view', 'shop.orders.manage',
+    'shop.content.manage',
   ],
 
   OPERATIONS_MANAGER: [
@@ -525,6 +568,11 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'documents.link',
     'documents.archive',
     'documents.restore',
+
+    // Shop — operations: orders + content; no settings
+    'shop.view',
+    'shop.orders.view', 'shop.orders.manage',
+    'shop.content.manage',
   ],
 
   INVENTORY_MANAGER: [
@@ -534,6 +582,11 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'service_orders.view',
     'clients.view',
     // NOT: financial data, reports, accounting, tax
+
+    // Shop — order visibility (stock impact) + content manage; no settings
+    'shop.view',
+    'shop.orders.view',
+    'shop.content.manage',
   ],
 
   STAFF: [
@@ -553,6 +606,10 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'documents.view',
     'documents.upload',
     'documents.link',
+
+    // Shop — read-only for general staff
+    'shop.view',
+    'shop.orders.view',
   ],
 
   VIEWER: [
@@ -569,6 +626,10 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     // Documents — view-only for audits (no personal docs)
     'documents.view',
     'documents.compliance.view',
+
+    // Shop — strictly read-only
+    'shop.view',
+    'shop.orders.view',
   ],
 };
 

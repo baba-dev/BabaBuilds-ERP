@@ -58,7 +58,7 @@ const navItems: NavItem[] = [
   { id: "service_catalog", label: "service_catalog", href: "/services", icon: "serviceCatalog", group: "Start Here", keywords: ["services", "catalog"], pinnable: true },
 
   { id: "quotes_proposals", label: "quotes_proposals", href: "/proposals", icon: "quotesAndProposals", group: "Setup Business", keywords: ["quotes", "proposals"], pinnable: true },
-  { id: "shop", label: "shop", href: "/shop", icon: "shop", group: "Setup Business", keywords: ["store", "shop"], pinnable: true },
+  { id: "shop", label: "shop", href: "/shop", icon: "shop", group: "Setup Business", moduleKey: "SHOP", keywords: ["store", "shop"], pinnable: true },
   { id: "import_manager", label: "import_manager", href: "/import-manager", icon: "serviceCatalog", group: "Setup Business", moduleKey: "IMPORT_MANAGER", keywords: ["import", "csv", "xlsx"], pinnable: false },
 
   { id: "inventory_hub", label: "inventory", href: "/inventory", icon: "inventoryHub", group: "Run Operations", keywords: ["inventory", "stock"], pinnable: true },
