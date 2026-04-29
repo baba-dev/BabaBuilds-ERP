@@ -1,183 +1,297 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BabaBuilds ERP
 
-## Getting Started
+![Next.js](https://img.shields.io/badge/Next.js-16.2.4-black?logo=next.js)
+![React](https://img.shields.io/badge/React-19.2.4-149eca?logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript)
+![Prisma](https://img.shields.io/badge/Prisma-ORM-2d3748?logo=prisma)
+![SQLite](https://img.shields.io/badge/SQLite-Database-003b57?logo=sqlite)
+![NextAuth](https://img.shields.io/badge/Auth-NextAuth-7c3aed)
+![License](https://img.shields.io/badge/License-Private-informational)
 
-First, run the development server:
+BabaBuilds ERP is a full-stack ERP and operations suite for service-first businesses.  
+It combines quoting, service catalog management, shop + inventory workflows, invoicing, retainers, expenses, tax/compliance, AI-assisted reconciliation, and optional advanced modules (workforce, payroll, cash flow, reporting, and more) in one workspace-aware platform.
+
+Built with **Next.js App Router + React Server Components + Prisma + SQLite + NextAuth**.
+
+---
+
+## Table of Contents
+
+- [Product Tour (Screenshots)](#product-tour-screenshots)
+- [Core Functionalities (Codebase + Schema Mapped)](#core-functionalities-codebase--schema-mapped)
+- [Use Cases](#use-cases)
+- [Architecture at a Glance](#architecture-at-a-glance)
+- [Installation & Local Development](#installation--local-development)
+- [Environment Variables](#environment-variables)
+- [Auth Configuration Modes](#auth-configuration-modes)
+- [Database & Prisma Notes](#database--prisma-notes)
+- [Scripts You’ll Actually Use](#scripts-youll-actually-use)
+- [Testing & Quality](#testing--quality)
+- [Troubleshooting](#troubleshooting)
+- [Documentation & Helpful Paths](#documentation--helpful-paths)
+
+---
+
+## Product Tour (Screenshots)
+
+> You mentioned you have screenshots somewhere — the repo already contains a complete help screenshot set under `public/help/screenshots/`.
+
+### Highlights
+
+| Area | Screenshot |
+|---|---|
+| Dashboard | ![Dashboard overview](public/help/screenshots/help-dashboard-01-overview.png) |
+| Service Catalog | ![Service catalog](public/help/screenshots/help-service-catalog-01-overview.png) |
+| Inventory | ![Inventory hub](public/help/screenshots/help-inventory-01-overview.png) |
+| Clients | ![Clients](public/help/screenshots/help-clients-01-overview.png) |
+| Quotes & Proposals | ![Proposals](public/help/screenshots/help-proposals-01-overview.png) |
+| Invoices & Earnings | ![Invoices and earnings](public/help/screenshots/help-income-01-overview.png) |
+
+For the full gallery index, see:  
+`content/docs/help-screenshot-gallery.md`
+
+---
+
+## Core Functionalities (Codebase + Schema Mapped)
+
+Based on static inspection of app modules, Prisma enums/models, scripts, and help docs.
+
+### 1) Business setup, authentication, and access control
+- NextAuth-based sign-in architecture (email and/or Google providers)
+- Demo login route for local/dev onboarding
+- Workspace-aware user model and role system
+- Role/permission-gated feature access for optional modules
+
+### 2) CRM & customer lifecycle
+- Client management (profiles, contact and relationship data)
+- Referral tracking and rewards workflow
+- Proposal/quote lifecycle with conversion pathways
+
+### 3) Revenue operations
+- Service catalog operations (priceable services/products)
+- Shop/order-oriented operations for sellable items
+- Retainer and recurring revenue tracking
+- Invoice lifecycle with schema-backed statuses:
+  - `PENDING`
+  - `PARTIALLY_PAID`
+  - `PAID`
+- Payment/revenue event tracking via accounting event types
+
+### 4) Expense, tax, and compliance workflows
+- Expense recording and categorization
+- Tax workflows with readiness, blocker, and filing status concepts
+- CA/audit portal workflows for finance/compliance collaboration
+- Compliance task tracking via task status states
+
+### 5) Inventory & operations hub
+- Inventory management and stock operational flows
+- Operational dashboard with primary action surfaces and drill-down views
+
+### 6) AI-assisted finance tooling
+- AI reconciliation workflows
+- Optional cash-flow forecasting module with:
+  - horizon, scenario tags, direction/source/classification enums
+  - risk-level tagging and generation provenance metadata
+
+### 7) Reporting & analytics
+- Optional Reporting Center module
+- Preset-driven, scoped query execution model
+- Export workflows (XLSX pathway in dependencies/scripts)
+- Audit logging for reporting actions
+
+### 8) Workforce and payroll (optional modules)
+- Workforce module patterns for people/process tracking
+- Payroll-related optional workflows
+
+### 9) Document and import subsystems (optional modules)
+- Document Vault module surface
+- Import Manager workflows for structured data intake
+
+### 10) Partner/channel ecosystem
+- Distributor, coupon attribution, and commission schema entities
+- Margin basis and payout lifecycle handling
+- Reseller/coupon audience concepts in schema enums
+
+---
+
+## Use Cases
+
+### For founders / owner-operators
+- Replace fragmented tools (spreadsheets + invoicing app + CRM + notes) with one operational system.
+- Track cash in/out, invoices, retainers, and taxes from a single dashboard.
+
+### For finance and accounting teams
+- Keep clean revenue/expense visibility with audit-friendly activity trails.
+- Standardize filing readiness and compliance blockers before deadlines.
+
+### For sales and account teams
+- Move from lead/referral to proposal to invoice without switching products.
+- Maintain client context while coordinating with service/ops teams.
+
+### For operations and inventory managers
+- Run inventory-aware workflows alongside service catalog and order processes.
+- Reduce manual handoff friction between shop floor and finance workflows.
+
+### For growing organizations
+- Start with core ERP modules, then enable optional modules (cash flow, reporting center, payroll, document vault, etc.) as maturity increases.
+
+---
+
+## Architecture at a Glance
+
+- **Frontend:** Next.js 16 App Router + React 19 + TypeScript
+- **Backend:** Next.js server routes / server components
+- **Database:** Prisma ORM with SQLite (`prisma/dev.db` in local dev)
+- **Auth:** NextAuth with provider toggles
+- **Styling/UI:** Tailwind + Radix/UI utilities
+- **Tests:** Vitest + Playwright smoke coverage
+
+---
+
+## Installation & Local Development
+
+### 1) Clone and install
+
+```bash
+git clone <your-repo-url>
+cd BabaBuilds-ERP
+npm install
+```
+
+### 2) Create `.env` at repo root
+
+Required baseline variables:
+
+```bash
+DATABASE_URL="file:./prisma/dev.db"
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="replace-with-a-random-secret"
+AUTH_GOOGLE_ENABLED=false
+AUTH_EMAIL_ENABLED=false
+```
+
+### 3) Prepare Prisma client and schema
+
+```bash
+npx prisma generate
+npx prisma db push
+```
+
+(Optional) seed compliance dictionaries:
+
+```bash
+npx ts-node prisma/seed.ts
+```
+
+### 4) Run the app
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open: [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Environment Variables
 
-## Browser test system (Playwright)
+### Always required once auth is exercised
+- `NEXTAUTH_URL`
+- `NEXTAUTH_SECRET`
 
-This repo includes Playwright so we can validate rendering and key user flows in a real browser.
+### Database
+- `DATABASE_URL` (SQLite path in local dev)
 
-### One-time setup
+### Provider toggles
+- `AUTH_EMAIL_ENABLED`
+- `AUTH_GOOGLE_ENABLED`
 
-```bash
-npm install
-npm run test:browser:install
-```
+When enabling email or Google auth, set the related provider credentials as documented in [Auth Configuration Modes](#auth-configuration-modes).
 
-This installs the Chromium browser binary and Linux dependencies used by the smoke suite.
+---
 
-### Run browser smoke tests
+## Auth Configuration Modes
 
-```bash
-npm run test:browser:smoke
-```
+### Mode A — Email-only auth
+Set:
+- `AUTH_EMAIL_ENABLED=true`
+- `AUTH_GOOGLE_ENABLED=false`
 
-Notes:
-- Tests run against `http://localhost:3000`.
-- Playwright will start the Next.js dev server automatically using `npm run dev` from `playwright.config.ts`.
-- If you want to target an already-running app, set `BASE_URL` before running tests.
+Also configure SMTP/email variables:
+- `EMAIL_SERVER_HOST`
+- `EMAIL_SERVER_PORT`
+- `EMAIL_SERVER_USER`
+- `EMAIL_SERVER_PASSWORD`
+- `EMAIL_FROM`
 
-### Interactive browser checks
+### Mode B — Google + Email auth
+Set:
+- `AUTH_GOOGLE_ENABLED=true`
+- `AUTH_EMAIL_ENABLED=true`
 
-Headed run (visible browser window, if display is available):
+Also configure:
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- all SMTP/email variables above
 
-```bash
-npm run test:browser:headed
-```
-
-Playwright UI mode for test exploration/debugging:
-
-```bash
-npm run test:browser:ui
-```
-
-### Existing browser suites
-
-- `tests/smoke/ui-pages.spec.ts` — critical public route rendering checks
-- `tests/smoke/landing-persona-funnel.spec.ts` — landing funnel CTA visibility
-- `tests/smoke/demo-route-audit.spec.ts` — authenticated demo route audit with telemetry
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-## Auth provider configuration
-
-`validateAuthEnvOrThrow` runs when the NextAuth API route handles a request (`/api/auth/*`). Public pages (e.g. marketing) render even if optional provider env is missing; sign-in still fails fast with a clear configuration error instead of obscure runtime failures.
-
-It always requires these core NextAuth variables once auth is exercised:
-
-- `NEXTAUTH_URL=https://erp.bababuilds.com`
-- `NEXTAUTH_SECRET=<strong random value>`
-
-Provider-specific variables are only required when that provider is enabled.
-
-### Mode A: Email-only auth
-
-Use this when you only want magic-link sign in.
-
-- Set `AUTH_EMAIL_ENABLED=true`
-- Set `AUTH_GOOGLE_ENABLED=false` (optional but recommended for explicitness)
-- Provide SMTP/email vars:
-  - `EMAIL_SERVER_HOST=<smtp host>`
-  - `EMAIL_SERVER_PORT=<smtp port>`
-  - `EMAIL_SERVER_USER=<smtp username>`
-  - `EMAIL_SERVER_PASSWORD=<smtp password>`
-  - `EMAIL_FROM=<sender address>`
-
-### Mode B: Google + Email auth
-
-Use this when you want both OAuth and magic-link sign in.
-
-- Set `AUTH_GOOGLE_ENABLED=true`
-- Set `AUTH_EMAIL_ENABLED=true`
-- Provide Google OAuth vars:
-  - `GOOGLE_CLIENT_ID=<google oauth client id>`
-  - `GOOGLE_CLIENT_SECRET=<google oauth client secret>`
-- Provide SMTP/email vars:
-  - `EMAIL_SERVER_HOST=<smtp host>`
-  - `EMAIL_SERVER_PORT=<smtp port>`
-  - `EMAIL_SERVER_USER=<smtp username>`
-  - `EMAIL_SERVER_PASSWORD=<smtp password>`
-  - `EMAIL_FROM=<sender address>`
-
-For Google OAuth, ensure the Google Cloud Console OAuth client includes this redirect URI:
-
+Google OAuth callback URI:
 - `https://erp.bababuilds.com/api/auth/callback/google`
 
-### Deployment checks
+---
 
-Before promoting to staging/production:
+## Database & Prisma Notes
 
-1. If running behind a reverse proxy/CDN, preserve forwarded headers:
-   - `X-Forwarded-Proto`
-   - `X-Forwarded-Host`
-2. Validate login flow end-to-end:
-   - `/login` → provider flow (Google or email link) → callback success → dashboard load.
+- Local DB file: `prisma/dev.db` (gitignored)
+- Use `npx prisma db push` for local schema sync.
+- Avoid `npx prisma migrate dev` in this repo currently due to a known broken migration dependency (`20260407100000_invoice_status_enum` in shadow DB flow).
 
-### Auth/login route note
+---
 
-- Canonical authenticated entry route is `/dashboard` (served by `app/(dashboard)/dashboard/page.tsx`).
-- Keep login and post-auth redirects pointing to `/dashboard` rather than `/` or an implicit `app/(dashboard)/page.tsx`.
-- Legacy user preference values of `/` for `defaultLandingPage` are normalized to `/dashboard` in the profile API and migrated in Prisma SQL.
+## Scripts You’ll Actually Use
 
-## Frontend polish rollout
+```bash
+npm run dev                 # Start local app
+npm run lint                # ESLint + KPI coverage check
+npm run typecheck           # TypeScript no-emit check
+npm run validate            # Lint + typecheck + production build
+npm test                    # Vitest suite
+npm run test:browser:smoke  # Playwright smoke tests
+npm run codex:quick         # Fast local validation loop
+```
 
-Use these artifacts to coordinate phased UI delivery and design QA gates:
+---
 
-- [Component adoption matrix](docs/frontend/component-adoption-matrix.md)
-- [Visual QA checklist](docs/frontend/visual-qa-checklist.md)
+## Testing & Quality
 
-## Auth/email dependency constraints
+- **Unit/integration tests:** Vitest
+- **Browser smoke tests:** Playwright
+- **Static quality gates:** ESLint + TypeScript + route/check scripts
 
-To keep email sign-in and verification-token delivery compatible with `next-auth@4.24.13`, keep `nodemailer` on the `^7.0.7` major range (the peer dependency expected by this `next-auth` release).
+Note: Existing lint debt is known in the codebase; treat lint output as “baseline + regressions” during active development.
 
-When updating mailer dependencies, align `@types/nodemailer` to the same runtime major as `nodemailer` to avoid drift between compile-time types and runtime APIs.
+---
 
-## Reporting Center (Optional Module)
+## Troubleshooting
 
-Reporting Center is an optional workspace subsystem. Enable it from **Setup Wizard** or **Settings → Optional Modules**.
+- **Auth fails early:** verify `NEXTAUTH_URL` and `NEXTAUTH_SECRET` are set correctly.
+- **Schema mismatch/local DB issues:** run `npx prisma generate && npx prisma db push`.
+- **Demo login MFA policy block:** known pre-existing bug in policy/provider whitelisting (see `lib/auth.ts` behavior).
 
-### Enablement
-- Setup payload supports `enableReportingCenter: true`.
-- Settings supports runtime enable/disable (non-destructive; data preserved).
+---
 
-### Permissions
-Reporting Center uses enterprise RBAC permissions:
-- `reporting_center.view`
-- `reporting_center.query.run`
-- `reporting_center.export`
+## Documentation & Helpful Paths
 
-### Usage
-1. Open `/reporting`.
-2. Select a preset and filters.
-3. Run preview or export to XLSX.
+- Main README: `README.md`
+- Prisma schema: `prisma/schema.prisma`
+- Screenshot index: `content/docs/help-screenshot-gallery.md`
+- Screenshots folder: `public/help/screenshots/`
+- Frontend rollout docs:
+  - `docs/frontend/component-adoption-matrix.md`
+  - `docs/frontend/visual-qa-checklist.md`
 
-### Security
-- API returns **public preset metadata only** (no SQL in JSON).
-- Read-only execution policy allows `SELECT` / `WITH`.
-- Mandatory workspace scoping (`workspaceId = :workspaceId`).
-- DML/DDL/PRAGMA/ATTACH denied.
-- Timeout, row cap, and payload cap enforced.
-- Every run/export is audit logged via `AppActivityLog`.
+---
 
-### Chat assistant integration
-The chat assistant only registers `list_reporting_presets` and `open_reporting_center` when the module is enabled and the user has the required permissions.
+If you want, next PR can add:
+- clickable architecture diagram,
+- persona-specific quick-starts,
+- a “module-to-route map” table for faster onboarding of new engineers and coding agents.
