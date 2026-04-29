@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { requirePermission, checkPermissionSilent, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
+import { requirePermission, checkPermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
 import { requireModule, ModuleDisabledError } from '@/lib/modules';
 import { getEmployeeByUserId } from '@/lib/workforce/index';
 
@@ -38,8 +38,8 @@ export async function GET(req: NextRequest) {
     let employeeId: string | null = employeeIdParam;
     if (employeeId) {
       // Only elevated roles can view arbitrary employees' balances
-      const canViewOthers = await checkPermissionSilent(session.user.id, wid, 'workforce.leave.manage')
-        || await checkPermissionSilent(session.user.id, wid, 'workforce.leave.approve');
+      const canViewOthers = await checkPermission(session.user.id, wid, 'workforce.leave.manage')
+        || await checkPermission(session.user.id, wid, 'workforce.leave.approve');
       if (!canViewOthers) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
       const ok = await prisma.employee.findFirst({ where: { id: employeeId, workspaceId: wid }, select: { id: true } });

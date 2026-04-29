@@ -10,7 +10,7 @@ import { getInvoiceBilledAmount, sumInvoiceBilledAmount } from "@/lib/invoice/to
 import { estimateTax } from "@/lib/tax/engine";
 import { getCurrentFinancialYear } from "@/lib/financial-year";
 import { getTaxReadinessSummary } from "@/lib/tax/return-prep";
-import { checkPermissionSilent } from "@/lib/rbac";
+import { checkPermissionsSilent, checkPermissionSilent } from "@/lib/rbac";
 import { getEnabledModules, MODULE_DESCRIPTIONS, MODULE_LABELS, type ModuleKey } from "@/lib/modules";
 import { buildMonthlyChartBuckets, resolveMonthlyBucketTimeZone } from "./monthly-series";
 import { describeKpiPeriod, getFyDateRange } from "./sales-shop-kpi-periods";
@@ -82,21 +82,20 @@ async function buildDashboardPayload(
 
   const canViewTaxReadiness =
     Boolean(userId) && (await checkPermissionSilent(userId!, workspaceId, "tax.readiness.view"));
-  const [
-    canViewAccounting,
-    canViewOperations,
-    canViewSales,
-    canManageBilling,
-    canRunTaxReadiness,
-  ] = userId
-    ? await Promise.all([
-        checkPermissionSilent(userId, workspaceId, "accounting.view"),
-        checkPermissionSilent(userId, workspaceId, "inventory.view"),
-        checkPermissionSilent(userId, workspaceId, "proposals.view"),
-        checkPermissionSilent(userId, workspaceId, "billing.manage"),
-        checkPermissionSilent(userId, workspaceId, "tax.readiness.run"),
+  const capabilityGrants = userId
+    ? await checkPermissionsSilent(userId, workspaceId, [
+        "accounting.view",
+        "inventory.view",
+        "proposals.view",
+        "billing.manage",
+        "tax.readiness.run",
       ])
-    : [false, false, false, false, false];
+    : null;
+  const canViewAccounting = capabilityGrants?.["accounting.view"] ?? false;
+  const canViewOperations = capabilityGrants?.["inventory.view"] ?? false;
+  const canViewSales = capabilityGrants?.["proposals.view"] ?? false;
+  const canManageBilling = capabilityGrants?.["billing.manage"] ?? false;
+  const canRunTaxReadiness = capabilityGrants?.["tax.readiness.run"] ?? false;
   const enabledModules = await getEnabledModules(workspaceId);
 
   const [

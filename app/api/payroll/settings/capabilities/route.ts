@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 
 import { authOptions } from '@/lib/auth';
 import { getWorkspaceIdForUser } from '@/lib/payroll/settings';
-import { checkPermissionSilent } from '@/lib/rbac';
+import { checkPermissionsSilent } from '@/lib/rbac';
 
 export async function GET() {
   try {
@@ -19,10 +19,12 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const [canView, canManage] = await Promise.all([
-      checkPermissionSilent(userId, workspaceId, 'payroll.view'),
-      checkPermissionSilent(userId, workspaceId, 'payroll.settings.manage'),
+    const grants = await checkPermissionsSilent(userId, workspaceId, [
+      'payroll.view',
+      'payroll.settings.manage',
     ]);
+    const canView = grants['payroll.view'];
+    const canManage = grants['payroll.settings.manage'];
 
     return NextResponse.json({
       canView,

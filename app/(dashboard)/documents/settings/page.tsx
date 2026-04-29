@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isModuleEnabled } from "@/lib/modules";
-import { checkPermissionSilent } from "@/lib/rbac";
+import { checkPermissionsSilent } from "@/lib/rbac";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { StorageMeter } from "@/components/documents/StorageMeter";
 import { getWorkspaceQuotaSnapshot } from "@/lib/documents/quota";
@@ -19,11 +19,15 @@ export default async function DocumentSettingsPage() {
   const workspaceId = wu?.workspaceId ?? null;
   if (!workspaceId) redirect("/dashboard");
 
-  const [enabled, canView, canManage] = await Promise.all([
+  const [enabled, grants] = await Promise.all([
     isModuleEnabled(workspaceId, "DOCUMENTS"),
-    checkPermissionSilent(session.user.id, workspaceId, "documents.view"),
-    checkPermissionSilent(session.user.id, workspaceId, "documents.settings.manage"),
+    checkPermissionsSilent(session.user.id, workspaceId, [
+      "documents.view",
+      "documents.settings.manage",
+    ]),
   ]);
+  const canView = grants["documents.view"];
+  const canManage = grants["documents.settings.manage"];
 
   if (!enabled || !canView) redirect("/dashboard?moduleDisabled=DOCUMENTS");
 
@@ -79,4 +83,3 @@ export default async function DocumentSettingsPage() {
     </div>
   );
 }
-

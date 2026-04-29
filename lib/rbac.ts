@@ -207,9 +207,26 @@ export async function checkPermissionSilent(
   workspaceId: string,
   permission: Permission,
 ): Promise<boolean> {
+  const grants = await checkPermissionsSilent(userId, workspaceId, [permission]);
+  return grants[permission];
+}
+
+/**
+ * Silent multi-permission check for read-only gating.
+ *
+ * Uses a single role resolution and evaluates all requested permissions in-memory.
+ * This function does NOT emit RBAC denial audit records.
+ */
+export async function checkPermissionsSilent<const TPermission extends Permission>(
+  userId: string,
+  workspaceId: string,
+  permissions: readonly TPermission[],
+): Promise<Record<TPermission, boolean>> {
   const role = await resolveBusinessRole(userId, workspaceId);
-  if (!role) return false;
-  return (DEFAULT_ROLE_PERMISSIONS[role] as readonly string[]).includes(permission);
+  const grantedSet = role ? new Set<string>(DEFAULT_ROLE_PERMISSIONS[role]) : new Set<string>();
+  return Object.fromEntries(
+    permissions.map((permission) => [permission, grantedSet.has(permission)]),
+  ) as Record<TPermission, boolean>;
 }
 
 /**
