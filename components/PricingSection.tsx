@@ -18,7 +18,6 @@ type TierId = "tier-free" | "tier-pro" | "tier-team";
 
 type PricingTier = {
   id: TierId;
-  href: string;
   planId?: PlanId;
   isOneTime?: boolean;
   featured: boolean;
@@ -36,20 +35,17 @@ const pricingRegions: Array<{ code: PricingRegion; label: string }> = [
 const tiers: PricingTier[] = [
   {
     id: "tier-free",
-    href: "/api/auth/signin",
     featured: false,
     icon: Gift,
   },
   {
     id: "tier-pro",
-    href: "/api/auth/signin",
     planId: "pro",
     featured: true,
     icon: Sparkles,
   },
   {
     id: "tier-team",
-    href: "/api/auth/signin",
     planId: "team",
     featured: false,
     icon: Users,
@@ -76,6 +72,8 @@ export default function PricingSection() {
 
   const perPeriod =
     billingCycle === "monthly" ? tp("perMonth") : tp("perYear");
+
+  const cycleParam = billingCycle === "annually" ? "annual" : "monthly";
 
   return (
     <section id="pricing" className="bg-white py-24 dark:bg-zinc-950">
@@ -254,7 +252,15 @@ export default function PricingSection() {
                         : "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-950 dark:hover:bg-zinc-200",
                     )}
                   >
-                    <a href={tier.href}>{cta}</a>
+                    <a
+                      href={
+                        tier.planId
+                          ? `/signup?plan=${tier.planId}&cycle=${cycleParam}&trial=15&source=pricing`
+                          : `/signup?plan=pro&cycle=monthly&trial=15&source=pricing_free`
+                      }
+                    >
+                      {cta}
+                    </a>
                   </Button>
                 </m.div>
               );

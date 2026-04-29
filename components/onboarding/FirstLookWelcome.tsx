@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, Briefcase, LayoutDashboard, Settings2, Sparkles, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { OnboardingPersona } from "@/lib/onboarding";
 
 const firstLookCards = [
   {
@@ -35,7 +36,14 @@ const firstLookCards = [
   },
 ];
 
-export function FirstLookWelcome({ companyName }: { companyName?: string | null }) {
+const personaHeadlines: Record<OnboardingPersona, string> = {
+  ca: "Your compliance workflow is ready. Start with clients, invoices, and filing readiness checks.",
+  agency: "Your agency workflow is ready. Move from first client to retainer billing fast.",
+  freelancer: "Your freelancer workflow is ready. Convert proposals into paid invoices quickly.",
+  contractor: "Your contractor workflow is ready. Track milestones, invoices, and on-site expenses.",
+};
+
+export function FirstLookWelcome({ companyName, persona }: { companyName?: string | null; persona?: OnboardingPersona | null }) {
   return (
     <section className="rounded-2xl border border-indigo-200/60 bg-gradient-to-br from-indigo-50 via-white to-amber-50 p-5 dark:border-indigo-900/50 dark:from-indigo-950/30 dark:via-zinc-900 dark:to-amber-950/20">
       <div className="flex items-start justify-between gap-4">
@@ -48,7 +56,7 @@ export function FirstLookWelcome({ companyName }: { companyName?: string | null 
             {companyName ? `Welcome, ${companyName}` : "Welcome to BabaBuilds ERP"}
           </h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
-            Your workspace is ready. Follow these high-impact actions to unlock the full ERP experience.
+            {persona ? personaHeadlines[persona] : "Your workspace is ready. Follow these high-impact actions to unlock the full ERP experience."}
           </p>
         </div>
         <Button asChild size="sm" className="bg-indigo-600 hover:bg-indigo-500 text-white">

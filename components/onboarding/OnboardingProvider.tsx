@@ -1,7 +1,12 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { ONBOARDING_STEPS, type OnboardingStep, type OnboardingStepId } from "@/lib/onboarding";
+import {
+  ONBOARDING_STEPS,
+  type OnboardingPersona,
+  type OnboardingStep,
+  type OnboardingStepId,
+} from "@/lib/onboarding";
 
 type OnboardingState = {
   steps: OnboardingStep[];
@@ -9,8 +14,10 @@ type OnboardingState = {
   disabled: boolean;
   isFirstLogin: boolean;
   isDemoUser: boolean;
+  persona: OnboardingPersona | null;
   isLoading: boolean;
   completeStep: (stepId: OnboardingStepId) => Promise<void>;
+  setPersona: (persona: OnboardingPersona) => Promise<void>;
   dismiss: () => Promise<void>;
   complete: () => Promise<void>;
 };
@@ -23,6 +30,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   const [disabled, setDisabled] = useState(true);
   const [isFirstLogin, setIsFirstLogin] = useState(false);
   const [isDemoUser, setIsDemoUser] = useState(false);
+  const [persona, setPersonaState] = useState<OnboardingPersona | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const refresh = useCallback(async () => {
@@ -36,6 +44,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       setDisabled(Boolean(data.disabled));
       setIsFirstLogin(Boolean(data.isFirstLogin));
       setIsDemoUser(Boolean(data.isDemoUser));
+      setPersonaState((data.persona as OnboardingPersona | null | undefined) ?? null);
     } finally {
       setIsLoading(false);
     }
@@ -45,19 +54,24 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     void refresh();
   }, [refresh]);
 
-  const updateState = (data: Partial<OnboardingState> & { steps?: OnboardingStep[]; completedSteps?: OnboardingStepId[]; disabled?: boolean; isFirstLogin?: boolean; isDemoUser?: boolean }) => {
+  const updateState = (data: Partial<OnboardingState> & { steps?: OnboardingStep[]; completedSteps?: OnboardingStepId[]; disabled?: boolean; isFirstLogin?: boolean; isDemoUser?: boolean; persona?: OnboardingPersona | null }) => {
     setSteps(data.steps || ONBOARDING_STEPS);
     setCompletedSteps(Array.isArray(data.completedSteps) ? data.completedSteps : []);
     setDisabled(Boolean(data.disabled));
     setIsFirstLogin(Boolean(data.isFirstLogin));
     setIsDemoUser(Boolean(data.isDemoUser));
+    setPersonaState(data.persona ?? null);
   };
 
-  const sendAction = useCallback(async (action: "dismiss" | "complete" | "complete_step", stepId?: OnboardingStepId) => {
+  const sendAction = useCallback(async (input: {
+    action: "dismiss" | "complete" | "complete_step" | "set_persona";
+    stepId?: OnboardingStepId;
+    persona?: OnboardingPersona;
+  }) => {
     const res = await fetch("/api/user/onboarding", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, stepId }),
+      body: JSON.stringify(input),
     });
     if (!res.ok) {
       throw new Error("Failed to save onboarding state");
@@ -72,11 +86,13 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     disabled,
     isFirstLogin,
     isDemoUser,
+    persona,
     isLoading,
-    completeStep: async (stepId) => sendAction("complete_step", stepId),
-    dismiss: async () => sendAction("dismiss"),
-    complete: async () => sendAction("complete"),
-  }), [completedSteps, disabled, isDemoUser, isFirstLogin, isLoading, sendAction, steps]);
+    completeStep: async (stepId) => sendAction({ action: "complete_step", stepId }),
+    setPersona: async (nextPersona) => sendAction({ action: "set_persona", persona: nextPersona }),
+    dismiss: async () => sendAction({ action: "dismiss" }),
+    complete: async () => sendAction({ action: "complete" }),
+  }), [completedSteps, disabled, isDemoUser, isFirstLogin, isLoading, persona, sendAction, steps]);
 
   return <OnboardingContext.Provider value={value}>{children}</OnboardingContext.Provider>;
 }

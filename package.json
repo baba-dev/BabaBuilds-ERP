@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild:partner-kit": "npx tsx scripts/build-partner-kit.ts",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint . && npm run check:kpi-impact",

@@ -14,6 +14,12 @@ dateModified: "2026-04-22"
 
 Use this flow to keep financial records clean and always audit-ready.
 
+<Callout type="info">
+  Tax scope: BabaBuilds provides tax-ready invoicing and compliance workflows. Country-pack verification determines whether filing automation claims are appropriate in your region.
+</Callout>
+
+See also: [Tax Engine Scope & Country-Pack Verification](/help/tax-engine-scope)
+
 <HelpImage src="/help/screenshots/help-expenses-01-overview.png" alt="Expenses page overview" caption="Expenses overview and spend visibility." />
 <HelpImage src="/help/screenshots/help-expenses-02-primary-action.png" alt="Expenses primary actions" caption="Primary controls for logging and classifying expenses." />
 <HelpImage src="/help/screenshots/help-expenses-03-detail.png" alt="Expenses detail section" caption="Detailed expense ledger context." />

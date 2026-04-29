@@ -40,6 +40,9 @@ import { dashboardTypography as ty } from "./dashboard-typography";
 import type { DashboardData, RecentInvoiceRow } from "./types";
 import { useOnboarding } from "@/components/onboarding/OnboardingProvider";
 import { FirstLookWelcome } from "@/components/onboarding/FirstLookWelcome";
+import { PersonaPicker } from "@/components/onboarding/PersonaPicker";
+import { GuidedFlowsHub } from "@/components/dashboard/GuidedFlowsHub";
+import { StartWithRealBusinessCTA } from "@/components/demo/StartWithRealBusinessCTA";
 
 export default function Dashboard() {
   const t = useTranslations("Dashboard");
@@ -63,7 +66,14 @@ export default function Dashboard() {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("erp_getting_started_dismissed") === "1";
   });
-  const { isFirstLogin, disabled: onboardingDisabled, isDemoUser, isLoading: onboardingLoading } = useOnboarding();
+  const {
+    isFirstLogin,
+    disabled: onboardingDisabled,
+    isDemoUser,
+    isLoading: onboardingLoading,
+    persona: onboardingPersona,
+    setPersona,
+  } = useOnboarding();
 
   const { fCurrency, currency } = useFormat();
   const currencySymbol = getCurrencySymbol(currency);
@@ -228,7 +238,32 @@ export default function Dashboard() {
   };
 
   const showDemoUpgradePrompt = searchParams.get("demo") === "1";
+  const [demoActionCount, setDemoActionCount] = useState(0);
+  const [showDemoConversionCta, setShowDemoConversionCta] = useState(false);
   const [setupDetailsOpen, setSetupDetailsOpen] = useState(false);
+  useEffect(() => {
+    if (!showDemoUpgradePrompt || typeof window === "undefined") return;
+    const storedCount = Number(window.localStorage.getItem("demo_action_count") ?? "0");
+    setDemoActionCount(Number.isFinite(storedCount) ? storedCount : 0);
+    setShowDemoConversionCta(window.localStorage.getItem("demo_actions_completed") === "1");
+  }, [showDemoUpgradePrompt]);
+
+  const trackDemoAction = (action: string) => {
+    if (!showDemoUpgradePrompt || typeof window === "undefined") return;
+    const next = demoActionCount + 1;
+    setDemoActionCount(next);
+    window.localStorage.setItem("demo_action_count", String(next));
+    if (next >= 3) {
+      window.localStorage.setItem("demo_actions_completed", "1");
+      setShowDemoConversionCta(true);
+    }
+    if (next <= 3) {
+      toast.success(`Demo progress: ${next}/3 actions`, {
+        description: `You completed: ${action}.`,
+      });
+    }
+  };
+
   const baseYear = new Date().getMonth() >= 3 ? new Date().getFullYear() : new Date().getFullYear() - 1;
   const fyOptions = Array.from({ length: 4 }).map((_, idx) => {
     const year = baseYear - 3 + idx;
@@ -478,17 +513,40 @@ export default function Dashboard() {
                   Interactive demo active
                 </p>
                 <p className="mt-1 text-sm font-semibold text-zinc-800 dark:text-zinc-100">
-                  Like this setup? Start using this setup with your own workspace.
+                  Complete 3 core actions, then move to your real business workspace.
                 </p>
               </div>
-              <Button asChild className="h-10 rounded-xl font-bold">
-                <Link href="/api/auth/signin">Start using this setup</Link>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => trackDemoAction("Opened proposal flow")}>
+                Logged proposal flow
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => trackDemoAction("Opened tax overview")}>
+                Logged tax review
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => trackDemoAction("Opened invoice actions")}>
+                Logged invoice action
               </Button>
             </div>
+            {showDemoConversionCta ? (
+              <StartWithRealBusinessCTA
+                demoTemplate={searchParams.get("demoTemplate") ?? "dm_agency"}
+                actionCount={demoActionCount}
+              />
+            ) : (
+              <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-300">
+                Complete 3 demo actions to unlock a guided "Start with my real business" path.
+              </p>
+            )}
           </div>
         )}
 
-        {showFirstLook && <FirstLookWelcome companyName={orgName} />}
+        {showFirstLook && (
+          <>
+            {!onboardingPersona ? <PersonaPicker /> : null}
+            <FirstLookWelcome companyName={orgName} persona={onboardingPersona} />
+          </>
+        )}
         {/* 2.3 FIX — Getting Started checklist: shows for brand-new workspaces with zero activity */}
         {showGettingStarted && (
           <div className="relative rounded-2xl border border-orange-200 dark:border-orange-800/50 bg-gradient-to-br from-orange-50 to-white dark:from-orange-950/30 dark:to-zinc-900/60 p-5 shadow-sm animate-in fade-in slide-in-from-top-2 duration-500">
@@ -574,6 +632,8 @@ export default function Dashboard() {
         )}
 
         {!d.financialPulse ? <SkeletonBlock className="h-32" /> : <DashboardFinancialPulse financialPulse={d.financialPulse} fCurrency={fCurrency} />}
+
+        <GuidedFlowsHub />
 
         <DashboardCashFlowSummary />
 

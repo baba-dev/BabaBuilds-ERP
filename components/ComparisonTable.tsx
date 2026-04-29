@@ -167,7 +167,7 @@ export default function ComparisonTable() {
                 className="rounded-xl bg-orange-600 font-bold shadow-lg shadow-orange-600/20 hover:bg-orange-700"
               >
                 <Link
-                  href="/api/auth/signin"
+                  href="/signup?plan=pro&cycle=monthly&trial=15&source=comparison"
                   onClick={() =>
                     emitMarketingAnalyticsEvent("marketing_trial_cta_clicked", {
                       location: "comparison_strip",
