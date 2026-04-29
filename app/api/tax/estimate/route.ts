@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { estimateTax, TaxEngineValidationError } from '@/lib/tax/engine';
-import { checkPermission } from '@/lib/rbac';
+import { requirePermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
 import { resolveTaxJurisdictionForWorkspace } from '@/lib/tax/policy';
 import { prisma } from '@/lib/prisma';
 
@@ -35,8 +35,7 @@ export async function POST(request: Request) {
     const userId = session?.user?.id as string | undefined;
     if (!workspaceId || !userId) return NextResponse.json({ error: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' }, { status: 401 });
 
-    const canView = await checkPermission(userId, workspaceId, 'tax.view');
-    if (!canView) return NextResponse.json({ error: 'Forbidden', code: 'RBAC_PERMISSION_DENIED' }, { status: 403 });
+    await requirePermission(userId, workspaceId, 'tax.view');
 
     const payload = (await request.json()) as TaxEstimateScenarioPayload;
     const jurisdiction = await resolveTaxJurisdictionForWorkspace(prisma, workspaceId);
@@ -55,6 +54,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ taxEstimate });
   } catch (error) {
+    if (error instanceof RbacDeniedError) return rbacDeniedResponse(error);
     if (error instanceof TaxEngineValidationError) {
       return NextResponse.json({ error: error.message, code: error.code, ...(error.details ?? {}) }, { status: 422 });
     }
