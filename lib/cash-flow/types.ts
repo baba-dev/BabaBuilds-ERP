@@ -142,6 +142,23 @@ export type ForecastSourceData = {
     invoicePaymentTermsDays: number;
     minimumCashThreshold: number;
   };
+  debug?: {
+    telemetry: {
+      elapsedMs: number;
+      openingCashComputationMs: number;
+      counts: {
+        accounts: number;
+        bankTransactions: number;
+        invoices: number;
+        retainers: number;
+        purchaseOrders: number;
+        manualAdjustments: number;
+        clientPaymentBehaviors: number;
+        payrollTransactions: number;
+        txUpToStart: number;
+      };
+    };
+  };
 };
 
 export type ForecastEngineInput = {
@@ -194,4 +211,3 @@ export type {
   CashForecastScenarioTag,
   CashForecastSourceType,
 };
-
