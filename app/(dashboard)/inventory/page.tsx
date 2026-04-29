@@ -219,7 +219,7 @@ export default function InventoryHub() {
       kpiCard={{
         label: "Total Value",
         value: fCurrency(totalValue),
-        tone: "positive",
+        tone: "default",
       }}
       primaryAction={
         <Button

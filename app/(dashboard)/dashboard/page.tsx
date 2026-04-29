@@ -806,7 +806,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {optionalModuleCards.length > 0 ? (
+        {false ? (
           <Card className="border border-zinc-200 dark:border-zinc-800/70 bg-white dark:bg-zinc-900/40">
             <CardHeader className="pb-3">
               <CardTitle className={ty.sectionTitle}>

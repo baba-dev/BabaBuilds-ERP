@@ -141,6 +141,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
   const [content, setContent] = useState<ShopContentDraft>(EMPTY_CONTENT_DRAFT);
   const [contentInitial, setContentInitial] = useState<ShopContentDraft>(EMPTY_CONTENT_DRAFT);
   const [isSavingContent, setIsSavingContent] = useState(false);
+  const [isStorefrontContentOpen, setIsStorefrontContentOpen] = useState(false);
   const [contentLoadFailed, setContentLoadFailed] = useState(false);
 
   const isContentDirty = useMemo(
@@ -494,7 +495,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
           <>
             <Card className="border-indigo-200/60 dark:border-indigo-800/40 bg-gradient-to-br from-indigo-50/70 to-white dark:from-indigo-950/30 dark:to-zinc-900">
               <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2"><ShoppingCart className="w-3.5 h-3.5" />Total Orders</CardTitle></CardHeader>
-              <CardContent><p className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">{stats.totalOrders}</p></CardContent>
+              <CardContent><p className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">{stats.totalOrders}</p>{stats.totalOrders > 0 ? <p className="text-xs font-semibold uppercase tracking-widest text-indigo-700 dark:text-indigo-400 mt-1">+{stats.totalOrders} vs baseline</p> : null}</CardContent>
             </Card>
             <Card className="border-emerald-200/60 dark:border-emerald-800/40 bg-gradient-to-br from-emerald-50/70 to-white dark:from-emerald-950/20 dark:to-zinc-900">
               <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2"><Wallet className="w-3.5 h-3.5" />Gross Revenue</CardTitle></CardHeader>
@@ -534,7 +535,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
 
       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <Card className="border-zinc-200 dark:border-zinc-800">
-          <CardHeader className="pb-3 flex-row items-start justify-between gap-4 space-y-0">
+          <CardHeader className="pb-3 flex-row items-start justify-between gap-4 space-y-0 cursor-pointer" onClick={() => setIsStorefrontContentOpen((v) => !v)}>
             <CardTitle className="text-sm font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-200">Branding</CardTitle>
             {!abilities.canManageSettings ? (
               <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2 py-1 rounded-md">
@@ -596,7 +597,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
 
         {/* ── STOREFRONT CONTENT EDITOR ─────────────────────────────────── */}
         <Card className="border-zinc-200 dark:border-zinc-800">
-          <CardHeader className="pb-3 flex-row items-start justify-between gap-4 space-y-0">
+          <CardHeader className="pb-3 flex-row items-start justify-between gap-4 space-y-0 cursor-pointer" onClick={() => setIsStorefrontContentOpen((v) => !v)}>
             <div>
               <CardTitle className="text-sm font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-200 flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-indigo-500" /> Storefront Content
@@ -623,7 +624,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="pt-0 space-y-6">
+          {isStorefrontContentOpen ? (<CardContent className="pt-0 space-y-6">
             {contentLoadFailed ? (
               <div className="rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/60 dark:bg-rose-950/20 p-4 text-xs text-rose-700 dark:text-rose-300">
                 Could not load storefront content. You may not have <code>shop.view</code> permission, or the shop module is disabled.
@@ -836,7 +837,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
                 />
               </div>
             </fieldset>
-          </CardContent>
+          </CardContent>) : null}
         </Card>
 
         <div className="flex flex-col md:flex-row items-start md:items-center gap-4 justify-between">

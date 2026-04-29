@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { 
   Users, Plus, Globe, Building2, Mail, Phone, Briefcase, FileText, 
-  Image as ImageIcon, CheckCircle2, Trash2, Pencil, AlertCircle, ChevronLeft, ChevronRight, Loader2 
+  Image as ImageIcon, CheckCircle2, Trash2, Pencil, AlertCircle, ChevronLeft, ChevronRight, Loader2, List, LayoutGrid 
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,7 @@ export default function ClientCRM() {
   // --- NEW: PAGINATION STATE ---
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [viewMode, setViewMode] = useState<"grid"|"list">("grid");
 
   // --- GLOBALIZATION ENGINE ---
   const { 
@@ -444,7 +445,17 @@ export default function ClientCRM() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="flex justify-end">
+              <div className="hidden md:flex bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-1 rounded-xl shadow-sm h-10">
+                <Button variant={viewMode === "list" ? "secondary" : "ghost"} size="sm" onClick={() => setViewMode("list")} className="px-3 h-8 text-xs font-bold uppercase tracking-widest">
+                  <List className="w-4 h-4 mr-1.5" /> List
+                </Button>
+                <Button variant={viewMode === "grid" ? "secondary" : "ghost"} size="sm" onClick={() => setViewMode("grid")} className="px-3 h-8 text-xs font-bold uppercase tracking-widest">
+                  <LayoutGrid className="w-4 h-4 mr-1.5" /> Grid
+                </Button>
+              </div>
+            </div>
+            {viewMode === "grid" ? (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {sortedClients.map((client) => (
                 <Card key={client.id} className="group relative hover:shadow-xl hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-all duration-300 border-border bg-surface-elevated overflow-hidden flex flex-col">
                   <div className="absolute top-4 right-4 flex gap-2 z-10">
@@ -522,7 +533,7 @@ export default function ClientCRM() {
                   </CardContent>
                 </Card>
               ))}
-            </div>
+            </div>) : (<div className="overflow-x-auto rounded-xl border border-border bg-surface-elevated"><table className="min-w-full text-sm"><thead><tr className="text-left text-xs uppercase tracking-widest text-muted-body border-b border-border"><th className="p-3">Client</th><th className="p-3">Country</th><th className="p-3">Email</th><th className="p-3">Phone</th><th className="p-3">Tax ID</th></tr></thead><tbody>{sortedClients.map((client)=>(<tr key={client.id} className="border-b border-border/60"><td className="p-3 font-semibold">{client.name}</td><td className="p-3">{client.country}</td><td className="p-3">{client.email || "—"}</td><td className="p-3">{client.phone || "—"}</td><td className="p-3 font-mono">{client.taxId || "—"}</td></tr>))}</tbody></table></div>)}
 
             {/* --- PAGINATION CONTROLS --- */}
             {totalPages > 1 && (

@@ -30,12 +30,12 @@ export const sidebarItems: SidebarItem[] = [
   { key: "inventory", path: "/inventory", icon: Archive, groupKey: "operations", keywords: ["stock", "products", "warehouse"] },
   { key: "client_crm", path: "/clients", icon: Users, groupKey: "operations", keywords: ["customers", "contacts", "crm"] },
   { key: "quotes_proposals", path: "/proposals", icon: FileSignature, groupKey: "sales", keywords: ["quotes", "deals", "proposals"] },
+  { key: "invoices_and_earnings", path: "/income", icon: ReceiptText, groupKey: "sales", keywords: ["billing", "revenue", "invoices"] },
   { key: "retainers_hub", path: "/retainers", icon: Box, groupKey: "sales", keywords: ["recurring", "contracts", "retainer"] },
   { key: "referrals_rewards", path: "/referrals", icon: Users, groupKey: "sales", keywords: ["affiliate", "reseller", "customer referral"] },
   { key: "expenses_margins", path: "/expenses", icon: Receipt, groupKey: "finance", keywords: ["costs", "purchases", "spend"] },
   { key: "savings_tax", path: "/tax", icon: ShieldCheck, groupKey: "finance", keywords: ["gst", "compliance", "tax"] },
   { key: "ai_reconciliation", path: "/reconciliation", icon: Sparkles, groupKey: "finance", keywords: ["bank", "matching", "ledger"] },
-  { key: "invoices_and_earnings", path: "/income", icon: ReceiptText, groupKey: "finance", keywords: ["billing", "revenue", "invoices"] },
   { key: "ca_compliance", path: "/ca-portal", icon: Landmark, groupKey: "compliance", keywords: ["chartered", "filings", "audit"] },
   { key: "settings", path: "/settings", icon: Settings, groupKey: "workspace", keywords: ["preferences", "team", "configuration"] },
 ];
