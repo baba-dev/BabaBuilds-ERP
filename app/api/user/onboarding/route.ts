@@ -2,7 +2,16 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { ONBOARDING_STEPS, isDemoEmail, parseCompletedSteps, serializeCompletedSteps, type OnboardingStepId } from "@/lib/onboarding";
+import {
+  getOnboardingSteps,
+  ONBOARDING_STEPS,
+  isDemoEmail,
+  parseOnboardingPersona,
+  parseCompletedSteps,
+  serializeCompletedSteps,
+  type OnboardingPersona,
+  type OnboardingStepId,
+} from "@/lib/onboarding";
 
 async function getSessionUser() {
   const session = await getServerSession(authOptions);
@@ -23,11 +32,14 @@ async function ensureOnboarding(userId: string) {
 }
 
 function buildResponse(record: Awaited<ReturnType<typeof ensureOnboarding>>) {
+  const persona = parseOnboardingPersona(record.persona);
+  const steps = getOnboardingSteps(persona);
   const completedSteps = parseCompletedSteps(record.completedSteps);
   const disabled = Boolean(record.dismissedAt || record.completedAt || !record.isFirstLogin);
   return {
-    steps: ONBOARDING_STEPS,
+    steps,
     completedSteps,
+    persona,
     isFirstLogin: record.isFirstLogin,
     disabled,
     dismissedAt: record.dismissedAt,
@@ -45,6 +57,7 @@ export async function GET() {
     return NextResponse.json({
       steps: ONBOARDING_STEPS,
       completedSteps: [],
+      persona: null,
       isFirstLogin: false,
       disabled: true,
       dismissedAt: new Date().toISOString(),
@@ -66,8 +79,9 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Onboarding updates are disabled for demo users." }, { status: 403 });
   }
 
-  const { action, stepId } = await request.json().catch(() => ({}));
+  const { action, stepId, persona } = await request.json().catch(() => ({}));
   const existing = await ensureOnboarding(sessionUser.id);
+  const stepCatalog = getOnboardingSteps(parseOnboardingPersona(existing.persona));
   const now = new Date();
 
   if (action === "dismiss") {
@@ -84,20 +98,35 @@ export async function PATCH(request: Request) {
       data: {
         completedAt: now,
         isFirstLogin: false,
-        completedSteps: serializeCompletedSteps(ONBOARDING_STEPS.map((step) => step.id)),
+        completedSteps: serializeCompletedSteps(stepCatalog.map((step) => step.id)),
+      },
+    });
+    return NextResponse.json(buildResponse(updated));
+  }
+
+  if (action === "set_persona") {
+    const nextPersona: OnboardingPersona | null = parseOnboardingPersona(persona);
+    const updated = await prisma.userOnboarding.update({
+      where: { userId: sessionUser.id },
+      data: {
+        persona: nextPersona,
+        completedSteps: serializeCompletedSteps([]),
+        completedAt: null,
+        dismissedAt: null,
+        isFirstLogin: true,
       },
     });
     return NextResponse.json(buildResponse(updated));
   }
 
   if (action === "complete_step") {
-    if (typeof stepId !== "string" || !ONBOARDING_STEPS.some((step) => step.id === stepId)) {
+    if (typeof stepId !== "string" || !stepCatalog.some((step) => step.id === stepId)) {
       return NextResponse.json({ error: "Invalid stepId" }, { status: 400 });
     }
 
     const parsedSteps = parseCompletedSteps(existing.completedSteps);
     const updatedSteps = Array.from(new Set([...parsedSteps, stepId as OnboardingStepId]));
-    const allDone = updatedSteps.length >= ONBOARDING_STEPS.length;
+    const allDone = updatedSteps.length >= stepCatalog.length;
     const updated = await prisma.userOnboarding.update({
       where: { userId: sessionUser.id },
       data: {

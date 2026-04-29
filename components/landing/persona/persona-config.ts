@@ -33,7 +33,7 @@ export type PersonaConfig = {
 
 const PRIMARY_CTA = {
   label: "Start 15-Day Pro Trial",
-  href: "/api/auth/signin",
+  href: "/signup?plan=pro&cycle=monthly&trial=15&source=persona",
 } as const;
 
 export const personaConfigs: Record<PersonaConfig["slug"], PersonaConfig> = {

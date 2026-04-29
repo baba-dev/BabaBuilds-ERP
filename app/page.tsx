@@ -64,7 +64,7 @@ const faqJsonLd = {
       name: "What is BabaBuilds ERP?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "BabaBuilds ERP is an all-in-one financial management platform for agencies and freelancers. It automates multi-currency invoicing, GST/VAT tax compliance, AI-powered bank reconciliation, retainer tracking, and real-time dashboards.",
+        text: "BabaBuilds ERP is an all-in-one financial management platform for agencies and freelancers. It delivers multi-currency invoicing, tax-ready GST/VAT compliance workflows, AI-powered bank reconciliation, retainer tracking, and real-time dashboards.",
       },
     },
     {

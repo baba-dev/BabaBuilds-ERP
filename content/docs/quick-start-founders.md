@@ -1,12 +1,12 @@
 ---
 title: "Quick Start for Founders (First 60 Minutes)"
-description: "A founder-friendly launch checklist to set up ERP fast, send your first invoice, and activate the most useful modules."
+description: "A founder-friendly launch checklist covering plan-aware signup, persona onboarding, first invoice, and early revenue controls."
 order: 20
 category: "Getting Started"
-tags: ["quick start", "founder", "onboarding", "checklist"]
+tags: ["quick start", "founder", "onboarding", "checklist", "signup", "trial"]
 estimatedMinutes: 8
 isFeatured: true
-dateModified: "2026-04-21"
+dateModified: "2026-04-29"
 ---
 
 # Quick Start for Founders (First 60 Minutes)
@@ -15,6 +15,8 @@ Short on time? Follow this path to go live quickly.
 
 ## Minute 0-15: Business setup
 
+- Start from the plan-aware URL: `/signup?plan=pro&cycle=monthly&trial=15`
+- Pick your onboarding persona (CA, Agency, Freelancer, Contractor)
 - Complete Settings profile
 - Add tax IDs and bank details
 - Upload logo

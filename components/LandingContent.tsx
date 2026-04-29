@@ -117,7 +117,7 @@ export default function LandingContent() {
                   className="relative h-14 gap-2 rounded-2xl px-10 text-base font-black shadow-xl"
                   asChild
                 >
-                  <Link href="/api/auth/signin" onClick={() => trackTrialClick("hero")}>
+                  <Link href="/signup?plan=pro&cycle=monthly&trial=15&source=landing_hero" onClick={() => trackTrialClick("hero")}>
                     {tp1("cta.startTrial")} <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </Button>
@@ -282,7 +282,7 @@ export default function LandingContent() {
               className="h-14 rounded-2xl bg-surface-elevated px-10 text-lg font-black text-foreground shadow-xl hover:bg-white"
               asChild
             >
-              <Link href="/api/auth/signin" onClick={() => trackTrialClick("final_cta")}>
+              <Link href="/signup?plan=pro&cycle=monthly&trial=15&source=landing_final" onClick={() => trackTrialClick("final_cta")}>
                 {tp1("cta.startTrial")}
               </Link>
             </Button>

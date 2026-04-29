@@ -1,5 +1,6 @@
 import { getLocaleDirection } from "@/lib/i18n";
 import { NextAuthOptions } from "next-auth";
+import { cookies } from "next/headers";
 import GoogleProvider from "next-auth/providers/google";
 import EmailProvider from "next-auth/providers/email";
 import CredentialsProvider from "next-auth/providers/credentials";
@@ -9,6 +10,7 @@ import { createTransport } from "nodemailer"; // 1. ADDED IMPORT
 import addressparser from "nodemailer/lib/addressparser";
 import { recordAuthFailure } from "@/lib/auth-observability";
 import { logActivity } from "@/lib/activity-log";
+import { deserializeSignupIntent, SIGNUP_INTENT_COOKIE } from "@/lib/signup-intent";
 import {
   HIGH_RISK_MAGIC_LINK_ERROR_CODE,
   hasHighRiskRole,
@@ -19,6 +21,11 @@ import {
 
 const LOGIN_ROUTE = "/login";
 const CANONICAL_DASHBOARD_ROUTE = "/dashboard";
+
+async function getSignupIntent() {
+  const store = await cookies();
+  return deserializeSignupIntent(store.get(SIGNUP_INTENT_COOKIE)?.value);
+}
 
 declare module "next-auth" {
   interface Session {
@@ -421,7 +428,8 @@ export const authOptions: NextAuthOptions = {
         });
         if (existingMembership?.workspaceId) return existingMembership.workspaceId;
 
-        const trialDays = 14;
+        const signupIntent = await getSignupIntent();
+        const trialDays = signupIntent?.trial ?? 15;
         const trialEndDate = new Date();
         trialEndDate.setDate(trialEndDate.getDate() + trialDays);
 
@@ -430,10 +438,19 @@ export const authOptions: NextAuthOptions = {
             name: `${input.name?.split(" ")[0] || input.email?.split("@")[0] || "My"} Business`,
             subscriptionStatus: "TRIALING",
             subscriptionEndsAt: trialEndDate,
+            signupIntentJson: signupIntent ? JSON.stringify(signupIntent) : null,
             users: { create: { userId: input.id, role: "OWNER" } },
           },
           select: { id: true },
         });
+
+        if (signupIntent?.persona) {
+          await prisma.userOnboarding.upsert({
+            where: { userId: input.id },
+            create: { userId: input.id, persona: signupIntent.persona },
+            update: { persona: signupIntent.persona },
+          });
+        }
 
         logActivity({
           action: "workspace_bootstrap",
@@ -590,7 +607,8 @@ export const authOptions: NextAuthOptions = {
     async createUser({ user }) {
       if (user.email?.endsWith('@bababuilds.demo')) return;
 
-      const trialDays = 14;
+      const signupIntent = await getSignupIntent();
+      const trialDays = signupIntent?.trial ?? 15;
       const trialEndDate = new Date();
       trialEndDate.setDate(trialEndDate.getDate() + trialDays);
 
@@ -600,9 +618,18 @@ export const authOptions: NextAuthOptions = {
             name: `${user.name?.split(' ')[0] || user.email?.split('@')[0] || 'My'} Business`, 
             subscriptionStatus: "TRIALING",
             subscriptionEndsAt: trialEndDate, 
+            signupIntentJson: signupIntent ? JSON.stringify(signupIntent) : null,
             users: { create: { userId: user.id, role: "OWNER" } }
           }
         });
+
+        if (signupIntent?.persona) {
+          await prisma.userOnboarding.upsert({
+            where: { userId: user.id },
+            create: { userId: user.id, persona: signupIntent.persona },
+            update: { persona: signupIntent.persona },
+          });
+        }
 
         logActivity({
           action: "workspace_bootstrap",

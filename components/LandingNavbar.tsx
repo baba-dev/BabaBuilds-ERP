@@ -162,7 +162,7 @@ export default function LandingNavbar() {
                 className="bg-zinc-900 dark:bg-zinc-50 dark:text-zinc-950 text-white hover:bg-zinc-800 dark:hover:bg-zinc-200 rounded-xl font-bold"
               >
                 <Link
-                  href="/api/auth/signin"
+                  href="/signup?plan=pro&cycle=monthly&trial=15&source=navbar"
                   onClick={() =>
                     emitMarketingAnalyticsEvent("trial_cta_click", {
                       source: "navbar",
@@ -261,7 +261,7 @@ export default function LandingNavbar() {
                   className="w-full bg-zinc-900 dark:bg-zinc-50 dark:text-zinc-950 text-white rounded-xl font-bold py-6"
                 >
                   <Link
-                    href="/api/auth/signin"
+                    href="/signup?plan=pro&cycle=monthly&trial=15&source=mobile_navbar"
                     onClick={() =>
                       emitMarketingAnalyticsEvent("trial_cta_click", {
                         source: "mobile_navbar",

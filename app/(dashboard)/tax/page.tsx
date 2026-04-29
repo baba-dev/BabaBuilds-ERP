@@ -26,6 +26,8 @@ import { ColumnVisibilityToggle, DataTable, DataTableToolbar, useUrlTableState, 
 import { TaxOverrideModal, type TaxOverrideWindow } from "@/components/tax/tax-override-modal";
 import { TaxComplianceOps } from "@/components/tax/tax-compliance-ops";
 import { TaxHubOverview } from "@/components/tax/tax-hub-overview";
+import { TaxScopeNotice } from "@/components/tax/TaxScopeNotice";
+import { getCountryPackVerificationStatus } from "@/lib/tax/country-pack-status";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
@@ -88,6 +90,7 @@ export default function WealthAndTaxPlanner() {
   
   const currencySymbol = getCurrencySymbol(currency, locale);
   const safeDateFormat = (dateFormat ?? "dd/MM/yyyy").replace(/D/g, 'd').replace(/Y/g, 'y');
+  const taxScopeStatus = getCountryPackVerificationStatus(countryCode);
 
   // Form State
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -338,6 +341,7 @@ export default function WealthAndTaxPlanner() {
       description={tr("description", "Plan your {taxLabel} and savings.", { taxLabel })}
       animated={false}
     >
+      <TaxScopeNotice status={taxScopeStatus} />
       <Tabs defaultValue={taxAdvancedEnabled ? "overview" : "planner"} className="w-full space-y-6">
         <TabsList className="flex w-full flex-wrap justify-start gap-1 bg-zinc-100/80 p-1 dark:bg-zinc-900/80">
           <TabsTrigger value="overview" className="text-xs font-semibold">

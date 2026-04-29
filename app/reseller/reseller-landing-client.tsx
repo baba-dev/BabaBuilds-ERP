@@ -47,10 +47,12 @@ const partnerTypes = [
 ];
 
 const supportItems = [
-  "Sales decks, objection handling scripts, and ROI calculator",
-  "Co-branded launch assets and onboarding checklist",
-  "Enablement sessions with live product walkthroughs",
-  "Dedicated partner support channel with priority turnaround",
+  { label: "Downloadable sales deck", href: "/api/reseller/partner-kit/sales-deck.pdf" },
+  { label: "One-page pricing sheet", href: "/api/reseller/partner-kit/pricing-sheet.pdf" },
+  { label: "WhatsApp outreach script", href: "/api/reseller/partner-kit/whatsapp-script.pdf" },
+  { label: "Objection handling sheet", href: "/api/reseller/partner-kit/objection-sheet.pdf" },
+  { label: "Onboarding checklist", href: "/api/reseller/partner-kit/onboarding-checklist.pdf" },
+  { label: "Live ROI calculator + partner resources", href: "/reseller/partner-kit" },
 ];
 
 type CouponState = {
@@ -215,7 +217,7 @@ export default function ResellerLandingClient() {
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button asChild className="h-12 gap-2 rounded-2xl px-7 font-black">
-                  <Link href="/api/auth/signin">
+                  <Link href="/signup?plan=pro&cycle=monthly&trial=15&source=reseller_hero">
                     Apply as Reseller <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
@@ -350,6 +352,9 @@ export default function ResellerLandingClient() {
                   <Button asChild className="h-12 w-full rounded-2xl font-black">
                     <Link href={checkoutHref}>Continue to Secure Checkout</Link>
                   </Button>
+                  <Button asChild variant="outline" className="h-11 w-full rounded-2xl font-bold">
+                    <Link href="/reseller/partner-kit">Download partner kit</Link>
+                  </Button>
                 </CardContent>
               </Card>
             </m.div>
@@ -378,7 +383,17 @@ export default function ResellerLandingClient() {
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-body">
                 {supportItems.map((item) => (
-                  <p key={item} className="leading-relaxed">• {item}</p>
+                  <p key={item.href} className="leading-relaxed">
+                    •{" "}
+                    <Link
+                      href={item.href}
+                      className="font-semibold text-foreground underline-offset-4 hover:text-orange-600 hover:underline"
+                      target={item.href.endsWith(".pdf") ? "_blank" : undefined}
+                      rel={item.href.endsWith(".pdf") ? "noopener noreferrer" : undefined}
+                    >
+                      {item.label}
+                    </Link>
+                  </p>
                 ))}
               </CardContent>
             </Card>

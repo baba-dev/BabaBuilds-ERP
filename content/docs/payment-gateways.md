@@ -33,6 +33,8 @@ Enable online collections by connecting your payment gateway in Settings.
 4. Paste credentials
 5. Save configuration
 
+If you started from pricing, your signup path now keeps plan intent (`/signup?plan=...&cycle=...&trial=...`) so billing setup lands in the right context after onboarding.
+
 ---
 
 ## Razorpay setup

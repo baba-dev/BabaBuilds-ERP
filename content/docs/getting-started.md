@@ -1,13 +1,13 @@
 ---
 title: "Getting Started with BabaBuilds ERP"
-description: "Onboarding walkthrough from first login to first invoice, with practical setup order for faster go-live."
+description: "Onboarding walkthrough from plan-aware signup to first invoice, with persona-specific setup guidance."
 order: 1
 category: "Getting Started"
-tags: ["onboarding", "setup", "workspace", "first invoice"]
+tags: ["onboarding", "setup", "workspace", "first invoice", "signup"]
 estimatedMinutes: 8
 isFeatured: true
 icon: "Rocket"
-dateModified: "2026-04-21"
+dateModified: "2026-04-29"
 ---
 
 # Getting Started with BabaBuilds ERP
@@ -24,14 +24,14 @@ Welcome to BabaBuilds ERP. This guide helps you go from a new workspace to your 
 
 ---
 
-## Step 1 — Sign in and confirm workspace
+## Step 1 — Start from plan-aware signup
 
 <Steps>
-  <Step title="Log in to ERP">
-    Open **erp.bababuilds.com** and sign in.
+  <Step title="Choose plan + trial intent">
+    Start from a plan-aware URL such as **/signup?plan=pro&cycle=monthly&trial=15**. This preserves your selected billing intent during authentication.
   </Step>
-  <Step title="Confirm workspace">
-    If you manage multiple brands, verify the active workspace before entering data.
+  <Step title="Complete secure sign-in">
+    Continue through **/login** and confirm your workspace context before entering records.
   </Step>
 </Steps>
 
@@ -39,9 +39,9 @@ Welcome to BabaBuilds ERP. This guide helps you go from a new workspace to your 
 
 ---
 
-## Step 2 — Complete Settings first
+## Step 2 — Pick onboarding persona and complete Settings
 
-Open **Settings** and complete:
+On first dashboard load, choose your persona (CA, Agency, Freelancer, or Contractor) to get a guided money-task path. Then open **Settings** and complete:
 
 - Company identity and logo
 - Tax and compliance IDs
@@ -89,6 +89,14 @@ Common rollout order:
 4. Payroll + Workforce
 
 See: [Optional Sub Systems — Overview](/help/optional-sub-systems-overview)
+
+---
+
+## Related guides for launch workflows
+
+- [Personalized onboarding and money-task paths](/help/personalized-onboarding)
+- [Guided money flows in the dashboard](/help/guided-money-flows)
+- [Demo to real business migration path](/help/demo-to-real-business)
 
 ---
 
