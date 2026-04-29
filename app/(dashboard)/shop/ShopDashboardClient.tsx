@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   AlertCircle,
   Bot,
+  ChevronDown,
   Check,
   Clock,
   ExternalLink,
@@ -136,6 +137,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
   const [dataSegment, setDataSegment] = useState<DataSegment>("ALL");
   const [orderSearch, setOrderSearch] = useState("");
   const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
+  const [isStorefrontContentExpanded, setIsStorefrontContentExpanded] = useState(false);
 
   // Storefront content blocks (About, Social, FAQ, Announcement, AI Assist)
   const [content, setContent] = useState<ShopContentDraft>(EMPTY_CONTENT_DRAFT);
@@ -374,6 +376,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
     FAILED: { label: "Failed", className: "bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-400", icon: <X className="w-3 h-3" /> },
     REFUNDED: { label: "Refunded", className: "bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-400", icon: <AlertCircle className="w-3 h-3" /> },
   };
+  const orderCompletionPct = stats.totalOrders > 0 ? Math.round((stats.paidOrders / stats.totalOrders) * 100) : 0;
 
   const getEmptyState = () => {
     if (orderSearch.trim()) {
@@ -494,7 +497,12 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
           <>
             <Card className="border-indigo-200/60 dark:border-indigo-800/40 bg-gradient-to-br from-indigo-50/70 to-white dark:from-indigo-950/30 dark:to-zinc-900">
               <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2"><ShoppingCart className="w-3.5 h-3.5" />Total Orders</CardTitle></CardHeader>
-              <CardContent><p className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">{stats.totalOrders}</p></CardContent>
+              <CardContent>
+                <p className="text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">{stats.totalOrders}</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-indigo-700 dark:text-indigo-300 mt-1">
+                  {orderCompletionPct}% paid conversion
+                </p>
+              </CardContent>
             </Card>
             <Card className="border-emerald-200/60 dark:border-emerald-800/40 bg-gradient-to-br from-emerald-50/70 to-white dark:from-emerald-950/20 dark:to-zinc-900">
               <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2"><Wallet className="w-3.5 h-3.5" />Gross Revenue</CardTitle></CardHeader>
@@ -606,6 +614,16 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setIsStorefrontContentExpanded((prev) => !prev)}
+                className="h-9 text-xs font-bold uppercase tracking-wider"
+              >
+                {isStorefrontContentExpanded ? "Collapse" : "Expand"}
+                <ChevronDown className={`ml-1 h-3.5 w-3.5 transition-transform ${isStorefrontContentExpanded ? "rotate-180" : ""}`} />
+              </Button>
               {!abilities.canManageContent ? (
                 <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2 py-1 rounded-md">
                   <Lock className="w-3 h-3" /> Read-only
@@ -623,6 +641,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
               </Button>
             </div>
           </CardHeader>
+          {isStorefrontContentExpanded ? (
           <CardContent className="pt-0 space-y-6">
             {contentLoadFailed ? (
               <div className="rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/60 dark:bg-rose-950/20 p-4 text-xs text-rose-700 dark:text-rose-300">
@@ -837,6 +856,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
               </div>
             </fieldset>
           </CardContent>
+          ) : null}
         </Card>
 
         <div className="flex flex-col md:flex-row items-start md:items-center gap-4 justify-between">

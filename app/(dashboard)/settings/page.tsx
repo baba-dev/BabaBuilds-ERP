@@ -1102,34 +1102,6 @@ export default function SettingsWizard() {
             </CardContent>
           </Card>
 
-          {/* TEAM COLLABORATION → link to dedicated Team & Access page */}
-          <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-            <CardContent className="pt-6 pb-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl flex items-center justify-center flex-shrink-0 border border-indigo-200 dark:border-indigo-900/40">
-                  <Users className="w-6 h-6 text-indigo-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className={cn(typography.sectionHeader, "text-base flex items-center gap-2")}>
-                    Team &amp; Access Management
-                  </h3>
-                  <p className={cn(typography.bodyCopy, "mt-0.5")}>
-                    Invite members, assign business roles, manage seats, view access activity, and review governance readiness.
-                  </p>
-                </div>
-                <a
-                  href="/settings/team"
-                  className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors shadow-sm shadow-indigo-600/20"
-                >
-                  <Users className="w-4 h-4" />
-                  Manage Team
-                  <ArrowRight className="w-4 h-4" />
-                </a>
-              </div>
-            </CardContent>
-          </Card>
-
-
           <PWASettings />
 
           {/* ─── WORKSPACE MODULES ─────────────────────────────────────── */}
@@ -1868,6 +1840,33 @@ export default function SettingsWizard() {
             </CardContent>
           </Card>
 
+          {/* TEAM COLLABORATION → link to dedicated Team & Access page */}
+          <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+            <CardContent className="pt-6 pb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl flex items-center justify-center flex-shrink-0 border border-indigo-200 dark:border-indigo-900/40">
+                  <Users className="w-6 h-6 text-indigo-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className={cn(typography.sectionHeader, "text-base flex items-center gap-2")}>
+                    Team &amp; Access Management
+                  </h3>
+                  <p className={cn(typography.bodyCopy, "mt-0.5")}>
+                    Invite members, assign business roles, manage seats, view access activity, and review governance readiness.
+                  </p>
+                </div>
+                <a
+                  href="/settings/team"
+                  className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors shadow-sm shadow-indigo-600/20"
+                >
+                  <Users className="w-4 h-4" />
+                  Manage Team
+                  <ArrowRight className="w-4 h-4" />
+                </a>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Disable Workforce Confirmation Dialog */}
           <Dialog open={showDisableConfirm} onOpenChange={setShowDisableConfirm}>
             <DialogContent className="sm:max-w-md bg-zinc-950 border-white/10">
@@ -2273,8 +2272,8 @@ export default function SettingsWizard() {
           </Dialog>
 
           {/* STICKY SAVE FOOTER */}
-          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200/80 bg-zinc-50/95 px-4 py-3 backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-950/95 md:px-8">
-            <div className="mx-auto w-full max-w-5xl">
+          <div className="sticky bottom-0 z-40 border-t border-zinc-200/80 bg-zinc-50/95 px-0 py-3 backdrop-blur-md dark:border-zinc-800/80 dark:bg-zinc-950/95">
+            <div className="mx-auto w-full max-w-4xl">
               <FormSubmitBar
                 isSubmitting={isSubmitting}
                 submitText={t('save_button')}
@@ -2284,7 +2283,7 @@ export default function SettingsWizard() {
                     <CheckCircle2 className="w-4 h-4" /> {t("profile_saved")}
                   </span>
                 ) : t("description")}
-                className="rounded-2xl border border-zinc-200 bg-white/95 shadow-xl transition-all duration-300 hover:border-indigo-500/30 dark:border-zinc-800 dark:bg-zinc-900/95"
+                className="rounded-2xl border border-zinc-200 bg-white/95 shadow-xl transition-all duration-300 hover:border-indigo-500/30 dark:border-zinc-800 dark:bg-zinc-900/95 px-4 py-3"
               />
               <FormFieldMessages helpText={isSubmitting ? t("actions.saving") : undefined} className="px-2 pt-2" />
             </div>

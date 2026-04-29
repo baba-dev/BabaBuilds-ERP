@@ -50,6 +50,12 @@ interface ProposalItem {
   unitPrice: number;
 }
 
+interface ProposalMediaItem {
+  type: "image" | "video";
+  url: string;
+  title?: string;
+}
+
 interface Proposal {
   id: string;
   proposalNo: string;
@@ -63,6 +69,7 @@ interface Proposal {
   status: 'DRAFT' | 'SENT' | 'ACCEPTED' | 'INVOICED';
   items: ProposalItem[];
   publicToken?: string;
+  richMedia: ProposalMediaItem[];
 }
 
 export default function ProposalsEngine() {
@@ -90,6 +97,7 @@ export default function ProposalsEngine() {
   const [clientId, setClientId] = useState("");
   const [validUntil, setValidUntil] = useState(format(addDays(new Date(), 14), 'yyyy-MM-dd')); 
   const [items, setItems] = useState<ProposalItem[]>([]);
+  const [richMedia, setRichMedia] = useState<ProposalMediaItem[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -305,13 +313,13 @@ export default function ProposalsEngine() {
       const res = await fetch('/api/proposals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientId, title, validUntil, items })
+        body: JSON.stringify({ clientId, title, validUntil, items, richMedia })
       });
       const payload = await res.json().catch(() => ({}));
       if (res.ok) {
         toast.success("Proposal created successfully!", { id: toastId });
         setView('list');
-        setTitle(""); setClientId(""); setItems([]);
+        setTitle(""); setClientId(""); setItems([]); setRichMedia([]);
       } else if (res.status === 422 && payload?.code === "TAX_RATE_REQUIRED") {
         setTaxRateMeta({
           taxLabel: payload.taxLabel,
@@ -338,7 +346,7 @@ export default function ProposalsEngine() {
       const res = await fetch('/api/proposals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientId, title, validUntil, items, taxRateOverride: Number(taxRateInput) })
+        body: JSON.stringify({ clientId, title, validUntil, items, richMedia, taxRateOverride: Number(taxRateInput) })
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(payload?.error || "Failed to save proposal.");
@@ -346,7 +354,7 @@ export default function ProposalsEngine() {
       setTaxRateModalOpen(false);
       setTaxRateInput("");
       setView('list');
-      setTitle(""); setClientId(""); setItems([]);
+      setTitle(""); setClientId(""); setItems([]); setRichMedia([]);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to save proposal";
       toast.error(msg, { id: toastId });
@@ -495,6 +503,22 @@ export default function ProposalsEngine() {
         <p className="text-xl font-bold text-zinc-900 dark:text-zinc-50">{fCurrency(grandTotal)}</p>
       </div>
     );
+  };
+
+  const addRichMedia = () => {
+    setRichMedia((prev) => [...prev, { type: "image", url: "", title: "" }]);
+  };
+
+  const updateRichMedia = (index: number, key: keyof ProposalMediaItem, value: string) => {
+    setRichMedia((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [key]: value };
+      return next;
+    });
+  };
+
+  const removeRichMedia = (index: number) => {
+    setRichMedia((prev) => prev.filter((_, i) => i !== index));
   };
 
   const renderBuilderContent = () => (
@@ -662,6 +686,59 @@ export default function ProposalsEngine() {
                   )}
                   <Button type="button" variant="outline" onClick={handleAddItem} className="w-full border-dashed border-2 text-zinc-500 dark:text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 border-zinc-200 hover:border-indigo-200 dark:hover:border-indigo-800/60 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/10 bg-zinc-50/50 dark:bg-zinc-900/30 dark:border-zinc-800 text-xs font-bold uppercase tracking-widest mt-4 h-12 transition-all active:scale-[0.99]">
                     <Plus className="w-4 h-4 mr-2" /> {t('add_item')}
+                  </Button>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-sm font-extrabold uppercase tracking-widest text-zinc-900 dark:text-zinc-50 border-b border-zinc-100 dark:border-zinc-800/80 pb-3">
+                    Rich media (optional)
+                  </h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    Add media URLs to provide context and visual references directly in the shared proposal.
+                  </p>
+                  <div className="space-y-3">
+                    {richMedia.map((media, index) => (
+                      <div key={`${media.url}-${index}`} className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800/80 bg-zinc-50/70 dark:bg-zinc-950/30">
+                        <div className="md:col-span-2">
+                          <Label className="text-xs uppercase font-bold tracking-widest text-zinc-500 dark:text-zinc-400">Type</Label>
+                          <select
+                            value={media.type}
+                            onChange={(e) => updateRichMedia(index, "type", e.target.value)}
+                            className="mt-1 flex h-10 w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-900"
+                          >
+                            <option value="image">Image</option>
+                            <option value="video">Video</option>
+                          </select>
+                        </div>
+                        <div className="md:col-span-4">
+                          <Label className="text-xs uppercase font-bold tracking-widest text-zinc-500 dark:text-zinc-400">Title</Label>
+                          <Input
+                            value={media.title ?? ""}
+                            onChange={(e) => updateRichMedia(index, "title", e.target.value)}
+                            placeholder="Moodboard, reference, demo..."
+                            className="mt-1 h-10"
+                          />
+                        </div>
+                        <div className="md:col-span-5">
+                          <Label className="text-xs uppercase font-bold tracking-widest text-zinc-500 dark:text-zinc-400">Media URL</Label>
+                          <Input
+                            type="url"
+                            value={media.url}
+                            onChange={(e) => updateRichMedia(index, "url", e.target.value)}
+                            placeholder="https://..."
+                            className="mt-1 h-10"
+                          />
+                        </div>
+                        <div className="md:col-span-1 flex items-end">
+                          <Button type="button" variant="outline" onClick={() => removeRichMedia(index)} className="w-full h-10">
+                            <Trash2 className="w-4 h-4 text-rose-500" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <Button type="button" variant="outline" onClick={addRichMedia} className="text-xs font-bold uppercase tracking-widest">
+                    <Plus className="w-4 h-4 mr-2" /> Add media reference
                   </Button>
                 </div>
 

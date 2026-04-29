@@ -58,6 +58,7 @@ const navItems: NavItem[] = [
   { id: "service_catalog", label: "service_catalog", href: "/services", icon: "serviceCatalog", group: "Start Here", keywords: ["services", "catalog"], pinnable: true },
 
   { id: "quotes_proposals", label: "quotes_proposals", href: "/proposals", icon: "quotesAndProposals", group: "Setup Business", keywords: ["quotes", "proposals"], pinnable: true },
+  { id: "invoices_and_earnings", label: "invoices_and_earnings", href: "/income", icon: "invoicesAndEarnings", group: "Setup Business", keywords: ["income", "invoices"], badgeSource: "invoices_and_earnings", pinnable: true },
   { id: "shop", label: "shop", href: "/shop", icon: "shop", group: "Setup Business", moduleKey: "SHOP", keywords: ["store", "shop"], pinnable: true },
   { id: "import_manager", label: "import_manager", href: "/import-manager", icon: "serviceCatalog", group: "Setup Business", moduleKey: "IMPORT_MANAGER", keywords: ["import", "csv", "xlsx"], pinnable: false },
 
@@ -66,7 +67,6 @@ const navItems: NavItem[] = [
   { id: "workforce", label: "workforce", href: "/workforce", icon: "clientCrm", group: "Run Operations", moduleKey: "WORKFORCE", keywords: ["employees", "attendance", "leave"], pinnable: true },
   { id: "retainers_hub", label: "retainers_hub", href: "/retainers", icon: "retainersHub", group: "Run Operations", keywords: ["retainers", "mrr"], pinnable: true },
 
-  { id: "invoices_and_earnings", label: "invoices_and_earnings", href: "/income", icon: "invoicesAndEarnings", group: "Get Paid & Track Money", keywords: ["income", "invoices"], badgeSource: "invoices_and_earnings", pinnable: true },
   { id: "reporting_center", label: "reporting_center", href: "/reporting", icon: "reportingCenter", group: "Get Paid & Track Money", moduleKey: "REPORTING_CENTER", keywords: ["reports", "analytics", "reporting"], pinnable: true },
   { id: "expenses_margins", label: "expenses_margins", href: "/expenses", icon: "expensesAndMargins", group: "Get Paid & Track Money", keywords: ["expenses", "margins"], pinnable: true },
   { id: "ai_reconciliation", label: "ai_reconciliation", href: "/reconciliation", icon: "aiReconciliation", group: "Get Paid & Track Money", featureFlag: "aiReconciliation", keywords: ["bank", "reconcile"], pinnable: true },
