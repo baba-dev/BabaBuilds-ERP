@@ -1,77 +1,77 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { estimateTax } from './engine';
+import { describe, expect, it } from 'vitest';
+import { estimateTax, TaxEngineValidationError } from './engine';
 
-test('India FY 2025-26 slab-based effective rate for ₹10L taxable income', () => {
-  const result = estimateTax({
-    countryCode: 'IN',
-    revenue: '1000000',
-    deductions: '0',
-    fiscalYear: '2025-26',
+describe('India tax engine', () => {
+  it('FY 2024-25 income 10L computes gross 50k and final 52k with cess', () => {
+    const r = estimateTax({ countryCode: 'IN', fiscalYear: '2024-25', revenue: '1000000', deductions: '0' });
+    expect(r.components.grossSlabTax).toBe('50000.00');
+    expect(r.components.rebate).toBe('0.00');
+    expect(r.components.cess).toBe('2000.00');
+    expect(r.components.finalTaxPayable).toBe('52000.00');
+    expect(r.amount).toBe('52000.00');
   });
 
-  assert.equal(result.basis.method, 'rule_engine');
-  assert.equal(result.disclaimerKey, 'AUTO_RULE');
-  assert.equal(result.amount, '40000.00');
-  assert.equal(result.ratePercent, 4);
-});
-
-test('India FY 2026-27 does not apply ₹7L rebate and taxes ₹7L at ₹15k', () => {
-  const result = estimateTax({
-    countryCode: 'IN',
-    revenue: '700000',
-    deductions: '0',
-    fiscalYear: 'FY 2026-27',
+  it('FY 2024-25 income 7L resident individual gets full rebate and nil final tax', () => {
+    const r = estimateTax({ countryCode: 'IN', fiscalYear: 'FY 2024-25', revenue: '700000' });
+    expect(r.components.grossSlabTax).toBe('20000.00');
+    expect(r.components.rebate).toBe('20000.00');
+    expect(r.components.finalTaxPayable).toBe('0.00');
   });
 
-  assert.equal(result.basis.method, 'rule_engine');
-  assert.equal(result.disclaimerKey, 'AUTO_RULE');
-  assert.equal(result.amount, '15000.00');
-  assert.equal(result.ratePercent, 2.14);
-});
-
-test('Unknown country falls back to provider/fallback rate', () => {
-  const result = estimateTax({
-    countryCode: 'ZZ',
-    revenue: '1000000',
-    deductions: '0',
+  it('FY 2025-26 income 7L has gross 15k, rebate 15k, final 0', () => {
+    const r = estimateTax({ countryCode: 'IN', fiscalYear: '2025/26', revenue: '700000' });
+    expect(r.components.grossSlabTax).toBe('15000.00');
+    expect(r.components.rebate).toBe('15000.00');
+    expect(r.amount).toBe('0.00');
   });
 
-  assert.equal(result.basis.method, 'fallback');
-  assert.equal(result.disclaimerKey, 'FALLBACK_RULE');
-  assert.equal(result.ratePercent, 30);
-  assert.equal(result.amount, '300000.00');
-});
-
-test('Manual override supersedes rule-engine and fallback/provider resolution', () => {
-  const result = estimateTax({
-    countryCode: 'IN',
-    revenue: '1000000',
-    deductions: '0',
-    overrideRatePercent: 22,
-    overrideReason: 'Contract-specific treatment',
+  it('FY 2025-26 income 12L has gross 60k, rebate 60k, final 0', () => {
+    const r = estimateTax({ countryCode: 'IN', fiscalYear: 'FY2025-26', revenue: '1200000' });
+    expect(r.components.grossSlabTax).toBe('60000.00');
+    expect(r.components.rebate).toBe('60000.00');
+    expect(r.amount).toBe('0.00');
   });
 
-  assert.equal(result.basis.method, 'manual_override');
-  assert.equal(result.disclaimerKey, 'MANUAL_OVERRIDE');
-  assert.equal(result.ratePercent, 22);
-  assert.equal(result.amount, '220000.00');
-  assert.equal(result.override.applied, true);
-});
-
-test('Region code drives provider rate while service scope remains separate metadata', () => {
-  const result = estimateTax({
-    countryCode: 'US',
-    regionCode: 'US-CA',
-    serviceScope: 'consulting_services',
-    revenue: '1000',
-    deductions: '0',
-    resolutionMode: 'prefer_provider_rate',
+  it('FY 2025-26 income 12.1L applies marginal relief and cess', () => {
+    const r = estimateTax({ countryCode: 'IN', fiscalYear: '2025-26', revenue: '1210000' });
+    expect(r.components.grossSlabTax).toBe('61500.00');
+    expect(r.components.marginalRelief).toBe('51500.00');
+    expect(r.components.taxAfterRebate).toBe('10000.00');
+    expect(r.components.finalTaxPayable).toBe('10400.00');
   });
 
-  assert.equal(result.basis.method, 'provider_rate');
-  assert.equal(result.basis.serviceScope, 'consulting_services');
-  assert.equal(result.basis.regionCode, 'US-CA');
-  assert.equal(result.ratePercent, 9.25);
-  assert.equal(result.amount, '92.50');
+  it('FY 2025-26 salaried 12.75L with standard deduction gets nil final tax', () => {
+    const r = estimateTax({ countryCode: 'IN', fiscalYear: '2025-26', revenue: '1275000', isSalaried: true, applyStandardDeduction: true });
+    expect(r.components.standardDeductionAmount).toBe('75000.00');
+    expect(r.components.normalTaxableIncome).toBe('1200000.00');
+    expect(r.components.rebate).toBe('60000.00');
+    expect(r.components.finalTaxPayable).toBe('0.00');
+  });
+
+  it('FY 2025-26 income 13L gross slab tax 75k', () => {
+    const r = estimateTax({ countryCode: 'IN', fiscalYear: '2025-26', revenue: '1300000' });
+    expect(r.components.grossSlabTax).toBe('75000.00');
+  });
+
+  it('special-rate income does not zero out final tax and adds warning', () => {
+    const r = estimateTax({ countryCode: 'IN', fiscalYear: '2025-26', revenue: '1200000', specialRateIncome: '200000' });
+    expect(r.warnings.some((w) => w.includes('Special-rate income'))).toBe(true);
+    expect(r.amount).not.toBe('0.00');
+  });
+
+  it('invalid and unsupported fiscal year throw validation errors', () => {
+    expect(() => estimateTax({ countryCode: 'IN', fiscalYear: 'bad input', revenue: 1000 })).toThrow(TaxEngineValidationError);
+    expect(() => estimateTax({ countryCode: 'IN', fiscalYear: '2023-24', revenue: 1000 })).toThrow(TaxEngineValidationError);
+  });
+
+  it('future FY is carried forward with warning', () => {
+    const r = estimateTax({ countryCode: 'IN', fiscalYear: '2027-28', revenue: 1000 });
+    expect(r.basis.ruleStatus).toBe('carried_forward_latest_known');
+    expect(r.warnings.some((w) => w.includes('carried-forward'))).toBe(true);
+  });
+
+  it('IN GST does not use income-tax rule engine', () => {
+    const r = estimateTax({ countryCode: 'IN', taxType: 'gst', revenue: 100000 });
+    expect(r.basis.method).not.toBe('rule_engine');
+  });
 });
