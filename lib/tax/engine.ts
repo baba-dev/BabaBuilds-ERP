@@ -26,7 +26,12 @@ export interface TaxEstimateResult { amount: string; ratePercent: number | null;
 
 const dec0 = new Prisma.Decimal(0);
 const emptyComponents = (amount = dec0): TaxEstimateComponents => ({ grossSlabTax: '0.00', standardDeductionApplied: false, standardDeductionAmount: '0.00', normalTaxableIncome: '0.00', specialRateIncome: '0.00', normalIncomeTax: '0.00', specialRateTax: '0.00', rebate: '0.00', marginalRelief: '0.00', taxAfterRebate: serializeMoney(amount), surcharge: '0.00', cess: '0.00', finalTaxPayable: serializeMoney(amount) });
-const normPercent = (v: unknown) => (v === null || v === undefined || v === '') ? null : (Number(v) > 1 ? Number(v) : Number(v) * 100);
+const normPercent = (v: unknown): number | null => {
+  if (v === null || v === undefined || v === '') return null;
+  const parsed = Number(v);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return parsed > 1 ? parsed : parsed * 100;
+};
 const parse2or4 = (t: string) => t.length === 2 ? (Number(t) >= 50 ? 1900 + Number(t) : 2000 + Number(t)) : Number(t);
 const parseFiscalYear = (fy?: string | null) => { if (!fy) return null; const m = fy.trim().match(/^(?:FY\s*)?(\d{2,4})\s*[-/]\s*(\d{2,4})$/i); if (!m) throw new TaxEngineValidationError('INVALID_FISCAL_YEAR', 'Invalid fiscal year format.'); const s = parse2or4(m[1]); const e = parse2or4(m[2]); if (e !== s + 1) throw new TaxEngineValidationError('INVALID_FISCAL_YEAR', 'Invalid fiscal year range.'); return { startYear: s, endYear: e, label: `${s}-${String(e).slice(-2)}` }; };
 const assessmentYearFromFiscalYear = (fy: { endYear: number }) => `${fy.endYear}-${String(fy.endYear + 1).slice(-2)}`;
@@ -47,14 +52,19 @@ export const estimateTax = (input: TaxEstimateInput): TaxEstimateResult => {
 
   if (country === 'IN' && taxType === 'income_tax' && (input.resolutionMode ?? 'auto') !== 'prefer_provider_rate') {
     const fy = parseFiscalYear(input.fiscalYear) ?? deriveFY(input.asOfDate); if (fy.startYear < 2024) throw new TaxEngineValidationError('UNSUPPORTED_FISCAL_YEAR', `Unsupported fiscal year ${fy.label}`, { supportedFiscalYears: ['2024-25', '2025-26'], latestKnownFiscalYear: '2025-26' });
-    const specialRateIncome = Prisma.Decimal.max(dec0, toDecimal(input.specialRateIncome)); if (specialRateIncome.lt(0)) throw new TaxEngineValidationError('INVALID_SPECIAL_RATE_INCOME', 'specialRateIncome cannot be negative.'); if (specialRateIncome.gt(0)) throw new TaxEngineValidationError('UNSUPPORTED_SPECIAL_RATE_INCOME', 'Special-rate income is not yet supported for final India income-tax payable estimates.', { reason: 'Section 87A rebate cannot be applied against special-rate income tax; a dedicated special-rate calculator is required.' });
+    const rawSpecialRateIncome = toDecimal(input.specialRateIncome);
+    if (rawSpecialRateIncome.lt(0)) {
+      throw new TaxEngineValidationError('INVALID_SPECIAL_RATE_INCOME', 'specialRateIncome cannot be negative.');
+    }
+    const specialRateIncome = rawSpecialRateIncome;
+    if (specialRateIncome.gt(0)) throw new TaxEngineValidationError('UNSUPPORTED_SPECIAL_RATE_INCOME', 'Special-rate income is not yet supported for final India income-tax payable estimates.', { reason: 'Section 87A rebate cannot be applied against special-rate income tax; a dedicated special-rate calculator is required.' });
     const sourceRule = fy.startYear === 2024 ? INDIA_RULES['2024-25'] : INDIA_RULES['2025-26']; const exact = fy.startYear === 2024 || fy.startYear === 2025;
     const std = input.isSalaried && input.applyStandardDeduction ? new Prisma.Decimal(sourceRule.standardDeduction) : dec0; const normalIncome = Prisma.Decimal.max(dec0, taxableIncome.minus(std));
     const gross = slabTax(normalIncome, sourceRule.slabs); const threshold = new Prisma.Decimal(sourceRule.rebate.threshold); const maxRebate = new Prisma.Decimal(sourceRule.rebate.maxRebate);
     const eligibleRebate = taxpayerType === 'individual' && residentialStatus === 'resident' && normalIncome.lte(threshold) ? Prisma.Decimal.min(gross, maxRebate) : dec0;
     let taxAfter = gross.minus(eligibleRebate); let marginal = dec0; if (taxpayerType === 'individual' && residentialStatus === 'resident' && normalIncome.gt(threshold)) { const above = normalIncome.minus(threshold); if (taxAfter.gt(above)) { marginal = taxAfter.minus(above); taxAfter = above; } }
     const surcharge = dec0; const cess = taxAfter.mul(sourceRule.cessRate); const final = taxAfter.plus(cess); const effective = taxableIncome.eq(0) ? 0 : final.div(taxableIncome).mul(100).toDecimalPlaces(2).toNumber();
-    const warnings = ['Not legal advice. Rules must be reviewed yearly.', 'Surcharge not implemented; assumed as 0.']; if (!exact) warnings.push(`Using carried-forward latest known India rule from FY ${sourceRule.fiscalYear} for requested FY ${fy.label}.`);
+    const warnings = ['Not legal advice. Rules must be reviewed yearly.', 'Surcharge not implemented; assumed as 0.']; if (!exact) warnings.push(`Using carried-forward latest known India rule set (sourced from FY ${sourceRule.fiscalYear} / AY ${sourceRule.assessmentYear}) for requested FY ${fy.label}.`);
     return { ...base, amount: serializeMoney(final), ratePercent: effective, warnings, disclaimerKey: 'AUTO_RULE', basis: { ...base.basis, method: 'rule_engine', fiscalYear: fy.label, assessmentYear: assessmentYearFromFiscalYear(fy), sourceRuleFiscalYear: sourceRule.fiscalYear, sourceRuleAssessmentYear: sourceRule.assessmentYear, selectedRuleVersion: sourceRule.ruleVersion, ruleStatus: exact ? 'exact' : 'carried_forward_latest_known' }, components: { grossSlabTax: serializeMoney(gross), standardDeductionApplied: std.gt(0), standardDeductionAmount: serializeMoney(std), normalTaxableIncome: serializeMoney(normalIncome), specialRateIncome: '0.00', normalIncomeTax: serializeMoney(gross), specialRateTax: '0.00', rebate: serializeMoney(eligibleRebate), marginalRelief: serializeMoney(marginal), taxAfterRebate: serializeMoney(taxAfter), surcharge: '0.00', cess: serializeMoney(cess), finalTaxPayable: serializeMoney(final) } };
   }
 
