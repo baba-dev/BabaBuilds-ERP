@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isModuleEnabled } from "@/lib/modules";
-import { checkPermission } from "@/lib/rbac";
+import { checkPermissionSilent } from "@/lib/rbac";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { StorageMeter } from "@/components/documents/StorageMeter";
 import { getWorkspaceQuotaSnapshot } from "@/lib/documents/quota";
@@ -21,8 +21,8 @@ export default async function DocumentSettingsPage() {
 
   const [enabled, canView, canManage] = await Promise.all([
     isModuleEnabled(workspaceId, "DOCUMENTS"),
-    checkPermission(session.user.id, workspaceId, "documents.view"),
-    checkPermission(session.user.id, workspaceId, "documents.settings.manage"),
+    checkPermissionSilent(session.user.id, workspaceId, "documents.view"),
+    checkPermissionSilent(session.user.id, workspaceId, "documents.settings.manage"),
   ]);
 
   if (!enabled || !canView) redirect("/dashboard?moduleDisabled=DOCUMENTS");

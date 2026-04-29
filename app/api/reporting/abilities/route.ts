@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { requireModule, ModuleDisabledError } from '@/lib/modules';
-import { checkPermission } from '@/lib/rbac';
+import { checkPermissionSilent } from '@/lib/rbac';
 import { reportingErrorResponse } from '@/app/api/reporting/_shared';
 
 /**
@@ -37,9 +37,9 @@ export async function GET() {
     }
 
     const [canView, canRun, canExport] = await Promise.all([
-      checkPermission(session.user.id, wu.workspaceId, 'reporting_center.view'),
-      checkPermission(session.user.id, wu.workspaceId, 'reporting_center.query.run'),
-      checkPermission(session.user.id, wu.workspaceId, 'reporting_center.export'),
+      checkPermissionSilent(session.user.id, wu.workspaceId, 'reporting_center.view'),
+      checkPermissionSilent(session.user.id, wu.workspaceId, 'reporting_center.query.run'),
+      checkPermissionSilent(session.user.id, wu.workspaceId, 'reporting_center.export'),
     ]);
 
     return Response.json({ canView, canRun, canExport, moduleEnabled: true });

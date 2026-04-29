@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { checkPermission } from '@/lib/rbac';
+import { checkPermissionSilent } from '@/lib/rbac';
 import { getTaxReadinessSummary } from '@/lib/tax/return-prep';
 import { getGstWorkspaceSummary } from '@/lib/tax/gst-workspace-summary';
 import { taxAdvancedModuleDisabledResponse } from '@/lib/tax/module-gate';
@@ -18,7 +18,7 @@ export async function GET() {
   const moduleDisabledResponse = await taxAdvancedModuleDisabledResponse(workspaceId);
   if (moduleDisabledResponse) return moduleDisabledResponse;
 
-  const canView = await checkPermission(userId, workspaceId, 'tax.view');
+  const canView = await checkPermissionSilent(userId, workspaceId, 'tax.view');
   if (!canView) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

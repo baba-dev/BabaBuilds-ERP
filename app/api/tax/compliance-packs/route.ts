@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { checkPermission } from '@/lib/rbac';
+import { checkPermissionSilent } from '@/lib/rbac';
 import { getCompliancePack, getSupportedCompliancePacks } from '@/lib/tax/compliance-packs';
 import { taxAdvancedModuleDisabledResponse } from '@/lib/tax/module-gate';
 
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   const moduleDisabledResponse = await taxAdvancedModuleDisabledResponse(workspaceId);
   if (moduleDisabledResponse) return moduleDisabledResponse;
 
-  const canView = await checkPermission(userId, workspaceId, 'tax.view');
+  const canView = await checkPermissionSilent(userId, workspaceId, 'tax.view');
   if (!canView) {
     return NextResponse.json({ error: 'Forbidden', code: 'RBAC_PERMISSION_DENIED' }, { status: 403 });
   }

@@ -6,7 +6,7 @@ import type { CAExpenseRow, CAInvoiceRow, CAPortalPayload } from "@/lib/ca-porta
 import { decimalToNumber, toDecimal } from "@/lib/money";
 import { getCurrentFinancialYear } from '@/lib/financial-year';
 import { reconcileWithholdingForPeriod } from '@/lib/tax/withholding';
-import { checkPermission } from '@/lib/rbac';
+import { checkPermissionSilent } from '@/lib/rbac';
 
 const isPaidStatus = (status: unknown) => String(status).toUpperCase() === "PAID";
 const isReceiptStatus = (status: unknown) => {
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized", code: "AUTH_UNAUTHORIZED" }, { status: 401 });
     }
 
-    const canViewTax = await checkPermission(userId, workspaceId, 'tax.view');
+    const canViewTax = await checkPermissionSilent(userId, workspaceId, 'tax.view');
     if (!canViewTax) {
       return NextResponse.json({ error: "Forbidden", code: "RBAC_PERMISSION_DENIED" }, { status: 403 });
     }

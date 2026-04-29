@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { checkPermission } from '@/lib/rbac';
+import { checkPermissionSilent } from '@/lib/rbac';
 import { getGstWorkspaceSummary } from '@/lib/tax/gst-workspace-summary';
 
 export async function GET(request: Request) {
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const canView = await checkPermission(userId, workspaceId, 'tax.view');
+  const canView = await checkPermissionSilent(userId, workspaceId, 'tax.view');
   if (!canView) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

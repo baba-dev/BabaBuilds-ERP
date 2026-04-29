@@ -10,7 +10,7 @@ import { getInvoiceBilledAmount, sumInvoiceBilledAmount } from "@/lib/invoice/to
 import { estimateTax } from "@/lib/tax/engine";
 import { getCurrentFinancialYear } from "@/lib/financial-year";
 import { getTaxReadinessSummary } from "@/lib/tax/return-prep";
-import { checkPermission } from "@/lib/rbac";
+import { checkPermissionSilent } from "@/lib/rbac";
 import { getEnabledModules, MODULE_DESCRIPTIONS, MODULE_LABELS, type ModuleKey } from "@/lib/modules";
 import { buildMonthlyChartBuckets, resolveMonthlyBucketTimeZone } from "./monthly-series";
 import { describeKpiPeriod, getFyDateRange } from "./sales-shop-kpi-periods";
@@ -81,7 +81,7 @@ async function buildDashboardPayload(
   const { canViewFinance = true } = options;
 
   const canViewTaxReadiness =
-    Boolean(userId) && (await checkPermission(userId!, workspaceId, "tax.readiness.view"));
+    Boolean(userId) && (await checkPermissionSilent(userId!, workspaceId, "tax.readiness.view"));
   const [
     canViewAccounting,
     canViewOperations,
@@ -90,11 +90,11 @@ async function buildDashboardPayload(
     canRunTaxReadiness,
   ] = userId
     ? await Promise.all([
-        checkPermission(userId, workspaceId, "accounting.view"),
-        checkPermission(userId, workspaceId, "inventory.view"),
-        checkPermission(userId, workspaceId, "proposals.view"),
-        checkPermission(userId, workspaceId, "billing.manage"),
-        checkPermission(userId, workspaceId, "tax.readiness.run"),
+        checkPermissionSilent(userId, workspaceId, "accounting.view"),
+        checkPermissionSilent(userId, workspaceId, "inventory.view"),
+        checkPermissionSilent(userId, workspaceId, "proposals.view"),
+        checkPermissionSilent(userId, workspaceId, "billing.manage"),
+        checkPermissionSilent(userId, workspaceId, "tax.readiness.run"),
       ])
     : [false, false, false, false, false];
   const enabledModules = await getEnabledModules(workspaceId);

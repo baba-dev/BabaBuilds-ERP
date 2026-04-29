@@ -187,8 +187,39 @@ export async function getGrantedPermissions(
 }
 
 /**
- * Convenience: checks a single permission and returns true/false.
- * Does NOT throw. Use for conditional rendering or pre-flight checks.
+ * Silent permission check for read-only gating.
+ *
+ * Resolves the current role from the database and returns a boolean grant result.
+ * This function does NOT emit RBAC denial audit records.
+ *
+ * Use this for non-enforcement scenarios only, such as:
+ *   - conditional rendering in Server Components
+ *   - capability booleans in "what can I do?" payloads
+ *   - non-security-critical data shaping
+ *
+ * IMPORTANT:
+ *   Enforcement and security-critical paths MUST continue to use
+ *   requirePermission() (or withPermission()) so denied access is blocked and
+ *   denial events are audited.
+ */
+export async function checkPermissionSilent(
+  userId: string,
+  workspaceId: string,
+  permission: Permission,
+): Promise<boolean> {
+  const role = await resolveBusinessRole(userId, workspaceId);
+  if (!role) return false;
+  return (DEFAULT_ROLE_PERMISSIONS[role] as readonly string[]).includes(permission);
+}
+
+/**
+ * Legacy convenience helper.
+ *
+ * Unlike checkPermissionSilent(), this variant routes through
+ * requirePermission(), so denied checks are written to RBAC audit logs.
+ *
+ * Prefer checkPermissionSilent() for read-only gating. Keep this helper only
+ * where denial audit writes are intentionally desired.
  */
 export async function checkPermission(
   userId: string,

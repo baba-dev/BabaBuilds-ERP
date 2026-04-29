@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 
 import { authOptions } from '@/lib/auth';
 import { getWorkspaceIdForUser } from '@/lib/payroll/settings';
-import { checkPermission } from '@/lib/rbac';
+import { checkPermissionSilent } from '@/lib/rbac';
 
 export async function GET() {
   try {
@@ -20,8 +20,8 @@ export async function GET() {
     }
 
     const [canView, canManage] = await Promise.all([
-      checkPermission(userId, workspaceId, 'payroll.view'),
-      checkPermission(userId, workspaceId, 'payroll.settings.manage'),
+      checkPermissionSilent(userId, workspaceId, 'payroll.view'),
+      checkPermissionSilent(userId, workspaceId, 'payroll.settings.manage'),
     ]);
 
     return NextResponse.json({
