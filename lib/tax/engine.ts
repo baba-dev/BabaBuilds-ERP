@@ -12,6 +12,7 @@ export interface TaxEstimateInput {
   regionCode?: string | null;
   customerScope?: string | null;
   asOfDate?: string | Date | null;
+  fiscalYear?: string | null;
   overrideRatePercent?: number | string | null;
   overrideId?: string | null;
   overrideReason?: string | null;
@@ -44,6 +45,30 @@ export interface TaxEstimateResult {
 const DEFAULT_FALLBACK_RATE = 0.3;
 const RULE_ENGINE_COUNTRIES = new Set(['IN']);
 
+type IndiaTaxRegimeKey = 'FY_2025_26' | 'FY_2026_27_PLUS';
+type IndiaTaxSlab = { floor: number; width: number | null; rate: number };
+
+const INDIA_TAX_SLABS_BY_REGIME: Record<IndiaTaxRegimeKey, IndiaTaxSlab[]> = {
+  // Effective for FY 2025-26 (AY 2026-27): up to 4L exempt and 4L slab widths through 24L.
+  FY_2025_26: [
+    { floor: 400000, width: 400000, rate: 0.05 },
+    { floor: 800000, width: 400000, rate: 0.10 },
+    { floor: 1200000, width: 400000, rate: 0.15 },
+    { floor: 1600000, width: 400000, rate: 0.20 },
+    { floor: 2000000, width: 400000, rate: 0.25 },
+    { floor: 2400000, width: null, rate: 0.30 },
+  ],
+  // Effective from FY 2026-27 onward until superseded.
+  FY_2026_27_PLUS: [
+    { floor: 400000, width: 400000, rate: 0.05 },
+    { floor: 800000, width: 400000, rate: 0.10 },
+    { floor: 1200000, width: 400000, rate: 0.15 },
+    { floor: 1600000, width: 400000, rate: 0.20 },
+    { floor: 2000000, width: 400000, rate: 0.25 },
+    { floor: 2400000, width: null, rate: 0.30 },
+  ],
+};
+
 const normalizePercent = (value: unknown): number | null => {
   if (value === null || value === undefined || value === '') return null;
   const normalized = Number(value);
@@ -59,18 +84,36 @@ const resolveProviderRatePercent = (countryCode?: string | null, regionCode?: st
   return providerRate * 100;
 };
 
-export const estimateIndiaIncomeTaxFromRules = (taxableIncome: Prisma.Decimal): { amount: Prisma.Decimal; ratePercent: number } => {
-  const slabs: Array<{ floor: number; width: number | null; rate: number }> = [
-    { floor: 300000, width: 300000, rate: 0.05 },
-    { floor: 600000, width: 300000, rate: 0.1 },
-    { floor: 900000, width: 300000, rate: 0.15 },
-    { floor: 1200000, width: 300000, rate: 0.2 },
-    { floor: 1500000, width: null, rate: 0.3 },
-  ];
+const parseIndiaFiscalYearStart = (fiscalYear?: string | null): number | null => {
+  if (!fiscalYear) return null;
+  const normalized = fiscalYear.trim();
+  const match = normalized.match(/^(?:FY\s*)?(\d{2,4})\s*[-/]\s*(\d{2,4})$/i);
+  if (!match) return null;
+  const parseYear = (token: string): number => {
+    if (token.length === 4) return Number(token);
+    const year = Number(token);
+    return year >= 50 ? 1900 + year : 2000 + year;
+  };
+  const startYear = parseYear(match[1]);
+  return Number.isFinite(startYear) ? startYear : null;
+};
 
-  if (taxableIncome.lte(700000)) {
-    return { amount: new Prisma.Decimal(0), ratePercent: 0 };
-  }
+const resolveIndiaTaxRegime = (input: Pick<TaxEstimateInput, 'asOfDate' | 'fiscalYear'>): IndiaTaxRegimeKey => {
+  const fiscalYearStart = parseIndiaFiscalYearStart(input.fiscalYear);
+  if (fiscalYearStart !== null) return fiscalYearStart >= 2026 ? 'FY_2026_27_PLUS' : 'FY_2025_26';
+
+  const effectiveDate = input.asOfDate ? new Date(input.asOfDate) : new Date();
+  const safeDate = Number.isNaN(effectiveDate.getTime()) ? new Date() : effectiveDate;
+  const fiscalYearFromDate = safeDate.getUTCMonth() >= 3 ? safeDate.getUTCFullYear() : safeDate.getUTCFullYear() - 1;
+  return fiscalYearFromDate >= 2026 ? 'FY_2026_27_PLUS' : 'FY_2025_26';
+};
+
+export const estimateIndiaIncomeTaxFromRules = (
+  taxableIncome: Prisma.Decimal,
+  context?: Pick<TaxEstimateInput, 'asOfDate' | 'fiscalYear'>,
+): { amount: Prisma.Decimal; ratePercent: number } => {
+  const regime = resolveIndiaTaxRegime(context ?? {});
+  const slabs = INDIA_TAX_SLABS_BY_REGIME[regime];
 
   const amount = slabs.reduce((tax, slab) => {
     const floor = new Prisma.Decimal(slab.floor);
@@ -141,7 +184,10 @@ export const estimateTax = (input: TaxEstimateInput): TaxEstimateResult => {
     }
 
     if (hasCountryRuleEngine && resolutionMode !== 'prefer_provider_rate') {
-      const fromRules = estimateIndiaIncomeTaxFromRules(taxableIncome);
+      const fromRules = estimateIndiaIncomeTaxFromRules(taxableIncome, {
+        asOfDate: input.asOfDate,
+        fiscalYear: input.fiscalYear,
+      });
       return {
         amount: serializeMoney(fromRules.amount),
         ratePercent: fromRules.ratePercent,

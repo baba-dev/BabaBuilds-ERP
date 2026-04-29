@@ -2,17 +2,32 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { estimateTax } from './engine';
 
-test('India taxable income above slab threshold uses slab-based effective rate', () => {
+test('India FY 2025-26 slab-based effective rate for ₹10L taxable income', () => {
   const result = estimateTax({
     countryCode: 'IN',
     revenue: '1000000',
     deductions: '0',
+    fiscalYear: '2025-26',
   });
 
   assert.equal(result.basis.method, 'rule_engine');
   assert.equal(result.disclaimerKey, 'AUTO_RULE');
-  assert.equal(result.amount, '60000.00');
-  assert.equal(result.ratePercent, 6);
+  assert.equal(result.amount, '40000.00');
+  assert.equal(result.ratePercent, 4);
+});
+
+test('India FY 2026-27 does not apply ₹7L rebate and taxes ₹7L at ₹15k', () => {
+  const result = estimateTax({
+    countryCode: 'IN',
+    revenue: '700000',
+    deductions: '0',
+    fiscalYear: 'FY 2026-27',
+  });
+
+  assert.equal(result.basis.method, 'rule_engine');
+  assert.equal(result.disclaimerKey, 'AUTO_RULE');
+  assert.equal(result.amount, '15000.00');
+  assert.equal(result.ratePercent, 2.14);
 });
 
 test('Unknown country falls back to provider/fallback rate', () => {
