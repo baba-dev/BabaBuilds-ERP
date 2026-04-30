@@ -38,32 +38,32 @@ export default function LandingNavbar() {
     { name: t("nav.features"), href: "#features" },
     { name: t("nav.comparison"), href: "#comparison" },
     { name: t("nav.pricing"), href: "#pricing" },
-    { name: "For CAs", href: "/for-ca" },
-    { name: "Reseller", href: "/reseller" },
+    { name: t("nav.forCa.title"), href: "/for-ca" },
+    { name: t("nav.reseller.title"), href: "/reseller" },
   ];
   const useCaseLinks = [
     {
-      name: "For Agencies",
+      name: t("nav.forAgencies.title"),
       href: "/for-agencies",
-      description: "Retainers, proposals, and receivables",
+      description: t("nav.forAgencies.description"),
       icon: BriefcaseBusiness,
     },
     {
-      name: "For Contractors",
+      name: t("nav.forContractors.title"),
       href: "/for-contractors",
-      description: "Milestones, expenses, and cash control",
+      description: t("nav.forContractors.description"),
       icon: HardHat,
     },
     {
-      name: "For Small Businesses",
+      name: t("nav.forSmallBusinesses.title"),
       href: "/for-small-businesses",
-      description: "Invoicing, collections, and tax-ready books",
+      description: t("nav.forSmallBusinesses.description"),
       icon: Building2,
     },
     {
-      name: "For Freelancers",
+      name: t("nav.forFreelancers.title"),
       href: "/for-freelancers",
-      description: "Proposal-to-invoice and retainer automation",
+      description: t("nav.forFreelancers.description"),
       icon: UserRound,
     },
   ];
@@ -71,7 +71,7 @@ export default function LandingNavbar() {
   return (
     <nav
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-6 py-4",
+        "fixed inset-x-0 top-0 z-50 transition-all duration-300 px-6 py-4",
         isScrolled
           ? "bg-white/70 dark:bg-zinc-950/70 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 py-3"
           : "bg-transparent"
@@ -105,9 +105,9 @@ export default function LandingNavbar() {
               className="inline-flex items-center gap-1 text-sm font-semibold text-zinc-600 transition-colors hover:text-orange-600 dark:text-zinc-400 dark:hover:text-orange-400"
               aria-haspopup="true"
             >
-              Use Cases <ChevronDown className="h-4 w-4" />
+              {t("nav.useCases")} <ChevronDown className="h-4 w-4" />
             </button>
-            <div className="invisible absolute right-0 top-full z-50 mt-3 w-[28rem] rounded-2xl border border-zinc-200 bg-white p-3 opacity-0 shadow-2xl transition-all duration-200 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 dark:border-zinc-800 dark:bg-zinc-950">
+            <div className="invisible absolute end-0 top-full z-50 mt-3 w-[28rem] rounded-2xl border border-zinc-200 bg-white p-3 opacity-0 shadow-2xl transition-all duration-200 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 dark:border-zinc-800 dark:bg-zinc-950">
               <div className="grid grid-cols-2 gap-3">
                 {useCaseLinks.map((useCase) => (
                   <Link
@@ -135,7 +135,7 @@ export default function LandingNavbar() {
               className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold gap-2"
             >
               <Link href="/dashboard">
-                {t("actions.dashboard")} <ArrowRight className="w-4 h-4" />
+                {t("actions.dashboard")} <ArrowRight className="h-4 w-4 rtl:rotate-180" />
               </Link>
             </Button>
           ) : (
@@ -182,8 +182,8 @@ export default function LandingNavbar() {
           type="button"
           className="md:hidden p-2 text-zinc-900 dark:text-zinc-50 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
-          title={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-label={mobileMenuOpen ? t("actions.closeMenu") : t("actions.openMenu")}
+          title={mobileMenuOpen ? t("actions.closeMenu") : t("actions.openMenu")}
           aria-expanded={mobileMenuOpen}
           aria-controls="landing-mobile-menu"
         >
@@ -199,7 +199,7 @@ export default function LandingNavbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             id="landing-mobile-menu"
-            className="absolute top-full left-0 right-0 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 p-6 flex flex-col gap-4 md:hidden shadow-xl"
+            className="absolute inset-x-0 top-full bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 p-6 flex flex-col gap-4 md:hidden shadow-xl"
           >
             {navLinks.map((link) => (
               <Link
@@ -213,7 +213,7 @@ export default function LandingNavbar() {
             ))}
             <div className="rounded-2xl border border-zinc-200 bg-zinc-50/70 p-3 dark:border-zinc-800 dark:bg-zinc-900/60">
               <p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">
-                Use Cases
+                {t("nav.useCases")}
               </p>
               <div className="grid gap-2">
                 {useCaseLinks.map((useCase) => (

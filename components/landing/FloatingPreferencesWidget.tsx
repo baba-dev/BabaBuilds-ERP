@@ -6,16 +6,16 @@ import { Globe2, MoonStar, Sun, ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 
-const localeOptions = [
-  { label: "English", value: "en-IN" },
-  { label: "Hindi", value: "hi" },
-  { label: "Arabic", value: "ar" },
-  { label: "Spanish", value: "es" },
-] as const;
-
 export default function FloatingPreferencesWidget() {
   const tl = useTranslations("LandingPhase1");
+  const ts = useTranslations("Settings");
   const { resolvedTheme, setTheme } = useTheme();
+  const localeOptions = [
+    { label: ts("languageOptions.enIN"), value: "en-IN" },
+    { label: ts("languageOptions.hi"), value: "hi" },
+    { label: ts("languageOptions.ar"), value: "ar" },
+    { label: ts("languageOptions.es"), value: "es" },
+  ] as const;
   const currentLocale = useMemo(() => {
     if (typeof document === "undefined") return "en-IN";
     const cookie = document.cookie.split("; ").find((part) => part.startsWith("NEXT_LOCALE="));
@@ -30,7 +30,7 @@ export default function FloatingPreferencesWidget() {
   return (
     <aside
       aria-label={tl("persona.widget.title")}
-      className="fixed bottom-6 right-6 z-40 w-72 rounded-2xl border border-orange-200/80 bg-white/95 p-4 shadow-2xl backdrop-blur dark:border-orange-900/50 dark:bg-zinc-950/90"
+      className="fixed bottom-6 end-6 z-40 w-72 rounded-2xl border border-orange-200/80 bg-white/95 p-4 shadow-2xl backdrop-blur dark:border-orange-900/50 dark:bg-zinc-950/90"
     >
       <p className="text-[11px] font-black uppercase tracking-[0.16em] text-orange-700 dark:text-orange-300">
         {tl("persona.widget.title")}
@@ -45,7 +45,7 @@ export default function FloatingPreferencesWidget() {
             <select
               defaultValue={currentLocale}
               onChange={(event) => updateLocale(event.target.value)}
-              className="h-10 w-full appearance-none rounded-xl border border-zinc-200 bg-white px-3 pr-9 text-sm font-medium text-zinc-800 outline-none ring-orange-400/40 transition focus:ring-2 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+              className="h-10 w-full appearance-none rounded-xl border border-zinc-200 bg-white px-3 pe-9 text-sm font-medium text-zinc-800 outline-none ring-orange-400/40 transition focus:ring-2 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
             >
               {localeOptions.map((locale) => (
                 <option key={locale.value} value={locale.value}>
@@ -53,7 +53,7 @@ export default function FloatingPreferencesWidget() {
                 </option>
               ))}
             </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-3 h-4 w-4 text-zinc-500" />
+            <ChevronDown className="pointer-events-none absolute end-3 top-3 h-4 w-4 text-zinc-500" />
           </div>
         </label>
 

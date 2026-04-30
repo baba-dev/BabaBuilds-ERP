@@ -90,7 +90,7 @@ export default function ComparisonTable() {
         </motion.div>
 
         <div className="overflow-x-auto rounded-2xl border border-zinc-200/80 dark:border-zinc-800">
-          <table className="w-full border-collapse text-left">
+          <table className="w-full border-collapse text-start">
             <caption className="sr-only">{t("title")}</caption>
             <thead>
               <tr className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900/40">
@@ -124,7 +124,7 @@ export default function ComparisonTable() {
                   transition={{ delay: reduceMotion ? 0 : idx * 0.06 }}
                   className="group border-b border-zinc-100 bg-white dark:border-zinc-900 dark:bg-zinc-950/30"
                 >
-                  <th scope="row" className="px-4 py-8 text-left align-top font-normal">
+                  <th scope="row" className="px-4 py-8 text-start align-top font-normal">
                     <div className="space-y-1">
                       <p className="text-lg font-bold text-zinc-900 dark:text-zinc-100">{feature.name}</p>
                       <p className="max-w-md text-sm text-zinc-500 dark:text-zinc-500">{feature.desc}</p>

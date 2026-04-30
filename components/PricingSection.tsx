@@ -271,7 +271,7 @@ export default function PricingSection() {
         <div className="mt-16 flex flex-col items-center gap-6">
           <div className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-6 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <Check className="h-5 w-5 text-emerald-500" aria-hidden />
-            <div className="text-left">
+            <div className="text-start">
               <p className="mb-1 text-xs font-bold uppercase leading-none tracking-widest text-zinc-500 dark:text-zinc-400">{tp("msmeLabel")}</p>
               <p className="text-sm font-black text-zinc-900 dark:text-zinc-100">{tp("udyamId")}</p>
             </div>

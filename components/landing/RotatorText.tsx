@@ -2,10 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-
-const words = ["on Autopilot", "at Scale", "Globally", "with AI"];
+import { useTranslations } from "next-intl";
 
 export default function RotatorText() {
+  const t = useTranslations("LandingHero");
+  const words = [
+    t("rotatorWords.autopilot"),
+    t("rotatorWords.scale"),
+    t("rotatorWords.global"),
+    t("rotatorWords.ai"),
+  ];
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
@@ -13,7 +19,7 @@ export default function RotatorText() {
       setIndex((prev) => (prev + 1) % words.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [words.length]);
 
   return (
     <span className="relative inline-block min-h-[1.15em] min-w-[4ch] align-top">

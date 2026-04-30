@@ -80,7 +80,7 @@ export default function RoleDemoLauncher() {
           {tp1("roleLauncher.footerTextPart1")}{" "}
           <span className="font-bold">&quot;{tp1("roleLauncher.footerQuotedCta")}&quot;</span>{" "}
           {tp1("roleLauncher.footerTextPart2")}
-          <ArrowRight className="ml-1 inline h-4 w-4 text-orange-500" />
+          <ArrowRight className="ms-1 inline h-4 w-4 text-orange-500" />
         </div>
       </div>
     </section>

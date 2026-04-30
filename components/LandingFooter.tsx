@@ -2,34 +2,37 @@
 
 import Link from "next/link";
 import { Box, Mail, MapPin, ShieldCheck, FileText, LifeBuoy } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { personaNavigationLinks } from "@/components/landing/persona/persona-config";
 
 export default function LandingFooter() {
+  const t = useTranslations("LandingFooter");
+  const tp = useTranslations("LandingPersona");
   const keyPersonaLinks = personaNavigationLinks.slice(0, 3);
 
   const sections = [
     {
-      title: "Product",
+      title: t("sections.product"),
       links: [
-        { name: "Features", href: "#features" },
-        { name: "Pricing", href: "#pricing" },
-        { name: "Interactive Demo", href: "#demo-launcher" },
+        { name: t("links.features"), href: "#features" },
+        { name: t("links.pricing"), href: "#pricing" },
+        { name: t("links.interactiveDemo"), href: "#demo-launcher" },
       ],
     },
     {
-      title: "By Persona",
+      title: t("sections.byPersona"),
       links: keyPersonaLinks.map((item) => ({
-        name: item.label,
+        name: tp(item.labelKey),
         href: item.href,
       })),
     },
     {
-      title: "Legal",
+      title: t("sections.legal"),
       links: [
-        { name: "Reseller Program", href: "/reseller" },
-        { name: "Privacy Policy", href: "/help/privacy" },
-        { name: "Terms of Service", href: "/help/terms" },
-        { name: "Help Center", href: "/help" },
+        { name: t("links.resellerProgram"), href: "/reseller" },
+        { name: t("links.privacyPolicy"), href: "/help/privacy" },
+        { name: t("links.termsOfService"), href: "/help/terms" },
+        { name: t("links.helpCenter"), href: "/help" },
       ],
     },
   ];
@@ -49,12 +52,12 @@ export default function LandingFooter() {
               </span>
             </div>
             <p className="max-w-md text-base leading-relaxed text-zinc-600 dark:text-zinc-300">
-              Public-ready ERP platform for invoicing, compliance, and growth operations.
+              {t("description")}
             </p>
             <div className="rounded-2xl border border-zinc-200 bg-white/90 px-4 py-3 text-sm text-zinc-700 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/80 dark:text-zinc-200">
               <p className="flex items-start gap-2 font-semibold">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
-                Address - Pilani, Rajasthan, India.
+                {t("addressLabel")}
               </p>
             </div>
           </div>
@@ -82,22 +85,22 @@ export default function LandingFooter() {
         </div>
 
         <div className="pt-8 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-3 text-center md:text-left">
+          <div className="space-y-3 text-center md:text-start">
             <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-              © {new Date().getFullYear()} BabaBuilds ERP. All rights reserved.
+              © {new Date().getFullYear()} BabaBuilds ERP. {t("allRightsReserved")}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3 md:justify-start">
               <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-semibold text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                Secure billing
+                {t("trustChips.secureBilling")}
               </span>
               <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-semibold text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
                 <FileText className="h-3.5 w-3.5 text-orange-500" />
-                GST/VAT ready
+                {t("trustChips.gstVatReady")}
               </span>
               <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-semibold text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
                 <LifeBuoy className="h-3.5 w-3.5 text-sky-500" />
-                Public support docs
+                {t("trustChips.publicSupportDocs")}
               </span>
             </div>
           </div>
@@ -106,7 +109,7 @@ export default function LandingFooter() {
               <Mail className="w-4 h-4 text-orange-500" /> support@bababuilds.com
             </span>
             <span className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-rose-500" /> Pilani, Rajasthan, India
+              <MapPin className="w-4 h-4 text-rose-500" /> {t("location")}
             </span>
           </div>
         </div>
