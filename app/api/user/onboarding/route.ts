@@ -106,6 +106,9 @@ export async function PATCH(request: Request) {
 
   if (action === "set_persona") {
     const nextPersona: OnboardingPersona | null = parseOnboardingPersona(persona);
+    if (typeof persona !== "string" || !nextPersona) {
+      return NextResponse.json({ error: "Invalid persona" }, { status: 400 });
+    }
     const updated = await prisma.userOnboarding.update({
       where: { userId: sessionUser.id },
       data: {
