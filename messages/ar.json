@@ -160,10 +160,10 @@
       "noSignatures": "Does not support signatures"
     },
     "languageOptions": {
-      "enIN": "English (India)",
-      "ar": "العربية (Arabic)",
-      "es": "Español (Spanish)",
-      "hi": "हिंदी (Hindi)"
+      "enIN": "الإنجليزية (الهند)",
+      "ar": "العربية",
+      "es": "الإسبانية",
+      "hi": "الهندية"
     },
     "alt": {
       "currentLogo": "Current Logo",
@@ -1124,63 +1124,63 @@
   },
   "Landing": {
     "hero": {
-      "badge": "الإصدار التالي من أنظمة ERP",
+      "badge": "إصدار ERP المطور",
       "titleLine1": "شغّل وكالتك",
-      "titleLine2": "on Autopilot.",
-      "description": "مركز قيادة عالمي للمحاسبة والامتثال والنمو. أتمتة الفواتير، ومطابقة الحركات البنكية، والحصول على رؤى مالية مدعومة بالذكاء الاصطناعي.",
-      "primaryCta": "Start for Free",
-      "secondaryCta": "See all Features",
-      "dashboardPreview": "Dashboard Preview"
+      "titleLine2": "بالذكاء الاصطناعي",
+      "description": "مركز قيادة عالمي للمحاسبة والامتثال والنمو. أتمتة الفواتير، ومطابقة العمليات البنكية، والسماح للذكاء الاصطناعي بكشف الحقيقة المالية.",
+      "primaryCta": "ابدأ مجانًا",
+      "secondaryCta": "استعرض كل الميزات",
+      "dashboardPreview": "معاينة لوحة التحكم"
     },
     "heroLoop": {
-      "label": "Your revenue loop",
-      "live": "Live",
-      "seeDemo": "See it in the interactive demo",
+      "label": "حلقة إيراداتك",
+      "live": "مباشر",
+      "seeDemo": "شاهده في العرض التفاعلي",
       "steps": {
         "step1": {
-          "title": "Win the deal",
-          "body": "Proposals and e-signatures that convert."
+          "title": "اكسب الصفقة",
+          "body": "عروض وتوقيع إلكتروني يرفع التحويل."
         },
         "step2": {
-          "title": "Send & bill",
-          "body": "Invoices and retainers with tax-aware fields."
+          "title": "أرسل وفوّتِر",
+          "body": "فواتير واشتراكات بحقوق ضريبية مضبوطة."
         },
         "step3": {
-          "title": "Collect faster",
-          "body": "Payment links and follow-ups in one thread."
+          "title": "حصّل أسرع",
+          "body": "روابط دفع ومتابعات في مسار واحد."
         },
         "step4": {
-          "title": "Close the books",
-          "body": "Bank matching and audit-ready trails."
+          "title": "أغلق الدفاتر",
+          "body": "مطابقة بنكية وسجل جاهز للتدقيق."
         }
       }
     },
     "story": {
-      "eyebrow": "The week, fixed",
-      "title": "From signed proposal to reconciled cash—without the spreadsheet chaos.",
-      "subtitle": "One orange-amber command center for agencies, accountants, contractors, and service teams who bill globally and need compliance that keeps up.",
+      "eyebrow": "أسبوعك مضبوط",
+      "title": "من توقيع العرض إلى تسوية النقد — بلا فوضى الجداول.",
+      "subtitle": "مركز قيادة واحد للوكالات والمحاسبين والمقاولين وفرق الخدمات التي تبيع عالميًا وتحتاج امتثالًا مواكبًا.",
       "steps": {
         "s1": {
-          "title": "Quote & convert",
-          "body": "Pipeline and proposals tied to what you invoice next."
+          "title": "قدّم العرض ثم حوّله",
+          "body": "العروض ومسار التحويل مرتبطان بما ستفوتره لاحقًا."
         },
         "s2": {
-          "title": "Bill & remind",
-          "body": "Recurring retainers, multi-currency invoices, AR signals."
+          "title": "فوّتِر وذكّر",
+          "body": "اشتراكات متكررة وفواتير متعددة العملات وإشارات مستحقات."
         },
         "s3": {
-          "title": "Match & categorize",
-          "body": "Expenses and bank lines reconciled to the right client or job."
+          "title": "طابِق وصنّف",
+          "body": "مطابقة المصروفات والحركات البنكية على العميل أو المشروع الصحيح."
         },
         "s4": {
-          "title": "Report & file-ready",
-          "body": "Tax dashboards, documents, and exports your CA can trust."
+          "title": "تقارير وملفات جاهزة",
+          "body": "لوحات ضريبية ومستندات وتصديرات يعتمدها محاسبك القانوني."
         }
       }
     },
     "socialProof": {
-      "quote": "أوقفنا تسرب الإيرادات عندما أصبحت الاشتراكات والتحصيلات والمطابقة في نظام واحد.",
-      "attribution": "Rhea Malhotra",
+      "quote": "أوقفنا تسرب الإيرادات عندما أصبحت الاشتراكات والتحصيلات والمطابقة داخل نظام واحد.",
+      "attribution": "ريّا مالهوترا",
       "role": "المؤسسة، PixelRidge Studio"
     },
     "socialProofHero": {
@@ -1198,193 +1198,193 @@
         "description": "انضباط الدفتر، ومطابقة بنكية، وسياق العملاء، وتنبيهات قبل مفاجآت النقدية."
       },
       "compliance": {
-        "title": "Compliance you can defend",
-        "description": "Region-aware tax workflows, document governance, and CA-ready evidence without the scramble."
+        "title": "امتثال يمكن الدفاع عنه",
+        "description": "مسارات ضريبية حسب المنطقة وحوكمة مستندات وأدلة جاهزة للتدقيق دون ارتباك."
       },
       "scale": {
-        "title": "Scale delivery",
-        "description": "Roles, inventory when you need it, and apps that keep working on the go."
+        "title": "وسّع التسليم",
+        "description": "أدوار، ومخزون عند الحاجة، وتطبيقات تعمل أثناء التنقل."
       },
       "advancedEyebrow": "مشمول أيضًا"
     },
     "personaHub": {
-      "eyebrow": "Pick your path",
-      "title": "Built for how you work—not a one-size ERP template.",
-      "subtitle": "Each page opens with pain points, a guided demo, and proof tailored to that role.",
-      "visit": "Explore page"
+      "eyebrow": "اختر مسارك",
+      "title": "مصمم لطريقة عملك، وليس قالب ERP موحدًا.",
+      "subtitle": "كل صفحة تبدأ بالمشكلات الأساسية وعرض موجّه ودليل ملائم للدور.",
+      "visit": "استكشف الصفحة"
     },
     "personaCards": {
-      "caTitle": "For CAs & Accountants",
-      "caDesc": "Compliance workflows, filing readiness, and client collections in one command center.",
-      "agencyTitle": "For Agencies",
-      "agencyDesc": "Retainers, proposals, and invoice pipeline visibility tailored for growth teams.",
-      "contractorTitle": "For Contractors & Builders",
-      "contractorDesc": "Milestone billing, vendor expenses, and project cash planning without spreadsheet chaos.",
-      "smbTitle": "For Small Businesses",
-      "smbDesc": "Practical invoicing, tax-aware records, and receivables tracking for service operations.",
-      "freelanceTitle": "For Freelancers & Consultants",
-      "freelanceDesc": "Proposal-to-invoice flow and retainer automation for solo operators and consultants."
+      "caTitle": "للمحاسبين القانونيين والمحاسبين",
+      "caDesc": "مسارات امتثال وجاهزية تقديم وتحصيل عملاء في لوحة واحدة.",
+      "agencyTitle": "للوكالات",
+      "agencyDesc": "اشتراكات، عروض، ورؤية كاملة لمسار الفواتير للفرق النامية.",
+      "contractorTitle": "للمقاولين والبنّائين",
+      "contractorDesc": "فوترة المراحل ومصروفات الموردين والتخطيط النقدي للمشاريع.",
+      "smbTitle": "للشركات الصغيرة",
+      "smbDesc": "فوترة عملية وسجلات جاهزة ضريبيًا وتتبع مستحقات فعال.",
+      "freelanceTitle": "للمستقلين والاستشاريين",
+      "freelanceDesc": "تدفق من العرض إلى الفاتورة مع أتمتة الاشتراكات للمشغل الفردي."
     },
     "comparisonSection": {
-      "eyebrow": "Compare",
-      "title": "Why teams evaluate BabaBuilds alongside the incumbents",
-      "subtitle": "Heritage ledgers excel at deep accounting history. We optimize the service-business loop: sell, bill, collect, reconcile, and stay audit-ready—with a live demo that proves it.",
-      "footnote": "Coverage varies by region and configuration. Use trials and imports to validate your exact books workflow.",
-      "ctaExplore": "Explore features",
-      "ctaTrial": "Start 15-day Pro trial",
-      "switchIntro": "Switching is easy. We support",
-      "switchHighlight": "direct data import",
-      "switchOutro": "from most legacy accounting tools.",
+      "eyebrow": "المقارنة",
+      "title": "لماذا تقارن الفرق BabaBuilds بالخيارات التقليدية",
+      "subtitle": "الأنظمة التقليدية قوية في التاريخ المحاسبي العميق، بينما نركز على دورة أعمال الخدمات: بيع، فوترة، تحصيل، مطابقة، وجاهزية للتدقيق عبر عرض حي.",
+      "footnote": "التغطية تختلف حسب الدولة والإعدادات. جرّب النسخة التجريبية للتحقق من سير عملك الفعلي.",
+      "ctaExplore": "استكشف الميزات",
+      "ctaTrial": "ابدأ تجربة Pro لمدة 15 يومًا",
+      "switchIntro": "الانتقال سهل. ندعم",
+      "switchHighlight": "استيراد البيانات المباشر",
+      "switchOutro": "من معظم أدوات المحاسبة التقليدية.",
       "table": {
-        "feature": "Feature",
+        "feature": "الميزة",
         "baba": "BabaERP",
         "tally": "Tally Prime",
         "quickbooks": "QuickBooks"
       },
-      "cellYes": "Yes",
-      "cellNo": "No",
+      "cellYes": "نعم",
+      "cellNo": "لا",
       "statusLabels": {
-        "partial": "Partial",
-        "addon": "Add-on",
-        "regional": "Regional",
-        "manual": "Manual",
-        "premium": "Premium"
+        "partial": "جزئي",
+        "addon": "إضافة",
+        "regional": "حسب المنطقة",
+        "manual": "يدوي",
+        "premium": "مميز"
       },
       "rows": {
         "retainers": {
-          "name": "Zero-Effort Retainers",
-          "desc": "Auto-appends month names, dates, and dynamic content to recurring invoices without lifting a finger.",
+          "name": "اشتراكات تلقائية",
+          "desc": "إضافة تلقائية لتواريخ ومحتوى الفواتير المتكررة دون تدخل يدوي.",
           "tally": "no",
           "quickbooks": "partial"
         },
         "bababot": {
-          "name": "AI Financial Advisor (BabaBot)",
-          "desc": "Natural language queries about your finances. 'How much did I spend on SEO last quarter?'",
+          "name": "مستشار مالي ذكي (BabaBot)",
+          "desc": "استعلامات باللغة الطبيعية حول بياناتك المالية.",
           "tally": "no",
           "quickbooks": "addon"
         },
         "tax": {
-          "name": "Multi-Region Tax Compliance",
-          "desc": "Region-aware tax labels (VAT, GST, Sales Tax), configurable rates, and country-pack coverage for selected jurisdictions.",
+          "name": "امتثال ضريبي متعدد المناطق",
+          "desc": "تسميات ضرائب حسب الدولة ومعدلات قابلة للتهيئة مع دعم إقليمي.",
           "tally": "regional",
           "quickbooks": "yes"
         },
         "proposal": {
-          "name": "Unified Proposal-to-Paid Workflow",
-          "desc": "Send a proposal, get it signed digitally, and convert to an invoice in 1 click.",
+          "name": "تدفق موحد من العرض إلى التحصيل",
+          "desc": "أرسل عرضًا ووقّعه رقميًا ثم حوّله لفاتورة بضغطة واحدة.",
           "tally": "no",
           "quickbooks": "yes"
         },
         "recon": {
-          "name": "Self-Healing Bank Reconciliation",
-          "desc": "AI matching of bank transactions with invoices and expenses.",
+          "name": "مطابقة بنكية ذاتية",
+          "desc": "مطابقة ذكية بين العمليات البنكية والفواتير والمصروفات.",
           "tally": "manual",
           "quickbooks": "yes"
         },
         "estore": {
-          "name": "Integrated Service E-Store",
-          "desc": "A centralized, public-facing shop for selling services directly.",
+          "name": "متجر خدمات متكامل",
+          "desc": "متجر عام موحّد لبيع الخدمات مباشرة.",
           "tally": "no",
           "quickbooks": "addon"
         },
         "native": {
-          "name": "Native Apps & PWA Support",
-          "desc": "Fully built native applications for Android, iOS & PC.",
+          "name": "تطبيقات أصلية ودعم PWA",
+          "desc": "تطبيقات أصلية كاملة لأندرويد وiOS والحاسوب.",
           "tally": "partial",
           "quickbooks": "yes"
         },
         "ca": {
-          "name": "Dedicated CA Audit Portal",
-          "desc": "1-click evidence exports for Chartered Accountants to perform year-end audits.",
+          "name": "بوابة تدقيق للمحاسبين القانونيين",
+          "desc": "تصدير أدلة التدقيق بضغطة واحدة لمراجعة نهاية السنة.",
           "tally": "manual",
           "quickbooks": "no"
         },
         "roles": {
-          "name": "Role-Based Team Access",
-          "desc": "Granular permission controls for your team members and accountants.",
+          "name": "صلاحيات فريق مبنية على الأدوار",
+          "desc": "تحكم دقيق في الصلاحيات لأعضاء الفريق والمحاسبين.",
           "tally": "addon",
           "quickbooks": "premium"
         }
       }
     },
     "pricingSection": {
-      "eyebrow": "Pricing",
-      "title": "Start free. Scale when revenue justifies it.",
-      "subtitle": "Transparent limits on Free, full power on Pro, collaboration on Team—no surprise line items.",
-      "gatewayNote": "Payment links use regional gateway routing: Razorpay for India (INR) and Stripe for global collection, including Oman and GCC currencies.",
+      "eyebrow": "الأسعار",
+      "title": "ابدأ مجانًا. وتوسع حين تبرر الإيرادات ذلك.",
+      "subtitle": "حدود واضحة في المجاني، قوة كاملة في الاحترافية، وتعاون أوسع في الفريق — دون رسوم مفاجئة.",
+      "gatewayNote": "روابط الدفع تستخدم توجيهًا إقليميًا: Razorpay للهند (INR) وStripe للتحصيل العالمي بما في ذلك عُمان والخليج.",
       "billing": {
-        "monthly": "Monthly",
-        "annually": "Annually",
-        "bestValue": "Best Value"
+        "monthly": "شهري",
+        "annually": "سنوي",
+        "bestValue": "أفضل قيمة"
       },
       "signals": {
-        "setupLabel": "Average setup time",
-        "setupValue": "<15 min",
-        "remindersLabel": "Automated reminders",
-        "remindersValue": "Included",
-        "reconLabel": "Invoice reconciliation",
-        "reconValue": "Real-time"
+        "setupLabel": "متوسط وقت الإعداد",
+        "setupValue": "أقل من 15 دقيقة",
+        "remindersLabel": "تذكيرات تلقائية",
+        "remindersValue": "مشمولة",
+        "reconLabel": "مطابقة الفواتير",
+        "reconValue": "لحظية"
       },
-      "badgeHighestValue": "Highest Value",
-      "planFitHeading": "Plan fit",
-      "includedHeading": "What's included",
-      "perMonth": "per month",
-      "perYear": "per year",
-      "perOneTime": "one-time",
-      "msmeLabel": "Official MSME Registered",
+      "badgeHighestValue": "أعلى قيمة",
+      "planFitHeading": "مناسبة الخطة",
+      "includedHeading": "ما الذي يتضمنه الاشتراك",
+      "perMonth": "شهريًا",
+      "perYear": "سنويًا",
+      "perOneTime": "مرة واحدة",
+      "msmeLabel": "منشأة MSME مسجلة رسميًا",
       "udyamId": "UDYAM-RJ-21-0089275",
-      "footerQuestion": "Questions about Pro or Team?",
-      "emailUs": "Email us",
+      "footerQuestion": "هل لديك أسئلة حول خطة الاحترافية أو الفريق؟",
+      "emailUs": "راسلنا",
       "tiers": {
         "free": {
-          "name": "Free",
-          "description": "Explore the full ERP with sensible limits — one workspace per account.",
-          "cta": "Start Free",
-          "cue": "Validate your workflow before you scale",
-          "planFitDetail": "Best for focused teams with predictable growth",
+          "name": "مجاني",
+          "description": "استكشف كامل النظام مع حدود مناسبة لمساحة عمل واحدة.",
+          "cta": "ابدأ مجانًا",
+          "cue": "تحقق من سير العمل قبل التوسع",
+          "planFitDetail": "مناسب للفرق الصغيرة بنمو متوقع",
           "features": [
-            "5 invoices per calendar month (UTC)",
-            "Up to 3 clients",
-            "Up to 3 published shop listings",
-            "Core CRM, proposals, income & expenses",
-            "Multi-currency support"
+            "5 فواتير لكل شهر ميلادي (UTC)",
+            "حتى 3 عملاء",
+            "حتى 3 عناصر منشورة في المتجر",
+            "إدارة علاقات العملاء والعروض والإيرادات والمصروفات",
+            "دعم متعدد العملات"
           ]
         },
         "pro": {
-          "name": "Pro",
-          "description": "Solo operators: unlimited invoices, gateways, and automation.",
-          "cta": "Go Pro",
-          "cue": "Best for freelancers who bill every month",
-          "planFitDetail": "Optimized for scaling agencies",
+          "name": "الاحترافية",
+          "description": "للمشغلين الفرديين: فواتير غير محدودة، بوابات دفع، وأتمتة.",
+          "cta": "اشترك في الخطة الاحترافية",
+          "cue": "الأفضل للمستقلين ذوي الفوترة الشهرية",
+          "planFitDetail": "محسن للوكالات المتنامية",
           "features": [
-            "Unlimited invoices",
-            "Stripe & Razorpay on invoices",
-            "AI BabaBot & premium workflows",
-            "Retainer automation",
-            "Up to 3 seats",
-            "20 MB document storage"
+            "فواتير غير محدودة",
+            "بوابات Stripe وRazorpay داخل الفواتير",
+            "مساعد BabaBot الذكي ومسارات متقدمة",
+            "أتمتة الاشتراكات",
+            "حتى 3 مقاعد",
+            "20 ميغابايت مساحة مستندات"
           ]
         },
         "team": {
-          "name": "Team",
-          "description": "Collaborate with staff and accountants in the same workspace.",
-          "cta": "Start with Team",
-          "cue": "Best for agencies with multiple operators",
-          "planFitDetail": "Best for focused teams with predictable growth",
+          "name": "الفريق",
+          "description": "تعاون مع الموظفين والمحاسبين في نفس مساحة العمل.",
+          "cta": "ابدأ بخطة الفريق",
+          "cue": "الأفضل للوكالات متعددة المشغلين",
+          "planFitDetail": "مناسب للفرق المركزة ذات النمو المتوقع",
           "features": [
-            "Everything in Pro",
-            "Up to 15 seats",
-            "Role-based access & accountant workflows",
-            "50 MB document storage",
-            "Priority scaling for agencies"
+            "كل ما في الخطة الاحترافية",
+            "حتى 15 مقعدًا",
+            "صلاحيات مبنية على الأدوار ومسارات محاسبين",
+            "50 ميغابايت مساحة مستندات",
+            "أولوية توسعة للوكالات"
           ]
         }
       }
     },
     "trustMetricValues": {
-      "automations": "أكثر من 120",
-      "invoiceRate": "99.9%",
-      "currencies": "أكثر من 25",
+      "automations": "+120",
+      "invoiceRate": "99.9٪",
+      "currencies": "+25",
       "setupTime": "أقل من 15 دقيقة"
     },
     "trust": {
@@ -1400,27 +1400,27 @@
     "regionalReadiness": {
       "title": "جاهزية إقليمية لعُمان ودول الخليج",
       "subtitle": "تغطية واضحة لمسارات الفوترة والضرائب عبر أسواق الخليج.",
-      "description": "Country-aware setup defaults are available across Oman, UAE, Saudi Arabia, Qatar, Bahrain, and Kuwait. Advanced compliance packs are currently strongest in UAE and Saudi Arabia, with additional GCC packs being expanded.",
-      "badgeAdvanced": "Advanced pack available",
-      "badgeCore": "Country-aware core support",
+      "description": "إعدادات افتراضية مهيأة حسب الدولة متوفرة لعُمان والإمارات والسعودية وقطر والبحرين والكويت، مع حزم امتثال متقدمة تتوسع تدريجيًا.",
+      "badgeAdvanced": "حزمة متقدمة متاحة",
+      "badgeCore": "دعم أساسي حسب الدولة",
       "countries": {
-        "oman": "Oman",
-        "uae": "United Arab Emirates",
-        "saudi": "Saudi Arabia",
-        "qatar": "Qatar",
-        "bahrain": "Bahrain",
-        "kuwait": "Kuwait"
+        "oman": "عُمان",
+        "uae": "الإمارات العربية المتحدة",
+        "saudi": "المملكة العربية السعودية",
+        "qatar": "قطر",
+        "bahrain": "البحرين",
+        "kuwait": "الكويت"
       },
       "signals": {
         "vat": "مصطلحات ضريبة القيمة المضافة وتسميات الضرائب مترجمة بحسب الدولة.",
-        "remittance": "حقول التحويل المالي تتكيّف مع الصيغ المحلية (مثل IBAN/SWIFT).",
+        "remittance": "حقول التحويل تتكيّف مع الصيغ المحلية (مثل IBAN/SWIFT).",
         "arabic": "الواجهة العربية وتخطيط RTL متاحان.",
-        "payments": "Stripe supports global collections; Razorpay remains India/INR only."
+        "payments": "يدعم Stripe التحصيل العالمي، بينما يظل Razorpay خاصًا بالهند/INR."
       }
     },
     "features": {
       "headingPrefix": "كل ما تحتاجه",
-      "headingHighlight": "للنمو بسرعة",
+      "headingHighlight": "للتوسع بسرعة",
       "description": "أتمتنا الأعمال المملة لتتفرغ لبناء مشروعك، دون مطابقة يدوية أو مواعيد ضريبية فائتة.",
       "items": {
         "automatedInvoicing": {
@@ -1428,12 +1428,12 @@
           "description": "إنشاء ملفات PDF احترافية مع قوالب متعددة وحساب تلقائي للضرائب."
         },
         "zeroEffortRetainers": {
-          "title": "اشتراكات بلا مجهود",
-          "description": "اضبط الفوترة المتكررة مرة واحدة، ويضيف النظام التواريخ والأوصاف تلقائيًا شهريًا."
+          "title": "اشتراكات تلقائية",
+          "description": "اضبط الفوترة المتكررة مرة واحدة، ويضيف النظام التواريخ والأوصاف تلقائيًا كل شهر."
         },
         "aiBabaBotInsights": {
-          "title": "AI BabaBot Insights",
-          "description": "Chat with your data. Get instant financial summaries and trend analysis using natural language."
+          "title": "رؤى BabaBot الذكية",
+          "description": "تحدث مع بياناتك واحصل على ملخصات مالية فورية وتحليل اتجاهات بلغة طبيعية."
         },
         "expenseLedger": {
           "title": "دفتر المصروفات",
@@ -1444,24 +1444,24 @@
           "description": "مطابقة بضغطة واحدة بين كشوف البنك والفواتير والمصروفات بدقة عالية."
         },
         "investmentHub": {
-          "title": "Investment Hub",
-          "description": "Global oversight of your agency's wealth, investments, and growth metrics."
+          "title": "مركز الاستثمارات",
+          "description": "رؤية شاملة لاستثمارات الوكالة ومؤشرات النمو."
         },
         "globalCompliance": {
-          "title": "Global Compliance",
-          "description": "Built-in SAC/HSN code lookup and regional tax compliance for 40+ countries."
+          "title": "امتثال عالمي",
+          "description": "دعم مضمن لرموز الضرائب ومتطلبات الامتثال الإقليمي عبر دول متعددة."
         },
         "clientCrm": {
           "title": "إدارة علاقات العملاء",
-          "description": "إدارة العلاقات، وتتبع الحالات، وعرض سجل الفوترة الكامل في مكان واحد."
+          "description": "إدارة العلاقات وتتبع الحالات وعرض سجلات الفوترة في مكان واحد."
         },
         "premiumProposals": {
           "title": "عروض احترافية",
           "description": "روابط عروض عالية التحويل مع توقيع إلكتروني وتتبع عام."
         },
         "inventoryHub": {
-          "title": "Inventory Hub",
-          "description": "Track physical assets, raw materials, and finished goods across multiple warehouses."
+          "title": "مركز المخزون",
+          "description": "تتبع الأصول والمواد والمنتجات عبر مستودعات متعددة."
         },
         "storeCatalog": {
           "title": "متجر خدمات متكامل",
@@ -1469,35 +1469,35 @@
         },
         "multiChannelNotifications": {
           "title": "تنبيهات متعددة القنوات",
-          "description": "تنبيهات فورية عبر البريد والإشعارات والويب للأحداث المهمة."
+          "description": "تنبيهات فورية عبر البريد والإشعارات والتطبيق للأحداث المهمة."
         },
         "caCompliance": {
-          "title": "CA Compliance & Audit Ledger",
-          "description": "A dedicated portal for your Chartered Accountant to perform year-end audits with 1-click evidence exports."
+          "title": "امتثال وتدقيق للمحاسبين القانونيين",
+          "description": "بوابة مخصصة للمراجع مع تصدير أدلة التدقيق بضغطة واحدة."
         },
         "multiLevelRoles": {
-          "title": "Multi-Level Roles",
-          "description": "Granular permission controls for your team members, accountants, and external contributors."
+          "title": "صلاحيات متعددة المستويات",
+          "description": "تحكم دقيق في الصلاحيات لأعضاء الفريق والمحاسبين والمتعاونين الخارجيين."
         },
         "pwaImplementation": {
-          "title": "PWA Implementation",
-          "description": "Install the application directly from the browser for lightning-fast, offline-capable access."
+          "title": "دعم تطبيق ويب تقدمي",
+          "description": "ثبّت التطبيق مباشرة من المتصفح للوصول السريع والعمل دون اتصال."
         },
         "nativeApps": {
-          "title": "Native Android & iOS Apps",
-          "description": "Fully built native applications for all platforms so you can manage your agency from anywhere."
+          "title": "تطبيقات أندرويد وiOS أصلية",
+          "description": "تطبيقات أصلية كاملة لإدارة أعمالك من أي مكان."
         }
       }
     },
     "finalCta": {
-      "titleLine1": "Ready to experience the",
-      "titleLine2": "BabaBuilds advantage?",
-      "primaryCta": "Get Started for Free",
-      "secondaryCta": "View Documentation",
+      "titleLine1": "جاهز لتجربة",
+      "titleLine2": "ميزة BabaBuilds؟",
+      "primaryCta": "ابدأ مجانًا",
+      "secondaryCta": "عرض التوثيق",
       "badges": {
-        "udyam": "UDYAM Registered",
-        "wcag": "WCAG 2.2 Level AA",
-        "globalSupport": "Global Support"
+        "udyam": "مسجل في UDYAM",
+        "wcag": "متوافق مع WCAG 2.2 المستوى AA",
+        "globalSupport": "دعم عالمي"
       }
     }
   },
@@ -1550,10 +1550,10 @@
     },
     "actions": {
       "dashboard": "لوحة التحكم",
-      "login": "Log in",
-      "getStarted": "Get Started",
+      "login": "تسجيل الدخول",
+      "getStarted": "ابدأ الآن",
       "goToDashboard": "الانتقال إلى لوحة التحكم",
-      "getStartedFree": "Get Started free",
+      "getStartedFree": "ابدأ مجانًا",
       "exploreDemo": "استكشف العرض التفاعلي",
       "startTrial": "ابدأ تجربة Pro لمدة 15 يومًا",
       "openMenu": "فتح قائمة التنقل",
@@ -1599,25 +1599,25 @@
     "roleLauncher": {
       "badge": "استكشف العرض التفاعلي",
       "title": "ادخل إلى إعداد مناسب للدور بنقرة واحدة.",
-      "description": "لا حاجة للتسجيل في النظرة الأولى. نقوم بتجهيز بيانات تجريبية ممهدة فورًا حتى يتمكن الزوار من تقييم تدفقات العمل الحقيقية بدون احتكاك.",
+      "description": "لا حاجة للتسجيل في النظرة الأولى. نجهز بيانات تجريبية فورًا لتقييم سير العمل الحقيقي دون احتكاك.",
       "cards": {
         "ca": {
           "title": "جرّب عرض المحاسب القانوني",
-          "description": "مساحة عمل تركز على الامتثال مع عوائق GST/TDS والمستندات وتدفق التسوية."
+          "description": "مساحة عمل امتثال مع عوائق GST/TDS والمستندات وتدفق المطابقة."
         },
         "agency": {
           "title": "جرّب عرض الوكالة",
-          "description": "الاحتفاظات والعروض وخط الفوترة وإشارات التحصيل المتأخر في إعداد واحد."
+          "description": "اشتراكات وعروض ومسار فواتير وإشارات تحصيل متأخر في إعداد واحد."
         },
         "contractor": {
           "title": "جرّب عرض المقاول",
-          "description": "فوترة المراحل ورؤية المصروفات وتخطيط التدفق النقدي للمشاريع للبنّائين والفرق."
+          "description": "فوترة مراحل ورؤية مصروفات وتخطيط نقدي للمشاريع."
         }
       },
       "footerPrefix": "داخل كل عرض:",
-      "footerTextPart1": "مطالبة تحويل ثابتة مع",
+      "footerTextPart1": "دعوة تحويل واضحة مع",
       "footerQuotedCta": "ابدأ باستخدام هذا الإعداد",
-      "footerTextPart2": "حتى ينتقل التقييم طبيعيًا إلى التجربة."
+      "footerTextPart2": "لتنتقل التجربة بسلاسة إلى البدء الفعلي."
     },
     "persona": {
       "widget": {
@@ -1627,9 +1627,9 @@
         "switchToDark": "التبديل إلى الوضع الداكن"
       },
       "workflowTitle": "هذا هو سير العمل الذي سيراه فريقك",
-      "painPointsTitle": "المشكلات التي نحلها أولًا",
-      "featuresTitle": "ميزات مصممة لهذا المجال",
-      "testimonialsTitle": "موثوق من فرق مثلك",
+      "painPointsTitle": "المشكلات التي نعالجها أولًا",
+      "featuresTitle": "ميزات مصممة لهذا القطاع",
+      "testimonialsTitle": "موثوق به من فرق مثلك",
       "exploreByPersona": "استكشف حسب الفئة"
     }
   },
@@ -1820,72 +1820,72 @@
     "allRightsReserved": "جميع الحقوق محفوظة.",
     "location": "بيلاني، راجستان، الهند",
     "trustChips": {
-      "secureBilling": "Secure billing",
-      "gstVatReady": "جاهز لـ GST/VAT",
+      "secureBilling": "فوترة آمنة",
+      "gstVatReady": "جاهز لضريبة القيمة المضافة وGST",
       "publicSupportDocs": "وثائق دعم عامة"
     }
   },
   "LandingPersona": {
     "forCa": {
       "navLabel": "للمحاسبين القانونيين",
-      "headline": "Built for CAs and accountants running compliance at scale.",
-      "subheadline": "Deliver GST/TDS-ready books, client billing, and document trails from one orange-amber command center.",
+      "headline": "مصمم للمحاسبين القانونيين ومكاتب المحاسبة التي تدير الامتثال على نطاق واسع.",
+      "subheadline": "قدم دفاتر جاهزة لـ GST/TDS وفوترة العملاء ومسارات المستندات من مركز قيادة واحد.",
       "painPoints": [
-        "Chasing clients for documents and recon data every month",
-        "Switching between filing sheets, invoices, and follow-up threads",
-        "No single view of compliance blockers across clients"
+        "مطاردة المستندات وبيانات المطابقة من العملاء كل شهر",
+        "التنقل بين جداول الإقرار والفواتير ومتابعات الرسائل",
+        "غياب رؤية موحدة لمعوقات الامتثال عبر العملاء"
       ],
       "features": [
-        "Compliance-focused demo workspace with tax milestones",
-        "Document inbox + OCR-ready intake for monthly filings",
-        "Client-wise receivables and follow-up workflow",
-        "Proposal and invoice engine with GST-aligned fields",
-        "Audit-friendly activity trail across billing and records"
+        "بيئة عرض تركز على الامتثال مع معالم ضريبية",
+        "صندوق مستندات مع استقبال جاهز للـ OCR",
+        "سير عمل للتحصيل والمتابعة حسب العميل",
+        "محرك عروض وفواتير متوافق مع متطلبات GST",
+        "سجل نشاط مناسب للتدقيق عبر الفوترة والوثائق"
       ],
       "demoFlow": [
-        "Open Tax Dashboard and review readiness blockers",
-        "Jump into document vault and verify filing documents",
-        "Send invoice + reminder and track outstanding collection",
-        "Close with monthly compliance status by client"
+        "افتح لوحة الضرائب وراجع نقاط التعثر",
+        "انتقل إلى خزنة المستندات وتحقق من ملفات الإقرار",
+        "أرسل فاتورة وتذكيرًا وتابع التحصيلات المعلقة",
+        "اختم بمؤشر امتثال شهري لكل عميل"
       ],
       "trustChips": [
-        "Secure billing",
-        "GST/VAT support",
-        "Proposal-to-invoice flow",
-        "Multi-currency ready"
+        "فوترة آمنة",
+        "دعم GST/VAT",
+        "تدفق من العرض إلى الفاتورة",
+        "جاهزية تعدد العملات"
       ],
       "testimonials": [
         {
-          "quote": "Our team now closes monthly compliance packs faster because billing, docs, and blocker visibility are finally in one place.",
-          "author": "Aditi Bhardwaj",
-          "role": "Partner, LedgerBridge CA Associates"
+          "quote": "أصبح فريقنا يغلق حزم الامتثال الشهرية أسرع لأن الفوترة والمستندات والرؤية أصبحت في مكان واحد.",
+          "author": "أديتي بهاردواج",
+          "role": "شريكة، LedgerBridge CA Associates"
         },
         {
-          "quote": "The tax workflow view reduced follow-up chaos with clients by making every open task visible.",
-          "author": "Nitin Khandelwal",
-          "role": "Compliance Lead, Northline Advisors"
+          "quote": "عرض سير العمل الضريبي قلل فوضى المتابعة مع العملاء عبر إظهار كل المهام المفتوحة بوضوح.",
+          "author": "نيتين خاندلوال",
+          "role": "قائد الامتثال، Northline Advisors"
         }
       ],
       "primaryCta": {
-        "label": "Start 15-Day Pro Trial"
+        "label": "ابدأ تجربة Pro لمدة 15 يومًا"
       },
       "secondaryCta": {
-        "label": "Try Live Demo"
+        "label": "جرّب العرض المباشر"
       },
       "metadata": {
-        "title": "ERP for CAs and accountants | BabaBuilds ERP",
-        "description": "A CA-first workspace for compliance, invoicing, and document governance. Start a 15-day trial or explore the tax agency demo instantly.",
+        "title": "ERP للمحاسبين القانونيين ومكاتب المحاسبة | BabaBuilds ERP",
+        "description": "مساحة عمل موجهة للمحاسبين القانونيين للامتثال والفوترة وحوكمة المستندات. ابدأ تجربة 15 يومًا أو استكشف عرض مكتب الضرائب فورًا.",
         "keywords": [
-          "ERP for chartered accountants",
-          "GST compliance software India",
-          "CA billing and receivables tool"
+          "ERP للمحاسبين القانونيين",
+          "برنامج امتثال GST في الهند",
+          "أداة فوترة وتحصيل لمكاتب المحاسبة"
         ]
       }
     },
     "forAgencies": {
       "navLabel": "للوكالات",
-      "headline": "Run your agency finances on autopilot, not spreadsheets.",
-      "subheadline": "From proposal to retainer billing and cash-flow visibility, get one operational hub for growth teams.",
+      "headline": "أدر مالية وكالتك تلقائيًا بدل الجداول.",
+      "subheadline": "من العرض إلى فوترة الاشتراكات ورؤية التدفق النقدي، منصة تشغيل واحدة لفرق النمو.",
       "painPoints": [
         "Retainer billing delays hurt monthly cash flow",
         "Client approvals, proposals, and invoices are scattered",
@@ -1923,25 +1923,25 @@
         }
       ],
       "primaryCta": {
-        "label": "Start 15-Day Pro Trial"
+        "label": "ابدأ تجربة Pro لمدة 15 يومًا"
       },
       "secondaryCta": {
-        "label": "Try Live Demo"
+        "label": "جرّب العرض المباشر"
       },
       "metadata": {
-        "title": "ERP for agencies | BabaBuilds ERP",
-        "description": "Automate retainers, proposals, invoices, and collections with a growth-focused agency ERP. Start your 15-day trial or try the live demo.",
+        "title": "ERP للوكالات | BabaBuilds ERP",
+        "description": "أتمتة الاشتراكات والعروض والفواتير والتحصيلات عبر نظام ERP مخصص لنمو الوكالات.",
         "keywords": [
-          "agency ERP",
-          "retainer invoicing software",
-          "agency receivables management"
+          "ERP للوكالات",
+          "برنامج فوترة الاشتراكات",
+          "إدارة تحصيلات الوكالات"
         ]
       }
     },
     "forContractors": {
       "navLabel": "للمقاولين",
-      "headline": "For contractors and builders who need tighter project cash control.",
-      "subheadline": "Track milestone billing, vendor costs, and payment delays without losing visibility across active jobs.",
+      "headline": "للمقاولين والبنّائين الذين يحتاجون تحكمًا أدق في نقدية المشاريع.",
+      "subheadline": "تتبع فوترة المراحل وتكاليف الموردين وتأخير الدفعات مع رؤية واضحة عبر المشاريع.",
       "painPoints": [
         "Milestone billing gets delayed and collections slip",
         "Site expenses and vendor payouts are hard to reconcile",
@@ -1979,25 +1979,25 @@
         }
       ],
       "primaryCta": {
-        "label": "Start 15-Day Pro Trial"
+        "label": "ابدأ تجربة Pro لمدة 15 يومًا"
       },
       "secondaryCta": {
-        "label": "Try Live Demo"
+        "label": "جرّب العرض المباشر"
       },
       "metadata": {
-        "title": "ERP for contractors and builders | BabaBuilds ERP",
-        "description": "Manage milestone billing, expenses, and cash flow in one contractor-focused ERP workspace. Start a 15-day trial or explore live demo data.",
+        "title": "ERP للمقاولين والبنّائين | BabaBuilds ERP",
+        "description": "إدارة فوترة المراحل والمصروفات والتدفق النقدي في مساحة ERP مخصصة للمقاولين.",
         "keywords": [
-          "contractor billing software",
-          "builder ERP",
-          "project cash flow management"
+          "برنامج فوترة للمقاولين",
+          "ERP للبنّائين",
+          "إدارة التدفق النقدي للمشاريع"
         ]
       }
     },
     "forSmallBusinesses": {
       "navLabel": "للشركات الصغيرة",
-      "headline": "A practical finance command center for small businesses and service firms.",
-      "subheadline": "Handle invoicing, collections, and tax-ready records without stitching together disconnected apps.",
+      "headline": "مركز مالي عملي للشركات الصغيرة وشركات الخدمات.",
+      "subheadline": "تعامل مع الفوترة والتحصيلات والسجلات الجاهزة ضريبيًا دون تطبيقات متفرقة.",
       "painPoints": [
         "Manual invoicing and follow-up takes too much owner time",
         "Cash tracking is reactive instead of predictable",
@@ -2035,25 +2035,25 @@
         }
       ],
       "primaryCta": {
-        "label": "Start 15-Day Pro Trial"
+        "label": "ابدأ تجربة Pro لمدة 15 يومًا"
       },
       "secondaryCta": {
-        "label": "Try Live Demo"
+        "label": "جرّب العرض المباشر"
       },
       "metadata": {
-        "title": "ERP for small businesses and service firms | BabaBuilds ERP",
-        "description": "Simplify invoicing, collections, expenses, and tax workflows for small business operations. Start a 15-day trial or explore an interactive demo.",
+        "title": "ERP للشركات الصغيرة وشركات الخدمات | BabaBuilds ERP",
+        "description": "بسّط الفوترة والتحصيل والمصروفات والضرائب لعمليات الشركات الصغيرة.",
         "keywords": [
-          "small business ERP",
-          "service business invoicing",
-          "GST ready billing software"
+          "ERP للشركات الصغيرة",
+          "فوترة شركات الخدمات",
+          "برنامج فوترة جاهز لـ GST"
         ]
       }
     },
     "forFreelancers": {
       "navLabel": "للمستقلين",
-      "headline": "For freelancers and consultants who want faster billing and cleaner books.",
-      "subheadline": "Create polished invoices, track retainers, and manage taxes without spending weekends on admin.",
+      "headline": "للمستقلين والاستشاريين الذين يريدون فوترة أسرع ودفاتر أنظف.",
+      "subheadline": "أنشئ فواتير احترافية وتابع الاشتراكات وأدر الضرائب دون إهدار عطلة نهاية الأسبوع في المهام الإدارية.",
       "painPoints": [
         "Late invoices and unpaid retainers break income predictability",
         "Proposal, billing, and expense records are not linked",
@@ -2091,25 +2091,25 @@
         }
       ],
       "primaryCta": {
-        "label": "Start 15-Day Pro Trial"
+        "label": "ابدأ تجربة Pro لمدة 15 يومًا"
       },
       "secondaryCta": {
-        "label": "Try Live Demo"
+        "label": "جرّب العرض المباشر"
       },
       "metadata": {
-        "title": "ERP for freelancers and consultants | BabaBuilds ERP",
-        "description": "Automate proposals, invoices, retainers, and expense tracking in one freelancer-friendly ERP. Start a 15-day trial or jump into a live demo.",
+        "title": "ERP للمستقلين والاستشاريين | BabaBuilds ERP",
+        "description": "أتمتة العروض والفواتير والاشتراكات وتتبع المصروفات في نظام ERP مناسب للمستقلين.",
         "keywords": [
-          "freelancer invoicing software",
-          "consultant billing tool",
-          "retainer management for freelancers"
+          "برنامج فوترة للمستقلين",
+          "أداة فوترة للاستشاريين",
+          "إدارة الاشتراكات للمستقلين"
         ]
       }
     }
   },
   "LandingPageSeo": {
-    "title": "BabaBuilds ERP | Start 15-Day Trial or Explore Interactive Demo",
-    "description": "Conversion-first ERP for agencies, accountants, contractors, freelancers, and service businesses. Start a 15-day Pro trial or jump into a role-based interactive demo with seeded data.",
+    "title": "BabaBuilds ERP | ابدأ تجربة 15 يومًا أو استكشف العرض التفاعلي",
+    "description": "نظام ERP موجه للتحويل للوكالات والمحاسبين والمقاولين والمستقلين وشركات الخدمات. ابدأ تجربة Pro لمدة 15 يومًا أو ادخل عرضًا تفاعليًا جاهزًا.",
     "keywords": [
       "Invoices",
       "Reconcile",
@@ -2124,35 +2124,35 @@
       "Bank Reconciliation"
     ],
     "openGraph": {
-      "title": "BabaBuilds ERP | Trial + Interactive Persona Demos",
-      "description": "Pick your role, explore a seeded live demo instantly, or start your 15-day Pro trial.",
-      "imageAlt": "BabaBuilds ERP — Invoicing, Reconciliation & Compliance Dashboard"
+      "title": "BabaBuilds ERP | تجربة + عروض تفاعلية حسب الدور",
+      "description": "اختر دورك، واستكشف عرضًا حيًا فوريًا، أو ابدأ تجربة Pro لمدة 15 يومًا.",
+      "imageAlt": "BabaBuilds ERP — لوحة الفوترة والمطابقة والامتثال"
     },
     "twitter": {
-      "title": "BabaBuilds ERP | Start Trial or Explore Demo",
-      "description": "Role-based ERP demos for CAs, agencies, contractors, freelancers, and SMB teams."
+      "title": "BabaBuilds ERP | ابدأ التجربة أو استكشف العرض",
+      "description": "عروض ERP تفاعلية حسب الدور للمحاسبين والوكالات والمقاولين والمستقلين وفرق الشركات الصغيرة."
     },
     "faq": {
       "items": [
         {
-          "question": "What is BabaBuilds ERP?",
-          "answer": "BabaBuilds ERP is an all-in-one financial management platform for agencies and freelancers. It delivers multi-currency invoicing, tax-ready GST/VAT compliance workflows, AI-powered bank reconciliation, retainer tracking, and real-time dashboards."
+          "question": "ما هو BabaBuilds ERP؟",
+          "answer": "BabaBuilds ERP منصة مالية متكاملة للوكالات والمستقلين، تدعم الفوترة متعددة العملات، وعمليات GST/VAT، ومطابقة بنكية ذكية، وتتبع الاشتراكات، ولوحات فورية."
         },
         {
-          "question": "Does BabaBuilds ERP support GST and VAT compliance?",
-          "answer": "Yes. BabaBuilds ERP supports GST/VAT workflows with country-aware setup defaults, configurable tax rates, and zero-rated export invoicing. Advanced compliance packs are available for select markets, while additional jurisdictions are supported through core country-aware setup and are being expanded."
+          "question": "هل يدعم BabaBuilds ERP امتثال GST وVAT؟",
+          "answer": "نعم، يدعم النظام تدفقات GST/VAT بإعدادات حسب الدولة ومعدلات ضريبة قابلة للضبط وفوترة صادرات منخفضة الضريبة."
         },
         {
-          "question": "Can I use BabaBuilds ERP for multi-currency invoicing?",
-          "answer": "Absolutely. BabaBuilds ERP supports invoicing in any currency — USD, INR, OMR, EUR, and more — with automatic formatting and live exchange rate awareness."
+          "question": "هل يمكن استخدام BabaBuilds ERP للفوترة متعددة العملات؟",
+          "answer": "بالتأكيد، يدعم النظام الفوترة بأي عملة مثل USD وINR وOMR وEUR مع تنسيق تلقائي ووعي بسعر الصرف."
         },
         {
-          "question": "Is BabaBuilds ERP free to use?",
-          "answer": "BabaBuilds ERP offers a free tier with full product access and limits on clients, invoices, and shop listings. Pro and Team add payment gateways, higher seat limits, and more document storage."
+          "question": "هل BabaBuilds ERP مجاني؟",
+          "answer": "يوفر النظام خطة مجانية بحدود استخدام، بينما تضيف خطتا Pro وTeam ميزات متقدمة وسعات أكبر."
         },
         {
-          "question": "Which payment gateways does BabaBuilds ERP integrate with?",
-          "answer": "BabaBuilds ERP integrates with Razorpay (for INR payments) and Stripe (for international payments), enabling you to embed payment links directly into your invoices."
+          "question": "ما بوابات الدفع التي يتكامل معها BabaBuilds ERP؟",
+          "answer": "يتكامل النظام مع Razorpay للمدفوعات بالروبية وStripe للمدفوعات الدولية مع روابط دفع داخل الفواتير."
         }
       ]
     }
