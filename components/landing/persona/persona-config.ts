@@ -57,7 +57,7 @@ export const personaOrder: PersonaConfig["slug"][] = [
 export const personaNavigationLinks = personaOrder.map((slug) => {
   const config = personaConfigs[slug];
   return {
-    labelKey: `LandingPersona.${config.namespace}.navLabel`,
+    labelKey: `${config.namespace}.navLabel`,
     href: `/${slug}`,
   };
 });

@@ -1124,10 +1124,10 @@
   },
   "Landing": {
     "hero": {
-      "badge": "Introducing the Next Evolution of ERP",
-      "titleLine1": "Run Your Agency",
+      "badge": "الإصدار التالي من أنظمة ERP",
+      "titleLine1": "شغّل وكالتك",
       "titleLine2": "on Autopilot.",
-      "description": "The global command center for bookkeeping, compliance, and growth. Automate your invoices, reconcile bank feeds, and let AI reveal your financial truth.",
+      "description": "مركز قيادة عالمي للمحاسبة والامتثال والنمو. أتمتة الفواتير، ومطابقة الحركات البنكية، والحصول على رؤى مالية مدعومة بالذكاء الاصطناعي.",
       "primaryCta": "Start for Free",
       "secondaryCta": "See all Features",
       "dashboardPreview": "Dashboard Preview"
@@ -1179,23 +1179,23 @@
       }
     },
     "socialProof": {
-      "quote": "We stopped revenue leakage when retainers, collections, and recon finally lived in one system.",
+      "quote": "أوقفنا تسرب الإيرادات عندما أصبحت الاشتراكات والتحصيلات والمطابقة في نظام واحد.",
       "attribution": "Rhea Malhotra",
-      "role": "Founder, PixelRidge Studio"
+      "role": "المؤسسة، PixelRidge Studio"
     },
     "socialProofHero": {
-      "trustedLine": "Trusted by 2,500+",
-      "trustedSuffix": "successful teams",
-      "taxLine": "Built for Indian and global tax workflows"
+      "trustedLine": "موثوق من أكثر من 2500",
+      "trustedSuffix": "فريق ناجح",
+      "taxLine": "مصمم لمسارات الضرائب المحلية والعالمية"
     },
     "featuresByOutcome": {
       "getPaid": {
-        "title": "Get paid",
-        "description": "Proposals, invoices, retainers, and a public shop—built for how service businesses actually bill."
+        "title": "تحصيل أسرع",
+        "description": "العروض والفواتير والاشتراكات ومتجر خدمات عام — بما يناسب طريقة فوترة شركات الخدمات."
       },
       "control": {
-        "title": "Stay in control",
-        "description": "Ledger discipline, bank reconciliation, CRM context, and alerts before cash surprises you."
+        "title": "تحكم كامل",
+        "description": "انضباط الدفتر، ومطابقة بنكية، وسياق العملاء، وتنبيهات قبل مفاجآت النقدية."
       },
       "compliance": {
         "title": "Compliance you can defend",
@@ -1205,7 +1205,7 @@
         "title": "Scale delivery",
         "description": "Roles, inventory when you need it, and apps that keep working on the go."
       },
-      "advancedEyebrow": "Also included"
+      "advancedEyebrow": "مشمول أيضًا"
     },
     "personaHub": {
       "eyebrow": "Pick your path",
@@ -1382,24 +1382,24 @@
       }
     },
     "trustMetricValues": {
-      "automations": "120+",
+      "automations": "أكثر من 120",
       "invoiceRate": "99.9%",
-      "currencies": "25+",
-      "setupTime": "< 15 min"
+      "currencies": "أكثر من 25",
+      "setupTime": "أقل من 15 دقيقة"
     },
     "trust": {
-      "title": "Trusted by Modern Agencies in",
+      "title": "موثوق لدى الوكالات الحديثة في",
       "cities": {
-        "dubai": "Dubai",
-        "london": "London",
-        "singapore": "Singapore",
-        "newYork": "New York",
-        "newDelhi": "New Delhi"
+        "dubai": "دبي",
+        "london": "لندن",
+        "singapore": "سنغافورة",
+        "newYork": "نيويورك",
+        "newDelhi": "نيودلهي"
       }
     },
     "regionalReadiness": {
-      "title": "Regional readiness for Oman & GCC",
-      "subtitle": "Transparent coverage for invoicing and tax workflows across Gulf markets.",
+      "title": "جاهزية إقليمية لعُمان ودول الخليج",
+      "subtitle": "تغطية واضحة لمسارات الفوترة والضرائب عبر أسواق الخليج.",
       "description": "Country-aware setup defaults are available across Oman, UAE, Saudi Arabia, Qatar, Bahrain, and Kuwait. Advanced compliance packs are currently strongest in UAE and Saudi Arabia, with additional GCC packs being expanded.",
       "badgeAdvanced": "Advanced pack available",
       "badgeCore": "Country-aware core support",
@@ -1412,36 +1412,36 @@
         "kuwait": "Kuwait"
       },
       "signals": {
-        "vat": "VAT terminology and tax labels are localized by country.",
-        "remittance": "Remittance fields adapt to local routing labels (for example, IBAN/SWIFT).",
-        "arabic": "Arabic interface support and RTL layout are available.",
+        "vat": "مصطلحات ضريبة القيمة المضافة وتسميات الضرائب مترجمة بحسب الدولة.",
+        "remittance": "حقول التحويل المالي تتكيّف مع الصيغ المحلية (مثل IBAN/SWIFT).",
+        "arabic": "الواجهة العربية وتخطيط RTL متاحان.",
         "payments": "Stripe supports global collections; Razorpay remains India/INR only."
       }
     },
     "features": {
-      "headingPrefix": "Everything you need to",
-      "headingHighlight": "scale with speed.",
-      "description": "We've automated the boring bits so you can focus on building your empire. No more manual reconciliation or missing tax deadlines.",
+      "headingPrefix": "كل ما تحتاجه",
+      "headingHighlight": "للنمو بسرعة",
+      "description": "أتمتنا الأعمال المملة لتتفرغ لبناء مشروعك، دون مطابقة يدوية أو مواعيد ضريبية فائتة.",
       "items": {
         "automatedInvoicing": {
-          "title": "Automated Invoicing",
-          "description": "Generates professional PDFs with multi-theme support and automatic calculation of taxes."
+          "title": "فوترة تلقائية",
+          "description": "إنشاء ملفات PDF احترافية مع قوالب متعددة وحساب تلقائي للضرائب."
         },
         "zeroEffortRetainers": {
-          "title": "Zero-Effort Retainers",
-          "description": "Set recurring billing once. Our engine auto-appends dates and descriptions every month."
+          "title": "اشتراكات بلا مجهود",
+          "description": "اضبط الفوترة المتكررة مرة واحدة، ويضيف النظام التواريخ والأوصاف تلقائيًا شهريًا."
         },
         "aiBabaBotInsights": {
           "title": "AI BabaBot Insights",
           "description": "Chat with your data. Get instant financial summaries and trend analysis using natural language."
         },
         "expenseLedger": {
-          "title": "Expense Ledger",
-          "description": "Track every cent with automated categorization and secure receipt storage."
+          "title": "دفتر المصروفات",
+          "description": "تتبع كل مصروف مع تصنيف تلقائي وحفظ آمن للإيصالات."
         },
         "bankReconciliation": {
-          "title": "Bank Reconciliation",
-          "description": "One-click matching of bank statements to invoices and expenses for 100% accuracy."
+          "title": "مطابقة بنكية",
+          "description": "مطابقة بضغطة واحدة بين كشوف البنك والفواتير والمصروفات بدقة عالية."
         },
         "investmentHub": {
           "title": "Investment Hub",
@@ -1452,24 +1452,24 @@
           "description": "Built-in SAC/HSN code lookup and regional tax compliance for 40+ countries."
         },
         "clientCrm": {
-          "title": "Client CRM",
-          "description": "Manage relationships, track statuses, and view complete billing histories in one hub."
+          "title": "إدارة علاقات العملاء",
+          "description": "إدارة العلاقات، وتتبع الحالات، وعرض سجل الفوترة الكامل في مكان واحد."
         },
         "premiumProposals": {
-          "title": "Premium Proposals",
-          "description": "High-converting proposal links with integrated e-signatures and public tracking."
+          "title": "عروض احترافية",
+          "description": "روابط عروض عالية التحويل مع توقيع إلكتروني وتتبع عام."
         },
         "inventoryHub": {
           "title": "Inventory Hub",
           "description": "Track physical assets, raw materials, and finished goods across multiple warehouses."
         },
         "storeCatalog": {
-          "title": "Integrated Service E-Store",
-          "description": "A centralized, public-facing shop for selling services directly without sending proposals."
+          "title": "متجر خدمات متكامل",
+          "description": "متجر عام موحّد لبيع الخدمات مباشرة دون إرسال عروض في كل مرة."
         },
         "multiChannelNotifications": {
-          "title": "Multi-Channel Notifications",
-          "description": "Get real-time alerts via Email, Web Push, and In-App notifications for critical business events."
+          "title": "تنبيهات متعددة القنوات",
+          "description": "تنبيهات فورية عبر البريد والإشعارات والويب للأحداث المهمة."
         },
         "caCompliance": {
           "title": "CA Compliance & Audit Ledger",
@@ -1503,15 +1503,15 @@
   },
   "LandingNavbar": {
     "nav": {
-      "features": "Features",
-      "comparison": "Comparison",
-      "pricing": "Pricing",
+      "features": "الميزات",
+      "comparison": "المقارنة",
+      "pricing": "الأسعار",
       "useCases": "حالات الاستخدام",
       "forCa": {
-        "title": "For CAs"
+        "title": "للمحاسبين القانونيين"
       },
       "reseller": {
-        "title": "Reseller"
+        "title": "الموزعون"
       },
       "forAgencies": {
         "title": "للوكالات",
@@ -1549,15 +1549,15 @@
       }
     },
     "actions": {
-      "dashboard": "Dashboard",
+      "dashboard": "لوحة التحكم",
       "login": "Log in",
       "getStarted": "Get Started",
-      "goToDashboard": "Go to Dashboard",
+      "goToDashboard": "الانتقال إلى لوحة التحكم",
       "getStartedFree": "Get Started free",
       "exploreDemo": "استكشف العرض التفاعلي",
       "startTrial": "ابدأ تجربة Pro لمدة 15 يومًا",
-      "openMenu": "Open navigation menu",
-      "closeMenu": "Close navigation menu"
+      "openMenu": "فتح قائمة التنقل",
+      "closeMenu": "إغلاق قائمة التنقل"
     }
   },
   "LandingPhase1": {
@@ -1626,10 +1626,10 @@
         "switchToLight": "التبديل إلى الوضع الفاتح",
         "switchToDark": "التبديل إلى الوضع الداكن"
       },
-      "workflowTitle": "هذه هي سير العمل الذي سيراه فريقك",
-      "painPointsTitle": "نقاط الألم التي نعالجها أولًا",
+      "workflowTitle": "هذا هو سير العمل الذي سيراه فريقك",
+      "painPointsTitle": "المشكلات التي نحلها أولًا",
       "featuresTitle": "ميزات مصممة لهذا المجال",
-      "testimonialsTitle": "موثوق به من فرق مثلك",
+      "testimonialsTitle": "موثوق من فرق مثلك",
       "exploreByPersona": "استكشف حسب الفئة"
     }
   },
@@ -1794,40 +1794,40 @@
   },
   "LandingHero": {
     "rotatorWords": {
-      "autopilot": "on Autopilot",
-      "scale": "at Scale",
-      "global": "Globally",
-      "ai": "with AI"
+      "autopilot": "بشكل تلقائي",
+      "scale": "على نطاق واسع",
+      "global": "عالميًا",
+      "ai": "بالذكاء الاصطناعي"
     }
   },
   "LandingFooter": {
     "sections": {
-      "product": "Product",
-      "byPersona": "By Persona",
-      "legal": "Legal"
+      "product": "المنتج",
+      "byPersona": "حسب الفئة",
+      "legal": "قانوني"
     },
     "links": {
-      "features": "Features",
-      "pricing": "Pricing",
-      "interactiveDemo": "Interactive Demo",
-      "resellerProgram": "Reseller Program",
-      "privacyPolicy": "Privacy Policy",
-      "termsOfService": "Terms of Service",
-      "helpCenter": "Help Center"
+      "features": "الميزات",
+      "pricing": "الأسعار",
+      "interactiveDemo": "عرض تفاعلي",
+      "resellerProgram": "برنامج الموزعين",
+      "privacyPolicy": "سياسة الخصوصية",
+      "termsOfService": "شروط الاستخدام",
+      "helpCenter": "مركز المساعدة"
     },
-    "description": "Public-ready ERP platform for invoicing, compliance, and growth operations.",
-    "addressLabel": "Address - Pilani, Rajasthan, India.",
-    "allRightsReserved": "All rights reserved.",
-    "location": "Pilani, Rajasthan, India",
+    "description": "منصة ERP جاهزة للعامة للفوترة والامتثال وعمليات النمو.",
+    "addressLabel": "العنوان - بيلاني، راجستان، الهند.",
+    "allRightsReserved": "جميع الحقوق محفوظة.",
+    "location": "بيلاني، راجستان، الهند",
     "trustChips": {
       "secureBilling": "Secure billing",
-      "gstVatReady": "GST/VAT ready",
-      "publicSupportDocs": "Public support docs"
+      "gstVatReady": "جاهز لـ GST/VAT",
+      "publicSupportDocs": "وثائق دعم عامة"
     }
   },
   "LandingPersona": {
     "forCa": {
-      "navLabel": "For CAs",
+      "navLabel": "للمحاسبين القانونيين",
       "headline": "Built for CAs and accountants running compliance at scale.",
       "subheadline": "Deliver GST/TDS-ready books, client billing, and document trails from one orange-amber command center.",
       "painPoints": [
@@ -1883,7 +1883,7 @@
       }
     },
     "forAgencies": {
-      "navLabel": "For Agencies",
+      "navLabel": "للوكالات",
       "headline": "Run your agency finances on autopilot, not spreadsheets.",
       "subheadline": "From proposal to retainer billing and cash-flow visibility, get one operational hub for growth teams.",
       "painPoints": [
@@ -1939,7 +1939,7 @@
       }
     },
     "forContractors": {
-      "navLabel": "For Contractors",
+      "navLabel": "للمقاولين",
       "headline": "For contractors and builders who need tighter project cash control.",
       "subheadline": "Track milestone billing, vendor costs, and payment delays without losing visibility across active jobs.",
       "painPoints": [
@@ -1995,7 +1995,7 @@
       }
     },
     "forSmallBusinesses": {
-      "navLabel": "For Small Businesses",
+      "navLabel": "للشركات الصغيرة",
       "headline": "A practical finance command center for small businesses and service firms.",
       "subheadline": "Handle invoicing, collections, and tax-ready records without stitching together disconnected apps.",
       "painPoints": [
@@ -2051,7 +2051,7 @@
       }
     },
     "forFreelancers": {
-      "navLabel": "For Freelancers",
+      "navLabel": "للمستقلين",
       "headline": "For freelancers and consultants who want faster billing and cleaner books.",
       "subheadline": "Create polished invoices, track retainers, and manage taxes without spending weekends on admin.",
       "painPoints": [
