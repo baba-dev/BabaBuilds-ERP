@@ -175,6 +175,13 @@ function inferProviderFromMetadata(metadata: Record<string, unknown> | undefined
   );
 }
 
+function isAllowedDemoMfaBypass(input: { provider?: string | null; email?: string | null }) {
+  const isDemoProvider = input.provider === "demo-login";
+  const isDemoEmail = Boolean(input.email?.toLowerCase().endsWith("@bababuilds.demo"));
+  const isNonProduction = process.env.NODE_ENV !== "production";
+  return isDemoProvider && isDemoEmail && (isNonProduction || isDemoEmail);
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24 },
@@ -325,12 +332,6 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user, account }) {
       if (!user?.email) return false;
 
-      // Allow the demo credentials provider to bypass phishing-resistant MFA policy checks.
-      // This is strictly scoped to the internal `demo-login` provider used for ephemeral demo accounts.
-      if (account?.provider === "demo-login") {
-        return true;
-      }
-
       const inviteEmail = user.email.toLowerCase();
       const pendingInvites = await prisma.workspaceInvite.findMany({
         where: {
@@ -365,10 +366,7 @@ export const authOptions: NextAuthOptions = {
 
       const isAllowedExceptionMagicLinkSignIn = isExceptionEmail && account?.provider === "email";
       if (hasHighRiskRole(effectiveRoles) && !isPhishingResistantSignIn(account) && !isAllowedExceptionMagicLinkSignIn) {
-        const isDemoCredentialsSignIn =
-          Boolean(user.email?.endsWith("@bababuilds.demo")) &&
-          (account?.provider === "demo-login" || account?.type === "credentials");
-        if (isDemoCredentialsSignIn) {
+        if (isAllowedDemoMfaBypass({ provider: account?.provider, email: user.email })) {
           return true;
         }
 
