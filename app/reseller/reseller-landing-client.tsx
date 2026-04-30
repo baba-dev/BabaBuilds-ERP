@@ -33,26 +33,26 @@ import {
 } from "@/lib/pricing";
 
 const planIntervals: Array<{ interval: PlanInterval; label: string }> = [
-  { interval: "MONTHLY", label: "Pro Monthly" },
-  { interval: "YEARLY", label: "Pro Yearly" },
-  { interval: "TEAM_MONTHLY", label: "Team Monthly" },
-  { interval: "TEAM_YEARLY", label: "Team Yearly" },
+  { interval: "MONTHLY", label: "الاحترافية شهري" },
+  { interval: "YEARLY", label: "الاحترافية سنوي" },
+  { interval: "TEAM_MONTHLY", label: "الفريق شهري" },
+  { interval: "TEAM_YEARLY", label: "الفريق سنوي" },
 ];
 
 const partnerTypes = [
-  "Consultants managing operations + finance tooling for clients",
-  "Accounting and CA firms offering implementation + advisory",
-  "Digital and automation agencies with recurring retainers",
-  "Local IT partners leading SMB ERP rollouts",
+  "استشاريون يديرون العمليات وأدوات المالية لعملائهم",
+  "مكاتب محاسبة ومحاسبين قانونيين تقدم التنفيذ والاستشارات",
+  "وكالات رقمية وأتمتة تعمل بنظام الاشتراكات المتكررة",
+  "شركاء تقنيون محليون يقودون إطلاق ERP للشركات الصغيرة والمتوسطة",
 ];
 
 const supportItems = [
-  { label: "Downloadable sales deck", href: "/api/reseller/partner-kit/sales-deck.pdf" },
-  { label: "One-page pricing sheet", href: "/api/reseller/partner-kit/pricing-sheet.pdf" },
-  { label: "WhatsApp outreach script", href: "/api/reseller/partner-kit/whatsapp-script.pdf" },
-  { label: "Objection handling sheet", href: "/api/reseller/partner-kit/objection-sheet.pdf" },
-  { label: "Onboarding checklist", href: "/api/reseller/partner-kit/onboarding-checklist.pdf" },
-  { label: "Live ROI calculator + partner resources", href: "/reseller/partner-kit" },
+  { label: "عرض مبيعات قابل للتنزيل", href: "/api/reseller/partner-kit/sales-deck.pdf" },
+  { label: "ورقة أسعار من صفحة واحدة", href: "/api/reseller/partner-kit/pricing-sheet.pdf" },
+  { label: "نص جاهز للتواصل عبر واتساب", href: "/api/reseller/partner-kit/whatsapp-script.pdf" },
+  { label: "ورقة معالجة الاعتراضات", href: "/api/reseller/partner-kit/objection-sheet.pdf" },
+  { label: "قائمة التحقق لبدء التشغيل", href: "/api/reseller/partner-kit/onboarding-checklist.pdf" },
+  { label: "حاسبة العائد + موارد الشريك", href: "/reseller/partner-kit" },
 ];
 
 type CouponState = {
@@ -114,7 +114,7 @@ export default function ResellerLandingClient() {
     e.preventDefault();
     const code = couponInput.trim().toUpperCase();
     if (!code) {
-      toast.error("Enter a reseller coupon code.");
+      toast.error("أدخل كود خصم الموزع.");
       return;
     }
 
@@ -126,7 +126,7 @@ export default function ResellerLandingClient() {
         body: JSON.stringify({ code }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Failed to validate coupon");
+      if (!res.ok) throw new Error(data?.error || "تعذر التحقق من الكود");
 
       setCoupon({
         code: data.coupon.code,
@@ -141,9 +141,9 @@ export default function ResellerLandingClient() {
         window.history.replaceState({}, "", next.toString());
         window.localStorage.setItem("resellerCouponCode", data.coupon.code);
       }
-      toast.success(`Coupon applied from ${data.coupon.resellerName}.`);
+      toast.success(`تم تطبيق الكوبون من ${data.coupon.resellerName}.`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not apply coupon");
+      toast.error(error instanceof Error ? error.message : "تعذر تطبيق الكوبون");
     } finally {
       setApplyingCoupon(false);
     }
@@ -163,7 +163,7 @@ export default function ResellerLandingClient() {
   const onSubmitQuery = async (e: FormEvent) => {
     e.preventDefault();
     if (!queryTurnstileToken) {
-      toast.error("Please complete the security challenge.");
+      toast.error("يرجى إكمال اختبار الأمان.");
       return;
     }
     setSubmittingQuery(true);
@@ -181,12 +181,12 @@ export default function ResellerLandingClient() {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Failed to submit query");
+      if (!res.ok) throw new Error(data?.error || "تعذر إرسال الطلب");
       setQueryForm(initialQueryState);
       setQueryTurnstileToken("");
-      toast.success("Thanks! Our reseller team will contact you shortly.");
+      toast.success("شكرًا! سيتواصل فريق الشركاء معك قريبًا.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not submit query");
+      toast.error(error instanceof Error ? error.message : "تعذر إرسال الطلب");
     } finally {
       setSubmittingQuery(false);
     }
@@ -206,30 +206,30 @@ export default function ResellerLandingClient() {
           <div className="relative z-10 mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
             <div className="space-y-8">
               <span className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-surface-elevated/90 px-4 py-2 text-sm font-bold text-muted-body shadow-sm backdrop-blur-md">
-                <Sparkles className="h-4 w-4 text-accent-strong" aria-hidden /> Partner Program
+                <Sparkles className="h-4 w-4 text-accent-strong" aria-hidden /> برنامج الشركاء
               </span>
               <h1 className="text-balance text-4xl font-black leading-[1.08] tracking-tight text-foreground md:text-6xl">
-                Grow with BabaBuilds ERP as a Reseller
+                نمِّ أعمالك مع BabaBuilds ERP كشريك موزع
               </h1>
               <p className="max-w-2xl text-lg font-medium leading-relaxed text-muted-body md:text-xl">
-                Build a predictable acquisition channel by helping clients modernize invoicing, compliance, and
-                operations. Offer customer discounts, close faster, and earn recurring commission upside.
+                ابنِ قناة اكتساب مستقرة عبر مساعدة العملاء على تحديث الفوترة والامتثال والعمليات. قدم خصومات
+                للعملاء، وأغلق الصفقات أسرع، وحقق عمولات متكررة.
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button asChild className="h-12 gap-2 rounded-2xl px-7 font-black">
                   <Link href="/signup?plan=pro&cycle=monthly&trial=15&source=reseller_hero">
-                    Apply as Reseller <ArrowRight className="h-4 w-4" />
+                    قدّم كشريك موزع <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
                 <Button asChild variant="outline" className="h-12 rounded-2xl px-7 font-bold">
-                  <Link href="/referrals">Go to Reseller Dashboard</Link>
+                  <Link href="/referrals">الانتقال إلى لوحة الشركاء</Link>
                 </Button>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
                 {[
-                  { title: "Default customer offer", value: "25% first-year discount" },
-                  { title: "Commission range", value: "10% to 15% per closed deal" },
-                  { title: "Payout terms", value: "Net 30 with tracked ledger" },
+                  { title: "عرض العميل الافتراضي", value: "خصم 25% في السنة الأولى" },
+                  { title: "نطاق العمولة", value: "من 10% إلى 15% لكل صفقة مغلقة" },
+                  { title: "شروط السداد", value: "صافي 30 يومًا مع دفتر تتبع" },
                 ].map((metric) => (
                   <div
                     key={metric.title}
@@ -251,11 +251,10 @@ export default function ResellerLandingClient() {
               <Card className="rounded-3xl border-border/70 bg-surface-elevated shadow-xl">
                 <CardHeader className="space-y-3">
                   <CardTitle className="flex items-center gap-2 text-2xl">
-                    <BadgeDollarSign className="h-6 w-6 text-orange-500" /> Live Partner Pricing
+                    <BadgeDollarSign className="h-6 w-6 text-orange-500" /> تسعير الشركاء المباشر
                   </CardTitle>
                   <CardDescription className="text-sm leading-relaxed">
-                    Apply your reseller code, preview discount impact instantly, then continue to checkout with the
-                    same pricing context.
+                    طبّق كود الشريك، عاين أثر الخصم فورًا، ثم أكمل الدفع بنفس سياق التسعير.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5">
@@ -275,7 +274,7 @@ export default function ResellerLandingClient() {
 
                   <div className="space-y-2">
                     <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-body">
-                      Pricing region
+                      منطقة التسعير
                     </p>
                     <div className="grid gap-2 sm:grid-cols-5">
                     {(["IN", "US", "EU", "OM", "ROW"] as PricingRegion[]).map((region) => (
@@ -294,21 +293,21 @@ export default function ResellerLandingClient() {
                   </div>
 
                   <form onSubmit={onApplyCoupon} className="space-y-2">
-                    <Label htmlFor="resellerCoupon">Reseller coupon code</Label>
+                    <Label htmlFor="resellerCoupon">كود كوبون الشريك</Label>
                     <div className="flex gap-2">
                       <Input
                         id="resellerCoupon"
                         value={couponInput}
                         onChange={(e) => setCouponInput(e.target.value)}
-                        placeholder="e.g. PARTNER-ABC123"
+                        placeholder="مثال: PARTNER-ABC123"
                         className="font-mono"
                       />
                       <Button type="submit" disabled={applyingCoupon}>
-                        {applyingCoupon ? "Applying..." : "Apply"}
+                        {applyingCoupon ? "جارٍ التطبيق..." : "تطبيق"}
                       </Button>
                     </div>
                     <p className="text-[11px] text-muted-body">
-                      Use an admin-generated reseller code. Your applied code will carry into checkout.
+                      استخدم كود شريك منشأ من لوحة الإدارة. سيُحفظ الكود حتى صفحة الدفع.
                     </p>
                   </form>
 
@@ -316,10 +315,10 @@ export default function ResellerLandingClient() {
                     {coupon ? (
                       <>
                         <p className="text-sm font-bold text-foreground">
-                          Coupon <span className="font-mono">{coupon.code}</span> from {coupon.resellerName}
+                          الكوبون <span className="font-mono">{coupon.code}</span> من {coupon.resellerName}
                         </p>
                         <p className="mt-1 text-xs text-muted-body">
-                          {coupon.discountPercent}% customer discount · {coupon.commissionPercent}% reseller commission
+                          خصم عميل {coupon.discountPercent}% · عمولة شريك {coupon.commissionPercent}%
                         </p>
                         <div className="mt-3 flex items-end gap-3">
                           <p className="text-sm text-muted-body line-through">
@@ -330,17 +329,17 @@ export default function ResellerLandingClient() {
                           </p>
                         </div>
                         <p className="mt-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                          You save{" "}
+                          أنت توفر{" "}
                           {formatMajorInCurrency(selectedPlan.amountMajor - discountedAmount, selectedPlan.currency)}
                         </p>
                         <Button type="button" variant="ghost" onClick={clearCoupon} className="mt-2 px-0 text-xs">
-                          Clear coupon
+                          إزالة الكوبون
                         </Button>
                       </>
                     ) : (
                       <>
                         <p className="text-xs font-black uppercase tracking-[0.16em] text-muted-body">
-                          Current list price
+                          السعر الأساسي الحالي
                         </p>
                         <p className="mt-2 text-3xl font-black text-foreground">
                           {formatMajorInCurrency(selectedPlan.amountMajor, selectedPlan.currency)}
@@ -350,10 +349,10 @@ export default function ResellerLandingClient() {
                   </div>
 
                   <Button asChild className="h-12 w-full rounded-2xl font-black">
-                    <Link href={checkoutHref}>Continue to Secure Checkout</Link>
+                    <Link href={checkoutHref}>المتابعة إلى دفع آمن</Link>
                   </Button>
                   <Button asChild variant="outline" className="h-11 w-full rounded-2xl font-bold">
-                    <Link href="/reseller/partner-kit">Download partner kit</Link>
+                    <Link href="/reseller/partner-kit">تحميل حقيبة الشريك</Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -366,7 +365,7 @@ export default function ResellerLandingClient() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-xl">
-                  <Users className="h-5 w-5 text-orange-600" /> Who can become a reseller
+                  <Users className="h-5 w-5 text-orange-600" /> من يمكنه أن يصبح شريكًا موزعًا
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-body">
@@ -378,7 +377,7 @@ export default function ResellerLandingClient() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-xl">
-                  <LifeBuoy className="h-5 w-5 text-emerald-600" /> Partner enablement support
+                  <LifeBuoy className="h-5 w-5 text-emerald-600" /> دعم تمكين الشركاء
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-body">
@@ -406,33 +405,33 @@ export default function ResellerLandingClient() {
               <CardContent className="grid gap-8 p-6 md:grid-cols-[1.1fr_0.9fr] md:items-center md:p-8">
                 <div className="space-y-4">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-muted-body">
-                    Official regional partner
+                    الشريك الإقليمي الرسمي
                   </p>
                   <h2 className="text-2xl font-black tracking-tight text-foreground md:text-3xl">
-                    Aiwa Media Group is our official Oman reseller and GCC support partner
+                    Aiwa Media Group هو شريكنا الرسمي للتوزيع في عُمان ودعم دول الخليج
                   </h2>
                   <p className="text-sm leading-relaxed text-muted-body md:text-base">
-                    For businesses in Oman and across GCC regions, Aiwa Media Group provides localized onboarding,
-                    solution consulting, and partner-led implementation support for BabaBuilds ERP.
+                    للشركات في عُمان ودول الخليج، يوفر Aiwa Media Group دعم تهيئة محلي، واستشارات حلول،
+                    ومساندة تنفيذ يقودها الشريك لنظام BabaBuilds ERP.
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <span className="rounded-full border border-border/80 bg-surface-elevated px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-foreground/90">
-                      Oman-focused coverage
+                      تغطية مخصصة لعُمان
                     </span>
                     <span className="rounded-full border border-border/80 bg-surface-elevated px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-foreground/90">
-                      GCC reseller support
+                      دعم شركاء الخليج
                     </span>
                   </div>
                   <Button asChild className="h-11 rounded-xl px-6 font-black">
                     <Link href="https://aiwamediagroup.com/" target="_blank" rel="noopener noreferrer">
-                      Visit Aiwa Media Group <ArrowRight className="h-4 w-4" />
+                      زيارة Aiwa Media Group <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
                 </div>
                 <div className="rounded-2xl border border-border/80 bg-white p-4 shadow-sm dark:bg-zinc-950">
                   <Image
                     src="/aiwa-media-group-logo.png"
-                    alt="Aiwa Media Group logo"
+                    alt="شعار Aiwa Media Group"
                     width={980}
                     height={390}
                     className="h-auto w-full rounded-lg object-contain"
@@ -447,13 +446,13 @@ export default function ResellerLandingClient() {
         <section className="bg-surface-base py-16">
           <div className="mx-auto max-w-7xl px-6">
             <div className="mb-8 max-w-3xl">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-muted-body">Secure partner intake</p>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-muted-body">نموذج شركاء آمن</p>
               <h2 className="mt-2 text-3xl font-black tracking-tight text-foreground md:text-4xl">
-                Tell us about your partner motion
+                أخبرنا عن خطة عملك كشريك
               </h2>
               <p className="mt-3 text-sm text-muted-body">
-                This form is protected with anti-bot checks and rate limiting. Share your goals and our partner team
-                will reach out with onboarding support and go-to-market guidance.
+                هذا النموذج محمي بفحوصات مكافحة الروبوتات وحدود الطلبات. شارك أهدافك وسيتواصل فريق الشركاء
+                معك لدعم التفعيل وخطة الإطلاق.
               </p>
             </div>
 
@@ -461,7 +460,7 @@ export default function ResellerLandingClient() {
               <CardContent className="p-6 md:p-8">
                 <form onSubmit={onSubmitQuery} className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="fullName">Full name</Label>
+                    <Label htmlFor="fullName">الاسم الكامل</Label>
                     <Input
                       id="fullName"
                       value={queryForm.fullName}
@@ -470,7 +469,7 @@ export default function ResellerLandingClient() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Work email</Label>
+                    <Label htmlFor="email">البريد المهني</Label>
                     <Input
                       id="email"
                       type="email"
@@ -480,7 +479,7 @@ export default function ResellerLandingClient() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="company">Company</Label>
+                    <Label htmlFor="company">الشركة</Label>
                     <Input
                       id="company"
                       value={queryForm.company}
@@ -488,7 +487,7 @@ export default function ResellerLandingClient() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
+                    <Label htmlFor="phone">رقم الهاتف</Label>
                     <Input
                       id="phone"
                       value={queryForm.phone}
@@ -496,7 +495,7 @@ export default function ResellerLandingClient() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="website">Website</Label>
+                    <Label htmlFor="website">الموقع الإلكتروني</Label>
                     <Input
                       id="website"
                       value={queryForm.website}
@@ -505,7 +504,7 @@ export default function ResellerLandingClient() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="monthlyClientLeads">Monthly client leads</Label>
+                    <Label htmlFor="monthlyClientLeads">عدد العملاء المتوقع شهريًا</Label>
                     <Input
                       id="monthlyClientLeads"
                       type="number"
@@ -517,16 +516,16 @@ export default function ResellerLandingClient() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="budgetBand">Budget band</Label>
+                    <Label htmlFor="budgetBand">النطاق الميزاني</Label>
                     <Input
                       id="budgetBand"
                       value={queryForm.budgetBand}
                       onChange={(e) => setQueryForm((prev) => ({ ...prev, budgetBand: e.target.value }))}
-                      placeholder="e.g. $1k-$5k / quarter"
+                      placeholder="مثال: 1000$-5000$ لكل ربع"
                     />
                   </div>
                   <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="message">How do you plan to position BabaBuilds ERP?</Label>
+                    <Label htmlFor="message">كيف تخطط لتقديم BabaBuilds ERP؟</Label>
                     <Textarea
                       id="message"
                       value={queryForm.message}
@@ -549,10 +548,10 @@ export default function ResellerLandingClient() {
                   </div>
                   <div className="md:col-span-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-xs text-muted-body">
-                      Protected by Turnstile, server-side rate limits, and honeypot validation.
+                      محمي عبر Turnstile وحدود الخادم والتحقق من حقول المصيدة.
                     </p>
                     <Button type="submit" disabled={submittingQuery} className="rounded-2xl px-8 font-black">
-                      {submittingQuery ? "Submitting..." : "Submit query"}
+                      {submittingQuery ? "جارٍ الإرسال..." : "إرسال الطلب"}
                     </Button>
                   </div>
                 </form>
@@ -564,48 +563,47 @@ export default function ResellerLandingClient() {
         <section className="border-t border-border py-16">
           <div className="mx-auto max-w-7xl px-6">
             <div className="mb-6">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-muted-body">How the system works</p>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-muted-body">كيف يعمل النظام</p>
               <h2 className="mt-2 text-2xl font-black tracking-tight text-foreground md:text-3xl">
-                Built for transparent reseller growth
+                مبني لنمو الشركاء بوضوح كامل
               </h2>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
-                    <Route className="h-4 w-4 text-indigo-500" /> How leads are tracked
+                    <Route className="h-4 w-4 text-indigo-500" /> كيف يتم تتبع العملاء المحتملين
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm text-muted-body">
-                  Unique coupon codes map each referred workspace to a reseller profile. This powers usage, revenue,
-                  conversion, and renewal analytics.
+                  تربط أكواد الكوبون الفريدة كل مساحة عمل مُحالة بملف الشريك. وهذا يدعم تحليلات الاستخدام
+                  والإيرادات والتحويلات والتجديد.
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
-                    <Handshake className="h-4 w-4 text-orange-500" /> Better joint GTM execution
+                    <Handshake className="h-4 w-4 text-orange-500" /> تنفيذ مشترك أقوى للإطلاق السوقي
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm text-muted-body">
-                  Collaborate on demos, launch sequences, and customer onboarding while keeping ownership and payout
-                  terms transparent.
+                  تعاون في العروض وتسلسل الإطلاق وتأهيل العملاء مع الحفاظ على وضوح الملكية وشروط السداد.
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
-                    <ShieldCheck className="h-4 w-4 text-emerald-500" /> Checkout-safe discounts
+                    <ShieldCheck className="h-4 w-4 text-emerald-500" /> خصومات متوافقة مع الدفع
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm text-muted-body">
                   <p className="flex items-start gap-2">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                    Coupon pricing preview stays aligned with checkout validation.
+                    معاينة تسعير الكوبون تظل متوافقة مع تحقق صفحة الدفع.
                   </p>
                   <p className="flex items-start gap-2">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                    Applied codes are persisted for billing flow continuity.
+                    يتم حفظ الأكواد المطبقة لضمان استمرارية مسار الفوترة.
                   </p>
                 </CardContent>
               </Card>
