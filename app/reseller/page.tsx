@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import ResellerLandingClient from "./reseller-landing-client";
 
 export const metadata: Metadata = {
-  title: "BabaBuilds ERP Reseller Program",
+  title: "برنامج موزعي BabaBuilds ERP",
   description:
-    "Join the BabaBuilds ERP reseller program. Offer clients a first-year discount, earn commissions, and get partner enablement support.",
+    "انضم إلى برنامج موزعي BabaBuilds ERP. قدّم خصومات للعملاء في السنة الأولى، واكسب عمولات، واحصل على دعم تمكين الشركاء.",
   alternates: {
     canonical: "https://erp.bababuilds.com/reseller",
   },

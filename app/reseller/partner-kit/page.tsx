@@ -8,9 +8,9 @@ import LandingFooter from "@/components/LandingFooter";
 import { RoiCalculator } from "@/components/reseller/RoiCalculator";
 
 export const metadata: Metadata = {
-  title: "Reseller Partner Kit | BabaBuilds ERP",
+  title: "حزمة شريك الموزعين | BabaBuilds ERP",
   description:
-    "Download the official reseller partner kit: deck, pricing sheet, WhatsApp script, objection sheet, onboarding checklist, and ROI calculator.",
+    "نزّل حزمة شريك الموزعين الرسمية: عرض المبيعات، ورقة الأسعار، نص واتساب، ورقة معالجة الاعتراضات، قائمة التفعيل، وحاسبة العائد.",
   alternates: {
     canonical: "https://erp.bababuilds.com/reseller/partner-kit",
   },
@@ -18,32 +18,32 @@ export const metadata: Metadata = {
 
 const kitAssets = [
   {
-    title: "Partner deck",
-    description: "Pitch storyline, ICP, and conversion flow for partner-led demos.",
+    title: "عرض الشريك",
+    description: "سرد عرض البيع، والعميل المثالي، ومسار التحويل لعروض يقودها الشريك.",
     href: "/api/reseller/partner-kit/sales-deck",
     icon: Presentation,
   },
   {
-    title: "1-page pricing sheet",
-    description: "Customer-facing pricing summary with reseller discount positioning.",
+    title: "ورقة أسعار من صفحة واحدة",
+    description: "ملخص أسعار موجه للعميل مع توضيح خصم الموزع.",
     href: "/api/reseller/partner-kit/pricing-sheet",
     icon: FileText,
   },
   {
-    title: "WhatsApp script",
-    description: "Message templates for outreach, follow-up, and demo booking.",
+    title: "نص واتساب",
+    description: "قوالب رسائل للتواصل الأولي، والمتابعة، وحجز العرض.",
     href: "/api/reseller/partner-kit/whatsapp-script",
     icon: MessageSquareText,
   },
   {
-    title: "Objection sheet",
-    description: "Fast responses to common commercial and product objections.",
+    title: "ورقة معالجة الاعتراضات",
+    description: "ردود سريعة على الاعتراضات التجارية والمنتج الشائعة.",
     href: "/api/reseller/partner-kit/objection-sheet",
     icon: ShieldCheck,
   },
   {
-    title: "Onboarding checklist",
-    description: "Step-by-step partner activation and first customer launch checklist.",
+    title: "قائمة تفعيل الشريك",
+    description: "خطوات تفعيل الشريك وإطلاق أول عميل بشكل منظم.",
     href: "/api/reseller/partner-kit/onboarding-checklist",
     icon: FileText,
   },
@@ -56,11 +56,10 @@ export default function ResellerPartnerKitPage() {
       <main className="pt-28">
         <section className="mx-auto max-w-7xl px-6 pb-14">
           <div className="rounded-3xl border border-border/80 bg-surface-elevated p-7 shadow-sm md:p-10">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-muted-body">Partner enablement</p>
-            <h1 className="mt-3 text-4xl font-black tracking-tight md:text-5xl">Reseller partner kit</h1>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-muted-body">تمكين الشركاء</p>
+            <h1 className="mt-3 text-4xl font-black tracking-tight md:text-5xl">حزمة شريك الموزعين</h1>
             <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-body md:text-base">
-              Download ready-to-use partner assets and run the ROI calculator before pitching. Every file is optimized
-              for fast customer conversations and cleaner close rates.
+              نزّل مواد الشريك الجاهزة واستخدم حاسبة العائد قبل عرض الخدمة. كل ملف مُحسّن لمحادثات أسرع مع العملاء ونسب إغلاق أفضل.
             </p>
           </div>
         </section>
@@ -81,7 +80,7 @@ export default function ResellerPartnerKitPage() {
                   <CardContent>
                     <Button asChild className="h-10 rounded-xl font-bold">
                       <Link href={asset.href}>
-                        Download
+                        تنزيل
                         <ArrowDownToLine className="h-4 w-4" />
                       </Link>
                     </Button>
@@ -101,15 +100,15 @@ export default function ResellerPartnerKitPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl">
                 <PlayCircle className="h-5 w-5" />
-                Demo walkthrough
+                جولة عرض توضيحي
               </CardTitle>
               <CardDescription className="text-zinc-200 dark:text-zinc-700">
-                Share this sample demo when a partner asks for the product narrative in action.
+                شارك هذا العرض النموذجي عندما يطلب الشريك قصة المنتج بشكل عملي.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button asChild variant="secondary" className="h-10 rounded-xl font-bold">
-                <Link href="/reseller">Open reseller demo page</Link>
+                <Link href="/reseller">افتح صفحة عرض الموزعين</Link>
               </Button>
             </CardContent>
           </Card>
