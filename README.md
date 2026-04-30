@@ -34,8 +34,6 @@ Built with **Next.js App Router + React Server Components + Prisma + SQLite + Ne
 
 ## Product Tour (Screenshots)
 
-> You mentioned you have screenshots somewhere — the repo already contains a complete help screenshot set under `public/help/screenshots/`.
-
 ### Highlights
 
 | Area | Screenshot |
