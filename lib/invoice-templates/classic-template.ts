@@ -27,6 +27,9 @@ const classicTemplate: InvoiceTemplate = {
     const rightMargin = width - 40;
     const clientSectionX = 320;
     const headerYOffset = 74;
+    const legalFooterHeight = 72;
+    const footerSeparatorY = 58;
+    const pageNumberYFromTop = height - legalFooterHeight + 58;
 
     const drawContinuationHeader = (targetPage: import("pdf-lib").PDFPage, pageIndex: number, totalPages: number) => {
       const h = targetPage.getSize().height;
@@ -41,8 +44,8 @@ const classicTemplate: InvoiceTemplate = {
 
     paginator.onFinalize((targetPage, pageIndex, totalPages) => {
       const h = targetPage.getSize().height;
-      targetPage.drawLine({ start: { x: leftMargin, y: 45 }, end: { x: rightMargin, y: 45 }, thickness: 0.5, color: borderGray });
-      drawText(targetPage, h, fonts, `Page ${pageIndex} of ${totalPages}`, rightMargin, h - 30, 8, { align: "right", color: textMuted });
+      targetPage.drawLine({ start: { x: leftMargin, y: footerSeparatorY }, end: { x: rightMargin, y: footerSeparatorY }, thickness: 0.5, color: borderGray });
+      drawText(targetPage, h, fonts, `Page ${pageIndex} of ${totalPages}`, rightMargin, pageNumberYFromTop, 8, { align: "right", color: white });
       if (pageIndex > 1) {
         drawContinuationHeader(targetPage, pageIndex, totalPages);
       }
@@ -259,7 +262,7 @@ const classicTemplate: InvoiceTemplate = {
       vm.profile.website ? ` | ${vm.profile.website}` : ""
     }`;
 
-    drawRect(page, height, 0, height - 72, width, 72, black);
+    drawRect(page, height, 0, height - legalFooterHeight, width, legalFooterHeight, black);
     drawText(page, height, fonts, metaStringValue, width / 2, height - 43, 9, { align: "center", color: white });
     drawText(page, height, fonts, contactString, width / 2, height - 24, 9, { align: "center", color: white });
   },

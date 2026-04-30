@@ -427,6 +427,15 @@ export async function POST(request: Request) {
 
     let finalPdfFilename = "";
     let finalPdfPath = "";
+    let paymentLinkAttempted = false;
+    let paymentLinkCreated = false;
+    let paymentLinkSkipReason:
+      | "NOT_ELIGIBLE_PLAN"
+      | "UNSUPPORTED_DEFAULT_GATEWAY"
+      | "UNSUPPORTED_CURRENCY"
+      | "MISSING_GATEWAY_CREDENTIALS"
+      | "GATEWAY_CALL_FAILED"
+      | null = null;
 
     while (attempts < MAX_ATTEMPTS) {
       try {
@@ -461,6 +470,9 @@ export async function POST(request: Request) {
         let paymentLink: string | null = null;
         let providerPaymentLinkId: string | null = null;
         let providerGateway: string | null = null;
+        paymentLinkAttempted = false;
+        paymentLinkCreated = false;
+        paymentLinkSkipReason = null;
 
         if (paidFeatures) {
           const defaultGateway = profileSettings.defaultGateway || 'RAZORPAY';
@@ -471,6 +483,7 @@ export async function POST(request: Request) {
             profileSettings.razorpayKeyId &&
             profileSettings.razorpayKeySecret
           ) {
+            paymentLinkAttempted = true;
             try {
               const { decrypt } = await import('@/lib/encryption');
               const { generateTenantPaymentLink } = await import('@/lib/razorpay-links');
@@ -501,10 +514,14 @@ export async function POST(request: Request) {
                 paymentLink = linkResult.url;
                 providerPaymentLinkId = linkResult.linkId;
                 providerGateway = 'RAZORPAY';
+                paymentLinkCreated = true;
+              } else {
+                paymentLinkSkipReason = "GATEWAY_CALL_FAILED";
               }
             } catch (rzpErr) {
               // Non-fatal — PDF still generates without the link
               console.error('[generate] Razorpay link generation failed (non-fatal):', rzpErr);
+              paymentLinkSkipReason = "GATEWAY_CALL_FAILED";
             }
 
           } else if (
@@ -512,6 +529,7 @@ export async function POST(request: Request) {
             profileSettings.stripePublishableKey &&
             profileSettings.stripeSecretKey
           ) {
+            paymentLinkAttempted = true;
             try {
               const { decrypt } = await import('@/lib/encryption');
               const { generateStripePaymentLink } = await import('@/lib/stripe-links');
@@ -536,26 +554,35 @@ export async function POST(request: Request) {
                 paymentLink = linkResult.url;
                 providerPaymentLinkId = linkResult.linkId;
                 providerGateway = 'STRIPE';
+                paymentLinkCreated = true;
+              } else {
+                paymentLinkSkipReason = "GATEWAY_CALL_FAILED";
               }
             } catch (stripeErr) {
               // Non-fatal — PDF still generates without the link
               console.error('[generate] Stripe link generation failed (non-fatal):', stripeErr);
+              paymentLinkSkipReason = "GATEWAY_CALL_FAILED";
             }
           } else if (defaultGateway === 'RAZORPAY') {
             if (baseCurrency !== 'INR') {
               console.info(`[generate] Razorpay link skipped: unsupported currency "${baseCurrency}" (requires INR).`);
+              paymentLinkSkipReason = "UNSUPPORTED_CURRENCY";
             } else if (!profileSettings.razorpayKeyId || !profileSettings.razorpayKeySecret) {
               console.info('[generate] Razorpay link skipped: missing Razorpay credentials in workspace settings.');
+              paymentLinkSkipReason = "MISSING_GATEWAY_CREDENTIALS";
             }
           } else if (defaultGateway === 'STRIPE') {
             if (!profileSettings.stripePublishableKey || !profileSettings.stripeSecretKey) {
               console.info('[generate] Stripe link skipped: missing Stripe credentials in workspace settings.');
+              paymentLinkSkipReason = "MISSING_GATEWAY_CREDENTIALS";
             }
           } else {
             console.info(`[generate] Payment link skipped: unsupported default gateway "${String(defaultGateway)}".`);
+            paymentLinkSkipReason = "UNSUPPORTED_DEFAULT_GATEWAY";
           }
         } else {
           console.info('[generate] Payment link skipped: workspace is not eligible for gateway links under current billing plan/trial state.');
+          paymentLinkSkipReason = "NOT_ELIGIBLE_PLAN";
         }
         // ──────────────────────────────────────────────────────────────────────
 
@@ -587,6 +614,15 @@ export async function POST(request: Request) {
           userLocale,
           paymentLink,
           status: normalizedStatus
+        });
+        console.info("[invoice-generate] asset preflight", {
+          workspaceId,
+          invoiceNumber,
+          profileLogoUrl: profile.logoUrl ?? null,
+          clientLogoUrl: client.logoUrl ?? null,
+          paymentLinkAttempted,
+          paymentLinkCreated,
+          paymentLinkSkipReason,
         });
 
         await fs.promises.writeFile(pdfPath, pdfBytes, { mode: 0o600 });
@@ -741,7 +777,12 @@ export async function POST(request: Request) {
       success: true,
       invoice: newInvoice,
       status: newInvoice.status,
-      emailStatus
+      emailStatus,
+      paymentLinkStatus: {
+        attempted: paymentLinkAttempted,
+        created: paymentLinkCreated,
+        skipReason: paymentLinkCreated ? null : paymentLinkSkipReason,
+      },
     };
 
     if (idempotencyKey) {
