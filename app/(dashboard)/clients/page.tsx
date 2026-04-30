@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { 
   Users, Plus, Globe, Building2, Mail, Phone, Briefcase, FileText, 
-  Image as ImageIcon, CheckCircle2, Trash2, Pencil, AlertCircle, ChevronLeft, ChevronRight, Loader2 
+  Image as ImageIcon, CheckCircle2, Trash2, Pencil, AlertCircle, ChevronLeft, ChevronRight, Loader2, List, LayoutGrid 
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -446,36 +446,17 @@ export default function ClientCRM() {
           </div>
         ) : (
           <>
-            <div className="mb-4 flex items-center justify-end">
-              <div className="flex bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-1 gap-1 h-10">
-                <button
-                  type="button"
-                  onClick={() => setViewMode("grid")}
-                  className={cn(
-                    "px-3 py-1 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all",
-                    viewMode === "grid"
-                      ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-sm"
-                      : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300",
-                  )}
-                >
-                  Grid
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode("list")}
-                  className={cn(
-                    "px-3 py-1 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all",
-                    viewMode === "list"
-                      ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-sm"
-                      : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300",
-                  )}
-                >
-                  List
-                </button>
+            <div className="flex justify-end">
+              <div className="hidden md:flex bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-1 rounded-xl shadow-sm h-10">
+                <Button variant={viewMode === "list" ? "secondary" : "ghost"} size="sm" onClick={() => setViewMode("list")} className="px-3 h-8 text-xs font-bold uppercase tracking-widest">
+                  <List className="w-4 h-4 mr-1.5" /> List
+                </Button>
+                <Button variant={viewMode === "grid" ? "secondary" : "ghost"} size="sm" onClick={() => setViewMode("grid")} className="px-3 h-8 text-xs font-bold uppercase tracking-widest">
+                  <LayoutGrid className="w-4 h-4 mr-1.5" /> Grid
+                </Button>
               </div>
             </div>
-            {viewMode === "grid" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {viewMode === "grid" ? (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {sortedClients.map((client) => (
                 <Card key={client.id} className="group relative hover:shadow-xl hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-all duration-300 border-border bg-surface-elevated overflow-hidden flex flex-col">
                   <div className="absolute top-4 right-4 flex gap-2 z-10">
@@ -553,8 +534,7 @@ export default function ClientCRM() {
                   </CardContent>
                 </Card>
               ))}
-            </div>
-            ) : (
+            </div>) : (
               <div className="bg-white dark:bg-zinc-950/50 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
