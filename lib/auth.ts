@@ -21,10 +21,25 @@ import {
 
 const LOGIN_ROUTE = "/login";
 const CANONICAL_DASHBOARD_ROUTE = "/dashboard";
+const ALLOWED_SIGNUP_PLANS = new Set(["pro", "team"] as const);
+const ALLOWED_SIGNUP_CYCLES = new Set(["monthly", "annual"] as const);
+const DEFAULT_TRIAL_DAYS = 15;
 
-async function getSignupIntent() {
+function sanitizeSignupIntent(intent: ReturnType<typeof deserializeSignupIntent>) {
+  if (!intent) return null;
+  return {
+    ...intent,
+    plan: ALLOWED_SIGNUP_PLANS.has(intent.plan) ? intent.plan : "pro",
+    cycle: ALLOWED_SIGNUP_CYCLES.has(intent.cycle) ? intent.cycle : "monthly",
+    trial: DEFAULT_TRIAL_DAYS,
+  };
+}
+
+async function consumeSignupIntent() {
   const store = await cookies();
-  return deserializeSignupIntent(store.get(SIGNUP_INTENT_COOKIE)?.value);
+  const intent = sanitizeSignupIntent(deserializeSignupIntent(store.get(SIGNUP_INTENT_COOKIE)?.value));
+  store.set(SIGNUP_INTENT_COOKIE, "", { path: "/", maxAge: 0 });
+  return intent;
 }
 
 declare module "next-auth" {
@@ -428,8 +443,8 @@ export const authOptions: NextAuthOptions = {
         });
         if (existingMembership?.workspaceId) return existingMembership.workspaceId;
 
-        const signupIntent = await getSignupIntent();
-        const trialDays = signupIntent?.trial ?? 15;
+        const signupIntent = await consumeSignupIntent();
+        const trialDays = DEFAULT_TRIAL_DAYS;
         const trialEndDate = new Date();
         trialEndDate.setDate(trialEndDate.getDate() + trialDays);
 
@@ -607,8 +622,8 @@ export const authOptions: NextAuthOptions = {
     async createUser({ user }) {
       if (user.email?.endsWith('@bababuilds.demo')) return;
 
-      const signupIntent = await getSignupIntent();
-      const trialDays = signupIntent?.trial ?? 15;
+      const signupIntent = await consumeSignupIntent();
+      const trialDays = DEFAULT_TRIAL_DAYS;
       const trialEndDate = new Date();
       trialEndDate.setDate(trialEndDate.getDate() + trialDays);
 

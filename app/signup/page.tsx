@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { parseSignupIntent, SIGNUP_INTENT_COOKIE, serializeSignupIntent } from "@/lib/signup-intent";
+import { parseSignupIntent } from "@/lib/signup-intent";
 
 export default function SignupPage() {
   const searchParams = useSearchParams();
@@ -19,8 +19,13 @@ export default function SignupPage() {
       source: searchParams.get("source") ?? "signup_page",
     });
 
-    const serializedIntent = serializeSignupIntent(intent);
-    document.cookie = `${SIGNUP_INTENT_COOKIE}=${serializedIntent}; Path=/; Max-Age=1800; SameSite=Lax`;
+    void fetch("/api/signup-intent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(intent),
+      credentials: "same-origin",
+      keepalive: true,
+    });
 
     const callbackUrl = `/dashboard?fromSignup=1&plan=${intent.plan}&cycle=${intent.cycle}`;
     window.location.replace(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
