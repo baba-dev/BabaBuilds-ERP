@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import LandingNavbar from "@/components/LandingNavbar";
 import LandingFooter from "@/components/LandingFooter";
 import TurnstileWidget from "@/components/TurnstileWidget";
@@ -87,6 +88,7 @@ const initialQueryState: QueryFormState = {
 };
 
 export default function ResellerLandingClient() {
+  const t = useTranslations("ResellerLanding");
   const reduceMotion = useReducedMotion();
   const [selectedInterval, setSelectedInterval] = useState<PlanInterval>("YEARLY");
   const [pricingRegion, setPricingRegion] = useState<PricingRegion>("IN");
@@ -114,7 +116,7 @@ export default function ResellerLandingClient() {
     e.preventDefault();
     const code = couponInput.trim().toUpperCase();
     if (!code) {
-      toast.error("أدخل كود خصم الموزع.");
+      toast.error(t("toasts.enterCoupon"));
       return;
     }
 
@@ -126,7 +128,7 @@ export default function ResellerLandingClient() {
         body: JSON.stringify({ code }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "تعذر التحقق من الكود");
+      if (!res.ok) throw new Error(data?.error || t("toasts.couponVerifyFailed"));
 
       setCoupon({
         code: data.coupon.code,
@@ -141,9 +143,9 @@ export default function ResellerLandingClient() {
         window.history.replaceState({}, "", next.toString());
         window.localStorage.setItem("resellerCouponCode", data.coupon.code);
       }
-      toast.success(`تم تطبيق الكوبون من ${data.coupon.resellerName}.`);
+      toast.success(t("toasts.couponApplied", { resellerName: data.coupon.resellerName }));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "تعذر تطبيق الكوبون");
+      toast.error(error instanceof Error ? error.message : t("toasts.couponApplyFailed"));
     } finally {
       setApplyingCoupon(false);
     }
@@ -163,7 +165,7 @@ export default function ResellerLandingClient() {
   const onSubmitQuery = async (e: FormEvent) => {
     e.preventDefault();
     if (!queryTurnstileToken) {
-      toast.error("يرجى إكمال اختبار الأمان.");
+      toast.error(t("toasts.completeSecurity"));
       return;
     }
     setSubmittingQuery(true);
@@ -181,12 +183,12 @@ export default function ResellerLandingClient() {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "تعذر إرسال الطلب");
+      if (!res.ok) throw new Error(data?.error || t("toasts.querySubmitFailed"));
       setQueryForm(initialQueryState);
       setQueryTurnstileToken("");
-      toast.success("شكرًا! سيتواصل فريق الشركاء معك قريبًا.");
+      toast.success(t("toasts.querySubmitted"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "تعذر إرسال الطلب");
+      toast.error(error instanceof Error ? error.message : t("toasts.querySubmitFailed"));
     } finally {
       setSubmittingQuery(false);
     }

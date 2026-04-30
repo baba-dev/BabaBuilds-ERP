@@ -2149,5 +2149,20 @@
         }
       ]
     }
+  },
+  "ResellerLanding": {
+    "toasts": {
+      "enterCoupon": "Ingresa el cupón de descuento del reseller.",
+      "couponVerifyFailed": "No se pudo verificar el cupón.",
+      "couponApplied": "Se aplicó el cupón de {resellerName}.",
+      "couponApplyFailed": "No se pudo aplicar el cupón.",
+      "completeSecurity": "Completa la verificación de seguridad.",
+      "querySubmitFailed": "No se pudo enviar la solicitud.",
+      "querySubmitted": "¡Gracias! Nuestro equipo de partners te contactará pronto."
+    },
+    "metadata": {
+      "title": "Programa de Resellers de BabaBuilds ERP",
+      "description": "Únete al programa de resellers de BabaBuilds ERP para ofrecer descuentos del primer año, ganar comisiones y recibir soporte de habilitación de partners."
+    }
   }
 }
