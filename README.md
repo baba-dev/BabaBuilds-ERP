@@ -239,9 +239,10 @@ Google OAuth callback URI:
 
 ## Database & Prisma Notes
 
-- Local DB file: `prisma/dev.db` (gitignored)
-- Use `npx prisma db push` for local schema sync.
-- Avoid `npx prisma migrate dev` in this repo currently due to a known broken migration dependency (`20260407100000_invoice_status_enum` in shadow DB flow).
+- Local DB file: `prisma/dev.db` (gitignored).
+- Production/staging schema changes should always flow through migration files and `npx prisma migrate deploy`.
+- For clean database bootstrap, use the baseline + `migrate resolve` workflow documented in `prisma/migrations/README.md`.
+- Use `npx prisma db push` only for disposable local prototyping databases, never as a production migration pathway.
 
 ---
 

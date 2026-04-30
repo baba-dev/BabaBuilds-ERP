@@ -7,7 +7,8 @@ CREATE TABLE "UserOnboarding" (
     "dismissedAt" DATETIME,
     "completedAt" DATETIME,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "UserOnboarding_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE UNIQUE INDEX "UserOnboarding_userId_key" ON "UserOnboarding"("userId");
@@ -35,8 +36,3 @@ SELECT
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
 FROM "User";
-
-ALTER TABLE "UserOnboarding"
-ADD CONSTRAINT "UserOnboarding_userId_fkey"
-FOREIGN KEY ("userId") REFERENCES "User"("id")
-ON DELETE CASCADE ON UPDATE CASCADE;
