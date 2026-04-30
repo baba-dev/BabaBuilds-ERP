@@ -1,22 +1,36 @@
 # Prisma migration strategy
 
-## Live/deployed databases
+## Why the first two migrations are placeholders
 
-- Keep this directory strictly **incremental and forward-only**.
-- Do **not** append full-schema bootstrap SQL after production migrations.
-- `20260407113000_init` is intentionally a no-op to prevent re-creating existing tables in deployed environments.
+`20260407100000_invoice_status_enum` and `20260407113000_init` are intentionally no-op migrations.
 
-## Fresh install baseline workflow
+Historically, their SQL depended on existing tables (`Invoice`, etc.), which made clean-room
+`prisma migrate deploy` fail on brand-new databases and shadow databases.
 
-When provisioning a brand-new database from scratch, use a separate baseline artifact/history strategy:
+To preserve production history without rewriting applied migration IDs, we keep these IDs in place
+as placeholders and bootstrap clean databases from a dedicated baseline SQL artifact.
 
-1. Apply `prisma/baseline/00000000000000_init_baseline.sql` to the empty database.
-2. Mark migrations as applied (without re-running SQL):
+## Canonical clean baseline workflow
+
+For a brand-new database (local, CI, staging bootstrap):
+
+1. Apply baseline schema SQL:
+   - `prisma/baseline/00000000000000_init_baseline.sql`
+2. Mark placeholder migrations as already applied:
    - `prisma migrate resolve --applied 20260407100000_invoice_status_enum`
    - `prisma migrate resolve --applied 20260407113000_init`
-3. Run `prisma migrate deploy` for future incremental migrations.
+3. Run forward migrations:
+   - `prisma migrate deploy`
 
-This keeps production history safe while still supporting clean-room installs.
+This yields a deterministic, forward-only history from the first real incremental migration onward.
+
+## Validation matrix
+
+Use this matrix when validating migration integrity changes:
+
+- **Blank SQLite DB**: baseline apply -> resolve -> deploy succeeds.
+- **Staging-like DB clone/snapshot**: deploy succeeds with no drift.
+- **Rollback simulation**: restore from pre-deploy snapshot, rerun deploy, verify idempotent success.
 
 ## Product-only shop hardening migration sequence
 
