@@ -18,6 +18,18 @@ type PersonaLandingPageProps = {
 
 export default function PersonaLandingPage({ persona }: PersonaLandingPageProps) {
   const tl = useTranslations("LandingPhase1");
+  const tp = useTranslations("LandingPersona");
+  const personaKey = persona.namespace;
+  const navLabel = tp(`${personaKey}.navLabel`);
+  const headline = tp(`${personaKey}.headline`);
+  const subheadline = tp(`${personaKey}.subheadline`);
+  const painPoints = tp.raw(`${personaKey}.painPoints`) as string[];
+  const features = tp.raw(`${personaKey}.features`) as string[];
+  const demoFlow = tp.raw(`${personaKey}.demoFlow`) as string[];
+  const trustChips = tp.raw(`${personaKey}.trustChips`) as string[];
+  const testimonials = tp.raw(`${personaKey}.testimonials`) as Array<{ quote: string; author: string; role: string }>;
+  const primaryCtaLabel = tp(`${personaKey}.primaryCta.label`);
+  const secondaryCtaLabel = tp(`${personaKey}.secondaryCta.label`);
   return (
     <div className="min-h-screen bg-surface-base">
       <LandingNavbar />
@@ -26,36 +38,36 @@ export default function PersonaLandingPage({ persona }: PersonaLandingPageProps)
         <section className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-6">
             <p className="inline-flex rounded-full border border-orange-500/25 bg-orange-500/10 px-4 py-1 text-xs font-black uppercase tracking-[0.2em] text-orange-700 dark:text-orange-300">
-              {persona.navLabel}
+              {navLabel}
             </p>
             <h1 className="text-4xl font-black leading-tight text-zinc-900 dark:text-zinc-50 md:text-6xl">
-              {persona.headline}
+              {headline}
             </h1>
-            <p className="max-w-2xl text-lg text-zinc-600 dark:text-zinc-300">{persona.subheadline}</p>
+            <p className="max-w-2xl text-lg text-zinc-600 dark:text-zinc-300">{subheadline}</p>
             <div className="flex flex-col gap-4 sm:flex-row">
               <Button size="lg" className="h-14 rounded-2xl px-8 text-base font-black" asChild>
                 <Link
-                  href={persona.primaryCta.href}
+                  href={persona.primaryCtaHref}
                   onClick={() =>
                     emitMarketingAnalyticsEvent("trial_cta_click", {
                       source: persona.slug,
-                      label: persona.primaryCta.label,
+                      label: primaryCtaLabel,
                     })
                   }
                 >
-                  {persona.primaryCta.label}
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  {primaryCtaLabel}
+                  <ArrowRight className="ms-2 h-4 w-4" />
                 </Link>
               </Button>
               <DemoLaunchButton
-                templateKey={persona.secondaryCta.templateKey}
-                label={persona.secondaryCta.label}
+                templateKey={persona.secondaryCtaTemplateKey}
+                label={secondaryCtaLabel}
                 analyticsContext={`persona:${persona.slug}`}
                 className="h-14 rounded-2xl px-8 text-base font-bold"
               />
             </div>
             <div className="flex flex-wrap gap-2 pt-2">
-              {persona.trustChips.map((chip) => (
+              {trustChips.map((chip) => (
                 <span
                   key={chip}
                   className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-semibold text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
@@ -71,7 +83,7 @@ export default function PersonaLandingPage({ persona }: PersonaLandingPageProps)
               {tl("persona.workflowTitle")}
             </p>
             <ol className="mt-4 space-y-3">
-              {persona.demoFlow.map((step) => (
+              {demoFlow.map((step) => (
                 <li
                   key={step}
                   className="rounded-2xl border border-orange-100 bg-orange-50/80 p-3 text-sm font-medium text-zinc-700 dark:border-orange-900/40 dark:bg-orange-950/20 dark:text-zinc-200"
@@ -89,7 +101,7 @@ export default function PersonaLandingPage({ persona }: PersonaLandingPageProps)
               {tl("persona.painPointsTitle")}
             </h2>
             <ul className="space-y-2">
-              {persona.painPoints.map((point) => (
+              {painPoints.map((point) => (
                 <li key={point} className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
                   {point}
@@ -102,7 +114,7 @@ export default function PersonaLandingPage({ persona }: PersonaLandingPageProps)
               {tl("persona.featuresTitle")}
             </h2>
             <ul className="space-y-2">
-              {persona.features.map((feature) => (
+              {features.map((feature) => (
                 <li key={feature} className="flex items-start gap-2 text-sm text-zinc-700 dark:text-zinc-300">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
                   {feature}
@@ -117,7 +129,7 @@ export default function PersonaLandingPage({ persona }: PersonaLandingPageProps)
             {tl("persona.testimonialsTitle")}
           </h2>
           <div className="mt-5 grid gap-5 md:grid-cols-2">
-            {persona.testimonials.map((testimonial) => (
+            {testimonials.map((testimonial) => (
               <article
                 key={`${testimonial.author}-${testimonial.role}`}
                 className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/70"
@@ -145,7 +157,7 @@ export default function PersonaLandingPage({ persona }: PersonaLandingPageProps)
                 href={item.href}
                 className="rounded-xl border border-orange-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:border-orange-400 hover:text-orange-700 dark:border-orange-900/40 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:text-orange-300"
               >
-                {item.label}
+                {tp(item.labelKey)}
               </Link>
             ))}
           </div>

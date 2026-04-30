@@ -36,6 +36,7 @@ import SocialProofHero from "@/components/landing/SocialProofHero";
 export default function LandingContent() {
   const t = useTranslations("Landing");
   const tp1 = useTranslations("LandingPhase1");
+  const tPersona = useTranslations("LandingPersona");
   const reduceMotion = useReducedMotion();
 
   const trustCities = [
@@ -256,7 +257,7 @@ export default function LandingContent() {
                 href={persona.href}
                 className="rounded-xl border border-border/80 bg-surface-elevated px-4 py-2 text-sm font-semibold text-foreground/90 transition hover:border-orange-500/40 hover:text-orange-600 dark:hover:text-orange-400"
               >
-                {persona.label}
+                {tPersona(persona.labelKey)}
               </Link>
             ))}
           </div>
