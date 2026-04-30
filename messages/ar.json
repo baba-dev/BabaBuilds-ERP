@@ -2156,5 +2156,20 @@
         }
       ]
     }
+  },
+  "ResellerLanding": {
+    "toasts": {
+      "enterCoupon": "أدخل كود خصم الموزع.",
+      "couponVerifyFailed": "تعذر التحقق من الكود.",
+      "couponApplied": "تم تطبيق الكوبون من {resellerName}.",
+      "couponApplyFailed": "تعذر تطبيق الكوبون.",
+      "completeSecurity": "يرجى إكمال اختبار الأمان.",
+      "querySubmitFailed": "تعذر إرسال الطلب.",
+      "querySubmitted": "شكرًا! سيتواصل فريق الشركاء معك قريبًا."
+    },
+    "metadata": {
+      "title": "برنامج موزعي BabaBuilds ERP",
+      "description": "انضم إلى برنامج موزعي BabaBuilds ERP. قدّم خصومات للعملاء في السنة الأولى، واكسب عمولات، واحصل على دعم تمكين الشركاء."
+    }
   }
 }

@@ -2144,5 +2144,20 @@
         }
       ]
     }
+  },
+  "ResellerLanding": {
+    "toasts": {
+      "enterCoupon": "रिसेलर डिस्काउंट कूपन कोड दर्ज करें।",
+      "couponVerifyFailed": "कूपन सत्यापित नहीं हो सका।",
+      "couponApplied": "{resellerName} का कूपन लागू कर दिया गया है।",
+      "couponApplyFailed": "कूपन लागू नहीं हो सका।",
+      "completeSecurity": "कृपया सुरक्षा जांच पूरी करें।",
+      "querySubmitFailed": "अनुरोध सबमिट नहीं हो सका।",
+      "querySubmitted": "धन्यवाद! हमारी पार्टनर टीम जल्द ही आपसे संपर्क करेगी।"
+    },
+    "metadata": {
+      "title": "BabaBuilds ERP रिसेलर प्रोग्राम",
+      "description": "BabaBuilds ERP रिसेलर प्रोग्राम से जुड़ें, पहले साल के ग्राहक डिस्काउंट दें, कमीशन कमाएँ और पार्टनर इनेबलमेंट सपोर्ट पाएँ।"
+    }
   }
 }
