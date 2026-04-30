@@ -30,8 +30,10 @@ export default function LandingFooter() {
       title: t("sections.legal"),
       links: [
         { name: t("links.resellerProgram"), href: "/reseller" },
-        { name: t("links.privacyPolicy"), href: "/help/privacy" },
-        { name: t("links.termsOfService"), href: "/help/terms" },
+        { name: t("links.privacyPolicy"), href: "/privacy" },
+        { name: t("links.termsOfService"), href: "/terms" },
+        { name: "Refund & Cancellation", href: "/refund-cancellation" },
+        { name: "Tax engine scope", href: "/tax-engine-scope" },
         { name: t("links.helpCenter"), href: "/help" },
       ],
     },

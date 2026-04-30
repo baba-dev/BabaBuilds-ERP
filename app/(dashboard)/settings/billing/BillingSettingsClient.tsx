@@ -549,6 +549,22 @@ export default function BillingSettingsClient({
               )}
             </CardContent>
           </Card>
+
+          <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+            <CardHeader className="bg-zinc-50/50 dark:bg-zinc-950/50 border-b dark:border-zinc-800">
+              <CardTitle className="text-lg flex items-center gap-2 dark:text-zinc-50 font-extrabold">
+                <Zap className="w-5 h-5 text-sky-600" /> Billing support & policy
+              </CardTitle>
+              <CardDescription className="dark:text-zinc-400 font-medium">Contact pathways, response expectation, and legal billing references.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-2 text-sm">
+              <p className="text-zinc-700 dark:text-zinc-300">Email: <a className="underline font-semibold" href="mailto:support@bababuilds.com">support@bababuilds.com</a> (target first response: 1 business day).</p>
+              <p className="text-zinc-700 dark:text-zinc-300">You can also submit requests through the <a className="underline" href="/help">Help Center</a> contact workflow.</p>
+              <p className="text-zinc-500 dark:text-zinc-400">
+                Policy references: <a className="underline" href="/terms">Terms</a> · <a className="underline" href="/privacy">Privacy</a> · <a className="underline" href="/refund-cancellation">Refund & Cancellation</a> · <a className="underline" href="/tax-engine-scope">Tax engine scope</a>.
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

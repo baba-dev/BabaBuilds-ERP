@@ -415,6 +415,9 @@ export default function WealthAndTaxPlanner() {
             <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1 max-w-md">
               All tax estimates are resolved from backend policy rules and overrides for your selected country.
             </p>
+            <a href="/tax-engine-scope" className="mt-3 text-xs font-semibold underline underline-offset-4 text-zinc-300 hover:text-white">
+              Review tax engine scope disclaimer
+            </a>
           </Card>
         </div>
 

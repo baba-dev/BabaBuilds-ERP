@@ -145,6 +145,9 @@ export default function HelpPage() {
             <Link className="px-4 py-3 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-indigo-300 dark:hover:border-indigo-700/50 transition-colors" href="/help/expenses-and-tax">
               Track expenses and tax
             </Link>
+            <Link className="px-4 py-3 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-indigo-300 dark:hover:border-indigo-700/50 transition-colors" href="/tax-engine-scope">
+              Review tax engine scope
+            </Link>
           </div>
         </div>
 

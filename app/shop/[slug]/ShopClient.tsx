@@ -257,6 +257,11 @@ function BuyModal({
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : `Pay ${formatPrice(product.price)}`}
                 </Button>
               </div>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                By continuing, you agree to our <a className="underline" href="/terms">Terms</a>,{" "}
+                <a className="underline" href="/privacy">Privacy Policy</a>, and{" "}
+                <a className="underline" href="/refund-cancellation">Refund & Cancellation Policy</a>.
+              </p>
             </form>
           </>
         )}
@@ -1051,6 +1056,10 @@ export function ShopClient({ data }: { data: ShopData }) {
             <a href="/" className="font-bold text-zinc-500 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
               BabaBuilds ERP
             </a>
+          </p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            <a href="/terms" className="underline">Terms</a> · <a href="/privacy" className="underline">Privacy</a> ·{" "}
+            <a href="/refund-cancellation" className="underline">Refunds</a> · <a href="/tax-engine-scope" className="underline">Tax scope</a>
           </p>
         </footer>
       </div>
