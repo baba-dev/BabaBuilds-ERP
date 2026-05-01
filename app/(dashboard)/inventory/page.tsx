@@ -253,22 +253,26 @@ export default function InventoryHub() {
           </div>
           
           <div className="flex gap-2 items-center">
-            <div className="hidden md:flex bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-1 rounded-xl shadow-sm h-10">
+            <div className="flex items-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-1 rounded-xl shadow-sm min-h-10">
               <Button 
                 variant={viewMode === 'list' ? 'secondary' : 'ghost'} 
                 size="sm" 
                 onClick={() => setViewMode('list')}
-                className={`px-3 h-8 text-xs font-bold uppercase tracking-widest ${viewMode === 'list' ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100' : 'text-zinc-500'}`}
+                aria-label="List view"
+                className={`px-2 md:px-3 h-10 text-xs font-bold uppercase tracking-widest ${viewMode === 'list' ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100' : 'text-zinc-500'}`}
               >
-                <List className="w-4 h-4 mr-1.5" /> List
+                <List className="w-4 h-4 md:mr-1.5" />
+                <span className="hidden md:inline">List</span>
               </Button>
               <Button 
                 variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
                 size="sm"
                 onClick={() => setViewMode('grid')}
-                className={`px-3 h-8 text-xs font-bold uppercase tracking-widest ${viewMode === 'grid' ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100' : 'text-zinc-500'}`}
+                aria-label="Grid view"
+                className={`px-2 md:px-3 h-10 text-xs font-bold uppercase tracking-widest ${viewMode === 'grid' ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100' : 'text-zinc-500'}`}
               >
-                <LayoutGrid className="w-4 h-4 mr-1.5" /> Grid
+                <LayoutGrid className="w-4 h-4 md:mr-1.5" />
+                <span className="hidden md:inline">Grid</span>
               </Button>
             </div>
             
