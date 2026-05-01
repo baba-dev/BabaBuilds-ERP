@@ -23,6 +23,7 @@ import { getConflictPolicy, queueOfflineMutation } from "@/lib/offline-sync";
 import { cn } from "@/lib/utils";
 import { dirFromLocale } from "@/src/lib/direction";
 import { buildInvoiceGenerateErrorMessage } from "@/lib/invoice/generate-error-message";
+import { InvoiceGenerationConfirmCard } from "@/components/invoice/InvoiceGenerationConfirmCard";
 
 const isLikelyOfflineError = (error: unknown) => {
   if (typeof navigator !== "undefined" && !navigator.onLine) return true;
@@ -51,6 +52,23 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
     paymentLinkStatus?: { attempted: boolean; created: boolean; skipReason: string | null };
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [draftPreview, setDraftPreview] = useState<{
+    draftId: string;
+    expiresAt: string;
+    confirmation: {
+      clientName: string;
+      clientEmail: string | null;
+      billingMonth: string;
+      invoiceDate: string;
+      dueDate: string;
+      currency: string;
+      services: Array<{ title: string; amount: number; quantity: number }>;
+      totals: { subtotal: number; taxAmount: number; total: number; taxRate: number; taxMode: string };
+      paymentLink: { url: string; linkId: string };
+    };
+    sendEmail: boolean;
+  } | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   // --- GLOBALIZATION ENGINE ---
   const {
@@ -268,7 +286,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
     if (!selectedClientId) { setError("No client selected. Please select a client from the CRM."); return; }
     if (!billingMonth.trim()) { setError("Billing month is required. Please select a cycle period."); return; }
 
-    setIsGenerating(true); setError(null); setSuccessData(null);
+    setIsGenerating(true); setError(null); setSuccessData(null); setDraftPreview(null);
 
     const hasInvalidProductQty = activeServices.some(
       (s) => Boolean(s.isProduct) && (!Number.isFinite(Number(s.quantity)) || Number(s.quantity) < 1),
@@ -286,7 +304,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
     }
 
     try {
-      const response = await fetch("/api/generate", {
+      const response = await fetch("/api/generate/preview", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -313,18 +331,46 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
           setTaxRateModalOpen(true);
           return;
         }
+        if (response.status === 400 && data?.code === "RAZORPAY_PREVIEW_NOT_APPLICABLE") {
+          const fallbackResponse = await fetch("/api/generate", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Offline-Conflict-Policy": getConflictPolicy("invoice", "create"),
+            },
+            body: JSON.stringify({
+              clientId: selectedClientId,
+              billingMonth,
+              sacCode: smartSacCode,
+              services: validServices,
+              customDate: invoiceDate.toISOString(),
+              sendEmail,
+            }),
+          });
+          const fallbackData = await fallbackResponse.json().catch(() => null);
+          if (!fallbackResponse.ok) {
+            throw new Error(buildInvoiceGenerateErrorMessage(fallbackData, "Failed to generate invoice."));
+          }
+          const result = {
+            pdfPath: fallbackData.invoice.pdfPath,
+            invoiceNumber: fallbackData.invoice.invoiceNumber,
+            emailStatus: fallbackData.emailStatus,
+            paymentLinkStatus: fallbackData.paymentLinkStatus,
+          };
+          setSuccessData(result);
+          setServices(services.map((s) => ({ ...s, selected: false, amount: "" })));
+          onSuccess?.(result);
+          return;
+        }
         throw new Error(buildInvoiceGenerateErrorMessage(data, "Failed to generate invoice."));
       }
 
-      const result = {
-        pdfPath: data.invoice.pdfPath,
-        invoiceNumber: data.invoice.invoiceNumber,
-        emailStatus: data.emailStatus,
-        paymentLinkStatus: data.paymentLinkStatus,
-      };
-      setSuccessData(result);
-      setServices(services.map((s) => ({ ...s, selected: false, amount: "" })));
-      onSuccess?.(result);
+      setDraftPreview({
+        draftId: data.draftId,
+        expiresAt: data.expiresAt,
+        confirmation: data.confirmation,
+        sendEmail,
+      });
     } catch (err: unknown) {
       if (isLikelyOfflineError(err)) {
         queueOfflineMutation({
@@ -357,7 +403,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
     setIsGenerating(true);
     const validServices = activeServices.filter((s) => Number(s.amount) > 0);
     try {
-      const response = await fetch("/api/generate", {
+      const response = await fetch("/api/generate/preview", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -374,19 +420,53 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
         }),
       });
       const data = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(buildInvoiceGenerateErrorMessage(data, "Failed to generate invoice."));
+      if (!response.ok) {
+        if (response.status === 400 && data?.code === "RAZORPAY_PREVIEW_NOT_APPLICABLE") {
+          const fallbackResponse = await fetch("/api/generate", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Offline-Conflict-Policy": getConflictPolicy("invoice", "update"),
+            },
+            body: JSON.stringify({
+              clientId: selectedClientId,
+              billingMonth,
+              sacCode: smartSacCode,
+              services: validServices,
+              customDate: invoiceDate.toISOString(),
+              sendEmail,
+              taxRateOverride: Number(taxRateInput),
+            }),
+          });
+          const fallbackData = await fallbackResponse.json().catch(() => null);
+          if (!fallbackResponse.ok) {
+            throw new Error(buildInvoiceGenerateErrorMessage(fallbackData, "Failed to generate invoice."));
+          }
+          const result = {
+            pdfPath: fallbackData.invoice.pdfPath,
+            invoiceNumber: fallbackData.invoice.invoiceNumber,
+            emailStatus: fallbackData.emailStatus,
+            paymentLinkStatus: fallbackData.paymentLinkStatus,
+          };
+          setSuccessData(result);
+          setServices(services.map((s) => ({ ...s, selected: false, amount: "" })));
+          setTaxRateInput("");
+          setTaxRateModalOpen(false);
+          onSuccess?.(result);
+          return;
+        }
+        throw new Error(buildInvoiceGenerateErrorMessage(data, "Failed to generate invoice."));
+      }
 
-      const result = {
-        pdfPath: data.invoice.pdfPath,
-        invoiceNumber: data.invoice.invoiceNumber,
-        emailStatus: data.emailStatus,
-        paymentLinkStatus: data.paymentLinkStatus,
-      };
-      setSuccessData(result);
-      setServices(services.map((s) => ({ ...s, selected: false, amount: "" })));
+      setDraftPreview({
+        draftId: data.draftId,
+        expiresAt: data.expiresAt,
+        confirmation: data.confirmation,
+        sendEmail,
+      });
       setTaxRateInput("");
       setTaxRateModalOpen(false);
-      onSuccess?.(result);
+      setError(null);
     } catch (err: unknown) {
       if (isLikelyOfflineError(err)) {
         queueOfflineMutation({
@@ -412,6 +492,49 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
       }
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleConfirmGenerate = async () => {
+    if (!draftPreview?.draftId) return;
+    setIsConfirming(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/generate/finalize", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Offline-Conflict-Policy": getConflictPolicy("invoice", "create"),
+        },
+        body: JSON.stringify({ draftId: draftPreview.draftId }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(buildInvoiceGenerateErrorMessage(data, "Failed to finalize invoice."));
+      }
+      const result = {
+        pdfPath: data.invoice.pdfPath,
+        invoiceNumber: data.invoice.invoiceNumber,
+        emailStatus: data.emailStatus,
+        paymentLinkStatus: data.paymentLinkStatus,
+      };
+      setSuccessData(result);
+      setServices(services.map((s) => ({ ...s, selected: false, amount: "" })));
+      setDraftPreview(null);
+      onSuccess?.(result);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to finalize invoice.");
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const handleCopyPaymentUrl = async () => {
+    if (!draftPreview?.confirmation.paymentLink?.url || !navigator?.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(draftPreview.confirmation.paymentLink.url);
+    } catch {
+      // Non-fatal UX action.
     }
   };
 
@@ -595,13 +718,26 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
           <span className="text-3xl font-black text-indigo-700 dark:text-indigo-400 drop-shadow-sm tracking-tight">{fCurrency(totalAmount)}</span>
         </div>
 
-        <FormSubmitBar
-          isSubmitting={isGenerating}
-          isDisabled={totalAmount === 0}
-          submitText={t("generate_btn")}
-          submittingText={t("generating")}
-          helperText={totalAmount === 0 ? "Select at least one priced service to continue." : "Review the preview amount and submit to generate an invoice."}
-        />
+        {draftPreview ? (
+          <InvoiceGenerationConfirmCard
+            data={{
+              draftId: draftPreview.draftId,
+              ...draftPreview.confirmation,
+            }}
+            isSubmitting={isConfirming}
+            onBack={() => setDraftPreview(null)}
+            onConfirm={handleConfirmGenerate}
+            onCopyUrl={handleCopyPaymentUrl}
+          />
+        ) : (
+          <FormSubmitBar
+            isSubmitting={isGenerating}
+            isDisabled={totalAmount === 0}
+            submitText={t("generate_btn")}
+            submittingText={sendEmail ? "Generating & Sending Invoice..." : "Generating Invoice..."}
+            helperText={totalAmount === 0 ? "Select at least one priced service to continue." : "Review the preview amount and continue to confirmation."}
+          />
+        )}
 
         {/* SUCCESS BANNER */}
         {successData && (

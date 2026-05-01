@@ -25,6 +25,7 @@ import {
   canInjectGatewayPaymentLinks,
   type WorkspaceBillingSnapshot,
 } from '@/lib/entitlements';
+import { finalizeInvoiceGenerationDraft } from '@/lib/invoice/finalize-draft';
 
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
 const IDEMPOTENCY_PENDING = "PENDING";
@@ -119,6 +120,7 @@ export async function POST(request: Request) {
 
     const body = (await request.json()) as {
       idempotencyKey?: string;
+      draftId?: string;
       clientId?: string;
       billingMonth?: string;
       sacCode?: string;
@@ -128,6 +130,15 @@ export async function POST(request: Request) {
       status?: string;
       taxRateOverride?: number;
     };
+    if (typeof body.draftId === "string" && body.draftId.trim()) {
+      const finalizeResult = await finalizeInvoiceGenerationDraft({
+        draftId: body.draftId.trim(),
+        workspaceId,
+        actorId,
+        actorEmail,
+      });
+      return NextResponse.json(finalizeResult.response, { status: finalizeResult.status });
+    }
     idempotencyKey = request.headers.get("Idempotency-Key")?.trim() || body?.idempotencyKey?.trim() || null;
     const idempotencyBody = { ...body };
     delete idempotencyBody.idempotencyKey;

@@ -1,0 +1,312 @@
+import { Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { calculateInvoiceTotals } from "@/lib/invoice/totals";
+import { resolveTaxRate } from "@/lib/invoice/tax-resolver";
+import { toInvoiceStatus } from "@/lib/invoice-status";
+import { toDecimal } from "@/lib/money";
+import {
+  assertFreeTierMonthlyInvoiceAllowed,
+  canInjectGatewayPaymentLinks,
+  type WorkspaceBillingSnapshot,
+} from "@/lib/entitlements";
+
+export type ServiceInput = {
+  title?: string;
+  amount?: number | string;
+  productId?: string;
+  quantity?: number;
+  unitPrice?: number | string;
+  sac?: {
+    igstRate?: number | null;
+  };
+  taxRate?: number | null;
+};
+
+export type SanitizedService = ServiceInput & {
+  title: string;
+  amount: number;
+  amountDecimal: Prisma.Decimal;
+  nicDetails: string;
+};
+
+type ProfileSettings = {
+  defaultTaxRate?: number | null;
+  invoiceTheme?: string | null;
+  defaultGateway?: string | null;
+  razorpayKeyId?: string | null;
+  razorpayKeySecret?: string | null;
+  stripePublishableKey?: string | null;
+  stripeSecretKey?: string | null;
+};
+
+export type InvoiceGenerationInput = {
+  clientId?: string;
+  billingMonth?: string;
+  sacCode?: string;
+  services?: ServiceInput[];
+  customDate?: string;
+  sendEmail?: boolean;
+  status?: string;
+  taxRateOverride?: number;
+};
+
+export type InvoiceGenerationContext = {
+  workspaceId: string;
+  client: Awaited<ReturnType<typeof prisma.client.findFirst>> extends infer T ? NonNullable<T> : never;
+  profile: Awaited<ReturnType<typeof prisma.businessProfile.findUnique>> extends infer T ? NonNullable<T> : never;
+  profileSettings: ProfileSettings;
+  normalizedStatus: ReturnType<typeof toInvoiceStatus>;
+  invoiceDate: Date;
+  dueDate: Date;
+  billingMonthValue: string;
+  sanitizedSacCode: string;
+  sanitizedServices: SanitizedService[];
+  serviceDesc: string;
+  validProductIds: Set<string>;
+  totals: ReturnType<typeof calculateInvoiceTotals>;
+  taxRateOverrideValue?: number;
+  taxRate: number;
+  countryCode: string;
+  userLocale: string;
+  baseCurrency: string;
+  billingSnapshot: WorkspaceBillingSnapshot;
+  paidFeatures: boolean;
+  shouldSendEmail: boolean;
+};
+
+export class InvoiceValidationError extends Error {
+  status: number;
+  payload: Record<string, unknown>;
+
+  constructor(status: number, payload: Record<string, unknown>, message?: string) {
+    super(message ?? String(payload.error ?? "Validation failed"));
+    this.status = status;
+    this.payload = payload;
+  }
+}
+
+export async function buildInvoiceGenerationContext(
+  workspaceId: string,
+  input: InvoiceGenerationInput,
+): Promise<InvoiceGenerationContext> {
+  const {
+    clientId,
+    billingMonth,
+    sacCode,
+    services,
+    customDate,
+    sendEmail: shouldSendEmail,
+    status: rawStatus,
+    taxRateOverride,
+  } = input;
+  const billingMonthValue = typeof billingMonth === "string" ? billingMonth : "";
+  const servicesInput: ServiceInput[] = Array.isArray(services) ? services : [];
+  const taxRateOverrideValue = typeof taxRateOverride === "number" ? taxRateOverride : undefined;
+  const normalizedStatus = toInvoiceStatus(rawStatus);
+  const validationErrors: Array<{ field: string; message: string; index?: number }> = [];
+
+  if (!clientId) throw new InvoiceValidationError(400, { error: "No client selected." });
+  if (billingMonthValue.trim().length === 0) {
+    validationErrors.push({
+      field: "billingMonth",
+      message: "Billing month is required and must be a non-empty string.",
+    });
+  }
+
+  let parsedCustomDate: Date | null = null;
+  if (typeof customDate !== "undefined" && customDate !== null && customDate !== "") {
+    parsedCustomDate = new Date(customDate);
+    if (isNaN(parsedCustomDate.getTime())) {
+      validationErrors.push({
+        field: "customDate",
+        message: "Custom date is invalid. Please provide a valid date value.",
+      });
+    }
+  }
+
+  if (servicesInput.length === 0) {
+    validationErrors.push({
+      field: "services",
+      message: "At least one service is required.",
+    });
+  }
+
+  if (validationErrors.length > 0) {
+    throw new InvoiceValidationError(400, { error: "Validation failed", fields: validationErrors });
+  }
+
+  const MAX_SERVICE_TITLE_LENGTH = 200;
+  const sanitizedServices: SanitizedService[] = servicesInput
+    .map((s: ServiceInput, index: number): SanitizedService => {
+      const title = typeof s?.title === "string" ? s.title.trim() : "";
+      if (!title) {
+        validationErrors.push({
+          field: "services.title",
+          index,
+          message: "Service title is required and cannot be empty.",
+        });
+      } else if (title.length > MAX_SERVICE_TITLE_LENGTH) {
+        validationErrors.push({
+          field: "services.title",
+          index,
+          message: `Service title must be ${MAX_SERVICE_TITLE_LENGTH} characters or fewer.`,
+        });
+      }
+
+      const amt = Number(s?.amount);
+      if (!Number.isFinite(amt) || amt < 0) {
+        validationErrors.push({
+          field: "services.amount",
+          index,
+          message: "Service amount must be a finite number greater than or equal to 0.",
+        });
+      }
+
+      return {
+        ...s,
+        title,
+        amount: amt,
+        amountDecimal: toDecimal(amt).toDecimalPlaces(2),
+        nicDetails: "",
+      };
+    });
+
+  if (validationErrors.length > 0) {
+    throw new InvoiceValidationError(400, { error: "Validation failed", fields: validationErrors });
+  }
+
+  const unverifiedProductIds = sanitizedServices
+    .map((s: { productId?: string }) => s.productId)
+    .filter((id: unknown): id is string => typeof id === "string" && id.length > 0);
+  const validProducts =
+    unverifiedProductIds.length > 0
+      ? await prisma.product.findMany({ where: { workspaceId, id: { in: unverifiedProductIds } }, select: { id: true } })
+      : [];
+  const validProductIds = new Set(validProducts.map((p: { id: string }) => p.id));
+
+  const date = parsedCustomDate ?? new Date();
+  if (isNaN(date.getTime())) {
+    throw new InvoiceValidationError(400, {
+      error: "Validation failed",
+      fields: [{ field: "customDate", message: "Custom date is invalid. Please provide a valid date value." }],
+    });
+  }
+  const dueDate = new Date(date);
+  dueDate.setDate(dueDate.getDate() + 7);
+
+  const serviceDesc = sanitizedServices.map((s) => s.title).join(" + ");
+  if (!serviceDesc.trim()) {
+    throw new InvoiceValidationError(400, {
+      error: "Validation failed",
+      fields: [{ field: "services.title", message: "At least one service title is required." }],
+    });
+  }
+  if (serviceDesc.length > 2000) {
+    throw new InvoiceValidationError(400, {
+      error: "Validation failed",
+      fields: [{ field: "services", message: "Combined service description is too long for invoice generation." }],
+    });
+  }
+
+  const sanitizedSacCode = typeof sacCode === "string" ? sacCode.trim() : "";
+  if (sanitizedSacCode.length > 100) {
+    throw new InvoiceValidationError(400, {
+      error: "Validation failed",
+      fields: [{ field: "sacCode", message: "SAC code is too long." }],
+    });
+  }
+  if (billingMonthValue.trim().length > 100) {
+    throw new InvoiceValidationError(400, {
+      error: "Validation failed",
+      fields: [{ field: "billingMonth", message: "Billing month is too long." }],
+    });
+  }
+
+  const client = await prisma.client.findFirst({ where: { id: clientId, workspaceId } });
+  if (!client) throw new InvoiceValidationError(404, { error: "Selected client does not exist in your CRM." });
+
+  const profile = await prisma.businessProfile.findUnique({
+    where: { workspaceId },
+    include: { workspace: true, primaryBankAccount: true },
+  });
+  if (!profile) throw new InvoiceValidationError(400, { error: "Business profile missing. Please complete Settings Wizard." });
+
+  const countryCode = profile.workspace?.countryCode || "IN";
+  const serviceTaxRates = sanitizedServices
+    .map((service: SanitizedService) => service.sac?.igstRate ?? service.taxRate ?? null)
+    .filter((rate: number | null): rate is number => rate !== null && rate !== undefined);
+  const profileSettings = profile as typeof profile & ProfileSettings;
+  const taxResolution = resolveTaxRate({
+    countryCode,
+    isTaxExempt: Boolean(client.isExport),
+    serviceTaxRates,
+    workspaceDefaultTaxRate: profileSettings.defaultTaxRate,
+    taxRateOverride: taxRateOverrideValue,
+  });
+
+  if (taxResolution.requiresUserInput) {
+    throw new InvoiceValidationError(422, {
+      error: "Tax rate is required before generating this invoice.",
+      code: "TAX_RATE_REQUIRED",
+      reason: taxResolution.reason,
+      countryCode,
+      taxLabel: profile.taxLabel || "Tax",
+      candidates: taxResolution.candidates || [],
+    });
+  }
+
+  if (taxResolution.source === "override" && taxRateOverrideValue !== undefined) {
+    await prisma.businessProfile.update({
+      where: { workspaceId },
+      data: { defaultTaxRate: taxResolution.taxRate },
+    });
+  }
+
+  const totals = calculateInvoiceTotals({
+    services: sanitizedServices,
+    isTaxExempt: Boolean(client.isExport),
+    defaultTaxRate: taxResolution.taxRate,
+  });
+
+  const billingSnapshot: WorkspaceBillingSnapshot = {
+    planTier: profile.workspace?.planTier,
+    subscriptionStatus: profile.workspace?.subscriptionStatus,
+    subscriptionEndsAt: profile.workspace?.subscriptionEndsAt,
+  };
+  const invoiceLimitDenied = await assertFreeTierMonthlyInvoiceAllowed(workspaceId, date);
+  if (invoiceLimitDenied) {
+    throw new InvoiceValidationError(403, {
+      error: invoiceLimitDenied.message,
+      code: invoiceLimitDenied.code,
+      limit: invoiceLimitDenied.limit,
+    });
+  }
+
+  const paidFeatures = canInjectGatewayPaymentLinks(billingSnapshot);
+  const userLocale = profile.workspace?.countryCode === "IN" ? "en-IN" : "en-US";
+  const baseCurrency = profile.workspace?.baseCurrency || "INR";
+
+  return {
+    workspaceId,
+    client,
+    profile,
+    profileSettings,
+    normalizedStatus,
+    invoiceDate: date,
+    dueDate,
+    billingMonthValue,
+    sanitizedSacCode,
+    sanitizedServices,
+    serviceDesc,
+    validProductIds,
+    totals,
+    taxRateOverrideValue,
+    taxRate: taxResolution.taxRate,
+    countryCode,
+    userLocale,
+    baseCurrency,
+    billingSnapshot,
+    paidFeatures,
+    shouldSendEmail: Boolean(shouldSendEmail),
+  };
+}
