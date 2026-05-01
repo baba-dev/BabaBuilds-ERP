@@ -69,7 +69,6 @@ export async function POST(request: Request) {
     const result = await finalizeInvoiceGenerationDraft({
       workspaceId,
       actorId: actorUserId,
-      actorEmail: null,
       draftId,
       forceSendEmail: null,
     });

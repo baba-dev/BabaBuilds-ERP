@@ -135,7 +135,6 @@ export async function POST(request: Request) {
         draftId: body.draftId.trim(),
         workspaceId,
         actorId,
-        actorEmail,
       });
       return NextResponse.json(finalizeResult.response, { status: finalizeResult.status });
     }
