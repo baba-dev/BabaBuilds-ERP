@@ -6,6 +6,7 @@ import Stripe from "stripe";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import { decrypt } from "@/lib/encryption";
+import { timingSafeEqualString } from "@/lib/security/signature";
 
 type Provider = "STRIPE" | "RAZORPAY";
 
@@ -294,7 +295,7 @@ export async function PATCH(req: Request) {
         .update(`${razorpayOrderId}|${razorpayPaymentId}`)
         .digest("hex");
 
-      if (generatedSignature !== razorpaySignature) {
+      if (!timingSafeEqualString(generatedSignature, razorpaySignature)) {
         return NextResponse.json({ error: "Invalid Razorpay signature.", code: "ATTACHMENT_FAILED" }, { status: 400 });
       }
 

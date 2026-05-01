@@ -9,6 +9,7 @@ import {
   releaseFinancialIdempotency,
 } from "@/lib/financial-idempotency";
 import { processRazorpaySubscriptionPaymentVerified } from "@/lib/razorpay-subscription";
+import { timingSafeEqualString } from "@/lib/security/signature";
 
 export async function POST(req: Request) {
   let idempotencyContext: { workspaceId: string; operation: string; idempotencyKey: string } | null = null;
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
 
-    if (generatedSignature !== razorpay_signature) {
+    if (!timingSafeEqualString(generatedSignature, razorpay_signature)) {
       console.error("⚠️ Security Alert: Invalid payment signature detected.");
       return NextResponse.json({ error: "Invalid payment signature" }, { status: 400 });
     }
