@@ -4,6 +4,7 @@ import { decrypt } from '@/lib/encryption';
 import crypto from 'crypto';
 import { commitShopOrderPayment } from '@/lib/shop/commit-shop-order-payment';
 import { timingSafeEqualString } from '@/lib/security/signature';
+import { isModuleEnabled } from '@/lib/modules';
 
 /**
  * POST /api/shop/[slug]/verify
@@ -34,6 +35,10 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
 
     const profile = order.workspace.businessProfile;
     if (!profile) return NextResponse.json({ error: 'Workspace not configured.' }, { status: 400 });
+
+    if (!(await isModuleEnabled(order.workspaceId, 'SHOP'))) {
+      return NextResponse.json({ error: 'Order not found.' }, { status: 404 });
+    }
 
     // ── Razorpay signature verification ──────────────────────────────────────
     if (order.gateway === 'RAZORPAY') {

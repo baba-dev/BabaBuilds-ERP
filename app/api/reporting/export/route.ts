@@ -3,9 +3,19 @@ import { buildReportFilename, buildReportWorkbook } from '@/lib/reporting/export
 import { executeReportingQuery } from '@/lib/reporting/sql-executor';
 import { getReportPreset, validatePresetFilters } from '@/lib/reporting/presets';
 import { reportingErrorResponse, resolveReportingContext } from '@/app/api/reporting/_shared';
+import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
 
 export async function POST(req: Request) {
   try {
+    const routeLimit = enforceRouteRateLimit({
+      request: req,
+      route: '/api/reporting/export',
+      scope: 'reporting-export',
+      max: 20,
+      windowMs: 10 * 60 * 1000,
+    });
+    if (!routeLimit.ok) return routeLimit.response;
+
     const { workspaceId, userId } = await resolveReportingContext('reporting_center.export');
     const body = (await req.json()) as { presetId?: string; filters?: unknown };
 
