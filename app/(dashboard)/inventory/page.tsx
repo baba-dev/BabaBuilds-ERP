@@ -120,7 +120,7 @@ export default function InventoryHub() {
       id: "sku",
       header: "SKU",
       accessor: (p) => p.sku,
-      className: "px-6 py-4 w-[100px] text-zinc-500 font-mono text-xs font-bold",
+      className: "px-6 py-4 w-[100px] whitespace-nowrap text-zinc-500 font-mono text-xs font-bold",
     },
     {
       id: "product",
@@ -141,7 +141,7 @@ export default function InventoryHub() {
       header: "Stock",
       sortable: true,
       sortAccessor: (p) => p.currentStock,
-      className: "px-2 py-4 font-bold text-sm",
+      className: "px-2 py-4 whitespace-nowrap font-bold text-sm",
       cell: (p) => {
         const isDanger = p.currentStock === 0;
         const isCritical = p.currentStock > 0 && p.currentStock <= (p.safetyStock / 2);
@@ -159,7 +159,7 @@ export default function InventoryHub() {
     {
       id: "level",
       header: "Level",
-      className: "px-2 py-4 w-[100px]",
+      className: "px-2 py-4 w-[100px] whitespace-nowrap",
       cell: (p) => {
         const isDanger = p.currentStock === 0;
         const isCritical = p.currentStock > 0 && p.currentStock <= (p.safetyStock / 2);
@@ -179,7 +179,7 @@ export default function InventoryHub() {
       id: "status",
       header: "Status",
       accessor: (p) => p.status,
-      className: "px-2 py-4 text-xs font-bold",
+      className: "px-2 py-4 whitespace-nowrap text-xs font-bold",
       cell: (p) => {
         if (p.currentStock === 0) return <span className="text-rose-600 text-[11px] font-medium tracking-wide">Out of Stock</span>;
         if (p.currentStock <= (p.safetyStock / 2)) return <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] tracking-wide">Critical</span>;
@@ -200,7 +200,7 @@ export default function InventoryHub() {
       header: "Value",
       sortable: true,
       sortAccessor: (p) => p.currentStock * p.costPrice,
-      className: "font-semibold text-[13px] text-zinc-800 dark:text-zinc-200 text-right px-6",
+      className: "font-semibold text-[13px] whitespace-nowrap text-zinc-800 dark:text-zinc-200 text-right px-6",
       cell: (p) => (
         <div className="flex items-center justify-end gap-3">
           {fCurrency(p.currentStock * (p.costPrice || 0))}

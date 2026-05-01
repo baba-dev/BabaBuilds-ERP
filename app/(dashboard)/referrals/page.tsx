@@ -364,11 +364,11 @@ export default function ReferralsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Workspace</TableHead>
-                    <TableHead>Stage</TableHead>
-                    <TableHead>Coupon</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Paid tx</TableHead>
-                    <TableHead className="text-right">Revenue</TableHead>
+                    <TableHead className="whitespace-nowrap">Stage</TableHead>
+                    <TableHead className="whitespace-nowrap">Coupon</TableHead>
+                    <TableHead className="whitespace-nowrap">Created</TableHead>
+                    <TableHead className="whitespace-nowrap">Paid tx</TableHead>
+                    <TableHead className="whitespace-nowrap text-right">Revenue</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -386,9 +386,9 @@ export default function ReferralsPage() {
                           <Badge className={stageBadge(lead.stage)}>{lead.stage}</Badge>
                         </TableCell>
                         <TableCell>{lead.couponCode ?? "—"}</TableCell>
-                        <TableCell>{new Date(lead.createdAt).toLocaleDateString()}</TableCell>
-                        <TableCell>{lead.paidTransactions}</TableCell>
-                        <TableCell className="text-right font-bold">${lead.revenue.toFixed(2)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{new Date(lead.createdAt).toLocaleDateString()}</TableCell>
+                        <TableCell className="whitespace-nowrap">{lead.paidTransactions}</TableCell>
+                        <TableCell className="whitespace-nowrap text-right font-bold">${lead.revenue.toFixed(2)}</TableCell>
                       </TableRow>
                     ))
                   )}
@@ -440,10 +440,10 @@ export default function ReferralsPage() {
                             {coupon.isActive ? "ACTIVE" : "INACTIVE"}
                           </Badge>
                         </TableCell>
-                        <TableCell>{coupon.discountValue}% / {coupon.commissionPercent}%</TableCell>
-                        <TableCell>{coupon.usedCount}{coupon.maxUses != null ? ` / ${coupon.maxUses}` : ""}</TableCell>
+                        <TableCell className="whitespace-nowrap">{coupon.discountValue}% / {coupon.commissionPercent}%</TableCell>
+                        <TableCell className="whitespace-nowrap">{coupon.usedCount}{coupon.maxUses != null ? ` / ${coupon.maxUses}` : ""}</TableCell>
                         <TableCell>{coupon.leadCount}</TableCell>
-                        <TableCell>{coupon.conversionRate}%</TableCell>
+                        <TableCell className="whitespace-nowrap">{coupon.conversionRate}%</TableCell>
                         <TableCell>
                           {coupon.daysRemaining == null ? "No expiry" : `${coupon.daysRemaining} days`}
                         </TableCell>
@@ -489,10 +489,10 @@ export default function ReferralsPage() {
                         <TableCell>
                           <Badge className={commissionBadge(item.status)}>{item.status}</Badge>
                         </TableCell>
-                        <TableCell>${item.dealAmount.toFixed(2)}</TableCell>
-                        <TableCell>{item.commissionPercent}%</TableCell>
-                        <TableCell className="font-bold">${item.commissionAmount.toFixed(2)}</TableCell>
-                        <TableCell>{new Date(item.createdAt).toLocaleDateString()}</TableCell>
+                        <TableCell className="whitespace-nowrap">${item.dealAmount.toFixed(2)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{item.commissionPercent}%</TableCell>
+                        <TableCell className="whitespace-nowrap font-bold">${item.commissionAmount.toFixed(2)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{new Date(item.createdAt).toLocaleDateString()}</TableCell>
                         <TableCell>{item.providerReference ?? "—"}</TableCell>
                       </TableRow>
                     ))
