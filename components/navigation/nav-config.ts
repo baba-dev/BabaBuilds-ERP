@@ -35,7 +35,27 @@ export type CanonicalNavItem = {
   requiresPermission?: string;
 };
 
-export const canonicalNavItems: CanonicalNavItem[] = [
+function assertUniqueAppNavItemKeys(items: CanonicalNavItem[]) {
+  if (process.env.NODE_ENV === "production") {
+    return items;
+  }
+
+  const keys = new Set<string>();
+
+  for (const item of items) {
+    if (keys.has(item.key)) {
+      throw new Error(
+        `[nav-config] Duplicate app navigation key detected: "${item.key}". Each appNavItems entry must use a unique key.`,
+      );
+    }
+
+    keys.add(item.key);
+  }
+
+  return items;
+}
+
+export const canonicalNavItems: CanonicalNavItem[] = assertUniqueAppNavItemKeys([
   { key: "dashboard", path: "/dashboard", icon: LayoutDashboard, group: "overview", keywords: ["home", "kpi", "summary"] },
   { key: "revenue_pipeline", path: "/proposals/pipeline", icon: Target, group: "sales", keywords: ["pipeline", "deals", "forecast"], badge: "AI", requiresModule: "REVENUE_PIPELINE" },
   { key: "service_catalog", path: "/services", icon: Briefcase, group: "operations", keywords: ["offerings", "pricing", "catalog"] },
@@ -49,6 +69,7 @@ export const canonicalNavItems: CanonicalNavItem[] = [
   { key: "reporting_center", path: "/reporting", icon: ChartColumnBig, group: "finance", keywords: ["reports", "analytics", "insights"], badge: "New", requiresModule: "REPORTING_CENTER", requiresPermission: "reporting_center.view" },
   { key: "ar_collections", path: "/ar-collections", icon: Siren, group: "finance", keywords: ["collections", "receivables", "follow up"], badge: "New", requiresModule: "AR_COLLECTIONS" },
   { key: "savings_tax", path: "/tax", icon: ShieldCheck, group: "finance", keywords: ["gst", "compliance", "tax"] },
+  { key: "tax_advanced", path: "/tax/advanced", icon: ShieldCheck, group: "finance", keywords: ["tax", "advanced", "compliance"], badge: "New", requiresModule: "TAX_ADVANCED" },
   { key: "ai_reconciliation", path: "/reconciliation", icon: Sparkles, group: "finance", keywords: ["bank", "matching", "ledger"], badge: "AI" },
   { key: "invoices_and_earnings", path: "/income", icon: ReceiptText, group: "sales", keywords: ["billing", "revenue", "invoices"] },
   { key: "ca_compliance", path: "/ca-portal", icon: Landmark, group: "compliance", keywords: ["chartered", "filings", "audit"] },
@@ -56,7 +77,7 @@ export const canonicalNavItems: CanonicalNavItem[] = [
   { key: "workforce", path: "/workforce", icon: Users2, group: "workspace", keywords: ["team", "staff", "hr"], requiresModule: "WORKFORCE" },
   { key: "payroll", path: "/payroll", icon: Wallet, group: "workspace", keywords: ["salary", "payout", "payroll"], requiresModule: "PAYROLL" },
   { key: "import_manager", path: "/import-manager", icon: UploadCloud, group: "operations", keywords: ["import", "csv", "migration"], badge: "New", requiresModule: "IMPORT_MANAGER" },
-];
+]);
 
 export const appNavItems = canonicalNavItems;
 

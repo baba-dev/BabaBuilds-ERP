@@ -394,7 +394,8 @@
     "group_finance": "Finance",
     "group_compliance": "Compliance",
     "group_workspace": "Workspace",
-    "import_manager": "Import Manager"
+    "import_manager": "Import Manager",
+    "tax_advanced": "Tax Advanced"
   },
   "UserNav": {
     "my_account": "My Account",
