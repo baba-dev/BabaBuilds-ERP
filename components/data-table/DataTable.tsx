@@ -181,7 +181,7 @@ export function DataTable<T>({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="border-zinc-200 dark:border-zinc-800/80 hover:bg-transparent">
                 {selectable && headerGroup.depth === 0 && (
-                  <TableHead className="w-10 group">
+                  <TableHead className="w-10 whitespace-nowrap group">
                     <Checkbox
                       checked={table.getIsAllPageRowsSelected()}
                       onCheckedChange={(checked) => table.toggleAllPageRowsSelected(Boolean(checked))}
@@ -240,7 +240,7 @@ export function DataTable<T>({
             {rowModel.rows.map((row) => (
               <TableRow key={row.id} className="border-zinc-100 dark:border-zinc-800/80 transition-colors hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 group/row">
                 {selectable && (
-                  <TableCell className="w-10">
+                  <TableCell className="w-10 whitespace-nowrap">
                     <Checkbox checked={row.getIsSelected()} onCheckedChange={(checked) => row.toggleSelected(Boolean(checked))} />
                   </TableCell>
                 )}
