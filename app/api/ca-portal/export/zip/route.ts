@@ -8,6 +8,7 @@ import fsPromises from 'fs/promises';
 import path from 'path';
 import { Readable } from 'stream';
 import { buildPrivatePath } from '@/lib/uploads/private-storage';
+import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
 
 const ZIP_BATCH_SIZE = 500;
 const MAX_ZIP_FILES = 12000;
@@ -55,6 +56,15 @@ function resolveExpenseFilePath(workspaceId: string, receiptUrl: string) {
 
 export async function GET(request: Request) {
   try {
+    const routeLimit = enforceRouteRateLimit({
+      request,
+      route: '/api/ca-portal/export/zip',
+      scope: 'ca-export-zip',
+      max: 4,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!routeLimit.ok) return routeLimit.response;
+
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
     if (!session || !(session as any).workspaceId) {
