@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import type { ReactNode } from "react";
 import {
-  Package, Plus, Search, Archive, AlertCircle, ArrowDownRight
+  Package, Plus, Search, Archive, AlertCircle, ArrowDownRight, ScanLine
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -245,14 +245,25 @@ export default function InventoryHub() {
             <Search className="absolute left-3 top-3 w-4 h-4 text-zinc-400" />
             <Input 
               autoFocus
-              placeholder="Scan Barcode or Search SKU..." 
+              placeholder="Search SKU..." 
               value={globalFilter}
               onChange={(e) => setGlobalFilter(e.target.value)}
               className="pl-9 h-10 w-full bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus-visible:ring-orange-500 font-bold"
             />
+            <p className="mt-1 text-[11px] font-medium text-zinc-500">
+              Scan barcode or search SKU
+            </p>
           </div>
           
-          <div className="flex gap-2 items-center">
+          <div className="flex gap-2 items-center w-full md:w-auto justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 px-3 sm:px-4 text-xs font-bold uppercase tracking-widest shrink-0"
+              onClick={() => setScannerOpen(true)}
+            >
+              <ScanLine className="w-4 h-4 mr-1.5" /> Scan
+            </Button>
             <div className="hidden md:flex bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-1 rounded-xl shadow-sm h-10">
               <Button 
                 variant={viewMode === 'list' ? 'secondary' : 'ghost'} 
