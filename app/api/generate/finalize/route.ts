@@ -73,7 +73,7 @@ export async function POST(request: Request) {
       draftId,
       forceSendEmail: null,
     });
-    return NextResponse.json(result);
+    return NextResponse.json(result.response, { status: result.status });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to finalize invoice draft." },

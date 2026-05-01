@@ -9,6 +9,8 @@ import { determineAndPersistTax } from "@/src/server/tax/service";
 import { createPrismaTaxPersistence } from "@/lib/tax/prisma-tax-persistence";
 import { appendTaxAuditEvent, newTaxCorrelationId } from "@/lib/tax/audit";
 import { buildInvoiceGenerationContext, type InvoiceGenerationInput } from "@/lib/invoice/generation-context";
+import { buildInvoiceDeliveryEmail } from "@/lib/notifications/transactional-email-templates";
+import { sendEmail } from "@/lib/mailer";
 
 type DraftPaymentLink = {
   url: string | null;
@@ -212,6 +214,7 @@ export async function finalizeInvoiceFromDraft(params: {
     invoice: newInvoice,
     invoiceNumber: currentInvoiceNumber,
     pdfFilename: finalPdfFilename,
+    pdfPath: generatedPdfPath,
     formattedTotal,
     baseCurrency,
     shouldSendEmail: context.shouldSendEmail,
@@ -225,11 +228,9 @@ export async function finalizeInvoiceFromDraft(params: {
 export async function finalizeInvoiceGenerationDraft(params: {
   workspaceId: string;
   actorId: string | null;
-  actorEmail: string | null;
   draftId: string;
-  forceSendEmail?: boolean | null;
 }) {
-  const { workspaceId, actorId, draftId } = params;
+  const { workspaceId, actorId, draftId, forceSendEmail } = params;
   const draft = await prisma.invoiceGenerationDraft.findFirst({
     where: { id: draftId, workspaceId, createdByUserId: actorId ?? "" },
   });
@@ -291,13 +292,45 @@ export async function finalizeInvoiceGenerationDraft(params: {
     },
   });
 
+  const shouldSendEmail = typeof forceSendEmail === "boolean" ? forceSendEmail : Boolean(draftInput.sendEmail);
+  let emailStatus = "Not requested";
+  if (shouldSendEmail) {
+    if (!created.clientEmail) {
+      emailStatus = "Failed: Client has no email address on file.";
+    } else if (!created.profile.smtpHost || !created.profile.smtpUser || !created.profile.smtpPassword) {
+      emailStatus = "Failed: SMTP Server not configured in Settings.";
+    } else {
+      try {
+        const invoiceEmail = buildInvoiceDeliveryEmail({
+          companyName: created.profile.companyName,
+          clientName: created.clientName,
+          invoiceNumber: created.invoiceNumber,
+          billingMonth: created.billingMonthValue,
+          amountFormatted: `${created.baseCurrency} ${created.formattedTotal}`,
+        });
+        await sendEmail({
+          route: "user",
+          profile: created.profile,
+          to: created.clientEmail,
+          subject: invoiceEmail.subject,
+          html: invoiceEmail.html,
+          text: invoiceEmail.text,
+          attachments: [{ filename: created.pdfFilename, path: created.pdfPath }],
+        });
+        emailStatus = "Success";
+      } catch (emailErr: unknown) {
+        emailStatus = `Failed: ${emailErr instanceof Error ? emailErr.message : "Unknown email error"}`;
+      }
+    }
+  }
+
   return {
     status: 200,
     response: {
       success: true,
       invoice: created.invoice,
       status: created.invoice.status,
-      emailStatus: "Not requested",
+      emailStatus,
       paymentLinkStatus: {
         attempted: Boolean(draft.razorpayLinkId),
         created: Boolean(draft.razorpayLinkId),
