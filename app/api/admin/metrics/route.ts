@@ -3,6 +3,7 @@ import { handleAdminApiError, verifySuperAdmin } from "../authz";
 import { prisma } from "@/lib/prisma";
 import { getAuthFailureMetrics } from "@/lib/auth-observability";
 import { getProtocolLaunchMetrics } from "@/lib/protocol-observability";
+import { getRouteRateLimitIpConcentration, getRouteRateLimitMetrics } from "@/lib/route-rate-limit";
 import { decimalToNumber, toDecimal } from "@/lib/money";
 import { getMonthlyPriceForInterval, getPricingRegionFromCountry } from "@/lib/pricing";
 
@@ -27,6 +28,8 @@ export async function GET() {
     const totalClients = await prisma.client.count();
     const authFailures = getAuthFailureMetrics();
     const protocolLaunches = getProtocolLaunchMetrics();
+    const routeRateLimitEvents = getRouteRateLimitMetrics();
+    const routeRateLimitIpConcentration = getRouteRateLimitIpConcentration();
 
     // Total gross volume across platform
     const invoices = await prisma.invoice.findMany({ select: { totalAmount: true } });
@@ -49,6 +52,12 @@ export async function GET() {
         .filter((row) => row.outcome === "failure")
         .reduce((sum, row) => sum + row.count, 0),
       protocolLaunchByOutcome: protocolLaunches,
+      routeRateLimitHitCount: routeRateLimitEvents.length,
+      routeRateLimitHitsByRoute: routeRateLimitEvents.reduce<Record<string, number>>((acc, event) => {
+        acc[event.route] = (acc[event.route] || 0) + 1;
+        return acc;
+      }, {}),
+      routeRateLimitTopSourceIps: routeRateLimitIpConcentration,
     });
 
   } catch (error) {

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { format } from 'date-fns';
+import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
 
 const CSV_BATCH_SIZE = 1000;
 const MAX_CSV_RECORDS = 120000;
@@ -45,6 +46,15 @@ const escapeCsv = (str: string | null | undefined) => {
 
 export async function GET(request: Request) {
   try {
+    const routeLimit = enforceRouteRateLimit({
+      request,
+      route: '/api/ca-portal/export/csv',
+      scope: 'ca-export-csv',
+      max: 10,
+      windowMs: 10 * 60 * 1000,
+    });
+    if (!routeLimit.ok) return routeLimit.response;
+
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
     if (!session || !(session as any).workspaceId) {

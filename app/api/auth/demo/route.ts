@@ -10,6 +10,7 @@ import {
   recordDemoProvisionAttempt,
   throttleToHttpResponse,
 } from "@/lib/demo-auth-throttle";
+import { enforceRouteRateLimit } from "@/lib/route-rate-limit";
 
 // --- HELPERS ---
 
@@ -78,6 +79,17 @@ export async function POST(request: Request) {
       Boolean(configuredAgentKey) &&
       Boolean(agentKeyFromHeader) &&
       agentKeyFromHeader === configuredAgentKey;
+
+    const routeLimit = hasValidAgentKey
+      ? { ok: true as const }
+      : enforceRouteRateLimit({
+          request,
+          route: '/api/auth/demo',
+          scope: 'demo-auth',
+          max: 5,
+          windowMs: 15 * 60 * 1000,
+        });
+    if (!routeLimit.ok) return routeLimit.response;
 
     // In development we allow non-local callers (e.g. Cloud Agents) ONLY if they present a valid agent key.
     // Without the key, dev access is limited to localhost to reduce accidental exposure.
