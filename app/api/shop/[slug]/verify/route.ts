@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { decrypt } from '@/lib/encryption';
 import crypto from 'crypto';
 import { commitShopOrderPayment } from '@/lib/shop/commit-shop-order-payment';
+import { timingSafeEqualString } from '@/lib/security/signature';
 
 /**
  * POST /api/shop/[slug]/verify
@@ -48,7 +49,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
         .update(`${razorpayOrderId}|${razorpayPaymentId}`)
         .digest('hex');
 
-      if (expectedSig !== razorpaySignature) {
+      if (!timingSafeEqualString(expectedSig, razorpaySignature)) {
         await prisma.shopOrder.update({ where: { id: order.id }, data: { status: 'FAILED' } });
         return NextResponse.json({ error: 'Payment signature verification failed.' }, { status: 400 });
       }
