@@ -309,7 +309,8 @@
     "group_finance": "المالية",
     "group_compliance": "الامتثال",
     "group_workspace": "مساحة العمل",
-    "import_manager": "مدير الاستيراد"
+    "import_manager": "مدير الاستيراد",
+    "help_center": "Help Center"
   },
   "UserNav": {
     "my_account": "حسابي",
@@ -972,7 +973,34 @@
     "ph_founder": "اسمك",
     "ph_address": "الشارع ، المدينة",
     "optional_reporting_title": "مركز التقارير",
-    "optional_reporting_desc": "تقارير مختارة وتنفيذ للقراءة فقط وتصدير XLSX."
+    "optional_reporting_desc": "تقارير مختارة وتنفيذ للقراءة فقط وتصدير XLSX.",
+    "step_integrations": "Integrations",
+    "step_shop": "Public Shop",
+    "step5_title": "Platform Integrations",
+    "step5_desc": "Connect email, AI, and payments for full automation.",
+    "step6_title": "E-Store Configuration",
+    "step6_desc": "Configure your public storefront to sell services globally.",
+    "api_groq_label": "Groq API Key (AI)",
+    "api_groq_ph": "gsk_...",
+    "api_groq_tooltip": "Enables AI insights, financial projections, and receipt parsing. Get your key at console.groq.com",
+    "smtp_host": "SMTP Host",
+    "smtp_port": "SMTP Port",
+    "smtp_user": "SMTP User",
+    "smtp_pass": "SMTP Password",
+    "smtp_from": "From Email",
+    "smtp_ph_host": "smtp.gmail.com",
+    "gateway_label": "Default Payment Gateway",
+    "razorpay_label": "Razorpay Setup",
+    "stripe_label": "Stripe Setup",
+    "payment_tooltip": "Allows clients to pay invoices directly via PDF links. Razorpay is best for India, Stripe for global.",
+    "enable_shop": "Enable Public Shop",
+    "shop_slug": "Shop URL Slug",
+    "shop_tagline": "Tagline",
+    "shop_color": "Accent Color",
+    "shop_slug_ph": "my-agency",
+    "groq_link_text": "Get Groq Key",
+    "razorpay_link_text": "Razorpay Dashboard",
+    "stripe_link_text": "Stripe Dashboard"
   },
   "Tax": {
     "title": "مخطط الثروة والضرائب",
@@ -1528,7 +1556,8 @@
       "forFreelancers": {
         "title": "للمستقلين",
         "description": "الفوترة السريعة وإدارة الاحتفاظات."
-      }
+      },
+      "useCasesDescription": "Explore role-specific pages"
     },
     "useCases": {
       "agency": {
