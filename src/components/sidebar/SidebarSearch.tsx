@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Search, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { appNavItems, isNavItemVisible } from "@/components/navigation/nav-config";
+import { appNavItems, filterAppNavItems } from "@/components/navigation/nav-config";
 import { openAIChat } from "@/src/stores/ui/aiChatStore";
 import { dirFromLocale } from "@/src/lib/direction";
 
@@ -45,6 +45,8 @@ export function SidebarSearch({ enabledModules, grantedPermissions }: SidebarSea
   const [debouncedSearchText, setDebouncedSearchText] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
 
+  const visibleNavItems = filterAppNavItems(appNavItems, enabledModules, grantedPermissions);
+
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       setDebouncedSearchText(searchText);
@@ -78,14 +80,12 @@ export function SidebarSearch({ enabledModules, grantedPermissions }: SidebarSea
 
   const filterByQuery = (query: string) => {
     const needle = query.trim().toLowerCase();
-    const visibleItems = appNavItems.filter((item) => isNavItemVisible(item, enabledModules, grantedPermissions));
+    if (!needle) return visibleNavItems;
 
-    if (!needle) return visibleItems;
-
-    return visibleItems.filter((item) => {
+    return visibleNavItems.filter((item) => {
       const label = t(item.key).toLowerCase();
-      const groupLabel = getGroupLabel(item.searchGroupKey).toLowerCase();
-      const keywordMatch = item.searchKeywords.some((keyword) => keyword.toLowerCase().includes(needle));
+      const groupLabel = getGroupLabel(item.group).toLowerCase();
+      const keywordMatch = item.keywords.some((keyword) => keyword.toLowerCase().includes(needle));
       return label.includes(needle) || groupLabel.includes(needle) || keywordMatch;
     });
   };
@@ -179,7 +179,7 @@ export function SidebarSearch({ enabledModules, grantedPermissions }: SidebarSea
                 )}
               >
                 <span className="truncate">{t(item.key)}</span>
-                <span className={cn("shrink-0 text-xs text-zinc-300", isRtl ? "mr-2" : "ml-2")}>{getGroupLabel(item.searchGroupKey)}</span>
+                <span className={cn("shrink-0 text-xs text-zinc-300", isRtl ? "mr-2" : "ml-2")}>{getGroupLabel(item.group)}</span>
               </button>
             ))
           )}

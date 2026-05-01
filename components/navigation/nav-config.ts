@@ -22,18 +22,25 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export type AppNavItem = {
+export type NavGroupKey = "overview" | "operations" | "sales" | "finance" | "compliance" | "workspace";
+
+export type CanonicalNavItem = {
   key: string;
   path: string;
   icon: LucideIcon;
+  group: NavGroupKey;
+  keywords: string[];
+  /**
+   * Backward-compatibility aliases used by search consumers during migration.
+   */
+  searchGroupKey?: string;
+  searchKeywords?: string[];
   badge?: "New" | "AI";
-  requiresModule?: string; // Module key required to show this item (e.g., 'WORKFORCE')
+  requiresModule?: string;
   requiresPermission?: string;
-  searchGroupKey: string;
-  searchKeywords: string[];
 };
 
-function assertUniqueAppNavItemKeys(items: AppNavItem[]) {
+function assertUniqueAppNavItemKeys(items: CanonicalNavItem[]) {
   if (process.env.NODE_ENV === "production") {
     return items;
   }
@@ -53,43 +60,40 @@ function assertUniqueAppNavItemKeys(items: AppNavItem[]) {
   return items;
 }
 
-export const appNavItems: AppNavItem[] = assertUniqueAppNavItemKeys([
-  { key: "dashboard", path: "/dashboard", icon: LayoutDashboard, searchGroupKey: "overview", searchKeywords: ["home", "kpi", "summary"] },
-  { key: "revenue_pipeline", path: "/proposals/pipeline", icon: Target, badge: "AI", requiresModule: "REVENUE_PIPELINE", searchGroupKey: "sales", searchKeywords: ["pipeline", "deals", "forecast"] },
-  { key: "service_catalog", path: "/services", icon: Briefcase, searchGroupKey: "operations", searchKeywords: ["offerings", "pricing", "catalog"] },
-  { key: "shop", path: "/shop", icon: Store, badge: "New", requiresModule: "SHOP", requiresPermission: "shop.view", searchGroupKey: "operations", searchKeywords: ["storefront", "orders", "public"] },
-  { key: "inventory", path: "/inventory", icon: Archive, searchGroupKey: "operations", searchKeywords: ["stock", "products", "warehouse"] },
-  { key: "client_crm", path: "/clients", icon: Users, searchGroupKey: "operations", searchKeywords: ["customers", "contacts", "crm"] },
-  { key: "quotes_proposals", path: "/proposals", icon: FileSignature, searchGroupKey: "sales", searchKeywords: ["quotes", "deals", "proposals"] },
-  { key: "retainers_hub", path: "/retainers", icon: Box, searchGroupKey: "sales", searchKeywords: ["recurring", "contracts", "retainer"] },
-  { key: "expenses_margins", path: "/expenses", icon: Receipt, searchGroupKey: "finance", searchKeywords: ["costs", "purchases", "spend"] },
-  { key: "cash_flow", path: "/cash-flow/overview", icon: HandCoins, badge: "New", requiresModule: "CASH_FLOW", searchGroupKey: "finance", searchKeywords: ["cash", "liquidity", "overview"] },
-  {
-    key: "reporting_center",
-    path: "/reporting",
-    icon: ChartColumnBig,
-    badge: "New",
-    requiresModule: "REPORTING_CENTER",
-    requiresPermission: "reporting_center.view",
-    searchGroupKey: "finance",
-    searchKeywords: ["reports", "analytics", "insights"],
-  },
-  { key: "ar_collections", path: "/ar-collections", icon: Siren, badge: "New", requiresModule: "AR_COLLECTIONS", searchGroupKey: "finance", searchKeywords: ["receivables", "collections", "dunning"] },
-  { key: "savings_tax", path: "/tax", icon: ShieldCheck, searchGroupKey: "finance", searchKeywords: ["gst", "compliance", "tax"] },
-  { key: "tax_advanced", path: "/tax/advanced", icon: ShieldCheck, badge: "New", requiresModule: "TAX_ADVANCED", searchGroupKey: "finance", searchKeywords: ["tax", "advanced", "compliance"] },
-  { key: "ai_reconciliation", path: "/reconciliation", icon: Sparkles, badge: "AI", searchGroupKey: "finance", searchKeywords: ["bank", "matching", "ledger"] },
-  { key: "invoices_and_earnings", path: "/income", icon: ReceiptText, searchGroupKey: "sales", searchKeywords: ["billing", "revenue", "invoices"] },
-  { key: "ca_compliance", path: "/ca-portal", icon: Landmark, searchGroupKey: "compliance", searchKeywords: ["chartered", "filings", "audit"] },
-  { key: "documents", path: "/documents", icon: FileText, requiresModule: "DOCUMENTS", searchGroupKey: "workspace", searchKeywords: ["files", "attachments", "docs"] },
-  { key: "workforce", path: "/workforce", icon: Users2, requiresModule: "WORKFORCE", searchGroupKey: "workspace", searchKeywords: ["employees", "team", "hr"] },
-  { key: "payroll", path: "/payroll", icon: Wallet, requiresModule: "PAYROLL", searchGroupKey: "workspace", searchKeywords: ["salary", "payouts", "compensation"] },
-  { key: "import_manager", path: "/import-manager", icon: UploadCloud, badge: "New", requiresModule: "IMPORT_MANAGER", searchGroupKey: "workspace", searchKeywords: ["csv", "upload", "ingestion"] },
+export const canonicalNavItems: CanonicalNavItem[] = assertUniqueAppNavItemKeys([
+  { key: "dashboard", path: "/dashboard", icon: LayoutDashboard, group: "overview", keywords: ["home", "kpi", "summary"] },
+  { key: "revenue_pipeline", path: "/proposals/pipeline", icon: Target, group: "sales", keywords: ["pipeline", "deals", "forecast"], badge: "AI", requiresModule: "REVENUE_PIPELINE" },
+  { key: "service_catalog", path: "/services", icon: Briefcase, group: "operations", keywords: ["offerings", "pricing", "catalog"] },
+  { key: "shop", path: "/shop", icon: Store, group: "operations", keywords: ["storefront", "orders", "public"], badge: "New", requiresModule: "SHOP", requiresPermission: "shop.view" },
+  { key: "inventory", path: "/inventory", icon: Archive, group: "operations", keywords: ["stock", "products", "warehouse"] },
+  { key: "client_crm", path: "/clients", icon: Users, group: "operations", keywords: ["customers", "contacts", "crm"] },
+  { key: "quotes_proposals", path: "/proposals", icon: FileSignature, group: "sales", keywords: ["quotes", "deals", "proposals"] },
+  { key: "retainers_hub", path: "/retainers", icon: Box, group: "sales", keywords: ["recurring", "contracts", "retainer"] },
+  { key: "expenses_margins", path: "/expenses", icon: Receipt, group: "finance", keywords: ["costs", "purchases", "spend"] },
+  { key: "cash_flow", path: "/cash-flow/overview", icon: HandCoins, group: "finance", keywords: ["liquidity", "cash", "forecast"], badge: "New", requiresModule: "CASH_FLOW" },
+  { key: "reporting_center", path: "/reporting", icon: ChartColumnBig, group: "finance", keywords: ["reports", "analytics", "insights"], badge: "New", requiresModule: "REPORTING_CENTER", requiresPermission: "reporting_center.view" },
+  { key: "ar_collections", path: "/ar-collections", icon: Siren, group: "finance", keywords: ["collections", "receivables", "follow up"], badge: "New", requiresModule: "AR_COLLECTIONS" },
+  { key: "savings_tax", path: "/tax", icon: ShieldCheck, group: "finance", keywords: ["gst", "compliance", "tax"] },
+  { key: "tax_advanced", path: "/tax/advanced", icon: ShieldCheck, group: "finance", keywords: ["tax", "advanced", "compliance"], badge: "New", requiresModule: "TAX_ADVANCED" },
+  { key: "ai_reconciliation", path: "/reconciliation", icon: Sparkles, group: "finance", keywords: ["bank", "matching", "ledger"], badge: "AI" },
+  { key: "invoices_and_earnings", path: "/income", icon: ReceiptText, group: "sales", keywords: ["billing", "revenue", "invoices"] },
+  { key: "ca_compliance", path: "/ca-portal", icon: Landmark, group: "compliance", keywords: ["chartered", "filings", "audit"] },
+  { key: "documents", path: "/documents", icon: FileText, group: "operations", keywords: ["files", "storage", "records"], requiresModule: "DOCUMENTS" },
+  { key: "workforce", path: "/workforce", icon: Users2, group: "workspace", keywords: ["team", "staff", "hr"], requiresModule: "WORKFORCE" },
+  { key: "payroll", path: "/payroll", icon: Wallet, group: "workspace", keywords: ["salary", "payout", "payroll"], requiresModule: "PAYROLL" },
+  { key: "import_manager", path: "/import-manager", icon: UploadCloud, group: "operations", keywords: ["import", "csv", "migration"], badge: "New", requiresModule: "IMPORT_MANAGER" },
 ]);
 
-export function filterAppNavItems(items: AppNavItem[]) {
-  return assertUniqueAppNavItemKeys(items);
+export const appNavItems = canonicalNavItems;
+
+export function filterAppNavItems(items: CanonicalNavItem[], enabledModules: Set<string>, grantedPermissions: Set<string>) {
+  return items.filter(
+    (item) =>
+      (!item.requiresModule || enabledModules.has(item.requiresModule)) &&
+      (!item.requiresPermission || grantedPermissions.has(item.requiresPermission)),
+  );
 }
 
-export function isNavItemVisible(item: AppNavItem, enabledModules: Set<string>, grantedPermissions: Set<string>) {
+export function isNavItemVisible(item: CanonicalNavItem, enabledModules: Set<string>, grantedPermissions: Set<string>) {
   return (!item.requiresModule || enabledModules.has(item.requiresModule)) && (!item.requiresPermission || grantedPermissions.has(item.requiresPermission));
 }
