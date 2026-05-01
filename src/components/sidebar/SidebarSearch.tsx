@@ -67,6 +67,7 @@ export function SidebarSearch({ enabledModules, grantedPermissions }: SidebarSea
       }
     };
 
+
     window.addEventListener("keydown", handleSlashFocus);
     return () => window.removeEventListener("keydown", handleSlashFocus);
   }, []);

@@ -30,6 +30,11 @@ export type CanonicalNavItem = {
   icon: LucideIcon;
   group: NavGroupKey;
   keywords: string[];
+  /**
+   * Backward-compatibility aliases used by search consumers during migration.
+   */
+  searchGroupKey?: string;
+  searchKeywords?: string[];
   badge?: "New" | "AI";
   requiresModule?: string;
   requiresPermission?: string;
@@ -87,4 +92,8 @@ export function filterAppNavItems(items: CanonicalNavItem[], enabledModules: Set
       (!item.requiresModule || enabledModules.has(item.requiresModule)) &&
       (!item.requiresPermission || grantedPermissions.has(item.requiresPermission)),
   );
+}
+
+export function isNavItemVisible(item: CanonicalNavItem, enabledModules: Set<string>, grantedPermissions: Set<string>) {
+  return (!item.requiresModule || enabledModules.has(item.requiresModule)) && (!item.requiresPermission || grantedPermissions.has(item.requiresPermission));
 }
