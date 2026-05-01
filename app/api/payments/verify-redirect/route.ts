@@ -6,6 +6,7 @@ import crypto from "crypto";
 import { determineInvoicePaymentStatus, validatePaymentBusinessRules } from "@/app/api/invoices/[id]/pay/logic";
 import { dispatchNotification } from "@/lib/notifications/dispatcher";
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from "@/lib/dashboard-cache";
+import { timingSafeEqualString } from "@/lib/security/signature";
 
 export async function GET(req: NextRequest) {
   try {
@@ -102,7 +103,7 @@ export async function GET(req: NextRequest) {
         .update(payload)
         .digest("hex");
 
-      if (generatedSignature !== razorpaySignature) {
+      if (!timingSafeEqualString(generatedSignature, razorpaySignature)) {
         console.error("Razorpay signature mismatch for invoice", invoice.id);
         return NextResponse.redirect(new URL("/payments/failure?reason=invalid_signature", req.url));
       }

@@ -23,6 +23,7 @@ import { withPermission } from '@/lib/rbac';
 import { canUsePaymentGateways, loadWorkspaceBillingSnapshot, shouldApplyFreeTierLimits } from '@/lib/entitlements';
 import { resolvePrimaryRemittanceFromProfile } from '@/lib/banking/resolve-primary-remittance';
 import { syncPrimaryRemittanceBankAccount } from '@/lib/banking/sync-primary-remittance-account';
+import { isProductionSecurityMode, isTestRazorpayKeyId, isTestRazorpaySecretKey, isTestStripePublishableKey, isTestStripeSecretKey } from '@/lib/payment-key-safety';
 
 export async function GET() {
   try {
@@ -161,6 +162,21 @@ export async function POST(request: Request) {
     const rawStripePublishableKey = getStringField('stripePublishableKey');
     const rawStripeSecretKey      = formData.get('stripeSecretKey')      as string;
     const defaultGateway          = formData.get('defaultGateway')       as string;
+
+    if (isProductionSecurityMode()) {
+      if (rawRzpKeyId && isTestRazorpayKeyId(rawRzpKeyId)) {
+        return NextResponse.json({ error: 'Razorpay test Key ID is blocked in production mode.' }, { status: 400 });
+      }
+      if (rawRzpSecret && rawRzpSecret !== 'SET' && rawRzpSecret !== 'DELETE_KEY' && isTestRazorpaySecretKey(rawRzpSecret)) {
+        return NextResponse.json({ error: 'Razorpay test secret is blocked in production mode.' }, { status: 400 });
+      }
+      if (rawStripePublishableKey && isTestStripePublishableKey(rawStripePublishableKey)) {
+        return NextResponse.json({ error: 'Stripe test publishable key is blocked in production mode.' }, { status: 400 });
+      }
+      if (rawStripeSecretKey && rawStripeSecretKey !== 'SET' && rawStripeSecretKey !== 'DELETE_KEY' && isTestStripeSecretKey(rawStripeSecretKey)) {
+        return NextResponse.json({ error: 'Stripe test secret key is blocked in production mode.' }, { status: 400 });
+      }
+    }
 
     // ── Shop / E-Store fields ─────────────────────────────────────────────────
     const rawShopSlug        = getStringField('shopSlug');

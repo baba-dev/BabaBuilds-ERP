@@ -4,6 +4,7 @@ import { processRazorpaySubscriptionPaymentVerified } from "@/lib/razorpay-subsc
 import { prisma } from "@/lib/prisma";
 import { reverseDistributorCommissionForBillingTx } from "@/lib/subscription-payment";
 import { logDistributorEvent } from "@/lib/observability-distributor";
+import { timingSafeEqualString } from "@/lib/security/signature";
 
 export async function POST(req: Request) {
   try {
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
 
     const expectedSignature = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
 
-    if (expectedSignature !== signature) {
+    if (!timingSafeEqualString(expectedSignature, signature)) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }
 
@@ -35,6 +36,13 @@ export async function POST(req: Request) {
 
       if (workspaceId && interval) {
         try {
+          const existing = await prisma.billingTransaction.findFirst({
+            where: { workspaceId, providerReference: paymentEntity.id },
+            select: { id: true },
+          });
+          if (existing) {
+            return NextResponse.json({ status: "duplicate_ignored" });
+          }
           await processRazorpaySubscriptionPaymentVerified(paymentEntity.id, workspaceId);
         } catch (e) {
           console.error("Razorpay webhook subscription finalize failed:", e);
