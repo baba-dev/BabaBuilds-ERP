@@ -209,7 +209,7 @@ export function AppSidebar() {
       <div className="flex h-full w-full max-h-screen flex-col gap-2 bg-gradient-to-b from-white/[0.03] to-transparent">
         <SidebarBrand />
 
-        <SidebarSearch />
+        <SidebarSearch enabledModules={enabledModules} grantedPermissions={grantedPermissions} />
 
         <div className="flex-1 overflow-auto py-2 custom-scrollbar">
           <NavMain
