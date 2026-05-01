@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Search, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { sidebarItems } from "@/components/navigation/sidebar-items";
+import { appNavItems, filterAppNavItems } from "@/components/navigation/nav-config";
 import { openAIChat } from "@/src/stores/ui/aiChatStore";
 import { dirFromLocale } from "@/src/lib/direction";
 
@@ -30,7 +30,12 @@ const GROUP_LABEL_TRANSLATION_KEYS: Record<string, string> = {
 
 const DEBOUNCE_MS = 200;
 
-export function SidebarSearch() {
+type SidebarSearchProps = {
+  enabledModules: Set<string>;
+  grantedPermissions: Set<string>;
+};
+
+export function SidebarSearch({ enabledModules, grantedPermissions }: SidebarSearchProps) {
   const router = useRouter();
   const t = useTranslations("Sidebar");
   const locale = useLocale();
@@ -39,6 +44,8 @@ export function SidebarSearch() {
   const [searchText, setSearchText] = useState("");
   const [debouncedSearchText, setDebouncedSearchText] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const visibleNavItems = filterAppNavItems(appNavItems, enabledModules, grantedPermissions);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -72,11 +79,11 @@ export function SidebarSearch() {
 
   const filterByQuery = (query: string) => {
     const needle = query.trim().toLowerCase();
-    if (!needle) return sidebarItems;
+    if (!needle) return visibleNavItems;
 
-    return sidebarItems.filter((item) => {
+    return visibleNavItems.filter((item) => {
       const label = t(item.key).toLowerCase();
-      const groupLabel = getGroupLabel(item.groupKey).toLowerCase();
+      const groupLabel = getGroupLabel(item.group).toLowerCase();
       const keywordMatch = item.keywords.some((keyword) => keyword.toLowerCase().includes(needle));
       return label.includes(needle) || groupLabel.includes(needle) || keywordMatch;
     });
@@ -171,7 +178,7 @@ export function SidebarSearch() {
                 )}
               >
                 <span className="truncate">{t(item.key)}</span>
-                <span className={cn("shrink-0 text-xs text-zinc-300", isRtl ? "mr-2" : "ml-2")}>{getGroupLabel(item.groupKey)}</span>
+                <span className={cn("shrink-0 text-xs text-zinc-300", isRtl ? "mr-2" : "ml-2")}>{getGroupLabel(item.group)}</span>
               </button>
             ))
           )}
