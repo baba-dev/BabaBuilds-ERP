@@ -574,6 +574,7 @@ model Workspace {
   retainers                       Retainer[]
   tasks                           Task[]
   invoiceIdempotencies            InvoiceIdempotency[]
+  invoiceGenerationDrafts         InvoiceGenerationDraft[]
   financialOperationLocks         FinancialOperationIdempotency[]
   taxPreference                   WorkspaceTaxPreference?
   workspaceTaxOverrides           WorkspaceTaxOverride[]
@@ -1283,6 +1284,7 @@ model Invoice {
   taxableEvents        TaxableEvent[]
   items                InvoiceItem[]
   linkedShopOrders     ShopOrder[]           @relation("ShopOrderLinkedInvoice")
+  generationDrafts     InvoiceGenerationDraft[] @relation("InvoiceGenerationDraftFinalizedInvoice")
 
   sourceProposalId      String?
   sourceProposal        Proposal?                     @relation("ProposalToInvoice", fields: [sourceProposalId], references: [id])
@@ -1648,6 +1650,28 @@ model InvoiceIdempotency {
   updatedAt      DateTime  @updatedAt
 
   @@unique([workspaceId, idempotencyKey])
+  @@index([workspaceId, expiresAt])
+}
+
+model InvoiceGenerationDraft {
+  id                String    @id @default(cuid())
+  workspaceId       String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdByUserId   String
+  payloadJson       Json
+  totalsJson        Json
+  currency          String
+  status            String    @default("PENDING") // "PENDING" | "CONFIRMED" | "EXPIRED" | "CANCELLED"
+  razorpayLinkId    String?
+  razorpayLinkUrl   String?
+  expiresAt         DateTime
+  consumedAt        DateTime?
+  finalizedInvoiceId String?
+  finalizedInvoice   Invoice?  @relation("InvoiceGenerationDraftFinalizedInvoice", fields: [finalizedInvoiceId], references: [id], onDelete: SetNull)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([workspaceId, createdByUserId, status])
   @@index([workspaceId, expiresAt])
 }
 
