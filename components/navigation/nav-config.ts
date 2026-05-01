@@ -72,6 +72,7 @@ export const appNavItems: AppNavItem[] = assertUniqueAppNavItemKeys([
   },
   { key: "ar_collections", path: "/ar-collections", icon: Siren, badge: "New", requiresModule: "AR_COLLECTIONS" },
   { key: "savings_tax", path: "/tax", icon: ShieldCheck },
+  { key: "tax_advanced", path: "/tax/advanced", icon: ShieldCheck, badge: "New", requiresModule: "TAX_ADVANCED" },
   { key: "ai_reconciliation", path: "/reconciliation", icon: Sparkles, badge: "AI" },
   { key: "invoices_and_earnings", path: "/income", icon: ReceiptText },
   { key: "ca_compliance", path: "/ca-portal", icon: Landmark },

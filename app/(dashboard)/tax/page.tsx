@@ -23,9 +23,6 @@ import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { PageLoadingState } from "@/components/states/PageLoadingState";
 import { PageErrorState } from "@/components/states/PageErrorState";
 import { ColumnVisibilityToggle, DataTable, DataTableToolbar, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
-import { TaxOverrideModal, type TaxOverrideWindow } from "@/components/tax/tax-override-modal";
-import { TaxComplianceOps } from "@/components/tax/tax-compliance-ops";
-import { TaxHubOverview } from "@/components/tax/tax-hub-overview";
 import { TaxScopeNotice } from "@/components/tax/TaxScopeNotice";
 import { getCountryPackVerificationStatus } from "@/lib/tax/country-pack-status";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -67,16 +64,6 @@ export default function WealthAndTaxPlanner() {
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [taxAdvancedEnabled, setTaxAdvancedEnabled] = useState(false);
-  const [taxAuditRows, setTaxAuditRows] = useState<any[]>([]);
-  const [taxAuditPage, setTaxAuditPage] = useState(1);
-  const [taxAuditTotalPages, setTaxAuditTotalPages] = useState(1);
-  const [taxAuditFilters, setTaxAuditFilters] = useState({
-    startDate: "",
-    endDate: "",
-    action: "ALL",
-    scopeType: "ALL",
-  });
 
   // --- GLOBALIZATION ENGINE ---
   const { 
@@ -111,8 +98,6 @@ export default function WealthAndTaxPlanner() {
     };
     disclaimerKey: string;
   } | null>(null);
-  const [taxOverrideOpen, setTaxOverrideOpen] = useState(false);
-  const [taxOverrides, setTaxOverrides] = useState<TaxOverrideWindow[]>([]);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(["date", "asset", "category", "amount"]);
   const tableState = useUrlTableState("tax");
 
@@ -120,21 +105,6 @@ export default function WealthAndTaxPlanner() {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    const loadModules = async () => {
-      try {
-        const res = await fetch("/api/workspace/modules");
-        if (!res.ok) return;
-        const payload = (await res.json()) as { modules?: string[] };
-        const enabled = Array.isArray(payload.modules) && payload.modules.includes("TAX_ADVANCED");
-        setTaxAdvancedEnabled(enabled);
-      } catch (err) {
-        console.error("Failed to load module flags", err);
-      }
-    };
-
-    void loadModules();
-  }, []);
 
   // --- SMART AI AUTO-FILL HOOK ---
   useEffect(() => {
@@ -197,13 +167,6 @@ export default function WealthAndTaxPlanner() {
       const nextRevenue = toSafeNumber(revData?.data?.totalRevenue);
       setInvestments(nextInvestments);
       setTotalRevenue(nextRevenue);
-      if (taxAdvancedEnabled) {
-        await fetchTaxAuditLogs(1);
-      } else {
-        setTaxAuditRows([]);
-        setTaxAuditPage(1);
-        setTaxAuditTotalPages(1);
-      }
     } catch (err) {
       console.error("Failed to load data");
       setFetchError("Failed to load tax planner data. Please refresh.");
@@ -213,40 +176,7 @@ export default function WealthAndTaxPlanner() {
     }
   };
 
-  useEffect(() => {
-    if (!taxAdvancedEnabled) {
-      setTaxOverrideOpen(false);
-      return;
-    }
-    void fetchTaxAuditLogs(1);
-  }, [taxAdvancedEnabled]);
 
-  const fetchTaxAuditLogs = async (page = 1, filters = taxAuditFilters) => {
-    const searchParams = new URLSearchParams({
-      page: String(page),
-      pageSize: "10",
-      action: filters.action,
-      scopeType: filters.scopeType,
-    });
-    if (filters.startDate) searchParams.set("startDate", filters.startDate);
-    if (filters.endDate) searchParams.set("endDate", filters.endDate);
-
-    const res = await fetch(`/api/tax/audit?${searchParams.toString()}`);
-    if (!res.ok) {
-      throw new Error("Failed to fetch tax audit history");
-    }
-    const payload = await res.json();
-    setTaxAuditRows(Array.isArray(payload?.data) ? payload.data : []);
-    setTaxAuditPage(payload?.pagination?.page ?? 1);
-    setTaxAuditTotalPages(payload?.pagination?.totalPages ?? 1);
-  };
-
-  const resolveDecisionBadgeClass = (source: string) => {
-    const normalized = source?.toUpperCase();
-    if (normalized === "OVERRIDE") return "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300";
-    if (normalized === "AUTO") return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300";
-    return "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300";
-  };
 
   // --- WEALTH CALCULATIONS (Global) ---
   const totalNetWorth = investments.reduce((sum, inv) => sum + toSafeNumber(inv?.amount), 0);
@@ -325,15 +255,6 @@ export default function WealthAndTaxPlanner() {
     }
   };
 
-  const handleTaxAuditFilterChange = async (nextFilters: typeof taxAuditFilters) => {
-    setTaxAuditFilters(nextFilters);
-    try {
-      await fetchTaxAuditLogs(1, nextFilters);
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to refresh tax history.");
-    }
-  };
 
   return (
     <DashboardPageShell
@@ -342,7 +263,7 @@ export default function WealthAndTaxPlanner() {
       animated={false}
     >
       <TaxScopeNotice status={taxScopeStatus} />
-      <Tabs defaultValue={taxAdvancedEnabled ? "overview" : "planner"} className="w-full space-y-6">
+      <Tabs defaultValue="planner" className="w-full space-y-6">
         <TabsList className="flex w-full flex-wrap justify-start gap-1 bg-zinc-100/80 p-1 dark:bg-zinc-900/80">
           <TabsTrigger value="overview" className="text-xs font-semibold">
             Overview
@@ -350,20 +271,11 @@ export default function WealthAndTaxPlanner() {
           <TabsTrigger value="planner" className="text-xs font-semibold">
             Savings & planner
           </TabsTrigger>
-          {taxAdvancedEnabled && (
-            <>
-              <TabsTrigger value="compliance" className="text-xs font-semibold">
-                Compliance & imports
-              </TabsTrigger>
-              <TabsTrigger value="audit" className="text-xs font-semibold">
-                Overrides & audit
-              </TabsTrigger>
-            </>
-          )}
+          
         </TabsList>
 
         <TabsContent value="overview" className="mt-0 outline-none">
-          {taxAdvancedEnabled ? <TaxHubOverview /> : null}
+
         </TabsContent>
 
         <TabsContent value="planner" className="mt-0 space-y-6 outline-none">
@@ -428,17 +340,7 @@ export default function WealthAndTaxPlanner() {
                 <h2 className="text-lg font-bold tracking-tight flex flex-wrap items-center gap-2">
                   <span>Tax estimate engine output</span>
                   <span className="text-sm font-medium text-zinc-400">{taxEstimate?.disclaimerKey ?? "FALLBACK_RULE"}</span>
-                  {taxAdvancedEnabled && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setTaxOverrideOpen(true)}
-                      className="h-7 px-2 rounded-md border border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 text-[10px] font-bold uppercase tracking-widest"
-                    >
-                      Override tax rate
-                    </Button>
-                  )}
+                  
                 </h2>
               </div>
               <Badge variant="secondary" className="bg-zinc-800 text-zinc-300 border-zinc-700">
@@ -642,153 +544,6 @@ export default function WealthAndTaxPlanner() {
         </div>
         </TabsContent>
 
-        {taxAdvancedEnabled && (
-          <TabsContent value="compliance" className="mt-0 outline-none">
-            <TaxComplianceOps />
-          </TabsContent>
-        )}
-
-        {taxAdvancedEnabled && (
-        <TabsContent value="audit" className="mt-0 outline-none">
-        <Card className="mt-0 shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-          <CardHeader className="border-b border-zinc-200 dark:border-zinc-800">
-            <CardTitle className="dark:text-zinc-50 text-sm font-bold uppercase tracking-wider">Tax Decision History</CardTitle>
-            <CardDescription className="dark:text-zinc-400 text-xs font-medium">
-              Override and decision events with actor traceability.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <Input
-                type="date"
-                value={taxAuditFilters.startDate}
-                onChange={(event) => handleTaxAuditFilterChange({ ...taxAuditFilters, startDate: event.target.value })}
-                className="dark:[color-scheme:dark]"
-              />
-              <Input
-                type="date"
-                value={taxAuditFilters.endDate}
-                onChange={(event) => handleTaxAuditFilterChange({ ...taxAuditFilters, endDate: event.target.value })}
-                className="dark:[color-scheme:dark]"
-              />
-              <Select
-                value={taxAuditFilters.action}
-                onValueChange={(action) => handleTaxAuditFilterChange({ ...taxAuditFilters, action })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Action type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All actions</SelectItem>
-                  <SelectItem value="CREATE">Create</SelectItem>
-                  <SelectItem value="UPDATE">Update</SelectItem>
-                  <SelectItem value="DEACTIVATE">Deactivate</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select
-                value={taxAuditFilters.scopeType}
-                onValueChange={(scopeType) => handleTaxAuditFilterChange({ ...taxAuditFilters, scopeType })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Scope type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All scopes</SelectItem>
-                  <SelectItem value="WORKSPACE">Workspace</SelectItem>
-                  <SelectItem value="CLIENT">Client</SelectItem>
-                  <SelectItem value="SERVICE">Service</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="hidden overflow-hidden rounded-md border border-zinc-200 dark:border-zinc-800 md:block">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Timestamp</TableHead>
-                    <TableHead>Actor</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Scope</TableHead>
-                    <TableHead className="text-right">Rate</TableHead>
-                    <TableHead>Effective Range</TableHead>
-                    <TableHead>Reason</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {taxAuditRows.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center text-xs text-zinc-500 py-8">
-                        No tax decision history found for the selected filters.
-                      </TableCell>
-                    </TableRow>
-                  ) : taxAuditRows.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell className="text-xs">{format(new Date(row.createdAt), `${safeDateFormat} HH:mm`)}</TableCell>
-                      <TableCell className="text-xs">{row.actorEmail || row.actorUserId || "System"}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-[10px]">{row.action}</Badge>
-                          <Badge className={`text-[10px] border-0 ${resolveDecisionBadgeClass(row.decisionSource)}`}>
-                            {row.decisionSource}
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-xs">{row.scopeType}{row.scopeRef ? ` • ${row.scopeRef}` : ""}</TableCell>
-                      <TableCell className="text-right text-xs font-semibold">{typeof row.rate === "number" ? `${row.rate.toFixed(2)}%` : "—"}</TableCell>
-                      <TableCell className="text-xs">
-                        {row.effectiveFrom ? format(new Date(row.effectiveFrom), safeDateFormat) : "—"}
-                        {" → "}
-                        {row.effectiveTo ? format(new Date(row.effectiveTo), safeDateFormat) : "Open"}
-                      </TableCell>
-                      <TableCell className="text-xs max-w-[260px] truncate">{row.reason || "—"}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            <div className="space-y-3 md:hidden">
-              {taxAuditRows.length === 0 ? (
-                <div className="rounded-md border border-zinc-200 py-8 text-center text-xs text-zinc-500 dark:border-zinc-800">
-                  No tax decision history found for the selected filters.
-                </div>
-              ) : (
-                taxAuditRows.map((row) => (
-                  <Card key={row.id} className="border-zinc-200 dark:border-zinc-800">
-                    <CardContent className="space-y-2 p-4 text-xs">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="font-semibold">{format(new Date(row.createdAt), `${safeDateFormat} HH:mm`)}</p>
-                        <Badge className={`text-[10px] border-0 ${resolveDecisionBadgeClass(row.decisionSource)}`}>{row.decisionSource}</Badge>
-                      </div>
-                      <p>{row.actorEmail || row.actorUserId || "System"} · {row.action}</p>
-                      <p>{row.scopeType}{row.scopeRef ? ` • ${row.scopeRef}` : ""}</p>
-                      <details className="rounded-md border border-zinc-200 p-2 dark:border-zinc-800">
-                        <summary className="cursor-pointer font-semibold">More details</summary>
-                        <div className="space-y-1 pt-2 text-zinc-600 dark:text-zinc-300">
-                          <p>Rate: {typeof row.rate === "number" ? `${row.rate.toFixed(2)}%` : "—"}</p>
-                          <p>From: {row.effectiveFrom ? format(new Date(row.effectiveFrom), safeDateFormat) : "—"}</p>
-                          <p>To: {row.effectiveTo ? format(new Date(row.effectiveTo), safeDateFormat) : "Open"}</p>
-                          <p>Reason: {row.reason || "—"}</p>
-                        </div>
-                      </details>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
-
-            <div className="flex items-center justify-end gap-2">
-              <Button variant="outline" size="sm" disabled={taxAuditPage <= 1} onClick={() => fetchTaxAuditLogs(taxAuditPage - 1)}>
-                Previous
-              </Button>
-              <span className="text-xs text-zinc-500">Page {taxAuditPage} of {taxAuditTotalPages}</span>
-              <Button variant="outline" size="sm" disabled={taxAuditPage >= taxAuditTotalPages} onClick={() => fetchTaxAuditLogs(taxAuditPage + 1)}>
-                Next
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-        </TabsContent>
-        )}
       </Tabs>
 
     </DashboardPageShell>
