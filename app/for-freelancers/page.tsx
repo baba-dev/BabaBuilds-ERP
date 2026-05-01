@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import PersonaLandingPage from "@/components/landing/persona/PersonaLandingPage";
 import { personaConfigs } from "@/components/landing/persona/persona-config";
 
@@ -7,6 +7,7 @@ const persona = personaConfigs["for-freelancers"];
 const SITE_URL = "https://erp.bababuilds.com";
 
 export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
   const t = await getTranslations("LandingPersona.forFreelancers.metadata");
   const title = t("title");
   const description = t("description");
@@ -26,7 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
       description,
       url: `${SITE_URL}/for-freelancers`,
       siteName: "BabaBuilds ERP",
-      locale: "en_IN",
+      locale: locale.replace("-", "_"),
       type: "website",
       images: ["/icons/Banner-1.png"],
     },

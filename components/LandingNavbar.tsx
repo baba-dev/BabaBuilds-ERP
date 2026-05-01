@@ -220,7 +220,7 @@ export default function LandingNavbar() {
                   <Link
                     key={useCase.href}
                     href={useCase.href}
-                    className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-orange-300 hover:text-orange-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-orange-800 dark:hover:text-orange-300"
+                    className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-orange-300 hover:text-orange-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-orange-800 dark:hover:text-orange-300 rtl:flex-row-reverse rtl:justify-between"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <useCase.icon className="h-4 w-4 text-orange-500" />

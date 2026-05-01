@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import LandingContent from "@/components/LandingContent";
 
 const SITE_URL = "https://erp.bababuilds.com";
 
 export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
   const t = await getTranslations("LandingPageSeo");
   const keywords = (t.raw("keywords") as unknown[]).filter(
     (keyword): keyword is string => typeof keyword === "string",
@@ -33,7 +34,7 @@ export async function generateMetadata(): Promise<Metadata> {
           alt: t("openGraph.imageAlt"),
         },
       ],
-      locale: "en_IN",
+      locale: locale.replace("-", "_"),
       alternateLocale: ["hi_IN", "ar_OM", "es_MX"],
       type: "website",
     },

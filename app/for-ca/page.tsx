@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import PersonaLandingPage from "@/components/landing/persona/PersonaLandingPage";
 import { personaConfigs } from "@/components/landing/persona/persona-config";
 
@@ -7,6 +7,7 @@ const persona = personaConfigs["for-ca"];
 const canonicalUrl = `https://erp.bababuilds.com/${persona.slug}`;
 
 export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
   const t = await getTranslations("LandingPersona");
   const title = t(`${persona.namespace}.metadata.title`);
   const description = t(`${persona.namespace}.metadata.description`);
@@ -25,6 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title,
       description,
       url: canonicalUrl,
+      locale: locale.replace("-", "_"),
       type: "website",
     },
   };
