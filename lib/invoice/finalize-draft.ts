@@ -229,6 +229,7 @@ export async function finalizeInvoiceGenerationDraft(params: {
   workspaceId: string;
   actorId: string | null;
   draftId: string;
+  forceSendEmail?: boolean | null;
 }) {
   const { workspaceId, actorId, draftId, forceSendEmail } = params;
   const draft = await prisma.invoiceGenerationDraft.findFirst({

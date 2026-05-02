@@ -720,14 +720,13 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
 
         {draftPreview ? (
           <InvoiceGenerationConfirmCard
-            data={{
-              draftId: draftPreview.draftId,
-              ...draftPreview.confirmation,
-            }}
-            isSubmitting={isConfirming}
+            confirmation={draftPreview.confirmation}
+            expiresAt={draftPreview.expiresAt}
+            sendEmail={sendEmail}
+            isConfirming={isConfirming}
             onBack={() => setDraftPreview(null)}
             onConfirm={handleConfirmGenerate}
-            onCopyUrl={handleCopyPaymentUrl}
+            fCurrency={fCurrency}
           />
         ) : (
           <FormSubmitBar
