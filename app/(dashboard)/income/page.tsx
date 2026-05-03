@@ -573,7 +573,10 @@ export default function InvoicesAndEarnings() {
 
       {/* ─── NEW INVOICE MODAL ─── */}
       <Dialog open={newInvoiceModalOpen} onOpenChange={setNewInvoiceModalOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[90dvh] overflow-y-auto p-0 gap-0 dark:bg-zinc-950 dark:border-zinc-800 shadow-2xl">
+        <DialogContent
+          showCloseButton={false}
+          className="sm:max-w-4xl max-h-[90dvh] overflow-y-auto p-0 gap-0 dark:bg-zinc-950 dark:border-zinc-800 shadow-2xl"
+        >
           {/* Accent stripe */}
           <div className="h-1 w-full bg-gradient-to-r from-indigo-500 via-indigo-600 to-emerald-500 shrink-0" />
 
