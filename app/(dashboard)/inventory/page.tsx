@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import type { ReactNode } from "react";
 import {
   Package, Plus, Search, Archive, AlertCircle, ArrowDownRight
@@ -51,6 +51,9 @@ export default function InventoryHub() {
   const [globalFilter, setGlobalFilter] = useState("");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
+  const nextCursorRef = useRef<string | null>(null);
+  const globalFilterRef = useRef("");
+  const hasInitializedFetchRef = useRef(false);
   
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
   const [selectedProductForAdjust, setSelectedProductForAdjust] = useState<InventoryProduct | null>(null);
@@ -61,12 +64,12 @@ export default function InventoryHub() {
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'list'|'grid'>('list');
 
-  const fetchProducts = useCallback(async ({ mode }: { mode: 'reset' | 'more' } = { mode: 'reset' }) => {
+  const fetchProducts = useCallback(async ({ mode, search }: { mode: 'reset' | 'more'; search?: string } = { mode: 'reset' }) => {
     setIsLoading(true);
     try {
       const limit = 200;
-      const cursor = mode === 'more' ? nextCursor : null;
-      const q = globalFilter.trim();
+      const cursor = mode === 'more' ? nextCursorRef.current : null;
+      const q = (search ?? globalFilterRef.current).trim();
       const url = new URL('/api/inventory/products', window.location.origin);
       url.searchParams.set('limit', String(limit));
       if (cursor) url.searchParams.set('cursor', cursor);
@@ -79,6 +82,7 @@ export default function InventoryHub() {
       const rows = Array.isArray(data) ? data : [];
       setProducts((prev) => (mode === 'more' ? [...prev, ...rows] : rows));
       const next = cursorHeader && cursorHeader.length > 0 ? cursorHeader : null;
+      nextCursorRef.current = next;
       setNextCursor(next);
       setHasMore(Boolean(next) && rows.length > 0);
     } catch (err) {
@@ -87,15 +91,19 @@ export default function InventoryHub() {
     } finally {
       setIsLoading(false);
     }
-  }, [globalFilter, nextCursor]);
+  }, []);
 
   useEffect(() => {
-    fetchProducts({ mode: 'reset' });
-  }, [fetchProducts]);
+    globalFilterRef.current = globalFilter;
 
-  useEffect(() => {
+    if (!hasInitializedFetchRef.current) {
+      hasInitializedFetchRef.current = true;
+      fetchProducts({ mode: 'reset', search: globalFilter }).catch(() => undefined);
+      return;
+    }
+
     const id = window.setTimeout(() => {
-      fetchProducts({ mode: 'reset' }).catch(() => undefined);
+      fetchProducts({ mode: 'reset', search: globalFilter }).catch(() => undefined);
     }, 250);
     return () => window.clearTimeout(id);
   }, [fetchProducts, globalFilter]);
