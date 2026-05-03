@@ -331,7 +331,12 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
           setTaxRateModalOpen(true);
           return;
         }
-        if (response.status === 400 && data?.code === "RAZORPAY_PREVIEW_NOT_APPLICABLE") {
+        if (
+          response.status === 400 &&
+          ["RAZORPAY_PREVIEW_NOT_APPLICABLE", "UNSUPPORTED_CURRENCY", "MISSING_GATEWAY_CREDENTIALS"].includes(
+            data?.code,
+          )
+        ) {
           const fallbackResponse = await fetch("/api/generate", {
             method: "POST",
             headers: {
@@ -421,7 +426,12 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        if (response.status === 400 && data?.code === "RAZORPAY_PREVIEW_NOT_APPLICABLE") {
+        if (
+          response.status === 400 &&
+          ["RAZORPAY_PREVIEW_NOT_APPLICABLE", "UNSUPPORTED_CURRENCY", "MISSING_GATEWAY_CREDENTIALS"].includes(
+            data?.code,
+          )
+        ) {
           const fallbackResponse = await fetch("/api/generate", {
             method: "POST",
             headers: {
