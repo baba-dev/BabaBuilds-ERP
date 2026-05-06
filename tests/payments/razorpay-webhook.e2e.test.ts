@@ -7,7 +7,7 @@ const reverseCommission = vi.fn();
 const prismaMock = {
   billingTransaction: {
     findFirst: vi.fn(),
-    update: vi.fn(),
+    updateMany: vi.fn(),
   },
 };
 
@@ -27,7 +27,7 @@ describe("Razorpay webhook safety", () => {
     processVerified.mockReset();
     reverseCommission.mockReset();
     prismaMock.billingTransaction.findFirst.mockReset();
-    prismaMock.billingTransaction.update.mockReset();
+    prismaMock.billingTransaction.updateMany.mockReset();
     vi.stubEnv("RAZORPAY_WEBHOOK_SECRET", "whsec_test");
   });
 
@@ -42,14 +42,12 @@ describe("Razorpay webhook safety", () => {
       payload: { payment: { entity: { id: "pay_123", notes: { workspaceId: "ws_1", interval: "MONTHLY" } } } },
     });
 
-    prismaMock.billingTransaction.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: "tx_1" });
-
     const first = await POST(new Request("http://localhost/api/webhooks/razorpay", { method: "POST", body: payload, headers: { "x-razorpay-signature": sign(payload) } }));
     const second = await POST(new Request("http://localhost/api/webhooks/razorpay", { method: "POST", body: payload, headers: { "x-razorpay-signature": sign(payload) } }));
 
     expect(first.status).toBe(200);
     expect(second.status).toBe(200);
-    expect(processVerified).toHaveBeenCalledTimes(1);
+    expect(processVerified).toHaveBeenCalledTimes(2);
   });
 
   it("rejects invalid signatures", async () => {
@@ -68,13 +66,16 @@ describe("Razorpay webhook safety", () => {
     });
 
     prismaMock.billingTransaction.findFirst.mockResolvedValue({ id: "tx_ref", workspaceId: "ws_1" });
-    prismaMock.billingTransaction.update.mockResolvedValue({ id: "tx_ref", status: "REFUNDED" });
+    prismaMock.billingTransaction.updateMany.mockResolvedValue({ count: 1 });
     reverseCommission.mockResolvedValue(true);
 
     const res = await POST(new Request("http://localhost/api/webhooks/razorpay", { method: "POST", body: payload, headers: { "x-razorpay-signature": sign(payload) } }));
 
     expect(res.status).toBe(200);
-    expect(prismaMock.billingTransaction.update).toHaveBeenCalledWith({ where: { id: "tx_ref" }, data: { status: "REFUNDED" } });
+    expect(prismaMock.billingTransaction.updateMany).toHaveBeenCalledWith({
+      where: { id: "tx_ref", status: { not: "REFUNDED" } },
+      data: { status: "REFUNDED" },
+    });
     expect(reverseCommission).toHaveBeenCalledTimes(1);
   });
 });

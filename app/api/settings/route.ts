@@ -25,6 +25,25 @@ import { resolvePrimaryRemittanceFromProfile } from '@/lib/banking/resolve-prima
 import { syncPrimaryRemittanceBankAccount } from '@/lib/banking/sync-primary-remittance-account';
 import { isProductionSecurityMode, isTestRazorpayKeyId, isTestRazorpaySecretKey, isTestStripePublishableKey, isTestStripeSecretKey } from '@/lib/payment-key-safety';
 
+function sanitizeBusinessProfileResponse(profile: Record<string, unknown> | null) {
+  if (!profile) return null;
+
+  const sanitized = { ...profile } as Record<string, unknown>;
+  delete sanitized.workspace;
+  delete sanitized.smtpPassword;
+  delete sanitized.groqApiKey;
+  delete sanitized.razorpayKeySecret;
+  delete sanitized.stripeSecretKey;
+  delete sanitized.accountNumber;
+
+  sanitized.hasSmtpPassword = Boolean((profile as Record<string, unknown>).smtpPassword);
+  sanitized.hasGroqApiKey = Boolean((profile as Record<string, unknown>).groqApiKey);
+  sanitized.hasRazorpayKeySecret = Boolean((profile as Record<string, unknown>).razorpayKeySecret);
+  sanitized.hasStripeSecretKey = Boolean((profile as Record<string, unknown>).stripeSecretKey);
+
+  return sanitized;
+}
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -37,26 +56,20 @@ export async function GET() {
 
     const profile = await prisma.businessProfile.findUnique({ 
       where: { workspaceId },
-      include: { workspace: true, primaryBankAccount: true },  // Need planTier for UI gating
+      include: {
+        workspace: {
+          select: {
+            name: true,
+            planTier: true,
+            subscriptionStatus: true,
+            subscriptionEndsAt: true,
+            countryCode: true,
+          },
+        },
+        primaryBankAccount: true,
+      },
     });
 
-    if (profile) {
-      // ── SECRETS SCRUB: Never send raw values to the frontend ──────────────
-      profile.smtpPassword  = "";
-      
-      if (profile.groqApiKey) {
-        (profile as Record<string, unknown>).groqApiKey = "SET";
-      }
-
-      // Return a boolean-like masked string so the UI knows a secret is set
-      if (profile.razorpayKeySecret) {
-        (profile as Record<string, unknown>).razorpayKeySecret = "SET";
-      }
-      if ((profile as Record<string, unknown>).stripeSecretKey) {
-        (profile as Record<string, unknown>).stripeSecretKey = "SET";
-      }
-    }
-    
     const workspace = profile?.workspace;
     const planTier    = workspace?.planTier    ?? "FREE";
     const countryCode = workspace?.countryCode ?? "IN";
@@ -71,10 +84,7 @@ export async function GET() {
       shouldApplyFreeTierLimits: billing ? shouldApplyFreeTierLimits(billing) : true,
     };
 
-    // Strip the nested workspace object before returning (cleaner payload)
-    const { workspace: _workspace, ...safeProfile } = (profile as Record<string, unknown> & { workspace: unknown }) ?? {};
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const _ignore = _workspace; 
+    const safeProfile = sanitizeBusinessProfileResponse(profile as unknown as Record<string, unknown> | null) ?? {};
 
     return NextResponse.json({
       ...safeProfile,
@@ -440,13 +450,7 @@ export async function POST(request: Request) {
       });
     });
 
-    if (profile) {
-      // Re-scrub before returning to frontend
-      (profile as Record<string, unknown>).smtpPassword = "";
-      (profile as Record<string, unknown>).groqApiKey = profile.groqApiKey ? "SET" : "";
-      (profile as Record<string, unknown>).razorpayKeySecret = profile.razorpayKeySecret ? "SET" : "";
-      (profile as Record<string, unknown>).stripeSecretKey = (profile as Record<string, unknown>).stripeSecretKey ? "SET" : "";
-    }
+    const sanitizedProfile = sanitizeBusinessProfileResponse(profile as unknown as Record<string, unknown> | null);
 
     // ── Locale update ─────────────────────────────────────────────────────────
     if (clientLocale) {
@@ -486,7 +490,7 @@ export async function POST(request: Request) {
       request,
     });
 
-    return NextResponse.json({ success: true, profile });
+    return NextResponse.json({ success: true, profile: sanitizedProfile });
   } catch (error) {
     console.error(error);
     logActivity({
