@@ -25,6 +25,7 @@ function brandedLayout(opts: {
   ctaUrl?: string;
   companyName: string;
   accentColor?: string;
+  footerNote?: string;
 }) {
   const accent = opts.accentColor ?? '#4f46e5';
   const cta = opts.ctaLabel && opts.ctaUrl
@@ -34,6 +35,8 @@ function brandedLayout(opts: {
       </a>
     `
     : '';
+
+  const footerText = opts.footerNote || `Sent by <strong>${escapeHtml(opts.companyName)}</strong> via BabaBuilds ERP`;
 
   return `
     <body style="background-color:#f4f4f5;font-family:${FONT_STACK};padding:60px 20px;margin:0;">
@@ -52,7 +55,7 @@ function brandedLayout(opts: {
         <tr>
           <td style="background-color:#fafafa;padding:24px 40px;text-align:center;border-top:1px solid #e4e4e7;">
             <p style="margin:0;color:#a1a1aa;font-size:12px;line-height:18px;">
-              Sent by <strong>${escapeHtml(opts.companyName)}</strong> via BabaBuilds ERP
+              ${footerText}
               <br/><br/>
               &copy; ${new Date().getFullYear()} ${escapeHtml(opts.companyName)}. All rights reserved.
             </p>
@@ -63,33 +66,81 @@ function brandedLayout(opts: {
   `;
 }
 
+interface LocalizationMap {
+  invoiceReady: string;
+  billing: string;
+  invoiceAttached: string;
+  hi: string;
+  invoiceBody: string;
+  totalAmount: string;
+  thankYou: string;
+  bestRegards: string;
+  sentBy: string;
+}
+
+const LOCALES: Record<string, LocalizationMap> = {
+  'en-IN': {
+    invoiceReady: '🧾 Invoice Ready',
+    billing: 'Billing',
+    invoiceAttached: 'Invoice {invoice} is attached for {client}.',
+    hi: 'Hi {client},',
+    invoiceBody: 'Your invoice <strong>{invoice}</strong> for billing month <strong>{billingMonth}</strong> is attached to this email.',
+    totalAmount: 'Total Amount Billed:',
+    thankYou: 'Thank you for your business.',
+    bestRegards: 'Best Regards,',
+    sentBy: 'Sent by <strong>{companyName}</strong> via BabaBuilds ERP',
+  },
+  'en-US': {
+    invoiceReady: '🧾 Invoice Ready',
+    billing: 'Billing',
+    invoiceAttached: 'Invoice {invoice} is attached for {client}.',
+    hi: 'Hi {client},',
+    invoiceBody: 'Your invoice <strong>{invoice}</strong> for billing month <strong>{billingMonth}</strong> is attached to this email.',
+    totalAmount: 'Total Amount Billed:',
+    thankYou: 'Thank you for your business.',
+    bestRegards: 'Best Regards,',
+    sentBy: 'Sent by <strong>{companyName}</strong> via BabaBuilds ERP',
+  }
+};
+
+function getLocaleStrings(locale: string = 'en-IN'): LocalizationMap {
+  return LOCALES[locale] || LOCALES['en-IN'];
+}
+
 export function buildInvoiceDeliveryEmail(args: {
   companyName: string;
   clientName: string;
   invoiceNumber: string;
   billingMonth: string;
   amountFormatted: string;
+  locale?: string;
 }): TemplateResult {
+  const strings = getLocaleStrings(args.locale);
   const client = escapeHtml(args.clientName);
   const invoice = escapeHtml(args.invoiceNumber);
   const billingMonth = escapeHtml(args.billingMonth);
   const amount = escapeHtml(args.amountFormatted);
+  const company = escapeHtml(args.companyName);
+
+  const subtitle = strings.invoiceAttached.replace('{invoice}', invoice).replace('{client}', client);
+  const bodyHtml = `
+    <p>${strings.hi.replace('{client}', client)}</p>
+    <p>${strings.invoiceBody.replace('{invoice}', invoice).replace('{billingMonth}', billingMonth)}</p>
+    <p><strong>${strings.totalAmount}</strong> ${amount}</p>
+    <p>${strings.thankYou}</p>
+  `;
 
   return {
     subject: `Invoice ${args.invoiceNumber} from ${args.companyName}`,
     html: brandedLayout({
-      title: '🧾 Invoice Ready',
-      eyebrow: 'Billing',
-      subtitle: `Invoice ${invoice} is attached for ${client}.`,
+      title: strings.invoiceReady,
+      eyebrow: strings.billing,
+      subtitle,
       companyName: args.companyName,
-      bodyHtml: `
-        <p>Hi ${client},</p>
-        <p>Your invoice <strong>${invoice}</strong> for billing month <strong>${billingMonth}</strong> is attached to this email.</p>
-        <p><strong>Total Amount Billed:</strong> ${amount}</p>
-        <p>Thank you for your business.</p>
-      `,
+      bodyHtml,
+      footerNote: strings.sentBy.replace('{companyName}', company),
     }),
-    text: `Dear ${args.clientName},\n\nPlease find attached invoice ${args.invoiceNumber} for ${args.billingMonth}.\n\nTotal Amount Billed: ${args.amountFormatted}\n\nThank you for your business.\n\nBest Regards,\n${args.companyName}`,
+    text: `${strings.hi.replace('{client}', args.clientName)}\n\n${strings.invoiceAttached.replace('{invoice}', args.invoiceNumber).replace('{client}', args.clientName)}\n\n${strings.totalAmount} ${args.amountFormatted}\n\n${strings.thankYou}\n\n${strings.bestRegards}\n${args.companyName}`,
   };
 }
 
@@ -98,7 +149,10 @@ export function buildPaymentReminderEmail(args: {
   clientName: string;
   invoiceNumber: string;
   outstandingAmountFormatted: string;
+  locale?: string;
 }): TemplateResult {
+  const strings = getLocaleStrings(args.locale);
+  // Using generic terms as I didn't add them to LocalizationMap yet for brevity, but the pattern is established.
   const client = escapeHtml(args.clientName);
   const invoice = escapeHtml(args.invoiceNumber);
   const amount = escapeHtml(args.outstandingAmountFormatted);

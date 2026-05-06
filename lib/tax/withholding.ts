@@ -30,9 +30,11 @@ export const computeWithheldAmount = (input: WithholdingInput) => {
     .toDecimalPlaces(2);
 };
 
-export const defaultDepositDueDate = (deductedAt: Date) => {
-  const dueDate = new Date(Date.UTC(deductedAt.getUTCFullYear(), deductedAt.getUTCMonth() + 1, 7, 0, 0, 0));
-  return dueDate;
+import { getTaxStrategy } from '@/lib/tax/strategies';
+
+export const defaultDepositDueDate = (deductedAt: Date, countryCode: string = 'IN') => {
+  const strategy = getTaxStrategy(countryCode);
+  return strategy.getDepositDueDate(deductedAt);
 };
 
 export const deriveReturnPeriodKey = (deductedAt: Date, provided?: string | null) =>

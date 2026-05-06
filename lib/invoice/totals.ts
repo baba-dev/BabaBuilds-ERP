@@ -33,35 +33,26 @@ export function sumInvoiceBilledAmount(invoices: InvoiceBilledAmountInput[]): Pr
   );
 }
 
-function toMinorUnits(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100);
-}
-
-function fromMinorUnits(value: number): number {
-  return value / 100;
-}
-
 export function calculateInvoiceTotals({
   services,
   isTaxExempt,
   defaultTaxRate = 0.18,
 }: InvoiceTotalsInput): InvoiceTotals {
-  const subtotalMinor = services.reduce((sum, service) => {
-    const amount = Number(service.amount || 0);
-    if (!Number.isFinite(amount)) return sum;
-    return sum + toMinorUnits(amount);
-  }, 0);
+  const subtotal = services.reduce((sum, service) => {
+    return sum.plus(toDecimal(service.amount || 0));
+  }, new Prisma.Decimal(0));
 
   const taxMode: InvoiceTaxMode = isTaxExempt ? 'exempt' : 'taxable';
   const taxRate = taxMode === 'taxable' ? defaultTaxRate : 0;
-  const taxMinor = Math.round(subtotalMinor * taxRate);
-  const totalMinor = subtotalMinor + taxMinor;
+  
+  const taxAmount = subtotal.times(taxRate).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+  const total = subtotal.plus(taxAmount);
 
   return {
-    subtotal: fromMinorUnits(subtotalMinor),
+    subtotal: subtotal.toNumber(),
     taxRate,
-    taxAmount: fromMinorUnits(taxMinor),
-    total: fromMinorUnits(totalMinor),
+    taxAmount: taxAmount.toNumber(),
+    total: total.toNumber(),
     taxMode,
   };
 }
