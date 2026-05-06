@@ -27,7 +27,7 @@ function fromProfile(profile: any): NormalizedPrimaryRemittanceAccount {
     bankName: profile?.bankName ?? null,
     accountHolderName: profile?.accountName ?? null,
     maskedAccountNumber: maskAccountNumber(profile?.accountNumber ?? null),
-    accountNumberDisplay: profile?.accountNumber ?? null,
+    accountNumberDisplay: maskAccountNumber(profile?.accountNumber ?? null),
     routingCode: profile?.ifscCode ?? null,
     routingLabel,
     currency,

@@ -60,8 +60,8 @@ export async function scanBuffer(buffer: Buffer): Promise<boolean> {
   } catch (error) {
     console.error('⚠️ [ClamAV Error]:', error);
     
-    // Check security mode
-    const isProduction = process.env.ERP_SECURITY_MODE === 'PRODUCTION';
+    // Fail closed whenever production runtime is detected, even if ERP_SECURITY_MODE is unset.
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.ERP_SECURITY_MODE === 'PRODUCTION';
     
     if (isProduction) {
       console.error('🛑 [ClamAV] Scanner unavailable in PRODUCTION. Rejecting file for security.');

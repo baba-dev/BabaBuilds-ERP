@@ -6,6 +6,9 @@ function isLocalDevAllowlisted(request: Request): boolean {
   if (process.env.NODE_ENV !== 'development') {
     return false;
   }
+  if (process.env.CRON_DEV_ORIGIN_BYPASS !== 'true') {
+    return false;
+  }
 
   const origin = request.headers.get('origin');
   if (!origin) {

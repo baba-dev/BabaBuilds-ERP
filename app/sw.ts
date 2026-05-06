@@ -3,6 +3,7 @@
 import { defaultCache } from '@serwist/next/worker';
 import { type PrecacheEntry, Serwist, type SerwistGlobalConfig } from 'serwist';
 import { normalizeLaunchDestination } from '@/lib/launch-routing';
+import { retryOfflineQueue } from '@/lib/offline-sync';
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -190,6 +191,7 @@ self.addEventListener('sync', (event: Event) => {
   syncEvent.waitUntil(
     (async () => {
       await notifyClients({ type: 'background-sync-fired' });
+      await retryOfflineQueue();
       await notifyClients({ type: 'offline-sync-queue-updated' });
     })(),
   );

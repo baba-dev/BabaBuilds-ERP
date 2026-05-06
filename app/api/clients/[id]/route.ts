@@ -204,9 +204,9 @@ export async function PATCH(
       logoUrl = `/logos/${workspaceId}/${path.basename(filepath)}`;
     }
 
-    // 2. Perform Update
-    const updatedClient = await prisma.client.update({
-      where: { id: clientId },
+    // 2. Perform tenant-scoped update
+    const updateResult = await prisma.client.updateMany({
+      where: { id: clientId, workspaceId },
       data: {
         name,
         address,
@@ -218,6 +218,15 @@ export async function PATCH(
         logoUrl
       }
     });
+    if (updateResult.count === 0) {
+      return apiError(404, "Client not found", "CLIENT_NOT_FOUND");
+    }
+    const updatedClient = await prisma.client.findFirst({
+      where: { id: clientId, workspaceId },
+    });
+    if (!updatedClient) {
+      return apiError(404, "Client not found", "CLIENT_NOT_FOUND");
+    }
 
     try {
       invalidateDashboardCacheForWorkspace(workspaceId);

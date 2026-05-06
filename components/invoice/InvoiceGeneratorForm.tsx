@@ -378,7 +378,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
       });
     } catch (err: unknown) {
       if (isLikelyOfflineError(err)) {
-        queueOfflineMutation({
+        void queueOfflineMutation({
           entity: "invoice",
           operation: "create",
           endpoint: "/api/generate",
@@ -479,7 +479,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
       setError(null);
     } catch (err: unknown) {
       if (isLikelyOfflineError(err)) {
-        queueOfflineMutation({
+        void queueOfflineMutation({
           entity: "invoice",
           operation: "update",
           endpoint: "/api/generate",
