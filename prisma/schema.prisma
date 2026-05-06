@@ -965,6 +965,23 @@ model FinancialOperationIdempotency {
   @@index([workspaceId, operation, expiresAt])
 }
 
+model ProcessedWebhookEvent {
+  id        String   @id @default(cuid())
+  provider  String
+  eventId   String
+  eventType String
+  status    String   @default("RECEIVED") // "RECEIVED" | "PROCESSED" | "FAILED"
+  payload   Json?
+  errorMessage String?
+  processedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, eventId])
+  @@index([provider, createdAt])
+  @@index([provider, status, createdAt])
+}
+
 model AccountingTransaction {
   id String @id @default(cuid())
 

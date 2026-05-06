@@ -3,10 +3,22 @@ import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
 import Razorpay from "razorpay";
 import crypto from "crypto";
-import { determineInvoicePaymentStatus, validatePaymentBusinessRules } from "@/app/api/invoices/[id]/pay/logic";
 import { dispatchNotification } from "@/lib/notifications/dispatcher";
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from "@/lib/dashboard-cache";
 import { timingSafeEqualString } from "@/lib/security/signature";
+
+const ZERO_DECIMAL_CURRENCIES = new Set([
+  "BIF", "CLP", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA",
+  "PYG", "RWF", "UGX", "VND", "VUV", "XAF", "XOF", "XPF", "ISK",
+]);
+
+function toSmallestUnit(amount: number, currency: string): number {
+  const upper = currency.toUpperCase();
+  if (ZERO_DECIMAL_CURRENCIES.has(upper)) {
+    return Math.round(amount);
+  }
+  return Math.round(amount * 100);
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -51,8 +63,19 @@ export async function GET(req: NextRequest) {
       const stripe = new Stripe(decryptedSecret, { apiVersion: '2026-03-25.dahlia' as any });
       const session = await stripe.checkout.sessions.retrieve(sessionId);
 
-      if (session.payment_status === "paid") {
-        const settled = await markInvoicePaid(invoice.id, invoice.workspaceId, Number(invoice.grandTotal), session.payment_intent as string);
+      const expectedAmount = toSmallestUnit(Number(invoice.grandTotal), invoice.workspace.baseCurrency ?? "INR");
+      const paidAmount = typeof session.amount_total === "number" ? session.amount_total : null;
+      const paymentLinkMatches = typeof session.payment_link === "string" && session.payment_link === linkId;
+      const amountMatches = paidAmount !== null && paidAmount === expectedAmount;
+      const isPaid = session.payment_status === "paid";
+      const isComplete = session.status === "complete";
+
+      if (isPaid && isComplete && paymentLinkMatches && amountMatches) {
+        const providerReference =
+          typeof session.payment_intent === "string" && session.payment_intent
+            ? session.payment_intent
+            : session.id;
+        const settled = await markInvoicePaid(invoice.id, invoice.workspaceId, Number(invoice.grandTotal), providerReference);
         if (settled) {
           dispatchNotification({
             event: 'INVOICE_PAID',
@@ -67,6 +90,12 @@ export async function GET(req: NextRequest) {
         return NextResponse.redirect(new URL("/payments/success", req.url));
       }
 
+      if (!paymentLinkMatches) {
+        return NextResponse.redirect(new URL("/payments/failure?reason=payment_link_mismatch", req.url));
+      }
+      if (!amountMatches) {
+        return NextResponse.redirect(new URL("/payments/failure?reason=amount_mismatch", req.url));
+      }
       return NextResponse.redirect(new URL("/payments/failure?reason=not_paid", req.url));
     }
 
@@ -144,11 +173,11 @@ async function markInvoicePaid(invoiceId: string, workspaceId: string, amount: n
   let settledNow = false;
   await prisma.$transaction(async (tx) => {
     // Re-verify inside the transaction to prevent race conditions
-    const invoice = await tx.invoice.findFirst({ where: { id: invoiceId } });
+    const invoice = await tx.invoice.findFirst({ where: { id: invoiceId, workspaceId } });
     if (!invoice || invoice.status === "PAID") return;
 
-    await tx.invoice.update({
-      where: { id: invoiceId },
+    await tx.invoice.updateMany({
+      where: { id: invoiceId, workspaceId },
       data: {
         status: "PAID",
         amountReceived: amount,

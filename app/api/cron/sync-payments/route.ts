@@ -104,11 +104,11 @@ export async function GET(req: Request) {
 
 async function markInvoicePaid(invoiceId: string, workspaceId: string, amount: number, reference: string) {
   await prisma.$transaction(async (tx) => {
-    const invoice = await tx.invoice.findFirst({ where: { id: invoiceId } });
+    const invoice = await tx.invoice.findFirst({ where: { id: invoiceId, workspaceId } });
     if (!invoice || invoice.status === "PAID") return;
 
-    await tx.invoice.update({
-      where: { id: invoiceId },
+    await tx.invoice.updateMany({
+      where: { id: invoiceId, workspaceId },
       data: {
         status: "PAID",
         amountReceived: amount,

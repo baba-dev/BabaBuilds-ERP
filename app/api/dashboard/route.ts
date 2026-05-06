@@ -159,24 +159,45 @@ async function buildDashboardPayload(
         )
       : Promise.resolve(null),
 
-    timed("profile.business", () =>
-      prisma.businessProfile.findUnique({
-        where: { workspaceId },
-        select: {
-          groqApiKey: true,
-          razorpayKeyId: true,
-          razorpayKeySecret: true,
-          stripePublishableKey: true,
-          stripeSecretKey: true,
-          smtpHost: true,
-          smtpPort: true,
-          smtpUser: true,
-          smtpPassword: true,
-          smtpFromEmail: true,
-          shopEnabled: true,
-        },
-      })
-    ),
+    timed("profile.business", async () => {
+      const [profilePublic, secretFlagsRows] = await Promise.all([
+        prisma.businessProfile.findUnique({
+          where: { workspaceId },
+          select: {
+            razorpayKeyId: true,
+            stripePublishableKey: true,
+            smtpHost: true,
+            smtpPort: true,
+            smtpUser: true,
+            smtpFromEmail: true,
+            shopEnabled: true,
+          },
+        }),
+        prisma.$queryRaw<Array<{
+          hasGroqApiKey: number;
+          hasRazorpayKeySecret: number;
+          hasStripeSecretKey: number;
+          hasSmtpPassword: number;
+        }>>`
+          SELECT
+            CASE WHEN "groqApiKey" IS NOT NULL AND "groqApiKey" != '' THEN 1 ELSE 0 END AS "hasGroqApiKey",
+            CASE WHEN "razorpayKeySecret" IS NOT NULL AND "razorpayKeySecret" != '' THEN 1 ELSE 0 END AS "hasRazorpayKeySecret",
+            CASE WHEN "stripeSecretKey" IS NOT NULL AND "stripeSecretKey" != '' THEN 1 ELSE 0 END AS "hasStripeSecretKey",
+            CASE WHEN "smtpPassword" IS NOT NULL AND "smtpPassword" != '' THEN 1 ELSE 0 END AS "hasSmtpPassword"
+          FROM "BusinessProfile"
+          WHERE "workspaceId" = ${workspaceId}
+          LIMIT 1
+        `,
+      ]);
+      const secretFlags = secretFlagsRows[0];
+      return {
+        ...profilePublic,
+        hasGroqApiKey: Boolean(secretFlags?.hasGroqApiKey),
+        hasRazorpayKeySecret: Boolean(secretFlags?.hasRazorpayKeySecret),
+        hasStripeSecretKey: Boolean(secretFlags?.hasStripeSecretKey),
+        hasSmtpPassword: Boolean(secretFlags?.hasSmtpPassword),
+      };
+    }),
 
     timed("invoices.fy", () =>
       prisma.invoice.findMany({
@@ -700,24 +721,24 @@ async function buildDashboardPayload(
   });
 
   const integrationReadiness = {
-    groq: getIntegrationReadiness([profile?.groqApiKey]),
+    groq: getIntegrationReadiness([profile?.hasGroqApiKey ? "SET" : null]),
     payment:
-      getIntegrationReadiness([profile?.razorpayKeyId, profile?.razorpayKeySecret]).status ===
+      getIntegrationReadiness([profile?.razorpayKeyId, profile?.hasRazorpayKeySecret ? "SET" : null]).status ===
         "healthy" ||
-      getIntegrationReadiness([profile?.stripePublishableKey, profile?.stripeSecretKey]).status ===
+      getIntegrationReadiness([profile?.stripePublishableKey, profile?.hasStripeSecretKey ? "SET" : null]).status ===
         "healthy"
         ? { configured: true, status: "healthy" as IntegrationStatus }
         : getIntegrationReadiness([
             profile?.razorpayKeyId,
-            profile?.razorpayKeySecret,
+            profile?.hasRazorpayKeySecret ? "SET" : null,
             profile?.stripePublishableKey,
-            profile?.stripeSecretKey,
+            profile?.hasStripeSecretKey ? "SET" : null,
           ]),
     smtp: getIntegrationReadiness([
       profile?.smtpHost,
       profile?.smtpPort ? String(profile.smtpPort) : null,
       profile?.smtpUser,
-      profile?.smtpPassword,
+      profile?.hasSmtpPassword ? "SET" : null,
       profile?.smtpFromEmail,
     ]),
     shop: profile?.shopEnabled

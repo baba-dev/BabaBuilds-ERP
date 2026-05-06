@@ -6,6 +6,13 @@
 
 BabaBuilds ERP is a full-stack Next.js 16 application (TypeScript, Prisma/SQLite, NextAuth) using the App Router with React Server Components. The package manager is **npm** (`package-lock.json`).
 
+### Cloud agent runtime requirement
+
+- Node.js `22.x`
+- npm `10+` (bundled with Node 22)
+
+When running in Cursor Cloud, ensure the environment base image/startup config provides Node/npm before project setup commands are executed.
+
 ### Environment setup
 
 A `.env` file is needed at the workspace root. Required variables: `DATABASE_URL` (SQLite file path), `NEXTAUTH_URL` (local dev URL), `NEXTAUTH_SECRET` (any random string). Set `AUTH_GOOGLE_ENABLED=false` and `AUTH_EMAIL_ENABLED=false` to disable external auth providers.

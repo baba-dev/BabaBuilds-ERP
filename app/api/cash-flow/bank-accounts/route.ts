@@ -16,6 +16,38 @@ const BankAccountCreateSchema = z.object({
   openingBalanceDate: z.string().datetime().optional().nullable(),
 });
 
+function toSafeBankAccountDto(account: {
+  id: string;
+  name: string;
+  bankName: string | null;
+  accountHolderName: string | null;
+  maskedAccountNumber: string | null;
+  routingCode: string | null;
+  currency: string;
+  openingBalance: unknown;
+  openingBalanceDate: Date;
+  isPrimaryRemittance: boolean;
+  sourceType: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  return {
+    id: account.id,
+    name: account.name,
+    bankName: account.bankName,
+    accountHolderName: account.accountHolderName,
+    maskedAccountNumber: account.maskedAccountNumber,
+    routingCode: account.routingCode,
+    currency: account.currency,
+    openingBalance: account.openingBalance,
+    openingBalanceDate: account.openingBalanceDate,
+    isPrimaryRemittance: account.isPrimaryRemittance,
+    sourceType: account.sourceType,
+    createdAt: account.createdAt,
+    updatedAt: account.updatedAt,
+  };
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   const workspaceId = (session as any)?.workspaceId as string | undefined;
@@ -28,7 +60,7 @@ export async function GET() {
     where: { workspaceId },
     orderBy: { createdAt: "asc" },
   });
-  return NextResponse.json({ data: accounts });
+  return NextResponse.json({ data: accounts.map(toSafeBankAccountDto) });
 }
 
 export async function POST(request: Request) {
@@ -60,5 +92,5 @@ export async function POST(request: Request) {
     },
   });
 
-  return NextResponse.json({ data: created }, { status: 201 });
+  return NextResponse.json({ data: toSafeBankAccountDto(created) }, { status: 201 });
 }

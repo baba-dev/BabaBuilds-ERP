@@ -69,10 +69,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Invoice not found or unauthorized." }, { status: 404 });
     }
 
-    // 2. Delete from Database
-    await prisma.invoice.delete({
-      where: { id: invoiceId }
+    // 2. Delete from Database with tenant scope safety
+    const deleted = await prisma.invoice.deleteMany({
+      where: { id: invoiceId, workspaceId }
     });
+    if (deleted.count === 0) {
+      return NextResponse.json({ error: "Invoice not found or unauthorized." }, { status: 404 });
+    }
 
     // 3. Cleanup Orphaned PDF File
     if (invoice.pdfPath) {

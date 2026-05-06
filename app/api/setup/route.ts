@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { enableModule } from "@/lib/modules";
 import { syncPrimaryRemittanceBankAccount } from "@/lib/banking/sync-primary-remittance-account";
+import { encrypt } from "@/lib/encryption";
 
 type SetupPayload = {
   countryCode?: string;
@@ -49,6 +50,13 @@ function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function maybeEncryptedSecret(raw?: string | null): string | null | undefined {
+  if (raw == null) return undefined;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  return encrypt(trimmed);
+}
+
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   const typedSession = session as { workspaceId?: string; user?: { id?: string } } | null;
@@ -85,6 +93,11 @@ export async function POST(req: Request) {
     }
 
     await prisma.$transaction(async (tx) => {
+      const smtpPasswordEncrypted = maybeEncryptedSecret(body.smtpPassword);
+      const groqApiKeyEncrypted = maybeEncryptedSecret(body.groqApiKey);
+      const razorpayKeySecretEncrypted = maybeEncryptedSecret(body.razorpayKeySecret);
+      const stripeSecretKeyEncrypted = maybeEncryptedSecret(body.stripeSecretKey);
+
       await tx.workspace.update({
         where: { id: workspaceId },
         data: {
@@ -122,14 +135,14 @@ export async function POST(req: Request) {
           smtpHost: body.smtpHost,
           smtpPort: body.smtpPort,
           smtpUser: body.smtpUser,
-          smtpPassword: body.smtpPassword,
+          smtpPassword: smtpPasswordEncrypted,
           smtpFromEmail: body.smtpFromEmail,
-          groqApiKey: body.groqApiKey,
+          groqApiKey: groqApiKeyEncrypted,
           defaultGateway: body.defaultGateway,
           razorpayKeyId: body.razorpayKeyId,
-          razorpayKeySecret: body.razorpayKeySecret,
+          razorpayKeySecret: razorpayKeySecretEncrypted,
           stripePublishableKey: body.stripePublishableKey,
-          stripeSecretKey: body.stripeSecretKey,
+          stripeSecretKey: stripeSecretKeyEncrypted,
           shopEnabled: body.shopEnabled ?? false,
           shopSlug: body.shopSlug,
           shopTagline: body.shopTagline,
@@ -147,14 +160,14 @@ export async function POST(req: Request) {
           smtpHost: body.smtpHost,
           smtpPort: body.smtpPort,
           smtpUser: body.smtpUser,
-          smtpPassword: body.smtpPassword,
+          smtpPassword: smtpPasswordEncrypted,
           smtpFromEmail: body.smtpFromEmail,
-          groqApiKey: body.groqApiKey,
+          groqApiKey: groqApiKeyEncrypted,
           defaultGateway: body.defaultGateway,
           razorpayKeyId: body.razorpayKeyId,
-          razorpayKeySecret: body.razorpayKeySecret,
+          razorpayKeySecret: razorpayKeySecretEncrypted,
           stripePublishableKey: body.stripePublishableKey,
-          stripeSecretKey: body.stripeSecretKey,
+          stripeSecretKey: stripeSecretKeyEncrypted,
           shopEnabled: body.shopEnabled ?? false,
           shopSlug: body.shopSlug,
           shopTagline: body.shopTagline,
