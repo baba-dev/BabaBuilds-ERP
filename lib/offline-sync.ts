@@ -18,20 +18,96 @@ export interface OfflineQueueItem {
   lastError?: string;
 }
 
-const OFFLINE_QUEUE_KEY = 'baba-offline-sync-queue-v1';
+export interface OfflineSyncSummary {
+  pending: number;
+  synced: number;
+  failed: number;
+  total: number;
+}
+
+const OFFLINE_QUEUE_DB_NAME = 'baba-offline-sync';
+const OFFLINE_QUEUE_STORE = 'queue';
+const OFFLINE_QUEUE_DB_VERSION = 1;
+const LEGACY_OFFLINE_QUEUE_KEY = 'baba-offline-sync-queue-v1';
 const OFFLINE_QUEUE_EVENT = 'offline-sync-queue-updated';
 
-const canUseBrowserStorage = () => typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+const canUseIndexedDb = () => typeof indexedDB !== 'undefined';
+const canUseWindow = () => typeof window !== 'undefined';
+const canUseBrowserStorage = () => canUseWindow() && typeof localStorage !== 'undefined';
 
 function emitQueueUpdated() {
-  if (typeof window === 'undefined') return;
+  if (!canUseWindow()) return;
   window.dispatchEvent(new CustomEvent(OFFLINE_QUEUE_EVENT));
 }
 
-function readQueue(): OfflineQueueItem[] {
+function createId() {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function openQueueDb(): Promise<IDBDatabase | null> {
+  if (!canUseIndexedDb()) return Promise.resolve(null);
+
+  return new Promise((resolve) => {
+    const request = indexedDB.open(OFFLINE_QUEUE_DB_NAME, OFFLINE_QUEUE_DB_VERSION);
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(OFFLINE_QUEUE_STORE)) {
+        const store = db.createObjectStore(OFFLINE_QUEUE_STORE, { keyPath: 'id' });
+        store.createIndex('status', 'status', { unique: false });
+        store.createIndex('updatedAt', 'updatedAt', { unique: false });
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => resolve(null);
+    request.onblocked = () => resolve(null);
+  });
+}
+
+async function withQueueStore<T>(
+  mode: IDBTransactionMode,
+  callback: (store: IDBObjectStore) => IDBRequest<T> | Promise<IDBRequest<T>>,
+): Promise<T | null> {
+  const db = await openQueueDb();
+  if (!db) return null;
+
+  return new Promise((resolve) => {
+    const transaction = db.transaction(OFFLINE_QUEUE_STORE, mode);
+    const store = transaction.objectStore(OFFLINE_QUEUE_STORE);
+    let request: IDBRequest<T> | null = null;
+
+    transaction.oncomplete = () => {
+      db.close();
+      resolve(request ? request.result : null);
+    };
+    transaction.onerror = () => {
+      db.close();
+      resolve(null);
+    };
+    transaction.onabort = () => {
+      db.close();
+      resolve(null);
+    };
+
+    Promise.resolve(callback(store))
+      .then((result) => {
+        request = result;
+      })
+      .catch(() => {
+        transaction.abort();
+      });
+  });
+}
+
+function readLegacyQueue(): OfflineQueueItem[] {
   if (!canUseBrowserStorage()) return [];
   try {
-    const raw = localStorage.getItem(OFFLINE_QUEUE_KEY);
+    const raw = localStorage.getItem(LEGACY_OFFLINE_QUEUE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as OfflineQueueItem[];
     return Array.isArray(parsed) ? parsed : [];
@@ -40,13 +116,42 @@ function readQueue(): OfflineQueueItem[] {
   }
 }
 
-function writeQueue(items: OfflineQueueItem[]) {
-  if (!canUseBrowserStorage()) return;
-  localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(items));
-  emitQueueUpdated();
+async function migrateLegacyQueue() {
+  if (!canUseBrowserStorage() || !canUseIndexedDb()) return;
+  const legacyQueue = readLegacyQueue();
+  if (legacyQueue.length === 0) return;
+
+  await withQueueStore('readwrite', (store) => {
+    legacyQueue.forEach((item) => store.put(item));
+    return store.getAll() as IDBRequest<OfflineQueueItem[]>;
+  });
+
+  try {
+    localStorage.removeItem(LEGACY_OFFLINE_QUEUE_KEY);
+  } catch {
+    // Ignore storage cleanup errors.
+  }
 }
 
-export function getOfflineQueue() {
+async function readQueue(): Promise<OfflineQueueItem[]> {
+  await migrateLegacyQueue();
+  const queue = await withQueueStore('readonly', (store) => store.getAll() as IDBRequest<OfflineQueueItem[]>);
+  return Array.isArray(queue) ? queue : [];
+}
+
+async function writeQueue(items: OfflineQueueItem[]) {
+  const wrote = await withQueueStore('readwrite', (store) => {
+    store.clear();
+    items.forEach((item) => store.put(item));
+    return store.getAll() as IDBRequest<OfflineQueueItem[]>;
+  });
+
+  if (wrote) {
+    emitQueueUpdated();
+  }
+}
+
+export async function getOfflineQueue() {
   return readQueue();
 }
 
@@ -62,13 +167,13 @@ export function getConflictPolicy(entity: OfflineEntityType, operation: OfflineO
   return 'server-wins';
 }
 
-export function queueOfflineMutation(input: Omit<OfflineQueueItem, 'id' | 'status' | 'retries' | 'createdAt' | 'updatedAt'>) {
+export async function queueOfflineMutation(input: Omit<OfflineQueueItem, 'id' | 'status' | 'retries' | 'createdAt' | 'updatedAt'>) {
   const now = new Date().toISOString();
-  const queue = readQueue();
+  const queue = await readQueue();
 
   const item: OfflineQueueItem = {
     ...input,
-    id: crypto.randomUUID(),
+    id: createId(),
     status: 'pending',
     retries: 0,
     createdAt: now,
@@ -76,12 +181,12 @@ export function queueOfflineMutation(input: Omit<OfflineQueueItem, 'id' | 'statu
   };
 
   queue.push(item);
-  writeQueue(queue);
+  await writeQueue(queue);
   return item;
 }
 
-export function getOfflineQueueSummary() {
-  const queue = readQueue();
+export async function getOfflineQueueSummary(): Promise<OfflineSyncSummary> {
+  const queue = await readQueue();
   const pending = queue.filter((item) => item.status === 'pending').length;
   const synced = queue.filter((item) => item.status === 'synced').length;
   const failed = queue.filter((item) => item.status === 'failed').length;
@@ -89,7 +194,7 @@ export function getOfflineQueueSummary() {
 }
 
 export async function retryOfflineQueue() {
-  const queue = readQueue();
+  const queue = await readQueue();
   const candidates = queue.filter((item) => item.status === 'failed' || item.status === 'pending');
 
   if (candidates.length === 0) {
@@ -103,6 +208,7 @@ export async function retryOfflineQueue() {
     try {
       const response = await fetch(item.endpoint, {
         method: item.method,
+        credentials: 'same-origin',
         headers: {
           'Content-Type': 'application/json',
           'X-Offline-Retry': '1',
@@ -138,7 +244,7 @@ export async function retryOfflineQueue() {
     }
   }
 
-  writeQueue(queue);
+  await writeQueue(queue);
   return { attempted: candidates.length, synced: syncedCount, failed: failedCount };
 }
 

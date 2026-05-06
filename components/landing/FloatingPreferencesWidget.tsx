@@ -30,7 +30,7 @@ export default function FloatingPreferencesWidget() {
   return (
     <aside
       aria-label={tl("persona.widget.title")}
-      className="fixed bottom-6 end-6 z-40 w-72 rounded-2xl border border-orange-200/80 bg-white/95 p-4 shadow-2xl backdrop-blur dark:border-orange-900/50 dark:bg-zinc-950/90"
+      className="fixed inset-x-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 w-auto rounded-2xl border border-orange-200/80 bg-white/95 p-4 shadow-2xl backdrop-blur dark:border-orange-900/50 dark:bg-zinc-950/90 sm:inset-x-auto sm:end-6 sm:w-72"
     >
       <p className="text-[11px] font-black uppercase tracking-[0.16em] text-orange-700 dark:text-orange-300">
         {tl("persona.widget.title")}

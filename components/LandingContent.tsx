@@ -20,8 +20,6 @@ import LandingNavbar from "@/components/LandingNavbar";
 import ComparisonTable from "@/components/ComparisonTable";
 import PricingSection from "@/components/PricingSection";
 import LandingFooter from "@/components/LandingFooter";
-import { cn } from "@/lib/utils";
-
 import RotatorText from "@/components/landing/RotatorText";
 import RoleDemoLauncher from "@/components/landing/RoleDemoLauncher";
 import { personaNavigationLinks } from "@/components/landing/persona/persona-config";
@@ -32,6 +30,7 @@ import LandingFeaturePillars from "@/components/landing/LandingFeaturePillars";
 import LandingPersonaHub from "@/components/landing/LandingPersonaHub";
 import FloatingPreferencesWidget from "@/components/landing/FloatingPreferencesWidget";
 import SocialProofHero from "@/components/landing/SocialProofHero";
+import { InstallAppPrompt } from "@/components/pwa/InstallAppPrompt";
 
 export default function LandingContent() {
   const t = useTranslations("Landing");
@@ -134,6 +133,8 @@ export default function LandingContent() {
                 </Link>
               </Button>
             </div>
+
+            <InstallAppPrompt />
 
             <SocialProofHero />
 

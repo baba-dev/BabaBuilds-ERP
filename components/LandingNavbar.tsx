@@ -199,7 +199,7 @@ export default function LandingNavbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             id="landing-mobile-menu"
-            className="absolute inset-x-0 top-full bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 p-6 flex flex-col gap-4 md:hidden shadow-xl"
+            className="absolute inset-x-0 top-full flex max-h-[calc(100dvh-5rem)] flex-col gap-4 overflow-y-auto overscroll-contain border-b border-zinc-200 bg-white p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-xl dark:border-zinc-800 dark:bg-zinc-950 md:hidden"
           >
             {navLinks.map((link) => (
               <Link

@@ -88,8 +88,8 @@ export function PWASettings() {
       </CardHeader>
 
       <CardContent className="pt-6 space-y-6">
-        <div className="flex items-center justify-between border-b dark:border-zinc-800 pb-4">
-          <div>
+        <div className="flex flex-col gap-3 border-b pb-4 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <h3 className="font-semibold dark:text-zinc-200 flex items-center gap-2">
               <DownloadCloud className="w-4 h-4 text-zinc-500" /> Install Application
             </h3>
@@ -102,15 +102,15 @@ export function PWASettings() {
             onClick={installPWA}
             disabled={!isInstallable}
             variant={isInstallable ? 'default' : 'secondary'}
-            className="flex items-center gap-2"
+            className="flex w-full items-center justify-center gap-2 sm:w-auto"
           >
             <ArrowDownToLine className="w-4 h-4" />
             {isInstallable ? 'Install App' : 'Installed / Unsupported'}
           </Button>
         </div>
 
-        <div className="flex items-center justify-between border-b dark:border-zinc-800 pb-4">
-          <div>
+        <div className="flex flex-col gap-3 border-b pb-4 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <h3 className="font-semibold dark:text-zinc-200 flex items-center gap-2">
               <BellRing className="w-4 h-4 text-zinc-500" /> Push Notifications
             </h3>
@@ -123,13 +123,14 @@ export function PWASettings() {
             onClick={requestNotificationPermission}
             disabled={permission === 'granted'}
             variant={permission === 'granted' ? 'secondary' : 'outline'}
+            className="w-full sm:w-auto"
           >
             {permission === 'granted' ? 'Enabled' : 'Enable Notifications'}
           </Button>
         </div>
 
-        <div className="flex items-center justify-between border-b dark:border-zinc-800 pb-4">
-          <div>
+        <div className="flex flex-col gap-3 border-b pb-4 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <h3 className="font-semibold dark:text-zinc-200 flex items-center gap-2">
               <Cloud className="w-4 h-4 text-zinc-500" /> Background Sync
             </h3>
@@ -137,13 +138,13 @@ export function PWASettings() {
               Queue updates while offline and sync when your connection returns.
             </p>
           </div>
-          <Button type="button" onClick={enableBackgroundSync} variant="outline">
+          <Button type="button" onClick={enableBackgroundSync} variant="outline" className="w-full sm:w-auto">
             Enable Sync
           </Button>
         </div>
 
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <h3 className="font-semibold dark:text-zinc-200 flex items-center gap-2">
               <RefreshCcw className="w-4 h-4 text-zinc-500" /> Periodic Background Refresh
             </h3>
@@ -151,13 +152,13 @@ export function PWASettings() {
               Refresh key cached pages periodically on supported browsers.
             </p>
           </div>
-          <Button type="button" onClick={enablePeriodicSync} variant="outline">
+          <Button type="button" onClick={enablePeriodicSync} variant="outline" className="w-full sm:w-auto">
             Enable Refresh
           </Button>
         </div>
         <div className="space-y-4 border-t dark:border-zinc-800 pt-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
               <h3 className="font-semibold dark:text-zinc-200 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-zinc-500" /> Offline Sync Queue
               </h3>
@@ -165,7 +166,7 @@ export function PWASettings() {
                 Track pending, synced, and failed offline updates and retry immediately when online.
               </p>
             </div>
-            <Button type="button" onClick={retryQueuedItems} variant="outline" disabled={isRetrying}>
+            <Button type="button" onClick={retryQueuedItems} variant="outline" disabled={isRetrying} className="w-full sm:w-auto">
               <RotateCcw className="w-4 h-4 mr-2" />
               {isRetrying ? 'Retrying...' : 'Retry Failed/Pending'}
             </Button>
