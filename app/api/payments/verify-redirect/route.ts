@@ -143,8 +143,13 @@ export async function GET(req: NextRequest) {
 async function markInvoicePaid(invoiceId: string, workspaceId: string, amount: number, reference: string): Promise<boolean> {
   let settledNow = false;
   await prisma.$transaction(async (tx) => {
-    // Re-verify inside the transaction to prevent race conditions
-    const invoice = await tx.invoice.findFirst({ where: { id: invoiceId } });
+    // Re-verify inside the transaction to prevent race conditions and cross-tenant leakage
+    const invoice = await tx.invoice.findFirst({ 
+      where: { 
+        id: invoiceId,
+        workspaceId // Critical scoping check
+      } 
+    });
     if (!invoice || invoice.status === "PAID") return;
 
     await tx.invoice.update({

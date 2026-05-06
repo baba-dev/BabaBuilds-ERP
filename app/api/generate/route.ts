@@ -98,6 +98,33 @@ function buildRequestHash(payload: unknown): string {
 }
 
 
+import { z } from 'zod';
+
+const ServiceSchema = z.object({
+  title: z.string().trim().min(1, "Service title is required").max(200, "Service title is too long"),
+  amount: z.coerce.number().finite().min(0, "Service amount must be 0 or greater"),
+  productId: z.string().optional(),
+  quantity: z.number().optional().default(1),
+  unitPrice: z.coerce.number().optional(),
+  sac: z.object({
+    igstRate: z.number().nullable().optional(),
+  }).optional(),
+  taxRate: z.number().nullable().optional(),
+});
+
+const GenerateInvoiceSchema = z.object({
+  idempotencyKey: z.string().optional(),
+  draftId: z.string().optional(),
+  clientId: z.string().min(1, "Client is required"),
+  billingMonth: z.string().trim().min(1, "Billing month is required").max(100),
+  sacCode: z.string().trim().max(100).optional(),
+  services: z.array(ServiceSchema).min(1, "At least one service is required"),
+  customDate: z.string().optional().nullable(),
+  sendEmail: z.boolean().optional(),
+  status: z.string().optional(),
+  taxRateOverride: z.number().optional(),
+});
+
 export async function POST(request: Request) {
   let generatedPdfPath = "";
   let workspaceId = "";
@@ -109,7 +136,6 @@ export async function POST(request: Request) {
   let createdInvoiceId: string | null = null;
 
   try {
-    // 1. SECURITY LOCK
     const session = (await getServerSession(authOptions)) as SessionWithWorkspace | null;
     if (!session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -118,27 +144,27 @@ export async function POST(request: Request) {
     actorId = session.user?.id ?? null;
     actorEmail = session.user?.email ?? null;
 
-    const body = (await request.json()) as {
-      idempotencyKey?: string;
-      draftId?: string;
-      clientId?: string;
-      billingMonth?: string;
-      sacCode?: string;
-      services?: ServiceInput[];
-      customDate?: string;
-      sendEmail?: boolean;
-      status?: string;
-      taxRateOverride?: number;
-    };
-    if (typeof body.draftId === "string" && body.draftId.trim()) {
+    const rawBody = await request.json();
+    const validation = GenerateInvoiceSchema.safeParse(rawBody);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Validation failed", fields: validation.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const body = validation.data;
+
+    if (body.draftId) {
       const finalizeResult = await finalizeInvoiceGenerationDraft({
-        draftId: body.draftId.trim(),
+        draftId: body.draftId,
         workspaceId,
         actorId,
       });
       return NextResponse.json(finalizeResult.response, { status: finalizeResult.status });
     }
-    idempotencyKey = request.headers.get("Idempotency-Key")?.trim() || body?.idempotencyKey?.trim() || null;
+    idempotencyKey = request.headers.get("Idempotency-Key")?.trim() || body.idempotencyKey || null;
     const idempotencyBody = { ...body };
     delete idempotencyBody.idempotencyKey;
     const requestHash = buildRequestHash(idempotencyBody);
@@ -205,88 +231,26 @@ export async function POST(request: Request) {
     }
 
     const { clientId, billingMonth, sacCode, services, customDate, sendEmail: shouldSendEmail, status: rawStatus, taxRateOverride } = body;
-    const billingMonthValue = typeof billingMonth === "string" ? billingMonth : "";
-    const servicesInput: ServiceInput[] = Array.isArray(services) ? services : [];
-    const taxRateOverrideValue = typeof taxRateOverride === 'number' ? taxRateOverride : undefined;
+    const billingMonthValue = billingMonth;
+    const servicesInput = services;
+    const taxRateOverrideValue = taxRateOverride;
     const normalizedStatus = toInvoiceStatus(rawStatus);
-    const validationErrors: Array<{ field: string; message: string; index?: number }> = [];
-
-    if (!clientId) return NextResponse.json({ error: "No client selected." }, { status: 400 });
-    if (billingMonthValue.trim().length === 0) {
-      validationErrors.push({
-        field: "billingMonth",
-        message: "Billing month is required and must be a non-empty string.",
-      });
-    }
 
     let parsedCustomDate: Date | null = null;
-    if (typeof customDate !== "undefined" && customDate !== null && customDate !== "") {
+    if (customDate) {
       parsedCustomDate = new Date(customDate);
-      if (isNaN(parsedCustomDate.getTime())) {
-        validationErrors.push({
-          field: "customDate",
-          message: "Custom date is invalid. Please provide a valid date value.",
-        });
-      }
     }
 
-    if (servicesInput.length === 0) {
-      validationErrors.push({
-        field: "services",
-        message: "At least one service is required.",
-      });
-    }
-
-    if (validationErrors.length > 0) {
-      return NextResponse.json(
-        { error: "Validation failed", fields: validationErrors },
-        { status: 400 }
-      );
-    }
-
-    // --- 🚨 SECURITY PATCH: Prevent malformed service payloads / NaN Poisoning ---
-    const MAX_SERVICE_TITLE_LENGTH = 200;
     const sanitizedServices: SanitizedService[] = servicesInput
-      .map((s: ServiceInput, index: number): SanitizedService => {
-        const title = typeof s?.title === "string" ? s.title.trim() : "";
-        if (!title) {
-          validationErrors.push({
-            field: "services.title",
-            index,
-            message: "Service title is required and cannot be empty.",
-          });
-        } else if (title.length > MAX_SERVICE_TITLE_LENGTH) {
-          validationErrors.push({
-            field: "services.title",
-            index,
-            message: `Service title must be ${MAX_SERVICE_TITLE_LENGTH} characters or fewer.`,
-          });
-        }
-
-        const amt = Number(s?.amount);
-        if (!Number.isFinite(amt) || amt < 0) {
-          validationErrors.push({
-            field: "services.amount",
-            index,
-            message: "Service amount must be a finite number greater than or equal to 0.",
-          });
-        }
-
+      .map((s): SanitizedService => {
         return {
           ...s,
-          title,
-          amount: amt,
-          amountDecimal: toDecimal(amt).toDecimalPlaces(2),
+          title: s.title,
+          amount: s.amount,
+          amountDecimal: toDecimal(s.amount).toDecimalPlaces(2),
           nicDetails: '',
         };
       });
-
-    if (validationErrors.length > 0) {
-      return NextResponse.json(
-        { error: "Validation failed", fields: validationErrors },
-        { status: 400 }
-      );
-    }
 
     const unverifiedProductIds = sanitizedServices.map((s: { productId?: string }) => s.productId).filter((id: unknown): id is string => typeof id === 'string' && id.length > 0);
     const validProducts = unverifiedProductIds.length > 0 
@@ -765,6 +729,7 @@ export async function POST(request: Request) {
             invoiceNumber: currentInvoiceNumber,
             billingMonth: billingMonthValue,
             amountFormatted: `${baseCurrency} ${formattedTotal}`,
+            locale: userLocale,
           });
           await sendEmail({
             route: 'user',
