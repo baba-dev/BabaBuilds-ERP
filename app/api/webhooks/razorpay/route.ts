@@ -36,13 +36,6 @@ export async function POST(req: Request) {
 
       if (workspaceId && interval) {
         try {
-          const existing = await prisma.billingTransaction.findFirst({
-            where: { workspaceId, providerReference: paymentEntity.id },
-            select: { id: true },
-          });
-          if (existing) {
-            return NextResponse.json({ status: "duplicate_ignored" });
-          }
           await processRazorpaySubscriptionPaymentVerified(paymentEntity.id, workspaceId);
         } catch (e) {
           console.error("Razorpay webhook subscription finalize failed:", e);
@@ -66,10 +59,13 @@ export async function POST(req: Request) {
           select: { id: true, workspaceId: true },
         });
         if (tx) {
-          await prisma.billingTransaction.update({
-            where: { id: tx.id },
+          const updated = await prisma.billingTransaction.updateMany({
+            where: { id: tx.id, status: { not: "REFUNDED" } },
             data: { status: "REFUNDED" },
           });
+          if (updated.count === 0) {
+            return NextResponse.json({ status: "refund_duplicate_ignored" });
+          }
           const reversed = await reverseDistributorCommissionForBillingTx(
             tx.id,
             `Razorpay refund webhook (${event.event})`,
