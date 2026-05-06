@@ -313,7 +313,7 @@ export default function ExpenseTracker() {
       fetchSummary();
     } catch (err) {
       if (isLikelyOfflineError(err)) {
-        queueOfflineMutation({
+        void queueOfflineMutation({
           entity: 'expense',
           operation: 'update',
           endpoint: `/api/expenses/${expenseToEdit.id}`,

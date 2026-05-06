@@ -23,7 +23,7 @@ export function useOfflineSync() {
   const [isRetrying, setIsRetrying] = useState(false);
 
   const refresh = useCallback(() => {
-    setSummary(getOfflineQueueSummary());
+    void getOfflineQueueSummary().then(setSummary);
   }, []);
 
   useEffect(() => {
