@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getClientIp } from '@/lib/request-ip';
 
 // Fetch the proposal data publicly using the secure token
 export async function GET(
@@ -101,9 +102,8 @@ export async function PATCH(
     }
     // --- 🚨 SECURITY & LOGIC PATCH END ---
 
-    // Grab the client's IP address from headers for the audit trail
-    const forwardedFor = request.headers.get('x-forwarded-for');
-    const clientIp = forwardedFor ? forwardedFor.split(',')[0] : 'Unknown IP';
+    // Grab the client's IP address from trusted proxy headers for the audit trail.
+    const clientIp = getClientIp(request);
 
     const updatedProposal = await prisma.proposal.update({
       where: { publicToken: token },

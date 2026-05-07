@@ -5,11 +5,10 @@ import { prisma } from "@/lib/prisma";
 import { normalizeDistributorCouponCode, decimalToNumber } from "@/lib/distributor-coupon";
 import { couponIsInValidityWindow } from "@/lib/distributor-margin";
 import { checkRateLimit } from "@/lib/rate-limit-memory";
+import { getClientIp } from "@/lib/request-ip";
 
 function clientKey(req: Request) {
-  const xf = req.headers.get("x-forwarded-for");
-  const ip = xf?.split(",")[0]?.trim() || "unknown";
-  return `apply-coupon:${ip}`;
+  return `apply-coupon:${getClientIp(req)}`;
 }
 
 export async function GET() {

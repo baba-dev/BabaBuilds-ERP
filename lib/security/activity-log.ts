@@ -3,6 +3,7 @@ import 'server-only';
 import crypto, { randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { getClientIp } from '@/lib/request-ip';
 
 const stableStringify = (value: unknown): string => {
   if (value === null || typeof value !== 'object') {
@@ -296,13 +297,6 @@ const firstHeader = (headers: Headers, candidates: string[]): string | null => {
   return null;
 };
 
-const normalizeIp = (value: string | null): string | null => {
-  if (!value) return null;
-  const first = value.split(',')[0]?.trim();
-  if (!first) return null;
-  return first.slice(0, MAX_IP_LENGTH);
-};
-
 export const extractRequestContext = (requestOrHeaders?: Request | Headers) => {
   if (!requestOrHeaders) {
     return {
@@ -313,9 +307,8 @@ export const extractRequestContext = (requestOrHeaders?: Request | Headers) => {
   }
 
   const headers = requestOrHeaders instanceof Headers ? requestOrHeaders : requestOrHeaders.headers;
-  const ipAddress = normalizeIp(
-    firstHeader(headers, ['x-forwarded-for', 'x-real-ip', 'cf-connecting-ip'])
-  );
+  const ip = getClientIp(headers);
+  const ipAddress = ip === 'unknown' ? null : ip.slice(0, MAX_IP_LENGTH);
   const userAgent = firstHeader(headers, ['user-agent'])?.slice(0, MAX_USER_AGENT_LENGTH) ?? null;
   const correlationId =
     firstHeader(headers, ['x-request-id', 'x-correlation-id'])?.slice(0, MAX_CORRELATION_ID_LENGTH) ?? null;

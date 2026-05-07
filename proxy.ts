@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getClientIp } from '@/lib/request-ip';
 
 type DecisionCacheEntry = {
   until: number;
@@ -35,15 +36,8 @@ const circuitBreaker = {
 };
 
 function normalizeClientIp(request: NextRequest): string {
-  const xForwardedFor = request.headers.get('x-forwarded-for');
-  const firstForwarded = xForwardedFor?.split(',')[0]?.trim();
-  const xRealIp = request.headers.get('x-real-ip')?.trim();
-  const rawIp = firstForwarded || xRealIp || '127.0.0.1';
-  const withoutPort = rawIp.startsWith('[')
-    ? rawIp.replace(/^\[([^\]]+)\](?::\d+)?$/, '$1')
-    : rawIp.replace(/:\d+$/, '');
-
-  return withoutPort.toLowerCase();
+  const ip = getClientIp(request);
+  return ip === 'unknown' ? '127.0.0.1' : ip;
 }
 
 function maybeLogMetrics() {

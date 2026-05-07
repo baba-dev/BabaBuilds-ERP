@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { LeadStage } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit-memory";
+import { getClientIp } from "@/lib/request-ip";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 
 type QueryPayload = {
@@ -17,11 +18,6 @@ type QueryPayload = {
   honeypot?: string;
 };
 
-function clientIp(req: Request) {
-  const xf = req.headers.get("x-forwarded-for");
-  return xf?.split(",")[0]?.trim() || "unknown";
-}
-
 function normalizeText(input: unknown, maxLen: number) {
   const value = typeof input === "string" ? input.trim() : "";
   return value.slice(0, maxLen);
@@ -34,7 +30,7 @@ function normalizeEmail(input: unknown) {
 
 export async function POST(req: Request) {
   try {
-    const ip = clientIp(req);
+    const ip = getClientIp(req);
     const limited = checkRateLimit(`reseller-query:${ip}`, 10, 60_000);
     if (!limited.ok) {
       return NextResponse.json(
