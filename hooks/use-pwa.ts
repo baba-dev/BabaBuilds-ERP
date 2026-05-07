@@ -23,12 +23,26 @@ type SyncServiceWorkerRegistration = ServiceWorkerRegistration & {
   };
 };
 
-export function usePWA() {
+type UsePWAOptions = {
+  /**
+   * When true, intercept beforeinstallprompt so a visible in-app install UI can
+   * own the browser prompt. Leave false whenever that UI is loading or hidden.
+   */
+  enableInstallPrompt?: boolean;
+};
+
+export function usePWA({ enableInstallPrompt = true }: UsePWAOptions = {}) {
   const [isInstallable, setIsInstallable] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
+    if (!enableInstallPrompt) {
+      return;
+    }
+
     const handleBeforeInstallPrompt = (event: Event) => {
+      // Intentionally suppress the browser mini-infobar only while a mounted,
+      // visible custom install control is ready to call installPWA().
       event.preventDefault();
       setDeferredPrompt(event as BeforeInstallPromptEvent);
       setIsInstallable(true);
@@ -39,10 +53,10 @@ export function usePWA() {
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
-  }, []);
+  }, [enableInstallPrompt]);
 
   const installPWA = async () => {
-    if (!deferredPrompt) {
+    if (!enableInstallPrompt || !deferredPrompt) {
       return;
     }
 
@@ -145,7 +159,7 @@ export function usePWA() {
   };
 
   return {
-    isInstallable,
+    isInstallable: enableInstallPrompt && isInstallable,
     installPWA,
     setAppBadge,
     clearAppBadge,

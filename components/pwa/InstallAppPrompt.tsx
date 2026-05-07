@@ -8,14 +8,21 @@ import { usePWA } from "@/hooks/use-pwa";
 const DISMISS_KEY = "baba-pwa-install-prompt-dismissed";
 
 export function InstallAppPrompt() {
-  const { isInstallable, installPWA } = usePWA();
-  const [dismissed, setDismissed] = useState(true);
+  const [dismissed, setDismissed] = useState(false);
+  const [isDismissedLoaded, setIsDismissedLoaded] = useState(false);
+  const canShowCustomInstallPrompt = isDismissedLoaded && !dismissed;
+  const { isInstallable, installPWA } = usePWA({
+    enableInstallPrompt: canShowCustomInstallPrompt,
+  });
 
   useEffect(() => {
-    setDismissed(localStorage.getItem(DISMISS_KEY) === "1");
+    queueMicrotask(() => {
+      setDismissed(localStorage.getItem(DISMISS_KEY) === "1");
+      setIsDismissedLoaded(true);
+    });
   }, []);
 
-  if (!isInstallable || dismissed) {
+  if (!canShowCustomInstallPrompt || !isInstallable) {
     return null;
   }
 
