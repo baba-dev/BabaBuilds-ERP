@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Globe2, MoonStar, Sun, ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -10,17 +10,26 @@ export default function FloatingPreferencesWidget() {
   const tl = useTranslations("LandingPhase1");
   const ts = useTranslations("Settings");
   const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  const [currentLocale, setCurrentLocale] = useState("en-IN");
   const localeOptions = [
     { label: ts("languageOptions.enIN"), value: "en-IN" },
     { label: ts("languageOptions.hi"), value: "hi" },
     { label: ts("languageOptions.ar"), value: "ar" },
     { label: ts("languageOptions.es"), value: "es" },
   ] as const;
-  const currentLocale = useMemo(() => {
-    if (typeof document === "undefined") return "en-IN";
+  useEffect(() => {
     const cookie = document.cookie.split("; ").find((part) => part.startsWith("NEXT_LOCALE="));
-    return cookie?.split("=")[1] || "en-IN";
+    const locale = cookie?.split("=")[1] || "en-IN";
+    const timeoutId = window.setTimeout(() => {
+      setCurrentLocale(locale);
+      setMounted(true);
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, []);
+
+  const themeIsDark = mounted && resolvedTheme === "dark";
 
   const updateLocale = (value: string) => {
     document.cookie = `NEXT_LOCALE=${value}; path=/; max-age=${60 * 60 * 24 * 365}`;
@@ -43,7 +52,7 @@ export default function FloatingPreferencesWidget() {
           </span>
           <div className="relative">
             <select
-              defaultValue={currentLocale}
+              value={currentLocale}
               onChange={(event) => updateLocale(event.target.value)}
               className="h-10 w-full appearance-none rounded-xl border border-zinc-200 bg-white px-3 pe-9 text-sm font-medium text-zinc-800 outline-none ring-orange-400/40 transition focus:ring-2 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
             >
@@ -60,11 +69,11 @@ export default function FloatingPreferencesWidget() {
         <Button
           type="button"
           variant="outline"
-          onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+          onClick={() => setTheme(themeIsDark ? "light" : "dark")}
           className="h-10 w-full justify-center gap-2 rounded-xl border-zinc-200 bg-white font-semibold text-zinc-700 hover:bg-orange-50 hover:text-orange-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-orange-300"
         >
-          {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
-          {resolvedTheme === "dark" ? tl("persona.widget.switchToLight") : tl("persona.widget.switchToDark")}
+          {themeIsDark ? <Sun className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
+          {themeIsDark ? tl("persona.widget.switchToLight") : tl("persona.widget.switchToDark")}
         </Button>
       </div>
     </aside>
