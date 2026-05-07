@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
 import { FREE_TIER_CLIENT_LIMIT, FREE_TIER_MONTHLY_INVOICE_LIMIT, formatPlanPrice, getPlanPriceFromInterval, getPricingRegion } from "@/lib/pricing";
+import { loadExternalScript } from "@/lib/client/load-external-script";
 
 type WorkspaceSummary = {
   planInterval: string | null;
@@ -70,12 +71,9 @@ export default function BillingSettingsClient({
     if (typeof window === "undefined") return false;
     if ((window as unknown as { Razorpay?: unknown }).Razorpay) return true;
 
-    await new Promise<boolean>((resolve) => {
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
+    await loadExternalScript("https://checkout.razorpay.com/v1/checkout.js", {
+      id: "razorpay-checkout-sdk",
+      timeoutMs: 10_000,
     });
 
     return Boolean((window as unknown as { Razorpay?: unknown }).Razorpay);
