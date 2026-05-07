@@ -17,6 +17,7 @@ import {
 } from "@/lib/pricing";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { loadExternalScript } from "@/lib/client/load-external-script";
 
 function SuccessUpgradeModal({ interval, onClose }: { interval: string, onClose: () => void }) {
   const isTeam = interval.includes("TEAM");
@@ -66,16 +67,15 @@ function SuccessUpgradeModal({ interval, onClose }: { interval: string, onClose:
 
 // Utility to inject the Razorpay script dynamically
 const loadRazorpayScript = () => {
-  return new Promise((resolve) => {
+  return new Promise<boolean>((resolve) => {
     if ((window as any).Razorpay) {
       resolve(true);
       return;
     }
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
+    void loadExternalScript("https://checkout.razorpay.com/v1/checkout.js", {
+      id: "razorpay-checkout-sdk",
+      timeoutMs: 10_000,
+    }).then(resolve);
   });
 };
 
