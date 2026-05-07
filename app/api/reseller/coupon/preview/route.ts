@@ -2,17 +2,13 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit-memory";
+import { getClientIp } from "@/lib/request-ip";
 
 const toNumber = (value: Prisma.Decimal | number | null | undefined) => Number(value ?? 0);
 
-function clientIp(req: Request) {
-  const xf = req.headers.get("x-forwarded-for");
-  return xf?.split(",")[0]?.trim() || "unknown";
-}
-
 export async function POST(req: Request) {
   try {
-    const ip = clientIp(req);
+    const ip = getClientIp(req);
     const limited = checkRateLimit(`reseller-preview:${ip}`, 30, 60_000);
     if (!limited.ok) {
       return NextResponse.json(

@@ -6,11 +6,10 @@ import type { SubscriptionIntervalKey } from "@/lib/subscription-checkout";
 import type { PricingRegion } from "@/lib/pricing";
 import { PRICING_REGIONS } from "@/lib/pricing";
 import { checkRateLimit } from "@/lib/rate-limit-memory";
+import { getClientIp } from "@/lib/request-ip";
 
 function orderKey(req: Request, workspaceId: string) {
-  const xf = req.headers.get("x-forwarded-for");
-  const ip = xf?.split(",")[0]?.trim() || "unknown";
-  return `razorpay-order:${workspaceId}:${ip}`;
+  return `razorpay-order:${workspaceId}:${getClientIp(req)}`;
 }
 
 export async function POST(req: Request) {

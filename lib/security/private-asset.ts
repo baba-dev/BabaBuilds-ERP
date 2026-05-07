@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { promises as fs } from 'fs';
 import { buildPrivatePath, type PrivateAssetKind } from '@/lib/uploads/private-storage';
+import { getClientIp } from '@/lib/request-ip';
 
 export type AssetKind = 'receipts' | 'logos' | 'invoices' | 'documents';
 
@@ -22,10 +23,7 @@ export function logDeniedAssetAccess(args: {
   requestedPath: string;
   workspaceId?: string;
 }) {
-  const ip =
-    args.request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    args.request.headers.get('x-real-ip') ||
-    'unknown';
+  const ip = getClientIp(args.request);
 
   console.warn(
     '[AUDIT] Asset access denied',

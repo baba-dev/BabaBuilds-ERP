@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getClientIp } from '@/lib/request-ip';
 
 type Bucket = { count: number; resetAt: number };
 
@@ -39,16 +40,7 @@ function getStore() {
 }
 
 export function getRequestIp(request: Request): string {
-  const xff = request.headers.get('x-forwarded-for');
-  if (xff) {
-    const first = xff.split(',')[0]?.trim();
-    if (first) return first;
-  }
-
-  const real = request.headers.get('x-real-ip')?.trim();
-  if (real) return real;
-
-  return 'unknown';
+  return getClientIp(request);
 }
 
 export function enforceRouteRateLimit(input: {
