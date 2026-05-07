@@ -20,6 +20,7 @@ jobs:
           script: |
             source ~/.bashrc
             export PATH=$PATH:/usr/bin:/usr/local/bin
+            set -euo pipefail
 
             cd /var/www/bababuilds-erp
 
@@ -30,7 +31,18 @@ jobs:
 
             npx prisma generate
             npx prisma db push
+            rm -f public/sw.js
             npm run build
+
+            if ! test -s public/sw.js; then
+              echo "ERROR: Serwist service worker was not generated at public/sw.js after npm run build." >&2
+              exit 1
+            fi
+
+            if ! grep -Eq "serwist|ServiceWorkerGlobalScope|addEventListener|precache|skipWaiting" public/sw.js; then
+              echo "ERROR: public/sw.js exists but does not look like a generated Serwist/service-worker bundle." >&2
+              exit 1
+            fi
 
             chown -R root:root .
 
@@ -49,3 +61,49 @@ jobs:
             chmod -R 775 public/invoices
 
             npx pm2 restart erp || npx pm2 start npm --name "erp" -- start
+
+            if [ -n "${{ secrets.CLOUDFLARE_ZONE_ID }}" ] && [ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
+              curl --fail --silent --show-error --request POST \
+                "https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/purge_cache" \
+                --header "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+                --header "Content-Type: application/json" \
+                --data '{"files":["https://erp.bababuilds.com/sw.js"]}'
+            else
+              echo "Skipping Cloudflare /sw.js purge because CLOUDFLARE_ZONE_ID or CLOUDFLARE_API_TOKEN is not configured."
+            fi
+
+            sw_body="$(mktemp)"
+            sw_headers="$(mktemp)"
+            cleanup_sw_smoke() {
+              rm -f "$sw_body" "$sw_headers"
+            }
+            trap cleanup_sw_smoke EXIT
+
+            sw_status="$(curl --silent --show-error --location \
+              --output "$sw_body" \
+              --dump-header "$sw_headers" \
+              --write-out "%{http_code}" \
+              "https://erp.bababuilds.com/sw.js")"
+
+            if [ "$sw_status" != "200" ]; then
+              echo "ERROR: https://erp.bababuilds.com/sw.js returned HTTP $sw_status, expected 200." >&2
+              cat "$sw_headers" >&2
+              exit 1
+            fi
+
+            sw_content_type="$(awk 'BEGIN{IGNORECASE=1} /^content-type:/ { value=$0; sub(/^[^:]*:[[:space:]]*/, "", value); print value; exit }' "$sw_headers")"
+            if ! printf '%s' "$sw_content_type" | grep -Eiq '^(application|text)/(javascript|ecmascript|x-javascript)(;|$)'; then
+              echo "ERROR: https://erp.bababuilds.com/sw.js returned Content-Type '$sw_content_type', expected a JavaScript MIME type." >&2
+              cat "$sw_headers" >&2
+              exit 1
+            fi
+
+            if ! test -s "$sw_body"; then
+              echo "ERROR: https://erp.bababuilds.com/sw.js returned an empty body." >&2
+              exit 1
+            fi
+
+            if ! grep -Eq "serwist|ServiceWorkerGlobalScope|addEventListener|precache|skipWaiting" "$sw_body"; then
+              echo "ERROR: https://erp.bababuilds.com/sw.js body does not look like generated Serwist/service-worker code." >&2
+              exit 1
+            fi
