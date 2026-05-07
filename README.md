@@ -166,6 +166,8 @@ NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="replace-with-a-random-secret"
 AUTH_GOOGLE_ENABLED=false
 AUTH_EMAIL_ENABLED=false
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=""
+TURNSTILE_SECRET_KEY=""
 ```
 
 ### 3) Prepare Prisma client and schema
@@ -205,6 +207,12 @@ Open: [http://localhost:3000](http://localhost:3000)
 - `AUTH_GOOGLE_ENABLED`
 
 When enabling email or Google auth, set the related provider credentials as documented in [Auth Configuration Modes](#auth-configuration-modes).
+
+### Turnstile bot protection
+- `NEXT_PUBLIC_TURNSTILE_SITE_KEY` — public Cloudflare Turnstile site key used by client widgets.
+- `TURNSTILE_SECRET_KEY` — private Cloudflare Turnstile secret key used by server-side token verification.
+
+Leave both blank in local development when Turnstile-protected flows are not being exercised.
 
 ---
 

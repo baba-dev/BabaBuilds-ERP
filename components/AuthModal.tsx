@@ -18,7 +18,6 @@ import {
   UserRound,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Turnstile } from "@marsidev/react-turnstile";
 import { toast } from "sonner";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -32,6 +31,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import TurnstileWidget from "@/components/TurnstileWidget";
 import type { DemoTemplateKey } from "@/lib/demo/templates/types";
 import { isDemoTemplateKey } from "@/lib/demo/templates";
 
@@ -628,16 +628,14 @@ export default function AuthModal({
                 </div>
 
                 {!isDemoLoading && isProd && (
-                  <div className="flex justify-center rounded-lg border border-border/80 bg-muted/25 py-2">
-                    <Turnstile
-                      siteKey="0x4AAAAAACvSwAyJa3nVFu2n"
-                      onSuccess={(token) => {
-                        setTurnstileToken(token);
-                        setRequiresTurnstile(false);
-                      }}
-                      options={{ theme: "dark" }}
-                    />
-                  </div>
+                  <TurnstileWidget
+                    className="flex justify-center rounded-lg border border-border/80 bg-muted/25 py-2"
+                    onVerify={(token) => {
+                      setTurnstileToken(token);
+                      setRequiresTurnstile(false);
+                    }}
+                    options={{ theme: "dark" }}
+                  />
                 )}
 
                 <Button

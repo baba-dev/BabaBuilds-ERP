@@ -1,4 +1,3 @@
-import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
 export type DemoProvisionBlockReason =
@@ -15,17 +14,6 @@ export type DemoProvisionDecision = {
 function asPositiveInt(value: unknown, fallback: number): number {
   const n = typeof value === 'string' ? Number(value) : typeof value === 'number' ? value : NaN;
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
-}
-
-export function getClientIp(request: Request): string | null {
-  // Best-effort (not a security boundary). Cloud agents / proxies often only provide x-forwarded-for.
-  const xff = request.headers.get('x-forwarded-for');
-  if (xff) {
-    const first = xff.split(',')[0]?.trim();
-    if (first) return first;
-  }
-  const real = request.headers.get('x-real-ip')?.trim();
-  return real || null;
 }
 
 export function getClientFingerprint(request: Request): string | null {

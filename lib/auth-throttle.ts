@@ -113,7 +113,7 @@ export async function evaluateEmailSignInThrottle(input: EvaluateInput): Promise
       };
     }
 
-    const verified = await verifyTurnstileToken(input.turnstileToken);
+    const verified = await verifyTurnstileToken(input.turnstileToken, input.ip);
     if (!verified) {
       return {
         allowed: false,

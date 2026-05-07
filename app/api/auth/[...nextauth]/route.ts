@@ -4,19 +4,9 @@ import type { NextRequest } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { evaluateEmailSignInThrottle } from "@/lib/auth-throttle";
 import { recordAuthThrottleAttempt, validateAuthEnvOrThrow } from "@/lib/auth-observability";
+import { getRequestIp } from "@/lib/request-ip";
 
 const handler = NextAuth(authOptions);
-
-function getClientIp(req: Request): string {
-  const forwardedFor = req.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    const first = forwardedFor.split(",")[0]?.trim();
-    if (first) return first;
-  }
-
-  const realIp = req.headers.get("x-real-ip") || req.headers.get("cf-connecting-ip");
-  return realIp?.trim() || "unknown";
-}
 
 function hashEmail(email: string): string {
   return crypto.createHash("sha256").update(email.trim().toLowerCase()).digest("hex");
@@ -49,7 +39,7 @@ async function applyEmailSignInThrottle(req: NextRequest): Promise<Response | nu
     return null;
   }
 
-  const ip = getClientIp(req);
+  const ip = getRequestIp(req);
   const fingerprint = req.headers.get("x-auth-fingerprint");
   const decision = await evaluateEmailSignInThrottle({
     ip,

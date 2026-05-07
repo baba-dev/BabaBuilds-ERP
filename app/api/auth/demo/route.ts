@@ -6,11 +6,12 @@ import { seedDemoWorkspace } from "@/lib/demo/seed-workspace";
 import {
   evaluateDemoProvisionThrottle,
   getClientFingerprint,
-  getClientIp,
   recordDemoProvisionAttempt,
   throttleToHttpResponse,
 } from "@/lib/demo-auth-throttle";
+import { getClientIp } from "@/lib/request-ip";
 import { enforceRouteRateLimit } from "@/lib/route-rate-limit";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 // --- HELPERS ---
 
@@ -25,26 +26,17 @@ function isLocalhostRequest(request: Request): boolean {
   return false;
 }
 
-async function verifyTurnstile(
+function turnstileFailureResponse(
   token: unknown,
-): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  verified: boolean,
+): { ok: true } | { ok: false; status: number; error: string } {
   if (!token || typeof token !== "string") {
     return { ok: false, status: 400, error: "Security challenge failed: No token." };
   }
   if (!process.env.TURNSTILE_SECRET_KEY) {
     return { ok: false, status: 500, error: "Turnstile is not configured (missing TURNSTILE_SECRET_KEY)." };
   }
-
-  const verifyRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      secret: process.env.TURNSTILE_SECRET_KEY,
-      response: token,
-    }),
-  });
-  const verifyData = await verifyRes.json().catch(() => null);
-  if (!verifyData?.success) {
+  if (!verified) {
     return { ok: false, status: 403, error: "Bot verification failed." };
   }
   return { ok: true };
@@ -72,6 +64,7 @@ export async function POST(request: Request) {
     // --- 🚨 SECURITY LAYER 0: TURNSTILE VERIFICATION ---
     const isDev = process.env.NODE_ENV === "development";
     const isLocal = isLocalhostRequest(request);
+    const ip = getClientIp(request);
 
     const agentKeyFromHeader = request.headers.get("x-demo-agent-key")?.trim() || null;
     const configuredAgentKey = process.env.DEMO_AGENT_KEY?.trim() || null;
@@ -108,10 +101,12 @@ export async function POST(request: Request) {
     // - localhost: allow without Turnstile (faster local onboarding)
     // - non-local: allow with valid agent key OR Turnstile token (verified)
     if (!isDev) {
-      const verify = await verifyTurnstile(token);
+      const verified = typeof token === "string" ? await verifyTurnstileToken(token, ip) : false;
+      const verify = turnstileFailureResponse(token, verified);
       if (!verify.ok) return NextResponse.json({ error: verify.error }, { status: verify.status });
     } else if (!isLocal && !hasValidAgentKey) {
-      const verify = await verifyTurnstile(token);
+      const verified = typeof token === "string" ? await verifyTurnstileToken(token, ip) : false;
+      const verify = turnstileFailureResponse(token, verified);
       if (!verify.ok) return NextResponse.json({ error: verify.error }, { status: verify.status });
     }
 
@@ -120,7 +115,6 @@ export async function POST(request: Request) {
     const configuredThreshold = Number(process.env.DEMO_CIRCUIT_BREAKER_THRESHOLD ?? "10");
     const threshold = Number.isFinite(configuredThreshold) ? configuredThreshold : 10;
 
-    const ip = getClientIp(request);
     const fingerprint = getClientFingerprint(request);
     const globalCount = await prisma.workspace.count({
       where: {
