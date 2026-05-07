@@ -31,6 +31,24 @@ server {
     add_header Referrer-Policy "no-referrer-when-downgrade";
     add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline' 'unsafe-eval'; frame-ancestors 'self';";
 
+    # Service worker must be served from the origin root with a JavaScript MIME
+    # type and no CDN/proxy caching so newly generated Serwist bundles activate
+    # immediately after deployment. Keep this before the generic / location.
+    location = /sw.js {
+        proxy_pass http://localhost:3000/sw.js;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_hide_header Content-Type;
+        proxy_hide_header Cache-Control;
+        add_header Content-Type "application/javascript; charset=utf-8" always;
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+        add_header Pragma "no-cache" always;
+        add_header Expires "0" always;
+    }
+
     location / {
         proxy_pass http://localhost:3000; # Assuming Next.js runs on 3000
         proxy_http_version 1.1;
