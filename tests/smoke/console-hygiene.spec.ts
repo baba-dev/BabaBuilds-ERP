@@ -59,11 +59,27 @@ test.describe("Console hygiene", () => {
       }
     });
 
-    for (const route of ["/", "/login", "/help"]) {
-      const response = await page.goto(route, { waitUntil: "networkidle" });
-      expect(response?.status(), `${route} should not 5xx`).toBeLessThan(500);
-    }
+    const criticalRoutes = [
+      "/",
+      "/login",
+      "/help",
+      "/for-ca",
+      "/for-agencies",
+      "/for-contractors",
+      "/for-small-businesses",
+      "/for-freelancers",
+      "/reseller",
+      "/terms",
+      "/privacy",
+      "/refund-cancellation",
+    ];
 
-    expect(firstPartyIssues, firstPartyIssues.join("\n")).toEqual([]);
+    for (const route of criticalRoutes) {
+      firstPartyIssues.length = 0;
+      const response = await page.goto(route, { waitUntil: "domcontentloaded", timeout: 45_000 });
+      expect(response?.status(), `${route} should not 5xx`).toBeLessThan(500);
+      await page.waitForTimeout(300);
+      expect(firstPartyIssues, `${route}\n${firstPartyIssues.join("\n")}`).toEqual([]);
+    }
   });
 });
