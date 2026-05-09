@@ -62,15 +62,23 @@ jobs:
 
             npx pm2 restart erp || npx pm2 start npm --name "erp" -- start
 
-            if [ -n "${{ secrets.CLOUDFLARE_ZONE_ID }}" ] && [ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
-              curl --fail --silent --show-error --request POST \
-                "https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/purge_cache" \
-                --header "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
-                --header "Content-Type: application/json" \
-                --data '{"files":["https://erp.bababuilds.com/sw.js"]}'
-            else
-              echo "Skipping Cloudflare /sw.js purge because CLOUDFLARE_ZONE_ID or CLOUDFLARE_API_TOKEN is not configured."
-            fi
+            sw_url="https://erp.bababuilds.com/sw.js"
+            purge_cloudflare_sw() {
+              if [ -n "${{ secrets.CLOUDFLARE_ZONE_ID }}" ] && [ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
+                # Purge the canonical service-worker URL after the origin is
+                # restarted so Cloudflare cannot keep serving a stale /sw.js
+                # object with old or missing MIME/cache headers.
+                curl --fail --silent --show-error --request POST \
+                  "https://api.cloudflare.com/client/v4/zones/${{ secrets.CLOUDFLARE_ZONE_ID }}/purge_cache" \
+                  --header "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+                  --header "Content-Type: application/json" \
+                  --data "{\"files\":[\"${sw_url}\"]}"
+              else
+                echo "Skipping Cloudflare /sw.js purge because CLOUDFLARE_ZONE_ID or CLOUDFLARE_API_TOKEN is not configured."
+              fi
+            }
+
+            purge_cloudflare_sw
 
             sw_body="$(mktemp)"
             sw_headers="$(mktemp)"
@@ -79,31 +87,53 @@ jobs:
             }
             trap cleanup_sw_smoke EXIT
 
-            sw_status="$(curl --silent --show-error --location \
-              --output "$sw_body" \
-              --dump-header "$sw_headers" \
-              --write-out "%{http_code}" \
-              "https://erp.bababuilds.com/sw.js")"
+            sw_smoke_passed=0
+            for sw_attempt in 1 2 3 4 5; do
+              : > "$sw_body"
+              : > "$sw_headers"
 
-            if [ "$sw_status" != "200" ]; then
-              echo "ERROR: https://erp.bababuilds.com/sw.js returned HTTP $sw_status, expected 200." >&2
-              cat "$sw_headers" >&2
-              exit 1
-            fi
+              sw_status="$(curl --silent --show-error --location \
+                --output "$sw_body" \
+                --dump-header "$sw_headers" \
+                --write-out "%{http_code}" \
+                "$sw_url")"
 
-            sw_content_type="$(awk 'BEGIN{IGNORECASE=1} /^content-type:/ { value=$0; sub(/^[^:]*:[[:space:]]*/, "", value); print value; exit }' "$sw_headers")"
-            if ! printf '%s' "$sw_content_type" | grep -Eiq '^(application|text)/(javascript|ecmascript|x-javascript)(;|$)'; then
-              echo "ERROR: https://erp.bababuilds.com/sw.js returned Content-Type '$sw_content_type', expected a JavaScript MIME type." >&2
-              cat "$sw_headers" >&2
-              exit 1
-            fi
+              sw_content_type="$(awk 'BEGIN{IGNORECASE=1} /^content-type:/ { value=$0; sub(/^[^:]*:[[:space:]]*/, "", value); print value; exit }' "$sw_headers")"
 
-            if ! test -s "$sw_body"; then
-              echo "ERROR: https://erp.bababuilds.com/sw.js returned an empty body." >&2
-              exit 1
-            fi
+              if [ "$sw_status" = "200" ] \
+                && printf '%s' "$sw_content_type" | grep -Eiq '^(application|text)/(javascript|ecmascript|x-javascript)(;|$)' \
+                && test -s "$sw_body" \
+                && grep -Eq "serwist|ServiceWorkerGlobalScope|addEventListener|precache|skipWaiting" "$sw_body"; then
+                sw_smoke_passed=1
+                break
+              fi
 
-            if ! grep -Eq "serwist|ServiceWorkerGlobalScope|addEventListener|precache|skipWaiting" "$sw_body"; then
-              echo "ERROR: https://erp.bababuilds.com/sw.js body does not look like generated Serwist/service-worker code." >&2
+              if [ "$sw_attempt" != "5" ]; then
+                echo "Waiting for $sw_url to return the latest uncached JavaScript response (attempt $sw_attempt/5)." >&2
+                cat "$sw_headers" >&2
+                purge_cloudflare_sw
+                sleep 5
+              fi
+            done
+
+            if [ "$sw_smoke_passed" != "1" ]; then
+              if [ "$sw_status" != "200" ]; then
+                echo "ERROR: $sw_url returned HTTP $sw_status, expected 200." >&2
+                cat "$sw_headers" >&2
+                exit 1
+              fi
+
+              if ! printf '%s' "$sw_content_type" | grep -Eiq '^(application|text)/(javascript|ecmascript|x-javascript)(;|$)'; then
+                echo "ERROR: $sw_url returned Content-Type '$sw_content_type', expected a JavaScript MIME type." >&2
+                cat "$sw_headers" >&2
+                exit 1
+              fi
+
+              if ! test -s "$sw_body"; then
+                echo "ERROR: $sw_url returned an empty body." >&2
+                exit 1
+              fi
+
+              echo "ERROR: $sw_url body does not look like generated Serwist/service-worker code." >&2
               exit 1
             fi
