@@ -670,9 +670,9 @@ export default function AuthModal({
             <div className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
               <Link href="/help" className="hover:text-foreground transition-colors">Documentation</Link>
               <span aria-hidden="true">&bull;</span>
-              <Link href="/help/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+              <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
               <span aria-hidden="true">&bull;</span>
-              <Link href="/help/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
+              <Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
             </div>
           </div>
         </div>

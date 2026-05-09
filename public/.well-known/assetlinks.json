@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.bababuilds.erp.twa",
+      "sha256_cert_fingerprints": [
+        "FD:27:DF:46:E0:8E:B5:70:32:5D:9A:02:B0:73:45:73:16:CB:B3:5E:A9:2B:FE:AB:D9:26:86:0E:70:3B:88:79"
+      ]
+    }
+  }
+]
