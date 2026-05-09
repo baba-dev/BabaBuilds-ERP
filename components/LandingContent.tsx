@@ -31,6 +31,7 @@ import LandingPersonaHub from "@/components/landing/LandingPersonaHub";
 import FloatingPreferencesWidget from "@/components/landing/FloatingPreferencesWidget";
 import SocialProofHero from "@/components/landing/SocialProofHero";
 import { InstallAppPrompt } from "@/components/pwa/InstallAppPrompt";
+import { MobileNativeInstallSection } from "@/components/landing/MobileNativeInstallSection";
 
 export default function LandingContent() {
   const t = useTranslations("Landing");
@@ -157,6 +158,8 @@ export default function LandingContent() {
       </section>
 
       <LandingStorySteps />
+
+      <MobileNativeInstallSection />
 
       <section className="border-b border-border/80 bg-surface-base py-14">
         <div className="mx-auto max-w-7xl px-6">
