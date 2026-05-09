@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from 'next-intl/plugin';
 import withSerwistInit from '@serwist/next';
+import { serviceWorkerHeaders } from './lib/service-worker/headers';
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
@@ -50,12 +51,10 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/sw.js',
-        headers: [
-          // Ensure clients fetch the latest SW after each deployment.
-          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
-          { key: 'Pragma', value: 'no-cache' },
-          { key: 'Expires', value: '0' },
-        ],
+        // Keep the service worker MIME type and cache policy explicit at the
+        // Next.js layer; proxy.ts applies the same headers to the generated
+        // bundle so proxies/CDNs never infer or retain stale values.
+        headers: [...serviceWorkerHeaders],
       },
     ];
   },

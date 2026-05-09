@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getClientIp } from '@/lib/request-ip';
+import { SERVICE_WORKER_PATH, serviceWorkerHeaders } from '@/lib/service-worker/headers';
 
 type DecisionCacheEntry = {
   until: number;
@@ -34,6 +35,24 @@ const circuitBreaker = {
   failures: 0,
   openUntil: 0,
 };
+
+function withServiceWorkerHeaders(response: NextResponse): NextResponse {
+  for (const { key, value } of serviceWorkerHeaders) {
+    response.headers.set(key, value);
+  }
+
+  return response;
+}
+
+function nextResponseFor(request: NextRequest): NextResponse {
+  const response = NextResponse.next();
+
+  if (request.nextUrl.pathname === SERVICE_WORKER_PATH) {
+    return withServiceWorkerHeaders(response);
+  }
+
+  return response;
+}
 
 function normalizeClientIp(request: NextRequest): string {
   const ip = getClientIp(request);
@@ -74,7 +93,7 @@ export async function proxy(request: NextRequest) {
         return new NextResponse('Forbidden - Access blocked by IPS.', { status: 403 });
       }
 
-      return NextResponse.next();
+      return nextResponseFor(request);
     }
 
     metrics.cacheMiss += 1;
@@ -86,7 +105,7 @@ export async function proxy(request: NextRequest) {
     if (isCircuitOpen) {
       metrics.circuitOpenSkips += 1;
       maybeLogMetrics();
-      return NextResponse.next();
+      return nextResponseFor(request);
     }
 
     try {
@@ -137,7 +156,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  return nextResponseFor(request);
 }
 
 export const config = {
