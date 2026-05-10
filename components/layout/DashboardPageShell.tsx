@@ -112,7 +112,7 @@ export function DashboardPageShell({
 
 
   return (
-    <div className="min-h-full bg-surface-base p-4 transition-colors duration-300 md:p-6">
+    <div className="min-h-full bg-surface-base p-4 pb-[calc(theme(spacing.4)+env(safe-area-inset-bottom))] transition-colors duration-300 md:p-6 md:pb-6">
       <div className={cn("mx-auto space-y-6", maxWidthClassName, animated && animationClassName)}>
         <header
           className={cn(
