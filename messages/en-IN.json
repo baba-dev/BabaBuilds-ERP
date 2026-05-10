@@ -1300,6 +1300,24 @@
       "trustedSuffix": "successful teams",
       "taxLine": "Built for Indian and global tax workflows"
     },
+    "mobileInstall": {
+      "eyebrow": "Mobile & desktop apps",
+      "title": "Install BabaBuilds ERP on your phone or computer",
+      "subtitle": "Use the progressive web app in your browser, or download published packages for Android, iOS, or desktop when we link them to your release channel.",
+      "hint": {
+        "android": "You are on Android — use the download below when available, or install from Chrome when prompted.",
+        "ios": "You are on iPhone or iPad — use Safari and Add to Home Screen for an app icon.",
+        "desktop": "On desktop, Chrome or Edge can install the app from the address bar when install is offered."
+      },
+      "iosSafariTitle": "iPhone & iPad (Safari)",
+      "iosSafariBody": "Open this site in Safari, tap Share, then Add to Home Screen.",
+      "ctaAndroid": "Download Android build",
+      "ctaIos": "iOS install link",
+      "ctaDesktop": "Desktop package",
+      "packagesPending": "Native install buttons appear here once release URLs are configured for your deployment.",
+      "pwaHint": "After sign-in, open Settings → App Features (PWA) to install when your browser supports it.",
+      "settingsLink": "PWA install in Settings"
+    },
     "featuresByOutcome": {
       "getPaid": {
         "title": "Get paid",
