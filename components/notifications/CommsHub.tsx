@@ -11,10 +11,11 @@ import {
   Inbox,
   LifeBuoy,
   LogOut,
-  Shield,
+  MonitorSmartphone,
   User,
   Zap,
 } from 'lucide-react';
+import { ConnectDeviceTab } from './ConnectDeviceTab';
 import { cn } from '@/lib/utils';
 import type { InAppNotification } from '@prisma/client';
 import { formatDistanceToNow } from 'date-fns';
@@ -235,10 +236,10 @@ function CommsHubInner({
                 <span>Account</span>
               </div>
             </TabsTrigger>
-            <TabsTrigger value="security" className={tabTriggerClasses}>
+            <TabsTrigger value="connect" className={tabTriggerClasses}>
               <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                <span>Security</span>
+                <MonitorSmartphone className="h-4 w-4" />
+                <span>Connect Device</span>
               </div>
             </TabsTrigger>
           </TabsList>
@@ -352,17 +353,8 @@ function CommsHubInner({
             </div>
           </TabsContent>
 
-          <TabsContent value="security" className={cn('mt-0 outline-none', contentPaddingClasses)}>
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Shield className="mb-4 h-12 w-12 text-zinc-700" />
-              <h4 className="text-lg font-medium text-zinc-300">Security &amp; Privacy</h4>
-              <p className="mt-1 max-w-[300px] text-sm text-zinc-600">
-                Manage your password, two-factor authentication, and active sessions.
-              </p>
-              <Button variant="outline" className="mt-6 h-11 border-zinc-800 hover:bg-white/5">
-                Go to Security Settings
-              </Button>
-            </div>
+          <TabsContent value="connect" className={cn('mt-0 outline-none', contentPaddingClasses)}>
+            <ConnectDeviceTab />
           </TabsContent>
         </div>
       </Tabs>
