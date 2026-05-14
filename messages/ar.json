@@ -2266,7 +2266,7 @@
         "invoices": "Up to {count} invoices created per UTC calendar month.",
         "shop": "Up to {count} published services in the public shop catalog.",
         "payments": "Collecting payments through Razorpay or Stripe gateway links on invoices and PDFs requires Pro, Team, or an active Pro trial—not the permanent Free tier.",
-        "seats": "Up to {count} workspace seat (active members and pending invites both count toward the seat cap)."
+        "seats": "Up to {count} workspace seat(s); active members and pending invites both count toward the seat cap."
       }
     },
     "revenue": {
