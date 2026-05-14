@@ -1920,6 +1920,22 @@
           "GST compliance software India",
           "CA billing and receivables tool"
         ]
+      },
+      "seoFaq": {
+        "items": [
+          {
+            "question": "Is BabaBuilds ERP suited for chartered accountants and tax firms?",
+            "answer": "Yes. The workspace is oriented around monthly compliance packs, client-wise receivables, GST-aligned invoicing, and a document trail suitable for recurring practice operations."
+          },
+          {
+            "question": "How does it help with GST and TDS preparation workflows?",
+            "answer": "You can centralize filings-related documents, track readiness blockers, and align proposals and invoices with tax-aware defaults while maintaining an activity trail across billing and records."
+          },
+          {
+            "question": "Can we try the product before rolling it out to clients?",
+            "answer": "You can start a 15-day Pro trial or open the tax-agency demo with seeded practice data to validate the workflow before committing."
+          }
+        ]
       }
     },
     "forAgencies": {
@@ -1975,6 +1991,22 @@
           "agency ERP",
           "retainer invoicing software",
           "agency receivables management"
+        ]
+      },
+      "seoFaq": {
+        "items": [
+          {
+            "question": "Does BabaBuilds ERP support retainer and recurring billing for agencies?",
+            "answer": "Yes. Retainer automation with recurring billing cycles is a first-class workflow so monthly revenue is predictable instead of delayed by manual invoicing."
+          },
+          {
+            "question": "How are proposals and invoices connected?",
+            "answer": "Accepted proposals flow into invoice actions with pipeline context, reducing rework and scattered threads between sales and finance."
+          },
+          {
+            "question": "What is the fastest way to evaluate the product?",
+            "answer": "Use the 15-day Pro trial or launch the live demo tuned for agency operations to explore proposals, retainers, and receivables in one place."
+          }
         ]
       }
     },
@@ -2032,6 +2064,22 @@
           "builder ERP",
           "project cash flow management"
         ]
+      },
+      "seoFaq": {
+        "items": [
+          {
+            "question": "Can contractors use BabaBuilds ERP for milestone billing?",
+            "answer": "Yes. The workflow supports milestone-ready proposals and invoices so project billing stays aligned with job progress and collections."
+          },
+          {
+            "question": "How does it help with job costs and vendor payouts?",
+            "answer": "Expense capture and categorized outflow tracking sit next to cash-flow snapshots so site costs and vendor payouts do not get lost across spreadsheets."
+          },
+          {
+            "question": "Is there a demo tailored to construction workflows?",
+            "answer": "You can open the contractor demo with seeded data to walk milestone billing, expenses, and cash visibility before starting a trial."
+          }
+        ]
       }
     },
     "forSmallBusinesses": {
@@ -2088,6 +2136,22 @@
           "service business invoicing",
           "GST ready billing software"
         ]
+      },
+      "seoFaq": {
+        "items": [
+          {
+            "question": "Is BabaBuilds ERP appropriate for small service businesses?",
+            "answer": "Yes. It focuses on fast invoicing, receivables tracking, expense visibility, and tax-ready records without stitching together disconnected apps."
+          },
+          {
+            "question": "Does it support GST or VAT aware invoicing?",
+            "answer": "Country-aware tax defaults help you issue invoices with the right tax treatment for your market while keeping records organized for month-end close."
+          },
+          {
+            "question": "How do I get started quickly?",
+            "answer": "Start the 15-day Pro trial or use the interactive demo to send an invoice, review outstanding payments, and validate the dashboard in under an hour."
+          }
+        ]
       }
     },
     "forFreelancers": {
@@ -2143,6 +2207,22 @@
           "freelancer invoicing software",
           "consultant billing tool",
           "retainer management for freelancers"
+        ]
+      },
+      "seoFaq": {
+        "items": [
+          {
+            "question": "Can freelancers automate retainers and recurring invoices?",
+            "answer": "Yes. Retainer automation with recurring billing support is built in so predictable income is not delayed by manual follow-ups."
+          },
+          {
+            "question": "How does BabaBuilds ERP help at tax time?",
+            "answer": "Tax-ready invoice defaults, linked expenses, and a consolidated dashboard reduce the scramble of assembling records right before filing."
+          },
+          {
+            "question": "What is the best way to preview the freelancer workflow?",
+            "answer": "Launch the freelancer or consultant demo with seeded data, or start the 15-day Pro trial to connect proposals, invoices, and expenses in one workspace."
+          }
         ]
       }
     }

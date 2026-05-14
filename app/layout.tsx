@@ -33,7 +33,10 @@ const DEFAULT_SOCIAL_BANNER_URL = `${SITE_URL}${DEFAULT_SOCIAL_BANNER_PATH}`;
 const FAVICON_URL = `${SITE_URL}${FAVICON_PATH}`;
 const ORGANIZATION_NAME = "BabaBuilds";
 const ORGANIZATION_LOGO_URL = FAVICON_URL;
-const ORGANIZATION_SAME_AS = ["https://github.com/BabaBuilds-ERP"];
+  const ORGANIZATION_SAME_AS = [
+    "https://github.com/BabaBuilds-ERP",
+    "https://twitter.com/bababuilds",
+  ];
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -182,11 +185,6 @@ export default async function RootLayout({
                     "@id": `${SITE_URL}/#organization`,
                   },
                   inLanguage: ["en", "hi", "ar", "es"],
-                  potentialAction: {
-                    "@type": "SearchAction",
-                    target: `${SITE_URL}/search?q={search_term_string}`,
-                    "query-input": "required name=search_term_string",
-                  },
                 },
                 {
                   "@type": "WebPage",
@@ -229,9 +227,10 @@ export default async function RootLayout({
                   },
                   offers: {
                     "@type": "Offer",
-                    price: "0",
-                    priceCurrency: "USD",
+                    url: `${SITE_URL}/signup`,
                     availability: "https://schema.org/InStock",
+                    description:
+                      "Free tier and paid plans with trials; see signup and pricing for current options.",
                   },
                   screenshot: DEFAULT_SOCIAL_BANNER_URL,
                   featureList: [

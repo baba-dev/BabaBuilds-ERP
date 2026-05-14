@@ -17,7 +17,6 @@ const AUTHENTICATED_TOP_LEVEL_PATHS = [
   '/services/',
   '/settings/',
   '/setup/',
-  '/shop/',
   '/tax/',
 ];
 
@@ -26,7 +25,6 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: ['/', '/help/', '/shop/'],
         disallow: [
           '/api/',
           '/authenticated/',

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
+import PersonaFaqJsonLd from "@/components/landing/persona/PersonaFaqJsonLd";
 import PersonaLandingPage from "@/components/landing/persona/PersonaLandingPage";
 import { personaConfigs } from "@/components/landing/persona/persona-config";
 
@@ -25,6 +26,11 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function ForAgenciesPage() {
-  return <PersonaLandingPage persona={persona} />;
+export default async function ForAgenciesPage() {
+  return (
+    <>
+      <PersonaFaqJsonLd namespace={persona.namespace} />
+      <PersonaLandingPage persona={persona} />
+    </>
+  );
 }

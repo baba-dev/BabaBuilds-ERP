@@ -17,6 +17,19 @@ const STATIC_ROUTES: Array<{
   { route: '', changeFrequency: 'weekly', priority: 1.0 },
   { route: '/help', changeFrequency: 'weekly', priority: 0.9 },
   { route: '/login', changeFrequency: 'monthly', priority: 0.5 },
+  { route: '/signup', changeFrequency: 'weekly', priority: 0.85 },
+  { route: '/for-agencies', changeFrequency: 'weekly', priority: 0.88 },
+  { route: '/for-freelancers', changeFrequency: 'weekly', priority: 0.88 },
+  { route: '/for-small-businesses', changeFrequency: 'weekly', priority: 0.88 },
+  { route: '/for-contractors', changeFrequency: 'weekly', priority: 0.88 },
+  { route: '/for-ca', changeFrequency: 'weekly', priority: 0.88 },
+  { route: '/help-hub', changeFrequency: 'weekly', priority: 0.82 },
+  { route: '/reseller', changeFrequency: 'monthly', priority: 0.75 },
+  { route: '/reseller/partner-kit', changeFrequency: 'monthly', priority: 0.65 },
+  { route: '/tax-engine-scope', changeFrequency: 'monthly', priority: 0.6 },
+  { route: '/privacy', changeFrequency: 'monthly', priority: 0.35 },
+  { route: '/terms', changeFrequency: 'monthly', priority: 0.35 },
+  { route: '/refund-cancellation', changeFrequency: 'monthly', priority: 0.35 },
 ];
 
 function getDocLastModified(slug: string): Date {
