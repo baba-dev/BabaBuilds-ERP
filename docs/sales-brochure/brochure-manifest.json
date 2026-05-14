@@ -1,0 +1,250 @@
+{
+  "generatedAt": "2026-05-14T20:22:04.365Z",
+  "shots": {
+    "landing": {
+      "relPath": "assets/screenshots/landing.png",
+      "title": "Marketing home",
+      "section": "marketing"
+    },
+    "login": {
+      "relPath": "assets/screenshots/login.png",
+      "title": "Sign in",
+      "section": "marketing"
+    },
+    "help_hub": {
+      "relPath": "assets/screenshots/help_hub.png",
+      "title": "Help hub",
+      "section": "marketing"
+    },
+    "for_small_business": {
+      "relPath": "assets/screenshots/for_small_business.png",
+      "title": "For small businesses",
+      "section": "marketing"
+    },
+    "dashboard": {
+      "relPath": "assets/screenshots/dashboard.png",
+      "title": "Dashboard",
+      "section": "overview"
+    },
+    "services": {
+      "relPath": "assets/screenshots/services.png",
+      "title": "Service catalog",
+      "section": "operations"
+    },
+    "inventory": {
+      "relPath": "assets/screenshots/inventory.png",
+      "title": "Inventory",
+      "section": "operations"
+    },
+    "inventory_po": {
+      "relPath": "assets/screenshots/inventory_po.png",
+      "title": "Purchase orders",
+      "section": "operations"
+    },
+    "clients": {
+      "relPath": "assets/screenshots/clients.png",
+      "title": "Clients",
+      "section": "operations"
+    },
+    "documents": {
+      "relPath": "assets/screenshots/documents.png",
+      "title": "Document vault",
+      "section": "operations"
+    },
+    "documents_inbox": {
+      "relPath": "assets/screenshots/documents_inbox.png",
+      "title": "Document inbox",
+      "section": "operations"
+    },
+    "documents_vault": {
+      "relPath": "assets/screenshots/documents_vault.png",
+      "title": "Document archive",
+      "section": "operations"
+    },
+    "documents_compliance": {
+      "relPath": "assets/screenshots/documents_compliance.png",
+      "title": "Compliance documents",
+      "section": "operations"
+    },
+    "import_manager": {
+      "relPath": "assets/screenshots/import_manager.png",
+      "title": "Import manager",
+      "section": "operations"
+    },
+    "inbox_import": {
+      "relPath": "assets/screenshots/inbox_import.png",
+      "title": "Inbox import",
+      "section": "operations"
+    },
+    "proposals": {
+      "relPath": "assets/screenshots/proposals.png",
+      "title": "Proposals",
+      "section": "sales"
+    },
+    "proposals_pipeline": {
+      "relPath": "assets/screenshots/proposals_pipeline.png",
+      "title": "Revenue pipeline",
+      "section": "sales"
+    },
+    "retainers": {
+      "relPath": "assets/screenshots/retainers.png",
+      "title": "Retainers",
+      "section": "sales"
+    },
+    "income": {
+      "relPath": "assets/screenshots/income.png",
+      "title": "Income & invoices",
+      "section": "sales"
+    },
+    "invoice": {
+      "relPath": "assets/screenshots/invoice.png",
+      "title": "Invoice workspace",
+      "section": "sales"
+    },
+    "expenses": {
+      "relPath": "assets/screenshots/expenses.png",
+      "title": "Expenses",
+      "section": "finance"
+    },
+    "cash_flow_overview": {
+      "relPath": "assets/screenshots/cash_flow_overview.png",
+      "title": "Cash flow overview",
+      "section": "finance"
+    },
+    "cash_flow_scenarios": {
+      "relPath": "assets/screenshots/cash_flow_scenarios.png",
+      "title": "Cash scenarios",
+      "section": "finance"
+    },
+    "cash_flow_alerts": {
+      "relPath": "assets/screenshots/cash_flow_alerts.png",
+      "title": "Liquidity alerts",
+      "section": "finance"
+    },
+    "reporting": {
+      "relPath": "assets/screenshots/reporting.png",
+      "title": "Reporting center",
+      "section": "finance"
+    },
+    "reporting_ar_aging": {
+      "relPath": "assets/screenshots/reporting_ar_aging.png",
+      "title": "AR aging preset",
+      "section": "finance"
+    },
+    "ar_collections": {
+      "relPath": "assets/screenshots/ar_collections.png",
+      "title": "AR collections",
+      "section": "finance"
+    },
+    "tax": {
+      "relPath": "assets/screenshots/tax.png",
+      "title": "Tax hub",
+      "section": "finance"
+    },
+    "tax_advanced": {
+      "relPath": "assets/screenshots/tax_advanced.png",
+      "title": "Tax advanced",
+      "section": "finance"
+    },
+    "reconciliation": {
+      "relPath": "assets/screenshots/reconciliation.png",
+      "title": "AI reconciliation",
+      "section": "finance"
+    },
+    "reconciliation_settings": {
+      "relPath": "assets/screenshots/reconciliation_settings.png",
+      "title": "Reconciliation settings",
+      "section": "finance"
+    },
+    "ca_portal": {
+      "relPath": "assets/screenshots/ca_portal.png",
+      "title": "CA portal",
+      "section": "compliance"
+    },
+    "workforce": {
+      "relPath": "assets/screenshots/workforce.png",
+      "title": "Workforce",
+      "section": "workspace"
+    },
+    "workforce_people": {
+      "relPath": "assets/screenshots/workforce_people.png",
+      "title": "People directory",
+      "section": "workspace"
+    },
+    "workforce_attendance": {
+      "relPath": "assets/screenshots/workforce_attendance.png",
+      "title": "Attendance",
+      "section": "workspace"
+    },
+    "workforce_leave": {
+      "relPath": "assets/screenshots/workforce_leave.png",
+      "title": "Leave",
+      "section": "workspace"
+    },
+    "payroll": {
+      "relPath": "assets/screenshots/payroll.png",
+      "title": "Payroll",
+      "section": "workspace"
+    },
+    "payroll_settings": {
+      "relPath": "assets/screenshots/payroll_settings.png",
+      "title": "Payroll settings",
+      "section": "workspace"
+    },
+    "shop_admin": {
+      "relPath": "assets/screenshots/shop_admin.png",
+      "title": "Shop (admin)",
+      "section": "operations"
+    },
+    "settings": {
+      "relPath": "assets/screenshots/settings.png",
+      "title": "Settings",
+      "section": "overview"
+    },
+    "settings_team": {
+      "relPath": "assets/screenshots/settings_team.png",
+      "title": "Team & seats",
+      "section": "overview"
+    },
+    "settings_billing": {
+      "relPath": "assets/screenshots/settings_billing.png",
+      "title": "Billing",
+      "section": "overview"
+    },
+    "settings_shop": {
+      "relPath": "assets/screenshots/settings_shop.png",
+      "title": "Shop settings",
+      "section": "operations"
+    },
+    "partner": {
+      "relPath": "assets/screenshots/partner.png",
+      "title": "Partner hub",
+      "section": "overview"
+    },
+    "referrals": {
+      "relPath": "assets/screenshots/referrals.png",
+      "title": "Referrals",
+      "section": "overview"
+    },
+    "help_in_app": {
+      "relPath": "assets/screenshots/help_in_app.png",
+      "title": "In-app help",
+      "section": "overview"
+    },
+    "proposal_detail": {
+      "relPath": "assets/screenshots/proposal_detail.png",
+      "title": "Proposal detail",
+      "section": "sales"
+    },
+    "payroll_run_detail": {
+      "relPath": "assets/screenshots/payroll_run_detail.png",
+      "title": "Payroll run detail",
+      "section": "workspace"
+    },
+    "public_shop": {
+      "relPath": "assets/screenshots/public_shop.png",
+      "title": "Public storefront",
+      "section": "public_shop"
+    }
+  }
+}

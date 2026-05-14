@@ -10,6 +10,7 @@ export const softwareCompanyTemplate: DemoTemplateDefinition = {
     baseCurrency: "USD",
     planTier: "PRO",
     subscriptionStatus: "ACTIVE",
+    isSetupComplete: true,
   },
   businessProfile: {
     companyName: "Northstar Software LLC",
@@ -355,5 +356,51 @@ export const softwareCompanyTemplate: DemoTemplateDefinition = {
         actionUrl: "/tax/advanced",
       },
     });
+
+    /** Public shop + inventory — brochure and demos need non-empty storefront and stock views */
+    const shopSlug = `northstar-${workspaceId.replace(/[^a-z0-9]/gi, "").toLowerCase().slice(-18)}`;
+    await tx.businessProfile.update({
+      where: { workspaceId },
+      data: {
+        shopSlug,
+        shopEnabled: true,
+        shopTagline: "Professional services and retainers — order securely online",
+        shopAccentColor: "#ea580c",
+        shopAnnouncement: "Demo storefront — pricing is illustrative.",
+        shopAboutMd:
+          "Northstar Software delivers platform engineering, applied ML, and reliability programs for teams worldwide.",
+        shopFaqJson: JSON.stringify([
+          {
+            q: "How do I place an order?",
+            a: "Browse the catalog and use checkout when a payment gateway is configured for this workspace.",
+          },
+        ]),
+      },
+    });
+
+    const templates = await tx.serviceTemplate.findMany({
+      where: { workspaceId },
+      orderBy: { name: "asc" },
+      take: 6,
+    });
+    for (let i = 0; i < templates.length; i++) {
+      const svc = templates[i]!;
+      await tx.product.create({
+        data: {
+          workspaceId,
+          sku: `DEMO-INV-${String(i + 1).padStart(3, "0")}`,
+          name: svc.name,
+          description: svc.description ?? svc.name,
+          baselinePrice: svc.defaultPrice,
+          costPrice: 0,
+          currentStock: 42 + i * 5,
+          safetyStock: 5,
+          status: "IN_STOCK",
+          showInShop: true,
+          shopSortOrder: i,
+          shopDescription: `${svc.name} — listed for the public shop demo.`,
+        },
+      });
+    }
   },
 };

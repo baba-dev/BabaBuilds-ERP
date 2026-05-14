@@ -23,6 +23,8 @@ export type DemoWorkspaceDefinition = {
   baseCurrency: string;
   planTier: string;
   subscriptionStatus: string;
+  /** When true, demo users land in the dashboard without the setup wizard gate. */
+  isSetupComplete?: boolean;
 };
 
 export type DemoBusinessProfileDefinition = {
