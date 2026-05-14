@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { attachPageTelemetry, dumpTelemetryOnFailure } from './helpers/telemetry';
+import { loginViaDemoUI } from './helpers/auth';
 
 test.describe('Smoke Test', () => {
   test('public landing loads without console errors', async ({ page }) => {
@@ -37,25 +38,6 @@ test.describe('Smoke Test', () => {
   });
 
   test('demo account can sign in via UI', async ({ page }) => {
-    await page.goto('/login', { waitUntil: 'domcontentloaded' });
-    await expect(page.locator('body')).toBeVisible();
-
-    // Expand demo section and click the CTA that provisions a demo account and calls next-auth signIn("demo-login").
-    await expect(page.getByText(/bababuilds erp/i)).toBeVisible();
-
-    const demoSummary = page.getByText(/need a sandbox instead\\?/i).first();
-    await demoSummary.scrollIntoViewIfNeeded();
-    await demoSummary.click();
-
-    const demoButton = page.getByRole('button', { name: /try interactive demo|provisioning|demo/i }).first();
-    await demoButton.click();
-
-    // Post-login routes can vary; allow `/dashboard` or `/setup` (if workspace context is missing).
-    await page.waitForURL(
-      (url) =>
-        url.origin === 'http://localhost:3000' &&
-        (url.pathname.startsWith('/dashboard') || url.pathname.startsWith('/setup')),
-      { timeout: 20000 }
-    );
+    await loginViaDemoUI(page);
   });
 });

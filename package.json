@@ -30,7 +30,14 @@
     "test:browser:ui": "playwright test tests/smoke --project=chromium --ui",
     "test:payments": "vitest run tests/payments && playwright test tests/payments",
     "test": "vitest run",
-    "invoices:samples": "npx tsx scripts/render-sample-invoices.ts"
+    "invoices:samples": "npx tsx scripts/render-sample-invoices.ts",
+    "brochure:shell": "npx tsx scripts/generate-brochure-shell.ts",
+    "brochure:api-appendix": "node scripts/generate-api-appendix.mjs",
+    "brochure:stitch": "node scripts/stitch-brochure-appendix.mjs",
+    "brochure:prepare": "npm run brochure:shell && npm run brochure:api-appendix && npm run brochure:stitch",
+    "brochure:capture": "playwright test tests/brochure/capture-brochure.spec.ts --project=chromium",
+    "brochure:pdf": "node scripts/brochure-render-pdf.mjs",
+    "brochure:dist": "npm run brochure:prepare && npm run brochure:capture && npm run brochure:pdf"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.4.2",
@@ -105,9 +112,11 @@
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.0",
     "@types/papaparse": "^5.5.2",
+    "@types/pngjs": "^6.0.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
+    "pngjs": "^7.0.0",
     "eslint-config-next": "16.2.6",
     "prisma": "^6.19.2",
     "tailwindcss": "^4",

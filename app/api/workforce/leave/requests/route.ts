@@ -39,7 +39,9 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const status = searchParams.get('status') ?? '';
+    const rawStatus = searchParams.get("status")?.trim() ?? "";
+    const allowedStatuses = new Set(["PENDING", "APPROVED", "REJECTED", "CANCELLED"]);
+    const statusFilter = allowedStatuses.has(rawStatus) ? rawStatus : undefined;
     const canApprove = await checkPermissionSilent(session.user.id, wid, 'workforce.leave.approve');
 
     // Role-scoped: STAFF sees own requests only
@@ -53,7 +55,9 @@ export async function GET(req: NextRequest) {
       where: {
         workspaceId: wid,
         ...(employeeIdFilter ? { employeeId: employeeIdFilter } : {}),
-        ...(status ? { status: status as 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' } : {}),
+        ...(statusFilter
+          ? { status: statusFilter as "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED" }
+          : {}),
       },
       include: {
         employee: { select: { id: true, firstName: true, lastName: true, avatarUrl: true, department: { select: { name: true } } } },
