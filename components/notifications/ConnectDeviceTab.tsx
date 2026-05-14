@@ -17,6 +17,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -156,13 +157,24 @@ export function ConnectDeviceTab() {
             </div>
 
             <div className="flex flex-wrap gap-4">
-               <Button size="lg" className="h-14 rounded-2xl bg-zinc-900 px-8 font-bold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100">
-                 <Github className="mr-3 h-5 w-5" />
-                 Latest GitHub Release
-               </Button>
-               <Button variant="outline" size="lg" className="h-14 rounded-2xl border-zinc-200 bg-white/50 px-8 font-bold backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/50">
-                 Manual Setup Guide
-               </Button>
+              <Button
+                size="lg"
+                className="h-14 rounded-2xl bg-zinc-900 px-8 font-bold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
+                asChild
+              >
+                <a href={githubReleaseUrl} target="_blank" rel="noopener noreferrer">
+                  <Github className="mr-3 h-5 w-5" />
+                  Latest GitHub Release
+                </a>
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="h-14 rounded-2xl border-zinc-200 bg-white/50 px-8 font-bold backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/50"
+                asChild
+              >
+                <Link href="/help">Manual Setup Guide</Link>
+              </Button>
             </div>
           </div>
 
@@ -358,17 +370,23 @@ export function ConnectDeviceTab() {
                 <h4 className="font-bold text-zinc-900 dark:text-white">Manual Links</h4>
               </div>
               <div className="space-y-2">
-                <Button variant="ghost" className="w-full justify-between h-10 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                   <span className="text-xs font-medium">Download Android APK</span>
-                   <ArrowRight className="h-3 w-3" />
+                <Button variant="ghost" className="h-10 w-full justify-between rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800" asChild>
+                  <a href={githubReleaseUrl} target="_blank" rel="noopener noreferrer">
+                    <span className="text-xs font-medium">Download Android APK</span>
+                    <ArrowRight className="h-3 w-3 shrink-0" />
+                  </a>
                 </Button>
-                <Button variant="ghost" className="w-full justify-between h-10 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                   <span className="text-xs font-medium">View iOS Installation Guide</span>
-                   <ArrowRight className="h-3 w-3" />
+                <Button variant="ghost" className="h-10 w-full justify-between rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800" asChild>
+                  <Link href="/help/category/getting-started">
+                    <span className="text-xs font-medium">View iOS Installation Guide</span>
+                    <ArrowRight className="h-3 w-3 shrink-0" />
+                  </Link>
                 </Button>
-                <Button variant="ghost" className="w-full justify-between h-10 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                   <span className="text-xs font-medium">Windows Desktop Build</span>
-                   <ArrowRight className="h-3 w-3" />
+                <Button variant="ghost" className="h-10 w-full justify-between rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800" asChild>
+                  <a href={githubReleaseUrl} target="_blank" rel="noopener noreferrer">
+                    <span className="text-xs font-medium">Windows Desktop Build</span>
+                    <ArrowRight className="h-3 w-3 shrink-0" />
+                  </a>
                 </Button>
               </div>
             </CardContent>
@@ -383,10 +401,25 @@ export function ConnectDeviceTab() {
            <Badge className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg">PRO</Badge>
            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Enterprise Sync Active</span>
         </div>
-        <div className="flex gap-6">
-           <a href="#" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-indigo-500 transition-colors">Documentation</a>
-           <a href="#" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-indigo-500 transition-colors">Privacy Policy</a>
-           <a href="#" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-indigo-500 transition-colors">Support</a>
+        <div className="flex flex-wrap justify-center gap-6 @md:justify-end">
+          <Link
+            href="/help"
+            className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 transition-colors hover:text-indigo-500"
+          >
+            Documentation
+          </Link>
+          <Link
+            href="/privacy"
+            className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 transition-colors hover:text-indigo-500"
+          >
+            Privacy Policy
+          </Link>
+          <Link
+            href="/help"
+            className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 transition-colors hover:text-indigo-500"
+          >
+            Support
+          </Link>
         </div>
       </div>
     </div>
