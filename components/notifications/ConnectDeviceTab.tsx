@@ -1,33 +1,26 @@
 'use client';
 
 import * as React from 'react';
-import { 
-  MonitorSmartphone, 
-  Github, 
-  ShieldCheck, 
-  RefreshCw, 
-  Smartphone, 
+import {
+  MonitorSmartphone,
+  Github,
+  Smartphone,
   Laptop,
   ArrowRight,
   ExternalLink,
   QrCode,
-  LogOut,
   MapPin,
   Clock,
-  ShieldAlert,
-  Fingerprint,
   Send,
   MessageSquare,
   Trash2,
-  Lock,
-  Globe,
-  Loader2
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
@@ -137,33 +130,6 @@ export function ConnectDeviceTab() {
     setPhoneNumber('');
   };
 
-  const securityChecks = [
-    { 
-      label: 'Encryption', 
-      status: 'Active', 
-      icon: <Lock className="h-4 w-4 text-emerald-500" />,
-      desc: 'End-to-end TLS 1.3 secured connection'
-    },
-    { 
-      label: 'Biometrics', 
-      status: 'Hardware Ready', 
-      icon: <Fingerprint className="h-4 w-4 text-indigo-500" />,
-      desc: 'System supports FaceID / TouchID'
-    },
-    { 
-      label: 'Trust Chain', 
-      status: 'Verified', 
-      icon: <ShieldCheck className="h-4 w-4 text-emerald-500" />,
-      desc: 'Application signature is authentic'
-    },
-    { 
-      label: 'Environment', 
-      status: 'Secure', 
-      icon: <Globe className="h-4 w-4 text-sky-500" />,
-      desc: 'No suspicious debuggers detected'
-    }
-  ];
-
   return (
     <div className="min-w-0 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
       
@@ -191,13 +157,24 @@ export function ConnectDeviceTab() {
             </div>
 
             <div className="flex flex-wrap gap-4">
-               <Button size="lg" className="h-14 rounded-2xl bg-zinc-900 px-8 font-bold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100">
-                 <Github className="mr-3 h-5 w-5" />
-                 Latest GitHub Release
-               </Button>
-               <Button variant="outline" size="lg" className="h-14 rounded-2xl border-zinc-200 bg-white/50 px-8 font-bold backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/50">
-                 Manual Setup Guide
-               </Button>
+              <Button
+                size="lg"
+                className="h-14 rounded-2xl bg-zinc-900 px-8 font-bold text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
+                asChild
+              >
+                <a href={githubReleaseUrl} target="_blank" rel="noopener noreferrer">
+                  <Github className="mr-3 h-5 w-5" />
+                  Latest GitHub Release
+                </a>
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="h-14 rounded-2xl border-zinc-200 bg-white/50 px-8 font-bold backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/50"
+                asChild
+              >
+                <Link href="/help">Manual Setup Guide</Link>
+              </Button>
             </div>
           </div>
 
@@ -234,149 +211,103 @@ export function ConnectDeviceTab() {
         </div>
       </section>
 
-      <div className="grid grid-cols-1 gap-8 @5xl:grid-cols-3">
-        
-        {/* 2. Universal Device Manager */}
-        <div className="space-y-6 @5xl:col-span-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className={typography.title}>Active Device Manager</h3>
-              <p className={typography.subtitle}>Authorized sessions currently accessing your ERP</p>
-            </div>
-            <Badge variant="outline" className="rounded-lg border-indigo-500/20 bg-indigo-500/5 text-indigo-600 dark:text-indigo-400">
-              {sessions.length} Active {sessions.length === 1 ? 'Session' : 'Sessions'}
-            </Badge>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className={typography.title}>Active Device Manager</h3>
+            <p className={typography.subtitle}>Authorized sessions currently accessing your ERP</p>
           </div>
+          <Badge variant="outline" className="rounded-lg border-indigo-500/20 bg-indigo-500/5 text-indigo-600 dark:text-indigo-400">
+            {sessions.length} Active {sessions.length === 1 ? 'Session' : 'Sessions'}
+          </Badge>
+        </div>
 
-          <Card className={cardSurfaceClass}>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="w-[300px] text-[10px] font-bold uppercase tracking-widest">Device Info</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Network</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-right">Action</TableHead>
+        <Card className={cardSurfaceClass}>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-[300px] text-[10px] font-bold uppercase tracking-widest">Device Info</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Network</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoadingSessions ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-32 text-center">
+                      <Loader2 className="mx-auto h-6 w-6 animate-spin text-zinc-400" />
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoadingSessions ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="h-32 text-center">
-                        <Loader2 className="mx-auto h-6 w-6 animate-spin text-zinc-400" />
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    <AnimatePresence mode="popLayout">
-                      {sessions.map((session) => {
-                        const { name, icon } = parseUserAgent(session.userAgent);
-                        return (
-                          <motion.tr 
-                            key={session.id}
-                            layout
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            className="group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30"
-                          >
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                                  {icon}
-                                </div>
-                                <div>
-                                  <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                                    {name}
-                                    {session.isCurrent && (
-                                      <Badge variant="secondary" className="ml-2 h-4 rounded px-1.5 text-[8px] font-black uppercase">
-                                        This Device
-                                      </Badge>
-                                    )}
-                                  </p>
-                                  <p className="text-[10px] text-zinc-500 truncate max-w-[200px]">{session.userAgent}</p>
-                                </div>
+                ) : (
+                  <AnimatePresence mode="popLayout">
+                    {sessions.map((session) => {
+                      const { name, icon } = parseUserAgent(session.userAgent);
+                      return (
+                        <motion.tr
+                          key={session.id}
+                          layout
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0, x: -20 }}
+                          className="group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30"
+                        >
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                                {icon}
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                                  <MapPin className="h-3 w-3" />
-                                  {session.ip}
-                                </div>
-                                <div className="flex items-center gap-1.5 text-[10px] text-zinc-500">
-                                  <Clock className="h-3 w-3" />
-                                  {new Date(session.expires).toLocaleDateString()}
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {!session.isCurrent && (
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon"
-                                  onClick={() => handleRevokeSession(session.id)}
-                                  disabled={revokingId === session.id}
-                                  className="h-9 w-9 text-zinc-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                                >
-                                  {revokingId === session.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Trash2 className="h-4 w-4" />
+                              <div>
+                                <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                                  {name}
+                                  {session.isCurrent && (
+                                    <Badge variant="secondary" className="ml-2 h-4 rounded px-1.5 text-[8px] font-black uppercase">
+                                      This Device
+                                    </Badge>
                                   )}
-                                </Button>
-                              )}
-                            </TableCell>
-                          </motion.tr>
-                        );
-                      })}
-                    </AnimatePresence>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </Card>
-        </div>
-
-        {/* 3. Biometric Trust-Chain & Health Check */}
-        <div className="space-y-6">
-          <h3 className={typography.title}>Security Health</h3>
-          <Card className={cardSurfaceClass}>
-            <CardContent className="p-6 space-y-6">
-              <div className="flex items-center justify-between">
-                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20">
-                   <ShieldCheck className="h-6 w-6" />
-                 </div>
-                 <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/20">All Secure</Badge>
-              </div>
-              
-              <div className="space-y-4">
-                {securityChecks.map((check, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className="mt-1">{check.icon}</div>
-                    <div className="flex-1 space-y-0.5">
-                       <div className="flex items-center justify-between">
-                         <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{check.label}</p>
-                         <span className="text-[9px] font-black uppercase text-zinc-400">{check.status}</span>
-                       </div>
-                       <p className="text-[10px] text-zinc-500 leading-normal">{check.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <Separator className="bg-zinc-200/50 dark:bg-zinc-800/50" />
-              
-              <div className="rounded-xl bg-zinc-50 p-4 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800">
-                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500 mb-2">
-                   <ShieldAlert className="h-4 w-4" />
-                   <span className="text-xs font-bold">Recommendations</span>
-                </div>
-                <p className="text-[10px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                  Enable Biometric Lock on your mobile app to prevent unauthorized access even if the device is unlocked.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                                </p>
+                                <p className="max-w-[200px] truncate text-[10px] text-zinc-500">{session.userAgent}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                                <MapPin className="h-3 w-3" />
+                                {session.ip}
+                              </div>
+                              <div className="flex items-center gap-1.5 text-[10px] text-zinc-500">
+                                <Clock className="h-3 w-3" />
+                                {new Date(session.expires).toLocaleDateString()}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {!session.isCurrent && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleRevokeSession(session.id)}
+                                disabled={revokingId === session.id}
+                                className="h-9 w-9 text-zinc-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                              >
+                                {revokingId === session.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                              </Button>
+                            )}
+                          </TableCell>
+                        </motion.tr>
+                      );
+                    })}
+                  </AnimatePresence>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
       </div>
 
       {/* 4. Push to Device Magic Links */}
@@ -439,17 +370,23 @@ export function ConnectDeviceTab() {
                 <h4 className="font-bold text-zinc-900 dark:text-white">Manual Links</h4>
               </div>
               <div className="space-y-2">
-                <Button variant="ghost" className="w-full justify-between h-10 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                   <span className="text-xs font-medium">Download Android APK</span>
-                   <ArrowRight className="h-3 w-3" />
+                <Button variant="ghost" className="h-10 w-full justify-between rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800" asChild>
+                  <a href={githubReleaseUrl} target="_blank" rel="noopener noreferrer">
+                    <span className="text-xs font-medium">Download Android APK</span>
+                    <ArrowRight className="h-3 w-3 shrink-0" />
+                  </a>
                 </Button>
-                <Button variant="ghost" className="w-full justify-between h-10 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                   <span className="text-xs font-medium">View iOS Installation Guide</span>
-                   <ArrowRight className="h-3 w-3" />
+                <Button variant="ghost" className="h-10 w-full justify-between rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800" asChild>
+                  <Link href="/help/category/getting-started">
+                    <span className="text-xs font-medium">View iOS Installation Guide</span>
+                    <ArrowRight className="h-3 w-3 shrink-0" />
+                  </Link>
                 </Button>
-                <Button variant="ghost" className="w-full justify-between h-10 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800">
-                   <span className="text-xs font-medium">Windows Desktop Build</span>
-                   <ArrowRight className="h-3 w-3" />
+                <Button variant="ghost" className="h-10 w-full justify-between rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800" asChild>
+                  <a href={githubReleaseUrl} target="_blank" rel="noopener noreferrer">
+                    <span className="text-xs font-medium">Windows Desktop Build</span>
+                    <ArrowRight className="h-3 w-3 shrink-0" />
+                  </a>
                 </Button>
               </div>
             </CardContent>
@@ -464,10 +401,25 @@ export function ConnectDeviceTab() {
            <Badge className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg">PRO</Badge>
            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Enterprise Sync Active</span>
         </div>
-        <div className="flex gap-6">
-           <a href="#" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-indigo-500 transition-colors">Documentation</a>
-           <a href="#" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-indigo-500 transition-colors">Privacy Policy</a>
-           <a href="#" className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-indigo-500 transition-colors">Support</a>
+        <div className="flex flex-wrap justify-center gap-6 @md:justify-end">
+          <Link
+            href="/help"
+            className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 transition-colors hover:text-indigo-500"
+          >
+            Documentation
+          </Link>
+          <Link
+            href="/privacy"
+            className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 transition-colors hover:text-indigo-500"
+          >
+            Privacy Policy
+          </Link>
+          <Link
+            href="/help"
+            className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 transition-colors hover:text-indigo-500"
+          >
+            Support
+          </Link>
         </div>
       </div>
     </div>
