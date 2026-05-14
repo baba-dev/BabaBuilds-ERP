@@ -165,15 +165,15 @@ export function ConnectDeviceTab() {
   ];
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
+    <div className="min-w-0 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
       
       {/* 1. Million Dollar Header & QR Hand-off */}
       <section className={glassHeaderClass}>
         <div className="absolute -right-12 -top-12 h-64 w-64 rounded-full bg-indigo-500/10 blur-[100px]" />
         <div className="absolute -left-12 -bottom-12 h-64 w-64 rounded-full bg-violet-500/10 blur-[100px]" />
         
-        <div className="relative flex flex-col lg:flex-row gap-10 items-center">
-          <div className="flex-1 space-y-6">
+        <div className="relative flex flex-col items-center gap-10 @3xl:flex-row @3xl:items-start">
+          <div className="min-w-0 w-full flex-1 space-y-6">
             <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-4 py-1.5">
               <QrCode className="h-4 w-4 text-indigo-500" />
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400">
@@ -182,7 +182,7 @@ export function ConnectDeviceTab() {
             </div>
             
             <div className="space-y-3">
-              <h2 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-white md:text-4xl">
+              <h2 className="text-3xl font-black tracking-tight text-zinc-900 dark:text-white @md:text-4xl">
                 One Scan. <span className="text-indigo-500">Total Sync.</span>
               </h2>
               <p className="max-w-xl text-lg font-medium text-zinc-600 dark:text-zinc-400">
@@ -204,7 +204,7 @@ export function ConnectDeviceTab() {
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="shrink-0 rounded-3xl border border-white/20 bg-white p-6 shadow-2xl dark:bg-zinc-950"
+            className="mx-auto shrink-0 rounded-3xl border border-white/20 bg-white p-6 shadow-2xl @3xl:mx-0 dark:bg-zinc-950"
           >
             <div className="relative">
                <div className="flex h-48 w-48 items-center justify-center rounded-xl bg-white p-2">
@@ -234,10 +234,10 @@ export function ConnectDeviceTab() {
         </div>
       </section>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 gap-8 @5xl:grid-cols-3">
         
         {/* 2. Universal Device Manager */}
-        <div className="xl:col-span-2 space-y-6">
+        <div className="space-y-6 @5xl:col-span-2">
           <div className="flex items-center justify-between">
             <div>
               <h3 className={typography.title}>Active Device Manager</h3>
@@ -382,21 +382,21 @@ export function ConnectDeviceTab() {
       {/* 4. Push to Device Magic Links */}
       <section className="space-y-6">
         <h3 className={typography.title}>Send Install Link to Device</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 @md:grid-cols-2 @5xl:grid-cols-3">
           
-          <Card className={cn(cardSurfaceClass, "lg:col-span-2")}>
+          <Card className={cn(cardSurfaceClass, '@5xl:col-span-2')}>
             <CardContent className="p-8">
-              <div className="flex flex-col md:flex-row gap-8 items-center">
+              <div className="flex flex-col items-center gap-8 @md:flex-row @md:items-start">
                 <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 shrink-0">
                   <Send className="h-8 w-8" />
                 </div>
-                <div className="flex-1 space-y-6 w-full">
+                <div className="min-w-0 w-full flex-1 space-y-6">
                   <div>
                     <h4 className="text-xl font-black text-zinc-900 dark:text-white">Push to Phone</h4>
                     <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">Get the secure link sent via SMS or WhatsApp for zero-friction setup.</p>
                   </div>
                   
-                  <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex flex-col gap-3 @sm:flex-row">
                     <div className="relative flex-1">
                       <Input 
                         placeholder="+1 (555) 000-0000" 
@@ -459,7 +459,7 @@ export function ConnectDeviceTab() {
       </section>
 
       {/* Footer Branding */}
-      <div className="pt-6 border-t border-zinc-200/80 dark:border-zinc-800/50 flex flex-col md:flex-row justify-between items-center gap-4">
+      <div className="flex flex-col items-center justify-between gap-4 border-t border-zinc-200/80 pt-6 @md:flex-row dark:border-zinc-800/50">
         <div className="flex items-center gap-2">
            <Badge className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg">PRO</Badge>
            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Enterprise Sync Active</span>

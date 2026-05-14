@@ -193,7 +193,7 @@ function CommsHubInner({
   const contentPaddingClasses = isMobile ? 'p-4' : 'p-8';
 
   return (
-    <div className="relative">
+    <div className="relative min-w-0">
       <div className="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-indigo-600/10 blur-[100px]" />
       <div className="pointer-events-none absolute -right-24 -bottom-24 h-64 w-64 rounded-full bg-violet-600/10 blur-[100px]" />
 
@@ -216,7 +216,7 @@ function CommsHubInner({
         </div>
       </DialogHeader>
 
-      <Tabs defaultValue="inbox" className="w-full">
+      <Tabs defaultValue="inbox" className="min-w-0 w-full">
         <div className={cn(isMobile ? 'px-4' : 'px-8')}>
           <TabsList className="h-auto w-full justify-start gap-8 rounded-none border-b border-zinc-200/80 bg-transparent p-0 dark:border-zinc-800/50">
             <TabsTrigger value="inbox" className={tabTriggerClasses}>
@@ -245,7 +245,7 @@ function CommsHubInner({
           </TabsList>
         </div>
 
-        <div className="max-h-[60vh] overflow-y-auto custom-scrollbar">
+        <div className="@container min-w-0 max-h-[60vh] overflow-x-hidden overflow-y-auto custom-scrollbar">
           <TabsContent value="inbox" className={cn('mt-0 space-y-6 outline-none', contentPaddingClasses)}>
             <div className="flex items-center justify-between">
               <h3 className={typography.metadata}>Recent Notifications</h3>
