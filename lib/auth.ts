@@ -176,10 +176,11 @@ function inferProviderFromMetadata(metadata: Record<string, unknown> | undefined
 }
 
 function isAllowedDemoMfaBypass(input: { provider?: string | null; email?: string | null }) {
-  const isDemoProvider = input.provider === "demo-login";
   const isDemoEmail = Boolean(input.email?.toLowerCase().endsWith("@bababuilds.demo"));
-  const isNonProduction = process.env.NODE_ENV !== "production";
-  return isDemoProvider && isDemoEmail && (isNonProduction || isDemoEmail);
+  // NextAuth reports CredentialsProvider as provider "credentials"; the configured id "demo-login" is not on `account`.
+  const isDemoCredentialsSignIn =
+    input.provider === "credentials" || input.provider === "demo-login";
+  return isDemoCredentialsSignIn && isDemoEmail;
 }
 
 export const authOptions: NextAuthOptions = {

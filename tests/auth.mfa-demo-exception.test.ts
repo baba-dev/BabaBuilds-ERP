@@ -53,10 +53,10 @@ describe("authOptions.callbacks.signIn MFA policy", () => {
     );
   });
 
-  it("allows demo provider for demo accounts when MFA would otherwise block", async () => {
+  it("allows demo credentials sign-in for demo accounts when MFA would otherwise block", async () => {
     const result = await authOptions.callbacks!.signIn!({
       user: { id: "u_demo", email: "temp@bababuilds.demo" },
-      account: { provider: "demo-login", type: "credentials" },
+      account: { provider: "credentials", type: "credentials" },
     } as never);
 
     expect(result).toBe(true);

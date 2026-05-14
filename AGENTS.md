@@ -32,7 +32,7 @@ Optionally seed compliance dictionaries: `npx ts-node prisma/seed.ts`
 
 - `npm run dev` — starts Next.js dev server on port 3000 (Turbopack)
 - The app has a demo login system (POST `/api/auth/demo`) that creates ephemeral demo accounts. In dev mode, Turnstile CAPTCHA is bypassed.
-- The demo login currently hits an `MFA_POLICY_BLOCK` error because the `demo-login` credentials provider is not whitelisted in the MFA policy check in `lib/auth.ts`. This is a pre-existing codebase bug.
+- Demo sign-in uses NextAuth `CredentialsProvider` (`provider: "credentials"`, id `demo-login`); high-risk-role MFA rules exempt `@bababuilds.demo` credentials sign-ins in `lib/auth.ts`.
 
 ### Standard commands (see `package.json` scripts)
 
