@@ -1,13 +1,11 @@
-"use client";
-
-import { useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { NextRequest, NextResponse } from "next/server";
 import { parseSignupIntent } from "@/lib/signup-intent";
+import { applySignupIntentCookie } from "@/lib/signup-intent-cookie";
 
-export default function SignupPage() {
-  const searchParams = useSearchParams();
+export async function GET(request: NextRequest) {
+  const { searchParams } = request.nextUrl;
 
-  useEffect(() => {
+  try {
     const intent = parseSignupIntent({
       plan: searchParams.get("plan"),
       cycle: searchParams.get("cycle"),
@@ -19,17 +17,13 @@ export default function SignupPage() {
       source: searchParams.get("source") ?? "signup_page",
     });
 
-    void fetch("/api/signup-intent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(intent),
-      credentials: "same-origin",
-      keepalive: true,
-    });
-
     const callbackUrl = `/dashboard?fromSignup=1&plan=${intent.plan}&cycle=${intent.cycle}`;
-    window.location.replace(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
-  }, [searchParams]);
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("callbackUrl", callbackUrl);
 
-  return null;
+    const response = NextResponse.redirect(loginUrl);
+    return applySignupIntentCookie(response, intent);
+  } catch {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 }
