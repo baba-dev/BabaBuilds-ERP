@@ -74,6 +74,7 @@ export async function finalizeSubscriptionPayment(input: FinalizeSubscriptionInp
         subscriptionEndsAt: newExpirationDate,
         billingProviderId: input.billingProviderCustomerId ?? input.providerReference,
         hasEverSubscribed: true,
+        signupIntentJson: null,
       },
     });
 

@@ -18,6 +18,12 @@ describe("signup intent cookie signing", () => {
     expect(deserializeSignupIntent(tamperedToken)).toBeNull();
   });
 
+  it("preserves trial length in serialized payload", () => {
+    const intent = signupIntentSchema.parse({ plan: "pro", cycle: "monthly", trial: 30 });
+    const restored = deserializeSignupIntent(serializeSignupIntent(intent));
+    expect(restored?.trial).toBe(30);
+  });
+
   it("rejects invalid signature", () => {
     const token = serializeSignupIntent(signupIntentSchema.parse({ plan: "pro", cycle: "monthly", trial: 15 }));
     const [version, payload] = token.split(".");

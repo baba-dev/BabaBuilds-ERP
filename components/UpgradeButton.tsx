@@ -83,14 +83,18 @@ export function ProUpgradeCard({
   locale = "en-IN",
   currency = "INR",
   countryCode,
+  defaultInterval = "YEARLY",
+  convertDuringTrial = false,
 }: {
   locale?: string;
   currency?: string;
   countryCode?: string | null;
+  defaultInterval?: PlanInterval;
+  convertDuringTrial?: boolean;
 }) {
   const { data: session, update } = useSession();
   const router = useRouter();
-  const [interval, setInterval] = useState<PlanInterval>("YEARLY");
+  const [interval, setInterval] = useState<PlanInterval>(defaultInterval);
   const [isLoading, setIsLoading] = useState(false);
   const [isUpgradeSuccess, setIsUpgradeSuccess] = useState(false);
   const [couponInput, setCouponInput] = useState("");
@@ -129,6 +133,10 @@ export function ProUpgradeCard({
   useEffect(() => {
     void loadSavedCoupon();
   }, [loadSavedCoupon]);
+
+  useEffect(() => {
+    setInterval(defaultInterval);
+  }, [defaultInterval]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

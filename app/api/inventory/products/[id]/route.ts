@@ -7,6 +7,7 @@ import path from 'path';
 import { scanBuffer } from '@/lib/security/clamav';
 import { buildPrivatePath, ensureDir, sniffAllowedContent, uniqueStoredName } from '@/lib/uploads/private-storage';
 import fs from 'fs';
+import { assertFreeTierPublishedShopListingsAllowed } from '@/lib/entitlements';
 
 function isAllowedProductImageExtension(ext: string) {
   return ['.jpg', '.jpeg', '.png', '.webp'].includes(ext.toLowerCase());
@@ -76,6 +77,21 @@ export async function PUT(req: Request, context: { params: Promise<{ id: string 
     }
     if (barcode !== null) dataToUpdate.barcode = barcode;
     if (location !== null) dataToUpdate.location = location;
+
+    const showInShopRaw = formData.get("showInShop");
+    if (showInShopRaw !== null) {
+      const enablingShop = showInShopRaw === "true" || showInShopRaw === "1";
+      if (enablingShop && !existing.showInShop) {
+        const denied = await assertFreeTierPublishedShopListingsAllowed(workspaceId);
+        if (denied) {
+          return NextResponse.json(
+            { error: denied.message, code: denied.code, requiresUpgrade: true },
+            { status: 403 },
+          );
+        }
+      }
+      dataToUpdate.showInShop = enablingShop;
+    }
 
     // Handle Image Upload
     const file = formData.get('image') as File | null;

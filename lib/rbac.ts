@@ -30,6 +30,7 @@ import {
   isValidBusinessRole,
 } from '@/lib/permissions';
 import { NextResponse } from 'next/server';
+import { resolveSeatLimitKey } from '@/lib/entitlements';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -267,7 +268,13 @@ export async function checkSeatAvailability(workspaceId: string): Promise<SeatAv
   const [workspace, activeMembers, pendingInvites] = await Promise.all([
     prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { planTier: true, seatAddonCount: true },
+      select: {
+        planTier: true,
+        seatAddonCount: true,
+        subscriptionStatus: true,
+        subscriptionEndsAt: true,
+        signupIntentJson: true,
+      },
     }),
     prisma.workspaceUser.count({
       where: { workspaceId, isActive: true },
@@ -279,8 +286,9 @@ export async function checkSeatAvailability(workspaceId: string): Promise<SeatAv
 
   if (!workspace) throw new Error('Workspace not found');
 
-  const planTier = workspace.planTier ?? 'FREE';
-  const baseLimit = getSeatLimit(planTier);
+  const seatLimitKey = resolveSeatLimitKey(workspace);
+  const planTier = seatLimitKey;
+  const baseLimit = getSeatLimit(seatLimitKey);
   const addonSeats = workspace.seatAddonCount ?? 0;
   const limit = baseLimit === Infinity ? Infinity : baseLimit + addonSeats;
   const used = activeMembers + pendingInvites;

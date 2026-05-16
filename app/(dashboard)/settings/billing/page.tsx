@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import BillingSettingsClient from "./BillingSettingsClient";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseStoredSignupIntent } from "@/lib/entitlements";
+import { getPlanInterval, type BillingCycle, type PlanId } from "@/lib/pricing";
 
 type WorkspaceSummary = {
   planInterval: string | null;
@@ -13,6 +15,7 @@ type WorkspaceSummary = {
   billingProviderId: string | null;
   countryCode: string | null;
   baseCurrency: string | null;
+  signupIntentJson?: string | null;
   _count: { clients: number };
 };
 
@@ -42,6 +45,7 @@ export default async function BillingSettingsPage() {
       billingProviderId: true,
       countryCode: true,
       baseCurrency: true,
+      signupIntentJson: true,
       _count: { select: { clients: true } },
     },
   });
@@ -61,11 +65,18 @@ export default async function BillingSettingsPage() {
     _count: { clients: workspace._count.clients },
   };
 
+  const storedIntent = parseStoredSignupIntent(workspace.signupIntentJson ?? null);
+  const defaultPlanId: PlanId = storedIntent?.plan === "team" ? "team" : "pro";
+  const defaultBillingCycle: BillingCycle =
+    storedIntent?.cycle === "annual" ? "annual" : "monthly";
+  const defaultInterval = getPlanInterval(defaultPlanId, defaultBillingCycle);
+
   return (
     <BillingSettingsClient
       locale={locale}
       currency={currency}
       workspace={workspaceSummary}
+      defaultUpgradeInterval={defaultInterval}
     />
   );
 }

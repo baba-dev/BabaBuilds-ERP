@@ -9,39 +9,50 @@ export type PersonaTestimonial = {
 export type PersonaConfig = {
   slug: "for-ca" | "for-agencies" | "for-contractors" | "for-small-businesses" | "for-freelancers";
   namespace: string;
+  /** Signup-intent persona enum passed to /signup */
+  signupPersona: "ca" | "agency" | "freelancer" | "contractor";
   primaryCtaHref: string;
   secondaryCtaTemplateKey: DemoTemplateKey;
 };
+
+function trialSignupHref(persona: PersonaConfig["signupPersona"], source: string): string {
+  return `/signup?plan=pro&cycle=monthly&trial=15&persona=${persona}&source=${source}`;
+}
 
 export const personaConfigs: Record<PersonaConfig["slug"], PersonaConfig> = {
   "for-ca": {
     slug: "for-ca",
     namespace: "forCa",
-    primaryCtaHref: "/signup?plan=pro&cycle=monthly&trial=15&source=persona",
+    signupPersona: "ca",
+    primaryCtaHref: trialSignupHref("ca", "persona_for_ca"),
     secondaryCtaTemplateKey: "tax_agency",
   },
   "for-agencies": {
     slug: "for-agencies",
     namespace: "forAgencies",
-    primaryCtaHref: "/signup?plan=pro&cycle=monthly&trial=15&source=persona",
+    signupPersona: "agency",
+    primaryCtaHref: trialSignupHref("agency", "persona_for_agencies"),
     secondaryCtaTemplateKey: "dm_agency",
   },
   "for-contractors": {
     slug: "for-contractors",
     namespace: "forContractors",
-    primaryCtaHref: "/signup?plan=pro&cycle=monthly&trial=15&source=persona",
+    signupPersona: "contractor",
+    primaryCtaHref: trialSignupHref("contractor", "persona_for_contractors"),
     secondaryCtaTemplateKey: "contractor_builder",
   },
   "for-small-businesses": {
     slug: "for-small-businesses",
     namespace: "forSmallBusinesses",
-    primaryCtaHref: "/signup?plan=pro&cycle=monthly&trial=15&source=persona",
+    signupPersona: "freelancer",
+    primaryCtaHref: trialSignupHref("freelancer", "persona_for_small_business"),
     secondaryCtaTemplateKey: "dm_agency",
   },
   "for-freelancers": {
     slug: "for-freelancers",
     namespace: "forFreelancers",
-    primaryCtaHref: "/signup?plan=pro&cycle=monthly&trial=15&source=persona",
+    signupPersona: "freelancer",
+    primaryCtaHref: trialSignupHref("freelancer", "persona_for_freelancers"),
     secondaryCtaTemplateKey: "freelancer_consultant",
   },
 };

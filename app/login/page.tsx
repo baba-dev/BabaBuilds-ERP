@@ -9,6 +9,7 @@ import { normalizeLaunchDestination } from "@/lib/launch-routing";
 import { AuthAmbientBackground } from "@/components/auth/AuthAmbientBackground";
 import { isDemoTemplateKey } from "@/lib/demo/templates";
 import type { DemoTemplateKey } from "@/lib/demo/templates";
+import { readSignupIntentPreview } from "@/lib/signup-intent-preview";
 
 type LoginPageProps = {
   searchParams?: Promise<{
@@ -43,6 +44,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     ? resolvedSearchParams?.demoTemplate
     : undefined;
 
+  const signupPreview = await readSignupIntentPreview();
+  const googleAuthEnabled =
+    process.env.AUTH_GOOGLE_ENABLED?.trim().toLowerCase() !== "false" &&
+    process.env.AUTH_GOOGLE_ENABLED?.trim().toLowerCase() !== "0";
+
   // If already authenticated, go to dashboard
   if (session) {
     // Avoid redirect loops when session exists but workspace context is missing.
@@ -72,6 +78,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           authError={authError}
           openSandboxOnLoad={openSandboxOnLoad}
           initialDemoTemplateKey={initialDemoTemplateKey}
+          signupPreview={signupPreview}
+          googleAuthEnabled={googleAuthEnabled}
         />
       </div>
     </div>
