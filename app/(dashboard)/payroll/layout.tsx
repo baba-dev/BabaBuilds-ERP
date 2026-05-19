@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { redirectToLogin } from "@/lib/auth/login-redirect";
 import { prisma } from "@/lib/prisma";
 import { isModuleEnabled } from "@/lib/modules";
 import { checkPermissionSilent } from "@/lib/rbac";
@@ -16,7 +17,7 @@ async function getWorkspaceId(userId: string) {
 
 export default async function PayrollLayout({ children }: { children: ReactNode }) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) redirect("/auth/signin");
+  if (!session?.user?.id) redirectToLogin("/payroll");
 
   const workspaceId = await getWorkspaceId(session.user.id);
   if (!workspaceId) redirect("/dashboard");

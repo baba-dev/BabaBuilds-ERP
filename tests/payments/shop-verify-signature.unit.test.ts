@@ -21,6 +21,10 @@ vi.mock("@/lib/shop/commit-shop-order-payment", () => ({
   commitShopOrderPayment: (...args: unknown[]) => commitShopOrderPayment(...args),
 }));
 
+vi.mock("@/lib/modules", () => ({
+  isModuleEnabled: vi.fn().mockResolvedValue(true),
+}));
+
 describe("shop verify route signature validation", () => {
   beforeEach(() => {
     shopOrderFindFirst.mockReset();

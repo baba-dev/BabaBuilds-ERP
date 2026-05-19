@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { redirectToLogin } from '@/lib/auth/login-redirect';
 import { isModuleEnabled } from '@/lib/modules';
 import { checkPermissionSilent } from '@/lib/rbac';
 import { getActiveWorkspaceIdForUser } from '@/lib/workspace-scope';
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
 
 export default async function ArCollectionsLayout({ children }: { children: ReactNode }) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) redirect('/auth/signin');
+  if (!session?.user?.id) redirectToLogin('/ar-collections');
 
   const workspaceId = await getActiveWorkspaceIdForUser(session.user.id);
   if (!workspaceId) redirect('/dashboard');

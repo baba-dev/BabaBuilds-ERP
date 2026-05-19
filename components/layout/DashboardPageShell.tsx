@@ -1,7 +1,6 @@
 "use client";
 
 import { ReactNode } from "react";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { typography as ty, tx } from "@/lib/ui/typography";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
@@ -123,13 +122,11 @@ export function DashboardPageShell({
           )}
         >
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-3">
-            <div className="flex items-center justify-between gap-3">
+            {breadcrumb ? (
               <div className={tx(ty.labelUpper, "text-muted-foreground flex items-center gap-2")}>
-                <SidebarTrigger className="md:hidden" />
-                {breadcrumb ? <span className="min-h-5">{breadcrumb}</span> : null}
+                <span className="min-h-5">{breadcrumb}</span>
               </div>
-              {/* Desktop-only action placement for non-compact header handled below */}
-            </div>
+            ) : null}
 
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div className="space-y-1">
