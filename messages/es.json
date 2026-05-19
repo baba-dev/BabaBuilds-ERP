@@ -962,7 +962,7 @@
     "launch_erp": "Lanzar ERP",
     "finalizing": "Finalizando...",
     "secure_config": "Configuración Segura — Desarrollado por el Motor de Globalización",
-    "step_indicator": "Paso {current} de 4 — {name}",
+    "step_indicator": "Paso {current} de {total} — {name}",
     "step_geo": "Geografía",
     "step_finance": "Finanzas",
     "step_compliance": "Cumplimiento",
@@ -1001,7 +1001,8 @@
     "shop_slug_ph": "my-agency",
     "groq_link_text": "Get Groq Key",
     "razorpay_link_text": "Razorpay Dashboard",
-    "stripe_link_text": "Stripe Dashboard"
+    "stripe_link_text": "Stripe Dashboard",
+    "step_modules": "Modules"
   },
   "Tax": {
     "title": "Planificador Fiscal y Patrimonial",

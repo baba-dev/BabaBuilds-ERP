@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { GEOGRAPHY_DB } from "@/lib/geography";
+import { getSetupStepNameKey } from "@/components/setup/step-indicator";
 
 interface SetupWizardProps {
   isModal?: boolean;
@@ -43,6 +44,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [expandedCapabilities, setExpandedCapabilities] = useState<Record<string, boolean>>({});
   const [showMoreModules, setShowMoreModules] = useState(false);
+  const companyNameInputRef = useRef<HTMLInputElement>(null);
 
   // Form State
   const [form, setForm] = useState({
@@ -111,6 +113,18 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
     const user = session?.user as Record<string, unknown> | undefined;
     return Boolean(user?.persona || user?.workspaceType || user?.businessType || user?.industry);
   }, [session?.user]);
+  const companyNameMissing = form.companyName.trim().length === 0;
+
+  const jumpToCompanyNameField = () => {
+    if (wizardMode === "quick") {
+      setWizardMode("full");
+    }
+    setStep(4);
+    window.requestAnimationFrame(() => {
+      companyNameInputRef.current?.focus();
+      companyNameInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  };
 
   useEffect(() => {
     const email = session?.user?.email;
@@ -246,19 +260,25 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
   };
 
   return (
-    <div className={`flex flex-col items-center justify-center transition-colors duration-500 ${isModal ? 'bg-transparent p-0' : 'min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8'}`}>
-      
+    <div className={`flex flex-col items-center justify-center transition-colors duration-500 ${isModal ? "bg-transparent p-0" : "min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8"}`}>
       {/* PROGRESS TRACKER */}
-      <div className="max-w-md w-full mb-8 space-y-4">
+      <div
+        className={`max-w-md w-full space-y-4 ${
+          isModal
+            ? "sticky top-0 z-20 mb-0 border-b border-zinc-200 bg-white px-4 py-4 dark:border-zinc-800 dark:bg-zinc-950"
+            : "mb-8"
+        }`}
+      >
         <div className="flex justify-between items-center px-2">
           {Array.from({ length: lastStep }, (_, i) => i + 1).map((i) => (
             <div key={i} className={`h-1.5 flex-1 mx-1 rounded-full transition-all duration-500 ${step >= i ? "bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.4)]" : "bg-zinc-200 dark:bg-zinc-800"}`} />
           ))}
         </div>
         <p className="text-center text-xs uppercase font-black tracking-widest text-zinc-400 dark:text-zinc-600">
-          {t('step_indicator', { 
-            current: step, 
-            name: step === 1 ? t('step_geo') : step === 2 ? t('step_finance') : step === 3 ? t('step_compliance') : step === 4 ? t('step_identity') : step === 5 ? t('step_integrations') : step === 6 ? t('step_shop') : 'Modules'
+          {t('step_indicator', {
+            current: step,
+            total: lastStep,
+            name: t(getSetupStepNameKey(step))
           })}
         </p>
         <div className="rounded-xl border border-indigo-200/60 bg-indigo-50/70 px-4 py-3 text-xs text-indigo-900 dark:border-indigo-900/40 dark:bg-indigo-950/30 dark:text-indigo-200">
@@ -270,7 +290,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
         </div>
       </div>
 
-      <div className="max-w-xl w-full relative">
+      <div className={`max-w-xl w-full relative ${isModal ? "flex min-h-[70vh] flex-col" : ""}`}>
         {/* DECORATIVE ELEMENTS (Only show in standalone) */}
         {!isModal && (
           <>
@@ -279,8 +299,12 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
           </>
         )}
 
-        <Card className={`shadow-2xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden ${isModal ? 'border-none' : ''}`}>
-          
+        <Card
+          className={`shadow-2xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden ${
+            isModal ? "flex min-h-0 flex-1 flex-col border-none shadow-none" : ""
+          }`}
+        >
+          <div className={isModal ? "min-h-0 flex-1 overflow-y-auto pb-24" : ""}>
           {/* STEP 1: GEOGRAPHY */}
           {step === 1 && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-500">
@@ -415,7 +439,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 </div>
                 <div className="space-y-2">
                   <Label className="dark:text-zinc-300">{t('legal_company_name')}</Label>
-                  <Input value={form.companyName} onChange={e => {
+                  <Input ref={companyNameInputRef} value={form.companyName} onChange={e => {
                     setForm({...form, companyName: e.target.value});
                     setFieldErrors(prev => {
                       const next = { ...prev };
@@ -1021,7 +1045,12 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
             </div>
           )}
 
-          <CardFooter className="bg-zinc-50 dark:bg-zinc-950/50 p-6 border-t dark:border-zinc-800 flex justify-between gap-4">
+          </div>
+          <CardFooter
+            className={`bg-zinc-50 p-6 border-t dark:border-zinc-800 flex justify-between gap-4 dark:bg-zinc-950 ${
+              isModal ? "sticky bottom-0 z-20" : ""
+            }`}
+          >
             <Button 
               variant="ghost" 
               onClick={prevStep} 
@@ -1041,10 +1070,27 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                   <Button variant="ghost" type="button" onClick={finishSetup} disabled={isSubmitting} className="text-zinc-500 dark:text-zinc-400">
                     Skip for now
                   </Button>
-                  <Button onClick={finishSetup} disabled={isSubmitting || !form.companyName} className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[160px] shadow-lg shadow-emerald-500/20 border-none">
+                  <Button
+                    onClick={finishSetup}
+                    disabled={isSubmitting || companyNameMissing}
+                    title={companyNameMissing ? "Company name is required to launch ERP" : undefined}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[160px] shadow-lg shadow-emerald-500/20 border-none"
+                  >
                     {isSubmitting ? t('finalizing') : <><CheckCircle2 className="w-4 h-4 mr-2" /> {t('launch_erp')}</>}
                   </Button>
                 </div>
+                {companyNameMissing && (
+                  <div className="text-right space-y-1">
+                    <p className="text-xs text-amber-700 dark:text-amber-300">Company name is required to launch ERP.</p>
+                    <button
+                      type="button"
+                      onClick={jumpToCompanyNameField}
+                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+                    >
+                      Jump to required field
+                    </button>
+                  </div>
+                )}
                 {wizardMode === "quick" && (
                   <button
                     type="button"
