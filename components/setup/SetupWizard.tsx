@@ -86,6 +86,31 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
     return essentials.filter((value) => value.trim().length > 0).length;
   }, [form.address, form.companyName, form.email, form.proprietorName]);
   const essentialCompletionPercent = Math.round((essentialCompletionCount / 4) * 100);
+  const hasAnyModuleEnabled = useMemo(
+    () =>
+      [
+        form.enableWorkforce,
+        form.enableDocuments,
+        form.enableCashFlow,
+        form.enableArCollections,
+        form.enableReportingCenter,
+        form.enableRevenuePipeline,
+        form.enablePayroll,
+      ].some(Boolean),
+    [
+      form.enableArCollections,
+      form.enableCashFlow,
+      form.enableDocuments,
+      form.enablePayroll,
+      form.enableReportingCenter,
+      form.enableRevenuePipeline,
+      form.enableWorkforce,
+    ],
+  );
+  const hasPersonaSignal = useMemo(() => {
+    const user = session?.user as Record<string, unknown> | undefined;
+    return Boolean(user?.persona || user?.workspaceType || user?.businessType || user?.industry);
+  }, [session?.user]);
 
   useEffect(() => {
     const email = session?.user?.email;
@@ -564,15 +589,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                   <p className="text-xs font-black uppercase tracking-wider text-teal-800 dark:text-teal-200">Recommended for most teams</p>
                   <p className="mt-1 text-xs text-teal-700 dark:text-teal-300">Start lean with 2–3 modules. Add more later anytime from Settings.</p>
                 </div>
-                {!Object.values({
-                  workforce: form.enableWorkforce,
-                  documents: form.enableDocuments,
-                  cashFlow: form.enableCashFlow,
-                  ar: form.enableArCollections,
-                  reporting: form.enableReportingCenter,
-                  revenue: form.enableRevenuePipeline,
-                  payroll: form.enablePayroll,
-                }).some(Boolean) && (
+                {!hasPersonaSignal && !hasAnyModuleEnabled && (
                   <p className="rounded-lg border border-zinc-200 dark:border-zinc-800 px-3 py-2 text-xs text-zinc-500 dark:text-zinc-400">
                     No defaults detected for your workspace yet—everything starts off so you can opt in deliberately.
                   </p>
