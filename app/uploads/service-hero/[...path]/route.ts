@@ -10,18 +10,18 @@ export async function GET(request: Request, { params }: { params: Promise<{ path
 
   const workspaceId = await getSessionWorkspaceId();
   if (!workspaceId) {
-    logDeniedAssetAccess({ kind: 'logos', reason: 'unauthorized', request, requestedPath });
+    logDeniedAssetAccess({ kind: 'service-hero', reason: 'unauthorized', request, requestedPath });
     return new NextResponse('Unauthorized', { status: 401 });
   }
 
   if (hasTraversal(filePathArray)) {
-    logDeniedAssetAccess({ kind: 'logos', reason: 'path_traversal', request, requestedPath, workspaceId });
+    logDeniedAssetAccess({ kind: 'service-hero', reason: 'path_traversal', request, requestedPath, workspaceId });
     return new NextResponse('Forbidden', { status: 403 });
   }
 
   if (!isWorkspaceNamespaced(filePathArray, workspaceId)) {
     logDeniedAssetAccess({
-      kind: 'logos',
+      kind: 'service-hero',
       reason: 'workspace_namespace_mismatch',
       request,
       requestedPath,
@@ -38,7 +38,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ path
 
   if (!owned) {
     logDeniedAssetAccess({
-      kind: 'logos',
+      kind: 'service-hero',
       reason: 'ownership_mismatch',
       request,
       requestedPath,
