@@ -183,10 +183,15 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
   };
 
   return (
-    <div className={`flex flex-col items-center justify-center transition-colors duration-500 ${isModal ? 'bg-transparent p-0' : 'min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8'}`}>
-      
+    <div className={`flex flex-col items-center justify-center transition-colors duration-500 ${isModal ? "bg-transparent p-0" : "min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8"}`}>
       {/* PROGRESS TRACKER */}
-      <div className="max-w-md w-full mb-8 space-y-4">
+      <div
+        className={`max-w-md w-full space-y-4 ${
+          isModal
+            ? "sticky top-0 z-20 mb-0 border-b border-zinc-200 bg-white px-4 py-4 dark:border-zinc-800 dark:bg-zinc-950"
+            : "mb-8"
+        }`}
+      >
         <div className="flex justify-between items-center px-2">
           {Array.from({ length: lastStep }, (_, i) => i + 1).map((i) => (
             <div key={i} className={`h-1.5 flex-1 mx-1 rounded-full transition-all duration-500 ${step >= i ? "bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.4)]" : "bg-zinc-200 dark:bg-zinc-800"}`} />
@@ -207,7 +212,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
         </div>
       </div>
 
-      <div className="max-w-xl w-full relative">
+      <div className={`max-w-xl w-full relative ${isModal ? "flex min-h-[70vh] flex-col" : ""}`}>
         {/* DECORATIVE ELEMENTS (Only show in standalone) */}
         {!isModal && (
           <>
@@ -216,8 +221,12 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
           </>
         )}
 
-        <Card className={`shadow-2xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden ${isModal ? 'border-none' : ''}`}>
-          
+        <Card
+          className={`shadow-2xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden ${
+            isModal ? "flex min-h-0 flex-1 flex-col border-none shadow-none" : ""
+          }`}
+        >
+          <div className={isModal ? "min-h-0 flex-1 overflow-y-auto pb-24" : ""}>
           {/* STEP 1: GEOGRAPHY */}
           {step === 1 && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-500">
@@ -930,7 +939,12 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
             </div>
           )}
 
-          <CardFooter className="bg-zinc-50 dark:bg-zinc-950/50 p-6 border-t dark:border-zinc-800 flex justify-between gap-4">
+          </div>
+          <CardFooter
+            className={`bg-zinc-50 p-6 border-t dark:border-zinc-800 flex justify-between gap-4 dark:bg-zinc-950 ${
+              isModal ? "sticky bottom-0 z-20" : ""
+            }`}
+          >
             <Button 
               variant="ghost" 
               onClick={prevStep} 
