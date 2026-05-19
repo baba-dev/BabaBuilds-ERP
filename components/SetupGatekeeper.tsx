@@ -42,7 +42,7 @@ export default function SetupGatekeeper() {
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}> 
       {/* onOpenChange is empty to prevent closing by clicking overlay or ESC */}
-      <DialogContent className="max-w-2xl p-0 overflow-hidden border-none bg-transparent shadow-none" showCloseButton={false}>
+      <DialogContent className="w-[95vw] lg:w-[60vw] min-w-[320px] max-w-[1200px] p-0 overflow-hidden border-none bg-transparent shadow-none" showCloseButton={false}>
         <DialogHeader className="sr-only">
           <DialogTitle>Setup Wizard</DialogTitle>
           <DialogDescription>
