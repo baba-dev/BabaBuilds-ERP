@@ -43,7 +43,7 @@ export default function SetupGatekeeper() {
     <Dialog open={isOpen} onOpenChange={() => {}}> 
       {/* onOpenChange is empty to prevent closing by clicking overlay or ESC */}
       <DialogContent
-        className="max-w-2xl p-0 overflow-hidden border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950"
+        className="w-[95vw] lg:w-[60vw] min-w-[320px] max-w-[1200px] p-0 overflow-hidden border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950"
         showCloseButton={false}
       >
         <DialogHeader className="sr-only">
