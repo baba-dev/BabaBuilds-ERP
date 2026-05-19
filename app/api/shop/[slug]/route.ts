@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isModuleEnabled } from '@/lib/modules';
 import { readShopContent } from '@/lib/shop/content';
+import { publicStorefrontAssetUrl } from '@/lib/shop/public-assets';
 
 /**
  * GET /api/shop/[slug]
@@ -40,7 +41,7 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
 
     // Determine checkout capability (Razorpay or Stripe configured?)
     const hasRazorpay = !!(profile.razorpayKeyId && profile.razorpayKeySecret);
-    const hasStripe   = !!(profile.stripePublishableKey && (profile as any).stripeSecretKey);
+    const hasStripe   = !!(profile.stripePublishableKey && profile.stripeSecretKey);
     const activeGateway = hasRazorpay && profile.defaultGateway !== 'STRIPE'
       ? 'RAZORPAY'
       : hasStripe ? 'STRIPE' : null;
@@ -52,7 +53,7 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
         slug,
         companyName:    profile.companyName,
         tagline:        profile.shopTagline  || null,
-        logoUrl:        profile.logoUrl      || null,
+        logoUrl:        publicStorefrontAssetUrl({ slug, url: profile.logoUrl, kind: 'logo' }),
         accentColor:    profile.shopAccentColor || '#6366f1',
         email:          profile.email,
         phone:          profile.phone        || null,
@@ -72,7 +73,12 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
         name: product.name,
         description: product.shopDescription || product.description,
         category: product.category,
-        imageUrl: product.shopImageUrl || product.imageUrl,
+        imageUrl: publicStorefrontAssetUrl({
+          slug,
+          url: product.shopImageUrl || product.imageUrl,
+          kind: 'product',
+          productId: product.id,
+        }),
         price: Number(product.baselinePrice),
         currentStock: product.currentStock,
       })),

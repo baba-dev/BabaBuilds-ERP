@@ -6,7 +6,14 @@ import { promises as fs } from 'fs';
 import { buildPrivatePath, type PrivateAssetKind } from '@/lib/uploads/private-storage';
 import { getClientIp } from '@/lib/request-ip';
 
-export type AssetKind = 'receipts' | 'logos' | 'invoices' | 'documents';
+export type AssetKind =
+  | 'receipts'
+  | 'logos'
+  | 'products'
+  | 'invoices'
+  | 'documents'
+  | 'service-hero'
+  | 'share-target';
 
 type DeniedReason =
   | 'unauthorized'

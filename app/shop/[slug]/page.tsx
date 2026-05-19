@@ -158,10 +158,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { shop } = data;
   const title       = `${shop.companyName} — Products & Shop`;
   const description = shop.tagline || `Browse and purchase products from ${shop.companyName}.`;
-  const primaryImage = shop.logoUrl || FALLBACK_SOCIAL_IMAGE;
+  const primaryImage = toAbsoluteUrl(shop.logoUrl) || `${BASE_URL}${FALLBACK_SOCIAL_IMAGE}`;
   const openGraphImages = shop.logoUrl
-    ? [{ url: shop.logoUrl, width: 1200, height: 630, alt: `${shop.companyName} logo` }]
-    : [{ url: FALLBACK_SOCIAL_IMAGE, width: 1536, height: 1024, alt: "BabaBuilds ERP services storefront" }];
+    ? [{ url: primaryImage, width: 1200, height: 630, alt: `${shop.companyName} logo` }]
+    : [{ url: primaryImage, width: 1536, height: 1024, alt: "BabaBuilds ERP services storefront" }];
 
   return {
     title,
