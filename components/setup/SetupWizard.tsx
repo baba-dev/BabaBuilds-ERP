@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { GEOGRAPHY_DB } from "@/lib/geography";
+import { getSetupStepNameKey } from "@/components/setup/step-indicator";
 
 interface SetupWizardProps {
   isModal?: boolean;
@@ -193,9 +194,10 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
           ))}
         </div>
         <p className="text-center text-xs uppercase font-black tracking-widest text-zinc-400 dark:text-zinc-600">
-          {t('step_indicator', { 
-            current: step, 
-            name: step === 1 ? t('step_geo') : step === 2 ? t('step_finance') : step === 3 ? t('step_compliance') : step === 4 ? t('step_identity') : step === 5 ? t('step_integrations') : step === 6 ? t('step_shop') : 'Modules'
+          {t('step_indicator', {
+            current: step,
+            total: lastStep,
+            name: t(getSetupStepNameKey(step))
           })}
         </p>
         <div className="rounded-xl border border-indigo-200/60 bg-indigo-50/70 px-4 py-3 text-xs text-indigo-900 dark:border-indigo-900/40 dark:bg-indigo-950/30 dark:text-indigo-200">
