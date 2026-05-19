@@ -147,7 +147,7 @@ export async function POST() {
         });
       }
 
-      const origin = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "http://localhost:3000";
+      const origin = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "https://erp.bababuilds.com";
       const checkoutSession = await stripe.checkout.sessions.create({
         mode: "setup",
         customer: customerId,

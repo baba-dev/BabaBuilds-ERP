@@ -149,7 +149,8 @@ export async function POST(req: Request) {
     });
 
     // ── 7. Send invite email ───────────────────────────────────────────────
-    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/invite/${token}`;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://erp.bababuilds.com";
+    const inviteUrl = `${appUrl}/invite/${token}`;
     const workspaceName = workspace.businessProfile?.companyName || workspace.name;
     const roleName = ROLE_LABELS[targetRole];
 
@@ -159,7 +160,7 @@ export async function POST(req: Request) {
         to: normalizedEmail,
         subject: `You've been invited to join ${workspaceName} on BabaBuilds ERP`,
         html: layout({
-          appUrl: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+          appUrl,
           companyName: workspaceName,
           emoji: "👋",
           headline: "You're Invited!",

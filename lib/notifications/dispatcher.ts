@@ -161,7 +161,7 @@ function buildPushAndInAppContent(
 export async function dispatchNotification(payload: NotificationPayload): Promise<void> {
   try {
     const { event, workspaceId, data, userIds } = payload;
-    const APP_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const APP_URL = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://erp.bababuilds.com';
 
     // ── 1. Resolve Target Users ───────────────────────────────────────────
     // If userIds are provided explicitly, use them; otherwise target all workspace owners/members
