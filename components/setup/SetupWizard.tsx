@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
@@ -42,6 +42,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const companyNameInputRef = useRef<HTMLInputElement>(null);
 
   // Form State
   const [form, setForm] = useState({
@@ -85,6 +86,19 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
     return essentials.filter((value) => value.trim().length > 0).length;
   }, [form.address, form.companyName, form.email, form.proprietorName]);
   const essentialCompletionPercent = Math.round((essentialCompletionCount / 4) * 100);
+  const companyNameMissing = form.companyName.trim().length === 0;
+
+  const jumpToCompanyNameField = () => {
+    if (wizardMode === "quick") {
+      setWizardMode("full");
+    }
+    setStep(4);
+    window.requestAnimationFrame(() => {
+      companyNameInputRef.current?.focus();
+      companyNameInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  };
+
 
   useEffect(() => {
     const email = session?.user?.email;
@@ -363,7 +377,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 </div>
                 <div className="space-y-2">
                   <Label className="dark:text-zinc-300">{t('legal_company_name')}</Label>
-                  <Input value={form.companyName} onChange={e => {
+                  <Input ref={companyNameInputRef} value={form.companyName} onChange={e => {
                     setForm({...form, companyName: e.target.value});
                     setFieldErrors(prev => {
                       const next = { ...prev };
@@ -962,9 +976,26 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
               </Button>
             ) : (
               <div className="flex flex-col items-end gap-2">
-                <Button onClick={finishSetup} disabled={isSubmitting || !form.companyName} className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[160px] shadow-lg shadow-emerald-500/20 border-none">
+                <Button
+                  onClick={finishSetup}
+                  disabled={isSubmitting || companyNameMissing}
+                  title={companyNameMissing ? "Company name is required to launch ERP" : undefined}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[160px] shadow-lg shadow-emerald-500/20 border-none"
+                >
                   {isSubmitting ? t('finalizing') : <><CheckCircle2 className="w-4 h-4 mr-2" /> {t('launch_erp')}</>}
                 </Button>
+                {companyNameMissing && (
+                  <div className="text-right space-y-1">
+                    <p className="text-xs text-amber-700 dark:text-amber-300">Company name is required to launch ERP.</p>
+                    <button
+                      type="button"
+                      onClick={jumpToCompanyNameField}
+                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+                    >
+                      Jump to required field
+                    </button>
+                  </div>
+                )}
                 {wizardMode === "quick" && (
                   <button
                     type="button"
