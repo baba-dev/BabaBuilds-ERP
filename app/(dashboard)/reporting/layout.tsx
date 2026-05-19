@@ -2,13 +2,14 @@ import { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { redirectToLogin } from '@/lib/auth/login-redirect';
 import { prisma } from '@/lib/prisma';
 import { isModuleEnabled } from '@/lib/modules';
 import { requirePermission } from '@/lib/rbac';
 
 export default async function ReportingLayout({ children }: { children: ReactNode }) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) redirect('/auth/signin');
+  if (!session?.user?.id) redirectToLogin('/reporting');
 
   const wu = await prisma.workspaceUser.findFirst({
     where: { userId: session.user.id, isActive: true },

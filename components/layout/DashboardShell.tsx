@@ -3,7 +3,7 @@
 import { ReactNode } from "react";
 import AuthModal from "@/components/AuthModal";
 import { AppSidebar } from "@/components/app-sidebar";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { OnboardingProvider } from "@/components/onboarding/OnboardingProvider";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
@@ -27,6 +27,14 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               <div className="absolute bottom-[-10%] left-[-5%] h-[280px] w-[280px] rounded-full bg-amber-400/[0.06] blur-[88px] dark:bg-amber-400/[0.09]" />
             </div>
             <div className="relative z-10">
+              {!isLoginRoute && (
+                <div className="sticky top-0 z-30 flex items-center gap-2 border-b border-border/60 bg-surface-base/90 px-3 py-2 backdrop-blur-md md:hidden">
+                  <SidebarTrigger />
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Menu
+                  </span>
+                </div>
+              )}
               {!isLoginRoute && <AuthModal />}
               {children}
             </div>

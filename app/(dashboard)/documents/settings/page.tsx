@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
+import { redirectToLogin } from "@/lib/auth/login-redirect";
 import { prisma } from "@/lib/prisma";
 import { isModuleEnabled } from "@/lib/modules";
 import { checkPermissionsSilent } from "@/lib/rbac";
@@ -10,7 +11,7 @@ import { getWorkspaceQuotaSnapshot } from "@/lib/documents/quota";
 
 export default async function DocumentSettingsPage() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) redirect("/auth/signin");
+  if (!session?.user?.id) redirectToLogin("/documents/settings");
 
   const wu = await prisma.workspaceUser.findFirst({
     where: { userId: session.user.id, isActive: true },
