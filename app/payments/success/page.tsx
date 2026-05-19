@@ -1,5 +1,5 @@
 import { CheckCircle2 } from "lucide-react";
-import Link from "next/link";
+import { CloseWindowButton } from "@/components/payments/CloseWindowButton";
 
 export default function PaymentSuccessPage() {
   return (
@@ -17,12 +17,7 @@ export default function PaymentSuccessPage() {
           </p>
         </div>
         <div className="pt-4">
-          <button 
-            onClick={() => window.close()}
-            className="w-full py-3 px-4 rounded-xl font-medium bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-white transition-colors"
-          >
-            Close Window
-          </button>
+          <CloseWindowButton />
         </div>
       </div>
     </div>
