@@ -4,10 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { 
+import {
   Globe, ShieldCheck, Building2, 
   ArrowRight, ArrowLeft, CheckCircle2, Sparkles,
-  Zap, Wallet, Users2, Calendar, Clock, ClipboardList, FileText, Route, CheckSquare2, HandCoins, Target, Siren, ChartColumnBig
+  Zap, Wallet, Users2, Calendar, Clock, ClipboardList, FileText, Route, CheckSquare2, HandCoins, Target, Siren, ChartColumnBig, ChevronDown
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,8 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [expandedCapabilities, setExpandedCapabilities] = useState<Record<string, boolean>>({});
+  const [showMoreModules, setShowMoreModules] = useState(false);
 
   // Form State
   const [form, setForm] = useState({
@@ -96,6 +98,42 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
       companyName: prev.companyName || (name ? `${name.split(" ")[0]} Business` : prev.companyName),
     }));
   }, [session?.user?.email, session?.user?.name]);
+
+  useEffect(() => {
+    const user = session?.user as Record<string, unknown> | undefined;
+    const rawPersona = (user?.persona || user?.workspaceType || user?.businessType || user?.industry || "") as string;
+    const persona = rawPersona.toLowerCase();
+    if (!persona) return;
+
+    setForm((prev) => {
+      if (
+        prev.enableWorkforce ||
+        prev.enableDocuments ||
+        prev.enableCashFlow ||
+        prev.enableArCollections ||
+        prev.enableReportingCenter ||
+        prev.enableRevenuePipeline ||
+        prev.enablePayroll
+      ) {
+        return prev;
+      }
+      const next = { ...prev };
+      if (persona.includes("agency") || persona.includes("service") || persona.includes("consult")) {
+        next.enableDocuments = true;
+        next.enableRevenuePipeline = true;
+      } else if (persona.includes("retail") || persona.includes("ecommerce") || persona.includes("store")) {
+        next.enableCashFlow = true;
+        next.enableArCollections = true;
+      } else if (persona.includes("team") || persona.includes("hr") || persona.includes("staff")) {
+        next.enableWorkforce = true;
+        next.enableDocuments = true;
+      } else {
+        next.enableDocuments = true;
+        next.enableCashFlow = true;
+      }
+      return next;
+    });
+  }, [session]);
 
   // Smart Suggestion Logic
   const handleCountryChange = (code: string) => {
@@ -521,7 +559,24 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                   Enable powerful subsystems for your workspace. You can change these anytime from Settings.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pt-8 space-y-4">
+              <CardContent className="pt-8 space-y-5">
+                <div className="rounded-xl border border-teal-200/60 bg-teal-50/70 dark:border-teal-900/40 dark:bg-teal-950/30 px-4 py-3">
+                  <p className="text-xs font-black uppercase tracking-wider text-teal-800 dark:text-teal-200">Recommended for most teams</p>
+                  <p className="mt-1 text-xs text-teal-700 dark:text-teal-300">Start lean with 2–3 modules. Add more later anytime from Settings.</p>
+                </div>
+                {!Object.values({
+                  workforce: form.enableWorkforce,
+                  documents: form.enableDocuments,
+                  cashFlow: form.enableCashFlow,
+                  ar: form.enableArCollections,
+                  reporting: form.enableReportingCenter,
+                  revenue: form.enableRevenuePipeline,
+                  payroll: form.enablePayroll,
+                }).some(Boolean) && (
+                  <p className="rounded-lg border border-zinc-200 dark:border-zinc-800 px-3 py-2 text-xs text-zinc-500 dark:text-zinc-400">
+                    No defaults detected for your workspace yet—everything starts off so you can opt in deliberately.
+                  </p>
+                )}
                 <div
                   className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
                     form.enableWorkforce
@@ -546,10 +601,13 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
-                          HR, attendance, leave management &amp; approvals — integrated with your ERP.
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2 line-clamp-2">
+                          HR workflows for people records, attendance, and approvals.
                         </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                        <button type="button" onClick={(e) => { e.stopPropagation(); setExpandedCapabilities((prev) => ({ ...prev, workforce: !prev.workforce })); }} className="text-[11px] font-semibold text-teal-700 dark:text-teal-300 inline-flex items-center gap-1">
+                          {expandedCapabilities.workforce ? "Hide capabilities" : "See capabilities"} <ChevronDown className={`h-3 w-3 transition-transform ${expandedCapabilities.workforce ? "rotate-180" : ""}`} />
+                        </button>
+                        {expandedCapabilities.workforce && <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 mt-2">
                           {[
                             { icon: Users2, text: 'Employee directory & profiles' },
                             { icon: Calendar, text: 'Leave requests & approvals' },
@@ -561,7 +619,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                               <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{text}</span>
                             </div>
                           ))}
-                        </div>
+                        </div>}
                       </div>
                     </div>
                     <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
@@ -598,10 +656,13 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
-                          Secure storage with OCR, extracted-field review, and ERP-native linking for accounting &amp; compliance.
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2 line-clamp-2">
+                          Secure document storage with OCR and quick ERP linking.
                         </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                        <button type="button" onClick={(e) => { e.stopPropagation(); setExpandedCapabilities((prev) => ({ ...prev, documents: !prev.documents })); }} className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 inline-flex items-center gap-1">
+                          {expandedCapabilities.documents ? "Hide capabilities" : "See capabilities"} <ChevronDown className={`h-3 w-3 transition-transform ${expandedCapabilities.documents ? "rotate-180" : ""}`} />
+                        </button>
+                        {expandedCapabilities.documents && <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 mt-2">
                           {[
                             { icon: FileText, text: 'Upload Center (Inbox) with triage states' },
                             { icon: Sparkles, text: 'OCR extraction with review & correction' },
@@ -613,7 +674,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                               <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{text}</span>
                             </div>
                           ))}
-                        </div>
+                        </div>}
                       </div>
                     </div>
                     <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
@@ -650,8 +711,8 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
-                          Forecast cash runways, monitor crunch windows, and refresh scenarios before risks become urgent.
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2">
+                          Cash forecasting to spot run-rate risk earlier.
                         </p>
                       </div>
                     </div>
@@ -665,6 +726,12 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                   </div>
                 </div>
 
+                <button type="button" onClick={() => setShowMoreModules((prev) => !prev)} className="w-full text-left rounded-xl border border-zinc-200 dark:border-zinc-800 px-4 py-3 text-sm font-semibold text-zinc-700 dark:text-zinc-200 inline-flex items-center justify-between">
+                  More modules
+                  <ChevronDown className={`h-4 w-4 transition-transform ${showMoreModules ? "rotate-180" : ""}`} />
+                </button>
+
+                {showMoreModules && <div className="space-y-4">
                 <div
                   className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
                     form.enableArCollections
@@ -689,10 +756,13 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
-                          Manage receivables with aging buckets, overdue prioritization, reminder automation, and collector workflow statuses.
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2 line-clamp-2">
+                          Receivables prioritization with aging and reminders.
                         </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                        <button type="button" onClick={(e) => { e.stopPropagation(); setExpandedCapabilities((prev) => ({ ...prev, arCollections: !prev.arCollections })); }} className="text-[11px] font-semibold text-orange-700 dark:text-orange-300 inline-flex items-center gap-1">
+                          {expandedCapabilities.arCollections ? "Hide capabilities" : "See capabilities"} <ChevronDown className={`h-3 w-3 transition-transform ${expandedCapabilities.arCollections ? "rotate-180" : ""}`} />
+                        </button>
+                        {expandedCapabilities.arCollections && <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 mt-2">
                           {[
                             { icon: Clock, text: 'Aging buckets and overdue concentration' },
                             { icon: ClipboardList, text: 'Collection priority queue by score' },
@@ -704,7 +774,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                               <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{text}</span>
                             </div>
                           ))}
-                        </div>
+                        </div>}
                       </div>
                     </div>
                     <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
@@ -742,7 +812,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('optional_reporting_desc')}</p>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2">{t('optional_reporting_desc')}</p>
                       </div>
                     </div>
                     <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
@@ -783,10 +853,13 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
-                          Proposal-stage intelligence with stalled-deal alerts and guided follow-up actions to accelerate conversions.
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2 line-clamp-2">
+                          Deal pipeline visibility with next-action guidance.
                         </p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                        <button type="button" onClick={(e) => { e.stopPropagation(); setExpandedCapabilities((prev) => ({ ...prev, revenuePipeline: !prev.revenuePipeline })); }} className="text-[11px] font-semibold text-violet-700 dark:text-violet-300 inline-flex items-center gap-1">
+                          {expandedCapabilities.revenuePipeline ? "Hide capabilities" : "See capabilities"} <ChevronDown className={`h-3 w-3 transition-transform ${expandedCapabilities.revenuePipeline ? "rotate-180" : ""}`} />
+                        </button>
+                        {expandedCapabilities.revenuePipeline && <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 mt-2">
                           {[
                             { icon: Target, text: 'Pipeline overview by stage' },
                             { icon: Clock, text: 'Stalled opportunity detection' },
@@ -798,7 +871,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                               <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{text}</span>
                             </div>
                           ))}
-                        </div>
+                        </div>}
                       </div>
                     </div>
                     <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
@@ -835,8 +908,8 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
-                          Stand up payroll safely with phased rollout controls, read-only previews, and go-live readiness checks.
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3 line-clamp-2">
+                          Phased payroll rollout with readiness checks.
                         </p>
 
                         <div className="space-y-2 mb-3">
@@ -926,6 +999,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                     </div>
                   </div>
                 </div>
+                </div>}
               </CardContent>
             </div>
           )}
@@ -946,9 +1020,14 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
               </Button>
             ) : (
               <div className="flex flex-col items-end gap-2">
-                <Button onClick={finishSetup} disabled={isSubmitting || !form.companyName} className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[160px] shadow-lg shadow-emerald-500/20 border-none">
-                  {isSubmitting ? t('finalizing') : <><CheckCircle2 className="w-4 h-4 mr-2" /> {t('launch_erp')}</>}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" type="button" onClick={finishSetup} disabled={isSubmitting} className="text-zinc-500 dark:text-zinc-400">
+                    Skip for now
+                  </Button>
+                  <Button onClick={finishSetup} disabled={isSubmitting || !form.companyName} className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[160px] shadow-lg shadow-emerald-500/20 border-none">
+                    {isSubmitting ? t('finalizing') : <><CheckCircle2 className="w-4 h-4 mr-2" /> {t('launch_erp')}</>}
+                  </Button>
+                </div>
                 {wizardMode === "quick" && (
                   <button
                     type="button"
