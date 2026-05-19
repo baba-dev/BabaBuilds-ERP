@@ -1,5 +1,5 @@
 import { XCircle } from "lucide-react";
-import Link from "next/link";
+import { CloseWindowButton } from "@/components/payments/CloseWindowButton";
 
 export default function PaymentFailurePage() {
   return (
@@ -13,16 +13,11 @@ export default function PaymentFailurePage() {
             Verification Unavailable
           </h1>
           <p className="text-gray-500 dark:text-gray-400">
-            We couldn't immediately verify your payment right now. Don't worry if your account was charged, our automated systems will synchronize the invoice automatically.
+            We couldn&apos;t immediately verify your payment right now. Don&apos;t worry if your account was charged, our automated systems will synchronize the invoice automatically.
           </p>
         </div>
         <div className="pt-4">
-          <button 
-            onClick={() => window.close()}
-            className="w-full py-3 px-4 rounded-xl font-medium bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-white transition-colors"
-          >
-            Close Window
-          </button>
+          <CloseWindowButton />
         </div>
       </div>
     </div>
