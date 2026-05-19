@@ -16,7 +16,14 @@ import { ProUpgradeCard } from "@/components/UpgradeButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
-import { FREE_TIER_CLIENT_LIMIT, FREE_TIER_MONTHLY_INVOICE_LIMIT, formatPlanPrice, getPlanPriceFromInterval, getPricingRegion } from "@/lib/pricing";
+import {
+  FREE_TIER_CLIENT_LIMIT,
+  FREE_TIER_MONTHLY_INVOICE_LIMIT,
+  formatPlanPrice,
+  getPlanPriceFromInterval,
+  getPricingRegion,
+  type PlanInterval,
+} from "@/lib/pricing";
 import { loadExternalScript } from "@/lib/client/load-external-script";
 
 type WorkspaceSummary = {
@@ -61,10 +68,12 @@ export default function BillingSettingsClient({
   locale,
   currency,
   workspace,
+  defaultUpgradeInterval,
 }: {
   locale: string;
   currency: string;
   workspace: WorkspaceSummary;
+  defaultUpgradeInterval?: PlanInterval;
 }) {
   const { data: session } = useSession();
   const loadRazorpayScript = useCallback(async () => {
@@ -130,7 +139,10 @@ export default function BillingSettingsClient({
   );
 
   const { activePriceLabel, intervalText } = useMemo(() => {
-    if (isTrialing) return { activePriceLabel: "Included", intervalText: "Trial — Pro features" };
+    if (isTrialing) {
+      const tierLabel = workspace.planTier === "TEAM" ? "Team" : "Pro";
+      return { activePriceLabel: "Included", intervalText: `Trial — ${tierLabel} features` };
+    }
     if (!isPaidSubscription) return { activePriceLabel: formatMoney(0), intervalText: "Forever" };
     const isTeam = workspace.subscriptionStatus === "TEAM" || workspace.planTier === "TEAM";
     const fallbackInterval = isTeam ? "TEAM_MONTHLY" : "MONTHLY";
@@ -432,7 +444,15 @@ export default function BillingSettingsClient({
             )}
           </Card>
 
-          {!isPaidSubscription && !isTrialing && <ProUpgradeCard locale={locale} currency={currency} countryCode={workspace.countryCode} />}
+          {!isPaidSubscription && (
+            <ProUpgradeCard
+              locale={locale}
+              currency={currency}
+              countryCode={workspace.countryCode}
+              defaultInterval={defaultUpgradeInterval}
+              convertDuringTrial={isTrialing}
+            />
+          )}
 
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
             <CardHeader className="bg-zinc-50/50 dark:bg-zinc-950/50 border-b dark:border-zinc-800">

@@ -18,6 +18,7 @@ import {
   type SidebarItemId,
   type UserPreferences,
 } from "@/src/types/user-preferences";
+import TrialStatusPill from "@/components/dashboard/TrialStatusPill";
 
 function SidebarBrand() {
   const t = useTranslations("Sidebar");
@@ -48,12 +49,14 @@ function SidebarBrand() {
 }
 
 export function AppSidebar() {
-  const { open, setOpen, setSidebarWidth } = useSidebar();
+  const { open, setOpen, setSidebarWidth, isMobile } = useSidebar();
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_USER_PREFERENCES);
   const [pinError, setPinError] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const [enabledModules, setEnabledModules] = useState<Set<string>>(new Set());
   const [grantedPermissions, setGrantedPermissions] = useState<Set<string>>(new Set());
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
+  const [isTrialing, setIsTrialing] = useState(false);
   const skipNextOpenSyncRef = useRef(false);
 
   const loadPreferences = useCallback(async () => {
@@ -67,6 +70,16 @@ export function AppSidebar() {
       if (prefRes.ok) {
         const payload = (await prefRes.json()) as UserPreferences;
         setPreferences(payload);
+      }
+
+      const settingsRes = await fetch("/api/settings", { cache: "no-store" });
+      if (settingsRes.ok) {
+        const settings = (await settingsRes.json()) as {
+          subscriptionStatus?: string;
+          subscriptionEndsAt?: string | null;
+        };
+        setIsTrialing(settings.subscriptionStatus === "TRIALING");
+        setTrialEndsAt(settings.subscriptionEndsAt ?? null);
       }
 
       if (modulesRes.ok) {
@@ -208,6 +221,11 @@ export function AppSidebar() {
     <Sidebar>
       <div className="flex h-full w-full max-h-screen flex-col gap-2 bg-gradient-to-b from-white/[0.03] to-transparent">
         <SidebarBrand />
+      {(open || isMobile) && (
+        <div className="px-4 pb-2">
+          <TrialStatusPill trialEndsAt={trialEndsAt} isTrialing={isTrialing} />
+        </div>
+      )}
 
         <SidebarSearch enabledModules={enabledModules} grantedPermissions={grantedPermissions} />
 

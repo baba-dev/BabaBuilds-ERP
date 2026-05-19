@@ -3,6 +3,7 @@ import 'server-only';
 import { prisma } from '@/lib/prisma';
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { getWorkspaceDocumentStorageCapBytes } from '@/lib/documents/policy';
+import { resolveEffectivePlanTier } from '@/lib/entitlements';
 
 export type WorkspaceQuotaSnapshot = {
   bytesUsedTotal: number;
@@ -21,7 +22,12 @@ export async function getWorkspaceQuotaSnapshot(workspaceId: string): Promise<Wo
   const [workspace, storage] = await Promise.all([
     prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { planTier: true },
+      select: {
+        planTier: true,
+        subscriptionStatus: true,
+        subscriptionEndsAt: true,
+        signupIntentJson: true,
+      },
     }),
     prisma.workspaceDocumentStorage.findUnique({
       where: { workspaceId },
@@ -29,7 +35,8 @@ export async function getWorkspaceQuotaSnapshot(workspaceId: string): Promise<Wo
     }),
   ]);
 
-  const cap = getWorkspaceDocumentStorageCapBytes(workspace?.planTier ?? 'FREE');
+  const effectiveTier = workspace ? resolveEffectivePlanTier(workspace) : 'FREE';
+  const cap = getWorkspaceDocumentStorageCapBytes(effectiveTier);
   const used = coerceNumber(storage?.bytesUsedTotal ?? 0);
   const percentUsed = cap === Infinity ? 0 : cap <= 0 ? 1 : Math.min(1, used / cap);
 

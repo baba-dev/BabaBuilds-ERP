@@ -1,12 +1,18 @@
 /**
  * Single source of truth for plan tiers, trial behavior, and feature gates.
  *
- * Trial: While `subscriptionStatus === "TRIALING"` and `subscriptionEndsAt` is in the future,
- * the workspace gets paid-tier feature access (payment gateways, no free-tier quotas), even if `planTier` is still FREE.
+ * Invariants:
+ * - `subscriptionStatus === "TRIALING"` — time-bound trial window (`subscriptionEndsAt`).
+ * - `planTier` — feature tier for seats, storage, and UI (PRO/TEAM during trial after provision).
  */
 
 import { prisma } from "@/lib/prisma";
 import { FREE_TIER_CLIENT_LIMIT, FREE_TIER_MONTHLY_INVOICE_LIMIT, FREE_TIER_PUBLISHED_SERVICES_LIMIT } from "@/lib/pricing";
+import {
+  deserializeSignupIntent,
+  signupIntentSchema,
+  type SignupIntent,
+} from "@/lib/signup-intent";
 
 export type PublicPlanTier = "FREE" | "PRO" | "TEAM";
 
@@ -14,6 +20,11 @@ export type WorkspaceBillingSnapshot = {
   planTier?: string | null;
   subscriptionStatus?: string | null;
   subscriptionEndsAt?: Date | string | null;
+  signupIntentJson?: string | null;
+};
+
+export type WorkspaceBillingRow = WorkspaceBillingSnapshot & {
+  id?: string;
 };
 
 export function normalizePlanTier(planTier: string | null | undefined): PublicPlanTier {
@@ -28,6 +39,69 @@ export function isTrialActive(snapshot: WorkspaceBillingSnapshot): boolean {
   const end = snapshot.subscriptionEndsAt;
   if (!end) return false;
   return new Date(end).getTime() > Date.now();
+}
+
+/** Parse persisted workspace.signupIntentJson (plain JSON or legacy signed cookie value). */
+export function parseStoredSignupIntent(json: string | null | undefined): SignupIntent | null {
+  if (!json) return null;
+  const fromCookie = deserializeSignupIntent(json);
+  if (fromCookie) return fromCookie;
+  try {
+    return signupIntentSchema.parse(JSON.parse(json));
+  } catch {
+    return null;
+  }
+}
+
+export function planTierFromSignupIntent(intent: SignupIntent | null | undefined): PublicPlanTier {
+  if (!intent) return "PRO";
+  return intent.plan === "team" ? "TEAM" : "PRO";
+}
+
+/**
+ * Effective tier for seats, document storage, and UI labels.
+ * Active trial uses planTier when set (post-provision); falls back to stored signup intent.
+ */
+export function resolveEffectivePlanTier(
+  snapshot: WorkspaceBillingSnapshot,
+  signupIntentJson?: string | null,
+): PublicPlanTier {
+  if (isTrialActive(snapshot)) {
+    const paid = normalizePlanTier(snapshot.planTier);
+    if (paid !== "FREE") return paid;
+    const intent = parseStoredSignupIntent(signupIntentJson ?? snapshot.signupIntentJson);
+    return planTierFromSignupIntent(intent);
+  }
+  return normalizePlanTier(snapshot.planTier);
+}
+
+/** Key passed to getSeatLimit() in lib/permissions.ts */
+export function resolveSeatLimitKey(
+  snapshot: WorkspaceBillingSnapshot,
+  signupIntentJson?: string | null,
+): string {
+  return resolveEffectivePlanTier(snapshot, signupIntentJson);
+}
+
+export function resolveBillingSnapshot(row: WorkspaceBillingRow): WorkspaceBillingSnapshot & {
+  effectivePlanTier: PublicPlanTier;
+  isTrialing: boolean;
+  seatLimitKey: string;
+} {
+  const snapshot: WorkspaceBillingSnapshot = {
+    planTier: row.planTier,
+    subscriptionStatus: row.subscriptionStatus,
+    subscriptionEndsAt: row.subscriptionEndsAt,
+    signupIntentJson: row.signupIntentJson,
+  };
+  const trialing = isTrialActive(snapshot);
+  const effectivePlanTier = resolveEffectivePlanTier(snapshot);
+  return {
+    ...snapshot,
+    effectivePlanTier,
+    isTrialing: trialing,
+    seatLimitKey: effectivePlanTier,
+  };
 }
 
 /** PRO/TEAM (Enterprise is normalized to Team for limits). */
@@ -95,14 +169,62 @@ export async function evaluateMonthlyInvoiceLimit(params: {
   };
 }
 
+function isExpiredTrialingRow(snapshot: WorkspaceBillingSnapshot): boolean {
+  if (String(snapshot.subscriptionStatus ?? "").toUpperCase() !== "TRIALING") return false;
+  const end = snapshot.subscriptionEndsAt;
+  if (!end) return false;
+  return new Date(end).getTime() <= Date.now();
+}
+
+/** Normalize stale TRIALING rows whose end date has passed (lazy heal). */
+export async function normalizeExpiredTrialWorkspace(workspaceId: string): Promise<void> {
+  const row = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: { subscriptionStatus: true, subscriptionEndsAt: true },
+  });
+  if (!row || !isExpiredTrialingRow(row)) return;
+  await prisma.workspace.update({
+    where: { id: workspaceId },
+    data: { subscriptionStatus: "FREE", planTier: "FREE" },
+  });
+}
+
 export async function loadWorkspaceBillingSnapshot(workspaceId: string): Promise<WorkspaceBillingSnapshot | null> {
+  await normalizeExpiredTrialWorkspace(workspaceId);
   return prisma.workspace.findUnique({
     where: { id: workspaceId },
-    select: { planTier: true, subscriptionStatus: true, subscriptionEndsAt: true },
+    select: {
+      planTier: true,
+      subscriptionStatus: true,
+      subscriptionEndsAt: true,
+      signupIntentJson: true,
+    },
   });
 }
 
 /** Enforces Free-tier monthly invoice cap (UTC calendar month); returns null if allowed. */
+export type PublishedShopLimitDenied = {
+  code: "FREE_TIER_PUBLISHED_SERVICES_LIMIT";
+  message: string;
+  limit: number;
+};
+
+export async function assertFreeTierPublishedShopListingsAllowed(
+  workspaceId: string,
+): Promise<PublishedShopLimitDenied | null> {
+  const snap = await loadWorkspaceBillingSnapshot(workspaceId);
+  if (!snap || !shouldApplyFreeTierLimits(snap)) return null;
+  const publishedCount = await prisma.product.count({
+    where: { workspaceId, showInShop: true },
+  });
+  if (publishedCount < FREE_TIER_PUBLISHED_SERVICES_LIMIT) return null;
+  return {
+    code: "FREE_TIER_PUBLISHED_SERVICES_LIMIT",
+    message: `You have reached the limit of ${FREE_TIER_PUBLISHED_SERVICES_LIMIT} published shop listings on the Free plan. Upgrade to publish more.`,
+    limit: FREE_TIER_PUBLISHED_SERVICES_LIMIT,
+  };
+}
+
 export async function assertFreeTierMonthlyInvoiceAllowed(
   workspaceId: string,
   invoiceMonthRef: Date,

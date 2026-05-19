@@ -385,7 +385,12 @@ export default function Dashboard() {
   );
 
   // 2.3 FIX: show a getting-started checklist for new workspaces (zero revenue = fresh account)
-  const showFirstLook = !onboardingLoading && !isDemoUser && isFirstLogin && !onboardingDisabled;
+  const fromSignup = searchParams.get("fromSignup") === "1";
+  const showFirstLook =
+    !onboardingLoading &&
+    !isDemoUser &&
+    !onboardingDisabled &&
+    (isFirstLogin || fromSignup);
   const showGettingStarted =
     !showFirstLook &&
     !gettingStartedDismissed &&

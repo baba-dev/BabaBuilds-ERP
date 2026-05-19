@@ -2,7 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getMaxUsersForPlan } from "@/lib/permissions";
+import { getSeatLimit } from "@/lib/permissions";
+import { resolveSeatLimitKey } from "@/lib/entitlements";
 import type { Metadata } from "next";
 import { getTokenizedPrivatePageMetadata } from "@/lib/metadata/tokenized-private-page";
 
@@ -48,7 +49,7 @@ export default async function InviteAcceptancePage({ params }: { params: Promise
 
   if (!session || !session.user) {
     // Not logged in -> Redirect to sign in/up page with callback to this URL
-    redirect(`/api/auth/signin?callbackUrl=/invite/${token}`);
+    redirect(`/login?callbackUrl=${encodeURIComponent(`/invite/${token}`)}`);
   }
 
   const user = await prisma.user.findUnique({ where: { email: session.user.email || "" } });
@@ -67,7 +68,14 @@ export default async function InviteAcceptancePage({ params }: { params: Promise
 
   // Check limits again before insertion (in case they downgraded or filled the spot)
   const currentMemberCount = invite.workspace.users.length;
-  const maxUsers = getMaxUsersForPlan(invite.workspace.planTier);
+  const maxUsers = getSeatLimit(
+    resolveSeatLimitKey({
+      planTier: invite.workspace.planTier,
+      subscriptionStatus: invite.workspace.subscriptionStatus,
+      subscriptionEndsAt: invite.workspace.subscriptionEndsAt,
+      signupIntentJson: invite.workspace.signupIntentJson,
+    }),
+  );
 
   if (currentMemberCount >= maxUsers) {
     return (

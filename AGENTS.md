@@ -50,3 +50,8 @@ Optionally seed compliance dictionaries: `npx ts-node prisma/seed.ts`
 - The Prisma migration history is broken; always use `npx prisma db push` for dev schema sync.
 - External services (Google OAuth, SMTP, Razorpay, Stripe, ClamAV, Cloudflare Turnstile) are all optional in development.
 - The SQLite database file is at `prisma/dev.db` (gitignored).
+
+### Scheduled jobs (production VPS cron)
+
+- `GET /api/cron/trial-expiry` — expires `TRIALING` workspaces past `subscriptionEndsAt` (set `Authorization: Bearer $CRON_SECRET`). Example: daily at 06:00 alongside other cron routes.
+- Trial signup flow: marketing links hit `GET /signup?...` (sets `signup_intent` cookie for 24h) → `/login` → NextAuth `createUser` provisions `TRIALING` workspace with `planTier` PRO/TEAM from intent.

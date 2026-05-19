@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { 
   Globe, ShieldCheck, Building2, 
@@ -33,7 +34,10 @@ type PayrollReadinessResponse = {
 
 export default function SetupWizard({ isModal = false, onComplete }: SetupWizardProps) {
   const router = useRouter();
+  const { data: session } = useSession();
   const t = useTranslations('Setup');
+  const [wizardMode, setWizardMode] = useState<"quick" | "full">(isModal ? "quick" : "full");
+  const lastStep = wizardMode === "quick" ? 3 : 7;
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -81,6 +85,18 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
   }, [form.address, form.companyName, form.email, form.proprietorName]);
   const essentialCompletionPercent = Math.round((essentialCompletionCount / 4) * 100);
 
+  useEffect(() => {
+    const email = session?.user?.email;
+    const name = session?.user?.name;
+    if (!email && !name) return;
+    setForm((prev) => ({
+      ...prev,
+      email: prev.email || email || "",
+      proprietorName: prev.proprietorName || name || "",
+      companyName: prev.companyName || (name ? `${name.split(" ")[0]} Business` : prev.companyName),
+    }));
+  }, [session?.user?.email, session?.user?.name]);
+
   // Smart Suggestion Logic
   const handleCountryChange = (code: string) => {
     const geo = GEOGRAPHY_DB[code];
@@ -105,8 +121,8 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
     });
   };
 
-  const nextStep = () => setStep(s => s + 1);
-  const prevStep = () => setStep(s => s - 1);
+  const nextStep = () => setStep((s) => Math.min(s + 1, lastStep));
+  const prevStep = () => setStep((s) => Math.max(s - 1, 1));
 
   useEffect(() => {
     if (step !== 7) return;
@@ -172,7 +188,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
       {/* PROGRESS TRACKER */}
       <div className="max-w-md w-full mb-8 space-y-4">
         <div className="flex justify-between items-center px-2">
-          {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+          {Array.from({ length: lastStep }, (_, i) => i + 1).map((i) => (
             <div key={i} className={`h-1.5 flex-1 mx-1 rounded-full transition-all duration-500 ${step >= i ? "bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.4)]" : "bg-zinc-200 dark:bg-zinc-800"}`} />
           ))}
         </div>
@@ -307,7 +323,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
           )}
 
           {/* STEP 4: IDENTITY */}
-          {step === 4 && (
+          {wizardMode === "full" && step === 4 && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-500">
               <CardHeader className="text-center pb-8 border-b dark:border-zinc-800">
                 <div className="mx-auto w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center mb-4">
@@ -389,7 +405,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
           )}
 
           {/* STEP 5: INTEGRATIONS */}
-          {step === 5 && (
+          {wizardMode === "full" && step === 5 && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-500">
               <CardHeader className="text-center pb-8 border-b dark:border-zinc-800">
                 <div className="mx-auto w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center mb-4">
@@ -454,7 +470,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
           )}
 
           {/* STEP 6: STORE / SHOP */}
-          {step === 6 && (
+          {wizardMode === "full" && step === 6 && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-500">
               <CardHeader className="text-center pb-8 border-b dark:border-zinc-800">
                 <div className="mx-auto w-12 h-12 bg-pink-100 dark:bg-pink-900/30 rounded-xl flex items-center justify-center mb-4">
@@ -494,7 +510,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
           )}
 
           {/* STEP 7: MODULE SELECTION */}
-          {step === 7 && (
+          {wizardMode === "full" && step === 7 && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-500">
               <CardHeader className="text-center pb-8 border-b dark:border-zinc-800">
                 <div className="mx-auto w-12 h-12 bg-teal-100 dark:bg-teal-900/30 rounded-xl flex items-center justify-center mb-4">
@@ -924,14 +940,28 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
               <ArrowLeft className="w-4 h-4 mr-2" /> {t('back')}
             </Button>
             
-            {step < 7 ? (
+            {step < lastStep ? (
               <Button onClick={nextStep} className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[120px]">
                 {t('continue')} <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             ) : (
-              <Button onClick={finishSetup} disabled={isSubmitting || !form.companyName} className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[160px] shadow-lg shadow-emerald-500/20 border-none">
-                {isSubmitting ? t('finalizing') : <><CheckCircle2 className="w-4 h-4 mr-2" /> {t('launch_erp')}</>}
-              </Button>
+              <div className="flex flex-col items-end gap-2">
+                <Button onClick={finishSetup} disabled={isSubmitting || !form.companyName} className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[160px] shadow-lg shadow-emerald-500/20 border-none">
+                  {isSubmitting ? t('finalizing') : <><CheckCircle2 className="w-4 h-4 mr-2" /> {t('launch_erp')}</>}
+                </Button>
+                {wizardMode === "quick" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setWizardMode("full");
+                      setStep(4);
+                    }}
+                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+                  >
+                    Advanced setup (integrations, shop, modules)
+                  </button>
+                )}
+              </div>
             )}
           </CardFooter>
         </Card>

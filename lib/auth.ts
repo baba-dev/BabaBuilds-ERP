@@ -12,6 +12,10 @@ import { recordAuthFailure } from "@/lib/auth-observability";
 import { logActivity } from "@/lib/activity-log";
 import { deserializeSignupIntent, SIGNUP_INTENT_COOKIE } from "@/lib/signup-intent";
 import {
+  provisionTrialWorkspace,
+  sanitizeSignupIntent,
+} from "@/lib/auth-workspace-provision";
+import {
   HIGH_RISK_MAGIC_LINK_ERROR_CODE,
   hasHighRiskRole,
   isEmailMagicLinkAllowedForRoles,
@@ -21,20 +25,6 @@ import {
 
 const LOGIN_ROUTE = "/login";
 const CANONICAL_DASHBOARD_ROUTE = "/dashboard";
-const ALLOWED_SIGNUP_PLANS = new Set(["pro", "team"] as const);
-const ALLOWED_SIGNUP_CYCLES = new Set(["monthly", "annual"] as const);
-const DEFAULT_TRIAL_DAYS = 15;
-
-function sanitizeSignupIntent(intent: ReturnType<typeof deserializeSignupIntent>) {
-  if (!intent) return null;
-  return {
-    ...intent,
-    plan: ALLOWED_SIGNUP_PLANS.has(intent.plan) ? intent.plan : "pro",
-    cycle: ALLOWED_SIGNUP_CYCLES.has(intent.cycle) ? intent.cycle : "monthly",
-    trial: DEFAULT_TRIAL_DAYS,
-  };
-}
-
 async function consumeSignupIntent() {
   const store = await cookies();
   const intent = sanitizeSignupIntent(deserializeSignupIntent(store.get(SIGNUP_INTENT_COOKIE)?.value));
@@ -434,52 +424,14 @@ export const authOptions: NextAuthOptions = {
       }
 
       const provisionWorkspaceForUser = async (input: { id: string; email?: string | null; name?: string | null }) => {
-        // Idempotent workspace bootstrap for legacy/edge cases where a user has no workspace membership.
-        // This avoids a redirect loop where `/login` redirects to `/dashboard`, but dashboard rejects missing workspace context.
-        const existingMembership = await prisma.workspaceUser.findFirst({
-          where: { userId: input.id },
-          select: { workspaceId: true },
-        });
-        if (existingMembership?.workspaceId) return existingMembership.workspaceId;
-
         const signupIntent = await consumeSignupIntent();
-        const trialDays = DEFAULT_TRIAL_DAYS;
-        const trialEndDate = new Date();
-        trialEndDate.setDate(trialEndDate.getDate() + trialDays);
-
-        const workspace = await prisma.workspace.create({
-          data: {
-            name: `${input.name?.split(" ")[0] || input.email?.split("@")[0] || "My"} Business`,
-            subscriptionStatus: "TRIALING",
-            subscriptionEndsAt: trialEndDate,
-            signupIntentJson: signupIntent ? JSON.stringify(signupIntent) : null,
-            users: { create: { userId: input.id, role: "OWNER" } },
-          },
-          select: { id: true },
+        return provisionTrialWorkspace({
+          userId: input.id,
+          email: input.email,
+          name: input.name,
+          signupIntent,
+          source: "nextauth_jwt_autoprovision",
         });
-
-        if (signupIntent?.persona) {
-          await prisma.userOnboarding.upsert({
-            where: { userId: input.id },
-            create: { userId: input.id, persona: signupIntent.persona },
-            update: { persona: signupIntent.persona },
-          });
-        }
-
-        logActivity({
-          action: "workspace_bootstrap",
-          outcome: "success",
-          entityType: "workspace",
-          entityId: workspace.id,
-          workspaceId: workspace.id,
-          actorId: input.id,
-          actorEmail: input.email ?? null,
-          metadata: {
-            source: "nextauth_jwt_autoprovision",
-          },
-        });
-
-        return workspace.id;
       };
 
       const dbUser = await prisma.user.findUnique({
@@ -577,21 +529,28 @@ export const authOptions: NextAuthOptions = {
 
     async redirect({ url, baseUrl }) {
       const isRootRelativeCallback = (candidate: string) => candidate === "/" || candidate.startsWith("/?");
+      const preserveQueryPaths = new Set([LOGIN_ROUTE, CANONICAL_DASHBOARD_ROUTE, "/setup"]);
 
-      if (url.startsWith("/")) {
-        if (isRootRelativeCallback(url) || isAuthErrorRoute(url)) {
-          return `${baseUrl}${url}`;
+      const preserveRelative = (pathWithQuery: string) => {
+        const pathOnly = pathWithQuery.split("?")[0]?.split("#")[0] ?? pathWithQuery;
+        if (isRootRelativeCallback(pathWithQuery) || isAuthErrorRoute(pathWithQuery)) {
+          return `${baseUrl}${pathWithQuery}`;
+        }
+        if (preserveQueryPaths.has(pathOnly)) {
+          return `${baseUrl}${pathWithQuery}`;
         }
         return `${baseUrl}${CANONICAL_DASHBOARD_ROUTE}`;
+      };
+
+      if (url.startsWith("/")) {
+        return preserveRelative(url);
       }
 
       try {
         const target = new URL(url);
         if (target.origin === baseUrl) {
-          if (target.pathname === "/" || target.pathname === LOGIN_ROUTE) {
-            return `${baseUrl}${target.search}${target.hash}`;
-          }
-          return `${baseUrl}${CANONICAL_DASHBOARD_ROUTE}`;
+          const relative = `${target.pathname}${target.search}${target.hash}`;
+          return preserveRelative(relative);
         }
       } catch {
         return `${baseUrl}${CANONICAL_DASHBOARD_ROUTE}`;
@@ -622,40 +581,14 @@ export const authOptions: NextAuthOptions = {
       if (user.email?.endsWith('@bababuilds.demo')) return;
 
       const signupIntent = await consumeSignupIntent();
-      const trialDays = DEFAULT_TRIAL_DAYS;
-      const trialEndDate = new Date();
-      trialEndDate.setDate(trialEndDate.getDate() + trialDays);
 
       try {
-        const workspace = await prisma.workspace.create({
-          data: {
-            name: `${user.name?.split(' ')[0] || user.email?.split('@')[0] || 'My'} Business`, 
-            subscriptionStatus: "TRIALING",
-            subscriptionEndsAt: trialEndDate, 
-            signupIntentJson: signupIntent ? JSON.stringify(signupIntent) : null,
-            users: { create: { userId: user.id, role: "OWNER" } }
-          }
-        });
-
-        if (signupIntent?.persona) {
-          await prisma.userOnboarding.upsert({
-            where: { userId: user.id },
-            create: { userId: user.id, persona: signupIntent.persona },
-            update: { persona: signupIntent.persona },
-          });
-        }
-
-        logActivity({
-          action: "workspace_bootstrap",
-          outcome: "success",
-          entityType: "workspace",
-          entityId: workspace.id,
-          workspaceId: workspace.id,
-          actorId: user.id,
-          actorEmail: user.email ?? null,
-          metadata: {
-            source: "nextauth_create_user",
-          },
+        await provisionTrialWorkspace({
+          userId: user.id,
+          email: user.email,
+          name: user.name,
+          signupIntent,
+          source: "nextauth_create_user",
         });
       } catch (error: any) {
         logActivity({

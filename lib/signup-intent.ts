@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createHmac, timingSafeEqual } from "crypto";
 
 export const SIGNUP_INTENT_COOKIE = "signup_intent";
-export const SIGNUP_INTENT_MAX_AGE_SECONDS = 60 * 10;
+export const SIGNUP_INTENT_MAX_AGE_SECONDS = 60 * 60 * 24;
 const SIGNUP_INTENT_HMAC_VERSION = "v1";
 
 const planSchema = z.enum(["pro", "team"]);
