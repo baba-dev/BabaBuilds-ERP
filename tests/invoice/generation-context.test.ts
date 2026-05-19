@@ -1,20 +1,17 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import { describe } from "node:test";
-
+import { describe, expect, it } from "vitest";
 import { InvoiceValidationError } from "@/lib/invoice/generation-context";
 
 describe("InvoiceValidationError", () => {
-  test("preserves status and payload", () => {
+  it("preserves status and payload", () => {
     const err = new InvoiceValidationError(422, { error: "Tax rate required", code: "TAX_RATE_REQUIRED" });
-    assert.equal(err.status, 422);
-    assert.equal(err.payload.code, "TAX_RATE_REQUIRED");
-    assert.equal(err.message, "Tax rate required");
+    expect(err.status).toBe(422);
+    expect(err.payload.code).toBe("TAX_RATE_REQUIRED");
+    expect(err.message).toBe("Tax rate required");
   });
 
-  test("falls back to generic message when payload lacks error", () => {
+  it("falls back to generic message when payload lacks error", () => {
     const err = new InvoiceValidationError(400, { code: "UNKNOWN" }, "Fallback");
-    assert.equal(err.status, 400);
-    assert.equal(err.message, "Fallback");
+    expect(err.status).toBe(400);
+    expect(err.message).toBe("Fallback");
   });
 });

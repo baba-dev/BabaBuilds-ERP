@@ -46,6 +46,8 @@ function withServiceWorkerHeaders(response: NextResponse): NextResponse {
 
 function nextResponseFor(request: NextRequest): NextResponse {
   const response = NextResponse.next();
+  const pathWithSearch = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  response.headers.set('next-url', pathWithSearch);
 
   if (request.nextUrl.pathname === SERVICE_WORKER_PATH) {
     return withServiceWorkerHeaders(response);
