@@ -189,17 +189,17 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
       <div className="max-w-md w-full mb-8 space-y-4">
         <div className="flex justify-between items-center px-2">
           {Array.from({ length: lastStep }, (_, i) => i + 1).map((i) => (
-            <div key={i} className={`h-1.5 flex-1 mx-1 rounded-full transition-all duration-500 ${step >= i ? "bg-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.4)]" : "bg-zinc-200 dark:bg-zinc-800"}`} />
+            <div key={i} className={`h-1.5 flex-1 mx-1 rounded-full transition-all duration-500 ${step >= i ? "bg-indigo-600 shadow-[0_0_6px_rgba(79,70,229,0.25)]" : "bg-zinc-200 dark:bg-zinc-800"}`} />
           ))}
         </div>
-        <p className="text-center text-xs uppercase font-black tracking-widest text-zinc-400 dark:text-zinc-600">
+        <p className="text-center text-xs font-semibold tracking-wide text-zinc-500 dark:text-zinc-400">
           {t('step_indicator', { 
             current: step, 
             name: step === 1 ? t('step_geo') : step === 2 ? t('step_finance') : step === 3 ? t('step_compliance') : step === 4 ? t('step_identity') : step === 5 ? t('step_integrations') : step === 6 ? t('step_shop') : 'Modules'
           })}
         </p>
         <div className="rounded-xl border border-indigo-200/60 bg-indigo-50/70 px-4 py-3 text-xs text-indigo-900 dark:border-indigo-900/40 dark:bg-indigo-950/30 dark:text-indigo-200">
-          <p className="font-bold uppercase tracking-wider">Why this matters</p>
+          <p className="font-bold tracking-wide">Why this matters</p>
           <p className="mt-1 leading-relaxed">
             Essential setup completion: {essentialCompletionPercent}% ({essentialCompletionCount}/4)
             {" "}core identity fields complete. Accurate identity and remittance details improve invoice trust and reduce failed collections.
@@ -211,18 +211,18 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
         {/* DECORATIVE ELEMENTS (Only show in standalone) */}
         {!isModal && (
           <>
-            <div className="absolute -top-12 -left-12 w-24 h-24 bg-indigo-500/10 blur-3xl rounded-full animate-pulse" />
-            <div className="absolute -bottom-12 -right-12 w-24 h-24 bg-emerald-500/10 blur-3xl rounded-full animate-pulse delay-700" />
+            <div className="absolute -top-12 -left-12 w-24 h-24 bg-indigo-500/10 blur-2xl rounded-full animate-pulse" />
+            <div className="absolute -bottom-12 -right-12 w-24 h-24 bg-emerald-500/10 blur-2xl rounded-full animate-pulse delay-700" />
           </>
         )}
 
-        <Card className={`shadow-2xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden ${isModal ? 'border-none' : ''}`}>
+        <Card className={`shadow-xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden ${isModal ? 'border-none' : ''}`}>
           
           {/* STEP 1: GEOGRAPHY */}
           {step === 1 && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-500">
               <CardHeader className="text-center pb-8 border-b dark:border-zinc-800">
-                <div className="mx-auto w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center mb-4">
+                <div className="mx-auto h-12 w-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center mb-4">
                   <Globe className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                 </div>
                 <CardTitle className="text-2xl font-black dark:text-zinc-50">{t('step1_title')}</CardTitle>
@@ -246,7 +246,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 </div>
                 <div className="p-4 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl border border-zinc-200 dark:border-zinc-800 flex items-start gap-3">
                   <Zap className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
                     {t('geo_hint')}
                   </p>
                 </div>
@@ -258,7 +258,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
           {step === 2 && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-500">
               <CardHeader className="text-center pb-8 border-b dark:border-zinc-800">
-                <div className="mx-auto w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center mb-4">
+                <div className="mx-auto h-12 w-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center mb-4">
                   <Wallet className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <CardTitle className="text-2xl font-black dark:text-zinc-50">{t('step2_title')}</CardTitle>
@@ -299,7 +299,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
           {step === 3 && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-500">
               <CardHeader className="text-center pb-8 border-b dark:border-zinc-800">
-                <div className="mx-auto w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center mb-4">
+                <div className="mx-auto h-12 w-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center mb-4">
                   <ShieldCheck className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                 </div>
                 <CardTitle className="text-2xl font-black dark:text-zinc-50">{t('step3_title')}</CardTitle>
@@ -326,7 +326,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
           {wizardMode === "full" && step === 4 && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-500">
               <CardHeader className="text-center pb-8 border-b dark:border-zinc-800">
-                <div className="mx-auto w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center mb-4">
+                <div className="mx-auto h-12 w-12 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center mb-4">
                   <Building2 className="w-6 h-6 text-amber-600 dark:text-amber-400" />
                 </div>
                 <CardTitle className="text-2xl font-black dark:text-zinc-50">{t('step4_title')}</CardTitle>
@@ -334,7 +334,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
               </CardHeader>
               <CardContent className="pt-8 space-y-4">
                 <div className="rounded-xl border border-amber-200/70 bg-amber-50/70 p-3 text-left dark:border-amber-900/50 dark:bg-amber-900/20">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
+                  <p className="text-xs font-semibold tracking-wide text-amber-700 dark:text-amber-300">
                     Essential setup progress
                   </p>
                   <p className="mt-1 text-xs text-amber-800/90 dark:text-amber-200/90">
@@ -346,7 +346,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                       style={{ width: `${essentialCompletionPercent}%` }}
                     />
                   </div>
-                  <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                  <p className="mt-1 text-xs font-medium tracking-wide text-amber-700 dark:text-amber-300">
                     {essentialCompletionCount}/4 completed
                   </p>
                 </div>
@@ -408,7 +408,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
           {wizardMode === "full" && step === 5 && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-500">
               <CardHeader className="text-center pb-8 border-b dark:border-zinc-800">
-                <div className="mx-auto w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center mb-4">
+                <div className="mx-auto h-12 w-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center mb-4">
                   <Zap className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
                 <CardTitle className="text-2xl font-black dark:text-zinc-50">{t('step5_title')}</CardTitle>
@@ -423,13 +423,13 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                       <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-xs text-indigo-500 hover:underline">{t('groq_link_text')}</a>
                     </Label>
                     <Input value={form.groqApiKey} onChange={e => setForm({...form, groqApiKey: e.target.value})} placeholder={t('api_groq_ph')} className="h-12 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('api_groq_tooltip')}</p>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-300">{t('api_groq_tooltip')}</p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <Label className="dark:text-zinc-300">{t('gateway_label')}</Label>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 -mt-2 mb-2">{t('payment_tooltip')}</p>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-300 -mt-2 mb-2">{t('payment_tooltip')}</p>
                   <Select value={form.defaultGateway} onValueChange={val => setForm({...form, defaultGateway: val})}>
                     <SelectTrigger className="h-12 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100">
                       <SelectValue />
@@ -473,7 +473,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
           {wizardMode === "full" && step === 6 && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-500">
               <CardHeader className="text-center pb-8 border-b dark:border-zinc-800">
-                <div className="mx-auto w-12 h-12 bg-pink-100 dark:bg-pink-900/30 rounded-xl flex items-center justify-center mb-4">
+                <div className="mx-auto h-12 w-12 bg-pink-100 dark:bg-pink-900/30 rounded-xl flex items-center justify-center mb-4">
                    <Globe className="w-6 h-6 text-pink-600 dark:text-pink-400" />
                 </div>
                 <CardTitle className="text-2xl font-black dark:text-zinc-50">{t('step6_title')}</CardTitle>
@@ -513,7 +513,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
           {wizardMode === "full" && step === 7 && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-500">
               <CardHeader className="text-center pb-8 border-b dark:border-zinc-800">
-                <div className="mx-auto w-12 h-12 bg-teal-100 dark:bg-teal-900/30 rounded-xl flex items-center justify-center mb-4">
+                <div className="mx-auto h-12 w-12 bg-teal-100 dark:bg-teal-900/30 rounded-xl flex items-center justify-center mb-4">
                   <Users2 className="w-6 h-6 text-teal-600 dark:text-teal-400" />
                 </div>
                 <CardTitle className="text-2xl font-black dark:text-zinc-50">Optional Modules</CardTitle>
@@ -523,17 +523,17 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
               </CardHeader>
               <CardContent className="pt-8 space-y-4">
                 <div
-                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
+                  className={`group relative rounded-xl border p-6 transition-all duration-200 cursor-pointer ${
                     form.enableWorkforce
-                      ? 'border-teal-500 bg-teal-50/50 dark:bg-teal-950/20'
-                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
+                      ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20'
+                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-zinc-50/60 dark:bg-zinc-900/60'
                   }`}
                   onClick={() => setForm({ ...form, enableWorkforce: !form.enableWorkforce })}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
-                        form.enableWorkforce ? 'bg-teal-500 shadow-lg shadow-teal-500/20' : 'bg-zinc-100 dark:bg-zinc-800'
+                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition-all ${
+                        form.enableWorkforce ? 'bg-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-zinc-100 dark:bg-zinc-800'
                       }`}>
                         <Users2 className={`h-5 w-5 ${form.enableWorkforce ? 'text-white' : 'text-zinc-500 dark:text-zinc-400'}`} />
                       </div>
@@ -541,12 +541,12 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Workforce</p>
                           {form.enableWorkforce && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-teal-100 dark:bg-teal-900/40 px-2 py-0.5 text-[10px] font-bold text-teal-700 dark:text-teal-300 uppercase tracking-wider">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300 tracking-wide">
                               <CheckCircle2 className="h-2.5 w-2.5" /> Enabled
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                        <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-3">
                           HR, attendance, leave management &amp; approvals — integrated with your ERP.
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
@@ -557,15 +557,15 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                             { icon: Sparkles, text: 'Role-aware HR dashboards' },
                           ].map(({ icon: Icon, text }) => (
                             <div key={text} className="flex items-center gap-1.5">
-                              <Icon className={`h-3 w-3 shrink-0 ${form.enableWorkforce ? 'text-teal-500' : 'text-zinc-400'}`} />
-                              <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{text}</span>
+                              <Icon className={`h-3 w-3 shrink-0 ${form.enableWorkforce ? 'text-indigo-500' : 'text-zinc-400'}`} />
+                              <span className="text-xs text-zinc-600 dark:text-zinc-300">{text}</span>
                             </div>
                           ))}
                         </div>
                       </div>
                     </div>
                     <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                      form.enableWorkforce ? 'bg-teal-500' : 'bg-zinc-300 dark:bg-zinc-700'
+                      form.enableWorkforce ? 'bg-indigo-600' : 'bg-zinc-300 dark:bg-zinc-700'
                     }`}>
                       <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
                         form.enableWorkforce ? 'translate-x-5' : 'translate-x-0'
@@ -575,17 +575,17 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 </div>
 
                 <div
-                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
+                  className={`group relative rounded-xl border p-6 transition-all duration-200 cursor-pointer ${
                     form.enableDocuments
                       ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20'
-                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
+                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-zinc-50/60 dark:bg-zinc-900/60'
                   }`}
                   onClick={() => setForm({ ...form, enableDocuments: !form.enableDocuments })}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
-                        form.enableDocuments ? 'bg-indigo-600 shadow-lg shadow-indigo-500/20' : 'bg-zinc-100 dark:bg-zinc-800'
+                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition-all ${
+                        form.enableDocuments ? 'bg-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-zinc-100 dark:bg-zinc-800'
                       }`}>
                         <FileText className={`h-5 w-5 ${form.enableDocuments ? 'text-white' : 'text-zinc-500 dark:text-zinc-400'}`} />
                       </div>
@@ -593,12 +593,12 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Document Vault</p>
                           {form.enableDocuments && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2 py-0.5 text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300 tracking-wide">
                               <CheckCircle2 className="h-2.5 w-2.5" /> Enabled
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                        <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-3">
                           Secure storage with OCR, extracted-field review, and ERP-native linking for accounting &amp; compliance.
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
@@ -610,7 +610,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                           ].map(({ icon: Icon, text }) => (
                             <div key={text} className="flex items-center gap-1.5">
                               <Icon className={`h-3 w-3 shrink-0 ${form.enableDocuments ? 'text-indigo-500' : 'text-zinc-400'}`} />
-                              <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{text}</span>
+                              <span className="text-xs text-zinc-600 dark:text-zinc-300">{text}</span>
                             </div>
                           ))}
                         </div>
@@ -627,17 +627,17 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 </div>
 
                 <div
-                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
+                  className={`group relative rounded-xl border p-6 transition-all duration-200 cursor-pointer ${
                     form.enableCashFlow
-                      ? 'border-cyan-500 bg-cyan-50/50 dark:bg-cyan-950/20'
-                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
+                      ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20'
+                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-zinc-50/60 dark:bg-zinc-900/60'
                   }`}
                   onClick={() => setForm({ ...form, enableCashFlow: !form.enableCashFlow })}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
-                        form.enableCashFlow ? 'bg-cyan-600 shadow-lg shadow-cyan-500/20' : 'bg-zinc-100 dark:bg-zinc-800'
+                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition-all ${
+                        form.enableCashFlow ? 'bg-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-zinc-100 dark:bg-zinc-800'
                       }`}>
                         <HandCoins className={`h-5 w-5 ${form.enableCashFlow ? 'text-white' : 'text-zinc-500 dark:text-zinc-400'}`} />
                       </div>
@@ -645,18 +645,18 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Cash Flow</p>
                           {form.enableCashFlow && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 dark:bg-cyan-900/40 px-2 py-0.5 text-[10px] font-bold text-cyan-700 dark:text-cyan-300 uppercase tracking-wider">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300 tracking-wide">
                               <CheckCircle2 className="h-2.5 w-2.5" /> Enabled
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                        <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-3">
                           Forecast cash runways, monitor crunch windows, and refresh scenarios before risks become urgent.
                         </p>
                       </div>
                     </div>
                     <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                      form.enableCashFlow ? 'bg-cyan-600' : 'bg-zinc-300 dark:bg-zinc-700'
+                      form.enableCashFlow ? 'bg-indigo-600' : 'bg-zinc-300 dark:bg-zinc-700'
                     }`}>
                       <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
                         form.enableCashFlow ? 'translate-x-5' : 'translate-x-0'
@@ -666,17 +666,17 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 </div>
 
                 <div
-                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
+                  className={`group relative rounded-xl border p-6 transition-all duration-200 cursor-pointer ${
                     form.enableArCollections
-                      ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-950/20'
-                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
+                      ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20'
+                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-zinc-50/60 dark:bg-zinc-900/60'
                   }`}
                   onClick={() => setForm({ ...form, enableArCollections: !form.enableArCollections })}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
-                        form.enableArCollections ? 'bg-orange-600 shadow-lg shadow-orange-500/20' : 'bg-zinc-100 dark:bg-zinc-800'
+                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition-all ${
+                        form.enableArCollections ? 'bg-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-zinc-100 dark:bg-zinc-800'
                       }`}>
                         <Siren className={`h-5 w-5 ${form.enableArCollections ? 'text-white' : 'text-zinc-500 dark:text-zinc-400'}`} />
                       </div>
@@ -684,12 +684,12 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">AR Aging + Collections Centre</p>
                           {form.enableArCollections && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 dark:bg-orange-900/40 px-2 py-0.5 text-[10px] font-bold text-orange-700 dark:text-orange-300 uppercase tracking-wider">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300 tracking-wide">
                               <CheckCircle2 className="h-2.5 w-2.5" /> Enabled
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                        <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-3">
                           Manage receivables with aging buckets, overdue prioritization, reminder automation, and collector workflow statuses.
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
@@ -700,15 +700,15 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                             { icon: Route, text: 'Follow-up lifecycle and escalations' },
                           ].map(({ icon: Icon, text }) => (
                             <div key={text} className="flex items-center gap-1.5">
-                              <Icon className={`h-3 w-3 shrink-0 ${form.enableArCollections ? 'text-orange-500' : 'text-zinc-400'}`} />
-                              <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{text}</span>
+                              <Icon className={`h-3 w-3 shrink-0 ${form.enableArCollections ? 'text-indigo-500' : 'text-zinc-400'}`} />
+                              <span className="text-xs text-zinc-600 dark:text-zinc-300">{text}</span>
                             </div>
                           ))}
                         </div>
                       </div>
                     </div>
                     <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                      form.enableArCollections ? 'bg-orange-600' : 'bg-zinc-300 dark:bg-zinc-700'
+                      form.enableArCollections ? 'bg-indigo-600' : 'bg-zinc-300 dark:bg-zinc-700'
                     }`}>
                       <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
                         form.enableArCollections ? 'translate-x-5' : 'translate-x-0'
@@ -719,17 +719,17 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
 
 
                 <div
-                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
+                  className={`group relative rounded-xl border p-6 transition-all duration-200 cursor-pointer ${
                     form.enableReportingCenter
-                      ? 'border-amber-500 bg-amber-50/60 dark:bg-amber-950/20'
-                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
+                      ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20'
+                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-zinc-50/60 dark:bg-zinc-900/60'
                   }`}
                   onClick={() => setForm({ ...form, enableReportingCenter: !form.enableReportingCenter })}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
-                        form.enableReportingCenter ? 'bg-amber-600 shadow-lg shadow-amber-500/20' : 'bg-zinc-100 dark:bg-zinc-800'
+                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition-all ${
+                        form.enableReportingCenter ? 'bg-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-zinc-100 dark:bg-zinc-800'
                       }`}>
                         <ChartColumnBig className={`h-5 w-5 ${form.enableReportingCenter ? 'text-white' : 'text-zinc-500 dark:text-zinc-400'}`} />
                       </div>
@@ -737,16 +737,16 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{t('optional_reporting_title')}</p>
                           {form.enableReportingCenter && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300 tracking-wide">
                               <CheckCircle2 className="h-2.5 w-2.5" /> Enabled
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('optional_reporting_desc')}</p>
+                        <p className="text-sm text-zinc-600 dark:text-zinc-300">{t('optional_reporting_desc')}</p>
                       </div>
                     </div>
                     <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                      form.enableReportingCenter ? 'bg-amber-600' : 'bg-zinc-300 dark:bg-zinc-700'
+                      form.enableReportingCenter ? 'bg-indigo-600' : 'bg-zinc-300 dark:bg-zinc-700'
                     }`}>
                       <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
                         form.enableReportingCenter ? 'translate-x-5' : 'translate-x-0'
@@ -760,17 +760,17 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 </p>
 
                 <div
-                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
+                  className={`group relative rounded-xl border p-6 transition-all duration-200 cursor-pointer ${
                     form.enableRevenuePipeline
-                      ? 'border-violet-500 bg-violet-50/50 dark:bg-violet-950/20'
-                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
+                      ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20'
+                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-zinc-50/60 dark:bg-zinc-900/60'
                   }`}
                   onClick={() => setForm({ ...form, enableRevenuePipeline: !form.enableRevenuePipeline })}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
-                        form.enableRevenuePipeline ? 'bg-violet-600 shadow-lg shadow-violet-500/20' : 'bg-zinc-100 dark:bg-zinc-800'
+                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition-all ${
+                        form.enableRevenuePipeline ? 'bg-indigo-600 shadow-md shadow-indigo-500/10' : 'bg-zinc-100 dark:bg-zinc-800'
                       }`}>
                         <Target className={`h-5 w-5 ${form.enableRevenuePipeline ? 'text-white' : 'text-zinc-500 dark:text-zinc-400'}`} />
                       </div>
@@ -778,12 +778,12 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Revenue Pipeline</p>
                           {form.enableRevenuePipeline && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 dark:bg-violet-900/40 px-2 py-0.5 text-[10px] font-bold text-violet-700 dark:text-violet-300 uppercase tracking-wider">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300 tracking-wide">
                               <CheckCircle2 className="h-2.5 w-2.5" /> Enabled
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                        <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-3">
                           Proposal-stage intelligence with stalled-deal alerts and guided follow-up actions to accelerate conversions.
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
@@ -794,15 +794,15 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                             { icon: ClipboardList, text: 'Batch task creation for follow-ups' },
                           ].map(({ icon: Icon, text }) => (
                             <div key={text} className="flex items-center gap-1.5">
-                              <Icon className={`h-3 w-3 shrink-0 ${form.enableRevenuePipeline ? 'text-violet-500' : 'text-zinc-400'}`} />
-                              <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{text}</span>
+                              <Icon className={`h-3 w-3 shrink-0 ${form.enableRevenuePipeline ? 'text-indigo-500' : 'text-zinc-400'}`} />
+                              <span className="text-xs text-zinc-600 dark:text-zinc-300">{text}</span>
                             </div>
                           ))}
                         </div>
                       </div>
                     </div>
                     <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                      form.enableRevenuePipeline ? 'bg-violet-600' : 'bg-zinc-300 dark:bg-zinc-700'
+                      form.enableRevenuePipeline ? 'bg-indigo-600' : 'bg-zinc-300 dark:bg-zinc-700'
                     }`}>
                       <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
                         form.enableRevenuePipeline ? 'translate-x-5' : 'translate-x-0'
@@ -812,17 +812,17 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 </div>
 
                 <div
-                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
+                  className={`group relative rounded-xl border p-6 transition-all duration-200 cursor-pointer ${
                     form.enablePayroll
                       ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20'
-                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
+                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-zinc-50/60 dark:bg-zinc-900/60'
                   }`}
                   onClick={() => setForm({ ...form, enablePayroll: !form.enablePayroll })}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
-                        form.enablePayroll ? 'bg-emerald-600 shadow-lg shadow-emerald-500/20' : 'bg-zinc-100 dark:bg-zinc-800'
+                      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg transition-all ${
+                        form.enablePayroll ? 'bg-emerald-600 shadow-md shadow-emerald-500/10' : 'bg-zinc-100 dark:bg-zinc-800'
                       }`}>
                         <Wallet className={`h-5 w-5 ${form.enablePayroll ? 'text-white' : 'text-zinc-500 dark:text-zinc-400'}`} />
                       </div>
@@ -830,17 +830,17 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Payroll (Execution staged)</p>
                           {form.enablePayroll && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300 tracking-wide">
                               <CheckCircle2 className="h-2.5 w-2.5" /> Enabled
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                        <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-3">
                           Stand up payroll safely with phased rollout controls, read-only previews, and go-live readiness checks.
                         </p>
 
                         <div className="space-y-2 mb-3">
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Execution phases</p>
+                          <p className="text-xs font-semibold tracking-wide text-zinc-500 dark:text-zinc-400">Execution phases</p>
                           <div className="space-y-1.5">
                             {(payrollReadiness?.executionPhases ?? []).map((phase) => (
                               <div key={phase.id} className="flex items-start gap-2">
@@ -851,7 +851,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                               </div>
                             ))}
                             {!payrollReadiness?.executionPhases?.length && (
-                              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Load payroll phases after module selection.</p>
+                              <p className="text-xs text-zinc-600 dark:text-zinc-300">Load payroll phases after module selection.</p>
                             )}
                           </div>
                         </div>
@@ -859,7 +859,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         {form.enablePayroll && (
                           <div className="rounded-xl border border-emerald-200/70 dark:border-emerald-900/60 bg-white/80 dark:bg-zinc-950/60 p-3 space-y-3 animate-in fade-in zoom-in-95">
                             <div className="space-y-2">
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Setup path</p>
+                              <p className="text-xs font-semibold tracking-wide text-zinc-500 dark:text-zinc-400">Setup path</p>
                               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                                 {[
                                   {
@@ -887,26 +887,26 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                                     }`}
                                   >
                                     <p className="text-[11px] font-semibold text-zinc-800 dark:text-zinc-100">{option.title}</p>
-                                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">{option.desc}</p>
+                                    <p className="text-xs text-zinc-600 dark:text-zinc-300 mt-1">{option.desc}</p>
                                   </button>
                                 ))}
                               </div>
                             </div>
 
                             <div className="space-y-2">
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Go-live readiness checklist</p>
+                              <p className="text-xs font-semibold tracking-wide text-zinc-500 dark:text-zinc-400">Go-live readiness checklist</p>
                               <div className="space-y-1.5">
                                 {(payrollReadiness?.readiness.checklist ?? []).map((item) => (
                                   <div key={item.id} className="flex items-start gap-2">
                                     <CheckSquare2 className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${item.status === "pass" ? "text-emerald-500" : "text-amber-500"}`} />
                                     <div>
                                       <p className="text-[11px] font-medium text-zinc-700 dark:text-zinc-200">{item.label}</p>
-                                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{item.detail}</p>
+                                      <p className="text-xs text-zinc-600 dark:text-zinc-300">{item.detail}</p>
                                     </div>
                                   </div>
                                 ))}
                                 {payrollReadiness && (
-                                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 pt-1">
+                                  <p className="text-xs text-zinc-600 dark:text-zinc-300 pt-1">
                                     Readiness score: <span className="font-semibold">{payrollReadiness.readiness.score}%</span> · Posting:{" "}
                                     <span className="font-semibold">{payrollReadiness.readiness.postingStatusLabel}</span>
                                   </p>
@@ -946,7 +946,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
               </Button>
             ) : (
               <div className="flex flex-col items-end gap-2">
-                <Button onClick={finishSetup} disabled={isSubmitting || !form.companyName} className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[160px] shadow-lg shadow-emerald-500/20 border-none">
+                <Button onClick={finishSetup} disabled={isSubmitting || !form.companyName} className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[160px] shadow-md shadow-emerald-500/10 border-none">
                   {isSubmitting ? t('finalizing') : <><CheckCircle2 className="w-4 h-4 mr-2" /> {t('launch_erp')}</>}
                 </Button>
                 {wizardMode === "quick" && (
