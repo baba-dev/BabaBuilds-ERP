@@ -962,7 +962,7 @@
     "launch_erp": "تشغيل النظام",
     "finalizing": "جاري الإنهاء...",
     "secure_config": "تكوين آمن - مدعوم بمحرك العولمة",
-    "step_indicator": "خطوة {current} من 4 — {name}",
+    "step_indicator": "خطوة {current} من {total} — {name}",
     "step_geo": "الجغرافيا",
     "step_finance": "المالية",
     "step_compliance": "الامتثال",
@@ -1001,7 +1001,8 @@
     "shop_slug_ph": "my-agency",
     "groq_link_text": "Get Groq Key",
     "razorpay_link_text": "Razorpay Dashboard",
-    "stripe_link_text": "Stripe Dashboard"
+    "stripe_link_text": "Stripe Dashboard",
+    "step_modules": "Modules"
   },
   "Tax": {
     "title": "مخطط الثروة والضرائب",

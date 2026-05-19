@@ -1045,7 +1045,7 @@
     "launch_erp": "Launch ERP",
     "finalizing": "Finalizing...",
     "secure_config": "Secure Configuration — Powered by BabaBuilds Globalization Engine",
-    "step_indicator": "Step {current} of 6 — {name}",
+    "step_indicator": "Step {current} of {total} — {name}",
     "step_geo": "Geography",
     "step_finance": "Finance",
     "step_compliance": "Compliance",
@@ -1084,7 +1084,8 @@
     "ph_founder": "Your Name",
     "ph_address": "Street, City, Postcode",
     "optional_reporting_title": "Reporting Center",
-    "optional_reporting_desc": "Curated P&L-style, AR aging, and register reports with read-only execution and XLSX export. Disabling only hides the UI."
+    "optional_reporting_desc": "Curated P&L-style, AR aging, and register reports with read-only execution and XLSX export. Disabling only hides the UI.",
+    "step_modules": "Modules"
   },
   "Tax": {
     "title": "Wealth & Tax Planner",
