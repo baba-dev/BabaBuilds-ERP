@@ -11,7 +11,8 @@ Distribution-ready **HTML + PDF** product overview with on-brand styling ([`broc
 | API appendix fragment | [`api-appendix.html`](api-appendix.html) |
 | Screenshots (PNG) | [`assets/screenshots/`](assets/screenshots/) |
 | Capture manifest | [`brochure-manifest.json`](brochure-manifest.json) |
-| Print PDF | [`dist/bababuilds-erp-brochure.pdf`](dist/bababuilds-erp-brochure.pdf) |
+| Sales PDF (screenshots + narrative) | [`dist/bababuilds-erp-brochure.pdf`](dist/bababuilds-erp-brochure.pdf) |
+| Full PDF with API appendix | `BROCHURE_PDF_HTML=dist npm run brochure:pdf` |
 
 ## One-shot build
 
@@ -32,7 +33,7 @@ This runs: shell HTML generation → grouped API appendix → stitch → Playwri
 - `npm run brochure:api-appendix` — scan `app/api/**/route.ts` into `api-appendix.html`.
 - `npm run brochure:stitch` — inject appendix into `index.dist.html`.
 - `npm run brochure:capture` — demo login (`software_company` template) and write PNGs + manifest (rejects blank images).
-- `npm run brochure:pdf` — Chromium print to `dist/bababuilds-erp-brochure.pdf`.
+- `npm run brochure:pdf` — Chromium print to `dist/bababuilds-erp-brochure.pdf` (uses `index.html`; set `BROCHURE_PDF_HTML=dist` to include the API appendix).
 
 ## Demo data notes
 
