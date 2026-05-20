@@ -91,6 +91,9 @@ h1 {
 
 section {
   padding: 1.25rem 0;
+}
+
+section.sales-block {
   page-break-inside: avoid;
 }
 
@@ -157,6 +160,24 @@ figure img {
   vertical-align: middle;
 }
 
+@media print {
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  figure img {
+    max-height: 52vh;
+    object-fit: contain;
+    object-position: top center;
+    background: var(--background);
+  }
+
+  .api-appendix {
+    display: none;
+  }
+}
+
 figcaption {
   padding: 0.45rem 0.55rem;
   font-size: 0.72rem;
@@ -196,6 +217,82 @@ figcaption {
 
 .api-appendix th {
   background: var(--muted);
+}
+
+.highlights {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.65rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.highlight-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.75rem 0.85rem;
+  background: var(--muted);
+  page-break-inside: avoid;
+}
+
+.highlight-card strong {
+  display: block;
+  font-size: 0.82rem;
+  margin-bottom: 0.25rem;
+}
+
+.highlight-card span {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted-foreground);
+  line-height: 1.35;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.data-table th,
+.data-table td {
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.data-table th {
+  background: var(--muted);
+  font-weight: 700;
+}
+
+.data-table.compact td:first-child {
+  font-weight: 600;
+  width: 22%;
+}
+
+.steps {
+  margin: 0.5rem 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.steps li {
+  margin-bottom: 0.45rem;
+}
+
+.page-break-before {
+  page-break-before: always;
+}
+
+.cover-meta {
+  font-size: 0.88rem;
+  margin-top: 0.5rem;
+}
+
+.cta-line {
+  font-size: 1rem;
+  margin: 1rem 0 0.5rem;
 }
 
 .back-cover {

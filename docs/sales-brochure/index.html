@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>BabaBuilds ERP — Product overview</title>
+  <title>BabaBuilds ERP — Sales brochure</title>
   <link rel="stylesheet" href="brochure.css" />
 </head>
 <body>
@@ -14,7 +14,8 @@
     </div>
     <p class="tagline-pill">Operations · Finance · Compliance</p>
     <h1>BabaBuilds ERP</h1>
-    <p class="subtitle">A full-stack workspace for proposals, billing, tax, cash visibility, documents, workforce, payroll, and optional storefront — designed for clarity and controlled rollout.</p>
+    <p class="subtitle">Sales brochure — product overview with in-app screenshots, module map, pricing, and integration surface.</p>
+    <p class="cover-meta muted">erp.bababuilds.com · 15-day Pro trial · Interactive persona demos</p>
   </header>
 
   <main style="max-width:900px;margin:0 auto;padding:0 1.25rem 2rem;">
@@ -22,24 +23,101 @@
       <strong>Demo imagery.</strong> Screenshots in this pack are captured from seeded demo workspaces with synthetic companies, amounts, and names. Live integrations (bank feeds, payments, email, AI, CAPTCHA) depend on your environment and plan.
     </div>
 
+<section id="executive-summary" class="sales-block">
+  <h2>Executive summary</h2>
+  <p>BabaBuilds ERP is a conversion-first financial operations workspace for agencies, accountants, contractors, freelancers, and service businesses. It unifies proposals, invoicing, expenses, tax readiness, cash visibility, document evidence, workforce, payroll, and an optional public storefront — with module toggles so teams adopt capabilities at their own pace.</p>
+  <div class="highlights">
+    <div class="highlight-card"><strong>Revenue to cash</strong><span>Pipeline, proposals, retainers, invoices, and AR collections in one flow.</span></div>
+    <div class="highlight-card"><strong>Compliance-ready</strong><span>GST/VAT workflows, CA portal exports, and audit-friendly document vault.</span></div>
+    <div class="highlight-card"><strong>Controlled rollout</strong><span>Optional modules preserve data when disabled; navigation adapts to your plan.</span></div>
+  </div>
+</section>
+
+<section id="who-its-for" class="sales-block">
+  <h2>Who it is for</h2>
+  <p class="muted">Persona landing pages and interactive demos mirror how different buyers evaluate the product.</p>
+  <table class="data-table">
+    <thead><tr><th>Persona</th><th>Primary outcomes</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Agencies &amp; studios</strong></td><td>Proposals, retainers, multi-client billing, pipeline visibility, team seats.</td></tr>
+      <tr><td><strong>Freelancers &amp; consultants</strong></td><td>Fast invoicing, expenses, tax estimates, lightweight compliance.</td></tr>
+      <tr><td><strong>Contractors &amp; builders</strong></td><td>Inventory, purchase orders, job costing signals, document vault.</td></tr>
+      <tr><td><strong>Small businesses</strong></td><td>Core books, cash flow, reporting presets, optional shop.</td></tr>
+      <tr><td><strong>Chartered accountants</strong></td><td>CA portal, regulated exports, client workspace handoff.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="platform-at-a-glance" class="sales-block">
+  <h2>Platform at a glance</h2>
+  <table class="data-table compact">
+    <thead><tr><th>Area</th><th>Capabilities</th></tr></thead>
+    <tbody>
+      <tr><td>Sales</td><td>Proposals, revenue pipeline, retainers, invoice workspace</td></tr>
+      <tr><td>Finance</td><td>Expenses, cash flow scenarios, reporting, AR aging, tax hub, AI reconciliation</td></tr>
+      <tr><td>Operations</td><td>Clients, services, inventory, POs, imports, document vault</td></tr>
+      <tr><td>People</td><td>Workforce directory, attendance, leave, payroll runs</td></tr>
+      <tr><td>Growth</td><td>Public shop, partner hub, referrals</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="pricing" class="sales-block">
+  <h2>Plans &amp; pricing</h2>
+  <p class="muted">Regional catalogs on the marketing site; representative monthly prices below. Annual billing is 10× monthly (two months free vs paying monthly for a year). New workspaces can start a <strong>15-day Pro trial</strong>.</p>
+  <table class="data-table">
+    <thead><tr><th>Plan</th><th>India (INR/mo)</th><th>US / ROW (USD/mo)</th><th>Highlights</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Free</strong></td><td>₹0</td><td>$0</td><td>Core product with limits on clients, invoices, and shop listings</td></tr>
+      <tr><td><strong>Pro</strong></td><td>₹1,499</td><td>$5</td><td>Payment gateways, higher limits, document storage</td></tr>
+      <tr><td><strong>Team</strong></td><td>₹3,499</td><td>$15</td><td>Multi-seat collaboration, Team billing interval</td></tr>
+    </tbody>
+  </table>
+  <p class="muted" style="margin-top:0.75rem;">EU (EUR) and Oman (OMR) price lists follow the same structure on <code>erp.bababuilds.com</code>. Payment gateways: Razorpay (INR) and Stripe (international) when configured.</p>
+</section>
+
+<section id="trust" class="sales-block">
+  <h2>Security &amp; trust</h2>
+  <ul>
+    <li><strong>Authentication</strong> — NextAuth with Google, email magic links, MFA for high-risk roles, and audited demo credentials.</li>
+    <li><strong>Workspace isolation</strong> — Multi-tenant data scoped per workspace with role-based permissions.</li>
+    <li><strong>Evidence &amp; exports</strong> — CA portal CSV/ZIP exports, governed reporting presets, document vault with OCR review.</li>
+    <li><strong>Operational hygiene</strong> — Scheduled cron jobs for integrity, trial expiry, tax obligations, and payment sync (production).</li>
+  </ul>
+</section>
+
+<section id="getting-started" class="sales-block">
+  <h2>Getting started</h2>
+  <ol class="steps">
+    <li>Visit <strong>erp.bababuilds.com</strong> and choose your persona or start a Pro trial.</li>
+    <li>Explore an interactive demo with seeded data — no credit card required for trial evaluation.</li>
+    <li>Enable optional modules in Settings as your team is ready; imports use preview-first CSV/XLSX templates.</li>
+    <li>Connect Razorpay, Stripe, SMTP, Plaid, or AI when your environment and plan allow.</li>
+  </ol>
+</section>
+
+<section id="product-tour" class="sales-block page-break-before">
+  <h2>Product tour (in-app screenshots)</h2>
+  <p class="muted">The following pages are captured from the Software Company demo template with synthetic data.</p>
+</section>
 <section id="sec-marketing">
 <h2>Go to market</h2>
 <p class="muted">Public entry points and educational surfaces.</p>
 <div class="grid">
   <figure>
-    <img src="assets/screenshots/landing.png" alt="Marketing home" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/landing.png" alt="Marketing home" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Marketing home</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/login.png" alt="Sign in" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/login.png" alt="Sign in" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Sign in</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/help_hub.png" alt="Help hub" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/help_hub.png" alt="Help hub" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Help hub</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/for_small_business.png" alt="For small businesses" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/for_small_business.png" alt="For small businesses" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>For small businesses</figcaption>
   </figure>
 </div>
@@ -49,31 +127,31 @@
 <p class="muted">Dashboard, settings, and in-product guidance.</p>
 <div class="grid">
   <figure>
-    <img src="assets/screenshots/dashboard.png" alt="Dashboard" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/dashboard.png" alt="Dashboard" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Dashboard</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/settings.png" alt="Settings" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/settings.png" alt="Settings" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Settings</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/settings_team.png" alt="Team &amp; seats" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/settings_team.png" alt="Team &amp; seats" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Team &amp; seats</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/settings_billing.png" alt="Billing" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/settings_billing.png" alt="Billing" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Billing</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/partner.png" alt="Partner hub" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/partner.png" alt="Partner hub" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Partner hub</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/referrals.png" alt="Referrals" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/referrals.png" alt="Referrals" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Referrals</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/help_in_app.png" alt="In-app help" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/help_in_app.png" alt="In-app help" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>In-app help</figcaption>
   </figure>
 </div>
@@ -83,51 +161,51 @@
 <p class="muted">Clients, services, inventory, documents, imports, and the operator view of Shop.</p>
 <div class="grid">
   <figure>
-    <img src="assets/screenshots/services.png" alt="Service catalog" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/services.png" alt="Service catalog" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Service catalog</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/inventory.png" alt="Inventory" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/inventory.png" alt="Inventory" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Inventory</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/inventory_po.png" alt="Purchase orders" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/inventory_po.png" alt="Purchase orders" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Purchase orders</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/clients.png" alt="Clients" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/clients.png" alt="Clients" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Clients</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/documents.png" alt="Document vault" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/documents.png" alt="Document vault" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Document vault</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/documents_inbox.png" alt="Document inbox" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/documents_inbox.png" alt="Document inbox" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Document inbox</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/documents_vault.png" alt="Document archive" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/documents_vault.png" alt="Document archive" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Document archive</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/documents_compliance.png" alt="Compliance documents" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/documents_compliance.png" alt="Compliance documents" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Compliance documents</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/import_manager.png" alt="Import manager" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/import_manager.png" alt="Import manager" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Import manager</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/inbox_import.png" alt="Inbox import" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/inbox_import.png" alt="Inbox import" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Inbox import</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/shop_admin.png" alt="Shop (admin)" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/shop_admin.png" alt="Shop (admin)" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Shop (admin)</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/settings_shop.png" alt="Shop settings" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/settings_shop.png" alt="Shop settings" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Shop settings</figcaption>
   </figure>
 </div>
@@ -137,27 +215,27 @@
 <p class="muted">Proposals, pipeline intelligence, retainers, and invoicing.</p>
 <div class="grid">
   <figure>
-    <img src="assets/screenshots/proposals.png" alt="Proposals" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/proposals.png" alt="Proposals" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Proposals</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/proposals_pipeline.png" alt="Revenue pipeline" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/proposals_pipeline.png" alt="Revenue pipeline" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Revenue pipeline</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/retainers.png" alt="Retainers" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/retainers.png" alt="Retainers" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Retainers</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/income.png" alt="Income &amp; invoices" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/income.png" alt="Income &amp; invoices" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Income &amp; invoices</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/invoice.png" alt="Invoice workspace" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/invoice.png" alt="Invoice workspace" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Invoice workspace</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/proposal_detail.png" alt="Proposal detail" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/proposal_detail.png" alt="Proposal detail" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Proposal detail</figcaption>
   </figure>
 </div>
@@ -167,47 +245,47 @@
 <p class="muted">Expenses, cash flow, reporting, AR collections, tax, and AI-assisted reconciliation.</p>
 <div class="grid">
   <figure>
-    <img src="assets/screenshots/expenses.png" alt="Expenses" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/expenses.png" alt="Expenses" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Expenses</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/cash_flow_overview.png" alt="Cash flow overview" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/cash_flow_overview.png" alt="Cash flow overview" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Cash flow overview</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/cash_flow_scenarios.png" alt="Cash scenarios" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/cash_flow_scenarios.png" alt="Cash scenarios" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Cash scenarios</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/cash_flow_alerts.png" alt="Liquidity alerts" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/cash_flow_alerts.png" alt="Liquidity alerts" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Liquidity alerts</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/reporting.png" alt="Reporting center" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/reporting.png" alt="Reporting center" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Reporting center</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/reporting_ar_aging.png" alt="AR aging preset" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/reporting_ar_aging.png" alt="AR aging preset" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>AR aging preset</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/ar_collections.png" alt="AR collections" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/ar_collections.png" alt="AR collections" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>AR collections</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/tax.png" alt="Tax hub" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/tax.png" alt="Tax hub" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Tax hub</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/tax_advanced.png" alt="Tax advanced" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/tax_advanced.png" alt="Tax advanced" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Tax advanced</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/reconciliation.png" alt="AI reconciliation" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/reconciliation.png" alt="AI reconciliation" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>AI reconciliation</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/reconciliation_settings.png" alt="Reconciliation settings" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/reconciliation_settings.png" alt="Reconciliation settings" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Reconciliation settings</figcaption>
   </figure>
 </div>
@@ -217,7 +295,7 @@
 <p class="muted">Chartered accountant portal and regulated export patterns.</p>
 <div class="grid">
   <figure>
-    <img src="assets/screenshots/ca_portal.png" alt="CA portal" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/ca_portal.png" alt="CA portal" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>CA portal</figcaption>
   </figure>
 </div>
@@ -227,31 +305,31 @@
 <p class="muted">Workforce, attendance, leave, and payroll runs.</p>
 <div class="grid">
   <figure>
-    <img src="assets/screenshots/workforce.png" alt="Workforce" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/workforce.png" alt="Workforce" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Workforce</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/workforce_people.png" alt="People directory" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/workforce_people.png" alt="People directory" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>People directory</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/workforce_attendance.png" alt="Attendance" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/workforce_attendance.png" alt="Attendance" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Attendance</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/workforce_leave.png" alt="Leave" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/workforce_leave.png" alt="Leave" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Leave</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/payroll.png" alt="Payroll" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/payroll.png" alt="Payroll" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Payroll</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/payroll_settings.png" alt="Payroll settings" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/payroll_settings.png" alt="Payroll settings" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Payroll settings</figcaption>
   </figure>
   <figure>
-    <img src="assets/screenshots/payroll_run_detail.png" alt="Payroll run detail" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/payroll_run_detail.png" alt="Payroll run detail" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Payroll run detail</figcaption>
   </figure>
 </div>
@@ -261,7 +339,7 @@
 <p class="muted">Buyer-facing catalog experience at your branded slug.</p>
 <div class="grid">
   <figure>
-    <img src="assets/screenshots/public_shop.png" alt="Public storefront" width="1440" height="900" loading="lazy" />
+    <img src="assets/screenshots/public_shop.png" alt="Public storefront" width="1440" height="900" loading="eager" decoding="async" />
     <figcaption>Public storefront</figcaption>
   </figure>
 </div>
@@ -299,6 +377,8 @@
     <div class="back-cover">
       <h2 style="border:none;">BabaBuilds ERP</h2>
       <p class="muted">Single workspace for finance operations, compliance evidence, and growth workflows.</p>
+      <p class="cta-line"><strong>Start a 15-day Pro trial</strong> at erp.bababuilds.com/signup?plan=pro&amp;trial=15</p>
+      <p class="muted">Questions? hello@bababuilds.com · LinkedIn /company/bababuilds</p>
     </div>
   </main>
 </body>

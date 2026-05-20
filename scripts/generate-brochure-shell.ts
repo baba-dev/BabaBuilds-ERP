@@ -31,7 +31,7 @@ function figuresHtml(shots: { id: string; title: string }[]) {
   const body = shots
     .map(
       (r) =>
-        `  <figure>\n    <img src="assets/screenshots/${esc(r.id)}.png" alt="${esc(r.title)}" width="1440" height="900" loading="lazy" />\n    <figcaption>${esc(r.title)}</figcaption>\n  </figure>`,
+        `  <figure>\n    <img src="assets/screenshots/${esc(r.id)}.png" alt="${esc(r.title)}" width="1440" height="900" loading="eager" decoding="async" />\n    <figcaption>${esc(r.title)}</figcaption>\n  </figure>`,
     )
     .join("\n");
   return `<div class="grid">\n${body}\n</div>\n`;
@@ -57,12 +57,88 @@ function sectionBlock(title: string, section: BrochureSection, intro: string) {
   );
 }
 
+function salesNarrativeHtml() {
+  return (
+    `<section id="executive-summary" class="sales-block">\n` +
+    `  <h2>Executive summary</h2>\n` +
+    `  <p>BabaBuilds ERP is a conversion-first financial operations workspace for agencies, accountants, contractors, freelancers, and service businesses. It unifies proposals, invoicing, expenses, tax readiness, cash visibility, document evidence, workforce, payroll, and an optional public storefront — with module toggles so teams adopt capabilities at their own pace.</p>\n` +
+    `  <div class="highlights">\n` +
+    `    <div class="highlight-card"><strong>Revenue to cash</strong><span>Pipeline, proposals, retainers, invoices, and AR collections in one flow.</span></div>\n` +
+    `    <div class="highlight-card"><strong>Compliance-ready</strong><span>GST/VAT workflows, CA portal exports, and audit-friendly document vault.</span></div>\n` +
+    `    <div class="highlight-card"><strong>Controlled rollout</strong><span>Optional modules preserve data when disabled; navigation adapts to your plan.</span></div>\n` +
+    `  </div>\n` +
+    `</section>\n\n` +
+    `<section id="who-its-for" class="sales-block">\n` +
+    `  <h2>Who it is for</h2>\n` +
+    `  <p class="muted">Persona landing pages and interactive demos mirror how different buyers evaluate the product.</p>\n` +
+    `  <table class="data-table">\n` +
+    `    <thead><tr><th>Persona</th><th>Primary outcomes</th></tr></thead>\n` +
+    `    <tbody>\n` +
+    `      <tr><td><strong>Agencies &amp; studios</strong></td><td>Proposals, retainers, multi-client billing, pipeline visibility, team seats.</td></tr>\n` +
+    `      <tr><td><strong>Freelancers &amp; consultants</strong></td><td>Fast invoicing, expenses, tax estimates, lightweight compliance.</td></tr>\n` +
+    `      <tr><td><strong>Contractors &amp; builders</strong></td><td>Inventory, purchase orders, job costing signals, document vault.</td></tr>\n` +
+    `      <tr><td><strong>Small businesses</strong></td><td>Core books, cash flow, reporting presets, optional shop.</td></tr>\n` +
+    `      <tr><td><strong>Chartered accountants</strong></td><td>CA portal, regulated exports, client workspace handoff.</td></tr>\n` +
+    `    </tbody>\n` +
+    `  </table>\n` +
+    `</section>\n\n` +
+    `<section id="platform-at-a-glance" class="sales-block">\n` +
+    `  <h2>Platform at a glance</h2>\n` +
+    `  <table class="data-table compact">\n` +
+    `    <thead><tr><th>Area</th><th>Capabilities</th></tr></thead>\n` +
+    `    <tbody>\n` +
+    `      <tr><td>Sales</td><td>Proposals, revenue pipeline, retainers, invoice workspace</td></tr>\n` +
+    `      <tr><td>Finance</td><td>Expenses, cash flow scenarios, reporting, AR aging, tax hub, AI reconciliation</td></tr>\n` +
+    `      <tr><td>Operations</td><td>Clients, services, inventory, POs, imports, document vault</td></tr>\n` +
+    `      <tr><td>People</td><td>Workforce directory, attendance, leave, payroll runs</td></tr>\n` +
+    `      <tr><td>Growth</td><td>Public shop, partner hub, referrals</td></tr>\n` +
+    `    </tbody>\n` +
+    `  </table>\n` +
+    `</section>\n\n` +
+    `<section id="pricing" class="sales-block">\n` +
+    `  <h2>Plans &amp; pricing</h2>\n` +
+    `  <p class="muted">Regional catalogs on the marketing site; representative monthly prices below. Annual billing is 10× monthly (two months free vs paying monthly for a year). New workspaces can start a <strong>15-day Pro trial</strong>.</p>\n` +
+    `  <table class="data-table">\n` +
+    `    <thead><tr><th>Plan</th><th>India (INR/mo)</th><th>US / ROW (USD/mo)</th><th>Highlights</th></tr></thead>\n` +
+    `    <tbody>\n` +
+    `      <tr><td><strong>Free</strong></td><td>₹0</td><td>$0</td><td>Core product with limits on clients, invoices, and shop listings</td></tr>\n` +
+    `      <tr><td><strong>Pro</strong></td><td>₹1,499</td><td>$5</td><td>Payment gateways, higher limits, document storage</td></tr>\n` +
+    `      <tr><td><strong>Team</strong></td><td>₹3,499</td><td>$15</td><td>Multi-seat collaboration, Team billing interval</td></tr>\n` +
+    `    </tbody>\n` +
+    `  </table>\n` +
+    `  <p class="muted" style="margin-top:0.75rem;">EU (EUR) and Oman (OMR) price lists follow the same structure on <code>erp.bababuilds.com</code>. Payment gateways: Razorpay (INR) and Stripe (international) when configured.</p>\n` +
+    `</section>\n\n` +
+    `<section id="trust" class="sales-block">\n` +
+    `  <h2>Security &amp; trust</h2>\n` +
+    `  <ul>\n` +
+    `    <li><strong>Authentication</strong> — NextAuth with Google, email magic links, MFA for high-risk roles, and audited demo credentials.</li>\n` +
+    `    <li><strong>Workspace isolation</strong> — Multi-tenant data scoped per workspace with role-based permissions.</li>\n` +
+    `    <li><strong>Evidence &amp; exports</strong> — CA portal CSV/ZIP exports, governed reporting presets, document vault with OCR review.</li>\n` +
+    `    <li><strong>Operational hygiene</strong> — Scheduled cron jobs for integrity, trial expiry, tax obligations, and payment sync (production).</li>\n` +
+    `  </ul>\n` +
+    `</section>\n\n` +
+    `<section id="getting-started" class="sales-block">\n` +
+    `  <h2>Getting started</h2>\n` +
+    `  <ol class="steps">\n` +
+    `    <li>Visit <strong>erp.bababuilds.com</strong> and choose your persona or start a Pro trial.</li>\n` +
+    `    <li>Explore an interactive demo with seeded data — no credit card required for trial evaluation.</li>\n` +
+    `    <li>Enable optional modules in Settings as your team is ready; imports use preview-first CSV/XLSX templates.</li>\n` +
+    `    <li>Connect Razorpay, Stripe, SMTP, Plaid, or AI when your environment and plan allow.</li>\n` +
+    `  </ol>\n` +
+    `</section>\n\n` +
+    `<section id="product-tour" class="sales-block page-break-before">\n` +
+    `  <h2>Product tour (in-app screenshots)</h2>\n` +
+    `  <p class="muted">The following pages are captured from the Software Company demo template with synthetic data.</p>\n` +
+    `</section>\n`
+  );
+}
+
 const html =
   `<!DOCTYPE html>\n` +
   `<html lang="en">\n<head>\n` +
   `  <meta charset="utf-8" />\n` +
   `  <meta name="viewport" content="width=device-width, initial-scale=1" />\n` +
-  `  <title>BabaBuilds ERP — Product overview</title>\n` +
+  `  <title>BabaBuilds ERP — Sales brochure</title>\n` +
   `  <link rel="stylesheet" href="brochure.css" />\n` +
   `</head>\n<body>\n` +
   `  <header class="cover">\n` +
@@ -72,12 +148,14 @@ const html =
   `    </div>\n` +
   `    <p class="tagline-pill">Operations · Finance · Compliance</p>\n` +
   `    <h1>BabaBuilds ERP</h1>\n` +
-  `    <p class="subtitle">A full-stack workspace for proposals, billing, tax, cash visibility, documents, workforce, payroll, and optional storefront — designed for clarity and controlled rollout.</p>\n` +
+  `    <p class="subtitle">Sales brochure — product overview with in-app screenshots, module map, pricing, and integration surface.</p>\n` +
+  `    <p class="cover-meta muted">erp.bababuilds.com · 15-day Pro trial · Interactive persona demos</p>\n` +
   `  </header>\n\n` +
   `  <main style="max-width:900px;margin:0 auto;padding:0 1.25rem 2rem;">\n` +
   `    <div class="disclaimer">\n` +
   `      <strong>Demo imagery.</strong> Screenshots in this pack are captured from seeded demo workspaces with synthetic companies, amounts, and names. Live integrations (bank feeds, payments, email, AI, CAPTCHA) depend on your environment and plan.\n` +
   `    </div>\n\n` +
+  salesNarrativeHtml() +
   sectionBlock("Go to market", "marketing", "Public entry points and educational surfaces.") +
   sectionBlock("Workspace overview", "overview", "Dashboard, settings, and in-product guidance.") +
   sectionBlock("Operations & delivery", "operations", "Clients, services, inventory, documents, imports, and the operator view of Shop.") +
@@ -116,6 +194,8 @@ const html =
   `    <div class="back-cover">\n` +
   `      <h2 style="border:none;">BabaBuilds ERP</h2>\n` +
   `      <p class="muted">Single workspace for finance operations, compliance evidence, and growth workflows.</p>\n` +
+  `      <p class="cta-line"><strong>Start a 15-day Pro trial</strong> at erp.bababuilds.com/signup?plan=pro&amp;trial=15</p>\n` +
+  `      <p class="muted">Questions? hello@bababuilds.com · LinkedIn /company/bababuilds</p>\n` +
   `    </div>\n` +
   `  </main>\n</body>\n</html>\n`;
 
