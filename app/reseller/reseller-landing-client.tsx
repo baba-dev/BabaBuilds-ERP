@@ -21,9 +21,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import LandingNavbar from "@/components/LandingNavbar";
 import LandingFooter from "@/components/LandingFooter";
+import FloatingPreferencesWidget from "@/components/landing/FloatingPreferencesWidget";
 import TurnstileWidget from "@/components/TurnstileWidget";
 import {
   formatMajorInCurrency,
@@ -89,6 +90,8 @@ const initialQueryState: QueryFormState = {
 
 export default function ResellerLandingClient() {
   const t = useTranslations("ResellerLanding");
+  const locale = useLocale();
+  const isArabic = locale.startsWith("ar");
   const reduceMotion = useReducedMotion();
   const [selectedInterval, setSelectedInterval] = useState<PlanInterval>("YEARLY");
   const [pricingRegion, setPricingRegion] = useState<PricingRegion>("IN");
@@ -208,23 +211,22 @@ export default function ResellerLandingClient() {
           <div className="relative z-10 mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
             <div className="space-y-8">
               <span className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-surface-elevated/90 px-4 py-2 text-sm font-bold text-muted-body shadow-sm backdrop-blur-md">
-                <Sparkles className="h-4 w-4 text-accent-strong" aria-hidden /> برنامج الشركاء
+                <Sparkles className="h-4 w-4 text-accent-strong" aria-hidden /> {isArabic ? "برنامج الشركاء" : "Partner Program"}
               </span>
               <h1 className="text-balance text-4xl font-black leading-[1.08] tracking-tight text-foreground md:text-6xl">
-                نمِّ أعمالك مع BabaBuilds ERP كشريك موزع
+                {isArabic ? "نمِّ أعمالك مع BabaBuilds ERP كشريك موزع" : "Grow your business as a BabaBuilds ERP reseller"}
               </h1>
               <p className="max-w-2xl text-lg font-medium leading-relaxed text-muted-body md:text-xl">
-                ابنِ قناة اكتساب مستقرة عبر مساعدة العملاء على تحديث الفوترة والامتثال والعمليات. قدم خصومات
-                للعملاء، وأغلق الصفقات أسرع، وحقق عمولات متكررة.
+                {isArabic ? "ابنِ قناة اكتساب مستقرة عبر مساعدة العملاء على تحديث الفوترة والامتثال والعمليات. قدم خصومات للعملاء، وأغلق الصفقات أسرع، وحقق عمولات متكررة." : "Build a steady acquisition channel by helping clients modernize billing, compliance, and operations. Offer customer discounts, close deals faster, and earn recurring commissions."}
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button asChild className="h-12 gap-2 rounded-2xl px-7 font-black">
                   <Link href="/signup?plan=pro&cycle=monthly&trial=15&source=reseller_hero">
-                    قدّم كشريك موزع <ArrowRight className="h-4 w-4" />
+                    {isArabic ? "قدّم كشريك موزع" : "Apply as a Reseller"} <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
                 <Button asChild variant="outline" className="h-12 rounded-2xl px-7 font-bold">
-                  <Link href="/referrals">الانتقال إلى لوحة الشركاء</Link>
+                  <Link href="/referrals">{isArabic ? "الانتقال إلى لوحة الشركاء" : "Go to Partner Dashboard"}</Link>
                 </Button>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
@@ -253,10 +255,10 @@ export default function ResellerLandingClient() {
               <Card className="rounded-3xl border-border/70 bg-surface-elevated shadow-xl">
                 <CardHeader className="space-y-3">
                   <CardTitle className="flex items-center gap-2 text-2xl">
-                    <BadgeDollarSign className="h-6 w-6 text-orange-500" /> تسعير الشركاء المباشر
+                    <BadgeDollarSign className="h-6 w-6 text-orange-500" /> {isArabic ? "تسعير الشركاء المباشر" : "Partner Pricing Preview"}
                   </CardTitle>
                   <CardDescription className="text-sm leading-relaxed">
-                    طبّق كود الشريك، عاين أثر الخصم فورًا، ثم أكمل الدفع بنفس سياق التسعير.
+                    {isArabic ? "طبّق كود الشريك، عاين أثر الخصم فورًا، ثم أكمل الدفع بنفس سياق التسعير." : "Apply a reseller code, preview the discount instantly, then continue to checkout with the same pricing context."}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5">
@@ -276,7 +278,7 @@ export default function ResellerLandingClient() {
 
                   <div className="space-y-2">
                     <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-body">
-                      منطقة التسعير
+                      {isArabic ? "منطقة التسعير" : "Pricing region"}
                     </p>
                     <div className="grid gap-2 sm:grid-cols-5">
                     {(["IN", "US", "EU", "OM", "ROW"] as PricingRegion[]).map((region) => (
@@ -295,21 +297,21 @@ export default function ResellerLandingClient() {
                   </div>
 
                   <form onSubmit={onApplyCoupon} className="space-y-2">
-                    <Label htmlFor="resellerCoupon">كود كوبون الشريك</Label>
+                    <Label htmlFor="resellerCoupon">{isArabic ? "كود كوبون الشريك" : "Reseller coupon code"}</Label>
                     <div className="flex gap-2">
                       <Input
                         id="resellerCoupon"
                         value={couponInput}
                         onChange={(e) => setCouponInput(e.target.value)}
-                        placeholder="مثال: PARTNER-ABC123"
+                        placeholder={isArabic ? "مثال: PARTNER-ABC123" : "Example: PARTNER-ABC123"}
                         className="font-mono"
                       />
                       <Button type="submit" disabled={applyingCoupon}>
-                        {applyingCoupon ? "جارٍ التطبيق..." : "تطبيق"}
+                        {applyingCoupon ? (isArabic ? "جارٍ التطبيق..." : "Applying...") : (isArabic ? "تطبيق" : "Apply")}
                       </Button>
                     </div>
                     <p className="text-[11px] text-muted-body">
-                      استخدم كود شريك منشأ من لوحة الإدارة. سيُحفظ الكود حتى صفحة الدفع.
+                      {isArabic ? "استخدم كود شريك منشأ من لوحة الإدارة. سيُحفظ الكود حتى صفحة الدفع." : "Use a reseller code generated from the admin panel. It will persist through checkout."}
                     </p>
                   </form>
 
@@ -351,10 +353,10 @@ export default function ResellerLandingClient() {
                   </div>
 
                   <Button asChild className="h-12 w-full rounded-2xl font-black">
-                    <Link href={checkoutHref}>المتابعة إلى دفع آمن</Link>
+                    <Link href={checkoutHref}>{isArabic ? "المتابعة إلى دفع آمن" : "Continue to secure checkout"}</Link>
                   </Button>
                   <Button asChild variant="outline" className="h-11 w-full rounded-2xl font-bold">
-                    <Link href="/reseller/partner-kit">تحميل حقيبة الشريك</Link>
+                    <Link href="/reseller/partner-kit">{isArabic ? "تحميل حقيبة الشريك" : "Download Partner Kit"}</Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -613,6 +615,7 @@ export default function ResellerLandingClient() {
           </div>
         </section>
       </main>
+      <FloatingPreferencesWidget />
       <LandingFooter />
     </div>
   );
