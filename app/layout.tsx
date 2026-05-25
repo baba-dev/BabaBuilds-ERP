@@ -41,11 +41,11 @@ const ORGANIZATION_LOGO_URL = FAVICON_URL;
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "BabaBuilds ERP — Automated Invoicing, Reconciliation & Tax Compliance",
+    default: "BabaBuilds ERP — Proposal to Payment Workflow for Service Teams",
     template: "%s | BabaBuilds ERP",
   },
   description:
-    "The all-in-one ERP for agencies and freelancers. Automate multi-currency invoicing, GST/VAT workflows with country-aware setup defaults, AI-powered bank reconciliation, and real-time financial dashboards.",
+    "BabaBuilds ERP helps service teams move from proposal to e-signature to invoice to payment link to bank match to CA-ready export in one workspace.",
   applicationName: "BabaBuilds ERP",
   keywords: [
     "ERP for freelancers",
@@ -94,9 +94,9 @@ export const metadata: Metadata = {
     alternateLocale: ["hi_IN", "ar_OM", "es_MX"],
     url: SITE_URL,
     siteName: "BabaBuilds ERP",
-    title: "BabaBuilds ERP — Run Your Agency on Autopilot",
+    title: "BabaBuilds ERP — Proposal to Payment Workflow",
     description:
-      "Multi-currency invoicing, AI-powered reconciliation, and global tax compliance for modern agencies and freelancers.",
+      "Proposals, e-signatures, invoices, payment links, bank matching, and CA-ready exports for agencies and freelancers.",
     images: [
       {
         url: DEFAULT_SOCIAL_BANNER_PATH,
@@ -111,7 +111,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "BabaBuilds ERP — Automated Invoicing & Compliance",
     description:
-      "The global command center for bookkeeping and growth. Automate invoices, manage clients, and track expenses.",
+      "Track proposals, invoices, payments, expenses, and reconciliation in one workspace.",
     images: [DEFAULT_SOCIAL_BANNER_PATH],
     creator: "@bababuilds",
   },
@@ -190,7 +190,7 @@ export default async function RootLayout({
                   "@type": "WebPage",
                   "@id": `${SITE_URL}/#webpage`,
                   url: SITE_URL,
-                  name: "BabaBuilds ERP — Automated Invoicing, Reconciliation & Tax Compliance",
+                  name: "BabaBuilds ERP — Proposal to Payment Workflow for Service Teams",
                   isPartOf: {
                     "@id": `${SITE_URL}/#website`,
                   },
@@ -206,7 +206,7 @@ export default async function RootLayout({
                     height: 1024,
                   },
                   description:
-                    "The all-in-one ERP for agencies and freelancers. Automate multi-currency invoicing, GST/VAT workflows, AI reconciliation, and real-time dashboards.",
+                    "BabaBuilds ERP gives agencies and freelancers one workflow from proposal through payment and bank matching to CA-ready export.",
                 },
                 {
                   "@type": "SoftwareApplication",
@@ -218,7 +218,7 @@ export default async function RootLayout({
                   url: SITE_URL,
                   image: DEFAULT_SOCIAL_BANNER_URL,
                   description:
-                    "All-in-one ERP for agencies: automated invoicing, multi-currency billing, country-aware GST/VAT workflows, AI reconciliation, and financial dashboards.",
+                    "ERP for agencies and freelancers: proposals, e-signatures, invoicing, payment links, bank matching, and GST/VAT-ready records.",
                   author: {
                     "@id": `${SITE_URL}/#organization`,
                   },
@@ -235,7 +235,7 @@ export default async function RootLayout({
                   screenshot: DEFAULT_SOCIAL_BANNER_URL,
                   featureList: [
                     "Automated invoicing",
-                    "AI-powered bank reconciliation",
+                    "Bank reconciliation",
                     "Country-aware GST/VAT setup",
                     "Multi-currency accounting",
                     "Client and project financial dashboards",
