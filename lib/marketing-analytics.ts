@@ -6,7 +6,11 @@ export type MarketingEventName =
   | "interactive_demo_click"
   | "interactive_demo_provisioned"
   | "homepage_role_demo_click"
-  | "marketing_trial_cta_clicked";
+  | "marketing_trial_cta_clicked"
+  | "home_v2_hero_demo_click"
+  | "home_v2_hero_start_free_click"
+  | "home_v2_final_demo_click"
+  | "home_v2_final_start_free_click";
 
 export type MarketingEventPayload = {
   location?: string;
