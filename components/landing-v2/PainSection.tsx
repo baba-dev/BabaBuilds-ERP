@@ -8,13 +8,15 @@ export default function PainSection() {
   ];
 
   return (
-    <section className="rounded-3xl border border-border/70 bg-surface-elevated p-6 sm:p-8">
+    <section className="px-6">
+      <div className="mx-auto max-w-7xl rounded-3xl border border-border/70 bg-surface-elevated p-6 sm:p-8">
       <h2 className="text-2xl font-extrabold text-foreground sm:text-3xl">Where service teams lose time</h2>
       <ul className="mt-5 space-y-3 text-sm text-muted-body sm:text-base">
         {pains.map((pain) => (
           <li key={pain} className="rounded-xl border border-border/60 bg-background/70 px-4 py-3">{pain}</li>
         ))}
       </ul>
+      </div>
     </section>
   );
 }

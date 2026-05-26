@@ -8,7 +8,8 @@ export default function FAQSection() {
     ["Can I export data?", "Yes. You can export financial records for bookkeeping, compliance, and audit preparation."],
   ];
   return (
-    <section className="rounded-3xl border border-border/70 bg-surface-elevated p-6 sm:p-8">
+    <section className="px-6">
+      <div className="mx-auto max-w-7xl rounded-3xl border border-border/70 bg-surface-elevated p-6 sm:p-8">
       <h2 className="text-2xl font-extrabold text-foreground sm:text-3xl">FAQs</h2>
       <div className="mt-5 space-y-3">
         {faqs.map(([q, a]) => (
@@ -17,6 +18,7 @@ export default function FAQSection() {
             <p className="mt-2 text-sm text-muted-body">{a}</p>
           </article>
         ))}
+      </div>
       </div>
     </section>
   );

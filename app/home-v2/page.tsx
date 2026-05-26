@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import LandingNavbar from "@/components/LandingNavbar";
+import LandingFooter from "@/components/LandingFooter";
 import HeroWorkflow from "@/components/landing-v2/HeroWorkflow";
 import PainSection from "@/components/landing-v2/PainSection";
 import WorkflowSection from "@/components/landing-v2/WorkflowSection";
@@ -17,37 +19,37 @@ export const metadata: Metadata = {
   title: "BabaBuilds ERP | Proposal-to-Payment Workflow",
   description:
     "Send proposals, collect e-signatures, create invoices, share payment links, match bank entries, and export CA-ready records in one workspace.",
-  alternates: {
-    canonical: PAGE_URL,
-  },
+  alternates: { canonical: PAGE_URL },
   openGraph: {
     title: "BabaBuilds ERP | Proposal-to-Payment Workflow",
-    description:
-      "Proposal → E-signature → Invoice → Payment Link → Bank Match → CA Export.",
+    description: "Proposal → E-signature → Invoice → Payment Link → Bank Match → CA Export.",
     url: PAGE_URL,
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "BabaBuilds ERP | Proposal-to-Payment Workflow",
-    description:
-      "Proposal → E-signature → Invoice → Payment Link → Bank Match → CA Export.",
+    description: "Proposal → E-signature → Invoice → Payment Link → Bank Match → CA Export.",
   },
 };
 
 export default function HomeV2Page() {
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
-      <HeroWorkflow />
-      <PainSection />
-      <WorkflowSection />
-      <RetainerSection />
-      <PaymentAndReconciliationSection />
-      <AIQuestionsSection />
-      <CAReadySection />
-      <PricingSection />
-      <FAQSection />
-      <FinalCTA />
-    </main>
+    <>
+      <LandingNavbar />
+      <main className="flex flex-col gap-8 pb-14 pt-28 md:pt-32">
+        <HeroWorkflow />
+        <PainSection />
+        <WorkflowSection />
+        <RetainerSection />
+        <PaymentAndReconciliationSection />
+        <AIQuestionsSection />
+        <CAReadySection />
+        <PricingSection />
+        <FAQSection />
+        <FinalCTA />
+      </main>
+      <LandingFooter />
+    </>
   );
 }
