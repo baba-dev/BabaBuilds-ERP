@@ -332,8 +332,8 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
           return;
         }
         if (
-          response.status === 400 &&
-          ["RAZORPAY_PREVIEW_NOT_APPLICABLE", "UNSUPPORTED_CURRENCY", "MISSING_GATEWAY_CREDENTIALS"].includes(
+          [400, 502].includes(response.status) &&
+          ["RAZORPAY_PREVIEW_NOT_APPLICABLE", "UNSUPPORTED_CURRENCY", "MISSING_GATEWAY_CREDENTIALS", "GATEWAY_CALL_FAILED"].includes(
             data?.code,
           )
         ) {
@@ -427,8 +427,8 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
       const data = await response.json().catch(() => null);
       if (!response.ok) {
         if (
-          response.status === 400 &&
-          ["RAZORPAY_PREVIEW_NOT_APPLICABLE", "UNSUPPORTED_CURRENCY", "MISSING_GATEWAY_CREDENTIALS"].includes(
+          [400, 502].includes(response.status) &&
+          ["RAZORPAY_PREVIEW_NOT_APPLICABLE", "UNSUPPORTED_CURRENCY", "MISSING_GATEWAY_CREDENTIALS", "GATEWAY_CALL_FAILED"].includes(
             data?.code,
           )
         ) {
@@ -547,6 +547,27 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
       // Non-fatal UX action.
     }
   };
+
+  const confirmStepContent = draftPreview ? (
+    <form className="bg-white dark:bg-zinc-950 flex flex-col relative">
+      <CardContent className="px-6 md:px-8 py-8">
+        <InvoiceGenerationConfirmCard
+          confirmation={draftPreview.confirmation}
+          expiresAt={draftPreview.expiresAt}
+          sendEmail={sendEmail}
+          isConfirming={isConfirming}
+          onBack={() => setDraftPreview(null)}
+          onConfirm={handleConfirmGenerate}
+          fCurrency={fCurrency}
+        />
+
+        <FormFieldMessages
+          errorText={error ? <span className="flex items-center justify-center gap-2"><AlertCircle className="w-4 h-4 shrink-0" /> {error}</span> : undefined}
+          className="w-full mt-6 p-4 bg-red-50 dark:bg-red-500/10 border-s-4 border-red-500 rounded-e-xl text-xs text-center font-bold uppercase tracking-widest shadow-sm animate-pulse"
+        />
+      </CardContent>
+    </form>
+  ) : null;
 
   const formContent = (
     <form onSubmit={handleSubmit} className="bg-white dark:bg-zinc-950 flex flex-col relative">
@@ -728,25 +749,13 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
           <span className="text-3xl font-black text-indigo-700 dark:text-indigo-400 drop-shadow-sm tracking-tight">{fCurrency(totalAmount)}</span>
         </div>
 
-        {draftPreview ? (
-          <InvoiceGenerationConfirmCard
-            confirmation={draftPreview.confirmation}
-            expiresAt={draftPreview.expiresAt}
-            sendEmail={sendEmail}
-            isConfirming={isConfirming}
-            onBack={() => setDraftPreview(null)}
-            onConfirm={handleConfirmGenerate}
-            fCurrency={fCurrency}
-          />
-        ) : (
-          <FormSubmitBar
-            isSubmitting={isGenerating}
-            isDisabled={totalAmount === 0}
-            submitText={t("generate_btn")}
-            submittingText={sendEmail ? "Generating & Sending Invoice..." : "Generating Invoice..."}
-            helperText={totalAmount === 0 ? "Select at least one priced service to continue." : "Review the preview amount and continue to confirmation."}
-          />
-        )}
+        <FormSubmitBar
+          isSubmitting={isGenerating}
+          isDisabled={totalAmount === 0}
+          submitText={t("generate_btn")}
+          submittingText={sendEmail ? "Generating & Sending Invoice..." : "Generating Invoice..."}
+          helperText={totalAmount === 0 ? "Select at least one priced service to continue." : "Review the preview amount and continue to confirmation."}
+        />
 
         {/* SUCCESS BANNER */}
         {successData && (
@@ -787,7 +796,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
   if (inModal) {
     return (
       <>
-        {formContent}
+        {draftPreview ? confirmStepContent : formContent}
         <TaxRateModal
           open={taxRateModalOpen}
           onOpenChange={setTaxRateModalOpen}
@@ -809,7 +818,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
     <>
       <Card className="shadow-xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
         <div className="h-1.5 bg-gradient-to-r from-indigo-500 to-indigo-600 w-full" />
-        {formContent}
+        {draftPreview ? confirmStepContent : formContent}
       </Card>
       <TaxRateModal
         open={taxRateModalOpen}
