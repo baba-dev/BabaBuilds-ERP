@@ -332,8 +332,8 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
           return;
         }
         if (
-          response.status === 400 &&
-          ["RAZORPAY_PREVIEW_NOT_APPLICABLE", "UNSUPPORTED_CURRENCY", "MISSING_GATEWAY_CREDENTIALS"].includes(
+          [400, 502].includes(response.status) &&
+          ["RAZORPAY_PREVIEW_NOT_APPLICABLE", "UNSUPPORTED_CURRENCY", "MISSING_GATEWAY_CREDENTIALS", "GATEWAY_CALL_FAILED"].includes(
             data?.code,
           )
         ) {
@@ -427,8 +427,8 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
       const data = await response.json().catch(() => null);
       if (!response.ok) {
         if (
-          response.status === 400 &&
-          ["RAZORPAY_PREVIEW_NOT_APPLICABLE", "UNSUPPORTED_CURRENCY", "MISSING_GATEWAY_CREDENTIALS"].includes(
+          [400, 502].includes(response.status) &&
+          ["RAZORPAY_PREVIEW_NOT_APPLICABLE", "UNSUPPORTED_CURRENCY", "MISSING_GATEWAY_CREDENTIALS", "GATEWAY_CALL_FAILED"].includes(
             data?.code,
           )
         ) {
