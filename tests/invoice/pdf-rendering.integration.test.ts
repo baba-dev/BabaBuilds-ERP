@@ -122,6 +122,27 @@ describe("pdf rendering integration", () => {
     expect(xObject).toBeTruthy();
   });
 
+  it("generateInvoicePDF loads logo with absolute URL starting with http/https", async () => {
+    const root = await makeTempUploadsRoot();
+    const workspaceId = "ws-test-absolute";
+    const logoPath = path.join(root, "logos", workspaceId, "logo.png");
+    await writeTinyPng(logoPath);
+
+    const pdfBytes = await generateInvoicePDF({
+      ...defaultParams(),
+      profile: {
+        ...defaultParams().profile,
+        logoUrl: `https://erp.bababuilds.com/logos/${workspaceId}/logo.png?t=123456`,
+      },
+    });
+
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+    const page = pdfDoc.getPages()[0];
+    const resources = page.node.lookup(PDFName.of("Resources"), PDFDict);
+    const xObject = resources?.lookup(PDFName.of("XObject"), PDFDict);
+    expect(xObject).toBeTruthy();
+  });
+
   it("generateInvoicePDF creates multipage output for many DESIGN_1 items", async () => {
     const services = Array.from({ length: 48 }, (_, idx) => ({
       title: `Long consulting line item ${idx + 1} for pagination validation`,

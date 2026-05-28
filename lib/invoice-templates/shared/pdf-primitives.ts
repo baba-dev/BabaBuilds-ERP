@@ -146,7 +146,14 @@ export const loadLogo = async (
   if (!logoUrl) return false;
 
   try {
-    const cleanUrl = logoUrl.split("?")[0];
+    let cleanUrl = logoUrl.split("?")[0];
+    if (cleanUrl.includes("://")) {
+      try {
+        cleanUrl = new URL(cleanUrl).pathname;
+      } catch {
+        // Fallback to original url splitting if parsing fails
+      }
+    }
     const relativeLogoPath = cleanUrl.startsWith("/") ? cleanUrl.substring(1) : cleanUrl;
     const parts = relativeLogoPath.split("/").filter(Boolean);
     const kind = parts.shift();
