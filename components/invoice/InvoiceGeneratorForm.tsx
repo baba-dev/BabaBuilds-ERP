@@ -370,12 +370,37 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
         throw new Error(buildInvoiceGenerateErrorMessage(data, "Failed to generate invoice."));
       }
 
-      setDraftPreview({
-        draftId: data.draftId,
-        expiresAt: data.expiresAt,
-        confirmation: data.confirmation,
-        sendEmail,
-      });
+      if (!data.confirmation.paymentLink?.url) {
+        // Skip the second step: immediately finalize the invoice!
+        const finalizeResponse = await fetch("/api/generate/finalize", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Offline-Conflict-Policy": getConflictPolicy("invoice", "create"),
+          },
+          body: JSON.stringify({ draftId: data.draftId }),
+        });
+        const finalizeData = await finalizeResponse.json().catch(() => null);
+        if (!finalizeResponse.ok) {
+          throw new Error(buildInvoiceGenerateErrorMessage(finalizeData, "Failed to finalize invoice."));
+        }
+        const result = {
+          pdfPath: finalizeData.invoice.pdfPath,
+          invoiceNumber: finalizeData.invoice.invoiceNumber,
+          emailStatus: finalizeData.emailStatus,
+          paymentLinkStatus: finalizeData.paymentLinkStatus,
+        };
+        setSuccessData(result);
+        setServices(services.map((s) => ({ ...s, selected: false, amount: "" })));
+        onSuccess?.(result);
+      } else {
+        setDraftPreview({
+          draftId: data.draftId,
+          expiresAt: data.expiresAt,
+          confirmation: data.confirmation,
+          sendEmail,
+        });
+      }
     } catch (err: unknown) {
       if (isLikelyOfflineError(err)) {
         void queueOfflineMutation({
@@ -468,15 +493,42 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
         throw new Error(buildInvoiceGenerateErrorMessage(data, "Failed to generate invoice."));
       }
 
-      setDraftPreview({
-        draftId: data.draftId,
-        expiresAt: data.expiresAt,
-        confirmation: data.confirmation,
-        sendEmail,
-      });
-      setTaxRateInput("");
-      setTaxRateModalOpen(false);
-      setError(null);
+      if (!data.confirmation.paymentLink?.url) {
+        // Skip the second step: immediately finalize the invoice!
+        const finalizeResponse = await fetch("/api/generate/finalize", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Offline-Conflict-Policy": getConflictPolicy("invoice", "create"),
+          },
+          body: JSON.stringify({ draftId: data.draftId }),
+        });
+        const finalizeData = await finalizeResponse.json().catch(() => null);
+        if (!finalizeResponse.ok) {
+          throw new Error(buildInvoiceGenerateErrorMessage(finalizeData, "Failed to finalize invoice."));
+        }
+        const result = {
+          pdfPath: finalizeData.invoice.pdfPath,
+          invoiceNumber: finalizeData.invoice.invoiceNumber,
+          emailStatus: finalizeData.emailStatus,
+          paymentLinkStatus: finalizeData.paymentLinkStatus,
+        };
+        setSuccessData(result);
+        setServices(services.map((s) => ({ ...s, selected: false, amount: "" })));
+        setTaxRateInput("");
+        setTaxRateModalOpen(false);
+        onSuccess?.(result);
+      } else {
+        setDraftPreview({
+          draftId: data.draftId,
+          expiresAt: data.expiresAt,
+          confirmation: data.confirmation,
+          sendEmail,
+        });
+        setTaxRateInput("");
+        setTaxRateModalOpen(false);
+        setError(null);
+      }
     } catch (err: unknown) {
       if (isLikelyOfflineError(err)) {
         void queueOfflineMutation({
