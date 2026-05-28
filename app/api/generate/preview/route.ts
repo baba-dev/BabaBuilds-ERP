@@ -109,10 +109,15 @@ export async function POST(request: Request) {
       tenantKeySecret: decryptedSecret,
     });
 
-    if (!paymentLinkResult?.url || !paymentLinkResult.linkId) {
-      return NextResponse.json(
-        { error: "Could not generate Razorpay payment URL for confirmation.", code: "GATEWAY_CALL_FAILED" },
-        { status: 502 },
+    let paymentLinkUrl = "";
+    let paymentLinkLinkId = "";
+
+    if (paymentLinkResult?.url && paymentLinkResult.linkId) {
+      paymentLinkUrl = paymentLinkResult.url;
+      paymentLinkLinkId = paymentLinkResult.linkId;
+    } else {
+      console.warn(
+        `[generate/preview] Razorpay link generation skipped or failed (non-fatal, proceeding to generate draft invoice). Total: ${context.totals.total}`
       );
     }
 
@@ -131,8 +136,8 @@ export async function POST(request: Request) {
         } as Prisma.InputJsonValue,
         currency: context.baseCurrency,
         status: "PENDING",
-        razorpayLinkId: paymentLinkResult.linkId,
-        razorpayLinkUrl: paymentLinkResult.url,
+        razorpayLinkId: paymentLinkLinkId || null,
+        razorpayLinkUrl: paymentLinkUrl || null,
         expiresAt,
       },
     });
@@ -162,8 +167,8 @@ export async function POST(request: Request) {
           taxMode: context.totals.taxMode,
         },
         paymentLink: {
-          url: paymentLinkResult.url,
-          linkId: paymentLinkResult.linkId,
+          url: paymentLinkUrl,
+          linkId: paymentLinkLinkId,
         },
       },
     };
