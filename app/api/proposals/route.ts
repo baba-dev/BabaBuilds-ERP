@@ -15,11 +15,18 @@ type ProposalItemInput = {
   description?: string;
   quantity: number;
   unitPrice: number;
+  isOptional?: boolean;
 };
 type ProposalMediaItemInput = {
   type: "image" | "video";
   url: string;
   title?: string;
+};
+type MilestoneInput = {
+  title: string;
+  description?: string;
+  amount: number;
+  dueDate?: string;
 };
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 
@@ -33,7 +40,7 @@ export async function GET() {
 
     const proposals = await prisma.proposal.findMany({
       where: { workspaceId: workspaceId },
-      include: { client: true },
+      include: { client: true, items: true, billingMilestones: true },
       orderBy: { dateCreated: 'desc' }
     });
 
@@ -59,13 +66,15 @@ export async function POST(request: Request) {
     if (!perm.granted) return perm.response;
 
     const body = await request.json();
-    const { clientId, title, validUntil, items, taxRateOverride, richMedia } = body as {
+    const { clientId, title, validUntil, items, taxRateOverride, richMedia, milestones, richSections } = body as {
       clientId: string;
       title: string;
       validUntil: string;
       items: ProposalItemInput[];
       taxRateOverride?: number;
       richMedia?: ProposalMediaItemInput[];
+      milestones?: MilestoneInput[];
+      richSections?: any;
     };
 
     const client = await prisma.client.findFirst({ 
@@ -159,6 +168,17 @@ export async function POST(request: Request) {
     const subtotal = totals.subtotal;
     const estimatedTax = totals.taxAmount;
     const totalAmount = totals.total;
+
+    // Enforce that the sum of all milestones must strictly equal the proposal's grand total
+    if (milestones && milestones.length > 0) {
+      const milestonesSum = milestones.reduce((sum, m) => sum + Number(m.amount), 0);
+      if (Math.abs(milestonesSum - totalAmount) > 0.01) {
+        return NextResponse.json({
+          error: `The sum of billing milestones (${milestonesSum.toFixed(2)}) must strictly equal the proposal grand total (${totalAmount.toFixed(2)}).`
+        }, { status: 400 });
+      }
+    }
+
     const normalizedRichMedia = Array.isArray(richMedia)
       ? richMedia
           .map((media) => ({
@@ -183,6 +203,7 @@ export async function POST(request: Request) {
           normalizedRichMedia.length > 0
             ? JSON.stringify({ richMedia: normalizedRichMedia })
             : null,
+        richSections: richSections ? richSections : undefined,
         status: "SENT",
         items: {
           create: items.map((item) => {
@@ -195,10 +216,22 @@ export async function POST(request: Request) {
               description: item.description || null,
               quantity: Number(item.quantity),
               unitPrice: unitPriceD.toNumber(),
-              total: lineTotal.toNumber()
+              total: lineTotal.toNumber(),
+              isOptional: Boolean(item.isOptional),
+              isSelected: true
             };
           })
-        }
+        },
+        billingMilestones: milestones && milestones.length > 0 ? {
+          create: milestones.map((m) => ({
+            workspaceId,
+            title: m.title,
+            description: m.description || null,
+            amount: new Prisma.Decimal(m.amount),
+            dueDate: m.dueDate ? new Date(m.dueDate) : null,
+            status: 'PENDING'
+          }))
+        } : undefined,
       }
     });
 

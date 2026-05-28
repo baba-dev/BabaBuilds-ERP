@@ -98,6 +98,8 @@ export default function ProposalsEngine() {
   const [validUntil, setValidUntil] = useState(format(addDays(new Date(), 14), 'yyyy-MM-dd')); 
   const [items, setItems] = useState<ProposalItem[]>([]);
   const [richMedia, setRichMedia] = useState<ProposalMediaItem[]>([]);
+  const [milestones, setMilestones] = useState<{ title: string; description: string; amount: number; dueDate: string }[]>([]);
+  const [richSections, setRichSections] = useState<{ title: string; body: string; mediaUrl: string }[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -305,6 +307,14 @@ export default function ProposalsEngine() {
       toast.error("Please add at least one valid item.");
       return;
     }
+
+    if (milestones.length > 0) {
+      const milestonesSum = milestones.reduce((sum, m) => sum + Number(m.amount), 0);
+      if (Math.abs(milestonesSum - grandTotal) > 0.01) {
+        toast.error(`The sum of milestones (${milestonesSum.toFixed(2)}) must strictly equal the proposal grand total (${grandTotal.toFixed(2)}). Difference: ${(grandTotal - milestonesSum).toFixed(2)}`);
+        return;
+      }
+    }
     
     setIsSubmitting(true);
     const toastId = toast.loading("Saving proposal...");
@@ -313,13 +323,13 @@ export default function ProposalsEngine() {
       const res = await fetch('/api/proposals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientId, title, validUntil, items, richMedia })
+        body: JSON.stringify({ clientId, title, validUntil, items, richMedia, milestones })
       });
       const payload = await res.json().catch(() => ({}));
       if (res.ok) {
         toast.success("Proposal created successfully!", { id: toastId });
         setView('list');
-        setTitle(""); setClientId(""); setItems([]); setRichMedia([]);
+        setTitle(""); setClientId(""); setItems([]); setRichMedia([]); setMilestones([]);
       } else if (res.status === 422 && payload?.code === "TAX_RATE_REQUIRED") {
         setTaxRateMeta({
           taxLabel: payload.taxLabel,
@@ -340,13 +350,20 @@ export default function ProposalsEngine() {
 
   const handleTaxRateConfirm = async () => {
     if (!taxRateInput) return;
+    if (milestones.length > 0) {
+      const milestonesSum = milestones.reduce((sum, m) => sum + Number(m.amount), 0);
+      if (Math.abs(milestonesSum - grandTotal) > 0.01) {
+        toast.error(`The sum of milestones (${milestonesSum.toFixed(2)}) must strictly equal the proposal grand total (${grandTotal.toFixed(2)}).`);
+        return;
+      }
+    }
     setIsSubmitting(true);
     const toastId = toast.loading("Saving proposal...");
     try {
       const res = await fetch('/api/proposals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientId, title, validUntil, items, richMedia, taxRateOverride: Number(taxRateInput) })
+        body: JSON.stringify({ clientId, title, validUntil, items, richMedia, taxRateOverride: Number(taxRateInput), milestones })
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(payload?.error || "Failed to save proposal.");
@@ -354,7 +371,7 @@ export default function ProposalsEngine() {
       setTaxRateModalOpen(false);
       setTaxRateInput("");
       setView('list');
-      setTitle(""); setClientId(""); setItems([]); setRichMedia([]);
+      setTitle(""); setClientId(""); setItems([]); setRichMedia([]); setMilestones([]);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to save proposal";
       toast.error(msg, { id: toastId });
@@ -521,6 +538,40 @@ export default function ProposalsEngine() {
     setRichMedia((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const addRichSection = () => {
+    setRichSections((prev) => [...prev, { title: "", body: "", mediaUrl: "" }]);
+  };
+
+  const updateRichSection = (index: number, key: string, value: string) => {
+    setRichSections((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [key]: value };
+      return next;
+    });
+  };
+
+  const removeRichSection = (index: number) => {
+    setRichSections((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const addMilestone = () => {
+    const allocated = milestones.reduce((sum, m) => sum + Number(m.amount), 0);
+    const remaining = Math.max(0, grandTotal - allocated);
+    setMilestones((prev) => [...prev, { title: "", description: "", amount: remaining, dueDate: format(new Date(), "yyyy-MM-dd") }]);
+  };
+
+  const updateMilestone = (index: number, key: string, value: string | number) => {
+    setMilestones((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], [key]: value } as any;
+      return next;
+    });
+  };
+
+  const removeMilestone = (index: number) => {
+    setMilestones((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const renderBuilderContent = () => (
     <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
           <Card className="shadow-xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
@@ -589,6 +640,62 @@ export default function ProposalsEngine() {
                       </div>
                     )}
                   </FormSection>
+                </div>
+
+                <div className="space-y-5 pt-4 border-t border-zinc-100 dark:border-zinc-800/80 animate-in fade-in duration-300">
+                  <h3 className="text-sm font-extrabold uppercase tracking-widest text-zinc-900 dark:text-zinc-50 border-b border-zinc-100 dark:border-zinc-800/80 pb-3 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-indigo-500" /> Executive Pitch & Custom Sections
+                  </h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    Add custom sections (like a Cover letter, Introduction, Why choose us, or special Client Terms) to make your proposal visually stunning and persuasive.
+                  </p>
+                  <div className="space-y-4">
+                    {richSections.map((section, index) => (
+                      <div key={index} className="p-5 bg-zinc-50/80 dark:bg-zinc-950/40 rounded-xl border border-zinc-200 dark:border-zinc-800/80 relative group transition-all hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-800/60">
+                        <button type="button" onClick={() => removeRichSection(index)} aria-label="Remove section" className="absolute -top-3 -right-3 bg-white dark:bg-zinc-900 border border-rose-200 dark:border-rose-900/60 text-rose-500 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-rose-50 dark:hover:bg-rose-950 hover:scale-105 shadow-sm z-10 focus:opacity-100">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        <div className="space-y-3">
+                          <div>
+                            <Label htmlFor={`sec-title-${index}`} className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Section Title</Label>
+                            <Input
+                              id={`sec-title-${index}`}
+                              placeholder="e.g., Executive Summary / Why Choose Us"
+                              value={section.title}
+                              onChange={(e) => updateRichSection(index, "title", e.target.value)}
+                              className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 font-bold text-sm h-10 mt-1 focus:ring-indigo-500/30"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor={`sec-body-${index}`} className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Content Body</Label>
+                            <textarea
+                              id={`sec-body-${index}`}
+                              placeholder="Write your beautiful proposal pitch copy here..."
+                              value={section.body}
+                              onChange={(e) => updateRichSection(index, "body", e.target.value)}
+                              className="mt-1 flex min-h-[100px] w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder-zinc-400 resize-none font-medium leading-relaxed"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor={`sec-media-${index}`} className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Section Hero Image or Attachment URL (Optional)</Label>
+                            <Input
+                              id={`sec-media-${index}`}
+                              type="url"
+                              placeholder="https://..."
+                              value={section.mediaUrl}
+                              onChange={(e) => updateRichSection(index, "mediaUrl", e.target.value)}
+                              className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 text-xs mt-1"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <Button type="button" variant="outline" onClick={addRichSection} className="text-xs font-bold uppercase tracking-widest mt-2 h-11 w-full border-dashed border-2 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/10 hover:border-indigo-300">
+                    <Plus className="w-4 h-4 mr-2" /> Add Rich text section
+                  </Button>
                 </div>
 
                 <div className="space-y-5">
@@ -740,6 +847,83 @@ export default function ProposalsEngine() {
                   <Button type="button" variant="outline" onClick={addRichMedia} className="text-xs font-bold uppercase tracking-widest">
                     <Plus className="w-4 h-4 mr-2" /> Add media reference
                   </Button>
+                </div>
+
+                <div className="space-y-4 pt-6 border-t border-zinc-100 dark:border-zinc-800/80 animate-in fade-in duration-300">
+                  <h3 className="text-sm font-extrabold uppercase tracking-widest text-zinc-900 dark:text-zinc-50 border-b border-zinc-100 dark:border-zinc-800/80 pb-3">
+                    Billing Schedule & Milestones (Optional)
+                  </h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    Define progress-based billing milestones (e.g., 50% deposit, 50% launch). On acceptance, invoices will be automatically created per milestone.
+                  </p>
+                  <div className="space-y-3">
+                    {milestones.map((milestone, index) => (
+                      <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-3 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800/80 bg-zinc-50/70 dark:bg-zinc-950/30">
+                        <div className="md:col-span-3">
+                          <Label htmlFor={`milestone-title-${index}`} className="text-xs uppercase font-bold tracking-widest text-zinc-500 dark:text-zinc-400">Milestone Title</Label>
+                          <Input
+                            id={`milestone-title-${index}`}
+                            value={milestone.title}
+                            onChange={(e) => updateMilestone(index, "title", e.target.value)}
+                            placeholder="e.g., Deposit (50%)"
+                            className="mt-1 h-10"
+                            required
+                          />
+                        </div>
+                        <div className="md:col-span-4">
+                          <Label htmlFor={`milestone-desc-${index}`} className="text-xs uppercase font-bold tracking-widest text-zinc-500 dark:text-zinc-400">Description</Label>
+                          <Input
+                            id={`milestone-desc-${index}`}
+                            value={milestone.description}
+                            onChange={(e) => updateMilestone(index, "description", e.target.value)}
+                            placeholder="Due upon signing contract"
+                            className="mt-1 h-10"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <Label htmlFor={`milestone-amount-${index}`} className="text-xs uppercase font-bold tracking-widest text-zinc-500 dark:text-zinc-400">Amount</Label>
+                          <div className="relative mt-1">
+                            <span className="absolute left-3 top-[10px] text-xs font-bold text-zinc-400">{currencySymbol}</span>
+                            <Input
+                              id={`milestone-amount-${index}`}
+                              type="number"
+                              min="0.01"
+                              step="0.01"
+                              value={milestone.amount}
+                              onChange={(e) => updateMilestone(index, "amount", Number(e.target.value))}
+                              className="pl-7 h-10 text-right font-bold"
+                              required
+                            />
+                          </div>
+                        </div>
+                        <div className="md:col-span-2">
+                          <Label htmlFor={`milestone-due-${index}`} className="text-xs uppercase font-bold tracking-widest text-zinc-500 dark:text-zinc-400">Target Date</Label>
+                          <Input
+                            id={`milestone-due-${index}`}
+                            type="date"
+                            value={milestone.dueDate}
+                            onChange={(e) => updateMilestone(index, "dueDate", e.target.value)}
+                            className="mt-1 h-10 font-bold dark:[color-scheme:dark]"
+                          />
+                        </div>
+                        <div className="md:col-span-1 flex items-end">
+                          <Button type="button" variant="outline" onClick={() => removeMilestone(index)} className="w-full h-10">
+                            <Trash2 className="w-4 h-4 text-rose-500" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Button type="button" variant="outline" onClick={addMilestone} className="text-xs font-bold uppercase tracking-widest">
+                      <Plus className="w-4 h-4 mr-2" /> Add milestone payment
+                    </Button>
+                    {milestones.length > 0 && (
+                      <p className="text-xs font-bold text-zinc-500">
+                        Allocated: <span className="text-indigo-600">{fCurrency(milestones.reduce((sum, m) => sum + m.amount, 0))}</span> of <span className="text-zinc-900 dark:text-zinc-50">{fCurrency(grandTotal)}</span>
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex justify-end pt-8 border-t border-zinc-100 dark:border-zinc-800/80">

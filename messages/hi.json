@@ -74,7 +74,17 @@
     },
     "serviceOrderForm": {
       "serviceTemplate": "Service Template"
-    }
+    },
+    "billingScheduleMilestones": "बिलिंग अनुसूची / मील के पत्थर",
+    "noMilestonesDefined": "कोई भुगतान मील का पत्थर परिभाषित नहीं है। यह एक एकल-चालान एकमुश्त प्रस्ताव है।",
+    "clientActivityTelemetry": "ग्राहक गतिविधि और टेलीमेट्री",
+    "noActivityTracked": "अभी तक कोई ग्राहक बातचीत ट्रैक नहीं की गई है।",
+    "activityCreated": "प्रस्ताव बनाया गया",
+    "activitySent": "प्रस्ताव भेजा गया",
+    "activityOpened": "प्रस्ताव खोला गया",
+    "activityReviewed": "धारा की समीक्षा की गई",
+    "activitySigned": "प्रस्ताव हस्ताक्षरित और स्वीकृत",
+    "activityRevisions": "संशोधन का अनुरोध किया गया"
   },
   "Settings": {
     "title": "मास्टर सेटिंग्स",

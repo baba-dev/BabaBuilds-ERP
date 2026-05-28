@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getClientIp } from "@/lib/request-ip";
+import { logActivity } from "@/lib/security/activity-log";
 
 const ALLOWED_PUBLIC_STATUSES = new Set(["REVISION_REQUESTED"]);
 const LOCKED_PROPOSAL_STATUSES = new Set(["ACCEPTED", "INVOICED"]);
@@ -59,10 +61,17 @@ export async function PATCH(
     const proposal = await prisma.proposal.findUnique({
       where: { publicToken: trimmedToken },
       select: {
+        id: true,
+        workspaceId: true,
         status: true,
         validUntil: true,
         expiredAt: true,
         declineReason: true,
+        client: {
+          select: {
+            email: true
+          }
+        }
       },
     });
 
@@ -78,6 +87,8 @@ export async function PATCH(
       return NextResponse.json({ error: "This proposal has expired and can no longer be updated." }, { status: 403 });
     }
 
+    const clientIp = getClientIp(request);
+
     const updatedProposal = await prisma.proposal.update({
       where: { publicToken: trimmedToken },
       data: {
@@ -86,6 +97,21 @@ export async function PATCH(
         declineReason: buildDeclineReasonPayload(proposal.declineReason, clientNote),
       },
       select: { status: true },
+    });
+
+    // Log the revision request to the CRM timeline
+    await logActivity({
+      action: requestedStatus === 'REVISION_REQUESTED' ? 'proposal_revision_requested' : 'proposal_status_updated',
+      status: 'SUCCESS',
+      workspaceId: proposal.workspaceId,
+      actor: { email: proposal.client.email || 'Anonymous Client' },
+      entity: { type: 'proposal', id: proposal.id },
+      ipAddress: clientIp === 'unknown' ? null : clientIp,
+      userAgent: request.headers.get('user-agent') || null,
+      metadata: {
+        newStatus: requestedStatus,
+        note: clientNote || ''
+      }
     });
 
     return NextResponse.json({ success: true, status: updatedProposal.status });

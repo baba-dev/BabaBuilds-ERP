@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getClientIp } from '@/lib/request-ip';
+import { parseProposalSections } from '@/lib/proposals/parser';
+import { logActivity } from '@/lib/security/activity-log';
 
 // Fetch the proposal data publicly using the secure token
 export async function GET(
@@ -13,27 +15,11 @@ export async function GET(
 
     const proposal = await prisma.proposal.findUnique({
       where: { publicToken: token },
-      include: { client: true, items: true }
+      include: { client: true, items: true, billingMilestones: true }
     });
 
     if (!proposal) return NextResponse.json({ error: "Proposal not found." }, { status: 404 });
-    let richSections: Array<{ title: string; body?: string; mediaUrl?: string }> = [];
-    if (proposal.declineReason) {
-      try {
-        const parsed = JSON.parse(proposal.declineReason) as { richSections?: Array<{ title?: string; body?: string; mediaUrl?: string }> };
-        if (Array.isArray(parsed.richSections)) {
-          richSections = parsed.richSections
-            .map((section) => ({
-              title: String(section.title ?? "").trim(),
-              body: typeof section.body === "string" ? section.body : "",
-              mediaUrl: typeof section.mediaUrl === "string" ? section.mediaUrl : "",
-            }))
-            .filter((section) => section.title.length > 0);
-        }
-      } catch {
-        // ignore non-json decline reason payloads from older records
-      }
-    }
+    const richSections = parseProposalSections(proposal);
     return NextResponse.json({ proposal: { ...proposal, richSections } });
   } catch (error) {
     return NextResponse.json({ error: "Failed to load proposal." }, { status: 500 });
@@ -49,10 +35,10 @@ export async function PATCH(
     const resolvedParams = await params;
     const token = resolvedParams.token;
     
-    // 1. Get the verification string from the frontend 
+    // 1. Get the verification string and optional selectedItemIds from the frontend 
     // (The frontend sends it as 'email', but we treat it as a generic identifier)
     const body = await request.json().catch(() => ({}));
-    const { email: providedIdentifier } = body; 
+    const { email: providedIdentifier, selectedItemIds, signatureBase64 } = body; 
 
     if (!providedIdentifier) {
       return NextResponse.json({ error: 'Verification required.' }, { status: 400 });
@@ -61,7 +47,7 @@ export async function PATCH(
     // 2. Fetch the proposal and associated client
     const proposal = await prisma.proposal.findUnique({
       where: { publicToken: token },
-      include: { client: true }
+      include: { client: true, items: true }
     });
 
     if (!proposal) {
@@ -102,6 +88,68 @@ export async function PATCH(
     }
     // --- 🚨 SECURITY & LOGIC PATCH END ---
 
+    // Recalculate totals directly on the proposal record based on client final selections
+    let finalSubtotal = Number(proposal.subtotal);
+    let finalEstimatedTax = Number(proposal.estimatedTax);
+    let finalTotalAmount = Number(proposal.totalAmount);
+    const { Prisma } = await import('@prisma/client');
+
+    if (Array.isArray(selectedItemIds)) {
+      // 1. Update each item's isSelected state
+      for (const item of proposal.items) {
+        const isSelected = !item.isOptional || selectedItemIds.includes(item.id);
+        await prisma.proposalItem.update({
+          where: { id: item.id },
+          data: { isSelected }
+        });
+      }
+
+      // 2. Fetch updated items
+      const updatedItems = await prisma.proposalItem.findMany({
+        where: { proposalId: proposal.id }
+      });
+
+      // 3. Recalculate Subtotal
+      const activeItems = updatedItems.filter(item => item.isSelected);
+      finalSubtotal = activeItems.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0);
+
+      // 4. Recalculate Tax proportionally
+      const originalSubtotal = Number(proposal.subtotal);
+      if (originalSubtotal > 0) {
+        const taxRate = Number(proposal.estimatedTax) / originalSubtotal;
+        finalEstimatedTax = finalSubtotal * taxRate;
+      } else {
+        finalEstimatedTax = 0;
+      }
+      finalTotalAmount = finalSubtotal + finalEstimatedTax;
+
+      // 5. Proportional milestone scaling
+      const originalTotal = Number(proposal.totalAmount);
+      if (originalTotal > 0 && Math.abs(finalTotalAmount - originalTotal) > 0.01) {
+        const ratio = finalTotalAmount / originalTotal;
+        const milestones = await prisma.billingMilestone.findMany({
+          where: { proposalId: proposal.id }
+        });
+        
+        let allocatedAmount = 0;
+        for (let i = 0; i < milestones.length; i++) {
+          const m = milestones[i];
+          let newAmount = Number(m.amount) * ratio;
+          
+          if (i === milestones.length - 1) {
+            newAmount = finalTotalAmount - allocatedAmount;
+          } else {
+            allocatedAmount += Number(newAmount.toFixed(2));
+          }
+
+          await prisma.billingMilestone.update({
+            where: { id: m.id },
+            data: { amount: new Prisma.Decimal(Number(newAmount.toFixed(2))) }
+          });
+        }
+      }
+    }
+
     // Grab the client's IP address from trusted proxy headers for the audit trail.
     const clientIp = getClientIp(request);
 
@@ -111,6 +159,25 @@ export async function PATCH(
         status: 'ACCEPTED',
         acceptedAt: new Date(),
         clientIp: clientIp,
+        subtotal: finalSubtotal,
+        estimatedTax: finalEstimatedTax,
+        totalAmount: finalTotalAmount,
+        clientSignatureBase64: signatureBase64 || null,
+      }
+    });
+
+    // Log acceptance to the activity feed
+    await logActivity({
+      action: 'proposal_accepted',
+      status: 'SUCCESS',
+      workspaceId: proposal.workspaceId,
+      actor: { email: proposal.client.email || 'Anonymous Client' },
+      entity: { type: 'proposal', id: proposal.id },
+      ipAddress: clientIp === 'unknown' ? null : clientIp,
+      userAgent: request.headers.get('user-agent') || null,
+      metadata: {
+        acceptedByName: proposal.client.name,
+        finalTotalAmount
       }
     });
 

@@ -2295,6 +2295,9 @@ model Proposal {
   firstConvertedAt DateTime?
   expiredAt        DateTime?
 
+  richSections           Json?
+  clientSignatureBase64  String?
+
   items                  ProposalItem[]
   conversions            ProposalConversion[]
   billingMilestones      BillingMilestone[]
@@ -2324,6 +2327,9 @@ model ProposalItem {
   quantity    Int     @default(1)
   unitPrice   Decimal
   total       Decimal
+
+  isOptional  Boolean  @default(false)
+  isSelected  Boolean  @default(true)
 }
 
 model Retainer {
