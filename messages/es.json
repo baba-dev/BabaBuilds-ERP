@@ -74,7 +74,17 @@
     },
     "serviceOrderForm": {
       "serviceTemplate": "Service Template"
-    }
+    },
+    "billingScheduleMilestones": "Calendario de facturación / Hitos",
+    "noMilestonesDefined": "No se definieron hitos de pago. Esta es una propuesta de suma global de factura única.",
+    "clientActivityTelemetry": "Actividad y telemetría del cliente",
+    "noActivityTracked": "Aún no se ha realizado un seguimiento de las interacciones del cliente.",
+    "activityCreated": "Propuesta creada",
+    "activitySent": "Propuesta enviada",
+    "activityOpened": "Propuesta abierta",
+    "activityReviewed": "Sección revisada",
+    "activitySigned": "Propuesta firmada y aceptada",
+    "activityRevisions": "Revisiones solicitadas"
   },
   "Settings": {
     "title": "Configuraciones Maestras",

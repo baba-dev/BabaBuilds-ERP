@@ -158,7 +158,17 @@
     },
     "serviceOrderForm": {
       "serviceTemplate": "Service Template"
-    }
+    },
+    "billingScheduleMilestones": "Billing Schedule / Milestones",
+    "noMilestonesDefined": "No payment milestones defined. This is a single-invoice lump sum proposal.",
+    "clientActivityTelemetry": "Client Activity & Telemetry",
+    "noActivityTracked": "No client interactions tracked yet.",
+    "activityCreated": "Proposal Created",
+    "activitySent": "Proposal Sent",
+    "activityOpened": "Proposal Opened",
+    "activityReviewed": "Section Reviewed",
+    "activitySigned": "Proposal Signed & Accepted",
+    "activityRevisions": "Revisions Requested"
   },
   "Settings": {
     "title": "Master Settings",

@@ -74,7 +74,17 @@
     },
     "serviceOrderForm": {
       "serviceTemplate": "Service Template"
-    }
+    },
+    "billingScheduleMilestones": "جدول الفواتير / المعالم",
+    "noMilestonesDefined": "لم يتم تحديد معالم الدفع. هذا اقتراح بمبلغ مقطوع لفاتورة واحدة.",
+    "clientActivityTelemetry": "نشاط العميل والقياس عن بعد",
+    "noActivityTracked": "لم يتم تتبع أي تفاعلات للعملاء بعد.",
+    "activityCreated": "تم إنشاء الاقتراح",
+    "activitySent": "تم إرسال الاقتراح",
+    "activityOpened": "تم فتح الاقتراح",
+    "activityReviewed": "تمت مراجعة القسم",
+    "activitySigned": "تم توقيع وقبول الاقتراح",
+    "activityRevisions": "المراجعات المطلوبة"
   },
   "Settings": {
     "title": "الإعدادات الرئيسية",

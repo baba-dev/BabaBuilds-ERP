@@ -42,11 +42,22 @@ export default async function ProposalDetailPage({
         include: { invoice: true, retainer: true }
       },
       generatedInvoices: true,
-      generatedRetainers: true
+      generatedRetainers: true,
+      billingMilestones: true
     }
   });
 
   if (!proposal) redirect("/proposals");
+
+  const logs = await prisma.appActivityLog.findMany({
+    where: {
+      entityType: "proposal",
+      entityId: id,
+      workspaceId: session.workspaceId,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
 
   const formatMoney = (amount: any) => formatCurrency(Number(amount), "INR", "en-IN");
 
@@ -180,6 +191,41 @@ export default async function ProposalDetailPage({
                 </div>
               )}
             </div>
+            
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-4 border-b pb-2">{t("billingScheduleMilestones")}</h2>
+              {(proposal as any).billingMilestones && (proposal as any).billingMilestones.length > 0 ? (
+                <div className="space-y-4">
+                  {(proposal as any).billingMilestones.map((milestone: any) => (
+                    <div key={milestone.id} className="p-4 border rounded-lg bg-zinc-50 dark:bg-zinc-950 space-y-2">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="font-bold text-sm">{milestone.title}</p>
+                          {milestone.description && <p className="text-xs text-zinc-500 mt-1">{milestone.description}</p>}
+                          {milestone.dueDate && (
+                            <p className="text-[10px] text-zinc-400 mt-1">
+                              Due: {format(new Date(milestone.dueDate), "MMM dd, yyyy")}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-extrabold text-sm text-indigo-600">{formatMoney(milestone.amount)}</p>
+                          <span className={`inline-block px-2 py-0.5 mt-1 rounded text-[10px] font-bold uppercase tracking-widest ${
+                            milestone.status === 'PAID' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' :
+                            milestone.status === 'INVOICED' ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300' :
+                            'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300'
+                          }`}>
+                            {milestone.status}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-zinc-500">{t("noMilestonesDefined")}</p>
+              )}
+            </div>
           </div>
           
           <div className="space-y-6">
@@ -243,12 +289,108 @@ export default async function ProposalDetailPage({
               <p className="font-bold">{proposal.client.name}</p>
               <p className="text-sm text-zinc-500">{proposal.client.email || "No email on file"}</p>
               
-              <div className="mt-6 pt-4 border-t border-zinc-100">
+              <div className="mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800/80">
                  <p className="text-xs text-zinc-500 font-medium">{t("publicUrl")}</p>
                  <a href={`/p/${proposal.publicToken}`} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 mt-1 block truncate hover:underline">
                    {`/p/${proposal.publicToken}`}
                  </a>
               </div>
+              
+              {proposal.clientSignatureBase64 && (
+                <div className="mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800/80">
+                  <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest mb-2">Digital Signature</p>
+                  <div className="bg-zinc-50 dark:bg-zinc-950 p-4 border rounded-xl shadow-inner max-w-[200px]">
+                    <img src={proposal.clientSignatureBase64} alt="Client Signature" className="h-16 w-auto object-contain mx-auto" />
+                  </div>
+                  <div className="mt-2 text-[10px] text-zinc-400 space-y-0.5 font-medium leading-relaxed">
+                    <p>Signed By: <span className="font-bold text-zinc-700 dark:text-zinc-300">{proposal.acceptedByName || proposal.client.name}</span></p>
+                    <p>IP Address: <span className="font-mono text-zinc-600 dark:text-zinc-400">{proposal.clientIp || "Unavailable"}</span></p>
+                    <p>Signed At: <span>{proposal.acceptedAt ? format(new Date(proposal.acceptedAt), "MMM dd, yyyy hh:mm a") : "N/A"}</span></p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Sleek CRM Telemetry Activity Timeline */}
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-4 border-b pb-2">{t("clientActivityTelemetry")}</h2>
+              {logs.length > 0 ? (
+                <div className="relative border-l border-zinc-200 dark:border-zinc-800 pl-4 space-y-6 py-2">
+                  {logs.map((log) => {
+                    const metadata = log.metadata as any || {};
+                    let icon = FileText;
+                    let colorClass = "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400";
+                    let title = log.action;
+                    let desc = "";
+
+                    if (log.action === "proposal_created") {
+                      icon = FileText;
+                      colorClass = "bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400";
+                      title = t("activityCreated");
+                      desc = `Drafted by ${log.actorEmail || "Sales Rep"}`;
+                    } else if (log.action === "proposal_sent") {
+                      icon = Send;
+                      colorClass = "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400";
+                      title = t("activitySent");
+                      desc = `Dispatched to ${proposal.client.email}`;
+                    } else if (log.action === "proposal_viewed") {
+                      icon = Eye;
+                      colorClass = "bg-fuchsia-100 text-fuchsia-600 dark:bg-fuchsia-900/40 dark:text-fuchsia-400";
+                      title = t("activityOpened");
+                      desc = `Client IP: ${log.ipAddress || "Unknown"}`;
+                    } else if (log.action === "proposal_section_dwell") {
+                      icon = Clock;
+                      colorClass = "bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400";
+                      title = t("activityReviewed");
+                      const dwell = Number(metadata.dwellTimeSeconds || 0);
+                      const timeStr = dwell > 59 
+                        ? `${Math.floor(dwell / 60)}m ${dwell % 60}s` 
+                        : `${dwell}s`;
+                      desc = `Read "${metadata.sectionTitle || "Scope"}" for ${timeStr}`;
+                    } else if (log.action === "proposal_accepted") {
+                      icon = CheckCircle2;
+                      colorClass = "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400";
+                      title = t("activitySigned");
+                      desc = `Signed by ${metadata.acceptedByName || proposal.client.name}`;
+                    } else if (log.action === "proposal_revision_requested") {
+                      icon = XCircle;
+                      colorClass = "bg-rose-100 text-rose-600 dark:bg-rose-900/40 dark:text-rose-400";
+                      title = t("activityRevisions");
+                      desc = metadata.note ? `Note: "${metadata.note}"` : "Client requested structural edits";
+                    }
+
+                    const LogIcon = icon;
+
+                    return (
+                      <div key={log.id} className="relative group">
+                        {/* Bullet Icon */}
+                        <div className={`absolute -left-[26px] top-1 w-5 h-5 rounded-full flex items-center justify-center border border-white dark:border-zinc-900 ${colorClass}`}>
+                          <LogIcon className="w-3 h-3" />
+                        </div>
+                        
+                        {/* Event details */}
+                        <div>
+                          <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{title}</p>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">{desc}</p>
+                          <div className="flex gap-2 items-center mt-1 text-[9px] text-zinc-400 dark:text-zinc-500 font-medium">
+                            <span>{format(new Date(log.createdAt), "MMM dd, hh:mm a")}</span>
+                            {log.ipAddress && (
+                              <>
+                                <span>•</span>
+                                <span className="font-mono">{log.ipAddress}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-6 text-center text-zinc-400">
+                  <p className="text-xs">{t("noActivityTracked")}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
