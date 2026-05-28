@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
-import LandingContent from "@/components/LandingContent";
+import LegacyLandingPage from "@/components/landing-legacy/LegacyLandingPage";
 
 const SITE_URL = "https://erp.bababuilds.com";
 
@@ -48,31 +48,6 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function LandingPage() {
-  const t = await getTranslations("LandingPageSeo.faq");
-  const faqItems = (t.raw("items") as Array<{ question: string; answer: string }>).filter(
-    (item): item is { question: string; answer: string } =>
-      Boolean(item) && typeof item.question === "string" && typeof item.answer === "string",
-  );
-  const faqJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: faqItems.map((item) => ({
-      "@type": "Question",
-      name: item.question,
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: item.answer,
-      },
-    })),
-  };
-  return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-      />
-      <LandingContent />
-    </>
-  );
+export default function LandingPage() {
+  return <LegacyLandingPage />;
 }

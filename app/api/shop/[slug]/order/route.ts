@@ -66,6 +66,9 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
       where: {
         workspaceId: profile.workspaceId,
         id: { in: requestedProductIds },
+        showInShop: true,
+        currentStock: { gt: 0 },
+        status: { in: ['IN_STOCK', 'LOW_STOCK'] },
       },
       select: {
         id: true,
@@ -89,7 +92,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
     for (const item of normalizedItems) {
       const product = productById.get(item.productId);
       if (!product) {
-        return NextResponse.json({ error: `Product ${item.productId} is not available in this shop.` }, { status: 404 });
+        return NextResponse.json({ error: 'Product is not available in this shop.' }, { status: 404 });
       }
       if (item.quantity > product.currentStock) {
         return NextResponse.json(

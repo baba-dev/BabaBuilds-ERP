@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
+import { redirectToLogin } from "@/lib/auth/login-redirect";
 import { prisma } from "@/lib/prisma";
 import { checkPermissionSilent } from "@/lib/rbac";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +19,7 @@ async function getWorkspaceId(userId: string) {
 
 export default async function DocumentsOverviewPage() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) redirect("/auth/signin");
+  if (!session?.user?.id) redirectToLogin("/documents");
 
   const workspaceId = await getWorkspaceId(session.user.id);
   if (!workspaceId) redirect("/dashboard");

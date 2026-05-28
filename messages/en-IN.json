@@ -1247,10 +1247,10 @@
   },
   "Landing": {
     "hero": {
-      "badge": "Introducing the Next Evolution of ERP",
-      "titleLine1": "Run Your Agency",
-      "titleLine2": "on Autopilot.",
-      "description": "The global command center for bookkeeping, compliance, and growth. Automate your invoices, reconcile bank feeds, and let AI reveal your financial truth.",
+      "badge": "Built for agencies, freelancers & service businesses",
+      "titleLine1": "Send proposals. Get signatures.",
+      "titleLine2": "Create invoices. Collect payments.",
+      "description": "Proposal to e-signature to invoice to payment link to bank match to CA export, in one workspace.",
       "primaryCta": "Start for Free",
       "secondaryCta": "See all Features",
       "dashboardPreview": "Dashboard Preview"
@@ -1281,7 +1281,7 @@
     "story": {
       "eyebrow": "The week, fixed",
       "title": "From signed proposal to reconciled cash—without the spreadsheet chaos.",
-      "subtitle": "One orange-amber command center for agencies, accountants, contractors, and service teams who bill globally and need compliance that keeps up.",
+      "subtitle": "Proposal, e-signature, invoice, payment link, bank matching, and CA-ready export in one workflow for service teams.",
       "steps": {
         "s1": {
           "title": "Quote & convert",
@@ -1307,8 +1307,8 @@
       "role": "Founder, PixelRidge Studio"
     },
     "socialProofHero": {
-      "trustedLine": "Trusted by 2,500+",
-      "trustedSuffix": "successful teams",
+      "trustedLine": "Built for service businesses",
+      "trustedSuffix": "across agency and freelancer workflows",
       "taxLine": "Built for Indian and global tax workflows"
     },
     "mobileInstall": {
@@ -1336,7 +1336,7 @@
       },
       "control": {
         "title": "Stay in control",
-        "description": "Ledger discipline, bank reconciliation, CRM context, and alerts before cash surprises you."
+        "description": "Track invoices, payments, expenses, and bank matches without switching tools."
       },
       "compliance": {
         "title": "Compliance you can defend",
@@ -1356,7 +1356,7 @@
     },
     "personaCards": {
       "caTitle": "For CAs & Accountants",
-      "caDesc": "Compliance workflows, filing readiness, and client collections in one command center.",
+      "caDesc": "Compliance workflows, filing readiness, and client collections in one place.",
       "agencyTitle": "For Agencies",
       "agencyDesc": "Retainers, proposals, and invoice pipeline visibility tailored for growth teams.",
       "contractorTitle": "For Contractors & Builders",
@@ -1524,7 +1524,7 @@
     },
     "trustMetricValues": {
       "automations": "120+",
-      "invoiceRate": "99.9%",
+      "invoiceRate": "Delivery tracking",
       "currencies": "25+",
       "setupTime": "< 15 min"
     },
@@ -1631,7 +1631,7 @@
     },
     "finalCta": {
       "titleLine1": "Ready to experience the",
-      "titleLine2": "BabaBuilds advantage?",
+      "titleLine2": "BabaBuilds workflow?",
       "primaryCta": "Get Started for Free",
       "secondaryCta": "View Documentation",
       "badges": {
@@ -1691,7 +1691,7 @@
     "exploreByPersona": "Explore by persona",
     "trustMetrics": {
       "automationsEnabled": "Automations enabled",
-      "invoiceSuccessRate": "Invoice success rate",
+      "invoiceSuccessRate": "Invoice delivery tracking",
       "supportedCurrencies": "Supported currencies",
       "avgSetupTime": "Avg. setup time"
     },
@@ -1746,7 +1746,7 @@
       "workflowTitle": "This is the workflow your team will see",
       "painPointsTitle": "Pain points we fix first",
       "featuresTitle": "Features tailored to this niche",
-      "testimonialsTitle": "Trusted by teams like yours",
+      "testimonialsTitle": "Used by teams like yours",
       "exploreByPersona": "Explore by persona",
       "widget": {
         "title": "Experience Preferences",
@@ -1833,7 +1833,7 @@
   },
   "LandingHero": {
     "rotatorWords": {
-      "autopilot": "on Autopilot",
+      "autopilot": "in one workflow",
       "scale": "at Scale",
       "global": "Globally",
       "ai": "with AI"
@@ -1868,7 +1868,7 @@
     "forCa": {
       "navLabel": "For CAs",
       "headline": "Built for CAs and accountants running compliance at scale.",
-      "subheadline": "Deliver GST/TDS-ready books, client billing, and document trails from one orange-amber command center.",
+      "subheadline": "Deliver GST/TDS-ready books, client billing, and document trails from one workspace.",
       "painPoints": [
         "Chasing clients for documents and recon data every month",
         "Switching between filing sheets, invoices, and follow-up threads",
@@ -1939,7 +1939,7 @@
     },
     "forAgencies": {
       "navLabel": "For Agencies",
-      "headline": "Run your agency finances on autopilot, not spreadsheets.",
+      "headline": "Run your agency finances with proposals, billing, and reconciliation in one workflow.",
       "subheadline": "From proposal to retainer billing and cash-flow visibility, get one operational hub for growth teams.",
       "painPoints": [
         "Retainer billing delays hurt monthly cash flow",
@@ -2083,7 +2083,7 @@
     },
     "forSmallBusinesses": {
       "navLabel": "For Small Businesses",
-      "headline": "A practical finance command center for small businesses and service firms.",
+      "headline": "A practical finance workflow for small businesses and service firms.",
       "subheadline": "Handle invoicing, collections, and tax-ready records without stitching together disconnected apps.",
       "painPoints": [
         "Manual invoicing and follow-up takes too much owner time",
@@ -2255,7 +2255,7 @@
       "items": [
         {
           "question": "What is BabaBuilds ERP?",
-          "answer": "BabaBuilds ERP is an all-in-one financial management platform for agencies and freelancers. It delivers multi-currency invoicing, tax-ready GST/VAT compliance workflows, AI-powered bank reconciliation, retainer tracking, and real-time dashboards."
+          "answer": "BabaBuilds ERP is a financial workflow platform for agencies and freelancers. It includes multi-currency invoicing, GST/VAT-ready tax workflows, bank reconciliation, retainer tracking, and real-time dashboards."
         },
         {
           "question": "Does BabaBuilds ERP support GST and VAT compliance?",

@@ -83,6 +83,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
     payrollSetupPath: "STANDALONE" as "STANDALONE" | "WORKFORCE_LINKED",
   });
   const [payrollReadiness, setPayrollReadiness] = useState<PayrollReadinessResponse | null>(null);
+  const [moduleAnnouncement, setModuleAnnouncement] = useState("");
   const essentialCompletionCount = useMemo(() => {
     const essentials = [form.companyName, form.proprietorName, form.email, form.address];
     return essentials.filter((value) => value.trim().length > 0).length;
@@ -221,6 +222,15 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
       active = false;
     };
   }, [step]);
+
+
+  const toggleModule = (field: "enableWorkforce" | "enableDocuments" | "enableCashFlow" | "enableArCollections" | "enableReportingCenter" | "enableRevenuePipeline" | "enablePayroll", label: string) => {
+    setForm((prev) => {
+      const nextValue = !prev[field];
+      setModuleAnnouncement(`${label} ${nextValue ? "enabled" : "disabled"}`);
+      return { ...prev, [field]: nextValue };
+    });
+  };
 
   const finishSetup = async () => {
     setIsSubmitting(true);
@@ -420,6 +430,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 <CardDescription className="dark:text-zinc-400">{t('step4_desc')}</CardDescription>
               </CardHeader>
               <CardContent className="pt-8 space-y-4">
+                <p className="sr-only" aria-live="polite">{moduleAnnouncement}</p>
                 <div className="rounded-xl border border-amber-200/70 bg-amber-50/70 p-3 text-left dark:border-amber-900/50 dark:bg-amber-900/20">
                   <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
                     Essential setup progress
@@ -619,12 +630,11 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                   </p>
                 )}
                 <div
-                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
+                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 ${
                     form.enableWorkforce
                       ? 'border-teal-500 bg-teal-50/50 dark:bg-teal-950/20'
                       : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
                   }`}
-                  onClick={() => setForm({ ...form, enableWorkforce: !form.enableWorkforce })}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
@@ -663,23 +673,22 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         </div>}
                       </div>
                     </div>
-                    <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                    <button type="button" role="switch" aria-checked={form.enableWorkforce} aria-label="Toggle Workforce module" onClick={() => toggleModule("enableWorkforce", "Workforce module")} className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500 dark:focus-visible:ring-offset-zinc-900 ${
                       form.enableWorkforce ? 'bg-teal-500' : 'bg-zinc-300 dark:bg-zinc-700'
                     }`}>
                       <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
                         form.enableWorkforce ? 'translate-x-5' : 'translate-x-0'
                       }`} />
-                    </div>
+                    </button>
                   </div>
                 </div>
 
                 <div
-                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
+                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 ${
                     form.enableDocuments
                       ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20'
                       : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
                   }`}
-                  onClick={() => setForm({ ...form, enableDocuments: !form.enableDocuments })}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
@@ -718,23 +727,22 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         </div>}
                       </div>
                     </div>
-                    <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                    <button type="button" role="switch" aria-checked={form.enableDocuments} aria-label="Toggle Document Vault module" onClick={() => toggleModule("enableDocuments", "Document Vault module")} className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500 dark:focus-visible:ring-offset-zinc-900 ${
                       form.enableDocuments ? 'bg-indigo-600' : 'bg-zinc-300 dark:bg-zinc-700'
                     }`}>
                       <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
                         form.enableDocuments ? 'translate-x-5' : 'translate-x-0'
                       }`} />
-                    </div>
+                    </button>
                   </div>
                 </div>
 
                 <div
-                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
+                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 ${
                     form.enableCashFlow
                       ? 'border-cyan-500 bg-cyan-50/50 dark:bg-cyan-950/20'
                       : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
                   }`}
-                  onClick={() => setForm({ ...form, enableCashFlow: !form.enableCashFlow })}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
@@ -757,13 +765,13 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         </p>
                       </div>
                     </div>
-                    <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                    <button type="button" role="switch" aria-checked={form.enableCashFlow} aria-label="Toggle Cash Flow module" onClick={() => toggleModule("enableCashFlow", "Cash Flow module")} className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500 dark:focus-visible:ring-offset-zinc-900 ${
                       form.enableCashFlow ? 'bg-cyan-600' : 'bg-zinc-300 dark:bg-zinc-700'
                     }`}>
                       <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
                         form.enableCashFlow ? 'translate-x-5' : 'translate-x-0'
                       }`} />
-                    </div>
+                    </button>
                   </div>
                 </div>
 
@@ -774,12 +782,11 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
 
                 {showMoreModules && <div className="space-y-4">
                 <div
-                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
+                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 ${
                     form.enableArCollections
                       ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-950/20'
                       : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
                   }`}
-                  onClick={() => setForm({ ...form, enableArCollections: !form.enableArCollections })}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
@@ -818,24 +825,23 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         </div>}
                       </div>
                     </div>
-                    <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                    <button type="button" role="switch" aria-checked={form.enableArCollections} aria-label="Toggle AR Aging + Collections Centre module" onClick={() => toggleModule("enableArCollections", "AR Aging + Collections Centre module")} className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500 dark:focus-visible:ring-offset-zinc-900 ${
                       form.enableArCollections ? 'bg-orange-600' : 'bg-zinc-300 dark:bg-zinc-700'
                     }`}>
                       <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
                         form.enableArCollections ? 'translate-x-5' : 'translate-x-0'
                       }`} />
-                    </div>
+                    </button>
                   </div>
                 </div>
 
 
                 <div
-                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
+                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 ${
                     form.enableReportingCenter
                       ? 'border-amber-500 bg-amber-50/60 dark:bg-amber-950/20'
                       : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
                   }`}
-                  onClick={() => setForm({ ...form, enableReportingCenter: !form.enableReportingCenter })}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
@@ -856,13 +862,13 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2">{t('optional_reporting_desc')}</p>
                       </div>
                     </div>
-                    <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                    <button type="button" role="switch" aria-checked={form.enableReportingCenter} aria-label="Toggle Reporting Center module" onClick={() => toggleModule("enableReportingCenter", "Reporting Center module")} className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500 dark:focus-visible:ring-offset-zinc-900 ${
                       form.enableReportingCenter ? 'bg-amber-600' : 'bg-zinc-300 dark:bg-zinc-700'
                     }`}>
                       <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
                         form.enableReportingCenter ? 'translate-x-5' : 'translate-x-0'
                       }`} />
-                    </div>
+                    </button>
                   </div>
                 </div>
 
@@ -871,12 +877,11 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 </p>
 
                 <div
-                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
+                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 ${
                     form.enableRevenuePipeline
                       ? 'border-violet-500 bg-violet-50/50 dark:bg-violet-950/20'
                       : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
                   }`}
-                  onClick={() => setForm({ ...form, enableRevenuePipeline: !form.enableRevenuePipeline })}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
@@ -915,23 +920,22 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         </div>}
                       </div>
                     </div>
-                    <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                    <button type="button" role="switch" aria-checked={form.enableRevenuePipeline} aria-label="Toggle Revenue Pipeline module" onClick={() => toggleModule("enableRevenuePipeline", "Revenue Pipeline module")} className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500 dark:focus-visible:ring-offset-zinc-900 ${
                       form.enableRevenuePipeline ? 'bg-violet-600' : 'bg-zinc-300 dark:bg-zinc-700'
                     }`}>
                       <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
                         form.enableRevenuePipeline ? 'translate-x-5' : 'translate-x-0'
                       }`} />
-                    </div>
+                    </button>
                   </div>
                 </div>
 
                 <div
-                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 cursor-pointer ${
+                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 ${
                     form.enablePayroll
                       ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20'
                       : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
                   }`}
-                  onClick={() => setForm({ ...form, enablePayroll: !form.enablePayroll })}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
@@ -990,11 +994,10 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                                   <button
                                     key={option.key}
                                     type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
+                                    onClick={() => {
                                       setForm({ ...form, payrollSetupPath: option.key });
                                     }}
-                                    className={`text-left rounded-lg border px-3 py-2 transition ${
+                                    className={`text-left rounded-lg border px-3 py-2 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 ${
                                       form.payrollSetupPath === option.key
                                         ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30"
                                         : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
@@ -1031,13 +1034,13 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         )}
                       </div>
                     </div>
-                    <div className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                    <button type="button" role="switch" aria-checked={form.enablePayroll} aria-label="Toggle Payroll module" onClick={() => toggleModule("enablePayroll", "Payroll module")} className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500 dark:focus-visible:ring-offset-zinc-900 ${
                       form.enablePayroll ? 'bg-emerald-600' : 'bg-zinc-300 dark:bg-zinc-700'
                     }`}>
                       <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
                         form.enablePayroll ? 'translate-x-5' : 'translate-x-0'
                       }`} />
-                    </div>
+                    </button>
                   </div>
                 </div>
                 </div>}

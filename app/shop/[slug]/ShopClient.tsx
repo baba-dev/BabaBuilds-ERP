@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, type ReactNode } from "react";
 import {
   Mail, Phone, Globe, MapPin, ShoppingCart, Check, Loader2, Sparkles,
   Info, MessageCircleQuestion, Send, ChevronDown, Megaphone, HelpCircle, Search, ArrowUpDown,
@@ -82,6 +82,35 @@ function PlatformIcon({ platform }: { platform: SocialPlatform }) {
 
 const formatPrice = (price: number) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 0 }).format(price);
+
+function StorefrontImage({
+  src,
+  alt,
+  className,
+  fallback,
+  eager = false,
+}: {
+  src: string | null | undefined;
+  alt: string;
+  className: string;
+  fallback: ReactNode;
+  eager?: boolean;
+}) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+
+  if (!src || failedSrc === src) return <>{fallback}</>;
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      loading={eager ? "eager" : "lazy"}
+      decoding="async"
+      onError={() => setFailedSrc(src)}
+    />
+  );
+}
 
 // ── Confetti ──────────────────────────────────────────────────────────────────
 function useConfetti(trigger: boolean) {
@@ -390,16 +419,19 @@ function ProductDetails({
   const content = (
     <>
       <div className="p-5 pt-0 space-y-4">
-        {product.imageUrl ? (
-          <img src={product.imageUrl} alt={product.name} className="h-52 w-full rounded-xl object-cover" />
-        ) : (
-          <div
-            className="h-52 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 flex items-center justify-center"
-            style={{ background: `linear-gradient(145deg, ${shop.accentColor}14, ${shop.accentColor}3a)` }}
-          >
-            <ImageIcon className="w-10 h-10" style={{ color: shop.accentColor }} />
-          </div>
-        )}
+        <StorefrontImage
+          src={product.imageUrl}
+          alt={product.name}
+          className="h-52 w-full rounded-xl object-cover"
+          fallback={(
+            <div
+              className="h-52 rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 flex items-center justify-center"
+              style={{ background: `linear-gradient(145deg, ${shop.accentColor}14, ${shop.accentColor}3a)` }}
+            >
+              <ImageIcon className="w-10 h-10" style={{ color: shop.accentColor }} />
+            </div>
+          )}
+        />
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className="text-xs">{category}</Badge>
           <Badge variant="outline" className="text-xs">
@@ -703,15 +735,17 @@ export function ShopClient({ data }: { data: ShopData }) {
               </div>
 
               <div className="flex items-center gap-4">
-                {shop.logoUrl ? (
-                  <div className="w-16 h-16 rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-                    <img src={shop.logoUrl} alt={shop.companyName} className="w-full h-full object-contain" />
-                  </div>
-                ) : (
-                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl font-black" style={accentStyles.strong}>
-                    {shop.companyName.charAt(0)}
-                  </div>
-                )}
+                <StorefrontImage
+                  src={shop.logoUrl}
+                  alt={shop.companyName}
+                  className="w-16 h-16 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 object-contain"
+                  eager
+                  fallback={(
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl font-black" style={accentStyles.strong}>
+                      {shop.companyName.charAt(0)}
+                    </div>
+                  )}
+                />
                 <h1 className="text-4xl md:text-6xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
                   {shop.companyName}
                 </h1>
@@ -885,22 +919,19 @@ export function ShopClient({ data }: { data: ShopData }) {
                   style={{ animationDelay: `${i * 80}ms`, animation: "shopCardIn 0.5s ease both" }}
                 >
                   {/* Hero image */}
-                  {product.imageUrl ? (
-                    <div className="h-44 overflow-hidden">
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    </div>
-                  ) : (
-                    <div
-                      className="h-44 flex items-center justify-center border-b border-zinc-200/70 dark:border-zinc-800"
-                      style={{ background: `linear-gradient(135deg, ${shop.accentColor}22, ${shop.accentColor}55)` }}
-                    >
-                      <ImageIcon className="w-9 h-9 opacity-80" style={{ color: shop.accentColor }} />
-                    </div>
-                  )}
+                  <StorefrontImage
+                    src={product.imageUrl}
+                    alt={product.name}
+                    className="h-44 w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    fallback={(
+                      <div
+                        className="h-44 flex items-center justify-center border-b border-zinc-200/70 dark:border-zinc-800"
+                        style={{ background: `linear-gradient(135deg, ${shop.accentColor}22, ${shop.accentColor}55)` }}
+                      >
+                        <ImageIcon className="w-9 h-9 opacity-80" style={{ color: shop.accentColor }} />
+                      </div>
+                    )}
+                  />
 
                   <div className="p-5 space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
