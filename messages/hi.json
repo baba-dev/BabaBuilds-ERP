@@ -962,7 +962,7 @@
     "launch_erp": "ईआरपी लॉन्च करें",
     "finalizing": "अंतिम रूप दिया जा रहा है...",
     "secure_config": "सुरक्षित कॉन्फ़िगरेशन - BabaBuilds वैश्वीकरण इंजन द्वारा संचालित",
-    "step_indicator": "चरण {current} / 4 — {name}",
+    "step_indicator": "चरण {current} / {total} — {name}",
     "step_geo": "भूगोल",
     "step_finance": "वित्त",
     "step_compliance": "अनुपालन",
@@ -1001,7 +1001,8 @@
     "shop_slug_ph": "my-agency",
     "groq_link_text": "Get Groq Key",
     "razorpay_link_text": "Razorpay Dashboard",
-    "stripe_link_text": "Stripe Dashboard"
+    "stripe_link_text": "Stripe Dashboard",
+    "step_modules": "Modules"
   },
   "Tax": {
     "title": "धन और कर योजनाकार",
