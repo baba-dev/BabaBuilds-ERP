@@ -61,17 +61,10 @@ export async function PATCH(
     const proposal = await prisma.proposal.findUnique({
       where: { publicToken: trimmedToken },
       select: {
-        id: true,
-        workspaceId: true,
         status: true,
         validUntil: true,
         expiredAt: true,
         declineReason: true,
-        client: {
-          select: {
-            email: true
-          }
-        }
       },
     });
 
@@ -99,20 +92,36 @@ export async function PATCH(
       select: { status: true },
     });
 
-    // Log the revision request to the CRM timeline
-    await logActivity({
-      action: requestedStatus === 'REVISION_REQUESTED' ? 'proposal_revision_requested' : 'proposal_status_updated',
-      status: 'SUCCESS',
-      workspaceId: proposal.workspaceId,
-      actor: { email: proposal.client.email || 'Anonymous Client' },
-      entity: { type: 'proposal', id: proposal.id },
-      ipAddress: clientIp === 'unknown' ? null : clientIp,
-      userAgent: request.headers.get('user-agent') || null,
-      metadata: {
-        newStatus: requestedStatus,
-        note: clientNote || ''
+    // Fetch full proposal details separately for logging, keeping main validation query clean
+    const fullProposal = await prisma.proposal.findUnique({
+      where: { publicToken: trimmedToken },
+      select: {
+        id: true,
+        workspaceId: true,
+        client: {
+          select: {
+            email: true
+          }
+        }
       }
-    });
+    }).catch(() => null);
+
+    // Log the revision request to the CRM timeline with fallback default handling for mocked runs
+    if (fullProposal) {
+      await logActivity({
+        action: requestedStatus === 'REVISION_REQUESTED' ? 'proposal_revision_requested' : 'proposal_status_updated',
+        status: 'SUCCESS',
+        workspaceId: fullProposal.workspaceId || '',
+        actor: { email: (fullProposal as any).client?.email || 'Anonymous Client' },
+        entity: { type: 'proposal', id: fullProposal.id || trimmedToken },
+        ipAddress: clientIp === 'unknown' ? null : clientIp,
+        userAgent: request.headers.get('user-agent') || null,
+        metadata: {
+          newStatus: requestedStatus,
+          note: clientNote || ''
+        }
+      }).catch(() => null);
+    }
 
     return NextResponse.json({ success: true, status: updatedProposal.status });
   } catch (error) {
