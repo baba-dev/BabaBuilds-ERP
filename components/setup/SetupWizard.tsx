@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import {
   Globe, ShieldCheck, Building2, 
@@ -38,7 +38,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
   const { data: session } = useSession();
   const t = useTranslations('Setup');
   const [wizardMode, setWizardMode] = useState<"quick" | "full">(isModal ? "quick" : "full");
-  const lastStep = wizardMode === "quick" ? 3 : 7;
+  const lastStep = wizardMode === "quick" ? 3 : 6;
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -203,7 +203,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
   const prevStep = () => setStep((s) => Math.max(s - 1, 1));
 
   useEffect(() => {
-    if (step !== 7) return;
+    if (step !== 6) return;
     let active = true;
 
     const loadPayrollReadiness = async () => {
@@ -224,7 +224,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
   }, [step]);
 
 
-  const toggleModule = (field: "enableWorkforce" | "enableDocuments" | "enableCashFlow" | "enableArCollections" | "enableReportingCenter" | "enableRevenuePipeline" | "enablePayroll", label: string) => {
+  const toggleModule = (field: "enableWorkforce" | "enableDocuments" | "enableCashFlow" | "enableArCollections" | "enableReportingCenter" | "enableRevenuePipeline" | "enablePayroll" | "shopEnabled", label: string) => {
     setForm((prev) => {
       const nextValue = !prev[field];
       setModuleAnnouncement(`${label} ${nextValue ? "enabled" : "disabled"}`);
@@ -553,13 +553,13 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 </div>
 
                 <div className="space-y-4">
-                  <Label className="dark:text-zinc-300">SMTP Email Server (Optional)</Label>
+                  <Label className="dark:text-zinc-300">{t('smtp_title_optional')}</Label>
                   <div className="grid grid-cols-2 gap-4">
                     <Input value={form.smtpHost} onChange={e => setForm({...form, smtpHost: e.target.value})} placeholder={t('smtp_ph_host')} className="dark:bg-zinc-950" />
                     <Input type="number" value={form.smtpPort} onChange={e => setForm({...form, smtpPort: parseInt(e.target.value) || 465})} placeholder="465" className="dark:bg-zinc-950" />
-                    <Input value={form.smtpUser} onChange={e => setForm({...form, smtpUser: e.target.value})} placeholder="User" className="dark:bg-zinc-950" />
-                    <Input type="password" value={form.smtpPassword} onChange={e => setForm({...form, smtpPassword: e.target.value})} placeholder="Password" className="dark:bg-zinc-950" />
-                    <Input value={form.smtpFromEmail} onChange={e => setForm({...form, smtpFromEmail: e.target.value})} placeholder="from@acme.com" className="col-span-2 dark:bg-zinc-950" />
+                    <Input value={form.smtpUser} onChange={e => setForm({...form, smtpUser: e.target.value})} placeholder={t('smtp_ph_user')} className="dark:bg-zinc-950" />
+                    <Input type="password" value={form.smtpPassword} onChange={e => setForm({...form, smtpPassword: e.target.value})} placeholder={t('smtp_ph_pass')} className="dark:bg-zinc-950" />
+                    <Input value={form.smtpFromEmail} onChange={e => setForm({...form, smtpFromEmail: e.target.value})} placeholder={t('smtp_ph_from')} className="col-span-2 dark:bg-zinc-950" />
                   </div>
                 </div>
 
@@ -567,70 +567,30 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
             </div>
           )}
 
-          {/* STEP 6: STORE / SHOP */}
+          {/* STEP 6: MODULE SELECTION */}
           {wizardMode === "full" && step === 6 && (
-            <div className="animate-in fade-in slide-in-from-right-4 duration-500">
-              <CardHeader className="text-center pb-8 border-b dark:border-zinc-800">
-                <div className="mx-auto w-12 h-12 bg-pink-100 dark:bg-pink-900/30 rounded-xl flex items-center justify-center mb-4">
-                   <Globe className="w-6 h-6 text-pink-600 dark:text-pink-400" />
-                </div>
-                <CardTitle className="text-2xl font-black dark:text-zinc-50">{t('step6_title')}</CardTitle>
-                <CardDescription className="dark:text-zinc-400">{t('step6_desc')}</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-8 space-y-6">
-                 <div className="flex items-center justify-between p-4 border rounded-xl dark:border-zinc-800">
-                   <Label className="text-base font-bold dark:text-zinc-200">{t('enable_shop')}</Label>
-                   <div className="flex items-center gap-2">
-                     <input type="checkbox" checked={form.shopEnabled} onChange={e => setForm({...form, shopEnabled: e.target.checked})} className="w-5 h-5 accent-indigo-600" />
-                   </div>
-                 </div>
-                 {form.shopEnabled && (
-                   <div className="space-y-4 animate-in fade-in zoom-in-95">
-                     <div className="space-y-2">
-                       <Label className="dark:text-zinc-300">{t('shop_slug')}</Label>
-                       <div className="flex items-center gap-2">
-                         <span className="text-zinc-500 text-sm">https://erp.com/store/</span>
-                         <Input value={form.shopSlug} onChange={e => setForm({...form, shopSlug: e.target.value})} placeholder={t('shop_slug_ph')} className="flex-1 dark:bg-zinc-950" />
-                       </div>
-                     </div>
-                     <div className="space-y-2">
-                       <Label className="dark:text-zinc-300">{t('shop_tagline')}</Label>
-                       <Input value={form.shopTagline} onChange={e => setForm({...form, shopTagline: e.target.value})} placeholder="Welcome to our store!" className="dark:bg-zinc-950" />
-                     </div>
-                     <div className="space-y-2">
-                       <Label className="dark:text-zinc-300">{t('shop_color')}</Label>
-                       <Input type="color" value={form.shopAccentColor} onChange={e => setForm({...form, shopAccentColor: e.target.value})} className="w-full h-12 p-1 dark:bg-zinc-950" />
-                     </div>
-                   </div>
-                 )}
-              </CardContent>
-            </div>
-          )}
-
-          {/* STEP 7: MODULE SELECTION */}
-          {wizardMode === "full" && step === 7 && (
             <div className="animate-in fade-in slide-in-from-right-4 duration-500">
               <CardHeader className="text-center pb-8 border-b dark:border-zinc-800">
                 <div className="mx-auto w-12 h-12 bg-teal-100 dark:bg-teal-900/30 rounded-xl flex items-center justify-center mb-4">
                   <Users2 className="w-6 h-6 text-teal-600 dark:text-teal-400" />
                 </div>
-                <CardTitle className="text-2xl font-black dark:text-zinc-50">Optional Modules</CardTitle>
+                <CardTitle className="text-2xl font-black dark:text-zinc-50">{t('optional_modules_title')}</CardTitle>
                 <CardDescription className="dark:text-zinc-400">
-                  Enable powerful subsystems for your workspace. You can change these anytime from Settings.
+                  {t('optional_modules_desc')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-8 space-y-5">
                 <div className="rounded-xl border border-teal-200/60 bg-teal-50/70 dark:border-teal-900/40 dark:bg-teal-950/30 px-4 py-3">
-                  <p className="text-xs font-black uppercase tracking-wider text-teal-800 dark:text-teal-200">Recommended for most teams</p>
-                  <p className="mt-1 text-xs text-teal-700 dark:text-teal-300">Start lean with 2–3 modules. Add more later anytime from Settings.</p>
+                  <p className="text-xs font-black uppercase tracking-wider text-teal-800 dark:text-teal-200">{t('recommended_for_teams')}</p>
+                  <p className="mt-1 text-xs text-teal-700 dark:text-teal-300">{t('start_lean')}</p>
                 </div>
                 {!hasPersonaSignal && !hasAnyModuleEnabled && (
                   <p className="rounded-lg border border-zinc-200 dark:border-zinc-800 px-3 py-2 text-xs text-zinc-500 dark:text-zinc-400">
-                    No defaults detected for your workspace yet—everything starts off so you can opt in deliberately.
+                    {t('no_defaults_detected')}
                   </p>
                 )}
                 <div
-                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 ${
+                   className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 ${
                     form.enableWorkforce
                       ? 'border-teal-500 bg-teal-50/50 dark:bg-teal-950/20'
                       : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
@@ -645,25 +605,25 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Workforce</p>
+                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{t('mod_workforce_title')}</p>
                           {form.enableWorkforce && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-teal-100 dark:bg-teal-900/40 px-2 py-0.5 text-[10px] font-bold text-teal-700 dark:text-teal-300 uppercase tracking-wider">
-                              <CheckCircle2 className="h-2.5 w-2.5" /> Enabled
+                              <CheckCircle2 className="h-2.5 w-2.5" /> {t('enabled_badge')}
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2 line-clamp-2">
-                          HR workflows for people records, attendance, and approvals.
+                          {t('mod_workforce_desc')}
                         </p>
                         <button type="button" onClick={(e) => { e.stopPropagation(); setExpandedCapabilities((prev) => ({ ...prev, workforce: !prev.workforce })); }} className="text-[11px] font-semibold text-teal-700 dark:text-teal-300 inline-flex items-center gap-1">
-                          {expandedCapabilities.workforce ? "Hide capabilities" : "See capabilities"} <ChevronDown className={`h-3 w-3 transition-transform ${expandedCapabilities.workforce ? "rotate-180" : ""}`} />
+                          {expandedCapabilities.workforce ? t('hide_capabilities') : t('see_capabilities')} <ChevronDown className={`h-3 w-3 transition-transform ${expandedCapabilities.workforce ? "rotate-180" : ""}`} />
                         </button>
                         {expandedCapabilities.workforce && <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 mt-2">
                           {[
-                            { icon: Users2, text: 'Employee directory & profiles' },
-                            { icon: Calendar, text: 'Leave requests & approvals' },
-                            { icon: ClipboardList, text: 'Daily attendance tracking' },
-                            { icon: Sparkles, text: 'Role-aware HR dashboards' },
+                            { icon: Users2, text: t('mod_workforce_cap1') },
+                            { icon: Calendar, text: t('mod_workforce_cap2') },
+                            { icon: ClipboardList, text: t('mod_workforce_cap3') },
+                            { icon: Sparkles, text: t('mod_workforce_cap4') },
                           ].map(({ icon: Icon, text }) => (
                             <div key={text} className="flex items-center gap-1.5">
                               <Icon className={`h-3 w-3 shrink-0 ${form.enableWorkforce ? 'text-teal-500' : 'text-zinc-400'}`} />
@@ -699,25 +659,25 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Document Vault</p>
+                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{t('mod_documents_title')}</p>
                           {form.enableDocuments && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2 py-0.5 text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
-                              <CheckCircle2 className="h-2.5 w-2.5" /> Enabled
+                              <CheckCircle2 className="h-2.5 w-2.5" /> {t('enabled_badge')}
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2 line-clamp-2">
-                          Secure document storage with OCR and quick ERP linking.
+                          {t('mod_documents_desc')}
                         </p>
                         <button type="button" onClick={(e) => { e.stopPropagation(); setExpandedCapabilities((prev) => ({ ...prev, documents: !prev.documents })); }} className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 inline-flex items-center gap-1">
-                          {expandedCapabilities.documents ? "Hide capabilities" : "See capabilities"} <ChevronDown className={`h-3 w-3 transition-transform ${expandedCapabilities.documents ? "rotate-180" : ""}`} />
+                          {expandedCapabilities.documents ? t('hide_capabilities') : t('see_capabilities')} <ChevronDown className={`h-3 w-3 transition-transform ${expandedCapabilities.documents ? "rotate-180" : ""}`} />
                         </button>
                         {expandedCapabilities.documents && <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 mt-2">
                           {[
-                            { icon: FileText, text: 'Upload Center (Inbox) with triage states' },
-                            { icon: Sparkles, text: 'OCR extraction with review & correction' },
-                            { icon: ShieldCheck, text: 'Compliance evidence vault & reminders' },
-                            { icon: Zap, text: 'Suggested linking to expenses & invoices' },
+                            { icon: FileText, text: t('mod_documents_cap1') },
+                            { icon: Sparkles, text: t('mod_documents_cap2') },
+                            { icon: ShieldCheck, text: t('mod_documents_cap3') },
+                            { icon: Zap, text: t('mod_documents_cap4') },
                           ].map(({ icon: Icon, text }) => (
                             <div key={text} className="flex items-center gap-1.5">
                               <Icon className={`h-3 w-3 shrink-0 ${form.enableDocuments ? 'text-indigo-500' : 'text-zinc-400'}`} />
@@ -753,15 +713,15 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Cash Flow</p>
+                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{t('mod_cashflow_title')}</p>
                           {form.enableCashFlow && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 dark:bg-cyan-900/40 px-2 py-0.5 text-[10px] font-bold text-cyan-700 dark:text-cyan-300 uppercase tracking-wider">
-                              <CheckCircle2 className="h-2.5 w-2.5" /> Enabled
+                              <CheckCircle2 className="h-2.5 w-2.5" /> {t('enabled_badge')}
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2">
-                          Cash forecasting to spot run-rate risk earlier.
+                          {t('mod_cashflow_desc')}
                         </p>
                       </div>
                     </div>
@@ -775,8 +735,91 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                   </div>
                 </div>
 
+                <div
+                  className={`group relative rounded-2xl border-2 p-5 transition-all duration-200 ${
+                    form.shopEnabled
+                      ? 'border-pink-500 bg-pink-50/50 dark:bg-pink-950/20'
+                      : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-900'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4 flex-1">
+                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
+                        form.shopEnabled ? 'bg-pink-500 shadow-lg shadow-pink-500/20' : 'bg-zinc-100 dark:bg-zinc-800'
+                      }`}>
+                        <Globe className={`h-5 w-5 ${form.shopEnabled ? 'text-white' : 'text-zinc-500 dark:text-zinc-400'}`} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{t('mod_shop_title')}</p>
+                          {form.shopEnabled && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-pink-100 dark:bg-pink-900/40 px-2 py-0.5 text-[10px] font-bold text-pink-700 dark:text-pink-300 uppercase tracking-wider">
+                              <CheckCircle2 className="h-2.5 w-2.5" /> {t('enabled_badge')}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3 leading-relaxed">
+                          {t('mod_shop_desc')}
+                        </p>
+                        
+                        {form.shopEnabled && (
+                          <div className="rounded-xl border border-pink-200/70 dark:border-pink-900/60 bg-white/80 dark:bg-zinc-950/60 p-4 space-y-4 animate-in fade-in zoom-in-95 mt-3">
+                            <div className="space-y-2">
+                              <Label className="text-xs font-semibold dark:text-zinc-300">{t('shop_slug')}</Label>
+                              <div className="flex items-center gap-2">
+                                <span className="text-zinc-500 text-xs truncate">/store/</span>
+                                <Input
+                                  value={form.shopSlug}
+                                  onChange={e => setForm({...form, shopSlug: e.target.value})}
+                                  placeholder={t('shop_slug_ph')}
+                                  className="h-9 text-xs dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-100"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-semibold dark:text-zinc-300">{t('shop_tagline')}</Label>
+                              <Input
+                                value={form.shopTagline}
+                                onChange={e => setForm({...form, shopTagline: e.target.value})}
+                                placeholder={t('shop_tagline')}
+                                className="h-9 text-xs dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-100"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-semibold dark:text-zinc-300">{t('shop_color')}</Label>
+                              <div className="flex items-center gap-3">
+                                <Input
+                                  type="color"
+                                  value={form.shopAccentColor}
+                                  onChange={e => setForm({...form, shopAccentColor: e.target.value})}
+                                  className="w-12 h-9 p-0.5 border dark:border-zinc-800 cursor-pointer rounded"
+                                />
+                                <span className="text-xs font-mono text-zinc-500 dark:text-zinc-400">{form.shopAccentColor}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={form.shopEnabled}
+                      aria-label="Toggle Public Shop module"
+                      onClick={() => toggleModule("shopEnabled", "Public Shop module")}
+                      className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500 dark:focus-visible:ring-offset-zinc-900 ${
+                        form.shopEnabled ? 'bg-pink-500' : 'bg-zinc-300 dark:bg-zinc-700'
+                      }`}
+                    >
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        form.shopEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`} />
+                    </button>
+                  </div>
+                </div>
+
                 <button type="button" onClick={() => setShowMoreModules((prev) => !prev)} className="w-full text-left rounded-xl border border-zinc-200 dark:border-zinc-800 px-4 py-3 text-sm font-semibold text-zinc-700 dark:text-zinc-200 inline-flex items-center justify-between">
-                  More modules
+                  {t('more_modules_btn')}
                   <ChevronDown className={`h-4 w-4 transition-transform ${showMoreModules ? "rotate-180" : ""}`} />
                 </button>
 
@@ -797,25 +840,25 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">AR Aging + Collections Centre</p>
+                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{t('mod_arcollections_title')}</p>
                           {form.enableArCollections && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 dark:bg-orange-900/40 px-2 py-0.5 text-[10px] font-bold text-orange-700 dark:text-orange-300 uppercase tracking-wider">
-                              <CheckCircle2 className="h-2.5 w-2.5" /> Enabled
+                              <CheckCircle2 className="h-2.5 w-2.5" /> {t('enabled_badge')}
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2 line-clamp-2">
-                          Receivables prioritization with aging and reminders.
+                          {t('mod_arcollections_desc')}
                         </p>
                         <button type="button" onClick={(e) => { e.stopPropagation(); setExpandedCapabilities((prev) => ({ ...prev, arCollections: !prev.arCollections })); }} className="text-[11px] font-semibold text-orange-700 dark:text-orange-300 inline-flex items-center gap-1">
-                          {expandedCapabilities.arCollections ? "Hide capabilities" : "See capabilities"} <ChevronDown className={`h-3 w-3 transition-transform ${expandedCapabilities.arCollections ? "rotate-180" : ""}`} />
+                          {expandedCapabilities.arCollections ? t('hide_capabilities') : t('see_capabilities')} <ChevronDown className={`h-3 w-3 transition-transform ${expandedCapabilities.arCollections ? "rotate-180" : ""}`} />
                         </button>
                         {expandedCapabilities.arCollections && <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 mt-2">
                           {[
-                            { icon: Clock, text: 'Aging buckets and overdue concentration' },
-                            { icon: ClipboardList, text: 'Collection priority queue by score' },
-                            { icon: Zap, text: 'Reminder automation for overdue invoices' },
-                            { icon: Route, text: 'Follow-up lifecycle and escalations' },
+                            { icon: Clock, text: t('mod_arcollections_cap1') },
+                            { icon: ClipboardList, text: t('mod_arcollections_cap2') },
+                            { icon: Zap, text: t('mod_arcollections_cap3') },
+                            { icon: Route, text: t('mod_arcollections_cap4') },
                           ].map(({ icon: Icon, text }) => (
                             <div key={text} className="flex items-center gap-1.5">
                               <Icon className={`h-3 w-3 shrink-0 ${form.enableArCollections ? 'text-orange-500' : 'text-zinc-400'}`} />
@@ -855,7 +898,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                           <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{t('optional_reporting_title')}</p>
                           {form.enableReportingCenter && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider">
-                              <CheckCircle2 className="h-2.5 w-2.5" /> Enabled
+                              <CheckCircle2 className="h-2.5 w-2.5" /> {t('enabled_badge')}
                             </span>
                           )}
                         </div>
@@ -873,7 +916,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 </div>
 
                 <p className="text-center text-xs text-zinc-400 dark:text-zinc-600 pt-2">
-                  More modules (Time Tracking, Asset Registry) coming soon.
+                  {t('coming_soon_modules')}
                 </p>
 
                 <div
@@ -892,25 +935,25 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Revenue Pipeline</p>
+                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{t('mod_revenue_title')}</p>
                           {form.enableRevenuePipeline && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 dark:bg-violet-900/40 px-2 py-0.5 text-[10px] font-bold text-violet-700 dark:text-violet-300 uppercase tracking-wider">
-                              <CheckCircle2 className="h-2.5 w-2.5" /> Enabled
+                              <CheckCircle2 className="h-2.5 w-2.5" /> {t('enabled_badge')}
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2 line-clamp-2">
-                          Deal pipeline visibility with next-action guidance.
+                          {t('mod_revenue_desc')}
                         </p>
                         <button type="button" onClick={(e) => { e.stopPropagation(); setExpandedCapabilities((prev) => ({ ...prev, revenuePipeline: !prev.revenuePipeline })); }} className="text-[11px] font-semibold text-violet-700 dark:text-violet-300 inline-flex items-center gap-1">
-                          {expandedCapabilities.revenuePipeline ? "Hide capabilities" : "See capabilities"} <ChevronDown className={`h-3 w-3 transition-transform ${expandedCapabilities.revenuePipeline ? "rotate-180" : ""}`} />
+                          {expandedCapabilities.revenuePipeline ? t('hide_capabilities') : t('see_capabilities')} <ChevronDown className={`h-3 w-3 transition-transform ${expandedCapabilities.revenuePipeline ? "rotate-180" : ""}`} />
                         </button>
                         {expandedCapabilities.revenuePipeline && <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 mt-2">
                           {[
-                            { icon: Target, text: 'Pipeline overview by stage' },
-                            { icon: Clock, text: 'Stalled opportunity detection' },
-                            { icon: Route, text: 'Next-best-action recommendations' },
-                            { icon: ClipboardList, text: 'Batch task creation for follow-ups' },
+                            { icon: Target, text: t('mod_revenue_cap1') },
+                            { icon: Clock, text: t('mod_revenue_cap2') },
+                            { icon: Route, text: t('mod_revenue_cap3') },
+                            { icon: ClipboardList, text: t('mod_revenue_cap4') },
                           ].map(({ icon: Icon, text }) => (
                             <div key={text} className="flex items-center gap-1.5">
                               <Icon className={`h-3 w-3 shrink-0 ${form.enableRevenuePipeline ? 'text-violet-500' : 'text-zinc-400'}`} />
@@ -946,19 +989,19 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Payroll (Execution staged)</p>
+                          <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{t('mod_payroll_title')}</p>
                           {form.enablePayroll && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
-                              <CheckCircle2 className="h-2.5 w-2.5" /> Enabled
+                              <CheckCircle2 className="h-2.5 w-2.5" /> {t('enabled_badge')}
                             </span>
                           )}
                         </div>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3 line-clamp-2">
-                          Phased payroll rollout with readiness checks.
+                          {t('mod_payroll_desc')}
                         </p>
 
                         <div className="space-y-2 mb-3">
-                          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Execution phases</p>
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('mod_payroll_phases')}</p>
                           <div className="space-y-1.5">
                             {(payrollReadiness?.executionPhases ?? []).map((phase) => (
                               <div key={phase.id} className="flex items-start gap-2">
@@ -969,7 +1012,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                               </div>
                             ))}
                             {!payrollReadiness?.executionPhases?.length && (
-                              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Load payroll phases after module selection.</p>
+                              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{t('mod_payroll_phase_load')}</p>
                             )}
                           </div>
                         </div>
@@ -977,18 +1020,18 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         {form.enablePayroll && (
                           <div className="rounded-xl border border-emerald-200/70 dark:border-emerald-900/60 bg-white/80 dark:bg-zinc-950/60 p-3 space-y-3 animate-in fade-in zoom-in-95">
                             <div className="space-y-2">
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Setup path</p>
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('mod_payroll_path')}</p>
                               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                                 {[
                                   {
                                     key: "STANDALONE" as const,
-                                    title: "Standalone payroll setup",
-                                    desc: "Configure payroll independently from Workforce.",
+                                    title: t('mod_payroll_path_standalone_title'),
+                                    desc: t('mod_payroll_path_standalone_desc'),
                                   },
                                   {
                                     key: "WORKFORCE_LINKED" as const,
-                                    title: "Workforce-linked setup",
-                                    desc: "Derive payroll context from Workforce employees + attendance.",
+                                    title: t('mod_payroll_path_linked_title'),
+                                    desc: t('mod_payroll_path_linked_desc'),
                                   },
                                 ].map((option) => (
                                   <button
@@ -1011,7 +1054,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                             </div>
 
                             <div className="space-y-2">
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Go-live readiness checklist</p>
+                              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{t('mod_payroll_checklist')}</p>
                               <div className="space-y-1.5">
                                 {(payrollReadiness?.readiness.checklist ?? []).map((item) => (
                                   <div key={item.id} className="flex items-start gap-2">
@@ -1024,8 +1067,10 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                                 ))}
                                 {payrollReadiness && (
                                   <p className="text-[10px] text-zinc-500 dark:text-zinc-400 pt-1">
-                                    Readiness score: <span className="font-semibold">{payrollReadiness.readiness.score}%</span> · Posting:{" "}
-                                    <span className="font-semibold">{payrollReadiness.readiness.postingStatusLabel}</span>
+                                    {t('mod_payroll_score', {
+                                      score: payrollReadiness.readiness.score,
+                                      status: payrollReadiness.readiness.postingStatusLabel
+                                    })}
                                   </p>
                                 )}
                               </div>
@@ -1054,14 +1099,24 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
               isModal ? "sticky bottom-0 z-20" : ""
             }`}
           >
-            <Button 
-              variant="ghost" 
-              onClick={prevStep} 
-              disabled={step === 1 || isSubmitting}
-              className="dark:text-zinc-400 dark:hover:bg-zinc-900"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" /> {t('back')}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                onClick={prevStep} 
+                disabled={step === 1 || isSubmitting}
+                className="dark:text-zinc-400 dark:hover:bg-zinc-900"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" /> {t('back')}
+              </Button>
+              <Button
+                variant="ghost"
+                type="button"
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/20 text-xs font-semibold px-3 h-9 rounded-md transition-colors"
+              >
+                Sign Out
+              </Button>
+            </div>
             
             {step < lastStep ? (
               <Button onClick={nextStep} className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[120px]">
@@ -1071,12 +1126,12 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
               <div className="flex flex-col items-end gap-2">
                 <div className="flex items-center gap-2">
                   <Button variant="ghost" type="button" onClick={finishSetup} disabled={isSubmitting} className="text-zinc-500 dark:text-zinc-400">
-                    Skip for now
+                    {t('skip_for_now')}
                   </Button>
                   <Button
                     onClick={finishSetup}
                     disabled={isSubmitting || companyNameMissing}
-                    title={companyNameMissing ? "Company name is required to launch ERP" : undefined}
+                    title={companyNameMissing ? t('company_name_required') : undefined}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[160px] shadow-lg shadow-emerald-500/20 border-none"
                   >
                     {isSubmitting ? t('finalizing') : <><CheckCircle2 className="w-4 h-4 mr-2" /> {t('launch_erp')}</>}
@@ -1084,26 +1139,26 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 </div>
                 {companyNameMissing && (
                   <div className="text-right space-y-1">
-                    <p className="text-xs text-amber-700 dark:text-amber-300">Company name is required to launch ERP.</p>
+                    <p className="text-xs text-amber-700 dark:text-amber-300">{t('company_name_required')}</p>
                     <button
                       type="button"
                       onClick={jumpToCompanyNameField}
                       className="text-xs font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
                     >
-                      Jump to required field
+                      {t('jump_to_required')}
                     </button>
                   </div>
                 )}
                 {wizardMode === "quick" && (
                   <button
-                    type="button"
-                    onClick={() => {
-                      setWizardMode("full");
-                      setStep(4);
-                    }}
-                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+                     type="button"
+                     onClick={() => {
+                       setWizardMode("full");
+                       setStep(4);
+                     }}
+                     className="text-xs font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
                   >
-                    Advanced setup (integrations, shop, modules)
+                    {t('advanced_setup_btn')}
                   </button>
                 )}
               </div>

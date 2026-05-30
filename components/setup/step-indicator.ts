@@ -10,8 +10,6 @@ export function getSetupStepNameKey(step: number): string {
       return "step_identity";
     case 5:
       return "step_integrations";
-    case 6:
-      return "step_shop";
     default:
       return "step_modules";
   }
