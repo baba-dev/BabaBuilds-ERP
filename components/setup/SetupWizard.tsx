@@ -270,7 +270,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
   };
 
   return (
-    <div className={`flex flex-col items-center justify-center transition-colors duration-500 ${isModal ? "bg-transparent p-0" : "min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8"}`}>
+    <div className={`flex flex-col items-center justify-center transition-colors duration-500 ${isModal ? "bg-transparent p-0 w-full h-full min-h-0" : "min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8"}`}>
       {/* PROGRESS TRACKER */}
       <div
         className={`max-w-md w-full space-y-4 ${
@@ -300,7 +300,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
         </div>
       </div>
 
-      <div className={`max-w-xl w-full relative ${isModal ? "flex min-h-[70vh] flex-col" : ""}`}>
+      <div className={`max-w-xl w-full relative ${isModal ? "flex flex-col flex-1 min-h-0 h-full w-full md:min-h-[70vh]" : ""}`}>
         {/* DECORATIVE ELEMENTS (Only show in standalone) */}
         {!isModal && (
           <>
