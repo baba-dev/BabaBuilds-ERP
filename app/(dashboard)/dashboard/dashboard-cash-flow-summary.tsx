@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { AreaChart, ArrowRight, RefreshCw, ShieldAlert } from "lucide-react";
+import { AreaChart, ArrowRight, RefreshCw, ShieldAlert, HandCoins } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useFormat } from "@/hooks/use-format";
 import { dt, dashboardTypography } from "./dashboard-typography";
 import { cn } from "@/lib/utils";
+import { DashboardModulePromoCard } from "@/components/dashboard/DashboardModulePromoCard";
 
 type CashFlowHorizonType = "DAILY_30" | "WEEKLY_13" | "MONTHLY_12";
 type CashFlowScenarioTag = "BASE" | "BEST_CASE" | "WORST_CASE";
@@ -50,10 +51,12 @@ export function DashboardCashFlowSummary({
   defaultHorizonType = "WEEKLY_13",
   defaultScenarioTag = "BASE",
   className,
+  onModuleEnabled,
 }: {
   defaultHorizonType?: CashFlowHorizonType;
   defaultScenarioTag?: CashFlowScenarioTag;
   className?: string;
+  onModuleEnabled?: () => void;
 }) {
   const { fCurrency } = useFormat();
   const [moduleEnabled, setModuleEnabled] = useState<boolean | null>(null);
@@ -150,7 +153,28 @@ export function DashboardCashFlowSummary({
   }, [snapshot?.generatedAt]);
   const confidenceLabel = snapshot?.confidenceScore == null ? "—" : `${Math.round(snapshot.confidenceScore * 100)}%`;
 
-  if (moduleEnabled === false) return null;
+  if (moduleEnabled === false) {
+    return (
+      <DashboardModulePromoCard
+        moduleKey="CASH_FLOW"
+        label="Cash Flow Forecasting"
+        description="Unlock scenario planning, runway predictions, liquidity alerts, and cash drivers using unified ERP ledger data."
+        icon={HandCoins}
+        features={[
+          "13-week or 12-month visual runway projections",
+          "Risk variance analysis vs actual performance",
+          "Worst-period indicators & scenario tags (best/worst)",
+          "Direct linkage to income & expense commitments"
+        ]}
+        onEnabled={() => {
+          setModuleEnabled(true);
+          void load();
+          if (onModuleEnabled) onModuleEnabled();
+        }}
+        className={className}
+      />
+    );
+  }
 
   return (
     <Card
