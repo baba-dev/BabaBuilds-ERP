@@ -1,7 +1,7 @@
 export const INTELLIGENCE_SUGGESTION_ROUTES = {
-  fixImports: "/inbox/import",
-  finishOnboarding: "/settings",
-  reviewReceivables: "/invoice",
+  fixImports: "/import-manager",
+  finishOnboarding: "/setup",
+  reviewReceivables: "/income",
   reconcileBooks: "/reconciliation",
   launchStorefront: "/shop",
   scaleBilling: "/invoice",

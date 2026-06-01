@@ -17,15 +17,48 @@ import type { DashboardData } from "./types";
 import { DashboardTooltip } from "./dashboard-tooltip";
 import { cn } from "@/lib/utils";
 import { dashboardTypography as ty } from "./dashboard-typography";
+import { DashboardModulePromoCard } from "@/components/dashboard/DashboardModulePromoCard";
 
-export function DashboardTrustPanel({ trust }: { trust: DashboardData["trust"] }) {
+export function DashboardTrustPanel({
+  trust,
+  enabledModules = new Set(["TAX_ADVANCED"]),
+  onModuleEnabled,
+}: {
+  trust: DashboardData["trust"];
+  enabledModules?: Set<string>;
+  onModuleEnabled?: (moduleKey: string) => void;
+}) {
   const t = useTranslations("Dashboard");
   const tr = (key: string, fallback: string, values?: any) => {
-    if (!t.has(key as any)) return fallback;
-    const translation = t(key as any, values);
-    if (translation === key || translation === `Dashboard.${key}`) return fallback;
-    return translation;
+    if (typeof (t as any).has === "function" && !(t as any).has(key)) return fallback;
+    try {
+      const translation = t(key as any, values);
+      if (translation === key || translation === `Dashboard.${key}`) return fallback;
+      return translation;
+    } catch {
+      return fallback;
+    }
   };
+
+  if (!enabledModules.has("TAX_ADVANCED")) {
+    return (
+      <DashboardModulePromoCard
+        moduleKey="TAX_ADVANCED"
+        label="Advanced Tax & Compliance"
+        description="Unlock universal prep return checklists, diagnostic audit scanning, manual rate overrides, and compliance logs based on ledgers."
+        icon={ShieldCheck}
+        features={[
+          "Tax readiness automated validation checks",
+          "Accounting integrity scans & violation logs",
+          "Tax rate override maker-checker histories",
+          "Tax decision audit trailing and linking"
+        ]}
+        onEnabled={() => {
+          onModuleEnabled?.("TAX_ADVANCED");
+        }}
+      />
+    );
+  }
 
   const statusMap: Record<string, { label: string; icon: any; color: string; bg: string; border: string; glow: string }> = {
     PASSED: { 

@@ -365,6 +365,10 @@ export default function Dashboard() {
   ];
 
   const d = data as DashboardData;
+  const enabledModulesSet = useMemo(() => new Set(d.optionalModules?.map(m => m.moduleKey) ?? []), [d.optionalModules]);
+  const handleModuleEnabled = () => {
+    void loadAllData(selectedFy);
+  };
   const isReady = Boolean(
     d.health &&
       d.attention &&
@@ -626,7 +630,7 @@ export default function Dashboard() {
 
         <GuidedFlowsHub />
 
-        <DashboardCashFlowSummary />
+        <DashboardCashFlowSummary onModuleEnabled={handleModuleEnabled} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
           <div className="lg:col-span-1 2xl:col-span-2 space-y-6">
@@ -640,7 +644,7 @@ export default function Dashboard() {
                       className={!permissionFlags.canViewSales ? lockOverlayClassName : undefined}
                       aria-disabled={!permissionFlags.canViewSales}
                     >
-                      <DashboardSalesAndShopPanel salesAndShop={d.salesAndShop} fCurrency={fCurrency} />
+                      <DashboardSalesAndShopPanel salesAndShop={d.salesAndShop} fCurrency={fCurrency} enabledModules={enabledModulesSet} onModuleEnabled={handleModuleEnabled} />
                     </div>
                   </TooltipTrigger>
                   {!permissionFlags.canViewSales ? (
@@ -660,7 +664,7 @@ export default function Dashboard() {
                       className={!permissionFlags.canViewOperations ? lockOverlayClassName : undefined}
                       aria-disabled={!permissionFlags.canViewOperations}
                     >
-                      <DashboardOperationsPanel operations={d.operations} />
+                      <DashboardOperationsPanel operations={d.operations} enabledModules={enabledModulesSet} onModuleEnabled={handleModuleEnabled} />
                     </div>
                   </TooltipTrigger>
                   {!permissionFlags.canViewOperations ? (
@@ -680,7 +684,7 @@ export default function Dashboard() {
                       className={!permissionFlags.canViewTrust ? lockOverlayClassName : undefined}
                       aria-disabled={!permissionFlags.canViewTrust}
                     >
-                      <DashboardTrustPanel trust={d.trust} />
+                      <DashboardTrustPanel trust={d.trust} enabledModules={enabledModulesSet} onModuleEnabled={handleModuleEnabled} />
                     </div>
                   </TooltipTrigger>
                   {!permissionFlags.canViewTrust ? (
@@ -822,7 +826,7 @@ export default function Dashboard() {
             size="sm"
             className={`flex-shrink-0 h-8 text-orange-600 dark:text-orange-400 hover:bg-orange-100/50 dark:hover:bg-orange-500/20 gap-2 border border-transparent hover:border-orange-100 dark:hover:border-orange-500/30 ${ty.labelUpperStrong}`}
           >
-            <Link href="https://erp.bababuilds.com/settings/profile" className="flex items-center gap-2">
+            <Link href="/settings/profile" className="flex items-center gap-2">
               User Session Settings
               <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
             </Link>
