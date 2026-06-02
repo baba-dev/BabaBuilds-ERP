@@ -427,6 +427,14 @@ export const authOptions: NextAuthOptions = {
         return token;
       }
 
+      // Optimize NextAuth to avoid hitting SQLite on every request.
+      // Only query the database on sign-in (user is defined),
+      // an explicit update, or if critical info is missing from the token.
+      const needsDbRefresh = !!user || trigger === "update" || !token.workspaceId || !token.locale;
+      if (!needsDbRefresh) {
+        return token;
+      }
+
       const provisionWorkspaceForUser = async (input: { id: string; email?: string | null; name?: string | null }) => {
         const signupIntent = await consumeSignupIntent();
         return provisionTrialWorkspace({
