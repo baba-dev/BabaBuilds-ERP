@@ -11,6 +11,7 @@ import PricingSection from "@/components/PricingSection";
 import LandingFooter from "@/components/LandingFooter";
 import RotatorText from "@/components/landing/RotatorText";
 import RoleDemoLauncher from "@/components/landing/RoleDemoLauncher";
+import FreeVsProComparison from "@/components/landing/FreeVsProComparison";
 import { personaNavigationLinks } from "@/components/landing/persona/persona-config";
 import { emitMarketingAnalyticsEvent } from "@/lib/marketing-analytics";
 import HeroRevenueLoopVisual from "@/components/landing/HeroRevenueLoopVisual";
@@ -63,11 +64,11 @@ export default function LandingContent() {
     <div className="overflow-x-hidden bg-surface-base">
       <LandingNavbar />
 
-      <section className="relative min-h-[min(100vh,920px)] px-6 pb-16 pt-28 md:pt-32">
+      <section className="relative flex items-center min-h-[min(100vh,920px)] px-6 pb-16 pt-28 md:pt-32">
         <div className="pointer-events-none absolute left-1/2 top-0 h-[600px] w-[1000px] -translate-x-1/2 rounded-full bg-accent-soft blur-[120px]" />
         <div className="pointer-events-none absolute bottom-0 right-0 h-[500px] w-[500px] rounded-full bg-orange-600/10 blur-[110px]" />
 
-        <div className="relative z-10 mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-start lg:gap-14">
+        <div className="relative z-10 mx-auto grid w-full max-w-7xl gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-start lg:gap-14">
           <div className="min-w-0 space-y-8">
             <div className="space-y-6">
               <span className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-surface-elevated/90 px-4 py-2 text-sm font-bold text-muted-body shadow-sm backdrop-blur-md">
@@ -95,7 +96,10 @@ export default function LandingContent() {
               </Button>
             </div>
 
-            <p className="text-sm font-semibold text-muted-body">No credit card required • 15-day trial • Guided onboarding included</p>
+            <div className="space-y-6">
+              <p className="text-sm font-semibold text-muted-body">No credit card required • 15-day trial • Guided onboarding included</p>
+              <SocialProofHero />
+            </div>
           </div>
 
           <div className="min-w-0 lg:pt-2">
@@ -103,8 +107,6 @@ export default function LandingContent() {
           </div>
         </div>
       </section>
-
-      <SocialProofHero />
 
       <section className="border-y border-border bg-surface-base py-16">
         <div className="mx-auto grid max-w-7xl gap-6 px-6 md:grid-cols-3">
@@ -133,23 +135,12 @@ export default function LandingContent() {
         </div>
       </section>
 
-      <section className="bg-surface-base py-12">
-        <div className="mx-auto max-w-7xl px-6">
-          <h2 className="text-2xl font-black tracking-tight text-foreground md:text-3xl">Built for your business model</h2>
-          <p className="mt-2 max-w-3xl text-sm text-muted-body">Choose your workflow blueprint and jump into a guided demo tuned for your team type.</p>
-          <div className="mt-4 flex flex-wrap gap-3">
-            {personaNavigationLinks.map((persona) => (
-              <Link key={persona.href} href={persona.href} onClick={() => trackPersonaClick("persona_hub", persona.href)} className="rounded-xl border border-border/80 bg-surface-elevated px-4 py-2 text-sm font-semibold text-foreground/90 transition hover:border-orange-500/40 hover:text-orange-600 dark:hover:text-orange-400">
-                {tPersona(persona.labelKey)}
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section id="demo-launcher"><RoleDemoLauncher /></section>
+      <div id="demo-launcher">
+        <RoleDemoLauncher />
+      </div>
       <ComparisonTable />
       <PricingSection />
+      <FreeVsProComparison />
 
       <section className="relative overflow-hidden bg-foreground py-28">
         <div className="pointer-events-none absolute right-0 top-0 h-[600px] w-[600px] rounded-full bg-accent-strong/25 blur-[120px]" />
