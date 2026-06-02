@@ -19,7 +19,7 @@ export default function SocialProofHero() {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.4 }}
-      className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-6"
+      className="mt-6 flex flex-col items-center justify-center lg:justify-start gap-3 sm:flex-row sm:items-center sm:gap-6"
     >
       <div className="flex -space-x-3">
         {avatars.map((src, i) => (

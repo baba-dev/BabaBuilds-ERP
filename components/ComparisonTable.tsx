@@ -89,7 +89,8 @@ export default function ComparisonTable() {
           <p className="mx-auto max-w-3xl text-lg text-zinc-600 dark:text-zinc-400">{t("subtitle")}</p>
         </motion.div>
 
-        <div className="overflow-x-auto rounded-2xl border border-zinc-200/80 dark:border-zinc-800">
+        {/* Desktop View: Interactive table structure */}
+        <div className="hidden md:block overflow-x-auto rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-white">
           <table className="w-full border-collapse text-start">
             <caption className="sr-only">{t("title")}</caption>
             <thead>
@@ -147,6 +148,65 @@ export default function ComparisonTable() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile View: High-fidelity comparative cards */}
+        <div className="grid gap-6 md:hidden">
+          {rows.map((feature, idx) => (
+            <motion.div
+              key={feature.key}
+              initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.15 }}
+              transition={{ duration: 0.35, delay: reduceMotion ? 0 : idx * 0.04 }}
+              className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900/40 shadow-sm space-y-4"
+            >
+              <div className="space-y-1">
+                <h3 className="text-base font-black text-zinc-900 dark:text-zinc-50">{feature.name}</h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">{feature.desc}</p>
+              </div>
+
+              <hr className="border-zinc-100 dark:border-zinc-800/80" />
+
+              <div className="grid grid-cols-3 gap-2.5">
+                {/* BabaBuilds ERP */}
+                <div className="rounded-xl border border-orange-500/10 bg-orange-500/5 p-2.5 text-center dark:border-orange-500/5 dark:bg-orange-950/20">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400 leading-none">BabaBuilds</p>
+                  <div className="mt-2 flex items-center justify-center text-emerald-500">
+                    <Check className="h-4.5 w-4.5 stroke-[2.5px]" />
+                  </div>
+                </div>
+
+                {/* Tally */}
+                <div className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-2.5 text-center dark:border-zinc-800/60 dark:bg-zinc-900/60 flex flex-col justify-between">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 leading-none">{t("table.tally")}</p>
+                  <div className="mt-2 flex items-center justify-center text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                    {feature.tally === "yes" ? (
+                      <Check className="h-4 w-4 text-emerald-500/70" />
+                    ) : feature.tally === "no" ? (
+                      <X className="h-4 w-4 text-rose-500/70" />
+                    ) : (
+                      <span className="leading-none text-[11px]">{tStatus(feature.tally)}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* QuickBooks */}
+                <div className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-2.5 text-center dark:border-zinc-800/60 dark:bg-zinc-900/60 flex flex-col justify-between">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 leading-none">{t("table.quickbooks")}</p>
+                  <div className="mt-2 flex items-center justify-center text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                    {feature.quickbooks === "yes" ? (
+                      <Check className="h-4 w-4 text-emerald-500/70" />
+                    ) : feature.quickbooks === "no" ? (
+                      <X className="h-4 w-4 text-rose-500/70" />
+                    ) : (
+                      <span className="leading-none text-[11px]">{tStatus(feature.quickbooks)}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ))}
         </div>
 
         <div className="mt-10 rounded-2xl border border-orange-500/20 bg-orange-600/5 p-6 dark:bg-orange-600/10">
