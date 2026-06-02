@@ -44,6 +44,7 @@ type SetupPayload = {
   enableArCollections?: boolean;
   enableReportingCenter?: boolean;
   payrollSetupPath?: "STANDALONE" | "WORKFORCE_LINKED";
+  isSkip?: boolean;
 };
 
 function isValidEmail(email: string) {
@@ -69,17 +70,19 @@ export async function POST(req: Request) {
     const body = (await req.json()) as SetupPayload;
     const fieldErrors: Record<string, string> = {};
 
-    if (!body.countryCode?.trim()) fieldErrors.countryCode = "Country is required.";
-    if (!body.baseCurrency?.trim()) fieldErrors.baseCurrency = "Base currency is required.";
-    if (!body.locale?.trim()) fieldErrors.locale = "Locale is required.";
+    if (!body.isSkip) {
+      if (!body.countryCode?.trim()) fieldErrors.countryCode = "Country is required.";
+      if (!body.baseCurrency?.trim()) fieldErrors.baseCurrency = "Base currency is required.";
+      if (!body.locale?.trim()) fieldErrors.locale = "Locale is required.";
 
-    if (!body.companyName?.trim()) fieldErrors.companyName = "Company name is required.";
-    if (!body.proprietorName?.trim()) fieldErrors.proprietorName = "Founder/Proprietor name is required.";
-    if (!body.email?.trim()) fieldErrors.email = "Email is required.";
-    if (body.email?.trim() && !isValidEmail(body.email.trim())) {
-      fieldErrors.email = "Please enter a valid email address.";
+      if (!body.companyName?.trim()) fieldErrors.companyName = "Company name is required.";
+      if (!body.proprietorName?.trim()) fieldErrors.proprietorName = "Founder/Proprietor name is required.";
+      if (!body.email?.trim()) fieldErrors.email = "Email is required.";
+      if (body.email?.trim() && !isValidEmail(body.email.trim())) {
+        fieldErrors.email = "Please enter a valid email address.";
+      }
+      if (!body.address?.trim()) fieldErrors.address = "Billing address is required.";
     }
-    if (!body.address?.trim()) fieldErrors.address = "Billing address is required.";
 
     if (Object.keys(fieldErrors).length > 0) {
       return NextResponse.json(
@@ -101,16 +104,16 @@ export async function POST(req: Request) {
       await tx.workspace.update({
         where: { id: workspaceId },
         data: {
-          countryCode: body.countryCode!.trim(),
-          baseCurrency: body.baseCurrency!.trim(),
+          countryCode: body.countryCode?.trim() || "IN",
+          baseCurrency: body.baseCurrency?.trim() || "INR",
         },
       });
 
       await tx.user.update({
         where: { id: userId },
         data: {
-          locale: body.locale!.trim(),
-          currencyFormat: body.baseCurrency!.trim(),
+          locale: body.locale?.trim() || "en-IN",
+          currencyFormat: body.baseCurrency?.trim() || "INR",
         },
       });
 
@@ -118,11 +121,11 @@ export async function POST(req: Request) {
         where: { workspaceId },
         create: {
           workspaceId,
-          companyName: body.companyName!.trim(),
-          proprietorName: body.proprietorName!.trim(),
-          email: body.email!.trim(),
-          address: body.address!.trim(),
-          taxLabel: body.taxLabel,
+          companyName: body.companyName?.trim() || "My Business",
+          proprietorName: body.proprietorName?.trim() || "Owner",
+          email: body.email?.trim() || "pending@example.com",
+          address: body.address?.trim() || "Pending Setup",
+          taxLabel: body.taxLabel || "GST",
           taxIdLabel: body.taxIdLabel,
           routingLabel: body.routingLabel,
           // Fallback for banking (can be finished in settings later)
@@ -149,11 +152,11 @@ export async function POST(req: Request) {
           shopAccentColor: body.shopAccentColor,
         },
         update: {
-          companyName: body.companyName!.trim(),
-          proprietorName: body.proprietorName!.trim(),
-          email: body.email!.trim(),
-          address: body.address!.trim(),
-          taxLabel: body.taxLabel,
+          companyName: body.companyName?.trim() || "My Business",
+          proprietorName: body.proprietorName?.trim() || "Owner",
+          email: body.email?.trim() || "pending@example.com",
+          address: body.address?.trim() || "Pending Setup",
+          taxLabel: body.taxLabel || "GST",
           taxIdLabel: body.taxIdLabel,
           routingLabel: body.routingLabel,
 
