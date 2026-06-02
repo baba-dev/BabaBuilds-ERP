@@ -232,16 +232,17 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
     });
   };
 
-  const finishSetup = async () => {
+  const finishSetup = async (isSkip = false) => {
     setIsSubmitting(true);
     setFieldErrors({});
-    const toastId = toast.loading("Configuring your global workspace...");
+    const toastId = toast.loading(isSkip ? "Skipping setup for now..." : "Configuring your global workspace...");
 
     try {
+      const payload = { ...form, isSkip };
       const res = await fetch("/api/setup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
+        body: JSON.stringify(payload)
       });
 
       if (res.ok) {
@@ -257,7 +258,23 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
         const errorBody = await res.json().catch(() => null);
         if (errorBody?.code === "VALIDATION_ERROR" && errorBody?.fieldErrors) {
           setFieldErrors(errorBody.fieldErrors as Record<string, string>);
-          toast.error(errorBody.error || "Please fix the highlighted fields.", { id: toastId });
+          
+          const errors = errorBody.fieldErrors;
+          let targetStep = step;
+          if (errors.countryCode) targetStep = 1;
+          else if (errors.baseCurrency || errors.locale) targetStep = 2;
+          else if (errors.taxLabel || errors.taxIdLabel || errors.routingLabel) targetStep = 3;
+          else if (errors.companyName || errors.proprietorName || errors.email || errors.address) {
+            setWizardMode("full");
+            targetStep = 4;
+          }
+
+          if (targetStep !== step || (targetStep === 4 && wizardMode === "quick")) {
+             setStep(targetStep);
+             toast.error("Please fill in the required fields on this step.", { id: toastId });
+          } else {
+             toast.error(errorBody.error || "Please fix the highlighted fields.", { id: toastId });
+          }
         } else {
           toast.error(errorBody?.error || "Setup failed. Please check your fields.", { id: toastId });
         }
@@ -460,7 +477,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                   }} placeholder={t('ph_company')} className="h-12 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
                   {fieldErrors.companyName && <p className="text-xs text-red-500">{fieldErrors.companyName}</p>}
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="dark:text-zinc-300">{t('founder_name')}</Label>
                     <Input value={form.proprietorName} onChange={e => {
@@ -538,13 +555,13 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                     </SelectContent>
                   </Select>
                   {form.defaultGateway === 'RAZORPAY' ? (
-                    <div className="grid grid-cols-2 gap-4 p-4 border rounded-md dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 border rounded-md dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
                        <div className="col-span-2 flex justify-end"><a href="https://dashboard.razorpay.com/app/keys" target="_blank" rel="noreferrer" className="text-xs text-indigo-500 hover:underline">{t('razorpay_link_text')}</a></div>
                        <Input value={form.razorpayKeyId} onChange={e => setForm({...form, razorpayKeyId: e.target.value})} placeholder="Key ID" className="dark:bg-zinc-950" />
                        <Input type="password" value={form.razorpayKeySecret} onChange={e => setForm({...form, razorpayKeySecret: e.target.value})} placeholder="Key Secret" className="dark:bg-zinc-950" />
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 gap-4 p-4 border rounded-md dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 border rounded-md dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
                        <div className="col-span-2 flex justify-end"><a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noreferrer" className="text-xs text-indigo-500 hover:underline">{t('stripe_link_text')}</a></div>
                        <Input value={form.stripePublishableKey} onChange={e => setForm({...form, stripePublishableKey: e.target.value})} placeholder="Publishable Key" className="dark:bg-zinc-950" />
                        <Input type="password" value={form.stripeSecretKey} onChange={e => setForm({...form, stripeSecretKey: e.target.value})} placeholder="Secret Key" className="dark:bg-zinc-950" />
@@ -554,7 +571,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
 
                 <div className="space-y-4">
                   <Label className="dark:text-zinc-300">{t('smtp_title_optional')}</Label>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Input value={form.smtpHost} onChange={e => setForm({...form, smtpHost: e.target.value})} placeholder={t('smtp_ph_host')} className="dark:bg-zinc-950" />
                     <Input type="number" value={form.smtpPort} onChange={e => setForm({...form, smtpPort: parseInt(e.target.value) || 465})} placeholder="465" className="dark:bg-zinc-950" />
                     <Input value={form.smtpUser} onChange={e => setForm({...form, smtpUser: e.target.value})} placeholder={t('smtp_ph_user')} className="dark:bg-zinc-950" />
@@ -1095,16 +1112,16 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
 
           </div>
           <CardFooter
-            className={`bg-zinc-50 p-6 border-t dark:border-zinc-800 flex justify-between gap-4 dark:bg-zinc-950 ${
+            className={`bg-zinc-50 p-4 sm:p-6 border-t dark:border-zinc-800 flex flex-col-reverse sm:flex-row sm:justify-between items-stretch sm:items-center gap-4 dark:bg-zinc-950 ${
               isModal ? "sticky bottom-0 z-20" : ""
             }`}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <Button 
                 variant="ghost" 
                 onClick={prevStep} 
                 disabled={step === 1 || isSubmitting}
-                className="dark:text-zinc-400 dark:hover:bg-zinc-900"
+                className="dark:text-zinc-400 dark:hover:bg-zinc-900 w-full sm:w-auto"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" /> {t('back')}
               </Button>
@@ -1112,33 +1129,33 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 variant="ghost"
                 type="button"
                 onClick={() => signOut({ callbackUrl: "/login" })}
-                className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/20 text-xs font-semibold px-3 h-9 rounded-md transition-colors"
+                className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/20 text-xs font-semibold px-3 h-9 rounded-md transition-colors w-full sm:w-auto"
               >
                 Sign Out
               </Button>
             </div>
             
             {step < lastStep ? (
-              <Button onClick={nextStep} className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[120px]">
+              <Button onClick={nextStep} className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[120px] w-full sm:w-auto">
                 {t('continue')} <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             ) : (
-              <div className="flex flex-col items-end gap-2">
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" type="button" onClick={finishSetup} disabled={isSubmitting} className="text-zinc-500 dark:text-zinc-400">
+              <div className="flex flex-col items-stretch sm:items-end gap-3 w-full sm:w-auto">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <Button variant="ghost" type="button" onClick={() => finishSetup(true)} disabled={isSubmitting} className="text-zinc-500 dark:text-zinc-400 w-full sm:w-auto">
                     {t('skip_for_now')}
                   </Button>
                   <Button
-                    onClick={finishSetup}
+                    onClick={() => finishSetup(false)}
                     disabled={isSubmitting || companyNameMissing}
                     title={companyNameMissing ? t('company_name_required') : undefined}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[160px] shadow-lg shadow-emerald-500/20 border-none"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[160px] shadow-lg shadow-emerald-500/20 border-none w-full sm:w-auto"
                   >
                     {isSubmitting ? t('finalizing') : <><CheckCircle2 className="w-4 h-4 mr-2" /> {t('launch_erp')}</>}
                   </Button>
                 </div>
                 {companyNameMissing && (
-                  <div className="text-right space-y-1">
+                  <div className="text-center sm:text-right space-y-1">
                     <p className="text-xs text-amber-700 dark:text-amber-300">{t('company_name_required')}</p>
                     <button
                       type="button"
@@ -1156,7 +1173,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                        setWizardMode("full");
                        setStep(4);
                      }}
-                     className="text-xs font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
+                     className="text-xs font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 text-center sm:text-right mt-1"
                   >
                     {t('advanced_setup_btn')}
                   </button>
