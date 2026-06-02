@@ -28,7 +28,11 @@ const CANONICAL_DASHBOARD_ROUTE = "/dashboard";
 async function consumeSignupIntent() {
   const store = await cookies();
   const intent = sanitizeSignupIntent(deserializeSignupIntent(store.get(SIGNUP_INTENT_COOKIE)?.value));
-  store.set(SIGNUP_INTENT_COOKIE, "", { path: "/", maxAge: 0 });
+  try {
+    store.set(SIGNUP_INTENT_COOKIE, "", { path: "/", maxAge: 0 });
+  } catch (error) {
+    console.warn("Could not clear signup intent cookie in this context", error);
+  }
   return intent;
 }
 
