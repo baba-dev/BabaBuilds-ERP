@@ -40,14 +40,9 @@ function formatRazorpayMask(payment: {
   return (payment.method || "PAYMENT_METHOD").toUpperCase();
 }
 
-function getProviderFromProfile(profile: {
-  stripePublishableKey: string | null;
-  stripeSecretKey: string | null;
-  razorpayKeyId: string | null;
-  razorpayKeySecret: string | null;
-}): Provider | null {
-  if (profile.stripePublishableKey && profile.stripeSecretKey) return "STRIPE";
-  if (profile.razorpayKeyId && profile.razorpayKeySecret) return "RAZORPAY";
+function getPlatformProvider(): Provider | null {
+  if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) return "RAZORPAY";
+  if (process.env.STRIPE_SECRET_KEY) return "STRIPE";
   return null;
 }
 
@@ -61,18 +56,12 @@ export async function GET() {
     }
 
     const workspaceId = scopedSession.workspaceId;
-    const [workspace, profile] = await Promise.all([
-      prisma.workspace.findUnique({
-        where: { id: workspaceId },
-        select: { paymentMethodMask: true, billingProviderId: true },
-      }),
-      prisma.businessProfile.findUnique({
-        where: { workspaceId },
-        select: { razorpayKeyId: true, razorpayKeySecret: true, stripePublishableKey: true, stripeSecretKey: true },
-      }),
-    ]);
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { paymentMethodMask: true, billingProviderId: true },
+    });
 
-    const provider = profile ? getProviderFromProfile(profile) : null;
+    const provider = getPlatformProvider();
 
     return NextResponse.json({
       paymentMethodMask: workspace?.paymentMethodMask || null,
@@ -102,7 +91,7 @@ export async function POST() {
       }),
       prisma.businessProfile.findUnique({
         where: { workspaceId },
-        select: { companyName: true, stripePublishableKey: true, stripeSecretKey: true, razorpayKeyId: true, razorpayKeySecret: true },
+        select: { companyName: true },
       }),
     ]);
 
@@ -114,23 +103,24 @@ export async function POST() {
       return NextResponse.json({ ok: true, message: "Payment method already on file.", confirmed: true });
     }
 
-    const provider = getProviderFromProfile(profile);
+    const provider = getPlatformProvider();
     if (!provider) {
       return NextResponse.json(
         {
-          error: "No payment provider is configured. Add Stripe or Razorpay keys in Settings → Integrations.",
+          error: "No payment provider is configured on the platform.",
           code: "PROVIDER_NOT_CONFIGURED",
         },
-        { status: 400 },
+        { status: 500 },
       );
     }
 
     if (provider === "STRIPE") {
-      if (!profile.stripeSecretKey || !profile.stripePublishableKey) {
-        return NextResponse.json({ error: "Stripe is not fully configured.", code: "PROVIDER_NOT_CONFIGURED" }, { status: 400 });
+      const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+      if (!stripeSecretKey) {
+        return NextResponse.json({ error: "Stripe is not fully configured.", code: "PROVIDER_NOT_CONFIGURED" }, { status: 500 });
       }
 
-      const stripe = new Stripe(decrypt(profile.stripeSecretKey), { apiVersion: "2026-03-25.dahlia" });
+      const stripe = new Stripe(stripeSecretKey, { apiVersion: "2026-03-25.dahlia" });
       const customerId = workspace.billingProviderId?.startsWith("cus_")
         ? workspace.billingProviderId
         : (
@@ -168,39 +158,44 @@ export async function POST() {
       });
     }
 
-    if (!profile.razorpayKeyId || !profile.razorpayKeySecret) {
-      return NextResponse.json({ error: "Razorpay is not fully configured.", code: "PROVIDER_NOT_CONFIGURED" }, { status: 400 });
+    if (provider === "RAZORPAY") {
+      const razorpayKeyId = process.env.RAZORPAY_KEY_ID;
+      const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
+
+      if (!razorpayKeyId || !razorpayKeySecret) {
+        return NextResponse.json({ error: "Razorpay is not fully configured.", code: "PROVIDER_NOT_CONFIGURED" }, { status: 500 });
+      }
+
+      const razorpay = new Razorpay({
+        key_id: razorpayKeyId,
+        key_secret: razorpayKeySecret,
+      });
+
+      const order = await razorpay.orders.create({
+        amount: 100,
+        currency: "INR",
+        receipt: `pm_setup_${workspaceId}_${Date.now()}`,
+        notes: {
+          workspaceId,
+          flow: "payment_method_setup",
+        },
+      });
+
+      return NextResponse.json({
+        ok: true,
+        provider,
+        confirmed: false,
+        clientAction: {
+          type: "RAZORPAY_CHECKOUT",
+          keyId: razorpayKeyId,
+          orderId: order.id,
+          amount: order.amount,
+          currency: order.currency,
+          name: profile.companyName || "BabaBuilds ERP",
+          description: "Setup payment method",
+        },
+      });
     }
-
-    const razorpay = new Razorpay({
-      key_id: profile.razorpayKeyId,
-      key_secret: decrypt(profile.razorpayKeySecret),
-    });
-
-    const order = await razorpay.orders.create({
-      amount: 100,
-      currency: "INR",
-      receipt: `pm_setup_${workspaceId}_${Date.now()}`,
-      notes: {
-        workspaceId,
-        flow: "payment_method_setup",
-      },
-    });
-
-    return NextResponse.json({
-      ok: true,
-      provider,
-      confirmed: false,
-      clientAction: {
-        type: "RAZORPAY_CHECKOUT",
-        keyId: profile.razorpayKeyId,
-        orderId: order.id,
-        amount: order.amount,
-        currency: order.currency,
-        name: profile.companyName || "BabaBuilds ERP",
-        description: "Setup payment method",
-      },
-    });
   } catch {
     return NextResponse.json({ error: "Unable to add payment method." }, { status: 500 });
   }
@@ -219,24 +214,19 @@ export async function PATCH(req: Request) {
     const body = await req.json().catch(() => ({}));
     const provider = body?.provider as Provider | undefined;
 
-    const [workspace, profile] = await Promise.all([
-      prisma.workspace.findUnique({
-        where: { id: workspaceId },
-        select: { id: true, billingProviderId: true },
-      }),
-      prisma.businessProfile.findUnique({
-        where: { workspaceId },
-        select: { stripeSecretKey: true, razorpayKeySecret: true },
-      }),
-    ]);
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { id: true, billingProviderId: true },
+    });
 
-    if (!workspace || !profile) {
-      return NextResponse.json({ error: "Workspace profile not found." }, { status: 404 });
+    if (!workspace) {
+      return NextResponse.json({ error: "Workspace not found." }, { status: 404 });
     }
 
     if (provider === "STRIPE") {
-      if (!profile.stripeSecretKey) {
-        return NextResponse.json({ error: "Stripe is not configured.", code: "PROVIDER_NOT_CONFIGURED" }, { status: 400 });
+      const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+      if (!stripeSecretKey) {
+        return NextResponse.json({ error: "Stripe is not configured.", code: "PROVIDER_NOT_CONFIGURED" }, { status: 500 });
       }
 
       const checkoutSessionId = body?.checkoutSessionId as string | undefined;
@@ -244,7 +234,7 @@ export async function PATCH(req: Request) {
         return NextResponse.json({ error: "Missing Stripe checkout session ID.", code: "INVALID_REQUEST" }, { status: 400 });
       }
 
-      const stripe = new Stripe(decrypt(profile.stripeSecretKey), { apiVersion: "2026-03-25.dahlia" });
+      const stripe = new Stripe(stripeSecretKey, { apiVersion: "2026-03-25.dahlia" });
       const checkoutSession = await stripe.checkout.sessions.retrieve(checkoutSessionId, {
         expand: ["setup_intent", "setup_intent.payment_method"],
       });
@@ -277,8 +267,9 @@ export async function PATCH(req: Request) {
     }
 
     if (provider === "RAZORPAY") {
-      if (!profile.razorpayKeySecret) {
-        return NextResponse.json({ error: "Razorpay is not configured.", code: "PROVIDER_NOT_CONFIGURED" }, { status: 400 });
+      const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
+      if (!razorpayKeySecret) {
+        return NextResponse.json({ error: "Razorpay is not configured.", code: "PROVIDER_NOT_CONFIGURED" }, { status: 500 });
       }
 
       const razorpayPaymentId = body?.razorpay_payment_id as string | undefined;
@@ -289,9 +280,8 @@ export async function PATCH(req: Request) {
         return NextResponse.json({ error: "Missing Razorpay confirmation payload.", code: "INVALID_REQUEST" }, { status: 400 });
       }
 
-      const keySecret = decrypt(profile.razorpayKeySecret);
       const generatedSignature = crypto
-        .createHmac("sha256", keySecret)
+        .createHmac("sha256", razorpayKeySecret)
         .update(`${razorpayOrderId}|${razorpayPaymentId}`)
         .digest("hex");
 
@@ -299,18 +289,14 @@ export async function PATCH(req: Request) {
         return NextResponse.json({ error: "Invalid Razorpay signature.", code: "ATTACHMENT_FAILED" }, { status: 400 });
       }
 
-      const bizProfile = await prisma.businessProfile.findUnique({
-        where: { workspaceId },
-        select: { razorpayKeyId: true },
-      });
-
-      if (!bizProfile?.razorpayKeyId) {
-        return NextResponse.json({ error: "Razorpay is not configured.", code: "PROVIDER_NOT_CONFIGURED" }, { status: 400 });
+      const razorpayKeyId = process.env.RAZORPAY_KEY_ID;
+      if (!razorpayKeyId) {
+        return NextResponse.json({ error: "Razorpay is not configured.", code: "PROVIDER_NOT_CONFIGURED" }, { status: 500 });
       }
 
       const razorpay = new Razorpay({
-        key_id: bizProfile.razorpayKeyId,
-        key_secret: keySecret,
+        key_id: razorpayKeyId,
+        key_secret: razorpayKeySecret,
       });
 
       const payment = await razorpay.payments.fetch(razorpayPaymentId);

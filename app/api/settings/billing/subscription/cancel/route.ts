@@ -23,8 +23,8 @@ export async function POST() {
       return NextResponse.json({ error: "Workspace not found." }, { status: 404 });
     }
 
-    if (workspace.subscriptionStatus !== "PRO") {
-      return NextResponse.json({ error: "No active PRO subscription to cancel." }, { status: 400 });
+    if (workspace.subscriptionStatus !== "PRO" && workspace.subscriptionStatus !== "TEAM") {
+      return NextResponse.json({ error: "No active paid subscription to cancel." }, { status: 400 });
     }
 
     await prisma.workspace.update({
