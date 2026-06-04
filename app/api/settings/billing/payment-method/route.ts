@@ -41,7 +41,7 @@ function formatRazorpayMask(payment: {
 }
 
 function getPlatformProvider(): Provider | null {
-  if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) return "RAZORPAY";
+  if ((process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) && process.env.RAZORPAY_KEY_SECRET) return "RAZORPAY";
   if (process.env.STRIPE_SECRET_KEY) return "STRIPE";
   return null;
 }
@@ -95,8 +95,8 @@ export async function POST() {
       }),
     ]);
 
-    if (!workspace || !profile) {
-      return NextResponse.json({ error: "Workspace profile not found." }, { status: 404 });
+    if (!workspace) {
+      return NextResponse.json({ error: "Workspace not found." }, { status: 404 });
     }
 
     if (workspace.paymentMethodMask) {
@@ -125,7 +125,7 @@ export async function POST() {
         ? workspace.billingProviderId
         : (
             await stripe.customers.create({
-              name: profile.companyName || undefined,
+              name: profile?.companyName || undefined,
               metadata: { workspaceId },
             })
           ).id;
@@ -159,7 +159,7 @@ export async function POST() {
     }
 
     if (provider === "RAZORPAY") {
-      const razorpayKeyId = process.env.RAZORPAY_KEY_ID;
+      const razorpayKeyId = process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
       const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
 
       if (!razorpayKeyId || !razorpayKeySecret) {
@@ -191,7 +191,7 @@ export async function POST() {
           orderId: order.id,
           amount: order.amount,
           currency: order.currency,
-          name: profile.companyName || "BabaBuilds ERP",
+          name: profile?.companyName || "BabaBuilds ERP",
           description: "Setup payment method",
         },
       });
