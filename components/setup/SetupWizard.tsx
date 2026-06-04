@@ -556,13 +556,13 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                   </Select>
                   {form.defaultGateway === 'RAZORPAY' ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 border rounded-md dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
-                       <div className="col-span-2 flex justify-end"><a href="https://dashboard.razorpay.com/app/keys" target="_blank" rel="noreferrer" className="text-xs text-indigo-500 hover:underline">{t('razorpay_link_text')}</a></div>
+                       <div className="col-span-1 sm:col-span-2 flex justify-end"><a href="https://dashboard.razorpay.com/app/keys" target="_blank" rel="noreferrer" className="text-xs text-indigo-500 hover:underline">{t('razorpay_link_text')}</a></div>
                        <Input value={form.razorpayKeyId} onChange={e => setForm({...form, razorpayKeyId: e.target.value})} placeholder="Key ID" className="dark:bg-zinc-950" />
                        <Input type="password" value={form.razorpayKeySecret} onChange={e => setForm({...form, razorpayKeySecret: e.target.value})} placeholder="Key Secret" className="dark:bg-zinc-950" />
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 border rounded-md dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900">
-                       <div className="col-span-2 flex justify-end"><a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noreferrer" className="text-xs text-indigo-500 hover:underline">{t('stripe_link_text')}</a></div>
+                       <div className="col-span-1 sm:col-span-2 flex justify-end"><a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noreferrer" className="text-xs text-indigo-500 hover:underline">{t('stripe_link_text')}</a></div>
                        <Input value={form.stripePublishableKey} onChange={e => setForm({...form, stripePublishableKey: e.target.value})} placeholder="Publishable Key" className="dark:bg-zinc-950" />
                        <Input type="password" value={form.stripeSecretKey} onChange={e => setForm({...form, stripeSecretKey: e.target.value})} placeholder="Secret Key" className="dark:bg-zinc-950" />
                     </div>
@@ -576,7 +576,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                     <Input type="number" value={form.smtpPort} onChange={e => setForm({...form, smtpPort: parseInt(e.target.value) || 465})} placeholder="465" className="dark:bg-zinc-950" />
                     <Input value={form.smtpUser} onChange={e => setForm({...form, smtpUser: e.target.value})} placeholder={t('smtp_ph_user')} className="dark:bg-zinc-950" />
                     <Input type="password" value={form.smtpPassword} onChange={e => setForm({...form, smtpPassword: e.target.value})} placeholder={t('smtp_ph_pass')} className="dark:bg-zinc-950" />
-                    <Input value={form.smtpFromEmail} onChange={e => setForm({...form, smtpFromEmail: e.target.value})} placeholder={t('smtp_ph_from')} className="col-span-2 dark:bg-zinc-950" />
+                    <Input value={form.smtpFromEmail} onChange={e => setForm({...form, smtpFromEmail: e.target.value})} placeholder={t('smtp_ph_from')} className="col-span-1 sm:col-span-2 dark:bg-zinc-950" />
                   </div>
                 </div>
 
@@ -614,7 +614,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                   }`}
                 >
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-4 flex-1 min-w-0">
                       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
                         form.enableWorkforce ? 'bg-teal-500 shadow-lg shadow-teal-500/20' : 'bg-zinc-100 dark:bg-zinc-800'
                       }`}>
@@ -668,7 +668,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                   }`}
                 >
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-4 flex-1 min-w-0">
                       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
                         form.enableDocuments ? 'bg-indigo-600 shadow-lg shadow-indigo-500/20' : 'bg-zinc-100 dark:bg-zinc-800'
                       }`}>
@@ -722,7 +722,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                   }`}
                 >
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-4 flex-1 min-w-0">
                       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
                         form.enableCashFlow ? 'bg-cyan-600 shadow-lg shadow-cyan-500/20' : 'bg-zinc-100 dark:bg-zinc-800'
                       }`}>
@@ -849,7 +849,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                   }`}
                 >
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-4 flex-1 min-w-0">
                       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
                         form.enableArCollections ? 'bg-orange-600 shadow-lg shadow-orange-500/20' : 'bg-zinc-100 dark:bg-zinc-800'
                       }`}>
@@ -904,7 +904,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                   }`}
                 >
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-4 flex-1 min-w-0">
                       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
                         form.enableReportingCenter ? 'bg-amber-600 shadow-lg shadow-amber-500/20' : 'bg-zinc-100 dark:bg-zinc-800'
                       }`}>
@@ -944,7 +944,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                   }`}
                 >
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-4 flex-1 min-w-0">
                       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
                         form.enableRevenuePipeline ? 'bg-violet-600 shadow-lg shadow-violet-500/20' : 'bg-zinc-100 dark:bg-zinc-800'
                       }`}>
@@ -998,7 +998,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                   }`}
                 >
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start gap-4 flex-1 min-w-0">
                       <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all ${
                         form.enablePayroll ? 'bg-emerald-600 shadow-lg shadow-emerald-500/20' : 'bg-zinc-100 dark:bg-zinc-800'
                       }`}>
@@ -1116,12 +1116,12 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
               isModal ? "sticky bottom-0 z-20" : ""
             }`}
           >
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div className="flex flex-row sm:flex-row items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
               <Button 
                 variant="ghost" 
                 onClick={prevStep} 
                 disabled={step === 1 || isSubmitting}
-                className="dark:text-zinc-400 dark:hover:bg-zinc-900 w-full sm:w-auto"
+                className="dark:text-zinc-400 dark:hover:bg-zinc-900 flex-1 sm:flex-none"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" /> {t('back')}
               </Button>
@@ -1129,7 +1129,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 variant="ghost"
                 type="button"
                 onClick={() => signOut({ callbackUrl: "/login" })}
-                className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/20 text-xs font-semibold px-3 h-9 rounded-md transition-colors w-full sm:w-auto"
+                className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/20 text-xs font-semibold px-3 h-9 rounded-md transition-colors flex-1 sm:flex-none"
               >
                 Sign Out
               </Button>
@@ -1141,8 +1141,8 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
               </Button>
             ) : (
               <div className="flex flex-col items-stretch sm:items-end gap-3 w-full sm:w-auto">
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  <Button variant="ghost" type="button" onClick={() => finishSetup(true)} disabled={isSubmitting} className="text-zinc-500 dark:text-zinc-400 w-full sm:w-auto">
+                <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2">
+                  <Button variant="ghost" type="button" onClick={() => finishSetup(true)} disabled={isSubmitting} className="text-zinc-500 dark:text-zinc-400 w-full sm:w-auto mt-2 sm:mt-0">
                     {t('skip_for_now')}
                   </Button>
                   <Button

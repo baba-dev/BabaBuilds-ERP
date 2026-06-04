@@ -130,7 +130,7 @@ export async function POST(req: Request) {
           routingLabel: body.routingLabel,
           // Fallback for banking (can be finished in settings later)
           bankName: "Pending Setup",
-          accountName: body.proprietorName!.trim(),
+          accountName: body.proprietorName?.trim() || "Owner",
           accountNumber: "0000",
           ifscCode: "0000",
           panNumber: "PENDING",
@@ -238,12 +238,6 @@ export async function POST(req: Request) {
         console.error('[setup] AR Collections module init failed (non-blocking):', e)
       );
     }
-    if (body.enableReportingCenter === true) {
-      await enableModule(workspaceId, 'REPORTING_CENTER', userId).catch((e) =>
-        console.error('[setup] Reporting Center module init failed (non-blocking):', e)
-      );
-    }
-
     if (body.enableReportingCenter === true) {
       await enableModule(workspaceId, 'REPORTING_CENTER', userId).catch((e) =>
         console.error('[setup] Reporting Center module init failed (non-blocking):', e)
