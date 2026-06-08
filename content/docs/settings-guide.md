@@ -6,31 +6,51 @@ category: "General"
 tags: ["settings", "configuration", "workspace", "branding", "modules"]
 estimatedMinutes: 12
 isFeatured: true
-dateModified: "2026-04-22"
+dateModified: "2026-06-04"
 ---
 
 # Configuring Your Business Profile & Workspace Settings
 
-Settings is your ERP control panel. Values here affect invoices, communication, tax fields, and enabled modules.
-
-## Open Settings
-
-1. Go to **Settings** from the sidebar.
-2. Update section values.
-3. Click **Save Configuration**.
+Settings is your ERP control panel. The values you configure here dictate how your business presents itself to the world (via invoices and emails), how taxes are calculated, and which advanced features are available to your team.
 
 <HelpImage src="/help/screenshots/help-settings-01-overview.png" alt="Settings overview page" caption="Use Settings as your command center for identity, finance, and module controls." />
 
+## Step 1: Business Identity & Branding
+
+Your business profile information appears on all generated PDFs and client-facing communications.
+
 <HelpImage src="/help/screenshots/help-settings-02-primary-action.png" alt="Settings primary action section" caption="Primary settings controls for business profile and integrations." />
+
+<Steps>
+  <Step title="Navigate to Settings">
+    Click on **Settings** at the bottom of the sidebar.
+  </Step>
+  <Step title="Update Core Identity">
+    Enter your Legal Business Name, operating address, and contact details.
+  </Step>
+  <Step title="Upload Logo">
+    Upload a high-resolution logo. This will be automatically embedded into the header of your invoices.
+  </Step>
+</Steps>
+
+## Step 2: Financial & Compliance Configuration
+
+Ensuring your tax and banking details are correct is critical before sending your first invoice.
 
 <HelpImage src="/help/screenshots/help-settings-03-detail.png" alt="Settings detailed section" caption="Detailed form context for workspace configuration." />
 
-## Optional Sub Systems
+- **Tax IDs:** Enter your local tax registration numbers (e.g., GSTIN, VAT, EIN). These are legally required on invoices in many jurisdictions.
+- **Bank Remittance Details:** Clearly state your bank name, account number, routing/IFSC codes, and account holder name so clients know where to send wire transfers.
+- **SMTP Configuration:** To send invoices directly from BabaBuilds ERP, enter your email provider's SMTP credentials. We recommend using an App Password for security.
 
-At the **Workspace Modules** section, you can enable advanced modules from settings:
+## Step 3: Enabling Optional Sub Systems
 
-- Workforce
-- Payroll
+BabaBuilds ERP is modular. You can turn on advanced features only when your business needs them, keeping the interface uncluttered.
+
+<HelpImage src="/help/screenshots/help-settings-modules-enabled.png" alt="Workspace modules in settings" caption="Enable optional modules from this section, then verify routes in sidebar." />
+
+From the **Workspace Modules** section, toggle on modules such as:
+- Workforce & Payroll
 - Revenue Pipeline
 - Document Vault
 - Cash Flow
@@ -38,6 +58,24 @@ At the **Workspace Modules** section, you can enable advanced modules from setti
 - Reporting Center
 - Import Manager
 
-<HelpImage src="/help/screenshots/help-settings-modules-enabled.png" alt="Workspace modules in settings" caption="Enable optional modules from this section, then verify routes in sidebar." />
+Enabled modules will immediately appear in your sidebar navigation. For more details on what each module does, see: [Optional Sub Systems — Overview](/help/optional-sub-systems-overview).
 
-See: [Optional Sub Systems — Overview](/help/optional-sub-systems-overview)
+## Best Practices
+
+**Do**
+- Send a test email to yourself immediately after configuring SMTP settings to verify they work.
+- Double-check bank account numbers; a typo here can result in lost or delayed payments.
+
+**Don't**
+- Change your core business legal name or Tax ID midway through a financial year without consulting your accountant, as this breaks invoice continuity.
+- Enable all optional modules at once if you are a solo freelancer; start simple and activate modules as you grow.
+
+---
+
+## FAQ
+
+### Why are my invoices failing to send via email?
+This is almost always an SMTP issue. Ensure your SMTP host, port, username, and password are correct. If using Gmail or Outlook, you must generate a specific "App Password" rather than using your main account password.
+
+### Can I have different branding for different clients?
+No, the branding configured in Workspace Settings applies globally to all invoices generated within that workspace. For multiple brands, consider provisioning a separate workspace.

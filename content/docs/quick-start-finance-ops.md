@@ -6,31 +6,60 @@ category: "Getting Started"
 tags: ["finance ops", "operations", "checklist", "monthly close"]
 estimatedMinutes: 8
 isFeatured: true
-dateModified: "2026-04-21"
+dateModified: "2026-06-08"
 ---
 
 # Quick Start for Finance Ops
 
-Use this routine to keep finance operations predictable and audit-ready.
+Use this routine to keep finance operations predictable and audit-ready. By establishing a set rhythm, you prevent the end-of-month panic associated with closing the books.
 
-## Daily rhythm
+## Daily Rhythm
 
-- Generate and send due invoices
-- Check overdue queue and follow-ups
-- Capture same-day expenses
+The daily checks ensure cash keeps flowing and exceptions are caught early.
 
-## Weekly rhythm
+<Steps>
+  <Step title="Generate Invoices">
+    Draft and send any invoices due for the day, pulling directly from the Service Catalog.
+  </Step>
+  <Step title="Review Collections Queue">
+    Check the AR Collections module. Action any high-priority overdue accounts that require a manual phone call.
+  </Step>
+  <Step title="Capture Expenses">
+    Log and categorize any same-day business expenses to prevent receipt backlog.
+  </Step>
+</Steps>
 
-- Reconcile invoice status vs payments
-- Review top overdue accounts
-- Validate high-value expense entries
+## Weekly Rhythm
 
-## Monthly rhythm
+The weekly checks are for reconciliation and variance tracking.
 
-- Close invoice cycle
-- Review tax estimate trends
-- Export leadership reports
-- Update renewal/retainer risks
+<Steps>
+  <Step title="Run AI Reconciliation">
+    Import the week's bank statement and match payments to open invoices.
+  </Step>
+  <Step title="Validate Expenses">
+    Review the week's high-value expense entries to ensure they are categorized correctly and have receipts attached.
+  </Step>
+  <Step title="Review Cash Flow">
+    Check the 90-day Cash Flow forecast to ensure no liquidity warnings have been triggered.
+  </Step>
+</Steps>
+
+## Monthly Rhythm
+
+The monthly checks finalize the period and provide leadership reporting.
+
+<Steps>
+  <Step title="Close the Invoice Cycle">
+    Ensure all recurring retainers have generated their monthly invoices.
+  </Step>
+  <Step title="Generate Management Reports">
+    Use the Reporting Center to export the P&L, AR Aging, and Tax Liability summaries.
+  </Step>
+  <Step title="Evaluate Renewals">
+    Review retainers expiring in the next 30-60 days and notify account managers to initiate renewal conversations.
+  </Step>
+</Steps>
 
 ---
 
@@ -39,11 +68,3 @@ Use this routine to keep finance operations predictable and audit-ready.
 - [Generating, Sending, and Collecting Invoices](/help/generating-invoices)
 - [Optional Module: AR Aging + Collections Centre](/help/optional-sub-system-ar-collections)
 - [Optional Module: Reporting Center](/help/optional-sub-system-reporting-center)
-
----
-
-## Article info
-
-- **Last reviewed:** 2026-04-21
-- **Owner:** Finance Operations Team
-- **Audience:** Finance Ops, Billing Managers

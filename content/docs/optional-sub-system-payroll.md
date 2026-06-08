@@ -5,24 +5,57 @@ order: 13
 category: "Optional Sub Systems"
 tags: ["payroll", "salary", "compliance", "runs"]
 estimatedMinutes: 9
-dateModified: "2026-04-22"
+dateModified: "2026-06-04"
 ---
 
 # Optional Module: Payroll
 
-Payroll supports end-to-end salary processing with controlled run lifecycle and posting safeguards.
-
-## Screenshots
+Payroll supports end-to-end salary processing with a controlled run lifecycle and posting safeguards to ensure your team is paid accurately and on time.
 
 <HelpImage src="/help/screenshots/help-optional-payroll-01-overview.png" alt="Payroll landing page" caption="Payroll overview page after module enablement." />
 
+## Enabling and Configuring Payroll
+
+To begin using the Payroll module, you must first enable it in your Workspace Settings and configure your standard salary components.
+
 <HelpImage src="/help/screenshots/help-optional-payroll-02-primary-action.png" alt="Payroll primary action area" caption="Configure payroll cycle, components, and run readiness checks." />
+
+<Steps>
+  <Step title="Enable the Module">
+    Go to **Settings > Workspace Modules** and toggle on **Payroll**.
+  </Step>
+  <Step title="Define Salary Components">
+    Set up the earning components (e.g., Basic Pay, Allowances, Bonuses) and deductions (e.g., Taxes, Provident Fund, Health Insurance).
+  </Step>
+  <Step title="Assign to Employees">
+    Link these pay components to individual employee profiles (requires the **Workforce** module to be active).
+  </Step>
+</Steps>
+
+## Executing a Payroll Run
+
+Running payroll is a structured, multi-step process to prevent costly errors.
 
 <HelpImage src="/help/screenshots/help-optional-payroll-03-detail.png" alt="Payroll detailed section" caption="Detailed payroll controls and execution context." />
 
-## Operating workflow
+<Steps>
+  <Step title="Draft the Run">
+    Initiate a new payroll run for the current period. The system will auto-calculate based on employee profiles and attendance data.
+  </Step>
+  <Step title="Review and Adjust">
+    Review the drafted payslips. Manually add any one-off bonuses, overtime, or unpaid leave deductions.
+  </Step>
+  <Step title="Finalize and Post">
+    Once approved, finalize the run. This locks the payslips and generates the necessary export files for your bank.
+  </Step>
+</Steps>
 
-1. Configure payroll settings and components.
-2. Validate period readiness.
-3. Execute payroll run.
-4. Post/export payroll outputs for accounting/compliance.
+## Best Practices
+
+**Do**
+- Run a "test" payroll cycle for a single department before rolling it out company-wide to ensure all tax deductions are calculating correctly.
+- Always review the gross-to-net variance report before finalizing the run.
+
+**Don't**
+- Finalize a run if attendance data from the Workforce module is incomplete.
+- Delete an employee profile mid-month; always mark them as "Terminated" to preserve their payroll history for tax purposes.

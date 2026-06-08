@@ -5,17 +5,49 @@ order: 19
 category: "Optional Sub Systems"
 tags: ["import", "bulk", "migration", "csv", "xlsx"]
 estimatedMinutes: 8
-dateModified: "2026-04-22"
+dateModified: "2026-06-04"
 ---
 
 # Optional Module: Import Manager
 
-Import Manager handles safe bulk create/upsert workflows using preview-first validation.
-
-## Screenshots
+The Import Manager is designed to safely handle bulk data creation and upsert workflows (e.g., migrating clients from an old system or bulk-adding inventory items) using a preview-first validation process.
 
 <HelpImage src="/help/screenshots/help-optional-import-manager-01-overview.png" alt="Import Manager overview page" caption="Import Manager hub and run context." />
 
+## Performing a Bulk Import
+
 <HelpImage src="/help/screenshots/help-optional-import-manager-02-primary-action.png" alt="Import Manager mapping/validation screen" caption="Primary mapping and validation experience." />
 
+<Steps>
+  <Step title="Enable the Module">
+    Toggle on **Import Manager** in **Settings > Workspace Modules**.
+  </Step>
+  <Step title="Upload File">
+    Upload your CSV or Excel (`.xlsx`) file.
+  </Step>
+  <Step title="Map Columns">
+    Map the columns from your uploaded file to the corresponding fields in BabaBuilds ERP (e.g., mapping "Email Address" to "Primary Contact Email").
+  </Step>
+  <Step title="Review Validation">
+    The system will run a pre-check to identify any malformed data, such as invalid email formats or missing required fields.
+  </Step>
+  <Step title="Execute Import">
+    Once validation passes, confirm the import. The system will process the records and provide a final success report.
+  </Step>
+</Steps>
+
+## Reviewing Past Imports
+
 <HelpImage src="/help/screenshots/help-optional-import-manager-03-detail.png" alt="Import Manager detail view" caption="Validation detail and run-history context." />
+
+- **Run History:** Access the logs of all past imports, including who initiated them and when.
+- **Rollback Capabilities:** If an import contained massive errors, you can initiate a rollback to remove the imported records (available for 24 hours post-import).
+
+## Best Practices
+
+**Do**
+- Clean your data in Excel or Google Sheets before uploading. Remove blank rows and ensure date formats are consistent.
+- Run a small test import of 5-10 records before attempting to import thousands of rows.
+
+**Don't**
+- Attempt to import data while team members are actively modifying related records, to prevent version conflicts.
