@@ -1811,6 +1811,40 @@
         "switchToLight": "Switch to Light Mode",
         "switchToDark": "Switch to Dark Mode"
       }
+    },
+    "optionalModules": {
+      "title": "Extend with Optional Modules",
+      "subtitle": "Tailor BabaBuilds to your exact needs by enabling powerful, specialized modules.",
+      "modules": {
+        "taxAdvanced": {
+          "title": "Advanced Tax & Compliance",
+          "description": "Automated calculations, multi-region compliance, and audit-ready reporting."
+        },
+        "workforce": {
+          "title": "Workforce Management",
+          "description": "Manage your team, track attendance, and oversee HR operations seamlessly."
+        },
+        "payroll": {
+          "title": "Payroll Processing",
+          "description": "Run accurate payroll, calculate deductions, and manage payouts on time."
+        },
+        "shop": {
+          "title": "B2B/B2C Storefront",
+          "description": "Launch a custom shop storefront and manage incoming orders in real-time."
+        },
+        "revenuePipeline": {
+          "title": "Sales Pipeline",
+          "description": "Track deals from lead to cash with AI-driven pipeline forecasting."
+        },
+        "arCollections": {
+          "title": "AR Collections",
+          "description": "Automate follow-ups and improve cash flow with smart receivables management."
+        },
+        "documents": {
+          "title": "Document Hub",
+          "description": "Centralized, secure storage for all your business records and contracts."
+        }
+      }
     }
   },
   "AuthModal": {
