@@ -321,7 +321,9 @@
     "group_workspace": "Espacio de trabajo",
     "import_manager": "Gestor de importación",
     "help_center": "Help Center",
-    "tax_advanced": "Tax Advanced"
+    "tax_advanced": "Tax Advanced",
+    "pinItem": "Fijar {item}",
+    "unpinItem": "Desfijar {item}"
   },
   "UserNav": {
     "my_account": "Mi Cuenta",
@@ -1227,7 +1229,8 @@
       "description": "The global command center for bookkeeping, compliance, and growth. Automate your invoices, reconcile bank feeds, and let AI reveal your financial truth.",
       "primaryCta": "Start for Free",
       "secondaryCta": "See all Features",
-      "dashboardPreview": "Dashboard Preview"
+      "dashboardPreview": "Dashboard Preview",
+      "trialPerks": "No se requiere tarjeta de crédito • Prueba de 15 días • Incorporación guiada incluida"
     },
     "heroLoop": {
       "label": "Your revenue loop",
@@ -2393,6 +2396,16 @@
           "question": "Which payment gateways does BabaBuilds ERP integrate with?",
           "answer": "BabaBuilds ERP integrates with Razorpay (for INR payments) and Stripe (for international payments), enabling you to embed payment links directly into your invoices."
         }
+      ]
+    },
+    "schema": {
+      "tryActionName": "Iniciar prueba gratuita",
+      "offerDescription": "Prueba de 15 días para nuevos espacios de trabajo",
+      "featureList": [
+        "Facturación y propuestas",
+        "Flujo de caja y seguimiento de gastos",
+        "Soporte multidivisa",
+        "Flujos de trabajo fiscales y de cumplimiento"
       ]
     }
   },

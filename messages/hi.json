@@ -321,7 +321,9 @@
     "group_workspace": "वर्कस्पेस",
     "import_manager": "इम्पोर्ट मैनेजर",
     "help_center": "Help Center",
-    "tax_advanced": "Tax Advanced"
+    "tax_advanced": "Tax Advanced",
+    "pinItem": "{item} पिन करें",
+    "unpinItem": "{item} अनपिन करें"
   },
   "UserNav": {
     "my_account": "मेरा खाता",
@@ -1227,7 +1229,8 @@
       "description": "The global command center for bookkeeping, compliance, and growth. Automate your invoices, reconcile bank feeds, and let AI reveal your financial truth.",
       "primaryCta": "Start for Free",
       "secondaryCta": "See all Features",
-      "dashboardPreview": "Dashboard Preview"
+      "dashboardPreview": "Dashboard Preview",
+      "trialPerks": "क्रेडिट कार्ड की आवश्यकता नहीं • 15-दिवसीय परीक्षण • निर्देशित ऑनबोर्डिंग शामिल है"
     },
     "heroLoop": {
       "label": "Your revenue loop",
@@ -2376,6 +2379,16 @@
           "question": "Which payment gateways does BabaBuilds ERP integrate with?",
           "answer": "BabaBuilds ERP integrates with Razorpay (for INR payments) and Stripe (for international payments), enabling you to embed payment links directly into your invoices."
         }
+      ]
+    },
+    "schema": {
+      "tryActionName": "मुफ़्त परीक्षण शुरू करें",
+      "offerDescription": "नए वर्कस्पेस के लिए 15-दिवसीय परीक्षण",
+      "featureList": [
+        "चालान और प्रस्ताव",
+        "नकदी प्रवाह और व्यय ट्रैकिंग",
+        "बहु-मुद्रा समर्थन",
+        "कर और अनुपालन वर्कफ़्लो"
       ]
     }
   },

@@ -71,8 +71,8 @@ export function NavMain({ preferences, pinError, enabledModules, grantedPermissi
             type="button"
             className="rounded-md p-1 text-zinc-400 transition hover:bg-white/10 hover:text-zinc-100"
             onClick={() => onTogglePin(item.key as Exclude<SidebarItemId, "settings">, !isPinned)}
-            aria-label={isPinned ? `Unpin ${t(item.key)}` : `Pin ${t(item.key)}`}
-            title={isPinned ? `Unpin ${t(item.key)}` : `Pin ${t(item.key)}`}
+            aria-label={isPinned ? t("unpinItem", { item: t(item.key) }) : t("pinItem", { item: t(item.key) })}
+            title={isPinned ? t("unpinItem", { item: t(item.key) }) : t("pinItem", { item: t(item.key) })}
           >
             {isPinned ? (
               <PinOff className="h-3.5 w-3.5" />
