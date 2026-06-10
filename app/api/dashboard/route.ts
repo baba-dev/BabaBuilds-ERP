@@ -316,7 +316,7 @@ async function buildDashboardPayload(
     timed("retainers.active", () =>
       prisma.retainer.findMany({
         where: { workspaceId, status: "ACTIVE" },
-        select: { amount: true, nextBillingDate: true, createdAt: true },
+        select: { items: { select: { quantity: true, unitPrice: true } }, nextBillingDate: true, createdAt: true },
       })
     ),
 
@@ -606,7 +606,7 @@ async function buildDashboardPayload(
     : { amount: serializeMoney(0) };
 
   const recurringRevenue = retainers.reduce(
-    (sum, ret) => sum.plus(toDecimal(ret.amount)),
+    (sum, ret) => sum.plus(toDecimal((ret as any).items?.reduce((acc: number, i: any) => acc + (i.quantity * Number(i.unitPrice)), 0) || 0)),
     new Prisma.Decimal(0)
   );
   const arr = recurringRevenue.mul(12);
@@ -694,14 +694,15 @@ async function buildDashboardPayload(
   }
 
   const generatedMrrRows = retainers.flatMap((ret) => {
-    if (!fyRange || !ret.createdAt) return [{ date: now, value: ret.amount }];
+    const amount = (ret as any).items?.reduce((acc: number, i: any) => acc + (i.quantity * Number(i.unitPrice)), 0) || 0;
+    if (!fyRange || !ret.createdAt) return [{ date: now, value: amount }];
     const activeMonths = [];
     for (let i = 0; i < 12; i++) {
       const d = new Date(fyRange.start);
       d.setMonth(fyRange.start.getMonth() + i);
       const isStartMonth = d.getFullYear() === new Date(ret.createdAt).getFullYear() && d.getMonth() === new Date(ret.createdAt).getMonth();
       if (isStartMonth || new Date(ret.createdAt) < fyRange.start) {
-        activeMonths.push({ date: d, value: ret.amount });
+        activeMonths.push({ date: d, value: amount });
       }
     }
     return activeMonths;

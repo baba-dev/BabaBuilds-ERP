@@ -21,12 +21,19 @@ export async function GET() {
       include: { 
         client: {
           select: { name: true, email: true } // We only need name and email for the UI
-        } 
+        },
+        items: true
       },
       orderBy: { nextBillingDate: 'asc' } // Show closest billing dates first
     });
 
-    return NextResponse.json(retainers);
+    const mappedRetainers = retainers.map(r => ({
+      ...r,
+      serviceName: r.items.map(i => i.title).join(', ') || 'Retainer Services',
+      amount: r.items.reduce((sum, i) => sum + (i.quantity * Number(i.unitPrice)), 0)
+    }));
+
+    return NextResponse.json(mappedRetainers);
   } catch (error) {
     console.error("Fetch Retainers Error:", error);
     return NextResponse.json({ error: 'Failed to fetch retainers' }, { status: 500 });
@@ -43,7 +50,7 @@ export async function POST(request: Request) {
     const workspaceId = session.workspaceId;
 
     const body = await request.json();
-    const { clientId, serviceName, amount, frequency, autoAppendMonth, nextBillingDate, serviceTemplateId, taxRateOverride } = body;
+    const { clientId, serviceName, amount, frequency, autoAppendMonth, nextBillingDate, serviceTemplateId, taxRateOverride, items } = body;
 
     // 2. VALIDATE CLIENT OWNERSHIP
     const client = await prisma.client.findFirst({ 
@@ -90,19 +97,28 @@ export async function POST(request: Request) {
       });
     }
 
-    // 3. CREATE THE AUTOMATED LOOP
     const newRetainer = await prisma.retainer.create({
       data: {
         workspaceId,
         clientId,
-        serviceName,
-        amount: Number(amount),
         frequency: frequency || "MONTHLY",
         autoAppendMonth: Boolean(autoAppendMonth),
         nextBillingDate: new Date(nextBillingDate),
         status: "ACTIVE", // Automatically starts running
-        sacCode: (body.sacCode as string) || serviceTemplate?.sacCode?.code || null, // Optional: inherited from profile if blank
-        taxRate: taxResolution.taxRate,
+        items: {
+          create: items && items.length > 0 ? items.map((i: any) => ({
+            title: i.title || "Retainer Service",
+            quantity: Number(i.quantity) || 1,
+            unitPrice: Number(i.unitPrice),
+            taxRate: Number(i.taxRate) || 0,
+            serviceTemplateId: i.serviceTemplateId || null,
+          })) : [{
+            title: serviceName || "Retainer Services",
+            quantity: 1,
+            unitPrice: Number(amount),
+            taxRate: taxResolution.taxRate,
+          }]
+        }
       }
     });
 

@@ -33,6 +33,7 @@ import { useTranslations } from "next-intl";
 import { TaxRateModal } from "@/components/invoice/tax-rate-modal";
 import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import RetainerBuilder from "@/components/retainers/RetainerBuilder";
 
 interface Retainer {
   id: string;
@@ -705,7 +706,14 @@ export default function RetainersHub() {
           </CardContent>
         </Card>
         ) : (
-          renderWizardContent()
+          <RetainerBuilder 
+            clients={clients} 
+            catalog={catalog} 
+            onSuccess={() => { setView('list'); fetchData(); }} 
+            onCancel={() => setView('list')} 
+            defaultClient={clientId} 
+            defaultService={serviceTemplateId} 
+          />
         )}
 
         {/* EDIT RETAINER MODAL */}

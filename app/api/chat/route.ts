@@ -596,7 +596,7 @@ async function getClientLedger(clientName: string, workspaceId: string) {
           select: { invoiceNumber: true, totalAmount: true, status: true },
         },
         retainers: {
-          select: { serviceName: true, amount: true, status: true },
+          select: { status: true, items: { select: { title: true, quantity: true, unitPrice: true } } },
         },
         proposals: {
           orderBy: { dateCreated: 'desc' },
@@ -614,7 +614,11 @@ async function getClientLedger(clientName: string, workspaceId: string) {
       client: client.name,
       status: client.status,
       recentInvoices: client.invoices,
-      activeRetainers: client.retainers,
+      activeRetainers: client.retainers.map((r: any) => ({
+        serviceName: r.items.map((i: any) => i.title).join(', ') || 'Retainer',
+        amount: r.items.reduce((acc: number, i: any) => acc + (i.quantity * Number(i.unitPrice)), 0),
+        status: r.status,
+      })),
       recentProposals: client.proposals,
     });
   } catch {
@@ -900,11 +904,17 @@ async function createRetainer(
       data: {
         workspaceId,
         clientId: client.id,
-        serviceName,
-        amount,
         frequency: freqCaps,
         nextBillingDate: nextDate,
         status: 'ACTIVE',
+        items: {
+          create: [{
+            title: serviceName || 'Retainer Services',
+            quantity: 1,
+            unitPrice: amount || 0,
+            taxRate: 0,
+          }]
+        }
       },
     });
 
@@ -943,9 +953,10 @@ async function updateRetainerStatus(
     const retainer = await prisma.retainer.findFirst({
       where: {
         clientId: client.id,
-        serviceName: { contains: serviceName },
+        items: { some: { title: { contains: serviceName } } },
         workspaceId,
       },
+      include: { items: true }
     });
 
     if (!retainer) {
@@ -972,7 +983,7 @@ async function updateRetainerStatus(
 
     return JSON.stringify({
       success: true,
-      message: `Retainer ${retainer.serviceName} for ${client.name} is now ${status.toUpperCase()}.`,
+      message: `Retainer ${retainer.items.map((i: any) => i.title).join(', ')} for ${client.name} is now ${status.toUpperCase()}.`,
     });
   } catch {
     return JSON.stringify({ error: 'Failed to update retainer status.' });
@@ -983,7 +994,7 @@ async function getActiveRetainers(workspaceId: string) {
   try {
     const retainers = await prisma.retainer.findMany({
       where: { workspaceId, status: 'ACTIVE' },
-      include: { client: { select: { name: true } } },
+      include: { client: { select: { name: true } }, items: true },
       orderBy: { nextBillingDate: 'asc' },
     });
 
@@ -994,8 +1005,8 @@ async function getActiveRetainers(workspaceId: string) {
     return JSON.stringify(
       retainers.map((r) => ({
         client: r.client.name,
-        service: r.serviceName,
-        amount: `₹${r.amount}`,
+        service: (r as any).items?.map((i: any) => i.title).join(', ') || 'Retainer Services',
+        amount: `₹${(r as any).items?.reduce((acc: number, i: any) => acc + (i.quantity * Number(i.unitPrice)), 0)}`,
         frequency: r.frequency,
         nextBilling: r.nextBillingDate.toISOString().split('T')[0],
       })),
