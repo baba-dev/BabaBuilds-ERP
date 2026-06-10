@@ -35,8 +35,6 @@ export async function PATCH(
     const updatedRetainer = await prisma.retainer.update({
       where: { id: retainerId },
       data: {
-        serviceName: serviceName || existingRetainer.serviceName,
-        amount: amount ? parseFloat(amount) : existingRetainer.amount,
         frequency: frequency || existingRetainer.frequency,
       }
     });

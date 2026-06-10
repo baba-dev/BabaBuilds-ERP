@@ -194,13 +194,18 @@ export async function seedDemoWorkspace(
       data: {
         workspaceId: workspace.id,
         clientId,
-        serviceName: r.serviceName,
-        amount: r.amount,
         frequency: r.frequency,
         autoAppendMonth: r.autoAppendMonth,
         nextBillingDate: getDateOffset(r.nextBillingInDays),
         status: r.status,
-        sacCode: r.sacCode,
+        items: {
+          create: [{
+            title: (r as any).serviceName || 'Retainer Services',
+            quantity: 1,
+            unitPrice: (r as any).amount || 0,
+            taxRate: 0,
+          }]
+        }
       },
     });
   }

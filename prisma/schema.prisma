@@ -1309,6 +1309,7 @@ model Invoice {
   billingMilestones     BillingMilestone[]
   withholdingEvents     WithholdingEvent[]
   bankTransactionSplits BankTransactionInvoiceSplit[]
+  meteredUsages         MeteredUsage[]
 
   // Security: Two different workspaces can use invoice number "001"
   @@unique([invoiceNumber, workspaceId])
@@ -2258,6 +2259,7 @@ model ServiceTemplate {
   sacCode   SACCode? @relation(fields: [sacCodeId], references: [id])
 
   proposalItems ProposalItem[]
+  retainerItems RetainerItem[]
 
   @@index([workspaceId])
 }
@@ -2341,7 +2343,7 @@ model Retainer {
   client   Client @relation(fields: [clientId], references: [id])
 
   // The Billing Details
-  amount    Decimal
+  currency  String  @default("INR")
   frequency String  @default("MONTHLY") // "MONTHLY", "QUARTERLY", "ANNUALLY"
   status    String  @default("ACTIVE") // "ACTIVE", "PAUSED", "CANCELLED"
 
@@ -2349,17 +2351,48 @@ model Retainer {
   nextBillingDate DateTime
   autoAppendMonth Boolean  @default(true) // The "Zero-Effort" Toggle
 
-  // What exactly are we billing them for?
-  serviceName String
-  sacCode     String?
-  taxRate     Float?
-
   sourceProposalId    String?
   sourceProposal      Proposal?            @relation("ProposalToRetainer", fields: [sourceProposalId], references: [id])
   proposalConversions ProposalConversion[]
 
+  items               RetainerItem[]
+  meteredUsages       MeteredUsage[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model RetainerItem {
+  id                String           @id @default(cuid())
+  retainerId        String
+  retainer          Retainer         @relation(fields: [retainerId], references: [id], onDelete: Cascade)
+  
+  serviceTemplateId String?
+  serviceTemplate   ServiceTemplate? @relation(fields: [serviceTemplateId], references: [id], onDelete: SetNull)
+  
+  productId         String?
+  product           Product?         @relation(fields: [productId], references: [id], onDelete: SetNull)
+  
+  title             String
+  quantity          Int              @default(1)
+  unitPrice         Decimal
+  taxRate           Float?           @default(0)
+}
+
+model MeteredUsage {
+  id                String     @id @default(cuid())
+  retainerId        String
+  retainer          Retainer   @relation(fields: [retainerId], references: [id], onDelete: Cascade)
+  
+  description       String
+  quantity          Decimal
+  unitPrice         Decimal
+  status            String     @default("PENDING") // PENDING, BILLED
+  
+  billedInInvoiceId String?
+  billedInInvoice   Invoice?   @relation(fields: [billedInInvoiceId], references: [id], onDelete: SetNull)
+  
+  createdAt         DateTime   @default(now())
 }
 
 model Task {
@@ -2635,6 +2668,7 @@ model Product {
   invoiceItems  InvoiceItem[]
   purchaseItems PurchaseOrderItem[]
   shopOrderItems ShopOrderItem[]
+  retainerItems RetainerItem[]
 
   @@unique([sku, workspaceId])
   @@index([workspaceId])

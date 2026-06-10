@@ -318,7 +318,7 @@ export async function loadForecastSourceData(args: {
     prisma.retainer.findMany({
       where: { workspaceId, status: "ACTIVE", nextBillingDate: { lte: endDate } },
       orderBy: [{ nextBillingDate: "asc" }, { id: "asc" }],
-      select: { id: true, amount: true, frequency: true, status: true, nextBillingDate: true, serviceName: true, client: { select: { name: true } } },
+      select: { id: true, frequency: true, status: true, nextBillingDate: true, client: { select: { name: true } }, items: { select: { quantity: true, unitPrice: true } } },
     }),
     prisma.purchaseOrder.findMany({
       where: {
@@ -409,15 +409,18 @@ export async function loadForecastSourceData(args: {
         },
       ])
     ),
-    retainers: retainers.map((r) => ({
-      id: r.id,
-      clientName: r.client.name,
-      amount: r.amount,
-      frequency: r.frequency,
-      status: r.status,
-      nextBillingDate: r.nextBillingDate,
-      serviceName: r.serviceName,
-    })),
+    retainers: retainers.map((r: any) => {
+      const sum = r.items ? r.items.reduce((acc: number, item: any) => acc + (item.quantity * Number(item.unitPrice)), 0) : 0;
+      return {
+        id: r.id,
+        clientName: r.client.name,
+        amount: new Prisma.Decimal(sum),
+        frequency: r.frequency,
+        status: r.status,
+        nextBillingDate: r.nextBillingDate,
+        serviceName: "Retainer Services",
+      };
+    }),
     purchaseOrders,
     manualAdjustments,
     payrollOutflows: payrollTransactions.map((row) => ({

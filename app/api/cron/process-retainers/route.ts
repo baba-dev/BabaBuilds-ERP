@@ -39,7 +39,7 @@ async function generateRetainerPDF(
   profile: any,
   invoiceNumber: string,
   billingMonth: string,
-  finalDescription: string,
+  services: { title: string; nicDetails: string; amount: number }[],
   totals: { subtotal: number; taxRate: number; taxAmount: number; total: number; taxMode: "taxable" | "exempt" },
   paymentLink: string | null = null,
 ) {
@@ -51,13 +51,7 @@ async function generateRetainerPDF(
   const dueDate = new Date(invoiceDate);
   dueDate.setDate(dueDate.getDate() + 7);
 
-  const services = [
-    {
-      title: retainer.serviceName,
-      nicDetails: finalDescription,
-      amount: totals.subtotal,
-    },
-  ];
+
 
   const vm = buildInvoiceViewModel({
     profile,
@@ -112,7 +106,11 @@ export async function GET(request: Request) {
         status: "ACTIVE",
         nextBillingDate: { lte: today }
       },
-      include: { client: true }
+      include: { 
+        client: true,
+        items: true,
+        meteredUsages: { where: { status: "PENDING" } }
+      }
     });
 
     if (dueRetainers.length === 0) {
@@ -182,25 +180,51 @@ export async function GET(request: Request) {
             const invoiceNumber = `INV/${fy}/${sequence.toString().padStart(3, '0')}`;
 
             // B. THE MAGIC TOGGLE (Smart Naming)
-            let finalDescription = retainer.serviceName;
+            let baseDescription = "Retainer Billing";
             if (retainer.autoAppendMonth) {
-              finalDescription = `${retainer.serviceName} (${billingMonth})`;
+              baseDescription = `Retainer Billing (${billingMonth})`;
+            }
+
+            const rawServices: { title: string; amount: number; taxRate: number }[] = [];
+            for (const item of retainer.items) {
+              rawServices.push({
+                title: retainer.autoAppendMonth ? `${item.title} (${billingMonth})` : item.title,
+                amount: decimalToNumber(item.unitPrice) * item.quantity,
+                taxRate: item.taxRate || 0,
+              });
+            }
+            for (const usage of retainer.meteredUsages) {
+              rawServices.push({
+                title: usage.description,
+                amount: decimalToNumber(usage.unitPrice) * decimalToNumber(usage.quantity),
+                taxRate: 0,
+              });
+            }
+
+            if (rawServices.length === 0) {
+              throw new Error("No active items or usage found for this retainer.");
             }
 
             const taxResolution = resolveTaxRate({
               countryCode: profile.workspace?.countryCode || "IN",
               isTaxExempt: Boolean(retainer.client.isExport),
-              serviceTaxRates: [(retainer as any).taxRate ?? null],
+              serviceTaxRates: rawServices.map(s => s.taxRate),
               workspaceDefaultTaxRate: (profile as any).defaultTaxRate ?? null,
             });
             if (taxResolution.requiresUserInput) {
               throw new Error(`Missing tax rate configuration for retainer. Please set a workspace default tax rate from UI.`);
             }
             const totals = calculateInvoiceTotals({
-              services: [{ amount: decimalToNumber(retainer.amount) }],
+              services: rawServices.map(s => ({ amount: s.amount })),
               isTaxExempt: Boolean(retainer.client.isExport),
               defaultTaxRate: taxResolution.taxRate,
             });
+            
+            const invoiceServices = rawServices.map(s => ({
+              title: s.title,
+              nicDetails: s.title,
+              amount: s.amount,
+            }));
 
             // --- PAYMENT LINK GENERATION (paid tier or trial — same as manual invoice generate) ---
             let paymentLink: string | null = null;
@@ -283,7 +307,7 @@ export async function GET(request: Request) {
               profile, 
               invoiceNumber, 
               billingMonth, 
-              finalDescription,
+              invoiceServices,
               totals,
               paymentLink
             );
@@ -293,7 +317,7 @@ export async function GET(request: Request) {
 
             // D. EXECUTE DATABASE TRANSACTION
             await prisma.$transaction(async (tx) => {
-              await tx.invoice.create({
+              const newInvoice = await tx.invoice.create({
                 data: {
                   workspaceId,
                   clientId: retainer.clientId,
@@ -302,8 +326,7 @@ export async function GET(request: Request) {
                   billingMonth,
                   invoiceDate: today,
                   clientName: retainer.client.name,
-                  sacCode: retainer.sacCode,
-                  serviceDescription: finalDescription,
+                  serviceDescription: baseDescription,
                   subtotal: toDecimal(totals.subtotal).toDecimalPlaces(2),
                   taxRate: totals.taxRate,
                   taxAmount: toDecimal(totals.taxAmount).toDecimalPlaces(2),
@@ -314,8 +337,23 @@ export async function GET(request: Request) {
                   pdfPath: relativePdfPath, 
                   providerGateway,
                   providerPaymentLinkId,
+                  items: {
+                    create: rawServices.map(s => ({
+                      description: s.title,
+                      quantity: 1,
+                      unitPrice: toDecimal(s.amount),
+                      totalAmount: toDecimal(s.amount)
+                    }))
+                  }
                 } as any
               });
+
+              if (retainer.meteredUsages.length > 0) {
+                await tx.meteredUsage.updateMany({
+                  where: { id: { in: retainer.meteredUsages.map((u: any) => u.id) } },
+                  data: { status: "BILLED", billedInInvoiceId: newInvoice.id }
+                });
+              }
 
               let nextDate = new Date(retainer.nextBillingDate);
               const wasLastDay = isLastDayOfMonth(nextDate);
@@ -336,7 +374,7 @@ export async function GET(request: Request) {
             success = true;
 
             results.successful++;
-            results.logs.push(`Successfully billed ${retainer.client.name} for ${finalDescription}`);
+            results.logs.push(`Successfully billed ${retainer.client.name} for ${baseDescription}`);
 
             dispatchNotification({
               event: 'INVOICE_GENERATED',
