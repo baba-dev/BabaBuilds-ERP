@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import LandingContent from "@/components/LandingContent";
 
 const SITE_URL = "https://erp.bababuilds.com";
@@ -6,6 +6,7 @@ const SITE_URL = "https://erp.bababuilds.com";
 export default async function LegacyLandingPage() {
   const t = await getTranslations("LandingPageSeo.faq");
   const seo = await getTranslations("LandingPageSeo");
+  const locale = await getLocale();
   const faqItems = (t.raw("items") as Array<{ question: string; answer: string }>).filter(
     (item): item is { question: string; answer: string } =>
       Boolean(item) && typeof item.question === "string" && typeof item.answer === "string",
@@ -30,20 +31,15 @@ export default async function LegacyLandingPage() {
     potentialAction: {
       "@type": "TryAction",
       target: `${SITE_URL}/signup?plan=pro&trial=15`,
-      name: "Start free trial",
+      name: seo("schema.tryActionName"),
     },
     offers: {
       "@type": "Offer",
       price: "0",
       priceCurrency: "USD",
-      description: "15-day trial for new workspaces",
+      description: seo("schema.offerDescription"),
     },
-    featureList: [
-      "Invoicing and proposals",
-      "Cash flow and expense tracking",
-      "Multi-currency support",
-      "Tax and compliance workflows",
-    ],
+    featureList: seo.raw("schema.featureList") as string[],
     url: SITE_URL,
   };
 
@@ -52,7 +48,7 @@ export default async function LegacyLandingPage() {
     "@type": "WebSite",
     name: "BabaBuilds ERP",
     url: SITE_URL,
-    inLanguage: "en",
+    inLanguage: locale,
   };
 
   const faqJsonLd = {

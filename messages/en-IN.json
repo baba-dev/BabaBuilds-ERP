@@ -405,7 +405,9 @@
     "group_compliance": "Compliance",
     "group_workspace": "Workspace",
     "import_manager": "Import Manager",
-    "tax_advanced": "Tax Advanced"
+    "tax_advanced": "Tax Advanced",
+    "pinItem": "Pin {item}",
+    "unpinItem": "Unpin {item}"
   },
   "UserNav": {
     "my_account": "My Account",
@@ -1310,7 +1312,8 @@
       "description": "Proposal to e-signature to invoice to payment link to bank match to CA export, in one workspace.",
       "primaryCta": "Start for Free",
       "secondaryCta": "See all Features",
-      "dashboardPreview": "Dashboard Preview"
+      "dashboardPreview": "Dashboard Preview",
+      "trialPerks": "No credit card required • 15-day trial • Guided onboarding included"
     },
     "heroLoop": {
       "label": "Your revenue loop",
@@ -2364,6 +2367,16 @@
           "question": "Which payment gateways does BabaBuilds ERP integrate with?",
           "answer": "BabaBuilds ERP integrates with Razorpay (for INR payments) and Stripe (for international payments), enabling you to embed payment links directly into your invoices."
         }
+      ]
+    },
+    "schema": {
+      "tryActionName": "Start free trial",
+      "offerDescription": "15-day trial for new workspaces",
+      "featureList": [
+        "Invoicing and proposals",
+        "Cash flow and expense tracking",
+        "Multi-currency support",
+        "Tax and compliance workflows"
       ]
     }
   },

@@ -85,7 +85,7 @@ export default function LandingContent() {
             </div>
 
             <div className="space-y-6">
-              <p className="text-sm font-semibold text-muted-body">No credit card required • 15-day trial • Guided onboarding included</p>
+              <p className="text-sm font-semibold text-muted-body">{t("hero.trialPerks")}</p>
               <SocialProofHero />
             </div>
           </div>

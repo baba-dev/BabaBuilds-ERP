@@ -52,8 +52,8 @@ export function NavSecondary({ preferences, onTogglePin, onNavigate }: Props) {
             type="button"
             className="rounded-md p-1 text-zinc-400 transition hover:bg-white/10 hover:text-zinc-100"
             onClick={() => onTogglePin("settings", !isPinned)}
-            aria-label={isPinned ? "Unpin settings" : "Pin settings"}
-            title={isPinned ? "Unpin settings" : "Pin settings"}
+            aria-label={isPinned ? t("unpinItem", { item: t("settings") }) : t("pinItem", { item: t("settings") })}
+            title={isPinned ? t("unpinItem", { item: t("settings") }) : t("pinItem", { item: t("settings") })}
           >
             {isPinned ? (
               <PinOff className="h-3.5 w-3.5" />
