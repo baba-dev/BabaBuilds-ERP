@@ -3054,6 +3054,9 @@ model Document {
   source           String? // upload_center|share_target|email (future)
   uploadedByUserId String?
 
+  aiSummary        String?
+  aiMeta           Json?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -3822,3 +3825,70 @@ model PayrollPayComponent {
   @@unique([workspaceId, code])
   @@index([workspaceId, category])
 }
+
+model SystemErrorLog {
+  id          String   @id @default(cuid())
+  errorType   String   // e.g. "TypeError", "PrismaClientKnownRequestError"
+  message     String
+  stackTrace  String?
+  sourceFile  String?
+  route       String?
+  method      String?
+  userId      String?
+  workspaceId String?
+  status      ErrorStatus @default(UNRESOLVED)
+  environment String      @default("development")
+  metadata    Json?
+
+  // AI Diagnostics
+  aiDiagnosis    String? // The explanation
+  aiSuggestedFix String? // Proposed fix
+  aiConfidence   Int?    // 0-100
+  analyzedAt     DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  remediation SystemRemediation?
+}
+
+enum ErrorStatus {
+  UNRESOLVED
+  ANALYZING
+  RESOLVED
+  IGNORED
+}
+
+model SystemRemediation {
+  id            String   @id @default(cuid())
+  errorLogId    String   @unique
+  errorLog      SystemErrorLog @relation(fields: [errorLogId], references: [id], onDelete: Cascade)
+  
+  actionType    RemediationType
+  content       String          
+  description   String          
+  
+  status        RemediationStatus @default(PENDING_APPROVAL)
+  executedAt    DateTime?
+  executedBy    String?         
+  executionLog  String?         
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+enum RemediationType {
+  CODE_PATCH
+  DATA_SCRIPT
+  SYSTEM_RESTART
+  SECURITY_BAN
+}
+
+enum RemediationStatus {
+  PENDING_APPROVAL
+  APPROVED
+  EXECUTING
+  SUCCESS
+  FAILED
+}
+

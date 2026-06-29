@@ -278,13 +278,53 @@ export async function POST(request: Request) {
   await ensureDir(path.dirname(absPath));
   await fs.writeFile(absPath, buffer, { mode: 0o600 });
 
+  // Optional AI Analysis
+  const aiAnalyze = formData.get('aiAnalyze') === 'true';
+  let aiSummary = null;
+  let aiMeta = null;
+  let aiTitle = null;
+
+  if (aiAnalyze) {
+    try {
+      let text = '';
+      if (mimeType === 'application/pdf') {
+        const pdfParse = (await import('pdf-parse')).default;
+        const pdfData = await pdfParse(buffer);
+        text = pdfData.text;
+      } else {
+        text = buffer.toString('utf8'); // Basic fallback
+      }
+
+      if (text.trim().length > 0) {
+        const { analyzeDocumentWithGroq } = await import('@/lib/ai/groq-analyzer');
+        const analysis = await analyzeDocumentWithGroq(text);
+        if (analysis) {
+          aiTitle = analysis.title;
+          aiSummary = analysis.summary;
+          aiMeta = analysis.meta;
+
+          await prisma.document.update({
+            where: { id: created.documentId },
+            data: {
+              title: aiTitle,
+              aiSummary,
+              aiMeta: aiMeta as any,
+            },
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to run AI analysis:', error);
+    }
+  }
+
   await logActivity({
     action: 'DOCUMENT_UPLOADED',
     status: 'SUCCESS',
     workspaceId,
     actor: { userId, email: session.user?.email ?? null },
     entity: { type: 'document', id: created.documentId },
-    metadata: { documentId: created.documentId, documentFileId: created.documentFileId, mimeType, byteSize: file.size },
+    metadata: { documentId: created.documentId, documentFileId: created.documentFileId, mimeType, byteSize: file.size, aiAnalyzed: aiAnalyze },
     request,
   });
 

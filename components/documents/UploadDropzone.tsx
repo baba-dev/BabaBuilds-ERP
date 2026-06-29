@@ -48,6 +48,7 @@ export function UploadDropzone({
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [aiAnalyze, setAiAnalyze] = useState(false);
   const [quota, setQuota] = useState<QuotaResponse | null>(null);
 
   const refreshQuota = useCallback(async () => {
@@ -81,6 +82,7 @@ export function UploadDropzone({
         fd.set("file", file);
         fd.set("category", "GENERAL");
         fd.set("scope", "WORKSPACE_BUSINESS");
+        fd.set("aiAnalyze", String(aiAnalyze));
 
         setProgress(25);
         const res = await fetch("/api/documents/upload", { method: "POST", body: fd });
@@ -133,26 +135,52 @@ export function UploadDropzone({
         onDragOver={(e) => e.preventDefault()}
         onDrop={onDrop}
         className={cn(
-          "rounded-xl border bg-card p-4 transition-colors",
-          isDragging ? "border-primary/50 bg-primary/5" : "border-foreground/10",
+          "relative overflow-hidden rounded-xl border-2 border-dashed bg-card/50 p-16 transition-all duration-300 ease-out hover:bg-card hover:shadow-md group",
+          isDragging
+            ? "border-primary bg-primary/5 scale-[1.02] shadow-lg shadow-primary/10"
+            : "border-muted-foreground/25 hover:border-primary/50",
         )}
       >
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <UploadCloud className="h-4 w-4 text-muted-foreground" />
-              <div className="text-sm font-medium">Drop to upload</div>
-              {meterState?.label ? (
-                <Badge variant={meterState.variant} className="uppercase tracking-wide text-[10px]">
-                  {meterState.label}
-                </Badge>
-              ) : null}
-            </div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              PDFs, PNG/JPG/JPEG/WEBP, CSV, XLSX. Policy is enforced server-side.
+        {isDragging && (
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent pointer-events-none" />
+        )}
+        <div className="relative flex flex-col items-center justify-center gap-4 text-center z-10">
+          <div className={cn(
+            "rounded-full p-4 transition-colors duration-300 ring-4",
+            isDragging 
+              ? "bg-primary text-primary-foreground ring-primary/20" 
+              : "bg-muted text-muted-foreground ring-transparent group-hover:bg-primary/10 group-hover:text-primary group-hover:ring-primary/5"
+          )}>
+            <UploadCloud className={cn("h-8 w-8 transition-transform duration-300", isDragging && "scale-110")} />
+          </div>
+          
+          <div className="space-y-1.5">
+            <h3 className="text-lg font-bold tracking-tight text-foreground">
+              {isDragging ? "Drop your file here" : "Drag & drop to upload"}
+            </h3>
+            <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
+              Support for PDFs, PNG/JPG/JPEG/WEBP, CSV, XLSX. Policy is enforced server-side.
+            </p>
+            <div className="pt-2 flex items-center justify-center gap-2">
+              <input
+                type="checkbox"
+                id="ai-analyze"
+                checked={aiAnalyze}
+                onChange={(e) => setAiAnalyze(e.target.checked)}
+                className="rounded border-zinc-300 text-primary focus:ring-primary h-4 w-4"
+              />
+              <label htmlFor="ai-analyze" className="text-sm font-medium text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                Analyze with AI Agent (Requires Groq Key)
+              </label>
             </div>
           </div>
-          <div className="shrink-0 flex items-center gap-2">
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 mt-4">
+            {meterState?.label && (
+              <Badge variant={meterState.variant} className="uppercase tracking-wide text-[10px] shadow-sm">
+                {meterState.label}
+              </Badge>
+            )}
             <input
               id="doc-upload"
               type="file"
@@ -165,23 +193,28 @@ export function UploadDropzone({
               disabled={isUploading}
             />
             <Button
-              size="sm"
-              variant="outline"
+              size="default"
+              className="font-semibold shadow-sm hover:shadow-md transition-all active:scale-95"
               onClick={() => {
                 void refreshQuota();
                 document.getElementById("doc-upload")?.click();
               }}
               disabled={isUploading}
             >
-              {isUploading ? "Uploading…" : "Choose file"}
+              {isUploading ? "Uploading…" : "Browse files"}
             </Button>
           </div>
         </div>
-        {progress > 0 ? (
-          <div className="mt-3">
-            <Progress value={progress} />
+        
+        {progress > 0 && (
+          <div className="absolute bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-md border-t z-20 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+            <div className="flex items-center justify-between text-xs mb-2">
+              <span className="font-semibold text-foreground">Uploading document...</span>
+              <span className="text-muted-foreground font-medium">{progress}%</span>
+            </div>
+            <Progress value={progress} className="h-1.5" />
           </div>
-        ) : null}
+        )}
       </div>
 
       {quota ? (
