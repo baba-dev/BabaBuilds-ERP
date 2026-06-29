@@ -1,10 +1,10 @@
-export type InvoiceTaxMode = 'taxable' | 'exempt';
+export type InvoiceTaxMode = 'taxable' | 'exempt' | 'mixed';
 import type { MoneyInput } from '@/lib/money';
 import { toDecimal } from '@/lib/money';
 import { Prisma } from '@prisma/client';
 
 export interface InvoiceTotalsInput {
-  services: Array<{ amount: number }>;
+  services: Array<{ amount: number, taxRate?: number }>;
   isTaxExempt: boolean;
   defaultTaxRate?: number;
 }
@@ -38,19 +38,30 @@ export function calculateInvoiceTotals({
   isTaxExempt,
   defaultTaxRate = 0.18,
 }: InvoiceTotalsInput): InvoiceTotals {
-  const subtotal = services.reduce((sum, service) => {
-    return sum.plus(toDecimal(service.amount || 0));
-  }, new Prisma.Decimal(0));
+  let subtotalDecimal = new Prisma.Decimal(0);
+  let taxAmountDecimal = new Prisma.Decimal(0);
+  const ratesUsed = new Set<number>();
 
-  const taxMode: InvoiceTaxMode = isTaxExempt ? 'exempt' : 'taxable';
-  const taxRate = taxMode === 'taxable' ? defaultTaxRate : 0;
+  services.forEach((service) => {
+    const amount = toDecimal(service.amount || 0);
+    subtotalDecimal = subtotalDecimal.plus(amount);
+
+    const itemTaxRate = isTaxExempt ? 0 : (service.taxRate ?? defaultTaxRate);
+    ratesUsed.add(itemTaxRate);
+    const itemTaxAmount = amount.times(itemTaxRate);
+    taxAmountDecimal = taxAmountDecimal.plus(itemTaxAmount);
+  });
+
+  const taxMode: InvoiceTaxMode = isTaxExempt ? 'exempt' : (ratesUsed.size > 1 ? 'mixed' : 'taxable');
   
-  const taxAmount = subtotal.times(taxRate).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
-  const total = subtotal.plus(taxAmount);
+  const taxAmount = taxAmountDecimal.toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+  const total = subtotalDecimal.plus(taxAmount);
+
+  let effectiveTaxRate = isTaxExempt ? 0 : (ratesUsed.size === 1 ? Array.from(ratesUsed)[0] : defaultTaxRate);
 
   return {
-    subtotal: subtotal.toNumber(),
-    taxRate,
+    subtotal: subtotalDecimal.toNumber(),
+    taxRate: effectiveTaxRate,
     taxAmount: taxAmount.toNumber(),
     total: total.toNumber(),
     taxMode,

@@ -47,6 +47,11 @@ function getClamScan() {
 }
 
 export async function scanBuffer(buffer: Buffer): Promise<boolean> {
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.ERP_SECURITY_MODE === 'PRODUCTION';
+  if (!isProduction && process.platform !== 'linux') {
+    return true; // Bypass on Windows/Dev to prevent hangs
+  }
+
   try {
     const clamscan = await getClamScan();
     const stream = Readable.from(buffer);

@@ -51,6 +51,7 @@ type ServiceInput = {
     igstRate?: number | null;
   };
   taxRate?: number | null;
+  sacCode?: string | null;
 };
 
 type SanitizedService = ServiceInput & {
@@ -58,6 +59,7 @@ type SanitizedService = ServiceInput & {
   amount: number;
   amountDecimal: Prisma.Decimal;
   nicDetails: string;
+  sacCode?: string | null;
 };
 
 type PrismaInvoiceItemCreateData = {
@@ -67,6 +69,7 @@ type PrismaInvoiceItemCreateData = {
   unitPrice: Prisma.Decimal;
   taxRate: number;
   totalAmount: Prisma.Decimal;
+  sacCode?: string | null;
 };
 
 type ProfileSettings = {
@@ -110,6 +113,7 @@ const ServiceSchema = z.object({
     igstRate: z.number().nullable().optional(),
   }).optional(),
   taxRate: z.number().nullable().optional(),
+  sacCode: z.string().trim().max(100).optional().nullable(),
 });
 
 const GenerateInvoiceSchema = z.object({
@@ -249,6 +253,7 @@ export async function POST(request: Request) {
           amount: s.amount,
           amountDecimal: toDecimal(s.amount).toDecimalPlaces(2),
           nicDetails: '',
+          sacCode: typeof s.sacCode === 'string' ? s.sacCode.trim() : null,
         };
       });
 
@@ -581,6 +586,7 @@ export async function POST(request: Request) {
             title: s.title,
             nicDetails: '',
             amount: s.amount,
+            sacCode: s.sacCode || sacCode || profile.defaultSacCode || null,
           })),
           totals,
           formattedTotal,
@@ -636,6 +642,7 @@ export async function POST(request: Request) {
                   unitPrice: toDecimal(s.unitPrice || s.amount).toDecimalPlaces(2),
                   taxRate: taxResolution.taxRate,
                   totalAmount: toDecimal(s.amount).toDecimalPlaces(2),
+                  sacCode: s.sacCode || sacCode || null,
                 })),
               },
             },
