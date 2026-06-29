@@ -2355,6 +2355,11 @@ model Retainer {
   sourceProposal      Proposal?            @relation("ProposalToRetainer", fields: [sourceProposalId], references: [id])
   proposalConversions ProposalConversion[]
 
+  // Legacy fields (restored as optional to prevent deployment data loss)
+  amount      Decimal?
+  sacCode     String?
+  serviceName String?
+
   items               RetainerItem[]
   meteredUsages       MeteredUsage[]
 
@@ -2377,6 +2382,7 @@ model RetainerItem {
   quantity          Int              @default(1)
   unitPrice         Decimal
   taxRate           Float?           @default(0)
+  sacCode           String?
 }
 
 model MeteredUsage {
@@ -2687,6 +2693,7 @@ model InvoiceItem {
   quantity    Int     @default(1)
   unitPrice   Decimal
   taxRate     Float   @default(0)
+  sacCode     String?
   totalAmount Decimal
 
   @@index([invoiceId])
@@ -3844,6 +3851,7 @@ model SystemErrorLog {
   aiDiagnosis    String? // The explanation
   aiSuggestedFix String? // Proposed fix
   aiConfidence   Int?    // 0-100
+  aiUserFriendlyMessage String? // What we told the user
   analyzedAt     DateTime?
 
   createdAt   DateTime @default(now())

@@ -104,7 +104,11 @@ const modernTemplate: InvoiceTemplate = {
       14,
       { isBold: true, color: black },
     );
-    drawText(page, height, fonts, `Service Classification: ${vm.sacCodeDisplay || "N/A"}`, leftMargin, calloutY + 24, 9, { color: textMuted });
+    if (vm.flags.hasMixedTaxRates) {
+      drawText(page, height, fonts, `Service Classification: Mixed (See items below)`, leftMargin, calloutY + 24, 9, { color: textMuted });
+    } else {
+      drawText(page, height, fonts, `Service Classification: ${vm.sacCodeDisplay || "N/A"}`, leftMargin, calloutY + 24, 9, { color: textMuted });
+    }
 
     const qtyX = rightMargin - 150;
     const priceX = rightMargin - 80;
@@ -143,7 +147,8 @@ const modernTemplate: InvoiceTemplate = {
         drawText(page, pageHeight, fonts, line, leftMargin, lineY, 9, { color: black });
         lineY += 11;
       }
-      drawText(page, pageHeight, fonts, `${service.nicDetails || "Billing period"}: ${vm.billingMonth}`, leftMargin, lineY + 3, 8, { color: textDark });
+      const subTitle = `${service.nicDetails || "Billing period"}: ${vm.billingMonth}` + (service.sacCodeDisplay ? ` | SAC: ${service.sacCodeDisplay}` : "");
+      drawText(page, pageHeight, fonts, subTitle, leftMargin, lineY + 3, 8, { color: textDark });
       drawText(page, pageHeight, fonts, "1", qtyX, tableY, 9, { align: "right", color: black });
       drawText(page, pageHeight, fonts, service.amountFormatted, priceX, tableY, 9, { align: "right", color: black });
       drawText(page, pageHeight, fonts, service.amountFormatted, rightMargin, tableY, 9, { align: "right", color: black });

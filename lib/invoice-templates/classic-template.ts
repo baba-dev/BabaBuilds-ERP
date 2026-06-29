@@ -138,7 +138,7 @@ const classicTemplate: InvoiceTemplate = {
         currentY = headerYOffset + 40;
       }
 
-      drawText(page, height, fonts, vm.sacCodeShort, 50, currentY, 10, { color: textDark });
+      drawText(page, height, fonts, service.sacCodeDisplay || vm.sacCodeShort, 50, currentY, 10, { color: textDark });
       titleLines.forEach((line, index) => {
         drawText(page, height, fonts, line, 180, currentY + index * 12, 10, { isBold: true, color: black });
       });

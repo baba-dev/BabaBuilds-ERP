@@ -39,8 +39,8 @@ async function generateRetainerPDF(
   profile: any,
   invoiceNumber: string,
   billingMonth: string,
-  services: { title: string; nicDetails: string; amount: number }[],
-  totals: { subtotal: number; taxRate: number; taxAmount: number; total: number; taxMode: "taxable" | "exempt" },
+  services: { title: string; nicDetails: string; amount: number; sacCode?: string | null }[],
+  totals: { subtotal: number; taxRate: number; taxAmount: number; total: number; taxMode: "taxable" | "exempt" | "mixed" },
   paymentLink: string | null = null,
 ) {
   const client = retainer.client;
@@ -185,12 +185,13 @@ export async function GET(request: Request) {
               baseDescription = `Retainer Billing (${billingMonth})`;
             }
 
-            const rawServices: { title: string; amount: number; taxRate: number }[] = [];
+            const rawServices: { title: string; amount: number; taxRate: number; sacCode?: string | null }[] = [];
             for (const item of retainer.items) {
               rawServices.push({
                 title: retainer.autoAppendMonth ? `${item.title} (${billingMonth})` : item.title,
                 amount: decimalToNumber(item.unitPrice) * item.quantity,
                 taxRate: item.taxRate || 0,
+                sacCode: item.sacCode || retainer.sacCode || profile.defaultSacCode || null,
               });
             }
             for (const usage of retainer.meteredUsages) {
@@ -215,7 +216,7 @@ export async function GET(request: Request) {
               throw new Error(`Missing tax rate configuration for retainer. Please set a workspace default tax rate from UI.`);
             }
             const totals = calculateInvoiceTotals({
-              services: rawServices.map(s => ({ amount: s.amount })),
+              services: rawServices.map(s => ({ amount: s.amount, taxRate: s.taxRate })),
               isTaxExempt: Boolean(retainer.client.isExport),
               defaultTaxRate: taxResolution.taxRate,
             });
@@ -224,6 +225,7 @@ export async function GET(request: Request) {
               title: s.title,
               nicDetails: s.title,
               amount: s.amount,
+              sacCode: s.sacCode,
             }));
 
             // --- PAYMENT LINK GENERATION (paid tier or trial — same as manual invoice generate) ---
@@ -342,7 +344,9 @@ export async function GET(request: Request) {
                       description: s.title,
                       quantity: 1,
                       unitPrice: toDecimal(s.amount),
-                      totalAmount: toDecimal(s.amount)
+                      totalAmount: toDecimal(s.amount),
+                      taxRate: s.taxRate,
+                      sacCode: s.sacCode,
                     }))
                   }
                 } as any

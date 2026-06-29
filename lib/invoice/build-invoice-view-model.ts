@@ -54,6 +54,7 @@ export interface PDFService {
   title: string;
   nicDetails: string;
   amount: number;
+  sacCode?: string | null;
 }
 
 export interface PDFParams {
@@ -86,6 +87,7 @@ type InvoiceServiceView = {
   nicDetails: string;
   amount: number;
   amountFormatted: string;
+  sacCodeDisplay?: string;
 };
 
 export interface InvoiceViewModel {
@@ -135,6 +137,7 @@ export interface InvoiceViewModel {
     showPaymentLink: boolean;
     isExportInvoice: boolean;
     isTaxExempt: boolean;
+    hasMixedTaxRates: boolean;
   };
 }
 
@@ -216,7 +219,9 @@ export const buildInvoiceViewModel = ({
   const subHeader = client.isExport ? "ZERO RATED SUPPLY" : "DOMESTIC SUPPLY";
   const taxLabel = profile.taxLabel || "Tax";
   const taxRatePercent = Math.round(totals.taxRate * 100);
-  const taxRowLabel = totals.taxMode === "exempt" ? `${taxLabel} (Exempt 0%)` : `${taxLabel} (${taxRatePercent}%)`;
+  let taxRowLabel = `${taxLabel} (${taxRatePercent}%)`;
+  if (totals.taxMode === "exempt") taxRowLabel = `${taxLabel} (Exempt 0%)`;
+  if (totals.taxMode === "mixed") taxRowLabel = `${taxLabel} (Mixed rates)`;
 
   const remittance = resolvePrimaryRemittanceFromProfile(profile);
   const { remittanceDisplay, hasBankDetails } = buildBankDisplay(remittance);
@@ -239,13 +244,17 @@ export const buildInvoiceViewModel = ({
     date,
     dueDate,
     billingMonth: sanitizeDisplayText(billingMonth),
-    services: services.map((service) => ({
-      title: service.title,
-      titleClamped: sanitizeDisplayText(service.title),
-      nicDetails: service.nicDetails || "",
-      amount: service.amount,
-      amountFormatted: service.amount.toLocaleString(userLocale, { minimumFractionDigits: 2 }),
-    })),
+    services: services.map((service) => {
+      const sacDisplay = resolveSacCodeDisplay(service.sacCode || null);
+      return {
+        title: service.title,
+        titleClamped: sanitizeDisplayText(service.title),
+        nicDetails: service.nicDetails || "",
+        amount: service.amount,
+        amountFormatted: service.amount.toLocaleString(userLocale, { minimumFractionDigits: 2 }),
+        sacCodeDisplay: sacDisplay !== "N/A" ? sacDisplay : undefined,
+      };
+    }),
     totals,
     formattedTotal,
     baseCurrency,
@@ -280,6 +289,7 @@ export const buildInvoiceViewModel = ({
       showPaymentLink: Boolean(normalizedPaymentLink),
       isExportInvoice: Boolean(client.isExport),
       isTaxExempt: totals.taxMode === "exempt",
+      hasMixedTaxRates: totals.taxMode === "mixed",
     },
   };
 };

@@ -13,7 +13,7 @@ export interface ResolveTaxRateInput {
 
 export interface TaxRateResolution {
   taxRate: number;
-  taxMode: 'taxable' | 'exempt';
+  taxMode: 'taxable' | 'exempt' | 'mixed';
   source: 'override' | 'service_code' | 'workspace_default' | 'country_default' | 'jurisdiction_default' | 'exempt';
   requiresUserInput?: boolean;
   reason?: 'MISSING_RATE' | 'MIXED_SERVICE_RATES';
@@ -61,11 +61,9 @@ export function resolveTaxRate({
 
   if (normalizedServiceRates.length > 1) {
     return {
-      taxRate: 0,
-      taxMode: 'taxable',
+      taxRate: normalizedServiceRates[0] || 0,
+      taxMode: 'mixed',
       source: 'service_code',
-      requiresUserInput: true,
-      reason: 'MIXED_SERVICE_RATES',
       candidates: normalizedServiceRates,
     };
   }
