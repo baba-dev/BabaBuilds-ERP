@@ -10,10 +10,11 @@ const prisma = new PrismaClient();
 
 export const dynamic = "force-dynamic";
 
-export default async function ErrorDetailsPage({ params }: { params: { id: string } }) {
-  const errorId = params.id;
+export default async function ErrorDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: errorId } = await params;
   const errorLog = await prisma.systemErrorLog.findUnique({
-    where: { id: errorId }
+    where: { id: errorId },
+    include: { remediation: true }
   });
 
   if (!errorLog) {
@@ -184,7 +185,7 @@ export default async function ErrorDetailsPage({ params }: { params: { id: strin
           <Terminal className="w-4 h-4" />
           <span className="font-medium text-sm">Raw Stack Trace</span>
         </div>
-        <div className="h-[400px] w-full bg-slate-950 p-4 overflow-auto"><ScrollArea className="h-[400px] w-full bg-slate-950 p-4">
+        <div className="h-[400px] w-full bg-slate-950 p-4 overflow-auto">
           <pre className="text-slate-300 text-xs font-mono whitespace-pre-wrap">
             {errorLog.stackTrace || "No stack trace available."}
           </pre>

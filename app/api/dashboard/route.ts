@@ -65,7 +65,7 @@ const getIntegrationReadiness = (
 const asPct = (num: number, den: number) =>
   den <= 0 ? 0 : Math.min(100, Math.round((num / den) * 100));
 
-export async function buildDashboardPayload(
+async function buildDashboardPayload(
   workspaceId: string,
   userId: string | null,
   fy: string,
@@ -93,7 +93,7 @@ export async function buildDashboardPayload(
       );
     }
   };
-  const timed = async <T>(label: string, op: () => Promise<T>): Promise<T> => {
+  const timed = async <T,>(label: string, op: () => Promise<T>): Promise<T> => {
     const startedAt = performance.now();
     try {
       return await op();

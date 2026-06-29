@@ -10,6 +10,7 @@ export default defineConfig([
       "build/**",
       "next-env.d.ts",
       "scripts/**",
+      "scratch/**",
       "tmp/**",
       "public/**",
       "pwa/**",

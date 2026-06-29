@@ -30,13 +30,13 @@ export async function GET(request: Request) {
     } else {
       const products = await prisma.product.findMany({
         where: { workspaceId },
-        select: { id: true, name: true, unitPrice: true, description: true, currentStock: true }
+        select: { id: true, name: true, baselinePrice: true, description: true, currentStock: true }
       });
       return NextResponse.json(products.map(p => ({
         id: p.id,
         type: 'PRODUCT',
         name: p.name,
-        price: Number(p.unitPrice),
+        price: Number(p.baselinePrice),
         description: p.description,
         stock: p.currentStock,
         taxRate: 0 // Products might have tax logic, default 0 for now

@@ -288,9 +288,11 @@ export async function POST(request: Request) {
     try {
       let text = '';
       if (mimeType === 'application/pdf') {
-        const pdfParse = (await import('pdf-parse')).default;
-        const pdfData = await pdfParse(buffer);
+        const { PDFParse } = await import('pdf-parse');
+        const parser = new PDFParse({ data: buffer });
+        const pdfData = await parser.getText();
         text = pdfData.text;
+        await parser.destroy();
       } else {
         text = buffer.toString('utf8'); // Basic fallback
       }
