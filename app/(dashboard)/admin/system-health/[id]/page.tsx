@@ -5,7 +5,6 @@ import { format } from "date-fns";
 import { ArrowLeft, Sparkles, Terminal, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 const prisma = new PrismaClient();
 
@@ -171,11 +170,11 @@ export default async function ErrorDetailsPage({ params }: { params: { id: strin
               </Badge>
             )}
           </div>
-          <ScrollArea className="max-h-[300px] w-full bg-slate-950 p-4">
+          <div className="max-h-[300px] w-full bg-slate-950 p-4 overflow-auto">
             <pre className="text-blue-300 text-xs font-mono whitespace-pre-wrap">
               {JSON.stringify(errorLog.metadata, null, 2)}
             </pre>
-          </ScrollArea>
+          </div>
         </div>
       )}
 
@@ -185,11 +184,11 @@ export default async function ErrorDetailsPage({ params }: { params: { id: strin
           <Terminal className="w-4 h-4" />
           <span className="font-medium text-sm">Raw Stack Trace</span>
         </div>
-        <ScrollArea className="h-[400px] w-full bg-slate-950 p-4">
+        <div className="h-[400px] w-full bg-slate-950 p-4 overflow-auto"><ScrollArea className="h-[400px] w-full bg-slate-950 p-4">
           <pre className="text-slate-300 text-xs font-mono whitespace-pre-wrap">
             {errorLog.stackTrace || "No stack trace available."}
           </pre>
-        </ScrollArea>
+        </div>
       </div>
 
     </div>
