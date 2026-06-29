@@ -19,6 +19,7 @@ import {
   Siren,
   ChartColumnBig,
   UploadCloud,
+  ShoppingCart,
   type LucideIcon,
 } from "lucide-react";
 
@@ -68,6 +69,7 @@ export const canonicalNavItems: CanonicalNavItem[] = assertUniqueAppNavItemKeys(
   { key: "inventory", path: "/inventory", icon: Archive, group: "operations", keywords: ["stock", "products", "warehouse"] },
   { key: "client_crm", path: "/clients", icon: Users, group: "operations", keywords: ["customers", "contacts", "crm"] },
   { key: "quotes_proposals", path: "/proposals", icon: FileSignature, group: "sales", keywords: ["quotes", "deals", "proposals"] },
+  { key: "pos", path: "/pos", icon: ShoppingCart, group: "sales", keywords: ["point of sale", "checkout", "register", "cart"], badge: "New" },
   { key: "retainers_hub", path: "/retainers", icon: Box, group: "sales", keywords: ["recurring", "contracts", "retainer"] },
   { key: "expenses_margins", path: "/expenses", icon: Receipt, group: "finance", keywords: ["costs", "purchases", "spend"] },
   { key: "cash_flow", path: "/cash-flow/overview", icon: HandCoins, group: "finance", keywords: ["liquidity", "cash", "forecast"], badge: "New", requiresModule: "CASH_FLOW" },
