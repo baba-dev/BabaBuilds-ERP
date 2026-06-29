@@ -6,13 +6,24 @@ import { authOptions } from "@/lib/auth";
 import { INVOICE_STATUS } from "@/lib/invoice-status";
 import { serializeMoney, toDecimal } from "@/lib/money";
 import { summarizeReceivablesForAttention } from "@/lib/dashboard/attention-receivables";
-import { getInvoiceBilledAmount, sumInvoiceBilledAmount } from "@/lib/invoice/totals";
+import {
+  getInvoiceBilledAmount,
+  sumInvoiceBilledAmount,
+} from "@/lib/invoice/totals";
 import { estimateTax } from "@/lib/tax/engine";
 import { getCurrentFinancialYear } from "@/lib/financial-year";
 import { getTaxReadinessSummary } from "@/lib/tax/return-prep";
 import { checkPermissionsSilent, checkPermissionSilent } from "@/lib/rbac";
-import { getEnabledModules, MODULE_DESCRIPTIONS, MODULE_LABELS, type ModuleKey } from "@/lib/modules";
-import { buildMonthlyChartBuckets, resolveMonthlyBucketTimeZone } from "./monthly-series";
+import {
+  getEnabledModules,
+  MODULE_DESCRIPTIONS,
+  MODULE_LABELS,
+  type ModuleKey,
+} from "@/lib/modules";
+import {
+  buildMonthlyChartBuckets,
+  resolveMonthlyBucketTimeZone,
+} from "./monthly-series";
 import { describeKpiPeriod, getFyDateRange } from "./sales-shop-kpi-periods";
 import {
   buildDashboardCacheKey,
@@ -23,9 +34,14 @@ import {
   setDashboardCacheEntry,
 } from "@/lib/dashboard-cache";
 
-const normalizeInvoiceStatus = (status: unknown) => String(status).toUpperCase();
+const normalizeInvoiceStatus = (status: unknown) =>
+  String(status).toUpperCase();
 const LOCALE_CURRENCY_AFFECTS_PAYLOAD = false;
-const CRITICAL_NOTIFICATION_TYPES = ["TAX_ALERT", "DEADLINE_ALERT", "PAYMENT_REMINDER"] as const;
+const CRITICAL_NOTIFICATION_TYPES = [
+  "TAX_ALERT",
+  "DEADLINE_ALERT",
+  "PAYMENT_REMINDER",
+] as const;
 
 type IntegrationStatus = "healthy" | "partial" | "missing";
 type SessionWithWorkspace = {
@@ -34,9 +50,14 @@ type SessionWithWorkspace = {
 };
 type IntegrationReadiness = { configured: boolean; status: IntegrationStatus };
 
-const getIntegrationReadiness = (keys: Array<string | null | undefined>): IntegrationReadiness => {
-  const presentKeys = keys.filter((value) => Boolean(value && value.trim())).length;
-  if (presentKeys === keys.length) return { configured: true, status: "healthy" };
+const getIntegrationReadiness = (
+  keys: Array<string | null | undefined>,
+): IntegrationReadiness => {
+  const presentKeys = keys.filter((value) =>
+    Boolean(value && value.trim()),
+  ).length;
+  if (presentKeys === keys.length)
+    return { configured: true, status: "healthy" };
   if (presentKeys > 0) return { configured: false, status: "partial" };
   return { configured: false, status: "missing" };
 };
@@ -44,20 +65,42 @@ const getIntegrationReadiness = (keys: Array<string | null | undefined>): Integr
 const asPct = (num: number, den: number) =>
   den <= 0 ? 0 : Math.min(100, Math.round((num / den) * 100));
 
-async function buildDashboardPayload(
+export async function buildDashboardPayload(
   workspaceId: string,
   userId: string | null,
   fy: string,
-  options: { canViewFinance?: boolean; segment?: string | null } = {}
+  options: { canViewFinance?: boolean; segment?: string | null } = {},
 ) {
   const queryTimingsMs: Record<string, number> = {};
 
-  const timed = async <T,>(label: string, op: () => Promise<T>): Promise<T> => {
+  const safeTimed = async <T>(
+    label: string,
+    fallback: T,
+    op: () => Promise<T>,
+  ): Promise<T> => {
+    const startedAt = performance.now();
+    try {
+      return await op();
+    } catch (err) {
+      console.warn(
+        `[Dashboard] Safe query failed ${label}:`,
+        err instanceof Error ? err.message : String(err),
+      );
+      return fallback;
+    } finally {
+      queryTimingsMs[label] = Number(
+        (performance.now() - startedAt).toFixed(2),
+      );
+    }
+  };
+  const timed = async <T>(label: string, op: () => Promise<T>): Promise<T> => {
     const startedAt = performance.now();
     try {
       return await op();
     } finally {
-      queryTimingsMs[label] = Number((performance.now() - startedAt).toFixed(2));
+      queryTimingsMs[label] = Number(
+        (performance.now() - startedAt).toFixed(2),
+      );
     }
   };
 
@@ -81,7 +124,8 @@ async function buildDashboardPayload(
   const { canViewFinance = true } = options;
 
   const canViewTaxReadiness =
-    Boolean(userId) && (await checkPermissionSilent(userId!, workspaceId, "tax.readiness.view"));
+    Boolean(userId) &&
+    (await checkPermissionSilent(userId!, workspaceId, "tax.readiness.view"));
   const capabilityGrants = userId
     ? await checkPermissionsSilent(userId, workspaceId, [
         "accounting.view",
@@ -109,45 +153,18 @@ async function buildDashboardPayload(
     investmentAggregate,
     expenses,
     bankTransactionGroups,
-    retainers,
-    proposalStatusGroups,
-    taskCount,
-    openTaskCount,
-    urgentTaskCount,
-    blockedTaskCount,
-    publishedProducts,
-    lowStockProducts,
-    openPurchaseOrders,
-    inventoryMovements,
-    shopOrderStatusGroups,
-    paidOrderRevenueThisMonth,
-    paidOrderRevenuePreviousMonth,
-    ordersLast30Days,
-    ordersPrior30Days,
-    topProductOrderGroups,
-    recentShopOrders,
-    integrityRuns,
-    violationCount,
-    criticalViolationCount,
-    taxOverrides,
-    taxAudits,
-    fileImportFailures,
-    activities,
-    notifications,
-    pendingOrderAgingBuckets,
-    taxReadinessSummary,
   ] = await Promise.all([
     timed("workspace.core", () =>
       prisma.workspace.findUnique({
         where: { id: workspaceId },
-      })
+      }),
     ),
 
     timed("workspace.owner", () =>
       prisma.workspaceUser.findFirst({
         where: { workspaceId, role: "OWNER" },
         select: { user: { select: { timeZone: true } } },
-      })
+      }),
     ),
 
     userId
@@ -155,7 +172,7 @@ async function buildDashboardPayload(
           prisma.user.findUnique({
             where: { id: userId },
             select: { timeZone: true },
-          })
+          }),
         )
       : Promise.resolve(null),
 
@@ -173,12 +190,14 @@ async function buildDashboardPayload(
             shopEnabled: true,
           },
         }),
-        prisma.$queryRaw<Array<{
-          hasGroqApiKey: number;
-          hasRazorpayKeySecret: number;
-          hasStripeSecretKey: number;
-          hasSmtpPassword: number;
-        }>>`
+        prisma.$queryRaw<
+          Array<{
+            hasGroqApiKey: number;
+            hasRazorpayKeySecret: number;
+            hasStripeSecretKey: number;
+            hasSmtpPassword: number;
+          }>
+        >`
           SELECT
             CASE WHEN "groqApiKey" IS NOT NULL AND "groqApiKey" != '' THEN 1 ELSE 0 END AS "hasGroqApiKey",
             CASE WHEN "razorpayKeySecret" IS NOT NULL AND "razorpayKeySecret" != '' THEN 1 ELSE 0 END AS "hasRazorpayKeySecret",
@@ -203,7 +222,9 @@ async function buildDashboardPayload(
       prisma.invoice.findMany({
         where: {
           workspaceId,
-          ...(fyRange ? { invoiceDate: { gte: fyRange.start, lt: fyRange.endExclusive } } : { financialYear: fy }),
+          ...(fyRange
+            ? { invoiceDate: { gte: fyRange.start, lt: fyRange.endExclusive } }
+            : { financialYear: fy }),
         },
         select: {
           status: true,
@@ -213,7 +234,7 @@ async function buildDashboardPayload(
           amountReceived: true,
         },
         orderBy: { invoiceDate: "asc" },
-      })
+      }),
     ),
 
     timed("invoices.attention_buckets", async () => {
@@ -243,12 +264,17 @@ async function buildDashboardPayload(
       for (const invoice of openInvoices) {
         const outstanding = Prisma.Decimal.max(
           new Prisma.Decimal(0),
-          getInvoiceBilledAmount(invoice).minus(new Prisma.Decimal(Number(invoice.amountReceived ?? 0)))
+          getInvoiceBilledAmount(invoice).minus(
+            new Prisma.Decimal(Number(invoice.amountReceived ?? 0)),
+          ),
         );
         if (outstanding.equals(0)) continue;
         const ageDays = Math.max(
           0,
-          Math.floor((now.getTime() - new Date(invoice.invoiceDate).getTime()) / (1000 * 60 * 60 * 24))
+          Math.floor(
+            (now.getTime() - new Date(invoice.invoiceDate).getTime()) /
+              (1000 * 60 * 60 * 24),
+          ),
         );
         if (ageDays <= 30) buckets.current = buckets.current.plus(outstanding);
         else if (ageDays <= 60) buckets.mid = buckets.mid.plus(outstanding);
@@ -261,14 +287,18 @@ async function buildDashboardPayload(
       const outstandingReceivables = openInvoices.reduce((count, inv) => {
         const outstanding = Prisma.Decimal.max(
           new Prisma.Decimal(0),
-          getInvoiceBilledAmount(inv).minus(new Prisma.Decimal(Number(inv.amountReceived ?? 0)))
+          getInvoiceBilledAmount(inv).minus(
+            new Prisma.Decimal(Number(inv.amountReceived ?? 0)),
+          ),
         );
         return outstanding.equals(0) ? count : count + 1;
       }, 0);
       const overdueReceivables = openInvoices.reduce((count, inv) => {
         const outstanding = Prisma.Decimal.max(
           new Prisma.Decimal(0),
-          getInvoiceBilledAmount(inv).minus(new Prisma.Decimal(Number(inv.amountReceived ?? 0)))
+          getInvoiceBilledAmount(inv).minus(
+            new Prisma.Decimal(Number(inv.amountReceived ?? 0)),
+          ),
         );
         if (outstanding.equals(0)) return count;
         const dueDate = new Date(inv.invoiceDate);
@@ -279,30 +309,32 @@ async function buildDashboardPayload(
       return { buckets, overdueReceivables, outstandingReceivables };
     }),
 
-    timed("invoices.recent", () =>
+    safeTimed("invoices.recent", [], () =>
       prisma.invoice.findMany({
         where: { workspaceId },
         orderBy: { invoiceDate: "desc" },
         take: 6,
         include: { client: true },
-      })
+      }),
     ),
 
     timed("investments.sum", () =>
       prisma.investment.aggregate({
         where: { workspaceId },
         _sum: { amount: true },
-      })
+      }),
     ),
 
     timed("expenses.fy", () =>
       prisma.expense.findMany({
         where: {
           workspaceId,
-          ...(fyRange ? { date: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}),
+          ...(fyRange
+            ? { date: { gte: fyRange.start, lt: fyRange.endExclusive } }
+            : {}),
         },
         select: { date: true, amount: true },
-      })
+      }),
     ),
 
     timed("bank.grouped", () =>
@@ -310,37 +342,56 @@ async function buildDashboardPayload(
         where: { workspaceId },
         by: ["isReconciled"],
         _count: { _all: true },
-      })
+      }),
     ),
+  ]);
 
+  const [
+    retainers,
+    proposalStatusGroups,
+    taskCount,
+    openTaskCount,
+    urgentTaskCount,
+    blockedTaskCount,
+    publishedProducts,
+    lowStockProducts,
+    openPurchaseOrders,
+    inventoryMovements,
+  ] = await Promise.all([
     timed("retainers.active", () =>
       prisma.retainer.findMany({
         where: { workspaceId, status: "ACTIVE" },
-        select: { items: { select: { quantity: true, unitPrice: true } }, nextBillingDate: true, createdAt: true },
-      })
+        select: {
+          items: { select: { quantity: true, unitPrice: true } },
+          nextBillingDate: true,
+          createdAt: true,
+        },
+      }),
     ),
 
     timed("proposals.grouped", () =>
       prisma.proposal.groupBy({
-        where: { 
+        where: {
           workspaceId,
-          ...(fyRange ? { dateCreated: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}),
+          ...(fyRange
+            ? { dateCreated: { gte: fyRange.start, lt: fyRange.endExclusive } }
+            : {}),
         },
         by: ["status"],
         _count: { _all: true },
-      })
+      }),
     ),
 
     timed("tasks.total", () =>
       prisma.task.count({
         where: { workspaceId },
-      })
+      }),
     ),
 
     timed("tasks.open", () =>
       prisma.task.count({
         where: { workspaceId, status: { not: "DONE" } },
-      })
+      }),
     ),
 
     timed("tasks.urgent", () =>
@@ -348,21 +399,24 @@ async function buildDashboardPayload(
         where: {
           workspaceId,
           status: { not: "DONE" },
-          OR: [{ dueDate: { lte: sevenDaysOut } }, { status: { contains: "URGENT" } }],
+          OR: [
+            { dueDate: { lte: sevenDaysOut } },
+            { status: { contains: "URGENT" } },
+          ],
         },
-      })
+      }),
     ),
 
     timed("tasks.blocked", () =>
       prisma.task.count({
         where: { workspaceId, status: { contains: "BLOCK" } },
-      })
+      }),
     ),
 
     timed("products.published", () =>
       prisma.product.count({
         where: { workspaceId, showInShop: true },
-      })
+      }),
     ),
 
     timed("products.low_stock", () =>
@@ -371,13 +425,13 @@ async function buildDashboardPayload(
           workspaceId,
           OR: [{ status: "LOW_STOCK" }, { currentStock: { lte: 5 } }],
         },
-      })
+      }),
     ),
 
     timed("purchase_orders.open", () =>
       prisma.purchaseOrder.count({
         where: { workspaceId, status: { in: ["DRAFT", "SENT"] } },
-      })
+      }),
     ),
 
     timed("inventory.recent", () =>
@@ -386,18 +440,33 @@ async function buildDashboardPayload(
         include: { product: { select: { name: true } } },
         orderBy: { createdAt: "desc" },
         take: 5,
-      })
+      }),
     ),
+  ]);
 
+  const [
+    shopOrderStatusGroups,
+    paidOrderRevenueThisMonth,
+    paidOrderRevenuePreviousMonth,
+    ordersLast30Days,
+    ordersPrior30Days,
+    topProductOrderGroups,
+    recentShopOrders,
+    integrityRuns,
+    violationCount,
+    criticalViolationCount,
+  ] = await Promise.all([
     timed("orders.status_group", () =>
       prisma.shopOrder.groupBy({
-        where: { 
+        where: {
           workspaceId,
-          ...(fyRange ? { createdAt: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}),
+          ...(fyRange
+            ? { createdAt: { gte: fyRange.start, lt: fyRange.endExclusive } }
+            : {}),
         },
         by: ["status"],
         _count: { _all: true },
-      })
+      }),
     ),
 
     timed("orders.revenue_month", () =>
@@ -408,7 +477,7 @@ async function buildDashboardPayload(
           createdAt: { gte: monthStart, lt: nextMonthStart },
         },
         _sum: { amount: true },
-      })
+      }),
     ),
 
     timed("orders.revenue_prev_month", () =>
@@ -419,13 +488,13 @@ async function buildDashboardPayload(
           createdAt: { gte: previousMonthStart, lt: monthStart },
         },
         _sum: { amount: true },
-      })
+      }),
     ),
 
     timed("orders.last_30d", () =>
       prisma.shopOrder.count({
         where: { workspaceId, createdAt: { gte: thirtyDaysBack } },
-      })
+      }),
     ),
 
     timed("orders.prior_30d", () =>
@@ -434,7 +503,7 @@ async function buildDashboardPayload(
           workspaceId,
           createdAt: { gte: sixtyDaysBack, lt: thirtyDaysBack },
         },
-      })
+      }),
     ),
 
     timed("orders.top_products", () =>
@@ -442,13 +511,15 @@ async function buildDashboardPayload(
         where: {
           shopOrder: {
             workspaceId,
-            ...(fyRange ? { createdAt: { gte: fyRange.start, lt: fyRange.endExclusive } } : {}),
+            ...(fyRange
+              ? { createdAt: { gte: fyRange.start, lt: fyRange.endExclusive } }
+              : {}),
           },
         },
         by: ["productId", "productName"],
         _count: { _all: true },
         _sum: { lineTotal: true },
-      })
+      }),
     ),
 
     timed("orders.recent", () =>
@@ -457,7 +528,7 @@ async function buildDashboardPayload(
         include: { items: { select: { productName: true }, take: 1 } },
         orderBy: { createdAt: "desc" },
         take: 5,
-      })
+      }),
     ),
 
     timed("integrity.last_run", () =>
@@ -465,47 +536,57 @@ async function buildDashboardPayload(
         where: { workspaceId },
         orderBy: { startedAt: "desc" },
         take: 1,
-      })
+      }),
     ),
 
     timed("integrity.violations_total", () =>
       prisma.accountingViolationReport.count({
         where: { workspaceId },
-      })
+      }),
     ),
 
     timed("integrity.violations_critical", () =>
       prisma.accountingViolationReport.count({
         where: { workspaceId, severity: "CRITICAL" },
-      })
+      }),
     ),
+  ]);
 
+  const [
+    taxOverrides,
+    taxAudits,
+    fileImportFailures,
+    activities,
+    notifications,
+    pendingOrderAgingBuckets,
+    taxReadinessSummary,
+  ] = await Promise.all([
     timed("tax.overrides", () =>
       prisma.taxRateOverride.count({
         where: { workspaceId, isActive: true },
-      })
+      }),
     ),
 
-    timed("tax.audits_recent", () =>
+    safeTimed("tax.audits_recent", [], () =>
       prisma.taxDecisionAuditLog.findMany({
         where: { workspaceId },
         orderBy: { createdAt: "desc" },
         take: 5,
-      })
+      }),
     ),
 
-    timed("imports.failed", () =>
+    safeTimed("imports.failed", 0, () =>
       prisma.fileImportAuditLog.count({
         where: { workspaceId, status: { in: ["FAILED", "ERROR"] } },
-      })
+      }),
     ),
 
-    timed("activity.recent", () =>
+    safeTimed("activity.recent", [], () =>
       prisma.appActivityLog.findMany({
         where: { workspaceId },
         orderBy: { createdAt: "desc" },
         take: 8,
-      })
+      }),
     ),
 
     userId
@@ -515,11 +596,14 @@ async function buildDashboardPayload(
               userId,
               workspaceId,
               isRead: false,
-              eventType: { in: CRITICAL_NOTIFICATION_TYPES as unknown as string[] },
+              eventType: {
+                in: CRITICAL_NOTIFICATION_TYPES as unknown as string[],
+              },
             },
-          })
+          }),
         )
       : Promise.resolve(0),
+
     timed("orders.pending_buckets", async () => {
       // Avoid pulling all orders into memory; we only need pending/failed aging buckets.
       const pendingOrders = await prisma.shopOrder.findMany({
@@ -540,7 +624,10 @@ async function buildDashboardPayload(
       for (const order of pendingOrders) {
         const ageDays = Math.max(
           0,
-          Math.floor((now.getTime() - new Date(order.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+          Math.floor(
+            (now.getTime() - new Date(order.createdAt).getTime()) /
+              (1000 * 60 * 60 * 24),
+          ),
         );
         const outstanding = toDecimal(order.amount);
         if (ageDays <= 30) buckets.current = buckets.current.plus(outstanding);
@@ -550,48 +637,60 @@ async function buildDashboardPayload(
 
       return buckets;
     }),
-    timed("tax.readiness_summary", () =>
-      getTaxReadinessSummary(workspaceId, { includeSummary: canViewTaxReadiness }),
+
+    safeTimed(
+      "tax.readiness_summary",
+      {
+        hasReturns: false,
+        totalOpenBlockers: 0,
+        openBlockersBySeverity: { INFO: 0, WARNING: 0, CRITICAL: 0 },
+        nextReturn: null,
+        recentReturns: [],
+      },
+      () =>
+        getTaxReadinessSummary(workspaceId, {
+          includeSummary: canViewTaxReadiness,
+        }),
     ),
   ]);
 
-  const billedRevenue = canViewFinance ? sumInvoiceBilledAmount(invoices) : new Prisma.Decimal(0);
+  const billedRevenue = canViewFinance
+    ? sumInvoiceBilledAmount(invoices)
+    : new Prisma.Decimal(0);
 
   const expensesTotal = expenses.reduce(
     (sum, row) => sum.plus(toDecimal(row.amount)),
-    new Prisma.Decimal(0)
+    new Prisma.Decimal(0),
   );
 
   const liquidAssets = canViewFinance
     ? toDecimal(investmentAggregate._sum.amount ?? 0)
     : new Prisma.Decimal(0);
 
-  const shopOrderByStatus = shopOrderStatusGroups.reduce<Record<string, number>>(
-    (acc, group) => {
-      const status = String(group.status || "PENDING").toUpperCase();
-      acc[status] = group._count._all;
-      return acc;
-    },
-    {}
-  );
+  const shopOrderByStatus = shopOrderStatusGroups.reduce<
+    Record<string, number>
+  >((acc, group) => {
+    const status = String(group.status || "PENDING").toUpperCase();
+    acc[status] = group._count._all;
+    return acc;
+  }, {});
 
   const paidOrders = shopOrderByStatus.PAID ?? 0;
   const pendingOrders = shopOrderByStatus.PENDING ?? 0;
   const failedOrders = shopOrderByStatus.FAILED ?? 0;
   const pendingOrdersCount = pendingOrders + failedOrders;
 
-  const receivables = (canViewFinance
-    ? invoices.reduce((sum, inv) => {
-        const billed = getInvoiceBilledAmount(inv);
-        const received = new Prisma.Decimal(Number(inv.amountReceived ?? 0));
-        return sum.plus(Prisma.Decimal.max(new Prisma.Decimal(0), billed.minus(received)));
-      }, new Prisma.Decimal(0))
-    : new Prisma.Decimal(0)
-  ).plus(
-    pendingOrdersCount > 0
-      ? toDecimal(0)
+  const receivables = (
+    canViewFinance
+      ? invoices.reduce((sum, inv) => {
+          const billed = getInvoiceBilledAmount(inv);
+          const received = new Prisma.Decimal(Number(inv.amountReceived ?? 0));
+          return sum.plus(
+            Prisma.Decimal.max(new Prisma.Decimal(0), billed.minus(received)),
+          );
+        }, new Prisma.Decimal(0))
       : new Prisma.Decimal(0)
-  );
+  ).plus(pendingOrdersCount > 0 ? toDecimal(0) : new Prisma.Decimal(0));
 
   const presumptiveIncome = billedRevenue.mul(0.5);
   const taxEstimate = canViewFinance
@@ -606,33 +705,45 @@ async function buildDashboardPayload(
     : { amount: serializeMoney(0) };
 
   const recurringRevenue = retainers.reduce(
-    (sum, ret) => sum.plus(toDecimal((ret as any).items?.reduce((acc: number, i: any) => acc + (i.quantity * Number(i.unitPrice)), 0) || 0)),
-    new Prisma.Decimal(0)
+    (sum, ret) =>
+      sum.plus(
+        toDecimal(
+          (ret as any).items?.reduce(
+            (acc: number, i: any) => acc + i.quantity * Number(i.unitPrice),
+            0,
+          ) || 0,
+        ),
+      ),
+    new Prisma.Decimal(0),
   );
   const arr = recurringRevenue.mul(12);
 
   const totalBankTransactions = bankTransactionGroups.reduce(
     (sum, row) => sum + row._count._all,
-    0
+    0,
   );
   const unreconciledTransactions = bankTransactionGroups
     .filter((row) => !row.isReconciled)
     .reduce((sum, row) => sum + row._count._all, 0);
   const reconciliationProgress = asPct(
     totalBankTransactions - unreconciledTransactions,
-    totalBankTransactions
+    totalBankTransactions,
   );
 
-  const { overdueReceivables, outstandingReceivables } = openInvoiceAgingBuckets;
+  const { overdueReceivables, outstandingReceivables } =
+    openInvoiceAgingBuckets;
 
   const retainersDueSoon = retainers.filter(
-    (ret) => ret.nextBillingDate >= now && ret.nextBillingDate <= sevenDaysOut
+    (ret) => ret.nextBillingDate >= now && ret.nextBillingDate <= sevenDaysOut,
   ).length;
 
-  const proposalCounts = proposalStatusGroups.reduce<Record<string, number>>((acc, group) => {
-    acc[String(group.status || "DRAFT").toUpperCase()] = group._count._all;
-    return acc;
-  }, {});
+  const proposalCounts = proposalStatusGroups.reduce<Record<string, number>>(
+    (acc, group) => {
+      acc[String(group.status || "DRAFT").toUpperCase()] = group._count._all;
+      return acc;
+    },
+    {},
+  );
 
   const acceptedUninvoicedProposals = proposalCounts.ACCEPTED ?? 0;
   const urgentTasks = urgentTaskCount;
@@ -650,11 +761,18 @@ async function buildDashboardPayload(
     declined: proposalCounts.DECLINED ?? 0,
   };
 
-  const conversion = asPct(paidOrders, Math.max(1, paidOrders + pendingOrders + failedOrders));
+  const conversion = asPct(
+    paidOrders,
+    Math.max(1, paidOrders + pendingOrders + failedOrders),
+  );
 
   const topProductIds = topProductOrderGroups
     .filter((group) => Boolean(group.productId))
-    .sort((a, b) => Number((b._count as { _all?: number } | undefined)?._all ?? 0) - Number((a._count as { _all?: number } | undefined)?._all ?? 0))
+    .sort(
+      (a, b) =>
+        Number((b._count as { _all?: number } | undefined)?._all ?? 0) -
+        Number((a._count as { _all?: number } | undefined)?._all ?? 0),
+    )
     .slice(0, 4)
     .map((group) => group.productId as string);
 
@@ -663,25 +781,41 @@ async function buildDashboardPayload(
         prisma.product.findMany({
           where: { id: { in: topProductIds } },
           select: { id: true, name: true },
-        })
+        }),
       )
     : [];
 
-  const topProductNameById = new Map(topProductsData.map((row) => [row.id, row.name]));
+  const topProductNameById = new Map(
+    topProductsData.map((row) => [row.id, row.name]),
+  );
 
   const topProducts = topProductOrderGroups
-    .sort((a, b) => Number((b._count as { _all?: number } | undefined)?._all ?? 0) - Number((a._count as { _all?: number } | undefined)?._all ?? 0))
+    .sort(
+      (a, b) =>
+        Number((b._count as { _all?: number } | undefined)?._all ?? 0) -
+        Number((a._count as { _all?: number } | undefined)?._all ?? 0),
+    )
     .slice(0, 4)
     .map((group) => ({
       productName:
         (group.productId && topProductNameById.get(group.productId)) ??
         "Unknown product",
-      orderCount: Number((group._count as { _all?: number } | undefined)?._all ?? 0),
-      revenue: serializeMoney(toDecimal((group._sum as { lineTotal?: number | string | Prisma.Decimal | null } | undefined)?.lineTotal ?? 0)),
+      orderCount: Number(
+        (group._count as { _all?: number } | undefined)?._all ?? 0,
+      ),
+      revenue: serializeMoney(
+        toDecimal(
+          (
+            group._sum as
+              | { lineTotal?: number | string | Prisma.Decimal | null }
+              | undefined
+          )?.lineTotal ?? 0,
+        ),
+      ),
     }));
 
   const bucketTimeZone = resolveMonthlyBucketTimeZone(
-    workspaceOwner?.user?.timeZone ?? currentUser?.timeZone ?? null
+    workspaceOwner?.user?.timeZone ?? currentUser?.timeZone ?? null,
   );
 
   const ensure12Months: { date: Date; value: number }[] = [];
@@ -694,13 +828,19 @@ async function buildDashboardPayload(
   }
 
   const generatedMrrRows = retainers.flatMap((ret) => {
-    const amount = (ret as any).items?.reduce((acc: number, i: any) => acc + (i.quantity * Number(i.unitPrice)), 0) || 0;
+    const amount =
+      (ret as any).items?.reduce(
+        (acc: number, i: any) => acc + i.quantity * Number(i.unitPrice),
+        0,
+      ) || 0;
     if (!fyRange || !ret.createdAt) return [{ date: now, value: amount }];
     const activeMonths = [];
     for (let i = 0; i < 12; i++) {
       const d = new Date(fyRange.start);
       d.setMonth(fyRange.start.getMonth() + i);
-      const isStartMonth = d.getFullYear() === new Date(ret.createdAt).getFullYear() && d.getMonth() === new Date(ret.createdAt).getMonth();
+      const isStartMonth =
+        d.getFullYear() === new Date(ret.createdAt).getFullYear() &&
+        d.getMonth() === new Date(ret.createdAt).getMonth();
       if (isStartMonth || new Date(ret.createdAt) < fyRange.start) {
         activeMonths.push({ date: d, value: amount });
       }
@@ -724,10 +864,14 @@ async function buildDashboardPayload(
   const integrationReadiness = {
     groq: getIntegrationReadiness([profile?.hasGroqApiKey ? "SET" : null]),
     payment:
-      getIntegrationReadiness([profile?.razorpayKeyId, profile?.hasRazorpayKeySecret ? "SET" : null]).status ===
-        "healthy" ||
-      getIntegrationReadiness([profile?.stripePublishableKey, profile?.hasStripeSecretKey ? "SET" : null]).status ===
-        "healthy"
+      getIntegrationReadiness([
+        profile?.razorpayKeyId,
+        profile?.hasRazorpayKeySecret ? "SET" : null,
+      ]).status === "healthy" ||
+      getIntegrationReadiness([
+        profile?.stripePublishableKey,
+        profile?.hasStripeSecretKey ? "SET" : null,
+      ]).status === "healthy"
         ? { configured: true, status: "healthy" as IntegrationStatus }
         : getIntegrationReadiness([
             profile?.razorpayKeyId,
@@ -752,7 +896,7 @@ async function buildDashboardPayload(
       acc[item.status] += 1;
       return acc;
     },
-    { healthy: 0, partial: 0, missing: 0 }
+    { healthy: 0, partial: 0, missing: 0 },
   );
 
   const setupSignals = [
@@ -801,9 +945,13 @@ async function buildDashboardPayload(
   ] as const;
 
   const receivablesAgingBuckets = {
-    current: openInvoiceAgingBuckets.buckets.current.plus(pendingOrderAgingBuckets.current),
+    current: openInvoiceAgingBuckets.buckets.current.plus(
+      pendingOrderAgingBuckets.current,
+    ),
     mid: openInvoiceAgingBuckets.buckets.mid.plus(pendingOrderAgingBuckets.mid),
-    late: openInvoiceAgingBuckets.buckets.late.plus(pendingOrderAgingBuckets.late),
+    late: openInvoiceAgingBuckets.buckets.late.plus(
+      pendingOrderAgingBuckets.late,
+    ),
   };
 
   const receivablesAging = [
@@ -817,16 +965,30 @@ async function buildDashboardPayload(
       ? [{ label: "Missing integrations", severity: "warning" as const }]
       : []),
     ...(criticalViolations > 0
-      ? [{ label: "Critical accounting violations", severity: "critical" as const }]
+      ? [
+          {
+            label: "Critical accounting violations",
+            severity: "critical" as const,
+          },
+        ]
       : []),
     ...(fileImportFailures > 0
-      ? [{ label: "Failed imports require review", severity: "warning" as const }]
+      ? [
+          {
+            label: "Failed imports require review",
+            severity: "warning" as const,
+          },
+        ]
       : []),
   ];
 
   const lastRun = integrityRuns[0];
-  const shopRevenueThisMonth = toDecimal(paidOrderRevenueThisMonth._sum.amount ?? 0);
-  const shopRevenuePreviousMonth = toDecimal(paidOrderRevenuePreviousMonth._sum.amount ?? 0);
+  const shopRevenueThisMonth = toDecimal(
+    paidOrderRevenueThisMonth._sum.amount ?? 0,
+  );
+  const shopRevenuePreviousMonth = toDecimal(
+    paidOrderRevenuePreviousMonth._sum.amount ?? 0,
+  );
 
   const revenueDeltaPct = shopRevenuePreviousMonth.gt(0)
     ? Number(
@@ -834,23 +996,43 @@ async function buildDashboardPayload(
           .minus(shopRevenuePreviousMonth)
           .div(shopRevenuePreviousMonth)
           .mul(100)
-          .toFixed(1)
+          .toFixed(1),
       )
     : null;
 
   const orderDeltaPct =
     ordersPrior30Days > 0
-      ? Number((((ordersLast30Days - ordersPrior30Days) / ordersPrior30Days) * 100).toFixed(1))
+      ? Number(
+          (
+            ((ordersLast30Days - ordersPrior30Days) / ordersPrior30Days) *
+            100
+          ).toFixed(1),
+        )
       : null;
 
   const salesAndShopKpiPeriods = {
     proposalFunnel: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
-    acceptedAwaitingInvoicing: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
+    acceptedAwaitingInvoicing: describeKpiPeriod({
+      type: "FY",
+      now,
+      fy,
+      fyRange,
+    }),
     publicShopOrders: describeKpiPeriod({ type: "ALL_TIME", now, fy, fyRange }),
-    shopOrderConversion: describeKpiPeriod({ type: "ALL_TIME", now, fy, fyRange }),
+    shopOrderConversion: describeKpiPeriod({
+      type: "ALL_TIME",
+      now,
+      fy,
+      fyRange,
+    }),
     topProducts: describeKpiPeriod({ type: "ALL_TIME", now, fy, fyRange }),
     shopRevenueThisMonth: describeKpiPeriod({ type: "FY", now, fy, fyRange }),
-    ordersLast30Days: describeKpiPeriod({ type: "ROLLING_30D", now, fy, fyRange }),
+    ordersLast30Days: describeKpiPeriod({
+      type: "ROLLING_30D",
+      now,
+      fy,
+      fyRange,
+    }),
   };
   const optionalModuleRouteMap: Record<ModuleKey, string> = {
     WORKFORCE: "/workforce",
@@ -921,7 +1103,10 @@ async function buildDashboardPayload(
       acceptedAwaitingInvoicing: acceptedUninvoicedProposals,
       shopEnabled: Boolean(profile?.shopEnabled),
       publicShopOrders: {
-        total: Object.values(shopOrderByStatus).reduce((sum, value) => sum + value, 0),
+        total: Object.values(shopOrderByStatus).reduce(
+          (sum, value) => sum + value,
+          0,
+        ),
         paid: paidOrders,
         pending: pendingOrders,
         failed: failedOrders,
@@ -947,7 +1132,8 @@ async function buildDashboardPayload(
     },
 
     operations: {
-      hasOperationalData: lowStockProducts > 0 || openPurchaseOrders > 0 || taskCount > 0,
+      hasOperationalData:
+        lowStockProducts > 0 || openPurchaseOrders > 0 || taskCount > 0,
       lowStockCount: lowStockProducts,
       openPurchaseOrders,
       recentInventoryMovements: inventoryMovements.map((movement) => ({
@@ -1051,7 +1237,7 @@ export async function GET(request: Request) {
     if (!workspaceId) {
       return NextResponse.json(
         { error: "Unauthorized", code: "AUTH_UNAUTHORIZED" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -1139,7 +1325,7 @@ export async function GET(request: Request) {
         error: "Failed to aggregate dashboard data",
         code: "DASHBOARD_AGGREGATION_FAILED",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
