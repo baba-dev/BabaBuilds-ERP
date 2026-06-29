@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import matter from "gray-matter";
+import yaml from "js-yaml";
 
 const docsDir = path.join(process.cwd(), "content", "docs");
 
@@ -38,6 +38,28 @@ export interface DocsSearchResult {
   icon?: string;
   estimatedMinutes?: number;
   score: number;
+}
+
+function parseFrontmatter(raw: string): { data: Record<string, unknown>; content: string } {
+  if (!raw.startsWith("---")) {
+    return { data: {}, content: raw };
+  }
+
+  const match = raw.match(/^---(?:\r?\n)([\s\S]*?)(?:\r?\n)---(?:\r?\n|$)([\s\S]*)$/);
+  if (!match) {
+    return { data: {}, content: raw };
+  }
+
+  const parsed = yaml.load(match[1]);
+  const data =
+    parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : {};
+
+  return {
+    data,
+    content: match[2] ?? "",
+  };
 }
 
 function parseFrontmatterDate(value: unknown): string | undefined {
@@ -131,7 +153,7 @@ function normalizeDocMeta(slug: string, data: Record<string, unknown>): DocMeta 
 export function getDocBySlug(slug: string): Doc {
   const filePath = path.join(docsDir, `${slug}.md`);
   const raw = fs.readFileSync(filePath, "utf-8");
-  const { data, content } = matter(raw);
+  const { data, content } = parseFrontmatter(raw);
 
   return {
     ...normalizeDocMeta(slug, data as Record<string, unknown>),
@@ -151,7 +173,7 @@ export function getAllDocs(): DocMeta[] {
     .map((file) => {
       const slug = file.replace(/\.md$/, "");
       const raw = fs.readFileSync(path.join(docsDir, file), "utf-8");
-      const { data } = matter(raw);
+      const { data } = parseFrontmatter(raw);
 
       return normalizeDocMeta(slug, data as Record<string, unknown>);
     })
