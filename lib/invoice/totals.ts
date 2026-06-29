@@ -4,7 +4,7 @@ import { toDecimal } from '@/lib/money';
 import { Prisma } from '@prisma/client';
 
 export interface InvoiceTotalsInput {
-  services: Array<{ amount: number, taxRate?: number }>;
+  services: Array<{ amount: number, taxRate?: number | null }>;
   isTaxExempt: boolean;
   defaultTaxRate?: number;
 }
@@ -57,7 +57,7 @@ export function calculateInvoiceTotals({
   const taxAmount = taxAmountDecimal.toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
   const total = subtotalDecimal.plus(taxAmount);
 
-  let effectiveTaxRate = isTaxExempt ? 0 : (ratesUsed.size === 1 ? Array.from(ratesUsed)[0] : defaultTaxRate);
+  const effectiveTaxRate = isTaxExempt ? 0 : (ratesUsed.size === 1 ? Array.from(ratesUsed)[0] : defaultTaxRate);
 
   return {
     subtotal: subtotalDecimal.toNumber(),

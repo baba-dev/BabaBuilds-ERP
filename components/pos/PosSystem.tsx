@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Loader2, Search, Plus, Minus, Trash2, ShoppingCart, User, X, FileText, Repeat } from "lucide-react";
 import { toast } from "sonner";
@@ -33,12 +34,14 @@ type CatalogItem = {
   description?: string;
 };
 
+type ClientOption = { id: string; name: string };
+
 type CartItem = CatalogItem & {
   cartId: string; // unique ID for cart instance
   quantity: number;
 };
 
-export default function PosSystem({ catalog, clients, onSuccess }: any) {
+export default function PosSystem({ clients }: { catalog?: CatalogItem[]; clients: ClientOption[]; onSuccess?: () => void }) {
   const t = useTranslations('POS');
   const [activeTab, setActiveTab] = useState<"SERVICES" | "PRODUCTS">("SERVICES");
   const [items, setItems] = useState<CatalogItem[]>([]);
@@ -217,7 +220,7 @@ export default function PosSystem({ catalog, clients, onSuccess }: any) {
               <SelectValue placeholder={t('select_client_ph')} />
             </SelectTrigger>
             <SelectContent>
-              {clients.map(c => (
+              {clients.map((c: ClientOption) => (
                 <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
               ))}
             </SelectContent>
