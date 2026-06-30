@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       resolvedClientId = walkIn.id;
     }
 
-    const client = await prisma.client.findUnique({ where: { id: resolvedClientId } });
+    const client = await prisma.client.findFirst({ where: { id: resolvedClientId, workspaceId } });
     if (!client) return NextResponse.json({ error: 'Client not found' }, { status: 404 });
 
     const totalAmount = items.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0) - discount;
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       const invoice = await prisma.invoice.create({
         data: {
           workspaceId,
-          clientId: resolvedClientId,
+          clientId: client.id,
           invoiceNumber: `POS-${Date.now().toString().slice(-6)}`,
           financialYear: new Date().getFullYear().toString(),
           invoiceDate: new Date(),
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
       const invoice = await prisma.invoice.create({
         data: {
           workspaceId,
-          clientId: resolvedClientId,
+          clientId: client.id,
           invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
           financialYear: new Date().getFullYear().toString(),
           invoiceDate: new Date(),
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
       const proposal = await prisma.proposal.create({
         data: {
           workspaceId,
-          clientId: resolvedClientId,
+          clientId: client.id,
           proposalNo: `PRP-${Date.now().toString().slice(-6)}`,
           title: 'POS Generated Proposal',
           subtotal: totalAmount,
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
       const retainer = await prisma.retainer.create({
         data: {
           workspaceId,
-          clientId: resolvedClientId,
+          clientId: client.id,
           frequency: 'MONTHLY',
           nextBillingDate: new Date(),
           status: 'ACTIVE',
