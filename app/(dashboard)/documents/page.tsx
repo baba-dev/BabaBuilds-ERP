@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { checkPermissionSilent } from "@/lib/rbac";
 import { UploadDropzone } from "@/components/documents/UploadDropzone";
 import { UnifiedDocumentList } from "@/components/documents/UnifiedDocumentList";
+import { FileText, UploadCloud } from "lucide-react";
 
 async function getWorkspaceId(userId: string) {
   const wu = await prisma.workspaceUser.findFirst({
@@ -40,28 +41,32 @@ export default async function DocumentCenterPage() {
   });
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto w-full pb-12">
-      {/* Header section with massive upload dropzone */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 shadow-2xl dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950 border border-zinc-800">
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
-        <div className="relative z-10 p-8 sm:p-12 space-y-6 text-center">
-          <div className="space-y-3">
-            <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white drop-shadow-md">
+    <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8 pb-20 transition-colors duration-300">
+      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
+        <div className="sticky top-0 z-20 -mx-4 px-4 py-3 md:-mx-8 md:px-8 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200/50 dark:border-zinc-800/50 transition-all duration-300">
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 max-w-7xl mx-auto w-full">
+            <div className="space-y-1">
+              <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-3">
+                <div className="p-2.5 bg-accent-primary/10 dark:bg-accent-primary/20 rounded-xl border border-accent-primary/20 dark:border-accent-primary/25">
+                  <FileText className="w-6 h-6 text-accent-primary" />
+                </div>
               Document Center
-            </h1>
-            <p className="text-sm sm:text-base text-zinc-300 max-w-2xl mx-auto leading-relaxed">
-              Upload, analyze, and manage your documents in one unified view. Check "Analyze with AI Agent" to automatically extract summaries and metadata.
-            </p>
-          </div>
-          
-          <div className="max-w-4xl mx-auto mt-8">
-            <UploadDropzone className="shadow-2xl shadow-black/20" />
+              </h1>
+              <p className="text-zinc-500 dark:text-zinc-400 font-medium text-sm max-w-xl">
+                Upload, analyze, and manage your workspace documents in one unified view.
+              </p>
+            </div>
+            <div className="hidden md:flex items-center gap-2 rounded-xl border border-accent-primary/20 bg-accent-primary/10 px-4 py-3 text-accent-primary shadow-sm">
+              <UploadCloud className="h-4 w-4" />
+              <span className="text-xs font-extrabold uppercase tracking-widest">AI-ready vault</span>
+            </div>
           </div>
         </div>
-      </div>
+
+        <UploadDropzone />
 
       {/* Unified Document List Section */}
-      <div className="px-2">
+        <div className="px-2">
         <div className="mb-6">
           <h2 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Your Documents</h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">All uploaded and generated documents across your workspace.</p>
@@ -69,6 +74,7 @@ export default async function DocumentCenterPage() {
         
         {/* Client component for rendering the documents and grid/list toggles */}
         <UnifiedDocumentList documents={documents} />
+        </div>
       </div>
     </div>
   );
