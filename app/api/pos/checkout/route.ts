@@ -58,11 +58,15 @@ export async function POST(request: Request) {
           pdfPath: '',
           items: {
             create: items.map((i: any) => ({
-              title: i.name,
-              description: i.description || '',
+              productId:
+                i.type === 'PRODUCT' && typeof i.id === 'string' && !i.id.startsWith('custom-')
+                  ? i.id
+                  : null,
+              description: i.description ? `${i.name} - ${i.description}` : i.name,
               quantity: i.quantity,
               unitPrice: i.price,
-              total: i.price * i.quantity,
+              taxRate: i.taxRate ?? 0,
+              totalAmount: i.price * i.quantity,
             }))
           }
         }
@@ -83,11 +87,15 @@ export async function POST(request: Request) {
           pdfPath: '',
           items: {
             create: items.map((i: any) => ({
-              title: i.name,
-              description: i.description || '',
+              productId:
+                i.type === 'PRODUCT' && typeof i.id === 'string' && !i.id.startsWith('custom-')
+                  ? i.id
+                  : null,
+              description: i.description ? `${i.name} - ${i.description}` : i.name,
               quantity: i.quantity,
               unitPrice: i.price,
-              total: i.price * i.quantity,
+              taxRate: i.taxRate ?? 0,
+              totalAmount: i.price * i.quantity,
             }))
           }
         }
