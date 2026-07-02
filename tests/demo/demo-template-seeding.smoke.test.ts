@@ -47,6 +47,13 @@ vi.mock('@/lib/prisma', () => {
       taxReturn: { create: vi.fn() },
       taxReadinessCheck: { upsert: vi.fn() },
       taxReadinessBlocker: { create: vi.fn() },
+      mailBillingPlan: { create: vi.fn() },
+      mailBillingServer: { create: vi.fn() },
+      mailBillingDomain: { create: vi.fn() },
+      mailBillingMailbox: { create: vi.fn() },
+      mailBillingSubscription: { create: vi.fn() },
+      mailBillingReviewItem: { create: vi.fn() },
+      mailBillingSettings: { upsert: vi.fn() },
     },
   };
 });
@@ -75,6 +82,9 @@ describe('demo templates seeding', () => {
     tx.taxReturn.create.mockResolvedValue({ id: 'tr_1' });
     tx.taxReadinessCheck.upsert.mockResolvedValue({ id: 'tc_1' });
     tx.cashForecastSnapshot.create.mockResolvedValue({ id: 'cfs_1' });
+    tx.mailBillingPlan.create.mockResolvedValue({ id: 'email_plan_1' });
+    tx.mailBillingServer.create.mockResolvedValue({ id: 'email_server_1' });
+    tx.mailBillingDomain.create.mockResolvedValue({ id: 'email_domain_1' });
 
     const result = await seedDemoWorkspace(tx, { userId: 'u_1', templateKey: key, ttlHours: 24 });
 

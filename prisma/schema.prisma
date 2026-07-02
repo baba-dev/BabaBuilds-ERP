@@ -608,6 +608,14 @@ model Workspace {
   cashForecastAlertPreferences    CashForecastAlertPreference[]
   clientPaymentBehaviors          ClientPaymentBehavior[]
   rbacAuditLogs                   RbacAuditLog[]
+  mailBillingServers              MailBillingServer[]
+  mailBillingDomains              MailBillingDomain[]
+  mailBillingMailboxes            MailBillingMailbox[]
+  mailBillingSyncRuns             MailBillingSyncRun[]
+  mailBillingPlans                MailBillingPlan[]
+  mailBillingSubscriptions        MailBillingSubscription[]
+  mailBillingReviewItems          MailBillingReviewItem[]
+  mailBillingSettings             MailBillingSettings?
 
   // IMS Relations
   products           Product[]
@@ -1225,6 +1233,8 @@ model Client {
   proposals       Proposal[]
   retainers       Retainer[]
   paymentBehavior ClientPaymentBehavior?
+  mailBillingDomains MailBillingDomain[]
+  mailBillingSubscriptions MailBillingSubscription[]
 
   @@unique([name, workspaceId])
   @@index([workspaceId])
@@ -2362,6 +2372,8 @@ model Retainer {
 
   items               RetainerItem[]
   meteredUsages       MeteredUsage[]
+  mailBillingDomains  MailBillingDomain[]
+  mailBillingSubscriptions MailBillingSubscription[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2955,6 +2967,236 @@ model RbacAuditLog {
   @@index([workspaceId, eventType, createdAt(sort: Desc)])
   @@index([workspaceId, actorUserId])
   @@index([workspaceId, targetUserId])
+}
+
+
+model MailBillingServer {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name        String
+  provider    String    @default("MIAB")
+  accessMode  String    @default("READ_ONLY_ADAPTER")
+  baseUrl        String
+  encryptedToken String?
+  status         String    @default("ACTIVE")
+  lastSyncAt     DateTime?
+  lastSyncStatus String?
+  lastSyncError  String?
+
+  domains   MailBillingDomain[]
+  mailboxes MailBillingMailbox[]
+  syncRuns  MailBillingSyncRun[]
+  reviewItems MailBillingReviewItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, status])
+}
+
+model MailBillingDomain {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  serverId String
+  server   MailBillingServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  domain String
+
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  retainerId String?
+  retainer   Retainer? @relation(fields: [retainerId], references: [id], onDelete: SetNull)
+
+  status       String @default("ACTIVE")
+  mailboxCount Int    @default(0)
+  aliasCount   Int    @default(0)
+  billingMode  String @default("DOMAIN_PLAN")
+  billingNotes String?
+
+  discoveredAt DateTime @default(now())
+  lastSeenAt   DateTime @default(now())
+  archivedAt   DateTime?
+  mailboxes MailBillingMailbox[]
+  subscriptions MailBillingSubscription[]
+  reviewItems MailBillingReviewItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, serverId, domain])
+  @@index([workspaceId, clientId])
+  @@index([workspaceId, retainerId])
+  @@index([workspaceId, status])
+}
+
+model MailBillingMailbox {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  serverId String
+  server   MailBillingServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  domainId String
+  domain   MailBillingDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+
+  email     String
+  localPart String
+  quotaMb   Int?
+  isAdmin   Boolean @default(false)
+  status     String @default("ACTIVE")
+  lastSeenAt DateTime @default(now())
+  archivedAt DateTime?
+  rawJson Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, serverId, email])
+  @@index([workspaceId, domainId])
+  @@index([workspaceId, status])
+}
+
+model MailBillingSyncRun {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  serverId String
+  server   MailBillingServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  status String @default("RUNNING")
+  startedAt  DateTime @default(now())
+  finishedAt DateTime?
+  domainsSeen      Int @default(0)
+  mailboxesSeen    Int @default(0)
+  domainsAdded     Int @default(0)
+  domainsRemoved   Int @default(0)
+  mailboxesAdded   Int @default(0)
+  mailboxesRemoved Int @default(0)
+  errorMessage String?
+  reviewItemsCreated Int @default(0)
+  summaryJson  Json?
+
+  @@index([workspaceId, startedAt])
+  @@index([workspaceId, serverId, startedAt])
+}
+
+
+model MailBillingPlan {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name              String
+  description       String?
+  billingMode       String @default("FIXED")
+  currency          String @default("INR")
+  basePrice         Decimal @default(0)
+  includedMailboxes Int @default(0)
+  extraMailboxPrice Decimal @default(0)
+  frequency         String @default("MONTHLY")
+  isActive          Boolean @default(true)
+  sortOrder         Int @default(0)
+
+  subscriptions MailBillingSubscription[]
+  settingsAsDefault MailBillingSettings[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, isActive])
+  @@index([workspaceId, sortOrder])
+}
+
+model MailBillingSubscription {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  domainId String
+  domain   MailBillingDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  planId String?
+  plan   MailBillingPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+  retainerId String?
+  retainer   Retainer? @relation(fields: [retainerId], references: [id], onDelete: SetNull)
+
+  billingStatus String @default("REVIEW_REQUIRED")
+  billingModeSnapshot String @default("FIXED")
+  currencySnapshot String @default("INR")
+  basePriceSnapshot Decimal @default(0)
+  includedMailboxesSnapshot Int @default(0)
+  extraMailboxPriceSnapshot Decimal @default(0)
+  billableMailboxCount Int @default(0)
+  lastSyncedMailboxCount Int @default(0)
+  pendingMailboxCount Int?
+  autoUpdateQuantity Boolean @default(false)
+  nextReviewAt DateTime?
+  notes String?
+
+  reviewItems MailBillingReviewItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, domainId])
+  @@index([workspaceId, clientId])
+  @@index([workspaceId, planId])
+  @@index([workspaceId, retainerId])
+  @@index([workspaceId, billingStatus])
+}
+
+model MailBillingReviewItem {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  domainId String?
+  domain   MailBillingDomain? @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  subscriptionId String?
+  subscription   MailBillingSubscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  serverId String?
+  server   MailBillingServer? @relation(fields: [serverId], references: [id], onDelete: SetNull)
+
+  type String
+  severity String @default("INFO")
+  status String @default("OPEN")
+  title String
+  description String
+  suggestedAction String?
+  oldValueJson Json?
+  newValueJson Json?
+  metadataJson Json?
+  createdAt DateTime @default(now())
+  resolvedAt DateTime?
+  resolvedByUserId String?
+
+  @@index([workspaceId, status, severity])
+  @@index([workspaceId, domainId, status])
+  @@index([workspaceId, subscriptionId])
+  @@index([workspaceId, serverId])
+  @@index([workspaceId, type, status])
+}
+
+model MailBillingSettings {
+  id          String    @id @default(cuid())
+  workspaceId String @unique
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  defaultBillingMode String @default("FIXED")
+  defaultCurrency String @default("INR")
+  defaultPlanId String?
+  defaultPlan MailBillingPlan? @relation(fields: [defaultPlanId], references: [id], onDelete: SetNull)
+  autoCreateReviewItems Boolean @default(true)
+  autoUpdateRetainerQuantities Boolean @default(false)
+  syncFrequencyPreference String @default("MANUAL")
+  alertRecipientsJson Json?
+  treatRemovedDomainsAsReviewRequired Boolean @default(true)
+  ignoreAdminMailboxesFromBilling Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, defaultPlanId])
 }
 
 // ==========================================

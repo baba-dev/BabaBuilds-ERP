@@ -44,6 +44,7 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   REPORTING_CENTER: 'Reporting Center',
   IMPORT_MANAGER: 'Import Manager',
   SHOP: 'Public Shop (E-Store)',
+  MIAB_BILLING: 'Email Billing',
 };
 
 export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
@@ -67,6 +68,8 @@ export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
     'Universal import workspace with template downloads, intelligent mapping, strict validation, preview-first workflows, and safe create/upsert execution.',
   SHOP:
     'Public storefront for clients to browse your catalog, place orders, and pay via Razorpay/Stripe — including content sections (About, Social, FAQ) editable from the dashboard.',
+  MIAB_BILLING:
+    'Read-only Mail-in-a-Box domain and mailbox inventory mapped to ERP clients, retainers, and recurring invoices.',
 };
 
 export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
@@ -147,6 +150,14 @@ export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
     'Optional in-shop AI Assist drawer for buyers to capture leads / questions',
     'Order management with status workflow and gateway-aware checkout (Razorpay / Stripe)',
     'RBAC-scoped admin tools: separate orders, content, and settings permissions',
+  ],
+  MIAB_BILLING: [
+    'Mail-in-a-Box server connection',
+    'Read-only domain and mailbox inventory sync',
+    'Client mapping for hosted domains',
+    'Retainer linking and recurring billing setup',
+    'Unmapped/unbilled domain detection',
+    'Sync status and billing review suggestions',
   ],
 };
 

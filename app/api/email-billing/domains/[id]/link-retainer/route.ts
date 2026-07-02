@@ -1,0 +1,4 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { requireEmailBilling } from '../../../_lib/auth';
+export async function POST(req:NextRequest,{params}:{params:Promise<{id:string}>}){const auth=await requireEmailBilling('invoices.edit'); if('response'in auth)return auth.response; const {id}=await params; const {retainerId}=await req.json().catch(()=>({})); const domain=await prisma.mailBillingDomain.findFirst({where:{id,workspaceId:auth.workspaceId}}); if(!domain)return NextResponse.json({error:'Not found'},{status:404}); const retainer=await prisma.retainer.findFirst({where:{id:String(retainerId),workspaceId:auth.workspaceId}}); if(!retainer)return NextResponse.json({error:'Retainer not found'},{status:404}); const updated=await prisma.mailBillingDomain.update({where:{id},data:{retainerId:retainer.id,clientId:domain.clientId??retainer.clientId}}); return NextResponse.json({domain:updated});}

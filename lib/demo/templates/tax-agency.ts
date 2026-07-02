@@ -69,6 +69,7 @@ export const taxAgencyTemplate: DemoTemplateDefinition = {
     REPORTING_CENTER: true,
     IMPORT_MANAGER: true,
     SHOP: true,
+    MIAB_BILLING: true,
   },
   seededModules: [
     'WORKFORCE',
@@ -81,6 +82,7 @@ export const taxAgencyTemplate: DemoTemplateDefinition = {
     'REPORTING_CENTER',
     'IMPORT_MANAGER',
     'SHOP',
+    'MIAB_BILLING',
   ],
   seed: async ({ tx, workspaceId, userId, now }) => {
     const [surya, verdant, ion] = await tx.client.findMany({

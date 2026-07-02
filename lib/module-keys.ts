@@ -9,6 +9,7 @@ export const MODULE_KEYS = [
   'REPORTING_CENTER',
   'IMPORT_MANAGER',
   'SHOP',
+  'MIAB_BILLING',
 ] as const;
 
 export type ModuleKey = (typeof MODULE_KEYS)[number];

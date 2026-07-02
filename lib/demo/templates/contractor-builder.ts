@@ -176,6 +176,7 @@ export const contractorBuilderTemplate: DemoTemplateDefinition = {
     REPORTING_CENTER: true,
     IMPORT_MANAGER: true,
     SHOP: true,
+    MIAB_BILLING: true,
   },
   seededModules: [
     "WORKFORCE",
@@ -188,6 +189,7 @@ export const contractorBuilderTemplate: DemoTemplateDefinition = {
     "REPORTING_CENTER",
     "IMPORT_MANAGER",
     "SHOP",
+    "MIAB_BILLING",
   ],
   seed: async ({ tx, workspaceId, userId, now }) => {
     const department = await tx.department.create({
