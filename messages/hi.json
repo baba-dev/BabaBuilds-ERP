@@ -323,7 +323,8 @@
     "help_center": "Help Center",
     "tax_advanced": "Tax Advanced",
     "pinItem": "{item} पिन करें",
-    "unpinItem": "{item} अनपिन करें"
+    "unpinItem": "{item} अनपिन करें",
+    "pos": "पीओएस"
   },
   "UserNav": {
     "my_account": "मेरा खाता",
@@ -2609,6 +2610,19 @@
     "btn_add_to_cart": "Add to Cart",
     "toast_catalog_fail": "Failed to load catalog",
     "toast_order_parked": "Order placed on hold",
-    "toast_checkout_fail": "Checkout failed"
+    "toast_checkout_fail": "Checkout failed",
+    "page_title": "पॉइंट ऑफ सेल",
+    "page_subtitle": "सेवाएं और उत्पाद बेचें, ऑर्डर पार्क करें, और कार्ट को इनवॉइस या प्रस्ताव में बदलें।",
+    "checkout_workspace": "चेकआउट वर्कस्पेस",
+    "services": "सेवाएं",
+    "products": "उत्पाद",
+    "out_of_stock": "स्टॉक में नहीं",
+    "in_stock": "{count} स्टॉक में",
+    "stock_count": "स्टॉक: {count}",
+    "restricted": "प्रतिबंधित",
+    "toast_out_of_stock": "{item} स्टॉक में नहीं है",
+    "toast_stock_limit": "केवल {count} {item} स्टॉक में है",
+    "toast_custom_item_denied": "आपके पास कस्टम POS आइटम जोड़ने की अनुमति नहीं है",
+    "custom_item_description": "ऐड-हॉक आइटम"
   }
 }

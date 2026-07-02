@@ -5,6 +5,7 @@ import PosSystem from "@/components/pos/PosSystem";
 import { redirect } from "next/navigation";
 import { ShoppingCart } from "lucide-react";
 import { checkPermissionsSilent, requirePermission } from "@/lib/rbac";
+import { getTranslations } from "next-intl/server";
 
 export const metadata = {
   title: "Point of Sale | BabaERP",
@@ -12,7 +13,7 @@ export const metadata = {
 
 export default async function PosPage() {
   const session = await getServerSession(authOptions);
-  
+
   if (!session?.user?.id || !session.workspaceId) {
     redirect("/login");
   }
@@ -25,15 +26,18 @@ export default async function PosPage() {
     redirect("/dashboard");
   }
 
-  const posCapabilities = await checkPermissionsSilent(session.user.id, workspaceId, [
-    "pos.custom_item",
-    "pos.discount",
-  ]);
+  const t = await getTranslations("POS");
+
+  const posCapabilities = await checkPermissionsSilent(
+    session.user.id,
+    workspaceId,
+    ["pos.custom_item", "pos.discount"],
+  );
 
   const clients = await prisma.client.findMany({
     where: { workspaceId },
     select: { id: true, name: true, email: true },
-    orderBy: { name: 'asc' }
+    orderBy: { name: "asc" },
   });
 
   return (
@@ -46,14 +50,16 @@ export default async function PosPage() {
                 <div className="p-2.5 bg-accent-primary/10 dark:bg-accent-primary/20 rounded-xl border border-accent-primary/20 dark:border-accent-primary/25">
                   <ShoppingCart className="w-6 h-6 text-accent-primary" />
                 </div>
-                Point of Sale
+                {t("page_title")}
               </h1>
               <p className="text-zinc-500 dark:text-zinc-400 font-medium text-sm max-w-xl">
-                Sell services and products, park orders, and convert carts into invoices or proposals.
+                {t("page_subtitle")}
               </p>
             </div>
             <div className="hidden md:flex items-center gap-2 rounded-xl border border-accent-primary/20 bg-accent-primary/10 px-4 py-3 text-accent-primary shadow-sm">
-              <span className="text-xs font-extrabold uppercase tracking-widest">Checkout workspace</span>
+              <span className="text-xs font-extrabold uppercase tracking-widest">
+                {t("checkout_workspace")}
+              </span>
             </div>
           </div>
         </div>
@@ -61,6 +67,10 @@ export default async function PosPage() {
           clients={clients}
           canCreateCustomItems={posCapabilities["pos.custom_item"]}
           canApplyDiscounts={posCapabilities["pos.discount"]}
+          currencyCode={
+            session.user.currencyFormat || session.baseCurrency || "INR"
+          }
+          locale={session.locale || "en-IN"}
         />
       </div>
     </div>
