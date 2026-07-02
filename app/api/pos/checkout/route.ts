@@ -5,7 +5,6 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { withPermission } from '@/lib/rbac';
-import type { BusinessRole } from '@/lib/permissions';
 
 const checkoutActionSchema = z.enum(['PAY_NOW', 'INVOICE', 'PROPOSAL', 'RETAINER']);
 const checkoutItemTypeSchema = z.enum(['SERVICE', 'PRODUCT', 'CUSTOM']);
@@ -37,6 +36,7 @@ const checkoutRequestSchema = z.object({
   action: checkoutActionSchema,
   clientId: z.string().trim().min(1).optional().nullable(),
   items: z.array(checkoutItemSchema).min(1),
+  discount: z.number().min(0).optional(),
   allowNegativeStock: z.boolean().optional(),
 }).strict();
 
@@ -66,14 +66,12 @@ type ProductSale = {
 
 class PosCheckoutError extends Error {
   constructor(
-    public readonly code: 'CLIENT_NOT_FOUND' | 'SERVICE_NOT_FOUND' | 'PRODUCT_NOT_FOUND' | 'INSUFFICIENT_STOCK' | 'INVALID_ACTION',
+    public readonly code: 'CLIENT_NOT_FOUND' | 'SERVICE_NOT_FOUND' | 'PRODUCT_NOT_FOUND' | 'INSUFFICIENT_STOCK' | 'INVALID_ACTION' | 'INVALID_DISCOUNT',
     public readonly meta: Record<string, string | number> = {},
   ) {
     super(code);
   }
 }
-
-const CUSTOM_POS_LINE_ROLES = new Set<BusinessRole>(['OWNER', 'ADMIN', 'FINANCE_MANAGER', 'SALES_MANAGER']);
 
 function decimal(value: Prisma.Decimal.Value) {
   return new Prisma.Decimal(value);
@@ -205,12 +203,6 @@ async function commitProductSales(
   }
 }
 
-function permissionForAction(action: CheckoutAction) {
-  if (action === 'PROPOSAL') return 'proposals.create' as const;
-  if (action === 'RETAINER') return 'retainers.manage' as const;
-  return 'invoices.create' as const;
-}
-
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -229,15 +221,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid checkout request', details: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { action, items, allowNegativeStock = false } = parsed.data;
+    const { action, items, allowNegativeStock = false, discount: requestedDiscount = 0 } = parsed.data;
     let resolvedClientId = parsed.data.clientId || undefined;
 
-    const actionPermission = await withPermission(userId, workspaceId, permissionForAction(action));
-    if (!actionPermission.granted) return actionPermission.response;
+    const checkoutPermission = await withPermission(userId, workspaceId, 'pos.checkout');
+    if (!checkoutPermission.granted) return checkoutPermission.response;
+
+    if (requestedDiscount > 0) {
+      const discountPermission = await withPermission(userId, workspaceId, 'pos.discount');
+      if (!discountPermission.granted) return discountPermission.response;
+    }
 
     const hasCustomItems = items.some((item) => item.type === 'CUSTOM');
-    if (hasCustomItems && !CUSTOM_POS_LINE_ROLES.has(actionPermission.role)) {
-      return NextResponse.json({ error: 'Your role cannot create custom POS line items.' }, { status: 403 });
+    if (hasCustomItems) {
+      const customItemPermission = await withPermission(userId, workspaceId, 'pos.custom_item');
+      if (!customItemPermission.granted) return customItemPermission.response;
     }
 
     if (!resolvedClientId && (action === 'INVOICE' || action === 'PROPOSAL' || action === 'RETAINER')) {
@@ -317,11 +315,15 @@ export async function POST(request: Request) {
       }
 
       const subtotal = resolvedItems.reduce((acc, item) => acc.add(item.lineSubtotal), decimal(0));
-      // Client-provided discounts are intentionally unsupported until a server-side discount policy exists.
-      const discount = decimal(0);
+      const discount = decimal(requestedDiscount);
+      if (discount.gt(subtotal)) {
+        throw new PosCheckoutError('INVALID_DISCOUNT');
+      }
       const taxableSubtotal = subtotal.sub(discount);
+      const discountRatio = subtotal.gt(0) ? discount.div(subtotal) : decimal(0);
       const tax = resolvedItems.reduce((acc, item) => {
-        return acc.add(item.lineSubtotal.mul(item.taxRate).div(100));
+        const taxableLine = item.lineSubtotal.sub(item.lineSubtotal.mul(discountRatio));
+        return acc.add(taxableLine.mul(item.taxRate).div(100));
       }, decimal(0));
       const totalAmount = taxableSubtotal.add(tax);
       const productSales = groupProductSales(resolvedItems);
@@ -416,6 +418,9 @@ export async function POST(request: Request) {
       }
       if (error.code === 'INVALID_ACTION') {
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+      }
+      if (error.code === 'INVALID_DISCOUNT') {
+        return NextResponse.json({ error: 'Discount cannot exceed subtotal' }, { status: 400 });
       }
       if (error.code === 'SERVICE_NOT_FOUND') {
         return NextResponse.json({ error: 'Service item not found' }, { status: 400 });

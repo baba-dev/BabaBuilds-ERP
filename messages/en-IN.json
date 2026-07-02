@@ -408,7 +408,8 @@
     "import_manager": "Import Manager",
     "tax_advanced": "Tax Advanced",
     "pinItem": "Pin {item}",
-    "unpinItem": "Unpin {item}"
+    "unpinItem": "Unpin {item}",
+    "pos": "POS"
   },
   "UserNav": {
     "my_account": "My Account",
@@ -2775,5 +2776,19 @@
       "removed": "Removed",
       "ignored": "Ignored"
     }
+    "toast_checkout_fail": "Checkout failed",
+    "page_title": "Point of Sale",
+    "page_subtitle": "Sell services and products, park orders, and convert carts into invoices or proposals.",
+    "checkout_workspace": "Checkout workspace",
+    "services": "services",
+    "products": "products",
+    "out_of_stock": "Out of stock",
+    "in_stock": "{count} in stock",
+    "stock_count": "Stock: {count}",
+    "restricted": "restricted",
+    "toast_out_of_stock": "{item} is out of stock",
+    "toast_stock_limit": "Only {count} {item} in stock",
+    "toast_custom_item_denied": "You do not have permission to add custom POS items",
+    "custom_item_description": "Ad-hoc item"
   }
 }
