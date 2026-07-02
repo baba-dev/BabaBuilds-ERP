@@ -323,7 +323,8 @@
     "help_center": "Help Center",
     "tax_advanced": "Tax Advanced",
     "pinItem": "تثبيت {item}",
-    "unpinItem": "إلغاء تثبيت {item}"
+    "unpinItem": "إلغاء تثبيت {item}",
+    "pos": "نقطة البيع"
   },
   "UserNav": {
     "my_account": "حسابي",
@@ -2617,6 +2618,19 @@
     "btn_add_to_cart": "Add to Cart",
     "toast_catalog_fail": "Failed to load catalog",
     "toast_order_parked": "Order placed on hold",
-    "toast_checkout_fail": "Checkout failed"
+    "toast_checkout_fail": "Checkout failed",
+    "page_title": "نقطة البيع",
+    "page_subtitle": "بع الخدمات والمنتجات، وأوقف الطلبات مؤقتًا، وحوّل السلات إلى فواتير أو عروض.",
+    "checkout_workspace": "مساحة عمل الدفع",
+    "services": "الخدمات",
+    "products": "المنتجات",
+    "out_of_stock": "غير متوفر",
+    "in_stock": "{count} في المخزون",
+    "stock_count": "المخزون: {count}",
+    "restricted": "مقيّد",
+    "toast_out_of_stock": "{item} غير متوفر",
+    "toast_stock_limit": "يتوفر فقط {count} من {item}",
+    "toast_custom_item_denied": "ليست لديك صلاحية لإضافة عناصر POS مخصصة",
+    "custom_item_description": "عنصر مخصص"
   }
 }
