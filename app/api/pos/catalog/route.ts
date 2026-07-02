@@ -2,14 +2,23 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { requirePermission, RbacDeniedError, rbacDeniedResponse } from "@/lib/rbac";
 
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.workspaceId) {
+    const userId = session?.user?.id;
+    if (!userId || !session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const workspaceId = session.workspaceId;
+
+    try {
+      await requirePermission(userId, workspaceId, 'pos.view');
+    } catch (error) {
+      if (error instanceof RbacDeniedError) return rbacDeniedResponse(error);
+      throw error;
+    }
 
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') || 'SERVICES'; // 'SERVICES' or 'PRODUCTS'
@@ -43,6 +52,7 @@ export async function GET(request: Request) {
       })));
     }
   } catch (error) {
+    if (error instanceof RbacDeniedError) return rbacDeniedResponse(error);
     console.error("POS Catalog Fetch Error:", error);
     return NextResponse.json({ error: 'Failed to fetch catalog' }, { status: 500 });
   }

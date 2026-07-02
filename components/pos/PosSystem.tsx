@@ -41,7 +41,17 @@ type CartItem = CatalogItem & {
   quantity: number;
 };
 
-export default function PosSystem({ clients }: { catalog?: CatalogItem[]; clients: ClientOption[]; onSuccess?: () => void }) {
+export default function PosSystem({
+  clients,
+  canCreateCustomItems = false,
+  canApplyDiscounts = false,
+}: {
+  catalog?: CatalogItem[];
+  clients: ClientOption[];
+  onSuccess?: () => void;
+  canCreateCustomItems?: boolean;
+  canApplyDiscounts?: boolean;
+}) {
   const t = useTranslations('POS');
   const [activeTab, setActiveTab] = useState<"SERVICES" | "PRODUCTS">("SERVICES");
   const [items, setItems] = useState<CatalogItem[]>([]);
@@ -95,6 +105,10 @@ export default function PosSystem({ clients }: { catalog?: CatalogItem[]; client
   };
 
   const handleAddCustomItem = () => {
+    if (!canCreateCustomItems) {
+      toast.error("You do not have permission to add custom POS items");
+      return;
+    }
     if (!customItem.name || !customItem.price) return;
     setCart(prev => [...prev, {
       id: `custom-${Date.now()}`,
@@ -173,9 +187,11 @@ export default function PosSystem({ clients }: { catalog?: CatalogItem[]; client
                 className="pl-10 h-12 text-lg shadow-sm border-border/50 bg-background"
               />
             </div>
-            <Button variant="outline" className="h-12 border-dashed border-accent-primary text-accent-primary" onClick={() => setIsCustomItemModalOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> {t('btn_custom_item')}
-            </Button>
+            {canCreateCustomItems ? (
+              <Button variant="outline" className="h-12 border-dashed border-accent-primary text-accent-primary" onClick={() => setIsCustomItemModalOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" /> {t('btn_custom_item')}
+              </Button>
+            ) : null}
           </div>
         </div>
 
@@ -274,7 +290,7 @@ export default function PosSystem({ clients }: { catalog?: CatalogItem[]; client
               <span>${subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-muted-foreground">
-              <span>{t('discount')}</span>
+              <span>{t('discount')}{canApplyDiscounts ? "" : " (restricted)"}</span>
               <span>$0.00</span>
             </div>
             <div className="flex justify-between font-black text-2xl text-foreground pt-2 border-t border-border/50">

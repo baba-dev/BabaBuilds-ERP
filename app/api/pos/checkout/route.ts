@@ -2,14 +2,18 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { requirePermission, RbacDeniedError, rbacDeniedResponse } from "@/lib/rbac";
 
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.workspaceId) {
+    const userId = session?.user?.id;
+    if (!userId || !session?.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const workspaceId = session.workspaceId;
+
+    await requirePermission(userId, workspaceId, 'pos.checkout');
 
     const body = await request.json();
     const { action, clientId, items, discount = 0 } = body;
@@ -17,6 +21,15 @@ export async function POST(request: Request) {
 
     if (!items || items.length === 0) {
       return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
+    }
+
+    if (Number(discount) > 0) {
+      await requirePermission(userId, workspaceId, 'pos.discount');
+    }
+
+    const hasCustomItems = items.some((item: any) => typeof item?.id === 'string' && item.id.startsWith('custom-'));
+    if (hasCustomItems) {
+      await requirePermission(userId, workspaceId, 'pos.custom_item');
     }
 
     let resolvedClientId = clientId;
@@ -142,6 +155,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (error) {
+    if (error instanceof RbacDeniedError) return rbacDeniedResponse(error);
     console.error("POS Checkout Error:", error);
     return NextResponse.json({ error: 'Failed to process POS checkout' }, { status: 500 });
   }
