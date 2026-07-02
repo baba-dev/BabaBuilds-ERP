@@ -28,10 +28,12 @@ import {
 
 type CatalogItem = {
   id: string;
-  type: "SERVICE" | "PRODUCT";
+  type: "SERVICE" | "PRODUCT" | "CUSTOM";
   name: string;
   price: number;
   description?: string;
+  taxRate?: number;
+  stock?: number;
 };
 
 type ClientOption = { id: string; name: string };
@@ -71,8 +73,18 @@ export default function PosSystem({ clients }: { catalog?: CatalogItem[]; client
   }, [activeTab]);
 
   const addToCart = (item: CatalogItem) => {
+    if (item.type === "PRODUCT" && Number(item.stock ?? 0) <= 0) {
+      toast.warning(`${item.name} is out of stock`);
+      return;
+    }
+
     setCart(prev => {
       const existing = prev.find(i => i.id === item.id);
+      const currentQuantity = existing?.quantity ?? 0;
+      if (item.type === "PRODUCT" && currentQuantity + 1 > Number(item.stock ?? 0)) {
+        toast.warning(`Only ${item.stock ?? 0} ${item.name} in stock`);
+        return prev;
+      }
       if (existing) {
         return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
       }
@@ -83,8 +95,20 @@ export default function PosSystem({ clients }: { catalog?: CatalogItem[]; client
   const updateQuantity = (cartId: string, delta: number) => {
     setCart(prev => prev.map(i => {
       if (i.cartId === cartId) {
-        const newQ = Math.max(1, i.quantity + delta);
-        return { ...i, quantity: newQ };
+        const requestedQuantity = Math.max(1, i.quantity + delta);
+        if (i.type === "PRODUCT") {
+          const availableStock = Number(i.stock ?? 0);
+          if (availableStock <= 0) {
+            toast.warning(`${i.name} is out of stock`);
+            return i;
+          }
+          const newQ = Math.min(requestedQuantity, availableStock);
+          if (requestedQuantity !== newQ) {
+            toast.warning(`Only ${i.stock ?? 0} ${i.name} in stock`);
+          }
+          return { ...i, quantity: newQ };
+        }
+        return { ...i, quantity: requestedQuantity };
       }
       return i;
     }));
@@ -99,7 +123,7 @@ export default function PosSystem({ clients }: { catalog?: CatalogItem[]; client
     setCart(prev => [...prev, {
       id: `custom-${Date.now()}`,
       cartId: `custom-${Date.now()}`,
-      type: activeTab === "SERVICES" ? "SERVICE" : "PRODUCT",
+      type: "CUSTOM",
       name: customItem.name,
       price: parseFloat(customItem.price),
       quantity: 1,
@@ -116,6 +140,26 @@ export default function PosSystem({ clients }: { catalog?: CatalogItem[]; client
     toast.success("Order placed on hold");
   };
 
+  const checkoutPayloadItems = cart.map(item => {
+    if (item.type === "CUSTOM") {
+      return {
+        type: item.type,
+        name: item.name,
+        description: item.description,
+        price: item.price,
+        quantity: item.quantity,
+        taxRate: item.taxRate ?? 0,
+      };
+    }
+
+    return {
+      id: item.id,
+      type: item.type,
+      quantity: item.quantity,
+      taxRate: item.taxRate ?? 0,
+    };
+  });
+
   const handleCheckout = async (action: string) => {
     if (cart.length === 0) return;
     setIsProcessing(true);
@@ -123,7 +167,7 @@ export default function PosSystem({ clients }: { catalog?: CatalogItem[]; client
       const res = await fetch('/api/pos/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, items: cart, clientId: selectedClient })
+        body: JSON.stringify({ action, items: checkoutPayloadItems, clientId: selectedClient || undefined })
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -178,25 +222,34 @@ export default function PosSystem({ clients }: { catalog?: CatalogItem[]; client
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               <AnimatePresence>
-                {filteredItems.map(item => (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                  >
-                    <Card 
-                      className="cursor-pointer h-full border border-zinc-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-accent-primary/50 hover:shadow-lg dark:border-zinc-800 dark:bg-zinc-900"
-                      onClick={() => addToCart(item)}
+                {filteredItems.map(item => {
+                  const isOutOfStock = item.type === "PRODUCT" && Number(item.stock ?? 0) <= 0;
+
+                  return (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
                     >
-                      <CardHeader className="p-4">
-                        <CardTitle className="text-base line-clamp-2">{item.name}</CardTitle>
-                        <div className="text-lg font-bold text-accent-primary mt-2">
-                          ${item.price.toFixed(2)}
-                        </div>
-                      </CardHeader>
-                    </Card>
-                  </motion.div>
-                ))}
+                      <Card
+                        className={`h-full border border-zinc-200 bg-white transition-all duration-300 dark:border-zinc-800 dark:bg-zinc-900 ${isOutOfStock ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:-translate-y-1 hover:border-accent-primary/50 hover:shadow-lg"}`}
+                        onClick={() => addToCart(item)}
+                      >
+                        <CardHeader className="p-4">
+                          <CardTitle className="text-base line-clamp-2">{item.name}</CardTitle>
+                          <div className="text-lg font-bold text-accent-primary mt-2">
+                            ${item.price.toFixed(2)}
+                          </div>
+                          {item.type === "PRODUCT" && (
+                            <div className={`text-xs font-bold uppercase tracking-widest ${isOutOfStock ? "text-destructive" : "text-muted-foreground"}`}>
+                              {isOutOfStock ? "Out of stock" : `${item.stock ?? 0} in stock`}
+                            </div>
+                          )}
+                        </CardHeader>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
             </div>
           )}
@@ -233,6 +286,9 @@ export default function PosSystem({ clients }: { catalog?: CatalogItem[]; client
                 <div className="flex-1 mr-2">
                   <div className="font-medium text-sm leading-tight">{item.name}</div>
                   <div className="text-accent-primary text-sm font-semibold mt-1">${item.price.toFixed(2)}</div>
+                  {item.type === "PRODUCT" && (
+                    <div className="text-[11px] text-muted-foreground mt-1">Stock: {item.stock ?? 0}</div>
+                  )}
                 </div>
                 
                 <div className="flex items-center space-x-2 bg-muted/50 rounded-md p-1">
