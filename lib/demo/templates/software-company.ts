@@ -101,6 +101,7 @@ export const softwareCompanyTemplate: DemoTemplateDefinition = {
     REPORTING_CENTER: true,
     IMPORT_MANAGER: true,
     SHOP: true,
+    MIAB_BILLING: true,
   },
   seededModules: [
     "WORKFORCE",
@@ -113,6 +114,7 @@ export const softwareCompanyTemplate: DemoTemplateDefinition = {
     "REPORTING_CENTER",
     "IMPORT_MANAGER",
     "SHOP",
+    "MIAB_BILLING",
   ],
   seed: async ({ tx, workspaceId, userId, now }) => {
     const employee = await tx.employee.create({

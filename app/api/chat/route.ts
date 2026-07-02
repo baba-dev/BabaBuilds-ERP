@@ -32,6 +32,11 @@ import {
   updateShopAnnouncement,
 } from '@/lib/shop/ai-tools';
 import { getAllowedShopTools, getShopToolPermissionMap } from '@/lib/ai/chat/shop-tool-access';
+import {
+  getEmailBillingSummaryForAi,
+  listEmailBillingReviewItemsForAi,
+  listUnmappedEmailDomainsForAi,
+} from '@/lib/email-billing/ai-tools';
 
 const lookupAsync = promisify(dns.lookup);
 type PrismaWithOptionalModels = typeof prisma & {
@@ -1283,6 +1288,13 @@ export async function POST(request: Request) {
       shopCanManageSettings = manageSettings;
     }
 
+    const emailBillingModuleEnabled = await isModuleEnabled(workspaceId, 'MIAB_BILLING');
+    const emailBillingCanView = Boolean(
+      actorUserId &&
+        emailBillingModuleEnabled &&
+        (await checkPermissionSilent(actorUserId, workspaceId, 'invoices.view')),
+    );
+
     const systemPrompt = `You are the Elite CFO & Executive AI Assistant for ${profile?.companyName || 'this business'}. 
     Current Workspace ID: ${workspaceId}.
     Current FY Revenue: ₹${totalRevenue.toLocaleString('en-IN')}.
@@ -1303,6 +1315,11 @@ ${
   shopModuleEnabled && shopCanView
     ? `7. PUBLIC SHOP: The storefront lives at /shop and the public page at /shop/<slug>. ${shopCanViewOrders ? 'Use get_shop_summary for commerce metrics/status and get_top_shop_products for sales trends.' : 'You can discuss storefront configuration/status, but do NOT access order or revenue metrics without shop.orders.view.'}${shopCanManageSettings ? ' Use set_shop_status to flip the master toggle.' : ''}${shopCanManageContent ? ' Use update_shop_announcement to push a banner, and open_shop_dashboard to send the user to the editor.' : ''}`
     : '7. PUBLIC SHOP: This workspace either has the Shop module disabled or you lack shop.view; do not call shop tools.'
+}
+${
+  emailBillingCanView
+    ? '8. EMAIL BILLING: The hosted email billing control center lives at /email-billing. Use read-only Email Billing tools for Mail-in-a-Box inventory, open review items, unmapped domains, subscriptions, and estimated recurring revenue. Never offer mailbox creation, deletion, password, quota, alias, admin privilege, DNS, restart, or update actions; the ERP is billing-only toward Mail-in-a-Box.'
+    : '8. EMAIL BILLING: If asked, explain that Email Billing requires the MIAB_BILLING module and invoice-view permissions before you can inspect hosted email billing data.'
 }`;
 
     const groq = new Groq({
@@ -1415,6 +1432,12 @@ ${
                   '/services',
                   '/proposals',
                   '/retainers',
+                  '/email-billing',
+                  '/email-billing/domains',
+                  '/email-billing/review',
+                  '/email-billing/plans',
+                  '/email-billing/servers',
+                  '/email-billing/settings',
                 ],
                 description:
                   "The URL path. '/income' is Invoices & Earnings (primary, use this to open the New Invoice modal). '/invoice' is a legacy alias that redirects to /income.",
@@ -1893,7 +1916,47 @@ ${
             : []),
         ];
 
-    const tools = [...baseTools, ...reportingTools, ...shopTools];
+    const emailBillingTools = emailBillingCanView
+      ? [
+          {
+            type: 'function',
+            function: {
+              name: 'get_email_billing_summary',
+              description:
+                'Read-only Email Billing summary: servers, hosted domains, active mailboxes, subscriptions, review items, and estimated recurring revenue.',
+              parameters: { type: 'object', properties: {} },
+            },
+          },
+          {
+            type: 'function',
+            function: {
+              name: 'list_email_billing_review_items',
+              description:
+                'List open Email Billing review items for synced domains, mailbox changes, sync failures, and billing readiness.',
+              parameters: { type: 'object', properties: {} },
+            },
+          },
+          {
+            type: 'function',
+            function: {
+              name: 'list_unmapped_email_domains',
+              description:
+                'List hosted email domains that are not mapped to an ERP client yet. Read-only helper for billing cleanup.',
+              parameters: { type: 'object', properties: {} },
+            },
+          },
+          {
+            type: 'function',
+            function: {
+              name: 'open_email_billing_dashboard',
+              description: 'Navigate to the Email Billing dashboard. Does not perform Mail-in-a-Box operational actions.',
+              parameters: { type: 'object', properties: {} },
+            },
+          },
+        ]
+      : [];
+
+    const tools = [...baseTools, ...reportingTools, ...shopTools, ...emailBillingTools];
 
     const initialResponse = await groq.chat.completions.create(
       {
@@ -2004,6 +2067,9 @@ ${
           },
           update_shop_announcement: (a, wid) =>
             updateShopAnnouncement(wid, asString((a as { announcement?: unknown }).announcement)),
+          get_email_billing_summary: (_a, wid) => getEmailBillingSummaryForAi(wid),
+          list_email_billing_review_items: (_a, wid) => listEmailBillingReviewItemsForAi(wid),
+          list_unmapped_email_domains: (_a, wid) => listUnmappedEmailDomainsForAi(wid),
         };
 
         const shopToolPermissionMap: Record<string, boolean> = getShopToolPermissionMap({
@@ -2014,6 +2080,12 @@ ${
           canManageContent: shopCanManageContent,
         });
         const isShopTool = toolCall.function.name in shopToolPermissionMap;
+        const isEmailBillingTool = [
+          'get_email_billing_summary',
+          'list_email_billing_review_items',
+          'list_unmapped_email_domains',
+          'open_email_billing_dashboard',
+        ].includes(toolCall.function.name);
 
         if (
           isReportingTool(toolCall.function.name) &&
@@ -2037,6 +2109,11 @@ ${
             error:
               'Shop is disabled for this workspace or your role cannot use this shop action.',
           });
+        } else if (isEmailBillingTool && !emailBillingCanView) {
+          dbResult = JSON.stringify({
+            error:
+              'Email Billing is disabled for this workspace or your role cannot view hosted email billing data.',
+          });
         } else if (!canExecuteToolForRole(toolCall.function.name, actorRole)) {
           dbResult = JSON.stringify({
             error: `Tool ${toolCall.function.name} requires elevated permissions for your workspace role.`,
@@ -2044,6 +2121,9 @@ ${
         } else if (toolCall.function.name === 'open_shop_dashboard') {
           action = { type: 'NAVIGATE', path: '/shop', payload: null };
           dbResult = JSON.stringify({ status: 'Opening Shop Command Center.' });
+        } else if (toolCall.function.name === 'open_email_billing_dashboard') {
+          action = { type: 'NAVIGATE', path: '/email-billing', payload: null };
+          dbResult = JSON.stringify({ status: 'Opening Email Billing dashboard.' });
         } else if (toolCall.function.name === 'list_reporting_presets') {
           dbResult = JSON.stringify({
             presets: listPublicPresets().map((p) => ({

@@ -29,6 +29,7 @@ export type NavItemId =
   | "ar_collections"
   | "payroll"
   | "import_manager"
+  | "email_billing"
   | "savings_tax"
   | "ca_compliance"
   | "settings";
@@ -73,6 +74,7 @@ const navItems: NavItem[] = [
   { id: "cash_flow", label: "cash_flow", href: "/cash-flow", icon: "retainersHub", group: "Get Paid & Track Money", moduleKey: "CASH_FLOW", keywords: ["cash", "forecast", "liquidity"], pinnable: true },
   { id: "ar_collections", label: "ar_collections", href: "/ar-collections", icon: "aiReconciliation", group: "Get Paid & Track Money", moduleKey: "AR_COLLECTIONS", keywords: ["aging", "collections", "receivables"], pinnable: true },
   { id: "payroll", label: "payroll", href: "/payroll", icon: "caCompliance", group: "Get Paid & Track Money", moduleKey: "PAYROLL", keywords: ["payroll", "salary", "wages"], pinnable: true },
+  { id: "email_billing", label: "email_billing", href: "/email-billing", icon: "invoicesAndEarnings", group: "Get Paid & Track Money", moduleKey: "MIAB_BILLING", keywords: ["email", "mail", "miab", "mailbox", "domain", "billing"], pinnable: true },
 
   { id: "savings_tax", label: "savings_tax", href: "/tax", icon: "savingsAndTax", group: "Taxes & Compliance", keywords: ["tax", "savings"], pinnable: true },
   { id: "ca_compliance", label: "ca_compliance", href: "/ca-portal", icon: "caCompliance", group: "Taxes & Compliance", keywords: ["ca", "compliance"], badgeSource: "ca_compliance", pinnable: false },

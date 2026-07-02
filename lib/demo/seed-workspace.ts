@@ -210,6 +210,105 @@ export async function seedDemoWorkspace(
     });
   }
 
+  if (template.modules.MIAB_BILLING) {
+    const emailBillingDemoNow = new Date();
+    const firstClientId = clientIdByRef.values().next().value as string | undefined;
+    const plan = await tx.mailBillingPlan.create({
+      data: {
+        workspaceId: workspace.id,
+        name: 'Business Email Demo Plan',
+        description: 'Demo hosted-email plan for reviewing Email Billing workflows.',
+        billingMode: 'BUNDLE_PLUS_EXTRA',
+        currency: 'INR',
+        basePrice: 1499,
+        includedMailboxes: 5,
+        extraMailboxPrice: 199,
+        frequency: 'MONTHLY',
+        isActive: true,
+        sortOrder: 10,
+      },
+      select: { id: true },
+    });
+    const server = await tx.mailBillingServer.create({
+      data: {
+        workspaceId: workspace.id,
+        name: 'Demo Mail-in-a-Box',
+        provider: 'MIAB',
+        accessMode: 'READ_ONLY_ADAPTER',
+        baseUrl: 'https://mail-demo.example.com/inventory.json',
+        status: 'ACTIVE',
+        lastSyncStatus: 'SUCCESS',
+        lastSyncAt: emailBillingDemoNow,
+      },
+      select: { id: true },
+    });
+    const domain = await tx.mailBillingDomain.create({
+      data: {
+        workspaceId: workspace.id,
+        serverId: server.id,
+        domain: 'demo-email.example.com',
+        clientId: firstClientId ?? null,
+        status: firstClientId ? 'ACTIVE' : 'UNMAPPED',
+        mailboxCount: 3,
+        aliasCount: 1,
+        lastSeenAt: emailBillingDemoNow,
+      },
+      select: { id: true },
+    });
+    await tx.mailBillingMailbox.create({
+      data: {
+        workspaceId: workspace.id,
+        serverId: server.id,
+        domainId: domain.id,
+        email: 'billing@demo-email.example.com',
+        localPart: 'billing',
+        quotaMb: 1024,
+        isAdmin: false,
+        status: 'ACTIVE',
+        lastSeenAt: emailBillingDemoNow,
+      },
+    });
+    if (firstClientId) {
+      await tx.mailBillingSubscription.create({
+        data: {
+          workspaceId: workspace.id,
+          domainId: domain.id,
+          clientId: firstClientId,
+          planId: plan.id,
+          billingStatus: 'REVIEW_REQUIRED',
+          billingModeSnapshot: 'BUNDLE_PLUS_EXTRA',
+          currencySnapshot: 'INR',
+          basePriceSnapshot: 1499,
+          includedMailboxesSnapshot: 5,
+          extraMailboxPriceSnapshot: 199,
+          billableMailboxCount: 3,
+          lastSyncedMailboxCount: 3,
+          pendingMailboxCount: 3,
+          autoUpdateQuantity: false,
+          notes: 'Demo subscription intentionally requires review before billing.',
+        },
+      });
+    }
+    await tx.mailBillingReviewItem.create({
+      data: {
+        workspaceId: workspace.id,
+        domainId: domain.id,
+        serverId: server.id,
+        type: firstClientId ? 'DOMAIN_MISSING_RETAINER' : 'DOMAIN_MISSING_CLIENT',
+        severity: 'WARNING',
+        status: 'OPEN',
+        title: 'Demo email billing review item',
+        description: 'Review the demo hosted email domain before generating recurring invoices.',
+        suggestedAction: firstClientId ? 'Create or link a retainer.' : 'Map the domain to an ERP client.',
+      },
+    });
+    await tx.mailBillingSettings.upsert({
+      where: { workspaceId: workspace.id },
+      update: {},
+      create: { workspaceId: workspace.id, defaultCurrency: 'INR', autoUpdateRetainerQuantities: false },
+    });
+  }
+
   // Ensure every optional module is present (caller decides which are enabled via template.modules).
   for (const moduleKey of MODULE_KEYS) {
     const enabled = Boolean(template.modules[moduleKey]);
