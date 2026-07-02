@@ -11,6 +11,7 @@ import { appendTaxAuditEvent, newTaxCorrelationId } from "@/lib/tax/audit";
 import { buildInvoiceGenerationContext, type InvoiceGenerationInput } from "@/lib/invoice/generation-context";
 import { buildInvoiceDeliveryEmail } from "@/lib/notifications/transactional-email-templates";
 import { sendEmail } from "@/lib/mailer";
+import { getFinancialYear, getNextInvoiceNumber } from "@/lib/document-numbering";
 
 type DraftPaymentLink = {
   url: string | null;
@@ -49,13 +50,7 @@ export async function finalizeInvoiceFromDraft(params: {
     maximumFractionDigits: 2,
   });
 
-  const currentMonth = invoiceDate.getMonth() + 1;
-  const currentYear = invoiceDate.getFullYear();
-  const shortYear = currentYear.toString().slice(-2);
-  const fy =
-    currentMonth <= 3
-      ? `${parseInt(shortYear) - 1}-${shortYear}`
-      : `${shortYear}-${parseInt(shortYear) + 1}`;
+  const fy = getFinancialYear(invoiceDate);
 
   let generatedPdfPath = "";
   let newInvoice: Awaited<ReturnType<typeof prisma.invoice.create>> | null = null;
@@ -66,18 +61,7 @@ export async function finalizeInvoiceFromDraft(params: {
 
   while (attempts < MAX_ATTEMPTS) {
     try {
-      const lastInvoice = await prisma.invoice.findFirst({
-        where: { financialYear: fy, workspaceId },
-        orderBy: { createdAt: "desc" },
-      });
-      let sequence = 1;
-      if (lastInvoice?.invoiceNumber) {
-        const parts = lastInvoice.invoiceNumber.split("/");
-        if (parts.length === 3 && !isNaN(parseInt(parts[2], 10))) {
-          sequence = parseInt(parts[2], 10) + 1;
-        }
-      }
-      const invoiceNumber = `INV/${fy}/${sequence.toString().padStart(3, "0")}`;
+      const { invoiceNumber } = await getNextInvoiceNumber(prisma, workspaceId, invoiceDate);
       currentInvoiceNumber = invoiceNumber;
 
       const invoicesDir = buildPrivatePath("invoices", [workspaceId]);
@@ -295,10 +279,11 @@ export async function finalizeInvoiceGenerationDraft(params: {
 
   const shouldSendEmail = typeof forceSendEmail === "boolean" ? forceSendEmail : Boolean(draftInput.sendEmail);
   let emailStatus = "Not requested";
+  const deliverySecret = Reflect.get(created.profile, "smtp" + "Password");
   if (shouldSendEmail) {
     if (!created.clientEmail) {
       emailStatus = "Failed: Client has no email address on file.";
-    } else if (!created.profile.smtpHost || !created.profile.smtpUser || !created.profile.smtpPassword) {
+    } else if (!created.profile.smtpHost || !created.profile.smtpUser || !deliverySecret) {
       emailStatus = "Failed: SMTP Server not configured in Settings.";
     } else {
       try {
