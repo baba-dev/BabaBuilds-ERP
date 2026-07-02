@@ -208,6 +208,12 @@ export const PERMISSION_KEYS = [
   'documents.personal.manage',
   'documents.settings.manage',
 
+  // POS / Checkout
+  'pos.view',                // Access the POS register and catalog
+  'pos.checkout',            // Complete POS checkout actions
+  'pos.discount',            // Apply discounts during POS checkout
+  'pos.custom_item',         // Add ad-hoc line items during POS checkout
+
   // Shop / Public Storefront (only surfaced when Shop module is enabled)
   'shop.view',                // Access the Shop dashboard / Command Center
   'shop.orders.view',         // View incoming buyer orders (read-only)
@@ -256,6 +262,7 @@ export const PERMISSION_MODULE_GROUPS: { module: string; label: string; keys: Pe
     keys: ['reporting_center.view', 'reporting_center.query.run', 'reporting_center.export'],
   },
   { module: 'clients',         label: 'Clients',          keys: ['clients.view', 'clients.manage'] },
+  { module: 'pos',             label: 'Point of Sale',    keys: ['pos.view', 'pos.checkout', 'pos.discount', 'pos.custom_item'] },
   { module: 'workspace',       label: 'Workspace Admin',  keys: ['workspace.manage_members', 'workspace.manage_roles', 'workspace.manage_settings'] },
   { module: 'billing',         label: 'Billing',          keys: ['billing.manage'] },
   {
@@ -358,6 +365,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'reporting_center.query.run',
     'reporting_center.export',
     'clients.view', 'clients.manage',
+    'pos.view', 'pos.checkout', 'pos.discount', 'pos.custom_item',
     'workspace.manage_members', 'workspace.manage_roles', 'workspace.manage_settings',
     'billing.manage',
     // Workforce — full access
@@ -416,6 +424,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'reporting_center.query.run',
     'reporting_center.export',
     'clients.view', 'clients.manage',
+    'pos.view', 'pos.checkout', 'pos.discount', 'pos.custom_item',
     'workspace.manage_members', 'workspace.manage_roles', 'workspace.manage_settings',
     // NOT: billing.manage
     // Workforce — full access
@@ -471,6 +480,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'reporting_center.query.run',
     'reporting_center.export',
     'clients.view',
+    'pos.view',
     // NOT: accounting.post, tax.approve, billing.manage, workspace.manage_*
     // Workforce — view-only (payroll cost oversight)
     'workforce.view', 'workforce.people.view',
@@ -510,6 +520,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'reporting_center.view',
     'reporting_center.query.run',
     'clients.view',
+    'pos.view',
     // NOT: any write, any export, any admin (no reporting_center.export — bulk extract)
     // Workforce — view-only
     'workforce.view', 'workforce.people.view', 'workforce.attendance.view',
@@ -536,6 +547,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'reports.view',
     'reporting_center.view', 'reporting_center.query.run', 'reporting_center.export',
     'clients.view', 'clients.manage',
+    'pos.view', 'pos.checkout', 'pos.discount', 'pos.custom_item',
     // NOT: expenses admin, purchase_orders, inventory, accounting, tax, financial exports
 
     // Shop — sales side: read storefront, manage orders + content; no settings
@@ -553,6 +565,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'tax.withholding.ingest',
     'inventory.view',
     'clients.view',
+    'pos.view', 'pos.checkout', 'pos.custom_item',
     'reports.view',
     // NOT: invoices admin, proposals, accounting, tax, cash flow assumptions
     // Workforce — team management + approvals
@@ -581,6 +594,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'purchase_orders.view', 'purchase_orders.create',
     'service_orders.view',
     'clients.view',
+    'pos.view',
     // NOT: financial data, reports, accounting, tax
 
     // Shop — order visibility (stock impact) + content manage; no settings
@@ -596,6 +610,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'expenses.view', 'expenses.create',
     'tax.withholding.record',
     'service_orders.view',
+    'pos.view', 'pos.checkout',
     // NOT: any admin, any financial management, any sensitive data
     // Workforce — self-service only
     'workforce.view', 'workforce.people.view',
@@ -621,6 +636,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'invoices.view',
     'expenses.view',
     'clients.view',
+    'pos.view',
     // NOT: any write, any export, any admin
 
     // Documents — view-only for audits (no personal docs)
