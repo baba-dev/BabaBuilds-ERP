@@ -32,8 +32,8 @@ export function EmailBillingPanel({ title, description, children, icon }: { titl
   return <Card variant="panel"><CardHeader><div className="flex items-start gap-3"><span className="rounded-lg border border-border/70 bg-muted p-2 text-muted-foreground"><Icon aria-hidden className="size-4" /></span><div><CardTitle>{title}</CardTitle>{description?<CardDescription>{description}</CardDescription>:null}</div></div></CardHeader><CardContent>{children}</CardContent></Card>;
 }
 
-export function EmailBillingTable({ headers, children, empty }: { headers: string[]; children: React.ReactNode; empty?: React.ReactNode }) {
-  return <div className="rounded-xl border border-border/70 bg-card"><Table><TableHeader><TableRow>{headers.map((h)=><TableHead key={h} className="whitespace-nowrap">{h}</TableHead>)}</TableRow></TableHeader><TableBody>{children || <TableRow><TableCell colSpan={headers.length}>{empty}</TableCell></TableRow>}</TableBody></Table></div>;
+export function EmailBillingTable({ headers, children, empty, caption }: { headers: string[]; children: React.ReactNode; empty?: React.ReactNode; caption?: string }) {
+  return <div className="w-full overflow-x-auto rounded-xl border border-border/70 bg-card" role="region" aria-label={caption ?? headers.join(', ')} tabIndex={0}><Table className="min-w-[860px]"><caption className="sr-only">{caption ?? headers.join(', ')}</caption><TableHeader><TableRow>{headers.map((h)=><TableHead key={h} className="whitespace-nowrap">{h}</TableHead>)}</TableRow></TableHeader><TableBody>{children || <TableRow><TableCell colSpan={headers.length}>{empty}</TableCell></TableRow>}</TableBody></Table></div>;
 }
 
 export function TruncatedText({ children, className }: { children: string; className?: string }) { return <span className={cn('block max-w-[16rem] truncate', className)} title={children}>{children}</span>; }

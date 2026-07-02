@@ -8,6 +8,11 @@ import {
   validateMailBillingUrl,
 } from '@/lib/email-billing/miab-client';
 import { calculateMailBilling } from '@/lib/email-billing/billing-calculator';
+import {
+  mailBillingPlanCreateSchema,
+  mailBillingSettingsPatchSchema,
+  mailBillingSubscriptionCreateSchema,
+} from '@/lib/email-billing/validation';
 
 describe('Email Billing module registration and guardrails', () => {
   it('validates MIAB_BILLING and keeps it opt-in', () => {
@@ -79,6 +84,14 @@ describe('Email Billing calculator', () => {
   });
 });
 
+describe('Email Billing API validation', () => {
+  it('rejects invalid price, date, currency, and ID inputs', () => {
+    expect(mailBillingPlanCreateSchema.safeParse({ name: 'Bad', currency: 'RUPEES', basePrice: -1 }).success).toBe(false);
+    expect(mailBillingSubscriptionCreateSchema.safeParse({ domainId: '' }).success).toBe(false);
+    expect(mailBillingSettingsPatchSchema.safeParse({ defaultCurrency: 'USD', syncFrequencyPreference: 'HOURLY' }).success).toBe(false);
+  });
+});
+
 describe('Email Billing route and assistant safety', () => {
   it('does not expose forbidden operational endpoint names outside tests/docs', () => {
     const roots = ['app/api/email-billing', 'app/(dashboard)/email-billing', 'lib/email-billing'];
@@ -110,5 +123,16 @@ describe('Email Billing route and assistant safety', () => {
     expect(chatRoute).toContain('open_email_billing_dashboard');
     expect(chatRoute).toContain('/email-billing');
     expect(chatRoute).toContain('Never offer mailbox creation');
+  });
+
+  it('wraps billing-impacting actions in transactions', () => {
+    const sources = [
+      'app/api/email-billing/subscriptions/route.ts',
+      'app/api/email-billing/subscriptions/[id]/create-retainer/route.ts',
+      'app/api/email-billing/domains/[id]/create-retainer/route.ts',
+      'app/api/email-billing/domains/[id]/link-retainer/route.ts',
+      'app/api/email-billing/review/[id]/apply/route.ts',
+    ].map((file) => fs.readFileSync(file, 'utf8'));
+    expect(sources.every((source) => source.includes('prisma.$transaction'))).toBe(true);
   });
 });

@@ -2639,7 +2639,19 @@
       "createPlan": "Create Plan",
       "editPlan": "Edit Plan",
       "deactivatePlan": "Deactivate Plan",
-      "testConnection": "Test Connection"
+      "testConnection": "Test Connection",
+      "editServer": "Edit Server",
+      "save": "Save",
+      "saving": "Saving…",
+      "saveSettings": "Save settings",
+      "resolve": "Resolve",
+      "dismiss": "Dismiss",
+      "ignoreDomain": "Ignore Domain",
+      "pauseSubscription": "Pause Subscription",
+      "openDomain": "Open Domain",
+      "createSubscription": "Create Subscription",
+      "createRetainer": "Create Retainer",
+      "domainActions": "Domain actions"
     },
     "nav": {
       "domains": "Domains",
@@ -2689,7 +2701,9 @@
       "noSyncTitle": "No sync history",
       "noSyncDescription": "Sync runs will appear after a server inventory sync completes.",
       "noMailboxesTitle": "No mailboxes found",
-      "noMailboxesDescription": "This domain has no synced mailbox rows yet."
+      "noMailboxesDescription": "This domain has no synced mailbox rows yet.",
+      "noSearchResultsTitle": "No matching domains",
+      "noSearchResultsDescription": "Try a different filter or sync a mail server to refresh inventory."
     },
     "tables": {
       "domain": "Domain",
@@ -2761,6 +2775,34 @@
       "syncFrequencyPreference": "Sync frequency preference",
       "treatRemovedDomainsAsReviewRequired": "Treat removed domains as review-required",
       "ignoreAdminMailboxesFromBilling": "Ignore admin mailboxes from billing"
+    },
+    "forms": {
+      "serverDescription": "Connect a read-only adapter endpoint or direct Mail-in-a-Box read API source. Tokens are never displayed after saving.",
+      "clearTokenConfirm": "Clear the stored token when saving",
+      "planDescription": "Create reusable hosted-email pricing plans for subscriptions and retainers.",
+      "deactivatePlanConfirm": "Deactivate this plan? Existing subscriptions keep their pricing snapshots."
+    },
+    "toast": {
+      "requestFailed": "Request failed",
+      "serverCreated": "Server created",
+      "serverUpdated": "Server updated",
+      "connectionOk": "Connection test completed",
+      "syncStarted": "Sync completed",
+      "planCreated": "Plan created",
+      "planUpdated": "Plan updated",
+      "planDeactivated": "Plan deactivated",
+      "reviewUpdated": "Review item updated",
+      "settingsSaved": "Settings saved",
+      "domainIgnored": "Domain ignored"
+    },
+    "filters": {
+      "all": "All",
+      "unmapped": "Unmapped",
+      "missingBilling": "Missing Billing",
+      "reviewRequired": "Review Required",
+      "active": "Active",
+      "removed": "Removed",
+      "ignored": "Ignored"
     }
   }
 }

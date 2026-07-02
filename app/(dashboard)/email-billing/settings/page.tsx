@@ -1,2 +1,25 @@
-import { getTranslations } from 'next-intl/server'; import { Settings } from 'lucide-react'; import { DashboardPageShell } from '@/components/layout/DashboardPageShell'; import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; import { prisma } from '@/lib/prisma'; import { EmailBillingStatusBadge } from '@/components/email-billing/ui'; import { requireEmailBillingPage } from '../_data';
-export default async function SettingsPage(){const t=await getTranslations('EmailBilling'); const workspaceId=await requireEmailBillingPage(); const s=await prisma.mailBillingSettings.upsert({where:{workspaceId},create:{workspaceId},update:{}}); const rows=[[t('tables.billingMode'),s.defaultBillingMode],[t('tables.currency'),s.defaultCurrency],[t('tables.plan'),s.defaultPlanId??t('labels.none')],['Auto-create review items',String(s.autoCreateReviewItems)],['Auto-update retainer quantities',String(s.autoUpdateRetainerQuantities)],['Sync frequency preference',s.syncFrequencyPreference],['Treat removed domains as review-required',String(s.treatRemovedDomainsAsReviewRequired)],['Ignore admin mailboxes from billing',String(s.ignoreAdminMailboxesFromBilling)]]; return <DashboardPageShell title={t('pages.settingsTitle')} description={t('pages.settingsSubtitle')} icon={<Settings className="size-5" />}><Card variant="panel"><CardHeader><CardTitle>{t('sections.moduleSettings')}</CardTitle></CardHeader><CardContent className="grid gap-3 sm:grid-cols-2">{rows.map(([label,value])=><div key={label} className="rounded-lg border border-border/70 bg-muted/20 p-3"><div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div><div className="mt-1 text-sm font-medium">{value==='true'||value==='false'?<EmailBillingStatusBadge value={value==='true'?'ACTIVE':'DISABLED'} label={value}/>:value}</div></div>)}</CardContent></Card><p className="text-sm text-muted-foreground">{t('labels.securityBoundary')}</p></DashboardPageShell>}
+import { getTranslations } from 'next-intl/server';
+import { Settings } from 'lucide-react';
+import { DashboardPageShell } from '@/components/layout/DashboardPageShell';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { prisma } from '@/lib/prisma';
+import { SettingsForm } from '@/components/email-billing/client-actions';
+import { requireEmailBillingPage } from '../_data';
+
+export default async function SettingsPage() {
+  const t = await getTranslations('EmailBilling');
+  const workspaceId = await requireEmailBillingPage();
+  const [settings, plans] = await Promise.all([
+    prisma.mailBillingSettings.upsert({ where: { workspaceId }, create: { workspaceId }, update: {} }),
+    prisma.mailBillingPlan.findMany({ where: { workspaceId, isActive: true }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+  ]);
+  return (
+    <DashboardPageShell title={t('pages.settingsTitle')} description={t('pages.settingsSubtitle')} icon={<Settings className="size-5" />}>
+      <Card variant="panel">
+        <CardHeader><CardTitle>{t('sections.moduleSettings')}</CardTitle></CardHeader>
+        <CardContent><SettingsForm settings={settings} plans={plans} /></CardContent>
+      </Card>
+      <p className="text-sm text-muted-foreground">{t('labels.securityBoundary')}</p>
+    </DashboardPageShell>
+  );
+}

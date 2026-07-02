@@ -1,5 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireEmailBilling } from '../_lib/auth';
-export async function GET(){const auth=await requireEmailBilling('invoices.view'); if('response'in auth)return auth.response; return NextResponse.json({plans:await prisma.mailBillingPlan.findMany({where:{workspaceId:auth.workspaceId},include:{_count:{select:{subscriptions:true}}},orderBy:[{sortOrder:'asc'},{name:'asc'}]})});}
-export async function POST(req:NextRequest){const auth=await requireEmailBilling('invoices.edit'); if('response'in auth)return auth.response; const b=await req.json().catch(()=>({})); const plan=await prisma.mailBillingPlan.create({data:{workspaceId:auth.workspaceId,name:String(b.name||'Email Plan'),description:b.description?String(b.description):null,billingMode:['FIXED','PER_MAILBOX','BUNDLE_PLUS_EXTRA','MANUAL'].includes(b.billingMode)?b.billingMode:'FIXED',currency:String(b.currency||'INR'),basePrice:Number(b.basePrice||0),includedMailboxes:Number(b.includedMailboxes||0),extraMailboxPrice:Number(b.extraMailboxPrice||0),frequency:['MONTHLY','QUARTERLY','ANNUALLY'].includes(b.frequency)?b.frequency:'MONTHLY',sortOrder:Number(b.sortOrder||0)}}); return NextResponse.json({plan},{status:201});}
+import { mailBillingPlanCreateSchema, parseJsonBody } from '@/lib/email-billing/validation';
+
+export async function GET() {
+  const auth = await requireEmailBilling('invoices.view');
+  if ('response' in auth) return auth.response;
+  return NextResponse.json({ plans: await prisma.mailBillingPlan.findMany({ where: { workspaceId: auth.workspaceId }, include: { _count: { select: { subscriptions: true } } }, orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] }) });
+}
+
+export async function POST(req: NextRequest) {
+  const auth = await requireEmailBilling('invoices.edit');
+  if ('response' in auth) return auth.response;
+  try {
+    const body = parseJsonBody(mailBillingPlanCreateSchema, await req.json().catch(() => ({})));
+    const plan = await prisma.mailBillingPlan.create({ data: { workspaceId: auth.workspaceId, ...body, description: body.description ?? null } });
+    return NextResponse.json({ plan }, { status: 201 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid plan' }, { status: 400 });
+  }
+}

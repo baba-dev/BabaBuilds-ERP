@@ -1,2 +1,49 @@
-import Link from 'next/link'; import { getTranslations } from 'next-intl/server'; import { Server } from 'lucide-react'; import { DashboardPageShell } from '@/components/layout/DashboardPageShell'; import { Button } from '@/components/ui/button'; import { prisma } from '@/lib/prisma'; import { EmailBillingEmptyState, EmailBillingStatusBadge, EmailBillingTable, TruncatedText } from '@/components/email-billing/ui'; import { requireEmailBillingPage } from '../_data';
-export default async function ServersPage(){const t=await getTranslations('EmailBilling'); const workspaceId=await requireEmailBillingPage(); const servers=await prisma.mailBillingServer.findMany({where:{workspaceId},include:{_count:{select:{domains:true,mailboxes:true}},syncRuns:{orderBy:{startedAt:'desc'},take:5}},orderBy:{createdAt:'desc'}}); const headers=['name','provider','accessMode','baseUrl','status','lastSync','domains','mailboxes','lastError','token','actions'].map(k=>t(`tables.${k}`)); return <DashboardPageShell title={t('pages.serversTitle')} description={t('pages.serversSubtitle')} icon={<Server className="size-5" />} primaryAction={<Button asChild variant="primary-action"><Link href="/email-billing/servers">{t('actions.addServer')}</Link></Button>}>{servers.length===0?<EmailBillingEmptyState title={t('empty.noServersTitle')} description={t('empty.noServersDescription')} action={{href:'/email-billing/servers',label:t('actions.addServer')}}/>:<EmailBillingTable headers={headers}>{servers.map(s=><tr key={s.id} className="border-b hover:bg-muted/50"><td className="p-2 font-medium">{s.name}</td><td className="p-2">{s.provider}</td><td className="p-2"><EmailBillingStatusBadge value={s.accessMode}/></td><td className="p-2"><TruncatedText>{s.baseUrl}</TruncatedText></td><td className="p-2"><EmailBillingStatusBadge value={s.status}/></td><td className="p-2">{s.lastSyncAt?.toLocaleString()??t('labels.never')}</td><td className="p-2">{s._count.domains}</td><td className="p-2">{s._count.mailboxes}</td><td className="p-2 text-muted-foreground">{s.lastSyncError??t('labels.notAvailable')}</td><td className="p-2"><EmailBillingStatusBadge value={s.encryptedToken?'ACTIVE':'DISABLED'} label={s.encryptedToken?t('labels.tokenSet'):t('labels.tokenNotConfigured')}/></td><td className="p-2"><span className="text-sm text-muted-foreground">{t('actions.testConnection')} · {t('actions.syncNow')}</span></td></tr>)}</EmailBillingTable>}<p className="text-sm text-muted-foreground">{t('sections.tokenSafety')}</p></DashboardPageShell>}
+import { getTranslations } from 'next-intl/server';
+import { Server } from 'lucide-react';
+import { DashboardPageShell } from '@/components/layout/DashboardPageShell';
+import { prisma } from '@/lib/prisma';
+import { EmailBillingEmptyState, EmailBillingStatusBadge, EmailBillingTable, TruncatedText } from '@/components/email-billing/ui';
+import { ServerDialog, ServerRowActions } from '@/components/email-billing/client-actions';
+import { requireEmailBillingPage } from '../_data';
+
+export default async function ServersPage() {
+  const t = await getTranslations('EmailBilling');
+  const workspaceId = await requireEmailBillingPage();
+  const servers = await prisma.mailBillingServer.findMany({
+    where: { workspaceId },
+    include: { _count: { select: { domains: true, mailboxes: true } }, syncRuns: { orderBy: { startedAt: 'desc' }, take: 5 } },
+    orderBy: { createdAt: 'desc' },
+  });
+  const headers = ['name', 'provider', 'accessMode', 'baseUrl', 'status', 'lastSync', 'domains', 'mailboxes', 'lastError', 'token', 'actions'].map((k) => t(`tables.${k}`));
+  return (
+    <DashboardPageShell
+      title={t('pages.serversTitle')}
+      description={t('pages.serversSubtitle')}
+      icon={<Server className="size-5" />}
+      primaryAction={<ServerDialog triggerLabel={t('actions.addServer')} />}
+    >
+      {servers.length === 0 ? (
+        <EmailBillingEmptyState title={t('empty.noServersTitle')} description={t('empty.noServersDescription')} />
+      ) : (
+        <EmailBillingTable headers={headers} caption={t('pages.serversTitle')}>
+          {servers.map((server) => (
+            <tr key={server.id} className="border-b hover:bg-muted/50">
+              <td className="p-2 font-medium"><TruncatedText>{server.name}</TruncatedText></td>
+              <td className="p-2">{server.provider}</td>
+              <td className="p-2"><EmailBillingStatusBadge value={server.accessMode} /></td>
+              <td className="p-2"><TruncatedText className="max-w-[22rem]">{server.baseUrl}</TruncatedText></td>
+              <td className="p-2"><EmailBillingStatusBadge value={server.status} /></td>
+              <td className="p-2 whitespace-nowrap">{server.lastSyncAt?.toLocaleString() ?? t('labels.never')}</td>
+              <td className="p-2">{server._count.domains}</td>
+              <td className="p-2">{server._count.mailboxes}</td>
+              <td className="p-2 text-muted-foreground"><TruncatedText>{server.lastSyncError ?? t('labels.notAvailable')}</TruncatedText></td>
+              <td className="p-2"><EmailBillingStatusBadge value={server.encryptedToken ? 'ACTIVE' : 'DISABLED'} label={server.encryptedToken ? t('labels.tokenSet') : t('labels.tokenNotConfigured')} /></td>
+              <td className="p-2"><ServerRowActions server={{ id: server.id, name: server.name, baseUrl: server.baseUrl, accessMode: server.accessMode, status: server.status, hasToken: Boolean(server.encryptedToken) }} /></td>
+            </tr>
+          ))}
+        </EmailBillingTable>
+      )}
+      <p className="text-sm text-muted-foreground">{t('sections.tokenSafety')}</p>
+    </DashboardPageShell>
+  );
+}

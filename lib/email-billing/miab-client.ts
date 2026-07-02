@@ -110,12 +110,21 @@ export async function validateMailBillingUrlForFetch(rawUrl: string, env = proce
   return url;
 }
 
-async function fetchJson(url: URL, token?: string) {
+function buildAuthHeader(accessMode: MailBillingAccessMode, token?: string): Record<string, string> {
+  if (!token) return {};
+  if (accessMode === 'DIRECT_MIAB_API') {
+    const value = token.startsWith('Basic ') ? token : `Basic ${Buffer.from(token).toString('base64')}`;
+    return { Authorization: value };
+  }
+  return { Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}` };
+}
+
+async function fetchJson(url: URL, accessMode: MailBillingAccessMode, token?: string) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch(url, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: buildAuthHeader(accessMode, token),
       redirect: 'error',
       signal: controller.signal,
     });
@@ -193,9 +202,9 @@ function extractDirectAliases(aliasesRaw: unknown) {
 
 async function fetchDirectMiabInventory(base: URL, token?: string): Promise<MailBillingInventory> {
   const [domainsRaw, usersRaw] = await Promise.all(
-    REQUIRED_DIRECT_ENDPOINTS.map((ep) => fetchJson(new URL(ep, base), token)),
+    REQUIRED_DIRECT_ENDPOINTS.map((ep) => fetchJson(new URL(ep, base), 'DIRECT_MIAB_API', token)),
   );
-  const aliasesRaw = await fetchJson(new URL(OPTIONAL_DIRECT_ENDPOINT, base), token).catch(() => []);
+  const aliasesRaw = await fetchJson(new URL(OPTIONAL_DIRECT_ENDPOINT, base), 'DIRECT_MIAB_API', token).catch(() => []);
   const domainNames = extractDirectDomains(domainsRaw);
   const users = extractDirectUsers(usersRaw);
   const aliases = extractDirectAliases(aliasesRaw);
@@ -225,6 +234,6 @@ export async function fetchMailBillingInventory(opts: {
   token?: string;
 }): Promise<MailBillingInventory> {
   const base = await validateMailBillingUrlForFetch(opts.baseUrl);
-  if (opts.accessMode === 'READ_ONLY_ADAPTER') return normalizeAdapterInventory(await fetchJson(base, opts.token));
+  if (opts.accessMode === 'READ_ONLY_ADAPTER') return normalizeAdapterInventory(await fetchJson(base, 'READ_ONLY_ADAPTER', opts.token));
   return fetchDirectMiabInventory(base, opts.token);
 }
