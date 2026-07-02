@@ -8,6 +8,7 @@ import { calculateInvoiceTotals } from '@/lib/invoice/totals';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
 import { logActivity } from '@/lib/security/activity-log';
 import { withPermission } from '@/lib/rbac';
+import { getNextProposalNo, isUniqueConstraintError } from '@/lib/document-numbering';
 
 type ProposalItemInput = {
   serviceTemplateId?: string;
@@ -77,8 +78,8 @@ export async function POST(request: Request) {
       richSections?: any;
     };
 
-    const client = await prisma.client.findFirst({ 
-      where: { id: clientId, workspaceId } 
+    const client = await prisma.client.findFirst({
+      where: { id: clientId, workspaceId }
     });
     if (!client) {
       return NextResponse.json({ error: "Invalid client selected." }, { status: 400 });
@@ -86,28 +87,10 @@ export async function POST(request: Request) {
 
     if (!client.email || client.email.trim() === '') {
       return NextResponse.json(
-        { error: `Cannot create proposal. The client "${client.name}" must have a valid email address on file for digital signatures.` }, 
+        { error: `Cannot create proposal. The client "${client.name}" must have a valid email address on file for digital signatures.` },
         { status: 400 }
       );
     }
-
-    // Auto-Sequence the Proposal Number
-    const currentYear = new Date().getFullYear();
-    const shortYear = currentYear.toString().slice(-2);
-    
-    const lastProposal = await prisma.proposal.findFirst({
-      where: { workspaceId },
-      orderBy: { dateCreated: 'desc' }
-    });
-
-    let sequence = 1;
-    if (lastProposal && lastProposal.proposalNo) {
-      const parts = lastProposal.proposalNo.split('-');
-      if (parts.length === 3 && !isNaN(parseInt(parts[2]))) {
-        sequence = parseInt(parts[2]) + 1;
-      }
-    }
-    const proposalNo = `EST-${shortYear}-${sequence.toString().padStart(3, '0')}`;
 
     const profile = await prisma.businessProfile.findUnique({
       where: { workspaceId },
@@ -189,51 +172,72 @@ export async function POST(request: Request) {
           .filter((media) => media.url.length > 0)
       : [];
 
-    const newProposal = await prisma.proposal.create({
-      data: {
-        workspaceId,
-        clientId,
-        title,
-        proposalNo,
-        validUntil: new Date(validUntil),
-        subtotal,
-        estimatedTax,
-        totalAmount,
-        declineReason:
-          normalizedRichMedia.length > 0
-            ? JSON.stringify({ richMedia: normalizedRichMedia })
-            : null,
-        richSections: richSections ? richSections : undefined,
-        status: "SENT",
-        items: {
-          create: items.map((item) => {
-            const qty = new Prisma.Decimal(Number(item.quantity));
-            const unitPriceD = new Prisma.Decimal(Number(item.unitPrice));
-            const lineTotal = qty.mul(unitPriceD).toDecimalPlaces(2);
-            return {
-              serviceTemplateId: templateMap.has(item.serviceTemplateId || "") ? item.serviceTemplateId : null,
-              title: item.title,
-              description: item.description || null,
-              quantity: Number(item.quantity),
-              unitPrice: unitPriceD.toNumber(),
-              total: lineTotal.toNumber(),
-              isOptional: Boolean(item.isOptional),
-              isSelected: true
-            };
-          })
-        },
-        billingMilestones: milestones && milestones.length > 0 ? {
-          create: milestones.map((m) => ({
-            workspaceId,
-            title: m.title,
-            description: m.description || null,
-            amount: new Prisma.Decimal(m.amount),
-            dueDate: m.dueDate ? new Date(m.dueDate) : null,
-            status: 'PENDING'
-          }))
-        } : undefined,
+    const MAX_NUMBERING_ATTEMPTS = 5;
+    let newProposal: Awaited<ReturnType<typeof prisma.proposal.create>> | null = null;
+    let proposalNo = "";
+
+    for (let attempt = 1; attempt <= MAX_NUMBERING_ATTEMPTS; attempt += 1) {
+      try {
+        newProposal = await prisma.$transaction(async (tx) => {
+          const nextProposalNo = await getNextProposalNo(tx, workspaceId);
+          proposalNo = nextProposalNo;
+
+          return tx.proposal.create({
+            data: {
+              workspaceId,
+              clientId,
+              title,
+              proposalNo: nextProposalNo,
+              validUntil: new Date(validUntil),
+              subtotal,
+              estimatedTax,
+              totalAmount,
+              declineReason:
+                normalizedRichMedia.length > 0
+                  ? JSON.stringify({ richMedia: normalizedRichMedia })
+                  : null,
+              richSections: richSections ? richSections : undefined,
+              status: "SENT",
+              items: {
+                create: items.map((item) => {
+                  const qty = new Prisma.Decimal(Number(item.quantity));
+                  const unitPriceD = new Prisma.Decimal(Number(item.unitPrice));
+                  const lineTotal = qty.mul(unitPriceD).toDecimalPlaces(2);
+                  return {
+                    serviceTemplateId: templateMap.has(item.serviceTemplateId || "") ? item.serviceTemplateId : null,
+                    title: item.title,
+                    description: item.description || null,
+                    quantity: Number(item.quantity),
+                    unitPrice: unitPriceD.toNumber(),
+                    total: lineTotal.toNumber(),
+                    isOptional: Boolean(item.isOptional),
+                    isSelected: true
+                  };
+                })
+              },
+              billingMilestones: milestones && milestones.length > 0 ? {
+                create: milestones.map((m) => ({
+                  workspaceId,
+                  title: m.title,
+                  description: m.description || null,
+                  amount: new Prisma.Decimal(m.amount),
+                  dueDate: m.dueDate ? new Date(m.dueDate) : null,
+                  status: 'PENDING'
+                }))
+              } : undefined,
+            }
+          });
+        });
+        break;
+      } catch (error) {
+        if (attempt < MAX_NUMBERING_ATTEMPTS && isUniqueConstraintError(error)) continue;
+        throw error;
       }
-    });
+    }
+
+    if (!newProposal) {
+      return NextResponse.json({ error: "Could not generate a unique proposal number." }, { status: 409 });
+    }
 
     // Fire notification (fire-and-forget)
     dispatchNotification({
