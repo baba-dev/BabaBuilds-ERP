@@ -43,7 +43,19 @@ type CartItem = CatalogItem & {
   quantity: number;
 };
 
-export default function PosSystem({ clients }: { catalog?: CatalogItem[]; clients: ClientOption[]; onSuccess?: () => void }) {
+type PosSystemProps = {
+  catalog?: CatalogItem[];
+  clients: ClientOption[];
+  onSuccess?: () => void;
+  canCreateCustomItems?: boolean;
+  canApplyDiscounts?: boolean;
+};
+
+export default function PosSystem({
+  clients,
+  canCreateCustomItems = false,
+  canApplyDiscounts = false,
+}: PosSystemProps) {
   const t = useTranslations('POS');
   const [activeTab, setActiveTab] = useState<"SERVICES" | "PRODUCTS">("SERVICES");
   const [items, setItems] = useState<CatalogItem[]>([]);
@@ -119,6 +131,10 @@ export default function PosSystem({ clients }: { catalog?: CatalogItem[]; client
   };
 
   const handleAddCustomItem = () => {
+    if (!canCreateCustomItems) {
+      toast.error("You do not have permission to add custom POS items");
+      return;
+    }
     if (!customItem.name || !customItem.price) return;
     setCart(prev => [...prev, {
       id: `custom-${Date.now()}`,
@@ -210,9 +226,11 @@ export default function PosSystem({ clients }: { catalog?: CatalogItem[]; client
                 className="pl-10 h-12 text-base font-medium shadow-sm border-zinc-200 bg-white focus-visible:ring-accent-primary/30 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50"
               />
             </div>
-            <Button variant="outline" className="h-12 border-dashed border-accent-primary/60 text-accent-primary hover:bg-accent-primary/10 font-bold" onClick={() => setIsCustomItemModalOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> {t('btn_custom_item')}
-            </Button>
+            {canCreateCustomItems ? (
+              <Button variant="outline" className="h-12 border-dashed border-accent-primary/60 text-accent-primary hover:bg-accent-primary/10 font-bold" onClick={() => setIsCustomItemModalOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" /> {t('btn_custom_item')}
+              </Button>
+            ) : null}
           </div>
         </div>
 
@@ -323,7 +341,7 @@ export default function PosSystem({ clients }: { catalog?: CatalogItem[]; client
               <span>${subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-muted-foreground">
-              <span>{t('discount')}</span>
+              <span>{t('discount')}{canApplyDiscounts ? "" : " (restricted)"}</span>
               <span>$0.00</span>
             </div>
             <div className="flex justify-between font-black text-2xl text-foreground pt-2 border-t border-border/50">
