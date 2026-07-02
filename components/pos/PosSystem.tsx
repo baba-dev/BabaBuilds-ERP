@@ -32,6 +32,7 @@ type CatalogItem = {
   name: string;
   price: number;
   description?: string;
+  stock?: number;
 };
 
 type ClientOption = { id: string; name: string };
@@ -71,8 +72,18 @@ export default function PosSystem({ clients }: { catalog?: CatalogItem[]; client
   }, [activeTab]);
 
   const addToCart = (item: CatalogItem) => {
+    if (item.type === "PRODUCT" && Number(item.stock ?? 0) <= 0) {
+      toast.warning(`${item.name} is out of stock`);
+      return;
+    }
+
     setCart(prev => {
       const existing = prev.find(i => i.id === item.id);
+      const currentQuantity = existing?.quantity ?? 0;
+      if (item.type === "PRODUCT" && currentQuantity + 1 > Number(item.stock ?? 0)) {
+        toast.warning(`Only ${item.stock ?? 0} ${item.name} in stock`);
+        return prev;
+      }
       if (existing) {
         return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
       }
@@ -83,7 +94,13 @@ export default function PosSystem({ clients }: { catalog?: CatalogItem[]; client
   const updateQuantity = (cartId: string, delta: number) => {
     setCart(prev => prev.map(i => {
       if (i.cartId === cartId) {
-        const newQ = Math.max(1, i.quantity + delta);
+        const requestedQuantity = Math.max(1, i.quantity + delta);
+        const newQ = i.type === "PRODUCT" && !i.id.startsWith("custom-")
+          ? Math.min(requestedQuantity, Number(i.stock ?? 0))
+          : requestedQuantity;
+        if (requestedQuantity !== newQ) {
+          toast.warning(`Only ${i.stock ?? 0} ${i.name} in stock`);
+        }
         return { ...i, quantity: newQ };
       }
       return i;
@@ -185,25 +202,34 @@ export default function PosSystem({ clients }: { catalog?: CatalogItem[]; client
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               <AnimatePresence>
-                {filteredItems.map(item => (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                  >
-                    <Card 
-                      className="cursor-pointer hover:border-accent-primary transition-colors h-full border border-border/50 bg-card/80 backdrop-blur"
-                      onClick={() => addToCart(item)}
+                {filteredItems.map(item => {
+                  const isOutOfStock = item.type === "PRODUCT" && Number(item.stock ?? 0) <= 0;
+
+                  return (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
                     >
-                      <CardHeader className="p-4">
-                        <CardTitle className="text-base line-clamp-2">{item.name}</CardTitle>
-                        <div className="text-lg font-bold text-accent-primary mt-2">
-                          ${item.price.toFixed(2)}
-                        </div>
-                      </CardHeader>
-                    </Card>
-                  </motion.div>
-                ))}
+                      <Card
+                        className={`transition-colors h-full border border-border/50 bg-card/80 backdrop-blur ${isOutOfStock ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-accent-primary"}`}
+                        onClick={() => addToCart(item)}
+                      >
+                        <CardHeader className="p-4">
+                          <CardTitle className="text-base line-clamp-2">{item.name}</CardTitle>
+                          <div className="text-lg font-bold text-accent-primary mt-2">
+                            ${item.price.toFixed(2)}
+                          </div>
+                          {item.type === "PRODUCT" && (
+                            <div className={`text-xs font-bold uppercase tracking-widest ${isOutOfStock ? "text-destructive" : "text-muted-foreground"}`}>
+                              {isOutOfStock ? "Out of stock" : `${item.stock} in stock`}
+                            </div>
+                          )}
+                        </CardHeader>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
             </div>
           )}
