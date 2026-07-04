@@ -5,6 +5,8 @@ import PosSystem from "@/components/pos/PosSystem";
 import { redirect } from "next/navigation";
 import { ShoppingCart } from "lucide-react";
 import { checkPermissionsSilent, requirePermission } from "@/lib/rbac";
+import { isModuleEnabled } from "@/lib/modules";
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
 export const metadata = {
@@ -19,6 +21,28 @@ export default async function PosPage() {
   }
 
   const workspaceId = session.workspaceId;
+
+  const moduleEnabled = await isModuleEnabled(workspaceId, "POS");
+  if (!moduleEnabled) {
+    return (
+      <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8">
+        <div className="mx-auto max-w-2xl rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-500">Point of Sale</p>
+          <h1 className="mt-2 flex items-center gap-3 text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+            <ShoppingCart className="h-8 w-8 text-amber-500" />
+            The POS module is currently disabled
+          </h1>
+          <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-300">
+            Register access, catalog lookup, and checkout actions are paused. Existing invoices, proposals, retainers, clients, inventory movements, and product data are preserved and return when POS is re-enabled.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/settings#workspace-modules" className="rounded-lg bg-amber-600 px-4 py-2 text-xs font-bold uppercase tracking-widest text-white hover:bg-amber-700">Enable in Settings</Link>
+            <Link href="/dashboard" className="rounded-lg border border-zinc-200 px-4 py-2 text-xs font-bold uppercase tracking-widest text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">Back to dashboard</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   try {
     await requirePermission(session.user.id, workspaceId, "pos.view");

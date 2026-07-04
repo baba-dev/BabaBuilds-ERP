@@ -33,6 +33,7 @@ type SetupPayload = {
   stripeSecretKey?: string;
   
   shopEnabled?: boolean;
+  enablePos?: boolean;
   shopSlug?: string;
   shopTagline?: string;
   shopAccentColor?: string;
@@ -241,6 +242,17 @@ export async function POST(req: Request) {
     if (body.enableReportingCenter === true) {
       await enableModule(workspaceId, 'REPORTING_CENTER', userId).catch((e) =>
         console.error('[setup] Reporting Center module init failed (non-blocking):', e)
+      );
+    }
+
+    if (body.enablePos !== false) {
+      await enableModule(workspaceId, 'POS', userId).catch((e) =>
+        console.error('[setup] POS module init failed (non-blocking):', e)
+      );
+    } else {
+      const { disableModule } = await import('@/lib/modules');
+      await disableModule(workspaceId, 'POS', userId).catch((e) =>
+        console.error('[setup] POS module disable failed (non-blocking):', e)
       );
     }
 

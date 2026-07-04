@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import {
   Building2, Landmark, ShieldCheck, Image as ImageIcon, CheckCircle2,
   Mailbox, Bot, Trash2, CreditCard, Lock, Globe, AlertTriangle,
-  Loader2, Info, Users, Mail, Clock, UserPlus, ArrowRight, Sparkles, Users2, FileText, HandCoins, Target, Siren, ChartColumnBig, UploadCloud
+  Loader2, Info, Users, Mail, Clock, UserPlus, ArrowRight, Sparkles, Users2, FileText, HandCoins, Target, Siren, ChartColumnBig, UploadCloud, ShoppingCart
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -76,6 +76,9 @@ export default function SettingsWizard() {
   const [taxAdvancedEnabled, setTaxAdvancedEnabled] = useState(false);
   const [taxAdvancedLoading, setTaxAdvancedLoading] = useState(false);
   const [showDisableTaxAdvancedConfirm, setShowDisableTaxAdvancedConfirm] = useState(false);
+  const [posEnabled, setPosEnabled] = useState(false);
+  const [posLoading, setPosLoading] = useState(false);
+  const [showDisablePosConfirm, setShowDisablePosConfirm] = useState(false);
   // Team invite state
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("MEMBER");
@@ -143,6 +146,7 @@ export default function SettingsWizard() {
           setRevenuePipelineEnabled(d.modules.includes('REVENUE_PIPELINE'));
           setImportManagerEnabled(d.modules.includes('IMPORT_MANAGER'));
           setTaxAdvancedEnabled(d.modules.includes('TAX_ADVANCED'));
+          setPosEnabled(d.modules.includes('POS'));
         }
       })
       .catch(() => {});
@@ -1146,6 +1150,46 @@ export default function SettingsWizard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
+              {/* POS Module Card */}
+              <div className={cn(
+                "rounded-xl border-2 p-5 transition-all duration-200",
+                posEnabled
+                  ? "border-amber-500/50 bg-amber-50/30 dark:bg-amber-950/10"
+                  : "border-zinc-200 dark:border-zinc-800"
+              )}>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all", posEnabled ? "bg-amber-500 shadow-lg shadow-amber-500/20" : "bg-zinc-100 dark:bg-zinc-800")}>
+                      <ShoppingCart className={cn("h-5 w-5", posEnabled ? "text-white" : "text-zinc-500")} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Point of Sale</p>
+                        <Badge variant="outline" className={cn("text-[10px] font-bold uppercase", posEnabled ? "border-amber-500/30 text-amber-600 dark:text-amber-400" : "border-zinc-300 dark:border-zinc-700 text-zinc-500")}>{posEnabled ? "Enabled" : "Disabled"}</Badge>
+                      </div>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2 max-w-sm">
+                        Checkout register for services, products, walk-in payments, invoices, proposals, and retainers.
+                      </p>
+                      <p className="text-[11px] text-zinc-500">Non-destructive disable preserves invoices, proposals, retainers, inventory movements, clients, and catalog data.</p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="pos-module-toggle"
+                    checked={posEnabled}
+                    disabled={posLoading}
+                    onCheckedChange={async (checked) => {
+                      if (!checked) { setShowDisablePosConfirm(true); return; }
+                      setPosLoading(true);
+                      try {
+                        const res = await fetch('/api/workspace/modules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ moduleKey: 'POS', enabled: true }) });
+                        if (res.ok) { setPosEnabled(true); toast.success('POS module enabled'); } else { toast.error('Failed to enable module'); }
+                      } finally { setPosLoading(false); }
+                    }}
+                    className="data-[state=checked]:bg-amber-500 shrink-0 mt-1"
+                  />
+                </div>
+              </div>
+
               {/* Workforce Module Card */}
               <div className={cn(
                 "rounded-xl border-2 p-5 transition-all duration-200",
@@ -2267,6 +2311,28 @@ export default function SettingsWizard() {
                 >
                   {importManagerLoading ? 'Disabling...' : 'Disable Import Manager'}
                 </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+
+          <Dialog open={showDisablePosConfirm} onOpenChange={setShowDisablePosConfirm}>
+            <DialogContent className="sm:max-w-md bg-zinc-950 border-white/10">
+              <DialogHeader>
+                <DialogTitle className="text-zinc-50 flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-400" /> Disable POS?</DialogTitle>
+                <DialogDescription className="text-zinc-400">
+                  POS register access, catalog lookup, and checkout APIs will be paused. Existing invoices, proposals, retainers, product stock history, inventory movements, clients, and catalog records will be <strong className="text-zinc-200">preserved</strong>.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="ghost" onClick={() => setShowDisablePosConfirm(false)} className="text-zinc-400">Cancel</Button>
+                <Button id="confirm-disable-pos" disabled={posLoading} onClick={async () => {
+                  setPosLoading(true);
+                  try {
+                    const res = await fetch('/api/workspace/modules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ moduleKey: 'POS', enabled: false }) });
+                    if (res.ok) { setPosEnabled(false); setShowDisablePosConfirm(false); toast.success('POS module disabled'); } else { toast.error('Failed to disable module'); }
+                  } finally { setPosLoading(false); }
+                }} className="bg-rose-600 hover:bg-rose-500 text-white border-none">{posLoading ? 'Disabling...' : 'Disable POS'}</Button>
               </div>
             </DialogContent>
           </Dialog>

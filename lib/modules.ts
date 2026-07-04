@@ -45,6 +45,7 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   IMPORT_MANAGER: 'Import Manager',
   SHOP: 'Public Shop (E-Store)',
   MIAB_BILLING: 'Email Billing',
+  POS: 'Point of Sale',
 };
 
 export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
@@ -70,6 +71,8 @@ export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
     'Public storefront for clients to browse your catalog, place orders, and pay via Razorpay/Stripe — including content sections (About, Social, FAQ) editable from the dashboard.',
   MIAB_BILLING:
     'Read-only Mail-in-a-Box domain and mailbox inventory mapped to ERP clients, retainers, and recurring invoices.',
+  POS:
+    'In-workspace checkout register for services, products, custom line items, walk-in sales, invoices, proposals, and retainers.',
 };
 
 export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
@@ -158,6 +161,13 @@ export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
     'Retainer linking and recurring billing setup',
     'Unmapped/unbilled domain detection',
     'Sync status and billing review suggestions',
+  ],
+  POS: [
+    'Checkout cart for services, products, and custom line items',
+    'Walk-in customer flow for immediate payments',
+    'Generate paid invoices, draft invoices, proposals, or retainers',
+    'Inventory stock decrements and movement audit trail',
+    'Role-scoped checkout, discount, and custom item permissions',
   ],
 };
 

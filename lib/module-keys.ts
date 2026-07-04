@@ -10,6 +10,7 @@ export const MODULE_KEYS = [
   'IMPORT_MANAGER',
   'SHOP',
   'MIAB_BILLING',
+  'POS',
 ] as const;
 
 export type ModuleKey = (typeof MODULE_KEYS)[number];
@@ -22,7 +23,7 @@ export type ModuleKey = (typeof MODULE_KEYS)[number];
  *
  * Other modules in MODULE_KEYS are opt-in (default disabled).
  */
-export const DEFAULT_ENABLED_MODULE_KEYS: ReadonlySet<ModuleKey> = new Set<ModuleKey>(['SHOP']);
+export const DEFAULT_ENABLED_MODULE_KEYS: ReadonlySet<ModuleKey> = new Set<ModuleKey>(['SHOP', 'POS']);
 
 export function isValidModuleKey(key: unknown): key is ModuleKey {
   return typeof key === 'string' && (MODULE_KEYS as readonly string[]).includes(key);

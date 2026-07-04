@@ -168,6 +168,7 @@ export const freelancerConsultantTemplate: DemoTemplateDefinition = {
     IMPORT_MANAGER: true,
     SHOP: true,
     MIAB_BILLING: true,
+    POS: true,
   },
   seededModules: [
     "WORKFORCE",
@@ -181,6 +182,7 @@ export const freelancerConsultantTemplate: DemoTemplateDefinition = {
     "IMPORT_MANAGER",
     "SHOP",
     "MIAB_BILLING",
+    "POS",
   ],
   seed: async ({ tx, workspaceId, userId, now }) => {
     const dept = await tx.department.create({

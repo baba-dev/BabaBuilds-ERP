@@ -192,6 +192,7 @@ export const dmAgencyTemplate: DemoTemplateDefinition = {
     IMPORT_MANAGER: true,
     SHOP: true,
     MIAB_BILLING: true,
+    POS: true,
   },
   seededModules: [
     'WORKFORCE',
@@ -205,6 +206,7 @@ export const dmAgencyTemplate: DemoTemplateDefinition = {
     'IMPORT_MANAGER',
     'SHOP',
     'MIAB_BILLING',
+    'POS',
   ],
   async seed({ tx, workspaceId, userId, now }) {
     // Payment behavior signal for receivables widgets
