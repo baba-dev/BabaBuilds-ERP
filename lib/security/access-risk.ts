@@ -2,7 +2,7 @@ import type { Account } from "next-auth";
 import { sendActivityAlert } from "@/lib/security/alert-hooks";
 import { HIGH_RISK_BUSINESS_ROLES } from "@/lib/permissions";
 
-const DEFAULT_PHISHING_RESISTANT_PROVIDERS = ["google", "azure-ad", "okta"];
+const DEFAULT_PHISHING_RESISTANT_PROVIDERS = ["google", "azure-ad", "okta", "passkey-login"];
 const DEFAULT_MAGIC_LINK_EXCEPTION_EMAILS = ["admin@bababuilds.com"];
 
 // HIGH_RISK_ROLES now references the authoritative set from lib/permissions.
@@ -28,7 +28,9 @@ export function getPhishingResistantProviders(): Set<string> {
 
 export function isPhishingResistantSignIn(account: Account | null | undefined): boolean {
   if (!account?.provider) return false;
-  return getPhishingResistantProviders().has(account.provider.toLowerCase());
+  const provider = account.provider.toLowerCase();
+  const providerAccountId = account.providerAccountId?.toLowerCase();
+  return getPhishingResistantProviders().has(provider) || providerAccountId === "passkey-login";
 }
 
 export function getMagicLinkExceptionEmails(): Set<string> {

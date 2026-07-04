@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react"; 
+import { startRegistration } from "@simplewebauthn/browser";
 import { UserCircle, Globe, Bell, Save, ShieldCheck, Clock, LayoutDashboard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ export default function ProfileSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
   const [isPasswordSaving, setIsPasswordSaving] = useState(false);
+  const [isPasskeySaving, setIsPasskeySaving] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
 
@@ -90,6 +92,33 @@ export default function ProfileSettingsPage() {
       toast.error("A network error occurred.", { id: toastId });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleAddPasskey = async () => {
+    if (typeof window === "undefined" || !("PublicKeyCredential" in window)) {
+      toast.error("Passkeys are not available in this browser. Try Safari, Chrome, Edge, or your mobile PWA.");
+      return;
+    }
+
+    setIsPasskeySaving(true);
+    try {
+      const optionsResponse = await fetch("/api/auth/passkeys/register/options", { method: "POST" });
+      const options = await optionsResponse.json();
+      if (!optionsResponse.ok) throw new Error(options.error || "Unable to start passkey setup.");
+      const attestation = await startRegistration({ optionsJSON: options });
+      const verifyResponse = await fetch("/api/auth/passkeys/register/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(attestation),
+      });
+      const payload = await verifyResponse.json().catch(() => ({}));
+      if (!verifyResponse.ok) throw new Error(payload.error || "Unable to save this passkey.");
+      toast.success("Passkey added to this device.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Passkey setup was cancelled or failed.");
+    } finally {
+      setIsPasskeySaving(false);
     }
   };
 
@@ -301,6 +330,20 @@ export default function ProfileSettingsPage() {
             </CardContent>
           </Card>
 
+
+
+          <Card className="border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-emerald-600" /> Passkeys</CardTitle>
+              <CardDescription>Add a passkey to this device for the fastest phishing-resistant login path across mobile PWA, desktop Chrome/Edge, Windows Hello/PIN, and Safari.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="max-w-xl text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">Use Face ID, Touch ID, Android screen lock, Windows Hello, or a hardware security key instead of typing a password.</p>
+              <Button type="button" variant="outline" onClick={handleAddPasskey} disabled={isPasskeySaving} className="w-full sm:w-auto">
+                {isPasskeySaving ? "Adding passkey..." : "Add passkey to this device"}
+              </Button>
+            </CardContent>
+          </Card>
 
           <Card className="border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
             <CardHeader>
