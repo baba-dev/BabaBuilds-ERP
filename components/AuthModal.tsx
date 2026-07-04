@@ -7,10 +7,10 @@ import {
   Sparkles,
   ArrowRight,
   Mail,
+  LockKeyhole,
   Loader2,
   CheckCircle2,
   ShieldAlert,
-  ShieldCheck,
   Building2,
   Code2,
   Landmark,
@@ -104,6 +104,11 @@ export default function AuthModal({
   const isProd = process.env.NODE_ENV === "production";
 
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isPasswordLoading, setIsPasswordLoading] = useState(false);
+  const [passwordMode, setPasswordMode] = useState<"login" | "reset">("login");
+  const [resetToken, setResetToken] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [emailStatus, setEmailStatus] = useState<EmailStatus>("idle");
   const [emailErrorCase, setEmailErrorCase] = useState<EmailErrorCase | null>(null);
@@ -132,6 +137,16 @@ export default function AuthModal({
   const emailInputRef = useRef<HTMLInputElement>(null);
   const statusPanelRef = useRef<HTMLDivElement>(null);
   const fingerprint = useMemo(() => getDeviceFingerprint(), []);
+
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const resetTokenFromUrl = params.get("resetToken");
+    if (resetTokenFromUrl) {
+      setResetToken(resetTokenFromUrl);
+      setPasswordMode("reset");
+    }
+  }, []);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -282,6 +297,57 @@ export default function AuthModal({
     }
   };
 
+
+  const handlePasswordSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password || isPasswordLoading) return;
+    setIsPasswordLoading(true);
+    const result = await signIn("password-login", { email, password, callbackUrl, redirect: false });
+    setIsPasswordLoading(false);
+    if (result?.error) {
+      toast.error("Email or password is incorrect, or this account requires stronger MFA.");
+      return;
+    }
+    if (result?.url) window.location.href = result.url;
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email || isPasswordLoading) {
+      toast.error("Enter your email first.");
+      return;
+    }
+    setIsPasswordLoading(true);
+    const response = await fetch("/api/auth/password-reset/request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    await response.json().catch(() => ({}));
+    setIsPasswordLoading(false);
+    toast.success("If that account exists, a password reset email has been sent.");
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetToken || !newPassword || isPasswordLoading) return;
+    setIsPasswordLoading(true);
+    const response = await fetch("/api/auth/password-reset/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: resetToken, password: newPassword }),
+    });
+    const payload = (await response.json().catch(() => ({}))) as { error?: string };
+    setIsPasswordLoading(false);
+    if (!response.ok) {
+      toast.error(payload.error || "Unable to reset password.");
+      return;
+    }
+    setPasswordMode("login");
+    setPassword(newPassword);
+    setNewPassword("");
+    toast.success("Password updated. Sign in with your new password.");
+  };
+
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
@@ -403,6 +469,37 @@ export default function AuthModal({
         </div>
 
         <div className="p-6 sm:p-8 space-y-5">
+          <form onSubmit={passwordMode === "reset" ? handleResetPassword : handlePasswordSignIn} className="space-y-3 rounded-2xl border border-border/80 bg-muted/20 p-4">
+            <p className="text-sm font-bold">Sign in with password</p>
+            <div className="relative">
+              <Mail className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
+              <Input type="email" required placeholder={t("placeholders.email")} value={email} onChange={(e) => setEmail(e.target.value)} className="h-11 w-full rounded-xl bg-background/90 pl-10 pr-4" />
+            </div>
+            {passwordMode === "reset" ? (
+              <>
+                <Input type="text" required placeholder="Reset token" value={resetToken} onChange={(e) => setResetToken(e.target.value)} className="h-11 rounded-xl bg-background/90" />
+                <div className="relative">
+                  <LockKeyhole className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
+                  <Input type="password" required minLength={12} placeholder="New password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="h-11 rounded-xl bg-background/90 pl-10" />
+                </div>
+              </>
+            ) : (
+              <div className="relative">
+                <LockKeyhole className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
+                <Input type="password" required placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} className="h-11 rounded-xl bg-background/90 pl-10" />
+              </div>
+            )}
+            <Button type="submit" variant="primary-action" size="lg" disabled={isPasswordLoading || isLoading || isDemoLoading} className="w-full rounded-xl font-bold">
+              {isPasswordLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : passwordMode === "reset" ? "Reset password" : "Continue with password"}
+            </Button>
+            <button type="button" onClick={passwordMode === "reset" ? () => setPasswordMode("login") : handleForgotPassword} className="w-full text-center text-xs text-orange-700 hover:underline dark:text-orange-300">
+              {passwordMode === "reset" ? "Back to password login" : "Forgot password?"}
+            </button>
+            <p className="text-[11px] text-muted-foreground">Password sign-in may still require passkey or MFA for high-risk roles.</p>
+          </form>
+
+          <div className="relative flex items-center py-1"><div className="flex-grow border-t border-border" /><span className="mx-4 text-xs font-medium uppercase tracking-widest text-muted-foreground">or</span><div className="flex-grow border-t border-border" /></div>
+
           <form onSubmit={handleEmailSignIn} className="space-y-3">
             {emailStatus === "success" && (
               <div className="bg-orange-500/10 border border-orange-500/25 rounded-xl p-4 text-center space-y-2 animate-in fade-in">
@@ -562,7 +659,7 @@ export default function AuthModal({
 
               <Button
                 onClick={() => signIn("google", { callbackUrl })}
-                disabled={isLoading || isDemoLoading}
+                disabled={isLoading || isDemoLoading || isPasswordLoading}
                 variant="outline"
                 size="lg"
                 className={cn("w-full rounded-xl font-bold", subtleInteractive)}
@@ -584,7 +681,7 @@ export default function AuthModal({
                 type="button"
                 data-testid="demo-auth-section"
                 variant="ghost"
-                disabled={isLoading || isDemoLoading}
+                disabled={isLoading || isDemoLoading || isPasswordLoading}
                 className="h-auto w-full justify-start rounded-xl border border-border/80 bg-muted/35 px-4 py-3 text-left text-sm font-medium text-muted-foreground hover:bg-muted/55 hover:text-foreground"
               >
                 {t("actions.demoSection")}

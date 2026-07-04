@@ -419,6 +419,13 @@ model User {
   image         String? // This acts as the Avatar URL
   role          String    @default("USER") // "USER", "ADMIN"
 
+  // --- PASSWORD AUTHENTICATION ---
+  passwordHash             String?
+  passwordUpdatedAt        DateTime?
+  passwordFailedAttempts   Int       @default(0)
+  passwordLockedUntil      DateTime?
+  passwordLastFailureAt    DateTime?
+
   // --- DEMO LIFECYCLE ---
   isDemo          Boolean   @default(false)
   demoTemplateKey String?
@@ -450,6 +457,7 @@ model User {
   inAppNotifications InAppNotification[]
   onboarding         UserOnboarding?
   userPreference     UserPreference?
+  passwordResetTokens PasswordResetToken[]
 
   /// When set, this user can access the distributor partner portal for this partner record
   distributorPartnerId String?
@@ -473,6 +481,21 @@ model UserOnboarding {
   updatedAt      DateTime  @updatedAt
 
   @@index([isFirstLogin])
+}
+
+model PasswordResetToken {
+  id          String    @id @default(cuid())
+  userId      String
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+  requestedIp String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Account {
