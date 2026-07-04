@@ -8,7 +8,7 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import { createTransport } from "nodemailer"; // 1. ADDED IMPORT
 import addressparser from "nodemailer/lib/addressparser";
-import { recordAuthFailure } from "@/lib/auth-observability";
+import { recordAuthFailure, recordPasswordAuthAuditEvent } from "@/lib/auth-observability";
 import { logActivity } from "@/lib/activity-log";
 import { deserializeSignupIntent, SIGNUP_INTENT_COOKIE } from "@/lib/signup-intent";
 import {
@@ -22,6 +22,13 @@ import {
   isMagicLinkExceptionEmail,
   isPhishingResistantSignIn,
 } from "@/lib/security/access-risk";
+import { normalizeLoginEmail, verifyPassword } from "@/lib/auth/password";
+import {
+  checkPasswordAuthRateLimit,
+  clearPasswordAuthRateLimit,
+  hashRateLimitValue,
+  recordPasswordAuthFailure,
+} from "@/lib/auth/rate-limit";
 
 const LOGIN_ROUTE = "/login";
 const CANONICAL_DASHBOARD_ROUTE = "/dashboard";
@@ -283,6 +290,80 @@ export const authOptions: NextAuthOptions = {
           }),
         ]
       : []),
+
+    CredentialsProvider({
+      id: "password-login",
+      name: "Email and Password",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials, req) {
+        const email = normalizeLoginEmail(credentials?.email || "");
+        const password = credentials?.password || "";
+        const ip = (req?.headers?.["x-forwarded-for"] || req?.headers?.["x-real-ip"] || "unknown")
+          .toString()
+          .split(",")[0]
+          .trim();
+        const rateLimitKey = `password-login:${hashRateLimitValue(email || "missing")}:${hashRateLimitValue(ip)}`;
+
+        if (!email || !password) {
+          recordAuthFailure({ reason: "PASSWORD_LOGIN_MISSING_CREDENTIALS", code: "PASSWORD_LOGIN_FAILED", provider: "password-login" });
+          return null;
+        }
+
+        const limit = checkPasswordAuthRateLimit(rateLimitKey);
+        if (!limit.ok) {
+          recordAuthFailure({ reason: "PASSWORD_LOGIN_RATE_LIMITED", code: "PASSWORD_LOGIN_RATE_LIMITED", provider: "password-login" });
+          recordPasswordAuthAuditEvent({ email, outcome: "rate_limited", ip, retryAfterSeconds: limit.retryAfterSeconds });
+          return null;
+        }
+
+        const user = await prisma.user.findUnique({
+          where: { email },
+          select: { id: true, name: true, email: true, image: true, isDemo: true, passwordHash: true, passwordLockedUntil: true },
+        });
+
+        if (!user || user.isDemo || !user.passwordHash) {
+          recordPasswordAuthFailure(rateLimitKey);
+          recordAuthFailure({ reason: user?.isDemo ? "PASSWORD_LOGIN_DEMO_USER_BLOCKED" : "PASSWORD_LOGIN_INVALID_CREDENTIALS", code: "PASSWORD_LOGIN_FAILED", provider: "password-login" });
+          recordPasswordAuthAuditEvent({ email, outcome: "failure", ip });
+          return null;
+        }
+
+        if (user.passwordLockedUntil && user.passwordLockedUntil > new Date()) {
+          recordAuthFailure({ reason: "PASSWORD_LOGIN_ACCOUNT_LOCKED", code: "PASSWORD_LOGIN_LOCKED", provider: "password-login" });
+          recordPasswordAuthAuditEvent({ email, userId: user.id, outcome: "locked", ip });
+          return null;
+        }
+
+        const passwordMatches = await verifyPassword(password, user.passwordHash);
+        if (!passwordMatches) {
+          const failure = recordPasswordAuthFailure(rateLimitKey);
+          const lockedUntil = failure.count >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null;
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              passwordFailedAttempts: { increment: 1 },
+              passwordLastFailureAt: new Date(),
+              ...(lockedUntil ? { passwordLockedUntil: lockedUntil } : {}),
+            },
+          });
+          recordAuthFailure({ reason: "PASSWORD_LOGIN_INVALID_CREDENTIALS", code: "PASSWORD_LOGIN_FAILED", provider: "password-login" });
+          recordPasswordAuthAuditEvent({ email, userId: user.id, outcome: "failure", ip });
+          return null;
+        }
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { passwordFailedAttempts: 0, passwordLockedUntil: null, passwordLastFailureAt: null },
+        });
+        clearPasswordAuthRateLimit(rateLimitKey);
+        recordPasswordAuthAuditEvent({ email, userId: user.id, outcome: "success", ip });
+
+        return { id: user.id, name: user.name, email: user.email, image: user.image };
+      },
+    }),
 
     CredentialsProvider({
       id: "demo-login",

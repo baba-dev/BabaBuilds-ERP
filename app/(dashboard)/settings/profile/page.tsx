@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react"; 
-import { UserCircle, Globe, Bell, Save, ShieldCheck, Mail, Clock, LayoutDashboard, CheckCircle2 } from "lucide-react";
+import { UserCircle, Globe, Bell, Save, ShieldCheck, Clock, LayoutDashboard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,8 @@ export default function ProfileSettingsPage() {
   const { update } = useSession(); 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "" });
+  const [isPasswordSaving, setIsPasswordSaving] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
 
@@ -84,10 +86,29 @@ export default function ProfileSettingsPage() {
         const errorData = await res.json();
         toast.error(errorData.error || "Failed to save profile.", { id: toastId });
       }
-    } catch (err) {
+    } catch {
       toast.error("A network error occurred.", { id: toastId });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handlePasswordSave = async () => {
+    setIsPasswordSaving(true);
+    try {
+      const res = await fetch("/api/auth/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(passwordForm),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload.error || "Unable to update password.");
+      setPasswordForm({ currentPassword: "", newPassword: "" });
+      toast.success("Password updated.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to update password.");
+    } finally {
+      setIsPasswordSaving(false);
     }
   };
 
@@ -276,6 +297,29 @@ export default function ProfileSettingsPage() {
                   checked={formData.weeklyReport}
                   onCheckedChange={(checked) => setFormData({ ...formData, weeklyReport: checked })}
                 />
+              </div>
+            </CardContent>
+          </Card>
+
+
+          <Card className="border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-indigo-600" /> Password sign-in</CardTitle>
+              <CardDescription>Set or change your password. High-risk roles still need phishing-resistant MFA/passkey policy coverage.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="current-password">Current password</Label>
+                <Input id="current-password" type="password" autoComplete="current-password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} placeholder="Required when changing an existing password" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New password</Label>
+                <Input id="new-password" type="password" autoComplete="new-password" minLength={12} value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} placeholder="At least 12 characters" />
+              </div>
+              <div className="sm:col-span-2 flex justify-end">
+                <Button type="button" variant="outline" onClick={handlePasswordSave} disabled={isPasswordSaving || passwordForm.newPassword.length < 12}>
+                  {isPasswordSaving ? "Saving..." : "Update password"}
+                </Button>
               </div>
             </CardContent>
           </Card>

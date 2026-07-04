@@ -204,3 +204,26 @@ export function recordAuthThrottleAttempt(event: Omit<AuthThrottleRecord, "at">)
 export function getAuthThrottleMetrics() {
   return [...getObservabilityStore().throttleEvents];
 }
+
+type PasswordAuthAuditEvent = {
+  email: string;
+  userId?: string | null;
+  outcome: "success" | "failure" | "locked" | "rate_limited" | "reset_requested" | "reset_completed";
+  ip?: string | null;
+  retryAfterSeconds?: number;
+  at: string;
+};
+
+export function recordPasswordAuthAuditEvent(event: Omit<PasswordAuthAuditEvent, "at">) {
+  const globalStore = globalThis as typeof globalThis & { __passwordAuthAuditEvents?: PasswordAuthAuditEvent[] };
+  if (!globalStore.__passwordAuthAuditEvents) globalStore.__passwordAuthAuditEvents = [];
+  globalStore.__passwordAuthAuditEvents.push({ ...event, at: new Date().toISOString() });
+  if (globalStore.__passwordAuthAuditEvents.length > 1000) {
+    globalStore.__passwordAuthAuditEvents.splice(0, globalStore.__passwordAuthAuditEvents.length - 1000);
+  }
+}
+
+export function getPasswordAuthAuditEvents() {
+  const globalStore = globalThis as typeof globalThis & { __passwordAuthAuditEvents?: PasswordAuthAuditEvent[] };
+  return [...(globalStore.__passwordAuthAuditEvents ?? [])];
+}
