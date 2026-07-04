@@ -458,6 +458,8 @@ model User {
   onboarding         UserOnboarding?
   userPreference     UserPreference?
   passwordResetTokens PasswordResetToken[]
+  webAuthnCredentials WebAuthnCredential[]
+  webAuthnChallenges WebAuthnChallenge[]
 
   /// When set, this user can access the distributor partner portal for this partner record
   distributorPartnerId String?
@@ -466,6 +468,37 @@ model User {
   referralProfile    CustomerReferralProfile?
 
   @@index([distributorPartnerId])
+}
+
+model WebAuthnCredential {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialID String   @unique
+  publicKey    String
+  counter      Int      @default(0)
+  transports   String?
+  deviceType   String?
+  backedUp     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime?
+
+  @@index([userId])
+}
+
+model WebAuthnChallenge {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  challenge String   @unique
+  tokenHash String?  @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  usedAt    DateTime?
+
+  @@index([userId, type])
+  @@index([expiresAt])
 }
 
 model UserOnboarding {

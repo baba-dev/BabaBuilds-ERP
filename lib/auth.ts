@@ -23,6 +23,7 @@ import {
   isPhishingResistantSignIn,
 } from "@/lib/security/access-risk";
 import { normalizeLoginEmail, verifyPassword } from "@/lib/auth/password";
+import { consumeLoginToken } from "@/lib/auth/passkeys";
 import {
   checkPasswordAuthRateLimit,
   clearPasswordAuthRateLimit,
@@ -366,6 +367,23 @@ export const authOptions: NextAuthOptions = {
     }),
 
     CredentialsProvider({
+      id: "passkey-login",
+      name: "Passkey",
+      credentials: {
+        token: { label: "Verified passkey token", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.token) return null;
+        const user = await consumeLoginToken(credentials.token);
+        if (!user) {
+          recordAuthFailure({ reason: "PASSKEY_LOGIN_TOKEN_INVALID", code: "PASSKEY_LOGIN_FAILED", provider: "passkey-login" });
+          return null;
+        }
+        return { id: user.id, name: user.name, email: user.email, image: user.image, phishingResistant: true };
+      },
+    }),
+
+    CredentialsProvider({
       id: "demo-login",
       name: "Demo Account",
       credentials: {
@@ -441,7 +459,7 @@ export const authOptions: NextAuthOptions = {
       }
 
       const isAllowedExceptionMagicLinkSignIn = isExceptionEmail && account?.provider === "email";
-      if (hasHighRiskRole(effectiveRoles) && !isPhishingResistantSignIn(account) && !isAllowedExceptionMagicLinkSignIn) {
+      if (hasHighRiskRole(effectiveRoles) && !isPhishingResistantSignIn(account) && !(user as { phishingResistant?: boolean }).phishingResistant && !isAllowedExceptionMagicLinkSignIn) {
         if (isAllowedDemoMfaBypass({ provider: account?.provider, email: user.email })) {
           return true;
         }

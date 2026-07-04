@@ -11,6 +11,7 @@ import {
   Loader2,
   CheckCircle2,
   ShieldAlert,
+  KeyRound,
   Building2,
   Code2,
   Landmark,
@@ -18,6 +19,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { startAuthentication } from "@simplewebauthn/browser";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -106,6 +108,7 @@ export default function AuthModal({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isPasswordLoading, setIsPasswordLoading] = useState(false);
+  const [isPasskeyLoading, setIsPasskeyLoading] = useState(false);
   const [passwordMode, setPasswordMode] = useState<"login" | "reset">("login");
   const [resetToken, setResetToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -298,6 +301,36 @@ export default function AuthModal({
   };
 
 
+  const handlePasskeySignIn = async () => {
+    if (isPasskeyLoading) return;
+    if (typeof window === "undefined" || !("PublicKeyCredential" in window)) {
+      toast.error("Passkeys are not available in this browser. Try Safari, Chrome, Edge, or your mobile PWA.");
+      return;
+    }
+
+    setIsPasskeyLoading(true);
+    try {
+      const optionsResponse = await fetch("/api/auth/passkeys/login/options", { method: "POST" });
+      const options = await optionsResponse.json();
+      if (!optionsResponse.ok) throw new Error(options.error || "Passkey sign-in is unavailable.");
+      const assertion = await startAuthentication({ optionsJSON: options });
+      const verifyResponse = await fetch("/api/auth/passkeys/login/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(assertion),
+      });
+      const payload = await verifyResponse.json().catch(() => ({}));
+      if (!verifyResponse.ok || !payload.loginToken) throw new Error(payload.error || "Passkey verification failed.");
+      const result = await signIn("passkey-login", { token: payload.loginToken, callbackUrl, redirect: false });
+      if (result?.error) throw new Error("Unable to create a session from this passkey.");
+      if (result?.url) window.location.href = result.url;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Passkey sign-in was cancelled or failed.");
+    } finally {
+      setIsPasskeyLoading(false);
+    }
+  };
+
   const handlePasswordSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password || isPasswordLoading) return;
@@ -469,6 +502,21 @@ export default function AuthModal({
         </div>
 
         <div className="p-6 sm:p-8 space-y-5">
+          <Button
+            type="button"
+            onClick={handlePasskeySignIn}
+            disabled={isPasskeyLoading || isLoading || isDemoLoading || isPasswordLoading}
+            variant="primary-action"
+            size="lg"
+            className={cn("min-h-12 w-full rounded-xl text-base font-black shadow-lg shadow-orange-500/20", subtleInteractive)}
+          >
+            {isPasskeyLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <KeyRound className="w-5 h-5" />}
+            Continue with passkey
+          </Button>
+          <p className="text-center text-[11px] leading-relaxed text-muted-foreground sm:px-4">Fastest phishing-resistant login with Face ID, Touch ID, Windows Hello, Android screen lock, or a security key.</p>
+
+          <div className="relative flex items-center py-1"><div className="flex-grow border-t border-border" /><span className="mx-4 text-xs font-medium uppercase tracking-widest text-muted-foreground">or</span><div className="flex-grow border-t border-border" /></div>
+
           <form onSubmit={passwordMode === "reset" ? handleResetPassword : handlePasswordSignIn} className="space-y-3 rounded-2xl border border-border/80 bg-muted/20 p-4">
             <p className="text-sm font-bold">Sign in with password</p>
             <div className="relative">
