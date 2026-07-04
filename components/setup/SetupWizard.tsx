@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import {
   Globe, ShieldCheck, Building2, 
   ArrowRight, ArrowLeft, CheckCircle2, Sparkles,
-  Zap, Wallet, Users2, Calendar, Clock, ClipboardList, FileText, Route, CheckSquare2, HandCoins, Target, Siren, ChartColumnBig, ChevronDown
+  Zap, Wallet, Users2, Calendar, Clock, ClipboardList, FileText, Route, CheckSquare2, HandCoins, Target, Siren, ChartColumnBig, ChevronDown, ShoppingCart
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -80,6 +80,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
     enableCashFlow: false,
     enableArCollections: false,
     enableReportingCenter: false,
+    enablePos: true,
     payrollSetupPath: "STANDALONE" as "STANDALONE" | "WORKFORCE_LINKED",
   });
   const [payrollReadiness, setPayrollReadiness] = useState<PayrollReadinessResponse | null>(null);
@@ -224,7 +225,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
   }, [step]);
 
 
-  const toggleModule = (field: "enableWorkforce" | "enableDocuments" | "enableCashFlow" | "enableArCollections" | "enableReportingCenter" | "enableRevenuePipeline" | "enablePayroll" | "shopEnabled", label: string) => {
+  const toggleModule = (field: "enableWorkforce" | "enableDocuments" | "enableCashFlow" | "enableArCollections" | "enableReportingCenter" | "enableRevenuePipeline" | "enablePayroll" | "shopEnabled" | "enablePos", label: string) => {
     setForm((prev) => {
       const nextValue = !prev[field];
       setModuleAnnouncement(`${label} ${nextValue ? "enabled" : "disabled"}`);
@@ -831,6 +832,28 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                       <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
                         form.shopEnabled ? 'translate-x-5' : 'translate-x-0'
                       }`} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className={`rounded-2xl border-2 p-4 transition-all duration-300 ${form.enablePos ? 'border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/10' : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50'}`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2.5 rounded-xl transition-colors ${form.enablePos ? 'bg-amber-500 shadow-lg shadow-amber-500/20' : 'bg-zinc-100 dark:bg-zinc-800'}`}>
+                        <ShoppingCart className={`h-5 w-5 ${form.enablePos ? 'text-white' : 'text-zinc-500 dark:text-zinc-400'}`} />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-black text-zinc-900 dark:text-zinc-100">Point of Sale</h3>
+                          {form.enablePos && <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">Enabled</span>}
+                        </div>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+                          Add a checkout register for walk-in sales, services, products, invoices, proposals, and retainers. You can disable it later without deleting POS-generated data.
+                        </p>
+                      </div>
+                    </div>
+                    <button type="button" role="switch" aria-checked={form.enablePos} aria-label="Toggle Point of Sale module" onClick={() => toggleModule("enablePos", "Point of Sale module")} className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500 dark:focus-visible:ring-offset-zinc-900 ${form.enablePos ? 'bg-amber-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}>
+                      <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${form.enablePos ? 'translate-x-5' : 'translate-x-0'}`} />
                     </button>
                   </div>
                 </div>

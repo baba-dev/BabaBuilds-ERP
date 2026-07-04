@@ -1046,6 +1046,7 @@ async function buildDashboardPayload(
     IMPORT_MANAGER: "/inbox/import",
     SHOP: "/shop",
     MIAB_BILLING: "/email-billing",
+    POS: "/pos",
   };
   const optionalModules = Array.from(enabledModules).map((moduleKey) => ({
     moduleKey,

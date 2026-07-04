@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { withPermission } from '@/lib/rbac';
+import { isModuleEnabled } from '@/lib/modules';
 import { getNextInvoiceNumber, getNextProposalNo, isUniqueConstraintError } from '@/lib/document-numbering';
 
 const checkoutActionSchema = z.enum(['PAY_NOW', 'INVOICE', 'PROPOSAL', 'RETAINER']);
@@ -212,6 +213,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const workspaceId = session.workspaceId;
+
+    if (!(await isModuleEnabled(workspaceId, 'POS'))) {
+      return NextResponse.json({ error: 'POS module is disabled' }, { status: 403 });
+    }
     const userId = (session as SessionWithUserId).user?.id || undefined;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

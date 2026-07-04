@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { withPermission } from '@/lib/rbac';
+import { isModuleEnabled } from '@/lib/modules';
 
 export async function GET(request: Request) {
   try {
@@ -12,6 +13,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const workspaceId = session.workspaceId;
+
+    if (!(await isModuleEnabled(workspaceId, 'POS'))) {
+      return NextResponse.json({ error: 'POS module is disabled' }, { status: 403 });
+    }
 
     const permission = await withPermission(userId, workspaceId, 'pos.view');
     if (!permission.granted) return permission.response;
