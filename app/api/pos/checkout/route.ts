@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { withPermission } from '@/lib/rbac';
+import { getNextInvoiceNumber, getNextProposalNo, isUniqueConstraintError } from '@/lib/document-numbering';
 
 const checkoutActionSchema = z.enum(['PAY_NOW', 'INVOICE', 'PROPOSAL', 'RETAINER']);
 const checkoutItemTypeSchema = z.enum(['SERVICE', 'PRODUCT', 'CUSTOM']);
@@ -40,7 +41,8 @@ const checkoutRequestSchema = z.object({
   allowNegativeStock: z.boolean().optional(),
 }).strict();
 
-type CheckoutAction = z.infer<typeof checkoutActionSchema>;
+const MAX_NUMBERING_ATTEMPTS = 5;
+
 type CheckoutItemInput = z.infer<typeof checkoutItemSchema>;
 
 type SessionWithUserId = {
@@ -242,174 +244,188 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: `Client is required for ${action} action.` }, { status: 400 });
     }
 
-    const result = await prisma.$transaction(async (tx) => {
-      // Default Walk-in Client if none provided for immediate POS payment.
-      if (!resolvedClientId) {
-        let walkIn = await tx.client.findFirst({ where: { workspaceId, name: 'Walk-in Customer' } });
-        if (!walkIn) {
-          walkIn = await tx.client.create({
-            data: { workspaceId, name: 'Walk-in Customer', email: 'walkin@example.com', address: '', country: '' }
-          });
-        }
-        resolvedClientId = walkIn.id;
-      }
-
-      const client = await tx.client.findFirst({ where: { id: resolvedClientId, workspaceId } });
-      if (!client) throw new PosCheckoutError('CLIENT_NOT_FOUND');
-
-      const serviceIds = [...new Set(items.filter((item) => item.type === 'SERVICE').map((item) => item.id!))];
-      const productIds = [...new Set(items.filter((item) => item.type === 'PRODUCT').map((item) => item.id!))];
-
-      const serviceTemplates = serviceIds.length
-        ? await tx.serviceTemplate.findMany({ where: { workspaceId, id: { in: serviceIds } } })
-        : [];
-      const products = productIds.length
-        ? await tx.product.findMany({ where: { workspaceId, id: { in: productIds } } })
-        : [];
-
-      const serviceById = new Map(serviceTemplates.map((service) => [service.id, service]));
-      const productById = new Map(products.map((product) => [product.id, product]));
-
-      const resolvedItems: ResolvedCheckoutItem[] = [];
-      for (const item of items) {
-        if (item.type === 'SERVICE') {
-          const service = serviceById.get(item.id!);
-          if (!service) throw new PosCheckoutError('SERVICE_NOT_FOUND', { itemName: item.name || item.id! });
-          const unitPrice = decimal(service.defaultPrice);
-          resolvedItems.push({
-            id: service.id,
-            type: 'SERVICE',
-            name: service.name,
-            description: service.description || '',
-            quantity: item.quantity,
-            unitPrice,
-            taxRate: item.taxRate ?? 0,
-            lineSubtotal: unitPrice.mul(item.quantity),
-          });
-        } else if (item.type === 'PRODUCT') {
-          const product = productById.get(item.id!);
-          if (!product) throw new PosCheckoutError('PRODUCT_NOT_FOUND', { productName: item.name || item.id! });
-          const unitPrice = decimal(product.baselinePrice);
-          resolvedItems.push({
-            id: product.id,
-            type: 'PRODUCT',
-            name: product.name,
-            description: product.description || '',
-            quantity: item.quantity,
-            unitPrice,
-            taxRate: item.taxRate ?? 0,
-            lineSubtotal: unitPrice.mul(item.quantity),
-          });
-        } else {
-          const unitPrice = decimal(item.price!);
-          resolvedItems.push({
-            type: 'CUSTOM',
-            name: item.name!,
-            description: item.description || '',
-            quantity: item.quantity,
-            unitPrice,
-            taxRate: item.taxRate ?? 0,
-            lineSubtotal: unitPrice.mul(item.quantity),
-          });
-        }
-      }
-
-      const subtotal = resolvedItems.reduce((acc, item) => acc.add(item.lineSubtotal), decimal(0));
-      const discount = decimal(requestedDiscount);
-      if (discount.gt(subtotal)) {
-        throw new PosCheckoutError('INVALID_DISCOUNT');
-      }
-      const taxableSubtotal = subtotal.sub(discount);
-      const discountRatio = subtotal.gt(0) ? discount.div(subtotal) : decimal(0);
-      const tax = resolvedItems.reduce((acc, item) => {
-        const taxableLine = item.lineSubtotal.sub(item.lineSubtotal.mul(discountRatio));
-        return acc.add(taxableLine.mul(item.taxRate).div(100));
-      }, decimal(0));
-      const totalAmount = taxableSubtotal.add(tax);
-      const productSales = groupProductSales(resolvedItems);
-
-      if (action === 'PAY_NOW') {
-        // Create an Invoice marked as PAID
-        const invoice = await tx.invoice.create({
-          data: {
-            workspaceId,
-            clientId: client.id,
-            invoiceNumber: `POS-${Date.now().toString().slice(-6)}`,
-            financialYear: new Date().getFullYear().toString(),
-            invoiceDate: new Date(),
-            clientName: client.name,
-            serviceDescription: 'POS Checkout',
-            subtotal,
-            taxAmount: tax,
-            grandTotal: totalAmount,
-            totalAmount,
-            status: 'PAID',
-            amountReceived: totalAmount,
-            dateReceived: new Date(),
-            pdfPath: '',
-            items: { create: buildInvoiceItems(resolvedItems) }
+    for (let attempt = 1; attempt <= MAX_NUMBERING_ATTEMPTS; attempt += 1) {
+      try {
+        const result = await prisma.$transaction(async (tx) => {
+          // Default Walk-in Client if none provided for immediate POS payment.
+          if (!resolvedClientId) {
+            let walkIn = await tx.client.findFirst({ where: { workspaceId, name: 'Walk-in Customer' } });
+            if (!walkIn) {
+              walkIn = await tx.client.create({
+                data: { workspaceId, name: 'Walk-in Customer', email: 'walkin@example.com', address: '', country: '' },
+              });
+            }
+            resolvedClientId = walkIn.id;
           }
-        });
-        await commitProductSales(tx, workspaceId, productSales, invoice.id, allowNegativeStock);
-        return { message: 'Payment collected successfully!', invoice };
-      } else if (action === 'INVOICE') {
-        const invoice = await tx.invoice.create({
-          data: {
-            workspaceId,
-            clientId: client.id,
-            invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
-            financialYear: new Date().getFullYear().toString(),
-            invoiceDate: new Date(),
-            clientName: client.name,
-            serviceDescription: 'POS Generated Invoice',
-            subtotal,
-            taxAmount: tax,
-            grandTotal: totalAmount,
-            totalAmount,
-            status: 'PENDING',
-            pdfPath: '',
-            items: { create: buildInvoiceItems(resolvedItems) }
+
+          const client = await tx.client.findFirst({ where: { id: resolvedClientId, workspaceId } });
+          if (!client) throw new PosCheckoutError('CLIENT_NOT_FOUND');
+
+          const serviceIds = [...new Set(items.filter((item) => item.type === 'SERVICE').map((item) => item.id!))];
+          const productIds = [...new Set(items.filter((item) => item.type === 'PRODUCT').map((item) => item.id!))];
+
+          const serviceTemplates = serviceIds.length
+            ? await tx.serviceTemplate.findMany({ where: { workspaceId, id: { in: serviceIds } } })
+            : [];
+          const products = productIds.length
+            ? await tx.product.findMany({ where: { workspaceId, id: { in: productIds } } })
+            : [];
+
+          const serviceById = new Map(serviceTemplates.map((service) => [service.id, service]));
+          const productById = new Map(products.map((product) => [product.id, product]));
+
+          const resolvedItems: ResolvedCheckoutItem[] = [];
+          for (const item of items) {
+            if (item.type === 'SERVICE') {
+              const service = serviceById.get(item.id!);
+              if (!service) throw new PosCheckoutError('SERVICE_NOT_FOUND', { itemName: item.name || item.id! });
+              const unitPrice = decimal(service.defaultPrice);
+              resolvedItems.push({
+                id: service.id,
+                type: 'SERVICE',
+                name: service.name,
+                description: service.description || '',
+                quantity: item.quantity,
+                unitPrice,
+                taxRate: item.taxRate ?? 0,
+                lineSubtotal: unitPrice.mul(item.quantity),
+              });
+            } else if (item.type === 'PRODUCT') {
+              const product = productById.get(item.id!);
+              if (!product) throw new PosCheckoutError('PRODUCT_NOT_FOUND', { productName: item.name || item.id! });
+              const unitPrice = decimal(product.baselinePrice);
+              resolvedItems.push({
+                id: product.id,
+                type: 'PRODUCT',
+                name: product.name,
+                description: product.description || '',
+                quantity: item.quantity,
+                unitPrice,
+                taxRate: item.taxRate ?? 0,
+                lineSubtotal: unitPrice.mul(item.quantity),
+              });
+            } else {
+              const unitPrice = decimal(item.price!);
+              resolvedItems.push({
+                type: 'CUSTOM',
+                name: item.name!,
+                description: item.description || '',
+                quantity: item.quantity,
+                unitPrice,
+                taxRate: item.taxRate ?? 0,
+                lineSubtotal: unitPrice.mul(item.quantity),
+              });
+            }
           }
-        });
-        await commitProductSales(tx, workspaceId, productSales, invoice.id, allowNegativeStock);
-        return { message: 'Invoice generated and saved.', invoice };
-      } else if (action === 'PROPOSAL') {
-        const proposal = await tx.proposal.create({
-          data: {
-            workspaceId,
-            clientId: client.id,
-            proposalNo: `PRP-${Date.now().toString().slice(-6)}`,
-            title: 'POS Generated Proposal',
-            subtotal: taxableSubtotal,
-            estimatedTax: tax,
-            totalAmount,
-            validUntil: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 days
-            status: 'DRAFT',
-            items: { create: buildProposalItems(resolvedItems) }
+
+          const subtotal = resolvedItems.reduce((acc, item) => acc.add(item.lineSubtotal), decimal(0));
+          const discount = decimal(requestedDiscount);
+          if (discount.gt(subtotal)) {
+            throw new PosCheckoutError('INVALID_DISCOUNT');
           }
-        });
-        await commitProductSales(tx, workspaceId, productSales, proposal.id, allowNegativeStock);
-        return { message: 'Proposal drafted successfully!', proposal };
-      } else if (action === 'RETAINER') {
-        const retainer = await tx.retainer.create({
-          data: {
-            workspaceId,
-            clientId: client.id,
-            frequency: 'MONTHLY',
-            nextBillingDate: new Date(),
-            status: 'ACTIVE',
-            amount: totalAmount,
-            items: { create: buildRetainerItems(resolvedItems) }
+          const taxableSubtotal = subtotal.sub(discount);
+          const discountRatio = subtotal.gt(0) ? discount.div(subtotal) : decimal(0);
+          const tax = resolvedItems.reduce((acc, item) => {
+            const taxableLine = item.lineSubtotal.sub(item.lineSubtotal.mul(discountRatio));
+            return acc.add(taxableLine.mul(item.taxRate).div(100));
+          }, decimal(0));
+          const totalAmount = taxableSubtotal.add(tax);
+          const productSales = groupProductSales(resolvedItems);
+
+          if (action === 'PAY_NOW') {
+            // Create an Invoice marked as PAID
+            const invoiceDate = new Date();
+            const { invoiceNumber, financialYear } = await getNextInvoiceNumber(tx, workspaceId, invoiceDate);
+            const invoice = await tx.invoice.create({
+              data: {
+                workspaceId,
+                clientId: client.id,
+                invoiceNumber,
+                financialYear,
+                invoiceDate,
+                clientName: client.name,
+                serviceDescription: 'POS Checkout',
+                subtotal,
+                taxAmount: tax,
+                grandTotal: totalAmount,
+                totalAmount,
+                status: 'PAID',
+                amountReceived: totalAmount,
+                dateReceived: new Date(),
+                pdfPath: '',
+                items: { create: buildInvoiceItems(resolvedItems) },
+              },
+            });
+            await commitProductSales(tx, workspaceId, productSales, invoice.id, allowNegativeStock);
+            return { message: 'Payment collected successfully!', invoice };
+          } else if (action === 'INVOICE') {
+            const invoiceDate = new Date();
+            const { invoiceNumber, financialYear } = await getNextInvoiceNumber(tx, workspaceId, invoiceDate);
+            const invoice = await tx.invoice.create({
+              data: {
+                workspaceId,
+                clientId: client.id,
+                invoiceNumber,
+                financialYear,
+                invoiceDate,
+                clientName: client.name,
+                serviceDescription: 'POS Generated Invoice',
+                subtotal,
+                taxAmount: tax,
+                grandTotal: totalAmount,
+                totalAmount,
+                status: 'PENDING',
+                pdfPath: '',
+                items: { create: buildInvoiceItems(resolvedItems) },
+              },
+            });
+            await commitProductSales(tx, workspaceId, productSales, invoice.id, allowNegativeStock);
+            return { message: 'Invoice generated and saved.', invoice };
+          } else if (action === 'PROPOSAL') {
+            const proposalNo = await getNextProposalNo(tx, workspaceId);
+            const proposal = await tx.proposal.create({
+              data: {
+                workspaceId,
+                clientId: client.id,
+                proposalNo,
+                title: 'POS Generated Proposal',
+                subtotal: taxableSubtotal,
+                estimatedTax: tax,
+                totalAmount,
+                validUntil: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 days
+                status: 'DRAFT',
+                items: { create: buildProposalItems(resolvedItems) },
+              },
+            });
+            await commitProductSales(tx, workspaceId, productSales, proposal.id, allowNegativeStock);
+            return { message: 'Proposal drafted successfully!', proposal };
+          } else if (action === 'RETAINER') {
+            const retainer = await tx.retainer.create({
+              data: {
+                workspaceId,
+                clientId: client.id,
+                frequency: 'MONTHLY',
+                nextBillingDate: new Date(),
+                status: 'ACTIVE',
+                amount: totalAmount,
+                items: { create: buildRetainerItems(resolvedItems) },
+              },
+            });
+            await commitProductSales(tx, workspaceId, productSales, retainer.id, allowNegativeStock);
+            return { message: 'Monthly Retainer activated!', retainer };
           }
+
+          throw new PosCheckoutError('INVALID_ACTION');
         });
-        await commitProductSales(tx, workspaceId, productSales, retainer.id, allowNegativeStock);
-        return { message: 'Monthly Retainer activated!', retainer };
+
+        return NextResponse.json({ success: true, ...result });
+      } catch (error) {
+        if (attempt < MAX_NUMBERING_ATTEMPTS && isUniqueConstraintError(error)) continue;
+        throw error;
       }
+    }
 
-      throw new PosCheckoutError('INVALID_ACTION');
-    });
-
-    return NextResponse.json({ success: true, ...result });
+    return NextResponse.json({ error: 'Could not generate a unique document number.' }, { status: 409 });
   } catch (error) {
     console.error("POS Checkout Error:", error);
     if (error instanceof PosCheckoutError) {
