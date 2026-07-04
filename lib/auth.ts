@@ -24,6 +24,7 @@ import {
 } from "@/lib/security/access-risk";
 import { normalizeLoginEmail, verifyPassword } from "@/lib/auth/password";
 import { consumeLoginToken } from "@/lib/auth/passkeys";
+import { isGoogleAuthEnabled } from "@/lib/auth/provider-flags";
 import {
   checkPasswordAuthRateLimit,
   clearPasswordAuthRateLimit,
@@ -96,7 +97,7 @@ function isProviderEnabled(toggleEnvName: string, inferredFromEnvVars: readonly 
   return inferredFromEnvVars.some((envName) => hasNonEmptyEnv(envName));
 }
 
-const googleAuthEnabled = isProviderEnabled("AUTH_GOOGLE_ENABLED", ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]);
+const googleAuthEnabled = isGoogleAuthEnabled();
 const emailAuthEnabled = isProviderEnabled("AUTH_EMAIL_ENABLED", [
   "EMAIL_SERVER_HOST",
   "EMAIL_SERVER_PORT",

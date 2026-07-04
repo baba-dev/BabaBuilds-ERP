@@ -10,6 +10,7 @@ import { AuthAmbientBackground } from "@/components/auth/AuthAmbientBackground";
 import { isDemoTemplateKey } from "@/lib/demo/templates";
 import type { DemoTemplateKey } from "@/lib/demo/templates";
 import { readSignupIntentPreview } from "@/lib/signup-intent-preview";
+import { getGoogleAuthMissingEnvVars, isGoogleAuthEnabled } from "@/lib/auth/provider-flags";
 
 type LoginPageProps = {
   searchParams?: Promise<{
@@ -45,9 +46,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     : undefined;
 
   const signupPreview = await readSignupIntentPreview();
-  const googleAuthEnabled =
-    process.env.AUTH_GOOGLE_ENABLED?.trim().toLowerCase() !== "false" &&
-    process.env.AUTH_GOOGLE_ENABLED?.trim().toLowerCase() !== "0";
+  const googleAuthEnabled = isGoogleAuthEnabled();
+  const missingGoogleAuthEnvVars =
+    !googleAuthEnabled && process.env.NODE_ENV === "development"
+      ? getGoogleAuthMissingEnvVars()
+      : [];
 
   // If already authenticated, go to dashboard
   if (session) {
@@ -81,6 +84,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           signupPreview={signupPreview}
           googleAuthEnabled={googleAuthEnabled}
         />
+        {missingGoogleAuthEnvVars.length > 0 && (
+          <p className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-700 shadow-sm backdrop-blur-sm dark:text-amber-200">
+            Google sign-in is disabled in development because {missingGoogleAuthEnvVars.join(" and ")} {missingGoogleAuthEnvVars.length === 1 ? "is" : "are"} missing.
+          </p>
+        )}
       </div>
     </div>
   );
