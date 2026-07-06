@@ -46,6 +46,7 @@ export const MODULE_LABELS: Record<ModuleKey, string> = {
   SHOP: 'Public Shop (E-Store)',
   MIAB_BILLING: 'Email Billing',
   POS: 'Point of Sale',
+  MULTI_COMPANY: 'Multi-Company',
 };
 
 export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
@@ -73,6 +74,8 @@ export const MODULE_DESCRIPTIONS: Record<ModuleKey, string> = {
     'Read-only Mail-in-a-Box domain and mailbox inventory mapped to ERP clients, retainers, and recurring invoices.',
   POS:
     'In-workspace checkout register for services, products, custom line items, walk-in sales, invoices, proposals, and retainers.',
+  MULTI_COMPANY:
+    'Opt-in multi-company workspace controls for managing multiple legal entities, company-specific defaults, and consolidated operations without changing single-company accounts by default.',
 };
 
 export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
@@ -168,6 +171,13 @@ export const MODULE_FEATURES: Record<ModuleKey, string[]> = {
     'Generate paid invoices, draft invoices, proposals, or retainers',
     'Inventory stock decrements and movement audit trail',
     'Role-scoped checkout, discount, and custom item permissions',
+  ],
+  MULTI_COMPANY: [
+    'Disabled by default for existing single-company workspaces',
+    'Multiple legal entities under one workspace',
+    'Company-scoped operational defaults and settings',
+    'Company-aware navigation and record filtering',
+    'Foundation for consolidated reporting workflows',
   ],
 };
 
