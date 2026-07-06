@@ -17,6 +17,9 @@ import {
 } from "@/lib/auth-workspace-provision";
 import {
   HIGH_RISK_MAGIC_LINK_ERROR_CODE,
+  HIGH_RISK_PASSWORD_ERROR_CODE,
+  MFA_POLICY_ERROR_CODE,
+  classifyLoginProvider,
   hasHighRiskRole,
   isEmailMagicLinkAllowedForRoles,
   isMagicLinkExceptionEmail,
@@ -363,7 +366,7 @@ export const authOptions: NextAuthOptions = {
         clearPasswordAuthRateLimit(rateLimitKey);
         recordPasswordAuthAuditEvent({ email, userId: user.id, outcome: "success", ip });
 
-        return { id: user.id, name: user.name, email: user.email, image: user.image };
+        return { id: user.id, name: user.name, email: user.email, image: user.image, authMethod: "password", phishingResistant: false };
       },
     }),
 
@@ -380,7 +383,7 @@ export const authOptions: NextAuthOptions = {
           recordAuthFailure({ reason: "PASSKEY_LOGIN_TOKEN_INVALID", code: "PASSKEY_LOGIN_FAILED", provider: "passkey-login" });
           return null;
         }
-        return { id: user.id, name: user.name, email: user.email, image: user.image, phishingResistant: true };
+        return { id: user.id, name: user.name, email: user.email, image: user.image, authMethod: "passkey", phishingResistant: true };
       },
     }),
 
@@ -433,19 +436,19 @@ export const authOptions: NextAuthOptions = {
           email: inviteEmail,
           expiresAt: { gt: new Date() },
         },
-        select: { id: true, workspaceId: true, role: true },
+        select: { id: true, workspaceId: true, role: true, businessRole: true },
       });
 
       const memberships = user.id
         ? await prisma.workspaceUser.findMany({
             where: { userId: user.id },
-            select: { role: true, workspaceId: true },
+            select: { role: true, businessRole: true, workspaceId: true },
           })
         : [];
 
       const effectiveRoles = [
-        ...memberships.map((membership) => membership.role),
-        ...pendingInvites.map((invite) => invite.role),
+        ...memberships.flatMap((membership) => [membership.businessRole, membership.role]),
+        ...pendingInvites.flatMap((invite) => [invite.businessRole, invite.role]),
       ];
 
       const isExceptionEmail = isMagicLinkExceptionEmail(user.email);
@@ -459,8 +462,24 @@ export const authOptions: NextAuthOptions = {
         return `/login?error=${HIGH_RISK_MAGIC_LINK_ERROR_CODE}&provider=email`;
       }
 
+      const loginRisk = classifyLoginProvider(account);
+      const userAuthContext = user as { phishingResistant?: boolean; authMethod?: string };
+      const isPasswordOnlyHighRiskSignIn =
+        hasHighRiskRole(effectiveRoles) &&
+        (loginRisk.method === "password" || userAuthContext.authMethod === "password") &&
+        !userAuthContext.phishingResistant;
+
+      if (isPasswordOnlyHighRiskSignIn) {
+        recordAuthFailure({
+          reason: "HIGH_RISK_PASSWORD_ONLY_BLOCKED",
+          code: HIGH_RISK_PASSWORD_ERROR_CODE,
+          provider: loginRisk.provider,
+        });
+        return `/login?error=${HIGH_RISK_PASSWORD_ERROR_CODE}&provider=${encodeURIComponent(loginRisk.provider)}`;
+      }
+
       const isAllowedExceptionMagicLinkSignIn = isExceptionEmail && account?.provider === "email";
-      if (hasHighRiskRole(effectiveRoles) && !isPhishingResistantSignIn(account) && !(user as { phishingResistant?: boolean }).phishingResistant && !isAllowedExceptionMagicLinkSignIn) {
+      if (hasHighRiskRole(effectiveRoles) && !isPhishingResistantSignIn(account) && !userAuthContext.phishingResistant && !isAllowedExceptionMagicLinkSignIn) {
         if (isAllowedDemoMfaBypass({ provider: account?.provider, email: user.email })) {
           return true;
         }
@@ -468,10 +487,10 @@ export const authOptions: NextAuthOptions = {
         const provider = account?.provider ?? "unknown";
         recordAuthFailure({
           reason: "HIGH_RISK_ROLE_REQUIRES_PHISHING_RESISTANT_MFA",
-          code: "MFA_POLICY_BLOCK",
+          code: MFA_POLICY_ERROR_CODE,
           provider,
         });
-        return "/login?error=MFA_POLICY_BLOCK";
+        return `/login?error=${MFA_POLICY_ERROR_CODE}&provider=${encodeURIComponent(provider)}`;
       }
 
       if (!user.id || pendingInvites.length === 0) {
