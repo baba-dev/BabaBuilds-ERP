@@ -54,6 +54,9 @@ type AuthModalProps = {
 
 type EmailErrorCase = "CONFIG_ERROR" | "RATE_LIMITED" | "INVALID_EMAIL" | "GENERIC";
 type EmailStatus = "idle" | "loading" | "success" | "error";
+type AuthMethod = "passkey" | "google" | "password" | "magic_link" | "demo";
+
+const LAST_AUTH_METHOD_KEY = "last_auth_method";
 
 const HIGH_RISK_MAGIC_LINK_BLOCKED = "HIGH_RISK_MAGIC_LINK_BLOCKED";
 const MFA_POLICY_BLOCK = "MFA_POLICY_BLOCK";
@@ -136,10 +139,40 @@ export default function AuthModal({
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [cooldownMessage, setCooldownMessage] = useState<string | null>(null);
   const [requiresTurnstile, setRequiresTurnstile] = useState(false);
+  const [isPasskeySupported, setIsPasskeySupported] = useState(false);
+  const [supportsConditionalMediation, setSupportsConditionalMediation] = useState(false);
+  const [lastAuthMethod, setLastAuthMethod] = useState<AuthMethod | null>(null);
+  const [authStatusMessage, setAuthStatusMessage] = useState("");
 
   const emailInputRef = useRef<HTMLInputElement>(null);
   const statusPanelRef = useRef<HTMLDivElement>(null);
   const fingerprint = useMemo(() => getDeviceFingerprint(), []);
+
+  const rememberAuthMethod = (method: AuthMethod) => {
+    setLastAuthMethod(method);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(LAST_AUTH_METHOD_KEY, method);
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const storedMethod = window.localStorage.getItem(LAST_AUTH_METHOD_KEY);
+    if (["passkey", "google", "password", "magic_link", "demo"].includes(storedMethod || "")) {
+      setLastAuthMethod(storedMethod as AuthMethod);
+    }
+
+    const publicKeyCredential = window.PublicKeyCredential;
+    setIsPasskeySupported(typeof publicKeyCredential !== "undefined");
+
+    if (typeof publicKeyCredential?.isConditionalMediationAvailable === "function") {
+      void publicKeyCredential
+        .isConditionalMediationAvailable()
+        .then(setSupportsConditionalMediation)
+        .catch(() => setSupportsConditionalMediation(false));
+    }
+  }, []);
 
 
   useEffect(() => {
@@ -229,12 +262,14 @@ export default function AuthModal({
     const isAllowed = await verifyMagicLinkPolicy({ blocking: true });
     if (!isAllowed) {
       setEmailStatus("error");
+      setAuthStatusMessage("Secure link sign-in is unavailable for this email right now.");
       setEmailErrorCase("GENERIC");
       return;
     }
 
     setIsLoading(true);
     setEmailStatus("loading");
+    setAuthStatusMessage("Sending a secure sign-in link to your email.");
     setEmailErrorCase(null);
     setCooldownMessage(null);
 
@@ -289,6 +324,8 @@ export default function AuthModal({
       }
 
       setEmailStatus("success");
+      setAuthStatusMessage("Secure sign-in link sent. Check your email to continue.");
+      rememberAuthMethod("magic_link");
       setResendCooldown(30);
     } catch (error) {
       console.error(error);
@@ -309,6 +346,7 @@ export default function AuthModal({
     }
 
     setIsPasskeyLoading(true);
+    setAuthStatusMessage("Opening your device passkey prompt.");
     try {
       const optionsResponse = await fetch("/api/auth/passkeys/login/options", { method: "POST" });
       const options = await optionsResponse.json();
@@ -323,8 +361,11 @@ export default function AuthModal({
       if (!verifyResponse.ok || !payload.loginToken) throw new Error(payload.error || "Passkey verification failed.");
       const result = await signIn("passkey-login", { token: payload.loginToken, callbackUrl, redirect: false });
       if (result?.error) throw new Error("Unable to create a session from this passkey.");
+      rememberAuthMethod("passkey");
+      setAuthStatusMessage("Passkey accepted. Redirecting securely.");
       if (result?.url) window.location.href = result.url;
     } catch (error) {
+      setAuthStatusMessage("Passkey sign-in was cancelled or failed.");
       toast.error(error instanceof Error ? error.message : "Passkey sign-in was cancelled or failed.");
     } finally {
       setIsPasskeyLoading(false);
@@ -335,12 +376,16 @@ export default function AuthModal({
     e.preventDefault();
     if (!email || !password || isPasswordLoading) return;
     setIsPasswordLoading(true);
+    setAuthStatusMessage("Checking your email and password.");
     const result = await signIn("password-login", { email, password, callbackUrl, redirect: false });
     setIsPasswordLoading(false);
     if (result?.error) {
+      setAuthStatusMessage("Password sign-in failed. Check your details or use a stronger method.");
       toast.error("Email or password is incorrect, or this account requires stronger MFA.");
       return;
     }
+    rememberAuthMethod("password");
+    setAuthStatusMessage("Password accepted. Redirecting securely.");
     if (result?.url) window.location.href = result.url;
   };
 
@@ -399,6 +444,7 @@ export default function AuthModal({
     }
 
     setIsDemoLoading(true);
+    setAuthStatusMessage("Preparing your demo sandbox.");
 
     try {
       const response = await fetch("/api/auth/demo", {
@@ -413,6 +459,7 @@ export default function AuthModal({
       const data = await response.json();
 
       if (data.email && data.password) {
+        rememberAuthMethod("demo");
         await signIn("demo-login", {
           email: data.email,
           password: data.password,
@@ -431,6 +478,26 @@ export default function AuthModal({
   };
 
   const isEmbedded = variant === "embedded";
+
+  const preferredAuthMethods: AuthMethod[] = [
+    ...(isPasskeySupported ? (["passkey"] as const) : []),
+    ...(googleAuthEnabled ? (["google"] as const) : []),
+    "password",
+    "magic_link",
+  ];
+  const orderedAuthMethods = lastAuthMethod
+    ? [
+        lastAuthMethod,
+        ...preferredAuthMethods.filter((method) => method !== lastAuthMethod),
+      ].filter((method, index, methods) =>
+        preferredAuthMethods.includes(method) && methods.indexOf(method) === index
+      )
+    : preferredAuthMethods;
+  const getAuthMethodOrder = (method: AuthMethod) => {
+    const methodOrder = orderedAuthMethods.indexOf(method);
+    return methodOrder === -1 ? preferredAuthMethods.length : methodOrder;
+  };
+
   const demoTemplateOptions: Array<{
     key: DemoTemplateKey;
     icon: typeof Building2;
@@ -501,23 +568,65 @@ export default function AuthModal({
           )}
         </div>
 
-        <div className="p-6 sm:p-8 space-y-5">
-          <Button
-            type="button"
-            onClick={handlePasskeySignIn}
-            disabled={isPasskeyLoading || isLoading || isDemoLoading || isPasswordLoading}
-            variant="primary-action"
-            size="lg"
-            className={cn("min-h-12 w-full rounded-xl text-base font-black shadow-lg shadow-orange-500/20", subtleInteractive)}
-          >
-            {isPasskeyLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <KeyRound className="w-5 h-5" />}
-            Continue with passkey
-          </Button>
-          <p className="text-center text-[11px] leading-relaxed text-muted-foreground sm:px-4">Fastest phishing-resistant login with Face ID, Touch ID, Windows Hello, Android screen lock, or a security key.</p>
+        <div className="flex flex-col gap-5 p-6 sm:p-8">
+          {isPasskeySupported && (
+            <section className="space-y-2" style={{ order: getAuthMethodOrder("passkey") }}>
+              <Button
+                type="button"
+                onClick={handlePasskeySignIn}
+                disabled={isPasskeyLoading || isLoading || isDemoLoading || isPasswordLoading}
+                variant="primary-action"
+                size="lg"
+                className={cn("min-h-12 w-full rounded-xl text-base font-black shadow-lg shadow-orange-500/20 focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2", subtleInteractive)}
+              >
+                {isPasskeyLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <KeyRound className="w-5 h-5" />}
+                Continue with passkey
+              </Button>
+              <div className="space-y-1 text-center text-[11px] leading-relaxed text-muted-foreground sm:px-4">
+                <p className="font-semibold text-foreground/80">Fastest on this device</p>
+                <p>Uses Face ID, fingerprint, or Windows Hello. No password to type.</p>
+                {supportsConditionalMediation && <p>Passkeys can be suggested automatically when your browser offers them.</p>}
+              </div>
+            </section>
+          )}
 
-          <div className="relative flex items-center py-1"><div className="flex-grow border-t border-border" /><span className="mx-4 text-xs font-medium uppercase tracking-widest text-muted-foreground">or</span><div className="flex-grow border-t border-border" /></div>
+          {googleAuthEnabled && (
+            <section className="space-y-3" style={{ order: getAuthMethodOrder("google") }}>
+              {getAuthMethodOrder("google") > 0 && (
+                <div className="relative flex items-center py-1">
+                  <div className="flex-grow border-t border-border" />
+                  <span className="flex-shrink-0 mx-4 text-xs font-medium text-muted-foreground uppercase tracking-widest">
+                    {t("or")}
+                  </span>
+                  <div className="flex-grow border-t border-border" />
+                </div>
+              )}
 
-          <form onSubmit={passwordMode === "reset" ? handleResetPassword : handlePasswordSignIn} className="space-y-3 rounded-2xl border border-border/80 bg-muted/20 p-4">
+              <Button
+                onClick={() => {
+                  rememberAuthMethod("google");
+                  setAuthStatusMessage("Redirecting to Google sign-in.");
+                  void signIn("google", { callbackUrl });
+                }}
+                disabled={isLoading || isDemoLoading || isPasswordLoading}
+                variant="outline"
+                size="lg"
+                className={cn("w-full rounded-xl font-bold", subtleInteractive)}
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                </svg>
+                {t("actions.continueWithGoogle")}
+              </Button>
+            </section>
+          )}
+
+          <section className="space-y-3" style={{ order: getAuthMethodOrder("password") }}>
+            {getAuthMethodOrder("password") > 0 && <div className="relative flex items-center py-1"><div className="flex-grow border-t border-border" /><span className="mx-4 text-xs font-medium uppercase tracking-widest text-muted-foreground">or</span><div className="flex-grow border-t border-border" /></div>}
+            <form onSubmit={passwordMode === "reset" ? handleResetPassword : handlePasswordSignIn} className="space-y-3 rounded-2xl border border-border/80 bg-muted/20 p-4">
             <p className="text-sm font-bold">Sign in with password</p>
             <div className="relative">
               <Mail className="absolute left-3 top-3 w-5 h-5 text-muted-foreground" />
@@ -544,11 +653,13 @@ export default function AuthModal({
               {passwordMode === "reset" ? "Back to password login" : "Forgot password?"}
             </button>
             <p className="text-[11px] text-muted-foreground">Password sign-in may still require passkey or MFA for high-risk roles.</p>
-          </form>
+            </form>
+          </section>
 
-          <div className="relative flex items-center py-1"><div className="flex-grow border-t border-border" /><span className="mx-4 text-xs font-medium uppercase tracking-widest text-muted-foreground">or</span><div className="flex-grow border-t border-border" /></div>
+          <section className="space-y-3" style={{ order: getAuthMethodOrder("magic_link") }}>
+            {getAuthMethodOrder("magic_link") > 0 && <div className="relative flex items-center py-1"><div className="flex-grow border-t border-border" /><span className="mx-4 text-xs font-medium uppercase tracking-widest text-muted-foreground">or</span><div className="flex-grow border-t border-border" /></div>}
 
-          <form onSubmit={handleEmailSignIn} className="space-y-3">
+            <form onSubmit={handleEmailSignIn} className="space-y-3">
             {emailStatus === "success" && (
               <div className="bg-orange-500/10 border border-orange-500/25 rounded-xl p-4 text-center space-y-2 animate-in fade-in">
                 <CheckCircle2 className="w-8 h-8 text-orange-600 dark:text-orange-400 mx-auto" />
@@ -693,36 +804,14 @@ export default function AuthModal({
                 )}
               </div>
             )}
-          </form>
+            </form>
+          </section>
 
-          {googleAuthEnabled && (
-            <>
-              <div className="relative flex items-center py-1">
-                <div className="flex-grow border-t border-border" />
-                <span className="flex-shrink-0 mx-4 text-xs font-medium text-muted-foreground uppercase tracking-widest">
-                  {t("or")}
-                </span>
-                <div className="flex-grow border-t border-border" />
-              </div>
 
-              <Button
-                onClick={() => signIn("google", { callbackUrl })}
-                disabled={isLoading || isDemoLoading || isPasswordLoading}
-                variant="outline"
-                size="lg"
-                className={cn("w-full rounded-xl font-bold", subtleInteractive)}
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                </svg>
-                {t("actions.continueWithGoogle")}
-              </Button>
-            </>
-          )}
 
+          <div className="sr-only" role="status" aria-live="polite">{authStatusMessage}</div>
+
+          <div style={{ order: preferredAuthMethods.length + 1 }}>
           <Dialog open={isSandboxModalOpen} onOpenChange={setIsSandboxModalOpen}>
             <DialogTrigger asChild>
               <Button
@@ -831,8 +920,9 @@ export default function AuthModal({
               </div>
             </DialogContent>
           </Dialog>
+          </div>
 
-          <div className="pt-1 text-center text-xs text-muted-foreground">
+          <div className="pt-1 text-center text-xs text-muted-foreground" style={{ order: preferredAuthMethods.length + 2 }}>
             <div className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
               <Link href="/help" className="hover:text-foreground transition-colors">Documentation</Link>
               <span aria-hidden="true">&bull;</span>
