@@ -27,9 +27,11 @@ export async function getNextInvoiceNumber(
   tx: NumberingClient,
   workspaceId: string,
   invoiceDate = new Date(),
+  invoicePrefix = "INV",
 ) {
   const financialYear = getFinancialYear(invoiceDate);
-  const prefix = `INV/${financialYear}/`;
+  const normalizedPrefix = invoicePrefix || "INV";
+  const prefix = `${normalizedPrefix}/${financialYear}/`;
   const recentInvoices = await tx.invoice.findMany({
     where: {
       workspaceId,

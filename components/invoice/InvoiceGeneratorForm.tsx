@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
-import { AlertCircle, CheckCircle2, Mail, Briefcase, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Mail, Briefcase, Loader2, Building2, Landmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +29,29 @@ const isLikelyOfflineError = (error: unknown) => {
   if (typeof navigator !== "undefined" && !navigator.onLine) return true;
   return error instanceof TypeError;
 };
+
+
+type InvoiceCompanyConfirmation = {
+  companyName?: string | null;
+  proprietorName?: string | null;
+  taxIdLabel?: string | null;
+  panNumber?: string | null;
+  gstin?: string | null;
+  bankName?: string | null;
+  accountName?: string | null;
+  defaultGateway?: string | null;
+  razorpayKeyId?: string | null;
+  stripePublishableKey?: string | null;
+  primaryBankAccount?: {
+    bankName?: string | null;
+    accountName?: string | null;
+    maskedAccountNumber?: string | null;
+    accountNumberMasked?: string | null;
+    ifscCode?: string | null;
+  } | null;
+};
+
+type RecentCompanySwitch = { name?: string; switchedAt?: number };
 
 interface InvoiceGeneratorFormProps {
   /** Called with the generated invoice data after a successful submission. Pass to close the modal. */
@@ -100,6 +123,9 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
   // Dynamic Services State
   const [services, setServices] = useState<any[]>([]);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
+  const [companyConfirmation, setCompanyConfirmation] = useState<InvoiceCompanyConfirmation | null>(null);
+  const [companyConfirmed, setCompanyConfirmed] = useState(false);
+  const [recentCompanySwitch, setRecentCompanySwitch] = useState<RecentCompanySwitch | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -111,7 +137,20 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
       fetch("/api/invoices/billing-months?limit=1000").then((res) => res.json()).catch(() => ({ data: [] })),
       fetch("/api/services?limit=100").then((res) => res.json()).catch(() => ({ data: [] })),
       fetch("/api/inventory/products?limit=100").then((res) => res.json()).catch(() => []),
-    ]).then(([clientsResult, invoicesResult, servicesResult, productsResult]) => {
+      fetch("/api/settings", { cache: "no-store" }).then((res) => res.json()).catch(() => null),
+    ]).then(([clientsResult, invoicesResult, servicesResult, productsResult, settingsResult]) => {
+      if (settingsResult && !settingsResult.error) setCompanyConfirmation(settingsResult as InvoiceCompanyConfirmation);
+      try {
+        const rawSwitch = sessionStorage.getItem("bababuilds:last-company-switch");
+        const parsedSwitch = rawSwitch ? JSON.parse(rawSwitch) as RecentCompanySwitch : null;
+        if (parsedSwitch?.switchedAt && Date.now() - parsedSwitch.switchedAt < 10 * 60 * 1000) {
+          setRecentCompanySwitch(parsedSwitch);
+        } else {
+          setRecentCompanySwitch(null);
+        }
+      } catch {
+        setRecentCompanySwitch(null);
+      }
       const parsedClients = Array.isArray(clientsResult) ? clientsResult : clientsResult?.data;
       if (Array.isArray(parsedClients)) setClients(parsedClients);
 
@@ -206,6 +245,11 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
 
   // --- COMPONENT LOGIC ---
   const selectedClient = useMemo(() => clients.find((c) => c.id.toString() === selectedClientId), [clients, selectedClientId]);
+  const companyTaxId = companyConfirmation?.gstin || companyConfirmation?.panNumber || "Not configured";
+  const bankIdentity = companyConfirmation?.primaryBankAccount
+    ? [companyConfirmation.primaryBankAccount.bankName, companyConfirmation.primaryBankAccount.accountName, companyConfirmation.primaryBankAccount.maskedAccountNumber || companyConfirmation.primaryBankAccount.accountNumberMasked, companyConfirmation.primaryBankAccount.ifscCode].filter(Boolean).join(" · ")
+    : [companyConfirmation?.bankName, companyConfirmation?.accountName].filter(Boolean).join(" · ") || "Not configured";
+  const paymentIdentity = [companyConfirmation?.defaultGateway || "Offline bank transfer", companyConfirmation?.razorpayKeyId || companyConfirmation?.stripePublishableKey].filter(Boolean).join(" · ");
   const activeServices = services.filter((s) => s.selected);
   const totalAmount = activeServices.reduce((sum, s) => sum + Number(s.amount || 0), 0);
 
@@ -236,6 +280,10 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
       return format(d, "MMMM yyyy");
     });
   }, [isMounted]);
+
+  useEffect(() => {
+    setCompanyConfirmed(false);
+  }, [companyConfirmation?.companyName, companyConfirmation?.gstin, companyConfirmation?.panNumber, bankIdentity, paymentIdentity]);
 
   const handleServiceToggle = (index: number) => {
     const newServices = [...services];
@@ -285,6 +333,8 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
     e.preventDefault();
     if (!selectedClientId) { setError("No client selected. Please select a client from the CRM."); return; }
     if (!billingMonth.trim()) { setError("Billing month is required. Please select a cycle period."); return; }
+
+    if (!companyConfirmed) { setError("Confirm the active company and payment identity before generating this invoice."); return; }
 
     setIsGenerating(true); setError(null); setSuccessData(null); setDraftPreview(null);
 
@@ -801,9 +851,33 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
           <span className="text-3xl font-black text-indigo-700 dark:text-indigo-400 drop-shadow-sm tracking-tight">{fCurrency(totalAmount)}</span>
         </div>
 
+        <div className={cn("rounded-xl border p-4 shadow-sm", companyConfirmed ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/60 dark:bg-emerald-950/20" : "border-amber-200 bg-amber-50/70 dark:border-amber-900/60 dark:bg-amber-950/30")}>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-zinc-800 dark:text-zinc-100">
+                <Building2 className="h-4 w-4 text-indigo-500" /> Confirm active company before invoice generation
+              </div>
+              <div className="grid gap-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 md:grid-cols-3">
+                <div><span className="block uppercase tracking-widest text-zinc-500">Legal name</span>{companyConfirmation?.companyName || companyConfirmation?.proprietorName || "Not configured"}</div>
+                <div><span className="block uppercase tracking-widest text-zinc-500">{companyConfirmation?.taxIdLabel || "Tax ID"}</span>{companyTaxId}</div>
+                <div><span className="block uppercase tracking-widest text-zinc-500">Bank / payment identity</span><span className="inline-flex items-center gap-1"><Landmark className="h-3.5 w-3.5" /> {bankIdentity}{paymentIdentity ? ` · ${paymentIdentity}` : ""}</span></div>
+              </div>
+              {recentCompanySwitch?.switchedAt && (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-white/70 p-3 text-xs font-bold text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  You recently switched to {recentCompanySwitch.name || "this company"}. Double-check the legal name, tax ID, and bank/payment identity before sending this invoice.
+                </div>
+              )}
+            </div>
+            <label className="flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-black uppercase tracking-widest text-zinc-800 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100">
+              <Checkbox checked={companyConfirmed} onCheckedChange={(checked) => setCompanyConfirmed(Boolean(checked))} /> Confirm
+            </label>
+          </div>
+        </div>
+
         <FormSubmitBar
           isSubmitting={isGenerating}
-          isDisabled={totalAmount === 0}
+          isDisabled={totalAmount === 0 || !companyConfirmed}
           submitText={t("generate_btn")}
           submittingText={sendEmail ? "Generating & Sending Invoice..." : "Generating Invoice..."}
           helperText={totalAmount === 0 ? "Select at least one priced service to continue." : "Review the preview amount and continue to confirmation."}

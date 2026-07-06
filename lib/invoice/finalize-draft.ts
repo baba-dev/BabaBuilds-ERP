@@ -61,7 +61,7 @@ export async function finalizeInvoiceFromDraft(params: {
 
   while (attempts < MAX_ATTEMPTS) {
     try {
-      const { invoiceNumber } = await getNextInvoiceNumber(prisma, workspaceId, invoiceDate);
+      const { invoiceNumber } = await getNextInvoiceNumber(prisma, workspaceId, invoiceDate, profile.invoicePrefix || "INV");
       currentInvoiceNumber = invoiceNumber;
 
       const invoicesDir = buildPrivatePath("invoices", [workspaceId]);

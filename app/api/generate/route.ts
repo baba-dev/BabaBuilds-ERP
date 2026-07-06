@@ -26,6 +26,7 @@ import {
   type WorkspaceBillingSnapshot,
 } from '@/lib/entitlements';
 import { finalizeInvoiceGenerationDraft } from '@/lib/invoice/finalize-draft';
+import { getNextInvoiceNumber } from '@/lib/document-numbering';
 
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000;
 const IDEMPOTENCY_PENDING = "PENDING";
@@ -419,19 +420,7 @@ export async function POST(request: Request) {
     while (attempts < MAX_ATTEMPTS) {
       try {
         // 4. ISOLATED SEQUENCING
-        const lastInvoice = await prisma.invoice.findFirst({
-          where: { financialYear: fy, workspaceId },
-          orderBy: { createdAt: 'desc' },
-        });
-
-        let sequence = 1;
-        if (lastInvoice && lastInvoice.invoiceNumber) {
-          const parts = lastInvoice.invoiceNumber.split('/');
-          if (parts.length === 3 && !isNaN(parseInt(parts[2]))) {
-            sequence = parseInt(parts[2]) + 1;
-          }
-        }
-        const invoiceNumber = `INV/${fy}/${sequence.toString().padStart(3, '0')}`;
+        const { invoiceNumber } = await getNextInvoiceNumber(prisma, workspaceId, invoiceDate, profile.invoicePrefix || 'INV');
         currentInvoiceNumber = invoiceNumber;
 
         // 5. NAMESPACED PDF STORAGE (private)
