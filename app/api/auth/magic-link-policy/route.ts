@@ -24,20 +24,20 @@ export async function POST(req: Request) {
           email,
           expiresAt: { gt: new Date() },
         },
-        select: { role: true },
+        select: { role: true, businessRole: true },
       }),
     ]);
 
     const memberships = user?.id
       ? await prisma.workspaceUser.findMany({
           where: { userId: user.id },
-          select: { role: true },
+          select: { role: true, businessRole: true },
         })
       : [];
 
     const effectiveRoles = [
-      ...memberships.map((membership) => membership.role),
-      ...pendingInvites.map((invite) => invite.role),
+      ...memberships.flatMap((membership) => [membership.businessRole, membership.role]),
+      ...pendingInvites.flatMap((invite) => [invite.businessRole, invite.role]),
     ];
     const allowed = isEmailMagicLinkAllowedForRoles(effectiveRoles, email);
 

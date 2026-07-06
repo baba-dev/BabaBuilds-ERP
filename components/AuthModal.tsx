@@ -59,6 +59,7 @@ type AuthMethod = "passkey" | "google" | "password" | "magic_link" | "demo";
 const LAST_AUTH_METHOD_KEY = "last_auth_method";
 
 const HIGH_RISK_MAGIC_LINK_BLOCKED = "HIGH_RISK_MAGIC_LINK_BLOCKED";
+const HIGH_RISK_PASSWORD_BLOCKED = "HIGH_RISK_PASSWORD_BLOCKED";
 const MFA_POLICY_BLOCK = "MFA_POLICY_BLOCK";
 const subtleInteractive =
   "transition-[background-color,border-color,box-shadow,transform,color] duration-200 ease-out";
@@ -129,9 +130,11 @@ export default function AuthModal({
   const [magicLinkPolicyMessage, setMagicLinkPolicyMessage] = useState<string | null>(
     authError === HIGH_RISK_MAGIC_LINK_BLOCKED
       ? t("alerts.highRiskMagicLinkBlocked")
-      : authError === MFA_POLICY_BLOCK
-        ? t("alerts.phishingResistantRequired")
-        : null
+      : authError === HIGH_RISK_PASSWORD_BLOCKED
+        ? "Password-only sign-in is disabled for Owner, Admin, and Finance Manager accounts. Use a passkey or Google sign-in."
+        : authError === MFA_POLICY_BLOCK
+          ? t("alerts.phishingResistantRequired")
+          : null
   );
   const [isMagicLinkAllowed, setIsMagicLinkAllowed] = useState(
     authError !== HIGH_RISK_MAGIC_LINK_BLOCKED
@@ -372,6 +375,33 @@ export default function AuthModal({
     }
   };
 
+  const getAuthResultErrorCode = (result: Awaited<ReturnType<typeof signIn>>) => {
+    if (typeof result?.error === "string" && result.error) return result.error;
+    if (!result?.url) return null;
+
+    try {
+      return new URL(result.url, window.location.origin).searchParams.get("error");
+    } catch {
+      return result.url.includes("HIGH_RISK_PASSWORD_BLOCKED")
+        ? HIGH_RISK_PASSWORD_BLOCKED
+        : result.url.includes("MFA_POLICY_BLOCK")
+          ? MFA_POLICY_BLOCK
+          : null;
+    }
+  };
+
+  const getBlockedHighRiskMessage = (code: string | null) => {
+    if (code === HIGH_RISK_PASSWORD_BLOCKED) {
+      return "Password-only sign-in is disabled for Owner, Admin, and Finance Manager accounts. Use a passkey or Google sign-in.";
+    }
+
+    if (code === MFA_POLICY_BLOCK) {
+      return "This high-privilege account requires phishing-resistant sign-in. Use a passkey or Google sign-in.";
+    }
+
+    return null;
+  };
+
   const handlePasswordSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password || isPasswordLoading) return;
@@ -379,7 +409,15 @@ export default function AuthModal({
     setAuthStatusMessage("Checking your email and password.");
     const result = await signIn("password-login", { email, password, callbackUrl, redirect: false });
     setIsPasswordLoading(false);
-    if (result?.error) {
+    const errorCode = getAuthResultErrorCode(result);
+    const highRiskMessage = getBlockedHighRiskMessage(errorCode);
+    if (highRiskMessage) {
+      setMagicLinkPolicyMessage(highRiskMessage);
+      setAuthStatusMessage(highRiskMessage);
+      toast.error(highRiskMessage);
+      return;
+    }
+    if (errorCode) {
       setAuthStatusMessage("Password sign-in failed. Check your details or use a stronger method.");
       toast.error("Email or password is incorrect, or this account requires stronger MFA.");
       return;
