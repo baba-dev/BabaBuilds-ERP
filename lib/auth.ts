@@ -59,6 +59,10 @@ declare module "next-auth" {
       role?: string;
     };
     workspaceId: string;
+    groupId?: string | null;
+    activeCompanyName?: string | null;
+    activeGroupName?: string | null;
+    isMultiCompany?: boolean;
     baseCurrency: string;
     isSetupComplete: boolean;
     countryCode: string;
@@ -143,6 +147,73 @@ function validateAndNormalizeEmailSender(emailFrom?: string): string {
 }
 
 const emailSender = emailAuthEnabled ? validateAndNormalizeEmailSender(process.env.EMAIL_FROM) : "";
+
+type AccessibleWorkspaceMembership = {
+  role: string;
+  businessRole: string | null;
+  workspace: {
+    id: string;
+    name: string;
+    baseCurrency: string;
+    isSetupComplete: boolean;
+    countryCode: string;
+    companyGroupLinks: Array<{
+      companyGroupId: string;
+      companyGroup: { name: string };
+    }>;
+  };
+};
+
+function getRequestedWorkspaceId(session: unknown) {
+  const workspaceId = (session as { workspaceId?: unknown } | null)?.workspaceId;
+  return typeof workspaceId === "string" && workspaceId.trim() ? workspaceId : null;
+}
+
+function pickActiveWorkspace(
+  memberships: AccessibleWorkspaceMembership[],
+  requestedWorkspaceId?: string | null,
+): AccessibleWorkspaceMembership | null {
+  if (requestedWorkspaceId) {
+    const preserved = memberships.find((membership) => membership.workspace.id === requestedWorkspaceId);
+    if (preserved) return preserved;
+  }
+
+  return memberships[0] ?? null;
+}
+
+function applyActiveWorkspaceToToken(
+  token: Record<string, unknown>,
+  membership: AccessibleWorkspaceMembership,
+  accessibleWorkspaceCount: number,
+) {
+  const workspace = membership.workspace;
+  const groupLink = workspace.companyGroupLinks[0] ?? null;
+
+  token.workspaceId = workspace.id;
+  token.groupId = groupLink?.companyGroupId ?? null;
+  token.activeCompanyName = workspace.name;
+  token.activeGroupName = groupLink?.companyGroup.name ?? null;
+  token.isMultiCompany = accessibleWorkspaceCount > 1 || Boolean(groupLink);
+  token.baseCurrency = workspace.baseCurrency;
+  token.isSetupComplete = workspace.isSetupComplete;
+  token.countryCode = workspace.countryCode;
+  token.role = membership.role;
+  // businessRole is for UI hints only — enforcement uses fresh DB lookup in lib/rbac.ts
+  token.businessRole = membership.businessRole ?? membership.role;
+}
+
+function clearActiveWorkspaceToken(token: Record<string, unknown>) {
+  delete token.workspaceId;
+  delete token.groupId;
+  delete token.activeCompanyName;
+  delete token.activeGroupName;
+  token.isMultiCompany = false;
+  delete token.baseCurrency;
+  delete token.isSetupComplete;
+  delete token.countryCode;
+  delete token.role;
+  delete token.businessRole;
+}
 
 function escapeHtmlText(value: string) {
   return value
@@ -533,9 +604,8 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, user, trigger, session }) {
-      if (trigger === "update" && session) {
-        return { ...token, ...session };
-      }
+      const requestedWorkspaceId =
+        trigger === "update" ? getRequestedWorkspaceId(session) : (token.workspaceId as string | undefined);
 
       if (user) {
         token.id = user.id;
@@ -573,16 +643,30 @@ export const authOptions: NextAuthOptions = {
           locale: true,
           currencyFormat: true,
           workspaces: {
-            take: 1,
+            where: { isActive: true },
+            orderBy: { joinedAt: "asc" },
             select: {
               role: true,
               businessRole: true,
               workspace: {
                 select: {
                   id: true,
+                  name: true,
                   baseCurrency: true,
                   isSetupComplete: true,
                   countryCode: true,
+                  companyGroupLinks: {
+                    where: {
+                      isActive: true,
+                      companyGroup: { members: { some: { userId, isActive: true } } },
+                    },
+                    orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+                    take: 1,
+                    select: {
+                      companyGroupId: true,
+                      companyGroup: { select: { name: true } },
+                    },
+                  },
                 },
               },
             },
@@ -610,21 +694,29 @@ export const authOptions: NextAuthOptions = {
               workspace: {
                 select: {
                   id: true,
+                  name: true,
                   baseCurrency: true,
                   isSetupComplete: true,
                   countryCode: true,
+                  companyGroupLinks: {
+                    where: {
+                      isActive: true,
+                      companyGroup: { members: { some: { userId, isActive: true } } },
+                    },
+                    orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+                    take: 1,
+                    select: {
+                      companyGroupId: true,
+                      companyGroup: { select: { name: true } },
+                    },
+                  },
                 },
               },
             },
           });
 
           if (membership?.workspace) {
-            token.workspaceId = membership.workspace.id;
-            token.baseCurrency = membership.workspace.baseCurrency;
-            token.isSetupComplete = membership.workspace.isSetupComplete;
-            token.countryCode = membership.workspace.countryCode;
-            token.role = membership.role;
-            token.businessRole = membership.businessRole ?? "OWNER";
+            applyActiveWorkspaceToToken(token, membership, 1);
           }
         } catch (error: any) {
           logActivity({
@@ -641,15 +733,12 @@ export const authOptions: NextAuthOptions = {
           });
         }
       } else {
-        const workspaceMembership = dbUser.workspaces[0];
-        const ws = workspaceMembership.workspace;
-        token.workspaceId = ws.id;
-        token.baseCurrency = ws.baseCurrency;
-        token.isSetupComplete = ws.isSetupComplete;
-        token.countryCode = ws.countryCode;
-        token.role = workspaceMembership.role;
-        // businessRole is for UI hints only — enforcement uses fresh DB lookup in lib/rbac.ts
-        token.businessRole = workspaceMembership.businessRole ?? workspaceMembership.role;
+        const workspaceMembership = pickActiveWorkspace(dbUser.workspaces, requestedWorkspaceId);
+        if (workspaceMembership) {
+          applyActiveWorkspaceToToken(token, workspaceMembership, dbUser.workspaces.length);
+        } else {
+          clearActiveWorkspaceToken(token);
+        }
       }
 
       token.locale = dbUser.locale;
@@ -694,6 +783,10 @@ export const authOptions: NextAuthOptions = {
       if (token && session.user) {
         session.user.id = token.id as string;
         session.workspaceId = token.workspaceId as string;
+        session.groupId = (token.groupId as string | null | undefined) ?? null;
+        session.activeCompanyName = (token.activeCompanyName as string | null | undefined) ?? null;
+        session.activeGroupName = (token.activeGroupName as string | null | undefined) ?? null;
+        session.isMultiCompany = Boolean(token.isMultiCompany);
         session.baseCurrency = token.baseCurrency as string;
         session.isSetupComplete = token.isSetupComplete as boolean;
         session.countryCode = token.countryCode as string;
