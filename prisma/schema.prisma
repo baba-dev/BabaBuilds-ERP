@@ -1316,7 +1316,8 @@ model BusinessProfile {
   phone          String?
   website        String?
 
-  invoiceTheme String @default("DESIGN_1") // "DESIGN_1" or "DESIGN_2"
+  invoiceTheme  String  @default("DESIGN_1") // "DESIGN_1" or "DESIGN_2"
+  invoicePrefix String? @default("INV")
 
   // --- DYNAMIC TAX LABELS ---
   // In the UI, instead of "Enter GST", we show "Enter {taxLabel}"

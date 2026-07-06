@@ -77,6 +77,15 @@ export function CompanySwitcher() {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error ?? "Unable to switch company.");
       }
+      try {
+        sessionStorage.setItem("bababuilds:last-company-switch", JSON.stringify({
+          workspaceId,
+          name: target?.name ?? "company",
+          switchedAt: Date.now(),
+        }));
+      } catch {
+        // Non-fatal: confirmation warnings still work without sessionStorage.
+      }
       toast.success(`Switched to ${target?.name ?? "company"}.`);
       window.location.reload();
     } catch (error) {

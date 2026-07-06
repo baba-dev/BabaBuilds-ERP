@@ -337,10 +337,13 @@ export async function POST(request: Request) {
           const totalAmount = taxableSubtotal.add(tax);
           const productSales = groupProductSales(resolvedItems);
 
+          const profile = await tx.businessProfile.findUnique({ where: { workspaceId }, select: { invoicePrefix: true } });
+          const invoicePrefix = profile?.invoicePrefix || 'INV';
+
           if (action === 'PAY_NOW') {
             // Create an Invoice marked as PAID
             const invoiceDate = new Date();
-            const { invoiceNumber, financialYear } = await getNextInvoiceNumber(tx, workspaceId, invoiceDate);
+            const { invoiceNumber, financialYear } = await getNextInvoiceNumber(tx, workspaceId, invoiceDate, invoicePrefix);
             const invoice = await tx.invoice.create({
               data: {
                 workspaceId,
@@ -365,7 +368,7 @@ export async function POST(request: Request) {
             return { message: 'Payment collected successfully!', invoice };
           } else if (action === 'INVOICE') {
             const invoiceDate = new Date();
-            const { invoiceNumber, financialYear } = await getNextInvoiceNumber(tx, workspaceId, invoiceDate);
+            const { invoiceNumber, financialYear } = await getNextInvoiceNumber(tx, workspaceId, invoiceDate, invoicePrefix);
             const invoice = await tx.invoice.create({
               data: {
                 workspaceId,
