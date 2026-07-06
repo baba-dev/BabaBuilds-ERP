@@ -17,7 +17,15 @@ import {
   isValidModuleKey,
 } from '@/lib/modules';
 
-async function getWorkspaceId(userId: string): Promise<string | null> {
+async function getWorkspaceId(userId: string, sessionWorkspaceId?: string | null): Promise<string | null> {
+  if (sessionWorkspaceId) {
+    const membership = await prisma.workspaceUser.findFirst({
+      where: { userId, workspaceId: sessionWorkspaceId, isActive: true },
+      select: { workspaceId: true },
+    });
+    if (membership) return membership.workspaceId;
+  }
+
   const wu = await prisma.workspaceUser.findFirst({
     where: { userId, isActive: true },
     select: { workspaceId: true },
@@ -26,14 +34,14 @@ async function getWorkspaceId(userId: string): Promise<string | null> {
   return wu?.workspaceId ?? null;
 }
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const workspaceId = await getWorkspaceId(session.user.id);
+    const workspaceId = await getWorkspaceId(session.user.id, (session as { workspaceId?: string | null }).workspaceId);
     if (!workspaceId) {
       return NextResponse.json({ modules: [] });
     }
@@ -53,7 +61,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const workspaceId = await getWorkspaceId(session.user.id);
+    const workspaceId = await getWorkspaceId(session.user.id, (session as { workspaceId?: string | null }).workspaceId);
     if (!workspaceId) {
       return NextResponse.json({ error: 'No workspace found' }, { status: 400 });
     }

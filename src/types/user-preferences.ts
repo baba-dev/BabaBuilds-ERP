@@ -2,6 +2,7 @@ export const MAX_PINNED_ITEMS = 3;
 
 export type SidebarItemId =
   | "dashboard"
+  | "companies"
   | "service_catalog"
   | "shop"
   | "inventory"
@@ -40,6 +41,7 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
 
 const ALLOWED_IDS = new Set<SidebarItemId>([
   "dashboard",
+  "companies",
   "service_catalog",
   "shop",
   "inventory",

@@ -286,6 +286,7 @@
     }
   },
   "Sidebar": {
+    "companies": "Companies",
     "dashboard": "لوحة القيادة",
     "revenue_pipeline": "مسار الإيرادات",
     "service_catalog": "كتالوج الخدمات",
