@@ -20,6 +20,7 @@ import {
   assertFreeTierMonthlyInvoiceAllowed,
   canInjectGatewayPaymentLinks,
 } from "@/lib/entitlements";
+import { getNextInvoiceNumber } from "@/lib/document-numbering";
 
 export async function convertProposalToInvoiceAction(proposalId: string) {
   const session = await getServerSession(authOptions);
@@ -118,18 +119,7 @@ export async function convertProposalToInvoiceAction(proposalId: string) {
       ? `${parseInt(shortYear) - 1}-${shortYear}`
       : `${shortYear}-${parseInt(shortYear) + 1}`;
 
-  const lastInvoice = await prisma.invoice.findFirst({
-    where: { financialYear: fy, workspaceId },
-    orderBy: { createdAt: "desc" },
-  });
-  let sequence = 1;
-  if (lastInvoice?.invoiceNumber) {
-    const parts = lastInvoice.invoiceNumber.split("/");
-    if (parts.length === 3 && !Number.isNaN(parseInt(parts[2] || "", 10))) {
-      sequence = parseInt(parts[2], 10) + 1;
-    }
-  }
-  const invoiceNumber = `INV/${fy}/${sequence.toString().padStart(3, "0")}`;
+  const { invoiceNumber } = await getNextInvoiceNumber(prisma, workspaceId, invoiceDate, (profile as any).invoicePrefix || "INV");
 
   // Generate payment link if possible (best-effort; never blocks conversion).
   const billingSnap = {
@@ -385,5 +375,3 @@ export async function convertProposalToRetainerAction(formData: FormData) {
 export async function convertProposalToRetainerFormAction(formData: FormData) {
   return convertProposalToRetainerAction(formData);
 }
-
-
