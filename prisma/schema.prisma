@@ -757,8 +757,9 @@ model CompanyGroupWorkspace {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  isPrimary Boolean @default(false)
-  isActive  Boolean @default(true)
+  relationType String  @default("MEMBER")
+  isPrimary    Boolean @default(false)
+  isActive     Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -777,8 +778,10 @@ model CompanyGroupMember {
   userId String
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  role     String  @default("MEMBER")
-  isActive Boolean @default(true)
+  role       String  @default("MEMBER")
+  groupRole  String  @default("MEMBER")
+  accessMode String  @default("SPECIFIC_COMPANIES")
+  isActive   Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
