@@ -480,6 +480,7 @@ model WebAuthnCredential {
   transports   String?
   deviceType   String?
   backedUp     Boolean  @default(false)
+  name         String?
   createdAt    DateTime @default(now())
   lastUsedAt   DateTime?
 
