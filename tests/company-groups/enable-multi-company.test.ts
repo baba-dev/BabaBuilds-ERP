@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { enableMultiCompany } from '@/lib/company-groups/enable-multi-company';
+import { enableMultiCompany, WorkspaceNotFoundError } from '@/lib/company-groups/enable-multi-company';
 import { prisma } from '@/lib/prisma';
 
 const createdWorkspaceIds: string[] = [];
@@ -42,12 +42,12 @@ describe('enableMultiCompany', () => {
     const workspace = await createWorkspace();
     const actor = await createUser();
 
-    const result = await enableMultiCompany({ workspaceId: workspace.id, actorUserId: actor.id });
+    const result = await enableMultiCompany(workspace.id, actor.id);
 
     const groupWorkspace = await prisma.companyGroupWorkspace.findUnique({
       where: {
         companyGroupId_workspaceId: {
-          companyGroupId: result.companyGroupId,
+          companyGroupId: result.companyGroup.id,
           workspaceId: workspace.id,
         },
       },
@@ -55,7 +55,8 @@ describe('enableMultiCompany', () => {
 
     expect(groupWorkspace).toMatchObject({
       workspaceId: workspace.id,
-      companyGroupId: result.companyGroupId,
+      companyGroupId: result.companyGroup.id,
+      relationType: 'PRIMARY',
       isPrimary: true,
       isActive: true,
     });
@@ -70,53 +71,69 @@ describe('enableMultiCompany', () => {
     });
     const actor = await createUser();
 
-    const result = await enableMultiCompany({ workspaceId: workspace.id, actorUserId: actor.id });
+    const result = await enableMultiCompany(workspace.id, actor.id);
 
-    const group = await prisma.companyGroup.findUniqueOrThrow({ where: { id: result.companyGroupId } });
-    expect(group.subscriptionStatus).toBe('TRIALING');
-    expect(group.subscriptionEndsAt?.toISOString()).toBe(subscriptionEndsAt.toISOString());
-    expect(group.planTier).toBe('TEAM');
-    expect(group.billingWorkspaceId).toBe(workspace.id);
+    expect(result.companyGroup.subscriptionStatus).toBe('TRIALING');
+    expect(result.companyGroup.subscriptionEndsAt?.toISOString()).toBe(subscriptionEndsAt.toISOString());
+    expect(result.companyGroup.planTier).toBe('TEAM');
+    expect(result.companyGroup.billingWorkspaceId).toBe(workspace.id);
   });
 
-  it('makes the actor a GROUP_OWNER', async () => {
+  it('makes the actor a GROUP_OWNER with all-company access', async () => {
     const workspace = await createWorkspace();
     const actor = await createUser();
 
-    const result = await enableMultiCompany({ workspaceId: workspace.id, actorUserId: actor.id });
+    const result = await enableMultiCompany(workspace.id, actor.id);
 
     const member = await prisma.companyGroupMember.findUnique({
       where: {
         companyGroupId_userId: {
-          companyGroupId: result.companyGroupId,
+          companyGroupId: result.companyGroup.id,
           userId: actor.id,
         },
       },
-      include: { workspaceAccess: true },
     });
 
-    expect(member).toMatchObject({ role: 'GROUP_OWNER', isActive: true });
-    expect(member?.workspaceAccess).toEqual([
-      expect.objectContaining({ workspaceId: workspace.id, accessRole: 'GROUP_OWNER', isActive: true }),
-    ]);
+    expect(member).toMatchObject({
+      userId: actor.id,
+      groupRole: 'GROUP_OWNER',
+      accessMode: 'ALL_COMPANIES',
+      isActive: true,
+    });
   });
 
-  it('enables MULTI_COMPANY at group level', async () => {
+  it('enables MULTI_COMPANY at group and workspace level', async () => {
     const workspace = await createWorkspace();
     const actor = await createUser();
 
-    const result = await enableMultiCompany({ workspaceId: workspace.id, actorUserId: actor.id });
+    const result = await enableMultiCompany(workspace.id, actor.id);
 
-    const module = await prisma.companyGroupModule.findUnique({
+    const groupModule = await prisma.companyGroupModule.findUnique({
       where: {
         companyGroupId_moduleKey: {
-          companyGroupId: result.companyGroupId,
+          companyGroupId: result.companyGroup.id,
+          moduleKey: 'MULTI_COMPANY',
+        },
+      },
+    });
+    const workspaceModule = await prisma.workspaceModule.findUnique({
+      where: {
+        workspaceId_moduleKey: {
+          workspaceId: workspace.id,
           moduleKey: 'MULTI_COMPANY',
         },
       },
     });
 
-    expect(module).toMatchObject({ moduleKey: 'MULTI_COMPANY', isEnabled: true });
+    expect(groupModule).toMatchObject({ moduleKey: 'MULTI_COMPANY', isEnabled: true });
+    expect(workspaceModule).toMatchObject({
+      workspaceId: workspace.id,
+      moduleKey: 'MULTI_COMPANY',
+      isEnabled: true,
+      enabledByUserId: actor.id,
+      disabledAt: null,
+      disabledByUserId: null,
+    });
   });
 
   it('leaves existing workspace business data scoped only by workspaceId', async () => {
@@ -140,7 +157,7 @@ describe('enableMultiCompany', () => {
       },
     });
 
-    await enableMultiCompany({ workspaceId: workspace.id, actorUserId: actor.id });
+    await enableMultiCompany(workspace.id, actor.id);
 
     const workspaceClients = await prisma.client.findMany({ where: { workspaceId: workspace.id } });
     const otherWorkspaceClients = await prisma.client.findMany({ where: { workspaceId: otherWorkspace.id } });
@@ -155,8 +172,9 @@ describe('enableMultiCompany', () => {
   it('throws a safe error when the workspace does not exist', async () => {
     const actor = await createUser();
 
-    await expect(
-      enableMultiCompany({ workspaceId: 'missing-workspace-id', actorUserId: actor.id }),
-    ).rejects.toThrow('Workspace not found.');
+    await expect(enableMultiCompany('missing-workspace-id', actor.id)).rejects.toThrow(WorkspaceNotFoundError);
+    await expect(enableMultiCompany('missing-workspace-id', actor.id)).rejects.toThrow(
+      'Workspace not found: missing-workspace-id',
+    );
   });
 });
