@@ -460,6 +460,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   webAuthnCredentials WebAuthnCredential[]
   webAuthnChallenges WebAuthnChallenge[]
+  companyGroupMemberships CompanyGroupMember[]
 
   /// When set, this user can access the distributor partner portal for this partner record
   distributorPartnerId String?
@@ -604,6 +605,9 @@ model Workspace {
 
   // RELATIONS
   users                           WorkspaceUser[]
+  companyGroupLinks               CompanyGroupWorkspace[]
+  billingForGroups                CompanyGroup[] @relation("CompanyGroupBillingWorkspace")
+  companyGroupMemberAccesses      CompanyGroupMemberWorkspaceAccess[]
   businessProfile                 BusinessProfile?
   clients                         Client[]
   invoices                        Invoice[]
@@ -719,6 +723,104 @@ model Workspace {
   @@index([isDemo])
   @@index([demoExpiresAt])
   @@index([demoTemplateKey])
+}
+
+model CompanyGroup {
+  id   String @id @default(cuid())
+  name String
+
+  /// Optional workspace that owns billing for the company group.
+  billingWorkspaceId String?
+  billingWorkspace   Workspace? @relation("CompanyGroupBillingWorkspace", fields: [billingWorkspaceId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaces CompanyGroupWorkspace[]
+  members    CompanyGroupMember[]
+  modules    CompanyGroupModule[]
+
+  @@index([billingWorkspaceId])
+}
+
+model CompanyGroupWorkspace {
+  id String @id @default(cuid())
+
+  companyGroupId String
+  companyGroup   CompanyGroup @relation(fields: [companyGroupId], references: [id], onDelete: Cascade)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  isPrimary Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyGroupId, workspaceId])
+  @@index([workspaceId])
+  @@index([companyGroupId, isPrimary])
+}
+
+model CompanyGroupMember {
+  id String @id @default(cuid())
+
+  companyGroupId String
+  companyGroup   CompanyGroup @relation(fields: [companyGroupId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role     String  @default("MEMBER")
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceAccess CompanyGroupMemberWorkspaceAccess[]
+
+  @@unique([companyGroupId, userId])
+  @@index([userId])
+  @@index([companyGroupId, isActive])
+}
+
+model CompanyGroupMemberWorkspaceAccess {
+  id String @id @default(cuid())
+
+  companyGroupMemberId String
+  companyGroupMember   CompanyGroupMember @relation(fields: [companyGroupMemberId], references: [id], onDelete: Cascade)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  accessRole String  @default("MEMBER")
+  isActive   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyGroupMemberId, workspaceId])
+  @@index([workspaceId, isActive])
+}
+
+model CompanyGroupModule {
+  id String @id @default(cuid())
+
+  companyGroupId String
+  companyGroup   CompanyGroup @relation(fields: [companyGroupId], references: [id], onDelete: Cascade)
+
+  moduleKey String
+  isEnabled Boolean @default(true)
+  configJson Json?
+
+  enabledAt  DateTime  @default(now())
+  disabledAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyGroupId, moduleKey])
+  @@index([companyGroupId, isEnabled])
 }
 
 model ResellerAccount {
