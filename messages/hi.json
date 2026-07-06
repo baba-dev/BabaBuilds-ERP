@@ -286,6 +286,7 @@
     }
   },
   "Sidebar": {
+    "companies": "Companies",
     "dashboard": "डैशबोर्ड",
     "revenue_pipeline": "रेवेन्यू पाइपलाइन",
     "service_catalog": "सेवा कैटलॉग",

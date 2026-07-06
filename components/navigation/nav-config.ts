@@ -1,6 +1,7 @@
 import {
   Archive,
   Box,
+  Building2,
   Briefcase,
   HandCoins,
   FileSignature,
@@ -63,6 +64,7 @@ function assertUniqueAppNavItemKeys(items: CanonicalNavItem[]) {
 
 export const canonicalNavItems: CanonicalNavItem[] = assertUniqueAppNavItemKeys([
   { key: "dashboard", path: "/dashboard", icon: LayoutDashboard, group: "overview", keywords: ["home", "kpi", "summary"] },
+  { key: "companies", path: "/companies", icon: Building2, group: "workspace", keywords: ["multi company", "group", "consolidation"], badge: "New", requiresModule: "MULTI_COMPANY" },
   { key: "revenue_pipeline", path: "/proposals/pipeline", icon: Target, group: "sales", keywords: ["pipeline", "deals", "forecast"], badge: "AI", requiresModule: "REVENUE_PIPELINE" },
   { key: "service_catalog", path: "/services", icon: Briefcase, group: "operations", keywords: ["offerings", "pricing", "catalog"] },
   { key: "shop", path: "/shop", icon: Store, group: "operations", keywords: ["storefront", "orders", "public"], badge: "New", requiresModule: "SHOP", requiresPermission: "shop.view" },

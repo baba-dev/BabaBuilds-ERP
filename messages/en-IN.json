@@ -370,6 +370,7 @@
     }
   },
   "Sidebar": {
+    "companies": "Companies",
     "dashboard": "Dashboard",
     "revenue_pipeline": "Revenue Pipeline",
     "service_catalog": "Service Catalog",

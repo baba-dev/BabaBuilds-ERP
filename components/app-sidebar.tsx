@@ -19,6 +19,7 @@ import {
   type UserPreferences,
 } from "@/src/types/user-preferences";
 import TrialStatusPill from "@/components/dashboard/TrialStatusPill";
+import { CompanySwitcher } from "@/components/companies-company-switcher";
 
 function SidebarBrand() {
   const t = useTranslations("Sidebar");
@@ -226,6 +227,8 @@ export function AppSidebar() {
           <TrialStatusPill trialEndsAt={trialEndsAt} isTrialing={isTrialing} />
         </div>
       )}
+
+        <CompanySwitcher />
 
         <SidebarSearch enabledModules={enabledModules} grantedPermissions={grantedPermissions} />
 
