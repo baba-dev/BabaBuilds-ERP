@@ -123,7 +123,9 @@ export const parseInvoicePaymentPayload = (payload: unknown): InvoicePaymentPayl
   return { amountReceived, dateReceived };
 };
 export type BusinessProfileDto = {
+  workspaceId?: string;
   companyName: string;
+  inheritSmtpFromGroup?: boolean | null;
   smtpHost: string | null;
   smtpPort: number | null;
   smtpUser: string | null;

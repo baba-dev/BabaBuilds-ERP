@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { commitShopOrderPayment } from '@/lib/shop/commit-shop-order-payment';
 import { timingSafeEqualString } from '@/lib/security/signature';
 import { isModuleEnabled } from '@/lib/modules';
+import { resolveBusinessProfileSettings } from '@/lib/business-profile-inheritance';
 
 /**
  * POST /api/shop/[slug]/verify
@@ -48,7 +49,11 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
       if (!order.razorpayOrderId || razorpayOrderId !== order.razorpayOrderId) {
         return NextResponse.json({ error: 'Gateway order mismatch.' }, { status: 400 });
       }
-      const decryptedSecret = decrypt(profile.razorpayKeySecret!);
+      const paymentProfile = await resolveBusinessProfileSettings(profile, 'paymentGateway');
+      if (!paymentProfile?.razorpayKeySecret) {
+        return NextResponse.json({ error: 'Payment gateway not configured for this shop.' }, { status: 400 });
+      }
+      const decryptedSecret = decrypt(paymentProfile.razorpayKeySecret);
       const expectedSig     = crypto
         .createHmac('sha256', decryptedSecret)
         .update(`${razorpayOrderId}|${razorpayPaymentId}`)

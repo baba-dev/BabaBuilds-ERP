@@ -6,6 +6,7 @@ import crypto from "crypto";
 import { dispatchNotification } from "@/lib/notifications/dispatcher";
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from "@/lib/dashboard-cache";
 import { timingSafeEqualString } from "@/lib/security/signature";
+import { resolveBusinessProfileSettings } from "@/lib/business-profile-inheritance";
 
 const ZERO_DECIMAL_CURRENCIES = new Set([
   "BIF", "CLP", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA",
@@ -48,7 +49,11 @@ export async function GET(req: NextRequest) {
         include: { workspace: { include: { businessProfile: true } }, client: true }
       });
 
-      if (!invoice || !invoice.workspace?.businessProfile?.stripeSecretKey) {
+      if (!invoice || !invoice.workspace?.businessProfile) {
+        return NextResponse.redirect(new URL("/payments/failure?reason=invoice_not_found", req.url));
+      }
+      const paymentProfile = await resolveBusinessProfileSettings(invoice.workspace.businessProfile, "paymentGateway");
+      if (!paymentProfile?.stripeSecretKey) {
         return NextResponse.redirect(new URL("/payments/failure?reason=invoice_not_found", req.url));
       }
 
@@ -58,7 +63,7 @@ export async function GET(req: NextRequest) {
       }
 
       const { decrypt } = await import('@/lib/encryption');
-      const decryptedSecret = decrypt(invoice.workspace.businessProfile.stripeSecretKey);
+      const decryptedSecret = decrypt(paymentProfile.stripeSecretKey);
       
       const stripe = new Stripe(decryptedSecret, { apiVersion: '2026-03-25.dahlia' as any });
       const session = await stripe.checkout.sessions.retrieve(sessionId);
@@ -113,7 +118,11 @@ export async function GET(req: NextRequest) {
         include: { workspace: { include: { businessProfile: true } }, client: true }
       });
 
-      if (!invoice || !invoice.workspace?.businessProfile?.razorpayKeySecret) {
+      if (!invoice || !invoice.workspace?.businessProfile) {
+        return NextResponse.redirect(new URL("/payments/failure?reason=invoice_not_found", req.url));
+      }
+      const paymentProfile = await resolveBusinessProfileSettings(invoice.workspace.businessProfile, "paymentGateway");
+      if (!paymentProfile?.razorpayKeySecret || !paymentProfile.razorpayKeyId) {
         return NextResponse.redirect(new URL("/payments/failure?reason=invoice_not_found", req.url));
       }
 
@@ -122,7 +131,7 @@ export async function GET(req: NextRequest) {
       }
 
       const { decrypt } = await import('@/lib/encryption');
-      const decryptedSecret = decrypt(invoice.workspace.businessProfile.razorpayKeySecret);
+      const decryptedSecret = decrypt(paymentProfile.razorpayKeySecret);
 
       // Verify Razorpay signature
       // Format: payment_link_id + "|" + payment_link_reference_id + "|" + payment_link_status + "|" + payment_id
@@ -138,7 +147,7 @@ export async function GET(req: NextRequest) {
       }
 
       const rzp = new Razorpay({
-        key_id: invoice.workspace.businessProfile.razorpayKeyId!,
+        key_id: paymentProfile.razorpayKeyId,
         key_secret: decryptedSecret,
       });
 

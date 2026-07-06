@@ -12,6 +12,7 @@ import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
 import { toInvoiceStatus } from '@/lib/invoice-status';
 import { toDecimal } from '@/lib/money';
 import { sendEmail } from '@/lib/mailer';
+import { resolveBusinessProfileSettings } from '@/lib/business-profile-inheritance';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
 import { logActivity } from '@/lib/activity-log';
 import { buildPrivatePath, ensureDir } from '@/lib/uploads/private-storage';
@@ -333,7 +334,8 @@ export async function POST(request: Request) {
     const serviceTaxRates = sanitizedServices
       .map((service: SanitizedService) => service.sac?.igstRate ?? service.taxRate ?? null)
       .filter((rate: number | null): rate is number => rate !== null && rate !== undefined);
-    const profileSettings = profile as typeof profile & ProfileSettings;
+    const profileSettings = (await resolveBusinessProfileSettings(profile as typeof profile & ProfileSettings, 'paymentGateway')) ?? (profile as typeof profile & ProfileSettings);
+    const smtpProfile = await resolveBusinessProfileSettings(profile, 'smtp');
     const taxResolution = resolveTaxRate({
       countryCode,
       isTaxExempt: Boolean(client.isExport),
@@ -726,7 +728,7 @@ export async function POST(request: Request) {
     if (shouldSendEmail) {
       if (!client.email) {
         emailStatus = "Failed: Client has no email address on file.";
-      } else if (!profile.smtpHost || !profile.smtpUser || !profile.smtpPassword) {
+      } else if (!smtpProfile?.smtpHost || !smtpProfile.smtpUser || !smtpProfile.smtpPassword) {
         emailStatus = "Failed: SMTP Server not configured in Settings.";
       } else {
         try {

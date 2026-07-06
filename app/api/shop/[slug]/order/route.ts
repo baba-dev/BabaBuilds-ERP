@@ -6,6 +6,7 @@ import { dispatchNotification } from '@/lib/notifications/dispatcher';
 import { logActivity } from '@/lib/security/activity-log';
 import { Prisma } from '@prisma/client';
 import { isModuleEnabled } from '@/lib/modules';
+import { resolveBusinessProfileSettings } from '@/lib/business-profile-inheritance';
 
 type BusinessProfileWithSecrets = {
   stripeSecretKey?: string | null;
@@ -118,10 +119,11 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
     const currency = profile.workspace ? 'INR' : 'INR'; // extend for multi-currency later
 
     // Determine which gateway to use
-    const hasRazorpay = !!(profile.razorpayKeyId && profile.razorpayKeySecret);
-    const profileSecrets = profile as typeof profile & BusinessProfileWithSecrets;
-    const hasStripe   = !!(profile.stripePublishableKey && profileSecrets.stripeSecretKey);
-    const gateway     = hasRazorpay && profile.defaultGateway !== 'STRIPE'
+    const paymentProfile = await resolveBusinessProfileSettings(profile, 'paymentGateway');
+    const hasRazorpay = !!(paymentProfile?.razorpayKeyId && paymentProfile.razorpayKeySecret);
+    const profileSecrets = paymentProfile as typeof paymentProfile & BusinessProfileWithSecrets;
+    const hasStripe   = !!(paymentProfile?.stripePublishableKey && profileSecrets?.stripeSecretKey);
+    const gateway     = hasRazorpay && paymentProfile?.defaultGateway !== 'STRIPE'
       ? 'RAZORPAY'
       : hasStripe ? 'STRIPE' : null;
 
@@ -202,8 +204,8 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
     });
 
     if (gateway === 'RAZORPAY') {
-      const decryptedSecret = decrypt(profile.razorpayKeySecret!);
-      const rzp = new Razorpay({ key_id: profile.razorpayKeyId!, key_secret: decryptedSecret });
+      const decryptedSecret = decrypt(paymentProfile!.razorpayKeySecret!);
+      const rzp = new Razorpay({ key_id: paymentProfile!.razorpayKeyId!, key_secret: decryptedSecret });
       const rzpOrder = await rzp.orders.create({
         amount:   Math.round(amount * 100), // paise
         currency: 'INR',
@@ -222,7 +224,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
         rpOrderId:  rzpOrder.id,
         amount:     rzpOrder.amount,
         currency:   rzpOrder.currency,
-        keyId:      profile.razorpayKeyId,
+        keyId:      paymentProfile!.razorpayKeyId,
         prefill:    { name: buyerName, email: buyerEmail, contact: buyerPhone || '' },
         shopName:   profile.companyName,
         itemCount: order.items.length,

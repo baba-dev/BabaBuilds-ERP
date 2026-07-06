@@ -23,6 +23,7 @@ import {
 } from '@/lib/entitlements';
 import { buildInvoiceViewModel } from '@/lib/invoice/build-invoice-view-model';
 import { renderInvoicePdf } from '@/lib/invoice-renderers/render-invoice-pdf';
+import { resolveBusinessProfileSettings } from '@/lib/business-profile-inheritance';
 
 // Helper for Indian Financial Year
 const getFY = (date: Date) => {
@@ -239,18 +240,26 @@ export async function GET(request: Request) {
             dueDate.setDate(dueDate.getDate() + 7);
 
             if (paidFeatures) {
-              const defaultGateway = (profile as any).defaultGateway || 'RAZORPAY';
+              const paymentProfile = await resolveBusinessProfileSettings(profile as typeof profile & {
+                inheritPaymentGatewayFromGroup?: boolean | null;
+                razorpayKeyId?: string | null;
+                razorpayKeySecret?: string | null;
+                stripePublishableKey?: string | null;
+                stripeSecretKey?: string | null;
+                defaultGateway?: string | null;
+              }, 'paymentGateway') ?? profile;
+              const defaultGateway = (paymentProfile as any).defaultGateway || 'RAZORPAY';
 
               if (
                 defaultGateway === 'RAZORPAY' &&
                 baseCurrency === 'INR' &&
-                (profile as any).razorpayKeyId &&
-                (profile as any).razorpayKeySecret
+                (paymentProfile as any).razorpayKeyId &&
+                (paymentProfile as any).razorpayKeySecret
               ) {
                 try {
                   const { decrypt }                   = await import('@/lib/encryption');
                   const { generateTenantPaymentLink } = await import('@/lib/razorpay-links');
-                  const decryptedSecret = decrypt((profile as any).razorpayKeySecret);
+                  const decryptedSecret = decrypt((paymentProfile as any).razorpayKeySecret);
 
                   const linkResult = await generateTenantPaymentLink({
                     amount:          totals.total,
@@ -261,7 +270,7 @@ export async function GET(request: Request) {
                       name:  retainer.client.name,
                       email: retainer.client.email ?? undefined,
                     },
-                    tenantKeyId:     (profile as any).razorpayKeyId,
+                    tenantKeyId:     (paymentProfile as any).razorpayKeyId,
                     tenantKeySecret: decryptedSecret,
                   });
 
@@ -275,13 +284,13 @@ export async function GET(request: Request) {
                 }
               } else if (
                 defaultGateway === 'STRIPE' &&
-                (profile as any).stripePublishableKey &&
-                (profile as any).stripeSecretKey
+                (paymentProfile as any).stripePublishableKey &&
+                (paymentProfile as any).stripeSecretKey
               ) {
                 try {
                   const { decrypt }                   = await import('@/lib/encryption');
                   const { generateStripePaymentLink } = await import('@/lib/stripe-links');
-                  const decryptedSecret = decrypt((profile as any).stripeSecretKey);
+                  const decryptedSecret = decrypt((paymentProfile as any).stripeSecretKey);
 
                   const linkResult = await generateStripePaymentLink({
                     amount:          totals.total,

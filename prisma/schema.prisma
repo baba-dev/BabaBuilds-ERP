@@ -1344,6 +1344,7 @@ model BusinessProfile {
   defaultTaxRate Float?
 
   // PAYMENT GATEWAY (Per-Tenant Razorpay Keys — PRO users only)
+  inheritPaymentGatewayFromGroup Boolean @default(false)
   razorpayKeyId     String? // Plain text (publishable key, e.g. rzp_live_xxx)
   razorpayKeySecret String? // AES-256-GCM encrypted blob (NEVER stored plain)
 
@@ -1367,6 +1368,7 @@ model BusinessProfile {
   shopShowAiAssist Boolean @default(true) // Show in-shop "AI Assist" lead-capture drawer for buyers
 
   // EMAIL SERVER (SMTP)
+  inheritSmtpFromGroup Boolean @default(false)
   smtpHost      String?
   smtpPort      Int?
   smtpUser      String?

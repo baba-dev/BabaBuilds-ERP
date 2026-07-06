@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import dns from 'dns';
 import { promisify } from 'util';
 import { decrypt } from '@/lib/encryption';
+import { resolveBusinessProfileSettings } from '@/lib/business-profile-inheritance';
 
 import { MailOptions } from '@/lib/types/business';
 
@@ -78,33 +79,34 @@ export async function sendEmail({
 
   } else {
     // User route
-    if (!profile || !profile.smtpHost || !profile.smtpUser || !profile.smtpPassword) {
+    const smtpProfile = await resolveBusinessProfileSettings(profile ?? null, 'smtp');
+    if (!smtpProfile || !smtpProfile.smtpHost || !smtpProfile.smtpUser || !smtpProfile.smtpPassword) {
       throw new Error('MISSING_USER_SMTP');
     }
 
-    const safeIp = await resolveSafeIp(profile.smtpHost);
+    const safeIp = await resolveSafeIp(smtpProfile.smtpHost);
     if (!safeIp) {
       throw new Error('Invalid or internal SMTP Host blocked by security policy.');
     }
 
     transporter = nodemailer.createTransport({
       host: safeIp,
-      port: profile.smtpPort || 587,
-      secure: profile.smtpPort === 465,
+      port: smtpProfile.smtpPort || 587,
+      secure: smtpProfile.smtpPort === 465,
       tls: {
-        servername: profile.smtpHost,
+        servername: smtpProfile.smtpHost,
         minVersion: 'TLSv1.2',
         rejectUnauthorized: true,
         ciphers: 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256',
         honorCipherOrder: true,
       },
       auth: {
-        user: profile.smtpUser,
-        pass: getRuntimeSmtpPassword(profile.smtpPassword),
+        user: smtpProfile.smtpUser,
+        pass: getRuntimeSmtpPassword(smtpProfile.smtpPassword),
       },
     });
 
-    fromAddress = `"${profile.companyName}" <${profile.smtpFromEmail || profile.smtpUser}>`;
+    fromAddress = `"${smtpProfile.companyName}" <${smtpProfile.smtpFromEmail || smtpProfile.smtpUser}>`;
   }
 
   const mailOptions = {

@@ -15,6 +15,7 @@ import fs from "fs";
 import { decrypt } from "@/lib/encryption";
 import { generateTenantPaymentLink } from "@/lib/razorpay-links";
 import { generateStripePaymentLink } from "@/lib/stripe-links";
+import { resolveBusinessProfileSettings } from "@/lib/business-profile-inheritance";
 import {
   assertFreeTierMonthlyInvoiceAllowed,
   canInjectGatewayPaymentLinks,
@@ -137,7 +138,14 @@ export async function convertProposalToInvoiceAction(proposalId: string) {
     subscriptionEndsAt: proposal.workspace?.subscriptionEndsAt,
   };
   const paidFeatures = canInjectGatewayPaymentLinks(billingSnap);
-  const defaultGateway = String((profile as any).defaultGateway || "RAZORPAY").toUpperCase();
+  const paymentProfile = (await resolveBusinessProfileSettings(profile as typeof profile & {
+    inheritPaymentGatewayFromGroup?: boolean | null;
+    razorpayKeyId?: string | null;
+    razorpayKeySecret?: string | null;
+    stripeSecretKey?: string | null;
+    defaultGateway?: string | null;
+  }, "paymentGateway")) ?? profile;
+  const defaultGateway = String((paymentProfile as any).defaultGateway || "RAZORPAY").toUpperCase();
   let paymentLink: string | null = null;
   let providerPaymentLinkId: string | null = null;
   let providerGateway: string | null = null;
@@ -146,10 +154,10 @@ export async function convertProposalToInvoiceAction(proposalId: string) {
     if (
       defaultGateway === "RAZORPAY" &&
       baseCurrency === "INR" &&
-      (profile as any).razorpayKeyId &&
-      (profile as any).razorpayKeySecret
+      (paymentProfile as any).razorpayKeyId &&
+      (paymentProfile as any).razorpayKeySecret
     ) {
-      const decryptedSecret = decrypt((profile as any).razorpayKeySecret);
+      const decryptedSecret = decrypt((paymentProfile as any).razorpayKeySecret);
       const result = await generateTenantPaymentLink({
         amount: Number(totals.total),
         currency: baseCurrency,
@@ -159,7 +167,7 @@ export async function convertProposalToInvoiceAction(proposalId: string) {
           name: proposal.client.name,
           email: proposal.client.email ?? undefined,
         },
-        tenantKeyId: (profile as any).razorpayKeyId,
+        tenantKeyId: (paymentProfile as any).razorpayKeyId,
         tenantKeySecret: decryptedSecret,
       });
       if (result) {
@@ -172,9 +180,9 @@ export async function convertProposalToInvoiceAction(proposalId: string) {
     if (
       !paymentLink &&
       defaultGateway === "STRIPE" &&
-      (profile as any).stripeSecretKey
+      (paymentProfile as any).stripeSecretKey
     ) {
-      const decryptedSecret = decrypt((profile as any).stripeSecretKey);
+      const decryptedSecret = decrypt((paymentProfile as any).stripeSecretKey);
       const result = await generateStripePaymentLink({
         amount: Number(totals.total),
         currency: baseCurrency,

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
 import Razorpay from "razorpay";
 import { isCronAuthorized, unauthorizedCronResponse } from '@/lib/security/cron-auth';
+import { resolveBusinessProfileSettings } from '@/lib/business-profile-inheritance';
 
 // Force node runtime for cron if needed, though standard Edge might be fine
 export const runtime = 'nodejs';
@@ -42,10 +43,11 @@ export async function GET(req: Request) {
       if (!profile) continue;
 
       try {
-        if (invoice.providerGateway === "RAZORPAY" && profile.razorpayKeyId && profile.razorpayKeySecret) {
-          const decryptedSecret = decrypt(profile.razorpayKeySecret);
+        const paymentProfile = await resolveBusinessProfileSettings(profile, "paymentGateway");
+        if (invoice.providerGateway === "RAZORPAY" && paymentProfile?.razorpayKeyId && paymentProfile.razorpayKeySecret) {
+          const decryptedSecret = decrypt(paymentProfile.razorpayKeySecret);
           const rzp = new Razorpay({
-            key_id: profile.razorpayKeyId,
+            key_id: paymentProfile.razorpayKeyId,
             key_secret: decryptedSecret
           });
 
@@ -64,8 +66,8 @@ export async function GET(req: Request) {
             await markInvoicePaid(invoice.id, invoice.workspaceId, Number(invoice.grandTotal), invoice.providerPaymentLinkId!);
             results.synced++;
           }
-        } else if (invoice.providerGateway === "STRIPE" && profile.stripeSecretKey) {
-          const decryptedSecret = decrypt(profile.stripeSecretKey);
+        } else if (invoice.providerGateway === "STRIPE" && paymentProfile?.stripeSecretKey) {
+          const decryptedSecret = decrypt(paymentProfile.stripeSecretKey);
           const stripe = new Stripe(decryptedSecret, { apiVersion: '2026-03-25.dahlia' as any });
 
           // Payment links themselves don't have a simple "status" in Stripe.

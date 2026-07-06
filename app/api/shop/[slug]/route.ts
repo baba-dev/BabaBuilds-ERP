@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { isModuleEnabled } from '@/lib/modules';
 import { readShopContent } from '@/lib/shop/content';
 import { publicStorefrontAssetUrl } from '@/lib/shop/public-assets';
+import { resolveBusinessProfileSettings } from '@/lib/business-profile-inheritance';
 
 /**
  * GET /api/shop/[slug]
@@ -40,9 +41,10 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
     }
 
     // Determine checkout capability (Razorpay or Stripe configured?)
-    const hasRazorpay = !!(profile.razorpayKeyId && profile.razorpayKeySecret);
-    const hasStripe   = !!(profile.stripePublishableKey && profile.stripeSecretKey);
-    const activeGateway = hasRazorpay && profile.defaultGateway !== 'STRIPE'
+    const paymentProfile = await resolveBusinessProfileSettings(profile, 'paymentGateway');
+    const hasRazorpay = !!(paymentProfile?.razorpayKeyId && paymentProfile.razorpayKeySecret);
+    const hasStripe   = !!(paymentProfile?.stripePublishableKey && paymentProfile.stripeSecretKey);
+    const activeGateway = hasRazorpay && paymentProfile?.defaultGateway !== 'STRIPE'
       ? 'RAZORPAY'
       : hasStripe ? 'STRIPE' : null;
 
@@ -64,8 +66,8 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
       checkout: {
         available:      !!activeGateway,
         gateway:        activeGateway,        // 'RAZORPAY' | 'STRIPE' | null
-        razorpayKeyId:  activeGateway === 'RAZORPAY' ? profile.razorpayKeyId : null,
-        stripePublishableKey: activeGateway === 'STRIPE' ? profile.stripePublishableKey : null,
+        razorpayKeyId:  activeGateway === 'RAZORPAY' ? paymentProfile?.razorpayKeyId ?? null : null,
+        stripePublishableKey: activeGateway === 'STRIPE' ? paymentProfile?.stripePublishableKey ?? null : null,
       },
       products: profile.workspace.products.map((product) => ({
         id: product.id,

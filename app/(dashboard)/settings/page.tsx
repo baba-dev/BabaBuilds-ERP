@@ -93,7 +93,8 @@ export default function SettingsWizard() {
     companyName: "", proprietorName: "", address: "", email: "", phone: "", website: "",
     panNumber: "", udyamNumber: "", gstin: "",
     bankName: "", accountName: "", accountNumber: "", ifscCode: "",
-    smtpHost: "", smtpPort: "", smtpUser: "", smtpPassword: "", smtpFromEmail: "", 
+    smtpHost: "", smtpPort: "", smtpUser: "", smtpPassword: "", smtpFromEmail: "",
+    inheritSmtpFromGroup: false,
     groqApiKey: "", invoiceTheme: "DESIGN_1", locale: "en-IN", 
     existingLogoUrl: "", existingSignatureUrl: "", defaultSacCode: "998313",
     // Razorpay (PRO only — INR / Indian users)
@@ -102,6 +103,7 @@ export default function SettingsWizard() {
     stripePublishableKey: "", stripeSecretKey: "",
     // Gateway preference
     defaultGateway: "RAZORPAY",
+    inheritPaymentGatewayFromGroup: false,
     // Shop / E-Store
     shopSlug: "", shopTagline: "", shopEnabled: false, shopAccentColor: "#6366f1",
   });
@@ -174,6 +176,7 @@ export default function SettingsWizard() {
             smtpHost: data.smtpHost || "", smtpPort: data.smtpPort || "", 
             smtpUser: data.smtpUser || "", smtpPassword: data.smtpPassword || "", 
             smtpFromEmail: data.smtpFromEmail || "",
+            inheritSmtpFromGroup: Boolean(data.inheritSmtpFromGroup),
             groqApiKey: data.groqApiKey || "", 
             invoiceTheme: data.invoiceTheme || "DESIGN_1",
             locale: data.locale || "en-IN",
@@ -185,6 +188,7 @@ export default function SettingsWizard() {
             stripePublishableKey: data.stripePublishableKey || "",
             stripeSecretKey:      data.stripeSecretKey      || "",
             defaultGateway: gateway,
+            inheritPaymentGatewayFromGroup: Boolean(data.inheritPaymentGatewayFromGroup),
             // Shop
             shopSlug:        data.shopSlug        || "",
             shopTagline:     data.shopTagline      || "",
@@ -775,6 +779,25 @@ export default function SettingsWizard() {
               <CardDescription className={typography.bodyCopy}>{t('smtp_desc')}</CardDescription>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
+              <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, inheritSmtpFromGroup: false })}
+                  className={`w-full flex items-center justify-between px-4 py-3 text-left text-sm ${!formData.inheritSmtpFromGroup ? "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300" : "bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-300"}`}
+                >
+                  <span className="font-semibold">Use this company’s SMTP</span>
+                  {!formData.inheritSmtpFromGroup && <CheckCircle2 className="w-4 h-4" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, inheritSmtpFromGroup: true })}
+                  className={`w-full flex items-center justify-between border-t border-zinc-200 dark:border-zinc-800 px-4 py-3 text-left text-sm ${formData.inheritSmtpFromGroup ? "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300" : "bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-300"}`}
+                >
+                  <span className="font-semibold">Inherit from group billing company</span>
+                  {formData.inheritSmtpFromGroup && <CheckCircle2 className="w-4 h-4" />}
+                </button>
+              </div>
+              <div className={formData.inheritSmtpFromGroup ? "opacity-50 pointer-events-none select-none space-y-6" : "space-y-6"}>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="md:col-span-3 space-y-2">
                   <Label className="dark:text-zinc-300">{t('smtp_host')}</Label>
@@ -816,6 +839,7 @@ export default function SettingsWizard() {
               <div className="space-y-2">
                 <Label className="dark:text-zinc-300">{t('from_email')}</Label>
                 <Input type="email" value={formData.smtpFromEmail} onChange={e => setFormData({...formData, smtpFromEmail: e.target.value})} placeholder={t("placeholders.fromEmail")} className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
+              </div>
               </div>
             </CardContent>
           </Card>
@@ -966,6 +990,26 @@ export default function SettingsWizard() {
                 </div>
               )}
 
+              <div className={`rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden ${gatewayLocked ? "opacity-50 pointer-events-none select-none" : ""}`}>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, inheritPaymentGatewayFromGroup: false })}
+                  className={`w-full flex items-center justify-between px-4 py-3 text-left text-sm ${!formData.inheritPaymentGatewayFromGroup ? "bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300" : "bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-300"}`}
+                >
+                  <span className="font-semibold">Use this company’s payment gateway</span>
+                  {!formData.inheritPaymentGatewayFromGroup && <CheckCircle2 className="w-4 h-4" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, inheritPaymentGatewayFromGroup: true })}
+                  className={`w-full flex items-center justify-between border-t border-zinc-200 dark:border-zinc-800 px-4 py-3 text-left text-sm ${formData.inheritPaymentGatewayFromGroup ? "bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300" : "bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-300"}`}
+                >
+                  <span className="font-semibold">Inherit from group billing company</span>
+                  {formData.inheritPaymentGatewayFromGroup && <CheckCircle2 className="w-4 h-4" />}
+                </button>
+              </div>
+
+              <div className={formData.inheritPaymentGatewayFromGroup ? "opacity-50 pointer-events-none select-none space-y-5" : "space-y-5"}>
               {/* DEFAULT GATEWAY SELECTOR — segmented control */}
               <div className={`space-y-3 ${gatewayLocked ? "opacity-50 pointer-events-none select-none" : ""}`}>
                 <Label className="dark:text-zinc-300 text-sm font-semibold">{t("payment.defaultGateway.label")}</Label>
@@ -1128,6 +1172,7 @@ export default function SettingsWizard() {
                     <p className="text-xs text-zinc-400 dark:text-zinc-500">{t("payment.secretHint")}</p>
                   </div>
                 </div>
+              </div>
               </div>
 
             </CardContent>

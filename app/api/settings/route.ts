@@ -172,6 +172,8 @@ export async function POST(request: Request) {
     const rawStripePublishableKey = getStringField('stripePublishableKey');
     const rawStripeSecretKey      = formData.get('stripeSecretKey')      as string;
     const defaultGateway          = formData.get('defaultGateway')       as string;
+    const inheritSmtpFromGroup = formData.get('inheritSmtpFromGroup') === 'true';
+    const inheritPaymentGatewayFromGroup = formData.get('inheritPaymentGatewayFromGroup') === 'true';
 
     if (isProductionSecurityMode()) {
       if (rawRzpKeyId && isTestRazorpayKeyId(rawRzpKeyId)) {
@@ -294,6 +296,7 @@ export async function POST(request: Request) {
       panNumber, udyamNumber, gstin,
       bankName, accountName, accountNumber, ifscCode,
       smtpHost, smtpPort, smtpUser, smtpFromEmail,
+      inheritSmtpFromGroup, inheritPaymentGatewayFromGroup,
       invoiceTheme, defaultSacCode,
       ...(logoUrl && { logoUrl }),
       ...(signatureUrl !== undefined && { signatureUrl }),
@@ -416,6 +419,7 @@ export async function POST(request: Request) {
           panNumber, udyamNumber, gstin,
           bankName, accountName, accountNumber, ifscCode,
           smtpHost, smtpPort, smtpUser, smtpFromEmail, 
+          inheritSmtpFromGroup, inheritPaymentGatewayFromGroup,
           smtpPassword:
             parsedSmtpPassword && parsedSmtpPassword !== "SET"
               ? encrypt(parsedSmtpPassword)
