@@ -729,6 +729,11 @@ model CompanyGroup {
   id   String @id @default(cuid())
   name String
 
+  // --- GROUP BILLING ---
+  subscriptionStatus String    @default("FREE") // "TRIALING", "PRO", "FREE", "SUSPENDED"
+  subscriptionEndsAt DateTime?
+  planTier           String    @default("FREE") // "FREE", "PRO", "TEAM"
+
   /// Optional workspace that owns billing for the company group.
   billingWorkspaceId String?
   billingWorkspace   Workspace? @relation("CompanyGroupBillingWorkspace", fields: [billingWorkspaceId], references: [id], onDelete: SetNull)
@@ -753,12 +758,13 @@ model CompanyGroupWorkspace {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   isPrimary Boolean @default(false)
+  isActive  Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([companyGroupId, workspaceId])
-  @@index([workspaceId])
+  @@index([workspaceId, isActive])
   @@index([companyGroupId, isPrimary])
 }
 
