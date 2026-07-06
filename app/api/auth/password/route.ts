@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import { logActivity } from "@/lib/activity-log";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -28,9 +29,18 @@ export async function POST(req: Request) {
     );
   }
 
+  const wasConfigured = Boolean(user.passwordHash);
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { passwordHash, passwordUpdatedAt: new Date() },
+    data: { passwordHash, passwordUpdatedAt: new Date(), passwordFailedAttempts: 0, passwordLockedUntil: null, passwordLastFailureAt: null },
+  });
+  logActivity({
+    action: wasConfigured ? "account_security.password_changed" : "account_security.password_set",
+    outcome: "success",
+    entityType: "User",
+    entityId: session.user.id,
+    actorId: session.user.id,
+    actorEmail: session.user.email,
   });
   return NextResponse.json({ ok: true });
 }

@@ -4,6 +4,7 @@ import { verifyRegistrationResponse } from "@simplewebauthn/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { consumeChallenge, getOrigin, getRpID, normalizeTransports, readClientChallenge, toBase64URL } from "@/lib/auth/passkeys";
+import { logActivity } from "@/lib/activity-log";
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
   }
 
   const info = verification.registrationInfo;
-  await prisma.webAuthnCredential.upsert({
+  const passkey = await prisma.webAuthnCredential.upsert({
     where: { credentialID: info.credential.id },
     create: {
       userId: session.user.id,
@@ -45,6 +46,7 @@ export async function POST(request: Request) {
       transports: normalizeTransports((body as { response?: { transports?: unknown } })?.response?.transports),
       deviceType: info.credentialDeviceType,
       backedUp: Boolean(info.credentialBackedUp),
+      name: "New passkey",
     },
     update: {
       userId: session.user.id,
@@ -53,7 +55,18 @@ export async function POST(request: Request) {
       transports: normalizeTransports((body as { response?: { transports?: unknown } })?.response?.transports),
       deviceType: info.credentialDeviceType,
       backedUp: Boolean(info.credentialBackedUp),
+      name: "New passkey",
     },
+  });
+
+  logActivity({
+    action: "account_security.passkey_added",
+    outcome: "success",
+    entityType: "WebAuthnCredential",
+    entityId: passkey.id,
+    actorId: session.user.id,
+    actorEmail: session.user.email,
+    metadata: { deviceType: info.credentialDeviceType, backedUp: Boolean(info.credentialBackedUp) },
   });
 
   return NextResponse.json({ ok: true });
