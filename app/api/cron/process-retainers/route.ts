@@ -24,6 +24,7 @@ import {
 import { buildInvoiceViewModel } from '@/lib/invoice/build-invoice-view-model';
 import { renderInvoicePdf } from '@/lib/invoice-renderers/render-invoice-pdf';
 import { resolveBusinessProfileSettings } from '@/lib/business-profile-inheritance';
+import { getNextInvoiceNumber } from '@/lib/document-numbering';
 
 // Helper for Indian Financial Year
 const getFY = (date: Date) => {
@@ -166,19 +167,7 @@ export async function GET(request: Request) {
         
         while (attempts < MAX_ATTEMPTS && !success) {
           try {
-            const lastInvoice = await prisma.invoice.findFirst({
-              where: { workspaceId, financialYear: fy },
-              orderBy: { createdAt: 'desc' }
-            });
-
-            let sequence = 1;
-            if (lastInvoice && lastInvoice.invoiceNumber) {
-              const parts = lastInvoice.invoiceNumber.split('/');
-              if (parts.length === 3 && !isNaN(parseInt(parts[2]))) {
-                sequence = parseInt(parts[2]) + 1;
-              }
-            }
-            const invoiceNumber = `INV/${fy}/${sequence.toString().padStart(3, '0')}`;
+            const { invoiceNumber } = await getNextInvoiceNumber(prisma, workspaceId, today, (profile as any).invoicePrefix || 'INV');
 
             // B. THE MAGIC TOGGLE (Smart Naming)
             let baseDescription = "Retainer Billing";
