@@ -11,6 +11,7 @@ export const MODULE_KEYS = [
   'SHOP',
   'MIAB_BILLING',
   'POS',
+  'MULTI_COMPANY',
 ] as const;
 
 export type ModuleKey = (typeof MODULE_KEYS)[number];
