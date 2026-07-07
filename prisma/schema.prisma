@@ -401,6 +401,22 @@ enum ReferralRewardType {
   WALLET_CREDIT
 }
 
+enum ReportShareScope {
+  WORKSPACE
+  GROUP
+}
+
+enum ReportShareAudience {
+  INTERNAL
+  EXTERNAL
+}
+
+enum ReportShareStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
 enum ReferralRewardStatus {
   PENDING
   APPROVED
@@ -461,6 +477,7 @@ model User {
   webAuthnCredentials WebAuthnCredential[]
   webAuthnChallenges WebAuthnChallenge[]
   companyGroupMemberships CompanyGroupMember[]
+  createdReportShares     ReportShare[] @relation("ReportShareCreator")
 
   /// When set, this user can access the distributor partner portal for this partner record
   distributorPartnerId String?
@@ -719,6 +736,8 @@ model Workspace {
   taxObligations          TaxObligation[]
   taxObligationPeriods    TaxObligationPeriod[]
   complianceTasks         ComplianceTask[]
+  reportShares            ReportShare[]
+  reportShareSnapshots    ReportShareSnapshot[]
 
   @@index([isDemo])
   @@index([demoExpiresAt])
@@ -744,6 +763,8 @@ model CompanyGroup {
   workspaces CompanyGroupWorkspace[]
   members    CompanyGroupMember[]
   modules    CompanyGroupModule[]
+  reportShares ReportShare[]
+  reportShareSnapshots ReportShareSnapshot[]
 
   @@index([billingWorkspaceId])
 }
@@ -1279,6 +1300,94 @@ model WorkspaceUser {
   @@unique([userId, workspaceId])
   @@index([workspaceId, isActive])
   @@index([workspaceId, businessRole])
+}
+
+/// Shareable report link for either a single workspace or a company group.
+/// External GROUP shares must use snapshots by default so future companies added to the group are not exposed through old links.
+model ReportShare {
+  id String @id @default(cuid())
+
+  scope    ReportShareScope
+  audience ReportShareAudience @default(INTERNAL)
+  status   ReportShareStatus   @default(ACTIVE)
+
+  /// Stable report identifier such as "profit-loss", "cash-flow", or "group-consolidated".
+  reportKey String
+  name      String?
+
+  /// Secret-bearing public token; keep unique and rotate by creating a new share.
+  token     String  @unique
+  tokenHash String? @unique
+
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  companyGroupId String?
+  companyGroup   CompanyGroup? @relation(fields: [companyGroupId], references: [id], onDelete: Cascade)
+
+  createdByUserId String?
+  createdBy       User?   @relation("ReportShareCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  /// Defaults to false so external group shares are snapshots unless explicitly promoted to a live internal workflow.
+  liveDataEnabled Boolean @default(false)
+
+  expiresAt    DateTime?
+  lastViewedAt DateTime?
+  viewCount    Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  snapshots ReportShareSnapshot[]
+
+  @@index([scope, audience, status])
+  @@index([workspaceId, status])
+  @@index([companyGroupId, status])
+  @@index([createdByUserId])
+  @@index([expiresAt])
+}
+
+/// Point-in-time data contract for external group report shares.
+/// Stores the exact companies, query shape, permissions, and generated artifact from creation time.
+model ReportShareSnapshot {
+  id String @id @default(cuid())
+
+  reportShareId String
+  reportShare   ReportShare @relation(fields: [reportShareId], references: [id], onDelete: Cascade)
+
+  /// Denormalized owning workspace when the snapshot is generated from a workspace-scoped share.
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+
+  /// Denormalized owning group when the snapshot is generated from a group-scoped share.
+  companyGroupId String?
+  companyGroup   CompanyGroup? @relation(fields: [companyGroupId], references: [id], onDelete: SetNull)
+
+  /// Workspace IDs included when the snapshot was created; do not recompute for external group links.
+  includedWorkspaceIds Json
+
+  filtersJson Json?
+  columnsJson Json?
+
+  dateRangeStart DateTime?
+  dateRangeEnd   DateTime?
+
+  allowPii              Boolean @default(false)
+  allowDownload         Boolean @default(false)
+  allowCompanyBreakdown Boolean @default(false)
+
+  /// Inline generated report payload for small reports.
+  generatedPayloadJson Json?
+
+  /// File/object-storage path for large generated exports.
+  exportPath String?
+
+  snapshotVersion Int      @default(1)
+  createdAt       DateTime @default(now())
+
+  @@index([reportShareId, createdAt])
+  @@index([workspaceId])
+  @@index([companyGroupId])
 }
 
 model WorkspaceInvite {
@@ -4310,4 +4419,3 @@ enum RemediationStatus {
   SUCCESS
   FAILED
 }
-
