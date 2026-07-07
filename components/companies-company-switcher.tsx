@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Building2, CheckCircle2, Circle, Lock, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { useSession } from "next-auth/react";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSidebar } from "@/components/ui/sidebar";
@@ -34,6 +35,7 @@ const accessLabel = (sources: string[]) => {
 
 export function CompanySwitcher() {
   const { open, isMobile } = useSidebar();
+  const { update } = useSession();
   const isExpanded = open || isMobile;
   const [context, setContext] = useState<CompanyContext | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,6 +79,7 @@ export function CompanySwitcher() {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error ?? "Unable to switch company.");
       }
+      await update({ workspaceId });
       try {
         sessionStorage.setItem("bababuilds:last-company-switch", JSON.stringify({
           workspaceId,

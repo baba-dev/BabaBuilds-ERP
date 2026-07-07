@@ -164,6 +164,23 @@ type AccessibleWorkspaceMembership = {
   };
 };
 
+type GroupAccessibleWorkspaceMembership = {
+  role: string;
+  groupRole: string;
+  accessMode: string;
+  companyGroup: {
+    workspaces: Array<{
+      isActive: boolean;
+      workspace: AccessibleWorkspaceMembership["workspace"];
+    }>;
+  };
+  workspaceAccess: Array<{
+    isActive: boolean;
+    accessRole: string;
+    workspace: AccessibleWorkspaceMembership["workspace"];
+  }>;
+};
+
 function getRequestedWorkspaceId(session: unknown) {
   const workspaceId = (session as { workspaceId?: unknown } | null)?.workspaceId;
   return typeof workspaceId === "string" && workspaceId.trim() ? workspaceId : null;
@@ -179,6 +196,53 @@ function pickActiveWorkspace(
   }
 
   return memberships[0] ?? null;
+}
+
+function addAccessibleWorkspaceMembership(
+  memberships: AccessibleWorkspaceMembership[],
+  seenWorkspaceIds: Set<string>,
+  membership: AccessibleWorkspaceMembership,
+) {
+  if (seenWorkspaceIds.has(membership.workspace.id)) return;
+  seenWorkspaceIds.add(membership.workspace.id);
+  memberships.push(membership);
+}
+
+function combineAccessibleWorkspaceMemberships(
+  directMemberships: AccessibleWorkspaceMembership[],
+  groupMemberships: GroupAccessibleWorkspaceMembership[],
+) {
+  const memberships: AccessibleWorkspaceMembership[] = [];
+  const seenWorkspaceIds = new Set<string>();
+
+  for (const membership of directMemberships) {
+    addAccessibleWorkspaceMembership(memberships, seenWorkspaceIds, membership);
+  }
+
+  for (const membership of groupMemberships) {
+    if (membership.accessMode === "ALL_COMPANIES") {
+      for (const link of membership.companyGroup.workspaces) {
+        if (!link.isActive) continue;
+        addAccessibleWorkspaceMembership(memberships, seenWorkspaceIds, {
+          role: membership.role,
+          businessRole: membership.groupRole,
+          workspace: link.workspace,
+        });
+      }
+      continue;
+    }
+
+    for (const access of membership.workspaceAccess) {
+      if (!access.isActive) continue;
+      addAccessibleWorkspaceMembership(memberships, seenWorkspaceIds, {
+        role: access.accessRole || membership.role,
+        businessRole: access.accessRole || membership.groupRole,
+        workspace: access.workspace,
+      });
+    }
+  }
+
+  return memberships;
 }
 
 function applyActiveWorkspaceToToken(
@@ -677,8 +741,83 @@ export const authOptions: NextAuthOptions = {
       // If we can't load the user record, keep token as-is.
       if (!dbUser) return token;
 
+      const groupMemberships = (await prisma.companyGroupMember.findMany({
+        where: { userId, isActive: true },
+        select: {
+          role: true,
+          groupRole: true,
+          accessMode: true,
+          companyGroup: {
+            select: {
+              workspaces: {
+                where: { isActive: true },
+                orderBy: { createdAt: "asc" },
+                select: {
+                  isActive: true,
+                  workspace: {
+                    select: {
+                      id: true,
+                      name: true,
+                      baseCurrency: true,
+                      isSetupComplete: true,
+                      countryCode: true,
+                      companyGroupLinks: {
+                        where: {
+                          isActive: true,
+                          companyGroup: { members: { some: { userId, isActive: true } } },
+                        },
+                        orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+                        take: 1,
+                        select: {
+                          companyGroupId: true,
+                          companyGroup: { select: { name: true } },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          workspaceAccess: {
+            where: {
+              isActive: true,
+              workspace: { companyGroupLinks: { some: { isActive: true } } },
+            },
+            orderBy: { createdAt: "asc" },
+            select: {
+              isActive: true,
+              accessRole: true,
+              workspace: {
+                select: {
+                  id: true,
+                  name: true,
+                  baseCurrency: true,
+                  isSetupComplete: true,
+                  countryCode: true,
+                  companyGroupLinks: {
+                    where: {
+                      isActive: true,
+                      companyGroup: { members: { some: { userId, isActive: true } } },
+                    },
+                    orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+                    take: 1,
+                    select: {
+                      companyGroupId: true,
+                      companyGroup: { select: { name: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      })) as GroupAccessibleWorkspaceMembership[];
+
+      const accessibleMemberships = combineAccessibleWorkspaceMemberships(dbUser.workspaces, groupMemberships);
+
       // Auto-provision a workspace if the user has none (legacy accounts or partial bootstrap failures).
-      if (dbUser.workspaces.length === 0) {
+      if (accessibleMemberships.length === 0) {
         try {
           const workspaceId = await provisionWorkspaceForUser({
             id: userId,
@@ -733,9 +872,9 @@ export const authOptions: NextAuthOptions = {
           });
         }
       } else {
-        const workspaceMembership = pickActiveWorkspace(dbUser.workspaces, requestedWorkspaceId);
+        const workspaceMembership = pickActiveWorkspace(accessibleMemberships, requestedWorkspaceId);
         if (workspaceMembership) {
-          applyActiveWorkspaceToToken(token, workspaceMembership, dbUser.workspaces.length);
+          applyActiveWorkspaceToToken(token, workspaceMembership, accessibleMemberships.length);
         } else {
           clearActiveWorkspaceToken(token);
         }
