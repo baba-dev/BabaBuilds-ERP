@@ -872,7 +872,14 @@ export const authOptions: NextAuthOptions = {
           });
         }
       } else {
-        const workspaceMembership = pickActiveWorkspace(accessibleMemberships, requestedWorkspaceId);
+        const currentWorkspaceId = typeof token.workspaceId === "string" ? token.workspaceId : null;
+        const requestedMembership = requestedWorkspaceId
+          ? accessibleMemberships.find((membership) => membership.workspace.id === requestedWorkspaceId) ?? null
+          : null;
+        const workspaceMembership = requestedWorkspaceId
+          ? requestedMembership ?? pickActiveWorkspace(accessibleMemberships, currentWorkspaceId)
+          : pickActiveWorkspace(accessibleMemberships, currentWorkspaceId);
+
         if (workspaceMembership) {
           applyActiveWorkspaceToToken(token, workspaceMembership, accessibleMemberships.length);
         } else {

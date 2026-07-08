@@ -79,10 +79,21 @@ export function CompanySwitcher() {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error ?? "Unable to switch company.");
       }
-      await update({ workspaceId });
+      const body = (await res.json()) as { session?: { workspaceId?: string } };
+      const confirmedWorkspaceId = body.session?.workspaceId ?? workspaceId;
+      const updatedSession = await update({ workspaceId: confirmedWorkspaceId });
+      if (updatedSession?.workspaceId !== confirmedWorkspaceId) {
+        throw new Error("Company switch was authorized, but the session did not update. Please try again.");
+      }
+      setContext((current) => current
+        ? {
+            ...current,
+            activeWorkspace: current.accessibleCompanies.find((company) => company.id === confirmedWorkspaceId) ?? current.activeWorkspace,
+          }
+        : current);
       try {
         sessionStorage.setItem("bababuilds:last-company-switch", JSON.stringify({
-          workspaceId,
+          workspaceId: confirmedWorkspaceId,
           name: target?.name ?? "company",
           switchedAt: Date.now(),
         }));
