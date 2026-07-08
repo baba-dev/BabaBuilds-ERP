@@ -3,9 +3,11 @@ import { getServerSession } from "next-auth/next";
 import { Prisma, type BusinessRoleEnum } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isModuleEnabled } from "@/lib/modules";
 
 export const MANAGE_GROUP_ROLES = new Set(["GROUP_OWNER", "GROUP_ADMIN"]);
 export const OWNER_GROUP_ROLES = new Set(["GROUP_OWNER"]);
+export const MULTI_COMPANY_MODULE_KEY = "MULTI_COMPANY";
 
 export type CompanyGroupContext = {
   userId: string;
@@ -50,6 +52,15 @@ export async function requireCompanyGroupContext(): Promise<{ context: CompanyGr
       accessMode: membership.accessMode,
     },
   };
+}
+
+export async function requireMultiCompanyModule(workspaceId: string): Promise<NextResponse | null> {
+  const enabled = await isModuleEnabled(workspaceId, MULTI_COMPANY_MODULE_KEY);
+  return enabled ? null : errorJson("Multi-company module is not enabled", 403);
+}
+
+export async function requireMultiCompanyAccess(context: Pick<CompanyGroupContext, "workspaceId">): Promise<NextResponse | null> {
+  return requireMultiCompanyModule(context.workspaceId);
 }
 
 export function canManageCompanies(groupRole: string) {

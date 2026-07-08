@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { canManageCompanies, canManageSubscription, errorJson, parseNullableString, parseString, parseWorkspaceUsers, requireCompanyGroupContext, subscriptionUpdateFromBody } from "../_shared";
+import { canManageCompanies, canManageSubscription, errorJson, parseNullableString, parseString, parseWorkspaceUsers, requireCompanyGroupContext, requireMultiCompanyAccess, subscriptionUpdateFromBody } from "../_shared";
 
 const companySelect = {
   id: true,
@@ -17,6 +17,8 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
     const result = await requireCompanyGroupContext();
     if ("response" in result) return result.response;
     const { context } = result;
+    const moduleResponse = await requireMultiCompanyAccess(context);
+    if (moduleResponse) return moduleResponse;
     if (!canManageCompanies(context.groupRole)) return errorJson("Forbidden", 403);
 
     const { id } = await props.params;

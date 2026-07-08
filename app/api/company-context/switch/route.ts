@@ -2,10 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireMultiCompanyModule } from "@/app/api/companies/_shared";
 
 function getSessionUserId(session: unknown): string | null {
   const maybeId = (session as { user?: { id?: string | null } })?.user?.id;
   return typeof maybeId === "string" && maybeId.length > 0 ? maybeId : null;
+}
+
+
+function getSessionWorkspaceId(session: unknown): string | null {
+  const maybeWorkspaceId = (session as { workspaceId?: string | null })?.workspaceId;
+  return typeof maybeWorkspaceId === "string" && maybeWorkspaceId.length > 0 ? maybeWorkspaceId : null;
 }
 
 async function validateWorkspaceAccess(userId: string, workspaceId: string) {
@@ -80,7 +87,11 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     const userId = getSessionUserId(session);
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const currentWorkspaceId = getSessionWorkspaceId(session);
+    if (!userId || !currentWorkspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const moduleResponse = await requireMultiCompanyModule(currentWorkspaceId);
+    if (moduleResponse) return moduleResponse;
 
     const body = (await request.json().catch(() => null)) as { workspaceId?: unknown } | null;
     const workspaceId = body?.workspaceId;

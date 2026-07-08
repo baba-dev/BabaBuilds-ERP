@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireMultiCompanyModule } from "@/app/api/companies/_shared";
 
 type WorkspaceSummary = {
   id: string;
@@ -91,6 +92,10 @@ export async function GET() {
     const accessibleCompanies = await getAccessibleCompanies(userId);
     const sessionWorkspaceId = getSessionWorkspaceId(session);
     const activeWorkspace = accessibleCompanies.find((company) => company.id === sessionWorkspaceId) ?? accessibleCompanies[0] ?? null;
+    if (activeWorkspace) {
+      const moduleResponse = await requireMultiCompanyModule(activeWorkspace.id);
+      if (moduleResponse) return moduleResponse;
+    }
 
     const activeGroupLinks = activeWorkspace
       ? (await prisma.companyGroupWorkspace.findMany({

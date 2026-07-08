@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { canManageCompanies, errorJson, requireCompanyGroupContext } from "../../_shared";
+import { canManageCompanies, errorJson, requireCompanyGroupContext, requireMultiCompanyAccess } from "../../_shared";
 
 export async function POST(_request: Request, props: { params: Promise<{ id: string }> }) {
   try {
     const result = await requireCompanyGroupContext();
     if ("response" in result) return result.response;
     const { context } = result;
+    const moduleResponse = await requireMultiCompanyAccess(context);
+    if (moduleResponse) return moduleResponse;
     if (!canManageCompanies(context.groupRole)) return errorJson("Forbidden", 403);
 
     const { id } = await props.params;

@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { errorJson, requireCompanyGroupContext } from "../_shared";
+import { errorJson, requireCompanyGroupContext, requireMultiCompanyAccess } from "../_shared";
 
 export async function GET() {
   try {
     const result = await requireCompanyGroupContext();
     if ("response" in result) return result.response;
+    const moduleResponse = await requireMultiCompanyAccess(result.context);
+    if (moduleResponse) return moduleResponse;
 
     const group = await prisma.companyGroup.findUnique({
       where: { id: result.context.companyGroupId },

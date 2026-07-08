@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { canManageCompanies, errorJson, parseString, parseWorkspaceUsers, requireCompanyGroupContext } from "./_shared";
+import { canManageCompanies, errorJson, parseString, parseWorkspaceUsers, requireCompanyGroupContext, requireMultiCompanyAccess } from "./_shared";
 
 const companySelect = {
   id: true,
@@ -33,6 +33,8 @@ export async function GET() {
   try {
     const result = await requireCompanyGroupContext();
     if ("response" in result) return result.response;
+    const moduleResponse = await requireMultiCompanyAccess(result.context);
+    if (moduleResponse) return moduleResponse;
 
     const links = await prisma.companyGroupWorkspace.findMany({
       where: { companyGroupId: result.context.companyGroupId },
@@ -52,6 +54,8 @@ export async function POST(request: Request) {
     const result = await requireCompanyGroupContext();
     if ("response" in result) return result.response;
     const { context } = result;
+    const moduleResponse = await requireMultiCompanyAccess(context);
+    if (moduleResponse) return moduleResponse;
     if (!canManageCompanies(context.groupRole)) return errorJson("Forbidden", 403);
 
     const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
