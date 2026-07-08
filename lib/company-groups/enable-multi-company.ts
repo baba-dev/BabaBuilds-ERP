@@ -34,7 +34,13 @@ export async function enableMultiCompany(workspaceId: string, actorUserId: strin
       throw new WorkspaceNotFoundError(workspaceId);
     }
 
-    const companyGroup = await tx.companyGroup.create({
+    const existingPrimaryWorkspaceLink = await tx.companyGroupWorkspace.findFirst({
+      where: { workspaceId: workspace.id, isPrimary: true },
+      include: { companyGroup: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const companyGroup = existingPrimaryWorkspaceLink?.companyGroup ?? await tx.companyGroup.create({
       data: {
         name: workspace.name,
         subscriptionStatus: workspace.subscriptionStatus,
@@ -44,18 +50,38 @@ export async function enableMultiCompany(workspaceId: string, actorUserId: strin
       },
     });
 
-    const primaryWorkspaceLink = await tx.companyGroupWorkspace.create({
-      data: {
-        companyGroupId: companyGroup.id,
-        workspaceId: workspace.id,
-        relationType: 'PRIMARY',
-        isPrimary: true,
+    const primaryWorkspaceLink = existingPrimaryWorkspaceLink
+      ? await tx.companyGroupWorkspace.update({
+          where: { id: existingPrimaryWorkspaceLink.id },
+          data: {
+            relationType: 'PRIMARY',
+            isPrimary: true,
+            isActive: true,
+          },
+        })
+      : await tx.companyGroupWorkspace.create({
+          data: {
+            companyGroupId: companyGroup.id,
+            workspaceId: workspace.id,
+            relationType: 'PRIMARY',
+            isPrimary: true,
+            isActive: true,
+          },
+        });
+
+    const companyGroupMember = await tx.companyGroupMember.upsert({
+      where: {
+        companyGroupId_userId: {
+          companyGroupId: companyGroup.id,
+          userId: actorUserId,
+        },
+      },
+      update: {
+        groupRole: 'GROUP_OWNER',
+        accessMode: 'ALL_COMPANIES',
         isActive: true,
       },
-    });
-
-    const companyGroupMember = await tx.companyGroupMember.create({
-      data: {
+      create: {
         companyGroupId: companyGroup.id,
         userId: actorUserId,
         groupRole: 'GROUP_OWNER',
@@ -64,8 +90,18 @@ export async function enableMultiCompany(workspaceId: string, actorUserId: strin
       },
     });
 
-    const companyGroupModule = await tx.companyGroupModule.create({
-      data: {
+    const companyGroupModule = await tx.companyGroupModule.upsert({
+      where: {
+        companyGroupId_moduleKey: {
+          companyGroupId: companyGroup.id,
+          moduleKey: MULTI_COMPANY_MODULE_KEY,
+        },
+      },
+      update: {
+        isEnabled: true,
+        disabledAt: null,
+      },
+      create: {
         companyGroupId: companyGroup.id,
         moduleKey: MULTI_COMPANY_MODULE_KEY,
         isEnabled: true,
