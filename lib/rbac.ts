@@ -98,9 +98,26 @@ export class RbacDeniedError extends Error {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Normalizes direct workspace, selected-company, and group roles to the
+ * code-defined BusinessRole values used by DEFAULT_ROLE_PERMISSIONS.
+ */
+function normalizeBusinessRole(rawRole: string | null | undefined, fallbackRole?: string | null): BusinessRole {
+  if (isValidBusinessRole(rawRole)) return rawRole;
+  if (isValidBusinessRole(fallbackRole)) return fallbackRole;
+  return legacyRoleToBusinessRole(rawRole ?? fallbackRole ?? 'VIEWER');
+}
+
+/**
  * Resolves the effective BusinessRole for a user in a workspace.
- * Prefers `businessRole` (the granular ERP role) over `role` (legacy).
- * Falls back to system-safe VIEWER if membership is missing.
+ *
+ * Resolution order is intentionally conservative:
+ * 1. Active direct WorkspaceUser membership wins.
+ * 2. Active selected-company CompanyGroupMemberWorkspaceAccess.
+ * 3. Active all-company CompanyGroupMember when the workspace is actively linked
+ *    to that group.
+ *
+ * Group roles are normalized to existing BusinessRole values before evaluating
+ * DEFAULT_ROLE_PERMISSIONS.
  */
 async function resolveBusinessRole(userId: string, workspaceId: string): Promise<BusinessRole | null> {
   const membership = await prisma.workspaceUser.findUnique({
@@ -108,11 +125,58 @@ async function resolveBusinessRole(userId: string, workspaceId: string): Promise
     select: { role: true, businessRole: true, isActive: true },
   });
 
-  if (!membership || !membership.isActive) return null;
+  if (membership?.isActive) {
+    return normalizeBusinessRole(membership.businessRole, membership.role);
+  }
 
-  const raw = membership.businessRole ?? membership.role;
-  if (isValidBusinessRole(raw)) return raw;
-  return legacyRoleToBusinessRole(membership.role);
+  const selectedCompanyAccess = await prisma.companyGroupMemberWorkspaceAccess.findFirst({
+    where: {
+      workspaceId,
+      isActive: true,
+      companyGroupMember: {
+        userId,
+        isActive: true,
+        accessMode: { notIn: ['ALL_COMPANIES', 'ALL_COMPANIES_IN_GROUP'] },
+        companyGroup: {
+          workspaces: {
+            some: { workspaceId, isActive: true },
+          },
+        },
+      },
+    },
+    select: {
+      accessRole: true,
+      companyGroupMember: { select: { groupRole: true, role: true } },
+    },
+  });
+
+  if (selectedCompanyAccess) {
+    return normalizeBusinessRole(
+      selectedCompanyAccess.accessRole,
+      selectedCompanyAccess.companyGroupMember.groupRole
+        ?? selectedCompanyAccess.companyGroupMember.role,
+    );
+  }
+
+  const allCompanyMembership = await prisma.companyGroupMember.findFirst({
+    where: {
+      userId,
+      isActive: true,
+      accessMode: { in: ['ALL_COMPANIES', 'ALL_COMPANIES_IN_GROUP'] },
+      companyGroup: {
+        workspaces: {
+          some: { workspaceId, isActive: true },
+        },
+      },
+    },
+    select: { groupRole: true, role: true },
+  });
+
+  if (allCompanyMembership) {
+    return normalizeBusinessRole(allCompanyMembership.groupRole, allCompanyMembership.role);
+  }
+
+  return null;
 }
 
 /**
