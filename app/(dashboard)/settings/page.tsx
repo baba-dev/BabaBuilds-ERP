@@ -79,6 +79,9 @@ export default function SettingsWizard() {
   const [posEnabled, setPosEnabled] = useState(false);
   const [posLoading, setPosLoading] = useState(false);
   const [showDisablePosConfirm, setShowDisablePosConfirm] = useState(false);
+  const [multiCompanyEnabled, setMultiCompanyEnabled] = useState(false);
+  const [multiCompanyLoading, setMultiCompanyLoading] = useState(false);
+  const [showDisableMultiCompanyConfirm, setShowDisableMultiCompanyConfirm] = useState(false);
   // Team invite state
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("MEMBER");
@@ -147,6 +150,7 @@ export default function SettingsWizard() {
           setImportManagerEnabled(d.modules.includes('IMPORT_MANAGER'));
           setTaxAdvancedEnabled(d.modules.includes('TAX_ADVANCED'));
           setPosEnabled(d.modules.includes('POS'));
+          setMultiCompanyEnabled(d.modules.includes('MULTI_COMPANY'));
         }
       })
       .catch(() => {});
@@ -1186,6 +1190,46 @@ export default function SettingsWizard() {
                       } finally { setPosLoading(false); }
                     }}
                     className="data-[state=checked]:bg-amber-500 shrink-0 mt-1"
+                  />
+                </div>
+              </div>
+
+              {/* Multi Company Module Card */}
+              <div className={cn(
+                "rounded-xl border-2 p-5 transition-all duration-200",
+                multiCompanyEnabled
+                  ? "border-sky-500/50 bg-sky-50/30 dark:bg-sky-950/10"
+                  : "border-zinc-200 dark:border-zinc-800"
+              )}>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-4">
+                    <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all", multiCompanyEnabled ? "bg-sky-600 shadow-lg shadow-sky-500/20" : "bg-zinc-100 dark:bg-zinc-800")}>
+                      <Building2 className={cn("h-5 w-5", multiCompanyEnabled ? "text-white" : "text-zinc-500")} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">Multi Company</p>
+                        <Badge variant="outline" className={cn("text-[10px] font-bold uppercase", multiCompanyEnabled ? "border-sky-500/30 text-sky-600 dark:text-sky-400" : "border-zinc-300 dark:border-zinc-700 text-zinc-500")}>{multiCompanyEnabled ? "Enabled" : "Disabled"}</Badge>
+                      </div>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-2 max-w-sm">
+                        Manage multiple legal entities, company-specific settings, switching, and consolidated company operations.
+                      </p>
+                      <p className="text-[11px] text-zinc-500">Non-destructive disable preserves company and group data while hiding multi-company navigation and APIs.</p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="multi-company-module-toggle"
+                    checked={multiCompanyEnabled}
+                    disabled={multiCompanyLoading}
+                    onCheckedChange={async (checked) => {
+                      if (!checked) { setShowDisableMultiCompanyConfirm(true); return; }
+                      setMultiCompanyLoading(true);
+                      try {
+                        const res = await fetch('/api/workspace/modules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ moduleKey: 'MULTI_COMPANY', enabled: true }) });
+                        if (res.ok) { setMultiCompanyEnabled(true); toast.success('Multi Company module enabled'); } else { toast.error('Failed to enable module'); }
+                      } finally { setMultiCompanyLoading(false); }
+                    }}
+                    className="data-[state=checked]:bg-sky-600 shrink-0 mt-1"
                   />
                 </div>
               </div>
@@ -2315,6 +2359,27 @@ export default function SettingsWizard() {
             </DialogContent>
           </Dialog>
 
+
+          <Dialog open={showDisableMultiCompanyConfirm} onOpenChange={setShowDisableMultiCompanyConfirm}>
+            <DialogContent className="sm:max-w-md bg-zinc-950 border-white/10">
+              <DialogHeader>
+                <DialogTitle className="text-zinc-50 flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-400" /> Disable Multi Company?</DialogTitle>
+                <DialogDescription className="text-zinc-400">
+                  Company/group data is <strong className="text-zinc-200">preserved</strong>, but multi-company navigation and APIs are hidden/paused until the module is re-enabled.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="ghost" onClick={() => setShowDisableMultiCompanyConfirm(false)} className="text-zinc-400">Cancel</Button>
+                <Button id="confirm-disable-multi-company" disabled={multiCompanyLoading} onClick={async () => {
+                  setMultiCompanyLoading(true);
+                  try {
+                    const res = await fetch('/api/workspace/modules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ moduleKey: 'MULTI_COMPANY', enabled: false }) });
+                    if (res.ok) { setMultiCompanyEnabled(false); setShowDisableMultiCompanyConfirm(false); toast.success('Multi Company module disabled'); } else { toast.error('Failed to disable module'); }
+                  } finally { setMultiCompanyLoading(false); }
+                }} className="bg-rose-600 hover:bg-rose-500 text-white border-none">{multiCompanyLoading ? 'Disabling...' : 'Disable Multi Company'}</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           <Dialog open={showDisablePosConfirm} onOpenChange={setShowDisablePosConfirm}>
             <DialogContent className="sm:max-w-md bg-zinc-950 border-white/10">
