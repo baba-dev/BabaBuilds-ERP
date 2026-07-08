@@ -26,6 +26,7 @@ import { typography } from "@/lib/ui/typography";
 import { Badge } from "@/components/ui/badge";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { OnboardingHint } from "@/components/onboarding/OnboardingHint";
+import { getSettingsAccountNumberDisplay, shouldSubmitSettingsAccountNumber } from "@/lib/settings/account-number-payload";
 
 export default function SettingsWizard() {
   /**
@@ -90,6 +91,7 @@ export default function SettingsWizard() {
   const [isNewSetup, setIsNewSetup] = useState(true);
   const [countryCode, setCountryCode] = useState<string>("IN");
   const [activeGatewayTab, setActiveGatewayTab] = useState<"RAZORPAY" | "STRIPE">("RAZORPAY");
+  const [serverAccountNumberDisplay, setServerAccountNumberDisplay] = useState<string | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -167,6 +169,8 @@ export default function SettingsWizard() {
 
           const gateway = data.defaultGateway || (detectedCountry === "IN" ? "RAZORPAY" : "STRIPE");
           setActiveGatewayTab(gateway as "RAZORPAY" | "STRIPE");
+          const accountNumberDisplay = getSettingsAccountNumberDisplay(data);
+          setServerAccountNumberDisplay(data.accountNumber ? null : accountNumberDisplay || null);
 
           setFormData({
             companyName: data.companyName || "", proprietorName: data.proprietorName || "", 
@@ -174,7 +178,7 @@ export default function SettingsWizard() {
             phone: data.phone || "", website: data.website || "",
             panNumber: data.panNumber || "", udyamNumber: data.udyamNumber || "", gstin: data.gstin || "",
             bankName: data.bankName || "", accountName: data.accountName || "", 
-            accountNumber: data.accountNumber || "", ifscCode: data.ifscCode || "",
+            accountNumber: accountNumberDisplay, ifscCode: data.ifscCode || "",
             smtpHost: data.smtpHost || "", smtpPort: data.smtpPort || "", 
             smtpUser: data.smtpUser || "", smtpPassword: data.smtpPassword || "", 
             smtpFromEmail: data.smtpFromEmail || "",
@@ -259,6 +263,10 @@ export default function SettingsWizard() {
 
     const body = new FormData();
     Object.entries(formData).forEach(([key, val]) => {
+      if (key === "accountNumber" && !shouldSubmitSettingsAccountNumber(String(val || ""), serverAccountNumberDisplay)) {
+        return;
+      }
+
       const shouldSendExplicitEmpty =
         CLEARABLE_OPTIONAL_FIELDS.has(key) && (val === "" || val === null || val === undefined);
 
@@ -732,7 +740,7 @@ export default function SettingsWizard() {
               </div>
               <div className="space-y-2">
                 <Label className="dark:text-zinc-300">{t('account_number')} <span className="text-red-500">*</span></Label>
-                <Input required type="password" value={formData.accountNumber} onChange={e => setFormData({...formData, accountNumber: e.target.value})} className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
+                <Input required type={serverAccountNumberDisplay && formData.accountNumber === serverAccountNumberDisplay ? "text" : "password"} value={formData.accountNumber} onChange={e => setFormData({...formData, accountNumber: e.target.value})} className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
                 <p className="text-xs text-zinc-400 dark:text-zinc-500">{t('account_number_hint')}</p>
               </div>
               <div className="space-y-2">

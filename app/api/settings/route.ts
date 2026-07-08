@@ -149,7 +149,7 @@ export async function POST(request: Request) {
     const gstin          = getStringField('gstin');
     const bankName       = formData.get('bankName')       as string;
     const accountName    = formData.get('accountName')    as string;
-    const accountNumber  = formData.get('accountNumber')  as string;
+    const accountNumber  = getStringField('accountNumber');
     const ifscCode       = formData.get('ifscCode')       as string;
     const smtpHost       = getStringField('smtpHost');
     const smtpPortRaw    = getStringField('smtpPort');
@@ -292,7 +292,8 @@ export async function POST(request: Request) {
     const updateData: Record<string, unknown> = {
       companyName, proprietorName, address, email, phone, website,
       panNumber, udyamNumber, gstin,
-      bankName, accountName, accountNumber, ifscCode,
+      bankName, accountName, ifscCode,
+      ...(hasField('accountNumber') && { accountNumber: accountNumber || "" }),
       smtpHost, smtpPort, smtpUser, smtpFromEmail,
       invoiceTheme, defaultSacCode,
       ...(logoUrl && { logoUrl }),
@@ -414,7 +415,7 @@ export async function POST(request: Request) {
           workspaceId,
           companyName, proprietorName, address, email, phone, website,
           panNumber, udyamNumber, gstin,
-          bankName, accountName, accountNumber, ifscCode,
+          bankName, accountName, accountNumber: accountNumber || "", ifscCode,
           smtpHost, smtpPort, smtpUser, smtpFromEmail, 
           smtpPassword:
             parsedSmtpPassword && parsedSmtpPassword !== "SET"
@@ -433,16 +434,18 @@ export async function POST(request: Request) {
         },
       });
 
-      await syncPrimaryRemittanceBankAccount(tx, {
-        workspaceId,
-        bankName,
-        accountHolderName: accountName,
-        accountNumber,
-        routingCode: ifscCode,
-        routingLabel: upserted.routingLabel,
-        currency: null,
-        sourceType: "SETTINGS_SYNC",
-      });
+      if (hasField('accountNumber')) {
+        await syncPrimaryRemittanceBankAccount(tx, {
+          workspaceId,
+          bankName,
+          accountHolderName: accountName,
+          accountNumber,
+          routingCode: ifscCode,
+          routingLabel: upserted.routingLabel,
+          currency: null,
+          sourceType: "SETTINGS_SYNC",
+        });
+      }
 
       return tx.businessProfile.findUnique({
         where: { workspaceId },
