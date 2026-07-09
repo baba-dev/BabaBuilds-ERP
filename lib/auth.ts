@@ -186,6 +186,11 @@ function getRequestedWorkspaceId(session: unknown) {
   return typeof workspaceId === "string" && workspaceId.trim() ? workspaceId : null;
 }
 
+function getRequestedGroupId(session: unknown) {
+  const groupId = (session as { groupId?: unknown } | null)?.groupId;
+  return typeof groupId === "string" && groupId.trim() ? groupId : null;
+}
+
 function pickActiveWorkspace(
   memberships: AccessibleWorkspaceMembership[],
   requestedWorkspaceId?: string | null,
@@ -249,9 +254,12 @@ function applyActiveWorkspaceToToken(
   token: Record<string, unknown>,
   membership: AccessibleWorkspaceMembership,
   accessibleWorkspaceCount: number,
+  requestedGroupId?: string | null,
 ) {
   const workspace = membership.workspace;
-  const groupLink = workspace.companyGroupLinks[0] ?? null;
+  const groupLink = (requestedGroupId
+    ? workspace.companyGroupLinks.find((link) => link.companyGroupId === requestedGroupId)
+    : null) ?? workspace.companyGroupLinks[0] ?? null;
 
   token.workspaceId = workspace.id;
   token.groupId = groupLink?.companyGroupId ?? null;
@@ -670,6 +678,8 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, trigger, session }) {
       const requestedWorkspaceId =
         trigger === "update" ? getRequestedWorkspaceId(session) : (token.workspaceId as string | undefined);
+      const requestedGroupId =
+        trigger === "update" ? getRequestedGroupId(session) : (token.groupId as string | undefined);
 
       if (user) {
         token.id = user.id;
@@ -855,7 +865,7 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (membership?.workspace) {
-            applyActiveWorkspaceToToken(token, membership, 1);
+            applyActiveWorkspaceToToken(token, membership, 1, requestedGroupId);
           }
         } catch (error: any) {
           logActivity({
@@ -881,7 +891,7 @@ export const authOptions: NextAuthOptions = {
           : pickActiveWorkspace(accessibleMemberships, currentWorkspaceId);
 
         if (workspaceMembership) {
-          applyActiveWorkspaceToToken(token, workspaceMembership, accessibleMemberships.length);
+          applyActiveWorkspaceToToken(token, workspaceMembership, accessibleMemberships.length, requestedGroupId);
         } else {
           clearActiveWorkspaceToken(token);
         }

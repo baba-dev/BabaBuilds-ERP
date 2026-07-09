@@ -22,7 +22,9 @@ type Company = {
 
 type CompanyContext = {
   activeWorkspace: Company | null;
-  group: { name: string } | null;
+  group: { id: string; name: string } | null;
+  availableGroups?: Array<{ id: string; name: string }>;
+  requiresGroupSelection?: boolean;
   accessibleCompanies: Company[];
   multiCompanyEnabled: boolean;
 };
@@ -60,6 +62,17 @@ export function CompanySwitcher() {
 
   if (loading || !context?.multiCompanyEnabled || !activeCompany) return null;
 
+  const onGroupSwitch = async (groupId: string) => {
+    if (!activeCompany || groupId === context?.group?.id) return;
+    const updatedSession = await update({ workspaceId: activeCompany.id, groupId });
+    if (updatedSession?.groupId !== groupId) {
+      toast.error("Group switch did not update the session. Please try again.");
+      return;
+    }
+    toast.success("Switched company group.");
+    window.location.reload();
+  };
+
   const onSwitch = async (workspaceId: string) => {
     if (workspaceId === activeCompany.id) return;
     const target = companies.find((company) => company.id === workspaceId);
@@ -73,16 +86,17 @@ export function CompanySwitcher() {
       const res = await fetch("/api/company-context/switch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workspaceId }),
+        body: JSON.stringify({ workspaceId, groupId: context?.group?.id ?? undefined }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error ?? "Unable to switch company.");
       }
-      const body = (await res.json()) as { session?: { workspaceId?: string } };
+      const body = (await res.json()) as { session?: { workspaceId?: string; groupId?: string | null } };
       const confirmedWorkspaceId = body.session?.workspaceId ?? workspaceId;
-      const updatedSession = await update({ workspaceId: confirmedWorkspaceId });
-      if (updatedSession?.workspaceId !== confirmedWorkspaceId) {
+      const confirmedGroupId = body.session?.groupId ?? context?.group?.id ?? null;
+      const updatedSession = await update({ workspaceId: confirmedWorkspaceId, groupId: confirmedGroupId });
+      if (updatedSession?.workspaceId !== confirmedWorkspaceId || updatedSession?.groupId !== confirmedGroupId) {
         throw new Error("Company switch was authorized, but the session did not update. Please try again.");
       }
       setContext((current) => current
@@ -123,13 +137,26 @@ export function CompanySwitcher() {
       <div className="mb-2 flex items-start gap-2">
         <Building2 className="mt-0.5 h-4 w-4 text-amber-400" />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[11px] font-bold uppercase tracking-wider text-zinc-400">{context.group?.name ?? "Company group"}</p>
+          <p className="truncate text-[11px] font-bold uppercase tracking-wider text-zinc-400">{context.group?.name ?? (context.requiresGroupSelection ? "Select company group" : "Company group")}</p>
           <p className="truncate text-sm font-bold text-white">{activeCompany.name}</p>
         </div>
         {switchingId && <RefreshCw className="h-3.5 w-3.5 animate-spin text-zinc-400" />}
       </div>
 
-      <Select value={activeCompany.id} onValueChange={onSwitch} disabled={Boolean(switchingId)}>
+      {(context.availableGroups?.length ?? 0) > 1 && (
+        <Select value={context.group?.id ?? ""} onValueChange={onGroupSwitch} disabled={Boolean(switchingId)}>
+          <SelectTrigger className="mb-2 h-9 border-zinc-800 bg-zinc-900/80 text-left text-xs text-zinc-100">
+            <SelectValue placeholder="Select company group" />
+          </SelectTrigger>
+          <SelectContent>
+            {context.availableGroups?.map((group) => (
+              <SelectItem key={group.id} value={group.id}>{group.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+
+      <Select value={activeCompany.id} onValueChange={onSwitch} disabled={Boolean(switchingId) || Boolean(context.requiresGroupSelection)}>
         <SelectTrigger className="h-auto min-h-10 border-zinc-800 bg-zinc-900/80 text-left text-zinc-100">
           <SelectValue placeholder="Select company" />
         </SelectTrigger>
