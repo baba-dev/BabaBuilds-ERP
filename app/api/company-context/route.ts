@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -24,6 +24,11 @@ function getSessionUserId(session: unknown): string | null {
 function getSessionWorkspaceId(session: unknown): string | null {
   const maybeWorkspaceId = (session as { workspaceId?: string | null })?.workspaceId;
   return typeof maybeWorkspaceId === "string" && maybeWorkspaceId.length > 0 ? maybeWorkspaceId : null;
+}
+
+function getSessionGroupId(session: unknown): string | null {
+  const maybeGroupId = (session as { groupId?: string | null })?.groupId;
+  return typeof maybeGroupId === "string" && maybeGroupId.length > 0 ? maybeGroupId : null;
 }
 
 function addCompany(companyMap: Map<string, AccessibleCompany>, workspace: WorkspaceSummary | (Omit<WorkspaceSummary, "enabledModules"> & { workspaceModules: { moduleKey: string }[]; isArchived?: boolean }), accessSource: string) {
@@ -83,7 +88,7 @@ async function getAccessibleCompanies(userId: string): Promise<AccessibleCompany
   return Array.from(companyMap.values()).sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     const userId = getSessionUserId(session);
@@ -91,6 +96,8 @@ export async function GET() {
 
     const accessibleCompanies = await getAccessibleCompanies(userId);
     const sessionWorkspaceId = getSessionWorkspaceId(session);
+    const requestedGroupId = request.nextUrl.searchParams.get("groupId");
+    const sessionGroupId = requestedGroupId && requestedGroupId.trim().length > 0 ? requestedGroupId.trim() : getSessionGroupId(session);
     const activeWorkspace = accessibleCompanies.find((company) => company.id === sessionWorkspaceId) ?? accessibleCompanies[0] ?? null;
     if (activeWorkspace) {
       const moduleResponse = await requireMultiCompanyModule(activeWorkspace.id);
@@ -109,7 +116,9 @@ export async function GET() {
         })) as Array<{ relationType: string; isPrimary: boolean; companyGroup: { id: string; name: string; planTier: string; subscriptionStatus: string; billingWorkspaceId: string | null } }>
       : [];
 
-    const primaryGroupLink = activeGroupLinks[0];
+    const primaryGroupLink = (sessionGroupId
+      ? activeGroupLinks.find((link) => link.companyGroup.id === sessionGroupId)
+      : null) ?? (activeGroupLinks.length === 1 ? activeGroupLinks[0] : undefined);
 
     return NextResponse.json({
       activeWorkspace,
@@ -124,6 +133,16 @@ export async function GET() {
             isPrimary: primaryGroupLink.isPrimary,
           }
         : null,
+      availableGroups: activeGroupLinks.map((link) => ({
+        id: link.companyGroup.id,
+        name: link.companyGroup.name,
+        planTier: link.companyGroup.planTier,
+        subscriptionStatus: link.companyGroup.subscriptionStatus,
+        billingWorkspaceId: link.companyGroup.billingWorkspaceId,
+        relationType: link.relationType,
+        isPrimary: link.isPrimary,
+      })),
+      requiresGroupSelection: activeGroupLinks.length > 1 && !primaryGroupLink,
       accessibleCompanies,
       multiCompanyEnabled: Boolean(activeWorkspace?.enabledModules.includes("MULTI_COMPANY")) && (accessibleCompanies.length > 1 || activeGroupLinks.length > 0),
     });

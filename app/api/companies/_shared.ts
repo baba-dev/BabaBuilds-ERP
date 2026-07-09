@@ -25,16 +25,28 @@ export async function requireCompanyGroupContext(): Promise<{ context: CompanyGr
   const session = await getServerSession(authOptions);
   const userId = (session as { user?: { id?: string | null }; workspaceId?: string | null } | null)?.user?.id;
   const workspaceId = (session as { workspaceId?: string | null } | null)?.workspaceId;
+  const sessionGroupId = (session as { groupId?: string | null } | null)?.groupId;
 
   if (!userId || !workspaceId) return { response: errorJson("Unauthorized", 401) };
 
-  const activeLink = await prisma.companyGroupWorkspace.findFirst({
+  const activeLinks = await prisma.companyGroupWorkspace.findMany({
     where: { workspaceId, isActive: true },
     select: { companyGroupId: true },
-    orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+    orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }, { companyGroupId: "asc" }],
   });
 
-  if (!activeLink) return { response: errorJson("Company group not found for active workspace", 404) };
+  if (activeLinks.length === 0) return { response: errorJson("Company group not found for active workspace", 404) };
+
+  const selectedGroupId = sessionGroupId?.trim() || null;
+  if (!selectedGroupId && activeLinks.length > 1) {
+    return { response: errorJson("Multiple company groups are available for the active workspace. Select a company group before continuing.", 400) };
+  }
+
+  const activeLink = selectedGroupId
+    ? activeLinks.find((link) => link.companyGroupId === selectedGroupId) ?? null
+    : activeLinks[0] ?? null;
+
+  if (!activeLink) return { response: errorJson("Selected company group is not linked to the active workspace", 403) };
 
   const membership = await prisma.companyGroupMember.findUnique({
     where: { companyGroupId_userId: { companyGroupId: activeLink.companyGroupId, userId } },
