@@ -97,13 +97,37 @@ export class RbacDeniedError extends Error {
 // CORE PERMISSION RESOLUTION
 // ─────────────────────────────────────────────────────────────────────────────
 
+const COMPANY_GROUP_ROLE_TO_BUSINESS_ROLE: Record<string, BusinessRole> = {
+  GROUP_OWNER: 'OWNER',
+  GROUP_ADMIN: 'ADMIN',
+  GROUP_FINANCE: 'FINANCE_MANAGER',
+  GROUP_FINANCE_MANAGER: 'FINANCE_MANAGER',
+  MEMBER: 'STAFF',
+};
+
+function companyGroupRoleToBusinessRole(role: string | null | undefined): BusinessRole | null {
+  if (!role) return null;
+
+  if (role.startsWith('GROUP_FINANCE')) return 'FINANCE_MANAGER';
+
+  return COMPANY_GROUP_ROLE_TO_BUSINESS_ROLE[role] ?? null;
+}
+
 /**
  * Normalizes direct workspace, selected-company, and group roles to the
  * code-defined BusinessRole values used by DEFAULT_ROLE_PERMISSIONS.
  */
 function normalizeBusinessRole(rawRole: string | null | undefined, fallbackRole?: string | null): BusinessRole {
   if (isValidBusinessRole(rawRole)) return rawRole;
+
+  const mappedRawRole = companyGroupRoleToBusinessRole(rawRole);
+  if (mappedRawRole) return mappedRawRole;
+
   if (isValidBusinessRole(fallbackRole)) return fallbackRole;
+
+  const mappedFallbackRole = companyGroupRoleToBusinessRole(fallbackRole);
+  if (mappedFallbackRole) return mappedFallbackRole;
+
   return legacyRoleToBusinessRole(rawRole ?? fallbackRole ?? 'VIEWER');
 }
 

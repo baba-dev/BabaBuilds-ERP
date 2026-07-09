@@ -75,6 +75,35 @@ describe('company group RBAC workspace access', () => {
     await expect(checkPermissionSilent('user_1', 'ws_outside_group', 'workspace.manage_settings')).resolves.toBe(false);
   });
 
+  it('maps group owners to owner-equivalent permissions in accessible companies', async () => {
+    groupMemberFindFirstMock.mockResolvedValue({ groupRole: 'GROUP_OWNER', role: 'MEMBER' });
+
+    const { checkPermissionSilent } = await import('@/lib/rbac');
+
+    await expect(checkPermissionSilent('user_1', 'ws_1', 'billing.manage')).resolves.toBe(true);
+  });
+
+  it('maps group admins to admin-equivalent permissions in accessible companies', async () => {
+    groupMemberFindFirstMock.mockResolvedValue({ groupRole: 'GROUP_ADMIN', role: 'MEMBER' });
+
+    const { checkPermissionSilent } = await import('@/lib/rbac');
+
+    await expect(checkPermissionSilent('user_1', 'ws_1', 'workspace.manage_settings')).resolves.toBe(true);
+    await expect(checkPermissionSilent('user_1', 'ws_1', 'billing.manage')).resolves.toBe(false);
+  });
+
+  it('keeps selected-company accessRole narrower than group role', async () => {
+    groupWorkspaceAccessFindFirstMock.mockResolvedValue({
+      accessRole: 'STAFF',
+      companyGroupMember: { groupRole: 'GROUP_OWNER', role: 'MEMBER' },
+    });
+
+    const { checkPermissionSilent } = await import('@/lib/rbac');
+
+    await expect(checkPermissionSilent('user_1', 'ws_1', 'billing.manage')).resolves.toBe(false);
+    expect(groupMemberFindFirstMock).not.toHaveBeenCalled();
+  });
+
   it('denies access when group links or memberships are inactive', async () => {
     groupWorkspaceAccessFindFirstMock.mockImplementation(({ where }) => {
       expect(where.isActive).toBe(true);
