@@ -2,6 +2,7 @@ import 'server-only';
 
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { disableModule } from '@/lib/modules';
 
 const MULTI_COMPANY_MODULE_KEY = 'MULTI_COMPANY';
 
@@ -140,4 +141,46 @@ export async function enableMultiCompany(workspaceId: string, actorUserId: strin
       workspaceModule,
     };
   });
+}
+
+
+/**
+ * Disables multi-company mode without deleting any group/company links, group
+ * memberships, or workspace access rows. Re-enabling can therefore restore the
+ * same company group structure.
+ */
+export async function disableMultiCompany(workspaceId: string, actorUserId: string) {
+  const activeGroupLink = await prisma.companyGroupWorkspace.findFirst({
+    where: { workspaceId, isActive: true },
+    select: { companyGroupId: true },
+    orderBy: [{ isPrimary: 'desc' }, { createdAt: 'asc' }],
+  });
+
+  const disabledAt = new Date();
+
+  if (activeGroupLink) {
+    await prisma.companyGroupModule.upsert({
+      where: {
+        companyGroupId_moduleKey: {
+          companyGroupId: activeGroupLink.companyGroupId,
+          moduleKey: MULTI_COMPANY_MODULE_KEY,
+        },
+      },
+      update: {
+        isEnabled: false,
+        disabledAt,
+      },
+      create: {
+        companyGroupId: activeGroupLink.companyGroupId,
+        moduleKey: MULTI_COMPANY_MODULE_KEY,
+        isEnabled: false,
+        disabledAt,
+        configJson: Prisma.JsonNull,
+      },
+    });
+  }
+
+  await disableModule(workspaceId, MULTI_COMPANY_MODULE_KEY, actorUserId);
+
+  return { companyGroupId: activeGroupLink?.companyGroupId ?? null };
 }

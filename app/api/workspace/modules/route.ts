@@ -10,7 +10,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { requirePermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
-import { enableMultiCompany } from '@/lib/company-groups/enable-multi-company';
+import { enableMultiCompany, disableMultiCompany } from '@/lib/company-groups/enable-multi-company';
 import {
   enableModule,
   disableModule,
@@ -92,7 +92,11 @@ export async function POST(req: NextRequest) {
         await enableModule(workspaceId, moduleKey, session.user.id);
       }
     } else {
-      await disableModule(workspaceId, moduleKey, session.user.id);
+      if (moduleKey === 'MULTI_COMPANY') {
+        await disableMultiCompany(workspaceId, session.user.id);
+      } else {
+        await disableModule(workspaceId, moduleKey, session.user.id);
+      }
     }
 
     return NextResponse.json({ success: true, moduleKey, enabled });
