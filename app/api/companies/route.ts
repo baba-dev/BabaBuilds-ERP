@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
-import { type Prisma } from "@prisma/client";
+import { type BusinessRoleEnum, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { canManageCompanies, errorJson, parseString, parseWorkspaceUsers, requireCompanyGroupContext, requireMultiCompanyAccess } from "./_shared";
+
+const ALL_COMPANIES_ACCESS_MODES = new Set(["ALL_COMPANIES", "ALL_COMPANIES_IN_GROUP"]);
+
+function workspaceRoleForBusinessRole(businessRole: BusinessRoleEnum) {
+  return businessRole === "OWNER" ? "OWNER" : "MEMBER";
+}
 
 const companySelect = {
   id: true,
@@ -113,11 +119,51 @@ export async function POST(request: Request) {
         select: { id: true },
       });
 
+      for (const user of selectedUsers) {
+        const groupMember = await tx.companyGroupMember.upsert({
+          where: {
+            companyGroupId_userId: {
+              companyGroupId: context.companyGroupId,
+              userId: user.userId,
+            },
+          },
+          update: { isActive: true },
+          create: {
+            companyGroupId: context.companyGroupId,
+            userId: user.userId,
+            // Company-level roles must not grant group administration privileges.
+            role: "MEMBER",
+            groupRole: "MEMBER",
+            accessMode: "SPECIFIC_COMPANIES",
+            isActive: true,
+          },
+          select: { id: true, accessMode: true },
+        });
+
+        if (!ALL_COMPANIES_ACCESS_MODES.has(groupMember.accessMode)) {
+          await tx.companyGroupMemberWorkspaceAccess.upsert({
+            where: {
+              companyGroupMemberId_workspaceId: {
+                companyGroupMemberId: groupMember.id,
+                workspaceId: workspace.id,
+              },
+            },
+            update: { accessRole: user.businessRole, isActive: true },
+            create: {
+              companyGroupMemberId: groupMember.id,
+              workspaceId: workspace.id,
+              accessRole: user.businessRole,
+              isActive: true,
+            },
+          });
+        }
+      }
+
       await tx.workspaceUser.createMany({
         data: selectedUsers.map((user) => ({
           userId: user.userId,
           workspaceId: workspace.id,
-          role: user.businessRole === "OWNER" ? "OWNER" : "MEMBER",
+          role: workspaceRoleForBusinessRole(user.businessRole),
           businessRole: user.businessRole,
           isActive: true,
         })),
