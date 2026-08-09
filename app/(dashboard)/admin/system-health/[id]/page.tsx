@@ -5,12 +5,15 @@ import { format } from "date-fns";
 import { ArrowLeft, Sparkles, Terminal, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { requireSystemHealthSuperAdmin } from "../_auth";
 
 const prisma = new PrismaClient();
 
 export const dynamic = "force-dynamic";
 
 export default async function ErrorDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireSystemHealthSuperAdmin();
+
   const { id: errorId } = await params;
   const errorLog = await prisma.systemErrorLog.findUnique({
     where: { id: errorId },
@@ -103,8 +106,8 @@ export default async function ErrorDetailsPage({ params }: { params: Promise<{ i
                   
                   {errorLog.remediation.status === "PENDING_APPROVAL" && (
                     <div className="flex justify-end pt-2">
-                      <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                        Approve & Execute Fix
+                      <Button disabled variant="outline">
+                        Offline signature required
                       </Button>
                     </div>
                   )}
@@ -138,7 +141,7 @@ export default async function ErrorDetailsPage({ params }: { params: Promise<{ i
           <p className="text-sm text-muted-foreground">
             {errorLog.status === "ANALYZING" ? "The AI is currently analyzing this error. Please refresh in a moment." : "This error was not processed by the AI analyzer."}
           </p>
-          <Button variant="outline" className="mt-2">Request AI Analysis</Button>
+          <Button disabled variant="outline" className="mt-2">Super-admin analysis required</Button>
         </div>
       )}
 
