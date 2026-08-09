@@ -2359,6 +2359,183 @@
       }
     }
   },
+  "LandingFreeErp": {
+    "metadata": {
+      "title": "Free ERP software for small business | BabaBuilds ERP",
+      "description": "BabaBuilds ERP includes a free tier with real modules for clients, proposals, invoices, expenses, tax, documents, and more—plus clear limits. See what is included and when to trial Pro for gateways.",
+      "keywords": [
+        "free ERP",
+        "free ERP software",
+        "free ERP for small business",
+        "free invoicing ERP",
+        "free ERP with proposals and clients",
+        "GST invoicing workspace India",
+        "retainer billing software free tier",
+        "BabaBuilds ERP free plan"
+      ]
+    },
+    "lastUpdated": "Last updated May 14, 2026",
+    "h1": "Free ERP: what you get on BabaBuilds without a subscription",
+    "introParagraphs": [
+      "If you are evaluating a free ERP for a solo practice, micro-agency, or side business, you want more than a single-purpose invoice generator—you want a connected workspace for clients, quotes, billing, expenses, and compliance prep.",
+      "BabaBuilds ERP offers a permanent Free tier at ₹0 / $0 with access to the product modules described below. The Free plan uses generous but explicit quotas so the platform stays sustainable; upgrading to Pro or Team removes those caps and unlocks online payment collection through Razorpay and Stripe.",
+      "Create a workspace in minutes—no card required for the Free plan—or start a 15-day Pro trial when you need payment gateways immediately."
+    ],
+    "glance": {
+      "title": "Free plan at a glance",
+      "intro": "On the permanent Free tier (not in an active paid trial), the workspace keeps full navigation across core modules while these limits apply:",
+      "bullets": {
+        "modules": "Use the same operational modules as paid workspaces—clients, proposals, invoices, retainers, expenses, income views, tax dashboards, documents, reporting presets, cash-flow tooling, shop, workforce, payroll, imports, and more—subject to the quotas below.",
+        "clients": "Up to {count} active CRM clients.",
+        "invoices": "Up to {count} invoices created per UTC calendar month.",
+        "shop": "Up to {count} published services in the public shop catalog.",
+        "payments": "Collecting payments through Razorpay or Stripe gateway links on invoices and PDFs requires Pro, Team, or an active Pro trial—not the permanent Free tier.",
+        "seats": "Up to {count} workspace seat(s); active members and pending invites both count toward the seat cap."
+      }
+    },
+    "revenue": {
+      "title": "Clients, proposals, invoices, and retainers"
+    },
+    "revenueParagraphs": [
+      "The revenue stack is built for professional services: maintain a client record, draft proposals or quotes, convert wins into invoices, and automate recurring retainers when your plan supports payment-link injection.",
+      "On Free you can still model proposals, manage pipeline stages, and issue invoices—just remember the monthly invoice count and client caps so you do not hit guardrails mid-month."
+    ],
+    "money": {
+      "title": "Money, expenses, and reporting"
+    },
+    "moneyParagraphs": [
+      "Expenses, income ledgers, and reporting presets help you understand performance without exporting everything to spreadsheets. Cash-flow surfaces and reconciliation-oriented workflows complement invoicing so leadership sees collections and burn in one place.",
+      "Use the help center articles linked below for step-by-step guidance on generating invoices, managing clients, and operating the reporting center."
+    ],
+    "compliance": {
+      "title": "Tax workflows and document governance"
+    },
+    "complianceParagraphs": [
+      "Tax dashboards, readiness cues, and document vault or inbox flows support month-end discipline. Availability of specific compliance packs varies by market; the product focuses on configurable tax defaults, traceable records, and structured storage rather than promising automatic filing outcomes.",
+      "Pair invoices with supporting documents so your team—or your accountant—has fewer last-minute scrambles."
+    ],
+    "optional": {
+      "title": "Optional subsystems you can explore"
+    },
+    "optionalParagraphs": [
+      "Beyond core finance, BabaBuilds exposes optional modules such as customer shopfronts, workforce attendance, payroll runs, import manager jobs, and AR collections. They are available to explore on Free within the same global limits; scale-heavy teams typically move to Pro or Team for headroom and automation tied to gateways."
+    ],
+    "team": {
+      "title": "Team size and security posture"
+    },
+    "teamParagraphs": [
+      "The Free tier includes one workspace seat, which suits solo operators validating the product. Pro and Team tiers raise seat caps for growing teams while preserving role-based permissions for sensitive actions like billing management or tax approvals.",
+      "Sensitive workflows remain gated by permissions regardless of tier—Free does not mean unsecured; it means capacity limits differ."
+    ],
+    "comparison": {
+      "title": "Free vs Pro vs Team",
+      "subtitle": "Regional pricing appears inside Billing after you sign in. The table highlights capability differences—not currency amounts.",
+      "colFeature": "Capability",
+      "colFree": "Free",
+      "colPro": "Pro",
+      "colTeam": "Team",
+      "rows": [
+        {
+          "label": "Core workspace modules",
+          "free": "Included (subject to Free quotas)",
+          "pro": "Included",
+          "team": "Included"
+        },
+        {
+          "label": "Active CRM clients",
+          "free": "Up to 3",
+          "pro": "Unlimited",
+          "team": "Unlimited"
+        },
+        {
+          "label": "Invoices per UTC calendar month",
+          "free": "Up to 5 new invoices",
+          "pro": "Unlimited",
+          "team": "Unlimited"
+        },
+        {
+          "label": "Shop published services",
+          "free": "Up to 3",
+          "pro": "Unlimited",
+          "team": "Unlimited"
+        },
+        {
+          "label": "Razorpay / Stripe payment links on PDFs",
+          "free": "Requires upgrade or active trial",
+          "pro": "Included",
+          "team": "Included"
+        },
+        {
+          "label": "Workspace seats (members + pending invites)",
+          "free": "1 seat",
+          "pro": "3 seats",
+          "team": "15 seats"
+        }
+      ]
+    },
+    "resources": {
+      "title": "Go deeper in the help center",
+      "links": [
+        { "slug": "getting-started", "label": "Getting started" },
+        { "slug": "managing-clients", "label": "Managing clients" },
+        { "slug": "quotes-and-proposals-operations", "label": "Quotes and proposals" },
+        { "slug": "generating-invoices", "label": "Generating invoices" },
+        { "slug": "retainers-and-mrr", "label": "Retainers and MRR" },
+        { "slug": "expenses-and-tax", "label": "Expenses and tax" },
+        { "slug": "optional-sub-system-reporting-center", "label": "Reporting center" },
+        { "slug": "optional-sub-system-document-vault", "label": "Document vault" },
+        { "slug": "shop-operations", "label": "Shop operations" },
+        { "slug": "optional-sub-system-workforce", "label": "Workforce module" }
+      ]
+    },
+    "cta": {
+      "signupLabel": "Create free workspace",
+      "trialLabel": "Start 15-day Pro trial",
+      "demoLabel": "Try live demo",
+      "closingTitle": "Ready to try a free ERP built for operators?",
+      "closingBody": "Spin up a workspace on the Free tier to map your real clients and invoices, or launch the interactive demo with seeded data if you prefer a guided tour first."
+    },
+    "seoFaq": {
+      "items": [
+        {
+          "question": "Is BabaBuilds ERP really free?",
+          "answer": "Yes. The Free tier is a permanent ₹0 / $0 plan with access to the workspace modules described on this page. It includes explicit quotas for clients, monthly invoices, and shop listings so the service stays reliable for everyone."
+        },
+        {
+          "question": "What are the Free plan limits?",
+          "answer": "On permanent Free you can maintain up to three active CRM clients, create up to five invoices per UTC calendar month, publish up to three shop services, and operate with a single workspace seat. Payment gateway links on invoices require Pro, Team, or an active Pro trial."
+        },
+        {
+          "question": "Can I collect payments online on the Free plan?",
+          "answer": "Razorpay and Stripe payment links embedded in invoices and PDFs are available when your workspace has full paid features—meaning an active Pro trial or a Pro/Team subscription—not on the permanent Free tier."
+        },
+        {
+          "question": "What happens after the 15-day Pro trial ends?",
+          "answer": "If you do not subscribe, the workspace returns to the Free tier quotas. Data you created remains accessible subject to those limits; upgrade anytime to restore unlimited invoices, higher seats, and gateway collection."
+        },
+        {
+          "question": "Who is the Free plan best for?",
+          "answer": "Solo founders, boutique agencies validating workflows, and consultants who issue a handful of invoices each month benefit most. Teams that need multiple seats, unlimited invoices, or online collections should plan on Pro or Team."
+        },
+        {
+          "question": "Does free ERP mean every advanced module is unlimited?",
+          "answer": "No. Free means you can explore the same modules as paid customers, but capacity-sensitive actions enforce the Free quotas. Heavy automation, payroll at scale, or large teams should move to paid tiers for headroom."
+        },
+        {
+          "question": "Is my data private on the Free tier?",
+          "answer": "Yes. Free workspaces use the same application security model as paid workspaces, including role-based permissions for sensitive actions. You control invites, exports, and billing administrators."
+        },
+        {
+          "question": "How does BabaBuilds compare to spreadsheet ERP templates?",
+          "answer": "Spreadsheets are flexible but fragile. BabaBuilds links clients, proposals, invoices, expenses, and documents in one auditable system with API-backed guardrails instead of manual cell maintenance."
+        },
+        {
+          "question": "Where can I learn implementation details?",
+          "answer": "Use the in-app help center articles linked from this page for invoices, clients, retainers, tax, reporting, documents, shop operations, and workforce modules."
+        }
+      ]
+    }
+  },
   "LandingPageSeo": {
     "title": "BabaBuilds ERP | ابدأ تجربة 15 يومًا أو استكشف العرض التفاعلي",
     "description": "نظام ERP موجه للتحويل للوكالات والمحاسبين والمقاولين والمستقلين وشركات الخدمات. ابدأ تجربة Pro لمدة 15 يومًا أو ادخل عرضًا تفاعليًا جاهزًا.",

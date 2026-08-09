@@ -23,6 +23,7 @@ const STATIC_ROUTES: Array<{
   { route: '/for-small-businesses', changeFrequency: 'weekly', priority: 0.88 },
   { route: '/for-contractors', changeFrequency: 'weekly', priority: 0.88 },
   { route: '/for-ca', changeFrequency: 'weekly', priority: 0.88 },
+  { route: '/free-erp', changeFrequency: 'monthly', priority: 0.88 },
   { route: '/help-hub', changeFrequency: 'weekly', priority: 0.82 },
   { route: '/reseller', changeFrequency: 'monthly', priority: 0.75 },
   { route: '/reseller/partner-kit', changeFrequency: 'monthly', priority: 0.65 },
