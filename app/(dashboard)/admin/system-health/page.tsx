@@ -3,12 +3,15 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { Bug, Activity, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { requireSystemHealthSuperAdmin } from "./_auth";
 
 const prisma = new PrismaClient();
 
 export const dynamic = "force-dynamic";
 
 export default async function SystemHealthPage() {
+  await requireSystemHealthSuperAdmin();
+
   const errors = await prisma.systemErrorLog.findMany({
     orderBy: { createdAt: "desc" },
     take: 50,

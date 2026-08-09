@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 export type AuthzCode = "UNAUTHORIZED" | "FORBIDDEN";
 
@@ -18,36 +19,45 @@ export class AuthzError extends Error {
 
 function superAdminEmails(): Set<string> {
   const raw = process.env.SUPERADMIN_EMAILS?.trim();
-  const list = raw
-    ? raw.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean)
-    : ["admin@bababuilds.com"];
-  return new Set(list);
+  if (!raw) return new Set();
+  return new Set(raw.split(",").map((email) => email.trim().toLowerCase()).filter(Boolean));
 }
 
-export async function verifySuperAdmin() {
+/**
+ * Fail-closed platform super-admin check. Session claims are not sufficient:
+ * the user role and email allowlist are re-read from trusted server state.
+ */
+export async function verifySuperAdmin(): Promise<{ userId: string; email: string }> {
   const session = await getServerSession(authOptions);
+  const sessionUserId = session?.user?.id;
 
-  if (!session) {
+  if (!session || !sessionUserId) {
     throw new AuthzError("UNAUTHORIZED");
   }
 
-  const email = session.user?.email?.toLowerCase();
-  if (!email || !superAdminEmails().has(email)) {
-    throw new AuthzError("FORBIDDEN", "Admin role required");
+  const user = await prisma.user.findUnique({
+    where: { id: sessionUserId },
+    select: { id: true, email: true, role: true },
+  });
+  const email = user?.email?.trim().toLowerCase();
+  if (!user || user.role !== "ADMIN" || !email || !superAdminEmails().has(email)) {
+    throw new AuthzError("FORBIDDEN", "Super-admin role required");
   }
+
+  return { userId: user.id, email };
 }
 
 export function handleAdminApiError(error: unknown, fallbackMessage = "Server Error") {
   if (error instanceof AuthzError) {
     return NextResponse.json(
       { error: error.message, code: error.code },
-      { status: error.status }
+      { status: error.status, headers: { "Cache-Control": "no-store" } },
     );
   }
 
   console.error("Admin API Error:", error);
   return NextResponse.json(
     { error: fallbackMessage, code: "INTERNAL_ERROR" },
-    { status: 500 }
+    { status: 500, headers: { "Cache-Control": "no-store" } },
   );
 }
