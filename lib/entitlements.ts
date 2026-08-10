@@ -7,7 +7,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { downgradeWorkspaceToFree } from "@/lib/billing/subscription-cancellation";
+import { downgradeWorkspaceToFree } from "@/lib/billing/downgrade";
 import { FREE_TIER_CLIENT_LIMIT, FREE_TIER_MONTHLY_INVOICE_LIMIT, FREE_TIER_PUBLISHED_SERVICES_LIMIT } from "@/lib/pricing";
 import {
   deserializeSignupIntent,
