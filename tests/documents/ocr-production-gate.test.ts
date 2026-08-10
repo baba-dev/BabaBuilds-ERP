@@ -8,6 +8,11 @@ const productionOcrFiles = [
   'app/api/cron/documents-ocr/route.ts',
   'lib/documents/ocr/providers.ts',
   'lib/documents/ocr/runner.ts',
+  'lib/demo/templates/tax-agency.ts',
+  'lib/demo/templates/dm-agency.ts',
+  'lib/demo/templates/software-company.ts',
+  'lib/demo/templates/contractor-builder.ts',
+  'lib/demo/templates/freelancer-consultant.ts',
   'prisma/schema.prisma',
 ];
 
