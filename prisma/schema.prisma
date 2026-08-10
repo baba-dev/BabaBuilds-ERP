@@ -3655,7 +3655,7 @@ model DocumentOcrJob {
 
   kind     String @default("GENERIC") // RECEIPT|INVOICE|STATEMENT|TAX|GENERIC
   status   String @default("QUEUED") // QUEUED|RUNNING|SUCCEEDED|FAILED
-  provider String @default("UNCONFIGURED") // LOCAL_TESSERACT|GOOGLE_VISION|AWS_TEXTRACT|...
+  provider String // Explicit registered provider key; no placeholder/default is permitted.
 
   attemptCount Int     @default(0)
   errorCode    String?
