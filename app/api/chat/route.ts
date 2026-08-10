@@ -17,14 +17,28 @@ import {
 } from '@/lib/dashboard-cache';
 import { chatRequestSchema, type ToolAction } from '@/lib/ai/chat/contracts';
 import {
-  canExecuteToolForRole,
+  getToolPermissionRequirements,
+  isMutatingTool,
   isReportingTool,
+  parseToolArguments,
   reportingToolAllowed,
+  summarizeToolMutation,
+  ToolPolicyError,
 } from '@/lib/ai/chat/tool-policy';
+import {
+  createToolConfirmationToken,
+  ToolConfirmationError,
+  verifyToolConfirmationToken,
+} from '@/lib/ai/chat/tool-confirmation';
 import { assertFreeTierMonthlyInvoiceAllowed } from '@/lib/entitlements';
 import { isModuleEnabled } from '@/lib/modules';
 import { listPublicPresets } from '@/lib/reporting/presets';
-import { checkPermissionSilent } from '@/lib/rbac';
+import {
+  checkPermissionSilent,
+  requirePermission,
+  RbacDeniedError,
+} from '@/lib/rbac';
+import { logActivity } from '@/lib/security/activity-log';
 import {
   getShopSummary,
   getTopShopProducts,
@@ -1188,6 +1202,402 @@ async function predictStockouts(workspaceId: string) {
   }
 }
 
+
+async function executeMutationTool(
+  toolName: string,
+  args: ToolArgs,
+  workspaceId: string,
+): Promise<string> {
+  switch (toolName) {
+    case 'create_task':
+      return createTask(
+        asString(args.title),
+        asString(args.description),
+        asOptionalString(args.dueDate),
+        workspaceId,
+      );
+    case 'mark_invoice_paid':
+      return markInvoicePaid(asString(args.invoice_number), workspaceId);
+    case 'send_invoice_reminder':
+      return sendInvoiceReminder(asString(args.invoice_number), workspaceId);
+    case 'create_client':
+      return createClient(
+        asString(args.name),
+        asOptionalString(args.email),
+        asOptionalString(args.taxId),
+        asString(args.address),
+        asString(args.country),
+        workspaceId,
+      );
+    case 'update_client_status':
+      return updateClientStatus(
+        asString(args.client_name),
+        asString(args.status),
+        workspaceId,
+      );
+    case 'log_expense':
+      return logExpense(
+        asString(args.vendor),
+        asNumber(args.amount),
+        asString(args.category),
+        asOptionalString(args.description),
+        asOptionalString(args.dateString),
+        workspaceId,
+      );
+    case 'auto_reconcile':
+      return autoReconcile(
+        asString(args.transactionId),
+        asString(args.invoiceNumber),
+        workspaceId,
+      );
+    case 'update_proposal_status':
+      return updateProposalStatus(
+        asString(args.proposal_no),
+        asString(args.status),
+        workspaceId,
+      );
+    case 'convert_to_invoice':
+      return convertProposalToInvoice(asString(args.proposal_no), workspaceId);
+    case 'add_service_to_catalog':
+      return addServiceToCatalog(
+        asString(args.name),
+        asNumber(args.default_price),
+        asOptionalString(args.description),
+        workspaceId,
+      );
+    case 'create_retainer':
+      return createRetainer(
+        asString(args.client_name),
+        asString(args.service_name),
+        asNumber(args.amount),
+        asString(args.frequency),
+        asOptionalString(args.start_date),
+        workspaceId,
+      );
+    case 'update_retainer_status':
+      return updateRetainerStatus(
+        asString(args.service_name),
+        asString(args.client_name),
+        asString(args.status),
+        workspaceId,
+      );
+    case 'log_investment':
+      return logInvestment(
+        asString(args.asset_name),
+        asNumber(args.amount),
+        asString(args.category),
+        asOptionalString(args.date_string),
+        workspaceId,
+      );
+    case 'set_shop_status':
+      return setShopStatus(workspaceId, args.enabled === true);
+    case 'update_shop_announcement':
+      return updateShopAnnouncement(
+        workspaceId,
+        asString(args.announcement),
+      );
+    default:
+      throw new ToolPolicyError('Tool is not an allowlisted mutation');
+  }
+}
+
+function jsonSafeState(value: unknown): unknown {
+  return value === undefined ? null : JSON.parse(JSON.stringify(value));
+}
+
+async function captureMutationState(
+  toolName: string,
+  args: ToolArgs,
+  workspaceId: string,
+): Promise<unknown> {
+  switch (toolName) {
+    case 'create_task':
+      return {
+        requestedTitle: asString(args.title),
+        requestedDueDate: asOptionalString(args.dueDate) ?? null,
+      };
+    case 'mark_invoice_paid':
+    case 'send_invoice_reminder':
+      return prisma.invoice.findFirst({
+        where: { workspaceId, invoiceNumber: asString(args.invoice_number) },
+        select: {
+          id: true,
+          invoiceNumber: true,
+          status: true,
+          totalAmount: true,
+          amountReceived: true,
+          dateReceived: true,
+          clientId: true,
+        },
+      });
+    case 'create_client':
+    case 'update_client_status':
+      return prisma.client.findFirst({
+        where: {
+          workspaceId,
+          name:
+            toolName === 'create_client'
+              ? asString(args.name)
+              : { contains: asString(args.client_name) },
+        },
+        select: { id: true, name: true, email: true, status: true, createdAt: true },
+      });
+    case 'log_expense':
+      return prisma.expense.findMany({
+        where: {
+          workspaceId,
+          vendor: asString(args.vendor),
+          category: asString(args.category),
+        },
+        select: { id: true, vendor: true, amount: true, category: true, date: true },
+        orderBy: { date: 'desc' },
+        take: 3,
+      });
+    case 'auto_reconcile': {
+      const [transaction, invoice] = await Promise.all([
+        prisma.bankTransaction.findFirst({
+          where: { workspaceId, id: asString(args.transactionId) },
+          select: {
+            id: true,
+            amount: true,
+            isReconciled: true,
+            matchedInvoiceId: true,
+            reconciliationConfidence: true,
+          },
+        }),
+        prisma.invoice.findFirst({
+          where: { workspaceId, invoiceNumber: asString(args.invoiceNumber) },
+          select: {
+            id: true,
+            invoiceNumber: true,
+            status: true,
+            totalAmount: true,
+            amountReceived: true,
+            dateReceived: true,
+          },
+        }),
+      ]);
+      return { transaction, invoice };
+    }
+    case 'update_proposal_status':
+    case 'convert_to_invoice': {
+      const proposalNo = asString(args.proposal_no);
+      const proposal = await prisma.proposal.findFirst({
+        where: { workspaceId, proposalNo },
+        select: {
+          id: true,
+          proposalNo: true,
+          status: true,
+          acceptedAt: true,
+          clientId: true,
+          title: true,
+          totalAmount: true,
+        },
+      });
+      const relatedInvoices =
+        toolName === 'convert_to_invoice' && proposal
+          ? await prisma.invoice.findMany({
+              where: {
+                workspaceId,
+                clientId: proposal.clientId,
+                serviceDescription: proposal.title,
+              },
+              select: {
+                id: true,
+                invoiceNumber: true,
+                status: true,
+                totalAmount: true,
+                createdAt: true,
+              },
+              orderBy: { createdAt: 'desc' },
+              take: 3,
+            })
+          : [];
+      return { proposal, relatedInvoices };
+    }
+    case 'add_service_to_catalog':
+      return prisma.serviceTemplate.findMany({
+        where: { workspaceId, name: asString(args.name) },
+        select: { id: true, name: true, defaultPrice: true },
+        take: 3,
+      });
+    case 'create_retainer':
+    case 'update_retainer_status': {
+      const client = await prisma.client.findFirst({
+        where: {
+          workspaceId,
+          name: {
+            contains:
+              toolName === 'create_retainer'
+                ? asString(args.client_name)
+                : asString(args.client_name),
+          },
+        },
+        select: { id: true, name: true },
+      });
+      if (!client) return { client: null, retainers: [] };
+      const serviceName = asString(args.service_name);
+      const retainers = await prisma.retainer.findMany({
+        where: {
+          workspaceId,
+          clientId: client.id,
+          items: { some: { title: { contains: serviceName } } },
+        },
+        select: {
+          id: true,
+          status: true,
+          frequency: true,
+          nextBillingDate: true,
+          updatedAt: true,
+          items: {
+            select: { id: true, title: true, quantity: true, unitPrice: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 3,
+      });
+      return { client, retainers };
+    }
+    case 'log_investment':
+      return prisma.investment.findMany({
+        where: {
+          workspaceId,
+          assetName: asString(args.asset_name),
+          category: asString(args.category).toUpperCase(),
+        },
+        select: { id: true, assetName: true, amount: true, category: true, date: true },
+        orderBy: { date: 'desc' },
+        take: 3,
+      });
+    case 'set_shop_status':
+    case 'update_shop_announcement':
+      return prisma.businessProfile.findUnique({
+        where: { workspaceId },
+        select: {
+          shopEnabled: true,
+          shopSlug: true,
+          shopAnnouncement: true,
+          updatedAt: true,
+        },
+      });
+    default:
+      throw new ToolPolicyError('Tool is not an allowlisted mutation');
+  }
+}
+
+async function executeAuditedMutation(input: {
+  toolName: string;
+  args: ToolArgs;
+  workspaceId: string;
+  actorUserId: string;
+  request: Request;
+}): Promise<string> {
+  const permissions = getToolPermissionRequirements(input.toolName, input.args);
+  const beforeState = jsonSafeState(
+    await captureMutationState(input.toolName, input.args, input.workspaceId),
+  );
+
+  const beforeAuditId = await logActivity({
+    action: 'ai_tool_mutation_before',
+    status: 'INFO',
+    workspaceId: input.workspaceId,
+    actor: { userId: input.actorUserId },
+    entity: { type: 'ai_tool', id: input.toolName },
+    metadata: {
+      toolName: input.toolName,
+      permissions,
+      arguments: input.args,
+      state: beforeState,
+    },
+    request: input.request,
+  });
+  if (!beforeAuditId) {
+    throw new Error('Mutation blocked because the before-state audit log could not be written');
+  }
+
+  // Canonical fresh-DB authorization is deliberately the last gate before execution.
+  for (const permission of permissions) {
+    await requirePermission(input.actorUserId, input.workspaceId, permission);
+  }
+
+  let dbResult: string;
+  try {
+    dbResult = await executeMutationTool(input.toolName, input.args, input.workspaceId);
+  } catch (error) {
+    await logActivity({
+      action: 'ai_tool_mutation_after',
+      status: 'FAILURE',
+      workspaceId: input.workspaceId,
+      actor: { userId: input.actorUserId },
+      entity: { type: 'ai_tool', id: input.toolName },
+      metadata: {
+        toolName: input.toolName,
+        beforeAuditId,
+        beforeState,
+        error: error instanceof Error ? error.message : String(error),
+      },
+      request: input.request,
+    });
+    throw error;
+  }
+
+  let resultPayload: unknown = dbResult;
+  try {
+    resultPayload = JSON.parse(dbResult);
+  } catch {
+    // Keep the bounded string result if a handler returns non-JSON.
+  }
+  const failed =
+    Boolean(resultPayload) &&
+    typeof resultPayload === 'object' &&
+    'error' in (resultPayload as Record<string, unknown>);
+  const afterState = jsonSafeState(
+    await captureMutationState(input.toolName, input.args, input.workspaceId),
+  );
+  const afterAuditId = await logActivity({
+    action: 'ai_tool_mutation_after',
+    status: failed ? 'FAILURE' : 'SUCCESS',
+    workspaceId: input.workspaceId,
+    actor: { userId: input.actorUserId },
+    entity: { type: 'ai_tool', id: input.toolName },
+    metadata: {
+      toolName: input.toolName,
+      beforeAuditId,
+      beforeState,
+      afterState,
+      result: resultPayload,
+    },
+    request: input.request,
+  });
+  if (!afterAuditId) {
+    throw new Error('Mutation completed, but the after-state audit log could not be written');
+  }
+
+  return dbResult;
+}
+
+function formatConfirmedMutationReply(
+  toolName: string,
+  args: ToolArgs,
+  dbResult: string,
+): string {
+  let result: Record<string, unknown> = {};
+  try {
+    const parsed = JSON.parse(dbResult);
+    if (parsed && typeof parsed === 'object') {
+      result = parsed as Record<string, unknown>;
+    }
+  } catch {
+    return dbResult;
+  }
+
+  if (typeof result.error === 'string') {
+    return `The confirmed action was not completed: ${result.error}`;
+  }
+  if (typeof result.message === 'string') return result.message;
+  return `${summarizeToolMutation(toolName, args)} completed successfully.`;
+}
+
 export async function POST(request: Request) {
   try {
     const session = (await getServerSession(authOptions)) as SessionActor | null;
@@ -1196,9 +1606,6 @@ export async function POST(request: Request) {
     }
 
     const workspaceId = session.workspaceId;
-    const actorRole = String(
-      session.businessRole || session.user?.role || '',
-    ).toUpperCase();
     const actorUserId = session.user?.id;
 
     const parsedBody = chatRequestSchema.safeParse(await request.json());
@@ -1213,8 +1620,71 @@ export async function POST(request: Request) {
       );
     }
 
-    const { message, history, context } = parsedBody.data;
+    const { message, history, context, confirmationToken } = parsedBody.data;
     const safeHistory = history.slice(-10);
+
+    if (!actorUserId) {
+      return NextResponse.json(
+        { code: 'CHAT_ACTOR_MISSING', error: 'Authenticated user identity is required.' },
+        { status: 401, headers: { 'Cache-Control': 'no-store' } },
+      );
+    }
+
+    if (confirmationToken) {
+      const confirmation = verifyToolConfirmationToken(confirmationToken);
+      if (
+        confirmation.userId !== actorUserId ||
+        confirmation.workspaceId !== workspaceId
+      ) {
+        throw new ToolConfirmationError(
+          'AI mutation confirmation is bound to a different user or workspace',
+        );
+      }
+
+      const args = parseToolArguments(confirmation.toolName, confirmation.args);
+      if (!isMutatingTool(confirmation.toolName)) {
+        throw new ToolConfirmationError('Confirmation is not bound to a mutation');
+      }
+
+      const nonceClaim = await prisma.aiToolConfirmationNonce.updateMany({
+        where: {
+          nonce: confirmation.nonce,
+          userId: actorUserId,
+          workspaceId,
+          toolName: confirmation.toolName,
+          expiresAt: { gt: new Date() },
+          consumedAt: null,
+        },
+        data: { consumedAt: new Date() },
+      });
+      if (nonceClaim.count !== 1) {
+        throw new ToolConfirmationError(
+          'AI mutation confirmation has expired or was already used',
+          'expired',
+        );
+      }
+
+      const dbResult = await executeAuditedMutation({
+        toolName: confirmation.toolName,
+        args,
+        workspaceId,
+        actorUserId,
+        request,
+      });
+
+      return NextResponse.json(
+        {
+          reply: formatConfirmedMutationReply(
+            confirmation.toolName,
+            args,
+            dbResult,
+          ),
+          action: null,
+          confirmation: null,
+        },
+        { headers: { 'Cache-Control': 'no-store' } },
+      );
+    }
 
     const profile = await prisma.businessProfile.findUnique({
       where: { workspaceId },
@@ -1305,7 +1775,8 @@ export async function POST(request: Request) {
     2. CONTEXT-AWARE NAVIGATION ('ui_navigate'): You don't just tell users where to go; you take them there. If a user says "Draft an invoice for Acme Corp for ₹50,000", call 'ui_navigate' to path '/income' AND pass a JSON payload { "client": "Acme Corp", "amount": 50000 } so the UI opens the New Invoice modal and auto-fills the form for them.
     3. PROACTIVE ASSISTANCE ('create_task'): You are not read-only. If a user mentions needing to follow up, verify a payment, or do something later, use 'create_task' to add it to their system. Anticipate their needs!
     4. UI THEME CONTROL ('set_ui_theme'): You can switch the user's UI theme instantly without navigation. Use it when the user asks for dark mode, light mode, or system theme.
-    5. TONE: Confident, incredibly helpful, and brief. Never use generic AI filler phrases like "I am an AI...". Get straight to the value.
+    5. MUTATION SAFETY: Any tool that changes ERP data, sends email, or changes public shop state requires an explicit confirmation in the application. Never claim a change happened until the tool result confirms it.
+    6. TONE: Confident, incredibly helpful, and brief. Never use generic AI filler phrases like "I am an AI...". Get straight to the value.
 ${
   reportingModuleEnabled && reportingCanList
     ? `6. REPORTING CENTER: Curated workspace reports live at /reporting. Use list_reporting_presets for titles (when available). Use open_reporting_center only when the user should open the Reporting Center UI with a preset${reportingCanNavigateRun ? ' (user has run access).' : ' — if they cannot run queries, suggest they ask an Admin for reporting_center.query.run.'}`
@@ -1973,22 +2444,91 @@ ${
     let actionPayload: ToolAction | null = null;
 
     if (responseMessage?.tool_calls && responseMessage.tool_calls.length > 0) {
-      messages.push(responseMessage);
+      const proposedMutations = responseMessage.tool_calls.flatMap((toolCall) => {
+        let rawArgs: unknown;
+        try {
+          rawArgs = JSON.parse(toolCall.function.arguments || '{}');
+        } catch {
+          throw new ToolPolicyError(
+            `Invalid JSON arguments for AI tool ${toolCall.function.name}`,
+          );
+        }
+        const args = parseToolArguments(toolCall.function.name, rawArgs);
+        return isMutatingTool(toolCall.function.name)
+          ? [{ toolName: toolCall.function.name, args }]
+          : [];
+      });
 
+      if (proposedMutations.length > 1) {
+        return NextResponse.json(
+          {
+            reply:
+              'I prepared more than one change. For safety, ask me to perform one mutation at a time.',
+            action: null,
+            confirmation: null,
+          },
+          { status: 200, headers: { 'Cache-Control': 'no-store' } },
+        );
+      }
+
+      if (proposedMutations.length === 1) {
+        const mutation = proposedMutations[0];
+        const permissions = getToolPermissionRequirements(
+          mutation.toolName,
+          mutation.args,
+        );
+        for (const permission of permissions) {
+          await requirePermission(actorUserId, workspaceId, permission);
+        }
+
+        const signed = createToolConfirmationToken({
+          userId: actorUserId,
+          workspaceId,
+          toolName: mutation.toolName,
+          args: mutation.args,
+        });
+        await prisma.aiToolConfirmationNonce.create({
+          data: {
+            nonce: signed.nonce,
+            userId: actorUserId,
+            workspaceId,
+            toolName: mutation.toolName,
+            expiresAt: new Date(signed.expiresAt),
+          },
+        });
+        const summary = summarizeToolMutation(mutation.toolName, mutation.args);
+
+        return NextResponse.json(
+          {
+            reply: `Please review and confirm this change: ${summary}.`,
+            action: null,
+            confirmation: {
+              token: signed.token,
+              toolName: mutation.toolName,
+              summary,
+              expiresAt: signed.expiresAt,
+            },
+          },
+          { status: 202, headers: { 'Cache-Control': 'no-store' } },
+        );
+      }
+
+      messages.push(responseMessage);
       const toolPromises = responseMessage.tool_calls.map(async (toolCall) => {
         let args: ToolArgs = {};
         let dbResult = '';
         let action: ToolAction | null = null;
 
         try {
-          args = JSON.parse(toolCall.function.arguments || '{}');
+          const rawArgs = JSON.parse(toolCall.function.arguments || '{}');
+          args = parseToolArguments(toolCall.function.name, rawArgs);
         } catch {
           return {
             role: 'tool',
             tool_call_id: toolCall.id,
             name: toolCall.function.name,
             content: JSON.stringify({
-              error: 'Invalid JSON arguments. Please call the tool again with valid JSON.',
+              error: 'Tool arguments were rejected by the server policy.',
             }),
             action: null,
           };
@@ -2000,73 +2540,17 @@ ${
           get_tax_summary: (_a, wid) => getTaxSummary(wid),
           get_service_catalog: (_a, wid) => getServiceCatalog(wid),
           get_proposals: (a, wid) => getProposals(wid, asOptionalString(a.status)),
-          create_task: (a, wid) =>
-            createTask(asString(a.title), asString(a.description), asOptionalString(a.dueDate), wid),
           get_overdue_invoices: (_a, wid) => getOverdueInvoices(wid),
-          mark_invoice_paid: (a, wid) => markInvoicePaid(asString(a.invoice_number), wid),
-          send_invoice_reminder: (a, wid) => sendInvoiceReminder(asString(a.invoice_number), wid),
-          create_client: (a, wid) =>
-            createClient(
-              asString(a.name),
-              asOptionalString(a.email),
-              asOptionalString(a.taxId),
-              asString(a.address),
-              asString(a.country),
-              wid,
-            ),
-          update_client_status: (a, wid) =>
-            updateClientStatus(asString(a.client_name), asString(a.status), wid),
           search_clients: (a, wid) => searchClients(asString(a.query), wid),
           get_client_ledger: (a, wid) => getClientLedger(asString(a.client_name), wid),
-          log_expense: (a, wid) =>
-            logExpense(
-              asString(a.vendor),
-              asNumber(a.amount),
-              asString(a.category),
-              asOptionalString(a.description),
-              asOptionalString(a.dateString),
-              wid,
-            ),
           get_expenses_summary: (_a, wid) => getExpensesSummary(wid),
           get_unreconciled_transactions: (_a, wid) => getUnreconciledBankLines(wid),
-          auto_reconcile: (a, wid) =>
-            autoReconcile(asString(a.transactionId), asString(a.invoiceNumber), wid),
-          update_proposal_status: (a, wid) =>
-            updateProposalStatus(asString(a.proposal_no), asString(a.status), wid),
-          convert_to_invoice: (a, wid) => convertProposalToInvoice(asString(a.proposal_no), wid),
-          add_service_to_catalog: (a, wid) =>
-            addServiceToCatalog(asString(a.name), asNumber(a.default_price), asOptionalString(a.description), wid),
-          create_retainer: (a, wid) =>
-            createRetainer(
-              asString(a.client_name),
-              asString(a.service_name),
-              asNumber(a.amount),
-              asString(a.frequency),
-              asOptionalString(a.start_date),
-              wid,
-            ),
-          update_retainer_status: (a, wid) =>
-            updateRetainerStatus(asString(a.service_name), asString(a.client_name), asString(a.status), wid),
           get_active_retainers: (_a, wid) => getActiveRetainers(wid),
-          log_investment: (a, wid) =>
-            logInvestment(asString(a.asset_name), asNumber(a.amount), asString(a.category), asOptionalString(a.date_string), wid),
           get_investments_list: (_a, wid) => getInvestmentsList(wid),
           calculate_estimated_tax: (_a, wid) => calculateEstimatedTax(wid),
           predict_stockouts: (_a, wid) => predictStockouts(wid),
           get_shop_summary: (_a, wid) => getShopSummary(wid),
           get_top_shop_products: (_a, wid) => getTopShopProducts(wid),
-          set_shop_status: (a, wid) => {
-            const rawEnabled = (a as { enabled?: unknown }).enabled;
-            const parsedEnabled =
-              typeof rawEnabled === 'boolean'
-                ? rawEnabled
-                : typeof rawEnabled === 'string'
-                  ? rawEnabled.trim().toLowerCase() === 'true'
-                  : false;
-            return setShopStatus(wid, parsedEnabled);
-          },
-          update_shop_announcement: (a, wid) =>
-            updateShopAnnouncement(wid, asString((a as { announcement?: unknown }).announcement)),
           get_email_billing_summary: (_a, wid) => getEmailBillingSummaryForAi(wid),
           list_email_billing_review_items: (_a, wid) => listEmailBillingReviewItemsForAi(wid),
           list_unmapped_email_domains: (_a, wid) => listUnmappedEmailDomainsForAi(wid),
@@ -2086,6 +2570,14 @@ ${
           'list_unmapped_email_domains',
           'open_email_billing_dashboard',
         ].includes(toolCall.function.name);
+
+        const requiredPermissions = getToolPermissionRequirements(
+          toolCall.function.name,
+          args,
+        );
+        for (const permission of requiredPermissions) {
+          await requirePermission(actorUserId, workspaceId, permission);
+        }
 
         if (
           isReportingTool(toolCall.function.name) &&
@@ -2114,10 +2606,6 @@ ${
             error:
               'Email Billing is disabled for this workspace or your role cannot view hosted email billing data.',
           });
-        } else if (!canExecuteToolForRole(toolCall.function.name, actorRole)) {
-          dbResult = JSON.stringify({
-            error: `Tool ${toolCall.function.name} requires elevated permissions for your workspace role.`,
-          });
         } else if (toolCall.function.name === 'open_shop_dashboard') {
           action = { type: 'NAVIGATE', path: '/shop', payload: null };
           dbResult = JSON.stringify({ status: 'Opening Shop Command Center.' });
@@ -2144,6 +2632,10 @@ ${
           };
           dbResult = JSON.stringify({
             status: `Opening Reporting Center preset ${asString(args.presetId)}.`,
+          });
+        } else if (isMutatingTool(toolCall.function.name)) {
+          dbResult = JSON.stringify({
+            error: 'Mutation requires a fresh signed user confirmation.',
           });
         } else if (toolHandlers[toolCall.function.name]) {
           dbResult = await toolHandlers[toolCall.function.name](args, workspaceId);
@@ -2242,6 +2734,40 @@ ${
     });
   } catch (error: unknown) {
     console.error('Chat Error Server Log:', error);
+
+    if (error instanceof RbacDeniedError) {
+      return NextResponse.json(
+        {
+          code: 'RBAC_PERMISSION_DENIED',
+          error: 'Access denied. You do not have permission to run this AI tool.',
+          permission: error.permission,
+          role: error.resolvedRole,
+        },
+        { status: 403, headers: { 'Cache-Control': 'no-store' } },
+      );
+    }
+    if (error instanceof ToolConfirmationError) {
+      const unavailable = error.reason === 'unavailable';
+      return NextResponse.json(
+        {
+          code: unavailable
+            ? 'AI_TOOL_CONFIRMATION_UNAVAILABLE'
+            : 'AI_TOOL_CONFIRMATION_INVALID',
+          error: error.message,
+        },
+        {
+          status: unavailable ? 503 : 400,
+          headers: { 'Cache-Control': 'no-store' },
+        },
+      );
+    }
+    if (error instanceof ToolPolicyError) {
+      return NextResponse.json(
+        { code: 'AI_TOOL_POLICY_REJECTED', error: error.message },
+        { status: 400, headers: { 'Cache-Control': 'no-store' } },
+      );
+    }
+
     const mapped = groqErrorToHttp(error);
     return NextResponse.json(
       { code: mapped.code, error: mapped.message },
