@@ -5,8 +5,8 @@ import { useRouter, usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { 
-  MessageSquare, X, Send, Bot, User, Loader2, 
-  Trash2, Maximize2, Minimize2, Sparkles, ArrowRight, BookOpen
+  MessageSquare, X, Send, Bot, User, Loader2,
+  Trash2, Maximize2, Minimize2, Sparkles, ArrowRight, BookOpen, ShieldAlert
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,9 +52,30 @@ type ChatMessage = {
   retryText?: string;
 };
 
+type PendingToolConfirmation = {
+  token: string;
+  toolName: string;
+  summary: string;
+  expiresAt: string;
+  requestMessage: string;
+};
+
 function getFriendlyChatError(payload: any, status: number): { content: string; canRetry: boolean } {
   const code = String(payload?.code || "").toUpperCase();
   const raw = typeof payload?.error === "string" ? payload.error : "";
+
+  if (
+    code === "AI_TOOL_CONFIRMATION_INVALID" ||
+    code === "AI_TOOL_CONFIRMATION_UNAVAILABLE" ||
+    code === "AI_TOOL_POLICY_REJECTED" ||
+    code === "RBAC_PERMISSION_DENIED" ||
+    code === "CHAT_ACTOR_MISSING"
+  ) {
+    return {
+      content: raw || "This AI action was blocked by the server security policy.",
+      canRetry: false,
+    };
+  }
 
   if (code === "GROQ_API_KEY_MISSING" || status === 400) {
     return {
@@ -105,6 +126,8 @@ export default function AIChatbot() {
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
+  const [pendingConfirmation, setPendingConfirmation] =
+    useState<PendingToolConfirmation | null>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -206,6 +229,16 @@ export default function AIChatbot() {
       } else {
         let actionMsg = "";
 
+        if (data.confirmation) {
+          setPendingConfirmation({
+            token: String(data.confirmation.token),
+            toolName: String(data.confirmation.toolName),
+            summary: String(data.confirmation.summary),
+            expiresAt: String(data.confirmation.expiresAt),
+            requestMessage: text,
+          });
+        }
+
         if (data.action && data.action.type === 'NAVIGATE') {
           actionMsg = `Navigating to ${data.action.path}...`;
           
@@ -269,6 +302,75 @@ export default function AIChatbot() {
       setIsLoading(false);
     }
   }, [isLoading, pathname, resolvedTheme, router, setTheme, theme]);
+
+  const cancelPendingConfirmation = useCallback(() => {
+    if (!pendingConfirmation || isLoading) return;
+    setPendingConfirmation(null);
+    setMessages(prev => [
+      ...prev,
+      {
+        role: "assistant",
+        content: `Cancelled: ${pendingConfirmation.summary}.`,
+      },
+    ]);
+  }, [isLoading, pendingConfirmation]);
+
+  const confirmPendingMutation = useCallback(async () => {
+    if (!pendingConfirmation || isLoading || sendInFlightRef.current) return;
+    sendInFlightRef.current = true;
+    setIsLoading(true);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: pendingConfirmation.requestMessage,
+          history: messagesRef.current.filter(
+            m => !(m.role === 'assistant' && m.content === DEFAULT_GREETING.content)
+          ).slice(-10),
+          context: {
+            currentRoute: pathname,
+            pageTitle: typeof document !== 'undefined' ? document.title : 'Unknown',
+          },
+          confirmationToken: pendingConfirmation.token,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        const friendly = getFriendlyChatError(data, res.status);
+        setMessages(prev => [
+          ...prev,
+          {
+            role: "assistant",
+            content: `**Action blocked:** ${friendly.content}`,
+          },
+        ]);
+      } else {
+        setMessages(prev => [
+          ...prev,
+          {
+            role: "assistant",
+            content: data.reply || "The confirmed action completed.",
+          },
+        ]);
+      }
+      setPendingConfirmation(null);
+    } catch {
+      setMessages(prev => [
+        ...prev,
+        {
+          role: "assistant",
+          content:
+            "**Network error occurred while confirming the action.** You can retry while the confirmation is still valid.",
+        },
+      ]);
+    } finally {
+      sendInFlightRef.current = false;
+      setIsLoading(false);
+    }
+  }, [isLoading, pathname, pendingConfirmation]);
 
   useEffect(() => {
     if (!aiChatStoreState.requestId) return;
@@ -468,6 +570,56 @@ export default function AIChatbot() {
           {isOpen ? <X className="w-6 h-6 -rotate-90 transition-transform duration-300" /> : <MessageSquare className="w-6 h-6" />}
         </button>
       </div>
+
+      <AlertDialog
+        open={Boolean(pendingConfirmation)}
+        onOpenChange={(open) => {
+          if (!open) cancelPendingConfirmation();
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5 text-amber-600" />
+              Confirm ERP change
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingConfirmation?.summary}. This confirmation expires at{" "}
+              {pendingConfirmation
+                ? new Date(pendingConfirmation.expiresAt).toLocaleTimeString()
+                : ""}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={isLoading}
+              onClick={(event) => {
+                event.preventDefault();
+                cancelPendingConfirmation();
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isLoading}
+              onClick={(event) => {
+                event.preventDefault();
+                void confirmPendingMutation();
+              }}
+              className="bg-amber-600 text-white hover:bg-amber-700"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Confirming…
+                </>
+              ) : (
+                "Confirm change"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
         <AlertDialogContent>
