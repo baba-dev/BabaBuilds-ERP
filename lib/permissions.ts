@@ -142,6 +142,10 @@ export const PERMISSION_KEYS = [
   'accounting.view',
   'accounting.post',       // High-risk: posts journal entries
 
+  // Bank Reconciliation
+  'reconciliation.import', // Import bank data into the reconciliation workspace
+  'reconciliation.commit', // Commit reviewed matches to invoices and expenses
+
   // Tax
   'tax.view',
   'tax.manage',            // High-risk: workspace tax setup, imports, document links
@@ -240,6 +244,7 @@ export const PERMISSION_MODULE_GROUPS: { module: string; label: string; keys: Pe
   { module: 'service_orders',  label: 'Service Orders',   keys: ['service_orders.view', 'service_orders.manage'] },
   { module: 'cash_flow',       label: 'Cash Flow',        keys: ['cash_flow.view', 'cash_flow.manage_assumptions'] },
   { module: 'accounting',      label: 'Accounting',       keys: ['accounting.view', 'accounting.post'] },
+  { module: 'reconciliation',  label: 'Reconciliation',   keys: ['reconciliation.import', 'reconciliation.commit'] },
   {
     module: 'tax',
     label: 'Tax',
@@ -351,6 +356,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'service_orders.view', 'service_orders.manage',
     'cash_flow.view', 'cash_flow.manage_assumptions',
     'accounting.view', 'accounting.post',
+    'reconciliation.import', 'reconciliation.commit',
     'tax.view',
     'tax.manage',
     'tax.edit',
@@ -410,6 +416,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'service_orders.view', 'service_orders.manage',
     'cash_flow.view', 'cash_flow.manage_assumptions',
     'accounting.view', 'accounting.post',
+    'reconciliation.import', 'reconciliation.commit',
     'tax.view',
     'tax.manage',
     'tax.edit',
@@ -468,6 +475,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'service_orders.view',
     'cash_flow.view', 'cash_flow.manage_assumptions',
     'accounting.view',    // can view but NOT post
+    'reconciliation.import', 'reconciliation.commit',
     'tax.view',
     'tax.edit',
     'tax.file',

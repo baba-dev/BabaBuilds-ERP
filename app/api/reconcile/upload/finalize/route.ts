@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 
 import { authOptions } from '@/lib/auth';
 import { commitReconciliationTransactions } from '@/lib/reconciliation/commit';
+import { withPermission } from '@/lib/rbac';
 
 /**
  * @deprecated Use POST /api/reconcile/commit instead.
@@ -13,10 +14,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const workspaceId = (session as any).workspaceId as string;
+  const userId = (session as any).user?.id as string | undefined;
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const permission = await withPermission(
+    userId,
+    workspaceId,
+    'reconciliation.commit',
+  );
+  if (!permission.granted) return permission.response;
+
   const body = await request.json();
   const result = await commitReconciliationTransactions({
-    workspaceId: (session as any).workspaceId,
-    actorUserId: (session as any).user?.id,
+    workspaceId,
+    actorUserId: userId,
     approvedInvoices: body?.approvedInvoices,
     approvedExpenses: body?.approvedExpenses,
   });
