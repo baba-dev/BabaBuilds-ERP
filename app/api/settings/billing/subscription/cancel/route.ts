@@ -1,44 +1,65 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
 
-export async function POST() {
+import { authOptions } from '@/lib/auth';
+import {
+  SubscriptionCancellationError,
+  scheduleWorkspaceSubscriptionCancellation,
+} from '@/lib/billing/subscription-cancellation';
+import {
+  RbacDeniedError,
+  rbacDeniedResponse,
+  requirePermission,
+} from '@/lib/rbac';
+
+export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    const scopedSession = session as (typeof session & { workspaceId?: string }) | null;
+    const workspaceId = (session as { workspaceId?: string } | null)?.workspaceId;
+    const userId = session?.user?.id;
 
-    if (!scopedSession?.workspaceId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!workspaceId || !userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const workspaceId = scopedSession.workspaceId;
+    // Fresh DB membership + exact owner-only billing permission check.
+    await requirePermission(userId, workspaceId, 'billing.manage');
 
-    const workspace = await prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      select: { subscriptionStatus: true, subscriptionEndsAt: true },
+    const result = await scheduleWorkspaceSubscriptionCancellation({
+      workspaceId,
+      actorUserId: userId,
+      actorEmail: session.user?.email,
+      request: req,
     });
 
-    if (!workspace) {
-      return NextResponse.json({ error: "Workspace not found." }, { status: 404 });
+    return NextResponse.json({
+      ok: true,
+      status: 'CANCELLATION_SCHEDULED',
+      alreadyScheduled: result.alreadyScheduled,
+      provider: result.provider,
+      effectiveAt: result.effectiveAt.toISOString(),
+      message:
+        'Cancellation is scheduled. Paid access remains active until the confirmed effective date.',
+    });
+  } catch (error) {
+    if (error instanceof RbacDeniedError) {
+      return rbacDeniedResponse(error);
+    }
+    if (error instanceof SubscriptionCancellationError) {
+      return NextResponse.json(
+        { error: error.message, code: error.code },
+        { status: error.httpStatus },
+      );
     }
 
-    if (workspace.subscriptionStatus !== "PRO" && workspace.subscriptionStatus !== "TEAM") {
-      return NextResponse.json({ error: "No active paid subscription to cancel." }, { status: 400 });
-    }
-
-    await prisma.workspace.update({
-      where: { id: workspaceId },
-      data: {
-        subscriptionStatus: "FREE",
-        planTier: "FREE",
-        planInterval: null,
-        subscriptionEndsAt: workspace.subscriptionEndsAt ?? new Date(),
+    console.error('[billing/subscription/cancel]', error);
+    return NextResponse.json(
+      {
+        error:
+          'The billing provider did not confirm cancellation. No local downgrade was applied.',
+        code: 'PROVIDER_CANCELLATION_FAILED',
       },
-    });
-
-    return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: "Failed to cancel subscription." }, { status: 500 });
+      { status: 502 },
+    );
   }
 }

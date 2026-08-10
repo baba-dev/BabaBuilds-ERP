@@ -399,6 +399,8 @@ export async function processRazorpaySubscriptionPaymentVerified(paymentId: stri
     description,
     distributorCouponId: couponId,
     billingProviderCustomerId: customerId,
+    billingProvider: "RAZORPAY",
+    billingContractType: "PREPAID",
     currency: payCurrency,
   });
 }

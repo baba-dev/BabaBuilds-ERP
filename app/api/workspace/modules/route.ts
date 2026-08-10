@@ -16,6 +16,8 @@ import {
   disableModule,
   getEnabledModules,
   isValidModuleKey,
+  PaidPlanRequiredError,
+  requireModulePlanEntitlement,
 } from '@/lib/modules';
 
 async function getWorkspaceId(userId: string, sessionWorkspaceId?: string | null): Promise<string | null> {
@@ -86,6 +88,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (enabled) {
+      await requireModulePlanEntitlement(workspaceId, moduleKey);
+
       if (moduleKey === 'MULTI_COMPANY') {
         await enableMultiCompany(workspaceId, session.user.id);
       } else {
@@ -101,6 +105,16 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, moduleKey, enabled });
   } catch (err) {
+    if (err instanceof PaidPlanRequiredError) {
+      return NextResponse.json(
+        {
+          error: 'This optional module requires an active Pro or Team plan.',
+          code: 'PAID_PLAN_REQUIRED',
+          moduleKey: err.moduleKey,
+        },
+        { status: 403 },
+      );
+    }
     console.error('[modules/POST]', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

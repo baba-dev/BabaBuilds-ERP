@@ -86,6 +86,18 @@ export async function GET() {
 
     const safeProfile = sanitizeBusinessProfileResponse(profile as unknown as Record<string, unknown> | null) ?? {};
 
+    // Gateway credentials/settings are paid-only. Preserve encrypted values in the
+    // database for a future re-upgrade, but never expose them to a Free workspace.
+    if (!billingEntitlements.canUsePaymentGateways) {
+      Object.assign(safeProfile, {
+        razorpayKeyId: null,
+        stripePublishableKey: null,
+        defaultGateway: null,
+        hasRazorpayKeySecret: false,
+        hasStripeSecretKey: false,
+      });
+    }
+
     return NextResponse.json({
       ...safeProfile,
       primaryBankAccount: profile ? resolvePrimaryRemittanceFromProfile(profile) : null,
@@ -172,6 +184,25 @@ export async function POST(request: Request) {
     const rawStripePublishableKey = getStringField('stripePublishableKey');
     const rawStripeSecretKey      = formData.get('stripeSecretKey')      as string;
     const defaultGateway          = formData.get('defaultGateway')       as string;
+
+    const currentBilling = await loadWorkspaceBillingSnapshot(workspaceId);
+    const canManageGatewaySettings =
+      currentBilling ? canUsePaymentGateways(currentBilling) : false;
+    const submittedNewGatewayCredential =
+      Boolean(rawRzpKeyId?.trim()) ||
+      Boolean(rawRzpSecret && rawRzpSecret !== 'SET') ||
+      Boolean(rawStripePublishableKey?.trim()) ||
+      Boolean(rawStripeSecretKey && rawStripeSecretKey !== 'SET');
+
+    if (!canManageGatewaySettings && submittedNewGatewayCredential) {
+      return NextResponse.json(
+        {
+          error: 'Payment gateway settings require an active Pro or Team plan.',
+          code: 'PAID_PLAN_REQUIRED',
+        },
+        { status: 403 },
+      );
+    }
 
     if (isProductionSecurityMode()) {
       if (rawRzpKeyId && isTestRazorpayKeyId(rawRzpKeyId)) {
@@ -370,6 +401,7 @@ export async function POST(request: Request) {
       }
     }
 
+    if (canManageGatewaySettings) {
     // ── Razorpay secrets ──────────────────────────────────────────────────────
     // Key ID is publishable — store plain (or null if cleared)
     if (hasField('razorpayKeyId')) {
@@ -405,6 +437,7 @@ export async function POST(request: Request) {
     if (defaultGateway) {
       updateData.defaultGateway = defaultGateway;
     }
+    }
 
     // ── Upsert ────────────────────────────────────────────────────────────────
     const profile = await prisma.$transaction(async (tx) => {
@@ -423,13 +456,13 @@ export async function POST(request: Request) {
               : null,
           groqApiKey:          (rawGroqApiKey && rawGroqApiKey !== "SET" && rawGroqApiKey !== "DELETE_KEY")
                                  ? encrypt(rawGroqApiKey) : (parsedGroqApiKey || null),
-          razorpayKeyId:       rawRzpKeyId        || null,
-          razorpayKeySecret:   (rawRzpSecret && rawRzpSecret !== "SET" && rawRzpSecret !== "DELETE_KEY")
+          razorpayKeyId:       canManageGatewaySettings ? (rawRzpKeyId || null) : null,
+          razorpayKeySecret:   canManageGatewaySettings && rawRzpSecret && rawRzpSecret !== "SET" && rawRzpSecret !== "DELETE_KEY"
                                  ? encrypt(rawRzpSecret) : null,
-          stripePublishableKey: rawStripePublishableKey || null,
-          stripeSecretKey:      (rawStripeSecretKey && rawStripeSecretKey !== "SET" && rawStripeSecretKey !== "DELETE_KEY")
+          stripePublishableKey: canManageGatewaySettings ? (rawStripePublishableKey || null) : null,
+          stripeSecretKey:      canManageGatewaySettings && rawStripeSecretKey && rawStripeSecretKey !== "SET" && rawStripeSecretKey !== "DELETE_KEY"
                                  ? encrypt(rawStripeSecretKey) : null,
-          defaultGateway:       defaultGateway || "RAZORPAY",
+          defaultGateway:       canManageGatewaySettings ? (defaultGateway || "RAZORPAY") : "RAZORPAY",
           invoiceTheme, defaultSacCode, logoUrl, signatureUrl,
         },
       });
