@@ -7,6 +7,7 @@ import Razorpay from "razorpay";
 import crypto from "crypto";
 import { decrypt } from "@/lib/encryption";
 import { timingSafeEqualString } from "@/lib/security/signature";
+import { withPermission } from "@/lib/rbac";
 
 type Provider = "STRIPE" | "RAZORPAY";
 
@@ -51,11 +52,17 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     const scopedSession = session as (typeof session & { workspaceId?: string }) | null;
 
-    if (!scopedSession?.workspaceId) {
+    if (!scopedSession?.workspaceId || !scopedSession.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const workspaceId = scopedSession.workspaceId;
+    const permission = await withPermission(
+      scopedSession.user.id,
+      workspaceId,
+      "billing.manage",
+    );
+    if (!permission.granted) return permission.response;
     const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
       select: { paymentMethodMask: true, billingProviderId: true },
@@ -78,11 +85,17 @@ export async function POST() {
     const session = await getServerSession(authOptions);
     const scopedSession = session as (typeof session & { workspaceId?: string }) | null;
 
-    if (!scopedSession?.workspaceId) {
+    if (!scopedSession?.workspaceId || !scopedSession.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const workspaceId = scopedSession.workspaceId;
+    const permission = await withPermission(
+      scopedSession.user.id,
+      workspaceId,
+      "billing.manage",
+    );
+    if (!permission.granted) return permission.response;
 
     const [workspace, profile] = await Promise.all([
       prisma.workspace.findUnique({
@@ -206,11 +219,17 @@ export async function PATCH(req: Request) {
     const session = await getServerSession(authOptions);
     const scopedSession = session as (typeof session & { workspaceId?: string }) | null;
 
-    if (!scopedSession?.workspaceId) {
+    if (!scopedSession?.workspaceId || !scopedSession.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const workspaceId = scopedSession.workspaceId;
+    const permission = await withPermission(
+      scopedSession.user.id,
+      workspaceId,
+      "billing.manage",
+    );
+    if (!permission.granted) return permission.response;
     const body = await req.json().catch(() => ({}));
     const provider = body?.provider as Provider | undefined;
 
