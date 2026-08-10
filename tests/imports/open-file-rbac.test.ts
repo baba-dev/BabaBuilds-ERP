@@ -33,6 +33,24 @@ describe('open-file import RBAC policy', () => {
     }
   });
 
+  it('protects direct reconciliation upload entry points', () => {
+    for (const routePath of [
+      'app/api/reconcile/upload/route.ts',
+      'app/api/reconcile/upload/parse-mapped/route.ts',
+    ]) {
+      const source = fs.readFileSync(routePath, 'utf8');
+      const enforcementIndex = source.indexOf(
+        '"reconciliation.import"',
+      );
+      const writeIndex = source.indexOf('prisma.bankImportBatch.create');
+
+      expect(source).toContain('withPermission(');
+      expect(enforcementIndex).toBeGreaterThan(-1);
+      expect(writeIndex).toBeGreaterThan(-1);
+      expect(enforcementIndex).toBeLessThan(writeIndex);
+    }
+  });
+
   it('rejects unknown or non-string flow selectors', () => {
     expect(isOpenFileImportFlow('expenses')).toBe(true);
     expect(isOpenFileImportFlow('reconciliation')).toBe(true);
