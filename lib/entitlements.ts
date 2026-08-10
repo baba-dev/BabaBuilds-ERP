@@ -7,7 +7,6 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import { downgradeWorkspaceToFree } from "@/lib/billing/downgrade";
 import { FREE_TIER_CLIENT_LIMIT, FREE_TIER_MONTHLY_INVOICE_LIMIT, FREE_TIER_PUBLISHED_SERVICES_LIMIT } from "@/lib/pricing";
 import {
   deserializeSignupIntent,
@@ -197,6 +196,10 @@ export async function normalizeExpiredWorkspaceSubscription(workspaceId: string)
     select: { subscriptionStatus: true, subscriptionEndsAt: true },
   });
   if (!row) return;
+
+  // Lazy import keeps pure entitlement helpers usable in unit/client-adjacent
+  // evaluation while the actual downgrade path remains server-only.
+  const { downgradeWorkspaceToFree } = await import("@/lib/billing/downgrade");
 
   if (isExpiredStatusRow(row, ["TRIALING"])) {
     await downgradeWorkspaceToFree(workspaceId, "trial_expired");
