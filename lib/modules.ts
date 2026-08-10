@@ -14,6 +14,7 @@
 import 'server-only';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
+import { hasFullPaidFeatures, loadWorkspaceBillingSnapshot } from '@/lib/entitlements';
 import {
   MODULE_KEYS,
   isValidModuleKey,
@@ -194,6 +195,29 @@ export class ModuleDisabledError extends Error {
   }
 }
 
+/** SHOP has a deliberately limited Free-tier experience; all other optional modules are paid. */
+export const PAID_ONLY_MODULE_KEYS: ReadonlySet<ModuleKey> = new Set(
+  MODULE_KEYS.filter((key) => key !== 'SHOP'),
+);
+
+export class PaidPlanRequiredError extends Error {
+  public readonly moduleKey: ModuleKey;
+  constructor(moduleKey: ModuleKey) {
+    super(`Module '${moduleKey}' requires an active paid plan.`);
+    this.name = 'PaidPlanRequiredError';
+    this.moduleKey = moduleKey;
+  }
+}
+
+async function hasModulePlanEntitlement(
+  workspaceId: string,
+  moduleKey: ModuleKey,
+): Promise<boolean> {
+  if (!PAID_ONLY_MODULE_KEYS.has(moduleKey)) return true;
+  const billing = await loadWorkspaceBillingSnapshot(workspaceId);
+  return billing ? hasFullPaidFeatures(billing) : false;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // CORE HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -210,6 +234,8 @@ export async function isModuleEnabled(
   workspaceId: string,
   moduleKey: ModuleKey,
 ): Promise<boolean> {
+  if (!(await hasModulePlanEntitlement(workspaceId, moduleKey))) return false;
+
   const record = await prisma.workspaceModule.findUnique({
     where: { workspaceId_moduleKey: { workspaceId, moduleKey } },
     select: { isEnabled: true },
@@ -226,6 +252,9 @@ export async function isModuleEnabled(
  * explicit record for them, preserving the legacy out-of-the-box experience.
  */
 export async function getEnabledModules(workspaceId: string): Promise<Set<ModuleKey>> {
+  const billing = await loadWorkspaceBillingSnapshot(workspaceId);
+  const paidAccess = billing ? hasFullPaidFeatures(billing) : false;
+
   const records = await prisma.workspaceModule.findMany({
     where: { workspaceId },
     select: { moduleKey: true, isEnabled: true },
@@ -235,6 +264,8 @@ export async function getEnabledModules(workspaceId: string): Promise<Set<Module
   const enabled = new Set<ModuleKey>();
 
   for (const key of MODULE_KEYS) {
+    if (PAID_ONLY_MODULE_KEYS.has(key) && !paidAccess) continue;
+
     if (explicit.has(key)) {
       if (explicit.get(key) === true) enabled.add(key);
     } else if (DEFAULT_ENABLED_MODULE_KEYS.has(key)) {
@@ -278,6 +309,10 @@ export async function enableModule(
   enabledByUserId?: string,
   configJson?: Record<string, unknown>,
 ): Promise<void> {
+  if (!(await hasModulePlanEntitlement(workspaceId, moduleKey))) {
+    throw new PaidPlanRequiredError(moduleKey);
+  }
+
   const existing = await prisma.workspaceModule.findUnique({
     where: { workspaceId_moduleKey: { workspaceId, moduleKey } },
     select: { id: true, isEnabled: true },
