@@ -13,9 +13,12 @@ import {
   uniqueStoredName,
 } from '@/lib/uploads/private-storage';
 import { buildPrivatePath } from '@/lib/uploads/private-storage';
-import { checkPermissionSilent } from '@/lib/rbac';
+import { requirePermission, RbacDeniedError } from '@/lib/rbac';
+import {
+  OPEN_FILE_FLOW_PERMISSIONS,
+  type ImportFlow,
+} from '@/lib/imports/open-file-policy';
 
-type ImportFlow = 'expenses' | 'invoices' | 'reconciliation' | 'withholding_certificates';
 type ImportStatus = 'IMPORTED' | 'UNSUPPORTED' | 'PERMISSION_DENIED' | 'FAILED';
 type ImportErrorCode =
   | 'PERMISSION_DENIED'
@@ -209,6 +212,48 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!actor?.userId) {
+      await logAudit({
+        workspaceId,
+        request,
+        actorEmail: actor?.email,
+        fileName: file.name,
+        mimeType: file.type,
+        fileSize: file.size,
+        flow,
+        status: 'PERMISSION_DENIED',
+        reason: 'Missing user context for file import authorization',
+      });
+      return apiError(403, 'Permission denied for file import.', 'PERMISSION_DENIED');
+    }
+
+    for (const permission of OPEN_FILE_FLOW_PERMISSIONS[flow]) {
+      try {
+        await requirePermission(actor.userId, workspaceId, permission);
+      } catch (error) {
+        if (!(error instanceof RbacDeniedError)) throw error;
+
+        await logAudit({
+          workspaceId,
+          request,
+          actorUserId: actor.userId,
+          actorEmail: actor.email,
+          fileName: file.name,
+          mimeType: file.type,
+          fileSize: file.size,
+          flow,
+          status: 'PERMISSION_DENIED',
+          reason: `Missing required permission: ${permission}`,
+        });
+        return apiError(
+          403,
+          'Permission denied for file import.',
+          'PERMISSION_DENIED',
+          { flow, requiredPermission: permission },
+        );
+      }
+    }
+
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     const isSafe = await withTimeout(scanBuffer(buffer), MALWARE_SCAN_TIMEOUT_MS);
@@ -252,36 +297,6 @@ export async function POST(request: Request) {
 
 
     if (flow === 'withholding_certificates') {
-      if (!actor?.userId) {
-        await logAudit({
-          workspaceId,
-          request,
-          status: 'PERMISSION_DENIED',
-          reason: 'Missing user context for withholding certificate ingestion',
-        });
-        return apiError(403, 'Permission denied for withholding certificate import.', 'PERMISSION_DENIED');
-      }
-
-      const [canIngest, canUpload] = await Promise.all([
-        checkPermissionSilent(actor.userId, workspaceId, 'tax.withholding.ingest'),
-        checkPermissionSilent(actor.userId, workspaceId, 'documents.upload'),
-      ]);
-      if (!canIngest || !canUpload) {
-        await logAudit({
-          workspaceId,
-          request,
-          actorUserId: actor.userId,
-          actorEmail: actor.email,
-          fileName: file.name,
-          mimeType: file.type,
-          fileSize: file.size,
-          flow,
-          status: 'PERMISSION_DENIED',
-          reason: 'Insufficient permissions for withholding certificate ingestion',
-        });
-        return apiError(403, 'Permission denied for withholding certificate import.', 'PERMISSION_DENIED');
-      }
-
       const guessed = sniffAllowedContent(buffer);
       if (!guessed || (guessed !== 'pdf' && guessed !== 'png' && guessed !== 'jpeg' && guessed !== 'webp')) {
         await logAudit({
