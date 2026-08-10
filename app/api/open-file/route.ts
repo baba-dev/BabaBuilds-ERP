@@ -16,6 +16,7 @@ import { buildPrivatePath } from '@/lib/uploads/private-storage';
 import { requirePermission, RbacDeniedError } from '@/lib/rbac';
 import {
   OPEN_FILE_FLOW_PERMISSIONS,
+  isOpenFileImportFlow,
   type ImportFlow,
 } from '@/lib/imports/open-file-policy';
 
@@ -184,9 +185,9 @@ export async function POST(request: Request) {
     }
 
     const ext = normalizeExt(file.name);
-    const flow = (requestedFlow && ['expenses', 'invoices', 'reconciliation', 'withholding_certificates'].includes(String(requestedFlow))
-      ? String(requestedFlow)
-      : EXTENSION_TO_FLOW[ext]) as ImportFlow | undefined;
+    const flow = isOpenFileImportFlow(requestedFlow)
+      ? requestedFlow
+      : EXTENSION_TO_FLOW[ext];
 
     if (!flow || !isSupportedFile(file, ext)) {
       await logAudit({
