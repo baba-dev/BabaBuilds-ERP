@@ -105,10 +105,9 @@ describe('workspace subscription cancellation', () => {
       items: { data: [{ current_period_end: 1_787_526_400 }] },
     });
 
-    const {
-      scheduleWorkspaceSubscriptionCancellation,
-      SubscriptionCancellationError,
-    } = await import('@/lib/billing/subscription-cancellation');
+    const { scheduleWorkspaceSubscriptionCancellation } = await import(
+      '@/lib/billing/subscription-cancellation'
+    );
 
     await expect(
       scheduleWorkspaceSubscriptionCancellation({
@@ -117,7 +116,7 @@ describe('workspace subscription cancellation', () => {
       }),
     ).rejects.toMatchObject({
       code: 'PROVIDER_OWNERSHIP_MISMATCH',
-    } satisfies Partial<InstanceType<typeof SubscriptionCancellationError>>);
+    });
 
     expect(stripeSubscriptionUpdate).not.toHaveBeenCalled();
     expect(workspaceUpdate).toHaveBeenCalledTimes(1);
