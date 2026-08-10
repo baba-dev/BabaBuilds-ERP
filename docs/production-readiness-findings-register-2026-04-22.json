@@ -13,8 +13,8 @@
       "title": "Document OCR jobs use UNCONFIGURED provider in upload path",
       "severity": "P0",
       "area": "api/documents",
-      "status": "OPEN",
-      "owner": "",
+      "status": "DONE",
+      "owner": "Engineering",
       "closureCriteria": [
         "Upload path selects a real provider strategy or returns explicit DISABLED capability result.",
         "No production code path persists provider=UNCONFIGURED OCR jobs.",
@@ -22,9 +22,18 @@
       ],
       "evidence": {
         "codePaths": [
-          "app/api/documents/upload/route.ts"
+          "app/api/documents/upload/route.ts",
+          "app/api/documents/ocr/run/route.ts",
+          "app/api/cron/documents-ocr/route.ts",
+          "lib/documents/ocr/providers.ts",
+          "lib/documents/ocr/runner.ts",
+          "prisma/schema.prisma",
+          "prisma/migrations/20260810060000_fail_closed_document_ocr/migration.sql"
         ],
-        "tests": [],
+        "tests": [
+          "tests/documents/ocr-capability.test.ts",
+          "tests/documents/ocr-production-gate.test.ts"
+        ],
         "docs": []
       },
       "sla": "release_blocker"
