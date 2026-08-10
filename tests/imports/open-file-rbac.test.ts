@@ -51,6 +51,24 @@ describe('open-file import RBAC policy', () => {
     }
   });
 
+  it('protects reconciliation commit entry points', () => {
+    for (const routePath of [
+      'app/api/reconcile/commit/route.ts',
+      'app/api/reconcile/upload/finalize/route.ts',
+    ]) {
+      const source = fs.readFileSync(routePath, 'utf8');
+      const enforcementIndex = source.indexOf(
+        "'reconciliation.commit'",
+      );
+      const writeIndex = source.indexOf('commitReconciliationTransactions({');
+
+      expect(source).toContain('withPermission(');
+      expect(enforcementIndex).toBeGreaterThan(-1);
+      expect(writeIndex).toBeGreaterThan(-1);
+      expect(enforcementIndex).toBeLessThan(writeIndex);
+    }
+  });
+
   it('rejects unknown or non-string flow selectors', () => {
     expect(isOpenFileImportFlow('expenses')).toBe(true);
     expect(isOpenFileImportFlow('reconciliation')).toBe(true);
@@ -94,6 +112,7 @@ describe('open-file import RBAC policy', () => {
       keyof typeof DEFAULT_ROLE_PERMISSIONS
     >) {
       expect(hasPermission(role, 'reconciliation.import')).toBe(allowed.has(role));
+      expect(hasPermission(role, 'reconciliation.commit')).toBe(allowed.has(role));
     }
   });
 });
