@@ -5,7 +5,10 @@ import BillingSettingsClient from "./BillingSettingsClient";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
-import { parseStoredSignupIntent } from "@/lib/entitlements";
+import {
+  normalizeExpiredWorkspaceSubscription,
+  parseStoredSignupIntent,
+} from "@/lib/entitlements";
 import { getPlanInterval, type BillingCycle, type PlanId } from "@/lib/pricing";
 
 type WorkspaceSummary = {
@@ -44,6 +47,8 @@ export default async function BillingSettingsPage() {
   } catch {
     redirect("/access-denied");
   }
+
+  await normalizeExpiredWorkspaceSubscription(scopedSession.workspaceId);
 
   const locale = scopedSession.locale || "en-IN";
   const currency = scopedSession.user?.currencyFormat || scopedSession.baseCurrency || "INR";
