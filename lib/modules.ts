@@ -218,6 +218,15 @@ async function hasModulePlanEntitlement(
   return billing ? hasFullPaidFeatures(billing) : false;
 }
 
+export async function requireModulePlanEntitlement(
+  workspaceId: string,
+  moduleKey: ModuleKey,
+): Promise<void> {
+  if (!(await hasModulePlanEntitlement(workspaceId, moduleKey))) {
+    throw new PaidPlanRequiredError(moduleKey);
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // CORE HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -309,9 +318,7 @@ export async function enableModule(
   enabledByUserId?: string,
   configJson?: Record<string, unknown>,
 ): Promise<void> {
-  if (!(await hasModulePlanEntitlement(workspaceId, moduleKey))) {
-    throw new PaidPlanRequiredError(moduleKey);
-  }
+  await requireModulePlanEntitlement(workspaceId, moduleKey);
 
   const existing = await prisma.workspaceModule.findUnique({
     where: { workspaceId_moduleKey: { workspaceId, moduleKey } },
