@@ -9,6 +9,13 @@ export const OPEN_FILE_IMPORT_FLOWS = [
 
 export type ImportFlow = (typeof OPEN_FILE_IMPORT_FLOWS)[number];
 
+export function isOpenFileImportFlow(value: unknown): value is ImportFlow {
+  return (
+    typeof value === 'string'
+    && (OPEN_FILE_IMPORT_FLOWS as readonly string[]).includes(value)
+  );
+}
+
 /**
  * Exact write-capability required before an uploaded file is read, scanned,
  * persisted, or routed into an operational workflow.
