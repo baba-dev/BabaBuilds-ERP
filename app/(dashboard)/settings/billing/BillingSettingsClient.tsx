@@ -32,6 +32,8 @@ type WorkspaceSummary = {
   subscriptionStatus: string;
   subscriptionEndsAt: Date | string | null;
   billingProviderId: string | null;
+  subscriptionCancelAtPeriodEnd: boolean;
+  subscriptionCancelEffectiveAt: Date | string | null;
   countryCode: string | null;
   baseCurrency: string | null;
   _count: { clients: number };
@@ -105,14 +107,18 @@ export default function BillingSettingsClient({
 
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
-  const [subscriptionCancelled, setSubscriptionCancelled] = useState(false);
+  const [cancellationScheduled, setCancellationScheduled] = useState(
+    workspace.subscriptionCancelAtPeriodEnd,
+  );
+  const [cancellationEffectiveAt, setCancellationEffectiveAt] = useState<Date | string | null>(
+    workspace.subscriptionCancelEffectiveAt,
+  );
 
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const isPaidSubscription =
-    (workspace.subscriptionStatus === "PRO" || workspace.subscriptionStatus === "TEAM") &&
-    !subscriptionCancelled;
-  const isTrialing = workspace.subscriptionStatus === "TRIALING" && !subscriptionCancelled;
+    workspace.subscriptionStatus === "PRO" || workspace.subscriptionStatus === "TEAM";
+  const isTrialing = workspace.subscriptionStatus === "TRIALING";
   const clientCount = workspace._count.clients;
   const clientLimit = FREE_TIER_CLIENT_LIMIT;
   const usagePercentage = Math.min((clientCount / clientLimit) * 100, 100);
@@ -238,7 +244,8 @@ export default function BillingSettingsClient({
       const response = await fetch("/api/settings/billing/subscription/cancel", { method: "POST" });
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || "Failed to cancel subscription.");
-      setSubscriptionCancelled(true);
+      setCancellationScheduled(true);
+      setCancellationEffectiveAt(data?.effectiveAt || workspace.subscriptionEndsAt);
     } catch (error: unknown) {
       setCancelError(getErrorMessage(error, "Failed to cancel subscription."));
     } finally {
@@ -377,7 +384,7 @@ export default function BillingSettingsClient({
                         ? "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/50"
                         : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700"
                     }`}>
-                      {subscriptionCancelled ? "CANCELLED" : workspace.subscriptionStatus}
+                      {cancellationScheduled ? "CANCELS AT PERIOD END" : workspace.subscriptionStatus}
                     </span>
                   </div>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2 font-medium">
@@ -388,11 +395,17 @@ export default function BillingSettingsClient({
                             : "—"
                         }. You have full Pro/Team features during the trial.`
                       : isPaidSubscription
-                        ? `Your subscription auto-renews on ${
-                            workspace.subscriptionEndsAt
-                              ? new Date(workspace.subscriptionEndsAt).toLocaleDateString(locale)
-                              : "next billing cycle"
-                          }.`
+                        ? cancellationScheduled
+                          ? `Cancellation is confirmed. Premium access remains active until ${
+                              cancellationEffectiveAt
+                                ? new Date(cancellationEffectiveAt).toLocaleDateString(locale)
+                                : "the end of the paid period"
+                            }.`
+                          : `Your subscription auto-renews on ${
+                              workspace.subscriptionEndsAt
+                                ? new Date(workspace.subscriptionEndsAt).toLocaleDateString(locale)
+                                : "next billing cycle"
+                            }.`
                         : "One workspace per account. Free tier includes limited clients and invoices per month."}
                   </p>
                   {cancelError && (
@@ -429,7 +442,7 @@ export default function BillingSettingsClient({
                 </>
               )}
             </CardContent>
-            {isPaidSubscription && (
+            {isPaidSubscription && !cancellationScheduled && (
               <CardFooter className="bg-zinc-50 dark:bg-zinc-950/50 border-t dark:border-zinc-800 p-4">
                 <Button
                   variant="outline"
