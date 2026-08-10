@@ -31,6 +31,9 @@ export type FinalizeSubscriptionInput = {
   description: string;
   distributorCouponId: string | null;
   billingProviderCustomerId?: string | null;
+  billingProvider?: "RAZORPAY" | "STRIPE";
+  billingContractType?: "PREPAID" | "RECURRING";
+  billingProviderSubscriptionId?: string | null;
   currency?: string;
 };
 
@@ -73,6 +76,13 @@ export async function finalizeSubscriptionPayment(input: FinalizeSubscriptionInp
         planInterval: verifiedInterval,
         subscriptionEndsAt: newExpirationDate,
         billingProviderId: input.billingProviderCustomerId ?? input.providerReference,
+        billingProvider: input.billingProvider ?? "RAZORPAY",
+        billingContractType: input.billingContractType ?? "PREPAID",
+        billingProviderSubscriptionId: input.billingProviderSubscriptionId ?? null,
+        subscriptionCancelAtPeriodEnd: false,
+        subscriptionCancelRequestedAt: null,
+        subscriptionCancelEffectiveAt: null,
+        subscriptionCancellationLastError: null,
         hasEverSubscribed: true,
         signupIntentJson: null,
       },
