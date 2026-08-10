@@ -71,7 +71,10 @@ SELECT
       ELSE "finishedAt"
     END,
     "createdAt",
-    CURRENT_TIMESTAMP
+    CASE
+      WHEN "provider" = 'UNCONFIGURED' THEN CURRENT_TIMESTAMP
+      ELSE "updatedAt"
+    END
 FROM "DocumentOcrJob";
 
 DROP TABLE "DocumentOcrJob";
