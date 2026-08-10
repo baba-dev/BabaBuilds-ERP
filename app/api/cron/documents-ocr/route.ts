@@ -1,10 +1,24 @@
 import { NextResponse } from 'next/server';
 import { isCronAuthorized, unauthorizedCronResponse } from '@/lib/security/cron-auth';
 import { runQueuedOcrJobs } from '@/lib/documents/ocr/runner';
+import { getOcrCapability, toOcrCapabilityResponse } from '@/lib/documents/ocr/providers';
 
 export async function GET(request: Request) {
   if (!isCronAuthorized(request)) {
     return unauthorizedCronResponse();
+  }
+
+  const capability = getOcrCapability();
+  if (!capability.enabled) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: capability.message,
+        code: capability.code,
+        capabilities: { ocr: toOcrCapabilityResponse(capability) },
+      },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } },
+    );
   }
 
   try {
@@ -18,4 +32,3 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: 'Internal error' }, { status: 500 });
   }
 }
-
