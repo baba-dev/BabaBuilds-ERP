@@ -9,6 +9,7 @@ import {
 import {
   OPEN_FILE_FLOW_PERMISSIONS,
   OPEN_FILE_IMPORT_FLOWS,
+  isOpenFileImportFlow,
 } from '@/lib/imports/open-file-policy';
 
 describe('open-file import RBAC policy', () => {
@@ -30,6 +31,13 @@ describe('open-file import RBAC policy', () => {
     ]) {
       expect(enforcementIndex).toBeLessThan(source.indexOf(operation));
     }
+  });
+
+  it('rejects unknown or non-string flow selectors', () => {
+    expect(isOpenFileImportFlow('expenses')).toBe(true);
+    expect(isOpenFileImportFlow('reconciliation')).toBe(true);
+    expect(isOpenFileImportFlow('admin')).toBe(false);
+    expect(isOpenFileImportFlow(null)).toBe(false);
   });
 
   it('maps every supported flow to exact permissions', () => {
