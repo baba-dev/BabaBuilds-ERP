@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -11,6 +12,26 @@ import {
 } from '@/lib/imports/open-file-policy';
 
 describe('open-file import RBAC policy', () => {
+  it('enforces canonical RBAC before file processing or writes', () => {
+    const source = fs.readFileSync('app/api/open-file/route.ts', 'utf8');
+    const enforcementIndex = source.indexOf(
+      'for (const permission of OPEN_FILE_FLOW_PERMISSIONS[flow])',
+    );
+
+    expect(source).toContain('await requirePermission(actor.userId, workspaceId, permission)');
+    expect(source).not.toContain('checkPermissionSilent');
+    expect(enforcementIndex).toBeGreaterThan(-1);
+
+    for (const operation of [
+      'file.arrayBuffer()',
+      'scanBuffer(buffer)',
+      "writeFile(filepath, buffer",
+      'prisma.expense.create',
+    ]) {
+      expect(enforcementIndex).toBeLessThan(source.indexOf(operation));
+    }
+  });
+
   it('maps every supported flow to exact permissions', () => {
     expect(Object.keys(OPEN_FILE_FLOW_PERMISSIONS).sort()).toEqual(
       [...OPEN_FILE_IMPORT_FLOWS].sort(),
