@@ -7,6 +7,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { downgradeWorkspaceToFree } from "@/lib/billing/subscription-cancellation";
 import { FREE_TIER_CLIENT_LIMIT, FREE_TIER_MONTHLY_INVOICE_LIMIT, FREE_TIER_PUBLISHED_SERVICES_LIMIT } from "@/lib/pricing";
 import {
   deserializeSignupIntent,
@@ -115,7 +116,14 @@ export function isPaidPlanTier(planTier: string | null | undefined): boolean {
  */
 export function hasFullPaidFeatures(snapshot: WorkspaceBillingSnapshot): boolean {
   if (isTrialActive(snapshot)) return true;
-  return isPaidPlanTier(snapshot.planTier);
+
+  const status = String(snapshot.subscriptionStatus ?? "").toUpperCase();
+  if (status !== "PRO" && status !== "TEAM") return false;
+  if (!isPaidPlanTier(snapshot.planTier)) return false;
+
+  // Paid access is time-bound. Fail closed when the end date is missing or stale.
+  if (!snapshot.subscriptionEndsAt) return false;
+  return new Date(snapshot.subscriptionEndsAt).getTime() > Date.now();
 }
 
 /**
@@ -169,28 +177,44 @@ export async function evaluateMonthlyInvoiceLimit(params: {
   };
 }
 
-function isExpiredTrialingRow(snapshot: WorkspaceBillingSnapshot): boolean {
-  if (String(snapshot.subscriptionStatus ?? "").toUpperCase() !== "TRIALING") return false;
+function isExpiredStatusRow(
+  snapshot: WorkspaceBillingSnapshot,
+  statuses: readonly string[],
+): boolean {
+  if (!statuses.includes(String(snapshot.subscriptionStatus ?? "").toUpperCase())) return false;
   const end = snapshot.subscriptionEndsAt;
   if (!end) return false;
   return new Date(end).getTime() <= Date.now();
 }
 
-/** Normalize stale TRIALING rows whose end date has passed (lazy heal). */
-export async function normalizeExpiredTrialWorkspace(workspaceId: string): Promise<void> {
+/**
+ * Lazy reconciliation for expired trials and paid terms.
+ * All callers see FREE entitlements immediately after the paid end timestamp.
+ */
+export async function normalizeExpiredWorkspaceSubscription(workspaceId: string): Promise<void> {
   const row = await prisma.workspace.findUnique({
     where: { id: workspaceId },
     select: { subscriptionStatus: true, subscriptionEndsAt: true },
   });
-  if (!row || !isExpiredTrialingRow(row)) return;
-  await prisma.workspace.update({
-    where: { id: workspaceId },
-    data: { subscriptionStatus: "FREE", planTier: "FREE" },
-  });
+  if (!row) return;
+
+  if (isExpiredStatusRow(row, ["TRIALING"])) {
+    await downgradeWorkspaceToFree(workspaceId, "trial_expired");
+    return;
+  }
+
+  if (isExpiredStatusRow(row, ["PRO", "TEAM"])) {
+    await downgradeWorkspaceToFree(workspaceId, "subscription_expired");
+  }
+}
+
+/** @deprecated Use normalizeExpiredWorkspaceSubscription(). */
+export async function normalizeExpiredTrialWorkspace(workspaceId: string): Promise<void> {
+  await normalizeExpiredWorkspaceSubscription(workspaceId);
 }
 
 export async function loadWorkspaceBillingSnapshot(workspaceId: string): Promise<WorkspaceBillingSnapshot | null> {
-  await normalizeExpiredTrialWorkspace(workspaceId);
+  await normalizeExpiredWorkspaceSubscription(workspaceId);
   return prisma.workspace.findUnique({
     where: { id: workspaceId },
     select: {
