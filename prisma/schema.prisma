@@ -4353,6 +4353,23 @@ model PayrollPayComponent {
   @@index([workspaceId, category])
 }
 
+/**
+ * One-time server-side claim for signed AI mutation confirmations.
+ * The signed token is never stored; only its random nonce and binding are kept.
+ */
+model AiToolConfirmationNonce {
+  nonce       String   @id
+  userId      String
+  workspaceId String
+  toolName    String
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([workspaceId, userId, expiresAt])
+  @@index([expiresAt])
+}
+
 model SystemErrorLog {
   id          String   @id @default(cuid())
   errorType   String   // e.g. "TypeError", "PrismaClientKnownRequestError"

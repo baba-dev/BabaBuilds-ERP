@@ -17,6 +17,7 @@ export const chatRequestSchema = z.object({
   message: z.string().trim().min(1).max(4_000),
   history: z.array(chatHistoryItemSchema).max(20).default([]),
   context: chatContextSchema,
+  confirmationToken: z.string().trim().min(1).max(12_000).optional(),
 });
 
 export type ChatRequest = z.infer<typeof chatRequestSchema>;

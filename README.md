@@ -164,6 +164,7 @@ Required baseline variables:
 DATABASE_URL="file:./prisma/dev.db"
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="replace-with-a-random-secret"
+AI_TOOL_CONFIRMATION_SECRET="replace-with-an-independent-32-byte-random-secret"
 AUTH_GOOGLE_ENABLED=false
 AUTH_EMAIL_ENABLED=false
 ```
@@ -196,6 +197,7 @@ Open: [http://localhost:3000](http://localhost:3000)
 ### Always required once auth is exercised
 - `NEXTAUTH_URL`
 - `NEXTAUTH_SECRET`
+- `AI_TOOL_CONFIRMATION_SECRET` (independent random value, at least 32 characters; signs two-minute AI mutation confirmations)
 
 ### Database
 - `DATABASE_URL` (SQLite path in local dev)
