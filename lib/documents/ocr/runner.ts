@@ -1,8 +1,8 @@
 import 'server-only';
 
 import { prisma } from '@/lib/prisma';
-import type { DocumentOcrProviderKey, OcrJobKind } from '@/lib/documents/ocr/providers';
-import { getOcrProvider } from '@/lib/documents/ocr/providers';
+import type { OcrJobKind } from '@/lib/documents/ocr/providers';
+import { requireOcrCapability } from '@/lib/documents/ocr/providers';
 
 type RunResult =
   | { ok: true; jobId: string; status: 'SUCCEEDED' | 'FAILED'; fieldsWritten: number }
@@ -10,11 +10,14 @@ type RunResult =
 
 export async function runNextOcrJob(params: {
   workspaceId?: string;
-  provider?: DocumentOcrProviderKey;
 }): Promise<RunResult | null> {
+  // Fail before reading or claiming queued work unless a compiled-in provider is configured.
+  const { provider } = requireOcrCapability();
+
   const job = await prisma.documentOcrJob.findFirst({
     where: {
       status: 'QUEUED',
+      provider: provider.key,
       ...(params.workspaceId ? { workspaceId: params.workspaceId } : {}),
     },
     orderBy: { queuedAt: 'asc' },
@@ -24,14 +27,11 @@ export async function runNextOcrJob(params: {
       documentId: true,
       documentFileId: true,
       kind: true,
-      provider: true,
     },
   });
 
   if (!job) return null;
 
-  const providerKey = (params.provider ?? (job.provider as DocumentOcrProviderKey)) || 'UNCONFIGURED';
-  const provider = getOcrProvider(providerKey);
   const kind = (job.kind as OcrJobKind) || 'GENERIC';
 
   try {
@@ -160,4 +160,3 @@ export async function runQueuedOcrJobs(params: { limit: number }) {
 
   return { ran: results.length, succeeded, failed, results };
 }
-
