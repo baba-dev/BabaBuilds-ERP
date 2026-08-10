@@ -165,10 +165,14 @@ async function scheduleRazorpayCancellation(workspace: CancellationWorkspace): P
     );
   }
 
-  const updated =
-    subscription.status === 'cancelled'
-      ? subscription
-      : await razorpay.subscriptions.cancel(subscriptionId, true);
+  const alreadyScheduled =
+    subscription.status === 'cancelled' ||
+    (subscription.has_scheduled_changes === true &&
+      typeof subscription.change_scheduled_at === 'number');
+
+  const updated = alreadyScheduled
+    ? subscription
+    : await razorpay.subscriptions.cancel(subscriptionId, true);
 
   const effectiveAt =
     unixDate(updated.current_end) ??
