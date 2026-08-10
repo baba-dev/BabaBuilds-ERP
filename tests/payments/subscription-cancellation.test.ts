@@ -128,6 +128,47 @@ describe('workspace subscription cancellation', () => {
     expect(workspaceUpdate.mock.calls[0][0].data.subscriptionStatus).toBeUndefined();
   });
 
+  it('verifies Razorpay ownership before scheduling cycle-end cancellation', async () => {
+    workspaceFindUnique.mockResolvedValue({
+      ...paidWorkspace,
+      billingProvider: 'RAZORPAY',
+      billingContractType: 'RECURRING',
+      billingProviderId: 'cust_1',
+      billingProviderSubscriptionId: 'sub_rzp_1',
+    });
+    razorpaySubscriptionFetch.mockResolvedValue({
+      id: 'sub_rzp_1',
+      status: 'active',
+      customer_id: 'cust_1',
+      notes: { workspaceId: 'ws_1' },
+      current_end: 1_789_632_000,
+      has_scheduled_changes: false,
+      change_scheduled_at: null,
+    });
+    razorpaySubscriptionCancel.mockResolvedValue({
+      id: 'sub_rzp_1',
+      status: 'active',
+      customer_id: 'cust_1',
+      notes: { workspaceId: 'ws_1' },
+      current_end: 1_789_632_000,
+      has_scheduled_changes: true,
+      change_scheduled_at: 1_789_632_000,
+    });
+
+    const { scheduleWorkspaceSubscriptionCancellation } = await import(
+      '@/lib/billing/subscription-cancellation'
+    );
+
+    const result = await scheduleWorkspaceSubscriptionCancellation({
+      workspaceId: 'ws_1',
+      actorUserId: 'owner_1',
+    });
+
+    expect(razorpaySubscriptionCancel).toHaveBeenCalledWith('sub_rzp_1', true);
+    expect(result.provider).toBe('RAZORPAY');
+    expect(result.effectiveAt).toEqual(new Date(1_789_632_000 * 1000));
+  });
+
   it('persists a provider-confirmed Stripe period-end date', async () => {
     workspaceFindUnique.mockResolvedValue({
       ...paidWorkspace,
