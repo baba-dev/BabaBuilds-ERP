@@ -614,6 +614,16 @@ model Workspace {
   paymentMethodMask String? // e.g., "•••• 4242" or "user@upi"
   billingProviderId String? // Stripe/Razorpay Customer ID
 
+  // Canonical provider contract identity and cancellation reconciliation state.
+  // PREPAID orders expire locally; RECURRING contracts must be cancelled at the provider first.
+  billingProvider               String? // "RAZORPAY" | "STRIPE"
+  billingContractType           String   @default("PREPAID") // "PREPAID" | "RECURRING"
+  billingProviderSubscriptionId String?
+  subscriptionCancelAtPeriodEnd Boolean  @default(false)
+  subscriptionCancelRequestedAt DateTime?
+  subscriptionCancelEffectiveAt DateTime?
+  subscriptionCancellationLastError String?
+
   /// True after at least one successful paid subscription charge (for partner first-purchase coupons)
   hasEverSubscribed Boolean @default(false)
   signupIntentJson  String?
