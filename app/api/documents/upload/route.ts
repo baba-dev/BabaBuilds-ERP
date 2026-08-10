@@ -25,6 +25,11 @@ import {
 import { promises as fs } from 'fs';
 import type { DocumentCategory, DocumentScope } from '@/lib/documents/policy';
 import { sniffAllowedContent } from '@/lib/uploads/private-storage';
+import {
+  buildOcrEnqueuePlan,
+  getOcrCapability,
+  toOcrCapabilityResponse,
+} from '@/lib/documents/ocr/providers';
 
 const MALWARE_SCAN_TIMEOUT_MS = Number(process.env.DOCUMENTS_UPLOAD_SCAN_TIMEOUT_MS ?? 60_000);
 
@@ -63,6 +68,9 @@ export async function POST(request: Request) {
   } catch (e) {
     return apiError(403, 'Permission denied.', 'RBAC_DENIED');
   }
+
+  const ocrCapability = getOcrCapability();
+  const ocrCapabilityResponse = toOcrCapabilityResponse(ocrCapability);
 
   const formData = await request.formData();
   const file = formData.get('file') as File | null;
@@ -251,24 +259,38 @@ export async function POST(request: Request) {
         documentFileId: fileRow.id,
         eventType: 'UPLOAD_ACCEPTED',
         actorUserId: userId,
-        metadata: { mimeType, fileName: safeOriginalName, fileSizeBytes: file.size },
+        metadata: {
+          mimeType,
+          fileName: safeOriginalName,
+          fileSizeBytes: file.size,
+          ocrCapability: ocrCapabilityResponse,
+        },
       },
     });
 
-    // enqueue OCR job (placeholder provider)
-    await tx.documentOcrJob.create({
-      data: {
-        workspaceId,
-        documentId: doc.id,
-        documentFileId: fileRow.id,
-        kind: mimeType === 'application/pdf' ? 'GENERIC' : 'RECEIPT',
-        status: 'QUEUED',
-        provider: 'UNCONFIGURED',
-      },
-      select: { id: true },
-    });
+    const ocrPlan = buildOcrEnqueuePlan(
+      ocrCapability,
+      mimeType === 'application/pdf' ? 'GENERIC' : 'RECEIPT',
+    );
+    const ocrJob = ocrPlan
+      ? await tx.documentOcrJob.create({
+          data: {
+            workspaceId,
+            documentId: doc.id,
+            documentFileId: fileRow.id,
+            ...ocrPlan,
+          },
+          select: { id: true },
+        })
+      : null;
 
-    return { documentId: doc.id, documentFileId: fileRow.id, storedSegments, storedPath };
+    return {
+      documentId: doc.id,
+      documentFileId: fileRow.id,
+      storedSegments,
+      storedPath,
+      ocrJobId: ocrJob?.id ?? null,
+    };
   });
 
   if (created instanceof NextResponse) return created;
@@ -326,10 +348,24 @@ export async function POST(request: Request) {
     workspaceId,
     actor: { userId, email: session.user?.email ?? null },
     entity: { type: 'document', id: created.documentId },
-    metadata: { documentId: created.documentId, documentFileId: created.documentFileId, mimeType, byteSize: file.size, aiAnalyzed: aiAnalyze },
+    metadata: {
+      documentId: created.documentId,
+      documentFileId: created.documentFileId,
+      mimeType,
+      byteSize: file.size,
+      aiAnalyzed: aiAnalyze,
+      ocrCapability: ocrCapabilityResponse,
+      ocrJobId: created.ocrJobId,
+    },
     request,
   });
 
-  return NextResponse.json({ ok: true, documentId: created.documentId, filePath: created.storedPath });
+  return NextResponse.json({
+    ok: true,
+    documentId: created.documentId,
+    filePath: created.storedPath,
+    ocrJobId: created.ocrJobId,
+    capabilities: { ocr: ocrCapabilityResponse },
+  });
 }
 
