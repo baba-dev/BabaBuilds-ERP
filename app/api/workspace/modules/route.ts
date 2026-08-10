@@ -17,6 +17,7 @@ import {
   getEnabledModules,
   isValidModuleKey,
   PaidPlanRequiredError,
+  requireModulePlanEntitlement,
 } from '@/lib/modules';
 
 async function getWorkspaceId(userId: string, sessionWorkspaceId?: string | null): Promise<string | null> {
@@ -87,6 +88,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (enabled) {
+      await requireModulePlanEntitlement(workspaceId, moduleKey);
+
       if (moduleKey === 'MULTI_COMPANY') {
         await enableMultiCompany(workspaceId, session.user.id);
       } else {
