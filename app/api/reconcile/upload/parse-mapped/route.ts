@@ -15,6 +15,7 @@ import {
 import { excelBufferToGrid } from "@/lib/reconciliation/bank-excel";
 import { persistAndMatchTransactions } from "@/lib/reconciliation/run-reconciliation-upload";
 import { getOrCreateReconciliationSettings } from "@/lib/reconciliation/reconciliation-settings";
+import { withPermission } from "@/lib/rbac";
 
 const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 
@@ -26,6 +27,16 @@ export async function POST(request: Request) {
     }
     const workspaceId = session.workspaceId;
     const userId = (session as { user?: { id?: string } }).user?.id ?? null;
+
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const permission = await withPermission(
+      userId,
+      workspaceId,
+      "reconciliation.import",
+    );
+    if (!permission.granted) return permission.response;
 
     const profile = await prisma.businessProfile.findUnique({
       where: { workspaceId },
