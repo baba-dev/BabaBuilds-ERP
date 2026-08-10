@@ -288,7 +288,7 @@ export const freelancerConsultantTemplate: DemoTemplateDefinition = {
         documentFileId: documentFile.id,
         kind: "GENERIC",
         status: "SUCCEEDED",
-        provider: "UNCONFIGURED",
+        provider: "DEMO_FIXTURE",
         attemptCount: 1,
         queuedAt: new Date(now.getTime() - 1000 * 60 * 18),
         startedAt: new Date(now.getTime() - 1000 * 60 * 17),

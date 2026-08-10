@@ -127,7 +127,7 @@ export const taxAgencyTemplate: DemoTemplateDefinition = {
         documentFileId: file1.id,
         kind: 'TAX',
         status: 'SUCCEEDED',
-        provider: 'UNCONFIGURED',
+        provider: 'DEMO_FIXTURE',
         attemptCount: 1,
         queuedAt: new Date(now.getTime() - 1000 * 60 * 15),
         startedAt: new Date(now.getTime() - 1000 * 60 * 10),

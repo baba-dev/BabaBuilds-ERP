@@ -211,7 +211,7 @@ export const softwareCompanyTemplate: DemoTemplateDefinition = {
         documentFileId: file.id,
         kind: "GENERIC",
         status: "SUCCEEDED",
-        provider: "UNCONFIGURED",
+        provider: "DEMO_FIXTURE",
         attemptCount: 1,
         queuedAt: new Date(now.getTime() - 1000 * 60 * 20),
         startedAt: new Date(now.getTime() - 1000 * 60 * 19),

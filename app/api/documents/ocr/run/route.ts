@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { requireModule, ModuleDisabledError } from '@/lib/modules';
 import { requirePermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
 import { runQueuedOcrJobs } from '@/lib/documents/ocr/runner';
+import { getOcrCapability, toOcrCapabilityResponse } from '@/lib/documents/ocr/providers';
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -25,10 +26,22 @@ export async function POST(request: Request) {
     throw e;
   }
 
+  const capability = getOcrCapability();
+  if (!capability.enabled) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: capability.message,
+        code: capability.code,
+        capabilities: { ocr: toOcrCapabilityResponse(capability) },
+      },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } },
+    );
+  }
+
   const body = (await request.json().catch(() => null)) as { limit?: number } | null;
   const limit = Math.max(1, Math.min(25, Number(body?.limit ?? 5)));
 
   const result = await runQueuedOcrJobs({ limit });
   return NextResponse.json({ ok: true, ...result });
 }
-
