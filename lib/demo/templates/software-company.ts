@@ -9,7 +9,7 @@ export const softwareCompanyTemplate: DemoTemplateDefinition = {
     countryCode: "US",
     baseCurrency: "USD",
     planTier: "PRO",
-    subscriptionStatus: "ACTIVE",
+    subscriptionStatus: "PRO",
     isSetupComplete: true,
   },
   businessProfile: {
