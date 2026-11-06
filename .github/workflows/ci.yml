@@ -51,6 +51,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
+      # Some tests (company-groups, tax summary) use the real Prisma client against SQLite.
+      # The schema hardcodes file:./dev.db, so create prisma/dev.db before running them.
+      - name: Create test database
+        run: npx prisma db push --skip-generate
+
       # Full Vitest suite (previously only 2 of ~90 test files ran in CI).
       - name: Vitest
         run: npm test
