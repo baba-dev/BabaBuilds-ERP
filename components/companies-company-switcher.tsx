@@ -157,8 +157,12 @@ export function CompanySwitcher() {
       )}
 
       <Select value={activeCompany.id} onValueChange={onSwitch} disabled={Boolean(switchingId) || Boolean(context.requiresGroupSelection)}>
-        <SelectTrigger className="h-auto min-h-10 border-zinc-800 bg-zinc-900/80 text-left text-zinc-100">
-          <SelectValue placeholder="Select company" />
+        <SelectTrigger className="h-auto min-h-10 w-full min-w-0 border-zinc-800 bg-zinc-900/80 text-left text-zinc-100">
+          {/* Explicit children: otherwise Radix mirrors the whole rich dropdown item (badges,
+              module list) into the 240px sidebar trigger and it overflows. */}
+          <SelectValue placeholder="Select company">
+            <span className="block min-w-0 truncate">{activeCompany.name}</span>
+          </SelectValue>
         </SelectTrigger>
         <SelectContent className="max-h-96 min-w-[320px]">
           {companies.map((company) => (
