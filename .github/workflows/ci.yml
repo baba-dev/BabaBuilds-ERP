@@ -66,12 +66,13 @@ jobs:
       - name: Ensure sqlite3 CLI
         run: command -v sqlite3 >/dev/null || sudo apt-get install -y --no-install-recommends sqlite3
 
+      # prisma/schema.prisma hardcodes `url = "file:./dev.db"`, so DATABASE_URL is ignored and the
+      # database Prisma uses is prisma/dev.db (gitignored). Load the baseline into exactly that file.
       - name: Fresh baseline, deploy, and drift check
         run: |
           set -euxo pipefail
-          export DATABASE_URL="file:./prisma/ci-migrate.db"
-          rm -f prisma/ci-migrate.db prisma/ci-migrate.db-journal
-          sqlite3 prisma/ci-migrate.db < prisma/baseline/00000000000000_init_baseline.sql
+          rm -f prisma/dev.db prisma/dev.db-journal
+          sqlite3 prisma/dev.db < prisma/baseline/00000000000000_init_baseline.sql
           npx prisma migrate resolve --applied 20260407100000_invoice_status_enum
           npx prisma migrate resolve --applied 20260407113000_init
           npx prisma migrate deploy

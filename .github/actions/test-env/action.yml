@@ -7,8 +7,8 @@ runs:
     - name: Write .env and push schema
       shell: bash
       run: |
+        # The schema hardcodes file:./dev.db (DATABASE_URL is ignored), so db push creates prisma/dev.db.
         {
-          echo 'DATABASE_URL="file:./ci-e2e.db"'
           echo 'NEXTAUTH_URL="http://localhost:3000"'
           echo "NEXTAUTH_SECRET=\"$(openssl rand -hex 32)\""
           echo "AI_TOOL_CONFIRMATION_SECRET=\"$(openssl rand -hex 32)\""
