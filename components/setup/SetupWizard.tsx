@@ -340,7 +340,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 <div className="mx-auto w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center mb-4">
                   <Globe className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                 </div>
-                <CardTitle className="text-2xl font-black dark:text-zinc-50">{t('step1_title')}</CardTitle>
+                <CardTitle as="h1" className="text-2xl font-black dark:text-zinc-50">{t('step1_title')}</CardTitle>
                 <CardDescription className="dark:text-zinc-400">{t('step1_desc')}</CardDescription>
               </CardHeader>
               <CardContent className="pt-8 space-y-6">
@@ -376,7 +376,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 <div className="mx-auto w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center mb-4">
                   <Wallet className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                 </div>
-                <CardTitle className="text-2xl font-black dark:text-zinc-50">{t('step2_title')}</CardTitle>
+                <CardTitle as="h1" className="text-2xl font-black dark:text-zinc-50">{t('step2_title')}</CardTitle>
                 <CardDescription className="dark:text-zinc-400">{t('step2_desc')}</CardDescription>
               </CardHeader>
               <CardContent className="pt-8 space-y-6">
@@ -417,7 +417,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 <div className="mx-auto w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center mb-4">
                   <ShieldCheck className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                 </div>
-                <CardTitle className="text-2xl font-black dark:text-zinc-50">{t('step3_title')}</CardTitle>
+                <CardTitle as="h1" className="text-2xl font-black dark:text-zinc-50">{t('step3_title')}</CardTitle>
                 <CardDescription className="dark:text-zinc-400">{t('step3_desc')}</CardDescription>
               </CardHeader>
               <CardContent className="pt-8 space-y-4">
@@ -444,7 +444,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 <div className="mx-auto w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center mb-4">
                   <Building2 className="w-6 h-6 text-amber-600 dark:text-amber-400" />
                 </div>
-                <CardTitle className="text-2xl font-black dark:text-zinc-50">{t('step4_title')}</CardTitle>
+                <CardTitle as="h1" className="text-2xl font-black dark:text-zinc-50">{t('step4_title')}</CardTitle>
                 <CardDescription className="dark:text-zinc-400">{t('step4_desc')}</CardDescription>
               </CardHeader>
               <CardContent className="pt-8 space-y-4">
@@ -527,7 +527,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 <div className="mx-auto w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center mb-4">
                   <Zap className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
-                <CardTitle className="text-2xl font-black dark:text-zinc-50">{t('step5_title')}</CardTitle>
+                <CardTitle as="h1" className="text-2xl font-black dark:text-zinc-50">{t('step5_title')}</CardTitle>
                 <CardDescription className="dark:text-zinc-400">{t('step5_desc')}</CardDescription>
               </CardHeader>
               <CardContent className="pt-8 space-y-6">
@@ -592,7 +592,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                 <div className="mx-auto w-12 h-12 bg-teal-100 dark:bg-teal-900/30 rounded-xl flex items-center justify-center mb-4">
                   <Users2 className="w-6 h-6 text-teal-600 dark:text-teal-400" />
                 </div>
-                <CardTitle className="text-2xl font-black dark:text-zinc-50">{t('optional_modules_title')}</CardTitle>
+                <CardTitle as="h1" className="text-2xl font-black dark:text-zinc-50">{t('optional_modules_title')}</CardTitle>
                 <CardDescription className="dark:text-zinc-400">
                   {t('optional_modules_desc')}
                 </CardDescription>

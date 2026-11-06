@@ -273,7 +273,15 @@ export default async function RootLayout({
                 </main>
               </div>
 
-              <Toaster richColors position="top-center" />
+              {/* Bottom-right, lifted above the 56px assistant button (bottom-6/right-6) so toasts never
+                  cover page headers, the FY selector, or the offline banner. */}
+              <Toaster
+                richColors
+                closeButton
+                position="bottom-right"
+                offset={{ right: 24, bottom: 96 }}
+                mobileOffset={{ right: 16, left: 16, bottom: 96 }}
+              />
             </AuthProvider>
           </ThemeProvider>
         </NextIntlClientProvider>

@@ -68,9 +68,9 @@ export default function PurchaseOrdersHub() {
             <ChevronLeft className="w-5 h-5 text-zinc-500" />
           </Link>
           <div>
-            <h2 className="text-3xl font-black tracking-tight flex items-center gap-2">
-              <Truck className="w-8 h-8 text-indigo-500" /> Procurement Hub
-            </h2>
+            <h1 className="text-3xl font-black tracking-tight flex items-center gap-2">
+              <Truck aria-hidden className="w-8 h-8 text-indigo-500" /> Procurement Hub
+            </h1>
             <p className="text-zinc-500 font-medium">Manage pending and delivered purchase orders.</p>
           </div>
         </div>

@@ -40,7 +40,7 @@ export default async function SharedImportPage({
       <Card>
         <CardHeader>
           <Badge variant="secondary" className="w-fit">Share Target Inbox</Badge>
-          <CardTitle>Import shared content</CardTitle>
+          <CardTitle as="h1">Import shared content</CardTitle>
           <CardDescription>
             Review incoming files and classify each item before adding it to Expenses, Clients, or Proposals.
           </CardDescription>
