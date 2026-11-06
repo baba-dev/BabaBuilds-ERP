@@ -32,21 +32,26 @@ Optionally seed compliance dictionaries: `npx ts-node prisma/seed.ts`
 
 - `npm run dev` — starts Next.js dev server on port 3000 (Turbopack)
 - The app has a demo login system (POST `/api/auth/demo`) that creates ephemeral demo accounts. In dev mode, Turnstile CAPTCHA is bypassed.
+- **Agent/automation demo access (dev only):** start the server with `DEMO_AGENT_KEY=<random>` and call `POST /api/auth/demo` with header `x-demo-agent-key: <random>` and body `{"templateKey":"dm_agency"}` (templates: `dm_agency`, `software_company`, `tax_agency`, `contractor_builder`, `freelancer_consultant`). The response has `{email, password}`; sign in via NextAuth credentials provider `demo-login` (`POST /api/auth/callback/demo-login` with `csrfToken`, `email`, `password`). Details: `docs/demo-account-dev-agent-access.md`.
+- Demo workspaces are seeded as `PRO` with a demo-bound `subscriptionEndsAt` so every optional module is entitled. Paid entitlements fail closed (`hasFullPaidFeatures`); a template with another status or no end date hides all paid modules.
 - Demo sign-in uses NextAuth `CredentialsProvider` (`provider: "credentials"`, id `demo-login`); high-risk-role MFA rules exempt `@bababuilds.demo` credentials sign-ins in `lib/auth.ts`.
 
 ### Standard commands (see `package.json` scripts)
 
 | Command | Purpose |
 |---|---|
-| `npm run lint` | ESLint + KPI coverage check (pre-existing errors exist) |
+| `npm run ci:fast` | **Run before pushing.** Local mirror of the CI gate: locales, lint, typecheck, demo-template coverage, full Vitest — in parallel (~30s), prints only failing output |
+| `npm run lint` | ESLint + KPI coverage check (0 errors; warnings are pre-existing) |
 | `npm run typecheck` | TypeScript compile check |
 | `npm run validate` | Full pre-merge: lint + typecheck + build |
-| `npm test` | Vitest test suite |
+| `npm test` | Full Vitest suite (all tests pass; keep it that way) |
+| `npm run validate:demos` | Demo template coverage and entitlement checks |
+| `npm run test:browser:smoke` | Playwright smoke tests (starts `next dev`; needs a Chromium build matching the installed Playwright) |
 | `npm run codex:quick` | Fast iteration: locale check + lint + typecheck (no build) |
 
 ### Caveats
 
-- ESLint reports ~340 pre-existing errors and ~185 warnings across the codebase. These are not regressions.
+- ESLint reports no errors and roughly 700 pre-existing warnings (mostly `no-explicit-any`). New code should not add warnings.
 - The Prisma migration history is broken; always use `npx prisma db push` for dev schema sync.
 - External services (Google OAuth, SMTP, Razorpay, Stripe, ClamAV, Cloudflare Turnstile) are all optional in development.
 - The SQLite database file is at `prisma/dev.db` (gitignored).
@@ -55,3 +60,11 @@ Optionally seed compliance dictionaries: `npx ts-node prisma/seed.ts`
 
 - `GET /api/cron/trial-expiry` — expires `TRIALING` workspaces past `subscriptionEndsAt` (set `Authorization: Bearer $CRON_SECRET`). Example: daily at 06:00 alongside other cron routes.
 - Trial signup flow: marketing links hit `GET /signup?...` (sets `signup_intent` cookie for 24h) → `/login` → NextAuth `createUser` provisions `TRIALING` workspace with `planTier` PRO/TEAM from intent.
+
+### CI (GitHub Actions)
+
+- `CI` workflow (`.github/workflows/ci.yml`) runs in parallel: static checks, full Vitest, Prisma migration drift, production build, and a browser smoke job (advisory until `CI_SMOKE_BLOCKING=true`). The single required check is **`CI gate`**.
+- Runners default to GitHub-hosted. Set repository variable `CI_RUNS_ON` to `["self-hosted","linux","x64","erp-ci"]` to use the self-hosted pool.
+- Deploy runs only after `CI` succeeds on a push to `main`, and deploys the exact validated commit.
+- Node is pinned in `.nvmrc` (22). Shared setup lives in `.github/actions/`.
+- Agent workflow: make the change, run `npm run ci:fast`, fix everything it reports, then push. Add or update tests for behavior you change; mocks of shared modules should spread `importOriginal()` so new exports do not break them.

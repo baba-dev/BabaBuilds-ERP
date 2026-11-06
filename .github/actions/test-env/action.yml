@@ -1,0 +1,28 @@
+name: Create Playwright test environment
+description: Writes a throwaway .env (random secrets, external auth off) and creates a fresh SQLite schema.
+
+runs:
+  using: composite
+  steps:
+    - name: Write .env and push schema
+      shell: bash
+      run: |
+        {
+          echo 'DATABASE_URL="file:./ci-e2e.db"'
+          echo 'NEXTAUTH_URL="http://localhost:3000"'
+          echo "NEXTAUTH_SECRET=\"$(openssl rand -hex 32)\""
+          echo "AI_TOOL_CONFIRMATION_SECRET=\"$(openssl rand -hex 32)\""
+          echo 'AUTH_GOOGLE_ENABLED=false'
+          echo 'AUTH_EMAIL_ENABLED=false'
+        } > .env
+        npx prisma db push --skip-generate
+
+    - name: Cache Playwright browsers
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+    - name: Install Chromium
+      shell: bash
+      run: npx playwright install --with-deps chromium

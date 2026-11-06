@@ -1,15 +1,36 @@
 name: Deploy ERP to Production
 
+# Deploys only after the CI workflow succeeded on a push to main, and deploys exactly the
+# commit CI validated (not whatever main points to by the time the job runs).
+# Manual runs (workflow_dispatch) deploy the selected ref's commit.
 on:
-  push:
-    branches: ["main"]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
 
+# Serialize deploys; never cancel one mid-flight.
 concurrency:
-  group: deploy-production-${{ github.ref }}
-  
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
 jobs:
   deploy:
+    # `event == 'push'` blocks workflow_run triggers from pull_request runs whose head branch
+    # happens to be named "main" (e.g. a fork).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: [self-hosted, linux, x64, erp-ci]
+    timeout-minutes: 30
+    env:
+      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     steps:
       - name: SSH into VPS and Deploy
         uses: appleboy/ssh-action@v1.0.3
@@ -17,6 +38,7 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
+          envs: DEPLOY_SHA
           script: |
             source ~/.bashrc
             export PATH=$PATH:/usr/bin:/usr/local/bin
@@ -25,7 +47,12 @@ jobs:
             cd /var/www/bababuilds-erp
 
             git fetch origin main
-            git reset --hard origin/main
+            # Deploy the validated commit, and refuse anything that is not on main.
+            git merge-base --is-ancestor "$DEPLOY_SHA" origin/main || {
+              echo "ERROR: $DEPLOY_SHA is not an ancestor of origin/main; refusing to deploy." >&2
+              exit 1
+            }
+            git reset --hard "$DEPLOY_SHA"
             git clean -fd components/ui/ 2>/dev/null || true
             npm install --legacy-peer-deps
 
