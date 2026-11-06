@@ -14,7 +14,11 @@ vi.mock('@/lib/prisma', () => {
   return {
     prisma: {
       $transaction: vi.fn(),
-      workspace: { create: vi.fn(), count: vi.fn() },
+      workspace: { create: vi.fn(), count: vi.fn(), findUnique: vi.fn() },
+      companyGroup: { create: vi.fn() },
+      companyGroupWorkspace: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
+      companyGroupMember: { upsert: vi.fn() },
+      companyGroupModule: { upsert: vi.fn() },
       user: { update: vi.fn() },
       businessProfile: { create: vi.fn(), update: vi.fn() },
       client: { create: vi.fn(), findMany: vi.fn() },
@@ -64,6 +68,18 @@ describe('demo templates seeding', () => {
 
     const tx = prisma as MockedPrisma;
     tx.workspace.create.mockResolvedValue({ id: 'ws_1' });
+    tx.workspace.findUnique.mockResolvedValue({
+      id: 'ws_1',
+      name: 'Demo Co',
+      subscriptionStatus: 'TRIALING',
+      subscriptionEndsAt: null,
+      planTier: 'PRO',
+    });
+    tx.companyGroupWorkspace.findFirst.mockResolvedValue(null);
+    tx.companyGroup.create.mockResolvedValue({ id: 'cg_1' });
+    tx.companyGroupWorkspace.create.mockResolvedValue({ id: 'cgw_1' });
+    tx.companyGroupMember.upsert.mockResolvedValue({ id: 'cgm_1' });
+    tx.companyGroupModule.upsert.mockResolvedValue({ id: 'cgmod_1' });
     tx.client.create.mockResolvedValue({ id: 'client_1' });
     tx.client.findMany.mockResolvedValue([{ id: 'client_1', name: 'Client 1' }]);
     tx.serviceTemplate.findMany.mockResolvedValue([
@@ -92,6 +108,9 @@ describe('demo templates seeding', () => {
     expect(tx.workspaceModule.upsert).toHaveBeenCalled();
     // At least once per module
     expect(tx.workspaceModule.upsert.mock.calls.length).toBeGreaterThanOrEqual(MODULE_KEYS.length);
+    // MULTI_COMPANY needs the company group wrapper, not just the module flag
+    expect(tx.companyGroup.create).toHaveBeenCalled();
+    expect(tx.companyGroupModule.upsert).toHaveBeenCalled();
   });
 });
 

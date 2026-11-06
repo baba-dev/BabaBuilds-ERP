@@ -19,7 +19,19 @@ export class WorkspaceNotFoundError extends Error {
  * granting the actor owner-level access across the group.
  */
 export async function enableMultiCompany(workspaceId: string, actorUserId: string) {
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction((tx) => enableMultiCompanyInTransaction(tx, workspaceId, actorUserId));
+}
+
+/**
+ * Transaction-scoped variant of {@link enableMultiCompany}, for callers that
+ * already hold a transaction (e.g. demo workspace seeding).
+ */
+export async function enableMultiCompanyInTransaction(
+  tx: Prisma.TransactionClient,
+  workspaceId: string,
+  actorUserId: string,
+) {
+  {
     const workspace = await tx.workspace.findUnique({
       where: { id: workspaceId },
       select: {
@@ -140,7 +152,7 @@ export async function enableMultiCompany(workspaceId: string, actorUserId: strin
       companyGroupModule,
       workspaceModule,
     };
-  });
+  }
 }
 
 
