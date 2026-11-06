@@ -25,6 +25,31 @@ type InsightCardProps = {
   href: string;
 };
 
+function InsightCard({
+  title,
+  value,
+  subtitle,
+  icon: Icon,
+  colorClass,
+  highlight,
+  href,
+}: InsightCardProps) {
+  return (
+    <Link href={href} className="block hover:-translate-y-1 transition-transform">
+      <div className={`p-5 rounded-2xl border bg-white dark:bg-zinc-900 shadow-sm relative overflow-hidden ${
+        highlight ? 'border-indigo-500 ring-1 ring-indigo-500/20' : 'border-zinc-200 dark:border-zinc-800'
+      }`}>
+        <div className={`w-10 h-10 flex flex-col justify-center items-center rounded-xl mb-4 ${colorClass}`}>
+          <Icon className="w-5 h-5" />
+        </div>
+        <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{title}</p>
+        <p className="text-2xl font-black text-zinc-900 dark:text-zinc-50 mt-1">{value}</p>
+        {subtitle && <p className="text-xs font-medium text-zinc-500 mt-2">{subtitle}</p>}
+      </div>
+    </Link>
+  );
+}
+
 export default async function PipelineDashboardPage({
   searchParams,
 }: {
@@ -156,27 +181,6 @@ export default async function PipelineDashboardPage({
   });
 
   const formatMoney = (amount: number) => formatCurrency(amount, "INR", "en-IN");
-
-  const InsightCard = ({
-    title,
-    value,
-    subtitle,
-    icon: Icon,
-    href,
-  }: InsightCardProps) => (
-    <Link href={href} className="block hover:-translate-y-1 transition-transform">
-      <div className={`p-5 rounded-2xl border bg-white dark:bg-zinc-900 shadow-sm relative overflow-hidden \${
-        highlight ? 'border-indigo-500 ring-1 ring-indigo-500/20' : 'border-zinc-200 dark:border-zinc-800'
-      }`}>
-        <div className={`w-10 h-10 flex flex-col justify-center items-center rounded-xl mb-4 \${colorClass}`}>
-          <Icon className="w-5 h-5" />
-        </div>
-        <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{title}</p>
-        <p className="text-2xl font-black text-zinc-900 dark:text-zinc-50 mt-1">{value}</p>
-        {subtitle && <p className="text-xs font-medium text-zinc-500 mt-2">{subtitle}</p>}
-      </div>
-    </Link>
-  );
 
   return (
     <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8 space-y-8">

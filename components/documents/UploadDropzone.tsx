@@ -107,6 +107,7 @@ export function UploadDropzone({
         setIsUploading(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
     [onUploaded, quota, refreshQuota],
   );
 

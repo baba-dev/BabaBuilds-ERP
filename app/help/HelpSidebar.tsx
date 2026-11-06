@@ -78,6 +78,7 @@ export function HelpSidebar({ docs }: HelpSidebarProps) {
       if (raw) {
         const parsed = JSON.parse(raw) as unknown;
         if (Array.isArray(parsed)) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time client-only state sync after mount (avoids SSR hydration mismatch)
           setRecentSlugs(parsed.filter((s): s is string => typeof s === "string").slice(0, 6));
         }
       }
@@ -92,6 +93,7 @@ export function HelpSidebar({ docs }: HelpSidebarProps) {
     const slug = match[1];
     if (!slug) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time client-only state sync after mount (avoids SSR hydration mismatch)
     setRecentSlugs((current) => {
       const next = [slug, ...current.filter((s) => s !== slug)].slice(0, 6);
       try {
@@ -109,7 +111,7 @@ export function HelpSidebar({ docs }: HelpSidebarProps) {
     return recentSlugs.map((s) => bySlug.get(s)).filter(Boolean) as DocMeta[];
   }, [docs, recentSlugs]);
 
-  const SidebarContent = () => (
+  const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="px-5 py-5 border-b border-zinc-100 dark:border-zinc-800">
@@ -265,7 +267,7 @@ export function HelpSidebar({ docs }: HelpSidebarProps) {
     <>
       {/* --- DESKTOP SIDEBAR --- */}
       <aside className="hidden lg:flex flex-col w-72 shrink-0 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 sticky top-0 h-screen overflow-hidden">
-        <SidebarContent />
+        {sidebarContent}
       </aside>
 
       {/* --- MOBILE TOGGLE BUTTON --- */}
@@ -308,7 +310,7 @@ export function HelpSidebar({ docs }: HelpSidebarProps) {
             >
               <X className="w-4 h-4" />
             </Button>
-            <SidebarContent />
+            {sidebarContent}
           </div>
         </div>
       )}

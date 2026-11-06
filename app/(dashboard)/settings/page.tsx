@@ -199,6 +199,7 @@ export default function SettingsWizard() {
         console.error("Failed to load settings:", err);
         toast.error(t("toasts.loadFailed"));
       });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
   }, []);
 
   // AI Auto-Fill Hook
@@ -234,6 +235,7 @@ export default function SettingsWizard() {
         toast.warning(t("toasts.aiAutofillFailed"));
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
   }, []);
 
   const handleGatewayTabChange = (tab: "RAZORPAY" | "STRIPE") => {
@@ -632,6 +634,7 @@ export default function SettingsWizard() {
                   <Label className="flex items-center gap-2 dark:text-zinc-300"><ImageIcon className="w-4 h-4" /> {t('master_logo')}</Label>
                   <div className="flex items-center gap-4">
                     {formData.existingLogoUrl && !logoFile && (
+                      // eslint-disable-next-line @next/next/no-img-element -- dynamic or user-supplied image source; next/image remote config not applicable
                       <img src={getBustedUrl(formData.existingLogoUrl)} alt={t("alt.currentLogo")} className="h-12 object-contain bg-white dark:bg-zinc-200 border rounded p-1" />
                     )}
                     <div className="flex-1">
@@ -668,6 +671,7 @@ export default function SettingsWizard() {
                   </div>
                   <div className="flex items-center gap-4">
                     {formData.existingSignatureUrl && !signatureFile && (
+                      // eslint-disable-next-line @next/next/no-img-element -- dynamic or user-supplied image source; next/image remote config not applicable
                       <img src={getBustedUrl(formData.existingSignatureUrl)} alt={t("alt.currentSignature")} className="h-12 object-contain bg-white dark:bg-zinc-200 border rounded p-1" />
                     )}
                     <div className="flex-1">

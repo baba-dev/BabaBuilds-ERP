@@ -69,7 +69,7 @@ export class IndiaTaxStrategy implements TaxStrategy {
     const maxRebate = new Prisma.Decimal(rules.rebate.maxRebate);
     const eligibleRebate = normalIncome.lte(threshold) ? Prisma.Decimal.min(grossTax, maxRebate) : new Prisma.Decimal(0);
 
-    let taxAfter = grossTax.minus(eligibleRebate);
+    const taxAfter = grossTax.minus(eligibleRebate);
     const cess = taxAfter.mul(rules.cessRate);
     const final = taxAfter.plus(cess);
 

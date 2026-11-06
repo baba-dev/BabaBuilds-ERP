@@ -29,6 +29,7 @@ export function ProductCard({ product, onAdjust, onClick }: ProductCardProps) {
     >
       <div className="relative aspect-[4/3] bg-zinc-100 dark:bg-zinc-950 overflow-hidden flex items-center justify-center p-6">
         {product.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- dynamic or user-supplied image source; next/image remote config not applicable
           <img 
             src={product.imageUrl} 
             alt={product.name} 

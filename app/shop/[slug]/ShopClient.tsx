@@ -101,6 +101,7 @@ function StorefrontImage({
   if (!src || failedSrc === src) return <>{fallback}</>;
 
   return (
+    // eslint-disable-next-line @next/next/no-img-element -- dynamic or user-supplied image source; next/image remote config not applicable
     <img
       src={src}
       alt={alt}
@@ -642,6 +643,7 @@ export function ShopClient({ data }: { data: ShopData }) {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("payment") === "success") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time client-only state sync after mount (avoids SSR hydration mismatch)
       setConfetti(true);
       toast.success("Payment successful! Thank you for your purchase.");
       window.history.replaceState({}, "", window.location.pathname);
@@ -1084,6 +1086,7 @@ export function ShopClient({ data }: { data: ShopData }) {
           ) : null}
           <p className="text-xs text-zinc-400 dark:text-zinc-600 font-medium">
             Powered by{" "}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- full-page navigation to a non-page route is intended */}
             <a href="/" className="font-bold text-zinc-500 dark:text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
               BabaBuilds ERP
             </a>

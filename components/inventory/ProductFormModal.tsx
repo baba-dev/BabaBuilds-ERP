@@ -181,6 +181,7 @@ export function ProductFormModal({ open, onOpenChange, productToEdit, onSuccess 
               >
                 {previewUrl ? (
                   <>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- dynamic or user-supplied image source; next/image remote config not applicable */}
                     <img src={previewUrl} alt="Preview" className="h-48 object-contain p-2" />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 backdrop-blur-sm">
                        <Button type="button" variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()} className="font-bold">

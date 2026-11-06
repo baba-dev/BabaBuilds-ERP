@@ -248,7 +248,7 @@ export default function RetainerBuilder({ clients, catalog, onSuccess, onCancel,
                   <Sparkles className={`w-4 h-4 ${formValues.autoAppendMonth ? 'text-purple-600' : 'text-zinc-400'}`} />
                   Smart Invoice Naming
                 </Label>
-                <p className="text-xs text-zinc-500">Automatically appends the billing month to invoice line items (e.g., "SEO Services (June 2026)").</p>
+                <p className="text-xs text-zinc-500">Automatically appends the billing month to invoice line items (e.g., &quot;SEO Services (June 2026)&quot;).</p>
               </div>
               <Switch checked={formValues.autoAppendMonth} onCheckedChange={(v) => setValue('autoAppendMonth', v)} className="data-[state=checked]:bg-purple-600" />
             </div>

@@ -42,6 +42,7 @@ export function MobileNativeInstallSection() {
   const [platform, setPlatform] = useState<ClientPlatform | null>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time client-only state sync after mount (avoids SSR hydration mismatch)
     setPlatform(detectClientPlatform());
   }, []);
 

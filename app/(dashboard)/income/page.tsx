@@ -83,6 +83,7 @@ export default function InvoicesAndEarnings() {
 
   useEffect(() => {
     fetchInvoices(currentPage);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
   }, [currentPage]);
 
   // --- SMART AI AUTO-FILL HOOK ---
@@ -122,6 +123,7 @@ export default function InvoicesAndEarnings() {
         toast.warning(t("toast.warning.ai_autofill_failed"));
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
   }, [invoices]);
 
   const fetchInvoices = async (page = 1) => {

@@ -15,6 +15,23 @@ import {
 import { getTranslations } from "next-intl/server";
 import { FREE_TIER_MONTHLY_INVOICE_LIMIT } from "@/lib/pricing";
 
+function TimelineItem({ active, icon: Icon, title, date, subtitle }: any) {
+  return (
+    <div className={`flex flex-col items-center gap-2 ${active ? "text-indigo-600" : "text-zinc-400 opacity-50"}`}>
+      <div
+        className={`w-10 h-10 rounded-full flex items-center justify-center ${active ? "bg-indigo-100 dark:bg-indigo-900/50" : "bg-zinc-100 dark:bg-zinc-800"}`}
+      >
+        <Icon className="w-5 h-5" />
+      </div>
+      <div className="text-center">
+        <p className="text-xs font-bold uppercase tracking-widest">{title}</p>
+        {active && date && <p className="text-[10px] text-zinc-500 mt-1">{format(new Date(date), "MMM dd, hh:mm a")}</p>}
+        {subtitle && <p className="text-[10px] text-zinc-400 mt-0.5">{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
+
 export default async function ProposalDetailPage({
   params,
   searchParams,
@@ -60,21 +77,6 @@ export default async function ProposalDetailPage({
   });
 
   const formatMoney = (amount: any) => formatCurrency(Number(amount), "INR", "en-IN");
-
-  const TimelineItem = ({ active, icon: Icon, title, date, subtitle }: any) => (
-    <div className={`flex flex-col items-center gap-2 ${active ? "text-indigo-600" : "text-zinc-400 opacity-50"}`}>
-      <div
-        className={`w-10 h-10 rounded-full flex items-center justify-center ${active ? "bg-indigo-100 dark:bg-indigo-900/50" : "bg-zinc-100 dark:bg-zinc-800"}`}
-      >
-        <Icon className="w-5 h-5" />
-      </div>
-      <div className="text-center">
-        <p className="text-xs font-bold uppercase tracking-widest">{title}</p>
-        {active && date && <p className="text-[10px] text-zinc-500 mt-1">{format(new Date(date), "MMM dd, hh:mm a")}</p>}
-        {subtitle && <p className="text-[10px] text-zinc-400 mt-0.5">{subtitle}</p>}
-      </div>
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8">
@@ -300,6 +302,7 @@ export default async function ProposalDetailPage({
                 <div className="mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800/80">
                   <p className="text-xs text-zinc-500 font-bold uppercase tracking-widest mb-2">Digital Signature</p>
                   <div className="bg-zinc-50 dark:bg-zinc-950 p-4 border rounded-xl shadow-inner max-w-[200px]">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- dynamic or user-supplied image source; next/image remote config not applicable */}
                     <img src={proposal.clientSignatureBase64} alt="Client Signature" className="h-16 w-auto object-contain mx-auto" />
                   </div>
                   <div className="mt-2 text-[10px] text-zinc-400 space-y-0.5 font-medium leading-relaxed">

@@ -250,6 +250,7 @@ export default function ReconciliationWizard() {
     return () => {
       cancelled = true;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
   }, []);
 
   const loadRegister = useCallback(async () => {

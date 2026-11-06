@@ -54,6 +54,7 @@ export function CashFlowPeriodBreakdown({
    
   useEffect(() => {
     if (!defaultOpenPeriodId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time client-only state sync after mount (avoids SSR hydration mismatch)
     setOpen((prev) => (prev[defaultOpenPeriodId] ? prev : { ...prev, [defaultOpenPeriodId]: true }));
   }, [defaultOpenPeriodId]);
 

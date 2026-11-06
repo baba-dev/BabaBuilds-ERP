@@ -125,6 +125,7 @@ function RoleBadge({ role, className }: { role: BusinessRole; className?: string
 
 function Initials({ name, email, image }: { name: string | null; email: string | null; image?: string | null }) {
   if (image) {
+    // eslint-disable-next-line @next/next/no-img-element -- dynamic or user-supplied image source; next/image remote config not applicable
     return <img src={image} alt={name ?? email ?? "User"} className="w-8 h-8 rounded-full object-cover" />;
   }
   const label = name

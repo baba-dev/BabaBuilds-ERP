@@ -380,6 +380,7 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
                   {proposal.clientSignatureBase64 && (
                     <div className="mt-4 p-3 bg-white dark:bg-zinc-900 border border-emerald-100 dark:border-emerald-800/40 rounded-xl shadow-inner max-w-[220px] mx-auto animate-in zoom-in duration-300">
                       <p className="text-[9px] uppercase font-bold tracking-widest text-zinc-400 mb-1 border-b pb-1 text-center">Digital Signature</p>
+                      {/* eslint-disable-next-line @next/next/no-img-element -- dynamic or user-supplied image source; next/image remote config not applicable */}
                       <img src={proposal.clientSignatureBase64} alt="Client Signature" className="h-16 w-auto object-contain mx-auto animate-in fade-in" />
                     </div>
                   )}
@@ -388,7 +389,7 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
                 <div className="flex flex-col items-center justify-center text-amber-600">
                   <MessageSquareDashed className="w-12 h-12 mb-3" />
                   <h3 className="text-lg font-bold">Revisions Requested</h3>
-                  <p className="text-sm text-amber-700/80 mt-1">We've received your feedback and will update the proposal shortly.</p>
+                  <p className="text-sm text-amber-700/80 mt-1">We&apos;ve received your feedback and will update the proposal shortly.</p>
                 </div>
               ) : (
                 <>
@@ -486,7 +487,7 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
           <DialogHeader>
             <DialogTitle>Request Changes</DialogTitle>
             <DialogDescription>
-              Let us know what you'd like us to adjust. We'll revise the proposal and notify you when it's ready.
+              Let us know what you&apos;d like us to adjust. We&apos;ll revise the proposal and notify you when it&apos;s ready.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">

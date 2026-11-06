@@ -87,6 +87,7 @@ export function EmployeeAvatar({
 
   if (avatarUrl) {
     return (
+      // eslint-disable-next-line @next/next/no-img-element -- dynamic or user-supplied image source; next/image remote config not applicable
       <img
         src={avatarUrl}
         alt={`${firstName} ${lastName}`}

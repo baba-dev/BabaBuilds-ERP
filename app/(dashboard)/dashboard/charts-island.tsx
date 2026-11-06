@@ -1,7 +1,7 @@
 "use client";
 
 import { TrendingUp, Clock, Filter, Activity, CheckCircle2, ArrowUpRight, Sparkles, Lock } from "lucide-react";
-import { useMemo, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { motion, type Variants } from "framer-motion";
 import {
@@ -54,8 +54,11 @@ export function ChartsIsland({
   canViewCharts?: boolean;
 }) {
   const t = useTranslations("Dashboard");
-  const tr = (key: string, fallback: string, values?: Record<string, any>) =>
-    t.has(key as any) ? t(key as any, values) : fallback;
+  const tr = useCallback(
+    (key: string, fallback: string, values?: Record<string, any>) =>
+      t.has(key as any) ? t(key as any, values) : fallback,
+    [t],
+  );
 
   const isMobile = useSyncExternalStore(
     (onStoreChange) => {

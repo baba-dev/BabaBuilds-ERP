@@ -187,6 +187,7 @@ export function ServiceFormDialog({ open, onOpenChange, service, onSuccess }: Pr
               <Label className="font-bold text-zinc-700 dark:text-zinc-300 text-xs uppercase tracking-wider">Service Image <span className="text-zinc-400 font-normal">(optional)</span></Label>
               {form.imageUrl && !imageFile && (
                 <div className="relative w-full h-32 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 mb-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- dynamic or user-supplied image source; next/image remote config not applicable */}
                   <img src={form.imageUrl} alt="Current" className="w-full h-full object-cover" />
                   <button type="button" onClick={() => setForm((f) => ({ ...f, imageUrl: "" }))} className="absolute top-2 right-2 p-1 bg-rose-600 text-white rounded-md text-[10px] font-bold">Remove</button>
                 </div>

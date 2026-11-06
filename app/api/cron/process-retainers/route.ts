@@ -384,8 +384,8 @@ export async function GET(request: Request) {
             // Delete the PDF we just generated — it will be orphaned if we retry
             // with a new invoice number, or if we give up after MAX_ATTEMPTS.
             if (lastGeneratedPdfPath) {
-              const fullOrphanPath = require('path').join(process.cwd(), 'public', lastGeneratedPdfPath.replace(/^\//, ''));
-              try { require('fs').unlinkSync(fullOrphanPath); } catch { /* ignore */ }
+              const fullOrphanPath = path.join(process.cwd(), 'public', lastGeneratedPdfPath.replace(/^\//, ''));
+              try { fs.unlinkSync(fullOrphanPath); } catch { /* ignore */ }
               lastGeneratedPdfPath = null;
             }
             if (err.code === 'P2002') {

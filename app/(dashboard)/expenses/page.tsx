@@ -78,10 +78,12 @@ export default function ExpenseTracker() {
 
   useEffect(() => {
     fetchExpenses(currentPage);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
   }, [currentPage]);
 
   useEffect(() => {
     fetchSummary();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
   }, []);
 
   const fetchExpenses = async (page = 1) => {

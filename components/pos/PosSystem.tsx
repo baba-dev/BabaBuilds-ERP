@@ -92,6 +92,7 @@ export default function PosSystem({
       }
     };
     fetchCatalog();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
   }, [activeTab]);
 
   const addToCart = (item: CatalogItem) => {

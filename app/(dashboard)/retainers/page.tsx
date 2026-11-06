@@ -107,6 +107,7 @@ export default function RetainersHub() {
 
   useEffect(() => {
     fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
   }, [view]);
 
   // --- SMART AI AUTO-FILL HOOK ---

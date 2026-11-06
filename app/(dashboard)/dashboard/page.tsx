@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Download, LayoutDashboard, Send, Sparkles, ArrowRight, Users, Briefcase, ReceiptText, X, Building, CircleAlert, ShieldCheck } from "lucide-react";
@@ -77,7 +77,7 @@ export default function Dashboard() {
   const { fCurrency, currency } = useFormat();
   const currencySymbol = getCurrencySymbol(currency);
 
-  const tr = (key: string, fallback: string, values?: Record<string, any>) => {
+  const tr = useCallback((key: string, fallback: string, values?: Record<string, any>) => {
     if (typeof (t as any).has === "function" && !(t as any).has(key)) return fallback;
     try {
       const translation = t(key as any, values);
@@ -86,7 +86,7 @@ export default function Dashboard() {
     } catch {
       return fallback;
     }
-  };
+  }, [t]);
 
   const isMobile = useSyncExternalStore(
     (onStoreChange) => {
@@ -163,6 +163,7 @@ export default function Dashboard() {
     const controller = new AbortController();
     loadAllData(selectedFy, controller.signal);
     return () => controller.abort();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
   }, [selectedFy]);
 
   useEffect(() => {
@@ -518,7 +519,7 @@ export default function Dashboard() {
               />
             ) : (
               <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-300">
-                Complete 3 demo actions to unlock a guided "Start with my real business" path.
+                Complete 3 demo actions to unlock a guided &quot;Start with my real business&quot; path.
               </p>
             )}
           </div>

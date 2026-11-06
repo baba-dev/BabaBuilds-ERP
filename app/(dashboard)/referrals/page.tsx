@@ -282,7 +282,7 @@ export default function ReferralsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-orange-500" /> Today's actions
+              <Sparkles className="h-4 w-4 text-orange-500" /> Today&apos;s actions
             </CardTitle>
             <CardDescription>Suggested next moves based on current pipeline and coupon health.</CardDescription>
           </CardHeader>

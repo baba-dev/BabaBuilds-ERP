@@ -121,6 +121,7 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
 
   useEffect(() => {
     fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
   }, []);
 
 
@@ -208,6 +209,7 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
       return;
     }
     void fetchTaxAuditLogs(1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
   }, [taxAdvancedEnabled]);
 
   const fetchTaxAuditLogs = async (page = 1, filters = taxAuditFilters) => {

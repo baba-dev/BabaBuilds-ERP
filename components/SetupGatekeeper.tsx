@@ -14,6 +14,7 @@ export default function SetupGatekeeper() {
   useEffect(() => {
     // DO NOT show gatekeeper on Help Center routes
     if (pathname?.startsWith("/help")) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time client-only state sync after mount (avoids SSR hydration mismatch)
       setIsOpen(false);
       return;
     }

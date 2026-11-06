@@ -57,13 +57,14 @@ export function useNotifications(): UseNotificationsReturn {
   // Track latest-seen createdAt so we only toast newly arrived items
   const lastSeenAtRef    = useRef<string | null>(null);
   const hasHydratedRef   = useRef(false);
-  const lastActivityRef  = useRef<number>(Date.now());
+  const lastActivityRef  = useRef<number>(0);
   const intervalRef      = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMountedRef     = useRef(true);
 
   // ── User activeness tracking ──────────────────────────────────────────────
   useEffect(() => {
     const refresh = () => { lastActivityRef.current = Date.now(); };
+    refresh();
     window.addEventListener('mousemove', refresh, { passive: true });
     window.addEventListener('keydown',   refresh, { passive: true });
     window.addEventListener('touchstart',refresh, { passive: true });
@@ -133,6 +134,7 @@ export function useNotifications(): UseNotificationsReturn {
     isMountedRef.current = true;
 
     // Initial load
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time client-only state sync after mount (avoids SSR hydration mismatch)
     setIsLoading(true);
     poll().finally(() => { if (isMountedRef.current) setIsLoading(false); });
 
