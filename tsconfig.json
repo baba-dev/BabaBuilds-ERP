@@ -41,7 +41,6 @@
   "exclude": [
     "tests/**/*",
     "node_modules",
-    "vitest.config.ts",
-    "scratch/**/*"
+    "vitest.config.ts"
   ]
 }
