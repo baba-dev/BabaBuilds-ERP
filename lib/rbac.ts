@@ -31,6 +31,7 @@ import {
 } from '@/lib/permissions';
 import { NextResponse } from 'next/server';
 import { resolveSeatLimitKey } from '@/lib/entitlements';
+import type { Prisma } from "@prisma/client";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -446,7 +447,7 @@ export async function logRbacEvent(event: RbacAuditEvent): Promise<void> {
         targetEmail: event.targetEmail ?? null,
         previousRole: event.previousRole ?? null,
         newRole: event.newRole ?? null,
-        metadata: event.metadata ? (event.metadata as any) : undefined,
+        metadata: event.metadata ? (event.metadata as Prisma.InputJsonValue) : undefined,
       },
     });
 

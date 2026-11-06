@@ -1,5 +1,6 @@
 import 'server-only';
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from "@prisma/client";
 
 export type MailBillingReviewType =
   | 'NEW_DOMAIN_DISCOVERED' | 'DOMAIN_MISSING_CLIENT' | 'DOMAIN_MISSING_SUBSCRIPTION' | 'DOMAIN_MISSING_RETAINER'
@@ -19,7 +20,7 @@ export async function createMailBillingReviewItem(input: {
   const item = await prisma.mailBillingReviewItem.create({ data: {
     workspaceId: input.workspaceId, domainId: input.domainId ?? null, subscriptionId: input.subscriptionId ?? null, serverId: input.serverId ?? null,
     type: input.type, severity: input.severity ?? 'INFO', title: input.title, description: input.description, suggestedAction: input.suggestedAction,
-    oldValueJson: input.oldValueJson as any, newValueJson: input.newValueJson as any, metadataJson: input.metadataJson as any,
+    oldValueJson: input.oldValueJson as Prisma.InputJsonValue, newValueJson: input.newValueJson as Prisma.InputJsonValue, metadataJson: input.metadataJson as any,
   }});
   return { item, created: true };
 }

@@ -193,7 +193,7 @@ function BuyModal({
 
       if (data.gateway === "RAZORPAY") {
         setStep("processing");
-        const rzp = new (window as any).Razorpay({
+        const rzp = new window.Razorpay!({
           key:         data.keyId,
           amount:      data.amount,
           currency:    data.currency,
@@ -202,7 +202,7 @@ function BuyModal({
           description: product.name,
           prefill:     data.prefill,
           theme:       { color: "#6366f1" },
-          handler: async (response: any) => {
+          handler: async (response: RazorpaySuccessResponse) => {
             const verifyRes = await fetch(`/api/shop/${slug}/verify`, {
               method:  "POST",
               headers: { "Content-Type": "application/json" },

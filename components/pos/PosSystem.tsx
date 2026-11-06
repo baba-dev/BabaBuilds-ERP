@@ -247,7 +247,7 @@ export default function PosSystem({
           <div className="flex items-center gap-4 mb-4">
             <Tabs
               value={activeTab}
-              onValueChange={(v: any) => setActiveTab(v)}
+              onValueChange={(v) => setActiveTab(v as "SERVICES" | "PRODUCTS")}
               className="w-64"
             >
               <TabsList className="grid w-full grid-cols-2">

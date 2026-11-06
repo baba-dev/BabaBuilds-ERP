@@ -45,7 +45,7 @@ describe('tax dashboard server composition', () => {
 
     expect(getActiveWorkspaceIdForUserMock).toHaveBeenCalledWith('user_1');
     expect(isModuleEnabledMock).toHaveBeenCalledWith('ws_1', 'TAX_ADVANCED');
-    expect((element as any).props.taxAdvancedEnabled).toBe(true);
+    expect((element as { props: { taxAdvancedEnabled: boolean } }).props.taxAdvancedEnabled).toBe(true);
   });
 
   it('defaults to disabled when no active workspace is found', async () => {
@@ -56,6 +56,6 @@ describe('tax dashboard server composition', () => {
     const element = await TaxDashboardPage();
 
     expect(isModuleEnabledMock).not.toHaveBeenCalled();
-    expect((element as any).props.taxAdvancedEnabled).toBe(false);
+    expect((element as { props: { taxAdvancedEnabled: boolean } }).props.taxAdvancedEnabled).toBe(false);
   });
 });

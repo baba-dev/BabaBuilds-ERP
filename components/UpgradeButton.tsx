@@ -69,7 +69,7 @@ function SuccessUpgradeModal({ interval, onClose }: { interval: string, onClose:
 // Utility to inject the Razorpay script dynamically
 const loadRazorpayScript = () => {
   return new Promise<boolean>((resolve) => {
-    if ((window as any).Razorpay) {
+    if (window.Razorpay) {
       resolve(true);
       return;
     }
@@ -222,7 +222,7 @@ export function ProUpgradeCard({
         theme: {
           color: "#4f46e5", // Indigo-600 to match your UI
         },
-        handler: async function (response: any) {
+        handler: async function (response: RazorpaySuccessResponse) {
           const verifyToastId = toast.loading("Verifying payment securely...");
           try {
             // 4. Send the success signature back to our server to verify & upgrade DB
@@ -255,8 +255,8 @@ export function ProUpgradeCard({
       };
 
       // 5. Open the Razorpay Modal
-      const paymentObject = new (window as any).Razorpay(options);
-      paymentObject.on("payment.failed", function (response: any) {
+      const paymentObject = new window.Razorpay!(options);
+      paymentObject.on("payment.failed", function (response: RazorpayFailureResponse) {
         toast.error(`Payment Failed: ${response.error.description}`);
       });
       paymentObject.open();

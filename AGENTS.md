@@ -38,7 +38,7 @@ Optionally seed compliance dictionaries: `npx ts-node prisma/seed.ts`
 
 | Command | Purpose |
 |---|---|
-| `npm run lint` | ESLint + KPI coverage check (pre-existing errors exist) |
+| `npm run lint` | ESLint + KPI coverage check (0 errors; remaining warnings are `no-explicit-any`) |
 | `npm run typecheck` | TypeScript compile check |
 | `npm run validate` | Full pre-merge: lint + typecheck + build |
 | `npm test` | Vitest test suite |
@@ -46,7 +46,7 @@ Optionally seed compliance dictionaries: `npx ts-node prisma/seed.ts`
 
 ### Caveats
 
-- ESLint reports ~340 pre-existing errors and ~185 warnings across the codebase. These are not regressions.
+- ESLint reports 0 errors. Remaining warnings are `@typescript-eslint/no-explicit-any`; new code should not add more. Prefix intentionally unused names with `_`.
 - The Prisma migration history is broken; always use `npx prisma db push` for dev schema sync.
 - External services (Google OAuth, SMTP, Razorpay, Stripe, ClamAV, Cloudflare Turnstile) are all optional in development.
 - The SQLite database file is at `prisma/dev.db` (gitignored).
