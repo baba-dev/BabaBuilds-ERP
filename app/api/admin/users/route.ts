@@ -56,7 +56,7 @@ export async function PATCH(req: Request) {
   try {
     await verifySuperAdmin();
     const session = await getServerSession(authOptions);
-    actorId = (session?.user as any)?.id ?? null;
+    actorId = session?.user?.id ?? null;
     actorEmail = session?.user?.email ?? null;
     const body = await req.json();
     const userId = typeof body?.userId === "string" ? body.userId : null;
@@ -177,7 +177,7 @@ export async function DELETE(req: Request) {
   try {
     await verifySuperAdmin();
     const session = await getServerSession(authOptions);
-    actorId = (session?.user as any)?.id ?? null;
+    actorId = session?.user?.id ?? null;
     actorEmail = session?.user?.email ?? null;
     const body = await req.json();
     const userId = typeof body?.userId === "string" ? body.userId : null;

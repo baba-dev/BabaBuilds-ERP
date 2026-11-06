@@ -44,6 +44,7 @@ import { PersonaPicker } from "@/components/onboarding/PersonaPicker";
 import { GuidedFlowsHub } from "@/components/dashboard/GuidedFlowsHub";
 import { StartWithRealBusinessCTA } from "@/components/demo/StartWithRealBusinessCTA";
 import { getErrorMessage } from "@/lib/error-utils";
+import { createTranslator } from "@/lib/i18n/translator";
 
 export default function Dashboard() {
   const t = useTranslations("Dashboard");
@@ -78,16 +79,7 @@ export default function Dashboard() {
   const { fCurrency, currency } = useFormat();
   const currencySymbol = getCurrencySymbol(currency);
 
-  const tr = useCallback((key: string, fallback: string, values?: Record<string, any>) => {
-    if (typeof (t as any).has === "function" && !(t as any).has(key)) return fallback;
-    try {
-      const translation = t(key as any, values);
-      if (translation === key || translation === `Dashboard.${key}`) return fallback;
-      return translation;
-    } catch {
-      return fallback;
-    }
-  }, [t]);
+  const tr = useMemo(() => createTranslator(t), [t]);
 
   const isMobile = useSyncExternalStore(
     (onStoreChange) => {

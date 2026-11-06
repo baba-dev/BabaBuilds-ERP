@@ -14,7 +14,7 @@ export async function GET() {
 
   const sessions = await prisma.session.findMany({
     where: {
-      userId: (session.user as any).id,
+      userId: session.user.id,
     },
     orderBy: {
       expires: 'desc',
@@ -58,7 +58,7 @@ export async function DELETE(request: Request) {
   await prisma.session.delete({
     where: {
       id: sessionId,
-      userId: (session.user as any).id,
+      userId: session.user.id,
     },
   });
 

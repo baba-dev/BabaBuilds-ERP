@@ -7,13 +7,11 @@ import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import type { DashboardData } from "./types";
 import { dashboardTypography as ty } from "./dashboard-typography";
+import { createTranslator } from "@/lib/i18n/translator";
 
 export function DashboardAttentionCenter({ attention }: { attention: DashboardData["attention"] }) {
   const t = useTranslations("Dashboard");
-  const tr = (key: string, fallback: string, values?: Record<string, unknown>) => {
-    if (!(t as any).has?.(key)) return fallback;
-    return t(key as never, values as never);
-  };
+  const tr = createTranslator(t);
 
   const isUrgent = attention.totalUrgent > 0;
 

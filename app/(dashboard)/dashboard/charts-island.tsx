@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import type { DashboardData } from "./types";
 import { dashboardTypography as ty } from "./dashboard-typography";
 import { DashboardTooltip } from "./dashboard-tooltip";
+import { createTranslator } from "@/lib/i18n/translator";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -54,11 +55,7 @@ export function ChartsIsland({
   canViewCharts?: boolean;
 }) {
   const t = useTranslations("Dashboard");
-  const tr = useCallback(
-    (key: string, fallback: string, values?: Record<string, any>) =>
-      t.has(key as any) ? t(key as any, values) : fallback,
-    [t],
-  );
+  const tr = useMemo(() => createTranslator(t), [t]);
 
   const isMobile = useSyncExternalStore(
     (onStoreChange) => {

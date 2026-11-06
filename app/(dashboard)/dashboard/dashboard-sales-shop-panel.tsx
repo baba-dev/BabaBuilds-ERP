@@ -27,6 +27,7 @@ import type { DashboardData } from "./types";
 import { DashboardTooltip } from "./dashboard-tooltip";
 import { dashboardTypography as ty } from "./dashboard-typography";
 import { DashboardModulePromoCard } from "@/components/dashboard/DashboardModulePromoCard";
+import { createTranslator } from "@/lib/i18n/translator";
 
 export function DashboardSalesAndShopPanel({
   salesAndShop,
@@ -42,10 +43,7 @@ export function DashboardSalesAndShopPanel({
   onModuleEnabled?: (moduleKey: string) => void;
 }) {
   const t = useTranslations("Dashboard");
-  const tr = (key: string, fallback: string, values?: any) => {
-    if (!t.has(key as any)) return fallback;
-    return t(key as any, values);
-  };
+  const tr = createTranslator(t);
 
   const panelCardClass =
     "group relative overflow-hidden h-full flex flex-col p-6 border-zinc-200 dark:border-zinc-800/60 bg-white dark:bg-zinc-950/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-500";

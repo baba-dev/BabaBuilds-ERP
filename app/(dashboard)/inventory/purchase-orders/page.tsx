@@ -9,6 +9,7 @@ import { Box, Truck, CheckCircle2, ChevronLeft, Loader2, ArrowRight } from "luci
 import { useFormat } from "@/hooks/use-format";
 import Link from "next/link";
 import { getErrorMessage } from "@/lib/error-utils";
+import { getApiErrorMessage } from "@/lib/error-utils";
 
 export default function PurchaseOrdersHub() {
   const [pos, setPos] = useState<any[]>([]);
@@ -27,7 +28,7 @@ export default function PurchaseOrdersHub() {
       const res = await fetch("/api/inventory/purchase-orders");
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error((data as any)?.error || "Failed to load Purchase Orders");
+        throw new Error(getApiErrorMessage(data, "Failed to load Purchase Orders"));
       }
       setPos(Array.isArray(data) ? data : []);
     } catch (err) {

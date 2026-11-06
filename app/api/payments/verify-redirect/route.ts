@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
       const { decrypt } = await import('@/lib/encryption');
       const decryptedSecret = decrypt(invoice.workspace.businessProfile.stripeSecretKey);
       
-      const stripe = new Stripe(decryptedSecret, { apiVersion: '2026-03-25.dahlia' as any });
+      const stripe = new Stripe(decryptedSecret, { apiVersion: '2026-03-25.dahlia' as Stripe.LatestApiVersion });
       const session = await stripe.checkout.sessions.retrieve(sessionId);
 
       const expectedAmount = toSmallestUnit(Number(invoice.grandTotal), invoice.workspace.baseCurrency ?? "INR");

@@ -67,7 +67,7 @@ export async function GET(req: Request) {
           }
         } else if (invoice.providerGateway === "STRIPE" && profile.stripeSecretKey) {
           const decryptedSecret = decrypt(profile.stripeSecretKey);
-          const stripe = new Stripe(decryptedSecret, { apiVersion: '2026-03-25.dahlia' as any });
+          const stripe = new Stripe(decryptedSecret, { apiVersion: '2026-03-25.dahlia' as Stripe.LatestApiVersion });
 
           // Payment links themselves don't have a simple "status" in Stripe.
           // They generate Checkout Sessions. We have to list Checkout Sessions for this Payment Link 

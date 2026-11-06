@@ -5,20 +5,12 @@ import { ArrowRight, FilePlus2, Receipt, ShoppingBag, Shield } from "lucide-reac
 import { Card } from "@/components/ui/card";
 import { useTranslations } from "next-intl";
 import { dashboardTypography as ty } from "./dashboard-typography";
+import { createTranslator } from "@/lib/i18n/translator";
 
 
 export function DashboardQuickActions() {
   const t = useTranslations("Dashboard");
-  const tr = (key: string, fallback: string, values?: any) => {
-    if (typeof (t as any).has === "function" && !(t as any).has(key)) return fallback;
-    try {
-      const translation = t(key as any, values);
-      if (translation === key || translation === `Dashboard.${key}`) return fallback;
-      return translation;
-    } catch {
-      return fallback;
-    }
-  };
+  const tr = createTranslator(t);
 
   const actions = [
     { href: "/invoice", label: tr("action_create_invoice", "Create invoice"), icon: FilePlus2 },

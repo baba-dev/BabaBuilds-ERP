@@ -17,3 +17,12 @@ export function getErrorCode(error: unknown): string | undefined {
   }
   return undefined;
 }
+
+/** Reads the conventional `{ error: string }` field from an untyped API payload. */
+export function getApiErrorMessage(payload: unknown, fallback: string): string {
+  if (payload && typeof payload === "object" && "error" in payload) {
+    const error = (payload as { error?: unknown }).error;
+    if (typeof error === "string" && error) return error;
+  }
+  return fallback;
+}

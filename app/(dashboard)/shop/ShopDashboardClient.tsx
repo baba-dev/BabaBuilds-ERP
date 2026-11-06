@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { useFormat } from "@/hooks/use-format";
 import { getShopDashboardLoadPlan } from "./load-plan";
+import { getApiErrorMessage } from "@/lib/error-utils";
 
 type ProductCatalogItem = {
   id: string;
@@ -167,10 +168,10 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
         shopSettingsRes.json().catch(() => null),
       ]);
 
-      if (!productsRes.ok) throw new Error((productsData as any)?.error || "Failed to load products.");
-      if (!shopSettingsRes.ok) throw new Error((shopSettingsData as any)?.error || "Failed to load shop settings.");
+      if (!productsRes.ok) throw new Error(getApiErrorMessage(productsData, "Failed to load products."));
+      if (!shopSettingsRes.ok) throw new Error(getApiErrorMessage(shopSettingsData, "Failed to load shop settings."));
       if (ordersRes && !ordersRes.ok) {
-        throw new Error((ordersData as any)?.error || "Failed to load orders.");
+        throw new Error(getApiErrorMessage(ordersData, "Failed to load orders."));
       }
 
       if (abilities.canViewOrders) {
@@ -280,7 +281,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        toast.error((data as any)?.error || "Failed to save storefront content.", { id: toastId });
+        toast.error(getApiErrorMessage(data, "Failed to save storefront content."), { id: toastId });
         return;
       }
       toast.success("Storefront content saved.", { id: toastId });

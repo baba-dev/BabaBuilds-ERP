@@ -27,6 +27,7 @@ import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import RetainerBuilder from "@/components/retainers/RetainerBuilder";
 import { getErrorMessage } from "@/lib/error-utils";
+import { getApiErrorMessage } from "@/lib/error-utils";
 
 interface Retainer {
   id: string;
@@ -159,7 +160,7 @@ export default function RetainersHub() {
         const res = await fetch('/api/retainers');
         const payload = await res.json().catch(() => null);
         if (!res.ok) {
-          throw new Error((payload as any)?.error || "Failed to load retainers");
+          throw new Error(getApiErrorMessage(payload, "Failed to load retainers"));
         }
         setRetainers(Array.isArray(payload) ? payload : []);
       } else {
@@ -169,8 +170,8 @@ export default function RetainersHub() {
         ]);
         const clientData = await clientRes.json().catch(() => null);
         const catData = await catRes.json().catch(() => null);
-        if (!clientRes.ok) throw new Error((clientData as any)?.error || "Failed to load clients");
-        if (!catRes.ok) throw new Error((catData as any)?.error || "Failed to load services");
+        if (!clientRes.ok) throw new Error(getApiErrorMessage(clientData, "Failed to load clients"));
+        if (!catRes.ok) throw new Error(getApiErrorMessage(catData, "Failed to load services"));
         const parsedClients = Array.isArray(clientData) ? clientData : (clientData as any)?.data;
         const parsedCatalog = Array.isArray(catData) ? catData : (catData as any)?.data;
         setClients(Array.isArray(parsedClients) ? parsedClients : []);

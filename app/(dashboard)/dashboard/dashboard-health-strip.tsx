@@ -11,6 +11,7 @@ import type { DashboardData } from "./types";
 import { DashboardAIPromptBar } from "./dashboard-ai-prompt-bar";
 import { DashboardTooltip } from "./dashboard-tooltip";
 import { dashboardTypography as ty } from "./dashboard-typography";
+import { createTranslator } from "@/lib/i18n/translator";
 
 // --- Subcomponents ---
 
@@ -159,12 +160,7 @@ export function DashboardHealthStrip({
   onOpenSetupDetails?: () => void;
 }) {
   const t = useTranslations("Dashboard");
-  const tr = (key: string, fallback: string, values?: Record<string, unknown>) => {
-    if (typeof t.has === "function" && !t.has(key as never)) return fallback;
-    const translation = t(key as never, values as never);
-    if (translation === key || translation === `Dashboard.${key}`) return fallback;
-    return translation;
-  };
+  const tr = createTranslator(t);
 
   return (
     <section className="space-y-6">

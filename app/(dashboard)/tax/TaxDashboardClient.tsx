@@ -29,6 +29,7 @@ import { TaxHubOverview } from "@/components/tax/tax-hub-overview";
 import { TaxScopeNotice } from "@/components/tax/TaxScopeNotice";
 import { getCountryPackVerificationStatus } from "@/lib/tax/country-pack-status";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { createTranslator } from "@/lib/i18n/translator";
 
 
 
@@ -58,14 +59,7 @@ type TaxDashboardClientProps = {
 
 export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardClientProps) {
   const t = useTranslations("Tax");
-  const tr = (key: string, fallback: string, values?: any) => {
-    if (typeof (t as any).has === "function" && !(t as any).has(key)) return fallback;
-    try {
-      return t(key as any, values);
-    } catch {
-      return fallback;
-    }
-  };
+  const tr = createTranslator(t);
   const [investments, setInvestments] = useState<any[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [isLoading, setIsLoading] = useState(true);

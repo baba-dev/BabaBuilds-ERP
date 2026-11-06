@@ -189,7 +189,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
             depositedAt: withholdingDepositedAt,
             depositDueAt,
             returnPeriodKey: deriveReturnPeriodKey(deductedAt, returnPeriodKey),
-            createdByUserId: (session?.user as any)?.id ?? null,
+            createdByUserId: session?.user?.id ?? null,
           },
         });
 
