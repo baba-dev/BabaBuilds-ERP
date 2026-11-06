@@ -138,7 +138,7 @@ export default function AIChatbot() {
   const aiChatStoreState = useSyncExternalStore(subscribeToAIChatStore, getAIChatStoreSnapshot, getAIChatStoreSnapshot);
   const currentThemeForToggle = resolvedTheme === "dark" ? "dark" : "light";
 
-  const workspaceId = (session as any)?.workspaceId;
+  const workspaceId = session?.workspaceId;
   const storageKey = workspaceId ? `cfo_chat_history_${workspaceId}` : null;
 
   useEffect(() => {

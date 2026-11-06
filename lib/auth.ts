@@ -34,6 +34,7 @@ import {
   hashRateLimitValue,
   recordPasswordAuthFailure,
 } from "@/lib/auth/rate-limit";
+import { getErrorMessage } from "@/lib/error-utils";
 
 const LOGIN_ROUTE = "/login";
 const CANONICAL_DASHBOARD_ROUTE = "/dashboard";
@@ -867,7 +868,7 @@ export const authOptions: NextAuthOptions = {
           if (membership?.workspace) {
             applyActiveWorkspaceToToken(token, membership, 1, requestedGroupId);
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
           logActivity({
             action: "workspace_bootstrap",
             outcome: "error",
@@ -877,7 +878,7 @@ export const authOptions: NextAuthOptions = {
             actorEmail: dbUser.email ?? null,
             metadata: {
               source: "nextauth_jwt_autoprovision",
-              errorMessage: error?.message || "Workspace bootstrap failed",
+              errorMessage: getErrorMessage(error, "Workspace bootstrap failed"),
             },
           });
         }
@@ -970,7 +971,7 @@ export const authOptions: NextAuthOptions = {
           signupIntent,
           source: "nextauth_create_user",
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         logActivity({
           action: "workspace_bootstrap",
           outcome: "error",
@@ -980,7 +981,7 @@ export const authOptions: NextAuthOptions = {
           actorEmail: user.email ?? null,
           metadata: {
             source: "nextauth_create_user",
-            errorMessage: error?.message || "Workspace bootstrap failed",
+            errorMessage: getErrorMessage(error, "Workspace bootstrap failed"),
           },
         });
         throw error;

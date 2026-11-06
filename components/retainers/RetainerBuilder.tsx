@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { getErrorMessage } from "@/lib/error-utils";
 
 type RetainerItemInput = {
   title: string;
@@ -119,8 +120,8 @@ export default function RetainerBuilder({ clients, catalog, onSuccess, onCancel,
 
       toast.success("Retainer activated successfully!", { id: toastId });
       onSuccess();
-    } catch (err: any) {
-      toast.error(err.message, { id: toastId });
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err), { id: toastId });
     } finally {
       setIsSubmitting(false);
     }

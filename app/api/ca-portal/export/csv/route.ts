@@ -57,10 +57,10 @@ export async function GET(request: Request) {
 
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
 
     // 2. PARSE FY
     const { searchParams } = new URL(request.url);

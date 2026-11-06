@@ -43,6 +43,7 @@ import { FirstLookWelcome } from "@/components/onboarding/FirstLookWelcome";
 import { PersonaPicker } from "@/components/onboarding/PersonaPicker";
 import { GuidedFlowsHub } from "@/components/dashboard/GuidedFlowsHub";
 import { StartWithRealBusinessCTA } from "@/components/demo/StartWithRealBusinessCTA";
+import { getErrorMessage } from "@/lib/error-utils";
 
 export default function Dashboard() {
   const t = useTranslations("Dashboard");
@@ -151,9 +152,9 @@ export default function Dashboard() {
       setData(parsed);
       if (signal?.aborted) return;
       setIsInitialLoad(false);
-    } catch (e: any) {
-      if (e.name === "AbortError") return;
-      setError(e?.message ?? "Unable to load dashboard");
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === "AbortError") return;
+      setError(getErrorMessage(e, "Unable to load dashboard"));
       toast.error(tr("toast.error.load_dashboard_refresh", "Failed to load dashboard"));
       setIsInitialLoad(false);
     }
@@ -230,8 +231,8 @@ export default function Dashboard() {
           ...refreshed.health,
         },
       }));
-    } catch (e: any) {
-      setSyncHealthError(e?.message ?? tr("toast.error.load_dashboard", "Unable to load dashboard"));
+    } catch (e: unknown) {
+      setSyncHealthError(getErrorMessage(e, tr("toast.error.load_dashboard", "Unable to load dashboard")));
     } finally {
       setSyncHealthLoading(false);
     }

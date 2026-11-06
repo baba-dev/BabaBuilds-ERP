@@ -6,7 +6,7 @@ import { authOptions } from "@/lib/auth";
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    const workspaceId = (session as any)?.workspaceId;
+    const workspaceId = session?.workspaceId;
     if (!session || !workspaceId) {
       return NextResponse.json({ error: "Unauthorized", code: "AUTH_UNAUTHORIZED" }, { status: 401 });
     }

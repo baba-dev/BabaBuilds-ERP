@@ -25,7 +25,7 @@ export async function PATCH(
   try {
     const session = await getServerSession(authOptions);
     const workspaceId = getWorkspaceId(session);
-    const userId = (session as any)?.user?.id as string | undefined;
+    const userId = session?.user?.id as string | undefined;
     if (!workspaceId || !userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -90,7 +90,7 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions);
     const workspaceId = getWorkspaceId(session);
-    const userId = (session as any)?.user?.id as string | undefined;
+    const userId = session?.user?.id as string | undefined;
     if (!workspaceId || !userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

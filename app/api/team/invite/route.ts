@@ -28,6 +28,8 @@ import {
   rbacDeniedResponse,
 } from "@/lib/rbac";
 import { alertElevatedPrivilegeGrant } from "@/lib/security/access-risk";
+import { getErrorMessage } from "@/lib/error-utils";
+import { getErrorCode } from "@/lib/error-utils";
 
 export async function POST(req: Request) {
   let workspaceId = "";
@@ -171,7 +173,7 @@ export async function POST(req: Request) {
           ctaUrl: inviteUrl,
         }),
       });
-    } catch (emailErr: any) {
+    } catch (emailErr: unknown) {
       console.error("[team/invite] Email delivery failed:", emailErr);
       // Invite was created — log the email failure but don't delete the invite
       // The admin can resend or user can use the token directly
@@ -182,7 +184,7 @@ export async function POST(req: Request) {
         actorEmail,
         targetEmail: normalizedEmail,
         newRole: targetRole,
-        metadata: { inviteId: invite.id, emailFailed: true, emailError: emailErr?.message },
+        metadata: { inviteId: invite.id, emailFailed: true, emailError: getErrorMessage(emailErr, "") },
       });
       return NextResponse.json(
         {
@@ -223,10 +225,10 @@ export async function POST(req: Request) {
         ? `You are approaching your seat limit (${seats.used}/${seats.limitDisplay}). Consider upgrading your plan.`
         : null,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[team/invite] Error:", err);
     if (err instanceof RbacDeniedError) return rbacDeniedResponse(err);
-    if (err?.code === "P2002") {
+    if (getErrorCode(err) === "P2002") {
       return NextResponse.json(
         { error: "An active invite for this email already exists." },
         { status: 409 },

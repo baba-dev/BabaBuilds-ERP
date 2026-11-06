@@ -7,7 +7,7 @@ import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from
 export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    const workspaceId = (session as any)?.workspaceId;
+    const workspaceId = session?.workspaceId;
     if (!session || !workspaceId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -39,7 +39,7 @@ export async function GET(req: Request) {
         "X-Next-Cursor": products.length > 0 ? String(products[products.length - 1].id) : "",
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[INVENTORY_PRODUCTS_GET]", error);
     return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
   }
@@ -50,6 +50,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { scanBuffer } from '@/lib/security/clamav';
 import { buildPrivatePath, ensureDir, sniffAllowedContent, uniqueStoredName } from '@/lib/uploads/private-storage';
+import { getErrorCode } from "@/lib/error-utils";
 
 function isAllowedProductImageExtension(ext: string) {
   return ['.jpg', '.jpeg', '.png', '.webp'].includes(ext.toLowerCase());
@@ -58,7 +59,7 @@ function isAllowedProductImageExtension(ext: string) {
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    const workspaceId = (session as any)?.workspaceId;
+    const workspaceId = session?.workspaceId;
     if (!session || !workspaceId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -154,8 +155,8 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true, product: newProduct });
-  } catch (error: any) {
-    if (error.code === 'P2002') {
+  } catch (error: unknown) {
+    if (getErrorCode(error) === 'P2002') {
       return NextResponse.json({ error: "A product with this SKU already exists" }, { status: 409 });
     }
     console.error("[INVENTORY_PRODUCTS_POST]", error);

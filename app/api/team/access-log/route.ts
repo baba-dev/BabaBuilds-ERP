@@ -65,7 +65,7 @@ export async function GET(req: Request) {
         limit,
       },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (err instanceof RbacDeniedError) return rbacDeniedResponse(err);
     console.error("[team/access-log] Error:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

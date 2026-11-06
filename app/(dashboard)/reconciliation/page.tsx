@@ -43,6 +43,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { ColumnMapping, ColumnRole } from "@/lib/reconciliation/bank-csv-parse";
+import { getErrorMessage } from "@/lib/error-utils";
 
 // --- STATE MACHINE TYPES ---
 export type Transaction = {
@@ -578,8 +579,8 @@ export default function ReconciliationWizard() {
       dispatch({ type: 'RESET_ALL' });
       void loadRegister();
 
-    } catch (err: any) {
-      toast.error(err.message || t('save_error'), { id: toastId });
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || t('save_error'), { id: toastId });
     } finally {
       setIsFinalizing(false);
     }

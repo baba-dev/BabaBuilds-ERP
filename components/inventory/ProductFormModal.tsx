@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Info, ImagePlus, X, Loader2, PackagePlus } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { getErrorMessage } from "@/lib/error-utils";
 
 interface ProductFormModalProps {
   open: boolean;
@@ -140,8 +141,8 @@ export function ProductFormModal({ open, onOpenChange, productToEdit, onSuccess 
       toast.success(`Product successfully ${productToEdit ? 'updated' : 'created'}.`);
       onSuccess();
       onOpenChange(false);
-    } catch (err: any) {
-      toast.error(err.message || "Something went wrong.");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || "Something went wrong.");
     } finally {
       setIsSubmitting(false);
     }

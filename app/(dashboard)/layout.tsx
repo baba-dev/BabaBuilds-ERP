@@ -20,7 +20,7 @@ export default async function DashboardLayout({
 }) {
   const requestHeaders = await headers();
   const session = await getServerSession(authOptions);
-  const workspaceId = (session as any)?.workspaceId;
+  const workspaceId = session?.workspaceId;
 
   if (!session) {
     const nextUrl = requestHeaders.get("next-url");

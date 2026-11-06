@@ -196,7 +196,7 @@ export async function PATCH(req: Request) {
       previousRole: currentRole,
       newRole: targetRole,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[team/role] Error:", err);
     if (err instanceof RbacDeniedError) return rbacDeniedResponse(err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

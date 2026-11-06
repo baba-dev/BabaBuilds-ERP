@@ -70,7 +70,7 @@ export async function POST(request: Request) {
       return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
     }
     const workspaceId = session.workspaceId;
-    const userId = (session as any).user?.id as string | undefined;
+    const userId = session.user?.id as string | undefined;
     if (!userId) return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
 
     // RBAC: creating an expense requires expenses.create permission

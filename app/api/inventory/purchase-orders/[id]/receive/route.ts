@@ -7,7 +7,7 @@ import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from
 export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
-    const workspaceId = (session as any)?.workspaceId;
+    const workspaceId = session?.workspaceId;
     if (!session || !workspaceId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -95,7 +95,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     }
 
     return NextResponse.json({ success: true, message: `PO #${po.poNumber} Received Successfully` });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[PO_RECEIVE]", error);
     return NextResponse.json({ error: "Failed to receive Purchase Order" }, { status: 500 });
   }

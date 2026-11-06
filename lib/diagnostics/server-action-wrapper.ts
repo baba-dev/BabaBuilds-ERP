@@ -13,9 +13,9 @@ export function withErrorLogger<T extends AnyFunction>(
   return (async (...args: Parameters<T>): Promise<ReturnType<T>> => {
     try {
       return await action(...args);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Log the error before rethrowing
-      await logSystemError(error, {
+      await logSystemError(error instanceof Error ? error : new Error(String(error)), {
         route: `ServerAction: ${actionName}`,
         method: "POST",
         metadata: {

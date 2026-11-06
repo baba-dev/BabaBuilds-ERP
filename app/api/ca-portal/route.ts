@@ -41,10 +41,10 @@ function getFinancialYearDates(fyString: string) {
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ error: "Unauthorized", code: "AUTH_UNAUTHORIZED" }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
     const userId = (session as { user?: { id?: string | null } }).user?.id as string | undefined;
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized", code: "AUTH_UNAUTHORIZED" }, { status: 401 });

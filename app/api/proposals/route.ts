@@ -59,7 +59,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const workspaceId = session.workspaceId;
-    const userId = (session as any).user?.id as string | undefined;
+    const userId = session.user?.id as string | undefined;
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     // RBAC: creating a proposal requires proposals.create permission

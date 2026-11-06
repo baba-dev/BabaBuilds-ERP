@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useFormat } from "@/hooks/use-format";
 import { formatCurrency } from "@/lib/currency";
 import { SignatureCanvas } from "@/components/ui/signature-canvas";
+import { getErrorMessage } from "@/lib/error-utils";
 
 export default function PublicProposalPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);  
@@ -50,8 +51,8 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
         if (prop && prop.items) {
           setItems(prop.items);
         }
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        setError(getErrorMessage(err));
       } finally {
         setIsLoading(false);
       }
@@ -165,8 +166,8 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
       setShowConfirmModal(false);
       toast.success("Proposal successfully signed and accepted!");
       
-    } catch (err: any) {
-      setAcceptError(err.message);
+    } catch (err: unknown) {
+      setAcceptError(getErrorMessage(err));
     } finally {
       setIsAccepting(false);
     }

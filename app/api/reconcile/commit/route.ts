@@ -7,12 +7,12 @@ import { withPermission } from '@/lib/rbac';
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
-  if (!session || !(session as any).workspaceId) {
+  if (!session || !session.workspaceId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const workspaceId = (session as any).workspaceId as string;
-  const userId = (session as any).user?.id as string | undefined;
+  const workspaceId = session.workspaceId as string;
+  const userId = session.user?.id as string | undefined;
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

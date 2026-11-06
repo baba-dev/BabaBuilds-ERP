@@ -40,6 +40,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getErrorMessage } from "@/lib/error-utils";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -204,8 +205,8 @@ export default function TeamAccessPage() {
       const payload = await res.json();
       if (!res.ok) throw new Error(payload?.error || "Failed to load team");
       setTeamData(payload.data);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to load team data");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || "Failed to load team data");
     } finally {
       setLoading(false);
     }
@@ -290,8 +291,8 @@ export default function TeamAccessPage() {
       }
       void fetchTeam();
       void fetchSeats();
-    } catch (err: any) {
-      toast.error(err.message, { id: tid });
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err), { id: tid });
     } finally {
       setInviteLoading(false);
     }
@@ -310,8 +311,8 @@ export default function TeamAccessPage() {
       if (!res.ok) throw new Error(data.error || "Failed to change role");
       toast.success("Role updated", { id: tid });
       void fetchTeam();
-    } catch (err: any) {
-      toast.error(err.message, { id: tid });
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err), { id: tid });
     } finally {
       setActionLoading(null);
     }
@@ -336,8 +337,8 @@ export default function TeamAccessPage() {
       toast.success(`${name} ${action}d successfully`, { id: tid });
       void fetchTeam();
       void fetchSeats();
-    } catch (err: any) {
-      toast.error(err.message, { id: tid });
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err), { id: tid });
     } finally {
       setActionLoading(null);
     }
@@ -356,8 +357,8 @@ export default function TeamAccessPage() {
       toast.success("Invite cancelled", { id: tid });
       void fetchTeam();
       void fetchSeats();
-    } catch (err: any) {
-      toast.error(err.message, { id: tid });
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err), { id: tid });
     }
   };
 

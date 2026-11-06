@@ -26,6 +26,7 @@ import { TaxRateModal } from "@/components/invoice/tax-rate-modal";
 import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import RetainerBuilder from "@/components/retainers/RetainerBuilder";
+import { getErrorMessage } from "@/lib/error-utils";
 
 interface Retainer {
   id: string;
@@ -303,8 +304,8 @@ export default function RetainersHub() {
       setTaxRateInput("");
       setView('list');
       setClientId(""); setServiceTemplateId(""); setAmount(""); setAutoAppendMonth(true);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to create retainer", { id: toastId });
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || "Failed to create retainer", { id: toastId });
     } finally {
       setIsSubmitting(false);
     }

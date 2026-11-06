@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getErrorMessage } from "@/lib/error-utils";
 
 type CatalogItem = {
   id: string;
@@ -223,8 +224,8 @@ export default function PosSystem({
       toast.success(data.message);
       setCart([]);
       setIsCheckoutModalOpen(false);
-    } catch (err: any) {
-      toast.error(err.message || t("toast_checkout_fail"));
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || t("toast_checkout_fail"));
     } finally {
       setIsProcessing(false);
     }

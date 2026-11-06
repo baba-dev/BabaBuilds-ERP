@@ -178,7 +178,7 @@ export async function POST(req: Request) {
 
       return NextResponse.json({ success: true, action: "removed" });
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[team/remove] Error:", err);
     if (err instanceof RbacDeniedError) return rbacDeniedResponse(err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

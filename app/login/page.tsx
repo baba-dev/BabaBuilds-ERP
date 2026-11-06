@@ -56,7 +56,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   if (session) {
     // Avoid redirect loops when session exists but workspace context is missing.
     // In that case, send the user to setup to finalize provisioning (or let auth auto-provision on refresh).
-    const workspaceId = (session as any)?.workspaceId;
+    const workspaceId = session?.workspaceId;
     if (!workspaceId) {
       redirect("/setup");
     }

@@ -24,6 +24,7 @@ import {
 import { buildInvoiceViewModel } from '@/lib/invoice/build-invoice-view-model';
 import { renderInvoicePdf } from '@/lib/invoice-renderers/render-invoice-pdf';
 import { getNextInvoiceNumber } from '@/lib/document-numbering';
+import { getErrorCode, getErrorMessage } from "@/lib/error-utils";
 
 // Helper for Indian Financial Year
 const getFY = (date: Date) => {
@@ -380,7 +381,7 @@ export async function GET(request: Request) {
               },
             }).catch(() => null);
 
-          } catch (err: any) {
+          } catch (err: unknown) {
             // Delete the PDF we just generated — it will be orphaned if we retry
             // with a new invoice number, or if we give up after MAX_ATTEMPTS.
             if (lastGeneratedPdfPath) {
@@ -388,7 +389,7 @@ export async function GET(request: Request) {
               try { fs.unlinkSync(fullOrphanPath); } catch { /* ignore */ }
               lastGeneratedPdfPath = null;
             }
-            if (err.code === 'P2002') {
+            if (getErrorCode(err) === 'P2002') {
               attempts++;
               if (attempts >= MAX_ATTEMPTS) {
                 throw new Error("Unable to generate invoice. Please try again later.");
@@ -399,19 +400,19 @@ export async function GET(request: Request) {
           }
         }
 
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error(`Failed to process retainer ${retainer.id}:`, err);
         results.failed++;
-        results.logs.push(`FAILED: ${retainer.client.name} - ${err.message}`);
+        results.logs.push(`FAILED: ${retainer.client.name} - ${getErrorMessage(err)}`);
         dispatchNotification({
           event: "BILLING_FAILED",
           workspaceId: retainer.workspaceId,
           data: {
             clientName: retainer.client.name,
-            message: err.message || "An unexpected error occurred during automated billing.",
+            message: getErrorMessage(err) || "An unexpected error occurred during automated billing.",
           }
         }).catch(() => null);
-        results.logs.push(`FAILED: ${retainer.client.name} - ${err.message}`);
+        results.logs.push(`FAILED: ${retainer.client.name} - ${getErrorMessage(err)}`);
       }
     }
 

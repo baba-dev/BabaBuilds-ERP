@@ -18,6 +18,7 @@ import {
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { loadExternalScript } from "@/lib/client/load-external-script";
+import { getErrorMessage } from "@/lib/error-utils";
 
 function SuccessUpgradeModal({ interval, onClose }: { interval: string, onClose: () => void }) {
   const isTeam = interval.includes("TEAM");
@@ -247,8 +248,8 @@ export function ProUpgradeCard({
             await update();
             setIsUpgradeSuccess(true);
 
-          } catch (err: any) {
-            toast.error(err.message || "Payment verification failed", { id: verifyToastId });
+          } catch (err: unknown) {
+            toast.error(getErrorMessage(err) || "Payment verification failed", { id: verifyToastId });
           }
         }
       };
@@ -260,8 +261,8 @@ export function ProUpgradeCard({
       });
       paymentObject.open();
 
-    } catch (error: any) {
-      toast.error(error.message || "An error occurred during checkout", { id: toastId });
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error) || "An error occurred during checkout", { id: toastId });
     } finally {
       setIsLoading(false);
     }

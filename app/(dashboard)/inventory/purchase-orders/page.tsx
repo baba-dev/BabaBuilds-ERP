@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Box, Truck, CheckCircle2, ChevronLeft, Loader2, ArrowRight } from "lucide-react";
 import { useFormat } from "@/hooks/use-format";
 import Link from "next/link";
+import { getErrorMessage } from "@/lib/error-utils";
 
 export default function PurchaseOrdersHub() {
   const [pos, setPos] = useState<any[]>([]);
@@ -52,8 +53,8 @@ export default function PurchaseOrdersHub() {
       
       toast.success(data.message, { id: toastId });
       fetchPOs();
-    } catch (err: any) {
-      toast.error(err.message, { id: toastId });
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err), { id: toastId });
     } finally {
       setReceivingId(null);
     }

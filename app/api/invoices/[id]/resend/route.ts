@@ -6,15 +6,16 @@ import fs from 'fs';
 import path from 'path';
 import { sendEmail } from '@/lib/mailer';
 import { buildInvoiceDeliveryEmail } from '@/lib/notifications/transactional-email-templates';
+import { getErrorMessage } from "@/lib/error-utils";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
     
     // Resolve dynamic params (Next.js 15 strict mode safe)
     const resolvedParams = await params;
@@ -78,8 +79,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     return NextResponse.json({ success: true, message: 'Email resent successfully.' });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Resend Email Error:", error);
-    return NextResponse.json({ error: error.message || 'Failed to resend the invoice email.' }, { status: 500 });
+    return NextResponse.json({ error: getErrorMessage(error) || 'Failed to resend the invoice email.' }, { status: 500 });
   }
 }

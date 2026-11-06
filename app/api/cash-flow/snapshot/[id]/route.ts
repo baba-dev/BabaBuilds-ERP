@@ -18,7 +18,7 @@ type StalenessSignal = {
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
-  const workspaceId = (session as any)?.workspaceId as string | undefined;
+  const workspaceId = session?.workspaceId as string | undefined;
   if (!session || !workspaceId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
