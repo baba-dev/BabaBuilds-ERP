@@ -4,7 +4,7 @@ export const INTELLIGENCE_SUGGESTION_ROUTES = {
   reviewReceivables: "/income",
   reconcileBooks: "/reconciliation",
   launchStorefront: "/shop",
-  scaleBilling: "/invoice",
+  scaleBilling: "/income",
 } as const;
 
 export type IntelligenceSuggestionRouteKey = keyof typeof INTELLIGENCE_SUGGESTION_ROUTES;

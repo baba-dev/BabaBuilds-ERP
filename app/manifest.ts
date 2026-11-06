@@ -162,7 +162,7 @@ export default async function manifest(): Promise<
         name: 'Invoices',
         short_name: 'Invoice',
         description: 'Create and manage invoices',
-        url: '/invoice',
+        url: '/income',
         icons: [defaultShortcutIcon],
       },
       {

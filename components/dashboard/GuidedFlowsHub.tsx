@@ -34,7 +34,7 @@ const FLOW_DEFS: FlowDef[] = [
       { label: "Add client profile", href: "/clients", description: "Create one client with legal + billing contact details." },
       { label: "Send proposal", href: "/proposals", description: "Draft and share a proposal aligned to your services." },
       { label: "Track pipeline", href: "/proposals/pipeline", description: "Move accepted proposal to delivery-ready state." },
-      { label: "Create invoice", href: "/invoice", description: "Issue your first invoice and start collections." },
+      { label: "Create invoice", href: "/income", description: "Issue your first invoice and start collections." },
     ],
   },
   {
