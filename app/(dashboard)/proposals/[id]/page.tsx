@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -15,7 +16,15 @@ import {
 import { getTranslations } from "next-intl/server";
 import { FREE_TIER_MONTHLY_INVOICE_LIMIT } from "@/lib/pricing";
 
-function TimelineItem({ active, icon: Icon, title, date, subtitle }: any) {
+interface TimelineItemProps {
+  active: boolean;
+  icon: ComponentType<{ className?: string }>;
+  title: string;
+  date?: Date | string | null;
+  subtitle?: string | null;
+}
+
+function TimelineItem({ active, icon: Icon, title, date, subtitle }: TimelineItemProps) {
   return (
     <div className={`flex flex-col items-center gap-2 ${active ? "text-indigo-600" : "text-zinc-400 opacity-50"}`}>
       <div
@@ -56,7 +65,7 @@ export default async function ProposalDetailPage({
       client: true,
       items: true,
       conversions: {
-        include: { invoice: true, retainer: true }
+        include: { invoice: true, retainer: true, shopOrder: true }
       },
       generatedInvoices: true,
       generatedRetainers: true,
@@ -76,7 +85,7 @@ export default async function ProposalDetailPage({
     take: 50,
   });
 
-  const formatMoney = (amount: any) => formatCurrency(Number(amount), "INR", "en-IN");
+  const formatMoney = (amount: unknown) => formatCurrency(Number(amount), "INR", "en-IN");
 
   return (
     <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8">
@@ -135,7 +144,7 @@ export default async function ProposalDetailPage({
 
             <TimelineItem active={!!proposal.firstConvertedAt} icon={DollarSign} title={t("timeline.converted")} date={proposal.firstConvertedAt} />
 
-            {proposal.firstConvertedAt && proposal.generatedInvoices.length > 0 && proposal.generatedInvoices.every((i: any) => i.status === 'PAID' || i.status === 'Paid') && (
+            {proposal.firstConvertedAt && proposal.generatedInvoices.length > 0 && proposal.generatedInvoices.every((i) => i.status === 'PAID') && (
               <TimelineItem active={true} icon={CheckCircle2} title={t("timeline.reconciled")} date={proposal.generatedInvoices[0].dateReceived ?? proposal.generatedInvoices[0].createdAt} subtitle={t("timeline.revenueSecured")} />
             )}
           </div>
@@ -147,7 +156,7 @@ export default async function ProposalDetailPage({
               <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-4 border-b pb-2">{t("downstreamArtifacts")}</h2>
               {proposal.firstConvertedAt ? (
                  <div className="space-y-4">
-                   {proposal.conversions.map((conv: any) => (
+                   {proposal.conversions.map((conv) => (
                       <div key={conv.id} className="p-4 border rounded-lg bg-zinc-50 dark:bg-zinc-950 space-y-2">
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex items-center gap-3">
@@ -196,9 +205,9 @@ export default async function ProposalDetailPage({
             
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 shadow-sm">
               <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-500 mb-4 border-b pb-2">{t("billingScheduleMilestones")}</h2>
-              {(proposal as any).billingMilestones && (proposal as any).billingMilestones.length > 0 ? (
+              {proposal.billingMilestones && proposal.billingMilestones.length > 0 ? (
                 <div className="space-y-4">
-                  {(proposal as any).billingMilestones.map((milestone: any) => (
+                  {proposal.billingMilestones.map((milestone) => (
                     <div key={milestone.id} className="p-4 border rounded-lg bg-zinc-50 dark:bg-zinc-950 space-y-2">
                       <div className="flex items-center justify-between gap-4">
                         <div>
@@ -320,7 +329,7 @@ export default async function ProposalDetailPage({
               {logs.length > 0 ? (
                 <div className="relative border-l border-zinc-200 dark:border-zinc-800 pl-4 space-y-6 py-2">
                   {logs.map((log) => {
-                    const metadata = log.metadata as any || {};
+                    const metadata = (log.metadata ?? {}) as Record<string, string | undefined>;
                     let icon = FileText;
                     let colorClass = "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400";
                     let title = log.action;

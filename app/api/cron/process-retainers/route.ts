@@ -25,6 +25,7 @@ import { buildInvoiceViewModel } from '@/lib/invoice/build-invoice-view-model';
 import { renderInvoicePdf } from '@/lib/invoice-renderers/render-invoice-pdf';
 import { getNextInvoiceNumber } from '@/lib/document-numbering';
 import { getErrorCode, getErrorMessage } from "@/lib/error-utils";
+import type { Prisma } from "@prisma/client";
 
 // Helper for Indian Financial Year
 const getFY = (date: Date) => {
@@ -34,11 +35,18 @@ const getFY = (date: Date) => {
   return `${year.toString().slice(-2)}-${(year + 1).toString().slice(-2)}`;
 };
 
+type DueRetainer = Prisma.RetainerGetPayload<{
+  include: { client: true; items: true; meteredUsages: true };
+}>;
+type RetainerProfile = Prisma.BusinessProfileGetPayload<{
+  include: { workspace: true; primaryBankAccount: true };
+}>;
+
 // --- PDF GENERATION ENGINE FOR CRON ---
 async function generateRetainerPDF(
   workspaceId: string,
-  retainer: any,
-  profile: any,
+  retainer: DueRetainer,
+  profile: RetainerProfile,
   invoiceNumber: string,
   billingMonth: string,
   services: { title: string; nicDetails: string; amount: number; sacCode?: string | null }[],
@@ -127,7 +135,7 @@ export async function GET(request: Request) {
       where: { workspaceId: { in: workspaceIds } },
       include: { workspace: true, primaryBankAccount: true }
     });
-    const profileMap = new Map();
+    const profileMap = new Map<string, RetainerProfile>();
     for (const p of profiles) {
       if (p.workspaceId) profileMap.set(p.workspaceId, p);
     }
@@ -200,7 +208,7 @@ export async function GET(request: Request) {
               countryCode: profile.workspace?.countryCode || "IN",
               isTaxExempt: Boolean(retainer.client.isExport),
               serviceTaxRates: rawServices.map(s => s.taxRate),
-              workspaceDefaultTaxRate: (profile as any).defaultTaxRate ?? null,
+              workspaceDefaultTaxRate: profile.defaultTaxRate ?? null,
             });
             if (taxResolution.requiresUserInput) {
               throw new Error(`Missing tax rate configuration for retainer. Please set a workspace default tax rate from UI.`);
@@ -229,18 +237,18 @@ export async function GET(request: Request) {
             dueDate.setDate(dueDate.getDate() + 7);
 
             if (paidFeatures) {
-              const defaultGateway = (profile as any).defaultGateway || 'RAZORPAY';
+              const defaultGateway = profile.defaultGateway || 'RAZORPAY';
 
               if (
                 defaultGateway === 'RAZORPAY' &&
                 baseCurrency === 'INR' &&
-                (profile as any).razorpayKeyId &&
-                (profile as any).razorpayKeySecret
+                profile.razorpayKeyId &&
+                profile.razorpayKeySecret
               ) {
                 try {
                   const { decrypt }                   = await import('@/lib/encryption');
                   const { generateTenantPaymentLink } = await import('@/lib/razorpay-links');
-                  const decryptedSecret = decrypt((profile as any).razorpayKeySecret);
+                  const decryptedSecret = decrypt(profile.razorpayKeySecret);
 
                   const linkResult = await generateTenantPaymentLink({
                     amount:          totals.total,
@@ -251,7 +259,7 @@ export async function GET(request: Request) {
                       name:  retainer.client.name,
                       email: retainer.client.email ?? undefined,
                     },
-                    tenantKeyId:     (profile as any).razorpayKeyId,
+                    tenantKeyId:     profile.razorpayKeyId,
                     tenantKeySecret: decryptedSecret,
                   });
 
@@ -265,13 +273,13 @@ export async function GET(request: Request) {
                 }
               } else if (
                 defaultGateway === 'STRIPE' &&
-                (profile as any).stripePublishableKey &&
-                (profile as any).stripeSecretKey
+                profile.stripePublishableKey &&
+                profile.stripeSecretKey
               ) {
                 try {
                   const { decrypt }                   = await import('@/lib/encryption');
                   const { generateStripePaymentLink } = await import('@/lib/stripe-links');
-                  const decryptedSecret = decrypt((profile as any).stripeSecretKey);
+                  const decryptedSecret = decrypt(profile.stripeSecretKey);
 
                   const linkResult = await generateStripePaymentLink({
                     amount:          totals.total,
@@ -339,12 +347,12 @@ export async function GET(request: Request) {
                       sacCode: s.sacCode,
                     }))
                   }
-                } as any
+                }
               });
 
               if (retainer.meteredUsages.length > 0) {
                 await tx.meteredUsage.updateMany({
-                  where: { id: { in: retainer.meteredUsages.map((u: any) => u.id) } },
+                  where: { id: { in: retainer.meteredUsages.map((u) => u.id) } },
                   data: { status: "BILLED", billedInInvoiceId: newInvoice.id }
                 });
               }
