@@ -103,6 +103,7 @@ export const softwareCompanyTemplate: DemoTemplateDefinition = {
     SHOP: true,
     MIAB_BILLING: true,
     POS: true,
+    MULTI_COMPANY: true,
   },
   seededModules: [
     "WORKFORCE",
@@ -117,6 +118,7 @@ export const softwareCompanyTemplate: DemoTemplateDefinition = {
     "SHOP",
     "MIAB_BILLING",
     "POS",
+    "MULTI_COMPANY",
   ],
   seed: async ({ tx, workspaceId, userId, now }) => {
     const employee = await tx.employee.create({

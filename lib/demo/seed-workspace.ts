@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client';
 import { decimalToNumber } from '@/lib/money';
 import { encrypt } from '@/lib/encryption';
 import { MODULE_KEYS } from '@/lib/module-keys';
+import { enableMultiCompanyInTransaction } from '@/lib/company-groups/enable-multi-company';
 import { getDemoTemplate, type DemoTemplateKey } from '@/lib/demo/templates';
 import { getMissingRequiredModules } from '@/lib/demo/templates/coverage-rules';
 
@@ -328,6 +329,12 @@ export async function seedDemoWorkspace(
         disabledByUserId: enabled ? null : params.userId,
       },
     });
+  }
+
+  // MULTI_COMPANY needs a company group wrapper (primary workspace link, owner membership,
+  // group module row) in addition to the workspace module flag.
+  if (template.modules.MULTI_COMPANY) {
+    await enableMultiCompanyInTransaction(tx, workspace.id, params.userId);
   }
 
   if (template.seed) {

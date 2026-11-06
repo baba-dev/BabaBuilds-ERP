@@ -169,6 +169,7 @@ export const freelancerConsultantTemplate: DemoTemplateDefinition = {
     SHOP: true,
     MIAB_BILLING: true,
     POS: true,
+    MULTI_COMPANY: true,
   },
   seededModules: [
     "WORKFORCE",
@@ -183,6 +184,7 @@ export const freelancerConsultantTemplate: DemoTemplateDefinition = {
     "SHOP",
     "MIAB_BILLING",
     "POS",
+    "MULTI_COMPANY",
   ],
   seed: async ({ tx, workspaceId, userId, now }) => {
     const dept = await tx.department.create({
