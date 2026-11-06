@@ -1,7 +1,7 @@
 "use client";
 
 import { useForm, useFieldArray } from "react-hook-form";
-import { Plus, Trash2, Repeat, Sparkles, CheckCircle2, Loader2, Info } from "lucide-react";
+import { Plus, Trash2, Repeat, Sparkles, Loader2, Info } from "lucide-react";
 import { format, addMonths } from "date-fns";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

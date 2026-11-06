@@ -132,7 +132,7 @@ export function DashboardTrustPanel({
 
           {/* Metrics Grid (Signal Tiles) */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-[1.5]">
-            {metrics.map((metric, idx) => {
+            {metrics.map((metric) => {
               const colors = {
                 critical: "text-rose-500 bg-rose-500/10 border-rose-500/20",
                 warning: "text-amber-500 bg-amber-500/10 border-amber-500/20",

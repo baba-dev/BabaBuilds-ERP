@@ -1,10 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import {
-  Plus, Briefcase, FileText, Trash2, ShieldCheck, Tag, Loader2,
-  Pencil, ExternalLink, Repeat,
-} from "lucide-react";
+import { Plus, Briefcase, FileText, Trash2, Tag, Loader2, Pencil, ExternalLink, Repeat } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +30,7 @@ export default function ServiceCatalog() {
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [shopSlug, setShopSlug] = useState<string | null>(null);
-  const [planTier, setPlanTier] = useState<PlanTier>("FREE");
+  const [, setPlanTier] = useState<PlanTier>("FREE");
 
   const industryLabel = countryCode === "IN" ? "NIC Code" : "Industry Class";
   const taxClassLabel = countryCode === "IN" ? "SAC/HSN Code" : "Service Class";

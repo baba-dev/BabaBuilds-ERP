@@ -43,7 +43,7 @@ export function MobileScanner({ open, onOpenChange, onScan }: MobileScannerProps
                 onOpenChange(false);
               }
             },
-            (errorMessage) => {
+            () => {
               // Ignore standard frame scan errors
             }
           );

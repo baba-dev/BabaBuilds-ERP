@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { buildMonthlyChartBuckets, buildRetainerMrrRows } from "@/app/api/dashboard/monthly-series";
+import { buildMonthlyChartBuckets } from "@/app/api/dashboard/monthly-series";
 
 test("buildMonthlyChartBuckets keeps chronological order across mixed insertion sources", () => {
   const now = new Date("2026-05-15T10:00:00.000Z");

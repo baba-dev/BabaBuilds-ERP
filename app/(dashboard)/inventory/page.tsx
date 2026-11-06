@@ -49,7 +49,7 @@ export default function InventoryHub() {
 
   const [products, setProducts] = useState<InventoryProduct[]>([]);
   const [globalFilter, setGlobalFilter] = useState("");
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const nextCursorRef = useRef<string | null>(null);
   const globalFilterRef = useRef("");

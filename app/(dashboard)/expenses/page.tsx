@@ -18,7 +18,7 @@ import { useFormat } from "@/hooks/use-format";
 import { getCurrencySymbol } from "@/lib/currency";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { ColumnVisibilityToggle, DataTable, DataTablePagination, DataTableToolbar, RowActionsMenu, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
-import type { ApiEnvelope, ExpenseDto, InvoiceDto } from "@/lib/types/business";
+import type { ApiEnvelope, ExpenseDto } from "@/lib/types/business";
 import { getConflictPolicy, queueOfflineMutation } from "@/lib/offline-sync";
 import { RecordDocumentsDialog } from "@/components/documents/RecordDocumentsDialog";
 
@@ -32,7 +32,7 @@ export default function ExpenseTracker() {
   const { fCurrency, currency, locale } = useFormat();
   const currencySymbol = getCurrencySymbol(currency, locale);
   const [expenses, setExpenses] = useState<ExpenseDto[]>([]);
-  const [totalRevenue, setTotalRevenue] = useState(0); // This stays to power the KPIs
+  const [, setTotalRevenue] = useState(0); // This stays to power the KPIs
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,8 +74,7 @@ export default function ExpenseTracker() {
     return Number.isFinite(parsed) ? parsed : 0;
   };
 
-  const calculateRevenueTotal = (invoices: InvoiceDto[]) =>
-    invoices.reduce((sum: number, inv: InvoiceDto) => sum + toSafeNumber(inv.totalAmount), 0);
+  
 
   useEffect(() => {
     fetchExpenses(currentPage);
@@ -134,7 +133,7 @@ export default function ExpenseTracker() {
         taxFreeAlpha: toSafeNumber(nextSummary.taxFreeAlpha),
         burnPercentage: toSafeNumber(nextSummary.burnPercentage),
       });
-    } catch (err) {
+    } catch {
       console.error("Failed to load financial summary");
       setSummaryError("Failed to load financial summary cards.");
       toast.error("Failed to load financial summary cards.");
@@ -274,7 +273,7 @@ export default function ExpenseTracker() {
       if (!res.ok) throw new Error(t("toast.error.delete_expense"));
       toast.success(t("toast.success.expense_deleted"), { id: toastId });
       fetchExpenses(currentPage);
-    } catch (err) {
+    } catch {
       toast.error(t("toast.error.delete_expense"), { id: toastId });
     } finally {
       setExpenseToDelete(null);

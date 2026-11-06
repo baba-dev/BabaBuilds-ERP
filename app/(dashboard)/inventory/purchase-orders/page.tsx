@@ -8,14 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Box, Truck, CheckCircle2, ChevronLeft, Loader2, ArrowRight } from "lucide-react";
 import { useFormat } from "@/hooks/use-format";
 import Link from "next/link";
-import { getCurrencySymbol } from "@/lib/currency";
 
 export default function PurchaseOrdersHub() {
   const [pos, setPos] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [receivingId, setReceivingId] = useState<string | null>(null);
   
-  const { fCurrency, currency, locale } = useFormat();
+  const { fCurrency } = useFormat();
 
   useEffect(() => {
     fetchPOs();

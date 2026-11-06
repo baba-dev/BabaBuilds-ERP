@@ -31,7 +31,6 @@ export function NavMain({ preferences, pinError, enabledModules, grantedPermissi
   const pinnedIds = preferences.pinnedIds.filter((id): id is Exclude<SidebarItemId, "settings"> => id !== "settings");
 
   const pinnedSet = new Set(pinnedIds);
-  const recentSet = new Set(recentIds);
 
   const pinnedItems = visibleNavItems.filter((item) => pinnedSet.has(item.key as Exclude<SidebarItemId, "settings">));
   const byKey = new Map(visibleNavItems.map((item) => [item.key, item] as const));

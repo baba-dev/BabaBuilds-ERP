@@ -1,6 +1,5 @@
 import "server-only";
 
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { CashForecastHorizonType, CashForecastScenarioTag } from "@prisma/client";
 import { computeCashForecastSnapshot } from "@/lib/cash-flow/forecast-engine";
@@ -16,13 +15,6 @@ export async function computeAndPersistCashForecastSnapshot(args: {
 }) {
   const { workspaceId, horizonType, scenarioTag, startDate, generatedBy } = args;
   const now = args.now ?? new Date();
-
-  const assumptionsRow = await prisma.cashForecastAssumption.findFirst({
-    where: { workspaceId, isActive: true, key: `cashForecast.scenario.${scenarioTag}` },
-    orderBy: { updatedAt: "desc" },
-    select: { valueJson: true },
-  });
-  const assumptions = (assumptionsRow?.valueJson ?? null) as any;
 
   const computed = await computeCashForecastSnapshot({
     workspaceId,

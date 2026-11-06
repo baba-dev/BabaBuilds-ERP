@@ -1,4 +1,3 @@
-import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getClientIp as getRequestClientIp } from '@/lib/request-ip';
 

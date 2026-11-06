@@ -5,10 +5,8 @@ import { format } from "date-fns";
 import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle
 } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
 import { Activity, ArrowDownRight, ArrowUpRight, Tag, Info } from "lucide-react";
 import { useFormat } from "@/hooks/use-format";
-import { getCurrencySymbol } from "@/lib/currency";
 
 interface InventoryDetailSheetProps {
   open: boolean;
@@ -20,8 +18,7 @@ export function InventoryDetailSheet({ open, onOpenChange, product }: InventoryD
   const [movements, setMovements] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const { fCurrency, currency, locale } = useFormat();
-  const currencySymbol = getCurrencySymbol(currency, locale);
+  const { fCurrency } = useFormat();
 
   useEffect(() => {
     if (open && product) {

@@ -1,7 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { ProposalConversionType } from '@prisma/client';
 import { logActivity } from '@/lib/security/activity-log';
-import { dispatchNotification } from '@/lib/notifications/dispatcher';
 
 export async function createProposalConversion({
   workspaceId,

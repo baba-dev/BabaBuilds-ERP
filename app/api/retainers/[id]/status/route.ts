@@ -20,7 +20,7 @@ export async function PATCH(
     const retainerId = resolvedParams.id;
 
     const body = await request.json();
-    const { serviceName, amount, frequency } = body;
+    const { frequency } = body;
 
     // 1. Verify ownership before updating
     const existingRetainer = await prisma.retainer.findFirst({

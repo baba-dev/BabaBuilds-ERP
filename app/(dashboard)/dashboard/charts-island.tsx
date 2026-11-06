@@ -1,17 +1,6 @@
 "use client";
 
-import {
-  BarChart3, 
-  TrendingUp, 
-  Clock, 
-  Filter, 
-  Activity, 
-  CheckCircle2, 
-  AlertCircle,
-  ArrowUpRight,
-  Sparkles,
-  Lock
-} from "lucide-react";
+import { TrendingUp, Clock, Filter, Activity, CheckCircle2, ArrowUpRight, Sparkles, Lock } from "lucide-react";
 import { useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { motion, type Variants } from "framer-motion";

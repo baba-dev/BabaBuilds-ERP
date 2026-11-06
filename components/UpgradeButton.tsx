@@ -84,7 +84,6 @@ export function ProUpgradeCard({
   currency = "INR",
   countryCode,
   defaultInterval = "YEARLY",
-  convertDuringTrial = false,
 }: {
   locale?: string;
   currency?: string;

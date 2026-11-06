@@ -237,7 +237,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
           }
         }
         sessionStorage.removeItem("erp_ai_payload");
-      } catch (e) {
+      } catch {
         console.error("Failed to parse AI payload");
       }
     }
@@ -641,14 +641,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
     }
   };
 
-  const handleCopyPaymentUrl = async () => {
-    if (!draftPreview?.confirmation.paymentLink?.url || !navigator?.clipboard) return;
-    try {
-      await navigator.clipboard.writeText(draftPreview.confirmation.paymentLink.url);
-    } catch {
-      // Non-fatal UX action.
-    }
-  };
+  
 
   const confirmStepContent = draftPreview ? (
     <form className="bg-white dark:bg-zinc-950 flex flex-col relative">

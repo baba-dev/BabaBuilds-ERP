@@ -87,17 +87,7 @@ export default function CashFlowInflowsPage() {
     [inflows],
   );
   const confidenceRollup = useMemo(() => rollupByConfidence(inflows), [inflows]);
-  const nearTermRisk = useMemo(() => {
-    const now = Date.now();
-    const horizonMs = 21 * 24 * 60 * 60 * 1000;
-    return lowConfidence
-      .filter((i) => {
-        const t = new Date(i.expectedDate).getTime();
-        return Number.isFinite(t) && t >= now - 7 * 24 * 60 * 60 * 1000 && t <= now + horizonMs;
-      })
-      .sort((a, b) => Number(b.amount ?? 0) - Number(a.amount ?? 0))
-      .slice(0, 6);
-  }, [lowConfidence]);
+  
 
   const topRiskDrivers = useMemo(() => topDrivers(lowConfidence, 5), [lowConfidence]);
 

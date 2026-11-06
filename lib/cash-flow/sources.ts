@@ -38,7 +38,7 @@ export function invoiceToForecastLines(args: {
   collectionsDelayDays: number;
   inflowHaircutPercent: number;
 }): ForecastLineDraft[] {
-  const { invoice, workspaceDefaults, scenarioTag, collectionsDelayDays, inflowHaircutPercent, paymentBehavior } = args;
+  const { invoice, workspaceDefaults, scenarioTag, collectionsDelayDays, paymentBehavior } = args;
   if (invoice.status === "PAID") return [];
 
   const received = toDecimal(invoice.amountReceived ?? 0);
@@ -103,7 +103,7 @@ export function retainerToForecastLines(args: {
   collectionsDelayDays: number;
   inflowHaircutPercent: number;
 }): ForecastLineDraft[] {
-  const { retainer, horizon, scenarioTag, collectionsDelayDays, inflowHaircutPercent } = args;
+  const { retainer, horizon, scenarioTag, collectionsDelayDays } = args;
   if (retainer.status !== "ACTIVE") return [];
   const events = generateRecurringDates(retainer.nextBillingDate, retainer.frequency, horizon.endDate);
   return events
@@ -141,7 +141,7 @@ export function purchaseOrderToForecastLines(args: {
   poShiftDays: number;
   outflowIncreasePercent: number;
 }): ForecastLineDraft[] {
-  const { purchaseOrder, scenarioTag, poShiftDays, outflowIncreasePercent } = args;
+  const { purchaseOrder, scenarioTag, poShiftDays } = args;
   const status = purchaseOrder.status;
   if (status === "CANCELLED") return [];
   if (status === "DRAFT") return [];

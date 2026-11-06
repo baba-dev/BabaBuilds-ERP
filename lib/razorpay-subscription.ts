@@ -43,13 +43,7 @@ export type CreateSubscriptionOrderInput = {
   pricingRegion?: PricingRegion | null;
 };
 
-type CouponResolution = {
-  discountPercent: number;
-  distributorCouponId: string | null;
-  resellerCouponId: string | null;
-  resellerId: string | null;
-  source: "distributor" | "reseller" | null;
-};
+
 
 async function assertCouponUsableForCheckout(
   coupon: {

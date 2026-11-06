@@ -21,7 +21,7 @@ export async function GET(
     if (!proposal) return NextResponse.json({ error: "Proposal not found." }, { status: 404 });
     const richSections = parseProposalSections(proposal);
     return NextResponse.json({ proposal: { ...proposal, richSections } });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Failed to load proposal." }, { status: 500 });
   }
 }

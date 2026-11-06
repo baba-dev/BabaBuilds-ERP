@@ -96,7 +96,7 @@ const components = {
       <span>{children}</span>
     </li>
   ),
-  blockquote: ({ children, ...props }: any) => (
+  blockquote: ({ children }: any) => (
     <div className="my-8 p-6 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/50 flex gap-4 animate-in fade-in slide-in-from-left-4 duration-500">
       <div className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-indigo-100 dark:border-indigo-800 shadow-sm flex items-center justify-center shrink-0">
         <Info className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />

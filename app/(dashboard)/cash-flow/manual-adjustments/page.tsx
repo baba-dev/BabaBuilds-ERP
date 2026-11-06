@@ -110,7 +110,7 @@ export default function CashFlowManualAdjustmentsPage() {
     }
   };
 
-  const onDelete = async (id: string) => {
+  const onDelete = async (_id: string) => {
     // v1 API has no DELETE; keep UI ready but link to future work.
     toast.message("Delete will be added next", {
       description: "For now, manual adjustments can be overwritten by adding a reversal entry.",

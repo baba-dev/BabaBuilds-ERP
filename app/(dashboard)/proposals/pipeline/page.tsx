@@ -8,7 +8,7 @@ import {
   getProposalPipelineSummary,
 } from "@/lib/commercial-workflow/pipeline";
 import { formatCurrency } from "@/lib/currency";
-import { DollarSign, Clock, AlertTriangle, TrendingUp, CheckCircle2, ChevronRight, FileText } from "lucide-react";
+import { DollarSign, Clock, AlertTriangle, TrendingUp, ChevronRight, FileText } from "lucide-react";
 import Link from "next/link";
 import { createCommercialActionTask } from "@/lib/commercial-workflow/tasks";
 import { revalidatePath } from "next/cache";
@@ -162,8 +162,6 @@ export default async function PipelineDashboardPage({
     value,
     subtitle,
     icon: Icon,
-    colorClass,
-    highlight,
     href,
   }: InsightCardProps) => (
     <Link href={href} className="block hover:-translate-y-1 transition-transform">

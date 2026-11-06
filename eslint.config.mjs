@@ -29,6 +29,16 @@ export default defineConfig([
       "react/no-unescaped-entities": "warn",
       "prefer-const": "warn",
       "@typescript-eslint/no-unsafe-function-type": "warn",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+          ignoreRestSiblings: true,
+        },
+      ],
     },
   },
   {

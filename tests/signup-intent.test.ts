@@ -8,7 +8,7 @@ describe("signup intent cookie signing", () => {
 
   it("rejects tampered payload", () => {
     const token = serializeSignupIntent(signupIntentSchema.parse({ plan: "pro", cycle: "monthly", trial: 15 }));
-    const [version, payload, sig] = token.split(".");
+    const [version, , sig] = token.split(".");
     const tamperedPayload = Buffer.from(
       JSON.stringify({ plan: "team", cycle: "annual", trial: 30 }),
       "utf8",

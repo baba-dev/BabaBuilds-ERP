@@ -23,7 +23,7 @@ import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { PageLoadingState } from "@/components/states/PageLoadingState";
 import { PageErrorState } from "@/components/states/PageErrorState";
 import { ColumnVisibilityToggle, DataTable, DataTableToolbar, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
-import { TaxOverrideModal, type TaxOverrideWindow } from "@/components/tax/tax-override-modal";
+import { type TaxOverrideWindow } from "@/components/tax/tax-override-modal";
 import { TaxComplianceOps } from "@/components/tax/tax-compliance-ops";
 import { TaxHubOverview } from "@/components/tax/tax-hub-overview";
 import { TaxScopeNotice } from "@/components/tax/TaxScopeNotice";
@@ -114,8 +114,8 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
     };
     disclaimerKey: string;
   } | null>(null);
-  const [taxOverrideOpen, setTaxOverrideOpen] = useState(false);
-  const [taxOverrides, setTaxOverrides] = useState<TaxOverrideWindow[]>([]);
+  const [, setTaxOverrideOpen] = useState(false);
+  const [] = useState<TaxOverrideWindow[]>([]);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(["date", "asset", "category", "amount"]);
   const tableState = useUrlTableState("tax");
 
@@ -139,7 +139,7 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
           if (data.amount) setAmount(data.amount.toString());
         }
         sessionStorage.removeItem('erp_ai_payload');
-      } catch(e) { 
+      } catch { 
         console.error("Failed to parse AI payload"); 
         toast.warning("AI auto-fill failed. Please fill the form manually.");
       }
@@ -193,7 +193,7 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
         setTaxAuditPage(1);
         setTaxAuditTotalPages(1);
       }
-    } catch (err) {
+    } catch {
       console.error("Failed to load data");
       setFetchError("Failed to load tax planner data. Please refresh.");
       toast.error("Failed to load tax planner data. Please refresh.");

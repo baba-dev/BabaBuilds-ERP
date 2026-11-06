@@ -1,11 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { 
-  Users, Plus, Globe, Building2, Mail, Phone, Briefcase, FileText, 
-  Image as ImageIcon, CheckCircle2, Trash2, Pencil, AlertCircle, ChevronLeft, ChevronRight, Loader2, List, LayoutGrid 
-} from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Users, Plus, Globe, Building2, Mail, Phone, Briefcase, FileText, Image as ImageIcon, Trash2, Pencil, AlertCircle, ChevronLeft, ChevronRight, Loader2, List, LayoutGrid } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,10 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { FileUploadField } from "@/components/forms/file-upload-field";
 import { FormFieldRow, FormSection, FormSubmitBar } from "@/components/forms/form-primitives";
-import { 
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle 
-} from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 import { ResponsiveDialog } from "@/components/ResponsiveDialog";
 import { useTranslations } from "next-intl";
@@ -29,7 +23,6 @@ import { CLIENT_LOGO_ACCEPT_ATTR, CLIENT_LOGO_HELP_TEXT } from "@/lib/uploads/cl
 import { type ClientDto, type ApiEnvelope } from "@/lib/types/business";
 import { useSearchParams } from "next/navigation";
 import { OnboardingHint } from "@/components/onboarding/OnboardingHint";
-import { cn } from "@/lib/utils";
 
 export default function ClientCRM() {
   const t = useTranslations('Clients');
@@ -52,8 +45,7 @@ export default function ClientCRM() {
   // --- GLOBALIZATION ENGINE ---
   const { 
     taxLabel = "Tax", 
-    taxIdLabel = "Tax ID", 
-    countryCode = "Global" 
+    taxIdLabel = "Tax ID" 
   } = useFormat();
 
   const [formData, setFormData] = useState({
@@ -85,7 +77,7 @@ export default function ClientCRM() {
           setOpen(true); 
         }
         sessionStorage.removeItem('erp_ai_payload');
-      } catch(e) {
+      } catch {
         console.error("Failed to parse AI payload");
       }
     }
@@ -100,7 +92,7 @@ export default function ClientCRM() {
       setClients(Array.isArray(data) ? data : []);
       setTotalPages(meta.totalPages);
       setCurrentPage(meta.currentPage);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load clients.");
       setFetchError("Failed to load clients.");
       setClients([]);
@@ -135,7 +127,7 @@ export default function ClientCRM() {
         const data = await res.json();
         toast.error(data.message || data.error || (isEditing ? t("toast.error.update_client") : t("toast.error.register_client")), { id: toastId });
       }
-    } catch (err) {
+    } catch {
       toast.error(t("toast.error.network"), { id: toastId });
     } finally {
       setIsSubmitting(false);

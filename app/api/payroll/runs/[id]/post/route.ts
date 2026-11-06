@@ -41,7 +41,7 @@ function decimalStringsEqual(a: Prisma.Decimal, b: number | undefined): boolean 
   return a.equals(new Prisma.Decimal(b.toFixed(2)));
 }
 
-async function buildPostedResponseFromDb(runId: string, workspaceId: string) {
+async function buildPostedResponseFromDb(runId: string, _workspaceId: string) {
   const posting = await prisma.payrollPosting.findUnique({
     where: { runId },
   });

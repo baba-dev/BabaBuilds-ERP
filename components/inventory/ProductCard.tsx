@@ -1,10 +1,9 @@
 "use client";
 
 import { useFormat } from "@/hooks/use-format";
-import { getCurrencySymbol } from "@/lib/currency";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowDownRight, Tag, Settings2, PackageSearch, AlertTriangle, AlertCircle, RefreshCw } from "lucide-react";
+import { Tag, PackageSearch, AlertTriangle, AlertCircle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ProductCardProps {
@@ -14,8 +13,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, onAdjust, onClick }: ProductCardProps) {
-  const { fCurrency, currency, locale } = useFormat();
-  const currencySymbol = getCurrencySymbol(currency, locale);
+  const { fCurrency } = useFormat();
 
   const isDanger = product.currentStock === 0;
   const isWarning = product.currentStock > 0 && product.currentStock <= product.safetyStock;

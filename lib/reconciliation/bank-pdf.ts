@@ -18,7 +18,7 @@ export async function parseBankPdfToTransactions(
 
   const parsed = parseBankStatementFromText(text);
   if (parsed.ok) {
-    return parsed.transactions.map((t, i) => ({
+    return parsed.transactions.map((t) => ({
       ...t,
       parseFlags: { ...(t.parseFlags as object), source: "PDF" },
     }));

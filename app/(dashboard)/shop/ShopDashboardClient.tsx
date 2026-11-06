@@ -377,7 +377,6 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
     FAILED: { label: "Failed", className: "bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-400", icon: <X className="w-3 h-3" /> },
     REFUNDED: { label: "Refunded", className: "bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-400", icon: <AlertCircle className="w-3 h-3" /> },
   };
-  const orderCompletionPct = stats.totalOrders > 0 ? Math.round((stats.paidOrders / stats.totalOrders) * 100) : 0;
 
   const getEmptyState = () => {
     if (orderSearch.trim()) {

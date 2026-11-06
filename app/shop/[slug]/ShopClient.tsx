@@ -155,7 +155,7 @@ function useConfetti(trigger: boolean) {
 
 // ── Buy Modal ─────────────────────────────────────────────────────────────────
 function BuyModal({
-  product, slug, checkout, onClose, onSuccess,
+  product, slug, onClose, onSuccess,
 }: {
   product: ShopData["products"][0];
   slug: string;

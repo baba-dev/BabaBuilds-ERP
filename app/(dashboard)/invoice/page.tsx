@@ -2,7 +2,6 @@
 
 import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
-import { useMemo } from "react";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import InvoiceGeneratorForm from "@/components/invoice/InvoiceGeneratorForm";
 

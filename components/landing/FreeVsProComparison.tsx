@@ -225,7 +225,7 @@ export default function FreeVsProComparison() {
     }
   ];
 
-  const trackTrialClick = (source: string) => {
+  const trackTrialClick = (_source: string) => {
     emitMarketingAnalyticsEvent("marketing_trial_cta_clicked", {
       location: "free_vs_pro_comparison",
       label: copy.btnTrial,

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, X, Clock, User, Calendar, FileText } from "lucide-react";
+import { CheckCircle2, X, Clock, Calendar, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, EmployeeAvatar } from "@/components/workforce/StatusBadge";
 import { format } from "date-fns";

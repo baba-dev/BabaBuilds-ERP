@@ -3,23 +3,12 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  Loader2,
-  Search,
-  Plus,
-  Minus,
-  Trash2,
-  ShoppingCart,
-  User,
-  X,
-  FileText,
-  Repeat,
-} from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, Search, Plus, Minus, Trash2, ShoppingCart, User, FileText, Repeat } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, getCurrencySymbol } from "@/lib/currency";
 import {
@@ -96,7 +85,7 @@ export default function PosSystem({
         const res = await fetch(`/api/pos/catalog?type=${activeTab}`);
         const data = await res.json();
         setItems(data);
-      } catch (err) {
+      } catch {
         toast.error(t("toast_catalog_fail"));
       } finally {
         setLoading(false);

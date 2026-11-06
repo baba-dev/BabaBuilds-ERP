@@ -70,7 +70,7 @@ function parseUserAgent(ua: string) {
 }
 
 export function ConnectDeviceTab() {
-  const [platform, setPlatform] = React.useState<Platform | null>(null);
+  const [, setPlatform] = React.useState<Platform | null>(null);
   const [sessions, setSessions] = React.useState<Session[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = React.useState(true);
   const [revokingId, setRevokingId] = React.useState<string | null>(null);
@@ -110,7 +110,7 @@ export function ConnectDeviceTab() {
       } else {
         toast.error('Failed to revoke session');
       }
-    } catch (error) {
+    } catch {
       toast.error('An error occurred while revoking session');
     } finally {
       setRevokingId(null);

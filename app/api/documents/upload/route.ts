@@ -65,7 +65,7 @@ export async function POST(request: Request) {
 
   try {
     await requirePermission(userId, workspaceId, 'documents.upload');
-  } catch (e) {
+  } catch {
     return apiError(403, 'Permission denied.', 'RBAC_DENIED');
   }
 

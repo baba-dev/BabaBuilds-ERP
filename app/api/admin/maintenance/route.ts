@@ -3,13 +3,9 @@ import { handleAdminApiError, verifySuperAdmin } from "../authz";
 import { prisma } from "@/lib/prisma";
 import fs from "fs";
 import path from "path";
-import { exec } from "child_process";
-import util from "util";
 import { decimalToNumber } from "@/lib/money";
 import { sendActivityAlert } from '@/lib/security/alert-hooks';
-import { buildPrivatePath, ensureDir, getPrivateUploadsRoot } from '@/lib/uploads/private-storage';
-
-const execPromise = util.promisify(exec);
+import { ensureDir, getPrivateUploadsRoot } from '@/lib/uploads/private-storage';
 
 export async function POST(req: Request) {
   try {
@@ -211,9 +207,6 @@ export async function POST(req: Request) {
 
           // Attempt Fuzzy Matching if original path fails (Essential for Linux/VPS vs Windows sync)
           if (!fileExists) {
-             const pathParts = inv.pdfPath.split('/');
-             const filename  = pathParts[pathParts.length - 1]; // e.g. 013.pdf
-             const parent    = pathParts.slice(0, -1).join('/'); // e.g. /invoices/workspaceId/INV/25-26
              
              // The system now uses underscores for the entire invoice number in the filename
              const sanitizedFilename = (inv.invoiceNumber || "").replace(/\//g, '_') + ".pdf";

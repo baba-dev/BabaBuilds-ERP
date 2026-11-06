@@ -15,7 +15,7 @@ export async function GET() {
     ]);
 
     return NextResponse.json({ nic: nicCodes, sac: sacCodes });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch tax codes' }, { status: 500 });
   }
 }

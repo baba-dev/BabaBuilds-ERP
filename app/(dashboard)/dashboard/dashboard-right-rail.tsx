@@ -48,7 +48,6 @@ type AIState = 'enabled' | 'locked_no_key' | 'fallback';
 
 export function DashboardRightRail({
   data,
-  fCurrency,
   onRefreshSyncImportHealth,
   syncImportHealthLoading = false,
   syncImportHealthError = null,
@@ -182,7 +181,7 @@ function RightRailHeader({ tr, mood, aiState }: { tr: any, mood: WorkspaceMood, 
   );
 }
 
-function IntelligenceAssistantSection({ data, tr, mood, aiState }: { data: DashboardData, tr: any, mood: WorkspaceMood, aiState: AIState }) {
+function IntelligenceAssistantSection({ tr, aiState }: { data: DashboardData, tr: any, mood: WorkspaceMood, aiState: AIState }) {
   if (aiState === 'locked_no_key') {
     return (
       <div className="p-6 bg-gradient-to-br from-amber-50/40 to-transparent dark:from-amber-500/5 dark:to-transparent">
@@ -307,7 +306,7 @@ function RecentActivitySection({ data, tr }: { data: DashboardData, tr: any }) {
   );
 }
 
-function RecentNotificationsSection({ data, tr, mood }: { data: DashboardData, tr: any, mood: WorkspaceMood }) {
+function RecentNotificationsSection({ data, tr }: { data: DashboardData, tr: any, mood: WorkspaceMood }) {
   const notifications = [
     ...(data.health.complianceWarnings || []).map(w => ({ type: 'warning', label: w.label, severity: w.severity as 'info' | 'warning' | 'critical' })),
     ...(data.attention.criticalNotifications > 0 ? [{ type: 'critical', label: tr("critical_notifications_interpret", "Immediate attention required for {count} critical anomalies", { count: data.attention.criticalNotifications }), severity: 'critical' as const }] : [])
@@ -369,7 +368,7 @@ function RecentNotificationsSection({ data, tr, mood }: { data: DashboardData, t
   );
 }
 
-function SuggestedActionsSection({ data, tr, mood }: { data: DashboardData, tr: any, mood: WorkspaceMood }) {
+function SuggestedActionsSection({ data, tr }: { data: DashboardData, tr: any, mood: WorkspaceMood }) {
   const suggestions = useMemo(() => deriveIntelligenceSuggestions(data, tr), [data, tr]);
 
   return (

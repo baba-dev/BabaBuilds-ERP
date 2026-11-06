@@ -4,27 +4,19 @@ import Link from "next/link";
 
 import { useState, useEffect, useMemo } from "react";
 import { format, addMonths } from "date-fns";
-import {
-  Repeat, Plus, ArrowLeft, Building2, Briefcase,
-  Sparkles, CalendarClock, PlayCircle, PauseCircle,
-  Activity, CheckCircle2, Trash2, Pencil, Loader2
-} from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Repeat, Plus, ArrowLeft, Sparkles, CalendarClock, PlayCircle, PauseCircle, Activity, Trash2, Pencil, Loader2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter
 } from "@/components/ui/dialog";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
-} from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 // MISSION CRITICAL: Globalization Imports
 import { useFormat } from "@/hooks/use-format";
@@ -90,7 +82,7 @@ export default function RetainersHub() {
   const [clientId, setClientId] = useState("");
   const [serviceTemplateId, setServiceTemplateId] = useState("");
   const [amount, setAmount] = useState("");
-  const [frequency, setFrequency] = useState("MONTHLY");
+  const [frequency] = useState("MONTHLY");
   const [autoAppendMonth, setAutoAppendMonth] = useState(true);
 
   // Deletion State
@@ -105,10 +97,10 @@ export default function RetainersHub() {
   const [isEditing, setIsEditing] = useState(false);
   const [taxRateModalOpen, setTaxRateModalOpen] = useState(false);
   const [taxRateInput, setTaxRateInput] = useState("");
-  const [taxRateMeta, setTaxRateMeta] = useState<{ taxLabel?: string; countryCode?: string; candidates?: number[] }>({});
+  const [taxRateMeta] = useState<{ taxLabel?: string; countryCode?: string; candidates?: number[] }>({});
 
   // Default to the 1st of the *next* month
-  const [nextBillingDate, setNextBillingDate] = useState(() => {
+  const [nextBillingDate] = useState(() => {
     const nextMonth = addMonths(new Date(), 1);
     return format(new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 1), 'yyyy-MM-dd');
   });
@@ -211,7 +203,7 @@ export default function RetainersHub() {
       });
       if (!res.ok) throw new Error("Failed to update status");
       toast.success(`Retainer ${newStatus.toLowerCase()}.`, { id: toastId });
-    } catch (err) {
+    } catch {
       setRetainers(previousRetainers);
       toast.error("Failed to update status", { id: toastId });
     }
@@ -231,7 +223,7 @@ export default function RetainersHub() {
       const res = await fetch(`/api/retainers/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error("Failed to delete");
       toast.success("Retainer loop destroyed.", { id: toastId });
-    } catch (err) {
+    } catch {
       setRetainers(previousRetainers);
       toast.error("Failed to delete retainer.", { id: toastId });
     }
@@ -282,51 +274,7 @@ export default function RetainersHub() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!clientId || !serviceTemplateId || !amount) return toast.error("Please fill all required fields.");
-
-    setIsSubmitting(true);
-    const toastId = toast.loading("Configuring retainer...");
-
-    try {
-      const res = await fetch('/api/retainers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clientId,
-          serviceTemplateId,
-          serviceName: selectedService?.name,
-          amount: parseFloat(amount),
-          frequency,
-          autoAppendMonth,
-          nextBillingDate: new Date(nextBillingDate).toISOString()
-        })
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        if (res.status === 422 && payload?.code === "TAX_RATE_REQUIRED") {
-          setTaxRateMeta({
-            taxLabel: payload.taxLabel,
-            countryCode: payload.countryCode,
-            candidates: payload.candidates || [],
-          });
-          setTaxRateModalOpen(true);
-          toast.dismiss(toastId);
-          return;
-        }
-        throw new Error(payload?.error || "Failed to create retainer");
-      }
-
-      toast.success("Retainer engine activated!", { id: toastId });
-      setView('list');
-      setClientId(""); setServiceTemplateId(""); setAmount(""); setAutoAppendMonth(true);
-    } catch (err: any) {
-      toast.error(err.message, { id: toastId });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  
 
   const handleTaxRateConfirm = async () => {
     if (!taxRateInput || !clientId || !serviceTemplateId || !amount) return;
@@ -396,143 +344,7 @@ export default function RetainersHub() {
     );
   };
 
-  const renderWizardContent = () => (
-    <Card className="shadow-2xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
-      <div className="h-1.5 bg-gradient-to-r from-indigo-500 to-emerald-500 w-full" />
-      <form onSubmit={handleSubmit}>
-        <CardContent className="p-6 md:p-8 space-y-8">
-
-                {/* Section 1: The Who & What */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-zinc-50/50 dark:bg-zinc-900/40 rounded-xl border border-zinc-100 dark:border-zinc-800/80">
-                  <div className="space-y-2">
-                    <Label htmlFor="retainer-client" className="text-zinc-700 dark:text-zinc-300 font-bold uppercase text-xs tracking-widest">{t('select_client_label')}</Label>
-                    <Select value={clientId} onValueChange={setClientId} required>
-                      <SelectTrigger id="retainer-client" className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 h-12 font-bold shadow-sm focus:ring-indigo-500/30">
-                        <SelectValue placeholder={t('select_client')} />
-                      </SelectTrigger>
-                      <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
-                        {clients.map(c => (
-                          <SelectItem key={c.id} value={String(c.id)} className="dark:focus:bg-zinc-800 dark:text-zinc-100 py-2.5">
-                            <div className="flex items-center gap-2">
-                              <Building2 className="w-4 h-4 text-zinc-400 dark:text-zinc-500" />
-                              <span className="font-bold">{c.name}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="retainer-service" className="text-zinc-700 dark:text-zinc-300 font-bold uppercase text-xs tracking-widest">{t('service_delivered')}</Label>
-                    <Select value={serviceTemplateId} onValueChange={setServiceTemplateId} required>
-                      <SelectTrigger id="retainer-service" className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 h-12 font-bold shadow-sm focus:ring-indigo-500/30">
-                        <SelectValue placeholder={t('select_service')} />
-                      </SelectTrigger>
-                      <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
-                        {catalog.map(cat => (
-                          <SelectItem key={cat.id} value={String(cat.id)} className="dark:focus:bg-zinc-800 dark:text-zinc-100 py-2.5">
-                            <div className="flex items-center gap-2">
-                              <Briefcase className="w-4 h-4 text-indigo-500" />
-                              <span className="font-bold">{cat.name}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Section 2: Financials */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-zinc-50/80 dark:bg-zinc-950/40 rounded-xl border border-zinc-200 dark:border-zinc-800/80">
-                  <div className="space-y-2">
-                    <Label htmlFor="retainer-frequency" className="text-zinc-700 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest">{t('billing_frequency')}</Label>
-                    <Select value={frequency} onValueChange={setFrequency}>
-                      <SelectTrigger id="retainer-frequency" className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 h-11 font-bold text-xs shadow-sm focus:ring-indigo-500/30">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
-                        <SelectItem value="MONTHLY" className="dark:focus:bg-zinc-800 dark:text-zinc-100 text-xs font-bold uppercase tracking-wider py-2">Monthly</SelectItem>
-                        <SelectItem value="QUARTERLY" className="dark:focus:bg-zinc-800 dark:text-zinc-100 text-xs font-bold uppercase tracking-wider py-2">Quarterly</SelectItem>
-                        <SelectItem value="ANNUALLY" className="dark:focus:bg-zinc-800 dark:text-zinc-100 text-xs font-bold uppercase tracking-wider py-2">Annually</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="retainer-date" className="text-zinc-700 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest">{t('first_invoice_date')}</Label>
-                    <Input
-                      id="retainer-date"
-                      type="date"
-                      value={nextBillingDate}
-                      onChange={e => setNextBillingDate(e.target.value)}
-                      required
-                      className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 h-11 dark:[color-scheme:dark] font-bold shadow-sm focus-visible:ring-indigo-500/30"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="retainer-amount" className="text-zinc-700 dark:text-zinc-400 font-bold text-xs uppercase tracking-widest">{t('recurring_amount')}</Label>
-                    <div className="relative group/amount border-zinc-200 dark:border-zinc-700">
-                      <span className="absolute left-3.5 top-3.5 text-zinc-400 dark:text-zinc-500 group-focus-within/amount:text-zinc-900 dark:group-focus-within/amount:text-zinc-100 font-bold transition-colors">{currencySymbol}</span>
-                      <Input
-                        id="retainer-amount"
-                        type="number"
-                        min="1"
-                        value={amount}
-                        onChange={e => setAmount(e.target.value)}
-                        required
-                        className="pl-9 bg-white dark:bg-zinc-950 border-inherit h-11 font-bold text-indigo-700 dark:text-indigo-400 shadow-sm focus-visible:ring-indigo-500/30 transition-colors"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 3: THE MAGIC TOGGLE */}
-                <div className={`p-6 rounded-xl border-2 transition-all duration-300 ${autoAppendMonth ? 'border-purple-300 dark:border-purple-500/50 bg-gradient-to-br from-purple-50/50 to-transparent dark:from-purple-900/10 dark:to-transparent bg-white dark:bg-zinc-950/80' : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/50'}`}>
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1.5 mr-4">
-                      <Label htmlFor="smart-naming" className="text-sm font-extrabold uppercase tracking-wider text-zinc-900 dark:text-zinc-50 flex items-center gap-2 cursor-pointer">
-                        <Sparkles className={`w-4 h-4 transition-colors ${autoAppendMonth ? 'text-purple-600 dark:text-purple-400' : 'text-zinc-400 dark:text-zinc-600'}`} />
-                        {t('smart_naming')}
-                      </Label>
-                      <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                        {t('smart_naming_desc')}
-                      </p>
-                    </div>
-                    <Switch
-                      id="smart-naming"
-                      aria-label="Toggle Smart Line-Item Naming"
-                      checked={autoAppendMonth}
-                      onCheckedChange={setAutoAppendMonth}
-                      className="data-[state=checked]:bg-purple-600 dark:data-[state=checked]:bg-purple-500 shadow-inner mt-1 shrink-0"
-                    />
-                  </div>
-
-                  {/* Dynamic Preview */}
-                  <div className="mt-5 pt-5 border-t border-purple-200/50 dark:border-purple-500/20">
-                    <p className="text-xs font-bold text-purple-800 dark:text-purple-400/80 uppercase tracking-widest mb-2.5">{t('invoice_preview')}</p>
-                    <div className="bg-white dark:bg-zinc-950 p-3.5 rounded-lg border border-purple-100 dark:border-purple-900/30 font-mono text-xs font-bold text-zinc-700 dark:text-zinc-300 shadow-sm flex items-center gap-2.5 backdrop-blur-sm">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 drop-shadow-sm" />
-                      {selectedService ? selectedService.name : t('select_service_ph')}
-                      {autoAppendMonth && <span className="text-purple-600 dark:text-purple-400 font-extrabold ml-1.5 opacity-90">({format(new Date(nextBillingDate), 'MMMM yyyy')})</span>}
-                    </div>
-                  </div>
-                </div>
-
-        </CardContent>
-        <CardFooter className="bg-zinc-50/80 dark:bg-zinc-900/40 border-t border-zinc-100 dark:border-zinc-800/80 p-6 rounded-b-xl flex justify-end">
-          <Button type="submit" size="lg" className="w-full md:w-auto md:px-12 bg-indigo-600 hover:bg-indigo-700 text-white font-bold uppercase tracking-widest text-xs h-12 shadow-sm shadow-indigo-500/20 transition-all active:scale-95 border-none" disabled={isSubmitting}>
-            {isSubmitting ? (
-              <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> {t('configuring')}</span>
-            ) : (
-              <span className="flex items-center gap-2"><Repeat className="w-4 h-4" /> {t('activate')}</span>
-            )}
-          </Button>
-        </CardFooter>
-      </form>
-    </Card>
-  );
+  
 
   // --- RENDER LIST VIEW ---
   const activeCount = retainers.filter(r => r.status === 'ACTIVE').length;

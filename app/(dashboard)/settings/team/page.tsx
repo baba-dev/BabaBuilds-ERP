@@ -15,12 +15,7 @@ import React from "react";
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Users, Shield, LayoutGrid, Activity, Scale,
-  UserPlus, MoreHorizontal, Check, X, ChevronLeft, ChevronRight,
-  AlertTriangle, CheckCircle2, ShieldAlert, UserMinus, UserCheck,
-  Loader2, Mail, Clock, Crown, RefreshCw, Info, ArrowUpRight,
-} from "lucide-react";
+import { Users, Shield, LayoutGrid, Activity, Scale, UserPlus, MoreHorizontal, Check, X, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, ShieldAlert, UserMinus, UserCheck, Loader2, Mail, Crown, RefreshCw, Info, ArrowUpRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -44,7 +39,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -348,7 +342,7 @@ export default function TeamAccessPage() {
     }
   };
 
-  const handleInviteCancel = async (inviteId: string, email: string) => {
+  const handleInviteCancel = async (inviteId: string, _email: string) => {
     const tid = toast.loading("Cancelling invite...");
     try {
       const res = await fetch("/api/team/remove", {

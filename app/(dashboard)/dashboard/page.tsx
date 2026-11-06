@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { Download, LayoutDashboard, Send, Sparkles, ArrowRight, Users, Briefcase, ReceiptText, X, Building, Lock, CircleAlert, ShieldCheck } from "lucide-react";
+import { Download, LayoutDashboard, Send, Sparkles, ArrowRight, Users, Briefcase, ReceiptText, X, Building, CircleAlert, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -72,7 +72,6 @@ export default function Dashboard() {
     isDemoUser,
     isLoading: onboardingLoading,
     persona: onboardingPersona,
-    setPersona,
   } = useOnboarding();
 
   const { fCurrency, currency } = useFormat();
@@ -369,16 +368,6 @@ export default function Dashboard() {
   const handleModuleEnabled = () => {
     void loadAllData(selectedFy);
   };
-  const isReady = Boolean(
-    d.health &&
-      d.attention &&
-      d.financialPulse &&
-      d.salesAndShop &&
-      d.operations &&
-      d.trust &&
-      d.charts &&
-      d.recentInvoices,
-  );
 
   const selectedInvoiceBilled = Number(selectedInvoice?.totalAmount ?? 0);
   const selectedInvoiceReceived = Number(selectedInvoice?.amountReceived ?? 0);
@@ -468,8 +457,7 @@ export default function Dashboard() {
   }, [d.health?.integrationReadiness?.summary?.healthy, d.recentInvoices?.length, d.salesAndShop?.publishedProducts, orgName, tr]);
 
   const pendingSetupChecklist = setupChecklist.filter((item) => !item.done);
-  const lockableCardClassName = (locked: boolean) =>
-    locked ? `${lockOverlayClassName} cursor-not-allowed select-none` : "";
+  
 
   if (isInitialLoad) {
     return <PageLoadingState title={tr("loading", "Loading dashboard")} description={tr("loading_desc", "Preparing command center")} className="min-h-screen" />;

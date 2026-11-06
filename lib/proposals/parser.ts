@@ -1,4 +1,3 @@
-import { Proposal } from '@prisma/client';
 
 export type RichSection = {
   title: string;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Download, RefreshCw } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PeopleTable } from "@/components/workforce/PeopleTable";
 import { WorkforcePageShell } from "@/components/workforce/WorkforceLayout";

@@ -286,7 +286,7 @@ export default function InvoicesAndEarnings() {
       if (!res.ok) throw new Error(t("toast.error.delete_invoice"));
       toast.success(t("toast.success.invoice_deleted"), { id: toastId });
       fetchInvoices(currentPage);
-    } catch (err) {
+    } catch {
       toast.error(t("toast.error.delete_invoice"), { id: toastId });
     } finally {
       setInvoiceToDelete(null);

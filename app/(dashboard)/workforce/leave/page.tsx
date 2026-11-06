@@ -37,7 +37,7 @@ const GLASS_PANEL_CLASS = "rounded-xl border border-zinc-200/60 bg-white/55 shad
 export default function LeavePage() {
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [balances, setBalances] = useState<LeaveBalance[]>([]);
-  const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
+  const [, setLeaveTypes] = useState<LeaveType[]>([]);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [isLoading, setIsLoading] = useState(true);
   const [canApprove, setCanApprove] = useState(false);
@@ -49,7 +49,7 @@ export default function LeavePage() {
     setIsLoading(true);
     try {
       const statusParam = statusFilter !== "ALL" ? `?status=${statusFilter}` : "";
-      const [reqRes, balRes, typesRes] = await Promise.all([
+      const [reqRes, balRes] = await Promise.all([
         fetch(`/api/workforce/leave/requests${statusParam}`),
         fetch("/api/workforce/leave/balances"),
         fetch("/api/workforce/leave/requests"), // to check canApprove
