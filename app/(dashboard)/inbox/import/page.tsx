@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
@@ -7,55 +5,18 @@ import { authOptions } from '@/lib/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-
-type SharedImportFile = {
-  fieldName: string;
-  originalName: string;
-  mimeType: string;
-  size: number;
-  publicUrl: string;
-};
-
-type SharedImportPayload = {
-  id: string;
-  createdAt: string;
-  source: 'web-share-target';
-  title: string | null;
-  text: string | null;
-  url: string | null;
-  files: SharedImportFile[];
-};
+import {
+  isValidShareId,
+  loadSharedPayload,
+  toSafeHttpUrl,
+  type SharedImportFile,
+} from '@/lib/uploads/share-target';
 
 const formatter = new Intl.NumberFormat('en-US');
 
 function getDefaultClassification(file: SharedImportFile) {
   if (file.mimeType === 'application/pdf') return 'Proposal attachment';
   return 'Expense';
-}
-
-async function loadSharedPayload(workspaceId: string, shareId: string): Promise<SharedImportPayload | null> {
-  const payloadPath = path.join(process.cwd(), 'tmp', 'share-target', workspaceId, `${shareId}.json`);
-
-  if (!fs.existsSync(payloadPath)) return null;
-
-  try {
-    const raw = fs.readFileSync(payloadPath, 'utf-8');
-    const parsed = JSON.parse(raw) as SharedImportPayload;
-    // Ensure previews always hit the protected route even if older payloads used a public path.
-    const files = Array.isArray(parsed.files)
-      ? parsed.files.map((file) => {
-          const url = typeof file.publicUrl === 'string' ? file.publicUrl : '';
-          if (url.startsWith('/uploads/share-target/')) return file;
-          if (typeof (file as any).relativePath === 'string' && (file as any).relativePath.startsWith('/uploads/share-target/')) {
-            return { ...file, publicUrl: (file as any).relativePath };
-          }
-          return file;
-        })
-      : [];
-    return { ...parsed, files };
-  } catch {
-    return null;
-  }
 }
 
 export default async function SharedImportPage({
@@ -71,7 +32,8 @@ export default async function SharedImportPage({
   }
 
   const { shareId } = await searchParams;
-  const payload = shareId ? await loadSharedPayload(workspaceId, shareId) : null;
+  const payload = isValidShareId(shareId) ? await loadSharedPayload(workspaceId, shareId) : null;
+  const sourceUrl = toSafeHttpUrl(payload?.url);
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6 p-4 md:p-6">
@@ -110,11 +72,11 @@ export default async function SharedImportPage({
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-zinc-600 dark:text-zinc-300">
               {payload.text ? <p>{payload.text}</p> : null}
-              {payload.url ? (
+              {sourceUrl ? (
                 <p>
                   Source URL:{' '}
-                  <a className="text-indigo-600 hover:underline" href={payload.url} target="_blank" rel="noreferrer">
-                    {payload.url}
+                  <a className="text-indigo-600 hover:underline" href={sourceUrl} target="_blank" rel="noopener noreferrer">
+                    {sourceUrl}
                   </a>
                 </p>
               ) : null}
