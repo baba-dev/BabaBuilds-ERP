@@ -3,9 +3,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirectToLogin } from "@/lib/auth/login-redirect";
 import { prisma } from "@/lib/prisma";
-import { isModuleEnabled } from "@/lib/modules";
+import { getModuleAvailability } from "@/lib/modules";
 import { checkPermissionSilent } from "@/lib/rbac";
 import type { ReactNode } from "react";
+import { ModuleUnavailable } from "@/components/modules/ModuleUnavailable";
 
 async function getWorkspaceId(userId: string) {
   const wu = await prisma.workspaceUser.findFirst({
@@ -22,13 +23,14 @@ export default async function DocumentsLayout({ children }: { children: ReactNod
   const workspaceId = await getWorkspaceId(session.user.id);
   if (!workspaceId) redirect("/dashboard");
 
-  const [moduleEnabled, canView] = await Promise.all([
-    isModuleEnabled(workspaceId, "DOCUMENTS"),
+  const [availability, canView] = await Promise.all([
+    getModuleAvailability(workspaceId, "DOCUMENTS"),
     checkPermissionSilent(session.user.id, workspaceId, "documents.view"),
   ]);
 
-  if (!moduleEnabled || !canView) {
-    redirect("/dashboard?moduleDisabled=DOCUMENTS");
+  if (!canView) redirect("/dashboard");
+  if (availability !== "enabled") {
+    return <ModuleUnavailable moduleKey="DOCUMENTS" reason={availability} />;
   }
 
   return children;

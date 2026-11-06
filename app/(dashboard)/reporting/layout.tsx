@@ -4,8 +4,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirectToLogin } from '@/lib/auth/login-redirect';
 import { prisma } from '@/lib/prisma';
-import { isModuleEnabled } from '@/lib/modules';
+import { getModuleAvailability } from '@/lib/modules';
 import { requirePermission } from '@/lib/rbac';
+import { ModuleUnavailable } from '@/components/modules/ModuleUnavailable';
 
 export default async function ReportingLayout({ children }: { children: ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -19,13 +20,16 @@ export default async function ReportingLayout({ children }: { children: ReactNod
 
   if (!wu?.workspaceId) redirect('/settings');
 
-  const enabled = await isModuleEnabled(wu.workspaceId, 'REPORTING_CENTER');
-  if (!enabled) redirect('/settings#workspace-modules');
-
+  // Permission first: users who cannot view reporting are not told whether the module is on.
   try {
     await requirePermission(session.user.id, wu.workspaceId, 'reporting_center.view');
   } catch {
     redirect('/dashboard');
+  }
+
+  const availability = await getModuleAvailability(wu.workspaceId, 'REPORTING_CENTER');
+  if (availability !== 'enabled') {
+    return <ModuleUnavailable moduleKey="REPORTING_CENTER" reason={availability} />;
   }
 
   return <>{children}</>;

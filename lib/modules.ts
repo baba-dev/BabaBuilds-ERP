@@ -243,14 +243,31 @@ export async function isModuleEnabled(
   workspaceId: string,
   moduleKey: ModuleKey,
 ): Promise<boolean> {
-  if (!(await hasModulePlanEntitlement(workspaceId, moduleKey))) return false;
+  return (await getModuleAvailability(workspaceId, moduleKey)) === 'enabled';
+}
+
+/**
+ * Why a module is (not) usable, so callers can explain it instead of bouncing the user:
+ * - 'enabled'        usable
+ * - 'plan_required'  paid-only module and the workspace has no active paid entitlement
+ * - 'disabled'       entitled, but switched off for this workspace
+ *
+ * `isModuleEnabled` is defined in terms of this function so the two never diverge.
+ */
+export type ModuleAvailability = 'enabled' | 'plan_required' | 'disabled';
+
+export async function getModuleAvailability(
+  workspaceId: string,
+  moduleKey: ModuleKey,
+): Promise<ModuleAvailability> {
+  if (!(await hasModulePlanEntitlement(workspaceId, moduleKey))) return 'plan_required';
 
   const record = await prisma.workspaceModule.findUnique({
     where: { workspaceId_moduleKey: { workspaceId, moduleKey } },
     select: { isEnabled: true },
   });
-  if (record) return record.isEnabled === true;
-  return isDefaultEnabledModule(moduleKey);
+  const enabled = record ? record.isEnabled === true : isDefaultEnabledModule(moduleKey);
+  return enabled ? 'enabled' : 'disabled';
 }
 
 /**
