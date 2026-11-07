@@ -48,6 +48,7 @@ function nextResponseFor(request: NextRequest): NextResponse {
   // Forward the pathname as a *request* header so the root layout can trim per-route payload.
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-pathname', request.nextUrl.pathname);
+  requestHeaders.set('x-pathname-with-search', `${request.nextUrl.pathname}${request.nextUrl.search}`);
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   const pathWithSearch = `${request.nextUrl.pathname}${request.nextUrl.search}`;
   response.headers.set('next-url', pathWithSearch);
