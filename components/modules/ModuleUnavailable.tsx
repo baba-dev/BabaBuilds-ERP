@@ -25,12 +25,12 @@ export function ModuleUnavailable({ moduleKey, reason }: Props) {
         aria-labelledby="module-unavailable-title"
         className="mx-auto max-w-2xl rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
       >
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-600 dark:text-amber-500">{label}</p>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-500">{label}</p>
         <h1
           id="module-unavailable-title"
           className="mt-2 flex items-center gap-3 text-2xl font-black tracking-tight text-zinc-900 dark:text-zinc-50 md:text-3xl"
         >
-          <Lock aria-hidden className="h-7 w-7 shrink-0 text-amber-600 dark:text-amber-500" />
+          <Lock aria-hidden className="h-7 w-7 shrink-0 text-amber-700 dark:text-amber-500" />
           {needsPlan ? `${label} needs a paid plan` : `${label} is turned off`}
         </h1>
         <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-300">{MODULE_DESCRIPTIONS[moduleKey]}</p>
