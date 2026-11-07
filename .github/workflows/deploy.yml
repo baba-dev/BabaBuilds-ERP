@@ -57,6 +57,20 @@ jobs:
             npm install --legacy-peer-deps
 
             npx prisma generate
+
+            # Snapshot the SQLite database before any schema push (keeps the 10 newest copies).
+            backup_dir="/var/www/bababuilds-erp-db-backups"
+            mkdir -p "$backup_dir"
+            backup_file="$backup_dir/dev-$(date +%Y%m%d-%H%M%S)-${DEPLOY_SHA:0:7}.db"
+            if [ -f prisma/dev.db ]; then
+              if command -v sqlite3 >/dev/null 2>&1; then
+                sqlite3 prisma/dev.db ".backup '$backup_file'" || cp prisma/dev.db "$backup_file"
+              else
+                cp prisma/dev.db "$backup_file"
+              fi
+              ls -1t "$backup_dir"/dev-*.db 2>/dev/null | tail -n +11 | xargs -r rm -f
+            fi
+
             npx prisma db push
             npm run backfill:invoices
             rm -f public/sw.js
