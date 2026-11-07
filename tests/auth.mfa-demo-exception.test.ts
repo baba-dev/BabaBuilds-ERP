@@ -18,6 +18,8 @@ vi.mock("@/lib/prisma", () => ({
 }));
 
 vi.mock("@/lib/auth-observability", () => ({ recordAuthFailure: mocks.recordAuthFailure }));
+// Spread the real module so new exports (e.g. classifyLoginProvider) never break this test;
+// only override the policy helpers whose outcome each case controls.
 vi.mock("@/lib/security/access-risk", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/security/access-risk")>()),
   HIGH_RISK_MAGIC_LINK_ERROR_CODE: "HIGH_RISK_MAGIC_LINK_BLOCKED",

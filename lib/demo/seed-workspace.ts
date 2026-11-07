@@ -45,6 +45,9 @@ export async function seedDemoWorkspace(
   const workspace = await tx.workspace.create({
     data: {
       ...template.workspace,
+      // Paid entitlements are time-bound and fail closed without an end date
+      // (see hasFullPaidFeatures), so demo access ends exactly when the demo does.
+      subscriptionEndsAt: expiresAt,
       isDemo: true,
       demoTemplateKey: template.key,
       demoExpiresAt: expiresAt,

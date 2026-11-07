@@ -12,9 +12,11 @@ test.describe("Critical pages render", () => {
     const response = await page.goto("/", { waitUntil: "networkidle" });
     expect(response?.status(), "home should not 5xx").toBeLessThan(500);
     await expect(page.locator("body")).toBeVisible();
-    // Primary CTA on marketing (copy is localized / may say "Get Started" not "Login")
+    // Primary CTA on marketing (copy is localized and changes: trial / demo / sign-in wording)
     await expect(
-      page.getByRole("link", { name: /get started|sign in|log in/i }).first(),
+      page
+        .getByRole("link", { name: /start .*trial|explore interactive demo|get started|sign in|log in/i })
+        .first(),
     ).toBeVisible({
       timeout: 15_000,
     });

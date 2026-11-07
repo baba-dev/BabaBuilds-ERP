@@ -44,7 +44,7 @@ async function notifyClients(message: Record<string, string>) {
 }
 
 async function revalidateCorePages() {
-  const urls = ['/dashboard', '/invoice', '/clients', '/proposals', '/expenses', '/tax'];
+  const urls = ['/dashboard', '/income', '/clients', '/proposals', '/expenses', '/tax'];
 
   await Promise.all(
     urls.map(async (url) => {

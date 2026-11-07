@@ -408,3 +408,94 @@ CREATE UNIQUE INDEX "Proposal_proposalNo_workspaceId_key" ON "Proposal"("proposa
 -- CreateIndex
 CREATE INDEX "Task_workspaceId_idx" ON "Task"("workspaceId");
 
+
+-- ============================================================================
+-- Pre-history table shapes required by later migrations
+--
+-- These tables were created in real databases with `prisma db push` and never captured by a
+-- migration, yet five later migrations ALTER / copy from them, so `prisma migrate deploy` failed on
+-- every clean database. Each stub below is the table as that migration expects to find it: the
+-- final schema shape minus exactly the column(s) that migration adds. The remaining drift from
+-- schema.prisma is closed by the final `schema_catch_up` migration.
+-- ============================================================================
+
+
+-- 202604190001_primary_remittance_bridge adds accountHolderName, routingCode, sourceType, isPrimaryRemittance
+CREATE TABLE "BankAccount" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "workspaceId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "bankName" TEXT,
+    "maskedAccountNumber" TEXT,
+    "currency" TEXT NOT NULL DEFAULT 'INR',
+    "openingBalance" DECIMAL NOT NULL DEFAULT 0,
+    "openingBalanceDate" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "currentBalance" DECIMAL,
+    "plaidItemId" TEXT,
+    "plaidAccountId" TEXT,
+    "plaidAccessTokenEncrypted" TEXT,
+    "plaidTransactionsCursor" TEXT,
+    "lastPlaidSyncAt" DATETIME,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "BankAccount_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- 20260428054000_shop_product_visibility_and_commit_hardening adds showInShop, shopSortOrder, shopDescription, shopImageUrl
+CREATE TABLE "Product" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "workspaceId" TEXT NOT NULL,
+    "sku" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "category" TEXT,
+    "unit" TEXT NOT NULL DEFAULT 'pcs',
+    "baselinePrice" DECIMAL NOT NULL DEFAULT 0,
+    "costPrice" DECIMAL NOT NULL DEFAULT 0,
+    "currentStock" INTEGER NOT NULL DEFAULT 0,
+    "safetyStock" INTEGER NOT NULL DEFAULT 5,
+    "status" TEXT NOT NULL DEFAULT 'IN_STOCK',
+    "barcode" TEXT,
+    "imageUrl" TEXT,
+    "location" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "Product_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- 20260704120000_passkey_names adds name
+CREATE TABLE "WebAuthnCredential" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "userId" TEXT NOT NULL,
+    "credentialID" TEXT NOT NULL,
+    "publicKey" TEXT NOT NULL,
+    "counter" INTEGER NOT NULL DEFAULT 0,
+    "transports" TEXT,
+    "deviceType" TEXT,
+    "backedUp" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lastUsedAt" DATETIME,
+    CONSTRAINT "WebAuthnCredential_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- 20260810060000_fail_closed_document_ocr rebuilds this table, copying exactly these columns
+CREATE TABLE "DocumentOcrJob" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "workspaceId" TEXT NOT NULL,
+    "documentId" TEXT NOT NULL,
+    "documentFileId" TEXT NOT NULL,
+    "kind" TEXT NOT NULL DEFAULT 'GENERIC',
+    "status" TEXT NOT NULL DEFAULT 'QUEUED',
+    "provider" TEXT NOT NULL,
+    "attemptCount" INTEGER NOT NULL DEFAULT 0,
+    "errorCode" TEXT,
+    "errorMessage" TEXT,
+    "queuedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "startedAt" DATETIME,
+    "finishedAt" DATETIME,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
+);
+
+-- 20260702103000_email_billing_commercial_models copies Retainer.currency into MailBillingSubscription
+ALTER TABLE "Retainer" ADD COLUMN "currency" TEXT NOT NULL DEFAULT 'INR';

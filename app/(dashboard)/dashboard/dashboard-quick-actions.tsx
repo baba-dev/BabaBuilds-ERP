@@ -13,7 +13,7 @@ export function DashboardQuickActions() {
   const tr = createTranslator(t);
 
   const actions = [
-    { href: "/invoice", label: tr("action_create_invoice", "Create invoice"), icon: FilePlus2 },
+    { href: "/income", label: tr("action_create_invoice", "Create invoice"), icon: FilePlus2 },
     { href: "/proposals", label: tr("action_draft_proposal", "Draft proposal"), icon: Receipt },
     { href: "/shop", label: tr("action_open_shop", "Open shop"), icon: ShoppingBag },
     { href: "/reconciliation", label: tr("action_integrity_check", "Run integrity check"), icon: Shield },

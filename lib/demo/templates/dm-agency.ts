@@ -9,7 +9,7 @@ export const dmAgencyTemplate: DemoTemplateDefinition = {
     countryCode: 'IN',
     baseCurrency: 'INR',
     planTier: 'PRO',
-    subscriptionStatus: 'ACTIVE',
+    subscriptionStatus: 'PRO',
   },
   businessProfile: {
     companyName: 'Nexus Digital Agency',

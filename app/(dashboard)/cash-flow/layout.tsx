@@ -4,8 +4,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirectToLogin } from "@/lib/auth/login-redirect";
 import { prisma } from "@/lib/prisma";
-import { isModuleEnabled } from "@/lib/modules";
+import { getModuleAvailability } from "@/lib/modules";
 import type { ReactNode } from "react";
+import { ModuleUnavailable } from "@/components/modules/ModuleUnavailable";
 
 export const metadata: Metadata = {
   title: "Cash Flow · BabaBuilds ERP",
@@ -27,9 +28,9 @@ export default async function CashFlowLayout({ children }: { children: ReactNode
   const workspaceId = await getWorkspaceId(session.user.id);
   if (!workspaceId) redirect("/dashboard");
 
-  const enabled = await isModuleEnabled(workspaceId, "CASH_FLOW");
-  if (!enabled) {
-    redirect("/settings#workspace-modules");
+  const availability = await getModuleAvailability(workspaceId, "CASH_FLOW");
+  if (availability !== "enabled") {
+    return <ModuleUnavailable moduleKey="CASH_FLOW" reason={availability} />;
   }
 
   return children;

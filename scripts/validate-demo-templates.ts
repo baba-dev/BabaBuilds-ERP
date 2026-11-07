@@ -18,6 +18,15 @@ function main() {
       );
     }
 
+    // Paid-only modules are gated on a PRO/TEAM status (or active trial) with an end date.
+    // The seeder supplies the end date; the template must supply a status that can qualify.
+    const status = String(template.workspace.subscriptionStatus).toUpperCase();
+    if (!['PRO', 'TEAM', 'TRIALING'].includes(status)) {
+      failures.push(
+        `${template.key}: workspace.subscriptionStatus "${template.workspace.subscriptionStatus}" never grants paid module access`,
+      );
+    }
+
     const seededSet = new Set(template.seededModules);
     const missingSeededCoverage = enabledModules.filter((moduleKey) => !seededSet.has(moduleKey));
     if (missingSeededCoverage.length > 0) {

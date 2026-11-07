@@ -4,7 +4,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirectToLogin } from '@/lib/auth/login-redirect';
 import { prisma } from '@/lib/prisma';
-import { isModuleEnabled } from '@/lib/modules';
+import { getModuleAvailability } from '@/lib/modules';
+import { ModuleUnavailable } from '@/components/modules/ModuleUnavailable';
 
 export default async function TaxAdvancedLayout({ children }: { children: ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -18,8 +19,10 @@ export default async function TaxAdvancedLayout({ children }: { children: ReactN
 
   if (!membership?.workspaceId) redirect('/settings');
 
-  const enabled = await isModuleEnabled(membership.workspaceId, 'TAX_ADVANCED');
-  if (!enabled) redirect('/tax');
+  const availability = await getModuleAvailability(membership.workspaceId, 'TAX_ADVANCED');
+  if (availability !== 'enabled') {
+    return <ModuleUnavailable moduleKey="TAX_ADVANCED" reason={availability} />;
+  }
 
   return <>{children}</>;
 }

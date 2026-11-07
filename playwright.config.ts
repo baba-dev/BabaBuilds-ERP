@@ -48,6 +48,11 @@ export default defineConfig({
         'playwright-local-dev-secret-must-be-32chars-min',
       // Playwright runs can create many demo workspaces quickly; relax the demo circuit breaker.
       DEMO_CIRCUIT_BREAKER_THRESHOLD: process.env.DEMO_CIRCUIT_BREAKER_THRESHOLD || '1000',
+      // Per-IP / per-fingerprint demo limits default to 3 per 15 minutes (persisted in the DB). A single
+      // smoke run already uses 3 provisioning calls, so retries or extra specs would hit 429 and
+      // surface as a sign-in timeout. Test servers only; production defaults are untouched.
+      DEMO_IP_RATE_LIMIT: process.env.DEMO_IP_RATE_LIMIT || '1000',
+      DEMO_FINGERPRINT_RATE_LIMIT: process.env.DEMO_FINGERPRINT_RATE_LIMIT || '1000',
     },
     // For smoke debugging we want a deterministic server env.
     // Reusing an existing dev server can hide issues (or keep old env vars) across runs.

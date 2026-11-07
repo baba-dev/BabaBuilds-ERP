@@ -24,6 +24,50 @@ For a brand-new database (local, CI, staging bootstrap):
 
 This yields a deterministic, forward-only history from the first real incremental migration onward.
 
+`npm run check:migrations` runs exactly this flow (in a throwaway copy, so `prisma/dev.db` is never
+touched) and fails if the result differs from `prisma/schema.prisma`. CI runs it on every PR.
+
+## Why the baseline ends with extra tables, and what `schema_catch_up` is
+
+Most of the schema (about three quarters: 115 tables) was historically created in real databases with
+`prisma db push` and never captured in a migration. Two things closed that gap:
+
+- **Baseline appendix.** Five existing migrations ALTER or copy from tables no migration ever created
+  (`BankAccount`, `Product`, `WebAuthnCredential`, `DocumentOcrJob`, `Retainer.currency`). The baseline
+  now ends with those tables in the shape each migration expects (final shape minus exactly the
+  columns that migration adds). This only affects brand-new databases; existing databases never run the baseline.
+- **`20261107100000_schema_catch_up`.** A Prisma-generated migration that brings a baseline-built
+  database to exactly `schema.prisma`. Do not edit it; it is checksummed.
+
+## Existing databases (created with `prisma db push`, e.g. production today)
+
+These already have the full schema. **Do not run the migration SQL on them.** Record the history as
+applied instead, once:
+
+```bash
+for d in $(ls prisma/migrations | grep -E '^[0-9]'); do
+  npx prisma migrate resolve --applied "$d"
+done
+npx prisma migrate status   # "Database schema is up to date!"
+```
+
+`schema_catch_up` rebuilds some tables and **drops columns that `schema.prisma` no longer declares**
+(`AppActivityLog.message/metadataJson/requestId`, `Retainer.taxRate`, 16 columns of
+`TaxDecisionAuditLog`). That is harmless on an empty clean database and destructive on a populated one,
+which is why populated databases must adopt it with `migrate resolve --applied`, never `migrate deploy`.
+
+## Changing the schema
+
+`prisma migrate dev` cannot work in this repo: it builds a shadow database from the migrations alone, and
+the migrations start from the baseline. To add a migration:
+
+1. Edit `prisma/schema.prisma`.
+2. Build a database from the current history (the `check:migrations` flow, or locally: apply the baseline
+   to `prisma/dev.db`, resolve the two placeholders, `prisma migrate deploy`).
+3. Generate the SQL: `prisma migrate diff --from-url file:<that db> --to-schema-datamodel prisma/schema.prisma --script`.
+4. Save it as `prisma/migrations/<UTC timestamp>_<name>/migration.sql` (timestamp after the latest one).
+5. `npm run check:migrations` must pass: it fails if the schema and the migrations disagree.
+
 ## Validation matrix
 
 Use this matrix when validating migration integrity changes:
