@@ -311,7 +311,7 @@ export async function POST(req: Request) {
                   services: [{ amount: decimalToNumber(inv.totalAmount) }],
                   isTaxExempt: Boolean(client.isExport),
                 });
-                const invoiceWithTotals = inv as any;
+                const invoiceWithTotals: { subtotal?: unknown } & typeof inv = inv;
                 const totals = {
                   subtotal: decimalToNumber(invoiceWithTotals.subtotal ?? fallbackTotals.subtotal),
                   taxRate: invoiceWithTotals.taxRate ?? fallbackTotals.taxRate,

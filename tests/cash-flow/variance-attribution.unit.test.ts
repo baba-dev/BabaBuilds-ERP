@@ -28,7 +28,7 @@ function summarizeDrivers(args: {
   };
 
   const projAgg = agg(proj);
-  const actAgg = agg(act as any);
+  const actAgg = agg(act);
 
   const out = Array.from(new Set([...projAgg.keys(), ...actAgg.keys()])).map((key) => {
     const p = projAgg.get(key);

@@ -70,7 +70,7 @@ interface ActivityLog {
   entityType: string | null;
   entityId: string | null;
   status: string;
-  metadata: any;
+  metadata: unknown;
   ipAddress: string | null;
   userAgent: string | null;
   correlationId: string | null;

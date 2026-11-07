@@ -14,7 +14,7 @@ import {
 import { useTranslations, useLocale } from "next-intl";
 import { DemoLaunchButton } from "@/components/landing/persona/DemoLaunchButton";
 
-const LOCALIZED_COPY: Record<string, any> = {
+const LOCALIZED_COPY = {
   en: {
     badge: "Interactive Playgrounds",
     title: "Choose your sandbox environment",

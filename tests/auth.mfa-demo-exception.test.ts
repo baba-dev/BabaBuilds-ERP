@@ -18,7 +18,8 @@ vi.mock("@/lib/prisma", () => ({
 }));
 
 vi.mock("@/lib/auth-observability", () => ({ recordAuthFailure: mocks.recordAuthFailure }));
-vi.mock("@/lib/security/access-risk", async () => ({
+vi.mock("@/lib/security/access-risk", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/security/access-risk")>()),
   HIGH_RISK_MAGIC_LINK_ERROR_CODE: "HIGH_RISK_MAGIC_LINK_BLOCKED",
   hasHighRiskRole: mocks.hasHighRiskRole,
   isEmailMagicLinkAllowedForRoles: mocks.isEmailMagicLinkAllowedForRoles,
@@ -47,7 +48,7 @@ describe("authOptions.callbacks.signIn MFA policy", () => {
       account: { provider: "google", type: "oauth" },
     } as never);
 
-    expect(result).toBe("/login?error=MFA_POLICY_BLOCK");
+    expect(result).toBe("/login?error=MFA_POLICY_BLOCK&provider=google");
     expect(mocks.recordAuthFailure).toHaveBeenCalledWith(
       expect.objectContaining({ code: "MFA_POLICY_BLOCK", provider: "google" }),
     );

@@ -91,7 +91,7 @@ export type ForecastSourceData = {
     paymentTermsDays: number | null;
     status: "PENDING" | "PARTIALLY_PAID" | "PAID";
     totalAmount: Decimal;
-    amountReceived: number | null;
+    amountReceived: number | Decimal | null;
     clientId: string | null;
   }>;
   clientPaymentBehavior: Record<

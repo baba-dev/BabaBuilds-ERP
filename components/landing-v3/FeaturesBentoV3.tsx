@@ -64,10 +64,10 @@ export default function FeaturesBentoV3() {
                     <Icon className="h-6 w-6" />
                   </div>
                   <h3 className="mb-2 text-xl font-bold text-zinc-900 dark:text-zinc-100">
-                    {t(`items.${feature.id}.title` as any)}
+                    {t(`items.${feature.id}.title` as Parameters<typeof t>[0])}
                   </h3>
                   <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
-                    {t(`items.${feature.id}.shortDesc` as any)}
+                    {t(`items.${feature.id}.shortDesc` as Parameters<typeof t>[0])}
                   </p>
                 </m.div>
               );
@@ -84,13 +84,13 @@ export default function FeaturesBentoV3() {
             <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
               {selectedFeature && <selectedFeature.icon className="h-5 w-5" />}
             </div>
-            {selectedFeature && t(`items.${selectedFeature.id}.title` as any)}
+            {selectedFeature && t(`items.${selectedFeature.id}.title` as Parameters<typeof t>[0])}
           </div>
         }
       >
         <div className="py-4 text-zinc-600 dark:text-zinc-300">
           <p className="text-base leading-relaxed">
-            {selectedFeature && t(`items.${selectedFeature.id}.details` as any)}
+            {selectedFeature && t(`items.${selectedFeature.id}.details` as Parameters<typeof t>[0])}
           </p>
         </div>
       </ResponsiveDialog>

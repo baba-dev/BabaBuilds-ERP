@@ -1,7 +1,7 @@
 "use client";
 
 import { TrendingUp, Clock, Filter, Activity, CheckCircle2, ArrowUpRight, Sparkles, Lock } from "lucide-react";
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { motion, type Variants } from "framer-motion";
 import {

@@ -22,7 +22,7 @@ export function invoiceToForecastLines(args: {
     clientId: string | null;
     status: "PENDING" | "PARTIALLY_PAID" | "PAID";
     totalAmount: Prisma.Decimal;
-    amountReceived: number | null;
+    amountReceived: number | Prisma.Decimal | null;
   };
   workspaceDefaults: {
     paymentTermsDays: number;
@@ -396,7 +396,7 @@ export async function loadForecastSourceData(args: {
   return {
     openingCash,
     bankTransactions,
-    invoices: invoices as any,
+    invoices,
     clientPaymentBehavior: Object.fromEntries(
       (paymentBehaviors ?? []).map((b) => [
         b.clientId,

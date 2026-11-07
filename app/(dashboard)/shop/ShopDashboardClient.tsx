@@ -119,6 +119,30 @@ const SOCIAL_PLATFORM_OPTIONS: SocialPlatform[] = [
   "youtube", "whatsapp", "tiktok", "pinterest", "github", "custom",
 ];
 
+type RawRecord = Record<string, unknown>;
+
+/** Normalises storefront content returned by the API into a safe form draft. */
+function toShopContentDraft(raw: unknown): ShopContentDraft {
+  const c: RawRecord = raw && typeof raw === "object" ? (raw as RawRecord) : {};
+  const social = Array.isArray(c.social) ? (c.social as RawRecord[]) : [];
+  const faq = Array.isArray(c.faq) ? (c.faq as RawRecord[]) : [];
+  return {
+    announcement: typeof c.announcement === "string" ? c.announcement : "",
+    aboutMd: typeof c.aboutMd === "string" ? c.aboutMd : "",
+    footerNote: typeof c.footerNote === "string" ? c.footerNote : "",
+    social: social.map((s) => ({
+      platform: SOCIAL_PLATFORM_OPTIONS.includes(s?.platform as SocialPlatform) ? (s.platform as SocialPlatform) : "custom",
+      url: typeof s?.url === "string" ? s.url : "",
+      label: typeof s?.label === "string" ? s.label : "",
+    })),
+    faq: faq.map((f) => ({
+      q: typeof f?.q === "string" ? f.q : "",
+      a: typeof f?.a === "string" ? f.a : "",
+    })),
+    showAiAssist: c.showAiAssist !== false,
+  };
+}
+
 export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities }) {
   const { fCurrency } = useFormat();
   const [orders, setOrders] = useState<ShopOrder[]>([]);
@@ -225,25 +249,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
         const data = await res.json().catch(() => null);
         const c = data?.content;
         if (!active || !c) return;
-        const draft: ShopContentDraft = {
-          announcement: typeof c.announcement === "string" ? c.announcement : "",
-          aboutMd: typeof c.aboutMd === "string" ? c.aboutMd : "",
-          footerNote: typeof c.footerNote === "string" ? c.footerNote : "",
-          social: Array.isArray(c.social)
-            ? c.social.map((s: any) => ({
-                platform: SOCIAL_PLATFORM_OPTIONS.includes(s?.platform) ? s.platform : "custom",
-                url: typeof s?.url === "string" ? s.url : "",
-                label: typeof s?.label === "string" ? s.label : "",
-              }))
-            : [],
-          faq: Array.isArray(c.faq)
-            ? c.faq.map((f: any) => ({
-                q: typeof f?.q === "string" ? f.q : "",
-                a: typeof f?.a === "string" ? f.a : "",
-              }))
-            : [],
-          showAiAssist: c.showAiAssist !== false,
-        };
+        const draft: ShopContentDraft = toShopContentDraft(c);
         setContent(draft);
         setContentInitial(draft);
       } catch {
@@ -285,26 +291,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
         return;
       }
       toast.success("Storefront content saved.", { id: toastId });
-      const c = (data as any)?.content || {};
-      const next: ShopContentDraft = {
-        announcement: typeof c.announcement === "string" ? c.announcement : "",
-        aboutMd: typeof c.aboutMd === "string" ? c.aboutMd : "",
-        footerNote: typeof c.footerNote === "string" ? c.footerNote : "",
-        social: Array.isArray(c.social)
-          ? c.social.map((s: any) => ({
-              platform: SOCIAL_PLATFORM_OPTIONS.includes(s?.platform) ? s.platform : "custom",
-              url: typeof s?.url === "string" ? s.url : "",
-              label: typeof s?.label === "string" ? s.label : "",
-            }))
-          : [],
-        faq: Array.isArray(c.faq)
-          ? c.faq.map((f: any) => ({
-              q: typeof f?.q === "string" ? f.q : "",
-              a: typeof f?.a === "string" ? f.a : "",
-            }))
-          : [],
-        showAiAssist: c.showAiAssist !== false,
-      };
+      const next: ShopContentDraft = toShopContentDraft((data as { content?: unknown } | null)?.content);
       setContent(next);
       setContentInitial(next);
     } catch {

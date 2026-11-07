@@ -172,8 +172,8 @@ export default function RetainersHub() {
         const catData = await catRes.json().catch(() => null);
         if (!clientRes.ok) throw new Error(getApiErrorMessage(clientData, "Failed to load clients"));
         if (!catRes.ok) throw new Error(getApiErrorMessage(catData, "Failed to load services"));
-        const parsedClients = Array.isArray(clientData) ? clientData : (clientData as any)?.data;
-        const parsedCatalog = Array.isArray(catData) ? catData : (catData as any)?.data;
+        const parsedClients = Array.isArray(clientData) ? clientData : (clientData as { data?: unknown } | null)?.data;
+        const parsedCatalog = Array.isArray(catData) ? catData : (catData as { data?: unknown } | null)?.data;
         setClients(Array.isArray(parsedClients) ? parsedClients : []);
         setCatalog(Array.isArray(parsedCatalog) ? parsedCatalog : []);
       }

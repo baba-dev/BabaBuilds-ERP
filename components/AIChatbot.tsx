@@ -60,7 +60,7 @@ type PendingToolConfirmation = {
   requestMessage: string;
 };
 
-function getFriendlyChatError(payload: any, status: number): { content: string; canRetry: boolean } {
+function getFriendlyChatError(payload: { code?: unknown; error?: unknown; [key: string]: unknown } | null | undefined, status: number): { content: string; canRetry: boolean } {
   const code = String(payload?.code || "").toUpperCase();
   const raw = typeof payload?.error === "string" ? payload.error : "";
 

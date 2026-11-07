@@ -57,15 +57,39 @@ type TaxDashboardClientProps = {
   taxAdvancedEnabled: boolean;
 };
 
+type InvestmentRow = {
+  id: string;
+  date: string;
+  assetName: string;
+  category: string;
+  amount: number | string;
+  [key: string]: unknown;
+};
+
+type TaxAuditRow = {
+  id: string;
+  createdAt: string;
+  actorEmail?: string | null;
+  actorUserId?: string | null;
+  action: string;
+  decisionSource: string;
+  scopeType: string;
+  scopeRef?: string | null;
+  rate?: number | null;
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
+  reason?: string | null;
+};
+
 export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardClientProps) {
   const t = useTranslations("Tax");
   const tr = createTranslator(t);
-  const [investments, setInvestments] = useState<any[]>([]);
+  const [investments, setInvestments] = useState<InvestmentRow[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [taxAuditRows, setTaxAuditRows] = useState<any[]>([]);
+  const [taxAuditRows, setTaxAuditRows] = useState<TaxAuditRow[]>([]);
   const [taxAuditPage, setTaxAuditPage] = useState(1);
   const [taxAuditTotalPages, setTaxAuditTotalPages] = useState(1);
   const [taxAuditFilters, setTaxAuditFilters] = useState({
@@ -243,7 +267,7 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
   const filteredInvestments = investments.filter((inv) =>
     `${inv.assetName} ${inv.category}`.toLowerCase().includes(tableState.search.toLowerCase()),
   );
-  const columns: DataTableColumnDef<any>[] = [
+  const columns: DataTableColumnDef<InvestmentRow>[] = [
     { id: "date", header: t("col_date"), sortable: true, sortAccessor: (row) => new Date(row.date).getTime(), cell: (row) => <span className="text-xs font-medium dark:text-zinc-300">{format(new Date(row.date), safeDateFormat)}</span>, hideable: true },
     { id: "asset", header: t("col_asset"), sortable: true, accessor: (row) => row.assetName, cell: (row) => <span className="font-bold text-sm text-zinc-900 dark:text-zinc-100">{row.assetName}</span>, hideable: true },
     {

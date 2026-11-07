@@ -90,7 +90,7 @@ const basePayload = {
 };
 
 test("parses serialized money values from dashboard payload", () => {
-  const parsed = parseDashboardResponse(basePayload) as any;
+  const parsed = parseDashboardResponse(basePayload);
 
   assert.ok(parsed);
   assert.equal(parsed?.financialPulse.billedRevenue, 1000.1);
@@ -98,12 +98,12 @@ test("parses serialized money values from dashboard payload", () => {
   assert.equal(parsed?.salesAndShop.shopRevenuePreviousMonth, 210);
   assert.equal(parsed?.salesAndShop.revenueChangeVsPriorMonthPct, 90.2);
   assert.equal(parsed?.salesAndShop.orderChangeVsPrior30DaysPct, 100);
-  assert.equal(parsed?.salesAndShop.topProducts[0].revenue, 1000.99);
-  assert.equal(parsed?.charts.revenueVsExpense[0].revenue, 100);
+  assert.equal((parsed?.salesAndShop.topProducts as Array<{ revenue: number }>)[0].revenue, 1000.99);
+  assert.equal((parsed?.charts.revenueVsExpense as Array<{ revenue: number }>)[0].revenue, 100);
 });
 
 test("preserves expanded dashboard response contract keys", () => {
-  const parsed = parseDashboardResponse(basePayload) as any;
+  const parsed = parseDashboardResponse(basePayload);
 
   assert.ok(parsed);
   assert.deepEqual(

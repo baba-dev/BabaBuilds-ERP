@@ -11,8 +11,18 @@ import Link from "next/link";
 import { getErrorMessage } from "@/lib/error-utils";
 import { getApiErrorMessage } from "@/lib/error-utils";
 
+type PurchaseOrderRow = {
+  id: string;
+  poNumber: string;
+  supplier: string;
+  status: string;
+  totalAmount: number;
+  createdAt: string;
+  items: unknown[];
+};
+
 export default function PurchaseOrdersHub() {
-  const [pos, setPos] = useState<any[]>([]);
+  const [pos, setPos] = useState<PurchaseOrderRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [receivingId, setReceivingId] = useState<string | null>(null);
   

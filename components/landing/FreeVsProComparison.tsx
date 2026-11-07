@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useTranslations, useLocale } from "next-intl";
 import { emitMarketingAnalyticsEvent } from "@/lib/marketing-analytics";
 
-const LOCALIZED_COPY: Record<string, any> = {
+const LOCALIZED_COPY = {
   en: {
     badge: "Feature Directory",
     title: "Free Sandbox vs. Active Operations",

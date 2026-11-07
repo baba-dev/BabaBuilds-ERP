@@ -114,7 +114,7 @@ export default async function PipelineDashboardPage({
       orderBy: { dateCreated: "desc" },
     });
 
-    const pipelineRows = getProposalPipelineRows(proposals as any);
+    const pipelineRows = getProposalPipelineRows(proposals);
 
     const targetRows = pipelineRows.filter((row) => {
       if (filter === "stalled") return row.isStalled;
@@ -167,7 +167,7 @@ export default async function PipelineDashboardPage({
     orderBy: { dateCreated: 'desc' }
   });
 
-  const pipelineRows = getProposalPipelineRows(proposals as any);
+  const pipelineRows = getProposalPipelineRows(proposals);
   const summary = getProposalPipelineSummary(pipelineRows);
 
   const filteredRows = pipelineRows.filter((row) => {

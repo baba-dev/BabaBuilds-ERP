@@ -48,7 +48,7 @@ export async function recomputeClientPaymentBehavior(args: {
     const clientId = inv.clientId;
     if (!clientId) continue;
     const arr = byClient.get(clientId) ?? [];
-    arr.push(inv as any);
+    arr.push(inv);
     byClient.set(clientId, arr);
   }
 

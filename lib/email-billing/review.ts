@@ -20,7 +20,7 @@ export async function createMailBillingReviewItem(input: {
   const item = await prisma.mailBillingReviewItem.create({ data: {
     workspaceId: input.workspaceId, domainId: input.domainId ?? null, subscriptionId: input.subscriptionId ?? null, serverId: input.serverId ?? null,
     type: input.type, severity: input.severity ?? 'INFO', title: input.title, description: input.description, suggestedAction: input.suggestedAction,
-    oldValueJson: input.oldValueJson as Prisma.InputJsonValue, newValueJson: input.newValueJson as Prisma.InputJsonValue, metadataJson: input.metadataJson as any,
+    oldValueJson: input.oldValueJson as Prisma.InputJsonValue, newValueJson: input.newValueJson as Prisma.InputJsonValue, metadataJson: input.metadataJson as Prisma.InputJsonValue,
   }});
   return { item, created: true };
 }
