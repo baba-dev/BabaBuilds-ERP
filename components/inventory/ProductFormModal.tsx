@@ -1,5 +1,6 @@
 "use client";
 
+import type { InventoryProduct } from "@/lib/types/inventory";
 import { useEffect, useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ import { getErrorMessage } from "@/lib/error-utils";
 interface ProductFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  productToEdit?: any;
+  productToEdit?: InventoryProduct;
   onSuccess: () => void;
 }
 

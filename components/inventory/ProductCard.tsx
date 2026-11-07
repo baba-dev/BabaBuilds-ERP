@@ -1,5 +1,6 @@
 "use client";
 
+import type { InventoryProduct } from "@/lib/types/inventory";
 import { useFormat } from "@/hooks/use-format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,9 +8,9 @@ import { Tag, PackageSearch, AlertTriangle, AlertCircle, RefreshCw } from "lucid
 import { cn } from "@/lib/utils";
 
 interface ProductCardProps {
-  product: any;
-  onAdjust: (product: any) => void;
-  onClick: (product: any) => void;
+  product: InventoryProduct;
+  onAdjust: (product: InventoryProduct) => void;
+  onClick: (product: InventoryProduct) => void;
 }
 
 export function ProductCard({ product, onAdjust, onClick }: ProductCardProps) {

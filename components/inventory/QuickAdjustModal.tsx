@@ -1,5 +1,6 @@
 "use client";
 
+import type { InventoryProduct } from "@/lib/types/inventory";
 import { useState } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -15,7 +16,7 @@ import { getErrorMessage } from "@/lib/error-utils";
 interface QuickAdjustModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  product: any;
+  product: InventoryProduct | null;
   onAdjusted: () => void;
 }
 
@@ -35,6 +36,7 @@ export function QuickAdjustModal({ open, onOpenChange, product, onAdjusted }: Qu
       toast.error("Please provide a reason for the adjustment.");
       return;
     }
+    if (!product) return;
 
     setIsSubmitting(true);
     const toastId = toast.loading("Adjusting stock...");

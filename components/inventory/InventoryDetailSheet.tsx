@@ -1,5 +1,6 @@
 "use client";
 
+import type { InventoryMovement, InventoryProduct } from "@/lib/types/inventory";
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import {
@@ -11,11 +12,11 @@ import { useFormat } from "@/hooks/use-format";
 interface InventoryDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  product: any;
+  product: InventoryProduct | null;
 }
 
 export function InventoryDetailSheet({ open, onOpenChange, product }: InventoryDetailSheetProps) {
-  const [movements, setMovements] = useState<any[]>([]);
+  const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const { fCurrency } = useFormat();

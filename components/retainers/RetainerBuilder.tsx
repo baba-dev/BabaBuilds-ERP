@@ -30,7 +30,24 @@ type FormData = {
   items: RetainerItemInput[];
 };
 
-export default function RetainerBuilder({ clients, catalog, onSuccess, onCancel, defaultClient, defaultService }: any) {
+type BuilderClient = { id: string; name: string };
+type BuilderCatalogItem = {
+  id: string;
+  name: string;
+  defaultPrice: number | string;
+  sacCode?: { igstRate?: number } | null;
+};
+
+interface RetainerBuilderProps {
+  clients: BuilderClient[];
+  catalog: BuilderCatalogItem[];
+  onSuccess: () => void;
+  onCancel: () => void;
+  defaultClient?: string;
+  defaultService?: string;
+}
+
+export default function RetainerBuilder({ clients, catalog, onSuccess, onCancel, defaultClient, defaultService }: RetainerBuilderProps) {
   const t = useTranslations('Retainers');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -57,7 +74,7 @@ export default function RetainerBuilder({ clients, catalog, onSuccess, onCancel,
   const formValues = watch();
 
   const handleServiceSelect = (index: number, serviceId: string) => {
-    const service = catalog.find((s: any) => s.id === serviceId);
+    const service = catalog.find((s) => s.id === serviceId);
     if (service) {
       setValue(`items.${index}.serviceTemplateId`, service.id);
       setValue(`items.${index}.title`, service.name);
@@ -71,7 +88,7 @@ export default function RetainerBuilder({ clients, catalog, onSuccess, onCancel,
     if (formValues.frequency === "QUARTERLY") multiplier = 1/3;
     if (formValues.frequency === "ANNUALLY") multiplier = 1/12;
     
-    const subtotal = formValues.items.reduce((sum: number, item: any) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0);
+    const subtotal = formValues.items.reduce((sum: number, item) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0);
     return subtotal * multiplier;
   };
 
@@ -80,7 +97,7 @@ export default function RetainerBuilder({ clients, catalog, onSuccess, onCancel,
     const date = new Date(formValues.nextBillingDate);
     const day = date.getDate();
     const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-    const subtotal = formValues.items.reduce((sum: number, item: any) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0);
+    const subtotal = formValues.items.reduce((sum: number, item) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0);
     if (day > 1) {
       const remainingDays = daysInMonth - day + 1;
       return (subtotal / daysInMonth) * remainingDays;
@@ -149,7 +166,7 @@ export default function RetainerBuilder({ clients, catalog, onSuccess, onCancel,
                   <SelectValue placeholder={t('select_client_builder_ph')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {clients?.map((c: any) => (
+                  {clients?.map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -200,7 +217,7 @@ export default function RetainerBuilder({ clients, catalog, onSuccess, onCancel,
               </Button>
             </div>
 
-            {fields.map((field: any, index: number) => (
+            {fields.map((field, index: number) => (
               <div key={field.id} className="grid grid-cols-12 gap-3 items-end bg-zinc-50 dark:bg-zinc-900 p-4 rounded-lg border border-zinc-200 dark:border-zinc-800">
                 <div className="col-span-12 md:col-span-4 space-y-2">
                   <Label className="text-xs font-bold uppercase text-zinc-500">{t('col_service_template')}</Label>
@@ -210,7 +227,7 @@ export default function RetainerBuilder({ clients, catalog, onSuccess, onCancel,
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="custom">{t('custom_service_opt')}</SelectItem>
-                      {catalog?.map((c: any) => (
+                      {catalog?.map((c) => (
                         <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                       ))}
                     </SelectContent>
