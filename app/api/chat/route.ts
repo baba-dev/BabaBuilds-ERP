@@ -239,7 +239,7 @@ async function getClientSummary(clientName: string, workspaceId: string) {
     }
 
     const invoiceStats = await prisma.invoice.aggregate({
-      where: { clientId: client.id, workspaceId },
+      where: { clientId: client.id, workspaceId, status: { not: 'VOID' } },
       _sum: { totalAmount: true },
       _count: true,
     });
@@ -838,6 +838,7 @@ async function convertProposalToInvoice(proposalNo: string, workspaceId: string)
     const monthCap = await assertFreeTierMonthlyInvoiceAllowed(workspaceId, new Date());
     if (monthCap) return JSON.stringify({ error: monthCap.message });
 
+    const chatWorkspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { baseCurrency: true } });
     const newInvoice = await prisma.invoice.create({
       data: {
         workspaceId,
@@ -848,6 +849,13 @@ async function convertProposalToInvoice(proposalNo: string, workspaceId: string)
         clientName: proposal.client?.name || 'Unknown Client',
         serviceDescription: proposal.title,
         totalAmount: proposal.totalAmount,
+        grandTotal: proposal.totalAmount,
+        baseGrandTotal: proposal.totalAmount,
+        currency: chatWorkspace?.baseCurrency || 'INR',
+        source: 'PROPOSAL',
+        sourceProposalId: proposal.id,
+        dueDate: new Date(Date.now() + 7 * 86_400_000),
+        paymentTermsDays: 7,
         status: 'PENDING',
         pdfPath: '',
       },
@@ -1089,7 +1097,7 @@ async function getInvestmentsList(workspaceId: string) {
 async function calculateEstimatedTax(workspaceId: string) {
   try {
     const revenueAgg = await prisma.invoice.aggregate({
-      where: { workspaceId },
+      where: { workspaceId, status: { not: 'VOID' } },
       _sum: { totalAmount: true },
     });
     const expenseAgg = await prisma.expense.aggregate({
@@ -1722,7 +1730,7 @@ export async function POST(request: Request) {
 
     const revenueAggregation = await prisma.invoice.aggregate({
       _sum: { totalAmount: true },
-      where: { workspaceId },
+      where: { workspaceId, status: { not: 'VOID' } },
     });
     const totalRevenue = revenueAggregation._sum.totalAmount || 0;
 

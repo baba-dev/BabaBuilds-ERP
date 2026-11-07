@@ -16,6 +16,8 @@ const mocks = vi.hoisted(() => ({
     product: { findMany: vi.fn(), findFirst: vi.fn() },
     businessProfile: { findUnique: vi.fn() },
     invoice: { create: vi.fn() },
+    invoicePayment: { create: vi.fn() },
+    workspace: { findUnique: vi.fn() },
     proposal: { create: vi.fn() },
     retainer: { create: vi.fn() },
   },
@@ -63,6 +65,8 @@ describe("POST /api/pos/checkout", () => {
     tx.product.findMany.mockResolvedValue([]);
     tx.businessProfile.findUnique.mockResolvedValue({ invoicePrefix: "BB" });
     tx.invoice.create.mockResolvedValue({ id: "invoice_1" });
+    tx.invoicePayment.create.mockResolvedValue({ id: "payment_1" });
+    tx.workspace.findUnique.mockResolvedValue({ baseCurrency: "INR" });
     tx.proposal.create.mockResolvedValue({ id: "proposal_1" });
     tx.retainer.create.mockResolvedValue({ id: "retainer_1" });
   });

@@ -220,6 +220,7 @@ async function buildDashboardPayload(
       prisma.invoice.findMany({
         where: {
           workspaceId,
+          status: { not: "VOID" },
           ...(fyRange
             ? { invoiceDate: { gte: fyRange.start, lt: fyRange.endExclusive } }
             : { financialYear: fy }),
@@ -242,7 +243,7 @@ async function buildDashboardPayload(
       const openInvoices = await prisma.invoice.findMany({
         where: {
           workspaceId,
-          status: { not: "PAID" },
+          status: { notIn: ["PAID", "VOID"] },
           invoiceDate: { gte: attentionStart },
         },
         select: {

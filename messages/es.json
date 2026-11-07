@@ -3120,5 +3120,231 @@
       },
       "securityNote": "Las cuentas de Propietario y Administrador se protegen con passkey o Google."
     }
+  },
+  "Income": {
+    "title": "Facturas e ingresos",
+    "description": "Crea, envía y cobra cada factura, y ve lo que aún se te debe.",
+    "newInvoice": "Nueva factura",
+    "export": "Exportar CSV",
+    "status": {
+      "PENDING": "Pendiente",
+      "PARTIALLY_PAID": "Pago parcial",
+      "PAID": "Pagada",
+      "OVERDUE": "Vencida",
+      "VOID": "Anulada"
+    },
+    "source": {
+      "MANUAL": "Manual",
+      "PROPOSAL": "Propuesta",
+      "RETAINER": "Iguala",
+      "POS": "TPV",
+      "SHOP": "Tienda",
+      "API": "API"
+    },
+    "kpi": {
+      "noPrevious": "Sin periodo anterior para comparar",
+      "vsPrevious": "frente al periodo anterior",
+      "billed": "Facturado",
+      "billedHint": "Total de facturas emitidas en este periodo (sin anuladas), en tu moneda base.",
+      "convertedNote": "Las facturas en otra moneda se convierten a {currency} con el tipo guardado en cada factura.",
+      "collected": "Cobrado",
+      "collectedHint": "Pagos recibidos en este periodo, descontando reversiones.",
+      "outstanding": "Pendiente de cobro",
+      "outstandingHint": "Dinero que aún se debe en facturas abiertas ahora mismo, sin importar el periodo.",
+      "overdueShare": "El {pct}% de lo pendiente está vencido",
+      "overdue": "{amount} vencido ({count})",
+      "nothingOverdue": "Nada vencido",
+      "openCount": "{count} abiertas",
+      "daysToPay": "Días medios de cobro",
+      "daysToPayHint": "Tiempo medio desde la fecha de factura hasta el pago final, en facturas pagadas por completo en este periodo.",
+      "days": "{count} días",
+      "noPaidYet": "Ninguna factura pagada por completo en este periodo",
+      "daysToPayBasis": "De la fecha de factura al pago final"
+    },
+    "taxCard": {
+      "title": "Estimación fiscal",
+      "badge": "Estimación",
+      "on": "Activada",
+      "off": "Desactivada",
+      "toggle": "Mostrar la estimación fiscal",
+      "basis": "{rate}% de {amount} cobrados en este periodo",
+      "enableDescription": "Para profesionales del régimen presuntivo de la India: muestra el {rate}% de lo que cobras como renta imponible estimada. Solo una estimación, no asesoría fiscal.",
+      "gstTitle": "Umbral de registro de GST",
+      "gstDescription": "{turnover} de {threshold} facturados este ejercicio",
+      "nearThreshold": "Te acercas al umbral de registro. Consúltalo con tu contador.",
+      "disclaimer": "Los umbrales varían según el estado y el tipo de negocio. Confírmalo con tu asesor fiscal.",
+      "saveFailed": "No se pudo guardar este ajuste."
+    },
+    "filters": {
+      "search": "Buscar número de factura o cliente",
+      "period": "Periodo",
+      "allTime": "Todo el tiempo",
+      "fy": "Ejercicio {fy}",
+      "source": "Origen",
+      "allSources": "Todos los orígenes",
+      "currency": "Moneda",
+      "allCurrencies": "Todas las monedas",
+      "status": "Estado",
+      "all": "Todas",
+      "client": "Cliente: {name}",
+      "clear": "Quitar filtros"
+    },
+    "table": {
+      "sortBy": "Ordenar por {column}",
+      "daysLate": "{days} d de retraso",
+      "dueToday": "vence hoy",
+      "dueIn": "en {days} d",
+      "selectAll": "Seleccionar todas las facturas de esta página",
+      "selectRow": "Seleccionar la factura {number}",
+      "invoice": "Factura",
+      "client": "Cliente",
+      "issued": "Emitida",
+      "due": "Vence",
+      "amount": "Importe",
+      "balance": "Saldo",
+      "status": "Estado",
+      "actions": "Acciones",
+      "paymentLink": "Enlace de pago",
+      "range": "{from}–{to} de {total}",
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "page": "Página {page} de {pages}"
+    },
+    "actions": {
+      "more": "Más acciones",
+      "recordPayment": "Registrar pago",
+      "open": "Ver detalles",
+      "sendInvoice": "Enviar factura por correo",
+      "sendReminder": "Enviar recordatorio",
+      "download": "Descargar PDF",
+      "copyNumber": "Copiar número de factura",
+      "delete": "Eliminar factura",
+      "void": "Anular factura"
+    },
+    "drawer": {
+      "loading": "Cargando factura",
+      "issued": "Emitida",
+      "due": "Vence",
+      "source": "Origen",
+      "period": "Periodo facturado",
+      "currency": "Moneda",
+      "sent": "Último envío",
+      "notSent": "Aún no enviada",
+      "voided": "Esta factura está anulada",
+      "items": "Conceptos",
+      "description": "Descripción",
+      "qty": "Cant.",
+      "amount": "Importe",
+      "subtotal": "Subtotal",
+      "tax": "Impuesto",
+      "total": "Total",
+      "received": "Recibido",
+      "balance": "Saldo pendiente",
+      "payments": "Pagos",
+      "noPayments": "Aún no hay pagos registrados.",
+      "reversed": "Revertido: {reason}",
+      "reverse": "Revertir",
+      "timeline": "Actividad",
+      "noEvents": "Sin actividad todavía."
+    },
+    "payment": {
+      "title": "Registrar pago",
+      "description": "Factura {number} · saldo {balance}",
+      "amount": "Importe recibido",
+      "fullBalance": "Usar el saldo completo",
+      "exceeds": "Es más que el saldo de {balance}.",
+      "date": "Fecha de recepción",
+      "method": "Método",
+      "methods": {
+        "BANK_TRANSFER": "Transferencia bancaria",
+        "UPI": "UPI",
+        "CARD": "Tarjeta",
+        "CASH": "Efectivo",
+        "CHEQUE": "Cheque",
+        "PAYMENT_LINK": "Enlace de pago",
+        "OTHER": "Otro"
+      },
+      "reference": "Referencia",
+      "referencePlaceholder": "UTR, n.º de cheque o ID de transacción",
+      "withholding": "El cliente retuvo impuestos en origen (TDS)",
+      "withholdingHint": "Registra la retención para tu declaración. Requiere permiso fiscal.",
+      "withholdingRate": "Tasa de TDS (%)",
+      "notes": "Notas",
+      "failed": "No se pudo registrar el pago.",
+      "success": "Pago registrado",
+      "cancel": "Cancelar",
+      "submit": "Registrar pago"
+    },
+    "reason": {
+      "label": "Motivo",
+      "cancel": "Cancelar"
+    },
+    "void": {
+      "title": "Anular la factura {number}",
+      "description": "La factura y su número se conservan. Se emite una nota de crédito, se devuelve el stock y la factura sale de los totales de ingresos, impuestos y pendientes. No se puede deshacer.",
+      "confirm": "Anular factura",
+      "placeholder": "Por ejemplo: cliente equivocado, duplicada o trabajo cancelado",
+      "failed": "No se pudo anular la factura.",
+      "success": "Factura anulada. Nota de crédito {number} emitida."
+    },
+    "reverse": {
+      "title": "Revertir pago",
+      "description": "El pago queda registrado como revertido y se restablece el saldo de la factura.",
+      "confirm": "Revertir pago",
+      "placeholder": "Por ejemplo: cheque rebotado o error de captura",
+      "failed": "No se pudo revertir el pago.",
+      "success": "Pago revertido"
+    },
+    "delete": {
+      "title": "¿Eliminar la factura {number}?",
+      "description": "Esta factura nunca se envió ni se pagó, así que puede eliminarse. Las facturas enviadas o pagadas deben anularse.",
+      "cancel": "Cancelar",
+      "confirm": "Eliminar factura",
+      "failed": "No se pudo eliminar la factura.",
+      "success": "Factura eliminada"
+    },
+    "events": {
+      "CREATED": "Factura creada",
+      "SENT": "Factura enviada por correo",
+      "REMINDER_SENT": "Recordatorio enviado",
+      "PAYMENT_RECORDED": "Pago registrado",
+      "PAYMENT_REVERSED": "Pago revertido",
+      "VOIDED": "Factura anulada",
+      "STOCK_COMMITTED": "Stock descontado",
+      "STOCK_RESTORED": "Stock restituido"
+    },
+    "empty": {
+      "title": "Aún no hay facturas",
+      "description": "Crea tu primera factura o convierte una propuesta aceptada en una.",
+      "cta": "Crear factura",
+      "filteredTitle": "Ninguna factura coincide con estos filtros",
+      "filteredDescription": "Prueba otra búsqueda o quita los filtros."
+    },
+    "error": {
+      "summary": "No se pudieron cargar los totales.",
+      "retry": "Reintentar",
+      "load": "No se pudieron cargar las facturas."
+    },
+    "bulk": {
+      "label": "Acciones en lote",
+      "selected": "{count} seleccionadas",
+      "send": "Enviar facturas",
+      "remind": "Enviar recordatorios",
+      "clear": "Quitar selección",
+      "result": "{ok} enviadas, {failed} con error"
+    },
+    "toast": {
+      "deepLinkMissing": "No se encontró esa factura.",
+      "sending": "Enviando…",
+      "invoiceSent": "Factura enviada por correo",
+      "reminderSent": "Recordatorio enviado",
+      "sendFailed": "No se pudo enviar el correo.",
+      "copied": "Copiado"
+    },
+    "new": {
+      "title": "Nueva factura",
+      "description": "Genera una factura lista para impuestos, con enlace de pago opcional y envío inmediato por correo.",
+      "back": "Volver a facturas"
+    }
   }
 }

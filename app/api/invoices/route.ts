@@ -1,84 +1,115 @@
-import { NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { INVOICE_STATUS } from '@/lib/invoice-status';
-import { serializeMoney, toDecimal } from '@/lib/money';
-import { withPermission } from '@/lib/rbac';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { apiError, requireInvoiceAccess } from "@/lib/invoices/auth";
+import { buildBaseWhere, buildListWhere, buildOrderBy, parseInvoiceListQuery, startOfUtcToday } from "@/lib/invoices/query";
+import { toListItem } from "@/lib/invoices/serialize";
+import type { InvoiceDisplayStatus, InvoiceListResponse } from "@/lib/invoices/types";
 
-const isPaidStatus = (status: unknown) => String(status).toUpperCase() === "PAID";
+const NO_STORE = { "Cache-Control": "private, no-store" } as const;
+
+const LIST_SELECT = {
+  id: true,
+  invoiceNumber: true,
+  invoiceDate: true,
+  dueDate: true,
+  clientId: true,
+  clientName: true,
+  currency: true,
+  exchangeRate: true,
+  grandTotal: true,
+  totalAmount: true,
+  baseGrandTotal: true,
+  amountReceived: true,
+  status: true,
+  source: true,
+  sourceProposalId: true,
+  providerGateway: true,
+  providerPaymentLinkId: true,
+  sentAt: true,
+  lastReminderSentAt: true,
+  createdAt: true,
+  pdfPath: true,
+} as const;
 
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.workspaceId) {
-      return NextResponse.json({ error: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' }, { status: 401 });
+    const auth = await requireInvoiceAccess("invoices.view");
+    if (!auth.ok) return auth.response;
+    const { workspaceId } = auth.access;
+
+    const parsed = parseInvoiceListQuery(new URL(request.url).searchParams);
+    if (!parsed.success) {
+      return apiError(400, "INVALID_QUERY", "Invalid filters.", {
+        issues: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
+      });
     }
-    const workspaceId = session.workspaceId;
-    const userId = session.user?.id as string | undefined;
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const query = parsed.data;
+    const now = new Date();
+    const today = startOfUtcToday(now);
+    const where = buildListWhere(workspaceId, query, now);
+    const baseWhere = buildBaseWhere(workspaceId, query);
 
-    // RBAC: viewing invoices requires invoices.view permission
-    const perm = await withPermission(userId, workspaceId, 'invoices.view');
-    if (!perm.granted) return perm.response;
+    // Deep link: jump to the page that contains `focus` (default ordering), instead of scanning pages client-side.
+    let page = query.page;
+    let sortQuery = query;
+    let focusFound = false;
+    if (query.focus) {
+      sortQuery = { ...query, sort: "invoiceDate", dir: "desc" };
+      const target = await prisma.invoice.findFirst({
+        where: { AND: [where, { id: query.focus }] },
+        select: { id: true, invoiceDate: true },
+      });
+      if (target) {
+        const ahead = await prisma.invoice.count({
+          where: {
+            AND: [
+              where,
+              { OR: [{ invoiceDate: { gt: target.invoiceDate } }, { invoiceDate: target.invoiceDate, id: { gt: target.id } }] },
+            ],
+          },
+        });
+        page = Math.floor(ahead / query.limit) + 1;
+        focusFound = true;
+      }
+    }
 
-    const whereClause = { workspaceId };
-
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '15');
-    const skip = (page - 1) * limit;
-
-    const [invoices, totalInvoices, invoiceAggregates] = await Promise.all([
-      prisma.invoice.findMany({ where: whereClause, orderBy: { invoiceDate: 'desc' }, skip, take: limit }),
-      prisma.invoice.count({ where: whereClause }),
-      prisma.invoice.groupBy({
-        where: whereClause,
-        by: ["status"],
-        _sum: { grandTotal: true, totalAmount: true, amountReceived: true },
+    const [rows, totalRecords, grouped, overduePending, overduePartial] = await Promise.all([
+      prisma.invoice.findMany({
+        where,
+        orderBy: buildOrderBy(sortQuery),
+        skip: (page - 1) * query.limit,
+        take: query.limit,
+        select: LIST_SELECT,
       }),
+      prisma.invoice.count({ where }),
+      prisma.invoice.groupBy({ by: ["status"], where: baseWhere, _count: { _all: true } }),
+      prisma.invoice.count({ where: { AND: [baseWhere, { status: "PENDING", dueDate: { lt: today } }] } }),
+      prisma.invoice.count({ where: { AND: [baseWhere, { status: "PARTIALLY_PAID", dueDate: { lt: today } }] } }),
     ]);
 
-    const totalRevenueDecimal = invoiceAggregates.reduce((sum, row) => {
-      const billed = toDecimal(row._sum.grandTotal ?? row._sum.totalAmount ?? 0);
-      return sum.plus(billed);
-    }, new Prisma.Decimal(0));
+    const count = (status: string) => grouped.find((g) => g.status === status)?._count._all ?? 0;
+    const statusCounts: Record<InvoiceDisplayStatus, number> = {
+      PENDING: count("PENDING") - overduePending,
+      PARTIALLY_PAID: count("PARTIALLY_PAID") - overduePartial,
+      PAID: count("PAID"),
+      VOID: count("VOID"),
+      OVERDUE: overduePending + overduePartial,
+    };
 
-    const realizedRevenueDecimal = invoiceAggregates.reduce((sum, row) => {
-      if (!isPaidStatus(row.status)) return sum;
-      const realized = toDecimal(row._sum.amountReceived ?? row._sum.grandTotal ?? row._sum.totalAmount ?? 0);
-      return sum.plus(realized);
-    }, new Prisma.Decimal(0));
-
-    const outstandingDecimal = invoiceAggregates.reduce((sum, row) => {
-      if (isPaidStatus(row.status)) return sum;
-      const billed = toDecimal(row._sum.grandTotal ?? row._sum.totalAmount ?? 0);
-      const received = toDecimal(row._sum.amountReceived ?? 0);
-      return sum.plus(Prisma.Decimal.max(new Prisma.Decimal(0), billed.minus(received)));
-    }, new Prisma.Decimal(0));
-
-    const presumptiveIncomeDecimal = realizedRevenueDecimal.mul(0.5);
-
-    return NextResponse.json({
-      data: invoices.map((invoice) => ({
-        ...invoice,
-        status: invoice.status || INVOICE_STATUS.PENDING,
-      })),
+    const body: InvoiceListResponse & { meta: { focusFound?: boolean } } = {
+      data: rows.map((row) => toListItem(row, now)),
       meta: {
-        currentPage: page,
-        totalPages: Math.ceil(totalInvoices / limit),
-        totalRecords: totalInvoices,
-        kpis: {
-          totalRevenue: serializeMoney(totalRevenueDecimal),
-          outstanding: serializeMoney(outstandingDecimal),
-          presumptiveIncome: serializeMoney(presumptiveIncomeDecimal),
-        },
+        page,
+        limit: query.limit,
+        totalRecords,
+        totalPages: Math.max(1, Math.ceil(totalRecords / query.limit)),
+        statusCounts,
+        ...(query.focus ? { focusFound } : {}),
       },
-    });
-
+    };
+    return NextResponse.json(body, { headers: NO_STORE });
   } catch (error) {
     console.error("API Error fetching invoices:", error);
-    return NextResponse.json({ error: 'Failed to fetch invoices', code: 'INVOICES_FETCH_FAILED' }, { status: 500 });
+    return apiError(500, "INVOICES_FETCH_FAILED", "Failed to fetch invoices.");
   }
 }

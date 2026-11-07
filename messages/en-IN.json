@@ -3091,5 +3091,231 @@
       },
       "securityNote": "Owner and Admin accounts are protected by passkey or Google sign-in."
     }
+  },
+  "Income": {
+    "title": "Invoices & earnings",
+    "description": "Create, send and collect on every invoice, and see what is still owed.",
+    "newInvoice": "New invoice",
+    "export": "Export CSV",
+    "status": {
+      "PENDING": "Pending",
+      "PARTIALLY_PAID": "Part paid",
+      "PAID": "Paid",
+      "OVERDUE": "Overdue",
+      "VOID": "Void"
+    },
+    "source": {
+      "MANUAL": "Manual",
+      "PROPOSAL": "Proposal",
+      "RETAINER": "Retainer",
+      "POS": "POS",
+      "SHOP": "Shop",
+      "API": "API"
+    },
+    "kpi": {
+      "noPrevious": "No earlier period to compare",
+      "vsPrevious": "vs previous period",
+      "billed": "Billed",
+      "billedHint": "Total of invoices issued in this period (void invoices excluded), in your base currency.",
+      "convertedNote": "Foreign-currency invoices are converted to {currency} at the rate saved on each invoice.",
+      "collected": "Collected",
+      "collectedHint": "Payments received in this period, after reversals.",
+      "outstanding": "Outstanding",
+      "outstandingHint": "Money still owed on open invoices right now, regardless of period.",
+      "overdueShare": "{pct}% of outstanding is overdue",
+      "overdue": "{amount} overdue ({count})",
+      "nothingOverdue": "Nothing overdue",
+      "openCount": "{count} open",
+      "daysToPay": "Avg. days to pay",
+      "daysToPayHint": "Average time from invoice date to final payment, for invoices fully paid in this period.",
+      "days": "{count} days",
+      "noPaidYet": "No invoices fully paid in this period",
+      "daysToPayBasis": "Invoice date to final payment"
+    },
+    "taxCard": {
+      "title": "Tax estimate",
+      "badge": "Estimate",
+      "on": "On",
+      "off": "Off",
+      "toggle": "Show the tax estimate",
+      "basis": "{rate}% of {amount} collected this period",
+      "enableDescription": "For professionals under India's presumptive scheme: shows {rate}% of what you collect as estimated taxable income. An estimate only, not tax advice.",
+      "gstTitle": "GST registration threshold",
+      "gstDescription": "{turnover} of {threshold} billed this financial year",
+      "nearThreshold": "You are close to the registration threshold. Check with your CA.",
+      "disclaimer": "Thresholds differ by state and business type. Confirm with your tax advisor.",
+      "saveFailed": "Could not save this setting."
+    },
+    "filters": {
+      "search": "Search invoice number or client",
+      "period": "Period",
+      "allTime": "All time",
+      "fy": "FY {fy}",
+      "source": "Source",
+      "allSources": "All sources",
+      "currency": "Currency",
+      "allCurrencies": "All currencies",
+      "status": "Status",
+      "all": "All",
+      "client": "Client: {name}",
+      "clear": "Clear filters"
+    },
+    "table": {
+      "sortBy": "Sort by {column}",
+      "daysLate": "{days}d late",
+      "dueToday": "due today",
+      "dueIn": "in {days}d",
+      "selectAll": "Select all invoices on this page",
+      "selectRow": "Select invoice {number}",
+      "invoice": "Invoice",
+      "client": "Client",
+      "issued": "Issued",
+      "due": "Due",
+      "amount": "Amount",
+      "balance": "Balance",
+      "status": "Status",
+      "actions": "Actions",
+      "paymentLink": "Pay link",
+      "range": "{from}–{to} of {total}",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page} of {pages}"
+    },
+    "actions": {
+      "more": "More actions",
+      "recordPayment": "Record payment",
+      "open": "View details",
+      "sendInvoice": "Email invoice",
+      "sendReminder": "Send reminder",
+      "download": "Download PDF",
+      "copyNumber": "Copy invoice number",
+      "delete": "Delete invoice",
+      "void": "Void invoice"
+    },
+    "drawer": {
+      "loading": "Loading invoice",
+      "issued": "Issued",
+      "due": "Due",
+      "source": "Source",
+      "period": "Billing period",
+      "currency": "Currency",
+      "sent": "Last emailed",
+      "notSent": "Not sent yet",
+      "voided": "This invoice is void",
+      "items": "Items",
+      "description": "Description",
+      "qty": "Qty",
+      "amount": "Amount",
+      "subtotal": "Subtotal",
+      "tax": "Tax",
+      "total": "Total",
+      "received": "Received",
+      "balance": "Balance due",
+      "payments": "Payments",
+      "noPayments": "No payments recorded yet.",
+      "reversed": "Reversed: {reason}",
+      "reverse": "Reverse",
+      "timeline": "Activity",
+      "noEvents": "No activity yet."
+    },
+    "payment": {
+      "title": "Record payment",
+      "description": "Invoice {number} · balance {balance}",
+      "amount": "Amount received",
+      "fullBalance": "Use full balance",
+      "exceeds": "That is more than the balance of {balance}.",
+      "date": "Date received",
+      "method": "Method",
+      "methods": {
+        "BANK_TRANSFER": "Bank transfer",
+        "UPI": "UPI",
+        "CARD": "Card",
+        "CASH": "Cash",
+        "CHEQUE": "Cheque",
+        "PAYMENT_LINK": "Payment link",
+        "OTHER": "Other"
+      },
+      "reference": "Reference",
+      "referencePlaceholder": "UTR, cheque no. or transaction ID",
+      "withholding": "Client deducted tax at source (TDS)",
+      "withholdingHint": "Records the withholding for your tax return. Needs tax permission.",
+      "withholdingRate": "TDS rate (%)",
+      "notes": "Notes",
+      "failed": "Could not record the payment.",
+      "success": "Payment recorded",
+      "cancel": "Cancel",
+      "submit": "Record payment"
+    },
+    "reason": {
+      "label": "Reason",
+      "cancel": "Cancel"
+    },
+    "void": {
+      "title": "Void invoice {number}",
+      "description": "The invoice and its number stay on record. A credit note is issued, stock is returned, and the invoice leaves revenue, tax and outstanding totals. This cannot be undone.",
+      "confirm": "Void invoice",
+      "placeholder": "For example: wrong client, duplicate, or work cancelled",
+      "failed": "Could not void the invoice.",
+      "success": "Invoice voided. Credit note {number} issued."
+    },
+    "reverse": {
+      "title": "Reverse payment",
+      "description": "The payment stays on record as reversed and the invoice balance is restored.",
+      "confirm": "Reverse payment",
+      "placeholder": "For example: bounced cheque or entered by mistake",
+      "failed": "Could not reverse the payment.",
+      "success": "Payment reversed"
+    },
+    "delete": {
+      "title": "Delete invoice {number}?",
+      "description": "This invoice was never sent or paid, so it can be deleted. Sent or paid invoices must be voided instead.",
+      "cancel": "Cancel",
+      "confirm": "Delete invoice",
+      "failed": "Could not delete the invoice.",
+      "success": "Invoice deleted"
+    },
+    "events": {
+      "CREATED": "Invoice created",
+      "SENT": "Invoice emailed",
+      "REMINDER_SENT": "Reminder sent",
+      "PAYMENT_RECORDED": "Payment recorded",
+      "PAYMENT_REVERSED": "Payment reversed",
+      "VOIDED": "Invoice voided",
+      "STOCK_COMMITTED": "Stock deducted",
+      "STOCK_RESTORED": "Stock restored"
+    },
+    "empty": {
+      "title": "No invoices yet",
+      "description": "Create your first invoice, or turn an accepted proposal into one.",
+      "cta": "Create invoice",
+      "filteredTitle": "No invoices match these filters",
+      "filteredDescription": "Try a different search, or clear the filters."
+    },
+    "error": {
+      "summary": "Could not load the totals.",
+      "retry": "Try again",
+      "load": "Could not load invoices."
+    },
+    "bulk": {
+      "label": "Bulk actions",
+      "selected": "{count} selected",
+      "send": "Email invoices",
+      "remind": "Send reminders",
+      "clear": "Clear selection",
+      "result": "{ok} sent, {failed} failed"
+    },
+    "toast": {
+      "deepLinkMissing": "That invoice could not be found.",
+      "sending": "Sending…",
+      "invoiceSent": "Invoice emailed",
+      "reminderSent": "Reminder sent",
+      "sendFailed": "Could not send the email.",
+      "copied": "Copied"
+    },
+    "new": {
+      "title": "New invoice",
+      "description": "Generate a tax-ready invoice, with an optional payment link and instant email delivery.",
+      "back": "Back to invoices"
+    }
   }
 }

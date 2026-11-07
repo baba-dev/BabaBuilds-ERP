@@ -18,7 +18,7 @@ export async function GET() {
 
     const [invoiceAggregate, expenseAggregate] = await Promise.all([
       prisma.invoice.aggregate({
-        where: { workspaceId },
+        where: { workspaceId, status: { not: "VOID" } },
         _sum: { totalAmount: true },
       }),
       prisma.expense.aggregate({

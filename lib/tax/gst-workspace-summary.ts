@@ -46,6 +46,7 @@ export async function getGstWorkspaceSummary(
   const invoices = await prisma.invoice.findMany({
     where: {
       workspaceId,
+      status: { not: "VOID" },
       invoiceDate: { gte: range.start, lte: range.end },
     },
     select: {

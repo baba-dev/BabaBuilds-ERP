@@ -16,7 +16,8 @@ import { FormFieldMessages, FormSection, FormSubmitBar } from "@/components/form
 
 // MISSION CRITICAL: Globalization & Caching Imports
 import { useFormat } from "@/hooks/use-format";
-import { getCurrencySymbol } from "@/lib/currency";
+import { formatCurrency, getCurrencySymbol } from "@/lib/currency";
+import { InvoiceCurrencyField } from "@/components/invoice/InvoiceCurrencyField";
 import { useTranslations } from "next-intl";
 import { getBustedUrl } from "@/lib/cache-buster";
 import { getConflictPolicy, queueOfflineMutation } from "@/lib/offline-sync";
@@ -119,10 +120,12 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
     sendEmail: boolean;
   } | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
+  // "" = same as the workspace base currency.
+  const [invoiceCurrency, setInvoiceCurrency] = useState("");
+  const [exchangeRate, setExchangeRate] = useState("");
 
   // --- GLOBALIZATION ENGINE ---
   const {
-    fCurrency,
     currency,
     locale,
     dateFormat = "dd/MM/yyyy",
@@ -130,7 +133,11 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
     countryCode = "Global",
   } = useFormat();
 
-  const currencySymbol = getCurrencySymbol(currency, locale);
+  const activeCurrency = invoiceCurrency || currency;
+  const fCurrency = (amount: number | string | null | undefined) => formatCurrency(amount, activeCurrency, locale);
+  const currencySymbol = getCurrencySymbol(activeCurrency, locale);
+  const isForeignCurrency = activeCurrency !== currency;
+  const currencyPayload = isForeignCurrency ? { currency: activeCurrency, exchangeRate: Number(exchangeRate) } : {};
   const isRtl = dirFromLocale(locale) === "rtl";
 
   // App State
@@ -358,6 +365,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
     e.preventDefault();
     if (!selectedClientId) { setError("No client selected. Please select a client from the CRM."); return; }
     if (!billingMonth.trim()) { setError("Billing month is required. Please select a cycle period."); return; }
+    if (isForeignCurrency && !(Number(exchangeRate) > 0)) { setError(`Enter the exchange rate from ${activeCurrency} to ${currency}.`); return; }
 
     if (!companyConfirmed) { setError("Confirm the active company and payment identity before generating this invoice."); return; }
 
@@ -391,6 +399,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
           sacCode: smartSacCode,
           services: validServices,
           customDate: invoiceDate.toISOString(),
+          ...currencyPayload,
           sendEmail,
         }),
       });
@@ -424,6 +433,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
               sacCode: smartSacCode,
               services: validServices,
               customDate: invoiceDate.toISOString(),
+          ...currencyPayload,
               sendEmail,
             }),
           });
@@ -489,6 +499,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
             sacCode: smartSacCode,
             services: activeServices.filter((s) => Number(s.amount) > 0),
             customDate: invoiceDate.toISOString(),
+          ...currencyPayload,
             sendEmail,
           },
           conflictPolicy: getConflictPolicy("invoice", "create"),
@@ -520,6 +531,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
           sacCode: smartSacCode,
           services: validServices,
           customDate: invoiceDate.toISOString(),
+          ...currencyPayload,
           sendEmail,
           taxRateOverride: Number(taxRateInput),
         }),
@@ -544,6 +556,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
               sacCode: smartSacCode,
               services: validServices,
               customDate: invoiceDate.toISOString(),
+          ...currencyPayload,
               sendEmail,
               taxRateOverride: Number(taxRateInput),
             }),
@@ -617,6 +630,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
             sacCode: smartSacCode,
             services: activeServices.filter((s) => Number(s.amount) > 0),
             customDate: invoiceDate.toISOString(),
+          ...currencyPayload,
             sendEmail,
             taxRateOverride: Number(taxRateInput),
           },
@@ -739,6 +753,18 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
               </SelectContent>
             </Select>
           </div>
+
+          <InvoiceCurrencyField
+            baseCurrency={currency}
+            value={invoiceCurrency}
+            exchangeRate={exchangeRate}
+            onChange={(next) => { setInvoiceCurrency(next.currency); setExchangeRate(next.exchangeRate); }}
+            labels={{
+              currency: "Invoice currency",
+              rate: ({ from, to }) => `1 ${from} = ? ${to}`,
+              rateHint: ({ from, to }) => `Rate is saved on the invoice. Reports convert ${from} to ${to} at this rate.`,
+            }}
+          />
         </FormSection>
 
         {isMonthAlreadyBilled && (

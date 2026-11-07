@@ -20,7 +20,7 @@ export function invoiceToForecastLines(args: {
     expectedPaymentDate: Date | null;
     paymentTermsDays: number | null;
     clientId: string | null;
-    status: "PENDING" | "PARTIALLY_PAID" | "PAID";
+    status: "PENDING" | "PARTIALLY_PAID" | "PAID" | "VOID";
     totalAmount: Prisma.Decimal;
     amountReceived: number | Prisma.Decimal | null;
   };

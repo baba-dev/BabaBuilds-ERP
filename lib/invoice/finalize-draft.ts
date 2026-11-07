@@ -1,4 +1,6 @@
 import fs from "fs";
+import { commitInvoiceStock } from "@/lib/invoices/stock";
+import { addInvoiceEvent } from "@/lib/invoices/events";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { toDecimal } from "@/lib/money";
@@ -43,6 +45,7 @@ export async function finalizeInvoiceFromDraft(params: {
     countryCode,
     userLocale,
     baseCurrency,
+    exchangeRate,
   } = context;
 
   const formattedTotal = totals.total.toLocaleString(userLocale, {
@@ -125,6 +128,11 @@ export async function finalizeInvoiceFromDraft(params: {
             totalAmount: toDecimal(totals.total).toDecimalPlaces(2),
             pdfPath: relativePdfPath,
             status: normalizedStatus,
+            currency: baseCurrency,
+            exchangeRate,
+            baseGrandTotal: toDecimal(totals.total).mul(exchangeRate).toDecimalPlaces(2),
+            paymentTermsDays: 7,
+            source: "MANUAL",
             providerGateway: draftPaymentLink.gateway,
             providerPaymentLinkId: draftPaymentLink.linkId,
             items: {
@@ -140,6 +148,9 @@ export async function finalizeInvoiceFromDraft(params: {
             },
           },
         });
+
+        await commitInvoiceStock(tx, { workspaceId, invoiceId: inv.id, actorUserId: actorId });
+        await addInvoiceEvent(tx, { workspaceId, invoiceId: inv.id, type: "CREATED", message: `Invoice ${invoiceNumber} created`, actorUserId: actorId });
 
         await determineAndPersistTax(createPrismaTaxPersistence(tx), {
           source: {

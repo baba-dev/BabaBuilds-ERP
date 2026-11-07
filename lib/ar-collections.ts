@@ -334,12 +334,13 @@ export async function runReminderAutomation(
     }
 
     const outstanding = resolveOutstandingAmount(invoice);
-    const formatted = formatMoneyForLocale(outstanding, baseCurrency, workspace?.countryCode ?? 'IN');
+    const invoiceCurrency = (invoice.currency ?? baseCurrency).trim() || baseCurrency;
+    const formatted = formatMoneyForLocale(outstanding, invoiceCurrency, workspace?.countryCode ?? 'IN');
     const reminderEmail = buildPaymentReminderEmail({
       companyName: profile.companyName,
       clientName: invoice.client?.name ?? invoice.clientName,
       invoiceNumber: invoice.invoiceNumber,
-      outstandingAmountFormatted: `${baseCurrency} ${formatted}`,
+      outstandingAmountFormatted: `${invoiceCurrency} ${formatted}`,
     });
 
     try {
@@ -454,12 +455,13 @@ export async function sendArReminderEmailForInvoice(
   if (!to) return { ok: false, code: 'NO_CLIENT_EMAIL' };
 
   const outstanding = resolveOutstandingAmount(invoice);
-  const formatted = formatMoneyForLocale(outstanding, baseCurrency, workspace?.countryCode ?? 'IN');
+  const invoiceCurrency = (invoice.currency ?? baseCurrency).trim() || baseCurrency;
+  const formatted = formatMoneyForLocale(outstanding, invoiceCurrency, workspace?.countryCode ?? 'IN');
   const reminderEmail = buildPaymentReminderEmail({
     companyName: profile.companyName,
     clientName: invoice.client?.name ?? invoice.clientName,
     invoiceNumber: invoice.invoiceNumber,
-    outstandingAmountFormatted: `${baseCurrency} ${formatted}`,
+    outstandingAmountFormatted: `${invoiceCurrency} ${formatted}`,
   });
 
   try {
@@ -476,6 +478,9 @@ export async function sendArReminderEmailForInvoice(
       where: { id: invoice.id },
       data: { lastReminderSentAt: new Date() },
     });
+    await prisma.invoiceEvent
+      .create({ data: { workspaceId, invoiceId: invoice.id, type: 'REMINDER_SENT', message: `Reminder emailed to ${to}` } })
+      .catch(() => {});
 
     await logActivity({
       workspaceId,

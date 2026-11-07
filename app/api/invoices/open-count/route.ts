@@ -17,9 +17,7 @@ export async function GET() {
     const openInvoiceCount = await prisma.invoice.count({
       where: {
         workspaceId,
-        NOT: {
-          status: INVOICE_STATUS.PAID,
-        },
+        status: { notIn: [INVOICE_STATUS.PAID, INVOICE_STATUS.VOID] },
       },
     });
 

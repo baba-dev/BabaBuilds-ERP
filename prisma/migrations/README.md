@@ -93,3 +93,13 @@ Operator checks after migration:
 - Confirm storefront query only returns products with `showInShop = true` and `currentStock > 0`.
 - Confirm `ShopOrder` payment commit writes exactly one inventory movement per order/product idempotency key.
 - Confirm invoice payment for product lines decrements stock once and does not affect service-only invoices.
+
+## Invoice rework (20261108100000_invoice_rework)
+
+Adds multi-currency columns, `InvoicePayment`, `InvoiceEvent`, `CreditNote`, `InvoiceStatus.VOID`, `stockCommittedAt`
+and the tax-estimate preference. The data fix-ups (legacy `grandTotal = 0` rows, payment-ledger rows for money already
+received, `dueDate` for unpaid invoices, stock marker for paid invoices) live in `prisma/backfills/invoice-rework.sql`:
+
+- migrated databases get them from the end of the migration SQL;
+- `prisma db push` databases (production) never run migration SQL, so the deploy workflow runs
+  `npm run backfill:invoices` right after `prisma db push`. The script is idempotent; run it again any time.
