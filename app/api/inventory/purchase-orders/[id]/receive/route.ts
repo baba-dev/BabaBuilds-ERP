@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
+import type { Prisma } from "@prisma/client";
 
 export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -31,7 +32,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     const body = await req.json();
     const { syncExpense } = body; // Boolean flag from UI to log expense
 
-    const transactionTasks: any[] = [];
+    const transactionTasks: Prisma.PrismaPromise<unknown>[] = [];
 
     // 1. Update PO Status
     transactionTasks.push(

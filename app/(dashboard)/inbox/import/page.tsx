@@ -14,6 +14,7 @@ type SharedImportFile = {
   mimeType: string;
   size: number;
   publicUrl: string;
+  relativePath?: string;
 };
 
 type SharedImportPayload = {
@@ -46,8 +47,8 @@ async function loadSharedPayload(workspaceId: string, shareId: string): Promise<
       ? parsed.files.map((file) => {
           const url = typeof file.publicUrl === 'string' ? file.publicUrl : '';
           if (url.startsWith('/uploads/share-target/')) return file;
-          if (typeof (file as any).relativePath === 'string' && (file as any).relativePath.startsWith('/uploads/share-target/')) {
-            return { ...file, publicUrl: (file as any).relativePath };
+          if (typeof file.relativePath === 'string' && file.relativePath.startsWith('/uploads/share-target/')) {
+            return { ...file, publicUrl: file.relativePath };
           }
           return file;
         })

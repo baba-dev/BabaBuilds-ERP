@@ -95,6 +95,7 @@ type AccessLogEntry = {
 };
 
 type TeamData = {
+  currentUserId?: string;
   currentUserRole: string;
   currentBusinessRole: BusinessRole;
   currentRoleLabel: string;
@@ -375,7 +376,7 @@ export default function TeamAccessPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-xs h-9 text-sm dark:bg-zinc-950 dark:border-zinc-800"
           />
-          <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as any)}>
+          <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as BusinessRole | "ALL")}>
             <SelectTrigger className="w-40 h-9 text-sm dark:bg-zinc-950 dark:border-zinc-800">
               <SelectValue placeholder="All roles" />
             </SelectTrigger>
@@ -502,7 +503,7 @@ export default function TeamAccessPage() {
           </div>
         ) : (
           filteredMembers.map((member) => {
-            const isCurrentUser = member.userId === (teamData as any)?.currentUserId;
+            const isCurrentUser = member.userId === teamData?.currentUserId;
             return (
               <div
                 key={member.id}

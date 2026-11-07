@@ -114,7 +114,7 @@ export function ChartsIsland({
         return {
           name: segment.name,
           value: segment.value,
-          color: (segment as any).color,
+          color: segment.color,
           dashArray,
           dashOffset,
           rotationDeg: (rotation / dashArray) * 360

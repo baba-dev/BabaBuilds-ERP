@@ -169,7 +169,7 @@ export function CashFlowPeriodBreakdown({
                           role="img"
                           aria-label={`Timing overlay: ${Object.entries(totalsByClass)
                             .filter(([, v]) => (v ?? 0) > 0)
-                            .map(([k, v]) => `${labelForClassification(k as any)} ${currencyFormatter(v ?? 0)}`)
+                            .map(([k, v]) => `${labelForClassification(k as SnapshotLineItem["classification"])} ${currencyFormatter(v ?? 0)}`)
                             .join(", ")}`}
                         >
                           <div className="flex h-full w-full">

@@ -174,7 +174,7 @@ export default function CashFlowManualAdjustmentsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Direction</Label>
-                  <Select value={draft.direction} onValueChange={(v) => setDraft((p) => ({ ...p, direction: v as any }))}>
+                  <Select value={draft.direction} onValueChange={(v) => setDraft((p) => ({ ...p, direction: v as typeof p.direction }))}>
                     <SelectTrigger className="h-10">
                       <SelectValue />
                     </SelectTrigger>

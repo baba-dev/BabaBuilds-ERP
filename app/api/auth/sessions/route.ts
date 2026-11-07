@@ -32,7 +32,7 @@ export async function GET() {
   const enrichedSessions = sessions.map((s) => ({
     id: s.id,
     expires: s.expires,
-    isCurrent: s.sessionToken === (session as any).sessionToken, // NextAuth might not expose this easily in JWT mode
+    isCurrent: s.sessionToken === (session as { sessionToken?: string }).sessionToken, // NextAuth might not expose this easily in JWT mode
     ip: currentIp, // Placeholder
     userAgent: currentUserAgent, // Placeholder
     lastSeen: new Date(),

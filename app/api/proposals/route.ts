@@ -75,7 +75,7 @@ export async function POST(request: Request) {
       taxRateOverride?: number;
       richMedia?: ProposalMediaItemInput[];
       milestones?: MilestoneInput[];
-      richSections?: any;
+      richSections?: unknown;
     };
 
     const client = await prisma.client.findFirst({

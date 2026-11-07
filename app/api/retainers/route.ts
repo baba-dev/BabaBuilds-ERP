@@ -106,7 +106,7 @@ export async function POST(request: Request) {
         nextBillingDate: new Date(nextBillingDate),
         status: "ACTIVE", // Automatically starts running
         items: {
-          create: items && items.length > 0 ? items.map((i: any) => ({
+          create: items && items.length > 0 ? items.map((i: Record<string, unknown>) => ({
             title: i.title || "Retainer Service",
             quantity: Number(i.quantity) || 1,
             unitPrice: Number(i.unitPrice),

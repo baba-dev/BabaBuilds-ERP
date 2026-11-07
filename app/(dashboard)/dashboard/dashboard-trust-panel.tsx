@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { dashboardTypography as ty } from "./dashboard-typography";
 import { DashboardModulePromoCard } from "@/components/dashboard/DashboardModulePromoCard";
 import { createTranslator } from "@/lib/i18n/translator";
+import type { LucideIcon } from "lucide-react";
 
 export function DashboardTrustPanel({
   trust,
@@ -52,7 +53,7 @@ export function DashboardTrustPanel({
     );
   }
 
-  const statusMap: Record<string, { label: string; icon: any; color: string; bg: string; border: string; glow: string }> = {
+  const statusMap: Record<string, { label: string; icon: LucideIcon; color: string; bg: string; border: string; glow: string }> = {
     PASSED: { 
       label: tr("status_passed", "Systems Healthy"), 
       icon: ShieldCheck, 

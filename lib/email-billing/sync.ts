@@ -4,6 +4,7 @@ import { decrypt } from '@/lib/encryption';
 import { fetchMailBillingInventory } from './miab-client';
 import { logActivity } from '@/lib/security/activity-log';
 import { createMailBillingReviewItem } from './review';
+import type { MailBillingAccessMode } from "./miab-client";
 
 async function review(input: Parameters<typeof createMailBillingReviewItem>[0]) {
   const result = await createMailBillingReviewItem(input);
@@ -17,7 +18,7 @@ export async function syncMailBillingServer({ workspaceId, serverId, actorUserId
   let reviewItemsCreated = 0;
   try {
     const token = server.encryptedToken ? decrypt(server.encryptedToken) : undefined;
-    const inventory = await fetchMailBillingInventory({ baseUrl: server.baseUrl, accessMode: server.accessMode as any, token });
+    const inventory = await fetchMailBillingInventory({ baseUrl: server.baseUrl, accessMode: server.accessMode as MailBillingAccessMode, token });
     const now = new Date();
     const existingDomains = await prisma.mailBillingDomain.findMany({ where: { workspaceId, serverId }, include: { subscriptions: true } });
     const existingMailboxes = await prisma.mailBillingMailbox.findMany({ where: { workspaceId, serverId }, select: { id: true, email: true, domainId: true } });
