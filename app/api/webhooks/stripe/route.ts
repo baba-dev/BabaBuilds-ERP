@@ -32,7 +32,7 @@ async function markInvoicePaid(invoiceId: string, workspaceId: string, amount: n
   let settledNow = false;
   await prisma.$transaction(async (tx) => {
     const invoice = await tx.invoice.findFirst({ where: { id: invoiceId, workspaceId } });
-    if (!invoice || invoice.status === "PAID") return;
+    if (!invoice || invoice.status === "PAID" || invoice.status === "VOID") return;
 
     await tx.invoice.updateMany({
       where: { id: invoiceId, workspaceId },
@@ -82,7 +82,7 @@ async function updateInvoiceStateFromBillingReference(params: {
     const invoiceNumber = match?.[1]?.trim();
     if (!invoiceNumber) continue;
     const updated = await prisma.invoice.updateMany({
-      where: { workspaceId: row.workspaceId, invoiceNumber },
+      where: { workspaceId: row.workspaceId, invoiceNumber, status: { not: "VOID" } },
       data:
         params.status === "PAID"
           ? { status: params.status, dateReceived: new Date() }

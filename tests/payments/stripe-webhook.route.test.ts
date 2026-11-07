@@ -142,7 +142,7 @@ describe("Stripe webhook route", () => {
     expect(res.status).toBe(200);
     expect(prismaMock.billingTransaction.updateMany).toHaveBeenCalled();
     expect(prismaMock.invoice.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { workspaceId: "ws_1", invoiceNumber: "INV-1" } }),
+      expect.objectContaining({ where: { workspaceId: "ws_1", invoiceNumber: "INV-1", status: { not: "VOID" } } }),
     );
   });
 });

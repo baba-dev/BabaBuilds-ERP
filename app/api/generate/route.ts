@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { commitInvoiceStock, InvoiceStockError } from '@/lib/invoices/stock';
+import { addInvoiceEvent } from '@/lib/invoices/events';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
@@ -128,6 +130,11 @@ const GenerateInvoiceSchema = z.object({
   sendEmail: z.boolean().optional(),
   status: z.string().optional(),
   taxRateOverride: z.number().optional(),
+  /** ISO-4217 code; defaults to the workspace base currency. */
+  currency: z.string().trim().toUpperCase().length(3).regex(/^[A-Z]{3}$/).optional(),
+  /** Units of base currency per 1 unit of `currency`. Required when currency differs from the base currency. */
+  exchangeRate: z.coerce.number().positive().finite().max(1_000_000).optional(),
+  source: z.enum(['MANUAL', 'API']).optional(),
 });
 
 export async function POST(request: Request) {
@@ -387,7 +394,16 @@ export async function POST(request: Request) {
 
     const paidFeatures = canInjectGatewayPaymentLinks(billingSnapshot);
     const userLocale = profile.workspace?.countryCode === "IN" ? "en-IN" : "en-US";
-    const baseCurrency = profile.workspace?.baseCurrency || 'INR';
+    const workspaceBaseCurrency = profile.workspace?.baseCurrency || 'INR';
+    // Multi-currency: the invoice (PDF, payment link, email) is in `baseCurrency`, reports use the base-currency equivalent.
+    const baseCurrency = body.currency ?? workspaceBaseCurrency;
+    const exchangeRate = baseCurrency === workspaceBaseCurrency ? 1 : body.exchangeRate;
+    if (!exchangeRate) {
+      return NextResponse.json(
+        { error: `An exchange rate to ${workspaceBaseCurrency} is required for ${baseCurrency} invoices.`, code: 'EXCHANGE_RATE_REQUIRED' },
+        { status: 400 },
+      );
+    }
     const invoiceDueDate = new Date(invoiceDate);
     invoiceDueDate.setDate(invoiceDueDate.getDate() + 7);
 
@@ -618,6 +634,12 @@ export async function POST(request: Request) {
               totalAmount: toDecimal(totals.total).toDecimalPlaces(2),
               pdfPath: relativePdfPath,
               status: normalizedStatus,
+              dueDate: invoiceDueDate,
+              paymentTermsDays: 7,
+              currency: baseCurrency,
+              exchangeRate,
+              baseGrandTotal: toDecimal(totals.total).mul(exchangeRate).toDecimalPlaces(2),
+              source: body.source ?? 'MANUAL',
               providerGateway,
               providerPaymentLinkId,
               items: {
@@ -636,6 +658,10 @@ export async function POST(request: Request) {
               },
             },
           });
+
+          // Policy: stock leaves when the invoice is issued (throws -> whole invoice rolls back).
+          await commitInvoiceStock(tx, { workspaceId, invoiceId: inv.id, actorUserId: actorId });
+          await addInvoiceEvent(tx, { workspaceId, invoiceId: inv.id, type: 'CREATED', message: `Invoice ${invoiceNumber} created`, actorUserId: actorId });
 
           await determineAndPersistTax(createPrismaTaxPersistence(tx), {
             source: {
@@ -822,6 +848,13 @@ export async function POST(request: Request) {
         errorMessage: error instanceof Error ? error.message : "Unknown invoice generation error",
       },
     });
+
+    if (error instanceof InvoiceStockError) {
+      return NextResponse.json(
+        { error: `Not enough stock to issue this invoice${error.productName ? ` (${error.productName})` : ''}.`, code: 'INSUFFICIENT_STOCK' },
+        { status: 409 },
+      );
+    }
 
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to generate invoice' },

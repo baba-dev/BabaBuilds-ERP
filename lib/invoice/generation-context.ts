@@ -48,6 +48,10 @@ export type InvoiceGenerationInput = {
   sendEmail?: boolean;
   status?: string;
   taxRateOverride?: number;
+  /** ISO-4217 invoice currency; defaults to the workspace base currency. */
+  currency?: string;
+  /** Base-currency units per 1 unit of `currency` (required when currency differs from the base currency). */
+  exchangeRate?: number | string;
 };
 
 export type InvoiceGenerationContext = {
@@ -68,7 +72,12 @@ export type InvoiceGenerationContext = {
   taxRate: number;
   countryCode: string;
   userLocale: string;
+  /** Currency of THIS invoice (PDF, payment link, email). Named baseCurrency for historical reasons. */
   baseCurrency: string;
+  /** Workspace base currency that reports add up in. */
+  workspaceBaseCurrency: string;
+  /** Base-currency units per 1 unit of baseCurrency (1 when they are the same). */
+  exchangeRate: number;
   billingSnapshot: WorkspaceBillingSnapshot;
   paidFeatures: boolean;
   shouldSendEmail: boolean;
@@ -284,7 +293,20 @@ export async function buildInvoiceGenerationContext(
 
   const paidFeatures = canInjectGatewayPaymentLinks(billingSnapshot);
   const userLocale = profile.workspace?.countryCode === "IN" ? "en-IN" : "en-US";
-  const baseCurrency = profile.workspace?.baseCurrency || "INR";
+  const workspaceBaseCurrency = profile.workspace?.baseCurrency || "INR";
+  const requestedCurrency = typeof input.currency === "string" ? input.currency.trim().toUpperCase() : "";
+  if (requestedCurrency && !/^[A-Z]{3}$/.test(requestedCurrency)) {
+    throw new InvoiceValidationError(400, { error: "Invalid currency code.", code: "INVALID_CURRENCY" });
+  }
+  const baseCurrency = requestedCurrency || workspaceBaseCurrency;
+  const requestedRate = Number(input.exchangeRate);
+  const exchangeRate = baseCurrency === workspaceBaseCurrency ? 1 : requestedRate;
+  if (!Number.isFinite(exchangeRate) || exchangeRate <= 0 || exchangeRate > 1_000_000) {
+    throw new InvoiceValidationError(400, {
+      error: `An exchange rate to ${workspaceBaseCurrency} is required for ${baseCurrency} invoices.`,
+      code: "EXCHANGE_RATE_REQUIRED",
+    });
+  }
 
   return {
     workspaceId,
@@ -305,6 +327,8 @@ export async function buildInvoiceGenerationContext(
     countryCode,
     userLocale,
     baseCurrency,
+    workspaceBaseCurrency,
+    exchangeRate,
     billingSnapshot,
     paidFeatures,
     shouldSendEmail: Boolean(shouldSendEmail),

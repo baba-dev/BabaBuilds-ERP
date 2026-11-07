@@ -184,7 +184,9 @@ async function getInvoiceRows(
     where: {
       workspaceId: { in: scope.workspaceIds },
       ...(Object.keys(invoiceDate).length > 0 ? { invoiceDate } : {}),
-      ...(filters.statuses && filters.statuses.length > 0 ? { status: { in: filters.statuses } } : {}),
+      ...(filters.statuses && filters.statuses.length > 0
+        ? { status: { in: filters.statuses } }
+        : { status: { not: "VOID" as const } }),
     },
     select: {
       id: true,

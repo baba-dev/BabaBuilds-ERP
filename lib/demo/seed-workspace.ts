@@ -150,7 +150,7 @@ export async function seedDemoWorkspace(
     if (!clientId) continue;
 
     const date = getDateOffset(inv.daysAgo);
-    await tx.invoice.create({
+    const seededInvoice = await tx.invoice.create({
       data: {
         workspaceId: workspace.id,
         clientId,
@@ -162,12 +162,29 @@ export async function seedDemoWorkspace(
         sacCode: template.businessProfile.defaultSacCode ?? '998313',
         serviceDescription: inv.description,
         totalAmount: inv.amount,
+        grandTotal: inv.amount,
+        baseGrandTotal: inv.amount,
+        currency: 'INR',
+        dueDate: new Date(date.getTime() + 7 * 86_400_000),
+        paymentTermsDays: 7,
+        stockCommittedAt: inv.status === 'PAID' ? date : null,
         status: inv.status,
         pdfPath: `/demo-invoices/INV-${i + 1}.pdf`,
         amountReceived: inv.status === 'PAID' ? inv.amount : null,
         dateReceived: inv.status === 'PAID' ? getDateOffset(inv.daysAgo + 5) : null,
       },
     });
+    if (inv.status === 'PAID') {
+      await tx.invoicePayment.create({
+        data: {
+          workspaceId: workspace.id,
+          invoiceId: seededInvoice.id,
+          amount: inv.amount,
+          receivedAt: getDateOffset(inv.daysAgo + 5),
+          method: 'BANK_TRANSFER',
+        },
+      });
+    }
   }
 
   await tx.expense.createMany({

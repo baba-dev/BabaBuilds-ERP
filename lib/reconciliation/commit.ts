@@ -156,7 +156,7 @@ export async function commitReconciliationTransactions({
             let primaryInvoiceId: string | null = null;
             for (const line of splits) {
               const inv = await tx.invoice.findFirst({
-                where: { workspaceId, invoiceNumber: line.invoiceNumber },
+                where: { workspaceId, invoiceNumber: line.invoiceNumber, status: { not: 'VOID' } },
                 select: {
                   id: true,
                   totalAmount: true,
@@ -221,7 +221,7 @@ export async function commitReconciliationTransactions({
           if (!invNum) continue;
 
           const dbInv = await tx.invoice.findFirst({
-            where: { workspaceId, invoiceNumber: invNum },
+            where: { workspaceId, invoiceNumber: invNum, status: { not: 'VOID' } },
             select: {
               id: true,
               invoiceNumber: true,

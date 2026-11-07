@@ -138,6 +138,7 @@ async function derivePrefillFacts(workspaceId: string, startDate: Date, endDate:
     prisma.invoice.aggregate({
       where: {
         workspaceId,
+        status: { not: "VOID" },
         invoiceDate: { gte: startDate, lte: endDate },
       },
       _sum: { taxAmount: true, totalAmount: true },

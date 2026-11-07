@@ -11,6 +11,17 @@ enum InvoiceStatus {
   PENDING
   PARTIALLY_PAID
   PAID
+  VOID
+}
+
+/// Where an invoice came from (shown/filterable on /income).
+enum InvoiceSource {
+  MANUAL
+  PROPOSAL
+  RETAINER
+  POS
+  SHOP
+  API
 }
 
 /**
@@ -1582,6 +1593,21 @@ model Invoice {
   amountReceived Decimal?
   dateReceived   DateTime?
 
+  // Multi-currency: amounts above are in `currency`; `baseGrandTotal` is grandTotal * exchangeRate
+  // in the workspace base currency (what reports and the /income KPIs add up).
+  currency       String        @default("INR")
+  exchangeRate   Decimal       @default(1)
+  baseGrandTotal Decimal?
+  source         InvoiceSource @default(MANUAL)
+  sentAt         DateTime?
+  voidedAt       DateTime?
+  voidReason     String?
+  // Set once stock for product lines has been deducted (at issue, or legacy: at payment). Guards double-deduction.
+  stockCommittedAt DateTime?
+  payments       InvoicePayment[]
+  events         InvoiceEvent[]
+  creditNotes    CreditNote[]
+
   withholdingRatePercent    Decimal?
   withholdingAmount         Decimal?
   withholdingDeductedAt     DateTime?
@@ -1614,6 +1640,69 @@ model Invoice {
   @@index([financialYear])
   @@index([workspaceId])
   @@index([workspaceId, status, dueDate])
+  @@index([workspaceId, financialYear, status])
+  @@index([workspaceId, clientId])
+  @@index([workspaceId, invoiceDate])
+}
+
+/// One received payment against an invoice. Invoice.amountReceived/status are derived from the
+/// non-reversed rows. Reversal keeps the row (audit trail) instead of deleting it.
+model InvoicePayment {
+  id          String   @id @default(cuid())
+  workspaceId String
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  amount      Decimal
+  receivedAt  DateTime
+  method      String   @default("OTHER") // BANK_TRANSFER | UPI | CARD | CASH | CHEQUE | PAYMENT_LINK | OTHER
+  reference   String?
+  notes       String?
+  bankTransactionId String?
+
+  idempotencyKey  String?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  reversedAt       DateTime?
+  reversedByUserId String?
+  reversalReason   String?
+
+  @@unique([workspaceId, idempotencyKey])
+  @@index([invoiceId])
+  @@index([workspaceId, receivedAt])
+}
+
+/// Append-only timeline for an invoice (created, sent, payment, reversal, void, reminder...).
+model InvoiceEvent {
+  id          String   @id @default(cuid())
+  workspaceId String
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  type        String
+  message     String?
+  metadata    String?
+  actorUserId String?
+  createdAt   DateTime @default(now())
+
+  @@index([invoiceId, createdAt])
+}
+
+/// Issued when an invoice is voided/cancelled or reduced (GST: cancellation is a credit note, not a delete).
+model CreditNote {
+  id               String   @id @default(cuid())
+  workspaceId      String
+  invoiceId        String
+  invoice          Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  creditNoteNumber String
+  amount           Decimal
+  taxAmount        Decimal  @default(0)
+  reason           String
+  issuedAt         DateTime @default(now())
+  createdByUserId  String?
+
+  @@unique([workspaceId, creditNoteNumber])
+  @@index([invoiceId])
 }
 
 model WorkspaceTaxPreference {
@@ -1623,6 +1712,9 @@ model WorkspaceTaxPreference {
   mode               WorkspaceTaxMode @default(AUTO)
   defaultCountryCode String?
   provider           String?
+  // Optional "tax estimate" card on /income (India professionals; presumptive-income rule).
+  taxEstimateEnabled     Boolean @default(false)
+  taxEstimateRatePercent Float   @default(50)
   updatedBy          String
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt

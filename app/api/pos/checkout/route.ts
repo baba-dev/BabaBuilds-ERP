@@ -339,6 +339,8 @@ export async function POST(request: Request) {
 
           const profile = await tx.businessProfile.findUnique({ where: { workspaceId }, select: { invoicePrefix: true } });
           const invoicePrefix = profile?.invoicePrefix || 'INV';
+          const posWorkspace = await tx.workspace.findUnique({ where: { id: workspaceId }, select: { baseCurrency: true } });
+          const posCurrency = posWorkspace?.baseCurrency || 'INR';
 
           if (action === 'PAY_NOW') {
             // Create an Invoice marked as PAID
@@ -353,6 +355,10 @@ export async function POST(request: Request) {
                 invoiceDate,
                 clientName: client.name,
                 serviceDescription: 'POS Checkout',
+                source: 'POS',
+                currency: posCurrency,
+                baseGrandTotal: totalAmount,
+                stockCommittedAt: new Date(),
                 subtotal,
                 taxAmount: tax,
                 grandTotal: totalAmount,
@@ -363,6 +369,9 @@ export async function POST(request: Request) {
                 pdfPath: '',
                 items: { create: buildInvoiceItems(resolvedItems) },
               },
+            });
+            await tx.invoicePayment.create({
+              data: { workspaceId, invoiceId: invoice.id, amount: totalAmount, receivedAt: invoice.invoiceDate, method: 'OTHER', notes: 'POS checkout' },
             });
             await commitProductSales(tx, workspaceId, productSales, invoice.id, allowNegativeStock);
             return { message: 'Payment collected successfully!', invoice };
@@ -378,6 +387,10 @@ export async function POST(request: Request) {
                 invoiceDate,
                 clientName: client.name,
                 serviceDescription: 'POS Generated Invoice',
+                source: 'POS',
+                currency: posCurrency,
+                baseGrandTotal: totalAmount,
+                stockCommittedAt: new Date(),
                 subtotal,
                 taxAmount: tax,
                 grandTotal: totalAmount,

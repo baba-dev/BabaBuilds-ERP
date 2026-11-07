@@ -1,120 +1,119 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
-import fs from 'fs';
-import path from 'path';
-import { logActivity } from '@/lib/security/activity-log';
-import { buildPrivatePath } from '@/lib/uploads/private-storage';
-import { withPermission } from '@/lib/rbac';
+import fs from "fs";
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { apiError, requireInvoiceAccess } from "@/lib/invoices/auth";
+import { toDetail } from "@/lib/invoices/serialize";
+import { serializeMoney, toDecimal } from "@/lib/money";
+import { restoreInvoiceStock } from "@/lib/invoices/stock";
+import { invalidateInvoiceCaches } from "@/lib/invoices/payments";
+import { resolveInvoicePdfStoragePath } from "@/lib/invoice/pdf-storage";
+import { logActivity } from "@/lib/security/activity-log";
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+type Ctx = { params: Promise<{ id: string }> };
+
+export async function GET(_request: Request, { params }: Ctx) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.workspaceId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    const workspaceId = session.workspaceId;
-    const userId = session.user?.id as string | undefined;
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    // RBAC: viewing an invoice requires invoices.view
-    const perm = await withPermission(userId, workspaceId, 'invoices.view');
-    if (!perm.granted) return perm.response;
-    const resolvedParams = await params;
-    const invoiceId = resolvedParams.id;
+    const auth = await requireInvoiceAccess("invoices.view");
+    if (!auth.ok) return auth.response;
+    const { id } = await params;
 
     const invoice = await prisma.invoice.findFirst({
-      where: { id: invoiceId, workspaceId },
+      where: { id, workspaceId: auth.access.workspaceId },
+      include: {
+        items: true,
+        payments: { orderBy: { receivedAt: "desc" } },
+        events: { orderBy: { createdAt: "desc" }, take: 100 },
+        creditNotes: { orderBy: { issuedAt: "desc" } },
+      },
     });
+    if (!invoice) return apiError(404, "INVOICE_NOT_FOUND", "Invoice not found.");
 
-    if (!invoice) {
-      return NextResponse.json({ error: "Invoice not found or unauthorized." }, { status: 404 });
+    const detail = toDetail(invoice);
+    // Money recorded directly on the invoice (webhooks, reconciliation, POS) that has no ledger row yet.
+    const activeSum = invoice.payments.filter((p) => !p.reversedAt).reduce((sum, p) => sum.plus(toDecimal(p.amount)), toDecimal(0));
+    const unattributed = toDecimal(invoice.amountReceived ?? 0).minus(activeSum);
+    if (unattributed.gt(0.005)) {
+      detail.payments.unshift({
+        id: "unattributed",
+        amount: serializeMoney(unattributed),
+        receivedAt: (invoice.dateReceived ?? invoice.createdAt).toISOString(),
+        method: "OTHER",
+        reference: null,
+        notes: "Received outside this ledger (payment link, bank match or import)",
+        createdAt: invoice.createdAt.toISOString(),
+        reversedAt: null,
+        reversalReason: null,
+      });
     }
-
-    return NextResponse.json({ data: invoice });
+    return NextResponse.json({ data: detail }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     console.error("Invoice fetch error:", error);
-    return NextResponse.json({ error: "Failed to fetch invoice." }, { status: 500 });
+    return apiError(500, "INVOICE_FETCH_FAILED", "Failed to fetch invoice.");
   }
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+/**
+ * Hard delete is only for an invoice that never left the building: still pending, never emailed,
+ * no payment history, no credit note. Anything else must be voided (credit note), which keeps the
+ * number and audit trail intact for GST.
+ */
+export async function DELETE(request: Request, { params }: Ctx) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.workspaceId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    const workspaceId = session.workspaceId;
-    const userId = session.user?.id as string | undefined;
-    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    // RBAC: deleting an invoice requires invoices.delete
-    const perm = await withPermission(userId, workspaceId, 'invoices.delete');
-    if (!perm.granted) return perm.response;
-    const resolvedParams = await params;
-    const invoiceId = resolvedParams.id;
+    const auth = await requireInvoiceAccess("invoices.delete");
+    if (!auth.ok) return auth.response;
+    const { workspaceId, userId, email } = auth.access;
+    const { id } = await params;
 
-    // 1. Fetch to get the PDF path for cleanup
     const invoice = await prisma.invoice.findFirst({
-      where: { id: invoiceId, workspaceId: workspaceId }
+      where: { id, workspaceId },
+      include: {
+        payments: { select: { id: true } },
+        creditNotes: { select: { id: true } },
+      },
     });
+    if (!invoice) return apiError(404, "INVOICE_NOT_FOUND", "Invoice not found.");
 
-    if (!invoice) {
-      return NextResponse.json({ error: "Invoice not found or unauthorized." }, { status: 404 });
+    const deletable =
+      invoice.status === "PENDING" &&
+      !invoice.sentAt &&
+      !invoice.lastReminderSentAt &&
+      invoice.payments.length === 0 &&
+      invoice.creditNotes.length === 0 &&
+      toDecimal(invoice.amountReceived ?? 0).lte(0);
+    if (!deletable) {
+      return apiError(409, "INVOICE_NOT_DELETABLE", "Sent, paid or partly paid invoices cannot be deleted. Void the invoice instead; it keeps the invoice number and issues a credit note.");
     }
 
-    // 2. Delete from Database with tenant scope safety
-    const deleted = await prisma.invoice.deleteMany({
-      where: { id: invoiceId, workspaceId }
-    });
-    if (deleted.count === 0) {
-      return NextResponse.json({ error: "Invoice not found or unauthorized." }, { status: 404 });
-    }
+    const pdfPath = invoice.pdfPath ? resolveInvoicePdfStoragePath(invoice) : null;
 
-    // 3. Cleanup Orphaned PDF File
-    if (invoice.pdfPath) {
-      const normalizedRelativePath = invoice.pdfPath.replace(/^[/\\]+/, '');
-      const privatePath = buildPrivatePath('invoices', normalizedRelativePath.split(path.sep));
-      if (fs.existsSync(privatePath)) {
-        try {
-          fs.unlinkSync(privatePath);
-        } catch {
-          console.error("Failed to delete PDF file");
-        }
+    await prisma.$transaction(async (tx) => {
+      await restoreInvoiceStock(tx, { workspaceId, invoiceId: invoice.id, actorUserId: userId });
+      const deleted = await tx.invoice.deleteMany({ where: { id: invoice.id, workspaceId, status: "PENDING" } });
+      if (deleted.count === 0) throw new Error("INVOICE_CHANGED");
+    });
+
+    if (pdfPath) {
+      try {
+        if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
+      } catch {
+        console.error("Failed to delete invoice PDF file");
       }
     }
-
-    try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
-    } catch {
-      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'invoice', action: 'delete' });
-    }
-
+    invalidateInvoiceCaches(workspaceId, "delete");
     logActivity({
       action: "invoice_deleted",
       status: "SUCCESS",
       workspaceId,
-      actor: { userId: session.user?.id, email: session.user?.email },
-      entity: { type: "invoice", id: invoiceId },
+      actor: { userId, email },
+      entity: { type: "invoice", id },
       request,
     });
-
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Invoice Deletion Error:", error);
-    logActivity({
-      action: "invoice_deleted",
-      status: "FAILURE",
-      workspaceId: null,
-      request,
-      metadata: { error: String(error) },
-    });
-    return NextResponse.json({ error: "Failed to delete invoice." }, { status: 500 });
+    if (error instanceof Error && error.message === "INVOICE_CHANGED") {
+      return apiError(409, "INVOICE_CHANGED", "The invoice changed while deleting. Refresh and try again.");
+    }
+    console.error("Invoice deletion error:", error);
+    return apiError(500, "INVOICE_DELETE_FAILED", "Failed to delete invoice.");
   }
 }

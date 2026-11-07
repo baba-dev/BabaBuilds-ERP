@@ -27,6 +27,7 @@ vi.mock('@/lib/prisma', () => {
       product: { create: vi.fn() },
       proposal: { create: vi.fn() },
       invoice: { create: vi.fn() },
+      invoicePayment: { create: vi.fn() },
       expense: { createMany: vi.fn() },
       investment: { createMany: vi.fn() },
       retainer: { create: vi.fn() },
@@ -82,6 +83,7 @@ describe('demo templates seeding', () => {
     tx.companyGroupMember.upsert.mockResolvedValue({ id: 'cgm_1' });
     tx.companyGroupModule.upsert.mockResolvedValue({ id: 'cgmod_1' });
     tx.client.create.mockResolvedValue({ id: 'client_1' });
+    tx.invoice.create.mockResolvedValue({ id: 'invoice_1' });
     tx.client.findMany.mockResolvedValue([{ id: 'client_1', name: 'Client 1' }]);
     tx.serviceTemplate.findMany.mockResolvedValue([
       { id: 'srv_1', name: 'S1', defaultPrice: 1, description: 'd' },
