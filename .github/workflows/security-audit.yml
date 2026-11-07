@@ -43,7 +43,7 @@ jobs:
           retention-days: 30
         
       - name: Create Pull Request if changes detected
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore: weekly security audit and dependency updates"
