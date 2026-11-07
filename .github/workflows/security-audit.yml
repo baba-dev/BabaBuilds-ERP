@@ -34,7 +34,7 @@ jobs:
         run: npm audit > npm-audit-after.txt || true
 
       - name: Upload Audit Reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: npm-audit-reports
           path: |
