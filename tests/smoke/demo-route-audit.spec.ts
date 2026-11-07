@@ -28,8 +28,7 @@ const EXTRA_ROUTES = [
   "/cash-flow/outflows",
   "/cash-flow/assumptions",
   "/cash-flow/manual-adjustments",
-  "/documents/inbox",
-  "/documents/vault",
+  "/documents",
   "/documents/compliance",
   "/documents/settings",
   "/invoice",
@@ -88,6 +87,10 @@ test.describe("Demo sandbox route audit", () => {
       await loginViaDemoUI(page);
       await expect(page.locator("main:visible").first()).toBeVisible();
       await dismissBlockingOverlays(page);
+      // Let the post-login page finish its own requests (e.g. next-auth session polling) before the
+      // first navigation; otherwise the aborted in-flight fetch is logged as a CLIENT_FETCH_ERROR
+      // and wrongly attributed to the first route.
+      await page.waitForLoadState("networkidle").catch(() => {});
 
       for (const path of EXTRA_ROUTES) {
         const before = snapshotCounts(telemetry);

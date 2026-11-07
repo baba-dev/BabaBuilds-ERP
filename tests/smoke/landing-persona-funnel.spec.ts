@@ -15,9 +15,16 @@ test.describe("Landing persona conversion funnel", () => {
   test("homepage role demo launcher shows all role entries", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
 
-    await expect(page.getByRole("button", { name: /Try CA Demo/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Try Agency Demo/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Try Contractor Demo/i })).toBeVisible();
+    // One launcher per demo template (see lib/demo/templates).
+    for (const name of [
+      /Try Tax Agency Demo/i,
+      /Try Digital Marketing Agency Demo/i,
+      /Try Contractor & Builder Demo/i,
+      /Try Freelancer & Consultant Demo/i,
+      /Try Software Company Demo/i,
+    ]) {
+      await expect(page.getByRole("button", { name })).toBeVisible();
+    }
   });
 
   test("persona pages render trial + demo CTAs", async ({ page }) => {

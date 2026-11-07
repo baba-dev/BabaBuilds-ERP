@@ -4,7 +4,8 @@ export async function loginViaDemoUI(page: Page) {
   await page.goto("/login", { waitUntil: "domcontentloaded" });
   await expect(page.locator("body")).toBeVisible();
 
-  await expect(page.getByText(/bababuilds erp/i)).toBeVisible();
+  // Stable hook instead of brand copy: the login heading text changes with branding/i18n.
+  await expect(page.getByTestId("demo-auth-section")).toBeVisible({ timeout: 30_000 });
 
   await page.getByTestId("demo-auth-section").scrollIntoViewIfNeeded();
   await page.getByTestId("demo-auth-section").click();
