@@ -98,7 +98,15 @@ export function ReconciliationSettingsPageClient() {
   const { open: openPlaid, ready: plaidReady } = usePlaidLink({
     token: linkToken,
     onSuccess: (public_token) => {
-      void onPlaidSuccess(public_token);
+      // Link v5 can complete non-Item flows without a public token.
+      // Only exchange a token when an actual bank Item was created.
+      if (!public_token) {
+        toast.error("Plaid did not return a bank connection. Please try again.");
+        return;
+      }
+      void onPlaidSuccess(public_token).catch((error: unknown) => {
+        toast.error(error instanceof Error ? error.message : "Could not link bank account.");
+      });
     },
   });
 
