@@ -9,7 +9,7 @@ import type {
   PaginationState,
   RowSelectionState,
   SortingState,
-  VisibilityState,
+  ColumnVisibilityState,
 } from "@tanstack/react-table";
 import type { DataTableStateModel } from "./types";
 
@@ -78,16 +78,21 @@ export function useDataTableState(prefix: string, options?: Options) {
   const search = searchParams.get(keys.search) ?? "";
   const sorting = parseSorting(searchParams.get(keys.sort) ?? "");
   const columnFilters = parseJsonState<ColumnFiltersState>(searchParams.get(keys.filters), []);
-  const columnVisibility = parseJsonState<VisibilityState>(searchParams.get(keys.visibility), {});
+  const columnVisibility = parseJsonState<ColumnVisibilityState>(searchParams.get(keys.visibility), {});
   const pagination = parseJsonState<PaginationState>(searchParams.get(keys.pagination), {
     pageIndex: 0,
     pageSize: options?.defaultPageSize ?? 10,
   });
   const rowSelection = parseJsonState<RowSelectionState>(searchParams.get(keys.selection), {});
-  const columnPinning = parseJsonState<ColumnPinningState>(searchParams.get(keys.pinning), {
-    left: [],
-    right: [],
-  });
+  // Accept v8 left/right deep links while persisting v9 logical start/end pinning.
+  const storedPinning = parseJsonState<{ start?: string[]; end?: string[]; left?: string[]; right?: string[] }>(
+    searchParams.get(keys.pinning),
+    {},
+  );
+  const columnPinning: ColumnPinningState = {
+    start: storedPinning.start ?? storedPinning.left ?? [],
+    end: storedPinning.end ?? storedPinning.right ?? [],
+  };
 
   const setParam = (key: string, value: string) => {
     const next = new URLSearchParams(searchParams.toString());
@@ -122,8 +127,8 @@ export function useDataTableState(prefix: string, options?: Options) {
     );
   };
 
-  const setColumnVisibility: OnChangeFn<VisibilityState> = (updaterOrValue) => {
-    setStateParam(keys.visibility, columnVisibility, updaterOrValue as Updater<VisibilityState>, (value) => {
+  const setColumnVisibility: OnChangeFn<ColumnVisibilityState> = (updaterOrValue) => {
+    setStateParam(keys.visibility, columnVisibility, updaterOrValue as Updater<ColumnVisibilityState>, (value) => {
       const hasOverrides = Object.values(value).some((visible) => visible === false);
       return hasOverrides ? JSON.stringify(value) : "";
     });
@@ -143,7 +148,7 @@ export function useDataTableState(prefix: string, options?: Options) {
 
   const setColumnPinning: OnChangeFn<ColumnPinningState> = (updaterOrValue) => {
     setStateParam(keys.pinning, columnPinning, updaterOrValue as Updater<ColumnPinningState>, (value) => {
-      const hasPins = (value.left?.length ?? 0) > 0 || (value.right?.length ?? 0) > 0;
+      const hasPins = (value.start?.length ?? 0) > 0 || (value.end?.length ?? 0) > 0;
       return hasPins ? JSON.stringify(value) : "";
     });
   };
