@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
+import { isStaleDeployError, recoverFromStaleDeploy } from "@/lib/errors/stale-deploy";
 
 export default function Error({
   error,
@@ -10,53 +11,22 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const [isAnalyzing, setIsAnalyzing] = useState(true);
-  const [friendlyMessage, setFriendlyMessage] = useState<string | null>(null);
+  const staleDeploy = isStaleDeployError(error);
+  const [recovering, setRecovering] = useState(staleDeploy);
 
   useEffect(() => {
     console.error("App route error boundary caught:", error);
-    
-    const abortController = new AbortController();
-    
-    // Set a timeout to fallback to generic message if it takes > 5s
-    const timeoutId = setTimeout(() => {
-      if (isAnalyzing) {
-        setIsAnalyzing(false);
-        setFriendlyMessage("We hit an unexpected error while loading this page. Our team has been notified.");
-      }
-    }, 5000);
+    if (!staleDeploy) return;
+    // A new version was deployed while this tab/service worker held the old one: refresh once.
+    void recoverFromStaleDeploy().then((reloaded) => {
+      if (!reloaded) setRecovering(false);
+    });
+  }, [error, staleDeploy]);
 
-    fetch("/api/diagnostics/user-message", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        errorName: error.name,
-        errorMessage: error.message,
-        errorStack: error.stack,
-        route: window.location.pathname,
-      }),
-      signal: abortController.signal
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        clearTimeout(timeoutId);
-        setFriendlyMessage(data.friendlyMessage);
-        setIsAnalyzing(false);
-      })
-      .catch((err) => {
-        if (err.name !== "AbortError") {
-          clearTimeout(timeoutId);
-          setIsAnalyzing(false);
-          setFriendlyMessage("We hit an unexpected error while loading this page. Our team has been notified.");
-        }
-      });
-
-    return () => {
-      clearTimeout(timeoutId);
-      abortController.abort();
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
-  }, [error]);
+  const isAnalyzing = recovering;
+  const friendlyMessage = staleDeploy
+    ? "A new version of the app was released. Refresh to load it."
+    : "We hit an unexpected error while loading this page. Try again, or refresh. If it keeps happening, share the error details below with support.";
 
   return (
     <div className="flex items-center justify-center min-h-[400px] w-full p-4">
@@ -80,7 +50,7 @@ export default function Error({
             <div className="flex flex-col items-center justify-center space-y-4 py-8 text-center">
               <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
               <p className="text-sm font-medium text-slate-500 dark:text-slate-400 animate-pulse">
-                Our AI mechanic is analyzing what happened...
+                Updating to the latest version...
               </p>
             </div>
           ) : (
@@ -88,11 +58,23 @@ export default function Error({
               <div className="rounded-lg bg-slate-50 dark:bg-slate-800 p-4 border text-slate-700 dark:text-slate-300 text-sm leading-relaxed shadow-inner">
                 {friendlyMessage}
               </div>
+
+              <details className="rounded-lg border p-3 text-xs text-slate-600 dark:text-slate-400">
+                <summary className="cursor-pointer font-medium">Error details</summary>
+                <p className="mt-2 break-words font-mono">
+                  {error.name}: {error.message}
+                </p>
+                {error.digest && <p className="mt-1 font-mono">Digest: {error.digest}</p>}
+              </details>
               
               <div className="flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => window.location.reload()}
+                  onClick={() => {
+                    void recoverFromStaleDeploy().then((reloaded) => {
+                      if (!reloaded) window.location.reload();
+                    });
+                  }}
                   className="rounded-md px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
                 >
                   Refresh Page

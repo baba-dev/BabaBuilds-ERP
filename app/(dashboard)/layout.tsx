@@ -23,7 +23,7 @@ export default async function DashboardLayout({
   const workspaceId = session?.workspaceId;
 
   if (!session) {
-    const nextUrl = requestHeaders.get("next-url");
+    const nextUrl = requestHeaders.get("x-pathname-with-search") || requestHeaders.get("next-url");
     const callbackUrl = normalizeLaunchDestination(nextUrl || "/dashboard");
     redirect(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
   }

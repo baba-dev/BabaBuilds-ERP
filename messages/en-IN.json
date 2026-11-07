@@ -2954,5 +2954,142 @@
       "removed": "Removed",
       "ignored": "Ignored"
     }
+  },
+  "LoginPage": {
+    "welcomeTitle": "Welcome back",
+    "welcomeSubtitle": "Sign in to your BabaBuilds workspace.",
+    "trialBadge": "Free trial · No credit card",
+    "trialTitle": "Start your {days}-day {plan} trial",
+    "trialSubtitle": "No credit card required. Sign in to create your workspace — your trial ends {date}.",
+    "emailLabel": "Work email",
+    "emailPlaceholder": "name@company.com",
+    "emailInvalid": "Enter a valid email address.",
+    "continue": "Continue",
+    "or": "or",
+    "orUse": "or use",
+    "passkey": "Continue with passkey",
+    "passkeyHint": "Fastest on this device. Uses Face ID, fingerprint or Windows Hello — nothing to type, and it can't be phished.",
+    "passkeyTipLabel": "What is a passkey?",
+    "passkeyUnsupported": "Passkeys aren't available in this browser. Try Safari, Chrome, Edge or the mobile app.",
+    "passkeyOpening": "Opening your device passkey prompt.",
+    "passkeyFailed": "Passkey sign-in was cancelled or failed.",
+    "passkeySession": "Unable to create a session from this passkey.",
+    "google": "Continue with Google",
+    "lastUsed": "Last used",
+    "signingInAs": "Signing in as",
+    "changeEmail": "Change",
+    "methodLabel": "Sign-in method",
+    "tabPassword": "Password",
+    "tabLink": "Email link",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "Your password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "signIn": "Sign in",
+    "forgot": "Forgot password?",
+    "sending": "Sending…",
+    "forgotSent": "If that account exists, a password reset email has been sent.",
+    "passwordTipLabel": "About password sign-in",
+    "passwordHint": "Owner, Admin and Finance Manager accounts must use a passkey or Google instead of a password alone.",
+    "passwordFailed": "Password sign-in failed.",
+    "checking": "Checking your details.",
+    "linkDescription": "We'll email you a one-time secure link. No password needed.",
+    "sendLink": "Email me a sign-in link",
+    "linkSending": "Sending a secure sign-in link to your email.",
+    "linkSentTitle": "Check your inbox",
+    "linkSentTo": "We sent a sign-in link to {email}. Check your spam folder too.",
+    "resend": "Resend link",
+    "resendIn": "Resend in {seconds}s",
+    "rateLimited": "Too many attempts. Try again in about {minutes} min.",
+    "completeCheck": "Complete the security check to continue.",
+    "networkError": "Network problem. Check your connection and try again.",
+    "resetTitle": "Choose a new password",
+    "resetSubtitle": "Use at least 12 characters, with a letter and a number.",
+    "newPassword": "New password",
+    "resetSubmit": "Update password",
+    "resetDone": "Password updated. Sign in with your new password.",
+    "resetFailed": "Unable to reset password.",
+    "backToSignIn": "Back to sign in",
+    "signingIn": "Signing you in…",
+    "redirecting": "Taking you to your workspace",
+    "redirectingGoogle": "Redirecting to Google sign-in.",
+    "demoLink": "Explore a live demo workspace",
+    "footerLabel": "Legal and help",
+    "help": "Help",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "errors": {
+      "highRiskMagicLink": "Email links are disabled for Owner and Admin accounts. Use a passkey or Google.",
+      "highRiskPassword": "Password-only sign-in is disabled for Owner, Admin and Finance Manager accounts. Use a passkey or Google.",
+      "mfaPolicy": "This account requires phishing-resistant sign-in. Use a passkey or Google.",
+      "linkExpired": "That sign-in link has expired or was already used. Request a new one.",
+      "accountNotLinked": "This email is registered with a different sign-in method. Use the method you first signed up with.",
+      "credentials": "Email or password is incorrect, or this account needs a stronger sign-in method.",
+      "accessDenied": "You don't have access to sign in with this account.",
+      "configuration": "Sign-in is temporarily unavailable. Please try again shortly.",
+      "oauth": "We couldn't complete sign-in with that provider. Please try again.",
+      "sessionRequired": "Please sign in to continue.",
+      "linkFailed": "We couldn't send the sign-in link. Please try again.",
+      "workspaceMissing": "We couldn't load your workspace. Sign in again, or contact support if this keeps happening.",
+    "generic": "Something went wrong while signing you in. Please try again."
+    },
+    "showcase": {
+      "ariaLabel": "About BabaBuilds ERP",
+      "eyebrow": "Proposal to payment, one workspace",
+      "headline": "Get paid faster. Close the books cleaner.",
+      "subhead": "Send proposals, collect e-signatures, invoice, take payment, match the bank and hand your CA a clean export — without switching tools.",
+      "steps": {
+        "proposal": {
+          "title": "Proposal",
+          "tip": "Build and send branded proposals in minutes."
+        },
+        "esign": {
+          "title": "E-signature",
+          "tip": "Clients sign online, so approvals never stall in email."
+        },
+        "invoice": {
+          "title": "Invoice",
+          "tip": "Turn an accepted proposal into a GST/VAT-ready invoice."
+        },
+        "payment": {
+          "title": "Payment link",
+          "tip": "Share a pay-now link so clients can settle instantly."
+        },
+        "bank": {
+          "title": "Bank match",
+          "tip": "Reconcile bank lines against invoices and expenses."
+        },
+        "export": {
+          "title": "CA export",
+          "tip": "Hand your accountant clean, audit-ready records."
+        }
+      },
+      "preview": {
+        "title": "This month",
+        "sample": "Sample data",
+        "invoiced": "Invoiced",
+        "collected": "Collected",
+        "outstanding": "Outstanding"
+      },
+      "features": {
+        "passkeys": {
+          "title": "Passkey sign-in",
+          "tip": "Phishing-resistant sign-in with Face ID, fingerprint or Windows Hello."
+        },
+        "tax": {
+          "title": "GST & VAT ready",
+          "tip": "Country-aware tax setup for India and the Gulf."
+        },
+        "currency": {
+          "title": "Multi-currency",
+          "tip": "Invoice and report in the currencies your clients use."
+        },
+        "roles": {
+          "title": "Team roles",
+          "tip": "Give owners, finance and staff exactly the access they need."
+        }
+      },
+      "securityNote": "Owner and Admin accounts are protected by passkey or Google sign-in."
+    }
   }
 }

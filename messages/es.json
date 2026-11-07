@@ -2983,5 +2983,142 @@
       "removed": "Removed",
       "ignored": "Ignored"
     }
+  },
+  "LoginPage": {
+    "welcomeTitle": "Bienvenido de nuevo",
+    "welcomeSubtitle": "Inicia sesión en tu espacio de BabaBuilds.",
+    "trialBadge": "Prueba gratuita · Sin tarjeta",
+    "trialTitle": "Empieza tu prueba {plan} de {days} días",
+    "trialSubtitle": "No necesitas tarjeta de crédito. Inicia sesión para crear tu espacio: la prueba termina el {date}.",
+    "emailLabel": "Correo de trabajo",
+    "emailPlaceholder": "nombre@empresa.com",
+    "emailInvalid": "Introduce un correo electrónico válido.",
+    "continue": "Continuar",
+    "or": "o",
+    "orUse": "o usa",
+    "passkey": "Continuar con passkey",
+    "passkeyHint": "Lo más rápido en este dispositivo. Usa Face ID, huella o Windows Hello: nada que escribir y no se puede suplantar.",
+    "passkeyTipLabel": "¿Qué es una passkey?",
+    "passkeyUnsupported": "Las passkeys no están disponibles en este navegador. Prueba Safari, Chrome, Edge o la app móvil.",
+    "passkeyOpening": "Abriendo el aviso de passkey de tu dispositivo.",
+    "passkeyFailed": "El inicio con passkey se canceló o falló.",
+    "passkeySession": "No se pudo crear una sesión con esta passkey.",
+    "google": "Continuar con Google",
+    "lastUsed": "Último usado",
+    "signingInAs": "Iniciando sesión como",
+    "changeEmail": "Cambiar",
+    "methodLabel": "Método de inicio de sesión",
+    "tabPassword": "Contraseña",
+    "tabLink": "Enlace por correo",
+    "passwordLabel": "Contraseña",
+    "passwordPlaceholder": "Tu contraseña",
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña",
+    "signIn": "Iniciar sesión",
+    "forgot": "¿Olvidaste tu contraseña?",
+    "sending": "Enviando…",
+    "forgotSent": "Si la cuenta existe, se ha enviado un correo para restablecer la contraseña.",
+    "passwordTipLabel": "Sobre el inicio con contraseña",
+    "passwordHint": "Las cuentas de Propietario, Administrador y Gerente financiero deben usar una passkey o Google, no solo contraseña.",
+    "passwordFailed": "Falló el inicio de sesión con contraseña.",
+    "checking": "Comprobando tus datos.",
+    "linkDescription": "Te enviaremos por correo un enlace seguro de un solo uso. Sin contraseña.",
+    "sendLink": "Enviarme un enlace de acceso",
+    "linkSending": "Enviando un enlace seguro de acceso a tu correo.",
+    "linkSentTitle": "Revisa tu bandeja de entrada",
+    "linkSentTo": "Enviamos un enlace de acceso a {email}. Revisa también el spam.",
+    "resend": "Reenviar enlace",
+    "resendIn": "Reenviar en {seconds}s",
+    "rateLimited": "Demasiados intentos. Vuelve a intentarlo en unos {minutes} min.",
+    "completeCheck": "Completa la verificación de seguridad para continuar.",
+    "networkError": "Problema de red. Revisa tu conexión e inténtalo de nuevo.",
+    "resetTitle": "Elige una contraseña nueva",
+    "resetSubtitle": "Usa al menos 12 caracteres, con una letra y un número.",
+    "newPassword": "Contraseña nueva",
+    "resetSubmit": "Actualizar contraseña",
+    "resetDone": "Contraseña actualizada. Inicia sesión con la nueva contraseña.",
+    "resetFailed": "No se pudo restablecer la contraseña.",
+    "backToSignIn": "Volver al inicio de sesión",
+    "signingIn": "Iniciando sesión…",
+    "redirecting": "Llevándote a tu espacio de trabajo",
+    "redirectingGoogle": "Redirigiendo a Google.",
+    "demoLink": "Explorar un espacio de demostración",
+    "footerLabel": "Legal y ayuda",
+    "help": "Ayuda",
+    "privacy": "Privacidad",
+    "terms": "Términos",
+    "errors": {
+      "highRiskMagicLink": "Los enlaces por correo están desactivados para cuentas de Propietario y Administrador. Usa una passkey o Google.",
+      "highRiskPassword": "El acceso solo con contraseña está desactivado para Propietario, Administrador y Gerente financiero. Usa una passkey o Google.",
+      "mfaPolicy": "Esta cuenta requiere un inicio de sesión resistente al phishing. Usa una passkey o Google.",
+      "linkExpired": "Ese enlace de acceso caducó o ya se usó. Solicita uno nuevo.",
+      "accountNotLinked": "Este correo está registrado con otro método de acceso. Usa el método con el que te registraste.",
+      "credentials": "El correo o la contraseña son incorrectos, o la cuenta necesita un método más seguro.",
+      "accessDenied": "No tienes acceso para iniciar sesión con esta cuenta.",
+      "configuration": "El inicio de sesión no está disponible por ahora. Inténtalo de nuevo en breve.",
+      "oauth": "No pudimos completar el inicio con ese proveedor. Inténtalo de nuevo.",
+      "sessionRequired": "Inicia sesión para continuar.",
+      "linkFailed": "No pudimos enviar el enlace de acceso. Inténtalo de nuevo.",
+      "workspaceMissing": "No pudimos cargar tu espacio de trabajo. Inicia sesión de nuevo o contacta con soporte si continúa.",
+    "generic": "Algo salió mal al iniciar sesión. Inténtalo de nuevo."
+    },
+    "showcase": {
+      "ariaLabel": "Acerca de BabaBuilds ERP",
+      "eyebrow": "De la propuesta al cobro, en un solo espacio",
+      "headline": "Cobra más rápido. Cierra los libros con más limpieza.",
+      "subhead": "Envía propuestas, recoge firmas electrónicas, factura, cobra, concilia el banco y entrega a tu contador una exportación limpia, sin cambiar de herramienta.",
+      "steps": {
+        "proposal": {
+          "title": "Propuesta",
+          "tip": "Crea y envía propuestas con tu marca en minutos."
+        },
+        "esign": {
+          "title": "Firma electrónica",
+          "tip": "Tus clientes firman en línea y las aprobaciones no se estancan."
+        },
+        "invoice": {
+          "title": "Factura",
+          "tip": "Convierte una propuesta aceptada en una factura lista para GST/IVA."
+        },
+        "payment": {
+          "title": "Enlace de pago",
+          "tip": "Comparte un enlace para que tus clientes paguen al instante."
+        },
+        "bank": {
+          "title": "Conciliación",
+          "tip": "Concilia los movimientos bancarios con facturas y gastos."
+        },
+        "export": {
+          "title": "Exportación al contador",
+          "tip": "Entrega registros limpios y listos para auditoría."
+        }
+      },
+      "preview": {
+        "title": "Este mes",
+        "sample": "Datos de ejemplo",
+        "invoiced": "Facturado",
+        "collected": "Cobrado",
+        "outstanding": "Pendiente"
+      },
+      "features": {
+        "passkeys": {
+          "title": "Acceso con passkey",
+          "tip": "Inicio de sesión resistente al phishing con Face ID, huella o Windows Hello."
+        },
+        "tax": {
+          "title": "Listo para GST e IVA",
+          "tip": "Configuración fiscal por país para India y el Golfo."
+        },
+        "currency": {
+          "title": "Multimoneda",
+          "tip": "Factura e informa en las monedas de tus clientes."
+        },
+        "roles": {
+          "title": "Roles de equipo",
+          "tip": "Da a propietarios, finanzas y equipo justo el acceso que necesitan."
+        }
+      },
+      "securityNote": "Las cuentas de Propietario y Administrador se protegen con passkey o Google."
+    }
   }
 }

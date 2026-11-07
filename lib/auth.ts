@@ -25,7 +25,15 @@ import {
   isMagicLinkExceptionEmail,
   isPhishingResistantSignIn,
 } from "@/lib/security/access-risk";
-import { normalizeLoginEmail, verifyPassword } from "@/lib/auth/password";
+import {
+  hashPassword,
+  isLegacyPasswordHash,
+  normalizeLoginEmail,
+  validatePasswordStrength,
+  verifyAgainstDummyHash,
+  verifyPassword,
+} from "@/lib/auth/password";
+import { normalizeIp } from "@/lib/request-ip";
 import { consumeLoginToken } from "@/lib/auth/passkeys";
 import { isGoogleAuthEnabled } from "@/lib/auth/provider-flags";
 import {
@@ -333,6 +341,9 @@ function isAllowedDemoMfaBypass(input: { provider?: string | null; email?: strin
   return isDemoCredentialsSignIn && isDemoEmail;
 }
 
+const ACCOUNT_LOCK_THRESHOLD = 10;
+const ACCOUNT_LOCK_MS = 10 * 60 * 1000;
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 7, updateAge: 60 * 60 * 24 },
@@ -450,10 +461,15 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials, req) {
         const email = normalizeLoginEmail(credentials?.email || "");
         const password = credentials?.password || "";
-        const ip = (req?.headers?.["x-forwarded-for"] || req?.headers?.["x-real-ip"] || "unknown")
-          .toString()
-          .split(",")[0]
-          .trim();
+        // Prefer the headers Cloudflare/nginx overwrite; x-forwarded-for is only a last resort.
+        const ip =
+          normalizeIp(
+            (req?.headers?.["cf-connecting-ip"] ||
+              req?.headers?.["x-real-ip"] ||
+              req?.headers?.["x-forwarded-for"] ||
+              "")
+              .toString(),
+          ) ?? "unknown";
         const rateLimitKey = `password-login:${hashRateLimitValue(email || "missing")}:${hashRateLimitValue(ip)}`;
 
         if (!email || !password) {
@@ -470,10 +486,21 @@ export const authOptions: NextAuthOptions = {
 
         const user = await prisma.user.findUnique({
           where: { email },
-          select: { id: true, name: true, email: true, image: true, isDemo: true, passwordHash: true, passwordLockedUntil: true },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+            isDemo: true,
+            passwordHash: true,
+            passwordLockedUntil: true,
+            passwordFailedAttempts: true,
+          },
         });
 
         if (!user || user.isDemo || !user.passwordHash) {
+          // Burn the same CPU as a real check so response time cannot be used to enumerate accounts.
+          await verifyAgainstDummyHash(password);
           recordPasswordAuthFailure(rateLimitKey);
           recordAuthFailure({ reason: user?.isDemo ? "PASSWORD_LOGIN_DEMO_USER_BLOCKED" : "PASSWORD_LOGIN_INVALID_CREDENTIALS", code: "PASSWORD_LOGIN_FAILED", provider: "password-login" });
           recordPasswordAuthAuditEvent({ email, outcome: "failure", ip });
@@ -481,6 +508,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         if (user.passwordLockedUntil && user.passwordLockedUntil > new Date()) {
+          await verifyAgainstDummyHash(password);
           recordAuthFailure({ reason: "PASSWORD_LOGIN_ACCOUNT_LOCKED", code: "PASSWORD_LOGIN_LOCKED", provider: "password-login" });
           recordPasswordAuthAuditEvent({ email, userId: user.id, outcome: "locked", ip });
           return null;
@@ -488,25 +516,39 @@ export const authOptions: NextAuthOptions = {
 
         const passwordMatches = await verifyPassword(password, user.passwordHash);
         if (!passwordMatches) {
-          const failure = recordPasswordAuthFailure(rateLimitKey);
-          const lockedUntil = failure.count >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null;
-          await prisma.user.update({
+          // A single IP is throttled by the (email, ip) limiter above. The account itself only locks
+          // after many failures overall, so one attacker cannot lock a real user out in 5 guesses.
+          recordPasswordAuthFailure(rateLimitKey);
+          const updated = await prisma.user.update({
             where: { id: user.id },
-            data: {
-              passwordFailedAttempts: { increment: 1 },
-              passwordLastFailureAt: new Date(),
-              ...(lockedUntil ? { passwordLockedUntil: lockedUntil } : {}),
-            },
+            data: { passwordFailedAttempts: { increment: 1 }, passwordLastFailureAt: new Date() },
+            select: { passwordFailedAttempts: true },
           });
+          if (updated.passwordFailedAttempts >= ACCOUNT_LOCK_THRESHOLD) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { passwordLockedUntil: new Date(Date.now() + ACCOUNT_LOCK_MS), passwordFailedAttempts: 0 },
+            });
+          }
           recordAuthFailure({ reason: "PASSWORD_LOGIN_INVALID_CREDENTIALS", code: "PASSWORD_LOGIN_FAILED", provider: "password-login" });
           recordPasswordAuthAuditEvent({ email, userId: user.id, outcome: "failure", ip });
           return null;
         }
 
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { passwordFailedAttempts: 0, passwordLockedUntil: null, passwordLastFailureAt: null },
-        });
+        // One write, and only when something actually has to change (clear counters / upgrade hash).
+        const needsRehash = isLegacyPasswordHash(user.passwordHash) && !validatePasswordStrength(password);
+        if (needsRehash || user.passwordFailedAttempts > 0 || user.passwordLockedUntil) {
+          const upgradedHash = needsRehash ? await hashPassword(password).catch(() => null) : null;
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              passwordFailedAttempts: 0,
+              passwordLockedUntil: null,
+              passwordLastFailureAt: null,
+              ...(upgradedHash ? { passwordHash: upgradedHash } : {}),
+            },
+          });
+        }
         clearPasswordAuthRateLimit(rateLimitKey);
         recordPasswordAuthAuditEvent({ email, userId: user.id, outcome: "success", ip });
 
@@ -575,20 +617,21 @@ export const authOptions: NextAuthOptions = {
       if (!user?.email) return false;
 
       const inviteEmail = user.email.toLowerCase();
-      const pendingInvites = await prisma.workspaceInvite.findMany({
-        where: {
-          email: inviteEmail,
-          expiresAt: { gt: new Date() },
-        },
-        select: { id: true, workspaceId: true, role: true, businessRole: true },
-      });
-
-      const memberships = user.id
-        ? await prisma.workspaceUser.findMany({
-            where: { userId: user.id },
-            select: { role: true, businessRole: true, workspaceId: true },
-          })
-        : [];
+      const [pendingInvites, memberships] = await Promise.all([
+        prisma.workspaceInvite.findMany({
+          where: {
+            email: inviteEmail,
+            expiresAt: { gt: new Date() },
+          },
+          select: { id: true, workspaceId: true, role: true, businessRole: true },
+        }),
+        user.id
+          ? prisma.workspaceUser.findMany({
+              where: { userId: user.id },
+              select: { role: true, businessRole: true, workspaceId: true },
+            })
+          : Promise.resolve([] as Array<{ role: string; businessRole: string | null; workspaceId: string }>),
+      ]);
 
       const effectiveRoles = [
         ...memberships.flatMap((membership) => [membership.businessRole, membership.role]),
@@ -643,10 +686,6 @@ export const authOptions: NextAuthOptions = {
 
       await prisma.$transaction(async (tx) => {
         for (const invite of pendingInvites) {
-          const fullInvite = await tx.workspaceInvite.findUnique({
-            where: { id: invite.id },
-            select: { businessRole: true, role: true },
-          });
           await tx.workspaceUser.upsert({
             where: {
               userId_workspaceId: {
@@ -658,12 +697,12 @@ export const authOptions: NextAuthOptions = {
               userId: user.id,
               workspaceId: invite.workspaceId,
               role: invite.role,
-              businessRole: fullInvite?.businessRole ?? undefined,
+              businessRole: invite.businessRole ?? undefined,
               joinedAt: new Date(),
             },
             update: {
               role: invite.role,
-              businessRole: fullInvite?.businessRole ?? undefined,
+              businessRole: invite.businessRole ?? undefined,
               isActive: true,
             },
           });
@@ -710,7 +749,7 @@ export const authOptions: NextAuthOptions = {
         });
       };
 
-      const dbUser = await prisma.user.findUnique({
+      const dbUserPromise = prisma.user.findUnique({
         where: { id: userId },
         select: {
           email: true,
@@ -749,10 +788,7 @@ export const authOptions: NextAuthOptions = {
         },
       });
 
-      // If we can't load the user record, keep token as-is.
-      if (!dbUser) return token;
-
-      const groupMemberships = (await prisma.companyGroupMember.findMany({
+      const groupMembershipsPromise = prisma.companyGroupMember.findMany({
         where: { userId, isActive: true },
         select: {
           role: true,
@@ -823,7 +859,16 @@ export const authOptions: NextAuthOptions = {
             },
           },
         },
-      })) as GroupAccessibleWorkspaceMembership[];
+      });
+
+      const dbUser = await dbUserPromise;
+      // If we can't load the user record, keep token as-is.
+      if (!dbUser) {
+        void groupMembershipsPromise.catch(() => undefined);
+        return token;
+      }
+
+      const groupMemberships = (await groupMembershipsPromise) as GroupAccessibleWorkspaceMembership[];
 
       const accessibleMemberships = combineAccessibleWorkspaceMemberships(dbUser.workspaces, groupMemberships);
 

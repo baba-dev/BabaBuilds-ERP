@@ -37,6 +37,7 @@ import {
 import type { DemoTemplateKey } from "@/lib/demo/templates/types";
 import { isDemoTemplateKey } from "@/lib/demo/templates";
 import type { SignupIntentPreview } from "@/lib/signup-intent-preview";
+import { TURNSTILE_SITE_KEY } from "@/lib/auth/turnstile-config";
 
 type AuthModalProps = {
   callbackUrl?: string;
@@ -407,8 +408,15 @@ export default function AuthModal({
     if (!email || !password || isPasswordLoading) return;
     setIsPasswordLoading(true);
     setAuthStatusMessage("Checking your email and password.");
-    const result = await signIn("password-login", { email, password, callbackUrl, redirect: false });
-    setIsPasswordLoading(false);
+    let result: Awaited<ReturnType<typeof signIn>>;
+    try {
+      result = await signIn("password-login", { email, password, callbackUrl, redirect: false });
+    } catch {
+      toast.error("Network problem. Check your connection and try again.");
+      return;
+    } finally {
+      setIsPasswordLoading(false);
+    }
     const errorCode = getAuthResultErrorCode(result);
     const highRiskMessage = getBlockedHighRiskMessage(errorCode);
     if (highRiskMessage) {
@@ -433,27 +441,39 @@ export default function AuthModal({
       return;
     }
     setIsPasswordLoading(true);
-    const response = await fetch("/api/auth/password-reset/request", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
-    await response.json().catch(() => ({}));
-    setIsPasswordLoading(false);
-    toast.success("If that account exists, a password reset email has been sent.");
+    try {
+      await fetch("/api/auth/password-reset/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      toast.success("If that account exists, a password reset email has been sent.");
+    } catch {
+      toast.error("Network problem. Check your connection and try again.");
+    } finally {
+      setIsPasswordLoading(false);
+    }
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!resetToken || !newPassword || isPasswordLoading) return;
     setIsPasswordLoading(true);
-    const response = await fetch("/api/auth/password-reset/confirm", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: resetToken, password: newPassword }),
-    });
-    const payload = (await response.json().catch(() => ({}))) as { error?: string };
-    setIsPasswordLoading(false);
+    let response: Response;
+    let payload: { error?: string } = {};
+    try {
+      response = await fetch("/api/auth/password-reset/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: resetToken, password: newPassword }),
+      });
+      payload = (await response.json().catch(() => ({}))) as { error?: string };
+    } catch {
+      toast.error("Network problem. Check your connection and try again.");
+      return;
+    } finally {
+      setIsPasswordLoading(false);
+    }
     if (!response.ok) {
       toast.error(payload.error || "Unable to reset password.");
       return;
@@ -494,7 +514,7 @@ export default function AuthModal({
         body: JSON.stringify({ token: turnstileToken, templateKey: selectedDemoTemplateKey }),
       });
 
-      const data = await response.json();
+      const data = (await response.json().catch(() => ({}))) as { email?: string; password?: string; error?: string };
 
       if (data.email && data.password) {
         rememberAuthMethod("demo");
@@ -923,12 +943,12 @@ export default function AuthModal({
                 {!isDemoLoading && isProd && (
                   <div className="flex justify-center rounded-lg border border-border/80 bg-muted/25 py-2">
                     <Turnstile
-                      siteKey="0x4AAAAAACvSwAyJa3nVFu2n"
+                      siteKey={TURNSTILE_SITE_KEY}
                       onSuccess={(token) => {
                         setTurnstileToken(token);
                         setRequiresTurnstile(false);
                       }}
-                      options={{ theme: "dark" }}
+                      options={{ theme: "auto" }}
                     />
                   </div>
                 )}

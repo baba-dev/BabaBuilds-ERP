@@ -1,11 +1,22 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { consumeAuthThrottle } from "@/lib/auth/ip-throttle";
+import { getClientIp } from "@/lib/request-ip";
 import {
   HIGH_RISK_MAGIC_LINK_REASON,
   isEmailMagicLinkAllowedForRoles,
 } from "@/lib/security/access-risk";
 
 export async function POST(req: Request) {
+  // Unauthenticated and role-revealing: throttle per client IP to make enumeration impractical.
+  const throttle = consumeAuthThrottle(`magic-link-policy:${getClientIp(req)}`, 20, 60_000);
+  if (!throttle.ok) {
+    return NextResponse.json(
+      { allowed: false, reason: "Too many requests. Please wait a moment." },
+      { status: 429, headers: { "Retry-After": String(throttle.retryAfterSeconds) } },
+    );
+  }
+
   try {
     const body = (await req.json().catch(() => ({}))) as { email?: string };
     const email = body.email?.trim().toLowerCase();
