@@ -24,7 +24,7 @@ jobs:
     runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
 
       # `!cancelled()` runs every check even if an earlier one failed, so one run
@@ -49,7 +49,7 @@ jobs:
     runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       # Some tests (company-groups, tax summary) use the real Prisma client against SQLite.
       # The schema hardcodes file:./dev.db, so create prisma/dev.db before running them.
@@ -65,7 +65,7 @@ jobs:
     runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
 
       # Runs in an isolated temp copy of the schema (prisma/schema.prisma hardcodes file:./dev.db).
@@ -82,7 +82,7 @@ jobs:
       NODE_OPTIONS: --max-old-space-size=4096
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
 
       - name: Restore Next.js build cache
@@ -107,7 +107,7 @@ jobs:
       NEXT_TELEMETRY_DISABLED: "1"
       DEMO_CIRCUIT_BREAKER_THRESHOLD: "1000"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
 
       - uses: ./.github/actions/test-env
