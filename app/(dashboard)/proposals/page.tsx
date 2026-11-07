@@ -560,10 +560,10 @@ export default function ProposalsEngine() {
     setMilestones((prev) => [...prev, { title: "", description: "", amount: remaining, dueDate: format(new Date(), "yyyy-MM-dd") }]);
   };
 
-  const updateMilestone = (index: number, key: string, value: string | number) => {
+  const updateMilestone = (index: number, key: "title" | "description" | "amount" | "dueDate", value: string | number) => {
     setMilestones((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], [key]: value } as any;
+      next[index] = { ...next[index], [key]: value };
       return next;
     });
   };

@@ -54,6 +54,7 @@ export function CashFlowPeriodBreakdown({
    
   useEffect(() => {
     if (!defaultOpenPeriodId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time client-only state sync after mount (avoids SSR hydration mismatch)
     setOpen((prev) => (prev[defaultOpenPeriodId] ? prev : { ...prev, [defaultOpenPeriodId]: true }));
   }, [defaultOpenPeriodId]);
 
@@ -168,7 +169,7 @@ export function CashFlowPeriodBreakdown({
                           role="img"
                           aria-label={`Timing overlay: ${Object.entries(totalsByClass)
                             .filter(([, v]) => (v ?? 0) > 0)
-                            .map(([k, v]) => `${labelForClassification(k as any)} ${currencyFormatter(v ?? 0)}`)
+                            .map(([k, v]) => `${labelForClassification(k as SnapshotLineItem["classification"])} ${currencyFormatter(v ?? 0)}`)
                             .join(", ")}`}
                         >
                           <div className="flex h-full w-full">

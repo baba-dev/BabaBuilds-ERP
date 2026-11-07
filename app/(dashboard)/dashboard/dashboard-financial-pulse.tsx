@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { typography as ty, tx } from "@/lib/ui/typography";
 import type { DashboardData } from "./types";
 import { DashboardTooltip } from "./dashboard-tooltip";
+import { createTranslator } from "@/lib/i18n/translator";
 
 // Optional subtle count animation for values to make it feel "alive"
 function CountUpValue({ value, formatter }: { value: number; formatter: (v: number) => string }) {
@@ -49,10 +50,7 @@ export function DashboardFinancialPulse({
   fCurrency: (value: number) => string;
 }) {
   const t = useTranslations("Dashboard");
-  const tr = (key: string, fallback: string, values?: any) => {
-    if (!t.has(key as any)) return fallback;
-    return t(key as any, values);
-  };
+  const tr = createTranslator(t);
 
   const {
     billedRevenue,

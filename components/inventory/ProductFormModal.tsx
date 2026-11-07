@@ -1,5 +1,6 @@
 "use client";
 
+import type { InventoryProduct } from "@/lib/types/inventory";
 import { useEffect, useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,11 +11,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Info, ImagePlus, X, Loader2, PackagePlus } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { getErrorMessage } from "@/lib/error-utils";
 
 interface ProductFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  productToEdit?: any;
+  productToEdit?: InventoryProduct;
   onSuccess: () => void;
 }
 
@@ -140,8 +142,8 @@ export function ProductFormModal({ open, onOpenChange, productToEdit, onSuccess 
       toast.success(`Product successfully ${productToEdit ? 'updated' : 'created'}.`);
       onSuccess();
       onOpenChange(false);
-    } catch (err: any) {
-      toast.error(err.message || "Something went wrong.");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || "Something went wrong.");
     } finally {
       setIsSubmitting(false);
     }
@@ -181,6 +183,7 @@ export function ProductFormModal({ open, onOpenChange, productToEdit, onSuccess 
               >
                 {previewUrl ? (
                   <>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- dynamic or user-supplied image source; next/image remote config not applicable */}
                     <img src={previewUrl} alt="Preview" className="h-48 object-contain p-2" />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 backdrop-blur-sm">
                        <Button type="button" variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()} className="font-bold">

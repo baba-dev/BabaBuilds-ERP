@@ -1,5 +1,6 @@
 "use client";
 
+import type { InventoryProduct } from "@/lib/types/inventory";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import type { ReactNode } from "react";
 import {
@@ -19,18 +20,6 @@ import { LayoutGrid, List, MapPin, RefreshCw } from "lucide-react";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { Card, CardContent } from "@/components/ui/card";
 
-type InventoryProduct = {
-  id: string;
-  sku: string;
-  name: string;
-  category: string | null;
-  currentStock: number;
-  safetyStock: number;
-  status: string;
-  location: string | null;
-  costPrice: number;
-};
-
 type ProductColumn = {
   id: string;
   header: ReactNode;
@@ -49,7 +38,7 @@ export default function InventoryHub() {
 
   const [products, setProducts] = useState<InventoryProduct[]>([]);
   const [globalFilter, setGlobalFilter] = useState("");
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const nextCursorRef = useRef<string | null>(null);
   const globalFilterRef = useRef("");

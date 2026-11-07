@@ -7,8 +7,8 @@ import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const workspaceId = (session as any).workspaceId;
+    if (!session || !session.workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const workspaceId = session.workspaceId;
 
     const { id } = await context.params;
     const { status } = await request.json();

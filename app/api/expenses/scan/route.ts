@@ -10,10 +10,10 @@ export async function POST(request: Request) {
   try {
     // 1. SECURITY LOCK & BYOK FETCH
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized access.' }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
 
     const profile = await prisma.businessProfile.findUnique({ 
       where: { workspaceId } 
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "AI could not cleanly parse the receipt data." }, { status: 500 });
     }
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("AI Scanner Error:", error);
     return NextResponse.json({ error: "An error occurred while scanning the receipt." }, { status: 500 });
   }

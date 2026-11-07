@@ -313,6 +313,7 @@ export default function AdminDistributorsPage() {
           <CardTitle className="text-lg">Export commissions (CSV)</CardTitle>
         </CardHeader>
         <CardContent>
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- full-page navigation to a non-page route is intended */}
           <a
             href="/api/admin/distributors/commissions/export"
             className="inline-flex items-center gap-2 text-sm font-bold text-indigo-600"

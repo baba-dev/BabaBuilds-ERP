@@ -255,16 +255,16 @@ export function confidenceBand(conf: number | null | undefined): ConfidenceBand 
 }
 
 export function rollupByConfidence(items: SnapshotLineItem[]) {
-  const out = {
+  const out: Record<ConfidenceBand, { count: number; amount: number }> = {
     high: { count: 0, amount: 0 },
     medium: { count: 0, amount: 0 },
     low: { count: 0, amount: 0 },
     unknown: { count: 0, amount: 0 },
-  } as const;
+  };
   for (const it of items) {
     const b = confidenceBand(it.confidence);
-    (out as any)[b].count += 1;
-    (out as any)[b].amount += Number(it.amount ?? 0);
+    out[b].count += 1;
+    out[b].amount += Number(it.amount ?? 0);
   }
   return out;
 }
@@ -272,7 +272,7 @@ export function rollupByConfidence(items: SnapshotLineItem[]) {
 export function invoiceBehaviorDelayDays(item: SnapshotLineItem): number | null {
   const raw = item.metadataJson;
   if (!raw || typeof raw !== "object") return null;
-  const val = (raw as any).behaviorDelayDays;
+  const val = (raw as Record<string, unknown>).behaviorDelayDays;
   const n = Number(val);
   return Number.isFinite(n) ? n : null;
 }

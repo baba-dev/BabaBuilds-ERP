@@ -22,7 +22,7 @@ export function invoiceToForecastLines(args: {
     clientId: string | null;
     status: "PENDING" | "PARTIALLY_PAID" | "PAID";
     totalAmount: Prisma.Decimal;
-    amountReceived: number | null;
+    amountReceived: number | Prisma.Decimal | null;
   };
   workspaceDefaults: {
     paymentTermsDays: number;
@@ -38,7 +38,7 @@ export function invoiceToForecastLines(args: {
   collectionsDelayDays: number;
   inflowHaircutPercent: number;
 }): ForecastLineDraft[] {
-  const { invoice, workspaceDefaults, scenarioTag, collectionsDelayDays, inflowHaircutPercent, paymentBehavior } = args;
+  const { invoice, workspaceDefaults, scenarioTag, collectionsDelayDays, paymentBehavior } = args;
   if (invoice.status === "PAID") return [];
 
   const received = toDecimal(invoice.amountReceived ?? 0);
@@ -103,7 +103,7 @@ export function retainerToForecastLines(args: {
   collectionsDelayDays: number;
   inflowHaircutPercent: number;
 }): ForecastLineDraft[] {
-  const { retainer, horizon, scenarioTag, collectionsDelayDays, inflowHaircutPercent } = args;
+  const { retainer, horizon, scenarioTag, collectionsDelayDays } = args;
   if (retainer.status !== "ACTIVE") return [];
   const events = generateRecurringDates(retainer.nextBillingDate, retainer.frequency, horizon.endDate);
   return events
@@ -141,7 +141,7 @@ export function purchaseOrderToForecastLines(args: {
   poShiftDays: number;
   outflowIncreasePercent: number;
 }): ForecastLineDraft[] {
-  const { purchaseOrder, scenarioTag, poShiftDays, outflowIncreasePercent } = args;
+  const { purchaseOrder, scenarioTag, poShiftDays } = args;
   const status = purchaseOrder.status;
   if (status === "CANCELLED") return [];
   if (status === "DRAFT") return [];
@@ -396,7 +396,7 @@ export async function loadForecastSourceData(args: {
   return {
     openingCash,
     bankTransactions,
-    invoices: invoices as any,
+    invoices,
     clientPaymentBehavior: Object.fromEntries(
       (paymentBehaviors ?? []).map((b) => [
         b.clientId,
@@ -409,8 +409,8 @@ export async function loadForecastSourceData(args: {
         },
       ])
     ),
-    retainers: retainers.map((r: any) => {
-      const sum = r.items ? r.items.reduce((acc: number, item: any) => acc + (item.quantity * Number(item.unitPrice)), 0) : 0;
+    retainers: retainers.map((r) => {
+      const sum = r.items ? r.items.reduce((acc: number, item) => acc + (item.quantity * Number(item.unitPrice)), 0) : 0;
       return {
         id: r.id,
         clientName: r.client.name,

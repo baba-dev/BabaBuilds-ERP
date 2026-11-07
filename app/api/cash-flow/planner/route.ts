@@ -20,7 +20,7 @@ const upsertSchema = z.object({
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
-  const workspaceId = (session as any)?.workspaceId as string | undefined;
+  const workspaceId = session?.workspaceId as string | undefined;
   if (!session || !workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const moduleGate = await requireCashFlowModule(workspaceId);
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
-  const workspaceId = (session as any)?.workspaceId as string | undefined;
+  const workspaceId = session?.workspaceId as string | undefined;
   if (!session || !workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const moduleGate = await requireCashFlowModule(workspaceId);

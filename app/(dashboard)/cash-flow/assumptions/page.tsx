@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverHeader, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import { CashFlowPageShell } from "@/app/(dashboard)/cash-flow/_components/cash-flow-page-shell";
 import type { CashFlowScenarioTag, CashFlowHorizonType } from "@/app/(dashboard)/cash-flow/_components/types";
-import { listAssumptions, upsertAssumption, listAssumptionProfiles, upsertAssumptionProfile } from "@/app/(dashboard)/cash-flow/_components/api";
+import { listAssumptions, upsertAssumption } from "@/app/(dashboard)/cash-flow/_components/api";
 import { CashFlowHelp } from "../_components/primitives/help";
 import { cashFlowIcon } from "../_components/primitives/styles";
 import { buildCashFlowContextQuery, getCashFlowContextFromSearchParams, updateCashFlowContextInUrl } from "../_components/context";
@@ -31,26 +31,9 @@ type AssumptionsForm = {
   movePOEarlierLaterDays: number;
 };
 
-function fmtSignedNumber(n: number) {
-  if (!Number.isFinite(n)) return "—";
-  return `${n >= 0 ? "+" : ""}${n}`;
-}
 
-function summarizeAssumptions(key: string, valueJson: unknown) {
-  const v = (valueJson ?? {}) as Partial<AssumptionsForm>;
-  const num = (x: unknown) => {
-    const n = Number(x);
-    return Number.isFinite(n) ? n : null;
-  };
-  const summary = [
-    { label: "Collections delay", value: num(v.collectionsDelayDays), suffix: "d" },
-    { label: "Inflow haircut", value: num(v.inflowHaircutPercent), suffix: "%" },
-    { label: "Outflow increase", value: num(v.outflowIncreasePercent), suffix: "%" },
-    { label: "PO timing", value: num(v.movePOEarlierLaterDays), suffix: "d" },
-  ].filter((x) => x.value != null);
 
-  return { key, summary };
-}
+
 
 const defaultForm: AssumptionsForm = {
   defaultInvoicePaymentTermsDays: 30,
@@ -100,7 +83,7 @@ const curatedPresets: Array<{
     label: "Engine default",
     description: "Reset to the scenario’s built-in baseline defaults.",
     tone: "default",
-    apply: (_base) => ({ ...scenarioDefaults.BASE }),
+    apply: () => ({ ...scenarioDefaults.BASE }),
   },
   {
     id: "conservative",

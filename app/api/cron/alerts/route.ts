@@ -16,7 +16,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isCronAuthorized, unauthorizedCronResponse } from '@/lib/security/cron-auth';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
-import { addDays, format, startOfDay, endOfDay, startOfMonth, endOfMonth, addMonths } from 'date-fns';
+import { addDays, format, startOfDay, endOfDay } from 'date-fns';
 
 // Tax filing milestones for Indian compliance (extendable for global users)
 const TAX_MILESTONES: Array<{ label: string; month: number; day: number }> = [

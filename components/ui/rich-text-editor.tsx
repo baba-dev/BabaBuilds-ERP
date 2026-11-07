@@ -16,6 +16,26 @@ interface RichTextEditorProps {
   className?: string;
 }
 
+function ToolbarButton({
+  onClick, active, title, children
+}: { onClick: () => void; active?: boolean; title: string; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className={cn(
+        "p-1.5 rounded transition-colors",
+        active
+          ? "bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300"
+          : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-100",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function RichTextEditor({ value, onChange, placeholder, className }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -33,24 +53,6 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
   });
 
   if (!editor) return null;
-
-  const ToolbarButton = ({
-    onClick, active, title, children
-  }: { onClick: () => void; active?: boolean; title: string; children: React.ReactNode }) => (
-    <button
-      type="button"
-      onClick={onClick}
-      title={title}
-      className={cn(
-        "p-1.5 rounded transition-colors",
-        active
-          ? "bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300"
-          : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-100",
-      )}
-    >
-      {children}
-    </button>
-  );
 
   return (
     <div className={cn("rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 overflow-hidden", className)}>

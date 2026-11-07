@@ -15,12 +15,7 @@ import React from "react";
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Users, Shield, LayoutGrid, Activity, Scale,
-  UserPlus, MoreHorizontal, Check, X, ChevronLeft, ChevronRight,
-  AlertTriangle, CheckCircle2, ShieldAlert, UserMinus, UserCheck,
-  Loader2, Mail, Clock, Crown, RefreshCw, Info, ArrowUpRight,
-} from "lucide-react";
+import { Users, Shield, LayoutGrid, Activity, Scale, UserPlus, MoreHorizontal, Check, X, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, ShieldAlert, UserMinus, UserCheck, Loader2, Mail, Crown, RefreshCw, Info, ArrowUpRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -44,8 +39,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getErrorMessage } from "@/lib/error-utils";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -100,6 +95,7 @@ type AccessLogEntry = {
 };
 
 type TeamData = {
+  currentUserId?: string;
   currentUserRole: string;
   currentBusinessRole: BusinessRole;
   currentRoleLabel: string;
@@ -131,6 +127,7 @@ function RoleBadge({ role, className }: { role: BusinessRole; className?: string
 
 function Initials({ name, email, image }: { name: string | null; email: string | null; image?: string | null }) {
   if (image) {
+    // eslint-disable-next-line @next/next/no-img-element -- dynamic or user-supplied image source; next/image remote config not applicable
     return <img src={image} alt={name ?? email ?? "User"} className="w-8 h-8 rounded-full object-cover" />;
   }
   const label = name
@@ -209,8 +206,8 @@ export default function TeamAccessPage() {
       const payload = await res.json();
       if (!res.ok) throw new Error(payload?.error || "Failed to load team");
       setTeamData(payload.data);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to load team data");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || "Failed to load team data");
     } finally {
       setLoading(false);
     }
@@ -295,8 +292,8 @@ export default function TeamAccessPage() {
       }
       void fetchTeam();
       void fetchSeats();
-    } catch (err: any) {
-      toast.error(err.message, { id: tid });
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err), { id: tid });
     } finally {
       setInviteLoading(false);
     }
@@ -315,8 +312,8 @@ export default function TeamAccessPage() {
       if (!res.ok) throw new Error(data.error || "Failed to change role");
       toast.success("Role updated", { id: tid });
       void fetchTeam();
-    } catch (err: any) {
-      toast.error(err.message, { id: tid });
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err), { id: tid });
     } finally {
       setActionLoading(null);
     }
@@ -341,14 +338,14 @@ export default function TeamAccessPage() {
       toast.success(`${name} ${action}d successfully`, { id: tid });
       void fetchTeam();
       void fetchSeats();
-    } catch (err: any) {
-      toast.error(err.message, { id: tid });
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err), { id: tid });
     } finally {
       setActionLoading(null);
     }
   };
 
-  const handleInviteCancel = async (inviteId: string, email: string) => {
+  const handleInviteCancel = async (inviteId: string, _email: string) => {
     const tid = toast.loading("Cancelling invite...");
     try {
       const res = await fetch("/api/team/remove", {
@@ -361,8 +358,8 @@ export default function TeamAccessPage() {
       toast.success("Invite cancelled", { id: tid });
       void fetchTeam();
       void fetchSeats();
-    } catch (err: any) {
-      toast.error(err.message, { id: tid });
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err), { id: tid });
     }
   };
 
@@ -379,7 +376,7 @@ export default function TeamAccessPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-xs h-9 text-sm dark:bg-zinc-950 dark:border-zinc-800"
           />
-          <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as any)}>
+          <Select value={roleFilter} onValueChange={(v) => setRoleFilter(v as BusinessRole | "ALL")}>
             <SelectTrigger className="w-40 h-9 text-sm dark:bg-zinc-950 dark:border-zinc-800">
               <SelectValue placeholder="All roles" />
             </SelectTrigger>
@@ -506,7 +503,7 @@ export default function TeamAccessPage() {
           </div>
         ) : (
           filteredMembers.map((member) => {
-            const isCurrentUser = member.userId === (teamData as any)?.currentUserId;
+            const isCurrentUser = member.userId === teamData?.currentUserId;
             return (
               <div
                 key={member.id}

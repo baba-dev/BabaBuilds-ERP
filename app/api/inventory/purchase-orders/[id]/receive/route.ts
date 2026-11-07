@@ -3,11 +3,12 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
+import type { Prisma } from "@prisma/client";
 
 export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
-    const workspaceId = (session as any)?.workspaceId;
+    const workspaceId = session?.workspaceId;
     if (!session || !workspaceId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -31,7 +32,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     const body = await req.json();
     const { syncExpense } = body; // Boolean flag from UI to log expense
 
-    const transactionTasks: any[] = [];
+    const transactionTasks: Prisma.PrismaPromise<unknown>[] = [];
 
     // 1. Update PO Status
     transactionTasks.push(
@@ -95,7 +96,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     }
 
     return NextResponse.json({ success: true, message: `PO #${po.poNumber} Received Successfully` });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[PO_RECEIVE]", error);
     return NextResponse.json({ error: "Failed to receive Purchase Order" }, { status: 500 });
   }

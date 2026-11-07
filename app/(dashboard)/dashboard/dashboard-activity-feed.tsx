@@ -5,16 +5,11 @@ import { formatDistanceToNow } from "date-fns";
 import { useTranslations } from "next-intl";
 import type { DashboardData } from "./types";
 import { dashboardTypography as ty } from "./dashboard-typography";
+import { createTranslator } from "@/lib/i18n/translator";
 
 export function DashboardActivityFeed({ activity }: { activity: DashboardData["activity"] }) {
   const t = useTranslations("Dashboard");
-  const tr = (key: string, fallback: string, values?: any) => {
-    const translationKey = key as any;
-    if (!t.has(translationKey)) return fallback;
-    const translation = t(translationKey, values);
-    if (translation === key || translation === `Dashboard.${key}`) return fallback;
-    return translation;
-  };
+  const tr = createTranslator(t);
   return (
     <Card className="p-4 border-zinc-200 dark:border-zinc-800">
       <p className={ty.sectionTitle}>{tr("recent_activity", "Recent activity")}</p>

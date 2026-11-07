@@ -1,17 +1,6 @@
 "use client";
 
-import {
-  BarChart3, 
-  TrendingUp, 
-  Clock, 
-  Filter, 
-  Activity, 
-  CheckCircle2, 
-  AlertCircle,
-  ArrowUpRight,
-  Sparkles,
-  Lock
-} from "lucide-react";
+import { TrendingUp, Clock, Filter, Activity, CheckCircle2, ArrowUpRight, Sparkles, Lock } from "lucide-react";
 import { useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { motion, type Variants } from "framer-motion";
@@ -31,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import type { DashboardData } from "./types";
 import { dashboardTypography as ty } from "./dashboard-typography";
 import { DashboardTooltip } from "./dashboard-tooltip";
+import { createTranslator } from "@/lib/i18n/translator";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -65,8 +55,7 @@ export function ChartsIsland({
   canViewCharts?: boolean;
 }) {
   const t = useTranslations("Dashboard");
-  const tr = (key: string, fallback: string, values?: Record<string, any>) =>
-    t.has(key as any) ? t(key as any, values) : fallback;
+  const tr = useMemo(() => createTranslator(t), [t]);
 
   const isMobile = useSyncExternalStore(
     (onStoreChange) => {
@@ -125,7 +114,7 @@ export function ChartsIsland({
         return {
           name: segment.name,
           value: segment.value,
-          color: (segment as any).color,
+          color: segment.color,
           dashArray,
           dashOffset,
           rotationDeg: (rotation / dashArray) * 360

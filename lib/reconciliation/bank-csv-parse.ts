@@ -191,15 +191,7 @@ export function sniffDelimiter(line: string): string {
   return best;
 }
 
-function splitCsvLine(line: string, delimiter: string): string[] {
-  const r = Papa.parse<string[]>(line, {
-    delimiter,
-    header: false,
-    skipEmptyLines: false,
-  });
-  const row = r.data[0];
-  return Array.isArray(row) ? row.map((c) => String(c ?? "").trim()) : [];
-}
+
 
 export function parseRows(text: string, delimiter: string): string[][] {
   const parsed = Papa.parse<string[]>(text, {

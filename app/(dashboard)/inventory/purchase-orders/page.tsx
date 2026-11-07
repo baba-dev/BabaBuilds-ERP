@@ -8,14 +8,25 @@ import { Button } from "@/components/ui/button";
 import { Box, Truck, CheckCircle2, ChevronLeft, Loader2, ArrowRight } from "lucide-react";
 import { useFormat } from "@/hooks/use-format";
 import Link from "next/link";
-import { getCurrencySymbol } from "@/lib/currency";
+import { getErrorMessage } from "@/lib/error-utils";
+import { getApiErrorMessage } from "@/lib/error-utils";
+
+type PurchaseOrderRow = {
+  id: string;
+  poNumber: string;
+  supplier: string;
+  status: string;
+  totalAmount: number;
+  createdAt: string;
+  items: unknown[];
+};
 
 export default function PurchaseOrdersHub() {
-  const [pos, setPos] = useState<any[]>([]);
+  const [pos, setPos] = useState<PurchaseOrderRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [receivingId, setReceivingId] = useState<string | null>(null);
   
-  const { fCurrency, currency, locale } = useFormat();
+  const { fCurrency } = useFormat();
 
   useEffect(() => {
     fetchPOs();
@@ -27,7 +38,7 @@ export default function PurchaseOrdersHub() {
       const res = await fetch("/api/inventory/purchase-orders");
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error((data as any)?.error || "Failed to load Purchase Orders");
+        throw new Error(getApiErrorMessage(data, "Failed to load Purchase Orders"));
       }
       setPos(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -53,8 +64,8 @@ export default function PurchaseOrdersHub() {
       
       toast.success(data.message, { id: toastId });
       fetchPOs();
-    } catch (err: any) {
-      toast.error(err.message, { id: toastId });
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err), { id: toastId });
     } finally {
       setReceivingId(null);
     }

@@ -2,7 +2,6 @@ import "server-only";
 
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { toDecimal } from "@/lib/money";
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
@@ -49,7 +48,7 @@ export async function recomputeClientPaymentBehavior(args: {
     const clientId = inv.clientId;
     if (!clientId) continue;
     const arr = byClient.get(clientId) ?? [];
-    arr.push(inv as any);
+    arr.push(inv);
     byClient.set(clientId, arr);
   }
 

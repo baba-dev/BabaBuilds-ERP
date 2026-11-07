@@ -90,6 +90,7 @@ export function GuidedFlowsHub() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time client-only state sync after mount (avoids SSR hydration mismatch)
     setCompletionMap({
       win_client: window.localStorage.getItem(getFlowStorageKey("win_client")) === "1",
       bill_retainer: window.localStorage.getItem(getFlowStorageKey("bill_retainer")) === "1",

@@ -41,7 +41,7 @@ Optionally seed compliance dictionaries: `npx ts-node prisma/seed.ts`
 | Command | Purpose |
 |---|---|
 | `npm run ci:fast` | **Run before pushing.** Local mirror of the CI gate: locales, lint, typecheck, demo-template coverage, migration history, full Vitest — in parallel (~50s), prints only failing output |
-| `npm run lint` | ESLint + KPI coverage check (0 errors; warnings are pre-existing) |
+| `npm run lint` | ESLint + KPI coverage check (0 errors, 0 warnings) |
 | `npm run typecheck` | TypeScript compile check |
 | `npm run validate` | Full pre-merge: lint + typecheck + build |
 | `npm test` | Full Vitest suite (all tests pass; keep it that way) |
@@ -51,7 +51,7 @@ Optionally seed compliance dictionaries: `npx ts-node prisma/seed.ts`
 
 ### Caveats
 
-- ESLint reports no errors and roughly 700 pre-existing warnings (mostly `no-explicit-any`). New code should not add warnings.
+- ESLint reports 0 errors and 0 warnings. New code must not add any: avoid `any` (use `unknown` and narrow), and prefix intentionally unused names with `_`.
 - The migration history now applies cleanly from the baseline (verified by `npm run check:migrations`), but production and local dev databases are created with `npx prisma db push`; adopt migrations on such databases with `prisma migrate resolve --applied`, never by running the SQL (see `prisma/migrations/README.md`).
 - External services (Google OAuth, SMTP, Razorpay, Stripe, ClamAV, Cloudflare Turnstile) are all optional in development.
 - The SQLite database file is at `prisma/dev.db` (gitignored).

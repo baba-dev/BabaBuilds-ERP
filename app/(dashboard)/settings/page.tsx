@@ -1,16 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Building2, Landmark, ShieldCheck, Image as ImageIcon, CheckCircle2,
-  Mailbox, Bot, Trash2, CreditCard, Lock, Globe, AlertTriangle,
-  Loader2, Info, Users, Mail, Clock, UserPlus, ArrowRight, Sparkles, Users2, FileText, HandCoins, Target, Siren, ChartColumnBig, UploadCloud, ShoppingCart
-} from "lucide-react";
+import { Building2, Landmark, ShieldCheck, Image as ImageIcon, CheckCircle2, Mailbox, Bot, Trash2, CreditCard, Lock, Globe, AlertTriangle, Info, Users, ArrowRight, Sparkles, Users2, FileText, HandCoins, Target, Siren, ChartColumnBig, UploadCloud, ShoppingCart } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -84,10 +79,10 @@ export default function SettingsWizard() {
   const [multiCompanyLoading, setMultiCompanyLoading] = useState(false);
   const [showDisableMultiCompanyConfirm, setShowDisableMultiCompanyConfirm] = useState(false);
   // Team invite state
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState("MEMBER");
-  const [inviteLoading, setInviteLoading] = useState(false);
-  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [] = useState("");
+  const [] = useState("MEMBER");
+  const [] = useState(false);
+  const [] = useState(false);
   const [isNewSetup, setIsNewSetup] = useState(true);
   const [countryCode, setCountryCode] = useState<string>("IN");
   const [activeGatewayTab, setActiveGatewayTab] = useState<"RAZORPAY" | "STRIPE">("RAZORPAY");
@@ -111,7 +106,7 @@ export default function SettingsWizard() {
     shopSlug: "", shopTagline: "", shopEnabled: false, shopAccentColor: "#6366f1",
   });
 
-  const [planTier, setPlanTier] = useState<string>("FREE");
+  const [, setPlanTier] = useState<string>("FREE");
   /** Mirrors server entitlements: trial OR paid tier unlocks gateways */
   const [canUseGatewaysFeature, setCanUseGatewaysFeature] = useState(false);
   const gatewayLocked = !canUseGatewaysFeature;
@@ -121,7 +116,6 @@ export default function SettingsWizard() {
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
 
   const isIndian = countryCode === "IN";
-  const isTeamPlan = planTier === "TEAM";
 
   const workspaceModulesAnchorRef = useRef<HTMLDivElement | null>(null);
   const firstLookSettingsAnchorRef = useRef<HTMLDivElement | null>(null);
@@ -205,6 +199,7 @@ export default function SettingsWizard() {
         console.error("Failed to load settings:", err);
         toast.error(t("toasts.loadFailed"));
       });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
   }, []);
 
   // AI Auto-Fill Hook
@@ -235,11 +230,12 @@ export default function SettingsWizard() {
           toast.info(t("toasts.aiAutofill"));
         }
         sessionStorage.removeItem('erp_ai_payload');
-      } catch(e) { 
+      } catch { 
         console.error("Failed to parse AI payload"); 
         toast.warning(t("toasts.aiAutofillFailed"));
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
   }, []);
 
   const handleGatewayTabChange = (tab: "RAZORPAY" | "STRIPE") => {
@@ -309,7 +305,7 @@ export default function SettingsWizard() {
       } else {
         toast.error(t("toasts.saveFailed"), { id: toastId });
       }
-    } catch (err) {
+    } catch {
       toast.error(t("toasts.networkError"), { id: toastId });
     } finally {
       setIsSubmitting(false);
@@ -638,6 +634,7 @@ export default function SettingsWizard() {
                   <Label className="flex items-center gap-2 dark:text-zinc-300"><ImageIcon className="w-4 h-4" /> {t('master_logo')}</Label>
                   <div className="flex items-center gap-4">
                     {formData.existingLogoUrl && !logoFile && (
+                      // eslint-disable-next-line @next/next/no-img-element -- dynamic or user-supplied image source; next/image remote config not applicable
                       <img src={getBustedUrl(formData.existingLogoUrl)} alt={t("alt.currentLogo")} className="h-12 object-contain bg-white dark:bg-zinc-200 border rounded p-1" />
                     )}
                     <div className="flex-1">
@@ -674,6 +671,7 @@ export default function SettingsWizard() {
                   </div>
                   <div className="flex items-center gap-4">
                     {formData.existingSignatureUrl && !signatureFile && (
+                      // eslint-disable-next-line @next/next/no-img-element -- dynamic or user-supplied image source; next/image remote config not applicable
                       <img src={getBustedUrl(formData.existingSignatureUrl)} alt={t("alt.currentSignature")} className="h-12 object-contain bg-white dark:bg-zinc-200 border rounded p-1" />
                     )}
                     <div className="flex-1">

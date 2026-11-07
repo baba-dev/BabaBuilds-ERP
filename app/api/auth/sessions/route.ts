@@ -14,7 +14,7 @@ export async function GET() {
 
   const sessions = await prisma.session.findMany({
     where: {
-      userId: (session.user as any).id,
+      userId: session.user.id,
     },
     orderBy: {
       expires: 'desc',
@@ -32,7 +32,7 @@ export async function GET() {
   const enrichedSessions = sessions.map((s) => ({
     id: s.id,
     expires: s.expires,
-    isCurrent: s.sessionToken === (session as any).sessionToken, // NextAuth might not expose this easily in JWT mode
+    isCurrent: s.sessionToken === (session as { sessionToken?: string }).sessionToken, // NextAuth might not expose this easily in JWT mode
     ip: currentIp, // Placeholder
     userAgent: currentUserAgent, // Placeholder
     lastSeen: new Date(),
@@ -58,7 +58,7 @@ export async function DELETE(request: Request) {
   await prisma.session.delete({
     where: {
       id: sessionId,
-      userId: (session.user as any).id,
+      userId: session.user.id,
     },
   });
 

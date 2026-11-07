@@ -18,7 +18,7 @@ async function getWid(userId: string) {
   return wu?.workspaceId ?? null;
 }
 
-export async function GET(_req: NextRequest) {
+export async function GET(__req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

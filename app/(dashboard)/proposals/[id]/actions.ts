@@ -77,9 +77,9 @@ export async function convertProposalToInvoiceAction(proposalId: string) {
 
   const taxResolution = resolveTaxRate({
     countryCode,
-    isTaxExempt: Boolean((proposal.client as any)?.isExport),
+    isTaxExempt: Boolean(proposal.client.isExport),
     serviceTaxRates: [],
-    workspaceDefaultTaxRate: (profile as any).defaultTaxRate,
+    workspaceDefaultTaxRate: profile.defaultTaxRate,
     taxRateOverride: undefined,
   });
 
@@ -101,8 +101,8 @@ export async function convertProposalToInvoiceAction(proposalId: string) {
           quantity: Number(item.quantity ?? 1),
           unitPrice: Number(item.unitPrice),
           amountDecimal: toDecimal(Number(item.total)).toDecimalPlaces(2),
-        })) as any,
-        isTaxExempt: Boolean((proposal.client as any)?.isExport),
+        })),
+        isTaxExempt: Boolean(proposal.client.isExport),
         defaultTaxRate: taxResolution.taxRate,
       });
 
@@ -127,7 +127,7 @@ export async function convertProposalToInvoiceAction(proposalId: string) {
     subscriptionEndsAt: proposal.workspace?.subscriptionEndsAt,
   };
   const paidFeatures = canInjectGatewayPaymentLinks(billingSnap);
-  const defaultGateway = String((profile as any).defaultGateway || "RAZORPAY").toUpperCase();
+  const defaultGateway = String(profile.defaultGateway || "RAZORPAY").toUpperCase();
   let paymentLink: string | null = null;
   let providerPaymentLinkId: string | null = null;
   let providerGateway: string | null = null;
@@ -136,10 +136,10 @@ export async function convertProposalToInvoiceAction(proposalId: string) {
     if (
       defaultGateway === "RAZORPAY" &&
       baseCurrency === "INR" &&
-      (profile as any).razorpayKeyId &&
-      (profile as any).razorpayKeySecret
+      profile.razorpayKeyId &&
+      profile.razorpayKeySecret
     ) {
-      const decryptedSecret = decrypt((profile as any).razorpayKeySecret);
+      const decryptedSecret = decrypt(profile.razorpayKeySecret);
       const result = await generateTenantPaymentLink({
         amount: Number(totals.total),
         currency: baseCurrency,
@@ -149,7 +149,7 @@ export async function convertProposalToInvoiceAction(proposalId: string) {
           name: proposal.client.name,
           email: proposal.client.email ?? undefined,
         },
-        tenantKeyId: (profile as any).razorpayKeyId,
+        tenantKeyId: profile.razorpayKeyId,
         tenantKeySecret: decryptedSecret,
       });
       if (result) {
@@ -162,9 +162,9 @@ export async function convertProposalToInvoiceAction(proposalId: string) {
     if (
       !paymentLink &&
       defaultGateway === "STRIPE" &&
-      (profile as any).stripeSecretKey
+      profile.stripeSecretKey
     ) {
-      const decryptedSecret = decrypt((profile as any).stripeSecretKey);
+      const decryptedSecret = decrypt(profile.stripeSecretKey);
       const result = await generateStripePaymentLink({
         amount: Number(totals.total),
         currency: baseCurrency,
@@ -194,7 +194,7 @@ export async function convertProposalToInvoiceAction(proposalId: string) {
 
   const pdfBytes = await generateInvoicePDF({
     profile,
-    client: proposal.client as any,
+    client: proposal.client,
     invoiceNumber,
     date: invoiceDate,
     dueDate,
@@ -245,7 +245,7 @@ export async function convertProposalToInvoiceAction(proposalId: string) {
             totalAmount: toDecimal(Number(i.total)).toDecimalPlaces(2),
           })),
         },
-      } as any,
+      },
     });
 
     await tx.proposal.update({
@@ -336,9 +336,8 @@ export async function convertProposalToRetainerAction(formData: FormData) {
         autoAppendMonth: true,
         serviceName: serviceName || proposal.title,
         sacCode: null,
-        taxRate: null,
         sourceProposalId: proposal.id,
-      } as any,
+      },
     });
 
     await tx.proposal.update({

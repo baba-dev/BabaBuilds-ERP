@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { Sparkles, Send, Command, Zap, ShieldCheck, Wallet, SunMoon } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { openAIChat } from "@/src/stores/ui/aiChatStore";

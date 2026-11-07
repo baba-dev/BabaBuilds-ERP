@@ -587,7 +587,7 @@ export default function WorkforceSettingsPage() {
                         onChange={(e) => setSchedule((s) => (s ? { ...s, workingDays: e.target.value } : s))}
                         className="h-8 text-sm font-mono"
                       />
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">Example: ["MON","TUE","WED","THU","FRI"]</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">Example: [&quot;MON&quot;,&quot;TUE&quot;,&quot;WED&quot;,&quot;THU&quot;,&quot;FRI&quot;]</p>
                     </div>
                     <div className="space-y-2 sm:col-span-2">
                       <Label className="text-xs text-zinc-600 dark:text-zinc-400">Time zone</Label>

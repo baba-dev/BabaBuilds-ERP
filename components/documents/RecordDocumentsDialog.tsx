@@ -60,7 +60,7 @@ export function RecordDocumentsDialog({
     try {
       const url = `/api/documents/list?q=${encodeURIComponent(q)}&archived=0`;
       const res = await fetch(url, { cache: "no-store" });
-      const body = (await res.json().catch(() => null)) as any;
+      const body = (await res.json().catch(() => null)) as { error?: string; documents?: unknown } | null;
       if (!res.ok) {
         toast.error(body?.error || "Failed to search documents.");
         setResults([]);
@@ -79,7 +79,7 @@ export function RecordDocumentsDialog({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ documentId, targetType, targetId, relation: "ATTACHMENT" }),
     });
-    const body = (await res.json().catch(() => null)) as any;
+    const body = (await res.json().catch(() => null)) as { error?: string } | null;
     if (!res.ok) {
       toast.error(body?.error || "Failed to link document.");
       return;

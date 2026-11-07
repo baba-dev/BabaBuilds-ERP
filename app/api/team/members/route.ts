@@ -14,7 +14,7 @@ import { ROLE_LABELS, legacyRoleToBusinessRole, isValidBusinessRole } from "@/li
 
 export async function GET() {
   try {
-    const session: any = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions);
     if (!session?.workspaceId || !session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

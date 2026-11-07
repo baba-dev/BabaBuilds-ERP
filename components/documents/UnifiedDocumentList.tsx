@@ -14,14 +14,17 @@ type DocType = {
   scope: string;
   status: string;
   aiSummary: string | null;
-  aiMeta: any;
+  aiMeta: unknown;
   files: {
     mimeType: string;
     byteSize: number;
     storedPath: string;
   }[];
-  links: any[];
+  links: unknown[];
 };
+
+const hasAiMeta = (meta: unknown): boolean =>
+  Boolean(meta) && typeof meta === "object" && Object.keys(meta as object).length > 0;
 
 export function UnifiedDocumentList({ documents }: { documents: DocType[] }) {
   const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
@@ -110,9 +113,9 @@ export function UnifiedDocumentList({ documents }: { documents: DocType[] }) {
                             <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed line-clamp-2" title={d.aiSummary}>
                               {d.aiSummary}
                             </p>
-                            {d.aiMeta && Object.keys(d.aiMeta).length > 0 && (
+                            {hasAiMeta(d.aiMeta) && (
                               <div className="flex flex-wrap gap-1">
-                                {Object.entries(d.aiMeta).slice(0, 3).map(([k, v]) => (
+                                {Object.entries(d.aiMeta as Record<string, unknown>).slice(0, 3).map(([k, v]) => (
                                   <Badge key={k} variant="secondary" className="text-[9px] px-1.5 py-0 uppercase bg-primary/10 text-primary hover:bg-primary/20">
                                     {k}: {String(v).substring(0, 15)}
                                   </Badge>
@@ -163,9 +166,9 @@ export function UnifiedDocumentList({ documents }: { documents: DocType[] }) {
                     </div>
                   )}
 
-                  {d.aiMeta && Object.keys(d.aiMeta).length > 0 && (
+                  {hasAiMeta(d.aiMeta) && (
                     <div className="flex flex-wrap gap-1.5 mb-4 mt-auto">
-                      {Object.entries(d.aiMeta).slice(0, 4).map(([k, v]) => (
+                      {Object.entries(d.aiMeta as Record<string, unknown>).slice(0, 4).map(([k, v]) => (
                         <Badge key={k} variant="secondary" className="text-[9px] px-1.5 py-0 bg-primary/5 text-primary/80 border-primary/10">
                           {k}: {String(v).substring(0, 15)}
                         </Badge>

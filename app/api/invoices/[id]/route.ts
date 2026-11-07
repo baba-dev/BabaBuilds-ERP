@@ -19,7 +19,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const workspaceId = session.workspaceId;
-    const userId = (session as any).user?.id as string | undefined;
+    const userId = session.user?.id as string | undefined;
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     // RBAC: viewing an invoice requires invoices.view
     const perm = await withPermission(userId, workspaceId, 'invoices.view');
@@ -52,7 +52,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const workspaceId = session.workspaceId;
-    const userId = (session as any).user?.id as string | undefined;
+    const userId = session.user?.id as string | undefined;
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     // RBAC: deleting an invoice requires invoices.delete
     const perm = await withPermission(userId, workspaceId, 'invoices.delete');

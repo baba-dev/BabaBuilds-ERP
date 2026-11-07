@@ -1,7 +1,6 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useTranslations } from "next-intl";
 import { 
   Dialog, 
   DialogTrigger 
@@ -15,7 +14,7 @@ import { cn } from "@/lib/utils";
 export function UserNav() {
   const { data: session } = useSession();
   const { open, isMobile } = useSidebar();
-  const t = useTranslations('UserNav');
+  
 
   if (!session?.user) return null;
 

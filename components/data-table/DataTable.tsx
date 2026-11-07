@@ -98,6 +98,7 @@ export function DataTable<T>({
     globalFilter: searchValue ?? "",
   };
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table returns non-memoizable functions; component opts out of memoization
   const table = useReactTable({
     data,
     columns: activeColumns.map((column) => {

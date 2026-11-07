@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,7 +60,7 @@ type PendingToolConfirmation = {
   requestMessage: string;
 };
 
-function getFriendlyChatError(payload: any, status: number): { content: string; canRetry: boolean } {
+function getFriendlyChatError(payload: { code?: unknown; error?: unknown; [key: string]: unknown } | null | undefined, status: number): { content: string; canRetry: boolean } {
   const code = String(payload?.code || "").toUpperCase();
   const raw = typeof payload?.error === "string" ? payload.error : "";
 
@@ -138,7 +138,7 @@ export default function AIChatbot() {
   const aiChatStoreState = useSyncExternalStore(subscribeToAIChatStore, getAIChatStoreSnapshot, getAIChatStoreSnapshot);
   const currentThemeForToggle = resolvedTheme === "dark" ? "dark" : "light";
 
-  const workspaceId = (session as any)?.workspaceId;
+  const workspaceId = session?.workspaceId;
   const storageKey = workspaceId ? `cfo_chat_history_${workspaceId}` : null;
 
   useEffect(() => {
@@ -148,7 +148,7 @@ export default function AIChatbot() {
       const savedChat = localStorage.getItem(storageKey);
       if (savedChat) {
         try { setMessages(JSON.parse(savedChat)); } 
-        catch (e) { setMessages([DEFAULT_GREETING]); }
+        catch { setMessages([DEFAULT_GREETING]); }
       } else {
         setMessages([DEFAULT_GREETING]);
       }
@@ -288,7 +288,7 @@ export default function AIChatbot() {
           actionExecuted: actionMsg || undefined 
         }]);
       }
-    } catch (err) {
+    } catch {
       setMessages(prev => [
         ...prev,
         {

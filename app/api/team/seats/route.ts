@@ -13,7 +13,7 @@ import { checkSeatAvailability } from "@/lib/rbac";
 
 export async function GET() {
   try {
-    const session: any = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions);
     if (!session?.workspaceId || !session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

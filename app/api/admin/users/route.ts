@@ -5,6 +5,7 @@ import { sendActivityAlert } from '@/lib/security/alert-hooks';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { logActivity } from "@/lib/activity-log";
+import type { Prisma } from "@prisma/client";
 
 // GET: Fetch all users & platform stats
 export async function GET() {
@@ -56,7 +57,7 @@ export async function PATCH(req: Request) {
   try {
     await verifySuperAdmin();
     const session = await getServerSession(authOptions);
-    actorId = (session?.user as any)?.id ?? null;
+    actorId = session?.user?.id ?? null;
     actorEmail = session?.user?.email ?? null;
     const body = await req.json();
     const userId = typeof body?.userId === "string" ? body.userId : null;
@@ -100,7 +101,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "No workspace found" }, { status: 404 });
     }
 
-    let updateData: any = {};
+    let updateData: Prisma.WorkspaceUpdateInput = {};
     
     if (action === 'UPGRADE_PRO' || action === 'UPGRADE') {
       updateData = { subscriptionStatus: 'PRO', planTier: 'PRO' };
@@ -177,7 +178,7 @@ export async function DELETE(req: Request) {
   try {
     await verifySuperAdmin();
     const session = await getServerSession(authOptions);
-    actorId = (session?.user as any)?.id ?? null;
+    actorId = session?.user?.id ?? null;
     actorEmail = session?.user?.email ?? null;
     const body = await req.json();
     const userId = typeof body?.userId === "string" ? body.userId : null;

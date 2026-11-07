@@ -18,6 +18,8 @@ import { DashboardTooltip } from "./dashboard-tooltip";
 import { cn } from "@/lib/utils";
 import { dashboardTypography as ty } from "./dashboard-typography";
 import { DashboardModulePromoCard } from "@/components/dashboard/DashboardModulePromoCard";
+import { createTranslator } from "@/lib/i18n/translator";
+import type { LucideIcon } from "lucide-react";
 
 export function DashboardTrustPanel({
   trust,
@@ -29,16 +31,7 @@ export function DashboardTrustPanel({
   onModuleEnabled?: (moduleKey: string) => void;
 }) {
   const t = useTranslations("Dashboard");
-  const tr = (key: string, fallback: string, values?: any) => {
-    if (typeof (t as any).has === "function" && !(t as any).has(key)) return fallback;
-    try {
-      const translation = t(key as any, values);
-      if (translation === key || translation === `Dashboard.${key}`) return fallback;
-      return translation;
-    } catch {
-      return fallback;
-    }
-  };
+  const tr = createTranslator(t);
 
   if (!enabledModules.has("TAX_ADVANCED")) {
     return (
@@ -60,7 +53,7 @@ export function DashboardTrustPanel({
     );
   }
 
-  const statusMap: Record<string, { label: string; icon: any; color: string; bg: string; border: string; glow: string }> = {
+  const statusMap: Record<string, { label: string; icon: LucideIcon; color: string; bg: string; border: string; glow: string }> = {
     PASSED: { 
       label: tr("status_passed", "Systems Healthy"), 
       icon: ShieldCheck, 
@@ -132,7 +125,7 @@ export function DashboardTrustPanel({
 
           {/* Metrics Grid (Signal Tiles) */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-[1.5]">
-            {metrics.map((metric, idx) => {
+            {metrics.map((metric) => {
               const colors = {
                 critical: "text-rose-500 bg-rose-500/10 border-rose-500/20",
                 warning: "text-amber-500 bg-amber-500/10 border-amber-500/20",

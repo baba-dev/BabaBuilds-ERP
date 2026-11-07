@@ -87,7 +87,7 @@ export function AccessDenied({
         Access Restricted
       </h2>
       <p className="text-zinc-500 dark:text-zinc-400 text-sm max-w-sm leading-relaxed mb-6">
-        You don't have permission to {blockedAction}.
+        You don&apos;t have permission to {blockedAction}.
         {currentRole && (
           <>
             {" "}Your current workspace role is{" "}

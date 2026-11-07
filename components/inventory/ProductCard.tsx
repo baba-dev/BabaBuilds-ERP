@@ -1,21 +1,20 @@
 "use client";
 
+import type { InventoryProduct } from "@/lib/types/inventory";
 import { useFormat } from "@/hooks/use-format";
-import { getCurrencySymbol } from "@/lib/currency";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowDownRight, Tag, Settings2, PackageSearch, AlertTriangle, AlertCircle, RefreshCw } from "lucide-react";
+import { Tag, PackageSearch, AlertTriangle, AlertCircle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ProductCardProps {
-  product: any;
-  onAdjust: (product: any) => void;
-  onClick: (product: any) => void;
+  product: InventoryProduct;
+  onAdjust: (product: InventoryProduct) => void;
+  onClick: (product: InventoryProduct) => void;
 }
 
 export function ProductCard({ product, onAdjust, onClick }: ProductCardProps) {
-  const { fCurrency, currency, locale } = useFormat();
-  const currencySymbol = getCurrencySymbol(currency, locale);
+  const { fCurrency } = useFormat();
 
   const isDanger = product.currentStock === 0;
   const isWarning = product.currentStock > 0 && product.currentStock <= product.safetyStock;
@@ -31,6 +30,7 @@ export function ProductCard({ product, onAdjust, onClick }: ProductCardProps) {
     >
       <div className="relative aspect-[4/3] bg-zinc-100 dark:bg-zinc-950 overflow-hidden flex items-center justify-center p-6">
         {product.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- dynamic or user-supplied image source; next/image remote config not applicable
           <img 
             src={product.imageUrl} 
             alt={product.name} 

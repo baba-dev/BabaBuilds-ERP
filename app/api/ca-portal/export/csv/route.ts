@@ -57,10 +57,10 @@ export async function GET(request: Request) {
 
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
 
     // 2. PARSE FY
     const { searchParams } = new URL(request.url);
@@ -168,7 +168,7 @@ export async function GET(request: Request) {
             escapeCsv('INCOME'),
             escapeCsv(nextInvoice.invoiceNumber),
             escapeCsv(nextInvoice.clientName),
-            escapeCsv(`SAC: ${nextInvoice.sacCode || (profile as any)?.defaultSacCode || '998313'}`),
+            escapeCsv(`SAC: ${nextInvoice.sacCode || profile?.defaultSacCode || '998313'}`),
             escapeCsv(nextInvoice.serviceDescription || 'Services Rendered'),
             nextInvoice.totalAmount.toFixed(2),
             escapeCsv(nextInvoice.status.toUpperCase()),

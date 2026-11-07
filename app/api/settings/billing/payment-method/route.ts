@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
 import Razorpay from "razorpay";
 import crypto from "crypto";
-import { decrypt } from "@/lib/encryption";
 import { timingSafeEqualString } from "@/lib/security/signature";
 import { withPermission } from "@/lib/rbac";
 

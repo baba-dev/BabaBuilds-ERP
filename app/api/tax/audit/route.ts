@@ -39,8 +39,8 @@ export async function GET(request: Request) {
     } catch {
       // Not a super-admin: lock to session workspaceId
       const session = await getServerSession(authOptions);
-      effectiveWorkspaceId = (session as any)?.workspaceId;
-      const actorUserId = (session as any)?.user?.id;
+      effectiveWorkspaceId = session?.workspaceId;
+      const actorUserId = session?.user?.id;
       if (!effectiveWorkspaceId || !actorUserId) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }

@@ -7,7 +7,7 @@ import { requireCashFlowModule } from "@/app/api/cash-flow/_module";
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    const workspaceId = (session as any)?.workspaceId as string | undefined;
+    const workspaceId = session?.workspaceId as string | undefined;
     if (!session || !workspaceId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

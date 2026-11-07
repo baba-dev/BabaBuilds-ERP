@@ -11,7 +11,7 @@ import {
   resolvePricingIntervalByAmount,
   roundMajorAmount,
 } from "@/lib/pricing";
-import { amountMajorToGatewayMinor, paidMatchesPlan } from "@/lib/subscription-checkout";
+import { paidMatchesPlan } from "@/lib/subscription-checkout";
 
 const paymentsFetch = vi.fn();
 

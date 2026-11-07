@@ -1,10 +1,10 @@
 import "server-only";
 
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { CashForecastHorizonType, CashForecastScenarioTag } from "@prisma/client";
 import { computeCashForecastSnapshot } from "@/lib/cash-flow/forecast-engine";
 import { toDecimal } from "@/lib/money";
+import type { Prisma } from "@prisma/client";
 
 export async function computeAndPersistCashForecastSnapshot(args: {
   workspaceId: string;
@@ -16,13 +16,6 @@ export async function computeAndPersistCashForecastSnapshot(args: {
 }) {
   const { workspaceId, horizonType, scenarioTag, startDate, generatedBy } = args;
   const now = args.now ?? new Date();
-
-  const assumptionsRow = await prisma.cashForecastAssumption.findFirst({
-    where: { workspaceId, isActive: true, key: `cashForecast.scenario.${scenarioTag}` },
-    orderBy: { updatedAt: "desc" },
-    select: { valueJson: true },
-  });
-  const assumptions = (assumptionsRow?.valueJson ?? null) as any;
 
   const computed = await computeCashForecastSnapshot({
     workspaceId,
@@ -50,7 +43,7 @@ export async function computeAndPersistCashForecastSnapshot(args: {
       totalProjectedInflows: computed.totalProjectedInflows,
       totalProjectedOutflows: computed.totalProjectedOutflows,
       confidenceScore: computed.confidenceScore ?? undefined,
-      assumptionsJson: computed.assumptions as any,
+      assumptionsJson: computed.assumptions as Prisma.InputJsonValue,
       generatedBy,
       periods: {
         create: computed.periods.map((p) => ({
@@ -75,7 +68,7 @@ export async function computeAndPersistCashForecastSnapshot(args: {
               scenarioTag,
               classification: l.classification,
               title: l.title,
-              metadataJson: l.metadataJson as any,
+              metadataJson: l.metadataJson as Prisma.InputJsonValue,
               explanation: l.explanation ?? undefined,
             })),
           },

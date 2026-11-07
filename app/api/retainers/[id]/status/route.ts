@@ -11,16 +11,16 @@ export async function PATCH(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
 
     const resolvedParams = await params;
     const retainerId = resolvedParams.id;
 
     const body = await request.json();
-    const { serviceName, amount, frequency } = body;
+    const { frequency } = body;
 
     // 1. Verify ownership before updating
     const existingRetainer = await prisma.retainer.findFirst({
@@ -47,7 +47,7 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, retainer: updatedRetainer });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Retainer Update Error:", error);
     return NextResponse.json({ error: "An error occurred while updating the retainer" }, { status: 500 });
   }
@@ -60,10 +60,10 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
 
     const resolvedParams = await params;
     const retainerId = resolvedParams.id;
@@ -88,7 +88,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, message: "Retainer engine destroyed successfully" });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Retainer Deletion Error:", error);
     return NextResponse.json({ error: "An error occurred while deleting the retainer" }, { status: 500 });
   }

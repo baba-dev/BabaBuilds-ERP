@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { useFormat } from "@/hooks/use-format";
 import { getShopDashboardLoadPlan } from "./load-plan";
+import { getApiErrorMessage } from "@/lib/error-utils";
 
 type ProductCatalogItem = {
   id: string;
@@ -118,6 +119,30 @@ const SOCIAL_PLATFORM_OPTIONS: SocialPlatform[] = [
   "youtube", "whatsapp", "tiktok", "pinterest", "github", "custom",
 ];
 
+type RawRecord = Record<string, unknown>;
+
+/** Normalises storefront content returned by the API into a safe form draft. */
+function toShopContentDraft(raw: unknown): ShopContentDraft {
+  const c: RawRecord = raw && typeof raw === "object" ? (raw as RawRecord) : {};
+  const social = Array.isArray(c.social) ? (c.social as RawRecord[]) : [];
+  const faq = Array.isArray(c.faq) ? (c.faq as RawRecord[]) : [];
+  return {
+    announcement: typeof c.announcement === "string" ? c.announcement : "",
+    aboutMd: typeof c.aboutMd === "string" ? c.aboutMd : "",
+    footerNote: typeof c.footerNote === "string" ? c.footerNote : "",
+    social: social.map((s) => ({
+      platform: SOCIAL_PLATFORM_OPTIONS.includes(s?.platform as SocialPlatform) ? (s.platform as SocialPlatform) : "custom",
+      url: typeof s?.url === "string" ? s.url : "",
+      label: typeof s?.label === "string" ? s.label : "",
+    })),
+    faq: faq.map((f) => ({
+      q: typeof f?.q === "string" ? f.q : "",
+      a: typeof f?.a === "string" ? f.a : "",
+    })),
+    showAiAssist: c.showAiAssist !== false,
+  };
+}
+
 export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities }) {
   const { fCurrency } = useFormat();
   const [orders, setOrders] = useState<ShopOrder[]>([]);
@@ -167,10 +192,10 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
         shopSettingsRes.json().catch(() => null),
       ]);
 
-      if (!productsRes.ok) throw new Error((productsData as any)?.error || "Failed to load products.");
-      if (!shopSettingsRes.ok) throw new Error((shopSettingsData as any)?.error || "Failed to load shop settings.");
+      if (!productsRes.ok) throw new Error(getApiErrorMessage(productsData, "Failed to load products."));
+      if (!shopSettingsRes.ok) throw new Error(getApiErrorMessage(shopSettingsData, "Failed to load shop settings."));
       if (ordersRes && !ordersRes.ok) {
-        throw new Error((ordersData as any)?.error || "Failed to load orders.");
+        throw new Error(getApiErrorMessage(ordersData, "Failed to load orders."));
       }
 
       if (abilities.canViewOrders) {
@@ -224,25 +249,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
         const data = await res.json().catch(() => null);
         const c = data?.content;
         if (!active || !c) return;
-        const draft: ShopContentDraft = {
-          announcement: typeof c.announcement === "string" ? c.announcement : "",
-          aboutMd: typeof c.aboutMd === "string" ? c.aboutMd : "",
-          footerNote: typeof c.footerNote === "string" ? c.footerNote : "",
-          social: Array.isArray(c.social)
-            ? c.social.map((s: any) => ({
-                platform: SOCIAL_PLATFORM_OPTIONS.includes(s?.platform) ? s.platform : "custom",
-                url: typeof s?.url === "string" ? s.url : "",
-                label: typeof s?.label === "string" ? s.label : "",
-              }))
-            : [],
-          faq: Array.isArray(c.faq)
-            ? c.faq.map((f: any) => ({
-                q: typeof f?.q === "string" ? f.q : "",
-                a: typeof f?.a === "string" ? f.a : "",
-              }))
-            : [],
-          showAiAssist: c.showAiAssist !== false,
-        };
+        const draft: ShopContentDraft = toShopContentDraft(c);
         setContent(draft);
         setContentInitial(draft);
       } catch {
@@ -280,30 +287,11 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        toast.error((data as any)?.error || "Failed to save storefront content.", { id: toastId });
+        toast.error(getApiErrorMessage(data, "Failed to save storefront content."), { id: toastId });
         return;
       }
       toast.success("Storefront content saved.", { id: toastId });
-      const c = (data as any)?.content || {};
-      const next: ShopContentDraft = {
-        announcement: typeof c.announcement === "string" ? c.announcement : "",
-        aboutMd: typeof c.aboutMd === "string" ? c.aboutMd : "",
-        footerNote: typeof c.footerNote === "string" ? c.footerNote : "",
-        social: Array.isArray(c.social)
-          ? c.social.map((s: any) => ({
-              platform: SOCIAL_PLATFORM_OPTIONS.includes(s?.platform) ? s.platform : "custom",
-              url: typeof s?.url === "string" ? s.url : "",
-              label: typeof s?.label === "string" ? s.label : "",
-            }))
-          : [],
-        faq: Array.isArray(c.faq)
-          ? c.faq.map((f: any) => ({
-              q: typeof f?.q === "string" ? f.q : "",
-              a: typeof f?.a === "string" ? f.a : "",
-            }))
-          : [],
-        showAiAssist: c.showAiAssist !== false,
-      };
+      const next: ShopContentDraft = toShopContentDraft((data as { content?: unknown } | null)?.content);
       setContent(next);
       setContentInitial(next);
     } catch {
@@ -377,7 +365,6 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
     FAILED: { label: "Failed", className: "bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-400", icon: <X className="w-3 h-3" /> },
     REFUNDED: { label: "Refunded", className: "bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-400", icon: <AlertCircle className="w-3 h-3" /> },
   };
-  const orderCompletionPct = stats.totalOrders > 0 ? Math.round((stats.paidOrders / stats.totalOrders) * 100) : 0;
 
   const getEmptyState = () => {
     if (orderSearch.trim()) {

@@ -1,27 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
 import { format } from "date-fns";
 import { useTranslations } from "next-intl";
-import {
-  DownloadCloud, 
-  FolderArchive, 
-  Calculator, 
-  AlertTriangle, 
-  CheckCircle2, 
-  Receipt, 
-  FileText, 
-  ExternalLink,
-  ArrowRightLeft,
-  Activity,
-  Percent,
-  Building2,
-  ShieldCheck,
-  ArrowRight,
-  CalendarClock,
-  Landmark,
-} from "lucide-react";
+import { DownloadCloud, FolderArchive, AlertTriangle, CheckCircle2, ExternalLink, Activity, Percent, Building2, ShieldCheck, CalendarClock, Landmark } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,7 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { DataTable, type DataTableColumnDef } from "@/components/data-table";
 import type { CAExpenseRow, CAInvoiceRow, CAPortalPayload, CAPortalSummary } from "@/lib/ca-portal/types";
-import { getCurrentFinancialYear } from "@/lib/financial-year";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 
 
@@ -199,6 +180,7 @@ export default function CAPortal() {
   // --- DATA FETCHING ---
   useEffect(() => {
     fetchAuditData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
   }, [fy]);
 
   const fetchAuditData = async () => {

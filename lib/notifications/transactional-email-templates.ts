@@ -151,7 +151,6 @@ export function buildPaymentReminderEmail(args: {
   outstandingAmountFormatted: string;
   locale?: string;
 }): TemplateResult {
-  const strings = getLocaleStrings(args.locale);
   // Using generic terms as I didn't add them to LocalizationMap yet for brevity, but the pattern is established.
   const client = escapeHtml(args.clientName);
   const invoice = escapeHtml(args.invoiceNumber);

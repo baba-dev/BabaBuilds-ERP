@@ -6,15 +6,8 @@ import { authOptions } from "@/lib/auth";
 import { decrypt, encrypt } from '@/lib/encryption';
 import fs from 'fs';
 import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
 import { scanBuffer } from '@/lib/security/clamav';
-import {
-  ensureDir,
-  sanitizeFilename,
-  sniffAllowedContent,
-  uniqueStoredName,
-  buildPrivatePath,
-} from '@/lib/uploads/private-storage';
+import { ensureDir, sniffAllowedContent, uniqueStoredName, buildPrivatePath } from '@/lib/uploads/private-storage';
 import { isSupportedLocale } from '@/i18n/locales';
 import { getTaxFeatureFlags } from '@/lib/tax/feature-flags';
 import { logActivity } from '@/lib/security/activity-log';

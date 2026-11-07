@@ -17,11 +17,11 @@ export async function GET() {
   try {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any).id) {
+    if (!session || !session.user.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = (session.user as any).id;
+    const userId = session.user.id;
 
     // 2. FETCH SPECIFIC FIELDS ONLY
     const userProfile = await prisma.user.findUnique({
@@ -70,11 +70,11 @@ export async function PATCH(request: Request) {
   try {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
-    if (!session || !(session.user as any).id) {
+    if (!session || !session.user.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = (session.user as any).id;
+    const userId = session.user.id;
     const body = await request.json();
 
     // 2. STRICT MASS-ASSIGNMENT PROTECTION

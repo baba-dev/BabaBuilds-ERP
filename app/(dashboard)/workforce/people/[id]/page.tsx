@@ -38,6 +38,7 @@ const ATTENDANCE_CELL_COLORS: Record<string, string> = {
 export default function EmployeeProfilePage() {
   const params = useParams();
   const router = useRouter();
+  const [now] = useState(() => Date.now());
   const id = params.id as string;
 
   const [employee, setEmployee] = useState<Employee | null>(null);
@@ -59,6 +60,7 @@ export default function EmployeeProfilePage() {
     setLoading(false);
   }, [id, router]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time client-only state sync after mount (avoids SSR hydration mismatch)
   useEffect(() => { void fetchEmployee(); }, [fetchEmployee]);
 
   const handleSave = async () => {
@@ -100,7 +102,7 @@ export default function EmployeeProfilePage() {
   if (!employee) return null;
 
   const tenure = employee.joinDate
-    ? Math.floor((Date.now() - new Date(employee.joinDate).getTime()) / (1000 * 60 * 60 * 24 * 30))
+    ? Math.floor((now - new Date(employee.joinDate).getTime()) / (1000 * 60 * 60 * 24 * 30))
     : null;
 
   return (

@@ -5,7 +5,6 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { INVOICE_STATUS } from "@/lib/invoice-status";
 import { serializeMoney, toDecimal } from "@/lib/money";
-import { summarizeReceivablesForAttention } from "@/lib/dashboard/attention-receivables";
 import {
   getInvoiceBilledAmount,
   sumInvoiceBilledAmount,
@@ -34,8 +33,7 @@ import {
   setDashboardCacheEntry,
 } from "@/lib/dashboard-cache";
 
-const normalizeInvoiceStatus = (status: unknown) =>
-  String(status).toUpperCase();
+
 const LOCALE_CURRENCY_AFFECTS_PAYLOAD = false;
 const CRITICAL_NOTIFICATION_TYPES = [
   "TAX_ALERT",
@@ -708,8 +706,8 @@ async function buildDashboardPayload(
     (sum, ret) =>
       sum.plus(
         toDecimal(
-          (ret as any).items?.reduce(
-            (acc: number, i: any) => acc + i.quantity * Number(i.unitPrice),
+          ret.items?.reduce(
+            (acc: number, i) => acc + i.quantity * Number(i.unitPrice),
             0,
           ) || 0,
         ),
@@ -829,8 +827,8 @@ async function buildDashboardPayload(
 
   const generatedMrrRows = retainers.flatMap((ret) => {
     const amount =
-      (ret as any).items?.reduce(
-        (acc: number, i: any) => acc + i.quantity * Number(i.unitPrice),
+      ret.items?.reduce(
+        (acc: number, i) => acc + i.quantity * Number(i.unitPrice),
         0,
       ) || 0;
     if (!fyRange || !ret.createdAt) return [{ date: now, value: amount }];

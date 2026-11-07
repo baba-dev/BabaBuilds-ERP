@@ -39,7 +39,7 @@ export async function PATCH(req: Request) {
   let actorEmail: string | null = null;
 
   try {
-    const session: any = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions);
     if (!session?.workspaceId || !session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -196,7 +196,7 @@ export async function PATCH(req: Request) {
       previousRole: currentRole,
       newRole: targetRole,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[team/role] Error:", err);
     if (err instanceof RbacDeniedError) return rbacDeniedResponse(err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

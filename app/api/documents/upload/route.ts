@@ -30,6 +30,7 @@ import {
   getOcrCapability,
   toOcrCapabilityResponse,
 } from '@/lib/documents/ocr/providers';
+import type { Prisma } from "@prisma/client";
 
 const MALWARE_SCAN_TIMEOUT_MS = Number(process.env.DOCUMENTS_UPLOAD_SCAN_TIMEOUT_MS ?? 60_000);
 
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
 
   try {
     await requirePermission(userId, workspaceId, 'documents.upload');
-  } catch (e) {
+  } catch {
     return apiError(403, 'Permission denied.', 'RBAC_DENIED');
   }
 
@@ -332,7 +333,7 @@ export async function POST(request: Request) {
             data: {
               title: aiTitle,
               aiSummary,
-              aiMeta: aiMeta as any,
+              aiMeta: aiMeta as Prisma.InputJsonValue,
             },
           });
         }

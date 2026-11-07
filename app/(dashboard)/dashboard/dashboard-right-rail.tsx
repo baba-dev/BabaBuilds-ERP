@@ -34,6 +34,7 @@ import type { DashboardData } from "./types";
 import { INTELLIGENCE_SUGGESTION_ROUTES } from "./intelligence-suggestion-routes";
 import { dashboardTypography as ty } from "./dashboard-typography";
 import { DashboardTooltip } from "./dashboard-tooltip";
+import { createTranslator, type Translator } from "@/lib/i18n/translator";
 
 interface DashboardRightRailProps {
   data: DashboardData;
@@ -48,20 +49,12 @@ type AIState = 'enabled' | 'locked_no_key' | 'fallback';
 
 export function DashboardRightRail({
   data,
-  fCurrency,
   onRefreshSyncImportHealth,
   syncImportHealthLoading = false,
   syncImportHealthError = null,
 }: DashboardRightRailProps) {
   const t = useTranslations("Dashboard");
-  const tr = (key: string, fallback: string, values?: any) => {
-    if (typeof (t as any).has === "function" && !(t as any).has(key)) return fallback;
-    try {
-      return t(key as any, values);
-    } catch {
-      return fallback;
-    }
-  };
+  const tr = createTranslator(t);
 
   const mood = useMemo(() => deriveWorkspaceMood(data), [data]);
   const aiState = useMemo(() => deriveAIState(data), [data]);
@@ -125,7 +118,7 @@ function deriveAIState(data: DashboardData): AIState {
   return 'enabled';
 }
 
-function RightRailHeader({ tr, mood, aiState }: { tr: any, mood: WorkspaceMood, aiState: AIState }) {
+function RightRailHeader({ tr, mood, aiState }: { tr: Translator, mood: WorkspaceMood, aiState: AIState }) {
   const getHeaderInfo = () => {
     if (aiState === 'locked_no_key') {
       return {
@@ -182,7 +175,7 @@ function RightRailHeader({ tr, mood, aiState }: { tr: any, mood: WorkspaceMood, 
   );
 }
 
-function IntelligenceAssistantSection({ data, tr, mood, aiState }: { data: DashboardData, tr: any, mood: WorkspaceMood, aiState: AIState }) {
+function IntelligenceAssistantSection({ tr, aiState }: { data: DashboardData, tr: Translator, mood: WorkspaceMood, aiState: AIState }) {
   if (aiState === 'locked_no_key') {
     return (
       <div className="p-6 bg-gradient-to-br from-amber-50/40 to-transparent dark:from-amber-500/5 dark:to-transparent">
@@ -247,7 +240,7 @@ function IntelligenceAssistantSection({ data, tr, mood, aiState }: { data: Dashb
   );
 }
 
-function RecentActivitySection({ data, tr }: { data: DashboardData, tr: any }) {
+function RecentActivitySection({ data, tr }: { data: DashboardData, tr: Translator }) {
   const hasActivity = data.activity.length > 0;
 
   return (
@@ -307,7 +300,7 @@ function RecentActivitySection({ data, tr }: { data: DashboardData, tr: any }) {
   );
 }
 
-function RecentNotificationsSection({ data, tr, mood }: { data: DashboardData, tr: any, mood: WorkspaceMood }) {
+function RecentNotificationsSection({ data, tr }: { data: DashboardData, tr: Translator, mood: WorkspaceMood }) {
   const notifications = [
     ...(data.health.complianceWarnings || []).map(w => ({ type: 'warning', label: w.label, severity: w.severity as 'info' | 'warning' | 'critical' })),
     ...(data.attention.criticalNotifications > 0 ? [{ type: 'critical', label: tr("critical_notifications_interpret", "Immediate attention required for {count} critical anomalies", { count: data.attention.criticalNotifications }), severity: 'critical' as const }] : [])
@@ -369,7 +362,7 @@ function RecentNotificationsSection({ data, tr, mood }: { data: DashboardData, t
   );
 }
 
-function SuggestedActionsSection({ data, tr, mood }: { data: DashboardData, tr: any, mood: WorkspaceMood }) {
+function SuggestedActionsSection({ data, tr }: { data: DashboardData, tr: Translator, mood: WorkspaceMood }) {
   const suggestions = useMemo(() => deriveIntelligenceSuggestions(data, tr), [data, tr]);
 
   return (
@@ -418,7 +411,7 @@ function SuggestedActionsSection({ data, tr, mood }: { data: DashboardData, tr: 
   );
 }
 
-function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
+function deriveIntelligenceSuggestions(data: DashboardData, tr: Translator) {
   const suggestions = [];
 
   // Strategic Priority Logic
@@ -486,7 +479,7 @@ function deriveIntelligenceSuggestions(data: DashboardData, tr: any) {
   return suggestions.slice(0, 3);
 }
 
-function SystemSignalsSection({ data, tr, mood }: { data: DashboardData, tr: any, mood: WorkspaceMood }) {
+function SystemSignalsSection({ data, tr, mood }: { data: DashboardData, tr: Translator, mood: WorkspaceMood }) {
   const { trust, health } = data;
   const healthy = trust.integrityStatus === "PASSED" || trust.integrityStatus === "COMPLETED";
   const integrationCount = Object.values(health.integrationReadiness.integrations).filter(i => i.configured).length;
@@ -551,7 +544,7 @@ function SyncImportHealthSection({
   error,
 }: {
   data: DashboardData;
-  tr: any;
+  tr: Translator;
   onRefreshSyncImportHealth?: () => Promise<void>;
   isRefreshing: boolean;
   error: string | null;

@@ -36,7 +36,7 @@ export default function PrivacyPage() {
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-300">BabaBuilds ERP</p>
         <h1 className="text-3xl font-black tracking-tight">Privacy Policy</h1>
         <p className="text-sm text-zinc-700 dark:text-zinc-300">
-          Last updated: May 9, 2026. This Privacy Policy explains how BabaBuilds ERP ("BabaBuilds", "we", "us", and "our")
+          Last updated: May 9, 2026. This Privacy Policy explains how BabaBuilds ERP (&quot;BabaBuilds&quot;, &quot;we&quot;, &quot;us&quot;, and &quot;our&quot;)
           collects, uses, shares, retains, and protects information for the BabaBuilds ERP web app, installed PWA, and Trusted Web
           Activity experience for <a className="underline" href="https://erp.bababuilds.com">https://erp.bababuilds.com</a>.
         </p>

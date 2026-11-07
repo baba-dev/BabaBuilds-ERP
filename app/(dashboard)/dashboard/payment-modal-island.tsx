@@ -1,5 +1,6 @@
 "use client";
 
+import type { Translator } from "@/lib/i18n/translator";
 import { Activity } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -29,7 +30,7 @@ export function PaymentModalIsland({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (e: React.FormEvent) => Promise<void>;
-  t: (key: string, fallback: string, values?: any) => string;
+  t: Translator;
   currency: string;
   currencySymbol: string;
   amountReceived: string;

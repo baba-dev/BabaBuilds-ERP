@@ -18,6 +18,7 @@ import {
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { loadExternalScript } from "@/lib/client/load-external-script";
+import { getErrorMessage } from "@/lib/error-utils";
 
 function SuccessUpgradeModal({ interval, onClose }: { interval: string, onClose: () => void }) {
   const isTeam = interval.includes("TEAM");
@@ -68,7 +69,7 @@ function SuccessUpgradeModal({ interval, onClose }: { interval: string, onClose:
 // Utility to inject the Razorpay script dynamically
 const loadRazorpayScript = () => {
   return new Promise<boolean>((resolve) => {
-    if ((window as any).Razorpay) {
+    if (window.Razorpay) {
       resolve(true);
       return;
     }
@@ -84,7 +85,6 @@ export function ProUpgradeCard({
   currency = "INR",
   countryCode,
   defaultInterval = "YEARLY",
-  convertDuringTrial = false,
 }: {
   locale?: string;
   currency?: string;
@@ -222,7 +222,7 @@ export function ProUpgradeCard({
         theme: {
           color: "#4f46e5", // Indigo-600 to match your UI
         },
-        handler: async function (response: any) {
+        handler: async function (response: RazorpaySuccessResponse) {
           const verifyToastId = toast.loading("Verifying payment securely...");
           try {
             // 4. Send the success signature back to our server to verify & upgrade DB
@@ -248,21 +248,21 @@ export function ProUpgradeCard({
             await update();
             setIsUpgradeSuccess(true);
 
-          } catch (err: any) {
-            toast.error(err.message || "Payment verification failed", { id: verifyToastId });
+          } catch (err: unknown) {
+            toast.error(getErrorMessage(err) || "Payment verification failed", { id: verifyToastId });
           }
         }
       };
 
       // 5. Open the Razorpay Modal
-      const paymentObject = new (window as any).Razorpay(options);
-      paymentObject.on("payment.failed", function (response: any) {
+      const paymentObject = new window.Razorpay!(options);
+      paymentObject.on("payment.failed", function (response: RazorpayFailureResponse) {
         toast.error(`Payment Failed: ${response.error.description}`);
       });
       paymentObject.open();
 
-    } catch (error: any) {
-      toast.error(error.message || "An error occurred during checkout", { id: toastId });
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error) || "An error occurred during checkout", { id: toastId });
     } finally {
       setIsLoading(false);
     }

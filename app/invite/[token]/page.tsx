@@ -60,6 +60,7 @@ export default async function InviteAcceptancePage({ params }: { params: Promise
         <div className="text-center">
           <h1 className="text-2xl font-bold text-rose-500">Wrong Account</h1>
           <p className="mt-2">This invite was sent to {invite.email}, but you are signed in as {session.user.email}.</p>
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- full-page navigation to a non-page route is intended */}
           <a href="/api/auth/signout" className="text-indigo-500 underline mt-4 inline-block">Sign out and switch accounts</a>
         </div>
       </div>
@@ -82,7 +83,7 @@ export default async function InviteAcceptancePage({ params }: { params: Promise
       <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-rose-500">Workspace is Full</h1>
-          <p className="mt-2">The workspace "{invite.workspace.name}" has reached its maximum user limit.</p>
+          <p className="mt-2">The workspace &quot;{invite.workspace.name}&quot; has reached its maximum user limit.</p>
         </div>
       </div>
     );

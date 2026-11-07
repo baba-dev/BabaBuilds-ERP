@@ -53,6 +53,33 @@ type InvoiceCompanyConfirmation = {
 
 type RecentCompanySwitch = { name?: string; switchedAt?: number };
 
+type ApiList<T> = T[] | { data?: T[] } | null | undefined;
+
+const unwrapList = <T,>(result: ApiList<T>): T[] => {
+  if (Array.isArray(result)) return result;
+  return Array.isArray(result?.data) ? result.data : [];
+};
+
+type ClientRow = { id: string | number; name: string; country: string; email?: string | null };
+type SacValue = string | number | { code?: string; value?: string; label?: string } | null;
+type BillingMonthRow = { billingMonth?: string | null; clientId?: string | null };
+type ServiceRow = { id: string; name: string; description?: string | null; sacCode?: SacValue; defaultPrice?: number | string | null };
+type ProductRow = { id: string; name: string; sku?: string | null; category?: string | null; baselinePrice?: number | string | null; costPrice?: number | string | null; currentStock?: number | null };
+type CatalogEntry = {
+  id: string;
+  selected: boolean;
+  title: string;
+  nicDetails: string;
+  sac: SacValue;
+  amount: string;
+  quantity: number;
+  unitPrice: number;
+  defaultPrice: number;
+  isProduct: boolean;
+  productId: string | null;
+  currentStock: number;
+};
+
 interface InvoiceGeneratorFormProps {
   /** Called with the generated invoice data after a successful submission. Pass to close the modal. */
   onSuccess?: (data: {
@@ -107,7 +134,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
   const isRtl = dirFromLocale(locale) === "rtl";
 
   // App State
-  const [clients, setClients] = useState<any[]>([]);
+  const [clients, setClients] = useState<ClientRow[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [existingInvoices, setExistingInvoices] = useState<Array<{ billingMonth: string; clientId: string | null }>>([]);
   const [billingMonth, setBillingMonth] = useState(() => format(new Date(), "MMMM yyyy"));
@@ -121,7 +148,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
   const [taxRateMeta, setTaxRateMeta] = useState<{ taxLabel?: string; countryCode?: string; candidates?: number[] }>({});
 
   // Dynamic Services State
-  const [services, setServices] = useState<any[]>([]);
+  const [services, setServices] = useState<CatalogEntry[]>([]);
   const [isLoadingServices, setIsLoadingServices] = useState(true);
   const [companyConfirmation, setCompanyConfirmation] = useState<InvoiceCompanyConfirmation | null>(null);
   const [companyConfirmed, setCompanyConfirmed] = useState(false);
@@ -151,25 +178,23 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
       } catch {
         setRecentCompanySwitch(null);
       }
-      const parsedClients = Array.isArray(clientsResult) ? clientsResult : clientsResult?.data;
+      const parsedClients = unwrapList<ClientRow>(clientsResult);
       if (Array.isArray(parsedClients)) setClients(parsedClients);
 
-      const parsedBillingMonths = Array.isArray(invoicesResult)
-        ? invoicesResult
-        : (invoicesResult as any)?.data;
+      const parsedBillingMonths = unwrapList<BillingMonthRow>(invoicesResult);
       if (Array.isArray(parsedBillingMonths)) {
         setExistingInvoices(
-          parsedBillingMonths.map((row: any) => ({
+          parsedBillingMonths.map((row) => ({
             billingMonth: String(row?.billingMonth || ""),
             clientId: row?.clientId ? String(row.clientId) : null,
           })),
         );
       }
 
-      const parsedServices = Array.isArray(servicesResult) ? servicesResult : servicesResult?.data;
-      const mappedCatalog: any[] = [];
+      const parsedServices = unwrapList<ServiceRow>(servicesResult);
+      const mappedCatalog: CatalogEntry[] = [];
       if (Array.isArray(parsedServices)) {
-        parsedServices.forEach((srv: any) => {
+        parsedServices.forEach((srv) => {
           mappedCatalog.push({
             id: srv.id,
             selected: false,
@@ -178,8 +203,8 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
             sac: srv.sacCode || (countryCode === "IN" ? "998313" : "GENERIC"),
             amount: "",
             quantity: 1,
-            unitPrice: srv.defaultPrice || 0,
-            defaultPrice: srv.defaultPrice || 0,
+            unitPrice: Number(srv.defaultPrice || 0),
+            defaultPrice: Number(srv.defaultPrice || 0),
             isProduct: false,
             productId: null,
             currentStock: 0,
@@ -187,9 +212,9 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
         });
       }
 
-      const parsedProducts = Array.isArray(productsResult) ? productsResult : [];
+      const parsedProducts: ProductRow[] = Array.isArray(productsResult) ? productsResult : [];
       if (Array.isArray(parsedProducts)) {
-        parsedProducts.forEach((p: any) => {
+        parsedProducts.forEach((p) => {
           mappedCatalog.push({
             id: p.id,
             selected: false,
@@ -198,11 +223,11 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
             sac: p.category || "GOODS",
             amount: "",
             quantity: 1,
-            unitPrice: p.baselinePrice || p.costPrice || 0,
-            defaultPrice: p.baselinePrice || p.costPrice || 0,
+            unitPrice: Number(p.baselinePrice || p.costPrice || 0),
+            defaultPrice: Number(p.baselinePrice || p.costPrice || 0),
             isProduct: true,
             productId: p.id,
-            currentStock: p.currentStock,
+            currentStock: p.currentStock ?? 0,
           });
         });
       }
@@ -237,7 +262,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
           }
         }
         sessionStorage.removeItem("erp_ai_payload");
-      } catch (e) {
+      } catch {
         console.error("Failed to parse AI payload");
       }
     }
@@ -641,14 +666,7 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
     }
   };
 
-  const handleCopyPaymentUrl = async () => {
-    if (!draftPreview?.confirmation.paymentLink?.url || !navigator?.clipboard) return;
-    try {
-      await navigator.clipboard.writeText(draftPreview.confirmation.paymentLink.url);
-    } catch {
-      // Non-fatal UX action.
-    }
-  };
+  
 
   const confirmStepContent = draftPreview ? (
     <form className="bg-white dark:bg-zinc-950 flex flex-col relative">

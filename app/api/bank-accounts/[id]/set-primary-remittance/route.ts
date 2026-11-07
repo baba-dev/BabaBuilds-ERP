@@ -7,14 +7,14 @@ import { logActivity } from "@/lib/security/activity-log";
 
 export async function POST(request: Request, ctx: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
-  const workspaceId = (session as any)?.workspaceId as string | undefined;
-  const actorUserId = (session as any)?.user?.id as string | undefined;
-  const actorEmail = (session as any)?.user?.email as string | undefined;
+  const workspaceId = session?.workspaceId as string | undefined;
+  const actorUserId = session?.user?.id as string | undefined;
+  const actorEmail = session?.user?.email as string | undefined;
   if (!workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!actorUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const perm = await withPermission(actorUserId, workspaceId, 'workspace.manage_settings');
-  if (!perm.granted) return perm.response as any;
+  if (!perm.granted) return perm.response;
 
   const { id } = await ctx.params;
 

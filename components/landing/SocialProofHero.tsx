@@ -23,6 +23,7 @@ export default function SocialProofHero() {
     >
       <div className="flex -space-x-3">
         {avatars.map((src, i) => (
+          // eslint-disable-next-line @next/next/no-img-element -- dynamic or user-supplied image source; next/image remote config not applicable
           <img
             key={i}
             src={src}

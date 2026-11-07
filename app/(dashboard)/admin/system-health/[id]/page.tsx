@@ -154,7 +154,7 @@ export default async function ErrorDetailsPage({ params }: { params: Promise<{ i
           </div>
           <div className="p-4">
             <p className="text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed italic">
-              "{errorLog.aiUserFriendlyMessage}"
+              &quot;{errorLog.aiUserFriendlyMessage}&quot;
             </p>
           </div>
         </div>

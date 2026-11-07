@@ -1,5 +1,6 @@
 "use client";
 
+import type { InventoryProduct } from "@/lib/types/inventory";
 import { useState } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -10,11 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { getErrorMessage } from "@/lib/error-utils";
 
 interface QuickAdjustModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  product: any;
+  product: InventoryProduct | null;
   onAdjusted: () => void;
 }
 
@@ -34,6 +36,7 @@ export function QuickAdjustModal({ open, onOpenChange, product, onAdjusted }: Qu
       toast.error("Please provide a reason for the adjustment.");
       return;
     }
+    if (!product) return;
 
     setIsSubmitting(true);
     const toastId = toast.loading("Adjusting stock...");
@@ -55,8 +58,8 @@ export function QuickAdjustModal({ open, onOpenChange, product, onAdjusted }: Qu
       setAdjustment("0");
       setReason("");
       onAdjusted();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to adjust stock.", { id: toastId });
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || "Failed to adjust stock.", { id: toastId });
     } finally {
       setIsSubmitting(false);
     }

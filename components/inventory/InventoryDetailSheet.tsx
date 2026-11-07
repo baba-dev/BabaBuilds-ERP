@@ -1,27 +1,25 @@
 "use client";
 
+import type { InventoryMovement, InventoryProduct } from "@/lib/types/inventory";
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import {
   Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle
 } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
 import { Activity, ArrowDownRight, ArrowUpRight, Tag, Info } from "lucide-react";
 import { useFormat } from "@/hooks/use-format";
-import { getCurrencySymbol } from "@/lib/currency";
 
 interface InventoryDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  product: any;
+  product: InventoryProduct | null;
 }
 
 export function InventoryDetailSheet({ open, onOpenChange, product }: InventoryDetailSheetProps) {
-  const [movements, setMovements] = useState<any[]>([]);
+  const [movements, setMovements] = useState<InventoryMovement[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const { fCurrency, currency, locale } = useFormat();
-  const currencySymbol = getCurrencySymbol(currency, locale);
+  const { fCurrency } = useFormat();
 
   useEffect(() => {
     if (open && product) {

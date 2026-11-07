@@ -1,3 +1,4 @@
+import type { ComponentPropsWithoutRef } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { categoryToSlug, getDocBySlug, getAllDocs } from "@/lib/docs";
@@ -53,7 +54,7 @@ function buildToc(markdown: string): TocItem[] {
 
 // PREMIUM MDX COMPONENTS
 const components = {
-  h2: ({ children, id, ...props }: any) => (
+  h2: ({ children, id, ...props }: ComponentPropsWithoutRef<"h2">) => (
     <h2
       {...props}
       id={typeof id === "string" && id.length ? id : slugifyHeading(String(children))}
@@ -66,7 +67,7 @@ const components = {
       {children}
     </h2>
   ),
-  h3: ({ children, id, ...props }: any) => (
+  h3: ({ children, id, ...props }: ComponentPropsWithoutRef<"h3">) => (
     <h3
       {...props}
       id={typeof id === "string" && id.length ? id : slugifyHeading(String(children))}
@@ -75,28 +76,28 @@ const components = {
       {children}
     </h3>
   ),
-  p: ({ children, ...props }: any) => (
+  p: ({ children, ...props }: ComponentPropsWithoutRef<"p">) => (
     <p {...props} className={cn(typography.bodyCopy, "text-[15px] mb-6")}>
       {children}
     </p>
   ),
-  ul: ({ children, ...props }: any) => (
+  ul: ({ children, ...props }: ComponentPropsWithoutRef<"ul">) => (
     <ul {...props} className="mb-8 space-y-3">
       {children}
     </ul>
   ),
-  ol: ({ children, ...props }: any) => (
+  ol: ({ children, ...props }: ComponentPropsWithoutRef<"ol">) => (
     <ol {...props} className="space-y-4 mb-8 list-decimal list-inside marker:text-indigo-600 marker:font-bold">
       {children}
     </ol>
   ),
-  li: ({ children, ...props }: any) => (
+  li: ({ children, ...props }: ComponentPropsWithoutRef<"li">) => (
     <li {...props} className={cn(typography.bodyCopy, "flex gap-3 text-[15px]")}>
       <span className="mt-2.5 w-1.5 h-1.5 rounded-full bg-indigo-600/40 shrink-0"></span>
       <span>{children}</span>
     </li>
   ),
-  blockquote: ({ children, ...props }: any) => (
+  blockquote: ({ children }: ComponentPropsWithoutRef<"blockquote">) => (
     <div className="my-8 p-6 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/50 flex gap-4 animate-in fade-in slide-in-from-left-4 duration-500">
       <div className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-indigo-100 dark:border-indigo-800 shadow-sm flex items-center justify-center shrink-0">
         <Info className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -106,24 +107,24 @@ const components = {
       </div>
     </div>
   ),
-  table: ({ children, ...props }: any) => (
+  table: ({ children, ...props }: ComponentPropsWithoutRef<"table">) => (
     <div className="my-8 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
       <table {...props} className="w-full text-left text-[14px]">
         {children}
       </table>
     </div>
   ),
-  thead: ({ children, ...props }: any) => (
+  thead: ({ children, ...props }: ComponentPropsWithoutRef<"thead">) => (
     <thead {...props} className="bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800">
       {children}
     </thead>
   ),
-  th: ({ children, ...props }: any) => (
+  th: ({ children, ...props }: ComponentPropsWithoutRef<"th">) => (
     <th {...props} className="px-4 py-3 font-bold text-zinc-900 dark:text-zinc-100">
       {children}
     </th>
   ),
-  td: ({ children, ...props }: any) => (
+  td: ({ children, ...props }: ComponentPropsWithoutRef<"td">) => (
     <td {...props} className="px-4 py-3 text-zinc-600 dark:text-zinc-400 border-b border-zinc-100 dark:border-zinc-800/50 last:border-0">
       {children}
     </td>
@@ -408,7 +409,7 @@ export default async function DocPage({ params }: Props) {
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px] gap-8 xl:gap-10">
         {/* Markdown content rendered via MDXRemote with custom components */}
         <div className={cn(typography.richContent, "max-w-none")}>
-          <MDXRemote source={doc.content} components={components as any} />
+          <MDXRemote source={doc.content} components={components} />
         </div>
 
         {/* Table of contents */}

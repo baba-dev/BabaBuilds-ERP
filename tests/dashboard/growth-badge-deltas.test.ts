@@ -49,7 +49,7 @@ describe("dashboard growth deltas", () => {
       },
       recentInvoices: [],
       countryCode: "IN",
-    }) as any;
+    });
 
     expect(parsed?.salesAndShop.shopRevenuePreviousMonth).toBe(70);
     expect(parsed?.salesAndShop.revenueChangeVsPriorMonthPct).toBe(42.8);

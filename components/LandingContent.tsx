@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, ShieldCheck, Sparkles, Globe, CheckCircle2, Workflow, Percent, Coins, Timer, LineChart, FileCheck2, Users } from "lucide-react";
+import { ArrowRight, ShieldCheck, Sparkles, Globe, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,6 @@ import LandingFooter from "@/components/LandingFooter";
 import RotatorText from "@/components/landing/RotatorText";
 import RoleDemoLauncher from "@/components/landing/RoleDemoLauncher";
 import FreeVsProComparison from "@/components/landing/FreeVsProComparison";
-import { personaNavigationLinks } from "@/components/landing/persona/persona-config";
 import { emitMarketingAnalyticsEvent } from "@/lib/marketing-analytics";
 import HeroRevenueLoopVisual from "@/components/landing/HeroRevenueLoopVisual";
 import FloatingPreferencesWidget from "@/components/landing/FloatingPreferencesWidget";
@@ -22,7 +21,7 @@ import OptionalModulesSlider from "@/components/landing/OptionalModulesSlider";
 export default function LandingContent() {
   const t = useTranslations("Landing");
   const tp1 = useTranslations("LandingPhase1");
-  const tPersona = useTranslations("LandingPersona");
+  
   const reduceMotion = useReducedMotion();
 
   const PRIMARY_CTA = "/signup?plan=pro&cycle=monthly&trial=15&source=landing";
@@ -44,9 +43,7 @@ export default function LandingContent() {
     });
   };
 
-  const trackPersonaClick = (surface: string, href: string) => {
-    emitMarketingAnalyticsEvent("marketing_cta_click", { location: surface, href });
-  };
+  
 
   return (
     <div className="overflow-x-hidden bg-surface-base">

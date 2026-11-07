@@ -10,6 +10,7 @@ import { DashboardTooltip } from "./dashboard-tooltip";
 import { dashboardTypography as ty } from "./dashboard-typography";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DashboardModulePromoCard } from "@/components/dashboard/DashboardModulePromoCard";
+import { createTranslator } from "@/lib/i18n/translator";
 
 export function DashboardOperationsPanel({
   operations,
@@ -25,16 +26,7 @@ export function DashboardOperationsPanel({
   onModuleEnabled?: (moduleKey: string) => void;
 }) {
   const t = useTranslations("Dashboard");
-  const tr = (key: string, fallback: string, values?: any) => {
-    if (typeof (t as any).has === "function" && !(t as any).has(key)) return fallback;
-    try {
-      const translation = t(key as any, values);
-      if (translation === key || translation === `Dashboard.${key}`) return fallback;
-      return translation;
-    } catch {
-      return fallback;
-    }
-  };
+  const tr = createTranslator(t);
 
   // Adaptive Card mod: if both Workforce & Payroll are disabled, show premium promo
   const isWorkforceEnabled = enabledModules.has("WORKFORCE");

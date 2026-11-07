@@ -4,6 +4,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireCashFlowModule } from "@/app/api/cash-flow/_module";
+import type { Prisma } from "@prisma/client";
 
 const createSchema = z.object({
   name: z.string().min(1).max(64),
@@ -14,7 +15,7 @@ const createSchema = z.object({
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  const workspaceId = (session as any)?.workspaceId as string | undefined;
+  const workspaceId = session?.workspaceId as string | undefined;
   if (!session || !workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const moduleGate = await requireCashFlowModule(workspaceId);
@@ -27,7 +28,7 @@ export async function GET() {
   });
 
   const data = rows.map((r) => {
-    const raw = (r.valueJson ?? {}) as any;
+    const raw = (r.valueJson ?? {}) as Record<string, unknown>;
     return {
       key: r.key,
       name: String(raw.name ?? r.key),
@@ -43,7 +44,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
-  const workspaceId = (session as any)?.workspaceId as string | undefined;
+  const workspaceId = session?.workspaceId as string | undefined;
   if (!session || !workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const moduleGate = await requireCashFlowModule(workspaceId);
@@ -64,8 +65,8 @@ export async function POST(request: Request) {
         name: parsed.data.name,
         description: parsed.data.description ?? null,
         scenarioTag: parsed.data.scenarioTag ?? null,
-        valueJson: parsed.data.valueJson,
-      } as any,
+        valueJson: parsed.data.valueJson as Prisma.InputJsonValue,
+      },
       isActive: true,
       updatedBy: session.user?.email ?? session.user?.id ?? null,
     },

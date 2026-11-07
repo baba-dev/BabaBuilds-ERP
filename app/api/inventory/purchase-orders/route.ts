@@ -3,10 +3,10 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(req: Request) {
+export async function GET(_req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    const workspaceId = (session as any)?.workspaceId;
+    const workspaceId = session?.workspaceId;
     if (!session || !workspaceId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     });
 
     return NextResponse.json(pos);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[INVENTORY_PO_GET]", error);
     return NextResponse.json({ error: "Failed to fetch purchase orders" }, { status: 500 });
   }

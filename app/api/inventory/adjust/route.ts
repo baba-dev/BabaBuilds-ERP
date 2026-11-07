@@ -7,7 +7,7 @@ import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    const workspaceId = (session as any)?.workspaceId;
+    const workspaceId = session?.workspaceId;
     if (!session || !workspaceId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ product: updatedProduct, movement });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[INVENTORY_ADJUST_POST]", error);
     return NextResponse.json({ error: "Failed to adjust stock" }, { status: 500 });
   }

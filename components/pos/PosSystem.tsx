@@ -3,23 +3,12 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  Loader2,
-  Search,
-  Plus,
-  Minus,
-  Trash2,
-  ShoppingCart,
-  User,
-  X,
-  FileText,
-  Repeat,
-} from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, Search, Plus, Minus, Trash2, ShoppingCart, User, FileText, Repeat } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, getCurrencySymbol } from "@/lib/currency";
 import {
@@ -37,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getErrorMessage } from "@/lib/error-utils";
 
 type CatalogItem = {
   id: string;
@@ -96,13 +86,14 @@ export default function PosSystem({
         const res = await fetch(`/api/pos/catalog?type=${activeTab}`);
         const data = await res.json();
         setItems(data);
-      } catch (err) {
+      } catch {
         toast.error(t("toast_catalog_fail"));
       } finally {
         setLoading(false);
       }
     };
     fetchCatalog();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
   }, [activeTab]);
 
   const addToCart = (item: CatalogItem) => {
@@ -233,8 +224,8 @@ export default function PosSystem({
       toast.success(data.message);
       setCart([]);
       setIsCheckoutModalOpen(false);
-    } catch (err: any) {
-      toast.error(err.message || t("toast_checkout_fail"));
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err) || t("toast_checkout_fail"));
     } finally {
       setIsProcessing(false);
     }
@@ -256,7 +247,7 @@ export default function PosSystem({
           <div className="flex items-center gap-4 mb-4">
             <Tabs
               value={activeTab}
-              onValueChange={(v: any) => setActiveTab(v)}
+              onValueChange={(v) => setActiveTab(v as "SERVICES" | "PRODUCTS")}
               className="w-64"
             >
               <TabsList className="grid w-full grid-cols-2">

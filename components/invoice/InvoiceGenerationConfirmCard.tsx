@@ -106,7 +106,7 @@ export function InvoiceGenerationConfirmCard({
               Razorpay Link Bypassed
             </div>
             <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 leading-relaxed">
-              This invoice exceeds Razorpay's KYC or unactivated ₹50,000 INR transaction limit. Online checkout link generation has been bypassed. An offline-payable invoice will be generated.
+              This invoice exceeds Razorpay&apos;s KYC or unactivated ₹50,000 INR transaction limit. Online checkout link generation has been bypassed. An offline-payable invoice will be generated.
             </p>
           </div>
         ) : (

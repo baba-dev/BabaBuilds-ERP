@@ -12,11 +12,11 @@ const isPaidStatus = (status: unknown) => String(status).toUpperCase() === "PAID
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
-    const userId = (session as any).user?.id as string | undefined;
+    const workspaceId = session.workspaceId;
+    const userId = session.user?.id as string | undefined;
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     // RBAC: viewing invoices requires invoices.view permission

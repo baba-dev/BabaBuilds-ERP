@@ -1,9 +1,11 @@
+import type { Prisma } from "@prisma/client";
 import 'server-only';
 import { prisma } from '@/lib/prisma';
 import { decrypt } from '@/lib/encryption';
 import { fetchMailBillingInventory } from './miab-client';
 import { logActivity } from '@/lib/security/activity-log';
 import { createMailBillingReviewItem } from './review';
+import type { MailBillingAccessMode } from "./miab-client";
 
 async function review(input: Parameters<typeof createMailBillingReviewItem>[0]) {
   const result = await createMailBillingReviewItem(input);
@@ -17,7 +19,7 @@ export async function syncMailBillingServer({ workspaceId, serverId, actorUserId
   let reviewItemsCreated = 0;
   try {
     const token = server.encryptedToken ? decrypt(server.encryptedToken) : undefined;
-    const inventory = await fetchMailBillingInventory({ baseUrl: server.baseUrl, accessMode: server.accessMode as any, token });
+    const inventory = await fetchMailBillingInventory({ baseUrl: server.baseUrl, accessMode: server.accessMode as MailBillingAccessMode, token });
     const now = new Date();
     const existingDomains = await prisma.mailBillingDomain.findMany({ where: { workspaceId, serverId }, include: { subscriptions: true } });
     const existingMailboxes = await prisma.mailBillingMailbox.findMany({ where: { workspaceId, serverId }, select: { id: true, email: true, domainId: true } });
@@ -53,7 +55,7 @@ export async function syncMailBillingServer({ workspaceId, serverId, actorUserId
           mailboxesAdded++;
           reviewItemsCreated += await review({ workspaceId, domainId: domain.id, serverId, type: 'MAILBOX_ADDED', severity: 'INFO', title: `Mailbox added: ${m.email}`, description: `${m.email} was discovered during inventory sync.`, suggestedAction: 'Review whether billing quantity should change.', newValueJson: { email: m.email } });
         }
-        await prisma.mailBillingMailbox.upsert({ where: { workspaceId_serverId_email: { workspaceId, serverId, email: m.email } }, create: { workspaceId, serverId, domainId: domain.id, email: m.email, localPart: m.email.split('@')[0], quotaMb: m.quotaMb ?? null, isAdmin: Boolean(m.isAdmin), status: m.status || 'ACTIVE', lastSeenAt: now, rawJson: m.raw as any }, update: { domainId: domain.id, localPart: m.email.split('@')[0], quotaMb: m.quotaMb ?? null, isAdmin: Boolean(m.isAdmin), status: m.status || 'ACTIVE', lastSeenAt: now, archivedAt: null, rawJson: m.raw as any } });
+        await prisma.mailBillingMailbox.upsert({ where: { workspaceId_serverId_email: { workspaceId, serverId, email: m.email } }, create: { workspaceId, serverId, domainId: domain.id, email: m.email, localPart: m.email.split('@')[0], quotaMb: m.quotaMb ?? null, isAdmin: Boolean(m.isAdmin), status: m.status || 'ACTIVE', lastSeenAt: now, rawJson: m.raw as Prisma.InputJsonValue }, update: { domainId: domain.id, localPart: m.email.split('@')[0], quotaMb: m.quotaMb ?? null, isAdmin: Boolean(m.isAdmin), status: m.status || 'ACTIVE', lastSeenAt: now, archivedAt: null, rawJson: m.raw as Prisma.InputJsonValue } });
       }
     }
     const removedDomains = existingDomains.filter((d) => !seenDomains.has(d.domain));
@@ -67,7 +69,7 @@ export async function syncMailBillingServer({ workspaceId, serverId, actorUserId
     await prisma.mailBillingDomain.updateMany({ where: { id: { in: removedDomains.map((d) => d.id) }, workspaceId }, data: { status: 'REMOVED', archivedAt: now } });
     await prisma.mailBillingMailbox.updateMany({ where: { id: { in: removedMailboxes.map((m) => m.id) }, workspaceId }, data: { status: 'REMOVED', archivedAt: now } });
     const summary = { domainsSeen: seenDomains.size, mailboxesSeen: seenMailboxes.size, domainsAdded, domainsRemoved: removedDomains.length, mailboxesAdded, mailboxesRemoved: removedMailboxes.length, reviewItemsCreated };
-    await prisma.mailBillingSyncRun.update({ where: { id: run.id }, data: { status: 'SUCCESS', finishedAt: now, ...summary, summaryJson: summary as any } });
+    await prisma.mailBillingSyncRun.update({ where: { id: run.id }, data: { status: 'SUCCESS', finishedAt: now, ...summary, summaryJson: summary as Prisma.InputJsonValue } });
     await prisma.mailBillingServer.update({ where: { id: serverId }, data: { lastSyncAt: now, lastSyncStatus: 'SUCCESS', lastSyncError: null, status: 'ACTIVE' } });
     await logActivity({ workspaceId, actor: { userId: actorUserId }, action: 'mail_billing.sync', status: 'SUCCESS', entity: { type: 'MailBillingServer', id: serverId }, metadata: summary, request });
     return summary;

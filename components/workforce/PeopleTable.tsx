@@ -4,12 +4,8 @@ import { useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {
-  Users2, Plus, Search, Filter, MoreHorizontal,
-  Mail, Phone, MapPin, ChevronRight, UserCheck, UserX,
-} from "lucide-react";
+import { Users2, Search, MoreHorizontal, Mail, MapPin, ChevronRight, UserX } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";

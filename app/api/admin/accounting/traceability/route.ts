@@ -9,11 +9,11 @@ export async function GET() {
     await verifySuperAdmin();
 
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' }, { status: 401 });
     }
 
-    const workspaceId = (session as any).workspaceId as string;
+    const workspaceId = session.workspaceId as string;
     const rows = await buildTraceabilityMatrix(workspaceId);
 
     return NextResponse.json({

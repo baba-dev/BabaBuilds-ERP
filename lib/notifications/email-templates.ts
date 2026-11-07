@@ -11,7 +11,7 @@ import { getLocaleDirection } from '@/lib/i18n';
 
 // --- DESIGN TOKENS ---
 const BRAND_PURPLE = '#6366f1'; // indigo-500 – matches the app accent
-const BRAND_DARK = '#18181b';   // zinc-900
+   // zinc-900
 const BRAND_LIGHT = '#f4f4f5';  // zinc-100
 const FONT_STACK = "'Inter', 'Noto Naskh Arabic', 'Cairo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
@@ -26,9 +26,7 @@ const escapeHtml = (value: unknown): string => {
 };
 
 /** Absolute public URL of the BabaBuilds logo (served from /icons/) */
-function logoTag(appUrl: string): string {
-  return `<img src="${appUrl}/icons/BabaBuillds_ERP_Logo.png" alt="BabaBuilds ERP" width="140" style="display:block;max-width:140px;height:auto;" />`;
-}
+
 
 // ---------------------------------------------------------------------------
 // MASTER LAYOUT

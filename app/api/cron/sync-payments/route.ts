@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import Stripe from "stripe";
 import Razorpay from "razorpay";
 import { isCronAuthorized, unauthorizedCronResponse } from '@/lib/security/cron-auth';
+import { getErrorMessage } from "@/lib/error-utils";
 
 // Force node runtime for cron if needed, though standard Edge might be fine
 export const runtime = 'nodejs';
@@ -53,7 +54,7 @@ export async function GET(req: Request) {
           // Note: using razorpay SDK to fetch payment link
           // The typings for paymentLink might be under rzp.paymentLink
           // Let's use it as any
-          const rzpAny = rzp as any;
+          const rzpAny = rzp as unknown as { paymentLink: { fetch(id: string): Promise<{ status?: string } & Record<string, unknown>> } };
           const link = await rzpAny.paymentLink.fetch(invoice.providerPaymentLinkId!);
           
           if (link && link.status === "paid") {
@@ -66,7 +67,7 @@ export async function GET(req: Request) {
           }
         } else if (invoice.providerGateway === "STRIPE" && profile.stripeSecretKey) {
           const decryptedSecret = decrypt(profile.stripeSecretKey);
-          const stripe = new Stripe(decryptedSecret, { apiVersion: '2026-03-25.dahlia' as any });
+          const stripe = new Stripe(decryptedSecret, { apiVersion: '2026-03-25.dahlia' as Stripe.LatestApiVersion });
 
           // Payment links themselves don't have a simple "status" in Stripe.
           // They generate Checkout Sessions. We have to list Checkout Sessions for this Payment Link 
@@ -90,15 +91,15 @@ export async function GET(req: Request) {
             results.synced++;
           }
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         results.failed++;
-        results.errors.push(`Invoice ${invoice.invoiceNumber}: ${err.message}`);
+        results.errors.push(`Invoice ${invoice.invoiceNumber}: ${getErrorMessage(err)}`);
       }
     }
 
     return NextResponse.json({ success: true, ...results });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message, ...results }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: getErrorMessage(err), ...results }, { status: 500 });
   }
 }
 

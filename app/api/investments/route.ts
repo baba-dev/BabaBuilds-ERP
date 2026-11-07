@@ -8,10 +8,10 @@ export async function GET() {
   try {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
 
     // 2. FETCH ONLY THIS WORKSPACE'S INVESTMENTS
     const investments = await prisma.investment.findMany({
@@ -20,7 +20,7 @@ export async function GET() {
     });
     
     return NextResponse.json(investments);
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Failed to fetch investments' }, { status: 500 });
   }
 }
@@ -29,10 +29,10 @@ export async function POST(request: Request) {
   try {
     // 1. SECURITY LOCK
     const session = await getServerSession(authOptions);
-    if (!session || !(session as any).workspaceId) {
+    if (!session || !session.workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const workspaceId = (session as any).workspaceId;
+    const workspaceId = session.workspaceId;
 
     const body = await request.json();
     const { date, category, assetName, amount } = body;

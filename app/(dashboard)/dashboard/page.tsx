@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { Download, LayoutDashboard, Send, Sparkles, ArrowRight, Users, Briefcase, ReceiptText, X, Building, Lock, CircleAlert, ShieldCheck } from "lucide-react";
+import { Download, LayoutDashboard, Send, Sparkles, ArrowRight, Users, Briefcase, ReceiptText, X, Building, CircleAlert, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -43,6 +43,8 @@ import { FirstLookWelcome } from "@/components/onboarding/FirstLookWelcome";
 import { PersonaPicker } from "@/components/onboarding/PersonaPicker";
 import { GuidedFlowsHub } from "@/components/dashboard/GuidedFlowsHub";
 import { StartWithRealBusinessCTA } from "@/components/demo/StartWithRealBusinessCTA";
+import { getErrorMessage } from "@/lib/error-utils";
+import { createTranslator } from "@/lib/i18n/translator";
 
 export default function Dashboard() {
   const t = useTranslations("Dashboard");
@@ -72,22 +74,12 @@ export default function Dashboard() {
     isDemoUser,
     isLoading: onboardingLoading,
     persona: onboardingPersona,
-    setPersona,
   } = useOnboarding();
 
   const { fCurrency, currency } = useFormat();
   const currencySymbol = getCurrencySymbol(currency);
 
-  const tr = (key: string, fallback: string, values?: Record<string, any>) => {
-    if (typeof (t as any).has === "function" && !(t as any).has(key)) return fallback;
-    try {
-      const translation = t(key as any, values);
-      if (translation === key || translation === `Dashboard.${key}`) return fallback;
-      return translation;
-    } catch {
-      return fallback;
-    }
-  };
+  const tr = useMemo(() => createTranslator(t), [t]);
 
   const isMobile = useSyncExternalStore(
     (onStoreChange) => {
@@ -152,9 +144,9 @@ export default function Dashboard() {
       setData(parsed);
       if (signal?.aborted) return;
       setIsInitialLoad(false);
-    } catch (e: any) {
-      if (e.name === "AbortError") return;
-      setError(e?.message ?? "Unable to load dashboard");
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === "AbortError") return;
+      setError(getErrorMessage(e, "Unable to load dashboard"));
       toast.error(tr("toast.error.load_dashboard_refresh", "Failed to load dashboard"));
       setIsInitialLoad(false);
     }
@@ -164,6 +156,7 @@ export default function Dashboard() {
     const controller = new AbortController();
     loadAllData(selectedFy, controller.signal);
     return () => controller.abort();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
   }, [selectedFy]);
 
   useEffect(() => {
@@ -230,8 +223,8 @@ export default function Dashboard() {
           ...refreshed.health,
         },
       }));
-    } catch (e: any) {
-      setSyncHealthError(e?.message ?? tr("toast.error.load_dashboard", "Unable to load dashboard"));
+    } catch (e: unknown) {
+      setSyncHealthError(getErrorMessage(e, tr("toast.error.load_dashboard", "Unable to load dashboard")));
     } finally {
       setSyncHealthLoading(false);
     }
@@ -369,16 +362,6 @@ export default function Dashboard() {
   const handleModuleEnabled = () => {
     void loadAllData(selectedFy);
   };
-  const isReady = Boolean(
-    d.health &&
-      d.attention &&
-      d.financialPulse &&
-      d.salesAndShop &&
-      d.operations &&
-      d.trust &&
-      d.charts &&
-      d.recentInvoices,
-  );
 
   const selectedInvoiceBilled = Number(selectedInvoice?.totalAmount ?? 0);
   const selectedInvoiceReceived = Number(selectedInvoice?.amountReceived ?? 0);
@@ -468,8 +451,7 @@ export default function Dashboard() {
   }, [d.health?.integrationReadiness?.summary?.healthy, d.recentInvoices?.length, d.salesAndShop?.publishedProducts, orgName, tr]);
 
   const pendingSetupChecklist = setupChecklist.filter((item) => !item.done);
-  const lockableCardClassName = (locked: boolean) =>
-    locked ? `${lockOverlayClassName} cursor-not-allowed select-none` : "";
+  
 
   if (isInitialLoad) {
     return <PageLoadingState title={tr("loading", "Loading dashboard")} description={tr("loading_desc", "Preparing command center")} className="min-h-screen" />;
@@ -530,7 +512,7 @@ export default function Dashboard() {
               />
             ) : (
               <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-300">
-                Complete 3 demo actions to unlock a guided "Start with my real business" path.
+                Complete 3 demo actions to unlock a guided &quot;Start with my real business&quot; path.
               </p>
             )}
           </div>

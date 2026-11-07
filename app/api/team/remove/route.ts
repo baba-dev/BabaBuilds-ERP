@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   let actorEmail: string | null = null;
 
   try {
-    const session: any = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions);
     if (!session?.workspaceId || !session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -178,7 +178,7 @@ export async function POST(req: Request) {
 
       return NextResponse.json({ success: true, action: "removed" });
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[team/remove] Error:", err);
     if (err instanceof RbacDeniedError) return rbacDeniedResponse(err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameDay } from "date-fns";
-import { ChevronLeft, ChevronRight, Clock, Plus } from "lucide-react";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday } from "date-fns";
+import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { StatusBadge, EmployeeAvatar } from "@/components/workforce/StatusBadge";
+import { EmployeeAvatar } from "@/components/workforce/StatusBadge";
 import { WorkforcePageShell } from "@/components/workforce/WorkforceLayout";
 import { toast } from "sonner";
 

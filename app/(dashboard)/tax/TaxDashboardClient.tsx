@@ -23,12 +23,13 @@ import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { PageLoadingState } from "@/components/states/PageLoadingState";
 import { PageErrorState } from "@/components/states/PageErrorState";
 import { ColumnVisibilityToggle, DataTable, DataTableToolbar, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
-import { TaxOverrideModal, type TaxOverrideWindow } from "@/components/tax/tax-override-modal";
+import { type TaxOverrideWindow } from "@/components/tax/tax-override-modal";
 import { TaxComplianceOps } from "@/components/tax/tax-compliance-ops";
 import { TaxHubOverview } from "@/components/tax/tax-hub-overview";
 import { TaxScopeNotice } from "@/components/tax/TaxScopeNotice";
 import { getCountryPackVerificationStatus } from "@/lib/tax/country-pack-status";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { createTranslator } from "@/lib/i18n/translator";
 
 
 
@@ -56,22 +57,39 @@ type TaxDashboardClientProps = {
   taxAdvancedEnabled: boolean;
 };
 
+type InvestmentRow = {
+  id: string;
+  date: string;
+  assetName: string;
+  category: string;
+  amount: number | string;
+  [key: string]: unknown;
+};
+
+type TaxAuditRow = {
+  id: string;
+  createdAt: string;
+  actorEmail?: string | null;
+  actorUserId?: string | null;
+  action: string;
+  decisionSource: string;
+  scopeType: string;
+  scopeRef?: string | null;
+  rate?: number | null;
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
+  reason?: string | null;
+};
+
 export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardClientProps) {
   const t = useTranslations("Tax");
-  const tr = (key: string, fallback: string, values?: any) => {
-    if (typeof (t as any).has === "function" && !(t as any).has(key)) return fallback;
-    try {
-      return t(key as any, values);
-    } catch {
-      return fallback;
-    }
-  };
-  const [investments, setInvestments] = useState<any[]>([]);
+  const tr = createTranslator(t);
+  const [investments, setInvestments] = useState<InvestmentRow[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [taxAuditRows, setTaxAuditRows] = useState<any[]>([]);
+  const [taxAuditRows, setTaxAuditRows] = useState<TaxAuditRow[]>([]);
   const [taxAuditPage, setTaxAuditPage] = useState(1);
   const [taxAuditTotalPages, setTaxAuditTotalPages] = useState(1);
   const [taxAuditFilters, setTaxAuditFilters] = useState({
@@ -114,13 +132,14 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
     };
     disclaimerKey: string;
   } | null>(null);
-  const [taxOverrideOpen, setTaxOverrideOpen] = useState(false);
-  const [taxOverrides, setTaxOverrides] = useState<TaxOverrideWindow[]>([]);
+  const [, setTaxOverrideOpen] = useState(false);
+  const [] = useState<TaxOverrideWindow[]>([]);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(["date", "asset", "category", "amount"]);
   const tableState = useUrlTableState("tax");
 
   useEffect(() => {
     fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
   }, []);
 
 
@@ -139,7 +158,7 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
           if (data.amount) setAmount(data.amount.toString());
         }
         sessionStorage.removeItem('erp_ai_payload');
-      } catch(e) { 
+      } catch { 
         console.error("Failed to parse AI payload"); 
         toast.warning("AI auto-fill failed. Please fill the form manually.");
       }
@@ -193,7 +212,7 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
         setTaxAuditPage(1);
         setTaxAuditTotalPages(1);
       }
-    } catch (err) {
+    } catch {
       console.error("Failed to load data");
       setFetchError("Failed to load tax planner data. Please refresh.");
       toast.error("Failed to load tax planner data. Please refresh.");
@@ -208,6 +227,7 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
       return;
     }
     void fetchTaxAuditLogs(1);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
   }, [taxAdvancedEnabled]);
 
   const fetchTaxAuditLogs = async (page = 1, filters = taxAuditFilters) => {
@@ -247,7 +267,7 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
   const filteredInvestments = investments.filter((inv) =>
     `${inv.assetName} ${inv.category}`.toLowerCase().includes(tableState.search.toLowerCase()),
   );
-  const columns: DataTableColumnDef<any>[] = [
+  const columns: DataTableColumnDef<InvestmentRow>[] = [
     { id: "date", header: t("col_date"), sortable: true, sortAccessor: (row) => new Date(row.date).getTime(), cell: (row) => <span className="text-xs font-medium dark:text-zinc-300">{format(new Date(row.date), safeDateFormat)}</span>, hideable: true },
     { id: "asset", header: t("col_asset"), sortable: true, accessor: (row) => row.assetName, cell: (row) => <span className="font-bold text-sm text-zinc-900 dark:text-zinc-100">{row.assetName}</span>, hideable: true },
     {

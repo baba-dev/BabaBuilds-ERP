@@ -10,7 +10,7 @@ import { useCashFlowContextFromUrl, updateCashFlowContextInUrl } from "../_compo
 import { Button } from "@/components/ui/button";
 import { useFormat } from "@/hooks/use-format";
 import { Textarea } from "@/components/ui/textarea";
-import { fetchCashFlowSnapshotWithPeriods, fetchPlanner, refreshCashForecast, upsertPlannerRow } from "../_components/api";
+import { fetchCashFlowSnapshotWithPeriods, fetchPlanner, refreshCashForecast } from "../_components/api";
 import type { CashFlowHorizonType, CashFlowScenarioTag, SnapshotDetail } from "../_components/types";
 import { CashFlowActionBar } from "../_components/primitives/action-bar";
 import { CashFlowMetricCard } from "../_components/primitives/metric-card";
@@ -18,7 +18,7 @@ import { CashFlowErrorState, CashFlowNoSnapshotState } from "../_components/prim
 import { CashFlowLineItemsTable } from "../_components/primitives/line-items-table";
 import { CashFlowPeriodBreakdown } from "../_components/primitives/period-breakdown";
 import { getStaleStatus, isConfidenceLow, sumLineItems, topDrivers } from "../_components/primitives/utils";
-import { buildCashFlowContextQuery, useCashFlowUrlContext } from "../_components/context";
+import { buildCashFlowContextQuery } from "../_components/context";
 import { CashFlowPageShell } from "../_components/cash-flow-page-shell";
 import { cashFlowIcon } from "../_components/primitives/styles";
 
@@ -29,7 +29,7 @@ export default function CashFlowOutflowsPage() {
   const [scenarioTag, setScenarioTag] = useState<CashFlowScenarioTag>(ctx.scenarioTag);
   const search = useSearchParams();
   const focusPeriodId = useMemo(() => search.get("periodId"), [search]);
-  const [openPeriod, setOpenPeriod] = useState<Record<string, boolean>>({});
+  const [, setOpenPeriod] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setHorizonType(ctx.horizonType);
@@ -39,7 +39,7 @@ export default function CashFlowOutflowsPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [plannerLoading, setPlannerLoading] = useState(false);
+  const [, setPlannerLoading] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -136,20 +136,7 @@ export default function CashFlowOutflowsPage() {
 
   const plannerState = useMemo(() => (plannerItemId ? plan[plannerItemId] ?? { status: "open" as const } : null), [plan, plannerItemId]);
 
-  const persistPlannerRow = async (lineItemId: string, next: { status: "open" | "deferred" | "resolved"; note?: string }) => {
-    try {
-      await upsertPlannerRow({
-        horizonType,
-        scenarioTag,
-        planKey: lineItemId,
-        status: next.status,
-        note: next.note ?? null,
-      });
-    } catch (e) {
-      console.error(e);
-      toast.error("Failed to save planner");
-    }
-  };
+  
 
   const nearTermRisk = useMemo(() => {
     const now = Date.now();

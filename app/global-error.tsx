@@ -54,6 +54,7 @@ export default function GlobalError({
       clearTimeout(timeoutId);
       abortController.abort();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
   }, [error]);
 
   return (

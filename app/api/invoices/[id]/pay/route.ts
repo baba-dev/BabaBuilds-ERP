@@ -3,8 +3,6 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
-import fs from 'fs';
-import path from 'path';
 import { INVOICE_STATUS, toInvoiceStatus, type InvoiceStatusValue } from '@/lib/invoice-status';
 import { 
   acquireFinancialIdempotency,
@@ -191,7 +189,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
             depositedAt: withholdingDepositedAt,
             depositDueAt,
             returnPeriodKey: deriveReturnPeriodKey(deductedAt, returnPeriodKey),
-            createdByUserId: (session?.user as any)?.id ?? null,
+            createdByUserId: session?.user?.id ?? null,
           },
         });
 

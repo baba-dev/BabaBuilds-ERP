@@ -70,12 +70,12 @@ export async function POST(request: Request) {
       return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
     }
     const workspaceId = session.workspaceId;
-    const userId = (session as any).user?.id as string | undefined;
+    const userId = session.user?.id as string | undefined;
     if (!userId) return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
 
     // RBAC: creating an expense requires expenses.create permission
     const perm = await withPermission(userId, workspaceId, 'expenses.create');
-    if (!perm.granted) return perm.response as any;
+    if (!perm.granted) return perm.response;
 
     const formData = await request.formData();
     
@@ -149,7 +149,7 @@ export async function POST(request: Request) {
       (returnPeriodKeyRaw && returnPeriodKeyRaw.trim() !== '');
     if (hasWithholdingPayload) {
       const whPerm = await withPermission(userId, workspaceId, 'tax.withholding.record');
-      if (!whPerm.granted) return whPerm.response as any;
+      if (!whPerm.granted) return whPerm.response;
     }
 
     // Extract the file

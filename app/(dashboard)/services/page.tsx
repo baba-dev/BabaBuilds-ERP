@@ -1,10 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import {
-  Plus, Briefcase, FileText, Trash2, ShieldCheck, Tag, Loader2,
-  Pencil, ExternalLink, Repeat,
-} from "lucide-react";
+import { Plus, Briefcase, FileText, Trash2, Tag, Loader2, Pencil, ExternalLink, Repeat } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +30,7 @@ export default function ServiceCatalog() {
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [shopSlug, setShopSlug] = useState<string | null>(null);
-  const [planTier, setPlanTier] = useState<PlanTier>("FREE");
+  const [, setPlanTier] = useState<PlanTier>("FREE");
 
   const industryLabel = countryCode === "IN" ? "NIC Code" : "Industry Class";
   const taxClassLabel = countryCode === "IN" ? "SAC/HSN Code" : "Service Class";
@@ -179,6 +176,7 @@ export default function ServiceCatalog() {
             <Card key={srv.id} className="group relative hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/95 overflow-hidden flex flex-col">
               {srv.imageUrl && (
                 <div className="w-full h-40 overflow-hidden relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- dynamic or user-supplied image source; next/image remote config not applicable */}
                   <img src={srv.imageUrl} alt={srv.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 </div>
