@@ -83,7 +83,7 @@ export function DataTable<T extends Record<string, any>>({
   const [internalColumnVisibility, setInternalColumnVisibility] = useState<ColumnVisibilityState>({});
   const [internalPagination, setInternalPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [internalRowSelection, setInternalRowSelection] = useState<RowSelectionState>({});
-  const [internalColumnPinning, setInternalColumnPinning] = useState<ColumnPinningState>({});
+  const [internalColumnPinning, setInternalColumnPinning] = useState<ColumnPinningState>({ start: [], end: [] });
 
   const activeColumns = useMemo(() => {
     if (!visibleColumnIds || visibleColumnIds.length === 0) return columns;
