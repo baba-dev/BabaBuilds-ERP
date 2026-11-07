@@ -16,7 +16,7 @@ jobs:
     env:
       BACKUP_DIR: ${{ github.workspace }}/backups
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       
       - name: Ensure Scripts are Executable
         run: chmod +x scripts/backup.sh
