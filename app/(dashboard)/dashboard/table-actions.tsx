@@ -1,5 +1,6 @@
 "use client";
 
+import type { Translator } from "@/lib/i18n/translator";
 import { Button } from "@/components/ui/button";
 import { Banknote, Download, Send } from "lucide-react";
 import { isPaidInvoiceStatus } from "@/lib/invoice-status";
@@ -14,7 +15,7 @@ export function TableActions({
   resending,
 }: {
   invoice: RecentInvoiceRow;
-  t: (key: string, fallback: string, values?: any) => string;
+  t: Translator;
   onOpenPayModal: (invoice: RecentInvoiceRow) => void;
   onResendEmail: (invoice: RecentInvoiceRow) => void;
   resending: boolean;

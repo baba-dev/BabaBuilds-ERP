@@ -123,10 +123,10 @@ export async function proxy(request: NextRequest) {
       });
 
       if (res.ok) {
-        const decisions = await res.json();
+        const decisions = (await res.json()) as Array<{ type?: string }> | null;
         // If there's an active decision to ban this IP
         if (decisions && decisions.length > 0) {
-          const ban = decisions.find((d: any) => d.type === 'ban');
+          const ban = decisions.find((d) => d.type === 'ban');
           const blocked = Boolean(ban);
           decisionCache.set(ip, { blocked, until: Date.now() + DECISION_CACHE_TTL_MS });
 

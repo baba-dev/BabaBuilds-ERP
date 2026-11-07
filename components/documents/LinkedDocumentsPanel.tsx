@@ -50,7 +50,7 @@ export function LinkedDocumentsPanel({
         const res = await fetch(`/api/documents/links?targetType=${encodeURIComponent(targetType)}&targetId=${encodeURIComponent(targetId)}`, {
           cache: "no-store",
         });
-        const body = (await res.json().catch(() => null)) as any;
+        const body = (await res.json().catch(() => null)) as { error?: string; links?: unknown } | null;
         if (!res.ok) {
           if (!cancelled) setError(body?.error || "Failed to load linked documents.");
           return;

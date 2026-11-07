@@ -201,9 +201,9 @@ export async function seedDemoWorkspace(
         status: r.status,
         items: {
           create: [{
-            title: (r as any).serviceName || 'Retainer Services',
+            title: r.serviceName || 'Retainer Services',
             quantity: 1,
-            unitPrice: (r as any).amount || 0,
+            unitPrice: r.amount || 0,
             taxRate: 0,
           }]
         }

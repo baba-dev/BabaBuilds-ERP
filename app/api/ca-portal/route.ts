@@ -174,7 +174,7 @@ export async function GET(request: Request) {
       invoiceDate: inv.invoiceDate.toISOString(),
       invoiceNumber: inv.invoiceNumber,
       clientName: inv.clientName,
-      sacCode: inv.sacCode || (profile as any)?.defaultSacCode || "998313",
+      sacCode: inv.sacCode || profile?.defaultSacCode || "998313",
       totalAmount: decimalToNumber(inv.totalAmount),
       amountReceived: inv.amountReceived === null ? null : decimalToNumber(inv.amountReceived),
       status: inv.status,

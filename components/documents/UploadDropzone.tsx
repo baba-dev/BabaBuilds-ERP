@@ -88,7 +88,7 @@ export function UploadDropzone({
         const res = await fetch("/api/documents/upload", { method: "POST", body: fd });
         setProgress(75);
 
-        const body = (await res.json().catch(() => null)) as any;
+        const body = (await res.json().catch(() => null)) as { error?: string; details?: { message?: string } } | null;
         if (!res.ok) {
           const msg =
             body?.details?.message || body?.error || "Upload failed. Please check the file type/size and storage limits.";

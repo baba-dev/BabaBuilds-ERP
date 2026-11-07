@@ -409,8 +409,8 @@ export async function loadForecastSourceData(args: {
         },
       ])
     ),
-    retainers: retainers.map((r: any) => {
-      const sum = r.items ? r.items.reduce((acc: number, item: any) => acc + (item.quantity * Number(item.unitPrice)), 0) : 0;
+    retainers: retainers.map((r) => {
+      const sum = r.items ? r.items.reduce((acc: number, item) => acc + (item.quantity * Number(item.unitPrice)), 0) : 0;
       return {
         id: r.id,
         clientName: r.client.name,
