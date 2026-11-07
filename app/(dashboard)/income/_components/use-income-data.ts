@@ -1,26 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { fyLabelFor } from "@/lib/invoices/period";
 import type { InvoiceDisplayStatus, InvoiceSourceValue } from "@/lib/invoices/types";
 
-/** Fetch JSON with cancellation. Keeps the previous data on screen while a new request is in flight. */
+/**
+ * Fetch JSON with cancellation. Keeps the previous data on screen while a new request is in flight.
+ * `loading` is derived (request key vs the key of the last settled result), so no state is set synchronously in the effect.
+ */
 export function useJson<T>(url: string | null) {
-  const [data, setData] = useState<T | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(Boolean(url));
   const [version, setVersion] = useState(0);
-  const lastUrl = useRef<string | null>(null);
+  const [result, setResult] = useState<{ key: string | null; data: T | null; error: string | null }>({ key: null, data: null, error: null });
+  const key = url ? `${url}#${version}` : null;
 
   useEffect(() => {
-    if (!url) {
-      setLoading(false);
-      return;
-    }
+    if (!url || !key) return;
     const controller = new AbortController();
-    setLoading(true);
-    setError(null);
     (async () => {
       try {
         const res = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
@@ -32,20 +28,18 @@ export function useJson<T>(url: string | null) {
             `Request failed (${res.status})`;
           throw new Error(message);
         }
-        lastUrl.current = url;
-        setData(payload as T);
+        setResult({ key, data: payload as T, error: null });
       } catch (e) {
         if ((e as { name?: string }).name === "AbortError") return;
-        setError(e instanceof Error ? e.message : "Request failed");
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        setResult((prev) => ({ key, data: prev.data, error: e instanceof Error ? e.message : "Request failed" }));
       }
     })();
     return () => controller.abort();
-  }, [url, version]);
+  }, [url, key]);
 
   const reload = useCallback(() => setVersion((v) => v + 1), []);
-  return { data, error, loading, reload };
+  const loading = key !== null && result.key !== key;
+  return { data: result.data, error: loading ? null : result.error, loading, reload };
 }
 
 export type IncomeFilters = {

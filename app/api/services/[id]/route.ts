@@ -1,129 +1,104 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import path from 'path';
-import { logActivity } from '@/lib/activity-log';
-import { apiError } from '@/lib/api-error';
-import { scanBuffer } from '@/lib/security/clamav';
-import { buildPrivatePath, ensureDir, sniffAllowedContent, uniqueStoredName } from '@/lib/uploads/private-storage';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { logActivity } from "@/lib/activity-log";
+import { parseServiceForm, sameServiceName } from "@/lib/services/validation";
+import { saveServiceImage } from "@/lib/services/image-upload";
+import { requireServiceAccess, serviceError } from "@/lib/services/access";
+import { SERVICE_INCLUDE, withUsage } from "@/lib/services/serialize";
 
-type SessionContext = {
-  workspaceId?: string;
-  user?: { id?: string | null; email?: string | null };
-};
+type Ctx = { params: Promise<{ id: string }> };
 
-export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
+export async function PATCH(request: Request, context: Ctx) {
   try {
-    const session = (await getServerSession(authOptions)) as SessionContext | null;
-    if (!session?.workspaceId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    const workspaceId = session.workspaceId;
+    const auth = await requireServiceAccess("write");
+    if (!auth.ok) return auth.response;
+    const { workspaceId, userId, email } = auth.access;
     const { id } = await context.params;
 
-    const existing = await prisma.serviceTemplate.findFirst({ where: { id, workspaceId } });
-    if (!existing) return NextResponse.json({ error: "Service not found or unauthorized." }, { status: 404 });
+    const existing = await prisma.serviceTemplate.findFirst({ where: { id, workspaceId }, select: { id: true } });
+    if (!existing) return serviceError(404, "SERVICE_NOT_FOUND", "Service not found or unauthorized.");
 
     const formData = await request.formData();
-    const name = formData.get('name') as string;
-    const description = formData.get('description') as string | null;
-    const longDescription = formData.get('longDescription') as string | null;
-    const defaultPrice = formData.get('defaultPrice') as string;
-    const nicCodeId = formData.get('nicCodeId') as string | null;
-    const sacCodeId = formData.get('sacCodeId') as string | null;
-    const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { id: true } });
-    if (!workspace) return apiError(404, "Workspace not found", "WORKSPACE_NOT_FOUND");
+    const parsed = parseServiceForm(formData);
+    if (!parsed.success) return serviceError(400, "INVALID_SERVICE", parsed.error.issues[0]?.message ?? "Invalid service details.");
+    const data = parsed.data;
 
-    let imageUrl: string | null = (formData.get('existingImageUrl') as string) || null;
+    const [nic, sac, sameName] = await Promise.all([
+      data.nicCodeId ? prisma.nICCode.findUnique({ where: { id: data.nicCodeId }, select: { id: true } }) : Promise.resolve(true),
+      data.sacCodeId ? prisma.sACCode.findUnique({ where: { id: data.sacCodeId }, select: { id: true } }) : Promise.resolve(true),
+      prisma.serviceTemplate.findMany({ where: { workspaceId, id: { not: id }, name: { contains: data.name } }, select: { name: true } }),
+    ]);
+    if (!nic || !sac) return serviceError(400, "INVALID_TAX_CODE", "The selected tax classification no longer exists.");
+    if (sameName.some((s) => sameServiceName(s.name, data.name))) {
+      return serviceError(409, "DUPLICATE_NAME", "Another service already uses this name.");
+    }
 
-    const imageFile = formData.get('serviceImage') as File | null;
-    if (imageFile && imageFile.size > 0) {
-      const ext = path.extname(imageFile.name).toLowerCase();
-      const allowedExtensions = ['.png', '.jpg', '.jpeg', '.webp'];
-      if (!allowedExtensions.includes(ext)) {
-        return NextResponse.json({ error: "Invalid image type. Only PNG, JPG, or WEBP allowed." }, { status: 400 });
-      }
-      const bytes = await imageFile.arrayBuffer();
-      const buffer = Buffer.from(bytes);
+    // The client sends the current image URL back; only trust our own storage prefix.
+    const requested = formData.get("existingImageUrl");
+    let imageUrl: string | null =
+      typeof requested === "string" && requested.startsWith(`/uploads/service-hero/${workspaceId}/`) ? requested : null;
 
-      const isSafe = await scanBuffer(buffer);
-      if (!isSafe) {
-        return apiError(400, "Malware detected in uploaded file.", "MALWARE_DETECTED");
-      }
-
-      const sniffed = sniffAllowedContent(buffer);
-      if (!sniffed || (sniffed !== 'png' && sniffed !== 'jpeg' && sniffed !== 'webp')) {
-        return NextResponse.json({ error: "Unsupported or unsafe image content." }, { status: 415 });
-      }
-
-      const dir = buildPrivatePath('service-hero', [workspaceId]);
-      await ensureDir(dir);
-      const filename = uniqueStoredName('hero', ext);
-      await (await import('fs/promises')).writeFile(path.join(dir, filename), buffer, { mode: 0o600 });
-      imageUrl = `/uploads/service-hero/${workspaceId}/${filename}`;
+    const imageFile = formData.get("serviceImage");
+    if (imageFile instanceof File && imageFile.size > 0) {
+      const saved = await saveServiceImage(workspaceId, imageFile);
+      if (!saved.ok) return serviceError(saved.status, saved.code, saved.message);
+      imageUrl = saved.url;
     }
 
     const updated = await prisma.serviceTemplate.update({
       where: { id },
-      data: {
-        name,
-        description: description || null,
-        longDescription: longDescription || null,
-        defaultPrice: Number(defaultPrice),
-        nicCodeId: nicCodeId || null,
-        sacCodeId: sacCodeId || null,
-        imageUrl,
-      },
-      include: { nicCode: true, sacCode: true },
+      data: { ...data, imageUrl },
+      include: SERVICE_INCLUDE,
     });
 
     logActivity({
-      action: 'shop.service.update',
-      outcome: 'success',
-      entityType: 'serviceTemplate',
+      action: "shop.service.update",
+      outcome: "success",
+      entityType: "serviceTemplate",
       entityId: updated.id,
       workspaceId,
-      actorId: session.user?.id ?? null,
-      actorEmail: session.user?.email ?? null,
-      metadata: {
-        name: updated.name,
-      },
+      actorId: userId,
+      actorEmail: email,
+      metadata: { name: updated.name },
     });
 
-    return NextResponse.json({ success: true, service: updated });
+    return NextResponse.json({ success: true, service: withUsage(updated) });
   } catch (error) {
-    console.error("Service PATCH Error:", error);
-    return NextResponse.json({ error: "Failed to update service" }, { status: 500 });
+    console.error("Service PATCH error:", error);
+    return serviceError(500, "SERVICE_UPDATE_FAILED", "Failed to update service");
   }
 }
 
-export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
+export async function DELETE(_request: Request, context: Ctx) {
   try {
-    const session = (await getServerSession(authOptions)) as SessionContext | null;
-    if (!session?.workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-    const workspaceId = session.workspaceId;
+    const auth = await requireServiceAccess("write");
+    if (!auth.ok) return auth.response;
+    const { workspaceId, userId, email } = auth.access;
     const { id } = await context.params;
 
-    const existing = await prisma.serviceTemplate.findFirst({ where: { id, workspaceId } });
-    if (!existing) return NextResponse.json({ error: "Service not found or unauthorized." }, { status: 404 });
+    const existing = await prisma.serviceTemplate.findFirst({
+      where: { id, workspaceId },
+      include: { _count: { select: { proposalItems: true, retainerItems: true } } },
+    });
+    if (!existing) return serviceError(404, "SERVICE_NOT_FOUND", "Service not found or unauthorized.");
 
+    // Related proposal/retainer lines keep their own copy of the text and price; the link is set to null.
     await prisma.serviceTemplate.delete({ where: { id } });
 
     logActivity({
-      action: 'shop.service.delete',
-      outcome: 'success',
-      entityType: 'serviceTemplate',
+      action: "shop.service.delete",
+      outcome: "success",
+      entityType: "serviceTemplate",
       entityId: id,
       workspaceId,
-      actorId: session.user?.id ?? null,
-      actorEmail: session.user?.email ?? null,
-      metadata: { name: existing.name },
+      actorId: userId,
+      actorEmail: email,
+      metadata: { name: existing.name, proposals: existing._count.proposalItems, retainers: existing._count.retainerItems },
     });
 
     return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json({ error: "Failed to delete service" }, { status: 500 });
+  } catch (error) {
+    console.error("Service delete error:", error);
+    return serviceError(500, "SERVICE_DELETE_FAILED", "Failed to delete service");
   }
 }

@@ -3346,5 +3346,181 @@
       "description": "Genera una factura lista para impuestos, con enlace de pago opcional y envío inmediato por correo.",
       "back": "Volver a facturas"
     }
+  },
+  "ServiceCatalog": {
+    "title": "Catálogo de servicios",
+    "description": "Los servicios que vendes, listos para usar en facturas, propuestas e igualas.",
+    "add": "Añadir servicio",
+    "viewShop": "Ver tienda en vivo",
+    "onboardingTitle": "Consejo: empieza tu catálogo",
+    "onboardingMessage": "Añade un servicio para crear facturas, propuestas e igualas en unos toques.",
+    "stats": {
+      "services": "Servicios",
+      "average": "Precio medio",
+      "unmapped": "Sin código fiscal"
+    },
+    "search": "Buscar servicios o códigos fiscales",
+    "sort": {
+      "label": "Ordenar servicios",
+      "name": "Nombre (A–Z)",
+      "priceDesc": "Precio: de mayor a menor",
+      "priceAsc": "Precio: de menor a mayor",
+      "used": "Más usados"
+    },
+    "view": {
+      "label": "Vista",
+      "grid": "Vista de tarjetas",
+      "list": "Vista de lista"
+    },
+    "loadFailed": "No se pudo cargar tu catálogo.",
+    "retry": "Reintentar",
+    "empty": {
+      "title": "Tu catálogo está vacío",
+      "description": "Añade una vez los servicios que vendes y reutilízalos en cada factura, propuesta e iguala.",
+      "cta": "Añade tu primer servicio"
+    },
+    "noMatches": "Ningún servicio coincide con «{query}».",
+    "clearSearch": "Borrar búsqueda",
+    "toast": {
+      "duplicating": "Duplicando…",
+      "duplicateFailed": "No se pudo duplicar el servicio.",
+      "duplicated": "Servicio duplicado",
+      "networkError": "Error de red. Inténtalo de nuevo.",
+      "deleteFailed": "No se pudo eliminar el servicio.",
+      "deleted": "Servicio eliminado"
+    },
+    "delete": {
+      "title": "¿Eliminar «{name}»?",
+      "description": "Dejará de aparecer al crear facturas, propuestas o igualas.",
+      "descriptionUsed": "Se usa en {proposals} línea(s) de propuestas y {retainers} línea(s) de igualas. Esos registros conservan su propio texto y precio, pero dejarán de estar vinculados a este servicio. Desaparecerá de las nuevas facturas, propuestas e igualas.",
+      "cancel": "Cancelar",
+      "confirm": "Eliminar servicio"
+    },
+    "card": {
+      "unused": "Aún sin usar",
+      "inProposals": "{count, plural, one {# propuesta} other {# propuestas}}",
+      "inRetainers": "{count, plural, one {# iguala} other {# igualas}}",
+      "more": "Más acciones para {name}",
+      "edit": "Editar",
+      "duplicate": "Duplicar",
+      "delete": "Eliminar",
+      "noDescription": "Aún sin descripción",
+      "invoice": "Facturar",
+      "retainer": "Iguala",
+      "noTaxCode": "Sin código fiscal",
+      "usedCount": "Usado {count} veces"
+    },
+    "form": {
+      "industryIn": "Código NIC",
+      "industry": "Clase de industria",
+      "taxClassIn": "Código SAC / HSN",
+      "taxClass": "Clase de servicio",
+      "taxCodesFailed": "No se pudieron cargar los códigos fiscales. Actualiza la página.",
+      "imageTooLarge": "Esa imagen supera los 5 MB.",
+      "nameRequired": "Ponle un nombre al servicio.",
+      "priceInvalid": "Introduce un precio de 0 o más.",
+      "duplicateName": "Ya existe un servicio con este nombre.",
+      "saveFailed": "No se pudo guardar el servicio.",
+      "updated": "Servicio actualizado",
+      "created": "Servicio añadido al catálogo",
+      "networkError": "Error de red. Inténtalo de nuevo.",
+      "editTitle": "Editar servicio",
+      "addTitle": "Añadir servicio",
+      "editDescription": "Actualiza cómo aparece este servicio en facturas y propuestas.",
+      "addDescription": "Configúralo una vez y reutilízalo en todas partes.",
+      "name": "Nombre del servicio",
+      "namePlaceholder": "p. ej. Paquete SEO mensual",
+      "price": "Precio",
+      "shortDescription": "Descripción corta",
+      "shortDescriptionPlaceholder": "Una línea que se muestra en facturas y propuestas",
+      "shortDescriptionHint": "Que sea breve: se imprime en la factura.",
+      "longDescription": "Detalles (opcional)",
+      "longDescriptionPlaceholder": "Alcance, entregables y condiciones",
+      "taxTitle": "Impuestos y cumplimiento",
+      "taxHint": "Sirve para aplicar el tratamiento de {taxLabel} correcto en las facturas. Puedes dejarlo vacío y completarlo después.",
+      "selectPlaceholder": "Seleccionar…",
+      "none": "Ninguno",
+      "image": "Imagen (opcional)",
+      "removeImage": "Quitar imagen",
+      "uploadImage": "Subir una imagen",
+      "replaceImage": "Cambiar imagen",
+      "imageHint": "PNG, JPG o WEBP, hasta 5 MB.",
+      "preview": "Vista previa",
+      "cancel": "Cancelar",
+      "save": "Guardar cambios",
+      "add": "Añadir al catálogo"
+    }
+  },
+  "InvoiceComposer": {
+    "billTo": {
+      "title": "¿Para quién es esta factura?",
+      "hint": "Elige el cliente, la fecha y el periodo de facturación.",
+      "noEmail": "Sin correo registrado",
+      "currency": "Moneda de la factura",
+      "rate": "1 {from} = ? {to}",
+      "rateHint": "El tipo se guarda en la factura. Los informes convierten {from} a {to} con este tipo."
+    },
+    "items": {
+      "title": "¿Qué vas a facturar?",
+      "hint": "Toca los conceptos para añadirlos y ajusta cantidad e importe.",
+      "loading": "Cargando tu catálogo…",
+      "emptyTitle": "Aún no hay servicios ni productos",
+      "emptyDescription": "Añade lo que vendes una vez y aparecerá aquí.",
+      "emptyCta": "Abrir el catálogo de servicios",
+      "search": "Buscar conceptos",
+      "filter": "Filtrar conceptos",
+      "tabs": {
+        "all": "Todo",
+        "services": "Servicios",
+        "products": "Productos"
+      },
+      "noMatches": "Nada coincide con tu búsqueda.",
+      "inStock": "{count} en stock",
+      "outOfStock": "Sin stock",
+      "quantity": "Cantidad",
+      "decrease": "Reducir cantidad",
+      "increase": "Aumentar cantidad",
+      "amount": "Importe"
+    },
+    "delivery": {
+      "title": "Envío y confirmación",
+      "hint": "Elige cómo se envía y confirma quién la emite.",
+      "issuedBy": "Emitida por",
+      "notConfigured": "Sin configurar",
+      "taxId": "ID fiscal",
+      "details": "Mostrar datos de la empresa",
+      "bank": "Banco",
+      "payment": "Pago",
+      "recentSwitch": "Cambiaste hace poco a {name}. Revisa la razón social, el ID fiscal y los datos bancarios antes de enviar.",
+      "thisCompany": "esta empresa",
+      "confirm": "He revisado la empresa, el ID fiscal y los datos bancarios"
+    },
+    "summary": {
+      "title": "Resumen de la factura",
+      "itemsCount": "{count, plural, one {# concepto} other {# conceptos}}",
+      "noItems": "Aún sin conceptos",
+      "noClient": "Ningún cliente seleccionado",
+      "total": "Total",
+      "taxNote": "El {taxLabel} se calcula en el siguiente paso.",
+      "baseNote": "≈ {amount} a un tipo de {rate}",
+      "checklist": "Antes de continuar",
+      "checkClient": "Cliente seleccionado",
+      "checkItems": "Al menos un concepto con precio",
+      "checkCompany": "Empresa confirmada",
+      "review": "Revisar factura",
+      "generating": "Preparando…",
+      "generatingSending": "Preparando y enviando…",
+      "reviewNote": "Verás los importes finales antes de enviar nada."
+    },
+    "success": {
+      "title": "Factura creada",
+      "subtitle": "{number} está lista.",
+      "emailSent": "Enviada por correo a tu cliente.",
+      "emailFailed": "Correo: {status}",
+      "noPaymentLink": "No se pudo añadir un enlace de pago a esta factura.",
+      "download": "Descargar PDF",
+      "viewInvoices": "Ver en facturas",
+      "another": "Crear otra"
+    }
   }
 }

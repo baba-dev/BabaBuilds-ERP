@@ -3317,5 +3317,181 @@
       "description": "Generate a tax-ready invoice, with an optional payment link and instant email delivery.",
       "back": "Back to invoices"
     }
+  },
+  "ServiceCatalog": {
+    "title": "Service catalogue",
+    "description": "The services you sell, ready to drop into invoices, proposals and retainers.",
+    "add": "Add service",
+    "viewShop": "View live shop",
+    "onboardingTitle": "Tip: start your catalogue",
+    "onboardingMessage": "Add one service so invoices, proposals and retainers can be created in a few taps.",
+    "stats": {
+      "services": "Services",
+      "average": "Average price",
+      "unmapped": "Without tax code"
+    },
+    "search": "Search services or tax codes",
+    "sort": {
+      "label": "Sort services",
+      "name": "Name (A–Z)",
+      "priceDesc": "Price: high to low",
+      "priceAsc": "Price: low to high",
+      "used": "Most used"
+    },
+    "view": {
+      "label": "Layout",
+      "grid": "Card view",
+      "list": "List view"
+    },
+    "loadFailed": "Could not load your catalogue.",
+    "retry": "Try again",
+    "empty": {
+      "title": "Your catalogue is empty",
+      "description": "Add the services you sell once, then reuse them on every invoice, proposal and retainer.",
+      "cta": "Add your first service"
+    },
+    "noMatches": "No services match “{query}”.",
+    "clearSearch": "Clear search",
+    "toast": {
+      "duplicating": "Duplicating…",
+      "duplicateFailed": "Could not duplicate the service.",
+      "duplicated": "Service duplicated",
+      "networkError": "Network error. Please try again.",
+      "deleteFailed": "Could not delete the service.",
+      "deleted": "Service deleted"
+    },
+    "delete": {
+      "title": "Delete “{name}”?",
+      "description": "It will no longer appear when you create invoices, proposals or retainers.",
+      "descriptionUsed": "It is used in {proposals} proposal line(s) and {retainers} retainer line(s). Those records keep their own text and price, but will no longer be linked to this service. It will disappear from new invoices, proposals and retainers.",
+      "cancel": "Cancel",
+      "confirm": "Delete service"
+    },
+    "card": {
+      "unused": "Not used yet",
+      "inProposals": "{count, plural, one {# proposal} other {# proposals}}",
+      "inRetainers": "{count, plural, one {# retainer} other {# retainers}}",
+      "more": "More actions for {name}",
+      "edit": "Edit",
+      "duplicate": "Duplicate",
+      "delete": "Delete",
+      "noDescription": "No description yet",
+      "invoice": "Invoice",
+      "retainer": "Retainer",
+      "noTaxCode": "No tax code",
+      "usedCount": "Used {count} times"
+    },
+    "form": {
+      "industryIn": "NIC code",
+      "industry": "Industry class",
+      "taxClassIn": "SAC / HSN code",
+      "taxClass": "Service class",
+      "taxCodesFailed": "Could not load tax codes. Please refresh.",
+      "imageTooLarge": "That image is larger than 5 MB.",
+      "nameRequired": "Give the service a name.",
+      "priceInvalid": "Enter a price of 0 or more.",
+      "duplicateName": "A service with this name already exists.",
+      "saveFailed": "Could not save the service.",
+      "updated": "Service updated",
+      "created": "Service added to your catalogue",
+      "networkError": "Network error. Please try again.",
+      "editTitle": "Edit service",
+      "addTitle": "Add service",
+      "editDescription": "Update how this service appears on invoices and proposals.",
+      "addDescription": "Set it up once and reuse it everywhere.",
+      "name": "Service name",
+      "namePlaceholder": "e.g. Monthly SEO package",
+      "price": "Price",
+      "shortDescription": "Short description",
+      "shortDescriptionPlaceholder": "One line shown on invoices and proposals",
+      "shortDescriptionHint": "Keep it short: it prints on the invoice.",
+      "longDescription": "Details (optional)",
+      "longDescriptionPlaceholder": "Scope, deliverables and terms",
+      "taxTitle": "Tax & compliance",
+      "taxHint": "Used to pick the right {taxLabel} treatment on invoices. You can leave this blank and set it later.",
+      "selectPlaceholder": "Select…",
+      "none": "None",
+      "image": "Image (optional)",
+      "removeImage": "Remove image",
+      "uploadImage": "Upload an image",
+      "replaceImage": "Replace image",
+      "imageHint": "PNG, JPG or WEBP, up to 5 MB.",
+      "preview": "Preview",
+      "cancel": "Cancel",
+      "save": "Save changes",
+      "add": "Add to catalogue"
+    }
+  },
+  "InvoiceComposer": {
+    "billTo": {
+      "title": "Who is this invoice for?",
+      "hint": "Pick the client, date and billing period.",
+      "noEmail": "No email on file",
+      "currency": "Invoice currency",
+      "rate": "1 {from} = ? {to}",
+      "rateHint": "The rate is saved on the invoice. Reports convert {from} to {to} at this rate."
+    },
+    "items": {
+      "title": "What are you billing?",
+      "hint": "Tap items to add them, then adjust quantity and amount.",
+      "loading": "Loading your catalogue…",
+      "emptyTitle": "No services or products yet",
+      "emptyDescription": "Add what you sell once and it will show up here.",
+      "emptyCta": "Open the service catalogue",
+      "search": "Search items",
+      "filter": "Filter items",
+      "tabs": {
+        "all": "All",
+        "services": "Services",
+        "products": "Products"
+      },
+      "noMatches": "Nothing matches your search.",
+      "inStock": "{count} in stock",
+      "outOfStock": "Out of stock",
+      "quantity": "Quantity",
+      "decrease": "Decrease quantity",
+      "increase": "Increase quantity",
+      "amount": "Amount"
+    },
+    "delivery": {
+      "title": "Delivery & confirmation",
+      "hint": "Choose how it is sent and confirm who is issuing it.",
+      "issuedBy": "Issued by",
+      "notConfigured": "Not configured",
+      "taxId": "Tax ID",
+      "details": "Show company details",
+      "bank": "Bank",
+      "payment": "Payment",
+      "recentSwitch": "You recently switched to {name}. Double-check the legal name, tax ID and bank details before sending.",
+      "thisCompany": "this company",
+      "confirm": "I have checked the company, tax ID and bank details"
+    },
+    "summary": {
+      "title": "Invoice summary",
+      "itemsCount": "{count, plural, one {# item} other {# items}}",
+      "noItems": "No items yet",
+      "noClient": "No client selected",
+      "total": "Total",
+      "taxNote": "{taxLabel} is calculated on the next step.",
+      "baseNote": "≈ {amount} at a rate of {rate}",
+      "checklist": "Before you continue",
+      "checkClient": "Client selected",
+      "checkItems": "At least one priced item",
+      "checkCompany": "Company confirmed",
+      "review": "Review invoice",
+      "generating": "Preparing…",
+      "generatingSending": "Preparing & sending…",
+      "reviewNote": "You will see the final amounts before anything is sent."
+    },
+    "success": {
+      "title": "Invoice created",
+      "subtitle": "{number} is ready.",
+      "emailSent": "Emailed to your client.",
+      "emailFailed": "Email: {status}",
+      "noPaymentLink": "A payment link could not be added to this invoice.",
+      "download": "Download PDF",
+      "viewInvoices": "View in invoices",
+      "another": "Create another"
+    }
   }
 }

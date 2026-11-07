@@ -1,28 +1,30 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { useSearchParams } from "next/navigation";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { format } from "date-fns";
-import { AlertCircle, CheckCircle2, Mail, Briefcase, Loader2, Building2, Landmark } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { AlertCircle, CheckCircle2, ChevronDown, Mail, Building2, Landmark } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TaxRateModal } from "@/components/invoice/tax-rate-modal";
 import { DatePickerField } from "@/components/forms/date-picker-field";
 import { SearchableCombobox } from "@/components/forms/searchable-combobox";
-import { FormFieldMessages, FormSection, FormSubmitBar } from "@/components/forms/form-primitives";
+import { FormFieldMessages } from "@/components/forms/form-primitives";
+import { Switch } from "@/components/ui/switch";
+import { ComposerSection } from "@/components/invoice/composer/ComposerSection";
+import { LineItems } from "@/components/invoice/composer/LineItems";
+import { SummaryPanel } from "@/components/invoice/composer/SummaryPanel";
+import { SuccessPanel } from "@/components/invoice/composer/SuccessPanel";
 
 // MISSION CRITICAL: Globalization & Caching Imports
 import { useFormat } from "@/hooks/use-format";
 import { formatCurrency, getCurrencySymbol } from "@/lib/currency";
 import { InvoiceCurrencyField } from "@/components/invoice/InvoiceCurrencyField";
 import { useTranslations } from "next-intl";
-import { getBustedUrl } from "@/lib/cache-buster";
 import { getConflictPolicy, queueOfflineMutation } from "@/lib/offline-sync";
 import { cn } from "@/lib/utils";
-import { dirFromLocale } from "@/src/lib/direction";
 import { buildInvoiceGenerateErrorMessage } from "@/lib/invoice/generate-error-message";
 import { InvoiceGenerationConfirmCard } from "@/components/invoice/InvoiceGenerationConfirmCard";
 
@@ -89,12 +91,17 @@ interface InvoiceGeneratorFormProps {
     emailStatus?: string;
     paymentLinkStatus?: { attempted: boolean; created: boolean; skipReason: string | null };
   }) => void;
-  /** When true, the form is rendered in a compact modal context (no outer Card chrome). */
-  inModal?: boolean;
 }
 
-export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: InvoiceGeneratorFormProps) {
+export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorFormProps) {
   const t = useTranslations("Invoice");
+  const tc = useTranslations("InvoiceComposer");
+  const reduceMotion = useReducedMotion();
+  const searchParams = useSearchParams();
+  const presetServiceId = searchParams.get("service");
+  const presetClientId = searchParams.get("client");
+  const presetApplied = useRef({ service: false, client: false });
+  const [showCompanyDetails, setShowCompanyDetails] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [successData, setSuccessData] = useState<{
     pdfPath: string;
@@ -138,7 +145,6 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
   const currencySymbol = getCurrencySymbol(activeCurrency, locale);
   const isForeignCurrency = activeCurrency !== currency;
   const currencyPayload = isForeignCurrency ? { currency: activeCurrency, exchangeRate: Number(exchangeRate) } : {};
-  const isRtl = dirFromLocale(locale) === "rtl";
 
   // App State
   const [clients, setClients] = useState<ClientRow[]>([]);
@@ -350,6 +356,22 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
     newServices[index].amount = (newQty * Number(newServices[index].unitPrice || newServices[index].defaultPrice)).toString();
     setServices(newServices);
   };
+
+  // Deep links: /income/new?service=<id>&client=<id> (from the catalogue and client pages).
+  useEffect(() => {
+    if (!presetApplied.current.client && presetClientId && clients.length > 0) {
+      presetApplied.current.client = true;
+      if (clients.some((c) => c.id.toString() === presetClientId)) setSelectedClientId(presetClientId);
+    }
+  }, [clients, presetClientId]);
+
+  useEffect(() => {
+    if (presetApplied.current.service || !presetServiceId || services.length === 0) return;
+    const index = services.findIndex((s) => s.id === presetServiceId && !s.isProduct);
+    presetApplied.current.service = true;
+    if (index >= 0 && !services[index].selected) handleServiceToggle(index);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- apply the preset once, when the catalogue first loads
+  }, [services, presetServiceId]);
 
   useEffect(() => {
     // 5.1 FIX: auto-enable email delivery when a client with an email is selected;
@@ -683,8 +705,8 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
   
 
   const confirmStepContent = draftPreview ? (
-    <form className="bg-white dark:bg-zinc-950 flex flex-col relative">
-      <CardContent className="px-6 md:px-8 py-8">
+    <div className="mx-auto max-w-3xl rounded-2xl border border-border/70 bg-card p-4 shadow-sm sm:p-8">
+      <div>
         <InvoiceGenerationConfirmCard
           confirmation={draftPreview.confirmation}
           expiresAt={draftPreview.expiresAt}
@@ -699,297 +721,239 @@ export default function InvoiceGeneratorForm({ onSuccess, inModal = false }: Inv
           errorText={error ? <span className="flex items-center justify-center gap-2"><AlertCircle className="w-4 h-4 shrink-0" /> {error}</span> : undefined}
           className="w-full mt-6 p-4 bg-red-50 dark:bg-red-500/10 border-s-4 border-red-500 rounded-e-xl text-xs text-center font-bold uppercase tracking-widest shadow-sm animate-pulse"
         />
-      </CardContent>
-    </form>
+      </div>
+    </div>
   ) : null;
 
+  const selectedLines = activeServices.map((s) => ({ id: s.id, title: s.title, quantity: s.quantity, amount: Number(s.amount || 0) }));
+  const checks = { client: Boolean(selectedClientId), items: totalAmount > 0, company: companyConfirmed };
+  const canSubmit = checks.client && checks.items && checks.company;
+  const submitLabel = tc("summary.review");
+  const submittingLabel = sendEmail ? tc("summary.generatingSending") : tc("summary.generating");
+  const effectiveRate = isForeignCurrency && Number(exchangeRate) > 0 ? Number(exchangeRate) : null;
+  const money = (n: number) => fCurrency(n);
+
   const formContent = (
-    <form onSubmit={handleSubmit} className="bg-white dark:bg-zinc-950 flex flex-col relative">
-      <CardContent className="space-y-8 px-6 md:px-8 py-8">
-
-        <FormSection className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="space-y-2">
-            <Label htmlFor="invoice-client" className="text-zinc-700 dark:text-zinc-300 font-bold uppercase text-xs tracking-widest">{t("billing_to")}</Label>
-            <SearchableCombobox
-              value={selectedClientId}
-              onChange={(val) => { setSelectedClientId(val); setError(null); }}
-              placeholder={t("select_crm")}
-              searchPlaceholder={`${t("select_crm")}...`}
-              emptyText={t("no_clients")}
-              options={clients.map((c) => ({
-                value: c.id.toString(),
-                label: c.name,
-                description: c.country,
-                keywords: [c.country, c.email || ""],
-              }))}
-              className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-700 h-11 font-bold text-xs shadow-sm text-zinc-900 dark:text-zinc-100 focus:ring-indigo-500/30"
-            />
-            {selectedClient && (
-              <div className="flex items-center gap-1.5 px-1 pt-1 text-xs text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-widest animate-in fade-in slide-in-from-top-2">
-                <CheckCircle2 className="h-3 w-3" /> {t("jurisdiction", { country: selectedClient.country })}
+    <form onSubmit={handleSubmit} noValidate className="pb-32 lg:pb-0">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
+        <div className="min-w-0 space-y-5 sm:space-y-6">
+          <ComposerSection step={1} title={tc("billTo.title")} hint={tc("billTo.hint")} done={checks.client} delay={0}>
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="invoice-client" className="text-sm font-medium">{t("billing_to")}</Label>
+                <SearchableCombobox
+                  value={selectedClientId}
+                  onChange={(val) => { setSelectedClientId(val); setError(null); }}
+                  placeholder={t("select_crm")}
+                  searchPlaceholder={`${t("select_crm")}...`}
+                  emptyText={t("no_clients")}
+                  options={clients.map((c) => ({
+                    value: c.id.toString(),
+                    label: c.name,
+                    description: c.country,
+                    keywords: [c.country, c.email || ""],
+                  }))}
+                  className="h-12 rounded-xl text-base"
+                />
+                <AnimatePresence initial={false}>
+                  {selectedClient && (
+                    <motion.p
+                      initial={reduceMotion ? false : { opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="flex flex-wrap items-center gap-x-3 gap-y-1 overflow-hidden text-sm text-muted-foreground"
+                    >
+                      <span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400"><CheckCircle2 className="size-4" aria-hidden /> {t("jurisdiction", { country: selectedClient.country })}</span>
+                      <span className={selectedClient.email ? "" : "text-amber-700 dark:text-amber-400"}>{selectedClient.email ?? tc("billTo.noEmail")}</span>
+                    </motion.p>
+                  )}
+                </AnimatePresence>
               </div>
-            )}
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="invoice-date" className="text-zinc-700 dark:text-zinc-300 font-bold uppercase text-xs tracking-widest">{t("document_date")}</Label>
-            <DatePickerField
-              value={invoiceDate}
-              onChange={setInvoiceDate}
-              placeholder={t("pick_date")}
-              formatString={dateFormat}
-              buttonClassName="font-bold text-xs border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 hover:bg-zinc-50 dark:hover:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm focus-visible:ring-indigo-500/30"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="invoice-cycle" className="text-zinc-700 dark:text-zinc-300 font-bold uppercase text-xs tracking-widest">{t("cycle_period")}</Label>
-            <Select value={billingMonth} onValueChange={setBillingMonth}>
-              <SelectTrigger id="invoice-cycle" className={`w-full bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-700 h-11 font-bold text-xs text-zinc-900 dark:text-zinc-100 shadow-sm focus:ring-indigo-500/30 transition-all ${isMonthAlreadyBilled ? "ring-2 ring-amber-400 dark:ring-amber-500/50 border-amber-300 dark:border-amber-600" : ""}`}>
-                <SelectValue placeholder={t("select_month")} />
-              </SelectTrigger>
-              <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
-                {isMounted && monthOptions.map((month) => <SelectItem key={month} value={month} className="dark:focus:bg-zinc-800 dark:text-zinc-100 text-xs font-bold uppercase tracking-wider py-2">{month}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <InvoiceCurrencyField
-            baseCurrency={currency}
-            value={invoiceCurrency}
-            exchangeRate={exchangeRate}
-            onChange={(next) => { setInvoiceCurrency(next.currency); setExchangeRate(next.exchangeRate); }}
-            labels={{
-              currency: "Invoice currency",
-              rate: ({ from, to }) => `1 ${from} = ? ${to}`,
-              rateHint: ({ from, to }) => `Rate is saved on the invoice. Reports convert ${from} to ${to} at this rate.`,
-            }}
-          />
-        </FormSection>
-
-        {isMonthAlreadyBilled && (
-          <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-500/10 border-s-4 border-amber-400 dark:border-amber-500 rounded-e-md text-amber-800 dark:text-amber-400 text-xs font-medium animate-in fade-in slide-in-from-top-2 shadow-sm">
-            <AlertCircle className="h-5 w-5 text-amber-500 dark:text-amber-500 shrink-0" />
-            <p className="leading-relaxed">{t("warning_duplicate", { billingMonth })}</p>
-          </div>
-        )}
-
-        <div className="space-y-4">
-          <h2 className="text-xs font-extrabold text-zinc-800 dark:text-zinc-200 uppercase tracking-widest flex items-center gap-2 border-b border-zinc-100 dark:border-zinc-800/80 pb-3">
-            <Briefcase className="w-4 h-4 text-indigo-500" /> {t("services_rendered")}
-          </h2>
-
-          <div className="grid gap-3.5">
-            {isLoadingServices ? (
-              <div className="flex flex-col justify-center items-center py-12 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50/50 dark:bg-zinc-900/40">
-                <Loader2 className="w-6 h-6 animate-spin text-indigo-500/50 mb-3" />
-                <span className="text-xs text-zinc-400 dark:text-zinc-500 font-bold uppercase tracking-widest animate-pulse">{t("loading_catalog")}</span>
-              </div>
-            ) : services.length === 0 ? (
-              <div className="p-12 text-center border-2 border-dashed border-zinc-200 dark:border-zinc-800/80 rounded-xl bg-zinc-50/50 dark:bg-zinc-950/20 group hover:bg-zinc-50 dark:hover:bg-zinc-900/40 transition-colors">
-                <div className="w-12 h-12 rounded-full bg-white dark:bg-zinc-900 shadow-sm border border-zinc-100 dark:border-zinc-800 flex items-center justify-center mx-auto mb-4">
-                  <Briefcase className="w-5 h-5 text-zinc-300 dark:text-zinc-600" />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="invoice-date" className="text-sm font-medium">{t("document_date")}</Label>
+                  <DatePickerField
+                    value={invoiceDate}
+                    onChange={setInvoiceDate}
+                    placeholder={t("pick_date")}
+                    formatString={dateFormat}
+                    buttonClassName="h-12 w-full rounded-xl text-base"
+                  />
                 </div>
-                <p className="text-zinc-800 dark:text-zinc-200 font-bold uppercase tracking-widest text-sm mb-1.5">{t("catalog_empty")}</p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed">{t("catalog_empty_desc")}</p>
+                <div className="space-y-2">
+                  <Label htmlFor="invoice-cycle" className="text-sm font-medium">{t("cycle_period")}</Label>
+                  <Select value={billingMonth} onValueChange={setBillingMonth}>
+                    <SelectTrigger id="invoice-cycle" className="h-12 w-full rounded-xl text-base">
+                      <SelectValue placeholder={t("select_month")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {isMounted && monthOptions.map((month) => <SelectItem key={month} value={month}>{month}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            ) : (
-              services.map((service, index) => (
-                <div key={service.id} className={`p-4 border rounded-xl transition-all duration-300 ${service.selected ? "border-indigo-500 dark:border-indigo-500 bg-indigo-50/30 dark:bg-indigo-900/10 shadow-sm ring-1 ring-indigo-500/10 dark:ring-indigo-500/20 md:-translate-y-0.5" : "border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/40 hover:bg-white dark:hover:bg-zinc-900/80 hover:border-zinc-300 dark:hover:border-zinc-700 hover:shadow-sm group"}`}>
-                  <div className="flex flex-col sm:flex-row items-start gap-4">
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className="pt-[5px]">
-                        <Checkbox
-                          id={`service-check-${index}`}
-                          checked={service.selected}
-                          onCheckedChange={() => handleServiceToggle(index)}
-                          aria-label={`Select ${service.title}`}
-                          disabled={service.isProduct && service.currentStock === 0}
-                        />
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <Label htmlFor={`service-check-${index}`} className="text-sm font-bold text-zinc-900 dark:text-zinc-50 cursor-pointer flex items-center gap-2">
-                          {service.title}
-                          {service.isProduct && (
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-sm font-bold tracking-widest ${service.currentStock > 0 ? "bg-emerald-100/50 text-emerald-700" : "bg-red-100/50 text-red-700"}`}>
-                              {service.currentStock} IN STOCK
-                            </span>
-                          )}
-                        </Label>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono uppercase tracking-widest font-bold opacity-80">{service.nicDetails}</p>
-                      </div>
-                    </div>
-                    {service.selected && (
-                      <div className="flex items-center gap-2 w-full sm:w-auto animate-in fade-in zoom-in-95 duration-300 ease-out">
-                        {service.isProduct && (
-                          <div className="w-[80px]">
-                            <Label htmlFor={`service-qty-${index}`} className="sr-only">Quantity</Label>
-                            <Input
-                              id={`service-qty-${index}`}
-                              type="number"
-                              min="1"
-                              max={service.currentStock}
-                              placeholder="Qty"
-                              value={service.quantity}
-                              onChange={(e) => handleQuantityChange(index, e.target.value)}
-                              className="h-9 font-bold text-sm text-center"
-                            />
-                          </div>
-                        )}
-                        <div className="relative group/price w-[120px]">
-                          <span className={cn("absolute top-2.5 text-zinc-400 dark:text-zinc-500 text-xs font-bold transition-colors group-focus-within/price:text-indigo-600 dark:group-focus-within/price:text-indigo-400", isRtl ? "right-3" : "left-3")}>{currencySymbol}</span>
-                          <Label htmlFor={`service-price-${index}`} className="sr-only">Amount for {service.title}</Label>
-                          <Input
-                            id={`service-price-${index}`}
-                            type="number"
-                            placeholder="0.00"
-                            value={service.amount}
-                            onChange={(e) => handleAmountChange(index, e.target.value)}
-                            required={service.selected}
-                            className={cn("h-9 bg-white dark:bg-zinc-900 border-indigo-200 dark:border-indigo-800 font-bold text-sm text-indigo-700 dark:text-indigo-400 shadow-inner focus-visible:ring-indigo-500/30 transition-colors", isRtl ? "pr-7" : "pl-7")}
-                          />
-                        </div>
-                      </div>
-                    )}
+
+              <InvoiceCurrencyField
+                baseCurrency={currency}
+                value={invoiceCurrency}
+                exchangeRate={exchangeRate}
+                onChange={(next) => { setInvoiceCurrency(next.currency); setExchangeRate(next.exchangeRate); }}
+                labels={{
+                  currency: tc("billTo.currency"),
+                  rate: ({ from, to }) => tc("billTo.rate", { from, to }),
+                  rateHint: ({ from, to }) => tc("billTo.rateHint", { from, to }),
+                }}
+              />
+
+              <AnimatePresence initial={false}>
+                {isMonthAlreadyBilled && (
+                  <motion.div
+                    initial={reduceMotion ? false : { opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    role="status"
+                    className="flex items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-200"
+                  >
+                    <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
+                    <p>{t("warning_duplicate", { billingMonth })}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </ComposerSection>
+
+          <ComposerSection step={2} title={tc("items.title")} hint={tc("items.hint")} done={checks.items} delay={0.06}>
+            <LineItems
+              items={services}
+              loading={isLoadingServices}
+              currencySymbol={currencySymbol}
+              format={money}
+              onToggle={handleServiceToggle}
+              onAmount={handleAmountChange}
+              onQuantity={handleQuantityChange}
+            />
+          </ComposerSection>
+
+          <ComposerSection step={3} title={tc("delivery.title")} hint={tc("delivery.hint")} done={checks.company} delay={0.12}>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 rounded-xl border border-border/70 p-3 sm:p-4">
+                <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl transition-colors", sendEmail ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-300" : "bg-muted text-muted-foreground")}>
+                  <Mail className="size-5" aria-hidden />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <Label htmlFor="send-email" className="block cursor-pointer text-sm font-semibold">{t("email_delivery")}</Label>
+                  <p className={cn("text-xs", selectedClient && !selectedClient.email ? "font-medium text-amber-700 dark:text-amber-400" : "text-muted-foreground")}>
+                    {selectedClient && !selectedClient.email ? t("email_unavailable") : t("email_desc")}
+                  </p>
+                </div>
+                <Switch id="send-email" checked={sendEmail} onCheckedChange={setSendEmail} disabled={!selectedClient?.email} />
+              </div>
+
+              <div className={cn("rounded-xl border p-3 transition-colors sm:p-4", companyConfirmed ? "border-emerald-500/40 bg-emerald-500/5" : "border-amber-500/40 bg-amber-500/5")}>
+                <div className="flex items-start gap-3">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-background text-indigo-600 shadow-sm dark:text-indigo-300"><Building2 className="size-5" aria-hidden /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-muted-foreground">{tc("delivery.issuedBy")}</p>
+                    <p className="truncate font-semibold">{companyConfirmation?.companyName || companyConfirmation?.proprietorName || tc("delivery.notConfigured")}</p>
+                    <p className="text-xs text-muted-foreground">{companyConfirmation?.taxIdLabel || tc("delivery.taxId")}: {companyTaxId}</p>
                   </div>
+                  <button type="button" onClick={() => setShowCompanyDetails((v) => !v)} aria-expanded={showCompanyDetails} className="rounded-lg p-2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={tc("delivery.details")}>
+                    <ChevronDown className={cn("size-4 transition-transform", showCompanyDetails && "rotate-180")} aria-hidden />
+                  </button>
                 </div>
-              ))
+                <AnimatePresence initial={false}>
+                  {showCompanyDetails && (
+                    <motion.dl initial={reduceMotion ? false : { height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mt-3 grid gap-2 overflow-hidden text-sm sm:grid-cols-2">
+                      <div><dt className="text-xs text-muted-foreground">{tc("delivery.bank")}</dt><dd className="inline-flex items-center gap-1.5 font-medium"><Landmark className="size-3.5" aria-hidden /> {bankIdentity}</dd></div>
+                      <div><dt className="text-xs text-muted-foreground">{tc("delivery.payment")}</dt><dd className="font-medium">{paymentIdentity}</dd></div>
+                    </motion.dl>
+                  )}
+                </AnimatePresence>
+                {recentCompanySwitch?.switchedAt && (
+                  <p className="mt-3 flex items-start gap-2 rounded-lg border border-amber-500/40 bg-background/70 p-2.5 text-xs font-medium text-amber-800 dark:text-amber-300">
+                    <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
+                    {tc("delivery.recentSwitch", { name: recentCompanySwitch.name || tc("delivery.thisCompany") })}
+                  </p>
+                )}
+                <label className="mt-3 flex cursor-pointer items-center gap-2.5 text-sm font-medium">
+                  <Checkbox checked={companyConfirmed} onCheckedChange={(checked) => setCompanyConfirmed(Boolean(checked))} />
+                  {tc("delivery.confirm")}
+                </label>
+              </div>
+            </div>
+          </ComposerSection>
+
+          <AnimatePresence initial={false}>
+            {error && (
+              <motion.div initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} role="alert" className="flex items-start gap-2 rounded-xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm font-medium text-rose-800 dark:text-rose-200">
+                <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden /> {error}
+              </motion.div>
             )}
-          </div>
-        </div>
-      </CardContent>
-
-      <CardFooter className="flex flex-col gap-6 bg-zinc-50/80 dark:bg-zinc-900/40 border-t border-zinc-100 dark:border-zinc-800/80 rounded-b-xl px-6 md:px-8 py-8 mt-auto">
-
-        {/* DELIVERY OPTIONS */}
-        <div className="w-full flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm gap-4 transition-colors">
-          <div className="flex items-start sm:items-center gap-4 w-full">
-            <div className={`p-2.5 rounded-lg transition-colors border ${sendEmail ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800" : "bg-zinc-100 dark:bg-zinc-900 text-zinc-400 dark:text-zinc-500 border-zinc-200 dark:border-zinc-800"}`}>
-              <Mail className="w-5 h-5" />
-            </div>
-            <div className="flex-1">
-              <Label htmlFor="send-email" className="font-extrabold text-xs uppercase tracking-wider text-zinc-900 dark:text-zinc-100 cursor-pointer block">
-                {t("email_delivery")}
-              </Label>
-              {selectedClient && !selectedClient.email ? (
-                <p className="text-xs text-rose-500 dark:text-rose-400 font-bold uppercase tracking-widest mt-1">{t("email_unavailable")}</p>
-              ) : (
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed mt-0.5 max-w-sm">{t("email_desc")}</p>
-              )}
-            </div>
-          </div>
-          <div className="ms-14 sm:ms-0 shrink-0">
-            <Checkbox
-              id="send-email"
-              checked={sendEmail}
-              onCheckedChange={() => setSendEmail(!sendEmail)}
-              disabled={!selectedClient?.email}
-            />
-          </div>
+          </AnimatePresence>
         </div>
 
-        <div className="flex justify-between items-center w-full mt-2 bg-white dark:bg-zinc-950 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-          <span className="text-zinc-500 dark:text-zinc-400 font-extrabold text-xs uppercase tracking-widest">
-            {t("total_preview", { taxLabel })}
-          </span>
-          <span className="text-3xl font-black text-indigo-700 dark:text-indigo-400 drop-shadow-sm tracking-tight">{fCurrency(totalAmount)}</span>
+        {/* Sticky below the page header (~10rem) so it follows the form while scrolling. */}
+        <div className="hidden lg:sticky lg:top-40 lg:block">
+          <SummaryPanel
+            clientName={selectedClient?.name ?? null}
+            currency={activeCurrency}
+            baseCurrency={currency}
+            exchangeRate={effectiveRate}
+            lines={selectedLines}
+            total={totalAmount}
+            format={money}
+            taxLabel={taxLabel}
+            checks={checks}
+            submitting={isGenerating}
+            submittingLabel={submittingLabel}
+            submitLabel={submitLabel}
+            canSubmit={canSubmit}
+          />
         </div>
+      </div>
 
-        <div className={cn("rounded-xl border p-4 shadow-sm", companyConfirmed ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/60 dark:bg-emerald-950/20" : "border-amber-200 bg-amber-50/70 dark:border-amber-900/60 dark:bg-amber-950/30")}>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-zinc-800 dark:text-zinc-100">
-                <Building2 className="h-4 w-4 text-indigo-500" /> Confirm active company before invoice generation
-              </div>
-              <div className="grid gap-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 md:grid-cols-3">
-                <div><span className="block uppercase tracking-widest text-zinc-500">Legal name</span>{companyConfirmation?.companyName || companyConfirmation?.proprietorName || "Not configured"}</div>
-                <div><span className="block uppercase tracking-widest text-zinc-500">{companyConfirmation?.taxIdLabel || "Tax ID"}</span>{companyTaxId}</div>
-                <div><span className="block uppercase tracking-widest text-zinc-500">Bank / payment identity</span><span className="inline-flex items-center gap-1"><Landmark className="h-3.5 w-3.5" /> {bankIdentity}{paymentIdentity ? ` · ${paymentIdentity}` : ""}</span></div>
-              </div>
-              {recentCompanySwitch?.switchedAt && (
-                <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-white/70 p-3 text-xs font-bold text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                  You recently switched to {recentCompanySwitch.name || "this company"}. Double-check the legal name, tax ID, and bank/payment identity before sending this invoice.
-                </div>
-              )}
-            </div>
-            <label className="flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-black uppercase tracking-widest text-zinc-800 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100">
-              <Checkbox checked={companyConfirmed} onCheckedChange={(checked) => setCompanyConfirmed(Boolean(checked))} /> Confirm
-            </label>
-          </div>
-        </div>
-
-        <FormSubmitBar
-          isSubmitting={isGenerating}
-          isDisabled={totalAmount === 0 || !companyConfirmed}
-          submitText={t("generate_btn")}
-          submittingText={sendEmail ? "Generating & Sending Invoice..." : "Generating Invoice..."}
-          helperText={totalAmount === 0 ? "Select at least one priced service to continue." : "Review the preview amount and continue to confirmation."}
-        />
-
-        {/* SUCCESS BANNER */}
-        {successData && (
-          <div className="w-full space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-500" aria-live="polite">
-            <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-900/50 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
-              <p className="text-sm font-extrabold text-emerald-800 dark:text-emerald-400 uppercase tracking-widest flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-emerald-500" /> {t("generated_success", { invoiceNumber: successData.invoiceNumber })}
-              </p>
-              <Button className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-600 dark:hover:bg-emerald-500 text-xs font-bold uppercase tracking-widest shadow-sm active:scale-95 transition-all" asChild>
-                <a href={getBustedUrl(successData.pdfPath)} target="_blank">{t("download_pdf")}</a>
-              </Button>
-            </div>
-
-            {/* EMAIL STATUS BANNER */}
-            {successData.emailStatus !== "Not requested" && (
-              <div className={`p-4 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center sm:justify-start gap-2 border shadow-sm ${successData.emailStatus === "Success" ? "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-500/10 dark:border-blue-900/50 dark:text-blue-400" : "bg-red-50 border-red-200 text-red-700 dark:bg-red-500/10 dark:border-red-900/50 dark:text-red-400"}`}>
-                <Mail className="w-4 h-4" />
-                {t("email_delivery_status", { status: successData.emailStatus || "Unknown" })}
-              </div>
-            )}
-            {successData.paymentLinkStatus && !successData.paymentLinkStatus.created && (
-              <div className="p-4 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center sm:justify-start gap-2 border shadow-sm bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-500/10 dark:border-amber-900/50 dark:text-amber-400">
-                <AlertCircle className="w-4 h-4" />
-                Payment link was not added ({successData.paymentLinkStatus.skipReason ?? "UNKNOWN_REASON"}).
-              </div>
-            )}
-          </div>
-        )}
-
-        <FormFieldMessages
-          errorText={error ? <span className="flex items-center justify-center gap-2"><AlertCircle className="w-4 h-4 shrink-0" /> {error}</span> : undefined}
-          className="w-full p-4 bg-red-50 dark:bg-red-500/10 border-s-4 border-red-500 rounded-e-xl text-xs text-center font-bold uppercase tracking-widest shadow-sm animate-pulse"
-        />
-      </CardFooter>
+      <SummaryPanel
+        compact
+        clientName={selectedClient?.name ?? null}
+        currency={activeCurrency}
+        baseCurrency={currency}
+        exchangeRate={effectiveRate}
+        lines={selectedLines}
+        total={totalAmount}
+        format={money}
+        taxLabel={taxLabel}
+        checks={checks}
+        submitting={isGenerating}
+        submittingLabel={submittingLabel}
+        submitLabel={submitLabel}
+        canSubmit={canSubmit}
+      />
     </form>
   );
 
-  if (inModal) {
-    return (
-      <>
-        {draftPreview ? confirmStepContent : formContent}
-        <TaxRateModal
-          open={taxRateModalOpen}
-          onOpenChange={setTaxRateModalOpen}
-          taxLabel={taxRateMeta.taxLabel}
-          countryCode={taxRateMeta.countryCode}
-          candidates={taxRateMeta.candidates}
-          value={taxRateInput}
-          onValueChange={setTaxRateInput}
-          onConfirm={handleTaxRateConfirm}
-          isSubmitting={isGenerating}
-          title="Tax rate required to continue"
-          description="We couldn't detect a single applicable rate from your service metadata. Enter it once and we'll remember it for your workspace."
-        />
-      </>
-    );
-  }
-
   return (
     <>
-      <Card className="shadow-xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
-        <div className="h-1.5 bg-gradient-to-r from-indigo-500 to-indigo-600 w-full" />
-        {draftPreview ? confirmStepContent : formContent}
-      </Card>
+      <AnimatePresence mode="wait" initial={false}>
+        {successData ? (
+          <SuccessPanel
+            key="success"
+            invoiceNumber={successData.invoiceNumber}
+            pdfPath={successData.pdfPath}
+            emailStatus={successData.emailStatus}
+            paymentLinkStatus={successData.paymentLinkStatus}
+            onAnother={() => setSuccessData(null)}
+          />
+        ) : draftPreview ? (
+          <motion.div key="confirm" initial={reduceMotion ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+            {confirmStepContent}
+          </motion.div>
+        ) : (
+          <motion.div key="form" initial={false} exit={{ opacity: 0 }}>
+            {formContent}
+          </motion.div>
+        )}
+      </AnimatePresence>
       <TaxRateModal
         open={taxRateModalOpen}
         onOpenChange={setTaxRateModalOpen}

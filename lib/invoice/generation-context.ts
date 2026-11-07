@@ -13,12 +13,10 @@ import {
 export type ServiceInput = {
   title?: string;
   amount?: number | string;
-  productId?: string;
+  productId?: string | null;
   quantity?: number;
   unitPrice?: number | string;
-  sac?: {
-    igstRate?: number | null;
-  };
+  sac?: string | number | { igstRate?: number | null } | null;
   taxRate?: number | null;
 };
 
@@ -185,7 +183,7 @@ export async function buildInvoiceGenerationContext(
   }
 
   const unverifiedProductIds = sanitizedServices
-    .map((s: { productId?: string }) => s.productId)
+    .map((s: { productId?: string | null }) => s.productId)
     .filter((id: unknown): id is string => typeof id === "string" && id.length > 0);
   const validProducts =
     unverifiedProductIds.length > 0
@@ -242,7 +240,7 @@ export async function buildInvoiceGenerationContext(
 
   const countryCode = profile.workspace?.countryCode || "IN";
   const serviceTaxRates = sanitizedServices
-    .map((service: SanitizedService) => service.sac?.igstRate ?? service.taxRate ?? null)
+    .map((service: SanitizedService) => (typeof service.sac === "object" && service.sac ? service.sac.igstRate : null) ?? service.taxRate ?? null)
     .filter((rate: number | null): rate is number => rate !== null && rate !== undefined);
   const profileSettings = profile as typeof profile & ProfileSettings;
   const taxResolution = resolveTaxRate({

@@ -47,12 +47,10 @@ type SessionWithWorkspace = {
 type ServiceInput = {
   title?: string;
   amount?: number | string;
-  productId?: string;
+  productId?: string | null;
   quantity?: number;
   unitPrice?: number | string;
-  sac?: {
-    igstRate?: number | null;
-  };
+  sac?: string | number | { igstRate?: number | null } | null;
   taxRate?: number | null;
   sacCode?: string | null;
 };
@@ -104,38 +102,7 @@ function buildRequestHash(payload: unknown): string {
 }
 
 
-import { z } from 'zod';
-
-const ServiceSchema = z.object({
-  title: z.string().trim().min(1, "Service title is required").max(200, "Service title is too long"),
-  amount: z.coerce.number().finite().min(0, "Service amount must be 0 or greater"),
-  productId: z.string().optional(),
-  quantity: z.number().optional().default(1),
-  unitPrice: z.coerce.number().optional(),
-  sac: z.object({
-    igstRate: z.number().nullable().optional(),
-  }).optional(),
-  taxRate: z.number().nullable().optional(),
-  sacCode: z.string().trim().max(100).optional().nullable(),
-});
-
-const GenerateInvoiceSchema = z.object({
-  idempotencyKey: z.string().optional(),
-  draftId: z.string().optional(),
-  clientId: z.string().min(1, "Client is required"),
-  billingMonth: z.string().trim().min(1, "Billing month is required").max(100),
-  sacCode: z.string().trim().max(100).optional(),
-  services: z.array(ServiceSchema).min(1, "At least one service is required"),
-  customDate: z.string().optional().nullable(),
-  sendEmail: z.boolean().optional(),
-  status: z.string().optional(),
-  taxRateOverride: z.number().optional(),
-  /** ISO-4217 code; defaults to the workspace base currency. */
-  currency: z.string().trim().toUpperCase().length(3).regex(/^[A-Z]{3}$/).optional(),
-  /** Units of base currency per 1 unit of `currency`. Required when currency differs from the base currency. */
-  exchangeRate: z.coerce.number().positive().finite().max(1_000_000).optional(),
-  source: z.enum(['MANUAL', 'API']).optional(),
-});
+import { GenerateInvoiceSchema } from '@/lib/invoice/generate-schema';
 
 export async function POST(request: Request) {
   let generatedPdfPath = "";
@@ -265,7 +232,7 @@ export async function POST(request: Request) {
         };
       });
 
-    const unverifiedProductIds = sanitizedServices.map((s: { productId?: string }) => s.productId).filter((id: unknown): id is string => typeof id === 'string' && id.length > 0);
+    const unverifiedProductIds = sanitizedServices.map((s: { productId?: string | null }) => s.productId).filter((id: unknown): id is string => typeof id === 'string' && id.length > 0);
     const validProducts = unverifiedProductIds.length > 0 
       ? await prisma.product.findMany({ where: { workspaceId, id: { in: unverifiedProductIds } }, select: { id: true } })
       : [];
@@ -339,7 +306,7 @@ export async function POST(request: Request) {
     if (!profile) return NextResponse.json({ error: "Business profile missing. Please complete Settings Wizard." }, { status: 400 });
     const countryCode = profile.workspace?.countryCode || "IN";
     const serviceTaxRates = sanitizedServices
-      .map((service: SanitizedService) => service.sac?.igstRate ?? service.taxRate ?? null)
+      .map((service: SanitizedService) => (typeof service.sac === "object" && service.sac ? service.sac.igstRate : null) ?? service.taxRate ?? null)
       .filter((rate: number | null): rate is number => rate !== null && rate !== undefined);
     const profileSettings = profile as typeof profile & ProfileSettings;
     const taxResolution = resolveTaxRate({

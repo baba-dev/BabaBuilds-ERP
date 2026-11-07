@@ -1,112 +1,86 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import path from 'path';
-import { logActivity } from '@/lib/activity-log';
-import { apiError } from '@/lib/api-error';
-import { scanBuffer } from '@/lib/security/clamav';
-import { buildPrivatePath, ensureDir, sniffAllowedContent, uniqueStoredName } from '@/lib/uploads/private-storage';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { logActivity } from "@/lib/activity-log";
+import { parseServiceForm, sameServiceName } from "@/lib/services/validation";
+import { saveServiceImage } from "@/lib/services/image-upload";
+import { requireServiceAccess, serviceError } from "@/lib/services/access";
+import { SERVICE_INCLUDE, withUsage } from "@/lib/services/serialize";
 
-type SessionContext = {
-  workspaceId?: string;
-  user?: { id?: string | null; email?: string | null };
-};
-
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const session = (await getServerSession(authOptions)) as SessionContext | null;
-    if (!session?.workspaceId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireServiceAccess("read");
+    if (!auth.ok) return auth.response;
+
+    const { searchParams } = new URL(request.url);
+    const q = (searchParams.get("q") ?? "").trim().slice(0, 120);
+    const limit = Math.min(500, Math.max(1, Number(searchParams.get("limit")) || 500));
 
     const services = await prisma.serviceTemplate.findMany({
-      where: { workspaceId: session.workspaceId },
-      include: { nicCode: true, sacCode: true },
-      orderBy: { name: 'asc' }
+      where: {
+        workspaceId: auth.access.workspaceId,
+        ...(q ? { OR: [{ name: { contains: q } }, { description: { contains: q } }] } : {}),
+      },
+      include: SERVICE_INCLUDE,
+      orderBy: { name: "asc" },
+      take: limit,
     });
 
-    return NextResponse.json(services);
-  } catch {
-    return NextResponse.json({ error: 'Failed to fetch services' }, { status: 500 });
+    return NextResponse.json(services.map(withUsage), { headers: { "Cache-Control": "private, no-store" } });
+  } catch (error) {
+    console.error("Service list error:", error);
+    return serviceError(500, "SERVICES_FETCH_FAILED", "Failed to fetch services");
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const session = (await getServerSession(authOptions)) as SessionContext | null;
-    if (!session?.workspaceId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireServiceAccess("write");
+    if (!auth.ok) return auth.response;
+    const { workspaceId, userId, email } = auth.access;
 
-    const workspaceId = session.workspaceId;
     const formData = await request.formData();
-    const name = formData.get('name') as string;
-    const description = formData.get('description') as string | null;
-    const longDescription = formData.get('longDescription') as string | null;
-    const defaultPrice = formData.get('defaultPrice') as string;
-    const nicCodeId = formData.get('nicCodeId') as string | null;
-    const sacCodeId = formData.get('sacCodeId') as string | null;
-    const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { id: true } });
-    if (!workspace) return apiError(404, "Workspace not found", "WORKSPACE_NOT_FOUND");
+    const parsed = parseServiceForm(formData);
+    if (!parsed.success) return serviceError(400, "INVALID_SERVICE", parsed.error.issues[0]?.message ?? "Invalid service details.");
+    const data = parsed.data;
+
+    // Referenced tax codes must exist (a bad id would otherwise surface as a 500 foreign-key error).
+    const [nic, sac, sameName] = await Promise.all([
+      data.nicCodeId ? prisma.nICCode.findUnique({ where: { id: data.nicCodeId }, select: { id: true } }) : Promise.resolve(true),
+      data.sacCodeId ? prisma.sACCode.findUnique({ where: { id: data.sacCodeId }, select: { id: true } }) : Promise.resolve(true),
+      prisma.serviceTemplate.findMany({ where: { workspaceId, name: { contains: data.name } }, select: { name: true } }),
+    ]);
+    if (!nic || !sac) return serviceError(400, "INVALID_TAX_CODE", "The selected tax classification no longer exists.");
+    if (sameName.some((s) => sameServiceName(s.name, data.name))) {
+      return serviceError(409, "DUPLICATE_NAME", "A service with this name already exists.");
+    }
 
     let imageUrl: string | null = null;
-
-    const imageFile = formData.get('serviceImage') as File | null;
-    if (imageFile && imageFile.size > 0) {
-      const ext = path.extname(imageFile.name).toLowerCase();
-      const allowedExtensions = ['.png', '.jpg', '.jpeg', '.webp'];
-      if (!allowedExtensions.includes(ext)) {
-        return NextResponse.json({ error: "Invalid image type. Only PNG, JPG, or WEBP allowed." }, { status: 400 });
-      }
-      const bytes = await imageFile.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-
-      const isSafe = await scanBuffer(buffer);
-      if (!isSafe) {
-        return apiError(400, "Malware detected in uploaded file.", "MALWARE_DETECTED");
-      }
-
-      const sniffed = sniffAllowedContent(buffer);
-      if (!sniffed || (sniffed !== 'png' && sniffed !== 'jpeg' && sniffed !== 'webp')) {
-        return NextResponse.json({ error: "Unsupported or unsafe image content." }, { status: 415 });
-      }
-
-      const dir = buildPrivatePath('service-hero', [workspaceId]);
-      await ensureDir(dir);
-      const filename = uniqueStoredName('hero', ext);
-      await (await import('fs/promises')).writeFile(path.join(dir, filename), buffer, { mode: 0o600 });
-      imageUrl = `/uploads/service-hero/${workspaceId}/${filename}`;
+    const imageFile = formData.get("serviceImage");
+    if (imageFile instanceof File && imageFile.size > 0) {
+      const saved = await saveServiceImage(workspaceId, imageFile);
+      if (!saved.ok) return serviceError(saved.status, saved.code, saved.message);
+      imageUrl = saved.url;
     }
 
-    const newService = await prisma.serviceTemplate.create({
-      data: {
-        workspaceId,
-        name,
-        description: description || null,
-        longDescription: longDescription || null,
-        defaultPrice: Number(defaultPrice),
-        nicCodeId: nicCodeId || null,
-        sacCodeId: sacCodeId || null,
-        imageUrl,
-      },
-      include: { nicCode: true, sacCode: true },
+    const created = await prisma.serviceTemplate.create({
+      data: { workspaceId, ...data, imageUrl },
+      include: SERVICE_INCLUDE,
     });
 
     logActivity({
-      action: 'service.create',
-      outcome: 'success',
-      entityType: 'serviceTemplate',
-      entityId: newService.id,
+      action: "service.create",
+      outcome: "success",
+      entityType: "serviceTemplate",
+      entityId: created.id,
       workspaceId,
-      actorId: session.user?.id ?? null,
-      actorEmail: session.user?.email ?? null,
-      metadata: { name: newService.name },
+      actorId: userId,
+      actorEmail: email,
+      metadata: { name: created.name },
     });
 
-    return NextResponse.json({ success: true, service: newService });
+    return NextResponse.json({ success: true, service: withUsage(created) }, { status: 201 });
   } catch (error) {
-    console.error("Service Creation Error:", error);
-    return NextResponse.json({ error: 'Failed to create service' }, { status: 500 });
+    console.error("Service creation error:", error);
+    return serviceError(500, "SERVICE_CREATE_FAILED", "Failed to create service");
   }
 }

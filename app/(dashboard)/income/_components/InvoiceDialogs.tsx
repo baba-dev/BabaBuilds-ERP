@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -19,8 +19,13 @@ type Common = { locale: string; onDone: () => void };
 /* ───────────────────────── Record payment ───────────────────────── */
 
 export function RecordPaymentDialog({ invoice, locale, onDone, onClose }: Common & { invoice: InvoiceListItemDto | null; onClose: () => void }) {
+  // Keyed by invoice so every open starts from fresh state (no reset effect needed).
+  return invoice ? <PaymentDialogBody key={invoice.id} invoice={invoice} locale={locale} onDone={onDone} onClose={onClose} /> : null;
+}
+
+function PaymentDialogBody({ invoice, locale, onDone, onClose }: Common & { invoice: InvoiceListItemDto; onClose: () => void }) {
   const t = useTranslations("Income.payment");
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState(() => Number(invoice.balance).toFixed(2));
   const [date, setDate] = useState(todayInputValue());
   const [method, setMethod] = useState<string>("BANK_TRANSFER");
   const [reference, setReference] = useState("");
@@ -32,20 +37,7 @@ export function RecordPaymentDialog({ invoice, locale, onDone, onClose }: Common
   // One key per open dialog: a retry of the same submit is safe, a second genuine payment is not dropped.
   const idempotencyKey = useRef(newIdempotencyKey());
 
-  useEffect(() => {
-    if (!invoice) return;
-    idempotencyKey.current = newIdempotencyKey();
-    setAmount(Number(invoice.balance).toFixed(2));
-    setDate(todayInputValue());
-    setMethod("BANK_TRANSFER");
-    setReference("");
-    setNotes("");
-    setTds(false);
-    setError(null);
-  }, [invoice]);
-
-  const balance = useMemo(() => Number(invoice?.balance ?? 0), [invoice]);
-  if (!invoice) return null;
+  const balance = useMemo(() => Number(invoice.balance), [invoice]);
 
   const value = Number(amount);
   const invalid = !(value > 0) || value > balance + 0.005;
@@ -191,56 +183,77 @@ function ReasonDialog({
   onClose: () => void;
   onConfirm: (reason: string) => Promise<string | null>;
 }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <Dialog open={open} onOpenChange={(next) => !next && !busy && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        {/* Mounted only while open, so the form state resets on every open. */}
+        <ReasonForm title={title} description={description} confirmLabel={confirmLabel} placeholder={placeholder} destructive={destructive} onClose={onClose} onConfirm={onConfirm} onBusy={setBusy} />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ReasonForm({
+  title,
+  description,
+  confirmLabel,
+  placeholder,
+  destructive,
+  onClose,
+  onConfirm,
+  onBusy,
+}: {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  placeholder: string;
+  destructive?: boolean;
+  onClose: () => void;
+  onConfirm: (reason: string) => Promise<string | null>;
+  onBusy: (busy: boolean) => void;
+}) {
   const t = useTranslations("Income.reason");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (open) {
-      setReason("");
-      setError(null);
-    }
-  }, [open]);
-
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (reason.trim().length < 3 || submitting) return;
     setSubmitting(true);
+    onBusy(true);
     const failure = await onConfirm(reason.trim());
     setSubmitting(false);
+    onBusy(false);
     if (failure) setError(failure);
   };
 
   return (
-    <Dialog open={open} onOpenChange={(next) => !next && !submitting && onClose()}>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={submit} className="space-y-4">
-          <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
-            <DialogDescription>{description}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-1.5">
-            <Label htmlFor="reason-text">{t("label")}</Label>
-            <Textarea id="reason-text" value={reason} onChange={(e) => setReason(e.target.value)} rows={3} maxLength={300} placeholder={placeholder} autoFocus required />
-          </div>
-          {error && (
-            <p role="alert" className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">
-              {error}
-            </p>
-          )}
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
-              {t("cancel")}
-            </Button>
-            <Button type="submit" variant={destructive ? "destructive" : "primary-action"} disabled={reason.trim().length < 3 || submitting}>
-              {submitting && <Loader2 className="size-4 animate-spin" aria-hidden />}
-              {confirmLabel}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <form onSubmit={submit} className="space-y-4">
+      <DialogHeader>
+        <DialogTitle>{title}</DialogTitle>
+        <DialogDescription>{description}</DialogDescription>
+      </DialogHeader>
+      <div className="space-y-1.5">
+        <Label htmlFor="reason-text">{t("label")}</Label>
+        <Textarea id="reason-text" value={reason} onChange={(e) => setReason(e.target.value)} rows={3} maxLength={300} placeholder={placeholder} autoFocus required />
+      </div>
+      {error && (
+        <p role="alert" className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">
+          {error}
+        </p>
+      )}
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
+          {t("cancel")}
+        </Button>
+        <Button type="submit" variant={destructive ? "destructive" : "primary-action"} disabled={reason.trim().length < 3 || submitting}>
+          {submitting && <Loader2 className="size-4 animate-spin" aria-hidden />}
+          {confirmLabel}
+        </Button>
+      </DialogFooter>
+    </form>
   );
 }
 
