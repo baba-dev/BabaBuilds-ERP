@@ -1,5 +1,6 @@
 import type { Viewport, Metadata } from "next";
 import Script from "next/script";
+import { headers } from "next/headers";
 import { Inter, Noto_Naskh_Arabic } from "next/font/google";
 
 import "./globals.css";
@@ -13,10 +14,13 @@ import { getLocaleDirection } from "@/lib/i18n";
 import PWARegistration from "@/components/PWARegistration";
 import OfflineSyncBanner from "@/components/offline-sync-banner";
 
+const LOGIN_ROUTE_NAMESPACES = new Set(["LoginPage", "AuthModal"]);
+
 const inter = Inter({ subsets: ["latin"] });
 const notoNaskhArabic = Noto_Naskh_Arabic({
   subsets: ["arabic"],
   display: "swap",
+  preload: false, // only needed for RTL locales; don't preload it for everyone
   weight: ["400", "500", "600", "700"],
 });
 
@@ -137,7 +141,15 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const locale = await getLocale();
-  const messages = await getMessages();
+  const allMessages = await getMessages();
+  const pathname = (await headers()).get("x-pathname");
+  const isLoginRoute = pathname === "/login";
+  // /login only needs the auth namespaces; shipping all of them bloats the HTML payload.
+  const messages = isLoginRoute
+    ? Object.fromEntries(
+        Object.entries(allMessages).filter(([namespace]) => LOGIN_ROUTE_NAMESPACES.has(namespace))
+      )
+    : allMessages;
   const dir = getLocaleDirection(locale);
 
   return (
@@ -147,6 +159,7 @@ export default async function RootLayout({
         suppressHydrationWarning
       >
         {/* ── Structured Data: SEO graph for SERP rich results ── */}
+        {!isLoginRoute && (
         <Script
           id="ld-json-seo-graph"
           type="application/ld+json"
@@ -245,6 +258,7 @@ export default async function RootLayout({
             }),
           }}
         />
+        )}
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ThemeProvider
             attribute="class"
