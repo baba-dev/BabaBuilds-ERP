@@ -5,7 +5,7 @@ import type {
   PaginationState,
   RowSelectionState,
   SortingState,
-  VisibilityState,
+  ColumnVisibilityState,
 } from "@tanstack/react-table";
 
 export type SortDirection = "asc" | "desc";
@@ -53,7 +53,7 @@ export type DataTableFacetedFilter = {
 export type DataTableStateModel = {
   sorting: SortingState;
   columnFilters: ColumnFiltersState;
-  columnVisibility: VisibilityState;
+  columnVisibility: ColumnVisibilityState;
   pagination: PaginationState;
   rowSelection: RowSelectionState;
   columnPinning: ColumnPinningState;
