@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { seedDemoWorkspace } from '@/lib/demo/seed-workspace';
 import { DEMO_TEMPLATE_KEYS, type DemoTemplateKey } from '@/lib/demo/templates';
 import { MODULE_KEYS } from '@/lib/modules';
+import { hasFullPaidFeatures } from '@/lib/entitlements';
 
 type MockedPrisma = typeof prisma & {
   [key: string]: {
@@ -108,6 +109,15 @@ describe('demo templates seeding', () => {
     expect(tx.workspaceModule.upsert).toHaveBeenCalled();
     // At least once per module
     expect(tx.workspaceModule.upsert.mock.calls.length).toBeGreaterThanOrEqual(MODULE_KEYS.length);
+    // Demo workspaces must pass the paid-entitlement gate, or every optional module is hidden
+    const created = tx.workspace.create.mock.calls.at(-1)?.[0].data;
+    expect(
+      hasFullPaidFeatures({
+        planTier: created.planTier,
+        subscriptionStatus: created.subscriptionStatus,
+        subscriptionEndsAt: created.subscriptionEndsAt,
+      }),
+    ).toBe(true);
     // MULTI_COMPANY needs the company group wrapper, not just the module flag
     expect(tx.companyGroup.create).toHaveBeenCalled();
     expect(tx.companyGroupModule.upsert).toHaveBeenCalled();

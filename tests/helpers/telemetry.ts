@@ -24,8 +24,12 @@ export function attachPageTelemetry(page: Page) {
   page.on('pageerror', (err) => telemetry.pageErrors.push(err.message));
 
   page.on('requestfailed', (req) => {
-    const failure = req.failure();
-    telemetry.failedRequests.push(`${req.method()} ${req.url()} ${failure?.errorText ?? ''}`.trim());
+    const errorText = req.failure()?.errorText ?? '';
+    // ERR_ABORTED means the browser cancelled the request itself (navigation or redirect away from a
+    // page with fetches in flight). It is not an app failure; real network errors (refused, reset,
+    // DNS) and every 4xx/5xx response (below) are still recorded.
+    if (errorText.includes('net::ERR_ABORTED')) return;
+    telemetry.failedRequests.push(`${req.method()} ${req.url()} ${errorText}`.trim());
   });
 
   page.on('response', async (res) => {

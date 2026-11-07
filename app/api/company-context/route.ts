@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { requireMultiCompanyModule } from "@/app/api/companies/_shared";
+import { isModuleEnabled } from "@/lib/modules";
 
 type WorkspaceSummary = {
   id: string;
@@ -88,6 +88,23 @@ async function getAccessibleCompanies(userId: string): Promise<AccessibleCompany
   return Array.from(companyMap.values()).sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/**
+ * The company switcher polls this endpoint from every dashboard page, including
+ * workspaces without the MULTI_COMPANY module. "Not enabled" is an expected state
+ * there, not an error: answer 200 with an empty context (no company names or group
+ * data) so it never surfaces as a failed request or console error.
+ */
+const MULTI_COMPANY_DISABLED_CONTEXT = {
+  activeWorkspace: null,
+  group: null,
+  availableGroups: [],
+  requiresGroupSelection: false,
+  accessibleCompanies: [],
+  multiCompanyEnabled: false,
+} as const;
+
+const NO_STORE = { "Cache-Control": "no-store" } as const;
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -99,9 +116,8 @@ export async function GET(request: NextRequest) {
     const requestedGroupId = request.nextUrl.searchParams.get("groupId");
     const sessionGroupId = requestedGroupId && requestedGroupId.trim().length > 0 ? requestedGroupId.trim() : getSessionGroupId(session);
     const activeWorkspace = accessibleCompanies.find((company) => company.id === sessionWorkspaceId) ?? accessibleCompanies[0] ?? null;
-    if (activeWorkspace) {
-      const moduleResponse = await requireMultiCompanyModule(activeWorkspace.id);
-      if (moduleResponse) return moduleResponse;
+    if (!activeWorkspace || !(await isModuleEnabled(activeWorkspace.id, "MULTI_COMPANY"))) {
+      return NextResponse.json(MULTI_COMPANY_DISABLED_CONTEXT, { headers: NO_STORE });
     }
 
     const activeGroupLinks = activeWorkspace
@@ -145,7 +161,7 @@ export async function GET(request: NextRequest) {
       requiresGroupSelection: activeGroupLinks.length > 1 && !primaryGroupLink,
       accessibleCompanies,
       multiCompanyEnabled: Boolean(activeWorkspace?.enabledModules.includes("MULTI_COMPANY")) && (accessibleCompanies.length > 1 || activeGroupLinks.length > 0),
-    });
+    }, { headers: NO_STORE });
   } catch (error) {
     console.error("[company-context/GET]", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

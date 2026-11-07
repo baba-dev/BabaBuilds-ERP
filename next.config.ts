@@ -64,6 +64,8 @@ const nextConfig: NextConfig = {
       { source: '/ledger', destination: '/income', permanent: true },
       // Consolidated: standalone New Invoice page → Invoices & Earnings (modal)
       { source: '/invoice', destination: '/income', permanent: false },
+      // In-app help lives at /help (the old page only redirected; do it before rendering)
+      { source: '/dashboard/help', destination: '/help', permanent: true },
     ];
   },
 };

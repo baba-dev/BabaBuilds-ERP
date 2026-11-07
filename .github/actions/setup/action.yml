@@ -1,0 +1,15 @@
+name: Setup Node and install dependencies
+description: Node version pinned from .nvmrc (matches package.json engines), npm cache, reproducible install.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+        cache: npm
+
+    - name: Install dependencies
+      shell: bash
+      # postinstall runs `prisma generate`, so the client is ready after this step.
+      run: npm ci --no-audit --no-fund

@@ -9,7 +9,7 @@ export const taxAgencyTemplate: DemoTemplateDefinition = {
     countryCode: 'IN',
     baseCurrency: 'INR',
     planTier: 'PRO',
-    subscriptionStatus: 'ACTIVE',
+    subscriptionStatus: 'PRO',
   },
   businessProfile: {
     companyName: 'Sapphire Tax Desk LLP',

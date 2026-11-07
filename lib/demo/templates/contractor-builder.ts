@@ -10,7 +10,7 @@ export const contractorBuilderTemplate: DemoTemplateDefinition = {
     countryCode: "IN",
     baseCurrency: "INR",
     planTier: "PRO",
-    subscriptionStatus: "ACTIVE",
+    subscriptionStatus: "PRO",
   },
   businessProfile: {
     companyName: "SummitBuild Constructions Pvt Ltd",

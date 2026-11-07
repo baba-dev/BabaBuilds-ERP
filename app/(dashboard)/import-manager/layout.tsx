@@ -3,8 +3,9 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirectToLogin } from '@/lib/auth/login-redirect';
-import { isModuleEnabled } from '@/lib/modules';
+import { getModuleAvailability } from '@/lib/modules';
 import { prisma } from '@/lib/prisma';
+import { ModuleUnavailable } from '@/components/modules/ModuleUnavailable';
 
 const ALLOWED = new Set(['OWNER', 'ADMIN', 'FINANCE_MANAGER']);
 
@@ -19,9 +20,13 @@ export default async function ImportManagerLayout({ children }: { children: Reac
   });
   if (!membership?.workspaceId) redirect('/settings');
 
-  const enabled = await isModuleEnabled(membership.workspaceId, 'IMPORT_MANAGER');
   const role = membership.businessRole ?? membership.role;
-  if (!enabled || !ALLOWED.has(role)) redirect('/settings#workspace-modules');
+  if (!ALLOWED.has(role)) redirect('/settings');
+
+  const availability = await getModuleAvailability(membership.workspaceId, 'IMPORT_MANAGER');
+  if (availability !== 'enabled') {
+    return <ModuleUnavailable moduleKey="IMPORT_MANAGER" reason={availability} />;
+  }
 
   return children;
 }

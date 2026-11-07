@@ -10,7 +10,7 @@ export const freelancerConsultantTemplate: DemoTemplateDefinition = {
     countryCode: "IN",
     baseCurrency: "INR",
     planTier: "PRO",
-    subscriptionStatus: "ACTIVE",
+    subscriptionStatus: "PRO",
   },
   businessProfile: {
     companyName: "Aarav Consulting Studio",
