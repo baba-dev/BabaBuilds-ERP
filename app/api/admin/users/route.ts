@@ -5,6 +5,7 @@ import { sendActivityAlert } from '@/lib/security/alert-hooks';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { logActivity } from "@/lib/activity-log";
+import type { Prisma } from "@prisma/client";
 
 // GET: Fetch all users & platform stats
 export async function GET() {
@@ -100,7 +101,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "No workspace found" }, { status: 404 });
     }
 
-    let updateData: any = {};
+    let updateData: Prisma.WorkspaceUpdateInput = {};
     
     if (action === 'UPGRADE_PRO' || action === 'UPGRADE') {
       updateData = { subscriptionStatus: 'PRO', planTier: 'PRO' };

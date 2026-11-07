@@ -19,7 +19,7 @@ export interface TaxEstimateResult {
   amount: Prisma.Decimal;
   ratePercent: number;
   warnings: string[];
-  components: Record<string, any>;
+  components: Record<string, unknown>;
   metadata: {
     countryCode: string;
     ruleVersion: string;

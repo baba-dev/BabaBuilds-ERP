@@ -6,7 +6,7 @@ const groq = apiKey ? new Groq({ apiKey }) : null;
 export type DocumentAnalysisResult = {
   title: string;
   summary: string;
-  meta: Record<string, any>;
+  meta: Record<string, unknown>;
 };
 
 export async function analyzeDocumentWithGroq(text: string): Promise<DocumentAnalysisResult | null> {

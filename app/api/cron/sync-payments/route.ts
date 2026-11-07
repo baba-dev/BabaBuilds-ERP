@@ -54,7 +54,7 @@ export async function GET(req: Request) {
           // Note: using razorpay SDK to fetch payment link
           // The typings for paymentLink might be under rzp.paymentLink
           // Let's use it as any
-          const rzpAny = rzp as any;
+          const rzpAny = rzp as unknown as { paymentLink: { fetch(id: string): Promise<{ status?: string } & Record<string, unknown>> } };
           const link = await rzpAny.paymentLink.fetch(invoice.providerPaymentLinkId!);
           
           if (link && link.status === "paid") {

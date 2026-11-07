@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { ProposalConversionType } from '@prisma/client';
 import { logActivity } from '@/lib/security/activity-log';
+import type { Prisma } from "@prisma/client";
 
 export async function createProposalConversion({
   workspaceId,
@@ -27,7 +28,7 @@ export async function createProposalConversion({
 
     if (!proposal) throw new Error('Proposal not found');
 
-    const updateData: any = {};
+    const updateData: Prisma.ProposalUpdateInput = {};
     if (!proposal.firstConvertedAt) {
       updateData.firstConvertedAt = new Date();
     }

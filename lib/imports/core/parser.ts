@@ -59,7 +59,7 @@ export async function parseImportFile(file: File): Promise<ParsedTabularFile> {
   } else {
     const buff = Buffer.from(await file.arrayBuffer()) as unknown as import('buffer').Buffer;
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buff as any);
+    await workbook.xlsx.load(buff as unknown as Parameters<typeof workbook.xlsx.load>[0]);
     const sheet = workbook.worksheets[0];
     if (!sheet) throw new Error('No worksheet found.');
     const matrix = sheet.getSheetValues().slice(1).map((row) => {

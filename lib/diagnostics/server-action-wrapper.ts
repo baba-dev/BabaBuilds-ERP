@@ -1,6 +1,6 @@
 import { logSystemError } from "./logger";
 
-type AnyFunction = (...args: any[]) => Promise<any>;
+type AnyFunction = (...args: never[]) => Promise<unknown>;
 
 /**
  * Wraps a Next.js Server Action to automatically catch, log, and rethrow any unhandled exceptions.
@@ -12,7 +12,7 @@ export function withErrorLogger<T extends AnyFunction>(
 ): T {
   return (async (...args: Parameters<T>): Promise<ReturnType<T>> => {
     try {
-      return await action(...args);
+      return (await action(...args)) as Awaited<ReturnType<T>>;
     } catch (error: unknown) {
       // Log the error before rethrowing
       await logSystemError(error instanceof Error ? error : new Error(String(error)), {

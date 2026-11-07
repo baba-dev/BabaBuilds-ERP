@@ -11,13 +11,42 @@ import { toast } from "sonner";
 import { useFormat } from "@/hooks/use-format";
 import { formatCurrency } from "@/lib/currency";
 import { SignatureCanvas } from "@/components/ui/signature-canvas";
-import { getErrorMessage } from "@/lib/error-utils";
+import { getApiErrorMessage, getErrorMessage } from "@/lib/error-utils";
+
+type PublicProposalItem = {
+  id?: string;
+  title: string;
+  description?: string | null;
+  quantity: number;
+  unitPrice: number;
+  isOptional?: boolean;
+  isSelected?: boolean;
+};
+
+type PublicProposal = {
+  id: string;
+  proposalNo?: string | null;
+  title: string;
+  status: string;
+  currency?: string;
+  locale?: string;
+  createdAt: string;
+  validUntil: string;
+  subtotal: number;
+  estimatedTax: number;
+  clientSignatureBase64?: string | null;
+  client?: { name?: string | null; email?: string | null } | null;
+  items?: PublicProposalItem[];
+  richSections?: Array<{ title?: string; body?: string; mediaUrl?: string }>;
+  richMedia?: Array<{ title?: string; url?: string; kind?: string }>;
+  billingMilestones?: Array<{ id?: string; title: string; description?: string | null; dueDate?: string | null; amount: number; status?: string }>;
+};
 
 export default function PublicProposalPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);  
   const { fCurrency, currency, locale } = useFormat();
-  const [proposal, setProposal] = useState<any>(null);
-  const [items, setItems] = useState<any[]>([]);
+  const [proposal, setProposal] = useState<PublicProposal | null>(null);
+  const [items, setItems] = useState<PublicProposalItem[]>([]);
   const [signatureBase64, setSignatureBase64] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +94,7 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
     .filter((item) => !item.isOptional || item.isSelected)
     .reduce((sum, item) => sum + Number(item.quantity) * Number(item.unitPrice), 0);
 
-  const calculatedTax = proposal?.subtotal > 0
+  const calculatedTax = proposal && proposal.subtotal > 0
     ? subtotal * (Number(proposal.estimatedTax) / Number(proposal.subtotal))
     : 0;
 
@@ -162,7 +191,7 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
       }
 
       // Update local state to reflect accepted status
-      setProposal({ ...proposal, status: "ACCEPTED", clientSignatureBase64: signatureBase64 });
+      setProposal((prev) => (prev ? { ...prev, status: "ACCEPTED", clientSignatureBase64: signatureBase64 } : prev));
       setShowConfirmModal(false);
       toast.success("Proposal successfully signed and accepted!");
       
@@ -194,12 +223,12 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
       const payload = await res.json().catch(() => null);
 
       if (!res.ok) {
-        const message = (payload as any)?.error || (payload as any)?.message || "Failed to submit feedback. Please try again.";
+        const message = getApiErrorMessage(payload, getErrorMessage(payload, "Failed to submit feedback. Please try again."));
         throw new Error(message);
       }
 
       // Optimistic UI Update
-      setProposal({ ...proposal, status: 'REVISION_REQUESTED' });
+      setProposal((prev) => (prev ? { ...prev, status: 'REVISION_REQUESTED' } : prev));
       setIsDeclineModalOpen(false);
       toast.success("Feedback sent! We'll review and get back to you shortly.");
     } catch (error: unknown) {
@@ -247,10 +276,10 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
               </div>
             </div>
 
-            {proposal.richSections?.length > 0 ? (
+            {(proposal.richSections?.length ?? 0) > 0 ? (
               <div data-section-name="Highlights" className="space-y-5 mb-10">
                 <h3 className="text-lg font-bold text-zinc-900">Proposal Highlights</h3>
-                {proposal.richSections.map((section: any, idx: number) => (
+                {(proposal.richSections ?? []).map((section, idx: number) => (
                   <div key={`${section.title}-${idx}`} className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
                     <p className="text-sm font-bold text-zinc-900">{section.title}</p>
                     {section.body ? <p className="text-sm text-zinc-600 mt-2 whitespace-pre-wrap">{section.body}</p> : null}
@@ -268,7 +297,7 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
             <div data-section-name="Scope & Deliverables" className="space-y-6 mb-12">
               <h3 className="text-lg font-bold text-zinc-900">Scope of Work & Investment</h3>
               <div className="space-y-4">
-                {items.map((item: any, i: number) => {
+                {items.map((item, i: number) => {
                   const isAcceptedOrInvoiced = proposal.status === "ACCEPTED" || proposal.status === "INVOICED" || proposal.status === "REVISION_REQUESTED";
                   return (
                     <div key={i} className={`p-4 bg-zinc-50 rounded-xl flex items-start gap-4 border transition-all ${
@@ -311,7 +340,7 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
                 <h3 className="text-lg font-bold text-zinc-900">Billing Schedule</h3>
                 <p className="text-sm text-zinc-500">Payments are structured based on progress milestones, invoiced upon completion of deliverables:</p>
                 <div className="space-y-4">
-                  {proposal.billingMilestones.map((milestone: any, i: number) => (
+                  {(proposal.billingMilestones ?? []).map((milestone, i: number) => (
                     <div key={i} className="p-4 border border-zinc-200 bg-zinc-50 rounded-xl flex justify-between gap-4">
                       <div>
                         <p className="font-bold text-zinc-900">{milestone.title}</p>
@@ -342,7 +371,7 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
               <div data-section-name="Attached Media" className="space-y-4 mb-12">
                 <h3 className="text-lg font-bold text-zinc-900">Rich Media</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {proposal.richMedia.map((media: any, idx: number) => (
+                  {(proposal.richMedia ?? []).map((media, idx: number) => (
                     <a
                       key={`${media.url}-${idx}`}
                       href={media.url}

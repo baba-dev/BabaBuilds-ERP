@@ -61,6 +61,13 @@ type TaxLink = {
   };
 };
 
+type TaxOpsPayload = {
+  error?: string;
+  links?: TaxLink[];
+  acknowledgment?: { message?: string; batch?: { successCount?: number; errorCount?: number } };
+  diagnostics?: Array<{ rawData?: Record<string, unknown>; status?: string; message?: string }>;
+};
+
 export function TaxComplianceOps() {
   const [entityType, setEntityType] = useState<string>('RETURN_ACKNOWLEDGMENT');
   const [entityKey, setEntityKey] = useState('');
@@ -94,7 +101,7 @@ export function TaxComplianceOps() {
     try {
       const params = new URLSearchParams({ entityType, entityKey: entityKey.trim() });
       const res = await fetch(`/api/tax/document-links?${params.toString()}`, { cache: 'no-store' });
-      const payload = (await res.json().catch(() => null)) as any;
+      const payload = (await res.json().catch(() => null)) as TaxOpsPayload | null;
       if (!res.ok) throw new Error(payload?.error || 'Failed to load tax links');
 
       setLinks(Array.isArray(payload?.links) ? payload.links : []);
@@ -124,7 +131,7 @@ export function TaxComplianceOps() {
           notes,
         }),
       });
-      const payload = (await res.json().catch(() => null)) as any;
+      const payload = (await res.json().catch(() => null)) as TaxOpsPayload | null;
       if (!res.ok) throw new Error(payload?.error || 'Failed to attach tax link');
 
       toast.success(payload?.acknowledgment?.message ?? 'Tax link saved');
@@ -145,7 +152,7 @@ export function TaxComplianceOps() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ linkId }),
       });
-      const payload = (await res.json().catch(() => null)) as any;
+      const payload = (await res.json().catch(() => null)) as TaxOpsPayload | null;
       if (!res.ok) throw new Error(payload?.error || 'Failed to remove link');
       toast.success(payload?.acknowledgment?.message ?? 'Tax link removed');
       await loadLinks();
@@ -211,7 +218,7 @@ export function TaxComplianceOps() {
         body: JSON.stringify({ templateType, sourceName, rows }),
       });
 
-      const payload = (await res.json().catch(() => null)) as any;
+      const payload = (await res.json().catch(() => null)) as TaxOpsPayload | null;
       if (!res.ok) throw new Error(payload?.error || 'Failed to persist import diagnostics');
 
       const counts = payload?.acknowledgment?.batch;
@@ -219,7 +226,7 @@ export function TaxComplianceOps() {
         `${payload?.acknowledgment?.message ?? 'Diagnostics saved'} (${counts?.successCount ?? 0} success / ${counts?.errorCount ?? 0} error)`,
       );
       if (Array.isArray(payload?.diagnostics)) {
-        setImportPreview(payload.diagnostics.map((d: any) => ({ ...d.rawData, _status: d.status, _message: d.message })));
+        setImportPreview(payload.diagnostics.map((d) => ({ ...d.rawData, _status: d.status, _message: d.message })));
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to persist diagnostics');

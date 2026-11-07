@@ -11,6 +11,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { withPermission, RbacDeniedError, rbacDeniedResponse } from "@/lib/rbac";
 import { ROLE_LABELS, isValidBusinessRole } from "@/lib/permissions";
+import type { Prisma } from "@prisma/client";
 
 export async function GET(req: Request) {
   try {
@@ -32,7 +33,7 @@ export async function GET(req: Request) {
     const eventType = searchParams.get("eventType") ?? undefined;
     const skip = (page - 1) * limit;
 
-    const where: any = { workspaceId };
+    const where: Prisma.RbacAuditLogWhereInput = { workspaceId };
     if (eventType) where.eventType = eventType;
 
     const [logs, total] = await Promise.all([

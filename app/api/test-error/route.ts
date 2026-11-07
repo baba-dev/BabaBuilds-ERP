@@ -7,7 +7,7 @@ export async function GET(req: Request) {
   // We trigger an intentional backend error to test the global error boundary and AI Logger
   try {
     // Simulating a deep backend failure (e.g. Prisma Error or undefined variable)
-    const faultyObject: any = null;
+    const faultyObject = null as unknown as { crash(): never };
     
     // This will throw a TypeError: Cannot read properties of null (reading 'crash')
     const result = faultyObject.crash();
