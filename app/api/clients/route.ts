@@ -1,3 +1,4 @@
+import type { Session } from "next-auth";
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
@@ -80,7 +81,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  let session: any = null;
+  let session: Session | null = null;
   try {
     // 1. SECURITY LOCK
     session = await getServerSession(authOptions);

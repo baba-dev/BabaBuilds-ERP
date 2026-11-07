@@ -112,7 +112,7 @@ export async function PATCH(
         action: requestedStatus === 'REVISION_REQUESTED' ? 'proposal_revision_requested' : 'proposal_status_updated',
         status: 'SUCCESS',
         workspaceId: fullProposal.workspaceId || '',
-        actor: { email: (fullProposal as any).client?.email || 'Anonymous Client' },
+        actor: { email: fullProposal.client?.email || 'Anonymous Client' },
         entity: { type: 'proposal', id: fullProposal.id || trimmedToken },
         ipAddress: clientIp === 'unknown' ? null : clientIp,
         userAgent: request.headers.get('user-agent') || null,

@@ -75,7 +75,7 @@ export async function POST(request: Request) {
 
     // RBAC: creating an expense requires expenses.create permission
     const perm = await withPermission(userId, workspaceId, 'expenses.create');
-    if (!perm.granted) return perm.response as any;
+    if (!perm.granted) return perm.response;
 
     const formData = await request.formData();
     
@@ -149,7 +149,7 @@ export async function POST(request: Request) {
       (returnPeriodKeyRaw && returnPeriodKeyRaw.trim() !== '');
     if (hasWithholdingPayload) {
       const whPerm = await withPermission(userId, workspaceId, 'tax.withholding.record');
-      if (!whPerm.granted) return whPerm.response as any;
+      if (!whPerm.granted) return whPerm.response;
     }
 
     // Extract the file

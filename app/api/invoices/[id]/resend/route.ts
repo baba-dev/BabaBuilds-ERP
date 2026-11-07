@@ -51,7 +51,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     // 5. TRANSMIT EMAIL (Security: resolveSafeIp is internal to sendEmail)
-    const billedAmount = (invoice as any).grandTotal || invoice.totalAmount;
+    const billedAmount = Number(invoice.totalAmount);
     const formattedTotal = billedAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const pdfFilename = invoice.pdfPath.split('/').pop() || `${invoice.invoiceNumber.replace(/\//g, '_')}.pdf`;
     const invoiceEmail = buildInvoiceDeliveryEmail({

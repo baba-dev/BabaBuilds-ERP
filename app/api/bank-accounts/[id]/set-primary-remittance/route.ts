@@ -14,7 +14,7 @@ export async function POST(request: Request, ctx: { params: Promise<{ id: string
   if (!actorUserId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const perm = await withPermission(actorUserId, workspaceId, 'workspace.manage_settings');
-  if (!perm.granted) return perm.response as any;
+  if (!perm.granted) return perm.response;
 
   const { id } = await ctx.params;
 

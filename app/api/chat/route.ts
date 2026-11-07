@@ -633,9 +633,9 @@ async function getClientLedger(clientName: string, workspaceId: string) {
       client: client.name,
       status: client.status,
       recentInvoices: client.invoices,
-      activeRetainers: client.retainers.map((r: any) => ({
-        serviceName: r.items.map((i: any) => i.title).join(', ') || 'Retainer',
-        amount: r.items.reduce((acc: number, i: any) => acc + (i.quantity * Number(i.unitPrice)), 0),
+      activeRetainers: client.retainers.map((r) => ({
+        serviceName: r.items.map((i) => i.title).join(', ') || 'Retainer',
+        amount: r.items.reduce((acc: number, i) => acc + (i.quantity * Number(i.unitPrice)), 0),
         status: r.status,
       })),
       recentProposals: client.proposals,
@@ -1002,7 +1002,7 @@ async function updateRetainerStatus(
 
     return JSON.stringify({
       success: true,
-      message: `Retainer ${retainer.items.map((i: any) => i.title).join(', ')} for ${client.name} is now ${status.toUpperCase()}.`,
+      message: `Retainer ${retainer.items.map((i) => i.title).join(', ')} for ${client.name} is now ${status.toUpperCase()}.`,
     });
   } catch {
     return JSON.stringify({ error: 'Failed to update retainer status.' });
@@ -1024,8 +1024,8 @@ async function getActiveRetainers(workspaceId: string) {
     return JSON.stringify(
       retainers.map((r) => ({
         client: r.client.name,
-        service: (r as any).items?.map((i: any) => i.title).join(', ') || 'Retainer Services',
-        amount: `₹${(r as any).items?.reduce((acc: number, i: any) => acc + (i.quantity * Number(i.unitPrice)), 0)}`,
+        service: r.items?.map((i) => i.title).join(', ') || 'Retainer Services',
+        amount: `₹${r.items?.reduce((acc: number, i) => acc + (i.quantity * Number(i.unitPrice)), 0)}`,
         frequency: r.frequency,
         nextBilling: r.nextBillingDate.toISOString().split('T')[0],
       })),
