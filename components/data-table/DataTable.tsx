@@ -3,22 +3,24 @@
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Pin } from "lucide-react";
 import {
-  type ColumnDef,
   type ColumnFiltersState,
   type ColumnPinningState,
+  type ColumnVisibilityState,
   flexRender,
+  type PaginationState,
+  type RowSelectionState,
+  type SortingState,
+} from "@tanstack/react-table";
+import {
   getCoreRowModel,
   getFacetedRowModel,
   getFacetedUniqueValues,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  type PaginationState,
-  type RowSelectionState,
-  type SortingState,
-  type VisibilityState,
-  useReactTable,
-} from "@tanstack/react-table";
+  type LegacyColumnDef,
+  useLegacyTable,
+} from "@tanstack/react-table/legacy";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -48,14 +50,14 @@ type Props<T> = {
   onStateChange?: {
     setSorting?: (updater: SortingState | ((old: SortingState) => SortingState)) => void;
     setColumnFilters?: (updater: ColumnFiltersState | ((old: ColumnFiltersState) => ColumnFiltersState)) => void;
-    setColumnVisibility?: (updater: VisibilityState | ((old: VisibilityState) => VisibilityState)) => void;
+    setColumnVisibility?: (updater: ColumnVisibilityState | ((old: ColumnVisibilityState) => ColumnVisibilityState)) => void;
     setPagination?: (updater: PaginationState | ((old: PaginationState) => PaginationState)) => void;
     setRowSelection?: (updater: RowSelectionState | ((old: RowSelectionState) => RowSelectionState)) => void;
     setColumnPinning?: (updater: ColumnPinningState | ((old: ColumnPinningState) => ColumnPinningState)) => void;
   };
 };
 
-export function DataTable<T>({
+export function DataTable<T extends Record<string, any>>({
   columns,
   data,
   rowId,
@@ -78,7 +80,7 @@ export function DataTable<T>({
     initialSort ? [{ id: initialSort.columnId, desc: initialSort.direction === "desc" }] : [],
   );
   const [internalColumnFilters, setInternalColumnFilters] = useState<ColumnFiltersState>([]);
-  const [internalColumnVisibility, setInternalColumnVisibility] = useState<VisibilityState>({});
+  const [internalColumnVisibility, setInternalColumnVisibility] = useState<ColumnVisibilityState>({});
   const [internalPagination, setInternalPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [internalRowSelection, setInternalRowSelection] = useState<RowSelectionState>({});
   const [internalColumnPinning, setInternalColumnPinning] = useState<ColumnPinningState>({});
@@ -98,10 +100,11 @@ export function DataTable<T>({
     globalFilter: searchValue ?? "",
   };
 
-  const table = useReactTable({
+  // Preserve v8 table behavior while migrating shared table APIs to v9.
+  const table = useLegacyTable({
     data,
     columns: activeColumns.map((column) => {
-      const tableColumn: ColumnDef<T, unknown> = {
+      const tableColumn: LegacyColumnDef<T> = {
         id: column.id,
         accessorFn: column.accessor ?? (() => undefined),
         header: () => column.header,
@@ -112,7 +115,7 @@ export function DataTable<T>({
           className: column.className,
           headerClassName: column.headerClassName,
         },
-        sortingFn: column.sortAccessor
+        sortFn: column.sortAccessor
           ? (rowA, rowB) => {
               const aValue = column.sortAccessor?.(rowA.original);
               const bValue = column.sortAccessor?.(rowB.original);
@@ -223,7 +226,7 @@ export function DataTable<T>({
                               variant="ghost"
                               size="icon"
                               className={`h-6 w-6 transition-all duration-200 ${isPinned ? "text-indigo-600 dark:text-indigo-400" : "text-zinc-400 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-zinc-700 dark:hover:text-zinc-200"}`}
-                              onClick={() => header.column.pin(isPinned === "left" ? false : "left")}
+                              onClick={() => header.column.pin(isPinned === "start" ? false : "start")}
                               aria-label="Pin column"
                             >
                               <Pin className="h-3 w-3" />
