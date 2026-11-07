@@ -26,7 +26,7 @@ npx prisma db push
 
 Optionally seed compliance dictionaries: `npx ts-node prisma/seed.ts`
 
-**Note:** `npx prisma migrate dev` fails due to a broken migration (`20260407100000_invoice_status_enum` references `Invoice` before it exists in the shadow database). Use `npx prisma db push` instead for local development.
+**Note:** `npx prisma migrate dev` does not work (its shadow database is built from the migrations alone, which start from a baseline). Use `npx prisma db push` for local development. Every `schema.prisma` change also needs a migration: see `prisma/migrations/README.md`; `npm run check:migrations` (part of `ci:fast` and CI) fails if the schema and the migration history disagree.
 
 ### Running the app
 
@@ -40,7 +40,7 @@ Optionally seed compliance dictionaries: `npx ts-node prisma/seed.ts`
 
 | Command | Purpose |
 |---|---|
-| `npm run ci:fast` | **Run before pushing.** Local mirror of the CI gate: locales, lint, typecheck, demo-template coverage, full Vitest — in parallel (~30s), prints only failing output |
+| `npm run ci:fast` | **Run before pushing.** Local mirror of the CI gate: locales, lint, typecheck, demo-template coverage, migration history, full Vitest — in parallel (~50s), prints only failing output |
 | `npm run lint` | ESLint + KPI coverage check (0 errors; warnings are pre-existing) |
 | `npm run typecheck` | TypeScript compile check |
 | `npm run validate` | Full pre-merge: lint + typecheck + build |
@@ -52,7 +52,7 @@ Optionally seed compliance dictionaries: `npx ts-node prisma/seed.ts`
 ### Caveats
 
 - ESLint reports no errors and roughly 700 pre-existing warnings (mostly `no-explicit-any`). New code should not add warnings.
-- The Prisma migration history is broken; always use `npx prisma db push` for dev schema sync.
+- The migration history now applies cleanly from the baseline (verified by `npm run check:migrations`), but production and local dev databases are created with `npx prisma db push`; adopt migrations on such databases with `prisma migrate resolve --applied`, never by running the SQL (see `prisma/migrations/README.md`).
 - External services (Google OAuth, SMTP, Razorpay, Stripe, ClamAV, Cloudflare Turnstile) are all optional in development.
 - The SQLite database file is at `prisma/dev.db` (gitignored).
 
@@ -63,7 +63,7 @@ Optionally seed compliance dictionaries: `npx ts-node prisma/seed.ts`
 
 ### CI (GitHub Actions)
 
-- `CI` workflow (`.github/workflows/ci.yml`) runs in parallel: static checks, full Vitest, Prisma migration drift, production build, and a browser smoke job (advisory until `CI_SMOKE_BLOCKING=true`). The single required check is **`CI gate`**.
+- `CI` workflow (`.github/workflows/ci.yml`) runs in parallel: static checks, full Vitest, migration history vs schema (`check:migrations`), production build, and a browser smoke job (advisory until `CI_SMOKE_BLOCKING=true`). The single required check is **`CI gate`**.
 - Runners default to GitHub-hosted. Set repository variable `CI_RUNS_ON` to `["self-hosted","linux","x64","erp-ci"]` to use the self-hosted pool.
 - Deploy runs only after `CI` succeeds on a push to `main`, and deploys the exact validated commit.
 - Node is pinned in `.nvmrc` (22). Shared setup lives in `.github/actions/`.

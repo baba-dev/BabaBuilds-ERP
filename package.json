@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit",
     "validate": "npm run lint && npm run typecheck && npm run build",
     "check:locales": "node scripts/check-locales.js",
+    "check:migrations": "bash scripts/check-migrations.sh",
     "check:kpi-impact": "node scripts/check-dashboard-kpi-coverage.js",
     "audit:routes": "node scripts/route-integrity-report.mjs",
     "validate:demos": "npx tsx scripts/validate-demo-templates.ts",

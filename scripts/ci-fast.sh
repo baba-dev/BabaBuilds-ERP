@@ -7,7 +7,7 @@
 #   CI_FAST_SKIP="lint" npm run ci:fast   # skip checks by name (space separated)
 #
 # Tests that use the real Prisma client need prisma/dev.db; it is created on first run.
-# Not covered here (CI-only, slower): production build, Prisma migration drift, browser smoke.
+# Not covered here (CI-only, slower): production build, browser smoke.
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
@@ -17,9 +17,10 @@ declare -A COMMANDS=(
   [lint]="npm run --silent lint"
   [typecheck]="npm run --silent typecheck"
   [demos]="npm run --silent validate:demos"
+  [migrations]="npm run --silent check:migrations"
   [tests]="{ [ -f prisma/dev.db ] || npx prisma db push --skip-generate >/dev/null; } && npm test --silent"
 )
-ORDER=(locales lint typecheck demos tests)
+ORDER=(locales lint typecheck demos migrations tests)
 
 LOG_DIR="$(mktemp -d)"
 trap 'rm -rf "$LOG_DIR"' EXIT
