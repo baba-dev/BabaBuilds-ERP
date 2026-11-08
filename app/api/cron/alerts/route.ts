@@ -12,6 +12,7 @@
  * Add VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT to .env as well.
  */
 
+import { amountsOfItems } from '@/lib/retainers/pricing';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isCronAuthorized, unauthorizedCronResponse } from '@/lib/security/cron-auth';
@@ -116,22 +117,24 @@ export async function GET(request: Request) {
             lte: endOfDay(inAWeek),
           },
         },
-        include: { client: true },
+        include: { client: true, items: true },
       });
 
       for (const r of upcomingRetainers) {
+        const cycle = amountsOfItems(r.items).total;
+        const label = r.name || r.items[0]?.title || 'Retainer';
         await dispatchNotification({
           event: 'RENEWAL_ALERT',
           workspaceId: wid,
           data: {
             clientName: r.client.name,
-            serviceName: r.serviceName,
+            serviceName: label,
             renewalDate: format(r.nextBillingDate, 'dd MMM yyyy'),
-            amount: `${r.amount}`,
+            amount: `${r.currency} ${cycle.toFixed(2)}`,
             frequency: r.frequency,
           },
         });
-        results.push(`[RENEWAL_ALERT] ${r.client.name} – ${r.serviceName}`);
+        results.push(`[RENEWAL_ALERT] ${r.client.name} – ${label}`);
       }
 
       // ── 4. Task Deadline Alerts: tasks due within 7 days ───────────────

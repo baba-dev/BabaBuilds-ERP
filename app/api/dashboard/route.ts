@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { monthlyEquivalent } from '@/lib/retainers/schedule';
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
@@ -362,6 +363,8 @@ async function buildDashboardPayload(
         where: { workspaceId, status: "ACTIVE" },
         select: {
           items: { select: { quantity: true, unitPrice: true } },
+          frequency: true,
+          exchangeRate: true,
           nextBillingDate: true,
           createdAt: true,
         },
@@ -703,16 +706,14 @@ async function buildDashboardPayload(
       })
     : { amount: serializeMoney(0) };
 
+  // Monthly recurring revenue: per-cycle amount normalised to a month and converted to the base currency.
+  const retainerMonthly = (ret: (typeof retainers)[number]) =>
+    monthlyEquivalent(
+      ret.items?.reduce((acc: number, i) => acc + i.quantity * Number(i.unitPrice), 0) || 0,
+      ret.frequency,
+    ) * Number(ret.exchangeRate);
   const recurringRevenue = retainers.reduce(
-    (sum, ret) =>
-      sum.plus(
-        toDecimal(
-          ret.items?.reduce(
-            (acc: number, i) => acc + i.quantity * Number(i.unitPrice),
-            0,
-          ) || 0,
-        ),
-      ),
+    (sum, ret) => sum.plus(toDecimal(retainerMonthly(ret))),
     new Prisma.Decimal(0),
   );
   const arr = recurringRevenue.mul(12);
@@ -827,11 +828,7 @@ async function buildDashboardPayload(
   }
 
   const generatedMrrRows = retainers.flatMap((ret) => {
-    const amount =
-      ret.items?.reduce(
-        (acc: number, i) => acc + i.quantity * Number(i.unitPrice),
-        0,
-      ) || 0;
+    const amount = retainerMonthly(ret);
     if (!fyRange || !ret.createdAt) return [{ date: now, value: amount }];
     const activeMonths = [];
     for (let i = 0; i < 12; i++) {

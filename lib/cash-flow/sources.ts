@@ -97,6 +97,9 @@ export function retainerToForecastLines(args: {
     status: string;
     nextBillingDate: Date;
     serviceName: string;
+    endDate?: Date | null;
+    maxCycles?: number | null;
+    cyclesBilled?: number;
   };
   horizon: { startDate: Date; endDate: Date };
   scenarioTag: CashForecastScenarioTag;
@@ -105,7 +108,10 @@ export function retainerToForecastLines(args: {
 }): ForecastLineDraft[] {
   const { retainer, horizon, scenarioTag, collectionsDelayDays } = args;
   if (retainer.status !== "ACTIVE") return [];
-  const events = generateRecurringDates(retainer.nextBillingDate, retainer.frequency, horizon.endDate);
+  let events = generateRecurringDates(retainer.nextBillingDate, retainer.frequency, horizon.endDate);
+  // Respect the retainer's own end: an end date and/or a cycle limit stop future billing.
+  if (retainer.endDate) events = events.filter((d) => d <= retainer.endDate!);
+  if (retainer.maxCycles != null) events = events.slice(0, Math.max(0, retainer.maxCycles - (retainer.cyclesBilled ?? 0)));
   return events
     .filter((d) => d >= horizon.startDate && d <= horizon.endDate)
     .map((d) => {
@@ -318,7 +324,7 @@ export async function loadForecastSourceData(args: {
     prisma.retainer.findMany({
       where: { workspaceId, status: "ACTIVE", nextBillingDate: { lte: endDate } },
       orderBy: [{ nextBillingDate: "asc" }, { id: "asc" }],
-      select: { id: true, frequency: true, status: true, nextBillingDate: true, client: { select: { name: true } }, items: { select: { quantity: true, unitPrice: true } } },
+      select: { id: true, name: true, frequency: true, status: true, nextBillingDate: true, endDate: true, maxCycles: true, cyclesBilled: true, exchangeRate: true, client: { select: { name: true } }, items: { select: { quantity: true, unitPrice: true, taxRate: true } } },
     }),
     prisma.purchaseOrder.findMany({
       where: {
@@ -410,15 +416,19 @@ export async function loadForecastSourceData(args: {
       ])
     ),
     retainers: retainers.map((r) => {
-      const sum = r.items ? r.items.reduce((acc: number, item) => acc + (item.quantity * Number(item.unitPrice)), 0) : 0;
+      // Cash arrives as the invoice total (tax included), converted to the workspace base currency.
+      const sum = r.items.reduce((acc, item) => acc + item.quantity * Number(item.unitPrice) * (1 + (item.taxRate ?? 0)), 0);
       return {
         id: r.id,
         clientName: r.client.name,
-        amount: new Prisma.Decimal(sum),
+        amount: new Prisma.Decimal(sum).mul(r.exchangeRate).toDecimalPlaces(2),
         frequency: r.frequency,
         status: r.status,
         nextBillingDate: r.nextBillingDate,
-        serviceName: "Retainer Services",
+        serviceName: r.name || "Retainer",
+        endDate: r.endDate,
+        maxCycles: r.maxCycles,
+        cyclesBilled: r.cyclesBilled,
       };
     }),
     purchaseOrders,

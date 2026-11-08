@@ -1635,6 +1635,10 @@ model Invoice {
   bankTransactionSplits BankTransactionInvoiceSplit[]
   meteredUsages         MeteredUsage[]
 
+  // The retainer cycle that produced this invoice (null for everything else).
+  retainerId String?
+  retainer   Retainer? @relation("RetainerInvoices", fields: [retainerId], references: [id], onDelete: SetNull)
+
   // Security: Two different workspaces can use invoice number "001"
   @@unique([invoiceNumber, workspaceId])
   @@index([financialYear])
@@ -1643,6 +1647,7 @@ model Invoice {
   @@index([workspaceId, financialYear, status])
   @@index([workspaceId, clientId])
   @@index([workspaceId, invoiceDate])
+  @@index([workspaceId, retainerId])
 }
 
 /// One received payment against an invoice. Invoice.amountReceived/status are derived from the
@@ -2786,8 +2791,43 @@ model Retainer {
   mailBillingDomains  MailBillingDomain[]
   mailBillingSubscriptions MailBillingSubscription[]
 
+  // Rework: lifecycle, schedule limits and billing state.
+  name             String?
+  notes            String?
+  exchangeRate     Decimal   @default(1)
+  paymentTermsDays Int       @default(7)
+  emailInvoice     Boolean   @default(true)
+  endDate          DateTime?
+  maxCycles        Int?
+  cyclesBilled     Int       @default(0)
+  lastBilledAt     DateTime?
+  lastError        String?
+  lastErrorAt      DateTime?
+  cancelledAt      DateTime?
+  invoices         Invoice[]        @relation("RetainerInvoices")
+  events           RetainerEvent[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, nextBillingDate])
+  @@index([workspaceId, clientId])
+}
+
+/// Append-only history of a retainer (created, edited, paused, billed, failed, ...).
+model RetainerEvent {
+  id          String   @id @default(cuid())
+  workspaceId String
+  retainerId  String
+  retainer    Retainer @relation(fields: [retainerId], references: [id], onDelete: Cascade)
+  type        String
+  message     String?
+  metadata    String?
+  actorUserId String?
+  createdAt   DateTime @default(now())
+
+  @@index([retainerId, createdAt])
 }
 
 model RetainerItem {

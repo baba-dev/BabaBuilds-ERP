@@ -30,6 +30,7 @@ type InvoiceRow = {
   status: string;
   source: string;
   sourceProposalId: string | null;
+  retainerId: string | null;
   providerGateway: string | null;
   providerPaymentLinkId: string | null;
   sentAt: Date | null;
@@ -89,6 +90,7 @@ export function toListItem(row: InvoiceRow, now = new Date()): InvoiceListItemDt
         : null,
     source: row.source as InvoiceSourceValue,
     sourceProposalId: row.sourceProposalId,
+    retainerId: row.retainerId,
     paymentLinkGateway: row.providerGateway,
     hasPaymentLink: Boolean(row.providerPaymentLinkId),
     sentAt: row.sentAt ? row.sentAt.toISOString() : null,

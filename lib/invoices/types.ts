@@ -33,6 +33,7 @@ export type InvoiceListItemDto = {
   daysOverdue: number | null;
   source: InvoiceSourceValue;
   sourceProposalId: string | null;
+  retainerId: string | null;
   paymentLinkGateway: string | null;
   hasPaymentLink: boolean;
   sentAt: string | null;

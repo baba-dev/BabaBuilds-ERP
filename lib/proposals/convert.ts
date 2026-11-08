@@ -218,6 +218,7 @@ export async function convertProposal(args: ConvertArgs): Promise<ConvertResult>
               status: "ACTIVE",
               nextBillingDate: next,
               autoAppendMonth: true,
+              name: proposal.title,
               serviceName: proposal.title,
               sourceProposalId: proposal.id,
               items: {

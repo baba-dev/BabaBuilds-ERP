@@ -238,5 +238,13 @@ function SourceTag({ row }: { row: InvoiceListItemDto }) {
       </Link>
     );
   }
+  if (row.source === "RETAINER" && row.retainerId) {
+    return (
+      <Link href={`/retainers?retainer=${row.retainerId}`} className="inline-flex items-center gap-1 text-indigo-600 hover:underline dark:text-indigo-400">
+        <FileText className="size-3" aria-hidden />
+        {label}
+      </Link>
+    );
+  }
   return <span>{label}</span>;
 }
