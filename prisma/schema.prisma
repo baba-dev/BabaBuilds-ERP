@@ -756,6 +756,9 @@ model Workspace {
   filingCalendarRules     FilingCalendarRule[]
   taxObligations          TaxObligation[]
   taxObligationPeriods    TaxObligationPeriod[]
+  gstReturns              GstReturn[]
+  gstAdjustments          GstAdjustment[]
+  gstr2bEntries           Gstr2bEntry[]
   complianceTasks         ComplianceTask[]
   reportShares            ReportShare[]
   reportShareSnapshots    ReportShareSnapshot[]
@@ -1459,6 +1462,13 @@ model BusinessProfile {
   panNumber   String // Acts as Primary Tax ID
   udyamNumber String? // Acts as Secondary Business ID
   gstin       String? // Acts as the Regional Tax ID
+  // GST (India): supplier state (2-digit GST state code), registration scheme and filing cadence.
+  gstStateCode          String? // "27" = Maharashtra
+  gstRegistrationType   String   @default("REGULAR") // REGULAR | COMPOSITION | UNREGISTERED
+  gstFilingFrequency    String   @default("MONTHLY") // MONTHLY | QRMP (quarterly GSTR-1/3B)
+  gstPrevFyTurnover     Decimal? // aggregate turnover of the previous FY (drives HSN digits, late-fee caps)
+  gstRegisteredFrom     DateTime?
+  gstLutActive          Boolean  @default(true) // exports of services under a Letter of Undertaking (zero-rated, no IGST)
 
   // Banking
   bankName      String
@@ -1518,6 +1528,8 @@ model Client {
   address String
   country String
   taxId   String?
+  // GST: recipient state (2-digit GST state code). Needed for place of supply (CGST+SGST vs IGST).
+  gstStateCode String?
   email   String?
   phone   String?
   logoUrl String?
@@ -1640,6 +1652,10 @@ model Invoice {
   retainer   Retainer? @relation("RetainerInvoices", fields: [retainerId], references: [id], onDelete: SetNull)
   // Automatic reminders already sent for this invoice (retainer collections).
   reminderCount Int @default(0)
+
+  // GST: optional explicit overrides; when null the return engine derives them from the client + business state.
+  gstPlaceOfSupply String? // 2-digit state code, or "96" for exports
+  gstReverseCharge Boolean @default(false)
 
   // Security: Two different workspaces can use invoice number "001"
   @@unique([invoiceNumber, workspaceId])
@@ -2113,9 +2129,23 @@ model Expense {
   withholdingEvents WithholdingEvent[]
   taxableEvents     TaxableEvent[]
 
+  // GST on purchases (input tax credit). `amount` is the total paid including GST.
+  vendorGstin      String?
+  vendorInvoiceNo  String?
+  vendorStateCode  String?
+  hsnCode          String?
+  gstRate          Float?
+  cgstAmount       Decimal @default(0)
+  sgstAmount       Decimal @default(0)
+  igstAmount       Decimal @default(0)
+  cessAmount       Decimal @default(0)
+  // NONE (no GST on the bill) | ELIGIBLE | INELIGIBLE (blocked u/s 17(5)) | REVERSE_CHARGE
+  itcStatus        String  @default("NONE")
+
   @@index([date])
   @@index([category])
   @@index([workspaceId])
+  @@index([workspaceId, date])
 }
 
 model WithholdingEvent {
@@ -4633,4 +4663,81 @@ enum RemediationStatus {
   EXECUTING
   SUCCESS
   FAILED
+}
+
+
+/// A GST return the workspace has recorded (filed, or with a notified due-date extension / manual inputs).
+/// Return periods themselves are derived from the registration settings; a row exists only once there is state to keep.
+model GstReturn {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  returnType String // GSTR1 | IFF | GSTR3B | CMP08 | GSTR4 | GSTR9 | GSTR9C
+  periodKey  String // "2026-04" (month), "2026-Q1" (quarter of the FY, Apr-Jun = Q1) or "2025-26" (annual)
+  status     String @default("OPEN") // OPEN | FILED
+
+  extendedDueDate DateTime? // a notified extension, overrides the statutory date
+  filedAt         DateTime?
+  arn             String?
+  filedByUserId   String?
+  isNil           Boolean   @default(false)
+  lateFeePaid     Decimal   @default(0)
+  interestPaid    Decimal   @default(0)
+  notes           String?
+
+  // Frozen figures at the time of filing + manual inputs (GSTR-9 tables 10-16 etc.)
+  inputsJson   Json?
+  snapshotJson Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, returnType, periodKey])
+  @@index([workspaceId, status])
+}
+
+/// Manual ledger movements that do not come from an invoice or a bill: opening ITC balance, rule 42/43 reversals, etc.
+model GstAdjustment {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  periodKey String // month "2026-04"
+  kind      String // ITC_OPENING | ITC_REVERSAL_RULE_38 | ITC_REVERSAL_RULE_42_43 | ITC_REVERSAL_OTHER | ITC_REVERSED_CLAIMED_AGAIN | LIABILITY_ADJUSTMENT | CASH_PAID
+  igst      Decimal @default(0)
+  cgst      Decimal @default(0)
+  sgst      Decimal @default(0)
+  cess      Decimal @default(0)
+  notes     String?
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@index([workspaceId, periodKey])
+}
+
+/// A supplier invoice as reported in the portal's GSTR-2B, kept to reconcile against recorded purchases.
+model Gstr2bEntry {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  periodKey     String // return period of the 2B ("2026-04")
+  supplierGstin String
+  supplierName  String?
+  invoiceNumber String
+  invoiceDate   DateTime?
+  taxableValue  Decimal  @default(0)
+  igst          Decimal  @default(0)
+  cgst          Decimal  @default(0)
+  sgst          Decimal  @default(0)
+  cess          Decimal  @default(0)
+  itcAvailable  Boolean  @default(true)
+  reverseCharge Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([workspaceId, periodKey, supplierGstin, invoiceNumber])
+  @@index([workspaceId, periodKey])
 }

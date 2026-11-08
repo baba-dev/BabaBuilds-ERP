@@ -17,6 +17,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ResponsiveDialog } from "@/components/ResponsiveDialog";
 import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
+import { GST_STATES } from "@/lib/gst/states";
+import { validateGstin } from "@/lib/gst/gstin";
 import { getBustedUrl } from "@/lib/cache-buster";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { CLIENT_LOGO_ACCEPT_ATTR, CLIENT_LOGO_HELP_TEXT } from "@/lib/uploads/client-logo";
@@ -46,11 +48,12 @@ export default function ClientCRM() {
   // --- GLOBALIZATION ENGINE ---
   const { 
     taxLabel = "Tax", 
-    taxIdLabel = "Tax ID" 
+    taxIdLabel = "Tax ID",
+    countryCode: workspaceCountry = "IN"
   } = useFormat();
 
   const [formData, setFormData] = useState({
-    name: "", address: "", country: "", taxId: "", email: "", phone: "", isExport: true
+    name: "", address: "", country: "", taxId: "", gstStateCode: "", email: "", phone: "", isExport: true
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
 
@@ -143,6 +146,7 @@ export default function ClientCRM() {
       address: client.address || "",
       country: client.country || "",
       taxId: client.taxId || "",
+      gstStateCode: client.gstStateCode || "",
       email: client.email || "",
       phone: client.phone || "",
       isExport: client.isExport
@@ -151,7 +155,7 @@ export default function ClientCRM() {
   };
 
   const resetForm = () => {
-    setFormData({ name: "", address: "", country: "", taxId: "", email: "", phone: "", isExport: true });
+    setFormData({ name: "", address: "", country: "", taxId: "", gstStateCode: "", email: "", phone: "", isExport: true });
     setLogoFile(null);
     setIsEditing(false);
     setSelectedClientId(null);
@@ -209,6 +213,7 @@ export default function ClientCRM() {
           address: client.address || "",
           country: client.country || "",
           taxId: client.taxId || "",
+          gstStateCode: client.gstStateCode || "",
           email: client.email || "",
           phone: client.phone || "",
           isExport: client.isExport,
@@ -335,6 +340,25 @@ export default function ClientCRM() {
                         />
                       </FormFieldRow>
                     </div>
+                    {workspaceCountry === "IN" && /^india$|^in$/i.test(formData.country.trim() || "India") ? (() => {
+                      const gstin = validateGstin(formData.taxId);
+                      const derived = gstin.valid ? gstin.stateCode : "";
+                      return (
+                        <FormFieldRow htmlFor="client-gst-state" label={t("gst_state")} optionalText={t("optional")}>
+                          <select
+                            id="client-gst-state"
+                            value={derived || formData.gstStateCode}
+                            disabled={!!derived}
+                            onChange={e => setFormData({...formData, gstStateCode: e.target.value})}
+                            className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring/30 disabled:opacity-70"
+                          >
+                            <option value="">{t("gst_state_none")}</option>
+                            {GST_STATES.map(st => <option key={st.code} value={st.code}>{st.code} · {st.name}</option>)}
+                          </select>
+                          <p className="mt-1 text-xs text-muted-foreground">{derived ? t("gst_state_from_gstin") : t("gst_state_hint")}</p>
+                        </FormFieldRow>
+                      );
+                    })() : null}
                   </div>
                 </FormSection>
 

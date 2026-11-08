@@ -30,7 +30,7 @@ vi.mock('@/app/(dashboard)/tax/TaxDashboardClient', () => ({
     React.createElement('div', { 'data-tax-enabled': String(taxAdvancedEnabled) }),
 }));
 
-describe('tax dashboard server composition', () => {
+describe('income tax page server composition', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -40,7 +40,7 @@ describe('tax dashboard server composition', () => {
     getActiveWorkspaceIdForUserMock.mockResolvedValue('ws_1');
     isModuleEnabledMock.mockResolvedValue(true);
 
-    const { default: TaxDashboardPage } = await import('@/app/(dashboard)/tax/page');
+    const { default: TaxDashboardPage } = await import('@/app/(dashboard)/tax/income-tax/page');
     const element = await TaxDashboardPage();
 
     expect(getActiveWorkspaceIdForUserMock).toHaveBeenCalledWith('user_1');
@@ -52,7 +52,7 @@ describe('tax dashboard server composition', () => {
     getServerSessionMock.mockResolvedValue({ user: { id: 'user_1' } });
     getActiveWorkspaceIdForUserMock.mockResolvedValue(null);
 
-    const { default: TaxDashboardPage } = await import('@/app/(dashboard)/tax/page');
+    const { default: TaxDashboardPage } = await import('@/app/(dashboard)/tax/income-tax/page');
     const element = await TaxDashboardPage();
 
     expect(isModuleEnabledMock).not.toHaveBeenCalled();

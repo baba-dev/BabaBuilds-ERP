@@ -22,6 +22,15 @@ export type ExpenseDto = {
   amount: number;
   description: string | null;
   receiptUrl: string | null;
+  /** GST on the bill (purchase side). */
+  itcStatus?: string;
+  vendorGstin?: string | null;
+  vendorInvoiceNo?: string | null;
+  hsnCode?: string | null;
+  gstRate?: number | null;
+  igstAmount?: number | string;
+  cgstAmount?: number | string;
+  sgstAmount?: number | string;
 };
 
 export type ClientDto = {
@@ -30,6 +39,8 @@ export type ClientDto = {
   address: string;
   country: string;
   taxId: string | null;
+  /** GST state code (2 digits) used for place of supply. */
+  gstStateCode?: string | null;
   email: string | null;
   phone: string | null;
   isExport: boolean;

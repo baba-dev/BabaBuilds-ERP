@@ -1,5 +1,6 @@
 import type { Session } from "next-auth";
 import { getClientRetainerSummaries } from '@/lib/retainers/client-summary';
+import { resolveClientGstState } from '@/lib/gst/client-state';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
@@ -123,6 +124,7 @@ export async function POST(request: Request) {
     const address = formData.get('address') as string;
     const country = formData.get('country') as string;
     const taxId = formData.get('taxId') as string;
+    const gstStateCode = resolveClientGstState(formData.get('gstStateCode'), taxId);
     const email = formData.get('email') as string;
     const phone = formData.get('phone') as string;
     const isExport = formData.get('isExport') === 'true';
@@ -162,6 +164,7 @@ export async function POST(request: Request) {
         workspaceId: workspaceId, // <-- Multi-tenant lock
         name, address, country,
         taxId: taxId || null,
+        gstStateCode,
         email: email || null,
         phone: phone || null,
         isExport,
