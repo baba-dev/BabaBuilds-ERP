@@ -78,7 +78,6 @@ export const canonicalNavItems: CanonicalNavItem[] = assertUniqueAppNavItemKeys(
   { key: "reporting_center", path: "/reporting", icon: ChartColumnBig, group: "finance", keywords: ["reports", "analytics", "insights"], badge: "New", requiresModule: "REPORTING_CENTER", requiresPermission: "reporting_center.view" },
   { key: "ar_collections", path: "/ar-collections", icon: Siren, group: "finance", keywords: ["collections", "receivables", "follow up"], badge: "New", requiresModule: "AR_COLLECTIONS" },
   { key: "savings_tax", path: "/tax", icon: ShieldCheck, group: "finance", keywords: ["gst", "compliance", "tax"] },
-  { key: "tax_advanced", path: "/tax/advanced", icon: ShieldCheck, group: "finance", keywords: ["tax", "advanced", "compliance"], badge: "New", requiresModule: "TAX_ADVANCED" },
   { key: "ai_reconciliation", path: "/reconciliation", icon: Sparkles, group: "finance", keywords: ["bank", "matching", "ledger"], badge: "AI" },
   { key: "invoices_and_earnings", path: "/income", icon: ReceiptText, group: "sales", keywords: ["billing", "revenue", "invoices"] },
   { key: "ca_compliance", path: "/ca-portal", icon: Landmark, group: "compliance", keywords: ["chartered", "filings", "audit"] },

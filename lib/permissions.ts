@@ -156,6 +156,13 @@ export const PERMISSION_KEYS = [
   'tax.readiness.run',     // run tax return readiness / prefill pipelines
   'tax.withholding.record', // record withholding on payments/expenses (creates WithholdingEvent)
   'tax.withholding.ingest', // ingest withholding certificates / post tax credits from uploads
+
+  // CA compliance (calendar, readiness, requests, sign-off, evidence pack)
+  'ca.view',
+  'ca.manage',             // edit the compliance calendar and the entity setup
+  'ca.request',            // raise and answer document requests and queries
+  'ca.signoff',            // High-risk: sign off a period or a year
+  'ca.export',             // High-risk: download the evidence pack and registers
   
   // Reports
   'reports.view',
@@ -260,6 +267,7 @@ export const PERMISSION_MODULE_GROUPS: { module: string; label: string; keys: Pe
       'tax.withholding.ingest',
     ],
   },
+  { module: 'ca', label: 'CA Compliance', keys: ['ca.view', 'ca.manage', 'ca.request', 'ca.signoff', 'ca.export'] },
   { module: 'reports',         label: 'Reports',          keys: ['reports.view', 'reports.export'] },
   {
     module: 'reporting_center',
@@ -358,6 +366,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'accounting.view', 'accounting.post',
     'reconciliation.import', 'reconciliation.commit',
     'tax.view',
+    'ca.view', 'ca.manage', 'ca.request', 'ca.signoff', 'ca.export',
     'tax.manage',
     'tax.edit',
     'tax.approve',
@@ -418,6 +427,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'accounting.view', 'accounting.post',
     'reconciliation.import', 'reconciliation.commit',
     'tax.view',
+    'ca.view', 'ca.manage', 'ca.request', 'ca.signoff', 'ca.export',
     'tax.manage',
     'tax.edit',
     'tax.approve',
@@ -477,6 +487,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'accounting.view',    // can view but NOT post
     'reconciliation.import', 'reconciliation.commit',
     'tax.view',
+    'ca.view', 'ca.manage', 'ca.request', 'ca.export',
     'tax.edit',
     'tax.file',
     'tax.readiness.view',
@@ -522,6 +533,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'cash_flow.view',
     'accounting.view',         // view only, NOT post
     'tax.view',
+    'ca.view', 'ca.request', 'ca.signoff', 'ca.export',
     'tax.file',
     'tax.readiness.view',
     'reports.view',            // view reports but NOT bulk export

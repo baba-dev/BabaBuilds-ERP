@@ -4547,6 +4547,407 @@
       "TAX_EXEMPT_CLIENT": "Este cliente está marcado como exento, así que no se cobra impuesto. Cámbialo en el cliente si es nacional."
     }
   },
+  "CaCompliance": {
+    "title": "Cumplimiento con tu CA",
+    "description": "Lleva el año de los libros a las declaraciones presentadas, junto con tu contador.",
+    "nav": "Secciones",
+    "fy": "Ejercicio fiscal",
+    "tabs": {
+      "overview": "Resumen",
+      "calendar": "Calendario",
+      "readiness": "Preparación",
+      "requests": "Solicitudes",
+      "evidence": "Evidencias",
+      "setup": "Ajustes y equipo"
+    },
+    "noAccess": {
+      "title": "No tienes acceso a Cumplimiento con tu CA",
+      "body": "Pide a un propietario del espacio de trabajo el rol de Contador o Responsable de finanzas."
+    },
+    "error": {
+      "title": "Algo salió mal",
+      "body": "No se pudo cargar el cumplimiento. Inténtalo de nuevo; tus datos están a salvo.",
+      "reference": "Referencia {id}",
+      "retry": "Reintentar"
+    },
+    "state": {
+      "FILED": "Presentado",
+      "OVERDUE": "Vencido",
+      "DUE_SOON": "Vence pronto",
+      "READY": "Listo para presentar",
+      "IN_PROGRESS": "En curso",
+      "UPCOMING": "Próximo",
+      "NOT_APPLICABLE": "No aplica"
+    },
+    "kinds": {
+      "ADVANCE_TAX": "Impuesto anticipado",
+      "TDS_DEPOSIT": "Depósito de TDS",
+      "TDS_RETURN_24Q": "Declaración TDS 24Q (salarios)",
+      "TDS_RETURN_26Q": "Declaración TDS 26Q (otros pagos)",
+      "FORM_16": "Formulario 16 a empleados",
+      "PF": "Fondo de previsión",
+      "ESI": "Contribución ESI",
+      "ITR": "Declaración del impuesto sobre la renta",
+      "TAX_AUDIT": "Informe de auditoría fiscal (3CD)",
+      "ROC_AOC4": "Estados financieros (AOC-4)",
+      "ROC_MGT7": "Declaración anual (MGT-7)",
+      "DIR3_KYC": "KYC de directores (DIR-3)",
+      "ROC_FORM11": "Declaración anual de la LLP (Form 11)",
+      "ROC_FORM8": "Estado de cuentas de la LLP (Form 8)",
+      "YEAR_CLOSE": "Cerrar los libros del año"
+    },
+    "overview": {
+      "setupNeeded": {
+        "title": "Cuéntanos qué tipo de contribuyente eres",
+        "body": "El calendario depende de tu tipo de entidad, tu régimen fiscal y de si retienes impuestos. Lleva un minuto.",
+        "cta": "Configurar"
+      },
+      "progress": "{filed} de {total} presentados",
+      "progressTitle": "Avance del año, FY {fy}",
+      "next": "Próximo vencimiento",
+      "nextNone": "No queda nada por presentar este año",
+      "overdue": "Vencidos",
+      "dueSoon": "Vencen en 14 días",
+      "signedOff": "Firmados",
+      "figures": {
+        "title": "El año en cifras",
+        "hint": "Sin GST, según tus libros a día de hoy.",
+        "billed": "Facturado",
+        "invoices": "{count} facturas",
+        "received": "Cobrado",
+        "expenses": "Gastos",
+        "payroll": "Nómina",
+        "itc": "Crédito de entrada reclamado",
+        "tdsCredits": "TDS retenido por clientes",
+        "tdsDeducted": "Retuviste {amount} y depositaste {deposited}"
+      },
+      "estimate": {
+        "title": "Estimación del impuesto sobre la renta",
+        "booksBasis": "Según el beneficio de tus libros",
+        "presumptiveBasis": "Con el régimen presuntivo",
+        "taxable": "Renta imponible",
+        "tax": "Impuesto estimado",
+        "payable": "Tras créditos de TDS",
+        "note": "Una estimación para planificar, no un consejo. No se infieren las deducciones del régimen antiguo.",
+        "open": "Abrir el planificador de impuestos",
+        "none": "Configura tu entidad para ver una estimación."
+      },
+      "readiness": {
+        "title": "Preparación de los libros",
+        "open": "Ver detalles",
+        "areas": {
+          "sales": "Facturas de venta",
+          "purchases": "Compras y facturas de proveedores",
+          "bank": "Conciliación bancaria",
+          "gst": "Declaraciones de GST",
+          "tds": "TDS",
+          "payroll": "Nómina",
+          "receivables": "Cuentas por cobrar"
+        },
+        "status": {
+          "OK": "Todo en orden",
+          "ATTENTION": "Requiere atención",
+          "BLOCKED": "Bloqueado",
+          "NOT_APPLICABLE": "No aplica"
+        }
+      },
+      "close": {
+        "title": "Firma de cierre del año",
+        "body": "Cuando nada impida cerrar los libros y las declaraciones estén presentadas, tu contador firma el año.",
+        "signed": "Firmado por {name} el {date}",
+        "signedToast": "Año firmado",
+        "undo": "Quitar la firma",
+        "blocked": "Resuelve primero {count} bloqueos",
+        "cta": "Firmar el año",
+        "needsCa": "Tu contador o un propietario firma el año."
+      },
+      "presumptive": {
+        "title": "Tributación presuntiva y umbrales",
+        "confirm": "Tu CA confirma si tu actividad cumple los requisitos; esto compara tus ingresos con los límites.",
+        "ada": "Sección 44ADA (profesiones)",
+        "ad": "Sección 44AD (negocios)",
+        "notEntity": "No disponible para este tipo de entidad.",
+        "within": "Dentro del límite de {limit}.",
+        "withinLowCash": "Dentro de {high} si el efectivo es del 5% o menos.",
+        "above": "Por encima del límite.",
+        "deemed": "Renta presunta {amount}",
+        "audit": "Auditoría fiscal y registro de GST"
+      },
+      "taxAudit": {
+        "LIKELY": "Es probable una auditoría fiscal: los ingresos superan ₹1 crore.",
+        "CHECK": "Comprueba si aplica una auditoría fiscal: los ingresos superan ₹50 lakh.",
+        "UNLIKELY": "Es improbable una auditoría fiscal con esta facturación."
+      },
+      "gstHint": {
+        "REGISTERED": "Registrado en GST.",
+        "REGISTRATION_MAY_BE_REQUIRED": "La facturación supera el umbral de registro de ₹20 lakh y no estás registrado. Consulta a tu CA.",
+        "BELOW_THRESHOLD": "La facturación está por debajo del umbral de registro de GST.",
+        "NOT_APPLICABLE": "GST no aplica a este espacio de trabajo."
+      }
+    },
+    "calendar": {
+      "groupLabel": "Filtrar por área",
+      "statusLabel": "Filtrar por estado",
+      "filters": {
+        "all": "Todo",
+        "GST": "GST",
+        "TDS": "TDS",
+        "INCOME_TAX": "Impuesto sobre la renta",
+        "PAYROLL": "PF y ESI",
+        "ROC": "Derecho societario",
+        "YEAR": "Cierre del año"
+      },
+      "status": {
+        "all": "Cualquier estado",
+        "open": "Abiertos",
+        "overdue": "Vencidos",
+        "filed": "Presentados"
+      },
+      "empty": "No hay nada en el calendario con estos filtros.",
+      "gstLocked": "Se presenta en el espacio de GST",
+      "signedOff": "Firmado",
+      "advance": "{percent}% del impuesto del año",
+      "heldBy": "Retenido por: {what}",
+      "filedOn": "Presentado el {date}",
+      "daysLate": "{count} días de retraso",
+      "daysLeft": "Quedan {count} días",
+      "extended": "Prorrogado al {date}",
+      "seeReadiness": "Ver qué lo está frenando"
+    },
+    "drawer": {
+      "due": "vence el {date}",
+      "amountDue": "unos {amount}",
+      "status": "Estado",
+      "statuses": {
+        "NOT_STARTED": "Sin empezar",
+        "IN_PROGRESS": "En curso",
+        "READY": "Listo para presentar",
+        "FILED": "Presentado",
+        "NOT_APPLICABLE": "No aplica"
+      },
+      "filedOn": "Presentado el",
+      "reference": "Acuse / referencia",
+      "owner": "Responsable",
+      "noOwner": "Sin asignar",
+      "notes": "Notas",
+      "extension": "Fecha límite prorrogada",
+      "extensionHint": "Solo si una notificación prorrogó la fecha.",
+      "save": "Guardar",
+      "saved": "Guardado",
+      "signoffCleared": "Guardado. Se quitó la firma porque cambió el resultado.",
+      "signoff": "Firmar",
+      "signedBy": "Firmado por {name} el {date}",
+      "signedToast": "Firmado",
+      "signoffRemoved": "Firma quitada",
+      "removeSignoff": "Quitar la firma",
+      "needsFiled": "Solo se puede firmar lo ya presentado.",
+      "notSigned": "Aún sin firmar. Tu contador firma lo presentado.",
+      "ask": "Hacer una pregunta",
+      "openWork": "Abrir el trabajo",
+      "gstLocked": "Las declaraciones de GST se presentan en el espacio de GST. Aquí puedes asignar un responsable, añadir notas y firmar.",
+      "readOnly": "Solo un gestor de cumplimiento puede editar esto."
+    },
+    "readiness": {
+      "allClear": "Nada impide el cierre.",
+      "summaryBlocked": "{count} bloqueos antes de poder cerrar el año",
+      "summaryHint": "{warnings} avisos no impiden el cierre, pero conviene revisarlos.",
+      "areas": {
+        "sales": "Facturas de venta",
+        "purchases": "Compras y facturas de proveedores",
+        "bank": "Conciliación bancaria",
+        "gst": "Declaraciones de GST",
+        "tds": "TDS",
+        "payroll": "Nómina",
+        "receivables": "Cuentas por cobrar"
+      },
+      "checked": "{count} revisados",
+      "status": {
+        "OK": "Todo en orden",
+        "ATTENTION": "Requiere atención",
+        "BLOCKED": "Bloqueado",
+        "NOT_APPLICABLE": "No aplica"
+      },
+      "issues": {
+        "SAC_MISSING": "{count} facturas sin código SAC/HSN",
+        "GSTIN_INVALID": "{count} facturas a clientes con un GSTIN no válido",
+        "STATE_ASSUMED": "{count} facturas sin estado del cliente; se supuso el tuyo",
+        "TAX_MISMATCH": "{count} facturas donde el impuesto no cuadra",
+        "EVIDENCE_MISSING": "{count} facturas sin PDF archivado",
+        "ITC_VENDOR_MISSING": "{count} facturas de proveedor reclaman crédito sin GSTIN ni número de factura del proveedor",
+        "RECEIPT_MISSING": "{count} facturas de proveedor sin recibo",
+        "BANK_UNRECONCILED": "{count} movimientos bancarios sin conciliar",
+        "GST_RETURN_OVERDUE": "{count} declaraciones de GST vencidas",
+        "TDS_UNDEPOSITED": "{count} retenciones de TDS no depositadas a tiempo ({amount})",
+        "PAYROLL_MONTHS_OPEN": "{count} meses de nómina sin cerrar",
+        "RECEIVABLES_OVERDUE": "{count} facturas vencidas ({amount} pendientes)"
+      },
+      "short": {
+        "SAC_MISSING": "falta SAC/HSN",
+        "GSTIN_INVALID": "GSTIN no válido",
+        "STATE_ASSUMED": "estado del cliente",
+        "TAX_MISMATCH": "impuesto descuadrado",
+        "EVIDENCE_MISSING": "PDF de facturas",
+        "ITC_VENDOR_MISSING": "datos del proveedor",
+        "RECEIPT_MISSING": "recibos",
+        "BANK_UNRECONCILED": "conciliación bancaria",
+        "GST_RETURN_OVERDUE": "declaración de GST vencida",
+        "TDS_UNDEPOSITED": "TDS sin depositar",
+        "PAYROLL_MONTHS_OPEN": "nómina sin cerrar",
+        "RECEIVABLES_OVERDUE": "facturas vencidas"
+      },
+      "severity": {
+        "blocker": "Bloqueo",
+        "warning": "Aviso",
+        "info": "Para tu atención"
+      },
+      "blocks": "Frena {kinds}",
+      "fix": "Corregir",
+      "areaClear": "Nada que corregir aquí.",
+      "na": {
+        "gst": "GST no aplica a este espacio de trabajo.",
+        "payroll": "No hay empleados activos."
+      }
+    },
+    "requests": {
+      "filterLabel": "Filtrar solicitudes",
+      "filter": {
+        "OPEN": "Abiertas",
+        "ANSWERED": "Respondidas",
+        "CLOSED": "Cerradas",
+        "ALL": "Todas"
+      },
+      "new": "Nueva solicitud",
+      "hint": "Pide un documento o plantea una pregunta. Las respuestas quedan con el año.",
+      "empty": "No hay solicitudes para este año.",
+      "kind": {
+        "DOCUMENT": "Solicitud de documento",
+        "QUERY": "Pregunta"
+      },
+      "status": {
+        "OPEN": "Abierta",
+        "ANSWERED": "Respondida",
+        "CLOSED": "Cerrada"
+      },
+      "needed": "necesario para el {date}",
+      "messages": "{count} mensajes",
+      "sentToast": "Solicitud enviada",
+      "form": {
+        "title": "Nueva solicitud",
+        "kind": "Tipo",
+        "subject": "Asunto",
+        "details": "Detalles",
+        "about": "Sobre",
+        "aboutNone": "El año en general",
+        "due": "Necesario para",
+        "cancel": "Cancelar",
+        "send": "Enviar"
+      },
+      "thread": {
+        "reply": "Respuesta",
+        "replyPlaceholder": "Escribe una respuesta",
+        "attach": "Adjuntar desde el archivo de documentos",
+        "noDoc": "Sin adjunto",
+        "send": "Enviar respuesta",
+        "close": "Cerrar solicitud",
+        "reopen": "Reabrir",
+        "closed": "Esta solicitud está cerrada."
+      }
+    },
+    "evidence": {
+      "noExport": "Tu rol no puede descargar evidencias. Pídelo a un propietario o a tu contador.",
+      "downloaded": "Descarga iniciada",
+      "pack": {
+        "title": "Paquete de evidencias (ZIP)",
+        "body": "Registros, calendario, resumen y cada PDF de factura y recibo, con un índice de lo que falta.",
+        "cta": "Descargar el paquete",
+        "preparing": "Preparando…"
+      },
+      "registers": {
+        "title": "Registros (CSV)",
+        "hint": "Ábrelos en Excel o pásalos a tu contador.",
+        "sales": "Registro de ventas",
+        "purchases": "Registro de compras",
+        "tds": "Registro de TDS",
+        "calendar": "Calendario de cumplimiento",
+        "summary": "Resumen del año"
+      },
+      "gst": {
+        "title": "Declaraciones de GST",
+        "body": "Los cálculos de GSTR-1, GSTR-3B y GSTR-9, el XML de Tally y el paquete para el contador están en el espacio de GST.",
+        "cta": "Abrir el espacio de GST"
+      },
+      "vault": {
+        "title": "Archivo de documentos",
+        "body": "Certificados, notificaciones y extractos que pidió tu contador.",
+        "cta": "Abrir el archivo"
+      },
+      "activity": {
+        "title": "Actividad reciente",
+        "hint": "Quién cambió, firmó o descargó qué.",
+        "empty": "Aún no hay actividad.",
+        "actions": {
+          "ITEM_UPDATED": "actualizó una obligación",
+          "SIGNED_OFF": "firmó algo",
+          "SIGNOFF_REMOVED": "quitó una firma",
+          "REQUEST_CREATED": "creó una solicitud",
+          "REQUEST_REPLIED": "respondió a una solicitud",
+          "REQUEST_CLOSED": "cerró una solicitud",
+          "REQUEST_REOPENED": "reabrió una solicitud",
+          "EXPORT_PACK": "descargó el paquete de evidencias",
+          "EXPORT_REGISTER": "descargó un registro",
+          "SETUP_UPDATED": "cambió los datos de la entidad"
+        }
+      }
+    },
+    "setup": {
+      "title": "Datos de la entidad",
+      "hint": "El calendario de cumplimiento se construye con estos datos.",
+      "entity": "Tipo de entidad",
+      "entityPlaceholder": "Elige una",
+      "entities": {
+        "PROPRIETOR": "Empresario individual / persona física",
+        "PARTNERSHIP": "Sociedad colectiva",
+        "LLP": "LLP",
+        "COMPANY": "Sociedad",
+        "OTHER": "AOP / otro"
+      },
+      "regime": "Régimen fiscal",
+      "regimes": {
+        "NEW": "Régimen nuevo",
+        "OLD": "Régimen antiguo"
+      },
+      "presumptive": "Régimen presuntivo",
+      "presumptives": {
+        "NONE": "Ninguno",
+        "SEC_44ADA": "Sección 44ADA",
+        "SEC_44AD": "Sección 44AD"
+      },
+      "audit": "Se aplica auditoría fiscal",
+      "auditHint": "Facturación por encima de los límites de auditoría, o auditoría exigida por otro motivo.",
+      "tan": "TAN",
+      "tanHint": "Necesario para las declaraciones de TDS: 4 letras, 5 dígitos y 1 letra.",
+      "save": "Guardar",
+      "saved": "Guardado",
+      "readOnly": "Solo un gestor de cumplimiento puede cambiar esto."
+    },
+    "team": {
+      "title": "Tu CA",
+      "hint": "Da acceso de solo lectura a tu contador y trabajad juntos aquí.",
+      "none": "Ningún CA tiene acceso todavía.",
+      "invite": "Invitar a tu CA",
+      "pending": "Invitaciones pendientes",
+      "expires": "caduca el {date}",
+      "lastSeen": "Última actividad {date}",
+      "never": "Aún sin actividad",
+      "inviteTitle": "Invita a tu contador",
+      "email": "Correo electrónico",
+      "send": "Enviar invitación",
+      "sent": "Invitación enviada",
+      "cancel": "Cancelar",
+      "roleNote": "Los contadores pueden ver los registros financieros, hacer solicitudes, firmar declaraciones presentadas y descargar evidencias. No pueden contabilizar asientos ni cambiar ajustes.",
+      "noInvite": "Solo un propietario puede invitar a tu CA."
+    }
+  },
   "GstHub": {
     "title": "GST e impuestos",
     "description": "Prepara GSTR-1, GSTR-3B y GSTR-9 a partir de tus facturas y compras, controla el crédito fiscal y no pierdas ningún vencimiento.",

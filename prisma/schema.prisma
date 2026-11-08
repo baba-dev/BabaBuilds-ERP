@@ -757,6 +757,8 @@ model Workspace {
   taxObligations          TaxObligation[]
   taxObligationPeriods    TaxObligationPeriod[]
   gstReturns              GstReturn[]
+  caComplianceItems       CaComplianceItem[]
+  caRequests              CaRequest[]
   gstAdjustments          GstAdjustment[]
   gstDebitNotes           GstDebitNote[]
   gstAmendments           GstAmendment[]
@@ -1474,6 +1476,13 @@ model BusinessProfile {
   gstPrevFyTurnover     Decimal? // aggregate turnover of the previous FY (drives HSN digits, late-fee caps)
   gstRegisteredFrom     DateTime?
   gstRemindersEnabled   Boolean  @default(true) // due-date alerts and the weekly digest
+  // CA compliance: what kind of taxpayer this is, which drives the compliance calendar.
+  caEntityType          String? // PROPRIETOR | PARTNERSHIP | LLP | COMPANY | OTHER
+  caTaxRegime           String? // NEW | OLD (individuals and proprietors)
+  caPresumptive         String? // NONE | SEC_44ADA | SEC_44AD
+  caTaxAuditApplicable  Boolean  @default(false)
+  caTan                 String? // TAN of the deductor, needed for TDS returns
+  caSetupAt             DateTime?
   gstLutActive          Boolean  @default(true) // exports of services under a Letter of Undertaking (zero-rated, no IGST)
 
   // Banking
@@ -4893,4 +4902,88 @@ model GstReminderLog {
   sentAt  DateTime @default(now())
 
   @@unique([workspaceId, key, channel])
+}
+
+
+// ==========================================
+// CA COMPLIANCE
+// ==========================================
+
+/// A person's record against one obligation (status, filing reference, extension, sign-off). Which obligations exist and
+/// when they fall due is derived from the rules in lib/ca, so only what someone set is stored here.
+model CaComplianceItem {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  kind      String // ADVANCE_TAX | TDS_DEPOSIT | TDS_RETURN | ITR | TAX_AUDIT | PF | ESI | ROC_* | YEAR_CLOSE ...
+  periodKey String // 2026-06 | 26-27-Q1 | 26-27
+  fy        String // 26-27
+
+  status String @default("NOT_STARTED") // NOT_STARTED | IN_PROGRESS | READY | FILED | NOT_APPLICABLE
+
+  ownerUserId String?
+  filedAt     DateTime?
+  reference   String? // ARN / acknowledgement number / challan
+  notes       String?
+  /// Extended due date notified by the government, when different from the standard one.
+  dueOverride DateTime?
+
+  signedOffByUserId String?
+  signedOffByName   String?
+  signedOffAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, kind, periodKey])
+  @@index([workspaceId, fy])
+}
+
+/// A document request or a query between the owner and their CA.
+model CaRequest {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  fy     String
+  kind   String // DOCUMENT | QUERY
+  title  String
+  status String @default("OPEN") // OPEN | ANSWERED | CLOSED
+
+  /// What it is about: an obligation (itemKind + periodKey) or a record (linkType + linkId).
+  itemKind  String?
+  periodKey String?
+  linkType  String? // INVOICE | EXPENSE | OTHER
+  linkId    String?
+  dueDate   DateTime?
+
+  createdByUserId String
+  createdByName   String
+  closedAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages CaRequestMessage[]
+
+  @@index([workspaceId, fy, status])
+}
+
+model CaRequestMessage {
+  id          String    @id @default(cuid())
+  requestId   String
+  request     CaRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  workspaceId String
+
+  authorUserId String
+  authorName   String
+  authorRole   String?
+  body         String
+  /// A document from the vault attached to the message.
+  documentId   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([requestId, createdAt])
 }
