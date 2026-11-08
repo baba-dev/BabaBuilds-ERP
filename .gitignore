@@ -56,3 +56,6 @@ prisma/*.db
 lint_*.json
 lint_*.txt
 eslint_report*.txt
+
+# Files written by dev-server runs (generated PDFs, uploads)
+/private_uploads/
