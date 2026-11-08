@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ADJUSTMENT_KINDS } from "@/lib/gst/adjustment-kinds";
+import { rule42Reversal } from "@/lib/gst/gaps";
+import { callApi } from "./gst-utils";
 import { EmptyArt } from "./art/GstArt";
 import { periodLabel, readError, Section, Stat, TableShell, td, tdr, th, thr, useJson, useMoney } from "./gst-utils";
 
@@ -21,7 +23,7 @@ type Ledger = {
 };
 type Adjustments = { adjustments: Array<{ id: string; periodKey: string; kind: string; igst: number; cgst: number; sgst: number; cess: number; notes: string | null }> };
 
-export function ItcTab({ fy }: { fy: string }) {
+export function ItcTab({ fy, canManage }: { fy: string; canManage: boolean }) {
   const t = useTranslations("GstHub.itc");
   const { n, c, locale } = useMoney();
   const ledger = useJson<Ledger>(`/api/gst/itc?fy=${encodeURIComponent(fy)}`);
@@ -71,7 +73,7 @@ export function ItcTab({ fy }: { fy: string }) {
           )}
         </Section>
 
-        <Section title={t("adjustments")} hint={t("adjustmentsHint")} right={<Button size="sm" variant="outline" onClick={() => setAdding(true)}><Plus className="me-1.5 size-4" aria-hidden />{t("add")}</Button>}>
+        <Section title={t("adjustments")} hint={t("adjustmentsHint")} right={canManage ? <Button size="sm" variant="outline" onClick={() => setAdding(true)}><Plus className="me-1.5 size-4" aria-hidden />{t("add")}</Button> : null}>
           {(adj.data?.adjustments.length ?? 0) === 0 ? <p className="text-sm text-muted-foreground">{t("noAdjustments")}</p> : (
             <ul className="divide-y divide-border/50">
               {adj.data!.adjustments.map((a) => (
@@ -80,13 +82,15 @@ export function ItcTab({ fy }: { fy: string }) {
                     <p className="text-sm font-medium">{t(`kind.${a.kind}`)} · <span className="text-muted-foreground">{periodLabel(a.periodKey, locale)}</span></p>
                     <p className="text-xs tabular-nums text-muted-foreground">IGST {n(a.igst)} · CGST {n(a.cgst)} · SGST {n(a.sgst)}{a.notes ? ` · ${a.notes}` : ""}</p>
                   </div>
-                  <Button size="icon" variant="ghost" aria-label={t("delete")} onClick={() => remove(a.id)}><Trash2 className="size-4" aria-hidden /></Button>
+                  {canManage ? <Button size="icon" variant="ghost" aria-label={t("delete")} onClick={() => remove(a.id)}><Trash2 className="size-4" aria-hidden /></Button> : null}
                 </li>
               ))}
             </ul>
           )}
         </Section>
       </div>
+
+      {canManage ? <Rule42Calculator onDone={() => { adj.reload(); ledger.reload(); }} /> : null}
 
       <Dialog open={adding} onOpenChange={setAdding}>
         <DialogContent className="max-w-md">{adding ? <AdjustmentForm onClose={() => setAdding(false)} onDone={() => { adj.reload(); ledger.reload(); }} /> : null}</DialogContent>
@@ -152,5 +156,41 @@ function AdjustmentForm({ onClose, onDone }: { onClose: () => void; onDone: () =
         <Button onClick={submit} disabled={busy}>{busy ? <Loader2 className="me-2 size-4 animate-spin" aria-hidden /> : null}{t("save")}</Button>
       </DialogFooter>
     </>
+  );
+}
+
+/** Rule 42: reverse the share of common credit that relates to exempt supplies. Shows the working, then records it. */
+function Rule42Calculator({ onDone }: { onDone: () => void }) {
+  const t = useTranslations("GstHub.itc.rule42");
+  const { n } = useMoney();
+  const now = new Date();
+  const [v, setV] = useState({ igst: "", cgst: "", sgst: "", exempt: "", total: "", month: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}` });
+  const [busy, setBusy] = useState(false);
+  const ex = Number(v.exempt) || 0;
+  const tot = Number(v.total) || 0;
+  const rev = { igst: rule42Reversal({ commonCredit: Number(v.igst) || 0, exemptTurnover: ex, totalTurnover: tot }), cgst: rule42Reversal({ commonCredit: Number(v.cgst) || 0, exemptTurnover: ex, totalTurnover: tot }), sgst: rule42Reversal({ commonCredit: Number(v.sgst) || 0, exemptTurnover: ex, totalTurnover: tot }) };
+  const sum = rev.igst + rev.cgst + rev.sgst;
+  async function record() {
+    setBusy(true);
+    const r = await callApi("POST", "/api/gst/adjustments", { periodKey: v.month, kind: "ITC_REVERSAL_RULE_42", ...rev, cess: 0, notes: t("note", { exempt: String(ex), total: String(tot) }) });
+    setBusy(false);
+    if (!r.ok) return void toast.error(r.error);
+    toast.success(t("recorded"));
+    onDone();
+  }
+  const set = (k: keyof typeof v, x: string) => setV((p) => ({ ...p, [k]: x }));
+  return (
+    <Section title={t("title")} hint={t("hint")}>
+      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {(["igst", "cgst", "sgst"] as const).map((k) => <div key={k} className="space-y-1.5"><Label htmlFor={`r42-${k}`}>{t("common", { head: k.toUpperCase() })}</Label><Input id={`r42-${k}`} inputMode="decimal" value={v[k]} onChange={(e) => set(k, e.target.value)} placeholder="0" /></div>)}
+        <div className="space-y-1.5"><Label htmlFor="r42-ex">{t("exempt")}</Label><Input id="r42-ex" inputMode="decimal" value={v.exempt} onChange={(e) => set("exempt", e.target.value)} placeholder="0" /></div>
+        <div className="space-y-1.5"><Label htmlFor="r42-tot">{t("total")}</Label><Input id="r42-tot" inputMode="decimal" value={v.total} onChange={(e) => set("total", e.target.value)} placeholder="0" /></div>
+        <div className="space-y-1.5"><Label htmlFor="r42-m">{t("month")}</Label><Input id="r42-m" type="month" value={v.month} onChange={(e) => set("month", e.target.value)} /></div>
+      </div>
+      <div className="mt-4 flex flex-wrap items-center gap-4">
+        <p className="text-sm">{t("result", { amount: n(sum) })}<span className="ms-2 text-xs text-muted-foreground">IGST {n(rev.igst)} · CGST {n(rev.cgst)} · SGST {n(rev.sgst)}</span></p>
+        <Button size="sm" onClick={record} disabled={busy || sum <= 0}>{busy ? <Loader2 className="me-2 size-4 animate-spin" aria-hidden /> : null}{t("record")}</Button>
+      </div>
+    </Section>
   );
 }

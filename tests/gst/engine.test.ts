@@ -352,7 +352,12 @@ describe("GSTR-2B reconciliation", () => {
     const { rows } = parseGstr2bJson(json);
     const books = [expense({ vendorInvoiceNo: "v1" }), expense({ id: "e2", vendorInvoiceNo: "X-7", igst: 900, amount: 5900 })];
     const r = reconcileGstr2b(rows, books);
-    expect(r.counts).toEqual({ MATCHED: 1, MISMATCH: 0, MISSING_IN_BOOKS: 1, MISSING_IN_2B: 1 });
+    expect(r.counts).toEqual({ MATCHED: 1, LIKELY: 0, MISMATCH: 0, MISSING_IN_BOOKS: 1, MISSING_IN_2B: 1 });
+    // A typo or dropped prefix in the bill's invoice number is surfaced as a likely match, not two unrelated gaps.
+    const typo = reconcileGstr2b(rows, [expense({ vendorInvoiceNo: "CH-V-1" })]);
+    expect(typo.counts.LIKELY).toBe(1);
+    expect(typo.rows.find((x) => x.status === "LIKELY")?.bookInvoiceNumber).toBe("CH-V-1");
+    expect(reconcileGstr2b(rows, [expense({ vendorInvoiceNo: "V-1", igst: 1795 })], { tolerance: 10 }).counts.MATCHED).toBe(1);
     const mismatch = reconcileGstr2b(rows, [expense({ vendorInvoiceNo: "V-1", igst: 1000, amount: 10000 })]);
     expect(mismatch.counts.MISMATCH).toBe(1);
   });

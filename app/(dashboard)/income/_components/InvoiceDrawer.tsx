@@ -12,6 +12,7 @@ import { getBustedUrl } from "@/lib/cache-buster";
 import { cn } from "@/lib/utils";
 import type { InvoiceDetailDto } from "@/lib/invoices/types";
 import { StatusBadge } from "./StatusBadge";
+import { InvoiceGstPanel } from "./InvoiceGstPanel";
 import { formatMoney } from "./income-utils";
 import { useJson } from "./use-income-data";
 import type { RowAction } from "./RowActionsMenu";
@@ -181,6 +182,8 @@ export function InvoiceDrawer({ invoiceId, locale, baseCurrency, reloadToken, on
                   </dl>
                 </div>
               </section>
+
+              {invoice.currency ? <InvoiceGstPanel invoiceId={invoice.id} locale={locale} /> : null}
 
               <section aria-labelledby="drawer-payments">
                 <h3 id="drawer-payments" className="mb-2 text-sm font-semibold">{t("payments")}</h3>

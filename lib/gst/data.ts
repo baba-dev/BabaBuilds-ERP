@@ -2,7 +2,7 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { classifyInvoice, normalizeHsn, type ClassifiedInvoice, type InvoiceInput } from "./classify";
-import type { CreditNoteInput } from "./gstr1";
+import type { AdvanceInput, AmendmentInput, CreditNoteInput, DebitNoteInput } from "./gstr1";
 import type { AdjustmentInput, ExpenseGstInput } from "./books";
 import type { FilingFrequency, GstSettings, RegistrationType } from "./calendar";
 import { normalizeGstin, validateGstin } from "./gstin";
@@ -18,13 +18,16 @@ export type GstProfile = GstSettings & {
   lutActive: boolean;
   countryCode: string;
   hasProfile: boolean;
+  remindersEnabled: boolean;
+  address: string;
+  email: string;
 };
 
 export async function loadGstProfile(workspaceId: string): Promise<GstProfile> {
   const [profile, ws] = await Promise.all([
     prisma.businessProfile.findUnique({
       where: { workspaceId },
-      select: { companyName: true, gstin: true, gstStateCode: true, gstRegistrationType: true, gstFilingFrequency: true, gstPrevFyTurnover: true, gstRegisteredFrom: true, gstLutActive: true },
+      select: { companyName: true, gstin: true, gstStateCode: true, gstRegistrationType: true, gstFilingFrequency: true, gstPrevFyTurnover: true, gstRegisteredFrom: true, gstLutActive: true, gstRemindersEnabled: true, address: true, email: true },
     }),
     prisma.workspace.findUnique({ where: { id: workspaceId }, select: { countryCode: true } }),
   ]);
@@ -47,6 +50,9 @@ export async function loadGstProfile(workspaceId: string): Promise<GstProfile> {
     lutActive: profile?.gstLutActive ?? true,
     countryCode: (ws?.countryCode ?? "IN").toUpperCase(),
     hasProfile: !!profile,
+    remindersEnabled: profile?.gstRemindersEnabled ?? true,
+    address: profile?.address ?? "",
+    email: profile?.email ?? "",
   };
 }
 
@@ -68,10 +74,17 @@ const invoiceSelect = {
   clientName: true,
   gstPlaceOfSupply: true,
   gstReverseCharge: true,
+  gstSupplyOverride: true,
+  gstEcoGstin: true,
+  irn: true,
+  irnAckNo: true,
+  irnAckDate: true,
+  ewayBillNo: true,
   client: { select: { country: true, taxId: true, gstStateCode: true } },
   items: { select: { description: true, quantity: true, totalAmount: true, taxRate: true, sacCode: true } },
 } satisfies Prisma.InvoiceSelect;
 
+export const invoiceGstSelect = invoiceSelect;
 type InvoiceRow = Prisma.InvoiceGetPayload<{ select: typeof invoiceSelect }>;
 
 export function toInvoiceInput(row: InvoiceRow): InvoiceInput {
@@ -102,6 +115,11 @@ export function toInvoiceInput(row: InvoiceRow): InvoiceInput {
     clientStateCode: row.client?.gstStateCode ?? null,
     placeOfSupplyOverride: row.gstPlaceOfSupply,
     reverseCharge: row.gstReverseCharge,
+    supplyOverride: row.gstSupplyOverride,
+    ecoGstin: row.gstEcoGstin,
+    irn: row.irn,
+    irnAckDate: row.irnAckDate,
+    ewayBillNo: row.ewayBillNo,
   };
 }
 
@@ -110,6 +128,9 @@ export type GstBooks = {
   creditNotes: CreditNoteInput[];
   expenses: ExpenseGstInput[];
   adjustments: AdjustmentInput[];
+  debitNotes: DebitNoteInput[];
+  amendments: AmendmentInput[];
+  advances: AdvanceInput[];
 };
 
 const monthKeyOf = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
@@ -117,18 +138,22 @@ const monthKeyOf = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() 
 /** Load everything dated in [from, to] that GST cares about. */
 export async function loadGstBooks(profile: GstProfile, from: Date, to: Date): Promise<GstBooks> {
   const workspaceId = profile.workspaceId;
-  const [invoiceRows, noteRows, expenseRows, adjustmentRows] = await Promise.all([
+  const [invoiceRows, noteRows, expenseRows, adjustmentRows, debitRows, amendmentRows, advanceRows] = await Promise.all([
     prisma.invoice.findMany({ where: { workspaceId, invoiceDate: { gte: from, lte: to } }, select: invoiceSelect, orderBy: { invoiceDate: "asc" } }),
     prisma.creditNote.findMany({
       where: { workspaceId, issuedAt: { gte: from, lte: to } },
       select: { id: true, creditNoteNumber: true, issuedAt: true, amount: true, taxAmount: true, reason: true, invoice: { select: invoiceSelect } },
       orderBy: { issuedAt: "asc" },
     }),
+    // Bills are loaded from 200 days before the window so rule 37 (180-day payment) can see the ones that lapse inside it.
     prisma.expense.findMany({
-      where: { workspaceId, date: { gte: from, lte: to }, itcStatus: { not: "NONE" } },
+      where: { workspaceId, date: { gte: new Date(from.getTime() - 200 * 86400000), lte: to }, itcStatus: { not: "NONE" } },
       orderBy: { date: "asc" },
     }),
     prisma.gstAdjustment.findMany({ where: { workspaceId, periodKey: { gte: monthKeyOf(from), lte: monthKeyOf(to) } } }),
+    prisma.gstDebitNote.findMany({ where: { workspaceId, issuedAt: { gte: from, lte: to } }, orderBy: { issuedAt: "asc" } }),
+    prisma.gstAmendment.findMany({ where: { workspaceId } }),
+    prisma.gstAdvance.findMany({ where: { workspaceId, OR: [{ receivedAt: { gte: from, lte: to } }, { adjustedAt: { gte: from, lte: to } }] } }),
   ]);
 
   const invoices = invoiceRows.map((r) => classifyInvoice(toInvoiceInput(r), profile.stateCode));
@@ -162,6 +187,10 @@ export async function loadGstBooks(profile: GstProfile, from: Date, to: Date): P
     sgst: num(e.sgstAmount),
     cess: num(e.cessAmount),
     itcStatus: e.itcStatus,
+    paymentStatus: e.paymentStatus,
+    paidAt: e.paidAt,
+    itcHeld: e.itcHeld,
+    itcClaimMonth: e.itcClaimMonth,
   }));
   const adjustments: AdjustmentInput[] = adjustmentRows.map((a) => ({
     id: a.id,
@@ -173,7 +202,22 @@ export async function loadGstBooks(profile: GstProfile, from: Date, to: Date): P
     cess: num(a.cess),
     notes: a.notes,
   }));
-  return { invoices, creditNotes, expenses, adjustments };
+  const debitNotes: DebitNoteInput[] = debitRows.map((d) => ({
+    id: d.id, number: d.noteNumber, date: d.issuedAt, invoiceNumber: d.invoiceNumber, invoiceDate: d.invoiceDate, name: d.recipientName,
+    gstin: d.recipientGstin ? normalizeGstin(d.recipientGstin) : null, pos: d.pos, rate: d.rate,
+    taxable: num(d.taxable), igst: num(d.igst), cgst: num(d.cgst), sgst: num(d.sgst), cess: num(d.cess), reason: d.reason,
+  }));
+  const amendments: AmendmentInput[] = amendmentRows.map((a) => ({
+    id: a.id, periodKey: a.periodKey, originalPeriodKey: a.originalPeriodKey, originalNumber: a.originalNumber, originalDate: a.originalDate,
+    name: a.recipientName, gstin: a.recipientGstin ? normalizeGstin(a.recipientGstin) : null, pos: a.pos, rate: a.rate, reason: a.reason,
+    original: { taxable: num(a.originalTaxable), igst: num(a.originalIgst), cgst: num(a.originalCgst), sgst: num(a.originalSgst), cess: 0 },
+    revised: { taxable: num(a.revisedTaxable), igst: num(a.revisedIgst), cgst: num(a.revisedCgst), sgst: num(a.revisedSgst), cess: 0 },
+  }));
+  const advances: AdvanceInput[] = advanceRows.map((a) => ({
+    id: a.id, receivedAt: a.receivedAt, adjustedAt: a.adjustedAt, party: a.party, gstin: a.recipientGstin ? normalizeGstin(a.recipientGstin) : null,
+    pos: a.pos, rate: a.rate, taxable: num(a.taxable), igst: num(a.igst), cgst: num(a.cgst), sgst: num(a.sgst), adjustedInvoice: a.adjustedInvoice,
+  }));
+  return { invoices, creditNotes, expenses, adjustments, debitNotes, amendments, advances };
 }
 
 export const inMonthRange = (d: Date, start: Date, end: Date) => d.getTime() >= start.getTime() && d.getTime() <= end.getTime();

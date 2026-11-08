@@ -63,7 +63,11 @@ export async function PATCH(
       const profile = await loadGstProfile(workspaceId);
       const normalized = normalizeExpenseGst(parsedGst.data, amount, profile.stateCode);
       if (!normalized.ok) return apiError(400, normalized.message, normalized.code);
-      gstData = normalized.data;
+      gstData = { ...normalized.data };
+      // Paying a bill that was on credit stamps the payment date, which decides whether rule 37 reversed its credit.
+      const previous = await prisma.expense.findFirst({ where: { id: expenseId, workspaceId }, select: { paymentStatus: true } });
+      if (normalized.data.paymentStatus === 'UNPAID') gstData.paidAt = null;
+      else if (previous?.paymentStatus === 'UNPAID') gstData.paidAt = new Date();
     }
 
     const updatedExpense = await prisma.expense.updateMany({

@@ -1,3 +1,4 @@
+import { getGstCashOutflows } from "@/lib/gst/insights";
 import { Prisma } from "@prisma/client";
 import { toDecimal } from "@/lib/money";
 import type {
@@ -248,6 +249,28 @@ export function payrollOutflowToForecastLine(args: {
   };
 }
 
+export function gstPaymentToForecastLine(args: {
+  payment: { id: string; periodKey: string; dueDate: Date; amount: Prisma.Decimal; label: string; estimated: boolean };
+  scenarioTag: CashForecastScenarioTag;
+}): ForecastLineDraft {
+  const { payment, scenarioTag } = args;
+  return {
+    direction: "OUTFLOW",
+    sourceType: "TAX",
+    sourceId: payment.id,
+    amount: toDecimal(payment.amount).abs(),
+    expectedDate: payment.dueDate,
+    confidence: payment.estimated ? 0.7 : 1,
+    scenarioTag,
+    classification: "COMMITTED",
+    title: `GST payable · ${payment.label}`,
+    metadataJson: { periodKey: payment.periodKey, estimated: payment.estimated },
+    explanation: payment.estimated
+      ? "Estimated cash GST on GSTR-3B for a period still open: output tax less input credit."
+      : "Cash GST payable on GSTR-3B after using input credit.",
+  };
+}
+
 function addDays(date: Date, days: number) {
   const d = new Date(date);
   d.setDate(d.getDate() + days);
@@ -399,8 +422,17 @@ export async function loadForecastSourceData(args: {
   const openingCashComputationMs = Date.now() - openingCashComputationStartedAt;
   const elapsedMs = Date.now() - loadStartedAt;
 
+  // GST cash outflows come from the GST engine; a failure there must never break the forecast.
+  let gstPayments: ForecastSourceData["gstPayments"] = [];
+  try {
+    gstPayments = (await getGstCashOutflows(workspaceId, startDate, endDate)).map((g) => ({ id: g.id, periodKey: g.periodKey, dueDate: g.dueDate, amount: new Prisma.Decimal(g.amount), label: g.label, estimated: g.estimated }));
+  } catch (error) {
+    console.error("Forecast: GST outflows unavailable", error);
+  }
+
   return {
     openingCash,
+    gstPayments,
     bankTransactions,
     invoices,
     clientPaymentBehavior: Object.fromEntries(
@@ -536,6 +568,10 @@ export function buildForecastLinesFromSources(args: {
 
   for (const posting of sources.payrollOutflows ?? []) {
     lines.push(payrollOutflowToForecastLine({ posting, scenarioTag }));
+  }
+
+  for (const payment of sources.gstPayments ?? []) {
+    lines.push(gstPaymentToForecastLine({ payment, scenarioTag }));
   }
 
   // Filter to horizon range.

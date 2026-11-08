@@ -240,6 +240,11 @@ export default function ExpenseTracker() {
       if (data.date) setDate(data.date); 
       if (data.category) setCategory(data.category);
       if (data.description) setDescription(data.description);
+      // GST read from the bill: pre-fills the GST section for the owner to confirm (never saved on its own).
+      if (isIndia && data.gst) {
+        setGst({ itcStatus: data.gst.itcStatus, vendorGstin: data.gst.vendorGstin ?? '', vendorInvoiceNo: data.gst.vendorInvoiceNo ?? '', hsnCode: data.gst.hsnCode ?? '', gstRate: String(data.gst.gstRate ?? 18), paymentStatus: 'PAID' });
+        toast.info(t('gst.scanned'));
+      }
     } catch (err: unknown) {
       console.error("Scan error:", err);
       // 7.2 FIX: surface scan failure to the user instead of silently failing
@@ -266,6 +271,7 @@ export default function ExpenseTracker() {
         if (g.vendorGstin) formData.append('vendorGstin', g.vendorGstin);
         if (g.vendorInvoiceNo) formData.append('vendorInvoiceNo', g.vendorInvoiceNo);
         if (g.hsnCode) formData.append('hsnCode', g.hsnCode);
+        formData.append('paymentStatus', g.paymentStatus);
         if (g.gstRate !== null) formData.append('gstRate', String(g.gstRate));
       }
       if (receiptFile) formData.append('receipt', receiptFile);

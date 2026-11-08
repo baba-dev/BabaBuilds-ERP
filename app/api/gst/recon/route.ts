@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { gstError, requireGstAccess } from "@/lib/gst/access";
+import { auditGst, gstError, requireGstAccess } from "@/lib/gst/access";
 import { getRecon } from "@/lib/gst/service";
 import { parseGstr2bCsv, parseGstr2bJson } from "@/lib/gst/recon";
 import { normalizeGstin } from "@/lib/gst/gstin";
@@ -13,7 +13,8 @@ export async function GET(request: Request) {
   if (!auth.ok) return auth.response;
   const period = new URL(request.url).searchParams.get("period") ?? "";
   if (!MONTH.test(period)) return gstError(400, "INVALID_PERIOD", "GSTR-2B is monthly. Use a period like 2026-04.");
-  const result = await getRecon(auth.access.workspaceId, period);
+  const tol = Number(new URL(request.url).searchParams.get("tolerance"));
+  const result = await getRecon(auth.access.workspaceId, period, Number.isFinite(tol) && tol >= 0 && tol <= 100 ? tol : undefined);
   return NextResponse.json(result ?? { rows: [], counts: {}, unmatchedTax: 0, uploaded: 0 });
 }
 
@@ -48,6 +49,7 @@ export async function POST(request: Request) {
       })),
     }),
   ]);
+  await auditGst(auth.access, "GSTR2B_UPLOADED", { type: "Gstr2b", id: period }, { rows: unique.size }, request);
   return NextResponse.json({ period, imported: unique.size, skipped: parsed.skipped });
 }
 
@@ -57,5 +59,6 @@ export async function DELETE(request: Request) {
   const period = new URL(request.url).searchParams.get("period") ?? "";
   if (!MONTH.test(period)) return gstError(400, "INVALID_PERIOD", "Use a period like 2026-04.");
   await prisma.gstr2bEntry.deleteMany({ where: { workspaceId: auth.access.workspaceId, periodKey: period } });
+  await auditGst(auth.access, "GSTR2B_CLEARED", { type: "Gstr2b", id: period }, undefined, request);
   return NextResponse.json({ ok: true });
 }

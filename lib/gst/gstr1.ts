@@ -26,7 +26,30 @@ export type Gstr1Invoice = {
   lines: Array<TaxRow & { rate: number }>;
 };
 
-export type Gstr1Note = Gstr1Invoice & { originalNumber: string; originalDate: string; reason: string };
+export type Gstr1Note = Gstr1Invoice & { originalNumber: string; originalDate: string; reason: string; noteType: "C" | "D" };
+
+export type DebitNoteInput = {
+  id: string; number: string; date: Date; invoiceNumber: string | null; invoiceDate: Date | null; name: string; gstin: string | null;
+  pos: string; rate: number; taxable: number; igst: number; cgst: number; sgst: number; cess: number; reason: string;
+};
+
+export type AmendmentInput = {
+  id: string; periodKey: string; originalPeriodKey: string; originalNumber: string; originalDate: Date; name: string | null; gstin: string | null;
+  pos: string; rate: number; original: TaxRow; revised: TaxRow; reason: string;
+};
+
+export type AdvanceInput = {
+  id: string; receivedAt: Date; adjustedAt: Date | null; party: string; gstin: string | null; pos: string; rate: number;
+  taxable: number; igst: number; cgst: number; sgst: number; adjustedInvoice: string | null;
+};
+
+export type Gstr1Amendment = {
+  id: string; originalNumber: string; originalDate: string; originalPeriodKey: string; name: string; gstin: string | null; pos: string; rate: number;
+  original: TaxRow; revised: TaxRow; delta: TaxRow; reason: string;
+};
+
+export type Gstr1AdvanceRow = TaxRow & { pos: string; rate: number };
+export type Gstr1EcoRow = TaxRow & { gstin: string; invoices: number };
 
 export type Gstr1B2bParty = { gstin: string; name: string; invoices: Gstr1Invoice[] };
 
@@ -40,11 +63,19 @@ export type Gstr1DocRange = { type: string; from: string; to: string; total: num
 
 export type Gstr1Report = {
   periodKey: string;
-  summary: TaxRow & { invoiceCount: number; creditNoteCount: number; value: number };
+  summary: TaxRow & { invoiceCount: number; creditNoteCount: number; debitNoteCount: number; value: number };
   b2b: Gstr1B2bParty[];
   b2cl: Gstr1Invoice[];
   b2cs: Gstr1B2cs[];
   exports: Gstr1Invoice[];
+  /** 6B: supplies to SEZ units / developers. */
+  sez: Gstr1B2bParty[];
+  /** 14: supplies made through e-commerce operators. */
+  eco: Gstr1EcoRow[];
+  /** 9A / 10: corrections to earlier periods. */
+  amendments: { b2b: Gstr1Amendment[]; b2cs: Gstr1Amendment[] };
+  /** 11: advances received and advances adjusted against invoices this period. */
+  advances: { received: Gstr1AdvanceRow[]; adjusted: Gstr1AdvanceRow[] };
   cdnr: Array<{ gstin: string; name: string; notes: Gstr1Note[] }>;
   cdnur: Gstr1Note[];
   nil: Gstr1Nil[];
@@ -123,6 +154,9 @@ export function buildGstr1(args: {
   end: Date;
   invoices: ClassifiedInvoice[];
   creditNotes: CreditNoteInput[];
+  debitNotes?: DebitNoteInput[];
+  amendments?: AmendmentInput[];
+  advances?: AdvanceInput[];
   prevTurnover: number;
 }): Gstr1Report {
   const { start, end, prevTurnover } = args;
@@ -132,6 +166,8 @@ export function buildGstr1(args: {
   const b2bMap = new Map<string, Gstr1B2bParty>();
   const b2cl: Gstr1Invoice[] = [];
   const exportsList: Gstr1Invoice[] = [];
+  const sezMap = new Map<string, Gstr1B2bParty>();
+  const ecoMap = new Map<string, Gstr1EcoRow>();
   const b2csMap = new Map<string, Gstr1B2cs>();
   const nilMap = new Map<Gstr1Nil["key"], Gstr1Nil>();
   const hsnMaps = { b2b: new Map<string, Gstr1Hsn>(), b2c: new Map<string, Gstr1Hsn>() };
@@ -166,8 +202,9 @@ export function buildGstr1(args: {
 
   for (const inv of included) {
     // Nil-rated / exempt lines (not exports) go to Table 8; everything else to the invoice tables.
-    const taxedLines = inv.supplyType === "EXPWP" || inv.supplyType === "EXPWOP" ? inv.lines : inv.lines.filter((l) => !isNilLine(l));
-    for (const l of inv.lines) if (isNilLine(l) && inv.supplyType !== "EXPWP" && inv.supplyType !== "EXPWOP") addNil(inv, l);
+    const zeroRated = inv.supplyType === "EXPWP" || inv.supplyType === "EXPWOP" || inv.supplyType === "SEZWP" || inv.supplyType === "SEZWOP";
+    const taxedLines = zeroRated ? inv.lines : inv.lines.filter((l) => !isNilLine(l));
+    for (const l of inv.lines) if (isNilLine(l) && !zeroRated) addNil(inv, l);
 
     valueTotal = r2(valueTotal + inv.value);
     const hsnBucket = inv.gstin ? hsnMaps.b2b : hsnMaps.b2c;
@@ -179,7 +216,18 @@ export function buildGstr1(args: {
     const doc = toGstr1Invoice(inv, taxedLines, r2(taxable + tax));
     for (const l of taxedLines) summary = addRow(summary, l);
 
-    if (inv.supplyType === "B2B" || inv.supplyType === "B2B_RCM") {
+    if (inv.ecoGstin) {
+      const cur = ecoMap.get(inv.ecoGstin) ?? { gstin: inv.ecoGstin, invoices: 0, ...zeroRow() };
+      let row: TaxRow = cur;
+      for (const l of taxedLines) row = addRow(row, l);
+      ecoMap.set(inv.ecoGstin, { ...cur, ...row, invoices: cur.invoices + 1 });
+    }
+
+    if (inv.supplyType === "SEZWP" || inv.supplyType === "SEZWOP") {
+      const party = sezMap.get(inv.gstin!) ?? { gstin: inv.gstin!, name: inv.clientName, invoices: [] };
+      party.invoices.push(doc);
+      sezMap.set(inv.gstin!, party);
+    } else if (inv.supplyType === "B2B" || inv.supplyType === "B2B_RCM") {
       const party = b2bMap.get(inv.gstin!) ?? { gstin: inv.gstin!, name: inv.clientName, invoices: [] };
       party.invoices.push(doc);
       b2bMap.set(inv.gstin!, party);
@@ -212,6 +260,7 @@ export function buildGstr1(args: {
       originalNumber: n.invoice.number,
       originalDate: ymd(n.invoice.date),
       reason: n.reason,
+      noteType: "C",
     };
     for (const l of taxed) summary = addRow(summary, { taxable: -l.taxable, igst: -l.igst, cgst: -l.cgst, sgst: -l.sgst, cess: -l.cess });
     valueTotal = r2(valueTotal - value);
@@ -221,6 +270,49 @@ export function buildGstr1(args: {
       cdnrMap.set(n.invoice.gstin, party);
     } else cdnur.push(doc);
   }
+
+  // Debit notes raise value or tax on earlier invoices and are reported beside credit notes (table 9B).
+  const debitList = (args.debitNotes ?? []).filter((d) => inRange(d.date, start, end));
+  for (const d of debitList) {
+    const row: TaxRow = { taxable: d.taxable, igst: d.igst, cgst: d.cgst, sgst: d.sgst, cess: d.cess };
+    const value = r2(d.taxable + d.igst + d.cgst + d.sgst + d.cess);
+    const doc: Gstr1Note = {
+      id: d.id, number: d.number, date: ymd(d.date), value, pos: d.pos, rcm: false, supplyType: d.gstin ? "B2B" : "B2CS",
+      lines: [{ rate: d.rate, ...row }], originalNumber: d.invoiceNumber ?? "", originalDate: d.invoiceDate ? ymd(d.invoiceDate) : "", reason: d.reason, noteType: "D",
+    };
+    summary = addRow(summary, row);
+    valueTotal = r2(valueTotal + value);
+    if (d.gstin) {
+      const party = cdnrMap.get(d.gstin) ?? { gstin: d.gstin, name: d.name, notes: [] };
+      party.notes.push(doc);
+      cdnrMap.set(d.gstin, party);
+    } else cdnur.push(doc);
+  }
+
+  // Amendments: only the difference between revised and original changes this period's tax.
+  const amendB2b: Gstr1Amendment[] = [];
+  const amendB2cs: Gstr1Amendment[] = [];
+  for (const a of (args.amendments ?? []).filter((x) => x.periodKey === args.periodKey)) {
+    const delta: TaxRow = { taxable: r2(a.revised.taxable - a.original.taxable), igst: r2(a.revised.igst - a.original.igst), cgst: r2(a.revised.cgst - a.original.cgst), sgst: r2(a.revised.sgst - a.original.sgst), cess: r2(a.revised.cess - a.original.cess) };
+    const item: Gstr1Amendment = { id: a.id, originalNumber: a.originalNumber, originalDate: ymd(a.originalDate), originalPeriodKey: a.originalPeriodKey, name: a.name ?? "", gstin: a.gstin, pos: a.pos, rate: a.rate, original: a.original, revised: a.revised, delta, reason: a.reason };
+    summary = addRow(summary, delta);
+    (a.gstin ? amendB2b : amendB2cs).push(item);
+  }
+
+  // Advances: tax is due in the month the money is received and is credited back when the invoice is raised.
+  const advRows = (list: AdvanceInput[]): Gstr1AdvanceRow[] => {
+    const map = new Map<string, Gstr1AdvanceRow>();
+    for (const a of list) {
+      const key = `${a.pos}|${a.rate}`;
+      const cur = map.get(key) ?? { pos: a.pos, rate: a.rate, ...zeroRow() };
+      map.set(key, { ...cur, ...addRow(cur, { taxable: a.taxable, igst: a.igst, cgst: a.cgst, sgst: a.sgst }) });
+    }
+    return Array.from(map.values());
+  };
+  const advReceived = advRows((args.advances ?? []).filter((a) => inRange(a.receivedAt, start, end)));
+  const advAdjusted = advRows((args.advances ?? []).filter((a) => a.adjustedAt && inRange(a.adjustedAt, start, end)));
+  for (const r of advReceived) summary = addRow(summary, r);
+  for (const r of advAdjusted) summary = addRow(summary, { taxable: -r.taxable, igst: -r.igst, cgst: -r.cgst, sgst: -r.sgst, cess: 0 });
 
   const issuedNumbers = included.map((i) => i.number);
   const cancelledNumbers = cancelled.map((i) => i.number);
@@ -234,23 +326,31 @@ export function buildGstr1(args: {
     const { from, to } = docSeries(notes.map((n) => n.number));
     docs.push({ type: "CREDIT_NOTE", from, to, total: notes.length, cancelled: 0, net: notes.length });
   }
+  if (debitList.length > 0) {
+    const { from, to } = docSeries(debitList.map((n) => n.number));
+    docs.push({ type: "DEBIT_NOTE", from, to, total: debitList.length, cancelled: 0, net: debitList.length });
+  }
 
   const sortHsn = (m: Map<string, Gstr1Hsn>) => Array.from(m.values()).sort((a, b) => a.hsn.localeCompare(b.hsn) || a.rate - b.rate);
 
   return {
     periodKey: args.periodKey,
-    summary: { ...summary, invoiceCount: included.length, creditNoteCount: notes.length, value: valueTotal },
+    summary: { ...summary, invoiceCount: included.length, creditNoteCount: notes.length, debitNoteCount: debitList.length, value: valueTotal },
     b2b: Array.from(b2bMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
     b2cl,
     b2cs: Array.from(b2csMap.values()),
     exports: exportsList,
+    sez: Array.from(sezMap.values()),
+    eco: Array.from(ecoMap.values()),
+    amendments: { b2b: amendB2b, b2cs: amendB2cs },
+    advances: { received: advReceived, adjusted: advAdjusted },
     cdnr: Array.from(cdnrMap.values()),
     cdnur,
     nil: Array.from(nilMap.values()),
     hsnB2b: sortHsn(hsnMaps.b2b),
     hsnB2c: sortHsn(hsnMaps.b2c),
     docs,
-    isNil: included.length === 0 && notes.length === 0,
+    isNil: included.length === 0 && notes.length === 0 && debitList.length === 0 && amendB2b.length + amendB2cs.length === 0 && advReceived.length === 0 && advAdjusted.length === 0,
   };
 }
 
@@ -272,7 +372,7 @@ export function gstr1PortalJson(report: Gstr1Report, supplierGstin: string): Rec
   const itms = (lines: Array<TaxRow & { rate: number }>) =>
     lines.map((l, i) => ({ num: i + 1, itm_det: { rt: l.rate, txval: l.taxable, iamt: l.igst, camt: l.cgst, samt: l.sgst, csamt: l.cess } }));
   const noteJson = (n: Gstr1Note) => ({
-    ntty: "C",
+    ntty: n.noteType,
     nt_num: n.number,
     nt_dt: dmy(n.date),
     val: n.value,
@@ -306,13 +406,24 @@ export function gstr1PortalJson(report: Gstr1Report, supplierGstin: string): Rec
           .map((i) => ({ inum: i.number, idt: dmy(i.date), val: i.value, itms: i.lines.map((l) => ({ txval: l.taxable, rt: l.rate, iamt: l.igst, csamt: l.cess })) })),
       }))
       .filter((g) => g.inv.length > 0),
+    sez: report.sez.map((p) => ({
+      ctin: p.gstin,
+      inv: p.invoices.map((i) => ({ inum: i.number, idt: dmy(i.date), val: i.value, pos: i.pos, sply_ty: i.supplyType === "SEZWP" ? "WPAY" : "WOPAY", itms: itms(i.lines) })),
+    })),
+    b2ba: report.amendments.b2b.map((a) => ({
+      ctin: a.gstin, inv: [{ oinum: a.originalNumber, oidt: dmy(a.originalDate), inum: a.originalNumber, idt: dmy(a.originalDate), val: a.revised.taxable + a.revised.igst + a.revised.cgst + a.revised.sgst, pos: a.pos, rchrg: "N", inv_typ: "R",
+        itms: [{ num: 1, itm_det: { rt: a.rate, txval: a.revised.taxable, iamt: a.revised.igst, camt: a.revised.cgst, samt: a.revised.sgst, csamt: a.revised.cess } }] }],
+    })),
+    b2csa: report.amendments.b2cs.map((a) => ({ omon: `${a.originalPeriodKey.slice(5, 7)}${a.originalPeriodKey.slice(0, 4)}`, sply_ty: a.pos === supplierGstin.slice(0, 2) ? "INTRA" : "INTER", rt: a.rate, typ: "OE", pos: a.pos, txval: a.revised.taxable, iamt: a.revised.igst, camt: a.revised.cgst, samt: a.revised.sgst, csamt: a.revised.cess })),
+    at: report.advances.received.map((r) => ({ pos: r.pos, sply_ty: r.pos === supplierGstin.slice(0, 2) ? "INTRA" : "INTER", itms: [{ rt: r.rate, ad_amt: r.taxable, iamt: r.igst, camt: r.cgst, samt: r.sgst, csamt: 0 }] })),
+    txpd: report.advances.adjusted.map((r) => ({ pos: r.pos, sply_ty: r.pos === supplierGstin.slice(0, 2) ? "INTRA" : "INTER", itms: [{ rt: r.rate, ad_amt: r.taxable, iamt: r.igst, camt: r.cgst, samt: r.sgst, csamt: 0 }] })),
     cdnr: report.cdnr.map((p) => ({ ctin: p.gstin, nt: p.notes.map(noteJson) })),
-    cdnur: report.cdnur.map((n) => ({ typ: "B2CL", ntty: "C", nt_num: n.number, nt_dt: dmy(n.date), val: n.value, pos: n.pos, itms: itms(n.lines) })),
+    cdnur: report.cdnur.map((n) => ({ typ: "B2CL", ntty: n.noteType, nt_num: n.number, nt_dt: dmy(n.date), val: n.value, pos: n.pos, itms: itms(n.lines) })),
     nil: { inv: report.nil.map((n) => ({ sply_ty: nilKey[n.key], expt_amt: n.exempt, nil_amt: n.nil, ngsup_amt: n.nonGst })) },
     hsn: { hsn_b2b: report.hsnB2b.map(hsnRow), hsn_b2c: report.hsnB2c.map(hsnRow) },
     doc_issue: {
       doc_det: report.docs.map((d) => ({
-        doc_num: d.type === "INVOICE" ? 1 : 5,
+        doc_num: d.type === "INVOICE" ? 1 : d.type === "DEBIT_NOTE" ? 4 : 5,
         docs: [{ num: 1, from: d.from, to: d.to, totnum: d.total, cancel: d.cancelled, net_issue: d.net }],
       })),
     },

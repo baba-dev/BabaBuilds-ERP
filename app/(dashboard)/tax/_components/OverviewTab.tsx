@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
-import { ArrowUpRight, CalendarCheck2, CalendarClock, FileCheck2, Landmark, PiggyBank, ShieldAlert } from "lucide-react";
+import { ArrowUpRight, CalendarCheck2, CalendarClock, FileCheck2, Landmark, PauseCircle, PiggyBank, QrCode, ShieldAlert, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { DueRing, EmptyArt, GstHeroArt, ReturnEmblem } from "./art/GstArt";
@@ -10,6 +10,8 @@ import { daysUntil, formatDay, periodLabel, Section, Stat, StatusChip, STATUS_ST
 
 type Props = {
   data: GstOverview;
+  canFile: boolean;
+  canManage: boolean;
   issueCount: number;
   onOpen: (o: ObligationView) => void;
   onFile: (o: ObligationView) => void;
@@ -48,7 +50,7 @@ function Hero({ data, goto }: { data: GstOverview; goto: (tab: string) => void }
   );
 }
 
-function ObligationCard({ o, onOpen, onFile, onExtend }: { o: ObligationView; onOpen: () => void; onFile: () => void; onExtend: () => void }) {
+function ObligationCard({ o, canFile, canManage, onOpen, onFile, onExtend }: { o: ObligationView; canFile: boolean; canManage: boolean; onOpen: () => void; onFile: () => void; onExtend: () => void }) {
   const t = useTranslations("GstHub");
   const { locale, m } = useMoney();
   const style = STATUS_STYLE[o.status] ?? STATUS_STYLE.OPEN_PERIOD;
@@ -80,15 +82,16 @@ function ObligationCard({ o, onOpen, onFile, onExtend }: { o: ObligationView; on
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
         <StatusChip status={o.status} label={t(`status.${o.status}`)} />
+        {o.reviewStatus && o.status !== "FILED" ? <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700 ring-1 ring-inset ring-violet-600/20 dark:bg-violet-500/10 dark:text-violet-300"><ShieldCheck className="size-3" aria-hidden />{t(`review.chip.${o.reviewStatus}`)}</span> : null}
         {canOpen ? <Button size="sm" variant="outline" onClick={onOpen}>{t("open")}</Button> : null}
-        {o.status !== "OPEN_PERIOD" || o.filing?.filedAt ? <Button size="sm" variant={o.status === "FILED" ? "ghost" : "default"} onClick={onFile}>{o.status === "FILED" ? t("edit") : t("markFiled")}</Button> : null}
-        {o.status !== "FILED" ? <Button size="sm" variant="ghost" onClick={onExtend} aria-label={t("extend.title", { label: o.label })}><CalendarClock className="size-4" aria-hidden /></Button> : null}
+        {canFile && (o.status !== "OPEN_PERIOD" || o.filing?.filedAt) ? <Button size="sm" variant={o.status === "FILED" ? "ghost" : "default"} onClick={onFile}>{o.status === "FILED" ? t("edit") : t("markFiled")}</Button> : null}
+        {canManage && o.status !== "FILED" ? <Button size="sm" variant="ghost" onClick={onExtend} aria-label={t("extend.title", { label: o.label })}><CalendarClock className="size-4" aria-hidden /></Button> : null}
       </div>
     </motion.li>
   );
 }
 
-export function OverviewTab({ data, issueCount, onOpen, onFile, onExtend, goto }: Props) {
+export function OverviewTab({ data, canFile, canManage, issueCount, onOpen, onFile, onExtend, goto }: Props) {
   const t = useTranslations("GstHub");
   const { m, c } = useMoney();
   const k = data.kpis;
@@ -108,15 +111,34 @@ export function OverviewTab({ data, issueCount, onOpen, onFile, onExtend, goto }
         </button>
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
+        <div className={cn("relative overflow-hidden rounded-2xl border p-4 shadow-sm", k.exposure.total > 0 ? "border-rose-300/60 bg-gradient-to-br from-rose-50 to-card dark:border-rose-500/30 dark:from-rose-500/10" : "border-border/70 bg-card")}>
+          <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground"><ShieldAlert className={cn("size-4", k.exposure.total > 0 ? "text-rose-500" : "text-emerald-500")} aria-hidden />{t("exposure.title")}</p>
+          <p className="mt-2 text-xl font-bold tabular-nums">{m(k.exposure.total)}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{k.exposure.total > 0 ? t("exposure.body", { fee: m(k.exposure.lateFee), interest: m(k.exposure.interest), count: k.exposure.overdueCount }) : t("exposure.none")}</p>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden><motion.div initial={{ width: 0 }} animate={{ width: `${Math.min(100, k.exposure.total > 0 ? 30 + Math.min(70, k.exposure.total / 200) : 4)}%` }} transition={{ duration: 0.8 }} className={cn("h-full rounded-full", k.exposure.total > 0 ? "bg-gradient-to-r from-amber-400 to-rose-500" : "bg-emerald-500")} /></div>
+        </div>
+        <button type="button" onClick={() => goto("recon")} className="rounded-2xl border border-border/70 bg-card p-4 text-start shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground"><PauseCircle className="size-4 text-violet-500" aria-hidden />{t("held.title")}</p>
+          <p className="mt-2 text-xl font-bold tabular-nums">{m(k.heldCredit)}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{k.heldCredit > 0 ? t("held.body") : t("held.none")}</p>
+        </button>
+        <button type="button" onClick={() => goto("documents")} className="rounded-2xl border border-border/70 bg-card p-4 text-start shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground"><QrCode className="size-4 text-sky-500" aria-hidden />{t("einv.title")}</p>
+          <p className="mt-2 text-xl font-bold tabular-nums">{k.eInvoicePending}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{k.eInvoicePending > 0 ? t("einv.body") : t("einv.none")}</p>
+        </button>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <Section title={t("timeline.title")} hint={t("timeline.hint")}>
           {upcoming.length + open.length === 0 && recent.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-6 text-center"><EmptyArt variant="returns" /><p className="text-sm font-medium">{t("timeline.emptyTitle")}</p><p className="max-w-xs text-xs text-muted-foreground">{t("timeline.emptyBody")}</p></div>
           ) : (
             <ul className="space-y-3">
-              {[...upcoming, ...open].slice(0, 8).map((o) => <ObligationCard key={`${o.returnType}-${o.periodKey}`} o={o} onOpen={() => onOpen(o)} onFile={() => onFile(o)} onExtend={() => onExtend(o)} />)}
+              {[...upcoming, ...open].slice(0, 8).map((o) => <ObligationCard key={`${o.returnType}-${o.periodKey}`} o={o} canFile={canFile} canManage={canManage} onOpen={() => onOpen(o)} onFile={() => onFile(o)} onExtend={() => onExtend(o)} />)}
               {recent.length > 0 ? <li className="pt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("timeline.recent")}</li> : null}
-              {recent.map((o) => <ObligationCard key={`${o.returnType}-${o.periodKey}`} o={o} onOpen={() => onOpen(o)} onFile={() => onFile(o)} onExtend={() => onExtend(o)} />)}
+              {recent.map((o) => <ObligationCard key={`${o.returnType}-${o.periodKey}`} o={o} canFile={canFile} canManage={canManage} onOpen={() => onOpen(o)} onFile={() => onFile(o)} onExtend={() => onExtend(o)} />)}
             </ul>
           )}
         </Section>

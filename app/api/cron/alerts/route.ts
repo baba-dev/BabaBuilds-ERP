@@ -21,8 +21,7 @@ import { addDays, format, startOfDay, endOfDay } from 'date-fns';
 
 // Tax filing milestones for Indian compliance (extendable for global users)
 const TAX_MILESTONES: Array<{ label: string; month: number; day: number }> = [
-  { label: 'GSTR-1 Monthly Filing',     month: 10, day: 11 }, // 11th – next month
-  { label: 'GSTR-3B Monthly Filing',    month: 10, day: 20 }, // 20th – next month
+  // GST returns are reminded by /api/cron/gst-reminders, which knows each workspace's cadence (monthly, QRMP, composition).
   { label: 'Advance Tax Q1',            month: 6,  day: 15 },
   { label: 'Advance Tax Q2',            month: 9,  day: 15 },
   { label: 'Advance Tax Q3',            month: 12, day: 15 },

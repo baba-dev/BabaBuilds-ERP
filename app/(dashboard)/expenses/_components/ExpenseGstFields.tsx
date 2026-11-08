@@ -16,17 +16,19 @@ export type ExpenseGstState = {
   vendorInvoiceNo: string;
   hsnCode: string;
   gstRate: string;
+  paymentStatus: "PAID" | "UNPAID";
 };
 
-export const EMPTY_EXPENSE_GST: ExpenseGstState = { itcStatus: "NONE", vendorGstin: "", vendorInvoiceNo: "", hsnCode: "", gstRate: "18" };
+export const EMPTY_EXPENSE_GST: ExpenseGstState = { itcStatus: "NONE", vendorGstin: "", vendorInvoiceNo: "", hsnCode: "", gstRate: "18", paymentStatus: "PAID" };
 
-export function gstStateFromExpense(e: { itcStatus?: string; vendorGstin?: string | null; vendorInvoiceNo?: string | null; hsnCode?: string | null; gstRate?: number | null }): ExpenseGstState {
+export function gstStateFromExpense(e: { paymentStatus?: string; itcStatus?: string; vendorGstin?: string | null; vendorInvoiceNo?: string | null; hsnCode?: string | null; gstRate?: number | null }): ExpenseGstState {
   return {
     itcStatus: (["ELIGIBLE", "INELIGIBLE", "REVERSE_CHARGE"].includes(e.itcStatus ?? "") ? e.itcStatus : "NONE") as ItcStatus,
     vendorGstin: e.vendorGstin ?? "",
     vendorInvoiceNo: e.vendorInvoiceNo ?? "",
     hsnCode: e.hsnCode ?? "",
     gstRate: e.gstRate === null || e.gstRate === undefined ? "18" : String(e.gstRate),
+    paymentStatus: e.paymentStatus === "UNPAID" ? "UNPAID" : "PAID",
   };
 }
 
@@ -38,6 +40,7 @@ export function gstPayload(s: ExpenseGstState) {
     vendorInvoiceNo: s.vendorInvoiceNo.trim() || null,
     hsnCode: s.hsnCode.trim() || null,
     gstRate: s.itcStatus === "NONE" ? null : Number(s.gstRate),
+    paymentStatus: s.paymentStatus,
   };
 }
 
@@ -102,6 +105,20 @@ export function ExpenseGstFields({ value, onChange, amount, supplierState }: { v
                   ))}
                 </div>
               </div>
+              {value.itcStatus === "ELIGIBLE" ? (
+                <div className="space-y-1.5">
+                  <Label>{t("payment")}</Label>
+                  <div role="radiogroup" aria-label={t("payment")} className="grid grid-cols-2 gap-2">
+                    {(["PAID", "UNPAID"] as const).map((p) => (
+                      <button key={p} type="button" role="radio" aria-checked={value.paymentStatus === p} onClick={() => set({ paymentStatus: p })}
+                        className={cn("rounded-lg border px-3 py-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", value.paymentStatus === p ? "border-indigo-500 bg-indigo-50/70 font-semibold text-indigo-800 dark:bg-indigo-500/10 dark:text-indigo-200" : "border-border/70 hover:border-indigo-300")}>
+                        {t(p === "PAID" ? "paid" : "unpaid")}
+                      </button>
+                    ))}
+                  </div>
+                  {value.paymentStatus === "UNPAID" ? <p className="text-xs text-amber-700 dark:text-amber-300">{t("unpaidHint")}</p> : null}
+                </div>
+              ) : null}
               {amount > 0 ? (
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-1 rounded-lg bg-background/70 p-3 text-xs sm:grid-cols-4">
                   <div><dt className="text-muted-foreground">{value.itcStatus === "REVERSE_CHARGE" ? t("value") : t("taxable")}</dt><dd className="font-semibold tabular-nums">{money(calc.taxable)}</dd></div>

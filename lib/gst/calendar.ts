@@ -209,3 +209,9 @@ export function trackingStart(profile: { registeredFrom: Date | null }, firstInv
   if (firstInvoice) return new Date(Date.UTC(firstInvoice.getUTCFullYear(), firstInvoice.getUTCMonth(), 1));
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 }
+
+/** Calendar days from today to the due date (UTC): 0 on the day, negative once it has passed. */
+export function daysUntilDue(dueIso: string, now: Date = new Date()): number {
+  const due = new Date(dueIso);
+  return Math.round((Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate()) - Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())) / 86400000);
+}

@@ -26,6 +26,10 @@ export type Gstr3bReport = {
     cash: TaxHeads;
     closingItc: TaxHeads;
     cashTotal: number;
+    /** TDS/TCS credit applied against the cash payable. */
+    cashCredits: TaxHeads;
+    /** Credit held back and not claimed this period. */
+    itcHeld: TaxHeads;
   };
 };
 
@@ -55,7 +59,10 @@ export function buildGstr3b(periodKey: string, books: PeriodBooks, carryIn: TaxH
 
   // RCM tax is paid in cash first (it cannot be paid from credit); its ITC (already in 4A) is then usable on output tax.
   const util = utilizeItc(outwardLiab, itcAvailable);
-  const cash = sumHeads(util.cash, rcmCash);
+  const cashBefore = sumHeads(util.cash, rcmCash);
+  const applied = (k: keyof TaxHeads) => Math.min(cashBefore[k], books.cashCredits[k]);
+  const cashCredits: TaxHeads = { igst: applied("igst"), cgst: applied("cgst"), sgst: applied("sgst"), cess: applied("cess") };
+  const cash: TaxHeads = { igst: r2(cashBefore.igst - cashCredits.igst), cgst: r2(cashBefore.cgst - cashCredits.cgst), sgst: r2(cashBefore.sgst - cashCredits.sgst), cess: r2(cashBefore.cess - cashCredits.cess) };
   const itcUsed = sumHeads(
     { igst: util.utilisation.igstCredit.igst + util.utilisation.igstCredit.cgst + util.utilisation.igstCredit.sgst, cgst: 0, sgst: 0, cess: 0 },
     {
@@ -81,6 +88,8 @@ export function buildGstr3b(periodKey: string, books: PeriodBooks, carryIn: TaxH
       cash,
       closingItc: util.remaining,
       cashTotal: totalTax(cash),
+      cashCredits,
+      itcHeld: books.itcHeld,
     },
   };
 }

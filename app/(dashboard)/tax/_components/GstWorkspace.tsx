@@ -15,6 +15,8 @@ import { Gstr1Tab } from "./Gstr1Tab";
 import { Gstr3bTab } from "./Gstr3bTab";
 import { Gstr9Tab } from "./Gstr9Tab";
 import { ItcTab } from "./ItcTab";
+import { DocumentsTab } from "./DocumentsTab";
+import { ToolsTab } from "./ToolsTab";
 import { IssuesTab } from "./IssuesTab";
 import { OverviewTab } from "./OverviewTab";
 import { ReconTab } from "./ReconTab";
@@ -22,7 +24,7 @@ import { SetupTab } from "./SetupTab";
 import { ExtendDialog, FileReturnDialog } from "./ReturnDialogs";
 import { useJson, useUrlState, type GstOverview, type ObligationView } from "./gst-utils";
 
-const TABS = ["overview", "gstr1", "gstr3b", "gstr9", "itc", "recon", "issues", "setup"] as const;
+const TABS = ["overview", "gstr1", "gstr3b", "gstr9", "itc", "recon", "documents", "tools", "issues", "setup"] as const;
 type Tab = (typeof TABS)[number];
 
 function fyOptions(current: number) {
@@ -49,6 +51,7 @@ export function GstWorkspace({ currentFy }: { currentFy: number }) {
   const refresh = useCallback(() => { overview.reload(); issues.reload(); }, [overview, issues]);
 
   const data = overview.data;
+  const access = data?.access ?? { manage: false, file: false, approve: false };
   const obligations = useMemo(() => data?.obligations ?? [], [data]);
   const defaultPeriod = useCallback((type: "GSTR1" | "GSTR3B") => {
     const list = obligations.filter((o) => o.returnType === type);
@@ -94,18 +97,20 @@ export function GstWorkspace({ currentFy }: { currentFy: number }) {
     if (notApplicable) {
       return <div className="rounded-2xl border border-dashed border-border p-10 text-center"><Landmark className="mx-auto size-8 text-muted-foreground" aria-hidden /><p className="mt-3 text-base font-semibold">{t("notIndia.title")}</p><p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">{t("notIndia.body")}</p><Link href="/tax/income-tax" className="mt-4 inline-block text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-300">{t("notIndia.cta")}</Link></div>;
     }
-    if (tab === "setup") return <SetupTab onSaved={refresh} />;
+    if (tab === "setup") return <SetupTab onSaved={refresh} canManage={access.manage} />;
     if (unregistered && tab !== "overview") {
       return <div className="rounded-2xl border border-dashed border-border p-10 text-center"><p className="text-base font-semibold">{t("unregistered.title")}</p><p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">{t("unregistered.body")}</p><button type="button" onClick={() => goto("setup")} className="mt-4 text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-300">{t("unregistered.cta")}</button></div>;
     }
     switch (tab) {
-      case "gstr1": return <Gstr1Tab obligations={obligations} period={period || defaultPeriod("GSTR1")} onPeriod={(p) => setUrl({ period: p })} onFile={setFiling} />;
-      case "gstr3b": return <Gstr3bTab obligations={obligations} period={period || defaultPeriod("GSTR3B")} onPeriod={(p) => setUrl({ period: p })} onFile={setFiling} />;
-      case "gstr9": return <Gstr9Tab fy={fy} obligation={obligations.find((o) => o.returnType === "GSTR9")} onFile={setFiling} />;
-      case "itc": return <ItcTab fy={fy} />;
-      case "recon": return <ReconTab key={fy} months={months} initial={period} />;
+      case "gstr1": return <Gstr1Tab obligations={obligations} period={period || defaultPeriod("GSTR1")} onPeriod={(p) => setUrl({ period: p })} onFile={setFiling} access={access} onChanged={refresh} />;
+      case "gstr3b": return <Gstr3bTab obligations={obligations} period={period || defaultPeriod("GSTR3B")} onPeriod={(p) => setUrl({ period: p })} onFile={setFiling} access={access} onChanged={refresh} />;
+      case "gstr9": return <Gstr9Tab fy={fy} obligation={obligations.find((o) => o.returnType === "GSTR9")} onFile={setFiling} access={access} onChanged={refresh} />;
+      case "itc": return <ItcTab fy={fy} canManage={access.manage} />;
+      case "recon": return <ReconTab key={fy} months={months} initial={period} canManage={access.manage} />;
+      case "documents": return <DocumentsTab fy={fy} canManage={access.manage} obligations={obligations} />;
+      case "tools": return <ToolsTab fy={fy} obligations={obligations} canManage={access.manage} />;
       case "issues": return <IssuesTab issues={issues.data?.issues ?? null} loading={issues.loading} goto={goto} />;
-      default: return <OverviewTab data={data} issueCount={issueCount} onOpen={openObligation} onFile={setFiling} onExtend={setExtending} goto={goto} />;
+      default: return <OverviewTab data={data} canFile={access.file} canManage={access.manage} issueCount={issueCount} onOpen={openObligation} onFile={setFiling} onExtend={setExtending} goto={goto} />;
     }
   };
 

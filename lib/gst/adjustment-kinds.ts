@@ -7,5 +7,7 @@ export const ADJUSTMENT_KINDS = [
   "ITC_REVERSAL_OTHER",
   "ITC_REVERSED_CLAIMED_AGAIN",
   "LIABILITY_ADJUSTMENT",
+  "TDS_CREDIT",
+  "TCS_CREDIT",
 ] as const;
 export type AdjustmentKind = (typeof ADJUSTMENT_KINDS)[number];

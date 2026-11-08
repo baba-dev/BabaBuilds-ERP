@@ -17,6 +17,10 @@ export type ExpenseGstInput = {
   sgst: number;
   cess: number;
   itcStatus: "NONE" | "ELIGIBLE" | "INELIGIBLE" | "REVERSE_CHARGE" | string;
+  paymentStatus?: string;
+  paidAt?: Date | null;
+  itcHeld?: boolean;
+  itcClaimMonth?: string | null;
 };
 
 export type AdjustmentInput = {
@@ -51,6 +55,10 @@ export type PeriodBooks = {
   openingItc: TaxHeads;
   liabilityAdjustment: TaxHeads;
   cashPaidAdjustment: TaxHeads;
+  /** TDS / TCS credited to the electronic cash ledger, set off against cash tax. */
+  cashCredits: TaxHeads;
+  /** Credit held back (supplier not filed / not yet claimed): visible but not claimed. */
+  itcHeld: TaxHeads;
 };
 
 export const emptyBooks = (): PeriodBooks => ({
@@ -70,6 +78,8 @@ export const emptyBooks = (): PeriodBooks => ({
   openingItc: zeroHeads(),
   liabilityAdjustment: zeroHeads(),
   cashPaidAdjustment: zeroHeads(),
+  cashCredits: zeroHeads(),
+  itcHeld: zeroHeads(),
 });
 
 const heads = (e: { igst: number; cgst: number; sgst: number; cess: number }): TaxHeads => ({ igst: e.igst, cgst: e.cgst, sgst: e.sgst, cess: e.cess });
@@ -86,9 +96,10 @@ export function buildBooks(args: { gstr1: Gstr1Report; expenses: ExpenseGstInput
 
   let exportsWp = zeroRow();
   let exportsWop = zeroRow();
-  for (const inv of gstr1.exports) {
+  const zeroRatedDocs = [...gstr1.exports, ...gstr1.sez.flatMap((p) => p.invoices)];
+  for (const inv of zeroRatedDocs) {
     for (const l of inv.lines) {
-      if (inv.supplyType === "EXPWP") exportsWp = addRow(exportsWp, l);
+      if (inv.supplyType === "EXPWP" || inv.supplyType === "SEZWP") exportsWp = addRow(exportsWp, l);
       else exportsWop = addRow(exportsWop, l);
     }
   }
@@ -117,10 +128,13 @@ export function buildBooks(args: { gstr1: Gstr1Report; expenses: ExpenseGstInput
   for (const e of args.expenses) {
     const tax = heads(e);
     if (e.itcStatus === "REVERSE_CHARGE") {
+      // The reverse-charge liability always arises; only the credit on it can be held back.
       b.rcm = addRow(b.rcm, { taxable: expenseTaxable(e), ...tax });
-      b.itcRcm = addHeads(b.itcRcm, tax);
+      if (e.itcHeld) b.itcHeld = addHeads(b.itcHeld, tax);
+      else b.itcRcm = addHeads(b.itcRcm, tax);
     } else if (e.itcStatus === "ELIGIBLE") {
-      b.itcOther = addHeads(b.itcOther, tax);
+      if (e.itcHeld) b.itcHeld = addHeads(b.itcHeld, tax);
+      else b.itcOther = addHeads(b.itcOther, tax);
     } else if (e.itcStatus === "INELIGIBLE") {
       b.itcIneligible = addHeads(b.itcIneligible, tax);
     }
@@ -144,6 +158,8 @@ export function buildBooks(args: { gstr1: Gstr1Report; expenses: ExpenseGstInput
       case "ITC_REVERSED_CLAIMED_AGAIN": b.reclaimed = addHeads(b.reclaimed, h); break;
       case "LIABILITY_ADJUSTMENT": b.liabilityAdjustment = addHeads(b.liabilityAdjustment, h); break;
       case "CASH_PAID": b.cashPaidAdjustment = addHeads(b.cashPaidAdjustment, h); break;
+      case "TDS_CREDIT":
+      case "TCS_CREDIT": b.cashCredits = addHeads(b.cashCredits, h); break;
       default: break;
     }
   }
@@ -169,6 +185,8 @@ export function mergeBooks(list: PeriodBooks[]): PeriodBooks {
     out.openingItc = addHeads(out.openingItc, x.openingItc);
     out.liabilityAdjustment = addHeads(out.liabilityAdjustment, x.liabilityAdjustment);
     out.cashPaidAdjustment = addHeads(out.cashPaidAdjustment, x.cashPaidAdjustment);
+    out.cashCredits = addHeads(out.cashCredits, x.cashCredits);
+    out.itcHeld = addHeads(out.itcHeld, x.itcHeld);
     for (const r of x.interStateUnregistered) {
       const cur = inter.get(r.pos) ?? { pos: r.pos, taxable: 0, igst: 0 };
       cur.taxable = r2(cur.taxable + r.taxable);
@@ -178,4 +196,37 @@ export function mergeBooks(list: PeriodBooks[]): PeriodBooks {
   }
   out.interStateUnregistered = Array.from(inter.values());
   return out;
+}
+
+/** Month a bill's credit is claimed in: the chosen claim month if it is not before the bill, else the bill's own month. */
+export function claimDate(e: Pick<ExpenseGstInput, "date" | "itcClaimMonth">): Date {
+  const m = e.itcClaimMonth && /^\d{4}-(0[1-9]|1[0-2])$/.test(e.itcClaimMonth) ? e.itcClaimMonth : null;
+  if (!m) return e.date;
+  const chosen = new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1));
+  const billMonth = new Date(Date.UTC(e.date.getUTCFullYear(), e.date.getUTCMonth(), 1));
+  return chosen.getTime() > billMonth.getTime() ? chosen : e.date;
+}
+
+const RULE37_DAYS = 180;
+
+/**
+ * Rule 37: credit on a bill that stays unpaid 180 days after the invoice date must be reversed (with interest) in the
+ * period the 180th day falls in, and can be claimed again in the period it is paid. Returns the movement for a period.
+ */
+export function rule37Movement(expenses: ExpenseGstInput[], start: Date, end: Date): { reversal: TaxHeads; reclaim: TaxHeads; reversedBills: string[]; reclaimedBills: string[] } {
+  let reversal = zeroHeads();
+  let reclaim = zeroHeads();
+  const reversedBills: string[] = [];
+  const reclaimedBills: string[] = [];
+  for (const e of expenses) {
+    if (e.itcStatus !== "ELIGIBLE" || e.itcHeld) continue;
+    const lapse = new Date(e.date.getTime() + RULE37_DAYS * 86400000);
+    const paidInTime = !!e.paidAt && e.paidAt.getTime() <= lapse.getTime();
+    if (paidInTime) continue;
+    // Bills never marked unpaid are assumed settled; only UNPAID or paid-after-the-deadline bills move.
+    if (e.paymentStatus !== "UNPAID" && !(e.paidAt && e.paidAt.getTime() > lapse.getTime())) continue;
+    if (lapse.getTime() >= start.getTime() && lapse.getTime() <= end.getTime()) { reversal = addHeads(reversal, heads(e)); reversedBills.push(e.id); }
+    if (e.paidAt && e.paidAt.getTime() >= start.getTime() && e.paidAt.getTime() <= end.getTime() && e.paidAt.getTime() > lapse.getTime()) { reclaim = addHeads(reclaim, heads(e)); reclaimedBills.push(e.id); }
+  }
+  return { reversal, reclaim, reversedBills, reclaimedBills };
 }

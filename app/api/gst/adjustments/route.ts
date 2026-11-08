@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { gstError, requireGstAccess } from "@/lib/gst/access";
+import { auditGst, gstError, requireGstAccess } from "@/lib/gst/access";
 import { num } from "@/lib/gst/money";
 import { ADJUSTMENT_KINDS } from "@/lib/gst/adjustment-kinds";
 
@@ -31,6 +31,7 @@ export async function POST(request: Request) {
   const d = body.data;
   if (d.igst + d.cgst + d.sgst + d.cess <= 0) return gstError(400, "AMOUNT_REQUIRED", "Enter an amount for at least one tax head.");
   const row = await prisma.gstAdjustment.create({ data: { workspaceId: auth.access.workspaceId, periodKey: d.periodKey, kind: d.kind, igst: d.igst, cgst: d.cgst, sgst: d.sgst, cess: d.cess, notes: d.notes ?? null, createdByUserId: auth.access.userId } });
+  await auditGst(auth.access, "ADJUSTMENT_ADDED", { type: "GstAdjustment", id: row.id }, { kind: d.kind, period: d.periodKey }, request);
   return NextResponse.json({ id: row.id }, { status: 201 });
 }
 
@@ -41,5 +42,6 @@ export async function DELETE(request: Request) {
   if (!id) return gstError(400, "ID_REQUIRED", "Missing adjustment id.");
   const res = await prisma.gstAdjustment.deleteMany({ where: { id, workspaceId: auth.access.workspaceId } });
   if (res.count === 0) return gstError(404, "NOT_FOUND", "Adjustment not found.");
+  await auditGst(auth.access, "ADJUSTMENT_REMOVED", { type: "GstAdjustment", id }, undefined, request);
   return NextResponse.json({ ok: true });
 }

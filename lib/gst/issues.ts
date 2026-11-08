@@ -3,7 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { loadGstBooks, loadGstProfile } from "./data";
 import { fyBounds, fyStartYear } from "./calendar";
 import { isValidGstin, normalizeGstin } from "./gstin";
-import { expenseTaxable } from "./books";
+import { claimDate, expenseTaxable } from "./books";
+import { eInvoiceStatus } from "./einvoice";
+import { findNumberGaps } from "./gaps";
 import { r2 } from "./money";
 
 export type GstIssue = {
@@ -13,7 +15,8 @@ export type GstIssue = {
     | "BUSINESS_GSTIN_MISSING" | "BUSINESS_GSTIN_INVALID" | "BUSINESS_STATE_MISSING" | "BUSINESS_TURNOVER_MISSING"
     | "CLIENT_STATE_MISSING" | "CLIENT_GSTIN_INVALID" | "CLIENT_STATE_MISMATCH"
     | "INVOICE_SAC_MISSING" | "INVOICE_TAX_MISMATCH" | "EXPORT_WITH_TAX"
-    | "EXPENSE_GSTIN_MISSING" | "EXPENSE_GSTIN_INVALID" | "EXPENSE_INVOICE_NO_MISSING" | "EXPENSE_TAX_EXCEEDS" | "EXPENSE_DUPLICATE" | "EXPENSE_HSN_MISSING";
+    | "EXPENSE_GSTIN_MISSING" | "EXPENSE_GSTIN_INVALID" | "EXPENSE_INVOICE_NO_MISSING" | "EXPENSE_TAX_EXCEEDS" | "EXPENSE_DUPLICATE" | "EXPENSE_HSN_MISSING"
+    | "INVOICE_NUMBER_GAP" | "SEZ_NEEDS_GSTIN" | "EINVOICE_OVERDUE" | "EINVOICE_PENDING" | "RULE37_SOON" | "ITC_HELD" | "ITC_CLAIM_DEADLINE";
   scope: "business" | "client" | "invoice" | "expense";
   refId: string | null;
   name: string;
@@ -39,6 +42,9 @@ export async function getGstIssues(workspaceId: string, asOf = new Date()): Prom
   const sacMissing: Array<{ id: string; number: string }> = [];
   const taxMismatch: Array<{ id: string; number: string }> = [];
   const exportTax: Array<{ id: string; number: string }> = [];
+  const sezNoGstin: Array<{ id: string; number: string }> = [];
+  const einvOverdue: Array<{ id: string; number: string }> = [];
+  const einvPending: Array<{ id: string; number: string }> = [];
   for (const inv of books.invoices) {
     if (inv.voided) continue;
     const key = inv.clientId ?? inv.clientName;
@@ -50,6 +56,10 @@ export async function getGstIssues(workspaceId: string, asOf = new Date()): Prom
     if (inv.issues.includes("SAC_MISSING")) sacMissing.push({ id: inv.id, number: inv.number });
     if (inv.issues.includes("TAX_MISMATCH")) taxMismatch.push({ id: inv.id, number: inv.number });
     if (inv.issues.includes("EXPORT_WITH_TAX")) exportTax.push({ id: inv.id, number: inv.number });
+    if (inv.issues.includes("SEZ_NEEDS_GSTIN")) sezNoGstin.push({ id: inv.id, number: inv.number });
+    const ei = eInvoiceStatus({ prevTurnover: profile.prevTurnover, invoiceDate: inv.date, supplyType: inv.supplyType, irn: inv.irn, now: asOf });
+    if (ei.status === "OVERDUE") einvOverdue.push({ id: inv.id, number: inv.number });
+    else if (ei.status === "PENDING") einvPending.push({ id: inv.id, number: inv.number });
   }
   for (const [id, c] of byClient) {
     const href = `/clients${id.length > 20 ? `?client=${id}` : ""}`;
@@ -61,8 +71,27 @@ export async function getGstIssues(workspaceId: string, asOf = new Date()): Prom
   if (taxMismatch.length) out.push({ id: "inv-tax", severity: "warning", code: "INVOICE_TAX_MISMATCH", scope: "invoice", refId: null, name: taxMismatch.slice(0, 3).map((i) => i.number).join(", "), count: taxMismatch.length, href: "/income" });
   if (exportTax.length) out.push({ id: "inv-exp", severity: "info", code: "EXPORT_WITH_TAX", scope: "invoice", refId: null, name: exportTax.slice(0, 3).map((i) => i.number).join(", "), count: exportTax.length, href: "/income" });
 
+  const many = (list: Array<{ number: string }>) => list.slice(0, 3).map((i) => i.number).join(", ");
+  if (sezNoGstin.length) out.push({ id: "inv-sez", severity: "error", code: "SEZ_NEEDS_GSTIN", scope: "invoice", refId: null, name: many(sezNoGstin), count: sezNoGstin.length, href: "/income" });
+  if (einvOverdue.length) out.push({ id: "inv-einv-late", severity: "error", code: "EINVOICE_OVERDUE", scope: "invoice", refId: null, name: many(einvOverdue), count: einvOverdue.length, href: "/tax?tab=documents" });
+  if (einvPending.length) out.push({ id: "inv-einv", severity: "warning", code: "EINVOICE_PENDING", scope: "invoice", refId: null, name: many(einvPending), count: einvPending.length, href: "/tax?tab=documents" });
+  const gaps = findNumberGaps(books.invoices.map((i) => i.number));
+  for (const g of gaps) out.push({ id: `gap-${g.prefix}`, severity: "warning", code: "INVOICE_NUMBER_GAP", scope: "invoice", refId: null, name: `${g.prefix}${g.missing.slice(0, 3).join(", ")}`, count: g.missingCount, href: "/income" });
+
+  const nowMs = asOf.getTime();
+  const soon = books.expenses.filter((e) => e.itcStatus === "ELIGIBLE" && !e.itcHeld && e.paymentStatus === "UNPAID" && !e.paidAt && (() => { const left = e.date.getTime() + 180 * 86400000 - nowMs; return left > 0 && left <= 30 * 86400000; })());
+  if (soon.length) out.push({ id: "rule37", severity: "warning", code: "RULE37_SOON", scope: "expense", refId: null, name: soon.slice(0, 3).map((e) => e.vendor).join(", "), count: soon.length, href: "/expenses" });
+  const held = books.expenses.filter((e) => e.itcHeld && (e.itcStatus === "ELIGIBLE" || e.itcStatus === "REVERSE_CHARGE"));
+  if (held.length) out.push({ id: "itc-held", severity: "info", code: "ITC_HELD", scope: "expense", refId: null, name: held.slice(0, 3).map((e) => e.vendor).join(", "), count: held.length, href: "/tax?tab=recon" });
+  // Credit on a year's bills can be claimed only until 30 November after the year ends.
+  const fyEnd = fy.end;
+  const deadline = new Date(Date.UTC(fyEnd.getUTCFullYear(), 10, 30, 23, 59, 59));
+  const deadlineClose = nowMs <= deadline.getTime() && deadline.getTime() - nowMs <= 45 * 86400000;
+  const unclaimed = books.expenses.filter((e) => e.itcHeld && e.date >= fy.start && e.date <= fy.end && claimDate(e) <= fy.end);
+  if (deadlineClose && unclaimed.length) out.push({ id: "itc-deadline", severity: "warning", code: "ITC_CLAIM_DEADLINE", scope: "expense", refId: null, name: unclaimed.slice(0, 3).map((e) => e.vendor).join(", "), count: unclaimed.length, href: "/tax?tab=recon" });
+
   const seen = new Map<string, string>();
-  for (const e of books.expenses) {
+  for (const e of books.expenses.filter((x) => x.date >= fy.start && x.date <= fy.end)) {
     const href = "/expenses";
     if (e.itcStatus === "ELIGIBLE" || e.itcStatus === "INELIGIBLE") {
       if (!e.vendorGstin) out.push({ id: `e-gstin-${e.id}`, severity: "error", code: "EXPENSE_GSTIN_MISSING", scope: "expense", refId: e.id, name: e.vendor, count: 1, href });

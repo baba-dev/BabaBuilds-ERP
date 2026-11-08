@@ -836,6 +836,11 @@
   },
   "Expenses": {
     "gst": {
+      "payment": "Payment",
+      "paid": "Paid",
+      "unpaid": "Not paid yet",
+      "unpaidHint": "The credit is reversed if this bill stays unpaid 180 days after its date, and can be claimed again once you pay it.",
+      "scanned": "GST details were read from the bill. Please confirm them.",
       "title": "GST on this bill",
       "collapsed": "No GST claimed",
       "credit": "Input credit",
@@ -3126,6 +3131,159 @@
     }
   },
   "Income": {
+      "gst": {
+        "title": "GST",
+        "edit": "Edit",
+        "inter": "Inter-state",
+        "intra": "Intra-state",
+        "type": {
+          "B2B": "B2B",
+          "B2B_RCM": "B2B · reverse charge",
+          "B2CL": "B2C large",
+          "B2CS": "B2C small",
+          "EXPWP": "Export with payment",
+          "EXPWOP": "Export under LUT",
+          "SEZWP": "SEZ with payment",
+          "SEZWOP": "SEZ without payment"
+        },
+        "einv": {
+          "REPORTED": "e-Invoice reported",
+          "PENDING": "e-Invoice IRN needed",
+          "OVERDUE": "e-Invoice overdue"
+        },
+        "daysLeft": "{days} days left",
+        "manage": "Manage",
+        "eway": "Needs an e-way bill to move the goods.",
+        "issue": {
+          "STATE_ASSUMED": "Customer state missing; your state was assumed",
+          "GSTIN_INVALID": "Customer GSTIN is not valid",
+          "GSTIN_STATE_MISMATCH": "Customer state differs from GSTIN",
+          "SAC_MISSING": "No SAC/HSN code",
+          "TAX_MISMATCH": "Line tax differs from the invoice total",
+          "EXPORT_WITH_TAX": "Export charged GST: reported with payment of IGST",
+          "SEZ_NEEDS_GSTIN": "SEZ supply needs the customer's GSTIN"
+        },
+        "editTitle": "GST details",
+        "editBody": "Override how this invoice is reported when the customer's record is not enough.",
+        "pos": "Place of supply",
+        "posAuto": "Automatic (from the customer)",
+        "outsideIndia": "Outside India",
+        "sez": "SEZ supply",
+        "sezNone": "Not a SEZ supply",
+        "sezWp": "SEZ, with payment of tax",
+        "sezWop": "SEZ, without payment of tax",
+        "rcm": "Reverse charge",
+        "rcmHint": "The customer pays the GST to the government.",
+        "eco": "E-commerce operator GSTIN",
+        "ecoHint": "Only if the sale went through a marketplace that collects tax at source.",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saved": "GST details saved",
+        "failed": "Could not save"
+      }
+    ,
+      "gst": {
+        "title": "GST",
+        "edit": "Edit",
+        "inter": "Inter-state",
+        "intra": "Intra-state",
+        "type": {
+          "B2B": "B2B",
+          "B2B_RCM": "B2B · reverse charge",
+          "B2CL": "B2C large",
+          "B2CS": "B2C small",
+          "EXPWP": "Export with payment",
+          "EXPWOP": "Export under LUT",
+          "SEZWP": "SEZ with payment",
+          "SEZWOP": "SEZ without payment"
+        },
+        "einv": {
+          "REPORTED": "e-Invoice reported",
+          "PENDING": "e-Invoice IRN needed",
+          "OVERDUE": "e-Invoice overdue"
+        },
+        "daysLeft": "{days} days left",
+        "manage": "Manage",
+        "eway": "Needs an e-way bill to move the goods.",
+        "issue": {
+          "STATE_ASSUMED": "Customer state missing; your state was assumed",
+          "GSTIN_INVALID": "Customer GSTIN is not valid",
+          "GSTIN_STATE_MISMATCH": "Customer state differs from GSTIN",
+          "SAC_MISSING": "No SAC/HSN code",
+          "TAX_MISMATCH": "Line tax differs from the invoice total",
+          "EXPORT_WITH_TAX": "Export charged GST: reported with payment of IGST",
+          "SEZ_NEEDS_GSTIN": "SEZ supply needs the customer's GSTIN"
+        },
+        "editTitle": "GST details",
+        "editBody": "Override how this invoice is reported when the customer's record is not enough.",
+        "pos": "Place of supply",
+        "posAuto": "Automatic (from the customer)",
+        "outsideIndia": "Outside India",
+        "sez": "SEZ supply",
+        "sezNone": "Not a SEZ supply",
+        "sezWp": "SEZ, with payment of tax",
+        "sezWop": "SEZ, without payment of tax",
+        "rcm": "Reverse charge",
+        "rcmHint": "The customer pays the GST to the government.",
+        "eco": "E-commerce operator GSTIN",
+        "ecoHint": "Only if the sale went through a marketplace that collects tax at source.",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saved": "GST details saved",
+        "failed": "Could not save"
+      }
+    ,
+      "gst": {
+        "title": "GST",
+        "edit": "Edit",
+        "inter": "Inter-state",
+        "intra": "Intra-state",
+        "type": {
+          "B2B": "B2B",
+          "B2B_RCM": "B2B · reverse charge",
+          "B2CL": "B2C large",
+          "B2CS": "B2C small",
+          "EXPWP": "Export with payment",
+          "EXPWOP": "Export under LUT",
+          "SEZWP": "SEZ with payment",
+          "SEZWOP": "SEZ without payment"
+        },
+        "einv": {
+          "REPORTED": "e-Invoice reported",
+          "PENDING": "e-Invoice IRN needed",
+          "OVERDUE": "e-Invoice overdue"
+        },
+        "daysLeft": "{days} days left",
+        "manage": "Manage",
+        "eway": "Needs an e-way bill to move the goods.",
+        "issue": {
+          "STATE_ASSUMED": "Customer state missing; your state was assumed",
+          "GSTIN_INVALID": "Customer GSTIN is not valid",
+          "GSTIN_STATE_MISMATCH": "Customer state differs from GSTIN",
+          "SAC_MISSING": "No SAC/HSN code",
+          "TAX_MISMATCH": "Line tax differs from the invoice total",
+          "EXPORT_WITH_TAX": "Export charged GST: reported with payment of IGST",
+          "SEZ_NEEDS_GSTIN": "SEZ supply needs the customer's GSTIN"
+        },
+        "editTitle": "GST details",
+        "editBody": "Override how this invoice is reported when the customer's record is not enough.",
+        "pos": "Place of supply",
+        "posAuto": "Automatic (from the customer)",
+        "outsideIndia": "Outside India",
+        "sez": "SEZ supply",
+        "sezNone": "Not a SEZ supply",
+        "sezWp": "SEZ, with payment of tax",
+        "sezWop": "SEZ, without payment of tax",
+        "rcm": "Reverse charge",
+        "rcmHint": "The customer pays the GST to the government.",
+        "eco": "E-commerce operator GSTIN",
+        "ecoHint": "Only if the sale went through a marketplace that collects tax at source.",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saved": "GST details saved",
+        "failed": "Could not save"
+      }
+    ,
     "title": "Invoices & earnings",
     "description": "Create, send and collect on every invoice, and see what is still owed.",
     "newInvoice": "New invoice",
@@ -4306,7 +4464,9 @@
       "itc": "Input credit",
       "recon": "GSTR-2B match",
       "issues": "Checks",
-      "setup": "Setup"
+      "setup": "Setup",
+      "documents": "Documents",
+      "tools": "Tools"
     },
     "fy": "Financial year",
     "incomeTax": "Income tax & savings",
@@ -4469,13 +4629,34 @@
       "docType": "Document",
       "docKey": {
         "INVOICE": "Invoices",
-        "CREDIT_NOTE": "Credit notes"
+        "CREDIT_NOTE": "Credit notes",
+        "DEBIT_NOTE": "Debit notes"
       },
       "from": "From",
       "to": "To",
       "total": "Total",
       "cancelled": "Cancelled",
-      "net": "Issued"
+      "net": "Issued",
+      "sez": "6B · SEZ supplies",
+      "sezHint": "Supplies to SEZ units or developers",
+      "withoutPayment": "Without payment of tax",
+      "amend": "9A / 10 · Amendments",
+      "amendHint": "Corrections to returns of earlier periods",
+      "table": "Table",
+      "original": "Original",
+      "revised": "Revised",
+      "delta": "Change",
+      "adv": "11 · Advances",
+      "advHint": "Money received before the invoice, and advances now adjusted",
+      "advKind": "Kind",
+      "advReceived": "Received (11A)",
+      "advAdjusted": "Adjusted (11B)",
+      "eco": "14 · Through e-commerce operators",
+      "ecoHint": "Supplies made on marketplaces that collect tax at source",
+      "ecoGstin": "Operator GSTIN",
+      "invoices": "Invoices",
+      "credit": "Credit note",
+      "debit": "Debit note"
     },
     "g3": {
       "intro": "A summary of the period built from the same books. Output tax is paid from your credit ledger first; only the balance is paid in cash.",
@@ -4516,7 +4697,26 @@
       "paidItc": "Paid through ITC",
       "paidCash": "Paid in cash",
       "closing": "Credit left",
-      "orderNote": "Credit is applied in the statutory order: IGST credit against IGST, then CGST, then SGST; CGST and SGST credit against their own head, then IGST."
+      "orderNote": "Credit is applied in the statutory order: IGST credit against IGST, then CGST, then SGST; CGST and SGST credit against their own head, then IGST.",
+      "heldNote": "{amount} of input credit is on hold and not claimed in this return.",
+      "heldWhich": "See which bills",
+      "tdsNote": "{amount} of TDS/TCS credit was set against the cash you owe.",
+      "compare": {
+        "title": "Compare with the portal's auto-drafted GSTR-3B",
+        "hint": "Type the figures the portal shows and see where they differ from your books",
+        "line": "Line",
+        "ours": "Your books",
+        "portal": "Portal",
+        "diff": "Difference",
+        "taxable": "3.1(a) Taxable value",
+        "igst": "3.1(a) IGST",
+        "cgst": "3.1(a) CGST",
+        "sgst": "3.1(a) SGST",
+        "itcIgst": "4(C) ITC IGST",
+        "itcCgst": "4(C) ITC CGST",
+        "itcSgst": "4(C) ITC SGST",
+        "note": "Since July 2025 the portal fills GSTR-3B from GSTR-1 and GSTR-2B and does not let you edit tax lines. Differences here usually mean a missing invoice, an unfiled GSTR-1 or a bill missing in GSTR-2B."
+      }
     },
     "g9": {
       "title": "GSTR-9 · Annual return {fy}",
@@ -4599,7 +4799,14 @@
       "t8rows": {
         "as2b": "Per GSTR-2B",
         "asBooks": "Availed in books",
-        "difference": "Difference"
+        "difference": "Difference",
+        "a": "Per GSTR-2B (auto-drafted)",
+        "b": "ITC availed in returns (6B + 6H)",
+        "c": "ITC of earlier-year invoices availed now",
+        "d": "Difference (A − B − C)",
+        "e": "ITC available but not availed",
+        "f": "ITC availed but ineligible",
+        "k": "ITC to lapse (D − E − F)"
       },
       "t9": "9 · Tax paid",
       "t9Hint": "Payable versus paid in cash and through credit",
@@ -4629,7 +4836,9 @@
         "t15g": "Total demands pending",
         "t16a": "Supplies received from composition taxpayers",
         "t16b": "Deemed supply under section 143 (job work)",
-        "t16c": "Goods sent on approval basis, not returned"
+        "t16c": "Goods sent on approval basis, not returned",
+        "t8c": "ITC on previous-year invoices availed this year",
+        "t8e": "ITC available but not availed"
       },
       "lateFeePaid": "Late fee paid for GSTR-9",
       "interestPaid": "Interest paid",
@@ -4640,7 +4849,24 @@
       "t17Hint": "By code and rate for the year",
       "t18": "18 · HSN summary of inward supplies",
       "t18Hint": "From purchases recorded with GST",
-      "noHsn": "Nothing to show yet."
+      "noHsn": "Nothing to show yet.",
+      "c9": {
+        "title": "9C · Reconciliation with your books",
+        "hint": "Turnover, tax and credit compared with what you declared. Add items such as unbilled revenue or advances.",
+        "hintRequired": "Required for your turnover (above ₹5 crore): a self-certified reconciliation statement. This is a ready-made starting point.",
+        "books": "Turnover per your books",
+        "itemLabel": "Reconciling item",
+        "itemAmount": "Amount",
+        "itemPlaceholder": "e.g. Unbilled revenue",
+        "addItem": "Add item",
+        "declared": "Turnover declared in GSTR-9",
+        "unreconciled": "Unreconciled difference",
+        "tax": "Tax payable / paid",
+        "itc": "ITC per books / per returns",
+        "itcDiff": "ITC difference",
+        "save": "Save items",
+        "saved": "Reconciling items saved"
+      }
     },
     "itc": {
       "balance": "Credit balance",
@@ -4695,7 +4921,21 @@
         "ITC_REVERSAL_RULE_43": "Reversal · Rule 43 (capital goods)",
         "ITC_REVERSAL_OTHER": "Reversal · Other",
         "ITC_REVERSED_CLAIMED_AGAIN": "ITC reclaimed",
-        "LIABILITY_ADJUSTMENT": "Liability adjustment"
+        "LIABILITY_ADJUSTMENT": "Liability adjustment",
+        "TDS_CREDIT": "TDS credit (cash ledger)",
+        "TCS_CREDIT": "TCS credit (cash ledger)"
+      },
+      "rule42": {
+        "title": "Rule 42 calculator",
+        "hint": "Credit on inputs used for both taxable and exempt supplies is reversed in proportion to exempt turnover.",
+        "common": "Common credit {head}",
+        "exempt": "Exempt turnover",
+        "total": "Total turnover",
+        "month": "Month",
+        "result": "Reverse {amount}",
+        "record": "Record reversal",
+        "recorded": "Reversal recorded",
+        "note": "Rule 42: exempt ₹{exempt} of ₹{total}"
       }
     },
     "recon": {
@@ -4722,14 +4962,34 @@
         "MATCHED": "Matched",
         "MISMATCH": "Amount differs",
         "MISSING_IN_2B": "Not in GSTR-2B",
-        "MISSING_IN_BOOKS": "Not in books"
+        "MISSING_IN_BOOKS": "Not in books",
+        "LIKELY": "Likely match"
       },
       "supplier": "Supplier",
       "invoice": "Invoice",
       "statusCol": "Status",
       "in2b": "GSTR-2B tax",
       "inBooks": "Books tax",
-      "diff": "Difference"
+      "diff": "Difference",
+      "likely": "Likely matches",
+      "likelyHint": "Same supplier and tax, similar invoice number",
+      "tolerance": "Tolerance",
+      "actions": "Actions",
+      "confirm": "Confirm match",
+      "accept2b": "Use GSTR-2B tax",
+      "accepted": "Bill updated from GSTR-2B",
+      "hold": "Hold credit",
+      "holdDone": "Credit held until the supplier files",
+      "release": "Release",
+      "released": "Credit released",
+      "nextMonth": "Claim next month",
+      "deferred": "Credit will be claimed in {month}",
+      "chase": "Email the supplier",
+      "mailSubject": "GSTR-1 reminder: invoice {number} not in my GSTR-2B",
+      "mailBody": "Hello,\n\nInvoice {number} (GSTIN {gstin}, tax {amount}) does not appear in my GSTR-2B for {month}. Please report it in your GSTR-1 so I can claim the input credit.\n\nThank you.",
+      "addBill": "Add bill",
+      "bookNo": "book no. {number}",
+      "held": "on hold"
     },
     "issues": {
       "title": "Data checks",
@@ -4801,6 +5061,34 @@
         "EXPENSE_HSN_MISSING": {
           "title": "{name}: bill has no HSN/SAC",
           "fix": "Used for the inward HSN summary in GSTR-9."
+        },
+        "INVOICE_NUMBER_GAP": {
+          "title": "{count, plural, one {# invoice number is} other {# invoice numbers are}} missing from the series ({name})",
+          "fix": "Every number must be issued or cancelled. Void unused numbers or note why they were skipped."
+        },
+        "SEZ_NEEDS_GSTIN": {
+          "title": "SEZ supply needs the customer's GSTIN ({name})",
+          "fix": "Add a valid GSTIN to the customer, or clear the SEZ setting on the invoice."
+        },
+        "EINVOICE_OVERDUE": {
+          "title": "{count, plural, one {# invoice is} other {# invoices are}} past the 30-day e-invoice window ({name})",
+          "fix": "Report them to the invoice portal now: buyers cannot claim credit without an IRN."
+        },
+        "EINVOICE_PENDING": {
+          "title": "{count, plural, one {# invoice needs} other {# invoices need}} an IRN ({name})",
+          "fix": "Download the e-invoice JSON, upload it to the portal and record the IRN in Documents."
+        },
+        "RULE37_SOON": {
+          "title": "{count, plural, one {# unpaid bill reaches} other {# unpaid bills reach}} 180 days soon ({name})",
+          "fix": "Pay the supplier before then, or the input credit must be reversed with interest."
+        },
+        "ITC_HELD": {
+          "title": "{count, plural, one {# bill's credit is} other {# bills' credit is}} on hold ({name})",
+          "fix": "Release it in GSTR-2B match once the supplier has filed."
+        },
+        "ITC_CLAIM_DEADLINE": {
+          "title": "Credit on {count, plural, one {# bill} other {# bills}} must be claimed by 30 November ({name})",
+          "fix": "Credit for last year's bills lapses after the deadline. Release or claim them now."
         }
       }
     },
@@ -4851,7 +5139,381 @@
       "save": "Save settings",
       "saved": "GST settings saved",
       "failed": "Could not save the settings",
-      "noProfile": "Complete your business profile in Settings before configuring GST."
+      "noProfile": "Complete your business profile in Settings before configuring GST.",
+      "reminders": "Due-date reminders",
+      "remindersHint": "Alerts 7, 3 and 1 days before each due date, weekly once overdue, plus a Monday digest of what blocks filing."
+    },
+    "exposure": {
+      "title": "Late-fee exposure",
+      "body": "{fee} late fees + {interest} interest on {count, plural, one {# overdue return} other {# overdue returns}}",
+      "none": "Nothing overdue. Filing on time keeps this at zero."
+    },
+    "held": {
+      "title": "Credit on hold",
+      "body": "Not claimed yet. Release it once the supplier files.",
+      "none": "No bills held back."
+    },
+    "einv": {
+      "title": "e-Invoices to report",
+      "body": "These need an IRN from the invoice portal.",
+      "none": "Nothing waiting."
+    },
+    "review": {
+      "chip": {
+        "READY_FOR_REVIEW": "In review",
+        "APPROVED": "Approved"
+      },
+      "review": "Review",
+      "inReview": "In review",
+      "approved": "Approved",
+      "open": "Open review and comments",
+      "title": "{label} · {period}",
+      "stateDraft": "Draft. Ask your accountant to review before you file.",
+      "stateReview": "Waiting for review.",
+      "stateApproved": "Approved and ready to file.",
+      "request": "Ask for review",
+      "approve": "Approve",
+      "back": "Back to draft",
+      "done": {
+        "REQUEST_REVIEW": "Sent for review",
+        "APPROVE": "Return approved",
+        "RETURN_TO_DRAFT": "Returned to draft"
+      },
+      "empty": "No comments yet. Use this thread to agree numbers before filing.",
+      "you": "You",
+      "placeholder": "Write a comment…",
+      "send": "Send"
+    },
+    "error": {
+      "title": "This page hit a problem",
+      "body": "Your data is safe. Try again; if it keeps happening, contact support with the reference below.",
+      "reference": "Reference: {id}",
+      "retry": "Try again"
+    },
+    "explain": {
+      "hint": "Click to see what makes up this number",
+      "documents": "Documents",
+      "taxable": "Taxable",
+      "tax": "Tax",
+      "empty": "Nothing contributes to this line in this period.",
+      "truncated": "Showing {shown} of {total}.",
+      "keys": {
+        "outward": "Outward taxable supplies",
+        "zero_rated": "Zero-rated supplies",
+        "nil": "Nil-rated and exempt supplies",
+        "rcm": "Inward supplies on reverse charge",
+        "interstate_unreg": "Inter-state to unregistered",
+        "itc_other": "Input credit on purchases",
+        "itc_rcm": "Credit on reverse-charge purchases",
+        "itc_ineligible": "Blocked credit (section 17(5))",
+        "itc_held": "Credit on hold",
+        "reversals": "Credit reversals",
+        "credit_notes": "Credit notes"
+      },
+      "why": {
+        "outward": "Invoices issued to customers where GST was charged.",
+        "zero_rated": "Exports and SEZ supplies, taxed at zero or under LUT.",
+        "nil": "Invoices with no GST charged (nil-rated or exempt).",
+        "rcm": "Purchases where you pay the GST yourself.",
+        "interstate_unreg": "Sales to consumers in another state, reported by place of supply.",
+        "itc_other": "Purchase bills with GST marked eligible and not on hold.",
+        "itc_rcm": "Credit you can claim on the reverse-charge tax you paid.",
+        "itc_ineligible": "Bills whose GST cannot be claimed, such as food or personal use.",
+        "itc_held": "Bills you chose to hold back until the supplier files.",
+        "reversals": "Manual reversals and bills unpaid 180 days after the invoice date.",
+        "credit_notes": "Credit notes issued this period against earlier invoices."
+      },
+      "kind": {
+        "invoice": "Invoice",
+        "bill": "Bill",
+        "note": "Note",
+        "adjustment": "Manual"
+      },
+      "noteKind": {
+        "DEBIT": "Debit note",
+        "AMENDMENT": "Amendment",
+        "ADVANCE": "Advance received",
+        "ADVANCE_ADJUSTED": "Advance adjusted",
+        "HELD": "On hold",
+        "RULE_37": "Unpaid 180 days"
+      }
+    },
+    "tools": {
+      "forecast": {
+        "title": "Cash GST coming up",
+        "hint": "What you will pay on each GSTR-3B after using credit",
+        "empty": "No cash GST due in the coming months.",
+        "due": "Due {date}",
+        "estimated": "estimate",
+        "note": "The same figures feed your cash-flow forecast."
+      },
+      "whatif": {
+        "title": "What if I buy…?",
+        "hint": "See how a planned purchase changes the cash GST for a period",
+        "none": "No open return periods to test.",
+        "period": "Return period",
+        "amount": "Bill amount (₹)",
+        "rate": "GST rate",
+        "supplier": "Supplier is",
+        "intra": "In my state",
+        "inter": "In another state",
+        "kind": "Credit",
+        "eligible": "GST included in the amount, claim credit",
+        "rcm": "Reverse charge, amount excludes GST",
+        "run": "Calculate",
+        "before": "Cash GST now",
+        "after": "With this bill",
+        "change": "Change",
+        "explain": "Adds {credit} of input credit; {carry} is carried forward after this period."
+      },
+      "exports": {
+        "title": "Exports for your accountant",
+        "hint": "Everything for the year in the formats accountants ask for",
+        "bundle": "Year bundle (ZIP)",
+        "bundleBody": "Every GSTR-1 and GSTR-3B, GSTR-9, registers, filing status and data checks.",
+        "tally": "Tally import (XML)",
+        "tallyBody": "Sales and purchase vouchers with the GST split, ready for Tally Prime.",
+        "gstr9": "GSTR-9 workings (CSV)",
+        "gstr9Body": "All annual tables and the 9C reconciliation as a spreadsheet.",
+        "readOnly": "You have read-only access, so ledger names in the Tally file use the defaults."
+      }
+    },
+    "docs": {
+      "title": "GST documents",
+      "sub": {
+        "einvoice": "e-Invoice & e-way",
+        "notes": "Debit notes",
+        "amendments": "Amendments",
+        "advances": "Advances"
+      },
+      "add": "Add",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "save": "Save",
+      "saved": "Saved",
+      "removed": "Removed",
+      "outsideIndia": "Outside India",
+      "einv": {
+        "applies": "e-invoicing applies",
+        "yes": "Yes",
+        "no": "No",
+        "appliesYes": "B2B, SEZ and export invoices need an IRN.",
+        "appliesNo": "Applies once previous-year turnover is above {limit}.",
+        "pending": "Waiting for IRN",
+        "pendingHint": "Invoices not yet reported",
+        "overdue": "Past the 30-day window",
+        "overdueHint": "Above ₹10 crore, report within 30 days",
+        "eway": "E-way bills",
+        "ewayHint": "Goods invoices above ₹50,000",
+        "intro": "Download each invoice's e-invoice JSON, upload it to the invoice portal (IRP) or the offline tool, then record the IRN it returns. The IRP signs the QR code, so it cannot be made here.",
+        "emptyTitle": "No invoices need reporting",
+        "emptyBody": "Everything required is reported.",
+        "notRequired": "Your turnover is below the e-invoicing limit, so no IRNs are needed.",
+        "register": "Invoice register",
+        "registerHint": "IRN and e-way status for the year",
+        "invoice": "Invoice",
+        "customer": "Customer",
+        "value": "Value",
+        "statusCol": "Status",
+        "irn": "IRN",
+        "status": {
+          "REPORTED": "Reported",
+          "PENDING": "To report",
+          "OVERDUE": "Overdue",
+          "NOT_REQUIRED": "Not required"
+        },
+        "dueBy": "report by {date} ({days} days)",
+        "ewayNeeded": "needs e-way bill",
+        "selectEway": "Select {number} for an e-way bill",
+        "ewayCta": "e-way JSON ({count})",
+        "downloadJson": "Download e-invoice JSON for {number}",
+        "recordIrn": "Record IRN for {number}",
+        "recordTitle": "Record IRN · {number}",
+        "recordBody": "Paste what the portal returned. Clear the IRN field to remove it.",
+        "ackNo": "Acknowledgement no.",
+        "ackDate": "Acknowledged on",
+        "ewayNo": "E-way bill number",
+        "saved": "Saved",
+        "cancel": "Cancel",
+        "save": "Save",
+        "failed": "Could not generate the file",
+        "ewayTitle": "e-way bill JSON for {count, plural, one {# invoice} other {# invoices}}",
+        "ewayBody": "One set of transport details is applied to all selected invoices. Only goods lines are included.",
+        "vehicle": "Vehicle number",
+        "distance": "Distance (km)",
+        "fromPin": "From PIN",
+        "toPin": "To PIN",
+        "mode": "Mode",
+        "modes": {
+          "1": "Road",
+          "2": "Rail",
+          "3": "Air",
+          "4": "Ship"
+        },
+        "transporter": "Transporter GSTIN",
+        "generate": "Download JSON",
+        "ewayDone": "e-way bill JSON downloaded",
+        "lateBy": "was due {date}"
+      },
+      "debit": {
+        "title": "Debit notes",
+        "hint": "Raise value or tax on an earlier invoice. They appear in table 9B of GSTR-1.",
+        "addTitle": "Add a debit note",
+        "addBody": "Tax is worked out from the taxable value and the place of supply.",
+        "emptyTitle": "No debit notes",
+        "emptyBody": "Add one when you charge more than the original invoice.",
+        "against": "against {number}",
+        "gst": "GST {amount}",
+        "fields": {
+          "noteNumber": "Note number",
+          "issuedAt": "Issued on",
+          "invoiceNumber": "Original invoice",
+          "recipientName": "Customer",
+          "recipientGstin": "Customer GSTIN",
+          "pos": "Place of supply",
+          "rate": "GST rate",
+          "taxable": "Taxable value (₹)",
+          "reason": "Reason",
+          "periodKey": "Report in period",
+          "originalPeriodKey": "Originally reported in",
+          "originalNumber": "Invoice number",
+          "originalDate": "Invoice date",
+          "originalTaxable": "Taxable value reported (₹)",
+          "revisedTaxable": "Correct taxable value (₹)",
+          "receivedAt": "Received on",
+          "party": "Received from",
+          "amount": "Amount received (₹, GST included)",
+          "notes": "Notes"
+        }
+      },
+      "amend": {
+        "title": "Amendments",
+        "hint": "Correct an invoice already reported in an earlier return. Only the difference changes this period's tax.",
+        "addTitle": "Add an amendment",
+        "addBody": "Enter the taxable value as originally reported and as it should be.",
+        "emptyTitle": "No amendments",
+        "emptyBody": "Add one if an earlier invoice was reported with the wrong value, rate or customer.",
+        "reportedIn": "reported in {period}",
+        "against": "against {number}",
+        "fields": {
+          "noteNumber": "Note number",
+          "issuedAt": "Issued on",
+          "invoiceNumber": "Original invoice",
+          "recipientName": "Customer",
+          "recipientGstin": "Customer GSTIN",
+          "pos": "Place of supply",
+          "rate": "GST rate",
+          "taxable": "Taxable value (₹)",
+          "reason": "Reason",
+          "periodKey": "Report in period",
+          "originalPeriodKey": "Originally reported in",
+          "originalNumber": "Invoice number",
+          "originalDate": "Invoice date",
+          "originalTaxable": "Taxable value reported (₹)",
+          "revisedTaxable": "Correct taxable value (₹)",
+          "receivedAt": "Received on",
+          "party": "Received from",
+          "amount": "Amount received (₹, GST included)",
+          "notes": "Notes"
+        }
+      },
+      "adv": {
+        "title": "Advances received",
+        "hint": "GST is due in the month money is received, even before the invoice. Adjust it when you invoice.",
+        "addTitle": "Add an advance",
+        "addBody": "The amount is GST-inclusive; tax is split out for you.",
+        "emptyTitle": "No advances",
+        "emptyBody": "Record money received before you raise the invoice.",
+        "gst": "GST {amount}",
+        "against": "against {number}",
+        "open": "Not yet adjusted against an invoice",
+        "adjustedOn": "Adjusted {date} against {invoice}",
+        "adjust": "Adjust",
+        "adjustTitle": "Adjust against an invoice",
+        "adjustBody": "The advance's tax is credited back in the return for the date you choose.",
+        "invoiceNo": "Invoice number",
+        "adjustedDate": "Adjusted on",
+        "fields": {
+          "noteNumber": "Note number",
+          "issuedAt": "Issued on",
+          "invoiceNumber": "Original invoice",
+          "recipientName": "Customer",
+          "recipientGstin": "Customer GSTIN",
+          "pos": "Place of supply",
+          "rate": "GST rate",
+          "taxable": "Taxable value (₹)",
+          "reason": "Reason",
+          "periodKey": "Report in period",
+          "originalPeriodKey": "Originally reported in",
+          "originalNumber": "Invoice number",
+          "originalDate": "Invoice date",
+          "originalTaxable": "Taxable value reported (₹)",
+          "revisedTaxable": "Correct taxable value (₹)",
+          "receivedAt": "Received on",
+          "party": "Received from",
+          "amount": "Amount received (₹, GST included)",
+          "notes": "Notes"
+        }
+      }
     }
+  },
+  "IncomeTaxPlanner": {
+    "title": "Income tax estimate",
+    "subtitle": "From your invoices and bills for the year, GST taken out. Compares the new and old regimes.",
+    "fy": "Financial year",
+    "taxpayer": "Taxpayer",
+    "taxpayers": {
+      "individual": "Individual",
+      "huf": "HUF",
+      "firm": "Partnership / LLP",
+      "company": "Company"
+    },
+    "basis": "Income basis",
+    "bases": {
+      "actual": "Actual profit",
+      "presumptive": "Presumptive (44ADA, 50%)",
+      "manual": "Enter income"
+    },
+    "age": "Age",
+    "ages": {
+      "below60": "Below 60",
+      "senior": "60 to 80",
+      "super_senior": "Above 80"
+    },
+    "manualIncome": "Taxable income before deductions (₹)",
+    "deductions": "Old-regime deductions (₹)",
+    "deductionsHint": "80C, 80D, HRA, home-loan interest. Starts from your logged savings, capped at ₹1.5 lakh.",
+    "salaried": "Salaried / pensioner",
+    "salariedHint": "Applies the standard deduction.",
+    "receipts": "Receipts (ex-GST)",
+    "expenses": "Expenses (ex-GST credit)",
+    "incomeUsed": "Income used",
+    "invoices": "Invoices",
+    "regimes": {
+      "new": "New regime",
+      "old": "Old regime"
+    },
+    "better": "Better",
+    "effective": "Effective rate {rate}%",
+    "saves": "{regime} saves you {amount} this year.",
+    "same": "Both regimes give the same tax.",
+    "payable": "Estimated tax",
+    "rows": {
+      "taxable": "Taxable income",
+      "slab": "Tax on slabs",
+      "std": "Standard deduction",
+      "rebate": "Section 87A rebate",
+      "marginal": "Marginal relief",
+      "surcharge": "Surcharge",
+      "cess": "Health & education cess (4%)",
+      "total": "Tax payable"
+    },
+    "advance": {
+      "title": "Advance tax",
+      "none": "No advance tax due: the estimated tax is under ₹10,000.",
+      "note": "Pay by 15 Jun (15%), 15 Sep (45%), 15 Dec (75%) and 15 Mar (100%). Interest applies on shortfalls.",
+      "presumptive": "Presumptive taxpayers pay the whole advance tax in one instalment by 15 March."
+    },
+    "act2025": "From 1 April 2026 the Income-tax Act 2025 replaces the 1961 Act. Slabs are unchanged, but section numbers differ (the 87A rebate is now section 202)."
   }
 }

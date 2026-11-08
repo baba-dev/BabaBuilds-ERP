@@ -16,6 +16,8 @@ export const expenseGstSchema = z.object({
   vendorStateCode: z.string().trim().max(2).optional().nullable(),
   hsnCode: z.string().trim().max(10).optional().nullable(),
   gstRate: z.number().finite().min(0).max(100).optional().nullable(),
+  /** UNPAID bills lose their credit after 180 days (rule 37) until they are paid. */
+  paymentStatus: z.enum(["PAID", "UNPAID"]).default("PAID"),
 });
 export type ExpenseGstFields = z.infer<typeof expenseGstSchema>;
 
@@ -57,16 +59,16 @@ export function vendorStateOf(gstin: string | null | undefined, chosen: string |
 }
 
 export type NormalizedExpenseGst =
-  | { ok: true; data: { itcStatus: ItcStatus; vendorGstin: string | null; vendorInvoiceNo: string | null; vendorStateCode: string | null; hsnCode: string | null; gstRate: number | null; igstAmount: number; cgstAmount: number; sgstAmount: number; cessAmount: number } }
+  | { ok: true; data: { itcStatus: ItcStatus; vendorGstin: string | null; vendorInvoiceNo: string | null; vendorStateCode: string | null; hsnCode: string | null; gstRate: number | null; paymentStatus: "PAID" | "UNPAID"; igstAmount: number; cgstAmount: number; sgstAmount: number; cessAmount: number } }
   | { ok: false; code: string; message: string };
 
 /** Validate the GST block of an expense and compute its tax split. Tax amounts are never taken from the client. */
 export function normalizeExpenseGst(fields: ExpenseGstFields | undefined, amount: number, supplierState: string | null): NormalizedExpenseGst {
-  const f = fields ?? { itcStatus: "NONE" as const };
+  const f = fields ?? { itcStatus: "NONE" as const, paymentStatus: "PAID" as const };
   const gstin = normalizeGstin(f.vendorGstin) || null;
   if (gstin && !validateGstin(gstin).valid) return { ok: false, code: "VENDOR_GSTIN_INVALID", message: "The vendor GSTIN is not valid." };
   if (f.itcStatus === "NONE") {
-    return { ok: true, data: { itcStatus: "NONE", vendorGstin: gstin, vendorInvoiceNo: f.vendorInvoiceNo || null, vendorStateCode: vendorStateOf(gstin, f.vendorStateCode), hsnCode: f.hsnCode || null, gstRate: null, igstAmount: 0, cgstAmount: 0, sgstAmount: 0, cessAmount: 0 } };
+    return { ok: true, data: { itcStatus: "NONE", vendorGstin: gstin, vendorInvoiceNo: f.vendorInvoiceNo || null, vendorStateCode: vendorStateOf(gstin, f.vendorStateCode), hsnCode: f.hsnCode || null, gstRate: null, paymentStatus: "PAID", igstAmount: 0, cgstAmount: 0, sgstAmount: 0, cessAmount: 0 } };
   }
   if (f.gstRate === null || f.gstRate === undefined) return { ok: false, code: "GST_RATE_REQUIRED", message: "Choose the GST rate on this bill." };
   const vendorState = vendorStateOf(gstin, f.vendorStateCode);
@@ -80,6 +82,7 @@ export function normalizeExpenseGst(fields: ExpenseGstFields | undefined, amount
       vendorStateCode: vendorState,
       hsnCode: f.hsnCode?.replace(/\D/g, "").slice(0, 8) || null,
       gstRate: f.gstRate,
+      paymentStatus: f.paymentStatus ?? "PAID",
       igstAmount: calc.igst,
       cgstAmount: calc.cgst,
       sgstAmount: calc.sgst,

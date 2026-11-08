@@ -758,6 +758,11 @@ model Workspace {
   taxObligationPeriods    TaxObligationPeriod[]
   gstReturns              GstReturn[]
   gstAdjustments          GstAdjustment[]
+  gstDebitNotes           GstDebitNote[]
+  gstAmendments           GstAmendment[]
+  gstAdvances             GstAdvance[]
+  gstReturnComments       GstReturnComment[]
+  gstReminderLogs         GstReminderLog[]
   gstr2bEntries           Gstr2bEntry[]
   complianceTasks         ComplianceTask[]
   reportShares            ReportShare[]
@@ -1468,6 +1473,7 @@ model BusinessProfile {
   gstFilingFrequency    String   @default("MONTHLY") // MONTHLY | QRMP (quarterly GSTR-1/3B)
   gstPrevFyTurnover     Decimal? // aggregate turnover of the previous FY (drives HSN digits, late-fee caps)
   gstRegisteredFrom     DateTime?
+  gstRemindersEnabled   Boolean  @default(true) // due-date alerts and the weekly digest
   gstLutActive          Boolean  @default(true) // exports of services under a Letter of Undertaking (zero-rated, no IGST)
 
   // Banking
@@ -1656,6 +1662,13 @@ model Invoice {
   // GST: optional explicit overrides; when null the return engine derives them from the client + business state.
   gstPlaceOfSupply String? // 2-digit state code, or "96" for exports
   gstReverseCharge Boolean @default(false)
+  gstSupplyOverride String? // SEZ_WP | SEZ_WOP (supply to a SEZ unit/developer, with or without payment of tax)
+  gstEcoGstin       String? // GSTIN of the e-commerce operator when the supply was made through one (GSTR-1 table 14)
+  // e-invoicing: IRN and acknowledgement as returned by the Invoice Registration Portal.
+  irn        String?
+  irnAckNo   String?
+  irnAckDate DateTime?
+  ewayBillNo String?
 
   // Security: Two different workspaces can use invoice number "001"
   @@unique([invoiceNumber, workspaceId])
@@ -2141,6 +2154,12 @@ model Expense {
   cessAmount       Decimal @default(0)
   // NONE (no GST on the bill) | ELIGIBLE | INELIGIBLE (blocked u/s 17(5)) | REVERSE_CHARGE
   itcStatus        String  @default("NONE")
+  // Rule 37: credit is reversed if the supplier is not paid within 180 days of the invoice (re-claimed once paid).
+  paymentStatus    String    @default("PAID") // PAID | UNPAID
+  paidAt           DateTime?
+  // Credit control: hold a bill's credit (e.g. supplier has not filed) or claim it in a later month than the bill's.
+  itcHeld          Boolean   @default(false)
+  itcClaimMonth    String? // "2026-10"
 
   @@index([date])
   @@index([category])
@@ -4740,4 +4759,119 @@ model Gstr2bEntry {
 
   @@unique([workspaceId, periodKey, supplierGstin, invoiceNumber])
   @@index([workspaceId, periodKey])
+}
+
+
+/// A debit note raised to increase the value or tax of an earlier invoice (GSTR-1 table 9B).
+model GstDebitNote {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  noteNumber    String
+  issuedAt      DateTime
+  invoiceNumber String? // invoice it relates to
+  invoiceDate   DateTime?
+  recipientName String
+  recipientGstin String?
+  pos           String // place of supply: state code, or "96" for exports
+  rate          Float
+  taxable       Decimal @default(0)
+  igst          Decimal @default(0)
+  cgst          Decimal @default(0)
+  sgst          Decimal @default(0)
+  cess          Decimal @default(0)
+  reason        String
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@unique([workspaceId, noteNumber])
+  @@index([workspaceId, issuedAt])
+}
+
+/// A correction to an invoice or note already reported in an earlier return (GSTR-1 tables 9A / 10); stored as original vs revised.
+model GstAmendment {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  periodKey         String // return period the amendment is reported in
+  originalPeriodKey String
+  originalNumber    String
+  originalDate      DateTime
+  recipientName     String?
+  recipientGstin    String? // set => B2B amendment (9A), empty => B2C small amendment (10)
+  pos               String
+  rate              Float
+
+  originalTaxable Decimal @default(0)
+  originalIgst    Decimal @default(0)
+  originalCgst    Decimal @default(0)
+  originalSgst    Decimal @default(0)
+  revisedTaxable  Decimal @default(0)
+  revisedIgst     Decimal @default(0)
+  revisedCgst     Decimal @default(0)
+  revisedSgst     Decimal @default(0)
+  reason          String
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@index([workspaceId, periodKey])
+}
+
+/// Money received before the invoice is raised; GST is payable in the month of receipt (GSTR-1 table 11).
+model GstAdvance {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  receivedAt     DateTime
+  party          String
+  recipientGstin String?
+  pos            String
+  rate           Float
+  amount         Decimal // received, GST included
+  taxable        Decimal @default(0)
+  igst           Decimal @default(0)
+  cgst           Decimal @default(0)
+  sgst           Decimal @default(0)
+  adjustedAt     DateTime? // when an invoice was raised against it
+  adjustedInvoice String?
+  notes          String?
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@index([workspaceId, receivedAt])
+}
+
+/// Review thread on a return (accountant <-> owner).
+model GstReturnComment {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  returnType   String
+  periodKey    String
+  authorUserId String
+  authorName   String?
+  body         String
+  createdAt    DateTime @default(now())
+
+  @@index([workspaceId, returnType, periodKey])
+}
+
+/// De-duplicates GST reminder sends per workspace.
+model GstReminderLog {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  key     String // e.g. "GSTR3B:2026-09:T-3" or "DIGEST:2026-W45"
+  channel String // EMAIL | INAPP
+  sentAt  DateTime @default(now())
+
+  @@unique([workspaceId, key, channel])
 }

@@ -20,12 +20,15 @@ import {
   type ObligationStatus,
 } from "./calendar";
 import { buildGstr1, gstr1PortalJson, type Gstr1Report } from "./gstr1";
-import { buildBooks, mergeBooks, type PeriodBooks } from "./books";
+import { buildBooks, claimDate, mergeBooks, rule37Movement, type PeriodBooks } from "./books";
 import { buildLedger, type Gstr3bReport } from "./gstr3b";
 import { buildGstr9, type Gstr9Inputs, type Gstr9Report } from "./gstr9";
 import { estimateInterest, estimateLateFee } from "./fees";
+import { checkPermissionsSilent } from "@/lib/rbac";
+import { eInvoiceStatus } from "./einvoice";
+import { exposureOf } from "./exposure";
 import { GST_RULES, type ReturnType } from "./rules";
-import { r2, totalTax, zeroHeads, type TaxHeads } from "./money";
+import { addHeads, r2, totalTax, zeroHeads, type TaxHeads } from "./money";
 import { reconcileGstr2b, type Gstr2bRow } from "./recon";
 import { num } from "./money";
 
@@ -55,11 +58,17 @@ export function unitRanges(profile: Pick<GstProfile, "filingFrequency">, fromFy:
 
 export function buildUnits(profile: GstProfile, books: GstBooks, ranges: Array<{ key: string; start: Date; end: Date }>): Unit[] {
   const unitBooks = ranges.map((r) => {
-    const gstr1 = buildGstr1({ periodKey: r.key, start: r.start, end: r.end, invoices: books.invoices, creditNotes: books.creditNotes, prevTurnover: profile.prevTurnover });
+    const gstr1 = buildGstr1({ periodKey: r.key, start: r.start, end: r.end, invoices: books.invoices, creditNotes: books.creditNotes, debitNotes: books.debitNotes, amendments: books.amendments, advances: books.advances, prevTurnover: profile.prevTurnover });
     const months = new Set(monthsOfPeriod(r.key));
-    const expenses = books.expenses.filter((e) => e.date >= r.start && e.date <= r.end);
+    // A bill belongs to the period its credit is claimed in (later than the bill date when the owner chose so).
+    const expenses = books.expenses.filter((e) => { const d = claimDate(e); return d >= r.start && d <= r.end; });
     const adjustments = books.adjustments.filter((a) => months.has(a.periodKey));
-    return { r, gstr1, books: buildBooks({ gstr1, expenses, adjustments }) };
+    const unitBooks = buildBooks({ gstr1, expenses, adjustments });
+    const r37 = rule37Movement(books.expenses, r.start, r.end);
+    unitBooks.reversalOther = addHeads(unitBooks.reversalOther, r37.reversal);
+    unitBooks.reclaimed = addHeads(unitBooks.reclaimed, r37.reclaim);
+    if (r37.reversedBills.length > 0) unitBooks.reversalByKind.ITC_REVERSAL_RULE_37 = addHeads(unitBooks.reversalByKind.ITC_REVERSAL_RULE_37 ?? zeroHeads(), r37.reversal);
+    return { r, gstr1, books: unitBooks };
   });
   const ledger = buildLedger(unitBooks.map((u) => ({ key: u.r.key, books: u.books })));
   return unitBooks.map((u, i) => ({ key: u.r.key, start: u.r.start, end: u.r.end, gstr1: u.gstr1, books: u.books, gstr3b: ledger[i] }));
@@ -105,6 +114,11 @@ export async function loadFilings(workspaceId: string): Promise<FilingRow[]> {
   }));
 }
 
+export async function loadCommentCounts(workspaceId: string): Promise<Record<string, number>> {
+  const rows = await prisma.gstReturnComment.groupBy({ by: ["returnType", "periodKey"], where: { workspaceId }, _count: { _all: true } });
+  return Object.fromEntries(rows.map((r) => [`${r.returnType}:${r.periodKey}`, r._count._all]));
+}
+
 export type ObligationView = {
   returnType: ReturnType;
   periodKey: string;
@@ -118,6 +132,9 @@ export type ObligationView = {
   daysLate: number;
   lateFeeEstimate: number;
   filing: Omit<FilingRow, "returnType" | "periodKey" | "status" | "extendedDueDate"> | null;
+  /** READY_FOR_REVIEW once the owner has asked the accountant to check the return. */
+  reviewStatus: "READY_FOR_REVIEW" | "APPROVED" | null;
+  commentCount: number;
   /** Headline numbers for the period (output tax / net payable), where we can compute them. */
   figures: { outputTax: number; itcUsed: number; cashPayable: number; taxable: number; invoiceCount: number } | null;
 };
@@ -136,7 +153,7 @@ function figuresFor(units: Unit[], o: Obligation) {
   };
 }
 
-export function prepareObligations(profile: GstProfile, fy: number, units: Unit[], filings: FilingRow[], now = new Date(), firstInvoice: Date | null = null): ObligationView[] {
+export function prepareObligations(profile: GstProfile, fy: number, units: Unit[], filings: FilingRow[], now = new Date(), firstInvoice: Date | null = null, comments: Record<string, number> = {}): ObligationView[] {
   const trackFrom = trackingStart(profile, firstInvoice, now);
   const turnover = fyUnitsTurnover(units);
   const list = obligationsForFy(fy, profile, { gstr9Optional: turnover <= GST_RULES.gstr9OptionalUpTo && profile.prevTurnover <= GST_RULES.gstr9OptionalUpTo, gstr9cRequired: Math.max(turnover, profile.prevTurnover) > GST_RULES.gstr9cAbove });
@@ -162,6 +179,8 @@ export function prepareObligations(profile: GstProfile, fy: number, units: Unit[
       lateFeeEstimate: late > 0 ? estimateLateFee({ returnType: o.returnType, daysLate: late, isNil, prevTurnover: profile.prevTurnover, annualTurnover: turnover }) : 0,
       filing: row ? { filedAt: row.filedAt, arn: row.arn, isNil: row.isNil, lateFeePaid: row.lateFeePaid, interestPaid: row.interestPaid, notes: row.notes } : null,
       figures,
+      reviewStatus: row?.status === "READY_FOR_REVIEW" || row?.status === "APPROVED" ? row.status : null,
+      commentCount: comments[`${o.returnType}:${o.periodKey}`] ?? 0,
     };
   });
 }
@@ -181,17 +200,27 @@ export type GstOverview = {
   kpis: {
     outputTaxYtd: number; itcClaimedYtd: number; cashPaidYtd: number; itcBalance: HeadsView; nextDue: { label: string; periodKey: string; dueDate: string } | null;
     overdue: number; filed: number; total: number; turnover: number;
+    exposure: { lateFee: number; interest: number; total: number; overdueCount: number };
+    heldCredit: number;
+    eInvoicePending: number;
   };
+  /** What the signed-in user may do, so the UI can hide actions instead of letting them fail. */
+  access: { manage: boolean; file: boolean; approve: boolean };
   trend: Array<{ key: string; outputTax: number; itc: number; cash: number }>;
 };
 type HeadsView = TaxHeads & { total: number };
 
-export async function getGstOverview(workspaceId: string, fy?: number): Promise<GstOverview> {
+export async function getGstOverview(workspaceId: string, fy?: number, userId?: string): Promise<GstOverview> {
   const profile = await loadGstProfile(workspaceId);
   const startYear = fy ?? fyStartYear(new Date());
-  const [{ fyUnits, units, books }, filings] = await Promise.all([computeFyUnits(profile, startYear), loadFilings(workspaceId)]);
+  const [{ fyUnits, units, books }, filings, comments, grants] = await Promise.all([
+    computeFyUnits(profile, startYear),
+    loadFilings(workspaceId),
+    loadCommentCounts(workspaceId),
+    userId ? checkPermissionsSilent(userId, workspaceId, ["tax.manage", "tax.file", "tax.approve"] as const) : Promise.resolve({ "tax.manage": true, "tax.file": true, "tax.approve": true }),
+  ]);
   const firstInvoice = books.invoices.reduce<Date | null>((min, i) => (min === null || i.date < min ? i.date : min), null);
-  const obligations = prepareObligations(profile, startYear, fyUnits, filings, new Date(), firstInvoice);
+  const obligations = prepareObligations(profile, startYear, fyUnits, filings, new Date(), firstInvoice, comments);
   const now = new Date();
   const pastUnits = fyUnits.filter((u) => u.end.getTime() <= now.getTime() || u.gstr1.summary.invoiceCount > 0);
   const last = [...units].reverse().find((u) => u.start.getTime() <= now.getTime()) ?? units[units.length - 1];
@@ -216,7 +245,11 @@ export async function getGstOverview(workspaceId: string, fy?: number): Promise<
       filed: required.filter((o) => o.status === "FILED").length,
       total: required.length,
       turnover: fyUnitsTurnover(fyUnits),
+      exposure: exposureOf(obligations),
+      heldCredit: r2(fyUnits.reduce((s, u) => s + totalTax(u.books.itcHeld), 0)),
+      eInvoicePending: books.invoices.filter((i) => !i.voided && i.date >= fyBounds(startYear).start && i.date <= fyBounds(startYear).end && eInvoiceStatus({ prevTurnover: profile.prevTurnover, invoiceDate: i.date, supplyType: i.supplyType, irn: i.irn }).status !== "NOT_REQUIRED" && eInvoiceStatus({ prevTurnover: profile.prevTurnover, invoiceDate: i.date, supplyType: i.supplyType, irn: i.irn }).status !== "REPORTED").length,
     },
+    access: { manage: !!grants["tax.manage"], file: !!grants["tax.file"], approve: !!grants["tax.approve"] },
     trend: fyUnits.map((u) => ({ key: u.key, outputTax: headsTotal(u.gstr3b.payment.liability), itc: headsTotal(u.gstr3b.s4.c), cash: u.gstr3b.payment.cashTotal })),
   };
 }
@@ -241,7 +274,7 @@ export async function getGstr9(workspaceId: string, fy: number): Promise<{ profi
   const range = fyBounds(fy);
   const twoB = await prisma.gstr2bEntry.findMany({ where: { workspaceId, periodKey: { in: monthsOfPeriod(fyLabel(fy)) }, itcAvailable: true } });
   const twoBTotals = twoB.reduce<TaxHeads>((a, e) => ({ igst: r2(a.igst + num(e.igst)), cgst: r2(a.cgst + num(e.cgst)), sgst: r2(a.sgst + num(e.sgst)), cess: r2(a.cess + num(e.cess)) }), zeroHeads());
-  const fyExpenses = books.expenses.filter((e) => e.date >= range.start && e.date <= range.end);
+  const fyExpenses = books.expenses.filter((e) => { const d = claimDate(e); return d >= range.start && d <= range.end; });
   const merged = mergeBooks(fyUnits.map((u) => u.books));
   const booksTurnover = r2(fyUnits.reduce((s, u) => s + u.gstr1.summary.taxable + u.books.nilExempt, 0));
   const turnover = booksTurnover;
@@ -276,17 +309,18 @@ export async function getGstr9(workspaceId: string, fy: number): Promise<{ profi
   return { profile, report, inputs, filing: filings.find((f) => f.returnType === "GSTR9" && f.periodKey === fyLabel(fy)) ?? null, drift };
 }
 
-export async function getRecon(workspaceId: string, periodKey: string) {
+export async function getRecon(workspaceId: string, periodKey: string, tolerance?: number) {
   const profile = await loadGstProfile(workspaceId);
   const range = periodRange(periodKey);
   if (!range) return null;
   const books = await loadGstBooks(profile, range.start, range.end);
   const entries = await prisma.gstr2bEntry.findMany({ where: { workspaceId, periodKey } });
+  const periodExpenses = books.expenses.filter((e) => { const d = claimDate(e); return d >= range.start && d <= range.end; });
   const rows: Gstr2bRow[] = entries.map((e) => ({
     supplierGstin: e.supplierGstin, supplierName: e.supplierName, invoiceNumber: e.invoiceNumber, invoiceDate: e.invoiceDate,
     taxableValue: num(e.taxableValue), igst: num(e.igst), cgst: num(e.cgst), sgst: num(e.sgst), cess: num(e.cess), itcAvailable: e.itcAvailable, reverseCharge: e.reverseCharge,
   }));
-  return { profile, uploaded: entries.length, ...reconcileGstr2b(rows, books.expenses) };
+  return { profile, uploaded: entries.length, ...reconcileGstr2b(rows, periodExpenses, { tolerance }) };
 }
 
 export { estimateInterest, monthKeyOf, parseFyLabel };

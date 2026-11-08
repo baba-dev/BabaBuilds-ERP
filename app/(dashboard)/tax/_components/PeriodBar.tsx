@@ -3,10 +3,11 @@
 import { useTranslations } from "next-intl";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { formatDay, periodLabel, StatusChip, useMoney, type ObligationView } from "./gst-utils";
+import { formatDay, periodLabel, StatusChip, useMoney, type GstAccessFlags, type ObligationView } from "./gst-utils";
+import { ReviewButton } from "./ReviewPanel";
 
 /** Period picker + status + primary actions shared by the GSTR-1 and GSTR-3B views. */
-export function PeriodBar({ obligations, value, onChange, onFile, children }: { obligations: ObligationView[]; value: string; onChange: (key: string) => void; onFile: (o: ObligationView) => void; children?: React.ReactNode }) {
+export function PeriodBar({ obligations, value, onChange, onFile, access, onChanged, children }: { obligations: ObligationView[]; value: string; onChange: (key: string) => void; onFile: (o: ObligationView) => void; access: GstAccessFlags; onChanged: () => void; children?: React.ReactNode }) {
   const t = useTranslations("GstHub");
   const { locale } = useMoney();
   const current = obligations.find((o) => o.periodKey === value) ?? null;
@@ -28,7 +29,8 @@ export function PeriodBar({ obligations, value, onChange, onFile, children }: { 
       ) : null}
       <div className="ms-auto flex flex-wrap items-center gap-2">
         {children}
-        {current && current.status !== "OPEN_PERIOD" ? (
+        {current ? <ReviewButton obligation={current} access={access} onChanged={onChanged} /> : null}
+        {current && current.status !== "OPEN_PERIOD" && access.file ? (
           <Button size="sm" variant={current.status === "FILED" ? "outline" : "default"} onClick={() => onFile(current)}>{current.status === "FILED" ? t("edit") : t("markFiled")}</Button>
         ) : null}
       </div>

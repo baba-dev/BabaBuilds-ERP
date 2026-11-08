@@ -97,7 +97,7 @@ export function parseGstr2bCsv(text: string): ParseResult {
   return { rows, skipped, periodHint: null };
 }
 
-export type ReconStatus = "MATCHED" | "MISMATCH" | "MISSING_IN_BOOKS" | "MISSING_IN_2B";
+export type ReconStatus = "MATCHED" | "LIKELY" | "MISMATCH" | "MISSING_IN_BOOKS" | "MISSING_IN_2B";
 
 export type ReconRow = {
   status: ReconStatus;
@@ -105,56 +105,99 @@ export type ReconRow = {
   supplierName: string;
   invoiceNumber: string;
   date: string | null;
-  twoB: { taxable: number; tax: number } | null;
+  twoB: { taxable: number; tax: number; igst: number; cgst: number; sgst: number; cess: number } | null;
   books: { taxable: number; tax: number; expenseId: string } | null;
   taxDifference: number;
   itcAvailable: boolean;
+  /** Invoice number as recorded in the books when it differs from the 2B (likely matches). */
+  bookInvoiceNumber?: string;
+  held?: boolean;
 };
 
 const taxOf = (x: { igst: number; cgst: number; sgst: number; cess: number }) => r2(x.igst + x.cgst + x.sgst + x.cess);
 
-/** Match 2B rows with purchase bills on supplier GSTIN + normalised invoice number; amounts tolerate Rs 1 of rounding. */
-export function reconcileGstr2b(twoB: Gstr2bRow[], expenses: ExpenseGstInput[]): { rows: ReconRow[]; counts: Record<ReconStatus, number>; unmatchedTax: number } {
-  const key = (g: string, n: string) => `${normalizeGstin(g)}|${normInvoice(n)}`;
-  const bookMap = new Map<string, ExpenseGstInput>();
-  for (const e of expenses) {
-    if (e.itcStatus === "NONE" || !e.vendorGstin || !e.vendorInvoiceNo) continue;
-    bookMap.set(key(e.vendorGstin, e.vendorInvoiceNo), e);
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  const prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i += 1) {
+    let diag = prev[0];
+    prev[0] = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const tmp = prev[j];
+      prev[j] = Math.min(prev[j] + 1, prev[j - 1] + 1, diag + (a[i - 1] === b[j - 1] ? 0 : 1));
+      diag = tmp;
+    }
   }
+  return prev[b.length];
+}
+
+/** Invoice numbers that probably denote the same document: a prefix or year was dropped/added, or one character differs. */
+export function similarInvoiceNumbers(a: string, b: string): boolean {
+  const x = normInvoice(a);
+  const y = normInvoice(b);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  const [short, long] = x.length <= y.length ? [x, y] : [y, x];
+  if (short.length >= 3 && long.endsWith(short)) return true;
+  return Math.min(x.length, y.length) >= 6 && levenshtein(x, y) <= 1;
+}
+
+export type ReconOptions = { tolerance?: number };
+
+/**
+ * Match 2B rows with purchase bills. Pass 1: supplier GSTIN + normalised invoice number. Pass 2 ("likely"): same supplier,
+ * a similar invoice number and tax within tolerance, so typos and missing prefixes are surfaced for one-click confirmation
+ * instead of showing up as two unrelated gaps. Amounts tolerate `tolerance` (default Rs 1) of rounding.
+ */
+export function reconcileGstr2b(twoB: Gstr2bRow[], expenses: ExpenseGstInput[], opts: ReconOptions = {}): { rows: ReconRow[]; counts: Record<ReconStatus, number>; unmatchedTax: number } {
+  const tol = opts.tolerance ?? 1;
+  const key = (g: string, n: string) => `${normalizeGstin(g)}|${normInvoice(n)}`;
+  const claimable = expenses.filter((e) => e.itcStatus !== "NONE" && !!e.vendorGstin && !!e.vendorInvoiceNo);
+  const bookMap = new Map<string, ExpenseGstInput>();
+  for (const e of claimable) bookMap.set(key(e.vendorGstin!, e.vendorInvoiceNo!), e);
+
   const rows: ReconRow[] = [];
   const used = new Set<string>();
+  const unmatched2b: Gstr2bRow[] = [];
+  const row = (r: Gstr2bRow, book: ExpenseGstInput | null, status: ReconStatus, extra: Partial<ReconRow> = {}): ReconRow => {
+    const twoBTax = taxOf(r);
+    const bookTax = book ? taxOf(book) : 0;
+    return {
+      status, supplierGstin: r.supplierGstin, supplierName: r.supplierName ?? book?.vendor ?? "", invoiceNumber: r.invoiceNumber, date: r.invoiceDate?.toISOString().slice(0, 10) ?? null,
+      twoB: { taxable: r.taxableValue, tax: twoBTax, igst: r.igst, cgst: r.cgst, sgst: r.sgst, cess: r.cess }, books: book ? { taxable: r2(book.amount - bookTax), tax: bookTax, expenseId: book.id } : null,
+      taxDifference: r2(twoBTax - bookTax), itcAvailable: r.itcAvailable, held: book?.itcHeld ?? false, ...extra,
+    };
+  };
+
   for (const r of twoB) {
     const k = key(r.supplierGstin, r.invoiceNumber);
     const book = bookMap.get(k);
-    const twoBTax = taxOf(r);
-    if (!book) {
-      rows.push({ status: "MISSING_IN_BOOKS", supplierGstin: r.supplierGstin, supplierName: r.supplierName ?? "", invoiceNumber: r.invoiceNumber, date: r.invoiceDate?.toISOString().slice(0, 10) ?? null, twoB: { taxable: r.taxableValue, tax: twoBTax }, books: null, taxDifference: twoBTax, itcAvailable: r.itcAvailable });
-      continue;
-    }
+    if (!book || used.has(k)) { unmatched2b.push(r); continue; }
     used.add(k);
-    const bookTax = taxOf(book);
-    const diff = r2(twoBTax - bookTax);
-    rows.push({
-      status: Math.abs(diff) <= 1 ? "MATCHED" : "MISMATCH",
-      supplierGstin: r.supplierGstin,
-      supplierName: r.supplierName ?? book.vendor,
-      invoiceNumber: r.invoiceNumber,
-      date: r.invoiceDate?.toISOString().slice(0, 10) ?? null,
-      twoB: { taxable: r.taxableValue, tax: twoBTax },
-      books: { taxable: r2(book.amount - bookTax), tax: bookTax, expenseId: book.id },
-      taxDifference: diff,
-      itcAvailable: r.itcAvailable,
-    });
+    rows.push(row(r, book, Math.abs(r2(taxOf(r) - taxOf(book))) <= tol ? "MATCHED" : "MISMATCH"));
   }
-  for (const [k, e] of bookMap) {
-    if (used.has(k)) continue;
+
+  const remaining = claimable.filter((e) => !used.has(key(e.vendorGstin!, e.vendorInvoiceNo!)));
+  for (const r of unmatched2b) {
+    const cand = remaining.find((e) => !used.has(key(e.vendorGstin!, e.vendorInvoiceNo!)) && normalizeGstin(e.vendorGstin) === normalizeGstin(r.supplierGstin)
+      && (similarInvoiceNumbers(e.vendorInvoiceNo!, r.invoiceNumber) || Math.abs(r2(taxOf(e) - taxOf(r))) <= tol) && Math.abs(r2(taxOf(e) - taxOf(r))) <= Math.max(tol, taxOf(r) * 0.02));
+    if (cand) {
+      used.add(key(cand.vendorGstin!, cand.vendorInvoiceNo!));
+      rows.push(row(r, cand, "LIKELY", { bookInvoiceNumber: cand.vendorInvoiceNo ?? undefined }));
+    } else {
+      rows.push(row(r, null, "MISSING_IN_BOOKS"));
+    }
+  }
+  for (const e of claimable) {
+    if (used.has(key(e.vendorGstin!, e.vendorInvoiceNo!))) continue;
     const bookTax = taxOf(e);
-    rows.push({ status: "MISSING_IN_2B", supplierGstin: e.vendorGstin ?? "", supplierName: e.vendor, invoiceNumber: e.vendorInvoiceNo ?? "", date: e.date.toISOString().slice(0, 10), twoB: null, books: { taxable: r2(e.amount - bookTax), tax: bookTax, expenseId: e.id }, taxDifference: -bookTax, itcAvailable: e.itcStatus === "ELIGIBLE" });
+    rows.push({ status: "MISSING_IN_2B", supplierGstin: e.vendorGstin ?? "", supplierName: e.vendor, invoiceNumber: e.vendorInvoiceNo ?? "", date: e.date.toISOString().slice(0, 10), twoB: null, books: { taxable: r2(e.amount - bookTax), tax: bookTax, expenseId: e.id }, taxDifference: -bookTax, itcAvailable: e.itcStatus === "ELIGIBLE", held: e.itcHeld ?? false });
   }
-  const counts: Record<ReconStatus, number> = { MATCHED: 0, MISMATCH: 0, MISSING_IN_BOOKS: 0, MISSING_IN_2B: 0 };
+
+  const counts: Record<ReconStatus, number> = { MATCHED: 0, LIKELY: 0, MISMATCH: 0, MISSING_IN_BOOKS: 0, MISSING_IN_2B: 0 };
   for (const r of rows) counts[r.status] += 1;
-  const unmatchedTax = r2(rows.filter((r) => r.status !== "MATCHED").reduce((s, r) => s + Math.abs(r.taxDifference), 0));
-  const order: Record<ReconStatus, number> = { MISMATCH: 0, MISSING_IN_2B: 1, MISSING_IN_BOOKS: 2, MATCHED: 3 };
+  const unmatchedTax = r2(rows.filter((r) => r.status !== "MATCHED" && r.status !== "LIKELY").reduce((s, r) => s + Math.abs(r.taxDifference), 0));
+  const order: Record<ReconStatus, number> = { MISMATCH: 0, MISSING_IN_2B: 1, LIKELY: 2, MISSING_IN_BOOKS: 3, MATCHED: 4 };
   rows.sort((a, b) => order[a.status] - order[b.status]);
   return { rows, counts, unmatchedTax };
 }

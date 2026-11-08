@@ -10,7 +10,7 @@ import type { Gstr1Report } from "@/lib/gst/gstr1";
 import { stateName } from "@/lib/gst/states";
 import { EmptyArt } from "./art/GstArt";
 import { PeriodBar } from "./PeriodBar";
-import { Stat, TableShell, td, tdr, th, thr, useJson, useMoney, type ObligationView } from "./gst-utils";
+import { Stat, TableShell, td, tdr, th, thr, useJson, useMoney, type GstAccessFlags, type ObligationView } from "./gst-utils";
 
 type Resp = { report: Gstr1Report; gstin: string | null; stateCode: string | null; prevTurnover: number };
 
@@ -31,7 +31,7 @@ function Block({ id, title, hint, count, children, defaultOpen }: { id: string; 
   );
 }
 
-export function Gstr1Tab({ obligations, period, onPeriod, onFile }: { obligations: ObligationView[]; period: string; onPeriod: (p: string) => void; onFile: (o: ObligationView) => void }) {
+export function Gstr1Tab({ obligations, period, onPeriod, onFile, access, onChanged }: { obligations: ObligationView[]; period: string; onPeriod: (p: string) => void; onFile: (o: ObligationView) => void; access: GstAccessFlags; onChanged: () => void }) {
   const t = useTranslations("GstHub.g1");
   const tc = useTranslations("GstHub");
   const { c, n } = useMoney();
@@ -49,7 +49,7 @@ export function Gstr1Tab({ obligations, period, onPeriod, onFile }: { obligation
 
   return (
     <div className="space-y-5">
-      <PeriodBar obligations={rows} value={period} onChange={onPeriod} onFile={onFile}>
+      <PeriodBar obligations={rows} value={period} onChange={onPeriod} onFile={onFile} access={access} onChanged={onChanged}>
         <Button size="sm" variant="outline" asChild><a href={`/api/gst/gstr1/export?period=${encodeURIComponent(period)}&format=csv`}><Download className="me-1.5 size-4" aria-hidden />CSV</a></Button>
         <Button size="sm" variant="outline" asChild><a href={`/api/gst/gstr1/export?period=${encodeURIComponent(period)}&format=json`}><FileJson className="me-1.5 size-4" aria-hidden />{t("portalJson")}</a></Button>
       </PeriodBar>
@@ -62,7 +62,7 @@ export function Gstr1Tab({ obligations, period, onPeriod, onFile }: { obligation
           <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
             <Stat label={t("taxable")} value={c(r.summary.taxable)} sub={t("invoicesHint", { count: r.summary.invoiceCount })} accent="bg-indigo-500" />
             <Stat label={t("tax")} value={c(taxTotal)} sub={`IGST ${c(r.summary.igst)} · CGST ${c(r.summary.cgst)} · SGST ${c(r.summary.sgst)}`} accent="bg-emerald-500" />
-            <Stat label={t("value")} value={c(r.summary.value)} sub={t("notesHint", { count: r.summary.creditNoteCount })} accent="bg-sky-500" />
+            <Stat label={t("value")} value={c(r.summary.value)} sub={t("notesHint", { count: r.summary.creditNoteCount + r.summary.debitNoteCount })} accent="bg-sky-500" />
             <Stat label={t("hsnDigits")} value={data && data.prevTurnover > 50_000_000 ? "6" : "4"} sub={t("hsnHint")} accent="bg-amber-500" />
           </div>
 
@@ -108,6 +108,34 @@ export function Gstr1Tab({ obligations, period, onPeriod, onFile }: { obligation
                 </TableShell>
               </Block>
 
+              <Block id="sez" title={t("sez")} hint={t("sezHint")} count={r.sez.reduce((s, p) => s + p.invoices.length, 0)}>
+                <TableShell minWidth={720}>
+                  <thead><tr><th className={th}>{t("invoice")}</th><th className={th}>{t("date")}</th><th className={th}>{t("party")}</th><th className={th}>{t("type")}</th><th className={thr}>{t("taxableCol")}</th><th className={thr}>IGST</th></tr></thead>
+                  <tbody>{r.sez.flatMap((p) => p.invoices.flatMap((i) => i.lines.map((l, idx) => <tr key={`${i.id}-${idx}`} className="border-t border-border/50"><td className={cn(td, "font-medium")}>{idx === 0 ? i.number : ""}</td><td className={td}>{idx === 0 ? i.date : ""}</td><td className={td}>{idx === 0 ? <><span className="block">{p.name}</span><span className="block font-mono text-[10px] text-muted-foreground">{p.gstin}</span></> : ""}</td><td className={td}>{i.supplyType === "SEZWP" ? t("withPayment") : t("withoutPayment")}</td><td className={tdr}>{n(l.taxable)}</td><td className={tdr}>{n(l.igst)}</td></tr>)))}</tbody>
+                </TableShell>
+              </Block>
+
+              <Block id="amend" title={t("amend")} hint={t("amendHint")} count={r.amendments.b2b.length + r.amendments.b2cs.length}>
+                <TableShell minWidth={760}>
+                  <thead><tr><th className={th}>{t("invoice")}</th><th className={th}>{t("table")}</th><th className={thr}>{t("original")}</th><th className={thr}>{t("revised")}</th><th className={thr}>{t("delta")}</th><th className={thr}>{t("tax")}</th></tr></thead>
+                  <tbody>{[...r.amendments.b2b.map((a) => ({ a, tbl: "9A" })), ...r.amendments.b2cs.map((a) => ({ a, tbl: "10" }))].map(({ a, tbl }) => <tr key={a.id} className="border-t border-border/50"><td className={cn(td, "font-medium")}>{a.originalNumber}<span className="block text-xs font-normal text-muted-foreground">{a.originalPeriodKey} · {a.reason}</span></td><td className={td}>{tbl}</td><td className={tdr}>{n(a.original.taxable)}</td><td className={tdr}>{n(a.revised.taxable)}</td><td className={tdr}>{n(a.delta.taxable)}</td><td className={tdr}>{n(a.delta.igst + a.delta.cgst + a.delta.sgst)}</td></tr>)}</tbody>
+                </TableShell>
+              </Block>
+
+              <Block id="adv" title={t("adv")} hint={t("advHint")} count={r.advances.received.length + r.advances.adjusted.length}>
+                <TableShell minWidth={680}>
+                  <thead><tr><th className={th}>{t("advKind")}</th><th className={th}>{t("pos")}</th><th className={thr}>{t("rate")}</th><th className={thr}>{t("taxableCol")}</th>{taxHead}</tr></thead>
+                  <tbody>{[...r.advances.received.map((a) => ({ a, k: "11A", sign: 1 })), ...r.advances.adjusted.map((a) => ({ a, k: "11B", sign: -1 }))].map(({ a, k, sign }) => <tr key={`${k}-${a.pos}-${a.rate}`} className="border-t border-border/50"><td className={td}>{k === "11A" ? t("advReceived") : t("advAdjusted")}</td><td className={td}>{pos(a.pos)}</td><td className={tdr}>{a.rate}%</td><td className={tdr}>{n(sign * a.taxable)}</td>{taxCells({ igst: sign * a.igst, cgst: sign * a.cgst, sgst: sign * a.sgst, cess: 0 })}</tr>)}</tbody>
+                </TableShell>
+              </Block>
+
+              <Block id="eco" title={t("eco")} hint={t("ecoHint")} count={r.eco.length}>
+                <TableShell minWidth={520}>
+                  <thead><tr><th className={th}>{t("ecoGstin")}</th><th className={thr}>{t("invoices")}</th><th className={thr}>{t("taxableCol")}</th><th className={thr}>{t("tax")}</th></tr></thead>
+                  <tbody>{r.eco.map((e) => <tr key={e.gstin} className="border-t border-border/50"><td className={cn(td, "font-mono text-xs")}>{e.gstin}</td><td className={tdr}>{e.invoices}</td><td className={tdr}>{n(e.taxable)}</td><td className={tdr}>{n(e.igst + e.cgst + e.sgst + e.cess)}</td></tr>)}</tbody>
+                </TableShell>
+              </Block>
+
               <Block id="nil" title={t("nil")} hint={t("nilHint")} count={r.nil.length}>
                 <TableShell minWidth={520}>
                   <thead><tr><th className={th}>{t("supply")}</th><th className={thr}>{t("nilRated")}</th><th className={thr}>{t("exempted")}</th><th className={thr}>{t("nonGst")}</th></tr></thead>
@@ -117,10 +145,10 @@ export function Gstr1Tab({ obligations, period, onPeriod, onFile }: { obligation
 
               <Block id="cdn" title={t("cdn")} hint={t("cdnHint")} count={r.cdnr.reduce((s, p) => s + p.notes.length, 0) + r.cdnur.length}>
                 <TableShell minWidth={760}>
-                  <thead><tr><th className={th}>{t("note")}</th><th className={th}>{t("date")}</th><th className={th}>{t("against")}</th><th className={th}>{t("party")}</th><th className={thr}>{t("taxableCol")}</th><th className={thr}>{t("tax")}</th></tr></thead>
+                  <thead><tr><th className={th}>{t("note")}</th><th className={th}>{t("type")}</th><th className={th}>{t("date")}</th><th className={th}>{t("against")}</th><th className={th}>{t("party")}</th><th className={thr}>{t("taxableCol")}</th><th className={thr}>{t("tax")}</th></tr></thead>
                   <tbody>
                     {[...r.cdnr.flatMap((p) => p.notes.map((x) => ({ x, name: p.name }))), ...r.cdnur.map((x) => ({ x, name: "" }))].map(({ x, name }) => (
-                      <tr key={x.id} className="border-t border-border/50"><td className={cn(td, "font-medium")}>{x.number}</td><td className={td}>{x.date}</td><td className={td}>{x.originalNumber}</td><td className={td}>{name || t("unregistered")}</td><td className={tdr}>{n(x.lines.reduce((s, l) => s + l.taxable, 0))}</td><td className={tdr}>{n(x.lines.reduce((s, l) => s + l.igst + l.cgst + l.sgst + l.cess, 0))}</td></tr>
+                      <tr key={x.id} className="border-t border-border/50"><td className={cn(td, "font-medium")}>{x.number}</td><td className={td}>{x.noteType === "D" ? t("debit") : t("credit")}</td><td className={td}>{x.date}</td><td className={td}>{x.originalNumber}</td><td className={td}>{name || t("unregistered")}</td><td className={tdr}>{n(x.lines.reduce((s, l) => s + l.taxable, 0))}</td><td className={tdr}>{n(x.lines.reduce((s, l) => s + l.igst + l.cgst + l.sgst + l.cess, 0))}</td></tr>
                     ))}
                   </tbody>
                 </TableShell>

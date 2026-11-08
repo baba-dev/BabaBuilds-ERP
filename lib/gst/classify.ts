@@ -3,7 +3,7 @@ import { FOREIGN_POS } from "./states";
 import { validateGstin, normalizeGstin } from "./gstin";
 import { r2, splitIntra, num, type TaxRow } from "./money";
 
-export type SupplyType = "B2B" | "B2B_RCM" | "B2CL" | "B2CS" | "EXPWP" | "EXPWOP";
+export type SupplyType = "B2B" | "B2B_RCM" | "B2CL" | "B2CS" | "EXPWP" | "EXPWOP" | "SEZWP" | "SEZWOP";
 
 export type InvoiceLineInput = {
   description: string;
@@ -36,6 +36,13 @@ export type InvoiceInput = {
   clientStateCode: string | null;
   placeOfSupplyOverride: string | null;
   reverseCharge: boolean;
+  /** SEZ_WP | SEZ_WOP when the supply is to a SEZ unit or developer. */
+  supplyOverride?: string | null;
+  /** GSTIN of the e-commerce operator the supply went through, if any. */
+  ecoGstin?: string | null;
+  irn?: string | null;
+  irnAckDate?: Date | null;
+  ewayBillNo?: string | null;
 };
 
 export type GstLine = TaxRow & { rate: number; hsn: string; description: string; quantity: number; nil: boolean };
@@ -57,6 +64,9 @@ export type ClassifiedInvoice = {
   tax: number;
   voided: boolean;
   voidedAt: Date | null;
+  ecoGstin: string | null;
+  irn: string | null;
+  ewayBillNo: string | null;
   issues: GstIssueCode[];
 };
 
@@ -66,7 +76,8 @@ export type GstIssueCode =
   | "GSTIN_STATE_MISMATCH"
   | "SAC_MISSING"
   | "TAX_MISMATCH"
-  | "EXPORT_WITH_TAX";
+  | "EXPORT_WITH_TAX"
+  | "SEZ_NEEDS_GSTIN";
 
 /** Pull the first run of 4+ digits out of a stored code (legacy rows sometimes hold JSON-encoded values). */
 export function normalizeHsn(raw: string | null | undefined): string {
@@ -107,7 +118,11 @@ export function classifyInvoice(inv: InvoiceInput, supplierState: string | null)
   }
 
   const isExport = pos === FOREIGN_POS;
-  const interState = !!supplierState && pos !== supplierState;
+  const sezRequested = inv.supplyOverride === "SEZ_WP" || inv.supplyOverride === "SEZ_WOP";
+  if (sezRequested && !registered) issues.push("SEZ_NEEDS_GSTIN");
+  const isSez = sezRequested && registered && !isExport;
+  // Supplies to a SEZ are always inter-state for GST, whatever the SEZ unit's state.
+  const interState = (!!supplierState && pos !== supplierState) || isSez;
 
   // Build base lines in INR.
   const rawLines: InvoiceLineInput[] =
@@ -154,7 +169,9 @@ export function classifyInvoice(inv: InvoiceInput, supplierState: string | null)
   const value = r2(taxable + tax);
 
   let supplyType: SupplyType;
-  if (isExport) {
+  if (isSez) {
+    supplyType = inv.supplyOverride === "SEZ_WP" ? "SEZWP" : "SEZWOP";
+  } else if (isExport) {
     supplyType = tax > 0 ? "EXPWP" : "EXPWOP";
     if (tax > 0) issues.push("EXPORT_WITH_TAX");
   } else if (registered) {
@@ -179,6 +196,9 @@ export function classifyInvoice(inv: InvoiceInput, supplierState: string | null)
     tax,
     voided: inv.voided,
     voidedAt: inv.voidedAt,
+    ecoGstin: inv.ecoGstin ? normalizeGstin(inv.ecoGstin) : null,
+    irn: inv.irn ?? null,
+    ewayBillNo: inv.ewayBillNo ?? null,
     issues: Array.from(new Set(issues)),
   };
 }

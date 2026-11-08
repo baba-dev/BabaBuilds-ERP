@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   const fy = fyParam ? parseFyLabel(fyParam) : fyStartYear(new Date());
   if (fy === null) return gstError(400, "INVALID_FY", "Use a financial year like 2026-27.");
   try {
-    return NextResponse.json(await getGstOverview(auth.access.workspaceId, fy));
+    return NextResponse.json(await getGstOverview(auth.access.workspaceId, fy, auth.access.userId));
   } catch (error) {
     console.error("GST overview error:", error);
     return gstError(500, "OVERVIEW_FAILED", "Failed to load the GST overview.");

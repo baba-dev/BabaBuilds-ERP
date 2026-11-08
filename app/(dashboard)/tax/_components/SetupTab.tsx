@@ -17,17 +17,17 @@ import { readError, Section, useJson } from "./gst-utils";
 
 type Settings = {
   gstin: string | null; stateCode: string | null; registrationType: "REGULAR" | "COMPOSITION" | "UNREGISTERED"; filingFrequency: "MONTHLY" | "QRMP";
-  prevTurnover: number; registeredFrom: string | null; lutActive: boolean; hasProfile: boolean; companyName: string;
+  prevTurnover: number; registeredFrom: string | null; lutActive: boolean; hasProfile: boolean; companyName: string; remindersEnabled: boolean;
 };
 
-export function SetupTab({ onSaved }: { onSaved: () => void }) {
+export function SetupTab({ onSaved, canManage }: { onSaved: () => void; canManage: boolean }) {
   const { data, error, reload } = useJson<Settings>("/api/gst/settings");
   if (error && !data) return <p role="alert" className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">{error}</p>;
   if (!data) return <Skeleton className="h-96 rounded-2xl" />;
-  return <SetupForm initial={data} onSaved={() => { reload(); onSaved(); }} />;
+  return <SetupForm canManage={canManage} initial={data} onSaved={() => { reload(); onSaved(); }} />;
 }
 
-function SetupForm({ initial, onSaved }: { initial: Settings; onSaved: () => void }) {
+function SetupForm({ initial, onSaved, canManage }: { initial: Settings; onSaved: () => void; canManage: boolean }) {
   const t = useTranslations("GstHub.setup");
   const [gstin, setGstin] = useState(initial.gstin ?? "");
   const [state, setState] = useState(initial.stateCode ?? "");
@@ -36,6 +36,7 @@ function SetupForm({ initial, onSaved }: { initial: Settings; onSaved: () => voi
   const [turnover, setTurnover] = useState(initial.prevTurnover ? String(initial.prevTurnover) : "");
   const [since, setSince] = useState(initial.registeredFrom ?? "");
   const [lut, setLut] = useState(initial.lutActive);
+  const [reminders, setReminders] = useState(initial.remindersEnabled);
   const [busy, setBusy] = useState(false);
 
   const normalized = normalizeGstin(gstin);
@@ -50,7 +51,7 @@ function SetupForm({ initial, onSaved }: { initial: Settings; onSaved: () => voi
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           gstin: normalized || null, stateCode: effectiveState || null, registrationType: reg, filingFrequency: reg === "REGULAR" ? freq : "MONTHLY",
-          prevTurnover: turnover.trim() === "" ? null : Number(turnover), registeredFrom: since || null, lutActive: lut,
+          prevTurnover: turnover.trim() === "" ? null : Number(turnover), registeredFrom: since || null, lutActive: lut, remindersEnabled: reminders,
         }),
       });
       if (!res.ok) throw new Error(await readError(res, t("failed")));
@@ -125,9 +126,13 @@ function SetupForm({ initial, onSaved }: { initial: Settings; onSaved: () => voi
             <div><p className="text-sm font-medium">{t("lut")}</p><p className="text-xs text-muted-foreground">{t("lutHint")}</p></div>
             <Switch checked={lut} onCheckedChange={setLut} aria-label={t("lut")} />
           </div>
+          <div className="flex items-start justify-between gap-4 rounded-xl border border-border/60 p-3.5 sm:col-span-2">
+            <div><p className="text-sm font-medium">{t("reminders")}</p><p className="text-xs text-muted-foreground">{t("remindersHint")}</p></div>
+            <Switch checked={reminders} onCheckedChange={setReminders} aria-label={t("reminders")} />
+          </div>
         </div>
       </Section>
-      <div className="flex justify-end"><Button onClick={save} disabled={busy || (!!check && !check.valid)}>{busy ? <Loader2 className="me-2 size-4 animate-spin" aria-hidden /> : null}{t("save")}</Button></div>
+      <div className="flex justify-end"><Button onClick={save} disabled={!canManage || busy || (!!check && !check.valid)}>{busy ? <Loader2 className="me-2 size-4 animate-spin" aria-hidden /> : null}{t("save")}</Button></div>
     </div>
   );
 }

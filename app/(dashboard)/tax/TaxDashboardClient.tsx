@@ -1,20 +1,17 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useTranslations } from "next-intl";
-import { ShieldPlus, Landmark, Calculator, AlertCircle, CheckCircle2, Globe2, CircleHelp } from "lucide-react";
+import { Landmark } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { TAX_HELP_COPY } from "@/lib/tax/help-copy";
 
 // MISSION CRITICAL: Globalization Imports
 import { useFormat } from "@/hooks/use-format";
@@ -26,27 +23,13 @@ import { ColumnVisibilityToggle, DataTable, DataTableToolbar, useUrlTableState, 
 import { type TaxOverrideWindow } from "@/components/tax/tax-override-modal";
 import { TaxComplianceOps } from "@/components/tax/tax-compliance-ops";
 import { TaxHubOverview } from "@/components/tax/tax-hub-overview";
+import { IncomeTaxPlanner } from "./_components/IncomeTaxPlanner";
 import { TaxScopeNotice } from "@/components/tax/TaxScopeNotice";
 import { getCountryPackVerificationStatus } from "@/lib/tax/country-pack-status";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { createTranslator } from "@/lib/i18n/translator";
 
 
-
-const HelpTooltip = ({ copy }: { copy: string }) => (
-  <TooltipProvider>
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button type="button" className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200" aria-label="More info">
-          <CircleHelp className="h-3.5 w-3.5" />
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="top" className="max-w-[280px] text-xs leading-relaxed">
-        {copy}
-      </TooltipContent>
-    </Tooltip>
-  </TooltipProvider>
-);
 
 const toSafeNumber = (value: unknown): number => {
   const parsed = Number(value);
@@ -119,20 +102,6 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
   const [assetName, setAssetName] = useState("");
   const [amount, setAmount] = useState("");
 
-  // Tax Settings State
-  const [taxEstimate, setTaxEstimate] = useState<{
-    amount: string;
-    ratePercent: number | null;
-    basis: {
-      method: string;
-      countryCode: string | null;
-      taxableIncome: string;
-      deductions: string;
-      providerRatePercent: number | null;
-    };
-    disclaimerKey: string;
-  } | null>(null);
-  const [, setTaxOverrideOpen] = useState(false);
   const [] = useState<TaxOverrideWindow[]>([]);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(["date", "asset", "category", "amount"]);
   const tableState = useUrlTableState("tax");
@@ -165,33 +134,6 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
     }
   }, []);
 
-  const fetchTaxEstimate = useCallback(async (revenueValue: number, deductionsValue: number) => {
-    try {
-      const res = await fetch("/api/tax/estimate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          country: countryCode,
-          revenue: revenueValue,
-          deductions: deductionsValue,
-          date,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to estimate tax");
-      const payload = await res.json();
-      setTaxEstimate(payload?.taxEstimate ?? null);
-    } catch (err) {
-      setTaxEstimate(null);
-      console.error("Tax estimate fetch failed", err);
-    }
-  }, [countryCode, date]);
-
-  useEffect(() => {
-    if (isLoading) return;
-    const currentDeductions = investments.reduce((sum, inv) => sum + toSafeNumber(inv?.amount), 0);
-    void fetchTaxEstimate(totalRevenue, currentDeductions);
-  }, [date, countryCode, isLoading, investments, totalRevenue, fetchTaxEstimate]);
-
   const fetchData = async () => {
     setIsLoading(true);
     setFetchError(null);
@@ -223,7 +165,6 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
 
   useEffect(() => {
     if (!taxAdvancedEnabled) {
-      setTaxOverrideOpen(false);
       return;
     }
     void fetchTaxAuditLogs(1);
@@ -260,10 +201,6 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
   // --- WEALTH CALCULATIONS (Global) ---
   const totalNetWorth = investments.reduce((sum, inv) => sum + toSafeNumber(inv?.amount), 0);
   
-  const estimatedTaxAmount = Number(taxEstimate?.amount ?? 0);
-  const estimatedTaxableBase = Number(taxEstimate?.basis?.taxableIncome ?? 0);
-  const estimatedRate = taxEstimate?.ratePercent ?? taxEstimate?.basis?.providerRatePercent ?? 0;
-  const estimateMethod = taxEstimate?.basis?.method ?? "fallback";
   const filteredInvestments = investments.filter((inv) =>
     `${inv.assetName} ${inv.category}`.toLowerCase().includes(tableState.search.toLowerCase()),
   );
@@ -377,103 +314,18 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
 
         <TabsContent value="planner" className="mt-0 space-y-6 outline-none">
         {/* TOP ROW: WEALTH & DEDUCTIONS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="shadow-sm border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/30 dark:bg-indigo-950/20">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-xs font-bold uppercase tracking-widest text-indigo-800 dark:text-indigo-400">{t('total_wealth')}</CardTitle>
-              <Landmark className="h-4 w-4 text-indigo-600 dark:text-indigo-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-50">{fCurrency(totalNetWorth)}</div>
-              <p className="text-xs uppercase font-bold tracking-widest text-indigo-600 dark:text-indigo-400/80 mt-1">{t('total_wealth_desc')}</p>
-            </CardContent>
-          </Card>
+        <IncomeTaxPlanner investmentsTotal={totalNetWorth} />
 
-          <Card className="shadow-sm border-emerald-200 dark:border-emerald-900/50 bg-white dark:bg-zinc-900">
-                <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                  <CardTitle className="text-xs font-bold uppercase tracking-widest text-emerald-800 dark:text-emerald-400">Estimated Taxable Base</CardTitle>
-                  <ShieldPlus className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{fCurrency(estimatedTaxableBase)}</div>
-                  <div className="mt-4 space-y-2">
-                    <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
-                      <span>Resolved from policy engine</span>
-                      <span>{taxEstimate?.basis?.countryCode ?? countryCode}</span>
-                    </div>
-                    <Progress value={Math.min(Math.max(estimatedRate, 0), 100)} className="h-2 bg-zinc-100 dark:bg-zinc-800 [&>div]:bg-emerald-500" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                  <CardTitle className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Estimated Tax Liability</CardTitle>
-                  <Calculator className="h-4 w-4 text-zinc-400 dark:text-zinc-500" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{fCurrency(estimatedTaxAmount)}</div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400 mt-1">
-                    {estimateMethod.replaceAll("_", " ")} · {estimatedRate.toFixed(2)}%
-                  </p>
-                </CardContent>
-              </Card>
-          <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 md:col-span-2 flex flex-col justify-center items-center p-6 text-center">
-            <Globe2 className="w-6 h-6 text-zinc-300 dark:text-zinc-600 mb-2" />
-            <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Jurisdiction-aware estimate</h3>
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1 max-w-md">
-              All tax estimates are resolved from backend policy rules and overrides for your selected country.
-            </p>
-            <a href="/tax-engine-scope" className="mt-3 text-xs font-semibold underline underline-offset-4 text-zinc-300 hover:text-white">
-              Review tax engine scope disclaimer
-            </a>
-          </Card>
-        </div>
-
-        <div className="bg-zinc-900 dark:bg-zinc-950 rounded-xl p-6 text-white shadow-xl border dark:border-zinc-800">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-zinc-800 pb-4">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="text-amber-400 h-5 w-5" />
-                <h2 className="text-lg font-bold tracking-tight flex flex-wrap items-center gap-2">
-                  <span>Tax estimate engine output</span>
-                  <span className="text-sm font-medium text-zinc-400">{taxEstimate?.disclaimerKey ?? "FALLBACK_RULE"}</span>
-                  {taxAdvancedEnabled && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setTaxOverrideOpen(true)}
-                      className="h-7 px-2 rounded-md border border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 text-[10px] font-bold uppercase tracking-widest"
-                    >
-                      Override tax rate
-                    </Button>
-                  )}
-                </h2>
-              </div>
-              <Badge variant="secondary" className="bg-zinc-800 text-zinc-300 border-zinc-700">
-                Method: {estimateMethod}
-              </Badge>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="p-4 rounded-lg border transition-colors border-zinc-800 dark:border-zinc-800/50 bg-zinc-900/50">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-zinc-400 font-bold text-xs uppercase tracking-widest">Estimated tax</h3>
-                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                </div>
-                <div className="text-3xl font-bold mb-1">{fCurrency(estimatedTaxAmount)}</div>
-                <p className="text-xs font-bold tracking-widest text-zinc-500 uppercase">Computed via API policy engine</p>
-              </div>
-              
-              <div className="p-4 rounded-lg border transition-colors border-zinc-800 dark:border-zinc-800/50 bg-zinc-900/50">
-                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-zinc-400 font-bold text-xs uppercase tracking-widest">Effective rate</h3>
-                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                </div>
-                <div className="text-3xl font-bold mb-1">{estimatedRate.toFixed(2)}%</div>
-                <p className="text-xs font-bold tracking-widest text-zinc-500 uppercase">{taxEstimate?.basis?.countryCode ?? countryCode}</p>
-              </div>
-            </div>
-          </div>
+        <Card className="shadow-sm border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/30 dark:bg-indigo-950/20">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-xs font-bold uppercase tracking-widest text-indigo-800 dark:text-indigo-400">{t('total_wealth')}</CardTitle>
+            <Landmark className="h-4 w-4 text-indigo-600 dark:text-indigo-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-50">{fCurrency(totalNetWorth)}</div>
+            <p className="text-xs uppercase font-bold tracking-widest text-indigo-600 dark:text-indigo-400/80 mt-1">{t('total_wealth_desc')}</p>
+          </CardContent>
+        </Card>
 
         {/* BOTTOM ROW: FORM & LEDGER */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -485,64 +337,6 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
               </CardHeader>
               <form onSubmit={handleSubmit} className="bg-zinc-50/50 dark:bg-zinc-950/50">
                 <CardContent className="space-y-4 pt-6">
-                  <div className="space-y-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Estimate basis tag</p>
-                      <HelpTooltip copy={TAX_HELP_COPY.estimate_basis_explainer} />
-                    </div>
-                    <div className="inline-flex items-center rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300">
-                      Basis v1 · Country + Effective Date
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-widest">Override mode selector</Label>
-                        <HelpTooltip copy={TAX_HELP_COPY.manual_override_warning} />
-                      </div>
-                      <Select value="auto" disabled>
-                        <SelectTrigger className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold text-xs">
-                          <SelectValue placeholder="Select mode" />
-                        </SelectTrigger>
-                        <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
-                          <SelectItem value="auto" className="text-xs font-bold">Auto</SelectItem>
-                          <SelectItem value="manual" className="text-xs font-bold">Manual override</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-widest">Scope selector</Label>
-                        <HelpTooltip copy={TAX_HELP_COPY.scope_hint_country_vs_region} />
-                      </div>
-                      <Select value="country" disabled>
-                        <SelectTrigger className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold text-xs">
-                          <SelectValue placeholder="Select scope" />
-                        </SelectTrigger>
-                        <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
-                          <SelectItem value="country" className="text-xs font-bold">Country</SelectItem>
-                          <SelectItem value="region" className="text-xs font-bold">Region</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-widest">Effective date fields</Label>
-                        <HelpTooltip copy={TAX_HELP_COPY.effective_dates_hint} />
-                      </div>
-                      <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 dark:[color-scheme:dark] font-bold text-xs" />
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-widest">Reason field</Label>
-                        <HelpTooltip copy={TAX_HELP_COPY.audit_log_explainer} />
-                      </div>
-                      <Input placeholder="Why was this changed?" className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 font-bold text-xs" />
-                    </div>
-                  </div>
-
                   <div className="space-y-2">
                     <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-widest">{t('date')}</Label>
                     <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 dark:[color-scheme:dark] font-bold text-xs" />

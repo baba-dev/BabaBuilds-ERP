@@ -4,7 +4,6 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { requirePermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
 import { getTaxReadinessSummary } from '@/lib/tax/return-prep';
-import { getGstWorkspaceSummary } from '@/lib/tax/gst-workspace-summary';
 import { taxAdvancedModuleDisabledResponse } from '@/lib/tax/module-gate';
 
 export async function GET() {
@@ -21,7 +20,7 @@ export async function GET() {
 
     await requirePermission(userId, workspaceId, 'tax.view');
 
-  const [readiness, returnPeriods, obligations, auditEvents, gstSummary] = await Promise.all([
+  const [readiness, returnPeriods, obligations, auditEvents] = await Promise.all([
     getTaxReadinessSummary(workspaceId, { includeSummary: true }),
     prisma.taxReturnPeriod.findMany({
       where: { workspaceId },
@@ -60,12 +59,10 @@ export async function GET() {
         createdAt: true,
       },
     }),
-    getGstWorkspaceSummary(prisma, workspaceId, new Date()),
   ]);
 
     return NextResponse.json({
       readiness,
-      gstSummary,
       returnPeriods: returnPeriods.map((p) => ({
         ...p,
         periodStart: p.periodStart.toISOString(),

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { gstError, requireGstAccess } from "@/lib/gst/access";
+import { auditGst, gstError, requireGstAccess } from "@/lib/gst/access";
 import { loadGstProfile } from "@/lib/gst/data";
 import { normalizeGstin, validateGstin } from "@/lib/gst/gstin";
 import { isStateCode } from "@/lib/gst/states";
@@ -12,7 +12,7 @@ export async function GET() {
   const p = await loadGstProfile(auth.access.workspaceId);
   return NextResponse.json({
     gstin: p.gstin, gstinValid: p.gstinValid, stateCode: p.stateCode, registrationType: p.registrationType, filingFrequency: p.filingFrequency,
-    prevTurnover: p.prevTurnover, registeredFrom: p.registeredFrom?.toISOString().slice(0, 10) ?? null, lutActive: p.lutActive, hasProfile: p.hasProfile, companyName: p.companyName, countryCode: p.countryCode,
+    remindersEnabled: p.remindersEnabled, prevTurnover: p.prevTurnover, registeredFrom: p.registeredFrom?.toISOString().slice(0, 10) ?? null, lutActive: p.lutActive, hasProfile: p.hasProfile, companyName: p.companyName, countryCode: p.countryCode,
   });
 }
 
@@ -24,6 +24,7 @@ const schema = z.object({
   prevTurnover: z.number().finite().min(0).max(1e13).optional().nullable(),
   registeredFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
   lutActive: z.boolean().optional(),
+  remindersEnabled: z.boolean().optional(),
 });
 
 export async function PATCH(request: Request) {
@@ -55,6 +56,8 @@ export async function PATCH(request: Request) {
   if (d.prevTurnover !== undefined) data.gstPrevFyTurnover = d.prevTurnover;
   if (d.registeredFrom !== undefined) data.gstRegisteredFrom = d.registeredFrom ? new Date(d.registeredFrom) : null;
   if (d.lutActive !== undefined) data.gstLutActive = d.lutActive;
+  if (d.remindersEnabled !== undefined) data.gstRemindersEnabled = d.remindersEnabled;
   await prisma.businessProfile.update({ where: { workspaceId }, data });
+  await auditGst(auth.access, "SETTINGS_UPDATED", { type: "BusinessProfile", id: workspaceId }, { fields: Object.keys(data) }, request);
   return NextResponse.json({ ok: true });
 }

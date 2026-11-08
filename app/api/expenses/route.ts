@@ -164,6 +164,7 @@ export async function POST(request: Request) {
       vendorStateCode: gstField('vendorStateCode'),
       hsnCode: gstField('hsnCode'),
       gstRate: gstRateRaw === null ? null : Number(gstRateRaw),
+      paymentStatus: gstField('paymentStatus') ?? 'PAID',
     });
     if (!gstParsed.success) return apiError(400, "Invalid GST details.", "INVALID_GST");
     const gstProfile = gstParsed.data.itcStatus !== 'NONE' || gstParsed.data.vendorGstin ? await loadGstProfile(workspaceId) : null;

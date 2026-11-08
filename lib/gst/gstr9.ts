@@ -13,6 +13,8 @@ export const GSTR9_MANUAL_ROWS = [
   { key: "t4l", table: "4", label: "Supplies / tax reduced through amendments (-)" },
   { key: "t5b", table: "5", label: "Supplies to SEZ without payment of tax" },
   { key: "t5f", table: "5", label: "Non-GST supply (including no-supply)" },
+  { key: "t8c", table: "8", label: "ITC on invoices of the previous financial year availed in this year" },
+  { key: "t8e", table: "8", label: "ITC available but not availed" },
   { key: "t10", table: "10", label: "Supplies / tax declared through amendments (+) (net of debit notes)" },
   { key: "t11", table: "11", label: "Supplies / tax reduced through amendments (-) (net of credit notes)" },
   { key: "t12", table: "12", label: "Reversal of ITC availed during previous FY" },
@@ -31,7 +33,7 @@ export const GSTR9_MANUAL_ROWS = [
 ] as const;
 
 export type Gstr9ManualKey = (typeof GSTR9_MANUAL_ROWS)[number]["key"];
-export type Gstr9Inputs = Partial<Record<Gstr9ManualKey, Partial<TaxRow>>> & { lateFeePaid?: number; interestPaid?: number };
+export type Gstr9Inputs = Partial<Record<Gstr9ManualKey, Partial<TaxRow>>> & { lateFeePaid?: number; interestPaid?: number; c9Items?: Array<{ label: string; amount: number }> };
 
 const rowOf = (inputs: Gstr9Inputs, key: Gstr9ManualKey): TaxRow => ({ ...zeroRow(), ...(inputs[key] ?? {}) });
 
@@ -45,7 +47,9 @@ export type Gstr9Report = {
   t5: Record<string, TaxRow>;
   t6: Record<string, TaxHeads>;
   t7: Record<string, TaxHeads>;
-  t8: { as2b: TaxHeads; asBooks: TaxHeads; difference: TaxHeads; ineligibleOrNotInBooks: TaxHeads };
+  t8: { as2b: TaxHeads; asBooks: TaxHeads; difference: TaxHeads; ineligibleOrNotInBooks: TaxHeads; rows: Record<string, TaxHeads> };
+  /** GSTR-9C style reconciliation, pre-filled from the books. */
+  c9: { turnoverBooks: number; items: Array<{ label: string; amount: number }>; turnoverAdjusted: number; turnoverDeclared: number; unreconciled: number; taxPayable: number; taxPaid: number; itcPerBooks: number; itcPerReturn: number; itcDifference: number };
   t9: Array<{ head: "IGST" | "CGST" | "SGST" | "CESS"; payable: number; cash: number; itc: number }>;
   manual: Record<string, TaxRow>;
   t17: Gstr9HsnRow[];
@@ -100,32 +104,42 @@ export function buildGstr9(args: {
   const b2b = monthly.flatMap((m) => m.b2b.flatMap((p) => p.invoices));
   const b2cl = monthly.flatMap((m) => m.b2cl);
   const exportsAll = monthly.flatMap((m) => m.exports);
-  const notes = monthly.flatMap((m) => [...m.cdnr.flatMap((p) => p.notes), ...m.cdnur]);
+  const sezAll = monthly.flatMap((m) => m.sez.flatMap((p) => p.invoices));
+  const allNotes = monthly.flatMap((m) => [...m.cdnr.flatMap((p) => p.notes), ...m.cdnur]);
+  const creditNotes = allNotes.filter((n) => n.noteType === "C");
+  const debitNotes = allNotes.filter((n) => n.noteType === "D");
   const taxed = (rate: number) => rate > 0;
+
+  // Advances received and not yet invoiced (4F), amendments split into increases and decreases (4K / 4L).
+  const advRow = (rows: Array<{ taxable: number; igst: number; cgst: number; sgst: number }>): TaxRow => rows.reduce<TaxRow>((a, r) => addRow(a, { taxable: r.taxable, igst: r.igst, cgst: r.cgst, sgst: r.sgst }), zeroRow());
+  const advancesNet = addRow(advRow(monthly.flatMap((m) => m.advances.received)), negateRow(advRow(monthly.flatMap((m) => m.advances.adjusted))));
+  const amendDeltas = monthly.flatMap((m) => [...m.amendments.b2b, ...m.amendments.b2cs].map((a) => a.delta));
+  const amendUp = amendDeltas.filter((d) => d.taxable + d.igst + d.cgst + d.sgst >= 0).reduce<TaxRow>((a, d) => addRow(a, d), zeroRow());
+  const amendDown = amendDeltas.filter((d) => d.taxable + d.igst + d.cgst + d.sgst < 0).reduce<TaxRow>((a, d) => addRow(a, negateRow(d)), zeroRow());
 
   const b2cs = monthly.flatMap((m) => m.b2cs).reduce<TaxRow>((a, r) => addRow(a, r), zeroRow());
   const t4: Record<string, TaxRow> = {
     a: addRow(sumInvoices(b2cl, taxed), b2cs),
     b: sumInvoices(b2b.filter((i) => !i.rcm), taxed),
     c: sumInvoices(exportsAll.filter((i) => i.supplyType === "EXPWP"), taxed),
-    d: zeroRow(),
+    d: sumInvoices(sezAll.filter((i) => i.supplyType === "SEZWP"), taxed),
     e: zeroRow(),
-    f: rowOf(inputs, "t4f"),
+    f: addRow(advancesNet, rowOf(inputs, "t4f")),
     g: books.rcm,
   };
   t4.h = Object.values(t4).reduce((a, r) => addRow(a, r), zeroRow());
-  t4.i = sumInvoices(notes);
-  t4.j = zeroRow();
-  t4.k = rowOf(inputs, "t4k");
-  t4.l = rowOf(inputs, "t4l");
-  t4.m = addRow(addRow(addRow(t4.h, negateRow(t4.i)), t4.k), negateRow(t4.l));
+  t4.i = sumInvoices(creditNotes);
+  t4.j = sumInvoices(debitNotes);
+  t4.k = addRow(amendUp, rowOf(inputs, "t4k"));
+  t4.l = addRow(amendDown, rowOf(inputs, "t4l"));
+  t4.m = addRow(addRow(addRow(addRow(t4.h, negateRow(t4.i)), t4.j), t4.k), negateRow(t4.l));
   t4.n = t4.m;
 
   const nilTaxable = monthly.reduce((s, m) => s + m.nil.reduce((x, n) => x + n.nil, 0), 0);
   const exemptTaxable = monthly.reduce((s, m) => s + m.nil.reduce((x, n) => x + n.exempt, 0), 0);
   const t5: Record<string, TaxRow> = {
     a: { ...zeroRow(), taxable: sumInvoices(exportsAll.filter((i) => i.supplyType === "EXPWOP")).taxable },
-    b: rowOf(inputs, "t5b"),
+    b: addRow({ ...zeroRow(), taxable: sumInvoices(sezAll.filter((i) => i.supplyType === "SEZWOP")).taxable }, rowOf(inputs, "t5b")),
     c: { ...zeroRow(), taxable: sumInvoices(b2b.filter((i) => i.rcm)).taxable },
     d: { ...zeroRow(), taxable: r2(exemptTaxable) },
     e: { ...zeroRow(), taxable: r2(nilTaxable) },
@@ -138,8 +152,8 @@ export function buildGstr9(args: {
 
   // Table 6: ITC availed per the returns
   const sum = (list: ExpenseGstInput[]): TaxHeads => list.reduce((a, e) => addHeads(a, heads(e)), zeroHeads());
-  const eligible = args.expenses.filter((e) => e.itcStatus === "ELIGIBLE");
-  const rcm = args.expenses.filter((e) => e.itcStatus === "REVERSE_CHARGE");
+  const eligible = args.expenses.filter((e) => e.itcStatus === "ELIGIBLE" && !e.itcHeld);
+  const rcm = args.expenses.filter((e) => e.itcStatus === "REVERSE_CHARGE" && !e.itcHeld);
   const t6: Record<string, TaxHeads> = {
     b_inputs: sum(eligible.filter((e) => purchaseKind(e) === "inputs")),
     b_capital: sum(eligible.filter((e) => purchaseKind(e) === "capital")),
@@ -172,11 +186,21 @@ export function buildGstr9(args: {
   t7.j_net = addHeads(t6.m_total, { igst: -reversedOutside17.igst, cgst: -reversedOutside17.cgst, sgst: -reversedOutside17.sgst, cess: -reversedOutside17.cess });
 
   const asBooks = t6.m_total;
+  const neg = (h: TaxHeads): TaxHeads => ({ igst: -h.igst, cgst: -h.cgst, sgst: -h.sgst, cess: -h.cess });
+  const manualHeads = (k: Gstr9ManualKey): TaxHeads => { const r = rowOf(inputs, k); return { igst: r.igst, cgst: r.cgst, sgst: r.sgst, cess: r.cess }; };
+  // 8A per 2B, 8B availed in the year, 8C previous-year credit availed now, 8D = A - (B + C), 8E available but not availed,
+  // 8F availed but ineligible, 8K = credit to lapse (8D less 8E and 8F, floored at zero).
+  const d8 = addHeads(args.twoBTotals, neg(addHeads(asBooks, manualHeads("t8c"))));
+  const positive = (h: TaxHeads): TaxHeads => ({ igst: Math.max(0, h.igst), cgst: Math.max(0, h.cgst), sgst: Math.max(0, h.sgst), cess: Math.max(0, h.cess) });
   const t8 = {
     as2b: args.twoBTotals,
     asBooks,
-    difference: addHeads(args.twoBTotals, { igst: -asBooks.igst, cgst: -asBooks.cgst, sgst: -asBooks.sgst, cess: -asBooks.cess }),
+    difference: addHeads(args.twoBTotals, neg(asBooks)),
     ineligibleOrNotInBooks: books.itcIneligible,
+    rows: {
+      a: args.twoBTotals, b: asBooks, c: manualHeads("t8c"), d: d8, e: manualHeads("t8e"), f: books.itcIneligible,
+      k: positive(addHeads(d8, neg(addHeads(manualHeads("t8e"), books.itcIneligible)))),
+    },
   };
 
   // Table 9: tax payable vs paid (from the ledger, i.e. cash vs credit utilisation)
@@ -200,6 +224,13 @@ export function buildGstr9(args: {
     args.prevTurnover,
   );
 
+  const items = (inputs.c9Items ?? []).filter((i) => i.label.trim() && Number.isFinite(i.amount)).slice(0, 30);
+  const adjusted = r2(args.booksTurnover + items.reduce((sum, i) => sum + i.amount, 0));
+  const taxPayable = r2(t9.reduce((sum, h) => sum + h.payable, 0));
+  const taxPaid = r2(t9.reduce((sum, h) => sum + h.cash + h.itc, 0));
+  const itcBooks = r2(totalTax(asBooks));
+  const itcReturn = r2(totalTax(args.ledger.reduce((a, r) => addHeads(a, r.s4.a.total), zeroHeads())));
+
   return {
     fy: args.fy,
     turnover,
@@ -216,6 +247,7 @@ export function buildGstr9(args: {
     gstr9cRequired: turnover > GST_RULES.gstr9cAbove,
     gstr9Optional: turnover <= GST_RULES.gstr9OptionalUpTo,
     reconciliation: { booksTurnover: args.booksTurnover, declared: turnover, difference: r2(args.booksTurnover - turnover) },
+    c9: { turnoverBooks: args.booksTurnover, items, turnoverAdjusted: adjusted, turnoverDeclared: turnover, unreconciled: r2(adjusted - turnover), taxPayable, taxPaid, itcPerBooks: itcBooks, itcPerReturn: itcReturn, itcDifference: r2(itcBooks - itcReturn) },
   };
 }
 

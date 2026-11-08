@@ -11,7 +11,10 @@ import { cn } from "@/lib/utils";
 import type { Gstr9Report } from "@/lib/gst/gstr9";
 import type { TaxRow } from "@/lib/gst/money";
 import { ReturnEmblem } from "./art/GstArt";
-import { formatDay, readError, Section, Stat, StatusChip, TableShell, td, tdr, th, thr, useJson, useMoney, type ObligationView } from "./gst-utils";
+import { Explain } from "./ExplainDrawer";
+import { ReviewButton } from "./ReviewPanel";
+import type { ExplainKey } from "@/lib/gst/explain";
+import { callApi, formatDay, readError, Section, Stat, StatusChip, TableShell, td, tdr, th, thr, useJson, useMoney, type GstAccessFlags, type ObligationView } from "./gst-utils";
 
 type Manual = { key: string; table: string; label: string };
 type Resp = {
@@ -23,9 +26,14 @@ type Resp = {
   registrationType: string;
 };
 
+const EXPLAIN_T4: Record<string, ExplainKey> = { a: "outward", b: "outward", c: "zero_rated", g: "rcm" };
+const EXPLAIN_T5: Record<string, ExplainKey> = { a: "zero_rated", e: "nil" };
+const EXPLAIN_T6: Record<string, ExplainKey> = { b_inputs: "itc_other", b_capital: "itc_other", b_services: "itc_other", c_unregistered: "itc_rcm", d_registered: "itc_rcm" };
+const EXPLAIN_T7: Record<string, ExplainKey> = { a_rule37: "reversals", c_rule42: "reversals", d_rule43: "reversals", e_section17_5: "itc_ineligible", h_other: "reversals" };
+
 const HEADS = ["taxable", "igst", "cgst", "sgst", "cess"] as const;
 
-export function Gstr9Tab({ fy, obligation, onFile }: { fy: string; obligation: ObligationView | undefined; onFile: (o: ObligationView) => void }) {
+export function Gstr9Tab({ fy, obligation, onFile, access, onChanged }: { fy: string; obligation: ObligationView | undefined; onFile: (o: ObligationView) => void; access: GstAccessFlags; onChanged: () => void }) {
   const t = useTranslations("GstHub.g9");
   const tc = useTranslations("GstHub");
   const { n, c, locale } = useMoney();
@@ -47,7 +55,8 @@ export function Gstr9Tab({ fy, obligation, onFile }: { fy: string; obligation: O
         <div className="ms-auto flex flex-wrap items-center gap-2">
           {obligation ? <StatusChip status={obligation.status} label={tc(`status.${obligation.status}`)} /> : null}
           <Button size="sm" variant="outline" asChild><a href={`/api/gst/gstr9/export?fy=${encodeURIComponent(fy)}`}><Download className="me-1.5 size-4" aria-hidden />CSV</a></Button>
-          {obligation ? <Button size="sm" variant={obligation.status === "FILED" ? "outline" : "default"} onClick={() => onFile(obligation)}>{obligation.status === "FILED" ? tc("edit") : tc("markFiled")}</Button> : null}
+          {obligation ? <ReviewButton obligation={obligation} access={access} onChanged={onChanged} /> : null}
+          {obligation && access.file ? <Button size="sm" variant={obligation.status === "FILED" ? "outline" : "default"} onClick={() => onFile(obligation)}>{obligation.status === "FILED" ? tc("edit") : tc("markFiled")}</Button> : null}
         </div>
       </div>
 
@@ -75,7 +84,7 @@ export function Gstr9Tab({ fy, obligation, onFile }: { fy: string; obligation: O
             <TableShell minWidth={720}>
               <thead><tr><th className={th}>{t("nature")}</th>{head}</tr></thead>
               <tbody>
-                {Object.entries(r.t4).map(([k, v]) => <tr key={k} className={cn("border-t border-border/50", ["h", "m", "n"].includes(k) && "bg-muted/30 font-semibold")}><td className={td}>4{k.toUpperCase()} · {t(`t4rows.${k}`)}</td>{rowCells(v)}</tr>)}
+                {Object.entries(r.t4).map(([k, v]) => <tr key={k} className={cn("border-t border-border/50", ["h", "m", "n"].includes(k) && "bg-muted/30 font-semibold")}><td className={td}>{EXPLAIN_T4[k] ? <Explain k={EXPLAIN_T4[k]} scope={{ fy }}>4{k.toUpperCase()} · {t(`t4rows.${k}`)}</Explain> : <>4{k.toUpperCase()} · {t(`t4rows.${k}`)}</>}</td>{rowCells(v)}</tr>)}
               </tbody>
             </TableShell>
           </Section>
@@ -83,21 +92,21 @@ export function Gstr9Tab({ fy, obligation, onFile }: { fy: string; obligation: O
           <Section title={t("t5")} hint={t("t5Hint")}>
             <TableShell minWidth={520}>
               <thead><tr><th className={th}>{t("nature")}</th><th className={thr}>{tc("g3.taxable")}</th></tr></thead>
-              <tbody>{Object.entries(r.t5).filter(([k]) => k !== "n").map(([k, v]) => <tr key={k} className={cn("border-t border-border/50", k === "g" && "bg-muted/30 font-semibold")}><td className={td}>5{k.toUpperCase()} · {t(`t5rows.${k}`)}</td><td className={tdr}>{n(v.taxable)}</td></tr>)}</tbody>
+              <tbody>{Object.entries(r.t5).filter(([k]) => k !== "n").map(([k, v]) => <tr key={k} className={cn("border-t border-border/50", k === "g" && "bg-muted/30 font-semibold")}><td className={td}>{EXPLAIN_T5[k] ? <Explain k={EXPLAIN_T5[k]} scope={{ fy }}>5{k.toUpperCase()} · {t(`t5rows.${k}`)}</Explain> : <>5{k.toUpperCase()} · {t(`t5rows.${k}`)}</>}</td><td className={tdr}>{n(v.taxable)}</td></tr>)}</tbody>
             </TableShell>
           </Section>
 
           <Section title={t("t6")} hint={t("t6Hint")}>
             <TableShell minWidth={680}>
               <thead><tr><th className={th}>{t("nature")}</th>{headNoTaxable}</tr></thead>
-              <tbody>{Object.entries(r.t6).filter(([k]) => k !== "m_total").map(([k, v]) => <tr key={k} className={cn("border-t border-border/50", ["i_subtotal", "a_per3b"].includes(k) && "bg-muted/30 font-semibold")}><td className={td}>{t(`t6rows.${k}`)}</td><td className={tdr} />{["igst", "cgst", "sgst", "cess"].map((h) => <td key={h} className={tdr}>{n((v as Record<string, number>)[h])}</td>)}</tr>)}</tbody>
+              <tbody>{Object.entries(r.t6).filter(([k]) => k !== "m_total").map(([k, v]) => <tr key={k} className={cn("border-t border-border/50", ["i_subtotal", "a_per3b"].includes(k) && "bg-muted/30 font-semibold")}><td className={td}>{EXPLAIN_T6[k] ? <Explain k={EXPLAIN_T6[k]} scope={{ fy }}>{t(`t6rows.${k}`)}</Explain> : t(`t6rows.${k}`)}</td><td className={tdr} />{["igst", "cgst", "sgst", "cess"].map((h) => <td key={h} className={tdr}>{n((v as Record<string, number>)[h])}</td>)}</tr>)}</tbody>
             </TableShell>
           </Section>
 
           <Section title={t("t7")} hint={t("t7Hint")}>
             <TableShell minWidth={680}>
               <thead><tr><th className={th}>{t("nature")}</th>{headNoTaxable}</tr></thead>
-              <tbody>{Object.entries(r.t7).map(([k, v]) => <tr key={k} className={cn("border-t border-border/50", ["i_total", "j_net"].includes(k) && "bg-muted/30 font-semibold")}><td className={td}>{t(`t7rows.${k}`)}</td><td className={tdr} />{["igst", "cgst", "sgst", "cess"].map((h) => <td key={h} className={tdr}>{n((v as Record<string, number>)[h])}</td>)}</tr>)}</tbody>
+              <tbody>{Object.entries(r.t7).map(([k, v]) => <tr key={k} className={cn("border-t border-border/50", ["i_total", "j_net"].includes(k) && "bg-muted/30 font-semibold")}><td className={td}>{EXPLAIN_T7[k] ? <Explain k={EXPLAIN_T7[k]} scope={{ fy }}>{t(`t7rows.${k}`)}</Explain> : t(`t7rows.${k}`)}</td><td className={tdr} />{["igst", "cgst", "sgst", "cess"].map((h) => <td key={h} className={tdr}>{n((v as Record<string, number>)[h])}</td>)}</tr>)}</tbody>
             </TableShell>
           </Section>
 
@@ -105,8 +114,11 @@ export function Gstr9Tab({ fy, obligation, onFile }: { fy: string; obligation: O
             <TableShell minWidth={680}>
               <thead><tr><th className={th}>{t("nature")}</th>{headNoTaxable}</tr></thead>
               <tbody>
-                {([["as2b", r.t8.as2b], ["asBooks", r.t8.asBooks], ["difference", r.t8.difference]] as const).map(([k, v]) => (
-                  <tr key={k} className={cn("border-t border-border/50", k === "difference" && "bg-muted/30 font-semibold")}><td className={td}>{t(`t8rows.${k}`)}</td><td className={tdr} />{["igst", "cgst", "sgst", "cess"].map((h) => <td key={h} className={cn(tdr, k === "difference" && Math.abs((v as unknown as Record<string, number>)[h]) > 1 && "text-rose-600")}>{n((v as unknown as Record<string, number>)[h])}</td>)}</tr>
+                {Object.entries(r.t8.rows).map(([k, v]) => (
+                  <tr key={k} className={cn("border-t border-border/50", ["d", "k"].includes(k) && "bg-muted/30 font-semibold")}>
+                    <td className={td}>8{k.toUpperCase()} · {t(`t8rows.${k}`)}</td><td className={tdr} />
+                    {(["igst", "cgst", "sgst", "cess"] as const).map((h) => <td key={h} className={cn(tdr, k === "d" && Math.abs(v[h]) > 1 && "text-rose-600")}>{n(v[h])}</td>)}
+                  </tr>
                 ))}
               </tbody>
             </TableShell>
@@ -119,7 +131,9 @@ export function Gstr9Tab({ fy, obligation, onFile }: { fy: string; obligation: O
             </TableShell>
           </Section>
 
-          <ManualInputs key={`${fy}-${loading ? "l" : "r"}`} fy={fy} rows={data.manualRows} inputs={data.inputs} onSaved={reload} />
+          {access.manage ? <ManualInputs key={`${fy}-${loading ? "l" : "r"}`} fy={fy} rows={data.manualRows} inputs={data.inputs} onSaved={reload} /> : null}
+
+          <C9Panel key={`c9-${fy}-${r.c9.items.length}`} fy={fy} report={r} onSaved={reload} canManage={access.manage} />
 
           {[{ k: "t17", rows: r.t17 }, { k: "t18", rows: r.t18 }].map((g) => (
             <Section key={g.k} title={t(g.k)} hint={t(`${g.k}Hint`)}>
@@ -215,6 +229,47 @@ function ManualInputs({ fy, rows, inputs, onSaved }: { fy: string; rows: Manual[
           <label className="space-y-1.5 text-xs font-medium">{t("interestPaid")}<Input inputMode="decimal" value={values.__meta.interestPaid} onChange={(e) => set("__meta", "interestPaid", e.target.value)} placeholder="0" /></label>
         </div>
       </div>
+    </Section>
+  );
+}
+
+function C9Panel({ fy, report, onSaved, canManage }: { fy: string; report: Gstr9Report; onSaved: () => void; canManage: boolean }) {
+  const t = useTranslations("GstHub.g9.c9");
+  const { n } = useMoney();
+  const [items, setItems] = useState<Array<{ label: string; amount: string }>>(report.c9.items.map((i) => ({ label: i.label, amount: String(i.amount) })));
+  const [busy, setBusy] = useState(false);
+  const c = report.c9;
+  const typed = items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const unreconciled = Math.round((c.turnoverBooks + typed - c.turnoverDeclared) * 100) / 100;
+  async function save() {
+    setBusy(true);
+    const r = await callApi("PUT", "/api/gst/gstr9", { fy, c9Items: items.filter((i) => i.label.trim() && Number.isFinite(Number(i.amount))).map((i) => ({ label: i.label.trim(), amount: Number(i.amount) })) });
+    setBusy(false);
+    if (!r.ok) return void toast.error(r.error);
+    toast.success(t("saved"));
+    onSaved();
+  }
+  return (
+    <Section title={t("title")} hint={report.gstr9cRequired ? t("hintRequired") : t("hint")} right={canManage ? <Button size="sm" variant="outline" onClick={save} disabled={busy}>{busy ? <Loader2 className="me-2 size-4 animate-spin" aria-hidden /> : null}{t("save")}</Button> : null}>
+      <TableShell minWidth={560}>
+        <tbody>
+          <tr className="border-b border-border/50"><td className={td}>{t("books")}</td><td className={tdr}>{n(c.turnoverBooks)}</td></tr>
+          {items.map((it, idx) => (
+            <tr key={idx} className="border-b border-border/50">
+              <td className="px-2 py-1.5"><Input aria-label={t("itemLabel")} value={it.label} maxLength={80} onChange={(e) => setItems((p) => p.map((x, i) => (i === idx ? { ...x, label: e.target.value } : x)))} placeholder={t("itemPlaceholder")} className="h-8" /></td>
+              <td className="px-2 py-1.5 text-end"><Input aria-label={t("itemAmount")} inputMode="decimal" value={it.amount} onChange={(e) => setItems((p) => p.map((x, i) => (i === idx ? { ...x, amount: e.target.value } : x)))} className="ms-auto h-8 w-32 text-end tabular-nums" placeholder="0" /></td>
+            </tr>
+          ))}
+          <tr className="border-b border-border/50"><td className={td} colSpan={2}><button type="button" onClick={() => setItems((p) => [...p, { label: "", amount: "" }])} className="text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-300">+ {t("addItem")}</button></td></tr>
+          <tr className="border-b border-border/50"><td className={td}>{t("declared")}</td><td className={tdr}>{n(c.turnoverDeclared)}</td></tr>
+          <tr className="bg-muted/30 font-semibold"><td className={td}>{t("unreconciled")}</td><td className={cn(tdr, Math.abs(unreconciled) > 1 ? "text-rose-600" : "text-emerald-600")}>{n(unreconciled)}</td></tr>
+        </tbody>
+      </TableShell>
+      <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+        <div><dt className="text-xs text-muted-foreground">{t("tax")}</dt><dd className="tabular-nums">{n(c.taxPayable)} / {n(c.taxPaid)}</dd></div>
+        <div><dt className="text-xs text-muted-foreground">{t("itc")}</dt><dd className="tabular-nums">{n(c.itcPerBooks)} / {n(c.itcPerReturn)}</dd></div>
+        <div><dt className="text-xs text-muted-foreground">{t("itcDiff")}</dt><dd className={cn("tabular-nums", Math.abs(c.itcDifference) > 1 && "text-rose-600")}>{n(c.itcDifference)}</dd></div>
+      </dl>
     </Section>
   );
 }

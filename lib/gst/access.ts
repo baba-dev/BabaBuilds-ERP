@@ -29,6 +29,17 @@ export function csvCell(value: string | number | null | undefined) {
 }
 export const toCsv = (lines: Array<Array<string | number | null | undefined>>) => "﻿" + lines.map((l) => l.map(csvCell).join(",")).join("\r\n");
 
-export function download(body: string, filename: string, type: string) {
-  return new NextResponse(body, { headers: { "Content-Type": `${type}; charset=utf-8`, "Content-Disposition": `attachment; filename="${filename}"`, "Cache-Control": "no-store" } });
+export function download(body: string | Buffer, filename: string, type: string) {
+  return new NextResponse(typeof body === "string" ? body : new Uint8Array(body), { headers: { "Content-Type": `${type}; charset=utf-8`, "Content-Disposition": `attachment; filename="${filename}"`, "Cache-Control": "no-store" } });
+}
+
+import { logActivity } from "@/lib/security/activity-log";
+
+/** Audit trail for every GST action that changes data (who, what, which record). Never throws. */
+export async function auditGst(access: GstAccess, action: string, entity: { type: string; id?: string | null }, metadata?: Record<string, unknown>, request?: Request) {
+  try {
+    await logActivity({ action: `GST_${action}`, status: "SUCCESS", workspaceId: access.workspaceId, actor: { userId: access.userId }, entity, metadata, request });
+  } catch (error) {
+    console.error("GST audit log failed:", error);
+  }
 }

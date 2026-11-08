@@ -129,3 +129,17 @@ export function useUrlState() {
   return set;
 }
 
+
+/** Calls a GST API and returns the parsed body or the server's message, so callers only handle toast + reload. */
+export async function callApi<T = unknown>(method: "POST" | "PATCH" | "PUT" | "DELETE", url: string, body?: unknown): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
+  try {
+    const res = await fetch(url, { method, headers: body === undefined ? undefined : { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+    if (!res.ok) return { ok: false, error: await readError(res, `Request failed (${res.status})`) };
+    return { ok: true, data: (await res.json().catch(() => ({}))) as T };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Network error" };
+  }
+}
+
+/** Access flags from the overview, so actions the user cannot perform are hidden instead of failing. */
+export type GstAccessFlags = { manage: boolean; file: boolean; approve: boolean };

@@ -310,6 +310,25 @@ export function buildEmailTemplate(
         text: `Tax Filing Reminder: ${taxType} due by ${dueDate}.`,
       };
     }
+    case 'GST_REMINDER':
+    case 'GST_DIGEST': {
+      const title = escapeHtml(data.title);
+      const lines = Array.isArray(data.lines) ? (data.lines as unknown[]).map((l) => `<li>${escapeHtml(l)}</li>`).join('') : '';
+      const isDigest = event === 'GST_DIGEST';
+      return {
+        subject: `${isDigest ? '📊' : '🏛️'} ${title}`,
+        html: layout({
+          appUrl, companyName, locale, dir, emoji: isDigest ? '📊' : '🏛️',
+          headline: isDigest ? 'GST weekly digest' : 'GST return reminder',
+          subheadline: title,
+          accentColor: '#4f46e5',
+          body: `<p>${escapeHtml(data.body)}</p>${lines ? `<ul>${lines}</ul>` : ''}<p style="color:#71717a;font-size:12px">Due dates follow the statutory calendar and any extension you recorded. Verify on the GST portal before filing.</p>`,
+          ctaLabel: isDigest ? 'Review GST checks' : 'Open GST workspace',
+          ctaUrl: `${appUrl}${isDigest ? '/tax?tab=issues' : String(data.actionUrl ?? '/tax')}`,
+        }),
+        text: `${String(data.title)}\n${String(data.body)}`,
+      };
+    }
     case 'SHOP_ORDER_CREATED': {
       const orderId = escapeHtml(data.orderId);
       const serviceName = escapeHtml(data.serviceName);
