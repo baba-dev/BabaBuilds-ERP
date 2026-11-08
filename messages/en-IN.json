@@ -4519,6 +4519,8 @@
     }
   },
   "CaCompliance": {
+    "retry": "Try again",
+    "refresh": "Refresh",
     "title": "CA Compliance",
     "description": "Take the year from books to filed returns, together with your accountant.",
     "nav": "Sections",
@@ -4568,6 +4570,13 @@
       "YEAR_CLOSE": "Close the year's books"
     },
     "overview": {
+      "attention": {
+        "title": "Needs your attention",
+        "hint": "Blockers first, then what is overdue or due soon.",
+        "empty": "Nothing urgent. You are on top of it.",
+        "fix": "Fix",
+        "more": "and {count} more"
+      },
       "setupNeeded": {
         "title": "Tell us what kind of taxpayer you are",
         "body": "The calendar depends on your entity type, tax regime and whether you deduct tax. It takes a minute.",
@@ -4657,6 +4666,8 @@
       }
     },
     "calendar": {
+      "today": "Today",
+      "jumpNext": "Jump to next due",
       "groupLabel": "Filter by area",
       "statusLabel": "Filter by status",
       "filters": {
@@ -4814,6 +4825,7 @@
         "send": "Send"
       },
       "thread": {
+        "sendHint": "Press Ctrl+Enter to send",
         "reply": "Reply",
         "replyPlaceholder": "Write a reply",
         "attach": "Attach from the document vault",
@@ -4828,6 +4840,12 @@
       "noExport": "Your role cannot download evidence. Ask an owner or your accountant.",
       "downloaded": "Download started",
       "pack": {
+        "includes": {
+          "registers": "Sales, purchase and TDS registers",
+          "calendar": "Compliance calendar and summary",
+          "invoices": "Every invoice PDF and receipt",
+          "index": "An index of what is missing"
+        },
         "title": "Evidence pack (ZIP)",
         "body": "Registers, calendar, summary and every invoice PDF and receipt, with an index showing what is missing.",
         "cta": "Download the pack",

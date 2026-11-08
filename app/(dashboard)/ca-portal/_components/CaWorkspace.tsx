@@ -3,10 +3,11 @@
 import { useCallback, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { motion } from "framer-motion";
-import { Landmark } from "lucide-react";
+import { MotionConfig, motion } from "framer-motion";
+import { Landmark, RefreshCw } from "lucide-react";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { fyLabel, fyStartYear } from "@/lib/ca/fy";
@@ -61,8 +62,18 @@ export function CaWorkspace() {
   );
 
   const body = () => {
-    if (overview.error && !data) return <p role="alert" className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">{overview.error}</p>;
-    if (!data) return <div className="space-y-4"><Skeleton className="h-56 rounded-3xl" /><Skeleton className="h-28 rounded-2xl" /></div>;
+    if (overview.error && !data) return (
+      <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
+        <span>{overview.error}</span>
+        <Button size="sm" variant="outline" onClick={refresh}>{t("retry")}</Button>
+      </div>
+    );
+    if (!data) return (
+      <div className="space-y-4" aria-busy="true">
+        <Skeleton className="h-56 rounded-3xl" />
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">{[0, 1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}</div>
+      </div>
+    );
     switch (tab) {
       case "calendar": return <CalendarTab data={data} onOpen={setEditing} goto={goto} />;
       case "readiness": return <ReadinessTab data={data} />;
@@ -74,23 +85,30 @@ export function CaWorkspace() {
   };
 
   return (
+    <MotionConfig reducedMotion="user">
     <DashboardPageShell
       title={t("title")}
       description={t("description")}
       icon={<Landmark className="size-5" aria-hidden />}
       animated={false}
       secondaryActions={
+        <div className="flex items-center gap-2">
+        <Button type="button" variant="outline" size="icon" className="size-9" onClick={refresh} disabled={overview.loading} aria-label={t("refresh")} title={t("refresh")}>
+          <RefreshCw className={cn("size-4", overview.loading && "animate-spin motion-reduce:animate-none")} aria-hidden />
+        </Button>
         <Select value={fy} onValueChange={(v) => setUrl({ fy: v === current ? null : v })}>
           <SelectTrigger className="h-9 w-[140px]" aria-label={t("fy")}><SelectValue /></SelectTrigger>
           <SelectContent>{years.map((y) => <SelectItem key={y.label} value={y.label}>FY {y.label}</SelectItem>)}</SelectContent>
         </Select>
+        </div>
       }
     >
-      <div className="space-y-5">
+      <div className="space-y-5 pb-20 sm:pb-0">
         {nav}
         <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }}>{body()}</motion.div>
       </div>
       {data ? <ItemDrawer item={editing} data={data} fy={fy} onClose={() => setEditing(null)} onChanged={refresh} onAsk={(i) => { setEditing(null); openAsk(i); }} /> : null}
     </DashboardPageShell>
+    </MotionConfig>
   );
 }
