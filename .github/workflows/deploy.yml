@@ -72,7 +72,7 @@ jobs:
             fi
 
             npx prisma db push
-            npm run backfill:invoices
+            npm run backfill
             rm -f public/sw.js
             npm run build
 

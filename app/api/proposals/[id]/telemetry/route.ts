@@ -4,6 +4,10 @@ import { logActivity } from "@/lib/security/activity-log";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getClientIp } from "@/lib/request-ip";
+import { dispatchNotification } from "@/lib/notifications/dispatcher";
+import { requireProposalAccess } from "@/lib/proposals/access";
+import { addProposalEvent } from "@/lib/proposals/events";
+import { checkRateLimit } from "@/lib/rate-limit-memory";
 
 // 1. GET: Fetch the telemetry history log for a specific proposal
 export async function GET(
@@ -11,10 +15,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.workspaceId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const auth = await requireProposalAccess("proposals.view");
+    if (!auth.ok) return auth.response;
+    const session = { workspaceId: auth.access.workspaceId };
     const resolvedParams = await params;
     const { id } = resolvedParams;
 
@@ -77,16 +80,39 @@ export async function POST(
       proposalId = proposal.id;
       actorEmail = proposal.client.email || "Anonymous Client";
       
-      // Update first/last viewed times and view counts on client interaction
+      // Drafts are not visible to clients; owners previewing their own link do not count as views either.
+      if (proposal.status === "DRAFT" || proposal.archivedAt) {
+        return NextResponse.json({ success: true });
+      }
+      const ip = getClientIp(request);
+      const limited = checkRateLimit(`proposal-telemetry:${token}:${ip}`, 120, 60_000);
+      if (!limited.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+
       if (eventType === "VIEW") {
-        await prisma.proposal.update({
-          where: { id: proposal.id },
-          data: {
-            firstViewedAt: proposal.firstViewedAt ? undefined : new Date(),
-            lastViewedAt: new Date(),
-            viewCount: { increment: 1 }
+        const now = new Date();
+        await prisma.$transaction(async (tx) => {
+          await tx.proposal.update({
+            where: { id: proposal.id },
+            data: {
+              firstViewedAt: proposal.firstViewedAt ? undefined : now,
+              lastViewedAt: now,
+              viewCount: { increment: 1 },
+            },
+          });
+          if (proposal.status === "SENT") {
+            await tx.proposal.updateMany({ where: { id: proposal.id, status: "SENT" }, data: { status: "VIEWED" } });
+          }
+          if (!proposal.firstViewedAt) {
+            await addProposalEvent(tx, { workspaceId: proposal.workspaceId, proposalId: proposal.id, type: "VIEWED" });
           }
         });
+        if (!proposal.firstViewedAt) {
+          dispatchNotification({
+            event: "PROPOSAL_VIEWED",
+            workspaceId: proposal.workspaceId,
+            data: { proposalNo: proposal.proposalNo, clientName: proposal.client.name },
+          }).catch(() => null);
+        }
       }
     } else {
       // B. If authenticated workspace user is querying (Sales Rep checking)
@@ -110,8 +136,8 @@ export async function POST(
       ipAddress: clientIp === "unknown" ? null : clientIp,
       userAgent: request.headers.get("user-agent") || null,
       metadata: {
-        sectionTitle: sectionTitle || "Main Overview",
-        dwellTimeSeconds: Number(dwellTimeSeconds || 0),
+        sectionTitle: String(sectionTitle || "Main Overview").slice(0, 120),
+        dwellTimeSeconds: Math.min(86_400, Math.max(0, Number(dwellTimeSeconds) || 0)),
         eventType: eventType || "HEARTBEAT"
       }
     });

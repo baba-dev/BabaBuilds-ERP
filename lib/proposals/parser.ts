@@ -7,6 +7,7 @@ export type RichSection = {
 
 type ProposalSectionSource = {
   richSections?: unknown;
+  richMedia?: unknown;
   declineReason?: unknown;
 } | null | undefined;
 
@@ -60,6 +61,12 @@ export function parseProposalSections(proposal: ProposalSectionSource): RichSect
     } catch (e) {
       console.error("🚨 Failed parsing richSections:", e);
     }
+  }
+
+  // 1b. Dedicated media column (media-only proposals).
+  if (Array.isArray(proposal.richMedia)) {
+    const media = proposal.richMedia.map(toMediaSection).filter(hasTitle);
+    if (media.length) return media;
   }
 
   // 2. Fallback to parsing declineReason for historical proposals

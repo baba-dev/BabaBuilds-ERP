@@ -232,7 +232,7 @@ function SourceTag({ row }: { row: InvoiceListItemDto }) {
   const label = t(`source.${row.source}`);
   if (row.source === "PROPOSAL" && row.sourceProposalId) {
     return (
-      <Link href={`/proposals/${row.sourceProposalId}`} className="inline-flex items-center gap-1 text-indigo-600 hover:underline dark:text-indigo-400">
+      <Link href={`/proposals?proposal=${row.sourceProposalId}`} className="inline-flex items-center gap-1 text-indigo-600 hover:underline dark:text-indigo-400">
         <FileText className="size-3" aria-hidden />
         {label}
       </Link>

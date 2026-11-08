@@ -132,7 +132,7 @@ describe('AI chat tool policy', () => {
       'await requirePermission(input.actorUserId, input.workspaceId, permission)',
     );
     const executionIndex = route.indexOf(
-      'await executeMutationTool(input.toolName, input.args, input.workspaceId)',
+      'await executeMutationTool(input.toolName, input.args, input.workspaceId, input.actorUserId ?? null)',
     );
     expect(permissionIndex).toBeGreaterThan(-1);
     expect(executionIndex).toBeGreaterThan(permissionIndex);

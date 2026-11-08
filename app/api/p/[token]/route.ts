@@ -1,189 +1,133 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getClientIp } from '@/lib/request-ip';
-import { parseProposalSections } from '@/lib/proposals/parser';
-import { logActivity } from '@/lib/security/activity-log';
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { getClientIp } from "@/lib/request-ip";
+import { logActivity } from "@/lib/security/activity-log";
+import { dispatchNotification } from "@/lib/notifications/dispatcher";
+import { checkRateLimit } from "@/lib/rate-limit-memory";
+import { serializePublic } from "@/lib/proposals/serialize";
+import { addProposalEvent, CLIENT_ACTIONABLE, findPublicProposal, isExpired, loadBusiness, scaleMilestones, totalsForSelection } from "@/lib/proposals/public";
+import { proposalError } from "@/lib/proposals/access";
+import { afterProposalChange } from "@/lib/proposals/save";
 
-// Fetch the proposal data publicly using the secure token
-export async function GET(
-  request: Request, 
-  { params }: { params: Promise<{ token: string }> }
-) {
-  try {
-    const resolvedParams = await params;
-    const token = resolvedParams.token;
+type Ctx = { params: Promise<{ token: string }> };
 
-    const proposal = await prisma.proposal.findUnique({
-      where: { publicToken: token },
-      include: { client: true, items: true, billingMilestones: true }
-    });
+const NO_STORE = { "Cache-Control": "private, no-store" };
 
-    if (!proposal) return NextResponse.json({ error: "Proposal not found." }, { status: 404 });
-    const richSections = parseProposalSections(proposal);
-    return NextResponse.json({ proposal: { ...proposal, richSections } });
-  } catch {
-    return NextResponse.json({ error: "Failed to load proposal." }, { status: 500 });
-  }
+/** Public, whitelisted view of a proposal. Never returns raw rows (client tax IDs, IPs, internal notes...). */
+export async function GET(request: Request, { params }: Ctx) {
+  const { token } = await params;
+  const ip = getClientIp(request);
+  const limited = checkRateLimit(`proposal-public-get:${ip}`, 120, 60_000);
+  if (!limited.ok) return proposalError(429, "RATE_LIMITED", "Too many requests.");
+
+  const row = await findPublicProposal(token);
+  if (!row) return proposalError(404, "PROPOSAL_NOT_FOUND", "Proposal not found.");
+  const business = await loadBusiness(row.workspaceId);
+  return NextResponse.json({ proposal: serializePublic(row, business) }, { headers: NO_STORE });
 }
 
-// Handle the Client's Digital Signature / Acceptance
-export async function PATCH(
-  request: Request, 
-  { params }: { params: Promise<{ token: string }> }
-) {
-  try {
-    const resolvedParams = await params;
-    const token = resolvedParams.token;
-    
-    // 1. Get the verification string and optional selectedItemIds from the frontend 
-    // (The frontend sends it as 'email', but we treat it as a generic identifier)
-    const body = await request.json().catch(() => ({}));
-    const { email: providedIdentifier, selectedItemIds, signatureBase64 } = body; 
+const acceptSchema = z.object({
+  email: z.string().trim().min(1).max(200),
+  selectedItemIds: z.array(z.string().max(64)).max(100).optional(),
+  signerName: z.string().trim().max(120).optional(),
+  signatureBase64: z
+    .string()
+    .max(300_000)
+    .refine((v) => /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(v), "Invalid signature image.")
+    .nullish(),
+});
 
-    if (!providedIdentifier) {
-      return NextResponse.json({ error: 'Verification required.' }, { status: 400 });
-    }
+export async function PATCH(request: Request, { params }: Ctx) {
+  const { token } = await params;
+  const ip = getClientIp(request);
+  // Guessing the verification email must be expensive.
+  const limited = checkRateLimit(`proposal-accept:${token}:${ip}`, 8, 15 * 60_000);
+  if (!limited.ok) return proposalError(429, "RATE_LIMITED", "Too many attempts. Please wait a few minutes and try again.");
 
-    // 2. Fetch the proposal and associated client
-    const proposal = await prisma.proposal.findUnique({
-      where: { publicToken: token },
-      include: { client: true, items: true }
-    });
+  const parsed = acceptSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return proposalError(400, "VALIDATION_ERROR", "Verification required.");
+  const { email: identifier, selectedItemIds, signerName, signatureBase64 } = parsed.data;
 
-    if (!proposal) {
-      return NextResponse.json({ error: 'Proposal not found.' }, { status: 404 });
-    }
-
-    if (proposal.status === 'ACCEPTED') {
-      return NextResponse.json({ error: 'Proposal is already accepted.' }, { status: 400 });
-    }
-
-    // --- 🚨 SECURITY PATCH START (Infinite Quote Vulnerability) ---
-    // Prevent clients from legally binding the agency to years-old expired pricing
-    if (new Date() > new Date(proposal.validUntil)) {
-      return NextResponse.json({ 
-        error: 'This proposal has expired and can no longer be accepted. Please request a new quote.' 
-      }, { status: 403 });
-    }
-    // --- 🚨 SECURITY PATCH END ---
-
-    // --- 🚨 SECURITY & LOGIC PATCH START (Graceful Fallback) ---
-    const clientEmail = proposal.client.email?.toLowerCase().trim();
-    const clientName = proposal.client.name?.toLowerCase().trim();
-    const input = providedIdentifier.toLowerCase().trim();
-
-    // Logic: If email exists, strict email match. If no email, fallback to exact Company Name match.
-    if (clientEmail) {
-      if (clientEmail !== input) {
-        return NextResponse.json({ error: 'Identity verification failed. Invalid email.' }, { status: 403 });
-      }
-    } else if (clientName) {
-      if (clientName !== input) {
-        return NextResponse.json({ 
-          error: `Verification failed. Since we don't have an email on file, please enter your exact Company Name to digitally sign.` 
-        }, { status: 403 });
-      }
-    } else {
-      return NextResponse.json({ error: 'Verification failed. Client data missing.' }, { status: 403 });
-    }
-    // --- 🚨 SECURITY & LOGIC PATCH END ---
-
-    // Recalculate totals directly on the proposal record based on client final selections
-    let finalSubtotal = Number(proposal.subtotal);
-    let finalEstimatedTax = Number(proposal.estimatedTax);
-    let finalTotalAmount = Number(proposal.totalAmount);
-    const { Prisma } = await import('@prisma/client');
-
-    if (Array.isArray(selectedItemIds)) {
-      // 1. Update each item's isSelected state
-      for (const item of proposal.items) {
-        const isSelected = !item.isOptional || selectedItemIds.includes(item.id);
-        await prisma.proposalItem.update({
-          where: { id: item.id },
-          data: { isSelected }
-        });
-      }
-
-      // 2. Fetch updated items
-      const updatedItems = await prisma.proposalItem.findMany({
-        where: { proposalId: proposal.id }
-      });
-
-      // 3. Recalculate Subtotal
-      const activeItems = updatedItems.filter(item => item.isSelected);
-      finalSubtotal = activeItems.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0);
-
-      // 4. Recalculate Tax proportionally
-      const originalSubtotal = Number(proposal.subtotal);
-      if (originalSubtotal > 0) {
-        const taxRate = Number(proposal.estimatedTax) / originalSubtotal;
-        finalEstimatedTax = finalSubtotal * taxRate;
-      } else {
-        finalEstimatedTax = 0;
-      }
-      finalTotalAmount = finalSubtotal + finalEstimatedTax;
-
-      // 5. Proportional milestone scaling
-      const originalTotal = Number(proposal.totalAmount);
-      if (originalTotal > 0 && Math.abs(finalTotalAmount - originalTotal) > 0.01) {
-        const ratio = finalTotalAmount / originalTotal;
-        const milestones = await prisma.billingMilestone.findMany({
-          where: { proposalId: proposal.id }
-        });
-        
-        let allocatedAmount = 0;
-        for (let i = 0; i < milestones.length; i++) {
-          const m = milestones[i];
-          let newAmount = Number(m.amount) * ratio;
-          
-          if (i === milestones.length - 1) {
-            newAmount = finalTotalAmount - allocatedAmount;
-          } else {
-            allocatedAmount += Number(newAmount.toFixed(2));
-          }
-
-          await prisma.billingMilestone.update({
-            where: { id: m.id },
-            data: { amount: new Prisma.Decimal(Number(newAmount.toFixed(2))) }
-          });
-        }
-      }
-    }
-
-    // Grab the client's IP address from trusted proxy headers for the audit trail.
-    const clientIp = getClientIp(request);
-
-    const updatedProposal = await prisma.proposal.update({
-      where: { publicToken: token },
-      data: {
-        status: 'ACCEPTED',
-        acceptedAt: new Date(),
-        clientIp: clientIp,
-        subtotal: finalSubtotal,
-        estimatedTax: finalEstimatedTax,
-        totalAmount: finalTotalAmount,
-        clientSignatureBase64: signatureBase64 || null,
-      }
-    });
-
-    // Log acceptance to the activity feed
-    await logActivity({
-      action: 'proposal_accepted',
-      status: 'SUCCESS',
-      workspaceId: proposal.workspaceId,
-      actor: { email: proposal.client.email || 'Anonymous Client' },
-      entity: { type: 'proposal', id: proposal.id },
-      ipAddress: clientIp === 'unknown' ? null : clientIp,
-      userAgent: request.headers.get('user-agent') || null,
-      metadata: {
-        acceptedByName: proposal.client.name,
-        finalTotalAmount
-      }
-    });
-
-    return NextResponse.json({ success: true, status: updatedProposal.status });
-  } catch (error) {
-    console.error("Proposal Acceptance Error:", error);
-    return NextResponse.json({ error: 'Failed to accept proposal.' }, { status: 500 });
+  const proposal = await findPublicProposal(token);
+  if (!proposal) return proposalError(404, "PROPOSAL_NOT_FOUND", "Proposal not found.");
+  if (proposal.status === "ACCEPTED" || proposal.status === "INVOICED") return proposalError(409, "ALREADY_ACCEPTED", "This proposal is already accepted.");
+  if (!CLIENT_ACTIONABLE.includes(proposal.status)) return proposalError(409, "NOT_ACTIONABLE", "This proposal can no longer be accepted.");
+  if (isExpired(proposal.status, proposal.validUntil)) {
+    return proposalError(403, "PROPOSAL_EXPIRED", "This proposal has expired and can no longer be accepted. Please request a new quote.");
   }
+
+  const full = await prisma.proposal.findUnique({ where: { id: proposal.id }, include: { client: { select: { name: true, email: true } } } });
+  if (!full) return proposalError(404, "PROPOSAL_NOT_FOUND", "Proposal not found.");
+  const clientEmail = full.client.email?.toLowerCase().trim();
+  const clientName = full.client.name?.toLowerCase().trim();
+  const input = identifier.toLowerCase();
+  if (clientEmail) {
+    if (clientEmail !== input) return proposalError(403, "VERIFICATION_FAILED", "Identity verification failed. Use the email address this proposal was sent to.");
+  } else if (clientName) {
+    if (clientName !== input) return proposalError(403, "VERIFICATION_FAILED", "Please enter your exact company name to sign.");
+  } else {
+    return proposalError(403, "VERIFICATION_FAILED", "Verification failed. Client data missing.");
+  }
+
+  const selected = new Set(selectedItemIds ?? proposal.items.filter((i) => i.isSelected).map((i) => i.id));
+  const totals = totalsForSelection(full, proposal.items, selected);
+  const acceptedAt = new Date();
+
+  const result = await prisma.$transaction(async (tx) => {
+    const claim = await tx.proposal.updateMany({
+      where: { id: proposal.id, status: { in: CLIENT_ACTIONABLE } },
+      data: {
+        status: "ACCEPTED",
+        acceptedAt,
+        acceptedByName: signerName || full.client.name,
+        clientIp: ip === "unknown" ? null : ip,
+        subtotal: totals.subtotal,
+        estimatedTax: totals.estimatedTax,
+        totalAmount: totals.totalAmount,
+        clientSignatureBase64: signatureBase64 || null,
+      },
+    });
+    if (claim.count === 0) return false;
+
+    const keep = new Set(totals.chosenIds);
+    for (const item of proposal.items) {
+      await tx.proposalItem.update({ where: { id: item.id }, data: { isSelected: keep.has(item.id) } });
+    }
+    if (!totals.totalAmount.equals(full.totalAmount) && proposal.billingMilestones.length) {
+      const milestones = await tx.billingMilestone.findMany({ where: { proposalId: proposal.id }, orderBy: { createdAt: "asc" } });
+      const amounts = scaleMilestones(milestones.map((m) => m.amount), full.totalAmount, totals.totalAmount);
+      for (let i = 0; i < milestones.length; i += 1) {
+        await tx.billingMilestone.update({ where: { id: milestones[i].id }, data: { amount: amounts[i] } });
+      }
+    }
+    await addProposalEvent(tx, {
+      workspaceId: proposal.workspaceId,
+      proposalId: proposal.id,
+      type: "ACCEPTED",
+      message: signerName || full.client.name,
+      metadata: { total: totals.totalAmount.toFixed(2), optionalDeclined: proposal.items.filter((i) => i.isOptional && !keep.has(i.id)).length },
+    });
+    return true;
+  });
+  if (!result) return proposalError(409, "NOT_ACTIONABLE", "This proposal just changed and can no longer be accepted.");
+
+  await logActivity({
+    action: "proposal_accepted",
+    status: "SUCCESS",
+    workspaceId: proposal.workspaceId,
+    actor: { email: full.client.email || "Anonymous Client" },
+    entity: { type: "proposal", id: proposal.id },
+    ipAddress: ip === "unknown" ? null : ip,
+    userAgent: request.headers.get("user-agent") || null,
+    metadata: { acceptedByName: signerName || full.client.name, finalTotalAmount: totals.totalAmount.toFixed(2) },
+  }).catch(() => null);
+  dispatchNotification({
+    event: "PROPOSAL_ACCEPTED",
+    workspaceId: proposal.workspaceId,
+    data: { proposalNo: proposal.proposalNo, clientName: full.client.name, amount: totals.totalAmount.toFixed(2) },
+  }).catch(() => null);
+  afterProposalChange(proposal.workspaceId, "accepted");
+
+  return NextResponse.json({ success: true, status: "ACCEPTED", totalAmount: totals.totalAmount.toFixed(2) });
 }

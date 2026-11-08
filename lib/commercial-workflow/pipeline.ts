@@ -1,3 +1,4 @@
+import { isExpired } from '@/lib/proposals/status';
 import { Proposal, Invoice, ProposalConversion, Retainer, ShopOrder } from '@prisma/client';
 
 export type PipelineStage = 
@@ -107,7 +108,7 @@ export function deriveCommercialPipelineStage(proposal: Proposal, linkedArtifact
   const now = new Date();
   
   // 1. Expired state takes precedence over early funnel stages if it wasn't accepted
-  if (proposal.validUntil < now && !proposal.acceptedAt && !proposal.firstConvertedAt) {
+  if (isExpired(String(proposal.status), proposal.validUntil, now) && !proposal.acceptedAt && !proposal.firstConvertedAt) {
     return 'EXPIRED';
   }
 

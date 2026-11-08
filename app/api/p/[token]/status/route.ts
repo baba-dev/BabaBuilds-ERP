@@ -1,131 +1,57 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getClientIp } from "@/lib/request-ip";
 import { logActivity } from "@/lib/security/activity-log";
+import { checkRateLimit } from "@/lib/rate-limit-memory";
+import { proposalError } from "@/lib/proposals/access";
+import { addProposalEvent, CLIENT_ACTIONABLE, findPublicProposal, isExpired } from "@/lib/proposals/public";
+import { afterProposalChange } from "@/lib/proposals/save";
 
-const ALLOWED_PUBLIC_STATUSES = new Set(["REVISION_REQUESTED"]);
-const LOCKED_PROPOSAL_STATUSES = new Set(["ACCEPTED", "INVOICED"]);
+const bodySchema = z.object({
+  status: z.enum(["REVISION_REQUESTED", "DECLINED"]).default("REVISION_REQUESTED"),
+  clientNote: z.string().trim().min(1, "Please tell us what you would like changed.").max(2000),
+});
 
-type ProposalFeedbackPayload = Record<string, unknown> & {
-  clientNote?: string;
-  previousDeclineReason?: string;
-  revisionRequestedAt?: string;
-};
+/** Client asks for changes (or declines) from the share link. The note lives in the event timeline. */
+export async function PATCH(request: Request, { params }: { params: Promise<{ token?: string }> }) {
+  const { token } = await params;
+  if (!token?.trim()) return proposalError(400, "VALIDATION_ERROR", "Proposal token is required.");
+  const ip = getClientIp(request);
+  const limited = checkRateLimit(`proposal-feedback:${token}:${ip}`, 10, 15 * 60_000);
+  if (!limited.ok) return proposalError(429, "RATE_LIMITED", "Too many requests. Please try again later.");
 
-function buildDeclineReasonPayload(existingDeclineReason: string | null, clientNote: string): string {
-  let payload: ProposalFeedbackPayload = {};
+  const parsed = bodySchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return proposalError(400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid request.");
+  const { status, clientNote } = parsed.data;
 
-  if (existingDeclineReason) {
-    try {
-      const parsed = JSON.parse(existingDeclineReason) as unknown;
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        payload = { ...(parsed as Record<string, unknown>) };
-      } else {
-        payload.previousDeclineReason = existingDeclineReason;
-      }
-    } catch {
-      payload.previousDeclineReason = existingDeclineReason;
-    }
-  }
+  const proposal = await findPublicProposal(token);
+  if (!proposal) return proposalError(404, "PROPOSAL_NOT_FOUND", "Proposal not found.");
+  if (!CLIENT_ACTIONABLE.includes(proposal.status)) return proposalError(409, "NOT_ACTIONABLE", "This proposal can no longer be changed.");
+  if (isExpired(proposal.status, proposal.validUntil)) return proposalError(403, "PROPOSAL_EXPIRED", "This proposal has expired and can no longer be updated.");
 
-  payload.clientNote = clientNote;
-  payload.revisionRequestedAt = new Date().toISOString();
-
-  return JSON.stringify(payload);
-}
-
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ token?: string }> },
-) {
-  try {
-    const { token } = await params;
-    const trimmedToken = token?.trim();
-
-    if (!trimmedToken) {
-      return NextResponse.json({ error: "Proposal token is required." }, { status: 400 });
-    }
-
-    const body = (await request.json().catch(() => ({}))) as { status?: unknown; clientNote?: unknown };
-    const requestedStatus = typeof body.status === "string" ? body.status : "";
-    const clientNote = typeof body.clientNote === "string" ? body.clientNote.trim() : "";
-
-    if (!ALLOWED_PUBLIC_STATUSES.has(requestedStatus)) {
-      return NextResponse.json({ error: "Invalid public proposal status transition." }, { status: 400 });
-    }
-
-    if (!clientNote) {
-      return NextResponse.json({ error: "Client note is required." }, { status: 400 });
-    }
-
-    const proposal = await prisma.proposal.findUnique({
-      where: { publicToken: trimmedToken },
-      select: {
-        status: true,
-        validUntil: true,
-        expiredAt: true,
-        declineReason: true,
-      },
+  const now = new Date();
+  const moved = await prisma.$transaction(async (tx) => {
+    const res = await tx.proposal.updateMany({
+      where: { id: proposal.id, status: { in: CLIENT_ACTIONABLE } },
+      data: status === "DECLINED" ? { status, declinedAt: now, declineReason: clientNote } : { status },
     });
+    if (res.count === 0) return false;
+    await addProposalEvent(tx, { workspaceId: proposal.workspaceId, proposalId: proposal.id, type: status, message: clientNote });
+    return true;
+  });
+  if (!moved) return proposalError(409, "NOT_ACTIONABLE", "This proposal just changed. Refresh and try again.");
 
-    if (!proposal) {
-      return NextResponse.json({ error: "Proposal not found." }, { status: 404 });
-    }
-
-    if (LOCKED_PROPOSAL_STATUSES.has(proposal.status)) {
-      return NextResponse.json({ error: "Proposal is already accepted and cannot be revised." }, { status: 400 });
-    }
-
-    if (proposal.expiredAt || new Date() > new Date(proposal.validUntil)) {
-      return NextResponse.json({ error: "This proposal has expired and can no longer be updated." }, { status: 403 });
-    }
-
-    const clientIp = getClientIp(request);
-
-    const updatedProposal = await prisma.proposal.update({
-      where: { publicToken: trimmedToken },
-      data: {
-        status: requestedStatus,
-        declinedAt: new Date(),
-        declineReason: buildDeclineReasonPayload(proposal.declineReason, clientNote),
-      },
-      select: { status: true },
-    });
-
-    // Fetch full proposal details separately for logging, keeping main validation query clean
-    const fullProposal = await prisma.proposal.findUnique({
-      where: { publicToken: trimmedToken },
-      select: {
-        id: true,
-        workspaceId: true,
-        client: {
-          select: {
-            email: true
-          }
-        }
-      }
-    }).catch(() => null);
-
-    // Log the revision request to the CRM timeline with fallback default handling for mocked runs
-    if (fullProposal) {
-      await logActivity({
-        action: requestedStatus === 'REVISION_REQUESTED' ? 'proposal_revision_requested' : 'proposal_status_updated',
-        status: 'SUCCESS',
-        workspaceId: fullProposal.workspaceId || '',
-        actor: { email: fullProposal.client?.email || 'Anonymous Client' },
-        entity: { type: 'proposal', id: fullProposal.id || trimmedToken },
-        ipAddress: clientIp === 'unknown' ? null : clientIp,
-        userAgent: request.headers.get('user-agent') || null,
-        metadata: {
-          newStatus: requestedStatus,
-          note: clientNote || ''
-        }
-      }).catch(() => null);
-    }
-
-    return NextResponse.json({ success: true, status: updatedProposal.status });
-  } catch (error) {
-    console.error("Public Proposal Status Error:", error);
-    return NextResponse.json({ error: "Failed to update proposal status." }, { status: 500 });
-  }
+  logActivity({
+    action: status === "DECLINED" ? "proposal_declined" : "proposal_revision_requested",
+    status: "SUCCESS",
+    workspaceId: proposal.workspaceId,
+    actor: { email: "Client" },
+    entity: { type: "proposal", id: proposal.id },
+    ipAddress: ip === "unknown" ? null : ip,
+    userAgent: request.headers.get("user-agent") || null,
+    metadata: { newStatus: status, note: clientNote },
+  }).catch(() => null);
+  afterProposalChange(proposal.workspaceId, "client_feedback");
+  return NextResponse.json({ success: true, status });
 }

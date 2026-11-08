@@ -14,6 +14,7 @@ import { createCommercialActionTask } from "@/lib/commercial-workflow/tasks";
 import { revalidatePath } from "next/cache";
 import type { ComponentType } from "react";
 import { isModuleEnabled, requireModule } from "@/lib/modules";
+import { ProposalsTabs } from "../_components/ProposalsTabs";
 
 type InsightCardProps = {
   title: string;
@@ -104,7 +105,7 @@ export default async function PipelineDashboardPage({
     const filter = String(formData.get("filter") || "stalled");
 
     const proposals = await prisma.proposal.findMany({
-      where: { workspaceId: session.workspaceId },
+      where: { workspaceId: session.workspaceId, archivedAt: null },
       include: {
         client: true,
         conversions: {
@@ -157,7 +158,7 @@ export default async function PipelineDashboardPage({
 
   // Load all proposals with downstream linking
   const proposals = await prisma.proposal.findMany({
-    where: { workspaceId: session.workspaceId },
+    where: { workspaceId: session.workspaceId, archivedAt: null },
     include: {
       client: true,
       conversions: {
@@ -185,7 +186,7 @@ export default async function PipelineDashboardPage({
   return (
     <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8 space-y-8">
       <div className="max-w-7xl mx-auto space-y-6">
-        
+        <ProposalsTabs />
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-black text-zinc-900 dark:text-zinc-50 tracking-tight">{t("title")}</h1>
@@ -201,7 +202,7 @@ export default async function PipelineDashboardPage({
                 {t("actions.createTasks")}
               </button>
             </form>
-            <Link href="/proposals" className="bg-indigo-600 px-4 py-2 text-white font-bold text-xs uppercase tracking-widest rounded-lg shadow-sm hover:bg-indigo-700 transition-colors">
+            <Link href="/proposals/new" className="bg-indigo-600 px-4 py-2 text-white font-bold text-xs uppercase tracking-widest rounded-lg shadow-sm hover:bg-indigo-700 transition-colors">
               {t("proposalBuilderCta")}
             </Link>
           </div>
