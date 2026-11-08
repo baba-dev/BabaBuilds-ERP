@@ -119,7 +119,7 @@ export function InvoiceDrawer({ invoiceId, locale, baseCurrency, reloadToken, on
                 </Field>
                 <Field label={t("source")}>
                   {invoice.sourceProposalId ? (
-                    <Link href={`/proposals/${invoice.sourceProposalId}`} className="inline-flex items-center gap-1 text-indigo-600 hover:underline dark:text-indigo-400">
+                    <Link href={`/proposals?proposal=${invoice.sourceProposalId}`} className="inline-flex items-center gap-1 text-indigo-600 hover:underline dark:text-indigo-400">
                       {tt(`source.${invoice.source}`)} <ExternalLink className="size-3" aria-hidden />
                     </Link>
                   ) : (

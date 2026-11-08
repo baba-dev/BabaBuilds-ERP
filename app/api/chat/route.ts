@@ -1,3 +1,6 @@
+import { convertProposal } from '@/lib/proposals/convert';
+import { canOwnerTransition } from '@/lib/proposals/status';
+import { addProposalEvent } from '@/lib/proposals/events';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
@@ -30,7 +33,6 @@ import {
   ToolConfirmationError,
   verifyToolConfirmationToken,
 } from '@/lib/ai/chat/tool-confirmation';
-import { assertFreeTierMonthlyInvoiceAllowed } from '@/lib/entitlements';
 import { isModuleEnabled } from '@/lib/modules';
 import { listPublicPresets } from '@/lib/reporting/presets';
 import {
@@ -786,95 +788,52 @@ async function updateProposalStatus(proposalNo: string, status: string, workspac
     if (!proposal) {
       return JSON.stringify({ error: `Could not find a proposal matching ${proposalNo}.` });
     }
-
-    await prisma.proposal.update({
-      where: { id: proposal.id },
-      data: { status: status.toUpperCase() },
+    const next = status.toUpperCase();
+    if (!canOwnerTransition(proposal.status, next)) {
+      return JSON.stringify({
+        error: `Proposal ${proposalNo} is ${proposal.status}; it cannot be moved to ${next}. Allowed: DRAFT, DECLINED or ACCEPTED from an open proposal. Use convert_to_invoice for billing.`,
+      });
+    }
+    const now = new Date();
+    const res = await prisma.proposal.updateMany({
+      where: { id: proposal.id, workspaceId, status: proposal.status },
+      data:
+        next === 'DECLINED'
+          ? { status: next, declinedAt: now }
+          : next === 'ACCEPTED'
+            ? { status: next, acceptedAt: now, acceptedByName: 'Recorded by owner' }
+            : { status: next, declinedAt: null, declineReason: null },
     });
+    if (res.count === 0) return JSON.stringify({ error: 'The proposal changed meanwhile. Try again.' });
+    await addProposalEvent(prisma, { workspaceId, proposalId: proposal.id, type: next === 'DECLINED' ? 'DECLINED' : next === 'ACCEPTED' ? 'ACCEPTED' : 'REOPENED', metadata: { by: 'assistant' } });
 
     return JSON.stringify({
       success: true,
-      message: `Updated proposal ${proposalNo} status to ${status.toUpperCase()}.`,
+      message: `Updated proposal ${proposalNo} status to ${next}.`,
     });
   } catch {
     return JSON.stringify({ error: 'Failed to update proposal status.' });
   }
 }
 
-async function convertProposalToInvoice(proposalNo: string, workspaceId: string) {
+async function convertProposalToInvoice(proposalNo: string, workspaceId: string, actorUserId: string | null) {
   try {
-    const proposal = await prisma.proposal.findFirst({
-      where: { proposalNo, workspaceId },
-      include: { client: true },
-    });
-
+    const proposal = await prisma.proposal.findFirst({ where: { proposalNo, workspaceId }, select: { id: true } });
     if (!proposal) return JSON.stringify({ error: `Could not find proposal ${proposalNo}.` });
-    if (proposal.status === 'INVOICED') {
-      return JSON.stringify({
-        message: 'This proposal was already converted to an invoice.',
-      });
-    }
 
-    await prisma.proposal.update({
-      where: { id: proposal.id },
-      data: { status: 'INVOICED', acceptedAt: new Date() },
-    });
-
-    const latestInvoice = await prisma.invoice.findFirst({
-      where: { workspaceId },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    let nextInvNum = 'INV-001';
-    if (latestInvoice && latestInvoice.invoiceNumber.startsWith('INV-')) {
-      const numPart = parseInt(latestInvoice.invoiceNumber.split('-')[1], 10);
-      if (!isNaN(numPart)) {
-        nextInvNum = `INV-${(numPart + 1).toString().padStart(3, '0')}`;
-      } else {
-        nextInvNum = `INV-${Date.now().toString().slice(-4)}`;
-      }
-    }
-
-    const monthCap = await assertFreeTierMonthlyInvoiceAllowed(workspaceId, new Date());
-    if (monthCap) return JSON.stringify({ error: monthCap.message });
-
-    const chatWorkspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { baseCurrency: true } });
-    const newInvoice = await prisma.invoice.create({
-      data: {
-        workspaceId,
-        clientId: proposal.client?.id,
-        invoiceNumber: nextInvNum,
-        financialYear: new Date().getFullYear().toString(),
-        invoiceDate: new Date(),
-        clientName: proposal.client?.name || 'Unknown Client',
-        serviceDescription: proposal.title,
-        totalAmount: proposal.totalAmount,
-        grandTotal: proposal.totalAmount,
-        baseGrandTotal: proposal.totalAmount,
-        currency: chatWorkspace?.baseCurrency || 'INR',
-        source: 'PROPOSAL',
-        sourceProposalId: proposal.id,
-        dueDate: new Date(Date.now() + 7 * 86_400_000),
-        paymentTermsDays: 7,
-        status: 'PENDING',
-        pdfPath: '',
-      },
-    });
+    const result = await convertProposal({ workspaceId, proposalId: proposal.id, actorUserId });
+    if (!result.ok) return JSON.stringify({ error: result.message });
 
     try {
       invalidateDashboardCacheForWorkspace(workspaceId);
     } catch (error) {
-      noteDashboardCacheIncident('invalidationFailures', {
-        workspaceId,
-        entity: 'invoice',
-        action: 'create',
-        error: String(error),
-      });
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'invoice', action: 'create', error: String(error) });
     }
-
     return JSON.stringify({
       success: true,
-      message: `Proposal ${proposalNo} marked ACCEPTED! Auto-generated new Invoice ${newInvoice.invoiceNumber} for ₹${newInvoice.totalAmount}.`,
+      message: result.alreadyConverted
+        ? `Proposal ${proposalNo} was already converted to invoice ${result.invoice.invoiceNumber}.`
+        : `Proposal ${proposalNo} converted to invoice ${result.invoice.invoiceNumber} (accepted items only, with the signed totals).`,
     });
   } catch {
     return JSON.stringify({ error: 'Failed to convert proposal to invoice.' });
@@ -1215,6 +1174,7 @@ async function executeMutationTool(
   toolName: string,
   args: ToolArgs,
   workspaceId: string,
+  actorUserId: string | null = null,
 ): Promise<string> {
   switch (toolName) {
     case 'create_task':
@@ -1265,7 +1225,7 @@ async function executeMutationTool(
         workspaceId,
       );
     case 'convert_to_invoice':
-      return convertProposalToInvoice(asString(args.proposal_no), workspaceId);
+      return convertProposalToInvoice(asString(args.proposal_no), workspaceId, actorUserId);
     case 'add_service_to_catalog':
       return addServiceToCatalog(
         asString(args.name),
@@ -1530,7 +1490,7 @@ async function executeAuditedMutation(input: {
 
   let dbResult: string;
   try {
-    dbResult = await executeMutationTool(input.toolName, input.args, input.workspaceId);
+    dbResult = await executeMutationTool(input.toolName, input.args, input.workspaceId, input.actorUserId ?? null);
   } catch (error) {
     await logActivity({
       action: 'ai_tool_mutation_after',

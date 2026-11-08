@@ -369,7 +369,7 @@ export default function RetainersHub() {
             {ret.autoAppendMonth && <span title="Smart Naming Enabled"><Sparkles className="w-3 h-3 text-purple-500 ml-1" /></span>}
           </div>
           {ret.sourceProposalId && (
-            <Link href={`/proposals/${ret.sourceProposalId}`} className="mt-1 flex items-center text-[10px] uppercase font-bold tracking-widest text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+            <Link href={`/proposals?proposal=${ret.sourceProposalId}`} className="mt-1 flex items-center text-[10px] uppercase font-bold tracking-widest text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
               <Sparkles className="w-3 h-3 mr-1" /> Origin
             </Link>
           )}

@@ -2701,9 +2701,38 @@ model Proposal {
   estimatedTax Decimal @default(0)
   totalAmount  Decimal
 
+  // Pricing context frozen at save time, so the converted invoice matches what the client signed.
+  currency       String  @default("INR")
+  exchangeRate   Decimal @default(1)
+  taxRatePercent Float   @default(0)
+  // Bumped on every edit after the proposal was sent.
+  revision       Int     @default(1)
+  archivedAt     DateTime?
+  // [{type:"image"|"video", url, title}] (previously smuggled into `declineReason`).
+  richMedia      Json?
+  events         ProposalEvent[]
+
   @@unique([proposalNo, workspaceId])
   @@index([workspaceId])
   @@index([publicToken])
+  @@index([workspaceId, status])
+  @@index([workspaceId, clientId])
+  @@index([workspaceId, dateCreated])
+}
+
+/// Append-only client/owner timeline for a proposal (sent, viewed, revision requested, accepted, ...).
+model ProposalEvent {
+  id          String   @id @default(cuid())
+  workspaceId String
+  proposalId  String
+  proposal    Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  type        String
+  message     String?
+  metadata    String?
+  actorUserId String?
+  createdAt   DateTime @default(now())
+
+  @@index([proposalId, createdAt])
 }
 
 model ProposalItem {
@@ -2722,6 +2751,8 @@ model ProposalItem {
 
   isOptional  Boolean  @default(false)
   isSelected  Boolean  @default(true)
+  // Explicit "bills every month" flag; replaces guessing from words in the title.
+  isRecurring Boolean  @default(false)
 }
 
 model Retainer {

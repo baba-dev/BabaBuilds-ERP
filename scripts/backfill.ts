@@ -1,17 +1,18 @@
 /**
- * Applies prisma/backfills/invoice-rework.sql to the current database (idempotent).
+ * Applies every prisma/backfills/*.sql file (in name order) to the current database. All files are idempotent.
  * Needed for databases created with `prisma db push` (production), where migration SQL is never run.
  *
- *   npm run backfill:invoices
+ *   npm run backfill
  */
 import fs from "fs";
 import path from "path";
 import { PrismaClient } from "@prisma/client";
 
 async function main() {
-  const file = path.join(process.cwd(), "prisma", "backfills", "invoice-rework.sql");
-  const statements = fs
-    .readFileSync(file, "utf8")
+  const dir = path.join(process.cwd(), "prisma", "backfills");
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith(".sql")).sort();
+  const sql = files.map((f) => fs.readFileSync(path.join(dir, f), "utf8")).join("\n");
+  const statements = sql
     .split("\n")
     .filter((line) => !line.trim().startsWith("--"))
     .join("\n")
@@ -23,7 +24,7 @@ async function main() {
   try {
     for (const statement of statements) {
       const changed = await prisma.$executeRawUnsafe(statement);
-      console.log(`[backfill:invoices] ${changed} row(s): ${statement.split("\n")[0].slice(0, 90)}`);
+      console.log(`[backfill] ${changed} row(s): ${statement.split("\n")[0].slice(0, 90)}`);
     }
   } finally {
     await prisma.$disconnect();
@@ -31,6 +32,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error("[backfill:invoices] failed", error);
+  console.error("[backfill] failed", error);
   process.exit(1);
 });

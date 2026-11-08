@@ -173,3 +173,48 @@ export function buildPaymentReminderEmail(args: {
     text: `Dear ${args.clientName},\n\nThis is a reminder that Invoice ${args.invoiceNumber} has an outstanding balance of ${args.outstandingAmountFormatted}.\n\nIf you have already paid, please disregard this message.\n\nThank you,\n${args.companyName}`,
   };
 }
+
+export function buildProposalEmail(args: {
+  companyName: string;
+  clientName: string;
+  proposalNo: string;
+  title: string;
+  totalFormatted: string;
+  validUntilFormatted: string;
+  url: string;
+  kind?: "send" | "reminder" | "update";
+  message?: string | null;
+}): TemplateResult {
+  const kind = args.kind ?? "send";
+  const client = escapeHtml(args.clientName);
+  const title = escapeHtml(args.title);
+  const lead =
+    kind === "reminder"
+      ? `A quick reminder: your proposal "${args.title}" is still waiting for your review.`
+      : kind === "update"
+        ? `We have updated your proposal "${args.title}". Please review the latest version.`
+        : `${args.companyName} has prepared a proposal for you: "${args.title}".`;
+  const note = args.message?.trim()
+    ? `<p style="margin:16px 0;padding:12px 16px;background:#f4f4f5;border-radius:8px;white-space:pre-wrap;">${escapeHtml(args.message.trim())}</p>`
+    : "";
+  const heading = kind === "reminder" ? "Proposal reminder" : kind === "update" ? "Updated proposal" : "New proposal";
+  return {
+    subject: `${kind === "reminder" ? "Reminder: " : kind === "update" ? "Updated: " : ""}Proposal ${args.proposalNo} from ${args.companyName}`,
+    html: brandedLayout({
+      title: heading,
+      eyebrow: args.proposalNo,
+      subtitle: lead,
+      companyName: args.companyName,
+      ctaLabel: "Review proposal",
+      ctaUrl: args.url,
+      bodyHtml: `
+        <p>Hi ${client},</p>
+        <p><strong>${title}</strong></p>
+        <p><strong>Total:</strong> ${escapeHtml(args.totalFormatted)}<br/><strong>Valid until:</strong> ${escapeHtml(args.validUntilFormatted)}</p>
+        ${note}
+        <p>You can review the details, choose optional items and accept online.</p>
+      `,
+    }),
+    text: `Hi ${args.clientName},\n\n${lead}\n\nTotal: ${args.totalFormatted}\nValid until: ${args.validUntilFormatted}\n${args.message?.trim() ? `\n${args.message.trim()}\n` : ""}\nReview and accept: ${args.url}\n\n${args.companyName}`,
+  };
+}

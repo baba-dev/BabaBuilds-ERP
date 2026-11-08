@@ -1,285 +1,141 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
-import { calculateInvoiceTotals } from '@/lib/invoice/totals';
-import { dispatchNotification } from '@/lib/notifications/dispatcher';
-import { logActivity } from '@/lib/security/activity-log';
-import { withPermission } from '@/lib/rbac';
-import { getNextProposalNo, isUniqueConstraintError } from '@/lib/document-numbering';
+import { NextResponse } from "next/server";
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from "@/lib/dashboard-cache";
+import { prisma } from "@/lib/prisma";
+import { dispatchNotification } from "@/lib/notifications/dispatcher";
+import { logActivity } from "@/lib/security/activity-log";
+import { proposalError, requireProposalAccess } from "@/lib/proposals/access";
+import { buildBaseWhere, buildListWhere, buildOrderBy, parseProposalListQuery } from "@/lib/proposals/query";
+import { listInclude, serializeListItem } from "@/lib/proposals/serialize";
+import { proposalInputSchema } from "@/lib/proposals/validation";
+import { checkMilestones, computeProposalTotals } from "@/lib/proposals/totals";
+import { createProposal, resolveCurrency } from "@/lib/proposals/save";
+import { startOfUtcDay, type ProposalDisplayStatus } from "@/lib/proposals/status";
+import type { ProposalListResponse } from "@/lib/proposals/types";
 
-type ProposalItemInput = {
-  serviceTemplateId?: string;
-  title: string;
-  description?: string;
-  quantity: number;
-  unitPrice: number;
-  isOptional?: boolean;
-};
-type ProposalMediaItemInput = {
-  type: "image" | "video";
-  url: string;
-  title?: string;
-};
-type MilestoneInput = {
-  title: string;
-  description?: string;
-  amount: number;
-  dueDate?: string;
-};
-import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
-
-export async function GET() {
+function refreshDashboard(workspaceId: string, action: string) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.workspaceId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    invalidateDashboardCacheForWorkspace(workspaceId);
+  } catch (error) {
+    noteDashboardCacheIncident("invalidationFailures", { workspaceId, entity: "proposal", action, error: String(error) });
+  }
+}
+
+
+export async function GET(request: Request) {
+  const auth = await requireProposalAccess("proposals.view");
+  if (!auth.ok) return auth.response;
+  const { workspaceId } = auth.access;
+
+  const parsed = parseProposalListQuery(new URL(request.url).searchParams);
+  if (!parsed.success) return proposalError(400, "INVALID_QUERY", parsed.error.issues[0]?.message ?? "Invalid query.");
+  const query = parsed.data;
+  const now = new Date();
+
+  try {
+    const where = buildListWhere(workspaceId, query, now);
+    const [totalRecords, rows, grouped, expiredGrouped] = await Promise.all([
+      prisma.proposal.count({ where }),
+      prisma.proposal.findMany({
+        where,
+        include: listInclude,
+        orderBy: buildOrderBy(query),
+        skip: (query.page - 1) * query.limit,
+        take: query.limit,
+      }),
+      prisma.proposal.groupBy({ by: ["status"], where: buildBaseWhere(workspaceId, query), _count: { _all: true } }),
+      prisma.proposal.groupBy({
+        by: ["status"],
+        where: { AND: [buildBaseWhere(workspaceId, query), { status: { in: ["SENT", "VIEWED", "REVISION_REQUESTED"] }, validUntil: { lt: new Date(startOfUtcDay(now)) } }] },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const statusCounts: Record<ProposalDisplayStatus, number> = {
+      DRAFT: 0, SENT: 0, VIEWED: 0, REVISION_REQUESTED: 0, ACCEPTED: 0, DECLINED: 0, EXPIRED: 0, INVOICED: 0,
+    };
+    for (const g of grouped) {
+      if (g.status in statusCounts) statusCounts[g.status as ProposalDisplayStatus] += g._count._all;
     }
-    const workspaceId = session.workspaceId;
+    for (const g of expiredGrouped) {
+      if (g.status in statusCounts) {
+        statusCounts[g.status as ProposalDisplayStatus] -= g._count._all;
+        statusCounts.EXPIRED += g._count._all;
+      }
+    }
 
-    const proposals = await prisma.proposal.findMany({
-      where: { workspaceId: workspaceId },
-      include: { client: true, items: true, billingMilestones: true },
-      orderBy: { dateCreated: 'desc' }
-    });
+    let focusFound: boolean | undefined;
+    let data = rows.map((r) => serializeListItem(r, now));
+    if (query.focus && !data.some((d) => d.id === query.focus)) {
+      const focused = await prisma.proposal.findFirst({ where: { id: query.focus, workspaceId }, include: listInclude });
+      focusFound = Boolean(focused);
+      if (focused) data = [serializeListItem(focused, now), ...data];
+    }
 
-    return NextResponse.json(proposals);
+    const body: ProposalListResponse = {
+      data,
+      meta: {
+        page: query.page,
+        limit: query.limit,
+        totalRecords,
+        totalPages: Math.max(1, Math.ceil(totalRecords / query.limit)),
+        statusCounts,
+        ...(focusFound === undefined ? {} : { focusFound }),
+      },
+    };
+    return NextResponse.json(body);
   } catch (error) {
     console.error("Fetch Proposals Error:", error);
-    return NextResponse.json({ error: 'Failed to fetch proposals' }, { status: 500 });
+    return proposalError(500, "PROPOSALS_FETCH_FAILED", "Failed to fetch proposals.");
   }
 }
 
 export async function POST(request: Request) {
+  const auth = await requireProposalAccess("proposals.create");
+  if (!auth.ok) return auth.response;
+  const { workspaceId, userId, email } = auth.access;
+
+  const json = await request.json().catch(() => null);
+  const parsed = proposalInputSchema.safeParse(json);
+  if (!parsed.success) {
+    return proposalError(400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid proposal.", {
+      issues: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
+    });
+  }
+  const input = parsed.data;
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.workspaceId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const workspaceId = session.workspaceId;
-    const userId = session.user?.id as string | undefined;
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const priced = await computeProposalTotals(workspaceId, input);
+    if (!priced.ok) return proposalError(priced.status, priced.code, priced.message, priced.details);
+    const milestoneError = checkMilestones(input.milestones, priced.totals.totalAmount);
+    if (milestoneError) return proposalError(400, "MILESTONE_MISMATCH", milestoneError);
 
-    // RBAC: creating a proposal requires proposals.create permission
-    const perm = await withPermission(userId, workspaceId, 'proposals.create');
-    if (!perm.granted) return perm.response;
+    const { currency, exchangeRate } = await resolveCurrency(workspaceId, input);
+    const created = await createProposal({ workspaceId, actorUserId: userId, input, totals: priced.totals, currency, exchangeRate });
 
-    const body = await request.json();
-    const { clientId, title, validUntil, items, taxRateOverride, richMedia, milestones, richSections } = body as {
-      clientId: string;
-      title: string;
-      validUntil: string;
-      items: ProposalItemInput[];
-      taxRateOverride?: number;
-      richMedia?: ProposalMediaItemInput[];
-      milestones?: MilestoneInput[];
-      richSections?: unknown;
-    };
-
-    const client = await prisma.client.findFirst({
-      where: { id: clientId, workspaceId }
-    });
-    if (!client) {
-      return NextResponse.json({ error: "Invalid client selected." }, { status: 400 });
-    }
-
-    if (!client.email || client.email.trim() === '') {
-      return NextResponse.json(
-        { error: `Cannot create proposal. The client "${client.name}" must have a valid email address on file for digital signatures.` },
-        { status: 400 }
-      );
-    }
-
-    const profile = await prisma.businessProfile.findUnique({
-      where: { workspaceId },
-      include: { workspace: true }
-    });
-    const countryCode = profile?.workspace?.countryCode || "IN";
-    const defaultTaxRate = (profile as Record<string, unknown> | null)?.defaultTaxRate as number | null ?? null;
-
-    const serviceTemplateIds = items
-      .map((item) => item.serviceTemplateId)
-      .filter((id): id is string => typeof id === 'string' && id.length > 0);
-
-    const templates = serviceTemplateIds.length
-      ? await prisma.serviceTemplate.findMany({
-          where: { workspaceId, id: { in: serviceTemplateIds } },
-          include: { sacCode: true },
-        })
-      : [];
-    const templateMap = new Map(templates.map((template) => [template.id, template]));
-    const serviceTaxRates = items
-      .map((item) => templateMap.get(item.serviceTemplateId || "")?.sacCode?.igstRate ?? null)
-      .filter((rate): rate is number => rate !== null && rate !== undefined);
-
-    const taxResolution = resolveTaxRate({
-      countryCode,
-      isTaxExempt: Boolean(client.isExport),
-      serviceTaxRates,
-      workspaceDefaultTaxRate: defaultTaxRate,
-      taxRateOverride,
-    });
-
-    if (taxResolution.requiresUserInput) {
-      return NextResponse.json({
-        error: "Tax rate is required before creating this proposal.",
-        code: "TAX_RATE_REQUIRED",
-        reason: taxResolution.reason,
-        countryCode,
-        taxLabel: profile?.taxLabel || "Tax",
-        candidates: taxResolution.candidates || [],
-      }, { status: 422 });
-    }
-
-    if (taxResolution.source === 'override' && taxRateOverride !== undefined && taxRateOverride !== null && profile) {
-      await prisma.businessProfile.update({
-        where: { workspaceId },
-        data: { defaultTaxRate: taxResolution.taxRate },
-      });
-    }
-
-    const pricedLines = items.map((item) => ({
-      amount: Number(item.quantity) * Number(item.unitPrice)
-    }));
-    const totals = calculateInvoiceTotals({
-      services: pricedLines,
-      isTaxExempt: Boolean(client.isExport),
-      defaultTaxRate: taxResolution.taxRate,
-    });
-    const subtotal = totals.subtotal;
-    const estimatedTax = totals.taxAmount;
-    const totalAmount = totals.total;
-
-    // Enforce that the sum of all milestones must strictly equal the proposal's grand total
-    if (milestones && milestones.length > 0) {
-      const milestonesSum = milestones.reduce((sum, m) => sum + Number(m.amount), 0);
-      if (Math.abs(milestonesSum - totalAmount) > 0.01) {
-        return NextResponse.json({
-          error: `The sum of billing milestones (${milestonesSum.toFixed(2)}) must strictly equal the proposal grand total (${totalAmount.toFixed(2)}).`
-        }, { status: 400 });
-      }
-    }
-
-    const normalizedRichMedia = Array.isArray(richMedia)
-      ? richMedia
-          .map((media) => ({
-            type: media.type === "video" ? "video" : "image",
-            url: String(media.url ?? "").trim(),
-            title: typeof media.title === "string" ? media.title.trim() : "",
-          }))
-          .filter((media) => media.url.length > 0)
-      : [];
-
-    const MAX_NUMBERING_ATTEMPTS = 5;
-    let newProposal: Awaited<ReturnType<typeof prisma.proposal.create>> | null = null;
-    let proposalNo = "";
-
-    for (let attempt = 1; attempt <= MAX_NUMBERING_ATTEMPTS; attempt += 1) {
-      try {
-        newProposal = await prisma.$transaction(async (tx) => {
-          const nextProposalNo = await getNextProposalNo(tx, workspaceId);
-          proposalNo = nextProposalNo;
-
-          return tx.proposal.create({
-            data: {
-              workspaceId,
-              clientId,
-              title,
-              proposalNo: nextProposalNo,
-              validUntil: new Date(validUntil),
-              subtotal,
-              estimatedTax,
-              totalAmount,
-              declineReason:
-                normalizedRichMedia.length > 0
-                  ? JSON.stringify({ richMedia: normalizedRichMedia })
-                  : null,
-              richSections: richSections ? richSections : undefined,
-              status: "SENT",
-              items: {
-                create: items.map((item) => {
-                  const qty = new Prisma.Decimal(Number(item.quantity));
-                  const unitPriceD = new Prisma.Decimal(Number(item.unitPrice));
-                  const lineTotal = qty.mul(unitPriceD).toDecimalPlaces(2);
-                  return {
-                    serviceTemplateId: templateMap.has(item.serviceTemplateId || "") ? item.serviceTemplateId : null,
-                    title: item.title,
-                    description: item.description || null,
-                    quantity: Number(item.quantity),
-                    unitPrice: unitPriceD.toNumber(),
-                    total: lineTotal.toNumber(),
-                    isOptional: Boolean(item.isOptional),
-                    isSelected: true
-                  };
-                })
-              },
-              billingMilestones: milestones && milestones.length > 0 ? {
-                create: milestones.map((m) => ({
-                  workspaceId,
-                  title: m.title,
-                  description: m.description || null,
-                  amount: new Prisma.Decimal(m.amount),
-                  dueDate: m.dueDate ? new Date(m.dueDate) : null,
-                  status: 'PENDING'
-                }))
-              } : undefined,
-            }
-          });
-        });
-        break;
-      } catch (error) {
-        if (attempt < MAX_NUMBERING_ATTEMPTS && isUniqueConstraintError(error)) continue;
-        throw error;
-      }
-    }
-
-    if (!newProposal) {
-      return NextResponse.json({ error: "Could not generate a unique proposal number." }, { status: 409 });
-    }
-
-    // Fire notification (fire-and-forget)
     dispatchNotification({
-      event: 'PROPOSAL_CREATED',
+      event: "PROPOSAL_CREATED",
       workspaceId,
-      data: {
-        proposalNo,
-        clientName: client.name,
-        amount: String(totalAmount),
-      },
+      data: { proposalNo: created.proposalNo, clientName: priced.client.name, amount: priced.totals.totalAmount.toFixed(2) },
     }).catch(() => null);
-
-logActivity({
-  action: "proposal_created",
-  status: "SUCCESS",
-  workspaceId,
-  actor: { userId: session.user?.id, email: session.user?.email },
-  entity: { type: "proposal", id: newProposal.id },
-  request,
-});
-
-try {
-  invalidateDashboardCacheForWorkspace(workspaceId);
-} catch (error) {
-  noteDashboardCacheIncident("invalidationFailures", {
-    workspaceId,
-    entity: "proposal",
-    action: "create",
-    error: String(error),
-  });
-}
-
-    return NextResponse.json({ success: true, proposal: newProposal });
-  } catch (error) {
-    console.error("Proposal Creation Error:", error);
     logActivity({
       action: "proposal_created",
-      status: "FAILURE",
-      workspaceId: null,
+      status: "SUCCESS",
+      workspaceId,
+      actor: { userId, email },
+      entity: { type: "proposal", id: created.id },
       request,
-      metadata: { error: String(error) },
     });
-    return NextResponse.json({ error: 'Failed to create proposal' }, { status: 500 });
+    refreshDashboard(workspaceId, "create");
+
+    return NextResponse.json({
+      success: true,
+      proposal: { id: created.id, proposalNo: created.proposalNo, status: created.status, publicToken: created.publicToken },
+      taxRateOverrideUsed: priced.totals.usedOverride ? priced.totals.taxRatePercent : null,
+    });
+  } catch (error) {
+    console.error("Proposal Creation Error:", error);
+    logActivity({ action: "proposal_created", status: "FAILURE", workspaceId, request, metadata: { error: String(error) } });
+    return proposalError(500, "PROPOSAL_CREATE_FAILED", "Failed to create proposal.");
   }
 }
+
