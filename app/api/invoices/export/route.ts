@@ -29,7 +29,7 @@ export async function GET(request: Request) {
       select: {
         id: true, invoiceNumber: true, invoiceDate: true, dueDate: true, clientId: true, clientName: true,
         currency: true, exchangeRate: true, grandTotal: true, totalAmount: true, baseGrandTotal: true,
-        amountReceived: true, status: true, source: true, sourceProposalId: true, providerGateway: true,
+        amountReceived: true, status: true, source: true, sourceProposalId: true, retainerId: true, providerGateway: true,
         providerPaymentLinkId: true, sentAt: true, lastReminderSentAt: true, createdAt: true, pdfPath: true,
       },
     });

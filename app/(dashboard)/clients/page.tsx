@@ -23,6 +23,7 @@ import { CLIENT_LOGO_ACCEPT_ATTR, CLIENT_LOGO_HELP_TEXT } from "@/lib/uploads/cl
 import { type ClientDto, type ApiEnvelope } from "@/lib/types/business";
 import { useSearchParams } from "next/navigation";
 import { OnboardingHint } from "@/components/onboarding/OnboardingHint";
+import { ClientRetainerChip } from "./_components/ClientRetainerChip";
 
 export default function ClientCRM() {
   const t = useTranslations('Clients');
@@ -522,6 +523,7 @@ export default function ClientCRM() {
                           {client.taxId || t('unregistered')}
                         </p>
                       </div>
+                      <div className="mt-3"><ClientRetainerChip client={client} /></div>
                     </div>
                   </CardContent>
                 </Card>
@@ -553,6 +555,7 @@ export default function ClientCRM() {
                               <div>
                                 <p className="font-bold text-[13px] text-zinc-900 dark:text-zinc-100">{client.name}</p>
                                 <p className="text-[11px] text-zinc-500">{client.address}</p>
+                                <div className="mt-1.5"><ClientRetainerChip client={client} /></div>
                               </div>
                             </div>
                           </td>

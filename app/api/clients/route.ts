@@ -1,4 +1,5 @@
 import type { Session } from "next-auth";
+import { getClientRetainerSummaries } from '@/lib/retainers/client-summary';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
@@ -65,9 +66,12 @@ export async function GET(request: Request) {
       prisma.client.count({ where: whereClause })
     ]);
     
+    // 3b. RECURRING BILLING SUMMARY per client on this page (two grouped queries, no N+1)
+    const retainerSummary = await getClientRetainerSummaries(workspaceId, clients.map((c) => c.id));
+
     // 4. CONSTRUCT PAGINATED RESPONSE
     return NextResponse.json({
-      data: clients,
+      data: clients.map((c) => ({ ...c, retainerSummary: retainerSummary.get(c.id) })),
       meta: {
         currentPage: page,
         totalPages: Math.max(1, Math.ceil(totalClients / limit)),

@@ -1,4 +1,5 @@
 import { convertProposal } from '@/lib/proposals/convert';
+import { changeRetainerStatus } from '@/lib/retainers/lifecycle';
 import { canOwnerTransition } from '@/lib/proposals/status';
 import { addProposalEvent } from '@/lib/proposals/events';
 import { NextResponse } from 'next/server';
@@ -890,6 +891,7 @@ async function createRetainer(
       data: {
         workspaceId,
         clientId: client.id,
+        name: serviceName || 'Retainer Services',
         frequency: freqCaps,
         nextBillingDate: nextDate,
         status: 'ACTIVE',
@@ -951,20 +953,17 @@ async function updateRetainerStatus(
       });
     }
 
-    await prisma.retainer.update({
-      where: { id: retainer.id },
-      data: { status: status.toUpperCase() },
-    });
+    const target = status.toUpperCase();
+    if (target !== 'ACTIVE' && target !== 'PAUSED' && target !== 'CANCELLED') {
+      return JSON.stringify({ error: 'Status must be ACTIVE, PAUSED or CANCELLED.' });
+    }
+    const changed = await changeRetainerStatus({ workspaceId, retainerId: retainer.id, to: target });
+    if (!changed.ok) return JSON.stringify({ error: changed.message });
 
     try {
       invalidateDashboardCacheForWorkspace(workspaceId);
     } catch (error) {
-      noteDashboardCacheIncident('invalidationFailures', {
-        workspaceId,
-        entity: 'retainer',
-        action: 'update',
-        error: String(error),
-      });
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'retainer', action: 'update', error: String(error) });
     }
 
     return JSON.stringify({

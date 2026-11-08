@@ -23,6 +23,7 @@ const LIST_SELECT = {
   status: true,
   source: true,
   sourceProposalId: true,
+  retainerId: true,
   providerGateway: true,
   providerPaymentLinkId: true,
   sentAt: true,

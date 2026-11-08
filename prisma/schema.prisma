@@ -1635,6 +1635,12 @@ model Invoice {
   bankTransactionSplits BankTransactionInvoiceSplit[]
   meteredUsages         MeteredUsage[]
 
+  // The retainer cycle that produced this invoice (null for everything else).
+  retainerId String?
+  retainer   Retainer? @relation("RetainerInvoices", fields: [retainerId], references: [id], onDelete: SetNull)
+  // Automatic reminders already sent for this invoice (retainer collections).
+  reminderCount Int @default(0)
+
   // Security: Two different workspaces can use invoice number "001"
   @@unique([invoiceNumber, workspaceId])
   @@index([financialYear])
@@ -1643,6 +1649,7 @@ model Invoice {
   @@index([workspaceId, financialYear, status])
   @@index([workspaceId, clientId])
   @@index([workspaceId, invoiceDate])
+  @@index([workspaceId, retainerId])
 }
 
 /// One received payment against an invoice. Invoice.amountReceived/status are derived from the
@@ -2786,8 +2793,64 @@ model Retainer {
   mailBillingDomains  MailBillingDomain[]
   mailBillingSubscriptions MailBillingSubscription[]
 
+  // Rework: lifecycle, schedule limits and billing state.
+  name             String?
+  notes            String?
+  exchangeRate     Decimal   @default(1)
+  paymentTermsDays Int       @default(7)
+  emailInvoice     Boolean   @default(true)
+  endDate          DateTime?
+  maxCycles        Int?
+  cyclesBilled     Int       @default(0)
+  lastBilledAt     DateTime?
+  lastError        String?
+  lastErrorAt      DateTime?
+  cancelledAt      DateTime?
+  invoices         Invoice[]        @relation("RetainerInvoices")
+  events           RetainerEvent[]
+  priceChanges     RetainerPriceChange[]
+  // Collections: automatic payment reminders for this retainer's overdue invoices.
+  remindersEnabled Boolean @default(true)
+  // Renewal: when the cycle limit / end date is reached, extend by `renewCycles` instead of completing.
+  autoRenew        Boolean @default(false)
+  renewCycles      Int?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, nextBillingDate])
+  @@index([workspaceId, clientId])
+}
+
+/// A scheduled price change: from the first cycle on/after `effectiveDate`, every line is multiplied by (1 + percent/100).
+model RetainerPriceChange {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  retainerId    String
+  retainer      Retainer  @relation(fields: [retainerId], references: [id], onDelete: Cascade)
+  effectiveDate DateTime
+  percent       Float
+  note          String?
+  appliedAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([retainerId, effectiveDate])
+}
+
+/// Append-only history of a retainer (created, edited, paused, billed, failed, ...).
+model RetainerEvent {
+  id          String   @id @default(cuid())
+  workspaceId String
+  retainerId  String
+  retainer    Retainer @relation(fields: [retainerId], references: [id], onDelete: Cascade)
+  type        String
+  message     String?
+  metadata    String?
+  actorUserId String?
+  createdAt   DateTime @default(now())
+
+  @@index([retainerId, createdAt])
 }
 
 model RetainerItem {
@@ -2817,6 +2880,8 @@ model MeteredUsage {
   quantity          Decimal
   unitPrice         Decimal
   status            String     @default("PENDING") // PENDING, BILLED
+  // Fraction (0.18). Null = use the retainer's own tax rate when billed.
+  taxRate           Float?
   
   billedInInvoiceId String?
   billedInInvoice   Invoice?   @relation(fields: [billedInInvoiceId], references: [id], onDelete: SetNull)

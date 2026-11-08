@@ -1,153 +1,79 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
-import { resolveTaxRate } from '@/lib/invoice/tax-resolver';
-import { logActivity } from '@/lib/security/activity-log';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { logActivity } from "@/lib/security/activity-log";
+import { retainerError, requireRetainerAccess } from "@/lib/retainers/access";
+import { buildBaseWhere, buildListWhere, buildOrderBy, parseRetainerListQuery } from "@/lib/retainers/query";
+import { listInclude, serializeListItem } from "@/lib/retainers/serialize";
+import { retainerInputSchema } from "@/lib/retainers/validation";
+import { priceRetainer } from "@/lib/retainers/pricing";
+import { afterRetainerChange, createRetainer, resolveCurrency } from "@/lib/retainers/save";
+import { startOfUtcDay, type RetainerDisplayStatus } from "@/lib/retainers/status";
+import type { RetainerListResponse } from "@/lib/retainers/types";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = await requireRetainerAccess("retainers.view");
+  if (!auth.ok) return auth.response;
+  const { workspaceId } = auth.access;
+  const parsed = parseRetainerListQuery(new URL(request.url).searchParams);
+  if (!parsed.success) return retainerError(400, "INVALID_QUERY", parsed.error.issues[0]?.message ?? "Invalid query.");
+  const q = parsed.data;
+  const now = new Date();
   try {
-    // 1. SECURITY LOCK
-    const session = await getServerSession(authOptions);
-    if (!session || !session.workspaceId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const where = buildListWhere(workspaceId, q, now);
+    const endOfToday = new Date(startOfUtcDay(now) + 86_399_999);
+    const base = buildBaseWhere(workspaceId, q);
+    const [totalRecords, rows, grouped, dueCount] = await Promise.all([
+      prisma.retainer.count({ where }),
+      prisma.retainer.findMany({ where, include: listInclude, orderBy: buildOrderBy(q), skip: (q.page - 1) * q.limit, take: q.limit }),
+      prisma.retainer.groupBy({ by: ["status"], where: base, _count: { _all: true } }),
+      prisma.retainer.count({ where: { AND: [base, { status: "ACTIVE", nextBillingDate: { lte: endOfToday } }] } }),
+    ]);
+    const counts: Record<RetainerDisplayStatus, number> = { ACTIVE: 0, PAUSED: 0, CANCELLED: 0, COMPLETED: 0, DUE: 0 };
+    for (const g of grouped) if (g.status in counts) counts[g.status as RetainerDisplayStatus] += g._count._all;
+    counts.DUE = dueCount;
+    counts.ACTIVE = Math.max(0, counts.ACTIVE - dueCount);
+
+    let data = rows.map((r) => serializeListItem(r, now));
+    let focusFound: boolean | undefined;
+    if (q.focus && !data.some((d) => d.id === q.focus)) {
+      const f = await prisma.retainer.findFirst({ where: { id: q.focus, workspaceId }, include: listInclude });
+      focusFound = Boolean(f);
+      if (f) data = [serializeListItem(f, now), ...data];
     }
-    const workspaceId = session.workspaceId;
-
-    // 2. FETCH RETAINERS (Include Client data for the UI)
-    const retainers = await prisma.retainer.findMany({
-      where: { workspaceId },
-      include: { 
-        client: {
-          select: { name: true, email: true } // We only need name and email for the UI
-        },
-        items: true
-      },
-      orderBy: { nextBillingDate: 'asc' } // Show closest billing dates first
-    });
-
-    const mappedRetainers = retainers.map(r => ({
-      ...r,
-      serviceName: r.items.map(i => i.title).join(', ') || 'Retainer Services',
-      amount: r.items.reduce((sum, i) => sum + (i.quantity * Number(i.unitPrice)), 0)
-    }));
-
-    return NextResponse.json(mappedRetainers);
+    const body: RetainerListResponse = {
+      data,
+      meta: { page: q.page, limit: q.limit, totalRecords, totalPages: Math.max(1, Math.ceil(totalRecords / q.limit)), statusCounts: counts, ...(focusFound === undefined ? {} : { focusFound }) },
+    };
+    return NextResponse.json(body);
   } catch (error) {
-    console.error("Fetch Retainers Error:", error);
-    return NextResponse.json({ error: 'Failed to fetch retainers' }, { status: 500 });
+    console.error("Fetch retainers error:", error);
+    return retainerError(500, "RETAINERS_FETCH_FAILED", "Failed to fetch retainers.");
   }
 }
 
 export async function POST(request: Request) {
+  const auth = await requireRetainerAccess("retainers.manage");
+  if (!auth.ok) return auth.response;
+  const { workspaceId, userId, email } = auth.access;
+  const parsed = retainerInputSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) {
+    return retainerError(400, "VALIDATION_ERROR", parsed.error.issues[0]?.message ?? "Invalid retainer.", { issues: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) });
+  }
+  const input = parsed.data;
+  if (input.endDate && Date.parse(input.endDate) < Date.parse(input.nextBillingDate)) {
+    return retainerError(400, "VALIDATION_ERROR", "The end date must be after the first billing date.");
+  }
   try {
-    // 1. SECURITY LOCK
-    const session = await getServerSession(authOptions);
-    if (!session || !session.workspaceId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const workspaceId = session.workspaceId;
-
-    const body = await request.json();
-    const { clientId, serviceName, amount, frequency, autoAppendMonth, nextBillingDate, serviceTemplateId, taxRateOverride, items } = body;
-
-    // 2. VALIDATE CLIENT OWNERSHIP
-    const client = await prisma.client.findFirst({ 
-      where: { id: clientId, workspaceId } 
-    });
-    if (!client) {
-      return NextResponse.json({ error: "Invalid client selected." }, { status: 400 });
-    }
-
-    const profile = await prisma.businessProfile.findUnique({
-      where: { workspaceId },
-      include: { workspace: true }
-    });
-    const serviceTemplate = serviceTemplateId
-      ? await prisma.serviceTemplate.findFirst({
-          where: { id: serviceTemplateId, workspaceId },
-          include: { sacCode: true },
-        })
-      : null;
-
-    const taxResolution = resolveTaxRate({
-      countryCode: profile?.workspace?.countryCode || "IN",
-      isTaxExempt: Boolean(client.isExport),
-      serviceTaxRates: [serviceTemplate?.sacCode?.igstRate ?? null],
-      workspaceDefaultTaxRate: profile?.defaultTaxRate ?? null,
-      taxRateOverride,
-    });
-
-    if (taxResolution.requiresUserInput) {
-      return NextResponse.json({
-        error: "Tax rate is required before creating this retainer.",
-        code: "TAX_RATE_REQUIRED",
-        reason: taxResolution.reason,
-        countryCode: profile?.workspace?.countryCode || "IN",
-        taxLabel: profile?.taxLabel || "Tax",
-        candidates: taxResolution.candidates || [],
-      }, { status: 422 });
-    }
-
-    if (taxResolution.source === 'override' && taxRateOverride !== undefined && taxRateOverride !== null && taxRateOverride !== '' && profile) {
-      await prisma.businessProfile.update({
-        where: { workspaceId },
-        data: { defaultTaxRate: taxResolution.taxRate },
-      });
-    }
-
-    const newRetainer = await prisma.retainer.create({
-      data: {
-        workspaceId,
-        clientId,
-        frequency: frequency || "MONTHLY",
-        autoAppendMonth: Boolean(autoAppendMonth),
-        nextBillingDate: new Date(nextBillingDate),
-        status: "ACTIVE", // Automatically starts running
-        items: {
-          create: items && items.length > 0 ? items.map((i: Record<string, unknown>) => ({
-            title: i.title || "Retainer Service",
-            quantity: Number(i.quantity) || 1,
-            unitPrice: Number(i.unitPrice),
-            taxRate: Number(i.taxRate) || 0,
-            serviceTemplateId: i.serviceTemplateId || null,
-          })) : [{
-            title: serviceName || "Retainer Services",
-            quantity: 1,
-            unitPrice: Number(amount),
-            taxRate: taxResolution.taxRate,
-          }]
-        }
-      }
-    });
-
-
-    try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
-    } catch (error) {
-      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'retainer', action: 'create', error: String(error) });
-    }
-
-    logActivity({
-      action: "retainer_created",
-      status: "SUCCESS",
-      workspaceId,
-      actor: { userId: session.user?.id, email: session.user?.email },
-      entity: { type: "retainer", id: newRetainer.id },
-      request,
-    });
-
-    return NextResponse.json({ success: true, retainer: newRetainer });
+    const priced = await priceRetainer(workspaceId, input);
+    if (!priced.ok) return retainerError(priced.status, priced.code, priced.message, priced.details);
+    const { currency, exchangeRate } = await resolveCurrency(workspaceId, input);
+    const created = await createRetainer({ workspaceId, actorUserId: userId, input, pricing: priced.pricing, currency, exchangeRate });
+    logActivity({ action: "retainer_created", status: "SUCCESS", workspaceId, actor: { userId, email }, entity: { type: "retainer", id: created.id }, request });
+    afterRetainerChange(workspaceId, "create");
+    return NextResponse.json({ success: true, retainer: { id: created.id, status: created.status } });
   } catch (error) {
-    console.error("Retainer Creation Error:", error);
-    logActivity({
-      action: "retainer_created",
-      status: "FAILURE",
-      workspaceId: null,
-      request,
-      metadata: { error: String(error) },
-    });
-    return NextResponse.json({ error: 'Failed to configure retainer engine' }, { status: 500 });
+    console.error("Retainer creation error:", error);
+    logActivity({ action: "retainer_created", status: "FAILURE", workspaceId, request, metadata: { error: String(error) } });
+    return retainerError(500, "RETAINER_CREATE_FAILED", "Failed to create the retainer.");
   }
 }
