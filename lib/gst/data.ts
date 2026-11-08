@@ -81,7 +81,7 @@ const invoiceSelect = {
   irnAckDate: true,
   ewayBillNo: true,
   client: { select: { country: true, taxId: true, gstStateCode: true } },
-  items: { select: { description: true, quantity: true, totalAmount: true, taxRate: true, sacCode: true } },
+  items: { select: { description: true, quantity: true, totalAmount: true, taxRate: true, sacCode: true, productId: true } },
 } satisfies Prisma.InvoiceSelect;
 
 export const invoiceGstSelect = invoiceSelect;
@@ -107,7 +107,7 @@ export function toInvoiceInput(row: InvoiceRow): InvoiceInput {
     taxRate: num(row.taxRate),
     sacCode: row.sacCode,
     isExemptMode: row.taxMode === "exempt",
-    items: row.items.map((i) => ({ description: i.description, quantity: i.quantity, amount: r2(num(i.totalAmount) * scale), taxRate: num(i.taxRate), sacCode: i.sacCode })),
+    items: row.items.map((i) => ({ description: i.description, quantity: i.quantity, amount: r2(num(i.totalAmount) * scale), taxRate: num(i.taxRate), sacCode: i.sacCode, goods: i.productId ? true : undefined })),
     clientId: row.clientId,
     clientName: row.clientName,
     recipientGstin: row.client?.taxId ?? null,

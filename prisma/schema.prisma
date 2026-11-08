@@ -1536,6 +1536,9 @@ model Client {
   taxId   String?
   // GST: recipient state (2-digit GST state code). Needed for place of supply (CGST+SGST vs IGST).
   gstStateCode String?
+  // GST: standing treatment copied onto every new invoice for this client (SEZ_WP | SEZ_WOP, or reverse charge).
+  gstSupplyOverride String?
+  gstReverseCharge  Boolean @default(false)
   email   String?
   phone   String?
   logoUrl String?
@@ -3187,6 +3190,10 @@ model Product {
   category    String?
   unit        String  @default("pcs")
 
+  // GST: HSN of the goods and the rate (percent) charged on them. Null rate = not set yet.
+  hsnCode String?
+  gstRate Float?
+
   // Cost & Valuation
   baselinePrice Decimal @default(0)
   costPrice     Decimal @default(0)
@@ -3267,6 +3274,11 @@ model PurchaseOrder {
   supplier String
   status   String @default("DRAFT") // "DRAFT", "SENT", "DELIVERED", "CANCELLED"
 
+  // GST: supplier registration, carried onto the purchase bill when the PO is received.
+  supplierGstin     String?
+  supplierStateCode String?
+  supplierInvoiceNo String?
+
   expectedDate        DateTime?
   paymentTermsDays    Int?
   expectedPaymentDate DateTime?
@@ -3294,6 +3306,10 @@ model PurchaseOrderItem {
   quantity      Int
   unitPrice     Decimal
   expectedTotal Decimal
+
+  // GST: HSN and rate (percent) on this line; defaults come from the product master.
+  hsnCode String?
+  gstRate Float?
 }
 
 // ==========================================
@@ -3310,6 +3326,9 @@ model ShopOrder {
   buyerEmail String
   buyerPhone String?
   buyerNote  String? // Optional message / requirements from buyer
+  // GST: where the goods go (state code) and the buyer's GSTIN, if they gave one.
+  buyerStateCode String?
+  buyerGstin     String?
 
   // Pricing snapshot (frozen at time of order)
   subtotal Decimal @default(0)

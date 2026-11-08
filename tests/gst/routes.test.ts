@@ -105,3 +105,35 @@ describe("GST route guards", () => {
     expect((await comments.POST(json({ returnType: "GSTR3B", periodKey: "bogus", body: "hi" }))).status).toBe(400);
   });
 });
+
+describe("GST at source routes", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getServerSessionMock.mockResolvedValue(session);
+    granted();
+  });
+
+  it("answers 501 GSP_NOT_CONFIGURED for a valid GSTIN while no provider is connected", async () => {
+    const { gstinChecksumChar } = await import("@/lib/gst/gstin");
+    const first14 = "27AABCU9603R1Z";
+    const { POST, GET } = await import("@/app/api/gst/gstin-lookup/route");
+    const res = await POST(json({ gstin: first14 + gstinChecksumChar(first14) }));
+    expect(res.status).toBe(501);
+    expect((await res.json()).code).toBe("GSP_NOT_CONFIGURED");
+    expect(await (await GET()).json()).toEqual({ configured: false, provider: null });
+  });
+
+  it("rejects a malformed GSTIN with 422 before any lookup", async () => {
+    const { POST } = await import("@/app/api/gst/gstin-lookup/route");
+    const res = await POST(json({ gstin: "bad" }));
+    expect(res.status).toBe(422);
+  });
+
+  it("requires a session for the preview", async () => {
+    getServerSessionMock.mockResolvedValue(null);
+    const { POST } = await import("@/app/api/gst/preview/route");
+    const res = await POST(json({ lines: [] }));
+    expect(res.status).toBe(401);
+  });
+});
+

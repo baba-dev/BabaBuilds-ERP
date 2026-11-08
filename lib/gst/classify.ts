@@ -13,6 +13,8 @@ export type InvoiceLineInput = {
   /** Tax rate as a fraction (0.18). */
   taxRate: number;
   sacCode: string | null;
+  /** True when the line is a stock item (goods); undefined = infer from the HSN. */
+  goods?: boolean;
 };
 
 export type InvoiceInput = {
@@ -45,7 +47,7 @@ export type InvoiceInput = {
   ewayBillNo?: string | null;
 };
 
-export type GstLine = TaxRow & { rate: number; hsn: string; description: string; quantity: number; nil: boolean };
+export type GstLine = TaxRow & { rate: number; hsn: string; description: string; quantity: number; nil: boolean; goods?: boolean };
 
 export type ClassifiedInvoice = {
   id: string;
@@ -146,6 +148,7 @@ export function classifyInvoice(inv: InvoiceInput, supplierState: string | null)
       hsn,
       description: l.description,
       quantity: l.quantity,
+      goods: l.goods,
       taxable: l.taxable,
       igst: 0,
       cgst: 0,

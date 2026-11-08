@@ -37,6 +37,8 @@ export function ProductFormModal({ open, onOpenChange, productToEdit, onSuccess 
     safetyStock: "5",
     barcode: "",
     location: "",
+    hsnCode: "",
+    gstRate: "",
   });
 
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -57,13 +59,15 @@ export function ProductFormModal({ open, onOpenChange, productToEdit, onSuccess 
           safetyStock: productToEdit.safetyStock?.toString() || "5",
           barcode: productToEdit.barcode || "",
           location: productToEdit.location || "",
+          hsnCode: productToEdit.hsnCode || "",
+          gstRate: productToEdit.gstRate?.toString() ?? "",
         });
         setPreviewUrl(productToEdit.imageUrl || null);
       } else {
         setFormData({
           sku: "", name: "", description: "", category: "", unit: "pcs",
           baselinePrice: "", costPrice: "", currentStock: "", safetyStock: "5",
-          barcode: "", location: "",
+          barcode: "", location: "", hsnCode: "", gstRate: "",
         });
         setPreviewUrl(null);
       }
@@ -71,7 +75,7 @@ export function ProductFormModal({ open, onOpenChange, productToEdit, onSuccess 
     }
   }, [open, productToEdit]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
@@ -260,6 +264,20 @@ export function ProductFormModal({ open, onOpenChange, productToEdit, onSuccess 
                   </TooltipProvider>
                 </div>
                 <Input id="baselinePrice" name="baselinePrice" type="number" step="0.01" value={formData.baselinePrice} onChange={handleChange} className="h-11 font-bold text-sm bg-white dark:bg-zinc-950 text-indigo-600 dark:text-indigo-400" placeholder="0.00" />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="hsnCode" className="text-xs font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400">HSN code</Label>
+                <Input id="hsnCode" name="hsnCode" inputMode="numeric" maxLength={8} value={formData.hsnCode} onChange={handleChange} className="h-11 font-mono text-sm bg-white dark:bg-zinc-950" placeholder="e.g. 8471" aria-describedby="hsn-help" />
+                <p id="hsn-help" className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">4, 6 or 8 digits. Used on invoices, GSTR-1 and e-way bills.</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="gstRate" className="text-xs font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400">GST rate</Label>
+                <select id="gstRate" name="gstRate" value={formData.gstRate} onChange={handleChange} className="h-11 w-full rounded-md border border-input bg-white px-3 text-sm font-bold dark:bg-zinc-950">
+                  <option value="">Not set</option>
+                  {[0, 5, 18, 40].map((r) => <option key={r} value={r}>{r}%</option>)}
+                  {formData.gstRate !== "" && ![0, 5, 18, 40].includes(Number(formData.gstRate)) ? <option value={formData.gstRate}>{formData.gstRate}% (check: not a current rate)</option> : null}
+                </select>
               </div>
 
               <div className="space-y-2">

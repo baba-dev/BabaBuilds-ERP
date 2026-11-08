@@ -1,4 +1,5 @@
 import "server-only";
+import { snapshotGstFields } from "@/lib/gst/source";
 import fs from "fs";
 import { prisma } from "@/lib/prisma";
 import { decrypt } from "@/lib/encryption";
@@ -183,6 +184,7 @@ export async function convertProposal(args: ConvertArgs): Promise<ConvertResult>
             exchangeRate: proposal.exchangeRate,
             baseGrandTotal: total.mul(proposal.exchangeRate).toDecimalPlaces(2),
             source: "PROPOSAL",
+            ...snapshotGstFields(proposal.client),
             sourceProposalId: proposal.id,
             providerGateway,
             providerPaymentLinkId,

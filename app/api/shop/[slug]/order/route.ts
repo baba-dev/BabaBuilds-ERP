@@ -6,6 +6,8 @@ import { dispatchNotification } from '@/lib/notifications/dispatcher';
 import { logActivity } from '@/lib/security/activity-log';
 import { Prisma } from '@prisma/client';
 import { isModuleEnabled } from '@/lib/modules';
+import { normalizeGstin, validateGstin } from '@/lib/gst/gstin';
+import { resolveClientGstState } from '@/lib/gst/client-state';
 
 type BusinessProfileWithSecrets = {
   stripeSecretKey?: string | null;
@@ -20,12 +22,14 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
   try {
     const { slug } = await context.params;
     const body = await request.json();
-    const { items, buyerName, buyerEmail, buyerPhone, buyerNote } = body as {
+    const { items, buyerName, buyerEmail, buyerPhone, buyerNote, buyerStateCode, buyerGstin } = body as {
       items?: unknown[];
       buyerName?: string;
       buyerEmail?: string;
       buyerPhone?: string;
       buyerNote?: string;
+      buyerStateCode?: string;
+      buyerGstin?: string;
     };
 
     if (!Array.isArray(items) || items.length === 0 || !buyerName || !buyerEmail) {
@@ -45,6 +49,13 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
     if (!(await isModuleEnabled(profile.workspaceId, 'SHOP'))) {
       return NextResponse.json({ error: 'Shop not found.' }, { status: 404 });
     }
+
+    // Place of supply for the GST invoice: a valid GSTIN fixes the state; otherwise the delivery state chosen.
+    const gstinInput = normalizeGstin(buyerGstin);
+    if (gstinInput && !validateGstin(gstinInput).valid) {
+      return NextResponse.json({ error: 'The GSTIN entered is not valid.', code: 'GSTIN_INVALID' }, { status: 422 });
+    }
+    const buyerState = resolveClientGstState(buyerStateCode ?? null, gstinInput || null);
 
     const normalizedItems = items
       .map((item: unknown) => {
@@ -137,6 +148,8 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
         buyerEmail,
         buyerPhone: buyerPhone || null,
         buyerNote: buyerNote || null,
+        buyerStateCode: buyerState,
+        buyerGstin: gstinInput || null,
         subtotal: subtotalDecimal,
         taxTotal: 0,
         amount: amountDecimal,

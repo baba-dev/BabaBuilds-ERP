@@ -1,5 +1,6 @@
 "use client";
 
+import { GstPreviewCard, useGstPreview } from "@/components/gst/GstPreviewCard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -192,6 +193,10 @@ function Form({ retainerId, detail, clients, catalog, catalogLoading }: FormProp
   const ready = preview.key === bodyKey && bodyKey !== "";
   const server = ready ? preview.data : null;
   const pricing = bodyKey !== "" && !ready;
+  const gstView = useGstPreview({
+    clientId: clientId || null,
+    lines: priced.map((i) => ({ description: i.title, amount: i.quantity * i.unitPrice, quantity: i.quantity, serviceTemplateId: i.serviceTemplateId, ratePercent: i.taxRate })),
+  });
   const localSubtotal = priced.reduce((a, i) => a + i.quantity * i.unitPrice, 0);
   const total = server ? Number(server.total) : localSubtotal;
 
@@ -323,6 +328,8 @@ function Form({ retainerId, detail, clients, catalog, catalogLoading }: FormProp
             <Button type="button" variant="outline" className="gap-1.5 rounded-xl" onClick={() => { touch(); setItems((l) => [...l, blank()]); }}><Plus className="size-4" aria-hidden /> {t("items.addCustom")}</Button>
           </div>
         </ComposerSection>
+
+        <GstPreviewCard preview={gstView.preview} loading={gstView.loading} format={fmt} />
 
         <ComposerSection step={3} title={t("schedule.title")} hint={t("schedule.hint")} done={checks.date && checks.end} delay={0.1}>
           <div className="grid gap-4 sm:grid-cols-2">

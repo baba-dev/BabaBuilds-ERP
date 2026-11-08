@@ -8,6 +8,8 @@ export interface InventoryProduct {
   unit: string;
   baselinePrice: number;
   costPrice: number;
+  hsnCode?: string | null;
+  gstRate?: number | null;
   currentStock: number;
   safetyStock: number;
   status?: string;

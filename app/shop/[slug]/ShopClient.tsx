@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import Script from "next/script";
 import DOMPurify from 'dompurify';
+import { GST_STATES } from "@/lib/gst/states";
 
 type SocialPlatform =
   | "website" | "instagram" | "facebook" | "x" | "linkedin"
@@ -165,7 +166,7 @@ function BuyModal({
   onSuccess: () => void;
 }) {
   const [step, setStep] = useState<"form" | "processing" | "success">("form");
-  const [buyer, setBuyer] = useState({ name: "", email: "", phone: "", note: "" });
+  const [buyer, setBuyer] = useState({ name: "", email: "", phone: "", note: "", state: "", gstin: "" });
   const [loading, setLoading] = useState(false);
 
   const handleBuy = async (e: React.FormEvent) => {
@@ -181,6 +182,8 @@ function BuyModal({
           buyerEmail: buyer.email,
           buyerPhone: buyer.phone,
           buyerNote: buyer.note,
+          buyerStateCode: buyer.state || undefined,
+          buyerGstin: buyer.gstin || undefined,
         }),
       });
       const data = await res.json();
@@ -275,6 +278,17 @@ function BuyModal({
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">Phone</Label>
                   <Input value={buyer.phone} onChange={(e) => setBuyer((b) => ({ ...b, phone: e.target.value }))} placeholder="+91 98765..." className="h-10" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">Delivery state</Label>
+                  <select value={buyer.state} onChange={(e) => setBuyer((b) => ({ ...b, state: e.target.value }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                    <option value="">Select state</option>
+                    {GST_STATES.map((st) => <option key={st.code} value={st.code}>{st.name}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">GSTIN (optional)</Label>
+                  <Input value={buyer.gstin} onChange={(e) => setBuyer((b) => ({ ...b, gstin: e.target.value.toUpperCase() }))} placeholder="For a GST invoice" maxLength={15} className="h-10" />
                 </div>
                 <div className="col-span-2 space-y-1.5">
                   <Label className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">Message / Requirements</Label>

@@ -1,4 +1,5 @@
 import "server-only";
+import { snapshotGstFields } from "@/lib/gst/source";
 import fs from "fs";
 import { format } from "date-fns";
 import { Prisma } from "@prisma/client";
@@ -267,7 +268,7 @@ export async function billRetainer(args: { retainerId: string; workspaceId?: str
               subtotal: toDecimal(plan.totals.subtotal).toDecimalPlaces(2), taxRate: plan.totals.taxRate,
               taxAmount: toDecimal(plan.totals.taxAmount).toDecimalPlaces(2), grandTotal: total, totalAmount: total, taxMode: plan.totals.taxMode,
               status: "PENDING", currency, exchangeRate: retainer.exchangeRate, baseGrandTotal: total.mul(retainer.exchangeRate).toDecimalPlaces(2),
-              source: "RETAINER", dueDate: plan.dueDate, paymentTermsDays: retainer.paymentTermsDays, pdfPath: relativePdfPath,
+              ...snapshotGstFields(retainer.client), source: "RETAINER", dueDate: plan.dueDate, paymentTermsDays: retainer.paymentTermsDays, pdfPath: relativePdfPath,
               providerGateway, providerPaymentLinkId,
               items: { create: plan.services.map((s) => ({ description: s.title, quantity: 1, unitPrice: toDecimal(s.amount), totalAmount: toDecimal(s.amount), taxRate: s.taxRate, sacCode: s.sacCode })) },
             },

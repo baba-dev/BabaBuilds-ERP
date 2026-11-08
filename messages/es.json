@@ -576,6 +576,17 @@
     }
   },
   "Clients": {
+    "gstin_ok": "El GSTIN es válido.",
+    "gstin_bad": "No es un GSTIN válido. Revisa los 15 caracteres.",
+    "gstin_pan": "Parece un PAN: correcto para un cliente no registrado.",
+    "gst_treatment": "Tratamiento de GST",
+    "gst_treatment_regular": "Normal",
+    "gst_treatment_sez_wp": "SEZ, con pago de impuesto",
+    "gst_treatment_sez_wop": "SEZ, sin pago de impuesto",
+    "gst_reverse_charge": "Inversión del sujeto pasivo: este cliente paga el impuesto",
+    "gst_verify": "Verificar registro",
+    "gst_verify_ready": "Consulta el portal de GST para este GSTIN.",
+    "gst_verify_unavailable": "Requiere conectar un proveedor de GST, que aún no está configurado. El dígito de control y el estado del GSTIN se siguen comprobando.",
     "gst_state": "Estado (para GST)",
     "gst_state_none": "Sin definir",
     "gst_state_from_gstin": "Tomado del GSTIN.",
@@ -3588,6 +3599,10 @@
       "confirm": "Eliminar servicio"
     },
     "card": {
+      "codeInvalid": "Código no válido",
+      "codeInvalidHint": "Este código SAC/HSN no tiene un formato válido.",
+      "rateStale": "Tasa obsoleta",
+      "rateStaleHint": "Este código tiene una tasa del 12% o 28%, tramos eliminados el 22 de septiembre de 2025. Revisa la tasa.",
       "unused": "Aún sin usar",
       "inProposals": "{count, plural, one {# propuesta} other {# propuestas}}",
       "inRetainers": "{count, plural, one {# iguala} other {# igualas}}",
@@ -3602,6 +3617,8 @@
       "usedCount": "Usado {count} veces"
     },
     "form": {
+      "codeInvalidHint": "Este código SAC/HSN no tiene un formato válido.",
+      "rateStaleHint": "Este código está al {rate}%, un tramo eliminado el 22 de septiembre de 2025. Revisa la tasa vigente antes de facturar.",
       "industryIn": "Código NIC",
       "industry": "Clase de industria",
       "taxClassIn": "Código SAC / HSN",
@@ -4479,6 +4496,55 @@
       "paused": "{count} en pausa",
       "overdue": "{count, plural, one {# factura vencida} other {# facturas vencidas}}",
       "open": "{count, plural, one {# factura abierta} other {# facturas abiertas}}"
+    }
+  },
+  "GstSource": {
+    "title": "GST de esta venta",
+    "outsideIndia": "Fuera de la India",
+    "placeOfSupply": "Lugar de suministro",
+    "intra": "Dentro del estado",
+    "inter": "Entre estados",
+    "cgst": "CGST",
+    "sgst": "SGST",
+    "igst": "IGST",
+    "taxable": "Valor imponible",
+    "total": "Total con GST",
+    "adjust": "Ajustar",
+    "fix": "Corregir",
+    "supply": {
+      "B2B": "Empresa registrada (B2B)",
+      "B2B_RCM": "Registrada, inversión del sujeto pasivo",
+      "B2CL": "Venta grande entre estados a consumidor (B2CL)",
+      "B2CS": "Venta a consumidor (B2CS)",
+      "EXPWP": "Exportación con pago de impuesto",
+      "EXPWOP": "Exportación sin pago de impuesto (LUT)",
+      "SEZWP": "SEZ, con pago de impuesto",
+      "SEZWOP": "SEZ, sin pago de impuesto"
+    },
+    "overrides": {
+      "placeOfSupply": "Lugar de suministro",
+      "auto": "Calcular automáticamente",
+      "sez": "Suministro a SEZ",
+      "sezNone": "No es un suministro a SEZ",
+      "sezWp": "SEZ, con pago de impuesto",
+      "sezWop": "SEZ, sin pago de impuesto",
+      "reverse": "Se aplica la inversión del sujeto pasivo (el cliente paga el impuesto)",
+      "hint": "Estas opciones solo valen para esta factura. Fija un tratamiento permanente en el cliente para aplicarlo a todas las facturas."
+    },
+    "warn": {
+      "SUPPLIER_STATE_MISSING": "No se ha definido el estado de tu empresa, así que no se puede decidir entre CGST/SGST e IGST. Defínelo en los ajustes de GST.",
+      "CLIENT_STATE_MISSING": "Este cliente no tiene estado ni GSTIN, así que la venta se trata como hecha en tu estado. Añade su estado para estar seguro.",
+      "GSTIN_INVALID": "El GSTIN del cliente no es válido.",
+      "GSTIN_STATE_MISMATCH": "El estado guardado difiere del estado del GSTIN. Se usa el del GSTIN.",
+      "SAC_MISSING": "La línea {line} no tiene código SAC/HSN. GSTR-1 lo exige.",
+      "SAC_INVALID": "Línea {line}: el código SAC/HSN no es un código válido de 4, 6 u 8 dígitos.",
+      "LEGACY_RATE": "La línea {line} usa 12% o 28%, tramos eliminados el 22 de septiembre de 2025. Revisa la tasa.",
+      "EXPORT": "Exportación: el lugar de suministro está fuera de la India. Con LUT el suministro tiene tasa cero; si no, se aplica IGST.",
+      "EXPORT_WITH_TAX": "Esta exportación lleva impuesto. Solo es correcto si pagas IGST y pides la devolución.",
+      "SEZ": "El suministro a una SEZ es entre estados: se aplica IGST, con o sin pago.",
+      "SEZ_NEEDS_GSTIN": "El tratamiento SEZ necesita un GSTIN válido del cliente.",
+      "REVERSE_CHARGE": "Inversión del sujeto pasivo: el cliente paga el impuesto y la factura lo indica.",
+      "TAX_EXEMPT_CLIENT": "Este cliente está marcado como exento, así que no se cobra impuesto. Cámbialo en el cliente si es nacional."
     }
   },
   "GstHub": {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { rateStatus } from '@/lib/gst/source';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
@@ -37,6 +38,12 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
+    // A rate typed on a custom SAC must be a real percentage.
+    if (type === 'SAC' && igstRate !== undefined && igstRate !== null && (typeof igstRate !== 'number' || !Number.isFinite(igstRate) || igstRate < 0 || igstRate > 100)) {
+      return NextResponse.json({ error: 'GST rate must be a number between 0 and 100.' }, { status: 400 });
+    }
+    const rateWarning = type === 'SAC' && isIndian && rateStatus(igstRate ?? 18) === 'LEGACY' ? 'LEGACY_RATE' : undefined;
+
     // --- Database Operations ---
     if (type === 'SAC') {
       const existing = await prisma.sACCode.findUnique({ where: { code: cleanCode } });
@@ -46,12 +53,12 @@ export async function POST(req: Request) {
         data: {
           code: cleanCode,
           description,
-          igstRate: igstRate || 18.0,
+          igstRate: igstRate ?? 18.0,
           countryCode,
           isCustom: true
         }
       });
-      return NextResponse.json(newCode);
+      return NextResponse.json({ ...newCode, rateWarning });
     } else {
       const existing = await prisma.nICCode.findUnique({ where: { code: cleanCode } });
       if (existing) return NextResponse.json({ error: 'Code already exists' }, { status: 409 });

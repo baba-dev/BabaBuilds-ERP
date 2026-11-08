@@ -1,5 +1,8 @@
 "use client";
 
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -19,12 +22,16 @@ type PurchaseOrderRow = {
   totalAmount: number;
   createdAt: string;
   items: unknown[];
+  supplierGstin?: string | null;
+  supplierInvoiceNo?: string | null;
 };
 
 export default function PurchaseOrdersHub() {
   const [pos, setPos] = useState<PurchaseOrderRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [receivingId, setReceivingId] = useState<string | null>(null);
+  const [dialogPo, setDialogPo] = useState<PurchaseOrderRow | null>(null);
+  const [supplier, setSupplier] = useState({ gstin: "", invoiceNo: "" });
   
   const { fCurrency } = useFormat();
 
@@ -56,13 +63,14 @@ export default function PurchaseOrdersHub() {
       const res = await fetch(`/api/inventory/purchase-orders/${poId}/receive`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ syncExpense: true }) // Automatically sync expense
+        body: JSON.stringify({ syncExpense: true, supplierGstin: supplier.gstin || undefined, supplierInvoiceNo: supplier.invoiceNo || undefined })
       });
       const data = await res.json();
       
       if (!res.ok) throw new Error(data.error || "Failed to receive.");
       
       toast.success(data.message, { id: toastId });
+      setDialogPo(null);
       fetchPOs();
     } catch (err: unknown) {
       toast.error(getErrorMessage(err), { id: toastId });
@@ -138,7 +146,7 @@ export default function PurchaseOrdersHub() {
                       {po.status !== 'DELIVERED' ? (
                         <Button
                           size="sm"
-                          onClick={() => receivePO(po.id)}
+                          onClick={() => { setSupplier({ gstin: po.supplierGstin ?? "", invoiceNo: po.supplierInvoiceNo ?? "" }); setDialogPo(po); }}
                           disabled={receivingId === po.id}
                           className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
                         >
@@ -158,6 +166,31 @@ export default function PurchaseOrdersHub() {
           </table>
         </div>
       </div>
+      <Dialog open={!!dialogPo} onOpenChange={(o) => { if (!o) setDialogPo(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Receive PO #{dialogPo?.poNumber}</DialogTitle>
+            <DialogDescription>Add the supplier&apos;s GST details so input tax credit is booked with the bill. Leave blank for an unregistered supplier.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="po-gstin">Supplier GSTIN</Label>
+              <Input id="po-gstin" value={supplier.gstin} maxLength={15} onChange={(e) => setSupplier((v) => ({ ...v, gstin: e.target.value.toUpperCase() }))} className="font-mono" placeholder="29ABCDE1234F1Z5" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="po-invno">Supplier invoice number</Label>
+              <Input id="po-invno" value={supplier.invoiceNo} onChange={(e) => setSupplier((v) => ({ ...v, invoiceNo: e.target.value }))} />
+            </div>
+            <p className="text-xs text-muted-foreground">GST is added per line from the product&apos;s HSN and rate and split into CGST/SGST or IGST by the supplier&apos;s state.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogPo(null)}>Cancel</Button>
+            <Button disabled={!dialogPo || receivingId === dialogPo.id} onClick={() => dialogPo && receivePO(dialogPo.id)}>
+              {dialogPo && receivingId === dialogPo.id ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}Receive & log bill
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { catalogCodeStatus } from "@/lib/gst/source";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -211,6 +212,14 @@ function ServiceFormBody({ service, onClose, onSaved, onBusy }: { service: Servi
                       ))}
                     </SelectContent>
                   </Select>
+                  {(() => {
+                    const picked = taxCodes.sac.find((c) => c.id === form.sacCodeId);
+                    if (!picked) return null;
+                    const status = catalogCodeStatus(picked.code, picked.igstRate);
+                    if (!status.check.valid) return <p role="alert" className="text-xs font-medium text-rose-600 dark:text-rose-400">{t("codeInvalidHint")}</p>;
+                    if (status.rateStatus === "LEGACY") return <p role="alert" className="text-xs font-medium text-amber-700 dark:text-amber-300">{t("rateStaleHint", { rate: picked.igstRate })}</p>;
+                    return null;
+                  })()}
                 </div>
                 <div className="space-y-1.5">
                   <Label>{industryLabel}</Label>

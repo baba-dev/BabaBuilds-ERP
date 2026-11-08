@@ -4,6 +4,18 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import type { Prisma } from "@prisma/client";
+import { z } from "zod";
+import { loadGstProfile } from "@/lib/gst/data";
+import { normalizeExpenseGst } from "@/lib/gst/expense-gst";
+import { normalizeGstin, validateGstin } from "@/lib/gst/gstin";
+import { isStateCode } from "@/lib/gst/states";
+
+const receiveSchema = z.object({
+  syncExpense: z.boolean().optional(),
+  supplierGstin: z.string().trim().max(20).nullish(),
+  supplierInvoiceNo: z.string().trim().max(60).nullish(),
+  supplierStateCode: z.string().trim().max(2).nullish(),
+});
 
 export async function POST(req: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -29,8 +41,20 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
       return NextResponse.json({ error: "Purchase Order is already delivered" }, { status: 400 });
     }
 
-    const body = await req.json();
-    const { syncExpense } = body; // Boolean flag from UI to log expense
+    const parsedBody = receiveSchema.safeParse(await req.json().catch(() => ({})));
+    if (!parsedBody.success) return NextResponse.json({ error: "Invalid receive request.", code: "INVALID_BODY" }, { status: 400 });
+    const { syncExpense } = parsedBody.data; // Boolean flag from UI to log expense
+    const supplierGstin = normalizeGstin(parsedBody.data.supplierGstin ?? po.supplierGstin) || null;
+    if (supplierGstin && !validateGstin(supplierGstin).valid) {
+      return NextResponse.json({ error: "The supplier GSTIN is not valid.", code: "VENDOR_GSTIN_INVALID" }, { status: 422 });
+    }
+    const supplierInvoiceNo = (parsedBody.data.supplierInvoiceNo ?? po.supplierInvoiceNo) || null;
+    const chosenState = parsedBody.data.supplierStateCode ?? po.supplierStateCode;
+    const supplierStateCode = supplierGstin ? null : chosenState && isStateCode(chosenState) ? chosenState : null;
+    const gstinCheck = validateGstin(supplierGstin);
+    const vendorState = gstinCheck.valid ? gstinCheck.stateCode : supplierStateCode;
+    const products = await prisma.product.findMany({ where: { workspaceId, id: { in: po.items.map((i) => i.productId) } }, select: { id: true, hsnCode: true, gstRate: true } });
+    const productById = new Map(products.map((p) => [p.id, p]));
 
     const transactionTasks: Prisma.PrismaPromise<unknown>[] = [];
 
@@ -38,7 +62,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     transactionTasks.push(
       prisma.purchaseOrder.update({
         where: { id: poId },
-        data: { status: "DELIVERED" }
+        data: { status: "DELIVERED", supplierGstin, supplierInvoiceNo, supplierStateCode: vendorState }
       })
     );
 
@@ -71,20 +95,45 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
       }
     }
 
-    // 3. Sync Expense if requested
+    // 3. Sync the purchase bill if requested. Vendor GSTIN, HSN and the CGST/SGST/IGST split travel with it so
+    // input tax credit is not re-keyed. PO prices exclude GST, so tax is added per line from the line (or product) rate.
     if (syncExpense) {
-      transactionTasks.push(
-        prisma.expense.create({
-          data: {
-            workspaceId,
-            vendor: po.supplier,
-            amount: po.totalAmount,
-            category: "Inventory Restock",
-            description: `Auto-generated expense for PO #${po.poNumber}`,
-            date: new Date()
-          }
-        })
-      );
+      const gstProfile = await loadGstProfile(workspaceId);
+      const groups = new Map<string, { rate: number | null; net: number; hsn: string | null }>();
+      for (const item of po.items) {
+        const product = productById.get(item.productId);
+        const rate = item.gstRate ?? product?.gstRate ?? null;
+        const key = rate === null ? "none" : String(rate);
+        const net = Number(item.expectedTotal);
+        const g = groups.get(key) ?? { rate, net: 0, hsn: item.hsnCode ?? product?.hsnCode ?? null };
+        g.net += net;
+        g.hsn = g.hsn ?? item.hsnCode ?? product?.hsnCode ?? null;
+        groups.set(key, g);
+      }
+      const registered = !!supplierGstin;
+      const ordered = Array.from(groups.values());
+      const anyRate = ordered.some((g) => g.rate !== null && g.rate > 0);
+      if (!anyRate) {
+        // Nothing to split: one bill for the PO total, exactly as before (the vendor details still ride along).
+        const gst = normalizeExpenseGst({ itcStatus: "NONE", paymentStatus: "PAID", vendorGstin: supplierGstin, vendorInvoiceNo: supplierInvoiceNo, vendorStateCode: vendorState, hsnCode: ordered[0]?.hsn ?? null }, Number(po.totalAmount), gstProfile.stateCode);
+        transactionTasks.push(
+          prisma.expense.create({
+            data: { workspaceId, vendor: po.supplier, amount: po.totalAmount, category: "Inventory Restock", description: `Auto-generated expense for PO #${po.poNumber}`, date: new Date(), ...(gst.ok ? gst.data : {}) },
+          }),
+        );
+      } else {
+        for (const g of ordered) {
+          const rate = g.rate ?? 0;
+          const gross = Math.round(g.net * (1 + rate / 100) * 100) / 100;
+          const gst = normalizeExpenseGst({ itcStatus: registered && rate > 0 ? "ELIGIBLE" : "NONE", paymentStatus: "PAID", vendorGstin: supplierGstin, vendorInvoiceNo: supplierInvoiceNo, vendorStateCode: vendorState, hsnCode: g.hsn, gstRate: rate > 0 ? rate : null }, gross, gstProfile.stateCode);
+          if (!gst.ok) return NextResponse.json({ error: gst.message, code: gst.code }, { status: 422 });
+          transactionTasks.push(
+            prisma.expense.create({
+              data: { workspaceId, vendor: po.supplier, amount: gross, category: "Inventory Restock", description: `Auto-generated expense for PO #${po.poNumber}${rate > 0 ? ` (GST ${rate}%)` : ""}`, date: new Date(), ...gst.data },
+            }),
+          );
+        }
+      }
     }
 
     await prisma.$transaction(transactionTasks);

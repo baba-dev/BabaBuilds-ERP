@@ -41,6 +41,8 @@ export type ClientDto = {
   taxId: string | null;
   /** GST state code (2 digits) used for place of supply. */
   gstStateCode?: string | null;
+  gstSupplyOverride?: string | null;
+  gstReverseCharge?: boolean | null;
   email: string | null;
   phone: string | null;
   isExport: boolean;

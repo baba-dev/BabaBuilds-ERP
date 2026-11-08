@@ -6,10 +6,14 @@ import { r2 } from "./money";
 /** An e-way bill is required to move goods worth more than ₹50,000 (consignment value, including tax). */
 export const EWAY_THRESHOLD = 50000;
 
+/** HSN-prefix guess, used only for lines that do not say whether they are stock items. */
 export const isGoodsLine = (hsn: string) => !!hsn && !hsn.startsWith("99");
 
+/** A line linked to a product is goods whatever its code looks like; other lines fall back to the prefix guess. */
+export const lineIsGoods = (l: { hsn: string; goods?: boolean }) => (l.goods !== undefined ? l.goods : isGoodsLine(l.hsn));
+
 export function needsEway(invoice: Pick<ClassifiedInvoice, "lines" | "value">): boolean {
-  return invoice.value > EWAY_THRESHOLD && invoice.lines.some((l) => isGoodsLine(l.hsn));
+  return invoice.value > EWAY_THRESHOLD && invoice.lines.some(lineIsGoods);
 }
 
 export type EwayTransport = { mode: 1 | 2 | 3 | 4; distanceKm: number; vehicleNo: string; transporterId?: string; fromPin: string; toPin: string; vehicleType?: "R" | "O" };
@@ -22,7 +26,7 @@ export function buildEwayBulkJson(args: { userGstin: string; seller: EwayParty; 
   return {
     version: "1.0.0621",
     billLists: args.invoices.map(({ invoice, buyer, transport }) => {
-      const goods = invoice.lines.filter((l) => isGoodsLine(l.hsn));
+      const goods = invoice.lines.filter(lineIsGoods);
       const sum = (k: "igst" | "cgst" | "sgst" | "cess") => r2(goods.reduce((s, l) => s + l[k], 0));
       const taxable = r2(goods.reduce((s, l) => s + l.taxable, 0));
       return {

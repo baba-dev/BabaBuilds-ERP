@@ -659,6 +659,17 @@
     }
   },
   "Clients": {
+    "gstin_ok": "GSTIN is valid.",
+    "gstin_bad": "That is not a valid GSTIN. Check all 15 characters.",
+    "gstin_pan": "Looks like a PAN: fine for an unregistered customer.",
+    "gst_treatment": "GST treatment",
+    "gst_treatment_regular": "Regular",
+    "gst_treatment_sez_wp": "SEZ, with payment of tax",
+    "gst_treatment_sez_wop": "SEZ, without payment of tax",
+    "gst_reverse_charge": "Reverse charge: this customer pays the tax",
+    "gst_verify": "Verify registration",
+    "gst_verify_ready": "Checks the GST portal for this GSTIN.",
+    "gst_verify_unavailable": "Needs a GST provider connection, which is not set up yet. The GSTIN checksum and state are still checked.",
     "gst_state": "State (for GST)",
     "gst_state_none": "Not set",
     "gst_state_from_gstin": "Taken from the GSTIN.",
@@ -3559,6 +3570,10 @@
       "confirm": "Delete service"
     },
     "card": {
+      "codeInvalid": "Invalid code",
+      "codeInvalidHint": "This SAC/HSN code is not in a valid format.",
+      "rateStale": "Stale rate",
+      "rateStaleHint": "This code is on a 12% or 28% rate, slabs removed on 22 Sep 2025. Check the rate.",
       "unused": "Not used yet",
       "inProposals": "{count, plural, one {# proposal} other {# proposals}}",
       "inRetainers": "{count, plural, one {# retainer} other {# retainers}}",
@@ -3573,6 +3588,8 @@
       "usedCount": "Used {count} times"
     },
     "form": {
+      "codeInvalidHint": "This SAC/HSN code is not in a valid format.",
+      "rateStaleHint": "This code is on {rate}%, a slab removed on 22 Sep 2025. Check the current rate before invoicing.",
       "industryIn": "NIC code",
       "industry": "Industry class",
       "taxClassIn": "SAC / HSN code",
@@ -4450,6 +4467,55 @@
       "paused": "{count} paused",
       "overdue": "{count, plural, one {# invoice overdue} other {# invoices overdue}}",
       "open": "{count, plural, one {# open invoice} other {# open invoices}}"
+    }
+  },
+  "GstSource": {
+    "title": "GST on this sale",
+    "outsideIndia": "Outside India",
+    "placeOfSupply": "Place of supply",
+    "intra": "Intra-state",
+    "inter": "Inter-state",
+    "cgst": "CGST",
+    "sgst": "SGST",
+    "igst": "IGST",
+    "taxable": "Taxable value",
+    "total": "Total with GST",
+    "adjust": "Adjust",
+    "fix": "Fix it",
+    "supply": {
+      "B2B": "Registered business (B2B)",
+      "B2B_RCM": "Registered, reverse charge",
+      "B2CL": "Large inter-state consumer sale (B2CL)",
+      "B2CS": "Consumer sale (B2CS)",
+      "EXPWP": "Export with tax payment",
+      "EXPWOP": "Export without tax payment (LUT)",
+      "SEZWP": "SEZ, with tax payment",
+      "SEZWOP": "SEZ, without tax payment"
+    },
+    "overrides": {
+      "placeOfSupply": "Place of supply",
+      "auto": "Work it out automatically",
+      "sez": "SEZ supply",
+      "sezNone": "Not a SEZ supply",
+      "sezWp": "SEZ, with payment of tax",
+      "sezWop": "SEZ, without payment of tax",
+      "reverse": "Reverse charge applies (the customer pays the tax)",
+      "hint": "These choices apply to this invoice only. Set a standing treatment on the customer to carry it to every invoice."
+    },
+    "warn": {
+      "SUPPLIER_STATE_MISSING": "Your business state is not set, so CGST/SGST versus IGST cannot be decided. Set it in GST settings.",
+      "CLIENT_STATE_MISSING": "This customer has no state or GSTIN, so the sale is treated as made in your state. Add their state to be sure.",
+      "GSTIN_INVALID": "The customer's GSTIN is not valid.",
+      "GSTIN_STATE_MISMATCH": "The state on file differs from the GSTIN's state. The GSTIN's state is used.",
+      "SAC_MISSING": "Line {line} has no SAC/HSN code. GSTR-1 needs one.",
+      "SAC_INVALID": "Line {line}: the SAC/HSN code is not a valid 4, 6 or 8 digit code.",
+      "LEGACY_RATE": "Line {line} uses 12% or 28%, slabs removed on 22 Sep 2025. Check the rate.",
+      "EXPORT": "Export: the place of supply is outside India. Supply under a LUT is zero-rated; otherwise IGST applies.",
+      "EXPORT_WITH_TAX": "This export carries tax. That is only right if you pay IGST and claim a refund.",
+      "SEZ": "Supply to a SEZ is inter-state: IGST applies, with or without payment.",
+      "SEZ_NEEDS_GSTIN": "SEZ treatment needs the customer's valid GSTIN.",
+      "REVERSE_CHARGE": "Reverse charge: the customer pays the tax, and the invoice says so.",
+      "TAX_EXEMPT_CLIENT": "This client is marked tax-exempt, so no tax is charged. Change it on the client if they are a domestic customer."
     }
   },
   "GstHub": {

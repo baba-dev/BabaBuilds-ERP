@@ -16,6 +16,13 @@ export const ServiceSchema = z.object({
   sacCode: z.string().trim().max(100).optional().nullable(),
 });
 
+/** GST treatment chosen on the composer; anything left out falls back to the customer's standing treatment. */
+export const GstOverridesSchema = z.object({
+  placeOfSupply: z.string().trim().max(2).nullish(),
+  supplyOverride: z.enum(["SEZ_WP", "SEZ_WOP"]).nullish(),
+  reverseCharge: z.boolean().nullish(),
+});
+
 export const GenerateInvoiceSchema = z.object({
   idempotencyKey: z.string().optional(),
   draftId: z.string().optional(),
@@ -32,4 +39,5 @@ export const GenerateInvoiceSchema = z.object({
   /** Units of base currency per 1 unit of `currency`. Required when currency differs from the base currency. */
   exchangeRate: z.coerce.number().positive().finite().max(1_000_000).optional(),
   source: z.enum(['MANUAL', 'API']).optional(),
+  gst: GstOverridesSchema.optional(),
 });

@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { counterSalePlace, snapshotGstFields } from '@/lib/gst/source';
+import { validateGstin } from '@/lib/gst/gstin';
 import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
@@ -58,6 +60,8 @@ type ResolvedCheckoutItem = {
   quantity: number;
   unitPrice: Prisma.Decimal;
   taxRate: number;
+  /** HSN (goods) or SAC (services) the line is reported under in the GST returns. */
+  sacCode: string | null;
   lineSubtotal: Prisma.Decimal;
 };
 
@@ -92,7 +96,9 @@ function buildInvoiceItems(items: ResolvedCheckoutItem[]) {
     description: item.description ? `${item.name} - ${item.description}` : item.name,
     quantity: item.quantity,
     unitPrice: item.unitPrice,
-    taxRate: item.taxRate,
+    // Invoice items store the rate as a fraction; the POS request carries percent.
+    taxRate: item.taxRate / 100,
+    sacCode: item.sacCode,
     totalAmount: item.lineSubtotal,
   }));
 }
@@ -253,11 +259,12 @@ export async function POST(request: Request) {
       try {
         const result = await prisma.$transaction(async (tx) => {
           // Default Walk-in Client if none provided for immediate POS payment.
+          const walkInCountry = (await tx.workspace.findUnique({ where: { id: workspaceId }, select: { countryCode: true } }))?.countryCode || 'IN';
           if (!resolvedClientId) {
             let walkIn = await tx.client.findFirst({ where: { workspaceId, name: 'Walk-in Customer' } });
             if (!walkIn) {
               walkIn = await tx.client.create({
-                data: { workspaceId, name: 'Walk-in Customer', email: 'walkin@example.com', address: '', country: '' },
+                data: { workspaceId, name: 'Walk-in Customer', email: 'walkin@example.com', address: '', country: walkInCountry },
               });
             }
             resolvedClientId = walkIn.id;
@@ -270,7 +277,7 @@ export async function POST(request: Request) {
           const productIds = [...new Set(items.filter((item) => item.type === 'PRODUCT').map((item) => item.id!))];
 
           const serviceTemplates = serviceIds.length
-            ? await tx.serviceTemplate.findMany({ where: { workspaceId, id: { in: serviceIds } } })
+            ? await tx.serviceTemplate.findMany({ where: { workspaceId, id: { in: serviceIds } }, include: { sacCode: { select: { code: true, igstRate: true } } } })
             : [];
           const products = productIds.length
             ? await tx.product.findMany({ where: { workspaceId, id: { in: productIds } } })
@@ -292,7 +299,8 @@ export async function POST(request: Request) {
                 description: service.description || '',
                 quantity: item.quantity,
                 unitPrice,
-                taxRate: item.taxRate ?? 0,
+                taxRate: item.taxRate ?? service.sacCode?.igstRate ?? 0,
+                sacCode: service.sacCode?.code ?? null,
                 lineSubtotal: unitPrice.mul(item.quantity),
               });
             } else if (item.type === 'PRODUCT') {
@@ -306,7 +314,8 @@ export async function POST(request: Request) {
                 description: product.description || '',
                 quantity: item.quantity,
                 unitPrice,
-                taxRate: item.taxRate ?? 0,
+                taxRate: item.taxRate ?? product.gstRate ?? 0,
+                sacCode: product.hsnCode ?? null,
                 lineSubtotal: unitPrice.mul(item.quantity),
               });
             } else {
@@ -318,6 +327,7 @@ export async function POST(request: Request) {
                 quantity: item.quantity,
                 unitPrice,
                 taxRate: item.taxRate ?? 0,
+                sacCode: null,
                 lineSubtotal: unitPrice.mul(item.quantity),
               });
             }
@@ -337,7 +347,10 @@ export async function POST(request: Request) {
           const totalAmount = taxableSubtotal.add(tax);
           const productSales = groupProductSales(resolvedItems);
 
-          const profile = await tx.businessProfile.findUnique({ where: { workspaceId }, select: { invoicePrefix: true } });
+          const profile = await tx.businessProfile.findUnique({ where: { workspaceId }, select: { invoicePrefix: true, gstin: true, gstStateCode: true } });
+          const supplierGstin = validateGstin(profile?.gstin);
+          const supplierState = supplierGstin.valid ? supplierGstin.stateCode : profile?.gstStateCode ?? null;
+          const gstFields = snapshotGstFields(client, { placeOfSupply: counterSalePlace(client, supplierState) });
           const invoicePrefix = profile?.invoicePrefix || 'INV';
           const posWorkspace = await tx.workspace.findUnique({ where: { id: workspaceId }, select: { baseCurrency: true } });
           const posCurrency = posWorkspace?.baseCurrency || 'INR';
@@ -356,6 +369,7 @@ export async function POST(request: Request) {
                 clientName: client.name,
                 serviceDescription: 'POS Checkout',
                 source: 'POS',
+                ...gstFields,
                 currency: posCurrency,
                 baseGrandTotal: totalAmount,
                 stockCommittedAt: new Date(),
@@ -388,6 +402,7 @@ export async function POST(request: Request) {
                 clientName: client.name,
                 serviceDescription: 'POS Generated Invoice',
                 source: 'POS',
+                ...gstFields,
                 currency: posCurrency,
                 baseGrandTotal: totalAmount,
                 stockCommittedAt: new Date(),

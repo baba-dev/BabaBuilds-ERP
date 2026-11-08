@@ -103,6 +103,7 @@ function buildRequestHash(payload: unknown): string {
 
 
 import { GenerateInvoiceSchema } from '@/lib/invoice/generate-schema';
+import { snapshotGstFields } from '@/lib/gst/source';
 
 export async function POST(request: Request) {
   let generatedPdfPath = "";
@@ -234,9 +235,17 @@ export async function POST(request: Request) {
 
     const unverifiedProductIds = sanitizedServices.map((s: { productId?: string | null }) => s.productId).filter((id: unknown): id is string => typeof id === 'string' && id.length > 0);
     const validProducts = unverifiedProductIds.length > 0 
-      ? await prisma.product.findMany({ where: { workspaceId, id: { in: unverifiedProductIds } }, select: { id: true } })
+      ? await prisma.product.findMany({ where: { workspaceId, id: { in: unverifiedProductIds } }, select: { id: true, hsnCode: true, gstRate: true } })
       : [];
     const validProductIds = new Set(validProducts.map((p: { id: string }) => p.id));
+    // The product master owns HSN and rate: goods lines never inherit the service SAC default.
+    const productGst = new Map(validProducts.map((p) => [p.id, p]));
+    for (const s of sanitizedServices) {
+      const product = typeof s.productId === 'string' ? productGst.get(s.productId) : undefined;
+      if (!product) continue;
+      if (product.hsnCode) s.sacCode = product.hsnCode;
+      if (product.gstRate !== null && (s.taxRate === null || s.taxRate === undefined)) s.taxRate = product.gstRate / 100; // services carry fractions; the product master stores percent
+    }
 
     const date = parsedCustomDate ?? new Date();
     if (isNaN(date.getTime())) {
@@ -607,6 +616,7 @@ export async function POST(request: Request) {
               exchangeRate,
               baseGrandTotal: toDecimal(totals.total).mul(exchangeRate).toDecimalPlaces(2),
               source: body.source ?? 'MANUAL',
+              ...snapshotGstFields(client, body.gst),
               providerGateway,
               providerPaymentLinkId,
               items: {

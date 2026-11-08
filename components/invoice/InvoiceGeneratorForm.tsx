@@ -8,6 +8,7 @@ import { AlertCircle, CheckCircle2, ChevronDown, Mail, Building2, Landmark } fro
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { GstPreviewCard, useGstPreview, type GstOverrides, type GstPreviewLine } from "@/components/gst/GstPreviewCard";
 import { TaxRateModal } from "@/components/invoice/tax-rate-modal";
 import { DatePickerField } from "@/components/forms/date-picker-field";
 import { SearchableCombobox } from "@/components/forms/searchable-combobox";
@@ -130,6 +131,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
   // "" = same as the workspace base currency.
   const [invoiceCurrency, setInvoiceCurrency] = useState("");
   const [exchangeRate, setExchangeRate] = useState("");
+  const [gstOverrides, setGstOverrides] = useState<GstOverrides>({});
 
   // --- GLOBALIZATION ENGINE ---
   const {
@@ -144,6 +146,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
   const fCurrency = (amount: number | string | null | undefined) => formatCurrency(amount, activeCurrency, locale);
   const currencySymbol = getCurrencySymbol(activeCurrency, locale);
   const isForeignCurrency = activeCurrency !== currency;
+  const gstPayload = gstOverrides.placeOfSupply || gstOverrides.supplyOverride || gstOverrides.reverseCharge ? { gst: gstOverrides } : {};
   const currencyPayload = isForeignCurrency ? { currency: activeCurrency, exchangeRate: Number(exchangeRate) } : {};
 
   // App State
@@ -419,6 +422,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
           clientId: selectedClientId,
           billingMonth,
           sacCode: smartSacCode,
+          ...gstPayload,
           services: validServices,
           customDate: invoiceDate.toISOString(),
           ...currencyPayload,
@@ -453,6 +457,9 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
               clientId: selectedClientId,
               billingMonth,
               sacCode: smartSacCode,
+            ...gstPayload,
+              ...gstPayload,
+          ...gstPayload,
               services: validServices,
               customDate: invoiceDate.toISOString(),
           ...currencyPayload,
@@ -519,6 +526,8 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
             clientId: selectedClientId,
             billingMonth,
             sacCode: smartSacCode,
+            ...gstPayload,
+          ...gstPayload,
             services: activeServices.filter((s) => Number(s.amount) > 0),
             customDate: invoiceDate.toISOString(),
           ...currencyPayload,
@@ -551,6 +560,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
           clientId: selectedClientId,
           billingMonth,
           sacCode: smartSacCode,
+          ...gstPayload,
           services: validServices,
           customDate: invoiceDate.toISOString(),
           ...currencyPayload,
@@ -576,6 +586,9 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
               clientId: selectedClientId,
               billingMonth,
               sacCode: smartSacCode,
+            ...gstPayload,
+              ...gstPayload,
+          ...gstPayload,
               services: validServices,
               customDate: invoiceDate.toISOString(),
           ...currencyPayload,
@@ -650,6 +663,8 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
             clientId: selectedClientId,
             billingMonth,
             sacCode: smartSacCode,
+            ...gstPayload,
+          ...gstPayload,
             services: activeServices.filter((s) => Number(s.amount) > 0),
             customDate: invoiceDate.toISOString(),
           ...currencyPayload,
@@ -725,6 +740,16 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
     </div>
   ) : null;
 
+  const previewLines: GstPreviewLine[] = activeServices.map((s) => ({
+    description: s.title,
+    amount: Number(s.amount || 0),
+    quantity: s.quantity,
+    sacCode: s.isProduct ? null : typeof s.sac === "object" && s.sac ? s.sac.code ?? s.sac.value ?? null : typeof s.sac === "string" || typeof s.sac === "number" ? String(s.sac) : null,
+    ratePercent: typeof s.sac === "object" && s.sac && typeof (s.sac as { igstRate?: unknown }).igstRate === "number" ? (s.sac as { igstRate: number }).igstRate : null,
+    goods: s.isProduct,
+    productId: s.productId,
+  }));
+  const gstView = useGstPreview({ clientId: selectedClientId || null, lines: previewLines, overrides: gstOverrides, exchangeRate: isForeignCurrency && Number(exchangeRate) > 0 ? Number(exchangeRate) : null });
   const selectedLines = activeServices.map((s) => ({ id: s.id, title: s.title, quantity: s.quantity, amount: Number(s.amount || 0) }));
   const checks = { client: Boolean(selectedClientId), items: totalAmount > 0, company: companyConfirmed };
   const canSubmit = checks.client && checks.items && checks.company;
@@ -834,6 +859,8 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
               onQuantity={handleQuantityChange}
             />
           </ComposerSection>
+
+          <GstPreviewCard preview={gstView.preview} loading={gstView.loading} format={(n) => fCurrency(n)} overrides={gstOverrides} onOverridesChange={setGstOverrides} />
 
           <ComposerSection step={3} title={tc("delivery.title")} hint={tc("delivery.hint")} done={checks.company} delay={0.12}>
             <div className="space-y-4">

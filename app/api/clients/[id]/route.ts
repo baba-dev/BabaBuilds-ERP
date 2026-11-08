@@ -1,4 +1,4 @@
-import { resolveClientGstState } from '@/lib/gst/client-state';
+import { parseClientGstInput } from '@/lib/gst/client-state';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
@@ -148,7 +148,9 @@ export async function PATCH(
     const address = formData.get('address') as string;
     const country = formData.get('country') as string;
     const taxId = formData.get('taxId') as string;
-    const gstStateCode = resolveClientGstState(formData.get('gstStateCode'), taxId);
+    const gstInput = parseClientGstInput({ country, taxId, state: formData.get('gstStateCode'), supplyOverride: formData.get('gstSupplyOverride'), reverseCharge: formData.get('gstReverseCharge') });
+    if (!gstInput.ok) return apiError(422, gstInput.message, gstInput.code);
+    const { gstStateCode, gstSupplyOverride, gstReverseCharge } = gstInput.data;
     const email = formData.get('email') as string;
     const phone = formData.get('phone') as string;
     const isExport = formData.get('isExport') === 'true';
@@ -214,6 +216,8 @@ export async function PATCH(
         country,
         taxId: taxId || null,
         gstStateCode,
+        gstSupplyOverride,
+        gstReverseCharge,
         email: email || null,
         phone: phone || null,
         isExport,
