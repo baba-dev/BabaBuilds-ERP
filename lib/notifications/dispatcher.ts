@@ -87,6 +87,10 @@ function buildPushAndInAppContent(
         body: `Return due by ${d.dueDate}`,
         actionUrl: '/tax',
       };
+    case 'GST_REMINDER':
+      return { title: `${d.title}`, body: `${d.body}`, actionUrl: d.actionUrl || '/tax' };
+    case 'GST_DIGEST':
+      return { title: `${d.title}`, body: `${d.body}`, actionUrl: '/tax?tab=issues' };
     case 'SHOP_ORDER_CREATED':
       return {
         title: `🛒 New Shop Order: ${d.orderId}`,

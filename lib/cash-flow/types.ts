@@ -138,6 +138,8 @@ export type ForecastSourceData = {
     currency: string;
     sourceRef: string | null;
   }>;
+  /** GST cash due on GSTR-3B (India), from the GST engine; estimated until the period closes. */
+  gstPayments?: Array<{ id: string; periodKey: string; dueDate: Date; amount: Decimal; label: string; estimated: boolean }>;
   workspaceDefaults: {
     invoicePaymentTermsDays: number;
     minimumCashThreshold: number;

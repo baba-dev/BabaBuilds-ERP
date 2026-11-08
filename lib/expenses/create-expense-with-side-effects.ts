@@ -25,6 +25,8 @@ export type CreateExpenseWithSideEffectsInput = {
   withholdingDepositedAt?: Date | null;
   withholdingDepositDueAt?: Date | null;
   returnPeriodKeyRaw?: string | null;
+  /** GST columns already validated by normalizeExpenseGst. */
+  gst?: Record<string, unknown> | null;
 };
 
 async function createWithinTx(tx: Tx, input: CreateExpenseWithSideEffectsInput) {
@@ -56,6 +58,7 @@ async function createWithinTx(tx: Tx, input: CreateExpenseWithSideEffectsInput) 
       withholdingDeductedAt: deductedAt,
       withholdingDepositedAt: input.withholdingDepositedAt ?? null,
       withholdingDepositDueAt: depositDueAt,
+      ...(input.gst ?? {}),
     },
   });
 

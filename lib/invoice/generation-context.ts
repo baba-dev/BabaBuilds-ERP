@@ -18,6 +18,7 @@ export type ServiceInput = {
   unitPrice?: number | string;
   sac?: string | number | { igstRate?: number | null } | null;
   taxRate?: number | null;
+  sacCode?: string | null;
 };
 
 export type SanitizedService = ServiceInput & {
@@ -50,6 +51,8 @@ export type InvoiceGenerationInput = {
   currency?: string;
   /** Base-currency units per 1 unit of `currency` (required when currency differs from the base currency). */
   exchangeRate?: number | string;
+  /** GST treatment picked on the composer (place of supply, SEZ, reverse charge). */
+  gst?: { placeOfSupply?: string | null; supplyOverride?: string | null; reverseCharge?: boolean | null };
 };
 
 export type InvoiceGenerationContext = {
@@ -187,9 +190,17 @@ export async function buildInvoiceGenerationContext(
     .filter((id: unknown): id is string => typeof id === "string" && id.length > 0);
   const validProducts =
     unverifiedProductIds.length > 0
-      ? await prisma.product.findMany({ where: { workspaceId, id: { in: unverifiedProductIds } }, select: { id: true } })
+      ? await prisma.product.findMany({ where: { workspaceId, id: { in: unverifiedProductIds } }, select: { id: true, hsnCode: true, gstRate: true } })
       : [];
   const validProductIds = new Set(validProducts.map((p: { id: string }) => p.id));
+  // The product master owns HSN and rate: goods lines never inherit the service SAC default.
+  const productGst = new Map(validProducts.map((p) => [p.id, p]));
+  for (const s of sanitizedServices) {
+    const product = typeof s.productId === "string" ? productGst.get(s.productId) : undefined;
+    if (!product) continue;
+    if (product.hsnCode) s.sacCode = product.hsnCode;
+    if (product.gstRate !== null && (s.taxRate === null || s.taxRate === undefined)) s.taxRate = product.gstRate / 100; // services carry fractions; the product master stores percent
+  }
 
   const date = parsedCustomDate ?? new Date();
   if (isNaN(date.getTime())) {

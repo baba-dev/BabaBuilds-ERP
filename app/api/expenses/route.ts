@@ -15,6 +15,8 @@ import {
   buildPrivatePath,
 } from '@/lib/uploads/private-storage';
 import { withPermission } from '@/lib/rbac';
+import { expenseGstSchema, normalizeExpenseGst } from '@/lib/gst/expense-gst';
+import { loadGstProfile } from '@/lib/gst/data';
 import { createExpenseWithSideEffects } from '@/lib/expenses/create-expense-with-side-effects';
 
 // Fetch all expenses for the ledger (NOW PAGINATED)
@@ -152,6 +154,23 @@ export async function POST(request: Request) {
       if (!whPerm.granted) return whPerm.response;
     }
 
+    // GST on the bill (optional). Tax amounts are always computed here from the rate, never trusted from the client.
+    const gstField = (k: string) => { const v = formData.get(k); return typeof v === 'string' && v.trim() !== '' ? v.trim() : null; };
+    const gstRateRaw = gstField('gstRate');
+    const gstParsed = expenseGstSchema.safeParse({
+      itcStatus: gstField('itcStatus') ?? 'NONE',
+      vendorGstin: gstField('vendorGstin'),
+      vendorInvoiceNo: gstField('vendorInvoiceNo'),
+      vendorStateCode: gstField('vendorStateCode'),
+      hsnCode: gstField('hsnCode'),
+      gstRate: gstRateRaw === null ? null : Number(gstRateRaw),
+      paymentStatus: gstField('paymentStatus') ?? 'PAID',
+    });
+    if (!gstParsed.success) return apiError(400, "Invalid GST details.", "INVALID_GST");
+    const gstProfile = gstParsed.data.itcStatus !== 'NONE' || gstParsed.data.vendorGstin ? await loadGstProfile(workspaceId) : null;
+    const gstNormalized = normalizeExpenseGst(gstParsed.data, parsedAmount, gstProfile?.stateCode ?? null);
+    if (!gstNormalized.ok) return apiError(400, gstNormalized.message, gstNormalized.code);
+
     // Extract the file
     const file = formData.get('receipt') as File | null;
     let receiptUrl = null;
@@ -204,6 +223,7 @@ export async function POST(request: Request) {
       withholdingDepositedAt: parsedWithholdingDepositedAt,
       withholdingDepositDueAt: parsedWithholdingDepositDueAt,
       returnPeriodKeyRaw,
+      gst: gstNormalized.data,
     });
 
     // Intentional duplicate safety invalidation so this endpoint remains KPI-cover compliant.

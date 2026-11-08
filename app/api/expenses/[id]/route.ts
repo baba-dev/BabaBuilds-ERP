@@ -7,6 +7,8 @@ import path from 'path';
 import { parseExpenseUpdatePayload } from '@/lib/types/business';
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import { withPermission } from '@/lib/rbac';
+import { expenseGstSchema, normalizeExpenseGst } from '@/lib/gst/expense-gst';
+import { loadGstProfile } from '@/lib/gst/data';
 
 const getWorkspaceId = (session: unknown) => {
   if (!session || typeof session !== "object") return null;
@@ -35,7 +37,8 @@ export async function PATCH(
     const resolvedParams = await params;
     const expenseId = resolvedParams.id;
 
-    const parsedPayload = parseExpenseUpdatePayload(await request.json());
+    const rawBody = await request.json();
+    const parsedPayload = parseExpenseUpdatePayload(rawBody);
     if (!parsedPayload) {
       return NextResponse.json({ error: "Invalid request payload." }, { status: 400 });
     }
@@ -51,6 +54,22 @@ export async function PATCH(
       return apiError(400, "Invalid date format.", "INVALID_DATE");
     }
 
+    // GST block is optional; when present it is validated and the tax split is recomputed for the (possibly new) amount.
+    let gstData: Record<string, unknown> = {};
+    const rawGst = (rawBody as { gst?: unknown } | null)?.gst;
+    if (rawGst !== undefined) {
+      const parsedGst = expenseGstSchema.safeParse(rawGst);
+      if (!parsedGst.success) return apiError(400, "Invalid GST details.", "INVALID_GST");
+      const profile = await loadGstProfile(workspaceId);
+      const normalized = normalizeExpenseGst(parsedGst.data, amount, profile.stateCode);
+      if (!normalized.ok) return apiError(400, normalized.message, normalized.code);
+      gstData = { ...normalized.data };
+      // Paying a bill that was on credit stamps the payment date, which decides whether rule 37 reversed its credit.
+      const previous = await prisma.expense.findFirst({ where: { id: expenseId, workspaceId }, select: { paymentStatus: true } });
+      if (normalized.data.paymentStatus === 'UNPAID') gstData.paidAt = null;
+      else if (previous?.paymentStatus === 'UNPAID') gstData.paidAt = new Date();
+    }
+
     const updatedExpense = await prisma.expense.updateMany({
       where: { 
         id: expenseId,
@@ -62,6 +81,7 @@ export async function PATCH(
         vendor,
         amount,
         description: description || null,
+        ...gstData,
       }
     });
 

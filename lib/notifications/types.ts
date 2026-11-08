@@ -14,6 +14,8 @@ export type NotificationEventType =
   | 'BILLING_FAILED'
   | 'DEADLINE_ALERT'
   | 'TAX_ALERT'
+  | 'GST_REMINDER'
+  | 'GST_DIGEST'
   | 'SHOP_ORDER_CREATED'
   | 'SHOP_ORDER_UPDATED'
   | 'SHOP_ORDER_DELETED'

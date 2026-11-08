@@ -13,6 +13,7 @@ import { appendTaxAuditEvent, newTaxCorrelationId } from "@/lib/tax/audit";
 import { buildInvoiceGenerationContext, type InvoiceGenerationInput } from "@/lib/invoice/generation-context";
 import { buildInvoiceDeliveryEmail } from "@/lib/notifications/transactional-email-templates";
 import { sendEmail } from "@/lib/mailer";
+import { snapshotGstFields } from "@/lib/gst/source";
 import { getFinancialYear, getNextInvoiceNumber } from "@/lib/document-numbering";
 
 type DraftPaymentLink = {
@@ -133,6 +134,7 @@ export async function finalizeInvoiceFromDraft(params: {
             baseGrandTotal: toDecimal(totals.total).mul(exchangeRate).toDecimalPlaces(2),
             paymentTermsDays: 7,
             source: "MANUAL",
+            ...snapshotGstFields(client, draftInput.gst),
             providerGateway: draftPaymentLink.gateway,
             providerPaymentLinkId: draftPaymentLink.linkId,
             items: {
@@ -144,6 +146,7 @@ export async function finalizeInvoiceFromDraft(params: {
                 unitPrice: toDecimal(s.unitPrice || s.amount).toDecimalPlaces(2),
                 taxRate,
                 totalAmount: toDecimal(s.amount).toDecimalPlaces(2),
+                sacCode: s.sacCode || sanitizedSacCode || null,
               })),
             },
           },

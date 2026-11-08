@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import Groq from 'groq-sdk';
 import { scanBuffer } from '@/lib/security/clamav';
 import { decrypt } from '@/lib/encryption';
+import { normalizeGstin, validateGstin } from '@/lib/gst/gstin';
 
 export async function POST(request: Request) {
   try {
@@ -81,7 +82,11 @@ export async function POST(request: Request) {
       "amount": Number (The final total amount in INR, no currency symbols),
       "date": "String (Format strictly as YYYY-MM-DD)",
       "category": "String (Must exactly match one of the allowed categories above)",
-      "description": "String (A short 3-6 word summary of what was purchased)"
+      "description": "String (A short 3-6 word summary of what was purchased)",
+      "vendorGstin": "String (The supplier's 15-character GSTIN printed on the bill, else null)",
+      "invoiceNumber": "String (The supplier's invoice or bill number, else null)",
+      "hsnCode": "String (HSN or SAC code if printed, digits only, else null)",
+      "gstRate": Number (The overall GST rate in percent, e.g. 18, or null if no GST is shown)
     }
     
     If you cannot find a piece of data, return null for that field, but never break the JSON structure.`;
@@ -108,12 +113,29 @@ export async function POST(request: Request) {
       const extractedData = JSON.parse(responseContent);
       
       // Send the clean, mapped data back to the frontend form
+      // GST suggestion: only offered when the GSTIN on the bill is genuinely valid; the owner confirms it in the form.
+      const gstin = normalizeGstin(typeof extractedData.vendorGstin === 'string' ? extractedData.vendorGstin : '');
+      const gstinValid = gstin.length === 15 && validateGstin(gstin).valid;
+      const rateNum = Number(extractedData.gstRate);
+      const rate = Number.isFinite(rateNum) && rateNum > 0 && rateNum <= 40 ? rateNum : null;
+      const category = extractedData.category || "Other";
+      // Food, entertainment and similar bills are blocked credit under section 17(5).
+      const blocked = category === "Meals & Entertainment";
       return NextResponse.json({
         vendor: extractedData.vendor || "",
         amount: extractedData.amount || "",
         date: extractedData.date || new Date().toISOString().split('T')[0],
-        category: extractedData.category || "Other",
-        description: extractedData.description || ""
+        category,
+        description: extractedData.description || "",
+        gst: rate
+          ? {
+              itcStatus: blocked ? 'INELIGIBLE' : gstinValid ? 'ELIGIBLE' : 'NONE',
+              vendorGstin: gstinValid ? gstin : '',
+              vendorInvoiceNo: typeof extractedData.invoiceNumber === 'string' ? extractedData.invoiceNumber.slice(0, 60) : '',
+              hsnCode: typeof extractedData.hsnCode === 'string' ? extractedData.hsnCode.replace(/\D/g, '').slice(0, 8) : '',
+              gstRate: rate,
+            }
+          : null,
       });
 
     } catch (parseError) {

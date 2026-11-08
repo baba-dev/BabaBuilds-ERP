@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { parseProductGst } from "@/lib/gst/source";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -80,6 +81,8 @@ export async function POST(req: Request) {
     if (!sku || !name) {
       return NextResponse.json({ error: "SKU and Name are required" }, { status: 400 });
     }
+    const gst = parseProductGst(formData.get('hsnCode'), formData.get('gstRate'));
+    if (!gst.ok) return NextResponse.json({ error: gst.message, code: gst.code }, { status: 422 });
 
     const file = formData.get('image') as File | null;
     let imageUrl = null;
@@ -125,6 +128,8 @@ export async function POST(req: Request) {
         unit,
         baselinePrice,
         costPrice,
+        hsnCode: gst.hsnCode,
+        gstRate: gst.gstRate,
         currentStock,
         safetyStock,
         status,

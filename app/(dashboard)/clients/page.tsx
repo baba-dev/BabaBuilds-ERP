@@ -17,6 +17,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ResponsiveDialog } from "@/components/ResponsiveDialog";
 import { useTranslations } from "next-intl";
 import { useFormat } from "@/hooks/use-format";
+import { GST_STATES } from "@/lib/gst/states";
+import { looksLikePan, validateGstin } from "@/lib/gst/gstin";
 import { getBustedUrl } from "@/lib/cache-buster";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { CLIENT_LOGO_ACCEPT_ATTR, CLIENT_LOGO_HELP_TEXT } from "@/lib/uploads/client-logo";
@@ -46,13 +48,18 @@ export default function ClientCRM() {
   // --- GLOBALIZATION ENGINE ---
   const { 
     taxLabel = "Tax", 
-    taxIdLabel = "Tax ID" 
+    taxIdLabel = "Tax ID",
+    countryCode: workspaceCountry = "IN"
   } = useFormat();
 
   const [formData, setFormData] = useState({
-    name: "", address: "", country: "", taxId: "", email: "", phone: "", isExport: true
+    name: "", address: "", country: "", taxId: "", gstStateCode: "", gstSupplyOverride: "", gstReverseCharge: false, email: "", phone: "", isExport: true
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [gspConfigured, setGspConfigured] = useState(false);
+  useEffect(() => {
+    fetch('/api/gst/gstin-lookup').then((r) => (r.ok ? r.json() : null)).then((d) => setGspConfigured(!!d?.configured)).catch(() => undefined);
+  }, []);
 
   useEffect(() => { 
     fetchClients(currentPage); 
@@ -143,6 +150,9 @@ export default function ClientCRM() {
       address: client.address || "",
       country: client.country || "",
       taxId: client.taxId || "",
+      gstStateCode: client.gstStateCode || "",
+      gstSupplyOverride: client.gstSupplyOverride || "",
+      gstReverseCharge: !!client.gstReverseCharge,
       email: client.email || "",
       phone: client.phone || "",
       isExport: client.isExport
@@ -151,7 +161,7 @@ export default function ClientCRM() {
   };
 
   const resetForm = () => {
-    setFormData({ name: "", address: "", country: "", taxId: "", email: "", phone: "", isExport: true });
+    setFormData({ name: "", address: "", country: "", taxId: "", gstStateCode: "", gstSupplyOverride: "", gstReverseCharge: false, email: "", phone: "", isExport: true });
     setLogoFile(null);
     setIsEditing(false);
     setSelectedClientId(null);
@@ -209,6 +219,9 @@ export default function ClientCRM() {
           address: client.address || "",
           country: client.country || "",
           taxId: client.taxId || "",
+          gstStateCode: client.gstStateCode || "",
+          gstSupplyOverride: client.gstSupplyOverride || "",
+          gstReverseCharge: !!client.gstReverseCharge,
           email: client.email || "",
           phone: client.phone || "",
           isExport: client.isExport,
@@ -335,6 +348,62 @@ export default function ClientCRM() {
                         />
                       </FormFieldRow>
                     </div>
+                    {workspaceCountry === "IN" && /^india$|^in$/i.test(formData.country.trim() || "India") ? (() => {
+                      const gstin = validateGstin(formData.taxId);
+                      const derived = gstin.valid ? gstin.stateCode : "";
+                      return (
+                        <FormFieldRow htmlFor="client-gst-state" label={t("gst_state")} optionalText={t("optional")}>
+                          <select
+                            id="client-gst-state"
+                            value={derived || formData.gstStateCode}
+                            disabled={!!derived}
+                            onChange={e => setFormData({...formData, gstStateCode: e.target.value})}
+                            className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring/30 disabled:opacity-70"
+                          >
+                            <option value="">{t("gst_state_none")}</option>
+                            {GST_STATES.map(st => <option key={st.code} value={st.code}>{st.code} · {st.name}</option>)}
+                          </select>
+                          <p className="mt-1 text-xs text-muted-foreground">{derived ? t("gst_state_from_gstin") : t("gst_state_hint")}</p>
+                        </FormFieldRow>
+                      );
+                    })() : null}
+                    {workspaceCountry === "IN" && /^india$|^in$/i.test(formData.country.trim() || "India") ? (() => {
+                      const raw = formData.taxId.trim();
+                      const gstin = validateGstin(raw);
+                      const bad = raw !== "" && !gstin.valid && !looksLikePan(raw);
+                      return (
+                        <div className="space-y-3 rounded-lg border border-border/70 bg-surface-elevated/50 p-3">
+                          {raw ? (
+                            <p className={`text-xs font-medium ${gstin.valid ? "text-emerald-600 dark:text-emerald-400" : bad ? "text-rose-600 dark:text-rose-400" : "text-muted-foreground"}`} role={bad ? "alert" : undefined}>
+                              {gstin.valid ? t("gstin_ok") : bad ? t("gstin_bad") : t("gstin_pan")}
+                            </p>
+                          ) : null}
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <FormFieldRow htmlFor="client-gst-treatment" label={t("gst_treatment")}>
+                              <select
+                                id="client-gst-treatment"
+                                value={formData.gstSupplyOverride}
+                                disabled={!gstin.valid}
+                                onChange={e => setFormData({...formData, gstSupplyOverride: e.target.value})}
+                                className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-foreground shadow-sm disabled:opacity-60"
+                              >
+                                <option value="">{t("gst_treatment_regular")}</option>
+                                <option value="SEZ_WP">{t("gst_treatment_sez_wp")}</option>
+                                <option value="SEZ_WOP">{t("gst_treatment_sez_wop")}</option>
+                              </select>
+                            </FormFieldRow>
+                            <label className="flex items-center gap-2 pt-6 text-sm text-foreground">
+                              <input type="checkbox" checked={formData.gstReverseCharge} onChange={e => setFormData({...formData, gstReverseCharge: e.target.checked})} className="size-4 rounded border-border" />
+                              {t("gst_reverse_charge")}
+                            </label>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Button type="button" variant="outline" size="sm" disabled={!gspConfigured || !gstin.valid}>{t("gst_verify")}</Button>
+                            <span className="text-xs text-muted-foreground">{gspConfigured ? t("gst_verify_ready") : t("gst_verify_unavailable")}</span>
+                          </div>
+                        </div>
+                      );
+                    })() : null}
                   </div>
                 </FormSection>
 

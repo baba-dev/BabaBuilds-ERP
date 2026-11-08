@@ -12,13 +12,6 @@ import { toast } from "sonner";
 import { AlertCircle, CalendarClock, CheckCircle2, ClipboardList, Loader2 } from "lucide-react";
 
 type HubSummary = {
-  gstSummary?: {
-    financialYear: string;
-    invoiceCount: number;
-    taxableSupplyApprox: number;
-    taxChargedApprox: number;
-    topSacCodes: Array<{ sacCode: string; invoiceCount: number; taxAmount: number }>;
-  };
   readiness: {
     hasReturns: boolean;
     totalOpenBlockers: number;
@@ -128,45 +121,6 @@ export function TaxHubOverview() {
 
   return (
     <div className="space-y-6">
-      {data.gstSummary && (
-        <Card className="border-zinc-200 dark:border-zinc-800">
-          <CardHeader>
-            <CardTitle className="text-sm font-semibold">GSTR-1 style pilot (outward supplies)</CardTitle>
-            <CardDescription>
-              FY {data.gstSummary.financialYear} · aggregates from invoices in this workspace (SAC-grouped)
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-3">
-            <div>
-              <p className="text-xs font-medium uppercase text-zinc-500">Invoices</p>
-              <p className="text-2xl font-bold">{data.gstSummary.invoiceCount}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase text-zinc-500">Taxable supply (approx)</p>
-              <p className="text-2xl font-bold">{data.gstSummary.taxableSupplyApprox.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase text-zinc-500">Tax charged (approx)</p>
-              <p className="text-2xl font-bold">{data.gstSummary.taxChargedApprox.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
-            </div>
-            <div className="md:col-span-3">
-              <p className="mb-2 text-xs font-medium uppercase text-zinc-500">Top SAC groups by tax</p>
-              <div className="flex flex-wrap gap-2">
-                {data.gstSummary.topSacCodes.length === 0 ? (
-                  <span className="text-sm text-zinc-500">No invoice data in FY window.</span>
-                ) : (
-                  data.gstSummary.topSacCodes.map((row) => (
-                    <Badge key={row.sacCode} variant="secondary" className="font-mono text-[11px]">
-                      {row.sacCode} · {row.invoiceCount} inv · tax {row.taxAmount.toFixed(0)}
-                    </Badge>
-                  ))
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="border-zinc-200 dark:border-zinc-800">
           <CardHeader className="pb-2">

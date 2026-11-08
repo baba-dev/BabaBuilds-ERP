@@ -1,5 +1,6 @@
 "use client";
 
+import { GstPreviewCard, useGstPreview } from "@/components/gst/GstPreviewCard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -155,6 +156,11 @@ function ComposerForm({ proposalId, detail, clients, catalog, catalogLoading }: 
       validDrafts.map((i) => ({ serviceTemplateId: i.serviceTemplateId, title: i.title.trim(), quantity: Number(i.quantity), unitPrice: Number(i.unitPrice), isOptional: i.isOptional, isRecurring: i.isRecurring })),
     [validDrafts],
   );
+  const gstView = useGstPreview({
+    clientId: clientId || null,
+    lines: validDrafts.filter((i) => !i.isOptional).map((i) => ({ description: i.title.trim(), amount: Number(i.quantity) * Number(i.unitPrice), quantity: Number(i.quantity), serviceTemplateId: i.serviceTemplateId })),
+  });
+
   const previewBody = useMemo(() => (clientId && pricedItems.length ? { clientId, items: pricedItems, ...(taxOverride !== null ? { taxRateOverride: taxOverride } : {}) } : null), [clientId, pricedItems, taxOverride]);
   const previewKey = previewBody ? JSON.stringify(previewBody) : "";
   const [preview, setPreview] = useState<PreviewState>({ key: "", data: null, error: null });
@@ -332,6 +338,8 @@ function ComposerForm({ proposalId, detail, clients, catalog, catalogLoading }: 
         <ComposerSection step={2} title={t("items.sectionTitle")} hint={t("items.hint")} done={checks.items} delay={0.05}>
           <ItemsEditor items={items} catalog={catalog} catalogLoading={catalogLoading} format={format} onChange={mark(setItems)} />
         </ComposerSection>
+
+        <GstPreviewCard preview={gstView.preview} loading={gstView.loading} format={format} />
 
         <ComposerSection step={3} title={t("details.title")} hint={t("details.hint")} done={milestonesOk && filledMilestones.length > 0} delay={0.1}>
           <div className="space-y-6">

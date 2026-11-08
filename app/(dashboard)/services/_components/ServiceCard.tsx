@@ -7,7 +7,7 @@ import { Copy, FilePlus, MoreHorizontal, Pencil, Repeat, Tag, Trash2 } from "luc
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { usageOf, type ServiceItem } from "./service-types";
+import { gstCodeIssue, usageOf, type ServiceItem } from "./service-types";
 
 type Props = {
   service: ServiceItem;
@@ -142,6 +142,11 @@ export function ServiceCard({ service, index, view, formatPrice, onEdit, onDupli
             <Tag className="size-3" aria-hidden />
             {sac ? sac : t("noTaxCode")}
           </span>
+          {gstCodeIssue(service) ? (
+            <span className="rounded-full bg-rose-500/10 px-2 py-0.5 font-medium text-rose-700 dark:text-rose-300" title={t(gstCodeIssue(service) === "INVALID_CODE" ? "codeInvalidHint" : "rateStaleHint")}>
+              {t(gstCodeIssue(service) === "INVALID_CODE" ? "codeInvalid" : "rateStale")}
+            </span>
+          ) : null}
           {nic && <span className="rounded-full bg-sky-500/10 px-2 py-0.5 font-medium text-sky-700 dark:text-sky-300" title={service.nicCode?.description}>{nic}</span>}
         </div>
 

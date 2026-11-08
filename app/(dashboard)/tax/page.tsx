@@ -1,22 +1,20 @@
-import { redirect } from 'next/navigation';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { isModuleEnabled } from '@/lib/modules';
-import { getActiveWorkspaceIdForUser } from '@/lib/workspace-scope';
-import TaxDashboardClient from './TaxDashboardClient';
+import type { Metadata } from "next";
+import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { fyStartYear } from "@/lib/gst/calendar";
+import { GstWorkspace } from "./_components/GstWorkspace";
 
-export default async function TaxDashboardPage() {
+export const metadata: Metadata = { title: "GST & Tax" };
+
+export default async function TaxPage() {
   const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
-
-  if (!userId) {
-    redirect('/login');
-  }
-
-  const workspaceId = await getActiveWorkspaceIdForUser(userId);
-  const taxAdvancedEnabled = workspaceId
-    ? await isModuleEnabled(workspaceId, 'TAX_ADVANCED')
-    : false;
-
-  return <TaxDashboardClient taxAdvancedEnabled={taxAdvancedEnabled} />;
+  if (!session?.user?.id) redirect("/login");
+  // useSearchParams (URL-backed tab/period) requires a Suspense boundary.
+  return (
+    <Suspense fallback={null}>
+      <GstWorkspace currentFy={fyStartYear(new Date())} />
+    </Suspense>
+  );
 }

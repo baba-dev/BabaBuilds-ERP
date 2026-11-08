@@ -17,6 +17,8 @@ type TaxEstimateScenarioPayload = {
   fiscalYear?: string | null;
   taxType?: 'income_tax' | 'gst' | 'vat' | 'sales_tax' | null;
   taxRegime?: 'new' | 'old' | null;
+  ageGroup?: 'below60' | 'senior' | 'super_senior' | null;
+  presumptive?: boolean | null;
   taxpayerType?: 'individual' | 'huf' | 'aop' | 'boi' | 'ajp' | 'company' | 'firm' | 'other' | null;
   residentialStatus?: 'resident' | 'non_resident' | 'not_ordinarily_resident' | null;
   isSalaried?: boolean | null;
@@ -58,6 +60,8 @@ export async function POST(request: Request) {
       fiscalYear: payload.fiscalYear,
       taxType: payload.taxType ?? (countryForEstimate === 'IN' ? 'income_tax' : undefined),
       taxRegime: payload.taxRegime ?? 'new',
+      ageGroup: payload.ageGroup ?? 'below60',
+      presumptive: payload.presumptive ?? false,
       taxpayerType: payload.taxpayerType ?? 'individual',
       residentialStatus: payload.residentialStatus ?? 'resident',
       isSalaried: payload.isSalaried ?? false,
