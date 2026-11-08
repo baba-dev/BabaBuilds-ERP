@@ -4518,6 +4518,407 @@
       "TAX_EXEMPT_CLIENT": "This client is marked tax-exempt, so no tax is charged. Change it on the client if they are a domestic customer."
     }
   },
+  "CaCompliance": {
+    "title": "CA Compliance",
+    "description": "Take the year from books to filed returns, together with your accountant.",
+    "nav": "Sections",
+    "fy": "Financial year",
+    "tabs": {
+      "overview": "Overview",
+      "calendar": "Calendar",
+      "readiness": "Readiness",
+      "requests": "Requests",
+      "evidence": "Evidence",
+      "setup": "Setup & team"
+    },
+    "noAccess": {
+      "title": "You do not have access to CA Compliance",
+      "body": "Ask a workspace owner to give you the Accountant or Finance Manager role."
+    },
+    "error": {
+      "title": "Something went wrong",
+      "body": "CA Compliance could not load. Try again; your data is safe.",
+      "reference": "Reference {id}",
+      "retry": "Try again"
+    },
+    "state": {
+      "FILED": "Filed",
+      "OVERDUE": "Overdue",
+      "DUE_SOON": "Due soon",
+      "READY": "Ready to file",
+      "IN_PROGRESS": "In progress",
+      "UPCOMING": "Upcoming",
+      "NOT_APPLICABLE": "Not applicable"
+    },
+    "kinds": {
+      "ADVANCE_TAX": "Advance tax",
+      "TDS_DEPOSIT": "TDS deposit",
+      "TDS_RETURN_24Q": "TDS return 24Q (salaries)",
+      "TDS_RETURN_26Q": "TDS return 26Q (other payments)",
+      "FORM_16": "Form 16 to employees",
+      "PF": "Provident fund",
+      "ESI": "ESI contribution",
+      "ITR": "Income-tax return",
+      "TAX_AUDIT": "Tax audit report (3CD)",
+      "ROC_AOC4": "Financial statements (AOC-4)",
+      "ROC_MGT7": "Annual return (MGT-7)",
+      "DIR3_KYC": "Director KYC (DIR-3)",
+      "ROC_FORM11": "LLP annual return (Form 11)",
+      "ROC_FORM8": "LLP statement of accounts (Form 8)",
+      "YEAR_CLOSE": "Close the year's books"
+    },
+    "overview": {
+      "setupNeeded": {
+        "title": "Tell us what kind of taxpayer you are",
+        "body": "The calendar depends on your entity type, tax regime and whether you deduct tax. It takes a minute.",
+        "cta": "Set up"
+      },
+      "progress": "{filed} of {total} filed",
+      "progressTitle": "Year progress, FY {fy}",
+      "next": "Next due",
+      "nextNone": "Nothing left to file this year",
+      "overdue": "Overdue",
+      "dueSoon": "Due in 14 days",
+      "signedOff": "Signed off",
+      "figures": {
+        "title": "The year in numbers",
+        "hint": "GST excluded, from your books as of today.",
+        "billed": "Invoiced",
+        "invoices": "{count} invoices",
+        "received": "Received",
+        "expenses": "Expenses",
+        "payroll": "Payroll",
+        "itc": "Input credit claimed",
+        "tdsCredits": "TDS withheld by customers",
+        "tdsDeducted": "You deducted {amount}, deposited {deposited}"
+      },
+      "estimate": {
+        "title": "Income-tax estimate",
+        "booksBasis": "From profit in your books",
+        "presumptiveBasis": "Under the presumptive scheme",
+        "taxable": "Taxable income",
+        "tax": "Estimated tax",
+        "payable": "After TDS credits",
+        "note": "A planning estimate, not advice. Old-regime deductions are not inferred.",
+        "open": "Open the tax planner",
+        "none": "Set up your entity to see an estimate."
+      },
+      "readiness": {
+        "title": "Books readiness",
+        "open": "See details",
+        "areas": {
+          "sales": "Sales invoices",
+          "purchases": "Purchases and bills",
+          "bank": "Bank reconciliation",
+          "gst": "GST returns",
+          "tds": "TDS",
+          "payroll": "Payroll",
+          "receivables": "Receivables"
+        },
+        "status": {
+          "OK": "All clear",
+          "ATTENTION": "Needs attention",
+          "BLOCKED": "Blocked",
+          "NOT_APPLICABLE": "Not applicable"
+        }
+      },
+      "close": {
+        "title": "Year-end sign-off",
+        "body": "When nothing blocks closing the books and returns are filed, your CA signs off the year.",
+        "signed": "Signed off by {name} on {date}",
+        "signedToast": "Year signed off",
+        "undo": "Remove sign-off",
+        "blocked": "Clear {count} blockers first",
+        "cta": "Sign off the year",
+        "needsCa": "Your accountant or an owner signs off the year."
+      },
+      "presumptive": {
+        "title": "Presumptive taxation and thresholds",
+        "confirm": "Your CA confirms whether your work qualifies; these compare your receipts with the limits.",
+        "ada": "Section 44ADA (professions)",
+        "ad": "Section 44AD (business)",
+        "notEntity": "Not available for this entity type.",
+        "within": "Within the {limit} limit.",
+        "withinLowCash": "Within {high} if cash receipts are 5% or less.",
+        "above": "Above the limit.",
+        "deemed": "Deemed income {amount}",
+        "audit": "Tax audit and GST registration"
+      },
+      "taxAudit": {
+        "LIKELY": "A tax audit is likely: receipts are above ₹1 crore.",
+        "CHECK": "Check whether a tax audit applies: receipts are above ₹50 lakh.",
+        "UNLIKELY": "A tax audit is unlikely at this turnover."
+      },
+      "gstHint": {
+        "REGISTERED": "GST registered.",
+        "REGISTRATION_MAY_BE_REQUIRED": "Turnover is above the ₹20 lakh registration threshold and you are not registered. Ask your CA.",
+        "BELOW_THRESHOLD": "Turnover is below the GST registration threshold.",
+        "NOT_APPLICABLE": "GST does not apply to this workspace."
+      }
+    },
+    "calendar": {
+      "groupLabel": "Filter by area",
+      "statusLabel": "Filter by status",
+      "filters": {
+        "all": "All",
+        "GST": "GST",
+        "TDS": "TDS",
+        "INCOME_TAX": "Income tax",
+        "PAYROLL": "PF & ESI",
+        "ROC": "Company law",
+        "YEAR": "Year close"
+      },
+      "status": {
+        "all": "Any status",
+        "open": "Open",
+        "overdue": "Overdue",
+        "filed": "Filed"
+      },
+      "empty": "Nothing on the calendar for these filters.",
+      "gstLocked": "Filed in the GST workspace",
+      "signedOff": "Signed off",
+      "advance": "{percent}% of the year's tax",
+      "heldBy": "Held up by: {what}",
+      "filedOn": "Filed {date}",
+      "daysLate": "{count} days late",
+      "daysLeft": "{count} days left",
+      "extended": "Extended to {date}",
+      "seeReadiness": "See what is holding things up"
+    },
+    "drawer": {
+      "due": "due {date}",
+      "amountDue": "about {amount}",
+      "status": "Status",
+      "statuses": {
+        "NOT_STARTED": "Not started",
+        "IN_PROGRESS": "In progress",
+        "READY": "Ready to file",
+        "FILED": "Filed",
+        "NOT_APPLICABLE": "Not applicable"
+      },
+      "filedOn": "Filed on",
+      "reference": "Acknowledgement / reference",
+      "owner": "Owner",
+      "noOwner": "Unassigned",
+      "notes": "Notes",
+      "extension": "Extended due date",
+      "extensionHint": "Only if a notification extended the date.",
+      "save": "Save",
+      "saved": "Saved",
+      "signoffCleared": "Saved. The sign-off was removed because the outcome changed.",
+      "signoff": "Sign off",
+      "signedBy": "Signed off by {name} on {date}",
+      "signedToast": "Signed off",
+      "signoffRemoved": "Sign-off removed",
+      "removeSignoff": "Remove sign-off",
+      "needsFiled": "Only a filed item can be signed off.",
+      "notSigned": "Not signed off yet. Your accountant signs off filed items.",
+      "ask": "Ask a question",
+      "openWork": "Open the work",
+      "gstLocked": "GST returns are filed in the GST workspace. You can assign an owner, add notes and sign off here.",
+      "readOnly": "Only a compliance manager can edit this."
+    },
+    "readiness": {
+      "allClear": "Nothing is holding up the close.",
+      "summaryBlocked": "{count} blockers before the year can be closed",
+      "summaryHint": "{warnings} warnings do not stop the close but are worth a look.",
+      "areas": {
+        "sales": "Sales invoices",
+        "purchases": "Purchases and bills",
+        "bank": "Bank reconciliation",
+        "gst": "GST returns",
+        "tds": "TDS",
+        "payroll": "Payroll",
+        "receivables": "Receivables"
+      },
+      "checked": "{count} checked",
+      "status": {
+        "OK": "All clear",
+        "ATTENTION": "Needs attention",
+        "BLOCKED": "Blocked",
+        "NOT_APPLICABLE": "Not applicable"
+      },
+      "issues": {
+        "SAC_MISSING": "{count} invoices have no SAC/HSN code",
+        "GSTIN_INVALID": "{count} invoices go to customers with an invalid GSTIN",
+        "STATE_ASSUMED": "{count} invoices have no customer state, so yours was assumed",
+        "TAX_MISMATCH": "{count} invoices where the tax does not add up",
+        "EVIDENCE_MISSING": "{count} invoices have no PDF on file",
+        "ITC_VENDOR_MISSING": "{count} bills claim credit without a vendor GSTIN or invoice number",
+        "RECEIPT_MISSING": "{count} bills have no receipt",
+        "BANK_UNRECONCILED": "{count} bank transactions are not reconciled",
+        "GST_RETURN_OVERDUE": "{count} GST returns are overdue",
+        "TDS_UNDEPOSITED": "{count} TDS deductions were not deposited by the due date ({amount})",
+        "PAYROLL_MONTHS_OPEN": "{count} payroll months are not closed",
+        "RECEIVABLES_OVERDUE": "{count} invoices are overdue ({amount} outstanding)"
+      },
+      "short": {
+        "SAC_MISSING": "missing SAC/HSN",
+        "GSTIN_INVALID": "invalid GSTIN",
+        "STATE_ASSUMED": "customer state",
+        "TAX_MISMATCH": "tax mismatch",
+        "EVIDENCE_MISSING": "invoice PDFs",
+        "ITC_VENDOR_MISSING": "vendor details on bills",
+        "RECEIPT_MISSING": "receipts",
+        "BANK_UNRECONCILED": "bank reconciliation",
+        "GST_RETURN_OVERDUE": "overdue GST return",
+        "TDS_UNDEPOSITED": "TDS not deposited",
+        "PAYROLL_MONTHS_OPEN": "payroll not closed",
+        "RECEIVABLES_OVERDUE": "overdue invoices"
+      },
+      "severity": {
+        "blocker": "Blocker",
+        "warning": "Warning",
+        "info": "For your attention"
+      },
+      "blocks": "Holds up {kinds}",
+      "fix": "Fix",
+      "areaClear": "Nothing to fix here.",
+      "na": {
+        "gst": "GST does not apply to this workspace.",
+        "payroll": "No active employees."
+      }
+    },
+    "requests": {
+      "filterLabel": "Filter requests",
+      "filter": {
+        "OPEN": "Open",
+        "ANSWERED": "Answered",
+        "CLOSED": "Closed",
+        "ALL": "All"
+      },
+      "new": "New request",
+      "hint": "Ask for a document or raise a question. Answers stay with the year.",
+      "empty": "No requests for this year.",
+      "kind": {
+        "DOCUMENT": "Document request",
+        "QUERY": "Question"
+      },
+      "status": {
+        "OPEN": "Open",
+        "ANSWERED": "Answered",
+        "CLOSED": "Closed"
+      },
+      "needed": "needed by {date}",
+      "messages": "{count} messages",
+      "sentToast": "Request sent",
+      "form": {
+        "title": "New request",
+        "kind": "Type",
+        "subject": "Subject",
+        "details": "Details",
+        "about": "About",
+        "aboutNone": "The year in general",
+        "due": "Needed by",
+        "cancel": "Cancel",
+        "send": "Send"
+      },
+      "thread": {
+        "reply": "Reply",
+        "replyPlaceholder": "Write a reply",
+        "attach": "Attach from the document vault",
+        "noDoc": "No attachment",
+        "send": "Send reply",
+        "close": "Close request",
+        "reopen": "Reopen",
+        "closed": "This request is closed."
+      }
+    },
+    "evidence": {
+      "noExport": "Your role cannot download evidence. Ask an owner or your accountant.",
+      "downloaded": "Download started",
+      "pack": {
+        "title": "Evidence pack (ZIP)",
+        "body": "Registers, calendar, summary and every invoice PDF and receipt, with an index showing what is missing.",
+        "cta": "Download the pack",
+        "preparing": "Preparing…"
+      },
+      "registers": {
+        "title": "Registers (CSV)",
+        "hint": "Open in Excel or hand to your accountant.",
+        "sales": "Sales register",
+        "purchases": "Purchase register",
+        "tds": "TDS register",
+        "calendar": "Compliance calendar",
+        "summary": "Year summary"
+      },
+      "gst": {
+        "title": "GST returns",
+        "body": "GSTR-1, GSTR-3B and GSTR-9 workings, Tally XML and the accountant bundle are in the GST workspace.",
+        "cta": "Open the GST workspace"
+      },
+      "vault": {
+        "title": "Document vault",
+        "body": "Certificates, notices and statements your accountant asked for.",
+        "cta": "Open the vault"
+      },
+      "activity": {
+        "title": "Recent activity",
+        "hint": "Who changed, signed off or downloaded what.",
+        "empty": "No activity yet.",
+        "actions": {
+          "ITEM_UPDATED": "updated an obligation",
+          "SIGNED_OFF": "signed something off",
+          "SIGNOFF_REMOVED": "removed a sign-off",
+          "REQUEST_CREATED": "raised a request",
+          "REQUEST_REPLIED": "replied to a request",
+          "REQUEST_CLOSED": "closed a request",
+          "REQUEST_REOPENED": "reopened a request",
+          "EXPORT_PACK": "downloaded the evidence pack",
+          "EXPORT_REGISTER": "downloaded a register",
+          "SETUP_UPDATED": "changed the entity setup"
+        }
+      }
+    },
+    "setup": {
+      "title": "Entity details",
+      "hint": "The compliance calendar is built from these.",
+      "entity": "Entity type",
+      "entityPlaceholder": "Choose one",
+      "entities": {
+        "PROPRIETOR": "Proprietor / individual",
+        "PARTNERSHIP": "Partnership firm",
+        "LLP": "LLP",
+        "COMPANY": "Company",
+        "OTHER": "AOP / other"
+      },
+      "regime": "Tax regime",
+      "regimes": {
+        "NEW": "New regime",
+        "OLD": "Old regime"
+      },
+      "presumptive": "Presumptive scheme",
+      "presumptives": {
+        "NONE": "None",
+        "SEC_44ADA": "Section 44ADA",
+        "SEC_44AD": "Section 44AD"
+      },
+      "audit": "Tax audit applies",
+      "auditHint": "Turnover above the audit limits, or an audit required for another reason.",
+      "tan": "TAN",
+      "tanHint": "Needed for TDS returns: 4 letters, 5 digits, 1 letter.",
+      "save": "Save",
+      "saved": "Saved",
+      "readOnly": "Only a compliance manager can change these."
+    },
+    "team": {
+      "title": "Your CA",
+      "hint": "Give your accountant read-only access, then work together here.",
+      "none": "No CA has access yet.",
+      "invite": "Invite your CA",
+      "pending": "Pending invitations",
+      "expires": "expires {date}",
+      "lastSeen": "Last active {date}",
+      "never": "Not yet active",
+      "inviteTitle": "Invite your accountant",
+      "email": "Email",
+      "send": "Send invitation",
+      "sent": "Invitation sent",
+      "cancel": "Cancel",
+      "roleNote": "Accountants can view financial records, raise requests, sign off filed returns and download evidence. They cannot post entries or change settings.",
+      "noInvite": "Only an owner can invite your CA."
+    }
+  },
   "GstHub": {
     "title": "GST & Tax",
     "description": "Prepare GSTR-1, GSTR-3B and GSTR-9 from your invoices and bills, track input credit and never miss a due date.",
