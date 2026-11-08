@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getTranslations } from "next-intl/server";
@@ -20,11 +21,12 @@ export default async function NewInvoicePage() {
         </Link>
       }
       animated={false}
-      maxWidthClassName="max-w-4xl"
+      maxWidthClassName="max-w-6xl"
     >
-      <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
+      {/* useSearchParams (?service=, ?client= presets) needs a Suspense boundary. */}
+      <Suspense fallback={null}>
         <InvoiceGeneratorForm />
-      </div>
+      </Suspense>
     </DashboardPageShell>
   );
 }

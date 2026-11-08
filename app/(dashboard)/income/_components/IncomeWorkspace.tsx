@@ -20,6 +20,7 @@ import { readApiError } from "./income-utils";
 import { buildExportUrl, buildListUrl, useIncomeUrlState, useJson } from "./use-income-data";
 
 const PAGE_SIZE = 15;
+const EMPTY_SELECTION: Set<string> = new Set();
 
 function summaryUrl(fy: string) {
   if (fy === "all") return "/api/invoices/summary?from=2000-01-01&to=2100-01-01";
@@ -38,7 +39,14 @@ export function IncomeWorkspace() {
   const meta = list.data?.meta ?? null;
   const baseCurrency = summary?.baseCurrency ?? sessionCurrency;
 
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Selection is tied to the page of data it was made on, so it resets itself when the list reloads.
+  const [selection, setSelection] = useState<{ forData: unknown; ids: Set<string> }>({ forData: null, ids: new Set() });
+  const selected = selection.forData === list.data ? selection.ids : EMPTY_SELECTION;
+  const setSelected = (updater: Set<string> | ((prev: Set<string>) => Set<string>)) =>
+    setSelection((prev) => {
+      const current = prev.forData === list.data ? prev.ids : EMPTY_SELECTION;
+      return { forData: list.data, ids: typeof updater === "function" ? updater(current) : updater };
+    });
   const [reloadToken, setReloadToken] = useState(0);
   const [payTarget, setPayTarget] = useState<InvoiceListItemDto | null>(null);
   const [voidTarget, setVoidTarget] = useState<InvoiceListItemDto | null>(null);
@@ -50,7 +58,6 @@ export function IncomeWorkspace() {
     list.reload();
     summaryState.reload();
     setReloadToken((n) => n + 1);
-    setSelected(new Set());
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload callbacks are stable
   }, []);
 
@@ -65,9 +72,6 @@ export function IncomeWorkspace() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per resolved deep link
   }, [focus, meta?.page]);
-
-  // Selection never outlives the page/filter it was made on.
-  useEffect(() => setSelected(new Set()), [list.data]);
 
   const hasFilters = Boolean(filters.q || filters.status.length || filters.source.length || filters.currency || filters.clientId);
   const currencies = useMemo(() => {
