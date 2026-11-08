@@ -45,3 +45,34 @@ export function cyclesPerYear(frequency: Freq): number {
 export function monthlyEquivalent(perCycle: number, frequency: Freq): number {
   return (perCycle * cyclesPerYear(frequency)) / 12;
 }
+
+/** Months covered by one billing cycle. */
+export function monthsPerCycle(frequency: Freq): number {
+  return frequency === "QUARTERLY" ? 3 : frequency === "ANNUALLY" ? 12 : 1;
+}
+
+/**
+ * Auto-renew: push the cycle limit and/or end date out by `cycles` more billing cycles.
+ * Returns only the fields that change.
+ */
+export function extendLimits(limits: ScheduleLimits, frequency: Freq, cycles: number): { maxCycles?: number; endDate?: Date } {
+  const out: { maxCycles?: number; endDate?: Date } = {};
+  if (limits.maxCycles !== null) out.maxCycles = limits.maxCycles + cycles;
+  if (limits.endDate) out.endDate = addMonths(limits.endDate, monthsPerCycle(frequency) * cycles);
+  return out;
+}
+
+/** Applies a sequence of percentage changes to a unit price (rounded to 2 decimals). */
+export function applyPercentChanges(unitPrice: number, percents: number[]): number {
+  const factor = percents.reduce((acc, p) => acc * (1 + p / 100), 1);
+  return Math.round(unitPrice * factor * 100) / 100;
+}
+
+/** Days after the due date at which automatic payment reminders go out. */
+export const REMINDER_OFFSETS_DAYS = [3, 7, 14] as const;
+
+/** When the next automatic reminder for an unpaid invoice is due, or null once all have been sent. */
+export function nextReminderAt(dueDate: Date | null, reminderCount: number): Date | null {
+  if (!dueDate || reminderCount >= REMINDER_OFFSETS_DAYS.length) return null;
+  return new Date(dueDate.getTime() + REMINDER_OFFSETS_DAYS[reminderCount] * 86_400_000);
+}

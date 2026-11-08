@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => {
       businessProfile: { findUnique: vi.fn() },
       retainerEvent: tx.retainerEvent,
       invoice: { update: vi.fn() },
+      task: { findFirst: vi.fn(async () => null), create: vi.fn(async () => ({})) },
       $transaction: vi.fn(async (fn: (t: typeof tx) => unknown) => fn(tx)),
     },
   };
@@ -53,7 +54,8 @@ const retainer = (over: Record<string, unknown> = {}) => ({
   paymentTermsDays: 14, sacCode: null,
   client: { id: "c1", name: "Acme", email: "a@acme.test", isExport: false, address: null, country: null, taxId: null, logoUrl: null },
   items: [{ id: "i1", title: "SEO", quantity: 2, unitPrice: D(500), taxRate: 0.18, sacCode: null }],
-  meteredUsages: [{ id: "u1", description: "Extra hours", quantity: D(2), unitPrice: D(100) }],
+  meteredUsages: [{ id: "u1", description: "Extra hours", quantity: D(2), unitPrice: D(100), taxRate: null }],
+  priceChanges: [], autoRenew: false, renewCycles: null, lastError: null,
   ...over,
 });
 
@@ -138,7 +140,7 @@ describe("retainer routes", () => {
     expect((await status.PATCH(req("PATCH", { status: "PAUSED" }), ctx())).status).toBe(403);
     expect((await bill.POST(req("POST", {}), ctx())).status).toBe(403);
     mocks.requireRetainerAccess.mockResolvedValue(access);
-    mocks.prisma.retainer.findFirst.mockResolvedValue({ status: "ACTIVE", nextBillingDate: new Date(), frequency: "MONTHLY" });
+    mocks.prisma.retainer.findFirst.mockResolvedValue({ status: "ACTIVE", nextBillingDate: new Date(), frequency: "MONTHLY", exchangeRate: D(1), items: [] });
     mocks.prisma.retainer.updateMany.mockResolvedValue({ count: 1 });
     await status.PATCH(req("PATCH", { status: "PAUSED" }), ctx());
     expect(mocks.requireRetainerAccess).toHaveBeenLastCalledWith("retainers.manage");
@@ -146,7 +148,7 @@ describe("retainer routes", () => {
 
   it("pauses for real: the status is written, not ignored", async () => {
     const { PATCH } = await import("@/app/api/retainers/[id]/status/route");
-    mocks.prisma.retainer.findFirst.mockResolvedValue({ status: "ACTIVE", nextBillingDate: new Date(), frequency: "MONTHLY" });
+    mocks.prisma.retainer.findFirst.mockResolvedValue({ status: "ACTIVE", nextBillingDate: new Date(), frequency: "MONTHLY", exchangeRate: D(1), items: [] });
     mocks.prisma.retainer.updateMany.mockResolvedValue({ count: 1 });
     const res = await PATCH(req("PATCH", { status: "PAUSED" }), ctx());
     expect(res.status).toBe(200);
@@ -155,14 +157,14 @@ describe("retainer routes", () => {
 
   it("rejects illegal transitions and unknown statuses", async () => {
     const { PATCH } = await import("@/app/api/retainers/[id]/status/route");
-    mocks.prisma.retainer.findFirst.mockResolvedValue({ status: "CANCELLED", nextBillingDate: new Date(), frequency: "MONTHLY" });
+    mocks.prisma.retainer.findFirst.mockResolvedValue({ status: "CANCELLED", nextBillingDate: new Date(), frequency: "MONTHLY", exchangeRate: D(1), items: [] });
     expect((await PATCH(req("PATCH", { status: "ACTIVE" }), ctx())).status).toBe(409);
     expect((await PATCH(req("PATCH", { status: "COMPLETED" }), ctx())).status).toBe(400);
   });
 
   it("resuming after a long pause rolls the schedule forward instead of back-billing", async () => {
     const { PATCH } = await import("@/app/api/retainers/[id]/status/route");
-    mocks.prisma.retainer.findFirst.mockResolvedValue({ status: "PAUSED", nextBillingDate: new Date("2020-01-15T00:00:00Z"), frequency: "MONTHLY" });
+    mocks.prisma.retainer.findFirst.mockResolvedValue({ status: "PAUSED", nextBillingDate: new Date("2020-01-15T00:00:00Z"), frequency: "MONTHLY", exchangeRate: D(1), items: [] });
     mocks.prisma.retainer.updateMany.mockResolvedValue({ count: 1 });
     const body = await (await PATCH(req("PATCH", { status: "ACTIVE" }), ctx())).json();
     expect(body.rolledForward).toBe(true);

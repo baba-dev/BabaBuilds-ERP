@@ -14,6 +14,7 @@ import type { RetainerFilters, RetainerSort } from "./use-retainers-data";
 type Props = {
   rows: RetainerListItemDto[]; loading: boolean; refreshing: boolean; locale: string; filters: RetainerFilters; activeId: string | null;
   page: number; totalPages: number; totalRecords: number; limit: number;
+  selected: Set<string>; onToggle: (id: string) => void; onToggleAll: () => void;
   onSort: (f: RetainerSort) => void; onAction: (a: RetainerRowAction, r: RetainerListItemDto) => void; onPage: (p: number) => void; onClientFilter: (id: string) => void;
 };
 
@@ -55,7 +56,8 @@ function SortHeader({ field, label, filters, onSort, className }: { field: Retai
 }
 
 export function RetainerTable(props: Props) {
-  const { rows, loading, refreshing, locale, filters, activeId, page, totalPages, totalRecords, limit, onSort, onAction, onPage, onClientFilter } = props;
+  const { rows, loading, refreshing, locale, filters, activeId, page, totalPages, totalRecords, limit, selected, onToggle, onToggleAll, onSort, onAction, onPage, onClientFilter } = props;
+  const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
   const t = useTranslations("RetainersHub.table");
   const tf = useTranslations("RetainersHub.frequency");
   const from = totalRecords === 0 ? 0 : (page - 1) * limit + 1;
@@ -86,7 +88,8 @@ export function RetainerTable(props: Props) {
         <table className="w-full min-w-[900px] text-sm">
           <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
-              <SortHeader field="name" label={t("retainer")} filters={filters} onSort={onSort} className="ps-4" />
+              <th scope="col" className="w-10 ps-4"><input type="checkbox" checked={allSelected} onChange={onToggleAll} aria-label={t("selectAll")} className="size-4 rounded border-border accent-indigo-600" /></th>
+              <SortHeader field="name" label={t("retainer")} filters={filters} onSort={onSort} />
               <th scope="col" className="px-3 py-3 text-start font-medium">{t("client")}</th>
               <th scope="col" className="px-3 py-3 text-end font-medium">{t("amount")}</th>
               <SortHeader field="nextBillingDate" label={t("nextBilling")} filters={filters} onSort={onSort} />
@@ -97,10 +100,11 @@ export function RetainerTable(props: Props) {
           </thead>
           <tbody className="divide-y divide-border/60">
             {loading && rows.length === 0
-              ? Array.from({ length: 6 }, (_, i) => <tr key={i}><td colSpan={7} className="px-4 py-3"><Skeleton className="h-9 w-full" /></td></tr>)
+              ? Array.from({ length: 6 }, (_, i) => <tr key={i}><td colSpan={8} className="px-4 py-3"><Skeleton className="h-9 w-full" /></td></tr>)
               : rows.map((row) => (
                   <tr key={row.id} data-active={activeId === row.id || undefined} className={cn("transition-colors hover:bg-muted/40 data-[active]:bg-indigo-500/5", (row.status === "CANCELLED" || row.status === "COMPLETED") && "text-muted-foreground")}>
-                    <td className="max-w-[20rem] px-3 py-3 ps-4">{nameBlock(row)}</td>
+                    <td className="ps-4"><input type="checkbox" checked={selected.has(row.id)} onChange={() => onToggle(row.id)} aria-label={t("selectRow", { name: row.name })} className="size-4 rounded border-border accent-indigo-600" /></td>
+                    <td className="max-w-[20rem] px-3 py-3">{nameBlock(row)}</td>
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-2.5">
                         <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-indigo-500/10 text-xs font-bold text-indigo-700 dark:text-indigo-300" aria-hidden>{initials(row.clientName)}</span>
@@ -127,7 +131,8 @@ export function RetainerTable(props: Props) {
           : rows.map((row) => (
               <li key={row.id} className="space-y-3 p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">{nameBlock(row)}<p className="mt-1 truncate text-sm text-muted-foreground">{row.clientName}</p></div>
+                  <input type="checkbox" checked={selected.has(row.id)} onChange={() => onToggle(row.id)} aria-label={t("selectRow", { name: row.name })} className="mt-1 size-4 shrink-0 rounded border-border accent-indigo-600" />
+                  <div className="min-w-0 flex-1">{nameBlock(row)}<p className="mt-1 truncate text-sm text-muted-foreground">{row.clientName}</p></div>
                   <RetainerStatusBadge status={row.displayStatus} />
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">

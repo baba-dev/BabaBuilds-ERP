@@ -3955,7 +3955,12 @@
       "BILL_FAILED": "Falló la facturación",
       "EMAIL_FAILED": "Falló el envío de la factura",
       "USAGE_ADDED": "Consumo añadido",
-      "USAGE_REMOVED": "Consumo eliminado"
+      "USAGE_REMOVED": "Consumo eliminado",
+      "PRICE_SCHEDULED": "Cambio de precio programado",
+      "PRICE_CHANGED": "Cambio de precio aplicado",
+      "RENEWED": "Renovada automáticamente",
+      "REMINDER_SENT": "Recordatorio de pago enviado",
+      "REMINDER_FAILED": "No se pudo enviar el recordatorio de pago"
     },
     "kpi": {
       "mrr": "Ingreso mensual recurrente",
@@ -4018,7 +4023,9 @@
       "range": "Mostrando {from}–{to} de {total}",
       "previous": "Anterior",
       "next": "Siguiente",
-      "page": "Página {page} de {pages}"
+      "page": "Página {page} de {pages}",
+      "selectAll": "Seleccionar todas las igualas de esta página",
+      "selectRow": "Seleccionar {name}"
     },
     "actions": {
       "more": "Más acciones",
@@ -4030,7 +4037,10 @@
       "cancel": "Cancelar iguala",
       "delete": "Eliminar",
       "addUsage": "Añadir consumo",
-      "viewInvoices": "Ver facturas"
+      "viewInvoices": "Ver facturas",
+      "schedulePrice": "Programar cambio de precio",
+      "previewInvoice": "Vista previa de la próxima factura",
+      "exportInvoices": "Exportar facturas"
     },
     "drawer": {
       "loading": "Cargando…",
@@ -4066,7 +4076,20 @@
       "void": "Anulada",
       "overdue": "{amount} vencido",
       "due": "{amount} pendiente",
-      "timeline": "Cronología"
+      "timeline": "Cronología",
+      "fix": "Editar iguala",
+      "retry": "Reintentar facturación",
+      "reminders": "Recordatorios de pago",
+      "remindersOn": "Automáticos (a los 3, 7 y 14 días de retraso)",
+      "remindersOff": "Desactivados",
+      "renewal": "Renovación",
+      "renewsBy": "Se renueva {count, plural, one {# ciclo} other {# ciclos}}",
+      "noRenewal": "Termina en su límite",
+      "priceChanges": "Cambios de precio programados",
+      "noPriceChanges": "No hay cambios de precio programados.",
+      "applied": "Aplicado",
+      "removePriceChange": "Quitar cambio de precio",
+      "nextReminder": "próximo recordatorio {date}"
     },
     "billNow": {
       "title": "¿Facturar esta iguala ahora?",
@@ -4108,7 +4131,10 @@
       "cancel": "Cancelar",
       "submit": "Añadir consumo",
       "success": "Consumo añadido",
-      "failed": "No se pudo añadir el consumo."
+      "failed": "No se pudo añadir el consumo.",
+      "taxRate": "Impuesto % (opcional)",
+      "taxSame": "Igual que la iguala",
+      "taxHint": "Déjalo vacío para aplicar la tasa de la iguala a este consumo."
     },
     "composer": {
       "newTitle": "Nueva iguala",
@@ -4174,7 +4200,14 @@
         "email": "Enviar cada factura por correo al cliente",
         "emailHint": "Se envía con el PDF desde tu propia configuración de correo justo después de facturar.",
         "upcoming": "Próximas fechas de facturación",
-        "noUpcoming": "Con estos ajustes no se facturará nada."
+        "noUpcoming": "Con estos ajustes no se facturará nada.",
+        "reminders": "Recordar al cliente las facturas vencidas",
+        "remindersHint": "Correos automáticos a los 3, 7 y 14 días del vencimiento hasta que se pague.",
+        "renew": "Renovar automáticamente al terminar",
+        "renewHint": "En lugar de completarse, se amplía la fecha de fin o el número de facturas.",
+        "renewNeedsLimit": "Define una fecha de fin o un número de facturas para activar la renovación.",
+        "renewBy": "Ampliar en",
+        "cycles": "ciclos"
       },
       "summary": {
         "title": "Resumen",
@@ -4196,7 +4229,65 @@
       "tax": {
         "title": "Define la tasa de impuesto",
         "description": "No pudimos deducir el impuesto de tus servicios. Introduce una tasa para esta iguala; no se guarda en tus ajustes."
+      },
+      "draft": {
+        "found": "Tienes un borrador sin guardar de {time}.",
+        "restore": "Restaurar borrador",
+        "discard": "Descartar"
       }
+    },
+    "bulk": {
+      "label": "Acciones masivas",
+      "selected": "{count} seleccionadas",
+      "billNow": "Facturar ahora",
+      "pause": "Pausar",
+      "resume": "Reanudar",
+      "clear": "Borrar selección",
+      "result": "{ok} hechas, {failed} con error."
+    },
+    "export": {
+      "label": "Exportar",
+      "list": "Igualas (CSV)",
+      "invoices": "Sus facturas (CSV)"
+    },
+    "price": {
+      "title": "Programar un cambio de precio",
+      "description": "Cada línea de {name} se multiplica por el porcentaje desde la primera facturación en o después de esta fecha.",
+      "from": "Vigente desde",
+      "percent": "Cambio (%)",
+      "preview": "Subtotal por ciclo {from} → {to}",
+      "note": "Nota (opcional)",
+      "notePlaceholder": "p. ej. Aumento anual",
+      "cancel": "Cancelar",
+      "submit": "Programar",
+      "success": "Cambio de precio programado",
+      "failed": "No se pudo programar el cambio de precio."
+    },
+    "insights": {
+      "riskTitle": "Ingresos en riesgo y renovaciones",
+      "atRisk": "{amount} de MRR afectado",
+      "riskEmpty": "Nada requiere atención. Aquí aparecen las igualas en pausa, con errores, vencidas o por terminar.",
+      "reason": {
+        "FAILED": "Falló la facturación",
+        "OVERDUE": "Factura vencida",
+        "PAUSED": "En pausa",
+        "ENDING": "Termina pronto",
+        "RENEWS": "Se renueva"
+      },
+      "movementTitle": "Movimiento del MRR",
+      "new": "Nuevo",
+      "expansion": "Expansión",
+      "contraction": "Contracción",
+      "churn": "Bajas",
+      "monthLabel": "Ganado {gain}, perdido {loss}",
+      "movementNote": "Basado en la actividad de las igualas; las creadas antes de este registro parten de su valor actual."
+    },
+    "clientChip": {
+      "start": "Crear una iguala",
+      "summary": "{count, plural, one {# iguala} other {# igualas}} · {mrr}/mes",
+      "paused": "{count} en pausa",
+      "overdue": "{count, plural, one {# factura vencida} other {# facturas vencidas}}",
+      "open": "{count, plural, one {# factura abierta} other {# facturas abiertas}}"
     }
   }
 }

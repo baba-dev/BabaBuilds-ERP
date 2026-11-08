@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { effectiveTotal } from "@/lib/invoices/serialize";
 import { toDecimal } from "@/lib/money";
 import { amountsOfItems } from "@/lib/retainers/pricing";
-import { monthlyEquivalent, upcomingDates } from "@/lib/retainers/schedule";
+import { monthlyEquivalent, nextReminderAt, upcomingDates } from "@/lib/retainers/schedule";
 import { getDisplayStatus, normalizeStatus, startOfUtcDay } from "@/lib/retainers/status";
 import type { RetainerDetailDto, RetainerInvoiceDto, RetainerListItemDto } from "@/lib/retainers/types";
 
@@ -25,8 +25,9 @@ export const detailInclude = {
   invoices: {
     orderBy: { invoiceDate: "desc" as const },
     take: 24,
-    select: { id: true, invoiceNumber: true, invoiceDate: true, dueDate: true, status: true, currency: true, grandTotal: true, totalAmount: true, amountReceived: true },
+    select: { id: true, invoiceNumber: true, invoiceDate: true, dueDate: true, status: true, currency: true, grandTotal: true, totalAmount: true, amountReceived: true, reminderCount: true },
   },
+  priceChanges: { orderBy: { effectiveDate: "asc" as const } },
 } satisfies Prisma.RetainerInclude;
 
 type ListRow = Prisma.RetainerGetPayload<{ include: typeof listInclude }>;
@@ -63,12 +64,15 @@ export function serializeListItem(row: ListRow, now = new Date()): RetainerListI
   };
 }
 
-function invoiceDto(i: DetailRow["invoices"][number], now: Date): RetainerInvoiceDto {
+function invoiceDto(i: DetailRow["invoices"][number], now: Date, reminders: boolean): RetainerInvoiceDto {
   const total = effectiveTotal(i);
   const open = i.status === "PENDING" || i.status === "PARTIALLY_PAID";
   const balance = open ? total.minus(toDecimal(i.amountReceived ?? 0)) : toDecimal(0);
+  const next = reminders && open ? nextReminderAt(i.dueDate, i.reminderCount) : null;
   return {
     id: i.id,
+    remindersSent: i.reminderCount,
+    nextReminderAt: iso(next),
     invoiceNumber: i.invoiceNumber,
     invoiceDate: i.invoiceDate.toISOString(),
     dueDate: iso(i.dueDate),
@@ -83,11 +87,15 @@ function invoiceDto(i: DetailRow["invoices"][number], now: Date): RetainerInvoic
 export function serializeDetail(row: DetailRow, now = new Date()): RetainerDetailDto {
   const base = serializeListItem({ ...row, meteredUsages: row.meteredUsages.filter((u) => u.status === "PENDING").map((u) => ({ id: u.id })) }, now);
   const a = amountsOfItems(row.items);
-  const invoices = row.invoices.map((i) => invoiceDto(i, now));
+  const invoices = row.invoices.map((i) => invoiceDto(i, now, row.remindersEnabled));
   const sum = (f: (i: RetainerInvoiceDto) => string) => invoices.reduce((acc, i) => acc.plus(toDecimal(f(i))), toDecimal(0));
   return {
     ...base,
     notes: row.notes,
+    remindersEnabled: row.remindersEnabled,
+    autoRenew: row.autoRenew,
+    renewCycles: row.renewCycles,
+    priceChanges: row.priceChanges.map((c) => ({ id: c.id, effectiveDate: c.effectiveDate.toISOString(), percent: c.percent, note: c.note, appliedAt: iso(c.appliedAt) })),
     clientEmail: row.client.email,
     exchangeRate: row.exchangeRate.toString(),
     paymentTermsDays: row.paymentTermsDays,
@@ -110,6 +118,7 @@ export function serializeDetail(row: DetailRow, now = new Date()): RetainerDetai
       quantity: u.quantity.toString(),
       unitPrice: toDecimal(u.unitPrice).toFixed(2),
       total: toDecimal(u.quantity).mul(toDecimal(u.unitPrice)).toFixed(2),
+      taxRatePercent: u.taxRate === null ? null : Math.round(u.taxRate * 10_000) / 100,
       status: u.status,
       createdAt: u.createdAt.toISOString(),
     })),

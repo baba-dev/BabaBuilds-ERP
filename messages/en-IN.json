@@ -3926,7 +3926,12 @@
       "BILL_FAILED": "Billing failed",
       "EMAIL_FAILED": "Invoice email failed",
       "USAGE_ADDED": "Usage added",
-      "USAGE_REMOVED": "Usage removed"
+      "USAGE_REMOVED": "Usage removed",
+      "PRICE_SCHEDULED": "Price change scheduled",
+      "PRICE_CHANGED": "Price change applied",
+      "RENEWED": "Renewed automatically",
+      "REMINDER_SENT": "Payment reminder sent",
+      "REMINDER_FAILED": "Payment reminder could not be sent"
     },
     "kpi": {
       "mrr": "Monthly recurring revenue",
@@ -3989,7 +3994,9 @@
       "range": "Showing {from}–{to} of {total}",
       "previous": "Previous",
       "next": "Next",
-      "page": "Page {page} of {pages}"
+      "page": "Page {page} of {pages}",
+      "selectAll": "Select all retainers on this page",
+      "selectRow": "Select {name}"
     },
     "actions": {
       "more": "More actions",
@@ -4001,7 +4008,10 @@
       "cancel": "Cancel retainer",
       "delete": "Delete",
       "addUsage": "Add usage",
-      "viewInvoices": "View invoices"
+      "viewInvoices": "View invoices",
+      "schedulePrice": "Schedule price change",
+      "previewInvoice": "Preview next invoice",
+      "exportInvoices": "Export invoices"
     },
     "drawer": {
       "loading": "Loading…",
@@ -4037,7 +4047,20 @@
       "void": "Void",
       "overdue": "{amount} overdue",
       "due": "{amount} due",
-      "timeline": "Timeline"
+      "timeline": "Timeline",
+      "fix": "Edit retainer",
+      "retry": "Retry billing",
+      "reminders": "Payment reminders",
+      "remindersOn": "Automatic (3, 7, 14 days late)",
+      "remindersOff": "Off",
+      "renewal": "Renewal",
+      "renewsBy": "Renews by {count, plural, one {# cycle} other {# cycles}}",
+      "noRenewal": "Ends at its limit",
+      "priceChanges": "Scheduled price changes",
+      "noPriceChanges": "No price changes scheduled.",
+      "applied": "Applied",
+      "removePriceChange": "Remove price change",
+      "nextReminder": "next reminder {date}"
     },
     "billNow": {
       "title": "Bill this retainer now?",
@@ -4079,7 +4102,10 @@
       "cancel": "Cancel",
       "submit": "Add usage",
       "success": "Usage added",
-      "failed": "Could not add the usage."
+      "failed": "Could not add the usage.",
+      "taxRate": "Tax % (optional)",
+      "taxSame": "Same as the retainer",
+      "taxHint": "Leave empty to tax this usage at the retainer's rate."
     },
     "composer": {
       "newTitle": "New retainer",
@@ -4145,7 +4171,14 @@
         "email": "Email each invoice to the client",
         "emailHint": "Sent with the PDF from your own email settings right after billing.",
         "upcoming": "Upcoming billing dates",
-        "noUpcoming": "Nothing will be billed with these settings."
+        "noUpcoming": "Nothing will be billed with these settings.",
+        "reminders": "Remind the client about overdue invoices",
+        "remindersHint": "Automatic emails 3, 7 and 14 days after the due date until it is paid.",
+        "renew": "Renew automatically at the end",
+        "renewHint": "Instead of completing, the end date or invoice count is extended.",
+        "renewNeedsLimit": "Set an end date or an invoice count to enable renewal.",
+        "renewBy": "Extend by",
+        "cycles": "cycles"
       },
       "summary": {
         "title": "Summary",
@@ -4167,7 +4200,65 @@
       "tax": {
         "title": "Set the tax rate",
         "description": "We could not work out the tax from your services. Enter a rate for this retainer; it is not saved to your settings."
+      },
+      "draft": {
+        "found": "You have an unsaved draft from {time}.",
+        "restore": "Restore draft",
+        "discard": "Discard"
       }
+    },
+    "bulk": {
+      "label": "Bulk actions",
+      "selected": "{count} selected",
+      "billNow": "Bill now",
+      "pause": "Pause",
+      "resume": "Resume",
+      "clear": "Clear selection",
+      "result": "{ok} done, {failed} failed."
+    },
+    "export": {
+      "label": "Export",
+      "list": "Retainers (CSV)",
+      "invoices": "Their invoices (CSV)"
+    },
+    "price": {
+      "title": "Schedule a price change",
+      "description": "Every line of {name} is multiplied by the percentage from the first billing on or after this date.",
+      "from": "Effective from",
+      "percent": "Change (%)",
+      "preview": "Per-cycle subtotal {from} → {to}",
+      "note": "Note (optional)",
+      "notePlaceholder": "e.g. Annual increase",
+      "cancel": "Cancel",
+      "submit": "Schedule",
+      "success": "Price change scheduled",
+      "failed": "Could not schedule the price change."
+    },
+    "insights": {
+      "riskTitle": "Revenue at risk & renewals",
+      "atRisk": "{amount} MRR affected",
+      "riskEmpty": "Nothing needs attention. Paused, failing, overdue and ending retainers show up here.",
+      "reason": {
+        "FAILED": "Billing failed",
+        "OVERDUE": "Invoice overdue",
+        "PAUSED": "Paused",
+        "ENDING": "Ending soon",
+        "RENEWS": "Renews"
+      },
+      "movementTitle": "MRR movement",
+      "new": "New",
+      "expansion": "Expansion",
+      "contraction": "Contraction",
+      "churn": "Churn",
+      "monthLabel": "Gained {gain}, lost {loss}",
+      "movementNote": "Based on retainer activity; retainers created before this log existed start from their current value."
+    },
+    "clientChip": {
+      "start": "Start a retainer",
+      "summary": "{count, plural, one {# retainer} other {# retainers}} · {mrr}/mo",
+      "paused": "{count} paused",
+      "overdue": "{count, plural, one {# invoice overdue} other {# invoices overdue}}",
+      "open": "{count, plural, one {# open invoice} other {# open invoices}}"
     }
   }
 }

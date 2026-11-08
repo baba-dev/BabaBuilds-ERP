@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { addRetainerEvent } from "@/lib/retainers/events";
+import { retainerMrr } from "@/lib/retainers/mrr";
 import { advanceBillingDate } from "@/lib/retainers/schedule";
 import { canTransition, startOfUtcDay } from "@/lib/retainers/status";
 
@@ -12,7 +13,7 @@ export type StatusResult = { ok: true; status: string; rolledForward: boolean } 
  */
 export async function changeRetainerStatus(args: { workspaceId: string; retainerId: string; to: "ACTIVE" | "PAUSED" | "CANCELLED"; actorUserId?: string | null; reason?: string | null; now?: Date }): Promise<StatusResult> {
   const now = args.now ?? new Date();
-  const row = await prisma.retainer.findFirst({ where: { id: args.retainerId, workspaceId: args.workspaceId }, select: { status: true, nextBillingDate: true, frequency: true } });
+  const row = await prisma.retainer.findFirst({ where: { id: args.retainerId, workspaceId: args.workspaceId }, select: { status: true, nextBillingDate: true, frequency: true, exchangeRate: true, items: { select: { quantity: true, unitPrice: true, taxRate: true } } } });
   if (!row) return { ok: false, status: 404, code: "RETAINER_NOT_FOUND", message: "Retainer not found." };
   if (!canTransition(row.status, args.to)) {
     return { ok: false, status: 409, code: "INVALID_TRANSITION", message: `A ${row.status.toLowerCase()} retainer cannot be set to ${args.to.toLowerCase()}.` };
@@ -36,7 +37,7 @@ export async function changeRetainerStatus(args: { workspaceId: string; retainer
     type: args.to === "PAUSED" ? "PAUSED" : args.to === "CANCELLED" ? "CANCELLED" : "RESUMED",
     message: args.reason || (rolledForward ? `Next billing moved to ${next.toISOString().slice(0, 10)}` : null),
     actorUserId: args.actorUserId,
-    metadata: { from: row.status, to: args.to },
+    metadata: { from: row.status, to: args.to, mrr: retainerMrr({ status: args.to, frequency: row.frequency, exchangeRate: row.exchangeRate, items: row.items }) },
   });
   return { ok: true, status: args.to, rolledForward };
 }

@@ -16,7 +16,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const r = await prisma.retainer.findFirst({ where: { id, workspaceId }, select: { status: true } });
   if (!r) return retainerError(404, "RETAINER_NOT_FOUND", "Retainer not found.");
   if (r.status === "CANCELLED" || r.status === "COMPLETED") return retainerError(409, "RETAINER_LOCKED", "Usage can't be added to a finished retainer.");
-  const usage = await prisma.meteredUsage.create({ data: { retainerId: id, description: parsed.data.description, quantity: parsed.data.quantity, unitPrice: parsed.data.unitPrice } });
+  const usage = await prisma.meteredUsage.create({ data: { retainerId: id, description: parsed.data.description, quantity: parsed.data.quantity, unitPrice: parsed.data.unitPrice, taxRate: parsed.data.taxRate === null ? null : Math.round(parsed.data.taxRate * 100) / 10_000 } });
   await addRetainerEvent(prisma, { workspaceId, retainerId: id, type: "USAGE_ADDED", message: parsed.data.description, actorUserId: userId });
   afterRetainerChange(workspaceId, "usage");
   return NextResponse.json({ success: true, usage: { id: usage.id } });

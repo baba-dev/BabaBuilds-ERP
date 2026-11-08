@@ -1638,6 +1638,8 @@ model Invoice {
   // The retainer cycle that produced this invoice (null for everything else).
   retainerId String?
   retainer   Retainer? @relation("RetainerInvoices", fields: [retainerId], references: [id], onDelete: SetNull)
+  // Automatic reminders already sent for this invoice (retainer collections).
+  reminderCount Int @default(0)
 
   // Security: Two different workspaces can use invoice number "001"
   @@unique([invoiceNumber, workspaceId])
@@ -2806,6 +2808,12 @@ model Retainer {
   cancelledAt      DateTime?
   invoices         Invoice[]        @relation("RetainerInvoices")
   events           RetainerEvent[]
+  priceChanges     RetainerPriceChange[]
+  // Collections: automatic payment reminders for this retainer's overdue invoices.
+  remindersEnabled Boolean @default(true)
+  // Renewal: when the cycle limit / end date is reached, extend by `renewCycles` instead of completing.
+  autoRenew        Boolean @default(false)
+  renewCycles      Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2813,6 +2821,21 @@ model Retainer {
   @@index([workspaceId, status])
   @@index([workspaceId, nextBillingDate])
   @@index([workspaceId, clientId])
+}
+
+/// A scheduled price change: from the first cycle on/after `effectiveDate`, every line is multiplied by (1 + percent/100).
+model RetainerPriceChange {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  retainerId    String
+  retainer      Retainer  @relation(fields: [retainerId], references: [id], onDelete: Cascade)
+  effectiveDate DateTime
+  percent       Float
+  note          String?
+  appliedAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([retainerId, effectiveDate])
 }
 
 /// Append-only history of a retainer (created, edited, paused, billed, failed, ...).
@@ -2857,6 +2880,8 @@ model MeteredUsage {
   quantity          Decimal
   unitPrice         Decimal
   status            String     @default("PENDING") // PENDING, BILLED
+  // Fraction (0.18). Null = use the retainer's own tax rate when billed.
+  taxRate           Float?
   
   billedInInvoiceId String?
   billedInInvoice   Invoice?   @relation(fields: [billedInInvoiceId], references: [id], onDelete: SetNull)

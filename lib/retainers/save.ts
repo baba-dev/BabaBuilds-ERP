@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from "@/lib/dashboard-cache";
 import { addRetainerEvent } from "@/lib/retainers/events";
+import { retainerMrr } from "@/lib/retainers/mrr";
 import type { RetainerPricing } from "@/lib/retainers/pricing";
 import type { RetainerInput } from "@/lib/retainers/validation";
 
@@ -46,6 +47,9 @@ const common = (input: RetainerInput, currency: string, exchangeRate: number) =>
   maxCycles: input.maxCycles,
   autoAppendMonth: input.autoAppendMonth,
   emailInvoice: input.emailInvoice,
+  remindersEnabled: input.remindersEnabled,
+  autoRenew: input.autoRenew && input.renewCycles !== null,
+  renewCycles: input.autoRenew ? input.renewCycles : null,
   paymentTermsDays: input.paymentTermsDays,
   currency,
   exchangeRate: new Prisma.Decimal(exchangeRate),
@@ -58,7 +62,8 @@ export async function createRetainer(args: { workspaceId: string; actorUserId: s
     const created = await tx.retainer.create({
       data: { workspaceId, ...common(input, args.currency, args.exchangeRate), status: "ACTIVE", sourceProposalId: args.sourceProposalId ?? null, items: { create: itemRows(input, pricing, templates) } },
     });
-    await addRetainerEvent(tx, { workspaceId, retainerId: created.id, type: "CREATED", actorUserId: args.actorUserId });
+    const mrr = retainerMrr({ status: "ACTIVE", frequency: input.frequency, exchangeRate: args.exchangeRate, items: itemRows(input, pricing, templates) });
+    await addRetainerEvent(tx, { workspaceId, retainerId: created.id, type: "CREATED", actorUserId: args.actorUserId, metadata: { mrr } });
     return created;
   });
 }
@@ -75,7 +80,9 @@ export async function updateRetainer(args: { workspaceId: string; retainerId: st
     if (res.count === 0) return null;
     await tx.retainerItem.deleteMany({ where: { retainerId } });
     await tx.retainerItem.createMany({ data: itemRows(input, pricing, templates).map((r) => ({ ...r, retainerId })) });
-    await addRetainerEvent(tx, { workspaceId, retainerId, type: "EDITED", actorUserId: args.actorUserId });
-    return tx.retainer.findUnique({ where: { id: retainerId } });
+    const updated = await tx.retainer.findUnique({ where: { id: retainerId } });
+    const mrr = retainerMrr({ status: updated?.status ?? "ACTIVE", frequency: input.frequency, exchangeRate: args.exchangeRate, items: itemRows(input, pricing, templates) });
+    await addRetainerEvent(tx, { workspaceId, retainerId, type: "EDITED", actorUserId: args.actorUserId, metadata: { mrr } });
+    return updated;
   });
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isCronAuthorized, unauthorizedCronResponse } from "@/lib/security/cron-auth";
 import { billRetainer } from "@/lib/retainers/billing";
+import { runRetainerReminders } from "@/lib/retainers/reminders";
 
 /**
  * Daily billing run. Each due, ACTIVE retainer produces one invoice per run (a retainer that is several cycles behind
@@ -17,7 +18,11 @@ export async function GET(request: Request) {
       select: { id: true, workspaceId: true, client: { select: { name: true } } },
       orderBy: { nextBillingDate: "asc" },
     });
-    if (due.length === 0) return NextResponse.json({ message: "No retainers due for processing today." });
+    const reminders = await runRetainerReminders(now).catch((error) => {
+      console.error("Retainer reminders failed:", error);
+      return null;
+    });
+    if (due.length === 0) return NextResponse.json({ message: "No retainers due for processing today.", reminders });
 
     const stats = { processed: due.length, successful: 0, failed: 0, skipped: 0 };
     const logs: string[] = [];
@@ -35,7 +40,7 @@ export async function GET(request: Request) {
         logs.push(`FAILED: ${r.client.name} - ${result.message}`);
       }
     }
-    return NextResponse.json({ message: "Cron execution complete", stats, logs });
+    return NextResponse.json({ message: "Cron execution complete", stats, reminders, logs });
   } catch (error) {
     console.error("Cron Execution Error:", error);
     return NextResponse.json({ error: "Failed to execute automated billing" }, { status: 500 });

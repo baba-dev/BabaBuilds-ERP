@@ -35,6 +35,8 @@ export type ClientDto = {
   isExport: boolean;
   logoUrl: string | null;
   updatedAt?: string | Date;
+  /** Recurring billing for this client (list endpoint only). */
+  retainerSummary?: { active: number; paused: number; mrr: string; currency: string; outstandingInvoices: number; overdueInvoices: number };
 };
 
 export type ApiKpis = {

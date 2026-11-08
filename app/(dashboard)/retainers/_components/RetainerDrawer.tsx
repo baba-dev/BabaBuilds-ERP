@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { ExternalLink, Gauge, Mail, Sparkles, TriangleAlert, X } from "lucide-react";
+import { BellRing, ExternalLink, Gauge, Mail, Repeat, Sparkles, TriangleAlert, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,7 +15,7 @@ import { useJson } from "./use-retainers-data";
 
 type Props = {
   retainerId: string | null; locale: string; reloadToken: number; onClose: () => void;
-  onAction: (a: RetainerRowAction, r: RetainerDetailDto) => void; onRemoveUsage: (retainerId: string, usageId: string) => void;
+  onAction: (a: RetainerRowAction, r: RetainerDetailDto) => void; onRemoveUsage: (retainerId: string, usageId: string) => void; onRemovePriceChange: (retainerId: string, changeId: string) => void;
 };
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -23,9 +23,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 const HEADLINE: RetainerRowAction[] = ["billNow", "resume", "edit", "addUsage"];
-const SECONDARY: RetainerRowAction[] = ["pause", "cancel", "delete"];
+const SECONDARY: RetainerRowAction[] = ["previewInvoice", "schedulePrice", "exportInvoices", "pause", "cancel", "delete"];
 
-export function RetainerDrawer({ retainerId, locale, reloadToken, onClose, onAction, onRemoveUsage }: Props) {
+export function RetainerDrawer({ retainerId, locale, reloadToken, onClose, onAction, onRemoveUsage, onRemovePriceChange }: Props) {
   const t = useTranslations("RetainersHub");
   const { data, error, loading, reload } = useJson<{ data: RetainerDetailDto }>(retainerId ? `/api/retainers/${retainerId}` : null);
   const r = data?.data && data.data.id === retainerId ? data.data : null;
@@ -61,7 +61,7 @@ export function RetainerDrawer({ retainerId, locale, reloadToken, onClose, onAct
                   <Button key={a} size="sm" variant={i === 0 ? "primary-action" : "outline"} onClick={() => onAction(a, r)}>{t(`actions.${a}`)}</Button>
                 ))}
                 {SECONDARY.filter((a) => actions.includes(a)).map((a) => (
-                  <Button key={a} size="sm" variant="ghost" onClick={() => onAction(a, r)} className={cn(a !== "pause" && "text-rose-600 hover:text-rose-700")}>{t(`actions.${a}`)}</Button>
+                  <Button key={a} size="sm" variant="ghost" onClick={() => onAction(a, r)} className={cn((a === "cancel" || a === "delete") && "text-rose-600 hover:text-rose-700")}>{t(`actions.${a}`)}</Button>
                 ))}
               </div>
             </>
@@ -77,7 +77,14 @@ export function RetainerDrawer({ retainerId, locale, reloadToken, onClose, onAct
               {r.lastError && r.status === "ACTIVE" && (
                 <div role="alert" className="flex items-start gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-800 dark:text-rose-200">
                   <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-                  <div><p className="font-semibold">{t("drawer.lastErrorTitle")}</p><p className="opacity-90">{r.lastError}</p></div>
+                  <div className="min-w-0">
+                    <p className="font-semibold">{t("drawer.lastErrorTitle")}</p>
+                    <p className="opacity-90">{r.lastError}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" onClick={() => onAction("edit", r)}>{t("drawer.fix")}</Button>
+                      <Button size="sm" variant="primary-action" onClick={() => onAction("billNow", r)}>{t("drawer.retry")}</Button>
+                    </div>
+                  </div>
                 </div>
               )}
               {r.displayStatus === "DUE" && <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-200">{t("drawer.dueNote")}</p>}
@@ -88,6 +95,12 @@ export function RetainerDrawer({ retainerId, locale, reloadToken, onClose, onAct
                 <Field label={t("drawer.ends")}>{r.endDate ? formatDate(r.endDate, locale) : t("drawer.noEnd")}</Field>
                 <Field label={t("drawer.paymentTerms")}>{t("drawer.days", { count: r.paymentTermsDays })}</Field>
                 <Field label={t("drawer.lastBilled")}>{r.lastBilledAt ? formatDateTime(r.lastBilledAt, locale) : "—"}</Field>
+                <Field label={t("drawer.reminders")}>
+                  <span><BellRing className="me-1 inline size-3.5 align-[-2px] text-muted-foreground" aria-hidden />{r.remindersEnabled ? t("drawer.remindersOn") : t("drawer.remindersOff")}</span>
+                </Field>
+                <Field label={t("drawer.renewal")}>
+                  <span><Repeat className="me-1 inline size-3.5 align-[-2px] text-muted-foreground" aria-hidden />{r.autoRenew && r.renewCycles ? t("drawer.renewsBy", { count: r.renewCycles }) : t("drawer.noRenewal")}</span>
+                </Field>
                 <Field label={t("drawer.delivery")}>
                   <span className="inline-flex items-center gap-1">
                     {r.emailInvoice ? <><Mail className="size-3.5 text-muted-foreground" aria-hidden />{t("drawer.autoEmail")}</> : t("drawer.manualSend")}
@@ -135,6 +148,30 @@ export function RetainerDrawer({ retainerId, locale, reloadToken, onClose, onAct
                 </section>
               )}
 
+              {(r.priceChanges.length > 0 || live) && (
+                <section aria-labelledby="rd-price" className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 id="rd-price" className="text-sm font-semibold">{t("drawer.priceChanges")}</h3>
+                    {live && <Button size="sm" variant="outline" className="gap-1.5" onClick={() => onAction("schedulePrice", r)}>{t("actions.schedulePrice")}</Button>}
+                  </div>
+                  {r.priceChanges.length === 0 ? <p className="text-sm text-muted-foreground">{t("drawer.noPriceChanges")}</p> : (
+                    <ul className="divide-y divide-border/60 rounded-xl border border-border/70 text-sm">
+                      {r.priceChanges.map((c) => (
+                        <li key={c.id} className="flex items-center justify-between gap-3 px-3 py-2">
+                          <span className="min-w-0">
+                            <span className="block font-medium tabular-nums">{c.percent > 0 ? "+" : ""}{c.percent}% · {formatDate(c.effectiveDate, locale)}</span>
+                            {c.note && <span className="text-xs text-muted-foreground">{c.note}</span>}
+                          </span>
+                          {c.appliedAt ? <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{t("drawer.applied")}</span> : (
+                            <Button type="button" size="icon" variant="ghost" className="size-7" aria-label={t("drawer.removePriceChange")} onClick={() => onRemovePriceChange(r.id, c.id)}><X className="size-3.5" aria-hidden /></Button>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              )}
+
               {(r.usage.some((u) => u.status === "PENDING") || r.status === "ACTIVE") && (
                 <section aria-labelledby="rd-usage" className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -145,7 +182,7 @@ export function RetainerDrawer({ retainerId, locale, reloadToken, onClose, onAct
                     <ul className="divide-y divide-border/60 rounded-xl border border-border/70 text-sm">
                       {r.usage.filter((u) => u.status === "PENDING").map((u) => (
                         <li key={u.id} className="flex items-center justify-between gap-3 px-3 py-2">
-                          <span className="min-w-0"><span className="block truncate font-medium">{u.description}</span><span className="text-xs text-muted-foreground tabular-nums">{u.quantity} × {money(u.unitPrice)}</span></span>
+                          <span className="min-w-0"><span className="block truncate font-medium">{u.description}</span><span className="text-xs text-muted-foreground tabular-nums">{u.quantity} × {money(u.unitPrice)}{u.taxRatePercent !== null ? ` · ${u.taxRatePercent}%` : ""}</span></span>
                           <span className="flex items-center gap-1"><span className="font-semibold tabular-nums">{money(u.total)}</span>
                             <Button type="button" size="icon" variant="ghost" className="size-7" aria-label={t("drawer.removeUsage")} onClick={() => onRemoveUsage(r.id, u.id)}><X className="size-3.5" aria-hidden /></Button></span>
                         </li>
@@ -170,6 +207,7 @@ export function RetainerDrawer({ retainerId, locale, reloadToken, onClose, onAct
                           <span className="text-end">
                             <span className="block font-semibold tabular-nums">{formatMoney(i.total, i.currency, locale)}</span>
                             <span className={cn("text-xs", i.overdue ? "font-semibold text-rose-600 dark:text-rose-400" : "text-muted-foreground")}>
+                              {i.nextReminderAt && i.status !== "PAID" && i.status !== "VOID" ? `${t("drawer.nextReminder", { date: formatDate(i.nextReminderAt, locale) })} · ` : ""}
                               {i.status === "PAID" ? t("drawer.paid") : i.status === "VOID" ? t("drawer.void") : i.overdue ? t("drawer.overdue", { amount: formatMoney(i.balance, i.currency, locale) }) : t("drawer.due", { amount: formatMoney(i.balance, i.currency, locale) })}
                             </span>
                           </span>

@@ -30,6 +30,9 @@ export type RetainerListItemDto = {
 
 export type RetainerInvoiceDto = {
   id: string;
+  /** Automatic payment reminders already sent, and when the next one goes out (null = none left / not applicable). */
+  remindersSent: number;
+  nextReminderAt: string | null;
   invoiceNumber: string;
   invoiceDate: string;
   dueDate: string | null;
@@ -47,7 +50,11 @@ export type RetainerDetailDto = RetainerListItemDto & {
   paymentTermsDays: number;
   items: Array<{ id: string; serviceTemplateId: string | null; title: string; quantity: number; unitPrice: string; taxRatePercent: number; total: string }>;
   upcoming: Array<{ date: string; total: string }>;
-  usage: Array<{ id: string; description: string; quantity: string; unitPrice: string; total: string; status: string; createdAt: string }>;
+  usage: Array<{ id: string; description: string; quantity: string; unitPrice: string; total: string; taxRatePercent: number | null; status: string; createdAt: string }>;
+  remindersEnabled: boolean;
+  autoRenew: boolean;
+  renewCycles: number | null;
+  priceChanges: Array<{ id: string; effectiveDate: string; percent: number; note: string | null; appliedAt: string | null }>;
   invoices: RetainerInvoiceDto[];
   invoiceTotals: { billed: string; outstanding: string; count: number };
   timeline: Array<{ id: string; type: string; message: string | null; createdAt: string }>;
@@ -71,7 +78,22 @@ export type RetainerSummaryDto = {
   outstandingValue: string;
   outstandingCount: number;
   overdueCount: number;
+  risk: RetainerRiskDto;
 };
+
+export type RetainerRiskItem = {
+  id: string;
+  name: string;
+  clientName: string;
+  reason: "PAUSED" | "FAILED" | "OVERDUE" | "ENDING" | "RENEWS";
+  /** Monthly recurring revenue involved, base currency. */
+  mrr: string;
+  /** Overdue amount (OVERDUE) or end date (ENDING/RENEWS), when relevant. */
+  amount: string | null;
+  date: string | null;
+};
+
+export type RetainerRiskDto = { atRiskMrr: string; counts: { paused: number; failed: number; overdue: number; ending: number }; items: RetainerRiskItem[] };
 
 export type RetainerPreviewDto = {
   subtotal: string;

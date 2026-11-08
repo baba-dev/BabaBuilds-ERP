@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Search, X } from "lucide-react";
+import { Download, Search, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
@@ -10,10 +12,10 @@ import type { RetainerDisplayStatus } from "@/lib/retainers/status";
 import { STATUS_ORDER, STATUS_STYLES } from "./retainer-utils";
 import type { RetainerFilters } from "./use-retainers-data";
 
-type Props = { filters: RetainerFilters; statusCounts: Record<RetainerDisplayStatus, number> | null; clientName: string | null; onChange: (patch: Partial<RetainerFilters>) => void };
+type Props = { filters: RetainerFilters; statusCounts: Record<RetainerDisplayStatus, number> | null; clientName: string | null; onChange: (patch: Partial<RetainerFilters>) => void; exportListHref: string; exportInvoicesHref: string };
 const ALL = "__all__";
 
-export function RetainerFilterBar({ filters, statusCounts, clientName, onChange }: Props) {
+export function RetainerFilterBar({ filters, statusCounts, clientName, onChange, exportListHref, exportInvoicesHref }: Props) {
   const t = useTranslations("RetainersHub");
   const [search, setSearch] = useState(filters.q);
   const last = useRef(filters.q);
@@ -54,6 +56,15 @@ export function RetainerFilterBar({ filters, statusCounts, clientName, onChange 
             {["MONTHLY", "QUARTERLY", "ANNUALLY"].map((f) => <SelectItem key={f} value={f}>{t(`frequency.${f}`)}</SelectItem>)}
           </SelectContent>
         </Select>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" variant="outline" className="h-10 gap-1.5 rounded-xl"><Download className="size-4" aria-hidden />{t("export.label")}</Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-60">
+            <DropdownMenuItem asChild><a href={exportListHref} download>{t("export.list")}</a></DropdownMenuItem>
+            <DropdownMenuItem asChild><a href={exportInvoicesHref} download>{t("export.invoices")}</a></DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t("filters.status")}>
         <button type="button" onClick={() => onChange({ status: [], page: 1 })} aria-pressed={filters.status.length === 0} className={chip(filters.status.length === 0)}>

@@ -4,7 +4,8 @@ type Db = PrismaClient | Prisma.TransactionClient;
 
 export type RetainerEventType =
   | "CREATED" | "EDITED" | "PAUSED" | "RESUMED" | "CANCELLED" | "COMPLETED"
-  | "BILLED" | "BILL_FAILED" | "EMAIL_FAILED" | "USAGE_ADDED" | "USAGE_REMOVED";
+  | "BILLED" | "BILL_FAILED" | "EMAIL_FAILED" | "USAGE_ADDED" | "USAGE_REMOVED"
+  | "PRICE_SCHEDULED" | "PRICE_CHANGED" | "RENEWED" | "REMINDER_SENT" | "REMINDER_FAILED";
 
 export async function addRetainerEvent(
   db: Db,

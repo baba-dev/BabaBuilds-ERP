@@ -24,6 +24,9 @@ export const retainerInputSchema = z.object({
   maxCycles: z.coerce.number().int().min(1).max(1200).nullish().transform((v) => v ?? null),
   autoAppendMonth: z.boolean().default(true),
   emailInvoice: z.boolean().default(true),
+  remindersEnabled: z.boolean().default(true),
+  autoRenew: z.boolean().default(false),
+  renewCycles: z.coerce.number().int().min(1).max(1200).nullish().transform((v) => v ?? null),
   paymentTermsDays: z.coerce.number().int().min(0).max(365).default(7),
   currency: z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/).optional(),
   exchangeRate: z.coerce.number().positive().finite().max(1_000_000).optional(),
@@ -40,6 +43,19 @@ export const usageInputSchema = z.object({
   description: z.string().trim().min(1, "Describe the usage.").max(200),
   quantity: z.coerce.number().positive().max(1_000_000),
   unitPrice: z.coerce.number().min(0).max(1_000_000_000),
+  /** Percentage (18). Omit to use the retainer's own tax rate. */
+  taxRate: z.coerce.number().min(0).max(100).nullish().transform((v) => (v === null || v === undefined ? null : v)),
+});
+
+export const priceChangeSchema = z.object({
+  effectiveDate: isoDate,
+  percent: z.coerce.number().min(-90).max(500).refine((v) => v !== 0, "Enter a percentage other than 0."),
+  note: optionalText(200),
+});
+
+export const bulkActionSchema = z.object({
+  action: z.enum(["pause", "resume", "billNow"]),
+  ids: z.array(z.string().trim().min(1).max(64)).min(1).max(50),
 });
 
 export const billNowSchema = z.object({}).passthrough();

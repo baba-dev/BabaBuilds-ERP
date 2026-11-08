@@ -13,16 +13,16 @@ export const STATUS_STYLES: Record<RetainerDisplayStatus, { chip: string; dot: s
   CANCELLED: { chip: "bg-rose-50 text-rose-700 ring-rose-600/20 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-400/20", dot: "bg-rose-500" },
 };
 
-export type RetainerRowAction = "open" | "billNow" | "edit" | "pause" | "resume" | "cancel" | "delete" | "addUsage" | "viewInvoices";
+export type RetainerRowAction = "open" | "billNow" | "edit" | "pause" | "resume" | "cancel" | "delete" | "addUsage" | "viewInvoices" | "schedulePrice" | "previewInvoice" | "exportInvoices";
 
 /** What the owner can do next; the server re-checks every one. */
 export function availableActions(status: string, cyclesBilled: number): RetainerRowAction[] {
   switch (status) {
     case "ACTIVE":
-      return ["billNow", "addUsage", "edit", "pause", "viewInvoices", cyclesBilled === 0 ? "delete" : "cancel"];
+      return ["billNow", "previewInvoice", "addUsage", "schedulePrice", "edit", "pause", "viewInvoices", "exportInvoices", cyclesBilled === 0 ? "delete" : "cancel"];
     case "PAUSED":
-      return ["resume", "edit", "viewInvoices", cyclesBilled === 0 ? "delete" : "cancel"];
+      return ["resume", "edit", "schedulePrice", "viewInvoices", "exportInvoices", cyclesBilled === 0 ? "delete" : "cancel"];
     default:
-      return ["viewInvoices"];
+      return ["viewInvoices", "exportInvoices"];
   }
 }

@@ -25,7 +25,7 @@ import { useJson } from "../_components/use-retainers-data";
 type Draft = { key: string; serviceTemplateId: string | null; title: string; quantity: string; unitPrice: string; taxRate: string };
 type Catalog = { id: string; name: string; description: string | null; defaultPrice: string | number };
 type ClientOption = { id: string; name: string; email: string | null };
-type Initial = { clientId: string; name: string; notes: string; frequency: string; nextBillingDate: string; endDate: string; maxCycles: string; autoAppendMonth: boolean; emailInvoice: boolean; paymentTermsDays: string; items: Draft[] };
+type Initial = { clientId: string; name: string; notes: string; frequency: string; nextBillingDate: string; endDate: string; maxCycles: string; autoAppendMonth: boolean; emailInvoice: boolean; remindersEnabled: boolean; autoRenew: boolean; renewCycles: string; paymentTermsDays: string; items: Draft[] };
 
 let n = 0;
 const key = () => `r${Date.now().toString(36)}${(n++).toString(36)}`;
@@ -37,7 +37,7 @@ const firstOfNextMonth = () => { const d = new Date(); return dateInput(new Date
 function fromDetail(r: RetainerDetailDto): Initial {
   return {
     clientId: r.clientId, name: r.name, notes: r.notes ?? "", frequency: r.frequency, nextBillingDate: r.nextBillingDate.slice(0, 10), endDate: r.endDate ? r.endDate.slice(0, 10) : "",
-    maxCycles: r.maxCycles ? String(r.maxCycles) : "", autoAppendMonth: r.autoAppendMonth, emailInvoice: r.emailInvoice, paymentTermsDays: String(r.paymentTermsDays),
+    maxCycles: r.maxCycles ? String(r.maxCycles) : "", autoAppendMonth: r.autoAppendMonth, emailInvoice: r.emailInvoice, remindersEnabled: r.remindersEnabled, autoRenew: r.autoRenew, renewCycles: r.renewCycles ? String(r.renewCycles) : "", paymentTermsDays: String(r.paymentTermsDays),
     items: r.items.map((i) => ({ key: key(), serviceTemplateId: i.serviceTemplateId, title: i.title, quantity: String(i.quantity), unitPrice: String(Number(i.unitPrice)), taxRate: i.taxRatePercent ? String(i.taxRatePercent) : "" })),
   };
 }
@@ -98,7 +98,7 @@ function Form({ retainerId, detail, clients, catalog, catalogLoading }: FormProp
 
   const [initial] = useState<Initial>(() => {
     if (detail) return fromDetail(detail);
-    const base: Initial = { clientId: sp.get("client") ?? "", name: "", notes: "", frequency: "MONTHLY", nextBillingDate: firstOfNextMonth(), endDate: "", maxCycles: "", autoAppendMonth: true, emailInvoice: true, paymentTermsDays: "7", items: [blank()] };
+    const base: Initial = { clientId: sp.get("client") ?? "", name: "", notes: "", frequency: "MONTHLY", nextBillingDate: firstOfNextMonth(), endDate: "", maxCycles: "", autoAppendMonth: true, emailInvoice: true, remindersEnabled: true, autoRenew: false, renewCycles: "", paymentTermsDays: "7", items: [blank()] };
     const ai = typeof window !== "undefined" ? readAiPayload(clients, catalog) : null;
     return ai ? { ...base, ...ai } : base;
   });
@@ -111,6 +111,9 @@ function Form({ retainerId, detail, clients, catalog, catalogLoading }: FormProp
   const [maxCycles, setMax] = useState(initial.maxCycles);
   const [autoAppendMonth, setAuto] = useState(initial.autoAppendMonth);
   const [emailInvoice, setEmailInvoice] = useState(initial.emailInvoice);
+  const [remindersEnabled, setReminders] = useState(initial.remindersEnabled);
+  const [autoRenew, setAutoRenew] = useState(initial.autoRenew);
+  const [renewCycles, setRenewCycles] = useState(initial.renewCycles);
   const [terms, setTerms] = useState(initial.paymentTermsDays);
   const [items, setItems] = useState(initial.items);
   const [query, setQuery] = useState("");
@@ -122,6 +125,32 @@ function Form({ retainerId, detail, clients, catalog, catalogLoading }: FormProp
   const dirty = useRef(false);
   const touch = useCallback(() => { dirty.current = true; }, []);
   const mark = <V,>(set: (v: V) => void) => (v: V) => { touch(); set(v); };
+
+  // Draft autosave (this browser only): survives a refresh or a closed tab, cleared on save.
+  const draftKey = `erp-retainer-draft:${retainerId ?? "new"}`;
+  const snapshot = useMemo(() => ({ clientId, name, notes, frequency, nextBillingDate, endDate, maxCycles, autoAppendMonth, emailInvoice, remindersEnabled, autoRenew, renewCycles, paymentTermsDays: terms, items }), [clientId, name, notes, frequency, nextBillingDate, endDate, maxCycles, autoAppendMonth, emailInvoice, remindersEnabled, autoRenew, renewCycles, terms, items]);
+  const [restorable, setRestorable] = useState<{ at: number; data: Initial } | null>(() => {
+    try {
+      const raw = typeof window === "undefined" ? null : localStorage.getItem(draftKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as { at?: number; data?: Initial };
+      return parsed.data && Array.isArray(parsed.data.items) ? { at: parsed.at ?? Date.now(), data: parsed.data } : null;
+    } catch { return null; }
+  });
+  useEffect(() => {
+    if (!dirty.current) return;
+    const id = window.setTimeout(() => { try { localStorage.setItem(draftKey, JSON.stringify({ at: Date.now(), data: snapshot })); } catch { /* storage unavailable */ } }, 800);
+    return () => window.clearTimeout(id);
+  }, [snapshot, draftKey]);
+  const restoreDraft = () => {
+    if (!restorable) return;
+    const d = restorable.data;
+    touch();
+    setClientId(d.clientId); setName(d.name); setNotes(d.notes); setFrequency(d.frequency); setNext(d.nextBillingDate); setEnd(d.endDate); setMax(d.maxCycles);
+    setAuto(d.autoAppendMonth); setEmailInvoice(d.emailInvoice); setReminders(d.remindersEnabled ?? true); setAutoRenew(d.autoRenew ?? false); setRenewCycles(d.renewCycles ?? "");
+    setTerms(d.paymentTermsDays); setItems(d.items.length ? d.items : [blank()]); setRestorable(null);
+  };
+  const discardDraft = () => { try { localStorage.removeItem(draftKey); } catch { /* storage unavailable */ } setRestorable(null); };
 
   useEffect(() => { try { sessionStorage.removeItem("erp_ai_payload"); } catch { /* storage unavailable */ } }, []);
   useEffect(() => {
@@ -170,14 +199,16 @@ function Form({ retainerId, detail, clients, catalog, catalogLoading }: FormProp
   const limits = useMemo(() => ({ endDate: endDate ? new Date(endDate) : null, maxCycles: maxCycles ? Number(maxCycles) : null, cyclesBilled: detail?.cyclesBilled ?? 0 }), [endDate, maxCycles, detail]);
   const upcoming = useMemo(() => (nextBillingDate ? upcomingDates(new Date(nextBillingDate), frequency, limits, 4) : []), [nextBillingDate, frequency, limits]);
 
+  const hasLimit = Boolean(endDate || maxCycles);
   const checks = {
     client: Boolean(clientId),
     name: name.trim().length > 0,
     items: priced.length > 0 && items.every((i) => !(i.title.trim() || i.unitPrice) || (i.title.trim() && i.unitPrice !== "")),
     date: Boolean(nextBillingDate) && (Boolean(retainerId) || nextBillingDate >= today),
     end: !endDate || endDate >= nextBillingDate,
+    renew: !(autoRenew && hasLimit) || Number(renewCycles) >= 1,
   };
-  const canSave = checks.client && checks.name && checks.items && checks.date && checks.end && !pricing && !(ready && preview.error) && terms !== "";
+  const canSave = checks.client && checks.name && checks.items && checks.date && checks.end && checks.renew && !pricing && !(ready && preview.error) && terms !== "";
 
   const save = async () => {
     if (!canSave || busy) return;
@@ -185,7 +216,7 @@ function Form({ retainerId, detail, clients, catalog, catalogLoading }: FormProp
     setError(null);
     const payload = {
       clientId, name: name.trim(), notes, frequency, nextBillingDate, endDate: endDate || null, maxCycles: maxCycles ? Number(maxCycles) : null,
-      autoAppendMonth, emailInvoice, paymentTermsDays: Number(terms || 7),
+      autoAppendMonth, emailInvoice, remindersEnabled, autoRenew: autoRenew && hasLimit, renewCycles: autoRenew && hasLimit ? Number(renewCycles || 0) || null : null, paymentTermsDays: Number(terms || 7),
       items: valid.map((i) => ({ serviceTemplateId: i.serviceTemplateId, title: i.title.trim(), quantity: Number(i.quantity), unitPrice: Number(i.unitPrice), taxRate: i.taxRate === "" ? null : Number(i.taxRate) })),
       ...(taxOverride !== null ? { taxRateOverride: taxOverride } : {}),
     };
@@ -194,6 +225,7 @@ function Form({ retainerId, detail, clients, catalog, catalogLoading }: FormProp
       const out = (await res.json().catch(() => null)) as { error?: string; retainer?: { id: string } } | null;
       if (!res.ok || !out?.retainer) { setError(out?.error || t("saveFailed")); return; }
       dirty.current = false;
+      try { localStorage.removeItem(draftKey); } catch { /* storage unavailable */ }
       toast.success(retainerId ? t("updated") : t("created"));
       router.push(`/retainers?retainer=${out.retainer.id}`);
     } catch { setError(t("saveFailed")); } finally { setBusy(false); }
@@ -218,6 +250,15 @@ function Form({ retainerId, detail, clients, catalog, catalogLoading }: FormProp
   return (
     <form onSubmit={(e) => { e.preventDefault(); void save(); }} className="grid gap-6 pb-28 lg:grid-cols-[minmax(0,1fr)_22rem] lg:pb-0" noValidate>
       <div className="min-w-0 space-y-5">
+        {restorable && (
+          <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-indigo-500/30 bg-indigo-500/5 p-3 text-sm">
+            <span>{t("draft.found", { time: new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(restorable.at)) })}</span>
+            <span className="flex gap-2">
+              <Button type="button" size="sm" variant="primary-action" onClick={restoreDraft}>{t("draft.restore")}</Button>
+              <Button type="button" size="sm" variant="ghost" onClick={discardDraft}>{t("draft.discard")}</Button>
+            </span>
+          </div>
+        )}
         <ComposerSection step={1} title={t("basics.title")} hint={t("basics.hint")} done={checks.client && checks.name}>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
@@ -315,6 +356,23 @@ function Form({ retainerId, detail, clients, catalog, catalogLoading }: FormProp
                 <input type="checkbox" checked={autoAppendMonth} onChange={(e) => mark(setAuto)(e.target.checked)} className="mt-0.5 size-4 rounded border-border accent-indigo-600" />
                 <span><span className="block font-medium">{t("schedule.smartNaming")}</span><span className="text-xs text-muted-foreground">{t("schedule.smartNamingHint")}</span></span>
               </label>
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/70 p-3 text-sm">
+                <input type="checkbox" checked={remindersEnabled} onChange={(e) => mark(setReminders)(e.target.checked)} className="mt-0.5 size-4 rounded border-border accent-indigo-600" />
+                <span><span className="block font-medium">{t("schedule.reminders")}</span><span className="text-xs text-muted-foreground">{t("schedule.remindersHint")}</span></span>
+              </label>
+              <div className={cn("rounded-xl border border-border/70 p-3 text-sm", !hasLimit && "opacity-60")}>
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input type="checkbox" disabled={!hasLimit} checked={autoRenew && hasLimit} onChange={(e) => mark(setAutoRenew)(e.target.checked)} className="mt-0.5 size-4 rounded border-border accent-indigo-600" />
+                  <span><span className="block font-medium">{t("schedule.renew")}</span><span className="text-xs text-muted-foreground">{hasLimit ? t("schedule.renewHint") : t("schedule.renewNeedsLimit")}</span></span>
+                </label>
+                {autoRenew && hasLimit && (
+                  <div className="mt-3 flex items-center gap-2 ps-7">
+                    <Label htmlFor="rc-renew" className="text-xs">{t("schedule.renewBy")}</Label>
+                    <Input id="rc-renew" inputMode="numeric" value={renewCycles} onChange={(e) => mark(setRenewCycles)(e.target.value.replace(/[^0-9]/g, ""))} className="h-9 w-24 tabular-nums" />
+                    <span className="text-xs text-muted-foreground">{t("schedule.cycles")}</span>
+                  </div>
+                )}
+              </div>
               <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/70 p-3 text-sm">
                 <input type="checkbox" checked={emailInvoice} onChange={(e) => mark(setEmailInvoice)(e.target.checked)} className="mt-0.5 size-4 rounded border-border accent-indigo-600" />
                 <span><span className="block font-medium">{t("schedule.email")}</span><span className="text-xs text-muted-foreground">{t("schedule.emailHint")}</span></span>

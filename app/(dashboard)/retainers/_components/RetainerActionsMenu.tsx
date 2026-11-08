@@ -1,14 +1,14 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Ban, CirclePause, CirclePlay, Eye, FileText, Gauge, MoreHorizontal, Pencil, PlayCircle, Trash2 } from "lucide-react";
+import { Ban, CalendarClock, Download, FileSearch, CirclePause, CirclePlay, Eye, FileText, Gauge, MoreHorizontal, Pencil, PlayCircle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { RetainerListItemDto } from "@/lib/retainers/types";
 import { availableActions, type RetainerRowAction } from "./retainer-utils";
 
 const ICONS: Record<RetainerRowAction, typeof Eye> = {
-  open: Eye, billNow: PlayCircle, edit: Pencil, pause: CirclePause, resume: CirclePlay, cancel: Ban, delete: Trash2, addUsage: Gauge, viewInvoices: FileText,
+  open: Eye, billNow: PlayCircle, edit: Pencil, pause: CirclePause, resume: CirclePlay, cancel: Ban, delete: Trash2, addUsage: Gauge, viewInvoices: FileText, schedulePrice: CalendarClock, previewInvoice: FileSearch, exportInvoices: Download,
 };
 const DESTRUCTIVE: RetainerRowAction[] = ["cancel", "delete"];
 
