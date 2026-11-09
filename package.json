@@ -17,6 +17,7 @@
     "validate": "npm run lint && npm run typecheck && npm run build",
     "check:locales": "node scripts/check-locales.js",
     "check:migrations": "bash scripts/check-migrations.sh",
+    "admin:promote": "tsx scripts/make-admin.ts",
     "backfill": "tsx scripts/backfill.ts",
     "backfill:invoices": "npm run backfill",
     "check:kpi-impact": "node scripts/check-dashboard-kpi-coverage.js",

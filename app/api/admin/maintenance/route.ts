@@ -1,3 +1,4 @@
+import { logActivity } from '@/lib/security/activity-log';
 import { NextResponse } from "next/server";
 import { handleAdminApiError, verifySuperAdmin } from "../authz";
 import { prisma } from "@/lib/prisma";
@@ -9,7 +10,7 @@ import { ensureDir, getPrivateUploadsRoot } from '@/lib/uploads/private-storage'
 
 export async function POST(req: Request) {
   try {
-    await verifySuperAdmin();
+    const admin = await verifySuperAdmin();
     const { action } = await req.json();
 
     if (['PURGE_DEMO', 'PRUNE_FILES', 'CLEAR_LOGS', 'CLEAR_CACHE', 'STAMP_PAID_INVOICES', 'REGENERATE_INVOICES', 'REBOOT'].includes(action)) {
@@ -20,6 +21,7 @@ export async function POST(req: Request) {
         details: { action },
         dedupeKey: `maintenance:${action}`
       });
+      await logActivity({ action: `admin_maintenance_${String(action).toLowerCase()}`, status: 'SUCCESS', workspaceId: null, actor: { userId: admin.userId, email: admin.email }, entity: { type: 'maintenance', id: String(action) }, metadata: { action }, request: req });
     }
 
     switch (action) {

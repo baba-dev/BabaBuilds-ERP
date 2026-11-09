@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getAdminDecision } from "@/lib/admin/session";
 
 export type AuthzCode = "UNAUTHORIZED" | "FORBIDDEN";
 
@@ -17,34 +15,15 @@ export class AuthzError extends Error {
   }
 }
 
-function superAdminEmails(): Set<string> {
-  const raw = process.env.SUPERADMIN_EMAILS?.trim();
-  if (!raw) return new Set();
-  return new Set(raw.split(",").map((email) => email.trim().toLowerCase()).filter(Boolean));
-}
-
 /**
  * Fail-closed platform super-admin check. Session claims are not sufficient:
- * the user role and email allowlist are re-read from trusted server state.
+ * the user role and email allowlist are re-read from trusted server state, with the same rule the admin pages use.
  */
 export async function verifySuperAdmin(): Promise<{ userId: string; email: string }> {
-  const session = await getServerSession(authOptions);
-  const sessionUserId = session?.user?.id;
-
-  if (!session || !sessionUserId) {
-    throw new AuthzError("UNAUTHORIZED");
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: sessionUserId },
-    select: { id: true, email: true, role: true },
-  });
-  const email = user?.email?.trim().toLowerCase();
-  if (!user || user.role !== "ADMIN" || !email || !superAdminEmails().has(email)) {
-    throw new AuthzError("FORBIDDEN", "Super-admin role required");
-  }
-
-  return { userId: user.id, email };
+  const decision = await getAdminDecision();
+  if (decision.ok && decision.userId) return { userId: decision.userId, email: decision.email };
+  if (!decision.ok && decision.reason === "ANONYMOUS") throw new AuthzError("UNAUTHORIZED");
+  throw new AuthzError("FORBIDDEN", "Super-admin role required");
 }
 
 export function handleAdminApiError(error: unknown, fallbackMessage = "Server Error") {

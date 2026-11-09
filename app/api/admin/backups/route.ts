@@ -3,8 +3,13 @@ import { handleAdminApiError, verifySuperAdmin } from "../authz";
 import fs from "fs";
 import path from "path";
 import JSZip from "jszip";
+import os from "os";
+import { prisma } from "@/lib/prisma";
+import { getPrivateUploadsRoot } from "@/lib/uploads/private-storage";
+import { logActivity } from "@/lib/security/activity-log";
 
 const BACKUP_DIR = path.join(process.cwd(), "backups");
+
 
 // Ensure backup directory exists
 async function ensureBackupDir() {
@@ -29,7 +34,7 @@ export async function GET() {
           return {
             filename: file,
             size: stats.size,
-            createdAt: stats.birthtime,
+            createdAt: stats.mtime,
           };
         })
     );
@@ -42,7 +47,7 @@ export async function GET() {
 
 export async function POST() {
   try {
-    await verifySuperAdmin();
+    const admin = await verifySuperAdmin();
     await ensureBackupDir();
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -51,29 +56,41 @@ export async function POST() {
 
     const zip = new JSZip();
 
-    // 1. Add Database (using stream for memory efficiency)
-    const dbPath = path.join(process.cwd(), "prisma", "dev.db");
+    // 1. A consistent database snapshot. Copying a live SQLite file can capture it mid-write, so take a snapshot first.
+    const snapshotPath = path.join(os.tmpdir(), `erp-snapshot-${Date.now()}.db`);
+    let dbIncluded = false;
     try {
-      await fs.promises.access(dbPath);
-      // JSZip can take a node stream
-      zip.file("database/dev.db", fs.createReadStream(dbPath));
+      await prisma.$executeRawUnsafe(`VACUUM INTO '${snapshotPath.replace(/'/g, "''")}'`);
+      zip.file("database/erp.db", fs.createReadStream(snapshotPath));
+      dbIncluded = true;
+    } catch (error) {
+      console.error("Backup: database snapshot failed", error);
+    }
+
+    // 2. Uploaded files. They live in private storage (PRIVATE_UPLOADS_DIR or ./private_uploads); the old backup only
+    // looked in public/ and so missed invoices, receipts, logos and documents.
+    let uploadsIncluded = false;
+    try {
+      const root = getPrivateUploadsRoot();
+      await fs.promises.access(root);
+      await addFolderToZip(zip, root, "uploads");
+      uploadsIncluded = true;
     } catch {
-      console.warn("Database file not found during backup.");
+      // No uploads yet.
     }
-
-    // 2. Add Uploads (Invoices, Logos, Receipts)
-    const uploadDirs = ["invoices", "logos", "receipts"];
-    const publicDir = path.join(process.cwd(), "public");
-
-    for (const dir of uploadDirs) {
-        const fullDirPath = path.join(publicDir, dir);
-        try {
-          await fs.promises.access(fullDirPath);
-          await addFolderToZip(zip, fullDirPath, `uploads/${dir}`);
-        } catch {
-          // Skip if directory missing
-        }
+    for (const dir of ["invoices", "logos", "receipts"]) {
+      const legacy = path.join(process.cwd(), "public", dir);
+      try {
+        await fs.promises.access(legacy);
+        await addFolderToZip(zip, legacy, `legacy-public/${dir}`);
+      } catch {
+        // Skip if directory missing
+      }
     }
+    if (!dbIncluded) {
+      return NextResponse.json({ error: "The database snapshot failed, so no backup was written. Check the server log.", code: "SNAPSHOT_FAILED" }, { status: 500 });
+    }
+    zip.file("manifest.json", JSON.stringify({ createdAt: new Date().toISOString(), database: dbIncluded, uploads: uploadsIncluded }, null, 2));
 
     // Generate ZIP as NodeBuffer and save
     const content = await zip.generateAsync({ 
@@ -83,6 +100,7 @@ export async function POST() {
     });
     
     await fs.promises.writeFile(backupPath, content);
+    await fs.promises.unlink(snapshotPath).catch(() => undefined);
 
     // 3. Prune old backups (Keep last 5)
     const files = await fs.promises.readdir(BACKUP_DIR);
@@ -91,7 +109,7 @@ export async function POST() {
         .filter(file => file.endsWith(".zip"))
         .map(async file => ({
           name: file,
-          time: (await fs.promises.stat(path.join(BACKUP_DIR, file))).birthtime.getTime()
+          time: (await fs.promises.stat(path.join(BACKUP_DIR, file))).mtime.getTime()
         }))
     );
     
@@ -104,7 +122,8 @@ export async function POST() {
       }
     }
 
-    return NextResponse.json({ success: true, filename: backupName });
+    await logActivity({ action: "admin_backup_created", status: "SUCCESS", workspaceId: null, actor: { userId: admin.userId, email: admin.email }, entity: { type: "backup", id: backupName }, metadata: { uploads: uploadsIncluded } });
+    return NextResponse.json({ success: true, filename: backupName, uploads: uploadsIncluded });
   } catch (error) {
     return handleAdminApiError(error, "Failed to create backup");
   }
