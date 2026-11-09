@@ -2,6 +2,7 @@ import { z } from "zod";
 import { r2, splitIntra } from "./money";
 import { normalizeGstin, validateGstin } from "./gstin";
 import { isStateCode } from "./states";
+import { validateUdyam } from "@/lib/msme/udyam";
 
 export const ITC_STATUSES = ["NONE", "ELIGIBLE", "INELIGIBLE", "REVERSE_CHARGE"] as const;
 export type ItcStatus = (typeof ITC_STATUSES)[number];
@@ -18,6 +19,10 @@ export const expenseGstSchema = z.object({
   gstRate: z.number().finite().min(0).max(100).optional().nullable(),
   /** UNPAID bills lose their credit after 180 days (rule 37) until they are paid. */
   paymentStatus: z.enum(["PAID", "UNPAID"]).default("PAID"),
+  /** MSME supplier tag for section 43B(h): payments to micro and small enterprises are due within 45 days. */
+  vendorMsme: z.enum(["NONE", "MICRO", "SMALL", "MEDIUM"]).optional().nullable(),
+  vendorUdyam: z.string().trim().max(30).optional().nullable(),
+  vendorAgreedDays: z.number().int().min(0).max(365).optional().nullable(),
 });
 export type ExpenseGstFields = z.infer<typeof expenseGstSchema>;
 
@@ -59,7 +64,7 @@ export function vendorStateOf(gstin: string | null | undefined, chosen: string |
 }
 
 export type NormalizedExpenseGst =
-  | { ok: true; data: { itcStatus: ItcStatus; vendorGstin: string | null; vendorInvoiceNo: string | null; vendorStateCode: string | null; hsnCode: string | null; gstRate: number | null; paymentStatus: "PAID" | "UNPAID"; igstAmount: number; cgstAmount: number; sgstAmount: number; cessAmount: number } }
+  | { ok: true; data: { itcStatus: ItcStatus; vendorGstin: string | null; vendorInvoiceNo: string | null; vendorStateCode: string | null; hsnCode: string | null; gstRate: number | null; paymentStatus: "PAID" | "UNPAID"; vendorMsme: string | null; vendorUdyam: string | null; vendorAgreedDays: number | null; igstAmount: number; cgstAmount: number; sgstAmount: number; cessAmount: number } }
   | { ok: false; code: string; message: string };
 
 /** Validate the GST block of an expense and compute its tax split. Tax amounts are never taken from the client. */
@@ -67,8 +72,14 @@ export function normalizeExpenseGst(fields: ExpenseGstFields | undefined, amount
   const f = fields ?? { itcStatus: "NONE" as const, paymentStatus: "PAID" as const };
   const gstin = normalizeGstin(f.vendorGstin) || null;
   if (gstin && !validateGstin(gstin).valid) return { ok: false, code: "VENDOR_GSTIN_INVALID", message: "The vendor GSTIN is not valid." };
+  const msmeClass = f.vendorMsme && f.vendorMsme !== "NONE" ? f.vendorMsme : null;
+  const udyam = f.vendorUdyam ? validateUdyam(f.vendorUdyam) : null;
+  if (udyam && !udyam.valid) return { ok: false, code: "VENDOR_UDYAM_INVALID", message: "The supplier's Udyam number looks wrong. It has the form UDYAM-MH-12-0000001." };
+  const msme = { vendorMsme: msmeClass, vendorUdyam: udyam?.value || null, vendorAgreedDays: msmeClass ? (f.vendorAgreedDays && f.vendorAgreedDays > 0 ? Math.min(f.vendorAgreedDays, 45) : null) : null };
   if (f.itcStatus === "NONE") {
-    return { ok: true, data: { itcStatus: "NONE", vendorGstin: gstin, vendorInvoiceNo: f.vendorInvoiceNo || null, vendorStateCode: vendorStateOf(gstin, f.vendorStateCode), hsnCode: f.hsnCode || null, gstRate: null, paymentStatus: "PAID", igstAmount: 0, cgstAmount: 0, sgstAmount: 0, cessAmount: 0 } };
+    // A bill with no GST can still be on credit when the supplier is a micro or small enterprise (section 43B(h)).
+    const onCredit = (msmeClass === "MICRO" || msmeClass === "SMALL") && f.paymentStatus === "UNPAID";
+    return { ok: true, data: { itcStatus: "NONE", vendorGstin: gstin, vendorInvoiceNo: f.vendorInvoiceNo || null, vendorStateCode: vendorStateOf(gstin, f.vendorStateCode), hsnCode: f.hsnCode || null, gstRate: null, paymentStatus: onCredit ? "UNPAID" : "PAID", ...msme, igstAmount: 0, cgstAmount: 0, sgstAmount: 0, cessAmount: 0 } };
   }
   if (f.gstRate === null || f.gstRate === undefined) return { ok: false, code: "GST_RATE_REQUIRED", message: "Choose the GST rate on this bill." };
   const vendorState = vendorStateOf(gstin, f.vendorStateCode);
@@ -83,6 +94,7 @@ export function normalizeExpenseGst(fields: ExpenseGstFields | undefined, amount
       hsnCode: f.hsnCode?.replace(/\D/g, "").slice(0, 8) || null,
       gstRate: f.gstRate,
       paymentStatus: f.paymentStatus ?? "PAID",
+      ...msme,
       igstAmount: calc.igst,
       cgstAmount: calc.cgst,
       sgstAmount: calc.sgst,

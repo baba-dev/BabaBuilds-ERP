@@ -1,6 +1,6 @@
 export type ReadinessCounts = {
   sales: { total: number; missingSac: number; stateAssumed: number; gstinInvalid: number; taxMismatch: number; missingEvidence: number };
-  purchases: { total: number; noReceipt: number; itcMissingVendor: number };
+  purchases: { total: number; noReceipt: number; itcMissingVendor: number; /** Unpaid bills to micro/small suppliers past the 45-day (or agreed) limit: section 43B(h). */ msmeOverdue?: number };
   bank: { total: number; unreconciled: number };
   receivables: { overdueCount: number; overdueAmount: number };
   tds: { undepositedCount: number; undepositedAmount: number };
@@ -58,6 +58,7 @@ export function buildReadiness(c: ReadinessCounts): Readiness {
     ]),
     area("purchases", c.purchases.total, [
       issue("ITC_VENDOR_MISSING", "blocker", gst ? c.purchases.itcMissingVendor : 0, ["GST_GSTR3B"], "/expenses"),
+      issue("MSME_PAYMENT_OVERDUE", "warning", c.purchases.msmeOverdue ?? 0, ["ITR", "TAX_AUDIT"], "/expenses"),
       issue("RECEIPT_MISSING", "warning", c.purchases.noReceipt, ["YEAR_CLOSE"], "/expenses"),
     ]),
     area("bank", c.bank.total, [issue("BANK_UNRECONCILED", "blocker", c.bank.unreconciled, ["YEAR_CLOSE"], "/reconciliation")]),

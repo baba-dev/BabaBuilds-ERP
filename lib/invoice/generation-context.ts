@@ -9,6 +9,7 @@ import {
   canInjectGatewayPaymentLinks,
   type WorkspaceBillingSnapshot,
 } from "@/lib/entitlements";
+import { supplierChargesGst } from "@/lib/msme/threshold";
 
 export type ServiceInput = {
   title?: string;
@@ -256,7 +257,7 @@ export async function buildInvoiceGenerationContext(
   const profileSettings = profile as typeof profile & ProfileSettings;
   const taxResolution = resolveTaxRate({
     countryCode,
-    isTaxExempt: Boolean(client.isExport),
+    isTaxExempt: Boolean(client.isExport) || !supplierChargesGst(profile, countryCode),
     serviceTaxRates,
     workspaceDefaultTaxRate: profileSettings.defaultTaxRate,
     taxRateOverride: taxRateOverrideValue,
@@ -282,7 +283,7 @@ export async function buildInvoiceGenerationContext(
 
   const totals = calculateInvoiceTotals({
     services: sanitizedServices,
-    isTaxExempt: Boolean(client.isExport),
+    isTaxExempt: Boolean(client.isExport) || !supplierChargesGst(profile, countryCode),
     defaultTaxRate: taxResolution.taxRate,
   });
 

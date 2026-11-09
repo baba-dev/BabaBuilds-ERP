@@ -37,8 +37,8 @@ export function presumptiveView(entity: EntityType | null, receipts: number): Pr
 export type GstRegistrationHint = "REGISTERED" | "REGISTRATION_MAY_BE_REQUIRED" | "BELOW_THRESHOLD" | "NOT_APPLICABLE";
 
 /** Compares aggregate turnover with the registration thresholds (services ₹20 lakh; ₹10 lakh in special-category states). Goods suppliers have ₹40 lakh. */
-export function gstRegistrationHint(args: { registered: boolean; countryIsIndia: boolean; turnover: number }): GstRegistrationHint {
+export function gstRegistrationHint(args: { registered: boolean; countryIsIndia: boolean; turnover: number; /** Applicable limit; defaults to the services limit. */ limit?: number }): GstRegistrationHint {
   if (!args.countryIsIndia) return "NOT_APPLICABLE";
   if (args.registered) return "REGISTERED";
-  return args.turnover > CA_RULES.gstRegistration.services ? "REGISTRATION_MAY_BE_REQUIRED" : "BELOW_THRESHOLD";
+  return args.turnover > (args.limit ?? CA_RULES.gstRegistration.services) ? "REGISTRATION_MAY_BE_REQUIRED" : "BELOW_THRESHOLD";
 }

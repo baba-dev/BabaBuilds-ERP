@@ -5,6 +5,7 @@ import { resolveTaxRate } from "@/lib/invoice/tax-resolver";
 import { calculateInvoiceTotals } from "@/lib/invoice/totals";
 import { toDecimal } from "@/lib/money";
 import type { RetainerInput } from "@/lib/retainers/validation";
+import { supplierChargesGst } from "@/lib/msme/threshold";
 
 export type RetainerPricing = {
   /** Fractions (0.18), the unit RetainerItem.taxRate and invoices use. */
@@ -36,13 +37,14 @@ export async function priceRetainer(workspaceId: string, input: Pick<RetainerInp
   const rates: number[] = [];
   let usedOverride = false;
   for (const item of input.items) {
-    if (item.taxRate !== null && item.taxRate !== undefined && !client.isExport) {
+    const taxFree = Boolean(client.isExport) || !supplierChargesGst(profile, countryCode);
+    if (item.taxRate !== null && item.taxRate !== undefined && !taxFree) {
       rates.push(Math.round(item.taxRate * 100) / 10_000);
       continue;
     }
     const resolution = resolveTaxRate({
       countryCode,
-      isTaxExempt: Boolean(client.isExport),
+      isTaxExempt: Boolean(client.isExport) || !supplierChargesGst(profile, countryCode),
       serviceTaxRates: [byId.get(item.serviceTemplateId ?? "")?.sacCode?.igstRate ?? null],
       workspaceDefaultTaxRate: profile?.defaultTaxRate ?? null,
       taxRateOverride: input.taxRateOverride,
@@ -63,7 +65,7 @@ export async function priceRetainer(workspaceId: string, input: Pick<RetainerInp
   const lineTotals = input.items.map((i) => toDecimal(i.quantity).mul(toDecimal(i.unitPrice)).toDecimalPlaces(2));
   const totals = calculateInvoiceTotals({
     services: lineTotals.map((amount, idx) => ({ amount: amount.toNumber(), taxRate: rates[idx] })),
-    isTaxExempt: Boolean(client.isExport),
+    isTaxExempt: Boolean(client.isExport) || !supplierChargesGst(profile, countryCode),
     defaultTaxRate: rates[0] ?? 0,
   });
   return {

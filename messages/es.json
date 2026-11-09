@@ -4785,6 +4785,7 @@
         "TAX_MISMATCH": "{count} facturas donde el impuesto no cuadra",
         "EVIDENCE_MISSING": "{count} facturas sin PDF archivado",
         "ITC_VENDOR_MISSING": "{count} facturas de proveedor reclaman crédito sin GSTIN ni número de factura del proveedor",
+        "MSME_PAYMENT_OVERDUE": "{count} facturas sin pagar a proveedores micro o pequeños superan el plazo permitido (sección 43B(h))",
         "RECEIPT_MISSING": "{count} facturas de proveedor sin recibo",
         "BANK_UNRECONCILED": "{count} movimientos bancarios sin conciliar",
         "GST_RETURN_OVERDUE": "{count} declaraciones de GST vencidas",
@@ -4799,6 +4800,7 @@
         "TAX_MISMATCH": "impuesto descuadrado",
         "EVIDENCE_MISSING": "PDF de facturas",
         "ITC_VENDOR_MISSING": "datos del proveedor",
+        "MSME_PAYMENT_OVERDUE": "pagos tardíos a proveedores pequeños",
         "RECEIPT_MISSING": "recibos",
         "BANK_UNRECONCILED": "conciliación bancaria",
         "GST_RETURN_OVERDUE": "declaración de GST vencida",
@@ -6029,5 +6031,95 @@
       "presumptive": "Los contribuyentes presuntivos pagan todo el anticipo en una cuota el 15 de marzo."
     },
     "act2025": "Desde el 1 de abril de 2026 la Ley del Impuesto a la Renta 2025 sustituye a la de 1961. Los tramos no cambian, pero sí la numeración (la rebaja 87A es ahora la sección 202)."
+  },
+  "SmallBusiness": {
+    "title": "Estado de pequeña empresa",
+    "subtitle": "Cómo estás frente al límite de registro del GST, además de tu posición Udyam y MSME.",
+    "progress": "Parte del límite de registro del GST utilizada",
+    "of": "de {limit} este ejercicio fiscal",
+    "special": "límite de estado de categoría especial",
+    "status": {
+      "WELL_BELOW": "Por debajo del límite del GST",
+      "APPROACHING": "Cerca del límite del GST",
+      "CROSSED": "Por encima del límite del GST",
+      "REGISTERED": "Registrado en el GST",
+      "NOT_APPLICABLE": "No aplica"
+    },
+    "kind": {
+      "SERVICES": "Límite para servicios",
+      "GOODS": "Límite para bienes",
+      "BOTH": "Límite para bienes y servicios"
+    },
+    "below": "Aún no necesitas registrarte en el GST. Te quedan unos {headroom} de margen.",
+    "approaching": "Has usado el {percent}% del límite y te quedan unos {headroom}. Planifica tu registro antes de superarlo.",
+    "projected": "A este ritmo lo superarás hacia el {date}.",
+    "crossed": "Superaste el límite el {date}. Solicita el registro del GST antes del {applyBy} (30 días) y cobra GST desde el día en que lo superaste.",
+    "udyam": {
+      "label": "Registro Udyam",
+      "none": "No añadido",
+      "add": "Añádelo en Ajustes",
+      "ok": "El formato parece correcto",
+      "bad": "Revisa el formato, debe parecerse a UDYAM-MH-12-0000001"
+    },
+    "class": {
+      "label": "Clase MSME",
+      "MICRO": "Microempresa",
+      "SMALL": "Pequeña empresa",
+      "MEDIUM": "Mediana empresa",
+      "NONE": "Por encima de los límites medianos",
+      "turnoverOnly": "Solo según la facturación. Añade tu inversión en la configuración del GST para una clase exacta.",
+      "both": "Según facturación e inversión"
+    },
+    "composition": {
+      "label": "Régimen de composición",
+      "yes": "Disponible al {rate}% de la facturación",
+      "over": "La facturación supera el límite de {limit}",
+      "na": "No disponible para suministros mixtos",
+      "hint": "Requiere registro en el GST y ventas dentro de tu propio estado."
+    },
+    "means": {
+      "title": "Qué significa para ti",
+      "r1": "Las facturas salen sin GST y se marcan como emitidas por un proveedor no registrado en el GST.",
+      "r2": "No hay declaraciones del GST que presentar. El impuesto sobre la renta sigue aplicando y el régimen presunto puede convenirte.",
+      "r3": "El registro Udyam es gratuito y no requiere GSTIN mientras estés por debajo del límite del GST. Te da beneficios MSME.",
+      "r4": "Vender bienes a otros estados o mediante una plataforma de comercio electrónico puede exigir registro en el GST incluso por debajo del límite. Consulta a tu contador."
+    },
+    "payables": {
+      "title": "Pagos a proveedores micro y pequeños",
+      "rule": "Paga en {days} días (15 sin acuerdo escrito)",
+      "unpaid": "{count} sin pagar fuera del plazo ({amount}). El gasto no es deducible en el año hasta que se pague.",
+      "late": "{count} pagados después del plazo",
+      "none": "No hay pagos tardíos a proveedores micro o pequeños.",
+      "open": "Marca proveedores en el formulario de gastos"
+    },
+    "editSetup": "Editar configuración del GST",
+    "setup": {
+      "kind": "¿Qué vendes?",
+      "kinds": {
+        "SERVICES": "Servicios",
+        "GOODS": "Bienes",
+        "BOTH": "Bienes y servicios"
+      },
+      "kindHint": "Define tu límite de registro del GST. Vender solo bienes tiene un límite mayor que los servicios.",
+      "investment": "Inversión en planta y equipo (₹)",
+      "investmentHint": "Opcional. Se usa con la facturación para calcular tu clase MSME."
+    },
+    "expense": {
+      "title": "El proveedor es una empresa micro o pequeña",
+      "class": {
+        "NONE": "No, o no estoy seguro",
+        "MICRO": "Micro",
+        "SMALL": "Pequeña",
+        "MEDIUM": "Mediana"
+      },
+      "udyam": "Número Udyam del proveedor",
+      "udyamBad": "Revisa el formato, p. ej. UDYAM-MH-12-0000001",
+      "days": "Días de crédito acordados (máx. 45)",
+      "payment": "Pago",
+      "paid": "Pagado",
+      "unpaid": "Pagar después",
+      "hint": "Marca a los proveedores micro y pequeños para seguir la regla de pago de 45 días.",
+      "ruleHint": "Paga en 45 días, o 15 sin acuerdo escrito; de lo contrario el gasto no es deducible hasta que lo pagues."
+    }
   }
 }

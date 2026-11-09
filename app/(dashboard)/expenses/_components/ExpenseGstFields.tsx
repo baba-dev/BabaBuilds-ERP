@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { computeExpenseGst, GST_RATE_OPTIONS, vendorStateOf, type ItcStatus } from "@/lib/gst/expense-gst";
 import { normalizeGstin, validateGstin } from "@/lib/gst/gstin";
+import { validateUdyam } from "@/lib/msme/udyam";
 import { stateName } from "@/lib/gst/states";
 
 export type ExpenseGstState = {
@@ -17,11 +18,14 @@ export type ExpenseGstState = {
   hsnCode: string;
   gstRate: string;
   paymentStatus: "PAID" | "UNPAID";
+  vendorMsme: "NONE" | "MICRO" | "SMALL" | "MEDIUM";
+  vendorUdyam: string;
+  vendorAgreedDays: string;
 };
 
-export const EMPTY_EXPENSE_GST: ExpenseGstState = { itcStatus: "NONE", vendorGstin: "", vendorInvoiceNo: "", hsnCode: "", gstRate: "18", paymentStatus: "PAID" };
+export const EMPTY_EXPENSE_GST: ExpenseGstState = { itcStatus: "NONE", vendorGstin: "", vendorInvoiceNo: "", hsnCode: "", gstRate: "18", paymentStatus: "PAID", vendorMsme: "NONE", vendorUdyam: "", vendorAgreedDays: "" };
 
-export function gstStateFromExpense(e: { paymentStatus?: string; itcStatus?: string; vendorGstin?: string | null; vendorInvoiceNo?: string | null; hsnCode?: string | null; gstRate?: number | null }): ExpenseGstState {
+export function gstStateFromExpense(e: { vendorMsme?: string | null; vendorUdyam?: string | null; vendorAgreedDays?: number | null; paymentStatus?: string; itcStatus?: string; vendorGstin?: string | null; vendorInvoiceNo?: string | null; hsnCode?: string | null; gstRate?: number | null }): ExpenseGstState {
   return {
     itcStatus: (["ELIGIBLE", "INELIGIBLE", "REVERSE_CHARGE"].includes(e.itcStatus ?? "") ? e.itcStatus : "NONE") as ItcStatus,
     vendorGstin: e.vendorGstin ?? "",
@@ -29,6 +33,9 @@ export function gstStateFromExpense(e: { paymentStatus?: string; itcStatus?: str
     hsnCode: e.hsnCode ?? "",
     gstRate: e.gstRate === null || e.gstRate === undefined ? "18" : String(e.gstRate),
     paymentStatus: e.paymentStatus === "UNPAID" ? "UNPAID" : "PAID",
+    vendorMsme: (["MICRO", "SMALL", "MEDIUM"].includes(e.vendorMsme ?? "") ? e.vendorMsme : "NONE") as ExpenseGstState["vendorMsme"],
+    vendorUdyam: e.vendorUdyam ?? "",
+    vendorAgreedDays: e.vendorAgreedDays ? String(e.vendorAgreedDays) : "",
   };
 }
 
@@ -41,6 +48,9 @@ export function gstPayload(s: ExpenseGstState) {
     hsnCode: s.hsnCode.trim() || null,
     gstRate: s.itcStatus === "NONE" ? null : Number(s.gstRate),
     paymentStatus: s.paymentStatus,
+    vendorMsme: s.vendorMsme,
+    vendorUdyam: s.vendorUdyam.trim() || null,
+    vendorAgreedDays: s.vendorAgreedDays.trim() ? Math.round(Number(s.vendorAgreedDays)) : null,
   };
 }
 
@@ -59,6 +69,7 @@ export function ExpenseGstFields({ value, onChange, amount, supplierState }: { v
   const money = (n: number) => new Intl.NumberFormat(locale, { style: "currency", currency: "INR" }).format(n);
 
   return (
+    <div className="space-y-3">
     <div className="rounded-xl border border-border/70 bg-muted/20">
       <button type="button" onClick={() => setUserOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center gap-3 px-3.5 py-3 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300"><ReceiptText className="size-4" aria-hidden /></span>
@@ -131,6 +142,55 @@ export function ExpenseGstFields({ value, onChange, amount, supplierState }: { v
           ) : null}
         </div>
       ) : null}
+    </div>
+    <MsmeVendorFields value={value} onChange={onChange} />
+    </div>
+  );
+}
+
+/** "Supplier is a micro or small enterprise": drives the 45-day payment rule (section 43B(h)). */
+function MsmeVendorFields({ value, onChange }: { value: ExpenseGstState; onChange: (next: ExpenseGstState) => void }) {
+  const t = useTranslations("SmallBusiness.expense");
+  const set = (patch: Partial<ExpenseGstState>) => onChange({ ...value, ...patch });
+  const mse = value.vendorMsme === "MICRO" || value.vendorMsme === "SMALL";
+  const udyam = value.vendorUdyam.trim() ? validateUdyam(value.vendorUdyam) : null;
+  return (
+    <div className="rounded-xl border border-border/70 bg-muted/20 p-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Label htmlFor="exp-msme" className="text-sm font-semibold">{t("title")}</Label>
+        <select id="exp-msme" value={value.vendorMsme} onChange={(e) => set({ vendorMsme: e.target.value as ExpenseGstState["vendorMsme"] })} className="h-9 rounded-lg border border-border/70 bg-background px-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          {(["NONE", "MICRO", "SMALL", "MEDIUM"] as const).map((k) => <option key={k} value={k}>{t(`class.${k}`)}</option>)}
+        </select>
+      </div>
+      {value.vendorMsme !== "NONE" ? (
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="exp-udyam">{t("udyam")}</Label>
+            <Input id="exp-udyam" value={value.vendorUdyam} maxLength={24} spellCheck={false} onChange={(e) => set({ vendorUdyam: e.target.value.toUpperCase() })} placeholder="UDYAM-MH-12-0000001" className="font-mono tracking-wide" aria-invalid={udyam ? !udyam.valid : undefined} />
+            {udyam && !udyam.valid ? <p className="text-xs text-rose-600">{t("udyamBad")}</p> : null}
+          </div>
+          {mse ? (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="exp-days">{t("days")}</Label>
+                <Input id="exp-days" inputMode="numeric" value={value.vendorAgreedDays} maxLength={3} onChange={(e) => set({ vendorAgreedDays: e.target.value.replace(/\D/g, "") })} placeholder="45" />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label>{t("payment")}</Label>
+                <div role="radiogroup" aria-label={t("payment")} className="grid grid-cols-2 gap-2">
+                  {(["PAID", "UNPAID"] as const).map((p) => (
+                    <button key={p} type="button" role="radio" aria-checked={value.paymentStatus === p} onClick={() => set({ paymentStatus: p })}
+                      className={cn("rounded-lg border px-3 py-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", value.paymentStatus === p ? "border-indigo-500 bg-indigo-50/70 font-semibold text-indigo-800 dark:bg-indigo-500/10 dark:text-indigo-200" : "border-border/70 hover:border-indigo-300")}>
+                      {t(p === "PAID" ? "paid" : "unpaid")}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+      <p className="mt-2 text-xs text-muted-foreground">{mse ? t("ruleHint") : t("hint")}</p>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveTaxRate } from "@/lib/invoice/tax-resolver";
 import { calculateInvoiceTotals } from "@/lib/invoice/totals";
 import { toDecimal } from "@/lib/money";
+import { supplierChargesGst } from "@/lib/msme/threshold";
 import type { ProposalInput } from "@/lib/proposals/validation";
 
 export type ProposalTotals = {
@@ -35,6 +36,7 @@ export async function computeProposalTotals(
 
   const profile = await prisma.businessProfile.findUnique({ where: { workspaceId }, include: { workspace: true } });
   const countryCode = profile?.workspace?.countryCode || "IN";
+  const taxFree = Boolean(client.isExport) || !supplierChargesGst(profile, countryCode);
   const defaultTaxRate = (profile as { defaultTaxRate?: number | null } | null)?.defaultTaxRate ?? null;
 
   const templateIds = input.items.map((i) => i.serviceTemplateId).filter((id): id is string => Boolean(id));
@@ -48,7 +50,7 @@ export async function computeProposalTotals(
 
   const resolution = resolveTaxRate({
     countryCode,
-    isTaxExempt: Boolean(client.isExport),
+    isTaxExempt: taxFree,
     serviceTaxRates,
     workspaceDefaultTaxRate: defaultTaxRate,
     taxRateOverride: input.taxRateOverride,
@@ -67,7 +69,7 @@ export async function computeProposalTotals(
   const lineTotals = input.items.map((i) => toDecimal(i.quantity).mul(toDecimal(i.unitPrice)).toDecimalPlaces(2));
   const totals = calculateInvoiceTotals({
     services: lineTotals.map((amount) => ({ amount: amount.toNumber() })),
-    isTaxExempt: Boolean(client.isExport),
+    isTaxExempt: taxFree,
     defaultTaxRate: resolution.taxRate,
   });
 
@@ -79,9 +81,9 @@ export async function computeProposalTotals(
       estimatedTax: toDecimal(totals.taxAmount).toDecimalPlaces(2),
       totalAmount: toDecimal(totals.total).toDecimalPlaces(2),
       // Stored as a percentage (18), whereas the resolver and invoices use fractions (0.18).
-      taxRatePercent: client.isExport ? 0 : Math.round(resolution.taxRate * 10_000) / 100,
+      taxRatePercent: taxFree ? 0 : Math.round(resolution.taxRate * 10_000) / 100,
       taxLabel,
-      isTaxExempt: Boolean(client.isExport),
+      isTaxExempt: taxFree,
       lineTotals,
       usedOverride: resolution.source === "override",
     },

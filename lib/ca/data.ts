@@ -4,6 +4,8 @@ import { loadGstBooks, loadGstProfile, type GstProfile } from "@/lib/gst/data";
 import { num, r2 } from "@/lib/gst/money";
 import { buildCaCalendar, calendarProgress, type CaFlags, type CaItemView, type CaProgress, type CaSetup, type EntityType, type GstObligationLike, type Presumptive, type StoredItem, type TaxRegime } from "./calendar";
 import { fyBounds, fyLabel, fyOptions, monthsElapsedInFy } from "./fy";
+import { msmePayables } from "@/lib/msme/payables";
+import { thresholdLimit, type SupplyKind } from "@/lib/msme/threshold";
 import { gstRegistrationHint, presumptiveView, type GstRegistrationHint, type PresumptiveView } from "./presumptive";
 import { buildReadiness, type Readiness, type ReadinessCounts } from "./readiness";
 import { estimateYearTax, EMPTY_FIGURES, type TaxEstimate, type YearFigures } from "./summary";
@@ -87,8 +89,9 @@ export async function loadReadinessCounts(gstProfile: GstProfile, startYear: num
   const { workspaceId } = gstProfile;
   const { start, end } = fyBounds(startYear);
   const inFy = { gte: start, lte: end };
-  const [books, salesEvidence, purchaseTotal, noReceipt, itcMissing, bankTotal, bankOpen, overdue, tds, employees, periods, firstEver] = await Promise.all([
+  const [books, msmeBills, salesEvidence, purchaseTotal, noReceipt, itcMissing, bankTotal, bankOpen, overdue, tds, employees, periods, firstEver] = await Promise.all([
     loadGstBooks(gstProfile, start, end),
+    prisma.expense.findMany({ where: { workspaceId, vendorMsme: { in: ["MICRO", "SMALL"] }, date: { lte: end } }, select: { id: true, vendor: true, date: true, amount: true, paymentStatus: true, paidAt: true, vendorMsme: true, vendorUdyam: true, vendorAgreedDays: true }, take: 1000 }),
     prisma.invoice.count({ where: { workspaceId, status: { not: "VOID" }, invoiceDate: inFy, pdfPath: "", NOT: { source: "POS" } } }),
     prisma.expense.count({ where: { workspaceId, date: inFy } }),
     prisma.expense.count({ where: { workspaceId, date: inFy, receiptUrl: null } }),
@@ -110,7 +113,7 @@ export async function loadReadinessCounts(gstProfile: GstProfile, startYear: num
   const monthsExpectedPayroll = firstPeriod || employees === 0 ? Math.max(0, monthsElapsed - monthsBefore) : 0;
   return {
     sales: { total: live.length, missingSac: has("SAC_MISSING"), stateAssumed: has("STATE_ASSUMED"), gstinInvalid: has("GSTIN_INVALID"), taxMismatch: has("TAX_MISMATCH"), missingEvidence: salesEvidence },
-    purchases: { total: purchaseTotal, noReceipt, itcMissingVendor: itcMissing },
+    purchases: { total: purchaseTotal, noReceipt, itcMissingVendor: itcMissing, msmeOverdue: msmePayables(msmeBills.map((b) => ({ id: b.id, vendor: b.vendor, date: b.date, amount: num(b.amount), paid: b.paymentStatus === "PAID", paidAt: b.paidAt, vendorMsme: b.vendorMsme, vendorUdyam: b.vendorUdyam, agreedDays: b.vendorAgreedDays })), now, end).unpaidPastDue },
     bank: { total: bankTotal, unreconciled: bankOpen },
     receivables: {
       overdueCount: overdue.length,
@@ -160,6 +163,8 @@ export async function getCaOverview(workspaceId: string, startYear: number, now 
   ]);
 
   const gstApplicable = gstProfile.countryCode === "IN" && gstProfile.registrationType !== "UNREGISTERED";
+  const kindRow = await prisma.businessProfile.findUnique({ where: { workspaceId }, select: { gstSupplyKind: true } });
+  const gstLimit = thresholdLimit((["GOODS", "BOTH"].includes(kindRow?.gstSupplyKind ?? "") ? kindRow?.gstSupplyKind : "SERVICES") as SupplyKind, gstProfile.stateCode).limit;
   let gstObligations: GstObligationLike[] = [];
   if (gstApplicable) {
     const [{ fyUnits }, filings, comments] = await Promise.all([computeFyUnits(gstProfile, startYear), loadFilings(workspaceId), loadCommentCounts(workspaceId)]);
@@ -180,7 +185,7 @@ export async function getCaOverview(workspaceId: string, startYear: number, now 
     fy, fyStart: startYear,
     years: fyOptions(now, firstInvoice?.invoiceDate ?? null),
     setup, configured, items, progress: calendarProgress(items), readiness, figures, estimate, presumptive,
-    gstHint: gstRegistrationHint({ registered: gstApplicable && gstProfile.registrationType !== "UNREGISTERED", countryIsIndia: gstProfile.countryCode === "IN", turnover: figures.billed }),
+    gstHint: gstRegistrationHint({ registered: gstApplicable && gstProfile.registrationType !== "UNREGISTERED", countryIsIndia: gstProfile.countryCode === "IN", turnover: figures.billed, limit: gstLimit }),
     gst: { applicable: gstApplicable, gstin: gstProfile.gstin, registrationType: gstProfile.registrationType },
     requests: { open: count("OPEN"), answered: count("ANSWERED") },
     yearSignedOff: !!items.find((i) => i.kind === "YEAR_CLOSE")?.signedOffAt,

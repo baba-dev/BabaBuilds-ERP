@@ -15,6 +15,7 @@ import { buildInvoiceDeliveryEmail } from "@/lib/notifications/transactional-ema
 import { sendEmail } from "@/lib/mailer";
 import { snapshotGstFields } from "@/lib/gst/source";
 import { getFinancialYear, getNextInvoiceNumber } from "@/lib/document-numbering";
+import { supplierChargesGst } from "@/lib/msme/threshold";
 
 type DraftPaymentLink = {
   url: string | null;
@@ -165,7 +166,7 @@ export async function finalizeInvoiceFromDraft(params: {
             destinationCountryCode: countryCode,
             clientId: client.id,
             occurredAt: invoiceDate,
-            isTaxExempt: Boolean(client.isExport),
+            isTaxExempt: Boolean(client.isExport) || !supplierChargesGst(profile, countryCode),
           },
           actorUserId: actorId ?? "system",
         });
