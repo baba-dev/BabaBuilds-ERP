@@ -105,6 +105,7 @@ function buildRequestHash(payload: unknown): string {
 import { GenerateInvoiceSchema } from '@/lib/invoice/generate-schema';
 import { snapshotGstFields } from '@/lib/gst/source';
 import { supplierChargesGst } from "@/lib/msme/threshold";
+import { getClientRecipients } from '@/lib/clients/service';
 
 export async function POST(request: Request) {
   let generatedPdfPath = "";
@@ -381,7 +382,8 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const termsDays = Number.isInteger(profile.invoiceTermsDays) ? profile.invoiceTermsDays : 7;
+    // A client's own payment terms win over the workspace default.
+    const termsDays = Number.isInteger(client.paymentTermsDays) ? (client.paymentTermsDays as number) : Number.isInteger(profile.invoiceTermsDays) ? profile.invoiceTermsDays : 7;
     const invoiceDueDate = new Date(invoiceDate);
     invoiceDueDate.setDate(invoiceDueDate.getDate() + termsDays);
 
@@ -718,7 +720,8 @@ export async function POST(request: Request) {
     let emailStatus = "Not requested";
 
     if (shouldSendEmail) {
-      if (!client.email) {
+      const recipients = await getClientRecipients(client.id, workspaceId, 'invoice');
+      if (recipients.length === 0) {
         emailStatus = "Failed: Client has no email address on file.";
       } else if (!profile.smtpHost || !profile.smtpUser || !profile.smtpPassword) {
         emailStatus = "Failed: SMTP Server not configured in Settings.";
@@ -735,7 +738,7 @@ export async function POST(request: Request) {
           await sendEmail({
             route: 'user',
             profile,
-            to: client.email,
+            to: recipients.join(', '),
             subject: invoiceEmail.subject,
             html: invoiceEmail.html,
             text: invoiceEmail.text,
