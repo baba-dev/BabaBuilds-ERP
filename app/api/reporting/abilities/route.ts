@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { resolveSessionMembership } from '@/lib/workspace-scope';
 import { requireModule, ModuleDisabledError } from '@/lib/modules';
 import { checkPermissionsSilent } from '@/lib/rbac';
 import { reportingErrorResponse } from '@/app/api/reporting/_shared';
@@ -15,11 +15,7 @@ export async function GET() {
       return Response.json({ canView: false, canRun: false, canExport: false, moduleEnabled: false });
     }
 
-    const wu = await prisma.workspaceUser.findFirst({
-      where: { userId: session.user.id, isActive: true },
-      orderBy: { joinedAt: 'asc' },
-      select: { workspaceId: true },
-    });
+    const wu = await resolveSessionMembership(session);
     if (!wu?.workspaceId) {
       return Response.json({ canView: false, canRun: false, canExport: false, moduleEnabled: false });
     }

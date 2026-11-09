@@ -9,17 +9,18 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { requirePermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
 import { requireModule, ModuleDisabledError } from '@/lib/modules';
+import { resolveSessionMembership } from '@/lib/workspace-scope';
 
-async function getWid(userId: string) {
-  const wu = await prisma.workspaceUser.findFirst({ where: { userId, isActive: true }, select: { workspaceId: true } });
-  return wu?.workspaceId ?? null;
+// The workspace the user is in (session), not an arbitrary membership.
+async function getWid(session: Parameters<typeof resolveSessionMembership>[0]) {
+  return (await resolveSessionMembership(session))?.workspaceId ?? null;
 }
 
 export async function GET(__req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const wid = await getWid(session.user.id);
+    const wid = await getWid(session);
     if (!wid) return NextResponse.json({ error: 'No workspace' }, { status: 400 });
 
     try {
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const wid = await getWid(session.user.id);
+    const wid = await getWid(session);
     if (!wid) return NextResponse.json({ error: 'No workspace' }, { status: 400 });
 
     try {

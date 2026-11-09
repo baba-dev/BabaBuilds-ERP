@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 
 import { authOptions } from '@/lib/auth';
 import { getWorkspaceIdForUser } from '@/lib/payroll/settings';
+import { isModuleEnabled } from '@/lib/modules';
 import { checkPermissionsSilent } from '@/lib/rbac';
 
 export async function GET() {
@@ -17,6 +18,11 @@ export async function GET() {
     const workspaceId = typedSession?.workspaceId ?? (await getWorkspaceIdForUser(userId));
     if (!workspaceId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // With the module off nobody can view or manage payroll, whatever their role.
+    if (!(await isModuleEnabled(workspaceId, 'PAYROLL'))) {
+      return NextResponse.json({ canView: false, canManage: false, readOnly: false, moduleEnabled: false });
     }
 
     const grants = await checkPermissionsSilent(userId, workspaceId, [

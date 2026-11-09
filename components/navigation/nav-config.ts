@@ -22,7 +22,7 @@ import {
   UploadCloud,
   ShoppingCart,
   type LucideIcon,
-} from "lucide-react";
+ Mailbox,} from "lucide-react";
 
 export type NavGroupKey = "overview" | "operations" | "sales" | "finance" | "compliance" | "workspace";
 
@@ -84,6 +84,7 @@ export const canonicalNavItems: CanonicalNavItem[] = assertUniqueAppNavItemKeys(
   { key: "documents", path: "/documents", icon: FileText, group: "operations", keywords: ["files", "storage", "records"], requiresModule: "DOCUMENTS" },
   { key: "workforce", path: "/workforce", icon: Users2, group: "workspace", keywords: ["team", "staff", "hr"], requiresModule: "WORKFORCE" },
   { key: "payroll", path: "/payroll", icon: Wallet, group: "workspace", keywords: ["salary", "payout", "payroll"], requiresModule: "PAYROLL" },
+  { key: "email_billing", path: "/email-billing", icon: Mailbox, group: "operations", keywords: ["mailbox", "domains", "hosting", "recurring"], requiresModule: "MIAB_BILLING" },
   { key: "import_manager", path: "/import-manager", icon: UploadCloud, group: "operations", keywords: ["import", "csv", "migration"], badge: "New", requiresModule: "IMPORT_MANAGER" },
 ]);
 

@@ -9,12 +9,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { logActivity } from '@/lib/security/activity-log';
 import { requirePermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
 import { enableMultiCompany, disableMultiCompany } from '@/lib/company-groups/enable-multi-company';
 import {
   enableModule,
   disableModule,
   getEnabledModules,
+  getModuleStates,
   isValidModuleKey,
   PaidPlanRequiredError,
   requireModulePlanEntitlement,
@@ -37,7 +39,7 @@ async function getWorkspaceId(userId: string, sessionWorkspaceId?: string | null
   return wu?.workspaceId ?? null;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -50,6 +52,10 @@ export async function GET() {
     }
 
     const enabled = await getEnabledModules(workspaceId);
+    // ?detail=1 adds each module's state (including "paused" after a plan ends) for the settings screen.
+    if (new URL(req.url).searchParams.get('detail') === '1') {
+      return NextResponse.json({ modules: Array.from(enabled), states: await getModuleStates(workspaceId) });
+    }
     return NextResponse.json({ modules: Array.from(enabled) });
   } catch (err) {
     console.error('[modules/GET]', err);
@@ -102,6 +108,17 @@ export async function POST(req: NextRequest) {
         await disableModule(workspaceId, moduleKey, session.user.id);
       }
     }
+
+    // Who switched what, and when, is part of the settings change history.
+    await logActivity({
+      action: enabled ? 'settings_module_enabled' : 'settings_module_disabled',
+      status: 'SUCCESS',
+      workspaceId,
+      actor: { userId: session.user.id, email: session.user.email ?? null },
+      entity: { type: 'workspace_module', id: moduleKey },
+      metadata: { module: moduleKey },
+      request: req,
+    });
 
     return NextResponse.json({ success: true, moduleKey, enabled });
   } catch (err) {

@@ -107,11 +107,11 @@ describe("settings map", () => {
     expect(activeKey("/settings/team", null)).toBe("team");
   });
 
-  it("the module list covers real modules once, and leaves out the retired and shop ones", () => {
+  it("the module list covers real modules once, and leaves out the shop (it has its own section)", () => {
     const keys = MODULE_CATALOG.map((m) => m.key);
     expect(new Set(keys).size).toBe(keys.length);
     for (const k of keys) expect((MODULE_KEYS as readonly string[]).includes(k)).toBe(true);
-    expect(keys).not.toContain("TAX_ADVANCED");
+    expect(keys).toContain("TAX_ADVANCED");
     expect(keys).not.toContain("SHOP");
   });
 });

@@ -14,7 +14,7 @@ export async function GET() {
   });
   return NextResponse.json({
     activity: rows.map((r) => {
-      const m = (r.metadata ?? {}) as { section?: unknown; changedFieldNames?: unknown; secret?: unknown; kind?: unknown };
+      const m = (r.metadata ?? {}) as { section?: unknown; changedFieldNames?: unknown; secret?: unknown; kind?: unknown; module?: unknown };
       return {
         id: r.id,
         action: r.action,
@@ -23,6 +23,7 @@ export async function GET() {
         fields: Array.isArray(m.changedFieldNames) ? m.changedFieldNames.filter((f): f is string => typeof f === "string").slice(0, 12) : [],
         secret: typeof m.secret === "string" ? m.secret : null,
         kind: typeof m.kind === "string" ? m.kind : null,
+        module: typeof m.module === "string" ? m.module : null,
         at: r.createdAt.toISOString(),
       };
     }),

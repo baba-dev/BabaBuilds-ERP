@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { resolveSessionMembership } from '@/lib/workspace-scope';
 import { ModuleDisabledError, requireModule } from '@/lib/modules';
 import { RbacDeniedError, requirePermission } from '@/lib/rbac';
 
@@ -15,11 +15,7 @@ export async function resolveReportingContext(
     throw new Error('UNAUTHORIZED');
   }
 
-  const wu = await prisma.workspaceUser.findFirst({
-    where: { userId: session.user.id, isActive: true },
-    orderBy: { joinedAt: 'asc' },
-    select: { workspaceId: true },
-  });
+  const wu = await resolveSessionMembership(session);
 
   if (!wu?.workspaceId) {
     throw new Error('WORKSPACE_NOT_FOUND');

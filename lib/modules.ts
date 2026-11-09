@@ -303,6 +303,35 @@ export async function getEnabledModules(workspaceId: string): Promise<Set<Module
 }
 
 /**
+ * What each module looks like to the settings screen, including the case the plain enabled set hides: a module a person
+ * turned on that is "paused" because the paid plan ended. Its data and switch are kept; it just cannot be used.
+ */
+export type ModuleState = {
+  key: ModuleKey;
+  state: 'enabled' | 'disabled' | 'plan_required' | 'paused';
+  enabledAt: string | null;
+  config: Record<string, unknown>;
+};
+
+export async function getModuleStates(workspaceId: string): Promise<ModuleState[]> {
+  const billing = await loadWorkspaceBillingSnapshot(workspaceId);
+  const paidAccess = billing ? hasFullPaidFeatures(billing) : false;
+  const records = await prisma.workspaceModule.findMany({
+    where: { workspaceId },
+    select: { moduleKey: true, isEnabled: true, enabledAt: true, configJson: true },
+  });
+  const byKey = new Map(records.map((r) => [r.moduleKey, r]));
+  return MODULE_KEYS.map((key) => {
+    const row = byKey.get(key);
+    const switchedOn = row ? row.isEnabled === true : DEFAULT_ENABLED_MODULE_KEYS.has(key);
+    const locked = PAID_ONLY_MODULE_KEYS.has(key) && !paidAccess;
+    const state: ModuleState['state'] = locked ? (switchedOn && row ? 'paused' : 'plan_required') : switchedOn ? 'enabled' : 'disabled';
+    const config = row?.configJson && typeof row.configJson === 'object' && !Array.isArray(row.configJson) ? (row.configJson as Record<string, unknown>) : {};
+    return { key, state, enabledAt: row?.enabledAt ? row.enabledAt.toISOString() : null, config };
+  });
+}
+
+/**
  * Throws ModuleDisabledError if the module is not enabled.
  * Use in route handlers and Server Components to guard module routes.
  *

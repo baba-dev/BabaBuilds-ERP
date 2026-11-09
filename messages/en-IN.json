@@ -6435,48 +6435,109 @@
       "items": {
         "CASH_FLOW": {
           "name": "Cash flow",
-          "body": "Forecasts, scenarios and warnings before cash runs short."
+          "body": "Forecasts, scenarios and warnings before cash runs short.",
+          "h1": "See your cash position weeks ahead",
+          "h2": "Best, expected and worst-case scenarios"
         },
         "AR_COLLECTIONS": {
           "name": "Collections",
-          "body": "Aging, overdue queues and payment reminders."
+          "body": "Aging, overdue queues and payment reminders.",
+          "h1": "Overdue invoices ranked by risk and amount",
+          "h2": "One-click or automatic payment reminders"
         },
         "REVENUE_PIPELINE": {
           "name": "Revenue pipeline",
-          "body": "Proposal stages, stalled deals and next steps."
+          "body": "Proposal stages, stalled deals and next steps.",
+          "h1": "Spot stalled proposals early",
+          "h2": "See accepted deals not yet invoiced"
         },
         "POS": {
           "name": "Point of sale",
-          "body": "A checkout screen for walk-in and counter sales."
+          "body": "A checkout screen for walk-in and counter sales.",
+          "h1": "Ring up walk-in sales in seconds",
+          "h2": "Stock updates as you sell"
         },
         "WORKFORCE": {
           "name": "Workforce",
-          "body": "Employees, attendance, leave and approvals."
+          "body": "Employees, attendance, leave and approvals.",
+          "h1": "Attendance and leave in one place",
+          "h2": "Approvals with notifications"
         },
         "PAYROLL": {
           "name": "Payroll",
-          "body": "Pay runs, posting and statutory exports."
+          "body": "Pay runs, posting and statutory exports.",
+          "h1": "Pay runs with checks before go-live",
+          "h2": "Statutory exports ready for filing"
         },
         "DOCUMENTS": {
           "name": "Document vault",
-          "body": "Secure storage with scanning and links to records."
+          "body": "Secure storage with scanning and links to records.",
+          "h1": "Scan bills and receipts into fields",
+          "h2": "Link files to invoices and expenses"
         },
         "REPORTING_CENTER": {
           "name": "Reporting centre",
-          "body": "Finance and compliance reports with polished exports."
+          "body": "Finance and compliance reports with polished exports.",
+          "h1": "Ready-made finance and compliance reports",
+          "h2": "Excel exports with an audit trail"
         },
         "MULTI_COMPANY": {
           "name": "Multiple companies",
-          "body": "Run several legal entities from one login."
+          "body": "Run several legal entities from one login.",
+          "h1": "Several legal entities, one login",
+          "h2": "Company-specific defaults"
         },
         "IMPORT_MANAGER": {
           "name": "Import manager",
-          "body": "Map, check and import data from files safely."
+          "body": "Map, check and import data from files safely.",
+          "h1": "Map and check files before importing",
+          "h2": "Safe create or update, with run history"
         },
         "MIAB_BILLING": {
           "name": "Email billing",
-          "body": "Mailbox inventory linked to clients and retainers."
+          "body": "Mailbox inventory linked to clients and retainers.",
+          "h1": "See hosted domains and mailboxes",
+          "h2": "Link them to clients and retainers"
+        },
+        "TAX_ADVANCED": {
+          "h1": "Readiness checks before you file",
+          "h2": "Rate overrides with maker-checker approval",
+          "name": "Advanced tax tools",
+          "body": "Tax readiness checks, rate overrides with approval, import diagnostics and an audit trail, inside Income tax."
         }
+      },
+      "status": {
+        "on": "On",
+        "off": "Off",
+        "paused": "Paused",
+        "needsPlan": "Needs a paid plan"
+      },
+      "filters": {
+        "all": "All",
+        "on": "On",
+        "off": "Off"
+      },
+      "details": "What's included",
+      "hideDetails": "Hide",
+      "worksWith": "Works well with {names}",
+      "turnOnSuggested": "Turn on {name}",
+      "planEnded": "Your paid plan ended, so this is paused. Your data is kept and it resumes when you upgrade.",
+      "needsPlanBody": "Available on Pro and Team plans.",
+      "upgrade": "See plans",
+      "since": "On since {date}",
+      "undo": "Undo",
+      "emptyFilter": "No modules in this view.",
+      "headline": "Add what your business needs",
+      "headlineHint": "Everything is optional. Turning a module off hides it and keeps its data.",
+      "options": {
+        "AR_COLLECTIONS": {
+          "autoReminders": {
+            "title": "Send reminders automatically every day",
+            "body": "Clients with overdue invoices get a reminder email each day. Needs email sending to be set up. Off until you turn it on."
+          }
+        },
+        "saved": "Option saved",
+        "failed": "Could not save the option."
       }
     },
     "needsAttention": "Needs attention",
@@ -6564,7 +6625,19 @@
       "branding": {
         "logo": "logo",
         "signature": "signature"
-      }
+      },
+      "moduleOn": "Turned on {name}",
+      "moduleOff": "Turned off {name}",
+      "moduleOption": "Changed an option for {name}"
+    },
+    "moduleUnavailable": {
+      "needsPlanTitle": "{name} needs a paid plan",
+      "offTitle": "{name} is turned off",
+      "needsPlanBody": "This workspace does not have an active paid plan, so the module is unavailable. Your existing data is kept.",
+      "offBody": "It is switched off for this workspace. Your data is preserved and returns when you turn it back on.",
+      "viewPlans": "View plans",
+      "enable": "Turn on in Settings",
+      "back": "Back to dashboard"
     }
   }
 }
