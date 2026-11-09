@@ -2,15 +2,18 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireReconAccess } from "@/lib/reconciliation/access";
 
 export async function GET(request: Request) {
-  const session = await getServerSession(authOptions);
-  const workspaceId = (session as { workspaceId?: string })?.workspaceId;
-  if (!workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requireReconAccess("reconciliation.import");
+  if (!access.ok) return access.response;
+  const workspaceId = access.ctx.workspaceId;
 
   const { searchParams } = new URL(request.url);
   const accountId = searchParams.get("accountId") || undefined;
   const unreconciledOnly = searchParams.get("unreconciled") === "1";
+  const reconciledOnly = searchParams.get("reconciled") === "1";
+  const q = (searchParams.get("q") ?? "").trim();
   const take = Math.min(200, Math.max(1, Number(searchParams.get("limit") || 50)));
   const skip = Math.max(0, Number(searchParams.get("offset") || 0));
 
@@ -18,6 +21,8 @@ export async function GET(request: Request) {
     workspaceId,
     ...(accountId ? { accountId } : {}),
     ...(unreconciledOnly ? { isReconciled: false } : {}),
+    ...(reconciledOnly ? { isReconciled: true } : {}),
+    ...(q ? { OR: [{ description: { contains: q } }, { referenceId: { contains: q } }] } : {}),
   };
 
   const [rows, total] = await Promise.all([

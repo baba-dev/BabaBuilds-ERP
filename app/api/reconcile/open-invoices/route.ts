@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireReconAccess } from "@/lib/reconciliation/access";
 import { Prisma } from "@prisma/client";
 
 export async function GET(request: Request) {
-  const session = await getServerSession(authOptions);
-  const workspaceId = (session as { workspaceId?: string })?.workspaceId;
-  if (!workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requireReconAccess("reconciliation.import");
+  if (!access.ok) return access.response;
+  const workspaceId = access.ctx.workspaceId;
 
   const { searchParams } = new URL(request.url);
   const q = (searchParams.get("q") ?? "").trim();
