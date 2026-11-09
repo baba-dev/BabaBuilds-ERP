@@ -19,6 +19,8 @@ export async function runNextOcrJob(params: {
       status: 'QUEUED',
       provider: provider.key,
       ...(params.workspaceId ? { workspaceId: params.workspaceId } : {}),
+      // Queued work for a workspace that switched Documents off waits until it is switched back on.
+      workspace: { workspaceModules: { some: { moduleKey: 'DOCUMENTS', isEnabled: true } } },
     },
     orderBy: { queuedAt: 'asc' },
     select: {

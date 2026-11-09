@@ -6464,48 +6464,109 @@
       "items": {
         "CASH_FLOW": {
           "name": "Flujo de caja",
-          "body": "Previsiones, escenarios y avisos antes de quedarte sin efectivo."
+          "body": "Previsiones, escenarios y avisos antes de quedarte sin efectivo.",
+          "h1": "Ve tu posición de caja con semanas de antelación",
+          "h2": "Escenarios mejor, esperado y peor"
         },
         "AR_COLLECTIONS": {
           "name": "Cobranza",
-          "body": "Antigüedad, colas de vencidos y recordatorios de pago."
+          "body": "Antigüedad, colas de vencidos y recordatorios de pago.",
+          "h1": "Facturas vencidas ordenadas por riesgo e importe",
+          "h2": "Recordatorios de pago con un clic o automáticos"
         },
         "REVENUE_PIPELINE": {
           "name": "Embudo de ingresos",
-          "body": "Etapas de propuestas, negocios estancados y siguientes pasos."
+          "body": "Etapas de propuestas, negocios estancados y siguientes pasos.",
+          "h1": "Detecta a tiempo propuestas estancadas",
+          "h2": "Mira los negocios aceptados aún sin facturar"
         },
         "POS": {
           "name": "Punto de venta",
-          "body": "Una pantalla de caja para ventas en mostrador."
+          "body": "Una pantalla de caja para ventas en mostrador.",
+          "h1": "Cobra ventas de mostrador en segundos",
+          "h2": "El stock se actualiza al vender"
         },
         "WORKFORCE": {
           "name": "Personal",
-          "body": "Empleados, asistencia, permisos y aprobaciones."
+          "body": "Empleados, asistencia, permisos y aprobaciones.",
+          "h1": "Asistencia y permisos en un solo lugar",
+          "h2": "Aprobaciones con notificaciones"
         },
         "PAYROLL": {
           "name": "Nómina",
-          "body": "Ciclos de pago, contabilización y exportaciones legales."
+          "body": "Ciclos de pago, contabilización y exportaciones legales.",
+          "h1": "Ciclos de pago con controles antes de salir en vivo",
+          "h2": "Exportaciones legales listas para presentar"
         },
         "DOCUMENTS": {
           "name": "Bóveda de documentos",
-          "body": "Almacenamiento seguro con escaneo y vínculos a registros."
+          "body": "Almacenamiento seguro con escaneo y vínculos a registros.",
+          "h1": "Escanea facturas y recibos a campos",
+          "h2": "Vincula archivos a facturas y gastos"
         },
         "REPORTING_CENTER": {
           "name": "Centro de informes",
-          "body": "Informes financieros y de cumplimiento con exportaciones cuidadas."
+          "body": "Informes financieros y de cumplimiento con exportaciones cuidadas.",
+          "h1": "Informes financieros y de cumplimiento listos",
+          "h2": "Exportaciones a Excel con rastro de auditoría"
         },
         "MULTI_COMPANY": {
           "name": "Varias empresas",
-          "body": "Gestiona varias entidades legales con un solo acceso."
+          "body": "Gestiona varias entidades legales con un solo acceso.",
+          "h1": "Varias entidades legales, un solo acceso",
+          "h2": "Valores por defecto por empresa"
         },
         "IMPORT_MANAGER": {
           "name": "Gestor de importación",
-          "body": "Asigna, revisa e importa datos desde archivos con seguridad."
+          "body": "Asigna, revisa e importa datos desde archivos con seguridad.",
+          "h1": "Asigna y revisa archivos antes de importar",
+          "h2": "Crear o actualizar con seguridad, con historial"
         },
         "MIAB_BILLING": {
           "name": "Facturación por correo",
-          "body": "Inventario de buzones vinculado a clientes e igualas."
+          "body": "Inventario de buzones vinculado a clientes e igualas.",
+          "h1": "Ve dominios y buzones alojados",
+          "h2": "Vincúlalos a clientes e igualas"
+        },
+        "TAX_ADVANCED": {
+          "h1": "Controles de preparación antes de presentar",
+          "h2": "Cambios de tasa con aprobación de dos personas",
+          "name": "Herramientas fiscales avanzadas",
+          "body": "Controles de preparación fiscal, cambios de tasa con aprobación, diagnóstico de importaciones y rastro de auditoría, dentro de Impuesto sobre la renta."
         }
+      },
+      "status": {
+        "on": "Activo",
+        "off": "Apagado",
+        "paused": "En pausa",
+        "needsPlan": "Requiere plan de pago"
+      },
+      "filters": {
+        "all": "Todos",
+        "on": "Activos",
+        "off": "Apagados"
+      },
+      "details": "Qué incluye",
+      "hideDetails": "Ocultar",
+      "worksWith": "Funciona bien con {names}",
+      "turnOnSuggested": "Activar {name}",
+      "planEnded": "Tu plan de pago terminó, así que está en pausa. Tus datos se conservan y se reanuda al mejorar el plan.",
+      "needsPlanBody": "Disponible en los planes Pro y Team.",
+      "upgrade": "Ver planes",
+      "since": "Activo desde {date}",
+      "undo": "Deshacer",
+      "emptyFilter": "No hay módulos en esta vista.",
+      "headline": "Añade lo que tu negocio necesita",
+      "headlineHint": "Todo es opcional. Apagar un módulo lo oculta y conserva sus datos.",
+      "options": {
+        "AR_COLLECTIONS": {
+          "autoReminders": {
+            "title": "Enviar recordatorios automáticamente cada día",
+            "body": "Los clientes con facturas vencidas reciben cada día un correo de recordatorio. Requiere configurar el envío de correo. Apagado hasta que lo actives."
+          }
+        },
+        "saved": "Opción guardada",
+        "failed": "No se pudo guardar la opción."
       }
     },
     "needsAttention": "Requiere atención",
@@ -6593,7 +6654,19 @@
       "branding": {
         "logo": "el logotipo",
         "signature": "la firma"
-      }
+      },
+      "moduleOn": "Activó {name}",
+      "moduleOff": "Apagó {name}",
+      "moduleOption": "Cambió una opción de {name}"
+    },
+    "moduleUnavailable": {
+      "needsPlanTitle": "{name} requiere un plan de pago",
+      "offTitle": "{name} está apagado",
+      "needsPlanBody": "Este espacio de trabajo no tiene un plan de pago activo, así que el módulo no está disponible. Tus datos se conservan.",
+      "offBody": "Está apagado en este espacio de trabajo. Tus datos se conservan y vuelven al activarlo de nuevo.",
+      "viewPlans": "Ver planes",
+      "enable": "Activar en Ajustes",
+      "back": "Volver al panel"
     }
   }
 }

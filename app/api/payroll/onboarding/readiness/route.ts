@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { isModuleEnabled } from "@/lib/modules";
 import { prisma } from "@/lib/prisma";
 
 type ReadinessItem = {
@@ -40,6 +41,10 @@ export async function GET() {
 
   if (!workspaceId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!(await isModuleEnabled(workspaceId, "PAYROLL"))) {
+    return NextResponse.json({ error: "Payroll module is not enabled for this workspace.", code: "MODULE_DISABLED" }, { status: 403 });
   }
 
   try {
