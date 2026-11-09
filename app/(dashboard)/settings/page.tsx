@@ -6,5 +6,5 @@ export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ section?: string }> }) {
   const { section } = await searchParams;
-  return <SettingsHost section={isSectionKey(section) ? section : "business"} />;
+  return <SettingsHost section={isSectionKey(section) ? section : "overview"} />;
 }

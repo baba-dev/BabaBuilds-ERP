@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { activeKey, GROUP_ORDER, NAV, type NavEntry } from "@/lib/settings/nav";
 import { NavIcon } from "./nav-icon";
-import { DirtyContext, SettingsDataProvider, useDirty } from "./settings-data";
+import { DirtyContext, SettingsDataProvider, useDirty, useSettingsData } from "./settings-data";
 
 function Nav() {
   const t = useTranslations("SettingsHub");
@@ -20,6 +20,23 @@ function Nav() {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const current = activeKey(pathname, params.get("section"));
+  const { overview } = useSettingsData();
+  const searchRef = useRef<HTMLInputElement | null>(null);
+  // Sections (or pages) with a required item still open get a dot.
+  const attention = useMemo(() => new Set((overview?.checks ?? []).filter((c) => c.status === "todo").map((c) => c.section)), [overview]);
+
+  // "/" jumps to the search box, like the main menu.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey || el?.closest("input, textarea, select, [contenteditable=true]")) return;
+      e.preventDefault();
+      setOpen(true);
+      searchRef.current?.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const q = query.trim().toLowerCase();
   const visible = useMemo(() => NAV.filter((n) => !q || t(`nav.${n.key}`).toLowerCase().includes(q) || t(`navHint.${n.key}`).toLowerCase().includes(q) || n.keywords.some((k) => k.includes(q))), [q, t]);
@@ -45,7 +62,7 @@ function Nav() {
       <div id="settings-map" className={cn("space-y-4", open ? "block" : "hidden lg:block")}>
       <div className="relative">
         <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-        <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("search")} aria-label={t("search")} className="h-9 ps-9" />
+        <Input ref={searchRef} type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("search")} aria-label={t("search")} className="h-9 ps-9" />
       </div>
       {visible.length === 0 ? <p className="px-1 text-sm text-muted-foreground">{t("noMatch")}</p> : null}
       {GROUP_ORDER.map((g) => {
@@ -61,6 +78,7 @@ function Nav() {
                     className={cn("flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", n.key === current ? "bg-indigo-50 font-semibold text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-200" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground")}>
                     <NavIcon name={n.icon} className="size-4 shrink-0" />
                     <span className="truncate">{t(`nav.${n.key}`)}</span>
+                    {attention.has(n.key) && n.key !== current ? <span className="ms-auto size-2 shrink-0 rounded-full bg-amber-500" role="img" aria-label={t("needsAttention")} /> : null}
                   </Link>
                 </li>
               ))}

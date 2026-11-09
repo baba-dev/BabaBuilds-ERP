@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HASH_TO_SECTION, type SectionKey } from "@/lib/settings/nav";
 import { useSettingsData } from "./settings-data";
+import { ActivitySection } from "./sections/Activity";
 import { AiSection } from "./sections/Ai";
 import { AppSection } from "./sections/App";
 import { AutomationSection } from "./sections/Automation";
@@ -14,11 +16,12 @@ import { BusinessSection } from "./sections/Business";
 import { EmailSection } from "./sections/Email";
 import { InvoicingSection } from "./sections/Invoicing";
 import { ModulesSection } from "./sections/Modules";
+import { OverviewSection } from "./sections/Overview";
 import { PaymentsSection } from "./sections/Payments";
 import { ShopSection } from "./sections/Shop";
 import { TaxSection } from "./sections/Tax";
 
-const SECTIONS = { business: BusinessSection, tax: TaxSection, invoicing: InvoicingSection, banking: BankingSection, modules: ModulesSection, automation: AutomationSection, email: EmailSection, payments: PaymentsSection, shop: ShopSection, ai: AiSection } as const;
+const SECTIONS = { overview: OverviewSection, activity: ActivitySection, business: BusinessSection, tax: TaxSection, invoicing: InvoicingSection, banking: BankingSection, modules: ModulesSection, automation: AutomationSection, email: EmailSection, payments: PaymentsSection, shop: ShopSection, ai: AiSection } as const;
 
 export function SettingsHost({ section }: { section: SectionKey }) {
   const t = useTranslations("SettingsHub");
@@ -32,7 +35,7 @@ export function SettingsHost({ section }: { section: SectionKey }) {
   }, [router, section]);
 
   return (
-    <main className="space-y-5" aria-labelledby="settings-title">
+    <motion.main key={section} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} className="space-y-5" aria-labelledby="settings-title">
       <header>
         <h1 id="settings-title" className="text-2xl font-bold tracking-tight">{t(`nav.${section}`)}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{t(`navHint.${section}`)}</p>
@@ -46,6 +49,6 @@ export function SettingsHost({ section }: { section: SectionKey }) {
       ) : data ? (
         (() => { const Section = SECTIONS[section as keyof typeof SECTIONS]; return <Section key={section} data={data} canManage={data.canManage !== false} reload={reload} />; })()
       ) : null}
-    </main>
+    </motion.main>
   );
 }

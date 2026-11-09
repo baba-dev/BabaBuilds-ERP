@@ -103,7 +103,7 @@ describe("settings map", () => {
     for (const n of NAV) expect(n.href.startsWith("/settings")).toBe(true);
     expect(new Set(NAV.map((n) => n.key)).size).toBe(NAV.length);
     expect(activeKey("/settings", "tax")).toBe("tax");
-    expect(activeKey("/settings", "nonsense")).toBe("business");
+    expect(activeKey("/settings", "nonsense")).toBe("overview");
     expect(activeKey("/settings/team", null)).toBe("team");
   });
 

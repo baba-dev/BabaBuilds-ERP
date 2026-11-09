@@ -121,6 +121,18 @@ export function useSectionForm<T extends Record<string, unknown>>(args: { sectio
   // eslint-disable-next-line react-hooks/exhaustive-deps -- args.toPayload/onSaved are inline closures; values is the real input
   }, [values, args.section, reload, t]);
 
+  // Ctrl/Cmd+S saves the section instead of the browser's "save page".
+  const saveRef = useRef(save);
+  useEffect(() => { saveRef.current = save; }, [save]);
+  useEffect(() => {
+    if (!dirty) return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") { e.preventDefault(); void saveRef.current(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [dirty]);
+
   return { values, set, errors, dirty, saving, justSaved, save, reset };
 }
 

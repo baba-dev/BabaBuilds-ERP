@@ -1,5 +1,5 @@
 /** The settings map. Each entry is a section on /settings or a page under /settings/*. Labels live in messages (SettingsHub.nav). */
-export const SECTION_KEYS = ["business", "tax", "invoicing", "banking", "modules", "automation", "email", "payments", "shop", "ai", "app"] as const;
+export const SECTION_KEYS = ["overview", "business", "tax", "invoicing", "banking", "modules", "automation", "email", "payments", "shop", "ai", "app", "activity"] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
 
 export type NavGroup = "business" | "operations" | "channels" | "account";
@@ -15,6 +15,7 @@ export type NavEntry = {
 };
 
 export const NAV: NavEntry[] = [
+  { key: "overview", group: "business", icon: "LayoutDashboard", href: "/settings?section=overview", keywords: ["overview", "setup", "checklist", "progress", "start", "home", "status"] },
   { key: "business", group: "business", icon: "Building2", href: "/settings?section=business", keywords: ["company", "name", "address", "logo", "signature", "language", "locale", "phone", "email"] },
   { key: "tax", group: "business", icon: "Landmark", href: "/settings?section=tax", keywords: ["gst", "gstin", "pan", "udyam", "msme", "sac", "tax rate", "vat", "registration"] },
   { key: "invoicing", group: "business", icon: "FileText", href: "/settings?section=invoicing", keywords: ["invoice", "prefix", "numbering", "theme", "design", "payment terms", "due date"] },
@@ -30,6 +31,7 @@ export const NAV: NavEntry[] = [
   { key: "security", group: "account", icon: "ShieldCheck", href: "/settings/security", keywords: ["security", "mfa", "passkey", "password", "2fa", "google"] },
   { key: "billing", group: "account", icon: "Receipt", href: "/settings/billing", keywords: ["billing", "plan", "subscription", "upgrade", "invoices"] },
   { key: "profile", group: "account", icon: "UserRound", href: "/settings/profile", keywords: ["profile", "me", "avatar", "personal"] },
+  { key: "activity", group: "account", icon: "History", href: "/settings?section=activity", keywords: ["activity", "history", "log", "audit", "changes", "who changed"] },
   { key: "app", group: "account", icon: "Smartphone", href: "/settings?section=app", keywords: ["app", "install", "pwa", "offline", "push", "devices"] },
 ];
 
@@ -49,5 +51,5 @@ export const HASH_TO_SECTION: Record<string, SectionKey> = {
 /** Active nav key for a URL. */
 export function activeKey(pathname: string, section: string | null): string {
   if (pathname.startsWith("/settings/")) return pathname.split("/")[2] ?? "business";
-  return isSectionKey(section) ? section : "business";
+  return isSectionKey(section) ? section : "overview";
 }

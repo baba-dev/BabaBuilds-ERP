@@ -6161,7 +6161,9 @@
       "security": "Seguridad",
       "billing": "Plan y facturación",
       "profile": "Mi perfil",
-      "app": "App y dispositivos"
+      "app": "App y dispositivos",
+      "overview": "Resumen",
+      "activity": "Historial de cambios"
     },
     "navHint": {
       "business": "Nombre, dirección, contacto, logotipo e idioma.",
@@ -6179,7 +6181,9 @@
       "security": "Métodos de acceso, passkeys y verificación en dos pasos.",
       "billing": "Tu suscripción, método de pago y facturas.",
       "profile": "Tu nombre e imagen personales.",
-      "app": "Instala la app y gestiona el uso sin conexión."
+      "app": "Instala la app y gestiona el uso sin conexión.",
+      "overview": "Cuánto llevas configurado y qué hacer después.",
+      "activity": "Quién cambió qué ajustes y cuándo."
     },
     "errors": {
       "REQUIRED": "Este campo es obligatorio.",
@@ -6311,7 +6315,8 @@
       "termsLabel": "Días hasta el vencimiento",
       "dueOnReceipt": "Al recibirla",
       "days": "{count} días",
-      "termsNote": "Se aplica a las facturas nuevas. Las igualas y propuestas mantienen sus propios plazos."
+      "termsNote": "Se aplica a las facturas nuevas. Las igualas y propuestas mantienen sus propios plazos.",
+      "dueExample": "Una factura con fecha {date} vencería el {due}."
     },
     "banking": {
       "title": "Datos bancarios en las facturas",
@@ -6389,7 +6394,9 @@
       "accentHint": "Botones y elementos destacados.",
       "content": "El texto Acerca de, las preguntas frecuentes y los enlaces se editan en el editor de la tienda.",
       "editContent": "Editar contenido de la tienda",
-      "viewShop": "Ver tienda"
+      "viewShop": "Ver tienda",
+      "copy": "Copiar enlace",
+      "copied": "Copiado"
     },
     "ai": {
       "title": "Clave del asistente de IA",
@@ -6499,6 +6506,93 @@
           "name": "Facturación por correo",
           "body": "Inventario de buzones vinculado a clientes e igualas."
         }
+      }
+    },
+    "needsAttention": "Requiere atención",
+    "overview": {
+      "headline": "{name} se está preparando",
+      "headlineNoName": "Terminemos la configuración",
+      "allDone": "Todo está configurado",
+      "allDoneBody": "Los datos del negocio, los identificadores fiscales y la cuenta bancaria están completos. Revisa los extras opcionales cuando quieras.",
+      "progress": "{done} de {total} pasos hechos. Primero los obligatorios.",
+      "next": "Siguiente: {item}",
+      "required": "Necesario para facturas y declaraciones",
+      "requiredHint": "Termínalos para que los documentos sean correctos.",
+      "recommended": "Recomendado",
+      "recommendedHint": "No es obligatorio, pero ahorra tiempo o genera confianza.",
+      "completed": "Hecho",
+      "setUp": "Configurar",
+      "review": "Revisar",
+      "item": {
+        "identity": {
+          "title": "Nombre, dirección y correo del negocio",
+          "why": "Se imprime en cada factura."
+        },
+        "contact": {
+          "title": "Teléfono y sitio web",
+          "why": "Los clientes pueden contactarte desde la factura."
+        },
+        "logo": {
+          "title": "Logotipo",
+          "why": "Hace que facturas y tienda se vean tuyas."
+        },
+        "pan": {
+          "title": "PAN",
+          "why": "Necesario en facturas y declaraciones de impuestos."
+        },
+        "gstin": {
+          "title": "GSTIN",
+          "why": "Necesario en facturas fiscales y declaraciones del GST."
+        },
+        "udyam": {
+          "title": "Registro Udyam",
+          "why": "Registro MSME gratuito con beneficios, sin GSTIN bajo el límite del GST."
+        },
+        "bank": {
+          "title": "Cuenta bancaria",
+          "why": "Los clientes la necesitan para pagarte por transferencia."
+        },
+        "email": {
+          "title": "Envío de correo",
+          "why": "Envía facturas y recordatorios desde tu propia dirección."
+        },
+        "payments": {
+          "title": "Pasarela de pago",
+          "why": "Añade enlaces de pago a las facturas."
+        },
+        "shop": {
+          "title": "Tienda en línea",
+          "why": "Deja que los clientes pidan desde una página pública."
+        },
+        "team": {
+          "title": "Invita a tu equipo o contador",
+          "why": "Dales acceso con los permisos adecuados."
+        }
+      }
+    },
+    "activity": {
+      "title": "Cambios recientes",
+      "hint": "Los últimos 40 cambios, del más reciente al más antiguo. Nunca se guardan los valores, solo qué campos cambiaron.",
+      "failed": "No se pudo cargar el historial.",
+      "emptyTitle": "Aún no hay cambios",
+      "emptyBody": "Los cambios en los ajustes aparecerán aquí con quién los hizo.",
+      "changed": "Cambió {fields} en {section}",
+      "saved": "Guardó los ajustes",
+      "secretSet": "Definió {name}",
+      "secretCleared": "Quitó {name}",
+      "brandingSet": "Subió {name} nuevo",
+      "brandingCleared": "Quitó {name}",
+      "emailTest": "Envió un correo de prueba",
+      "secrets": {
+        "smtpPassword": "la contraseña de correo",
+        "groqApiKey": "la clave de IA",
+        "razorpayKeySecret": "el secreto de Razorpay",
+        "stripeSecretKey": "el secreto de Stripe",
+        "unknown": "un secreto"
+      },
+      "branding": {
+        "logo": "el logotipo",
+        "signature": "la firma"
       }
     }
   }

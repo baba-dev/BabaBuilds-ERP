@@ -6132,7 +6132,9 @@
       "security": "Security",
       "billing": "Plan and billing",
       "profile": "My profile",
-      "app": "App and devices"
+      "app": "App and devices",
+      "overview": "Overview",
+      "activity": "Change history"
     },
     "navHint": {
       "business": "Name, address, contact details, logo and language.",
@@ -6150,7 +6152,9 @@
       "security": "Sign-in methods, passkeys and two-step checks.",
       "billing": "Your subscription, payment method and invoices.",
       "profile": "Your personal name and picture.",
-      "app": "Install the app and manage offline use."
+      "app": "Install the app and manage offline use.",
+      "overview": "How far your setup has come, and what to do next.",
+      "activity": "Who changed which settings, and when."
     },
     "errors": {
       "REQUIRED": "This field is required.",
@@ -6282,7 +6286,8 @@
       "termsLabel": "Days until due",
       "dueOnReceipt": "On receipt",
       "days": "{count} days",
-      "termsNote": "Applies to new invoices. Retainers and proposals keep their own terms."
+      "termsNote": "Applies to new invoices. Retainers and proposals keep their own terms.",
+      "dueExample": "An invoice dated {date} would be due on {due}."
     },
     "banking": {
       "title": "Bank details on invoices",
@@ -6360,7 +6365,9 @@
       "accentHint": "Buttons and highlights.",
       "content": "About text, FAQ and links are edited in the shop editor.",
       "editContent": "Edit shop content",
-      "viewShop": "View shop"
+      "viewShop": "View shop",
+      "copy": "Copy link",
+      "copied": "Copied"
     },
     "ai": {
       "title": "AI assistant key",
@@ -6470,6 +6477,93 @@
           "name": "Email billing",
           "body": "Mailbox inventory linked to clients and retainers."
         }
+      }
+    },
+    "needsAttention": "Needs attention",
+    "overview": {
+      "headline": "{name} is getting ready",
+      "headlineNoName": "Let's finish setting up",
+      "allDone": "Everything is set up",
+      "allDoneBody": "Your business details, tax IDs and bank account are complete. Review the optional extras any time.",
+      "progress": "{done} of {total} steps done. Required steps come first.",
+      "next": "Next: {item}",
+      "required": "Needed for invoices and returns",
+      "requiredHint": "Finish these so documents are correct.",
+      "recommended": "Recommended",
+      "recommendedHint": "Not required, but they save time or build trust.",
+      "completed": "Done",
+      "setUp": "Set up",
+      "review": "Review",
+      "item": {
+        "identity": {
+          "title": "Business name, address and email",
+          "why": "Printed on every invoice."
+        },
+        "contact": {
+          "title": "Phone and website",
+          "why": "Clients can reach you from the invoice."
+        },
+        "logo": {
+          "title": "Logo",
+          "why": "Makes invoices and the shop look like yours."
+        },
+        "pan": {
+          "title": "PAN",
+          "why": "Needed on invoices and tax returns."
+        },
+        "gstin": {
+          "title": "GSTIN",
+          "why": "Needed on tax invoices and GST returns."
+        },
+        "udyam": {
+          "title": "Udyam registration",
+          "why": "Free MSME registration with benefits, no GSTIN needed under the GST limit."
+        },
+        "bank": {
+          "title": "Bank account",
+          "why": "Clients need it to pay you by transfer."
+        },
+        "email": {
+          "title": "Email sending",
+          "why": "Send invoices and reminders from your own address."
+        },
+        "payments": {
+          "title": "Payment gateway",
+          "why": "Add pay-now links to invoices."
+        },
+        "shop": {
+          "title": "Online shop",
+          "why": "Let clients order from a public page."
+        },
+        "team": {
+          "title": "Invite your team or accountant",
+          "why": "Give them access with the right permissions."
+        }
+      }
+    },
+    "activity": {
+      "title": "Recent changes",
+      "hint": "The last 40 changes, newest first. Values are never recorded, only which fields changed.",
+      "failed": "Could not load the history.",
+      "emptyTitle": "No changes yet",
+      "emptyBody": "Changes to settings will appear here with who made them.",
+      "changed": "Changed {fields} in {section}",
+      "saved": "Saved settings",
+      "secretSet": "Set the {name}",
+      "secretCleared": "Removed the {name}",
+      "brandingSet": "Uploaded a new {name}",
+      "brandingCleared": "Removed the {name}",
+      "emailTest": "Sent a test email",
+      "secrets": {
+        "smtpPassword": "email password",
+        "groqApiKey": "AI key",
+        "razorpayKeySecret": "Razorpay secret",
+        "stripeSecretKey": "Stripe secret",
+        "unknown": "secret"
+      },
+      "branding": {
+        "logo": "logo",
+        "signature": "signature"
       }
     }
   }

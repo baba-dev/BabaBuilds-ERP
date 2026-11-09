@@ -21,12 +21,16 @@ export type SettingsData = {
   canManage?: boolean;
 };
 
-type Ctx = { data: SettingsData | null; loading: boolean; error: boolean; reload: () => void };
+export type OverviewCheck = { key: string; section: string; status: "done" | "todo" | "optional" | "na" };
+export type SetupOverview = { checks: OverviewCheck[]; percent: number; open: number };
+
+type Ctx = { data: SettingsData | null; overview: SetupOverview | null; loading: boolean; error: boolean; reload: () => void };
 const SettingsCtx = createContext<Ctx | null>(null);
 
 /** One fetch for the whole settings area; sections read it and ask for a reload after a save. */
 export function SettingsDataProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = useState<SettingsData | null>(null);
+  const [overview, setOverview] = useState<SetupOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [nonce, setNonce] = useState(0);
@@ -43,11 +47,12 @@ export function SettingsDataProvider({ children }: { children: React.ReactNode }
       .then((d) => { if (!cancelled) { setData(d); setError(false); } })
       .catch(() => { if (!cancelled) setError(true); })
       .finally(() => { if (!cancelled) setLoading(false); });
+    fetch("/api/settings/overview", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).then((d: SetupOverview | null) => { if (!cancelled && d) setOverview(d); }).catch(() => undefined);
     return () => { cancelled = true; };
   }, [nonce]);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
-  const value = useMemo(() => ({ data, loading, error, reload }), [data, loading, error, reload]);
+  const value = useMemo(() => ({ data, overview, loading, error, reload }), [data, overview, loading, error, reload]);
   return <SettingsCtx.Provider value={value}>{children}</SettingsCtx.Provider>;
 }
 

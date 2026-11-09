@@ -10,6 +10,7 @@ const txMock = { businessProfile: { create: vi.fn(), update: vi.fn(), findUnique
 const prismaMock = {
   workspace: { findUnique: vi.fn() },
   businessProfile: { findUnique: vi.fn(), update: vi.fn(), findFirst: vi.fn() },
+  appActivityLog: { findMany: vi.fn(async () => []) },
   user: { update: vi.fn() },
   $transaction: vi.fn(async (fn: (tx: typeof txMock) => unknown) => fn(txMock)),
 };
@@ -106,5 +107,12 @@ describe("settings routes", () => {
     const res = await PATCH(json({ section: "automation", values: { gstRemindersEnabled: true } }));
     expect(res.status).toBe(409);
     expect((await res.json()).code).toBe("PROFILE_REQUIRED");
+  });
+
+  it("shows the change history only to people who manage settings, and returns field names, not values", async () => {
+    const { NextResponse } = await import("next/server");
+    withPermissionMock.mockResolvedValue({ granted: false, response: NextResponse.json({ code: "RBAC_PERMISSION_DENIED" }, { status: 403 }) });
+    const { GET } = await import("@/app/api/settings/activity/route");
+    expect((await GET()).status).toBe(403);
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -22,7 +22,11 @@ export function InvoicingSection({ data, canManage }: SectionProps) {
     toPayload: (v) => ({ ...v, invoiceTermsDays: Number(v.invoiceTermsDays) }),
   });
   const { values: v, set, errors } = form;
+  const format = useFormatter();
   const prefix = (v.invoicePrefix || "INV").toUpperCase();
+  const terms = Number(v.invoiceTermsDays) || 0;
+  const today = new Date();
+  const due = new Date(today.getTime() + terms * 86_400_000);
   return (
     <div className="space-y-5">
       {!canManage ? <ReadOnlyBanner /> : null}
@@ -62,6 +66,7 @@ export function InvoicingSection({ data, canManage }: SectionProps) {
             </div>
           )}
         </Field>
+        <p className="mt-3 rounded-lg bg-muted/40 px-3 py-2 text-sm">{t("dueExample", { date: format.dateTime(today, { dateStyle: "medium" }), due: format.dateTime(due, { dateStyle: "medium" }) })}</p>
         <p className="mt-3 text-xs text-muted-foreground">{t("termsNote")}</p>
       </Panel>
       <SaveBar {...form} onSave={form.save} onReset={form.reset} disabled={!canManage} />
