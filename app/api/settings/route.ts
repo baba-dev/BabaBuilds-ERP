@@ -12,12 +12,14 @@ import { isSupportedLocale } from '@/i18n/locales';
 import { getTaxFeatureFlags } from '@/lib/tax/feature-flags';
 import { logActivity } from '@/lib/security/activity-log';
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
-import { withPermission } from '@/lib/rbac';
+import { checkPermissionsSilent, withPermission } from '@/lib/rbac';
 import { canUsePaymentGateways, loadWorkspaceBillingSnapshot, shouldApplyFreeTierLimits } from '@/lib/entitlements';
 import { resolvePrimaryRemittanceFromProfile } from '@/lib/banking/resolve-primary-remittance';
 import { syncPrimaryRemittanceBankAccount } from '@/lib/banking/sync-primary-remittance-account';
 import { isProductionSecurityMode, isTestRazorpayKeyId, isTestRazorpaySecretKey, isTestStripePublishableKey, isTestStripeSecretKey } from '@/lib/payment-key-safety';
 import { validateUdyam } from '@/lib/msme/udyam';
+import { patchSchema, SECTION_SCHEMAS, validateRegional, zodFieldErrors } from '@/lib/settings/schemas';
+import { buildSectionUpdate, changedFields } from '@/lib/settings/apply';
 
 function sanitizeBusinessProfileResponse(profile: Record<string, unknown> | null) {
   if (!profile) return null;
@@ -41,7 +43,7 @@ function sanitizeBusinessProfileResponse(profile: Record<string, unknown> | null
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.workspaceId) {
+    if (!session || !session.workspaceId || !session.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -80,6 +82,13 @@ export async function GET() {
 
     const safeProfile = sanitizeBusinessProfileResponse(profile as unknown as Record<string, unknown> | null) ?? {};
 
+    // Mail and payment configuration is for people who manage settings. Everyone else still needs the business
+    // identity, bank details printed on invoices and plan state, so only these operational fields are withheld.
+    const canManage = (await checkPermissionsSilent(session.user.id, workspaceId, ['workspace.manage_settings'] as const))['workspace.manage_settings'];
+    if (!canManage) {
+      for (const k of ['smtpHost', 'smtpPort', 'smtpUser', 'smtpFromEmail', 'razorpayKeyId', 'stripePublishableKey', 'hasSmtpPassword', 'hasGroqApiKey', 'hasRazorpayKeySecret', 'hasStripeSecretKey']) delete safeProfile[k];
+    }
+
     // Gateway credentials/settings are paid-only. Preserve encrypted values in the
     // database for a future re-upgrade, but never expose them to a Free workspace.
     if (!billingEntitlements.canUsePaymentGateways) {
@@ -102,6 +111,7 @@ export async function GET() {
       countryCode,
       taxFeatureFlags,
       billingEntitlements,
+      canManage,
     });
   } catch {
     return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
@@ -545,4 +555,87 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ error: 'Failed to save business profile' }, { status: 500 });
   }
+}
+
+
+/**
+ * Section-scoped save (JSON). Each section validates on its own and writes only the columns it owns, so one bad value
+ * never blocks another section. Secrets and images have their own routes.
+ */
+export async function PATCH(request: Request) {
+  const session = await getServerSession(authOptions);
+  const workspaceId = session?.workspaceId;
+  const userId = session?.user?.id;
+  if (!session || !workspaceId || !userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const perm = await withPermission(userId, workspaceId, 'workspace.manage_settings');
+  if (!perm.granted) return perm.response;
+
+  const body = patchSchema.safeParse(await request.json().catch(() => null));
+  if (!body.success) return NextResponse.json({ error: 'Invalid request.', code: 'INVALID_BODY' }, { status: 400 });
+  const { section, values } = body.data;
+
+  const parsed = SECTION_SCHEMAS[section].safeParse(values);
+  if (!parsed.success) return NextResponse.json({ error: 'Check the highlighted fields.', code: 'VALIDATION', fields: zodFieldErrors(parsed.error) }, { status: 422 });
+
+  const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { countryCode: true } });
+  const regional = validateRegional(section, parsed.data as Record<string, unknown>, workspace?.countryCode ?? 'IN');
+  if (regional.length) return NextResponse.json({ error: 'Check the highlighted fields.', code: 'VALIDATION', fields: regional }, { status: 422 });
+
+  const existing = await prisma.businessProfile.findUnique({ where: { workspaceId } });
+  if (!existing && section !== 'business') return NextResponse.json({ error: 'Save your business details first.', code: 'PROFILE_REQUIRED' }, { status: 409 });
+
+  const data = buildSectionUpdate(section, parsed.data as Record<string, unknown>, existing as Record<string, unknown> | null);
+  const input = parsed.data as Record<string, unknown>;
+
+  if (section === 'payments') {
+    const billing = await loadWorkspaceBillingSnapshot(workspaceId);
+    if (!(billing ? canUsePaymentGateways(billing) : false)) {
+      return NextResponse.json({ error: 'Payment gateway settings require an active Pro or Team plan.', code: 'PAID_PLAN_REQUIRED' }, { status: 403 });
+    }
+    if (isProductionSecurityMode()) {
+      if (typeof input.razorpayKeyId === 'string' && input.razorpayKeyId && isTestRazorpayKeyId(input.razorpayKeyId)) return NextResponse.json({ error: 'Razorpay test Key ID is blocked in production mode.', code: 'TEST_KEY_BLOCKED' }, { status: 400 });
+      if (typeof input.stripePublishableKey === 'string' && input.stripePublishableKey && isTestStripePublishableKey(input.stripePublishableKey)) return NextResponse.json({ error: 'Stripe test publishable key is blocked in production mode.', code: 'TEST_KEY_BLOCKED' }, { status: 400 });
+    }
+  }
+
+  if (section === 'shop') {
+    if (input.shopEnabled && !data.shopSlug) return NextResponse.json({ error: 'Choose a shop address of at least 3 letters or digits before turning the shop on.', code: 'VALIDATION', fields: [{ field: 'shopSlug', code: 'SLUG' }] }, { status: 422 });
+    if (data.shopSlug) {
+      const taken = await prisma.businessProfile.findFirst({ where: { shopSlug: data.shopSlug as string, NOT: { workspaceId } }, select: { id: true } });
+      if (taken) return NextResponse.json({ error: 'That shop address is already taken.', code: 'VALIDATION', fields: [{ field: 'shopSlug', code: 'SLUG_TAKEN' }] }, { status: 409 });
+    }
+  }
+
+  const changed = changedFields(existing as Record<string, unknown> | null, data);
+  const accountNumber = section === 'banking' && typeof input.accountNumber === 'string' && input.accountNumber ? input.accountNumber : null;
+  if (accountNumber) changed.push('accountNumber');
+
+  await prisma.$transaction(async (tx) => {
+    if (!existing) {
+      await tx.businessProfile.create({
+        data: { workspaceId, companyName: String(data.companyName), proprietorName: String(data.proprietorName), address: String(data.address), email: String(data.email), phone: (data.phone as string | null) ?? null, website: (data.website as string | null) ?? null, panNumber: '', bankName: '', accountName: '', accountNumber: '', ifscCode: '' },
+      });
+    } else if (Object.keys(data).length) {
+      await tx.businessProfile.update({ where: { workspaceId }, data });
+    }
+    if (section === 'banking') {
+      const fresh = await tx.businessProfile.findUnique({ where: { workspaceId }, select: { bankName: true, accountName: true, ifscCode: true, routingLabel: true, primaryBankAccountId: true } });
+      if (accountNumber && fresh) {
+        await syncPrimaryRemittanceBankAccount(tx, { workspaceId, bankName: fresh.bankName, accountHolderName: fresh.accountName, accountNumber, routingCode: fresh.ifscCode, routingLabel: fresh.routingLabel, currency: null, sourceType: 'SETTINGS_SYNC' });
+      } else if (fresh?.primaryBankAccountId) {
+        // Keep the linked bank account in step when only the name, holder or routing code changed.
+        await tx.bankAccount.updateMany({ where: { id: fresh.primaryBankAccountId, workspaceId }, data: { bankName: fresh.bankName, accountHolderName: fresh.accountName, routingCode: fresh.ifscCode } });
+      }
+    }
+  });
+
+  if (section === 'business' && typeof input.locale === 'string') {
+    await prisma.user.update({ where: { id: userId }, data: { locale: input.locale } });
+    (await cookies()).set('NEXT_LOCALE', input.locale, { path: '/' });
+    changed.push('locale');
+  }
+
+  try { invalidateDashboardCacheForWorkspace(workspaceId); } catch { noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'businessProfile', action: 'update' }); }
+  logActivity({ action: 'settings_update', status: 'SUCCESS', workspaceId, actor: { userId, email: session.user?.email ?? null }, entity: { type: 'workspace_settings', id: workspaceId }, metadata: { section, changedFieldNames: changed, changedFieldCount: changed.length }, request });
+  return NextResponse.json({ success: true, section, changed });
 }

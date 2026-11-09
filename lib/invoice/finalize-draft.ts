@@ -133,7 +133,7 @@ export async function finalizeInvoiceFromDraft(params: {
             currency: baseCurrency,
             exchangeRate,
             baseGrandTotal: toDecimal(totals.total).mul(exchangeRate).toDecimalPlaces(2),
-            paymentTermsDays: 7,
+            paymentTermsDays: Number.isInteger(profile.invoiceTermsDays) ? profile.invoiceTermsDays : 7,
             source: "MANUAL",
             ...snapshotGstFields(client, draftInput.gst),
             providerGateway: draftPaymentLink.gateway,

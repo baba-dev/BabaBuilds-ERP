@@ -210,9 +210,6 @@ export async function buildInvoiceGenerationContext(
       fields: [{ field: "customDate", message: "Custom date is invalid. Please provide a valid date value." }],
     });
   }
-  const dueDate = new Date(date);
-  dueDate.setDate(dueDate.getDate() + 7);
-
   const serviceDesc = sanitizedServices.map((s) => s.title).join(" + ");
   if (!serviceDesc.trim()) {
     throw new InvoiceValidationError(400, {
@@ -251,6 +248,8 @@ export async function buildInvoiceGenerationContext(
   if (!profile) throw new InvoiceValidationError(400, { error: "Business profile missing. Please complete Settings Wizard." });
 
   const countryCode = profile.workspace?.countryCode || "IN";
+  const dueDate = new Date(date);
+  dueDate.setDate(dueDate.getDate() + (Number.isInteger(profile.invoiceTermsDays) ? profile.invoiceTermsDays : 7));
   const serviceTaxRates = sanitizedServices
     .map((service: SanitizedService) => (typeof service.sac === "object" && service.sac ? service.sac.igstRate : null) ?? service.taxRate ?? null)
     .filter((rate: number | null): rate is number => rate !== null && rate !== undefined);

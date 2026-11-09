@@ -126,6 +126,13 @@ export function AppSidebar() {
     void loadPreferences();
   }, [loadPreferences]);
 
+  // Settings fires this after a module is switched so the menu follows without a reload.
+  useEffect(() => {
+    const refresh = () => { void loadPreferences(); };
+    window.addEventListener("erp:modules-changed", refresh);
+    return () => window.removeEventListener("erp:modules-changed", refresh);
+  }, [loadPreferences]);
+
   useEffect(() => {
     setSidebarWidth(preferences.sidebarWidth);
     const nextOpen = true; // Always open on desktop
