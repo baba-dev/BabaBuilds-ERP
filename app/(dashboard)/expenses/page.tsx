@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ArrowDown, ArrowUp, CheckCircle2, ChevronLeft, ChevronRight, Download, FileText, Loader2, Paperclip, Pencil, Plus, Receipt, Search, Tag, Trash2, TriangleAlert, X } from "lucide-react";
+import { ArrowDown, ArrowUp, CheckCircle2, ChevronLeft, ChevronRight, Download, FileText, Loader2, Paperclip, Pencil, Plus, Receipt, Search, Trash2, TriangleAlert, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,7 +62,7 @@ export default function ExpensesPage() {
   const searchRef = useRef<HTMLInputElement>(null);
   const reqId = useRef(0);
   const tRef = useRef(t);
-  tRef.current = t;
+  useEffect(() => { tRef.current = t; });
 
   useEffect(() => { const h = setTimeout(() => { setDebounced(q); setPage(1); }, 250); return () => clearTimeout(h); }, [q]);
 
@@ -133,7 +133,7 @@ export default function ExpensesPage() {
   }
 
   const sortBy = (s: Sort) => { if (sort === s) setDir((d) => (d === "asc" ? "desc" : "asc")); else { setSort(s); setDir(s === "vendor" ? "asc" : "desc"); } setPage(1); };
-  const SortIcon = ({ s }: { s: Sort }) => (sort === s ? (dir === "asc" ? <ArrowUp className="size-3" aria-hidden /> : <ArrowDown className="size-3" aria-hidden />) : null);
+  const sortIcon = (s: Sort) => (sort === s ? (dir === "asc" ? <ArrowUp className="size-3" aria-hidden /> : <ArrowDown className="size-3" aria-hidden />) : null);
 
   const delta = summary && summary.prevTotal !== null && summary.prevTotal > 0 ? ((summary.total - summary.prevTotal) / summary.prevTotal) * 100 : null;
   const maxMonth = Math.max(1, ...(summary?.monthly.map((x) => x.amount) ?? [1]));
@@ -253,10 +253,10 @@ export default function ExpensesPage() {
           <div className="overflow-hidden rounded-2xl border bg-card">
             <div className="hidden grid-cols-[32px_110px_minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1fr)_120px] items-center gap-3 border-b bg-muted/40 px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground lg:grid">
               <Checkbox checked={allSelected} onCheckedChange={() => setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.id)))} aria-label={t("selectAll")} />
-              <button type="button" className="flex items-center gap-1 text-start uppercase" onClick={() => sortBy("date")}>{tc("col_date")}<SortIcon s="date" /></button>
-              <button type="button" className="flex items-center gap-1 text-start uppercase" onClick={() => sortBy("vendor")}>{tc("col_vendor")}<SortIcon s="vendor" /></button>
+              <button type="button" className="flex items-center gap-1 text-start uppercase" onClick={() => sortBy("date")}>{tc("col_date")}{sortIcon("date")}</button>
+              <button type="button" className="flex items-center gap-1 text-start uppercase" onClick={() => sortBy("vendor")}>{tc("col_vendor")}{sortIcon("vendor")}</button>
               <span>{tc("col_category")}</span>
-              <button type="button" className="flex items-center justify-end gap-1 uppercase" onClick={() => sortBy("amount")}>{t("col.amount")}<SortIcon s="amount" /></button>
+              <button type="button" className="flex items-center justify-end gap-1 uppercase" onClick={() => sortBy("amount")}>{t("col.amount")}{sortIcon("amount")}</button>
               <span className="text-end">{tc("col_actions")}</span>
             </div>
             <ul>

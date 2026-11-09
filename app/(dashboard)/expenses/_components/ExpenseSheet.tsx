@@ -110,7 +110,7 @@ export function ExpenseSheet({ open, onOpenChange, expense, isIndia, supplierSta
     toast.error(res.data.error ?? t("toast.failed"));
   }
 
-  const Err = ({ k }: { k: string }) => (errors[k] ? <p role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">{errors[k]}</p> : null);
+  const fieldError = (k: string) => (errors[k] ? <p role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">{errors[k]}</p> : null);
   const cats = [...PRESET_CATEGORIES.map((c) => c.value as string), ...extraCategories];
   const unknownCat = category && !cats.includes(category);
 
@@ -152,17 +152,17 @@ export function ExpenseSheet({ open, onOpenChange, expense, isIndia, supplierSta
               <Label htmlFor="ex-vendor" className="mb-1.5 block text-xs font-medium text-muted-foreground">{tc("vendor")} *</Label>
               <Input id="ex-vendor" ref={firstRef} list="expense-vendors" className={field} value={vendor} maxLength={120} onChange={(e) => { setVendor(e.target.value); clear("vendor"); }} placeholder={tc("vendor_ph")} aria-invalid={Boolean(errors.vendor)} autoComplete="off" />
               <datalist id="expense-vendors">{vendors.map((v) => <option key={v} value={v} />)}</datalist>
-              <Err k="vendor" />
+              {fieldError("vendor")}
             </div>
             <div>
               <Label htmlFor="ex-amount" className="mb-1.5 block text-xs font-medium text-muted-foreground">{t("form.amount", { currency })} *</Label>
               <Input id="ex-amount" inputMode="decimal" className={`${field} tabular-nums`} value={amount} onChange={(e) => { setAmount(e.target.value.replace(/[^\d.,]/g, "")); clear("amount"); }} placeholder="0.00" aria-invalid={Boolean(errors.amount)} />
-              <Err k="amount" />
+              {fieldError("amount")}
             </div>
             <div>
               <Label htmlFor="ex-date" className="mb-1.5 block text-xs font-medium text-muted-foreground">{tc("date_purchase")} *</Label>
               <Input id="ex-date" type="date" className={`${field} dark:[color-scheme:dark]`} value={date} onChange={(e) => { setDate(e.target.value); clear("date"); }} aria-invalid={Boolean(errors.date)} />
-              <Err k="date" />
+              {fieldError("date")}
             </div>
             <div>
               <Label htmlFor="ex-cat" className="mb-1.5 block text-xs font-medium text-muted-foreground">{tc("category")} *</Label>
@@ -171,13 +171,13 @@ export function ExpenseSheet({ open, onOpenChange, expense, isIndia, supplierSta
                 {unknownCat && <option value={category}>{category}</option>}
                 {cats.map((c) => <option key={c} value={c}>{catLabel(c)}</option>)}
               </select>
-              <Err k="category" />
+              {fieldError("category")}
             </div>
           </div>
           <div>
             <Label htmlFor="ex-desc" className="mb-1.5 block text-xs font-medium text-muted-foreground">{t("form.notes")}</Label>
             <Textarea id="ex-desc" rows={2} maxLength={500} value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t("form.notesHint")} />
-            <Err k="description" />
+            {fieldError("description")}
           </div>
 
           {isIndia ? <ExpenseGstFields value={gst} onChange={setGst} amount={Number(amount.replace(/,/g, "")) || 0} supplierState={supplierState} /> : null}
