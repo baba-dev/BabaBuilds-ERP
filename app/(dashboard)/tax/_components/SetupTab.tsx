@@ -18,6 +18,7 @@ import { readError, Section, useJson } from "./gst-utils";
 type Settings = {
   gstin: string | null; stateCode: string | null; registrationType: "REGULAR" | "COMPOSITION" | "UNREGISTERED"; filingFrequency: "MONTHLY" | "QRMP";
   prevTurnover: number; registeredFrom: string | null; lutActive: boolean; hasProfile: boolean; companyName: string; remindersEnabled: boolean;
+  supplyKind: "SERVICES" | "GOODS" | "BOTH"; msmeInvestment: number | null;
 };
 
 export function SetupTab({ onSaved, canManage }: { onSaved: () => void; canManage: boolean }) {
@@ -29,12 +30,15 @@ export function SetupTab({ onSaved, canManage }: { onSaved: () => void; canManag
 
 function SetupForm({ initial, onSaved, canManage }: { initial: Settings; onSaved: () => void; canManage: boolean }) {
   const t = useTranslations("GstHub.setup");
+  const sb = useTranslations("SmallBusiness.setup");
   const [gstin, setGstin] = useState(initial.gstin ?? "");
   const [state, setState] = useState(initial.stateCode ?? "");
   const [reg, setReg] = useState(initial.registrationType);
   const [freq, setFreq] = useState(initial.filingFrequency);
   const [turnover, setTurnover] = useState(initial.prevTurnover ? String(initial.prevTurnover) : "");
   const [since, setSince] = useState(initial.registeredFrom ?? "");
+  const [kind, setKind] = useState(initial.supplyKind ?? "SERVICES");
+  const [investment, setInvestment] = useState(initial.msmeInvestment ? String(initial.msmeInvestment) : "");
   const [lut, setLut] = useState(initial.lutActive);
   const [reminders, setReminders] = useState(initial.remindersEnabled);
   const [busy, setBusy] = useState(false);
@@ -52,6 +56,7 @@ function SetupForm({ initial, onSaved, canManage }: { initial: Settings; onSaved
         body: JSON.stringify({
           gstin: normalized || null, stateCode: effectiveState || null, registrationType: reg, filingFrequency: reg === "REGULAR" ? freq : "MONTHLY",
           prevTurnover: turnover.trim() === "" ? null : Number(turnover), registeredFrom: since || null, lutActive: lut, remindersEnabled: reminders,
+          supplyKind: kind, msmeInvestment: investment.trim() === "" ? null : Number(investment),
         }),
       });
       if (!res.ok) throw new Error(await readError(res, t("failed")));
@@ -117,6 +122,19 @@ function SetupForm({ initial, onSaved, canManage }: { initial: Settings; onSaved
             <Label htmlFor="turnover">{t("turnover")}</Label>
             <Input id="turnover" inputMode="decimal" value={turnover} onChange={(e) => setTurnover(e.target.value)} placeholder="0" />
             <p className="text-xs text-muted-foreground">{t("turnoverHint")}</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="supply-kind">{sb("kind")}</Label>
+            <Select value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
+              <SelectTrigger id="supply-kind"><SelectValue /></SelectTrigger>
+              <SelectContent>{(["SERVICES", "GOODS", "BOTH"] as const).map((k) => <SelectItem key={k} value={k}>{sb(`kinds.${k}`)}</SelectItem>)}</SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">{sb("kindHint")}</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="msme-investment">{sb("investment")}</Label>
+            <Input id="msme-investment" inputMode="decimal" value={investment} onChange={(e) => setInvestment(e.target.value)} placeholder="0" />
+            <p className="text-xs text-muted-foreground">{sb("investmentHint")}</p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="since">{t("since")}</Label>

@@ -104,6 +104,7 @@ function buildRequestHash(payload: unknown): string {
 
 import { GenerateInvoiceSchema } from '@/lib/invoice/generate-schema';
 import { snapshotGstFields } from '@/lib/gst/source';
+import { supplierChargesGst } from "@/lib/msme/threshold";
 
 export async function POST(request: Request) {
   let generatedPdfPath = "";
@@ -320,7 +321,7 @@ export async function POST(request: Request) {
     const profileSettings = profile as typeof profile & ProfileSettings;
     const taxResolution = resolveTaxRate({
       countryCode,
-      isTaxExempt: Boolean(client.isExport),
+      isTaxExempt: Boolean(client.isExport) || !supplierChargesGst(profile, countryCode),
       serviceTaxRates,
       workspaceDefaultTaxRate: profileSettings.defaultTaxRate,
       taxRateOverride: taxRateOverrideValue,
@@ -346,7 +347,7 @@ export async function POST(request: Request) {
 
     const totals = calculateInvoiceTotals({
       services: sanitizedServices,
-      isTaxExempt: Boolean(client.isExport),
+      isTaxExempt: Boolean(client.isExport) || !supplierChargesGst(profile, countryCode),
       defaultTaxRate: taxResolution.taxRate,
     });
 
@@ -650,7 +651,7 @@ export async function POST(request: Request) {
               destinationCountryCode: countryCode,
               clientId: client.id,
               occurredAt: invoiceDate,
-              isTaxExempt: Boolean(client.isExport),
+              isTaxExempt: Boolean(client.isExport) || !supplierChargesGst(profile, countryCode),
             },
             actorUserId: actorId ?? 'system',
           });

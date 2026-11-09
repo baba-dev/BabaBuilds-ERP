@@ -24,6 +24,7 @@ import { addRetainerEvent } from "@/lib/retainers/events";
 import { retainerMrr } from "@/lib/retainers/mrr";
 import { advanceBillingDate, applyPercentChanges, extendLimits, isFinished } from "@/lib/retainers/schedule";
 import { startOfUtcDay } from "@/lib/retainers/status";
+import { supplierChargesGst } from "@/lib/msme/threshold";
 
 export type BillResult =
   | { ok: true; invoice: { id: string; invoiceNumber: string }; emailed: boolean; completed: boolean }
@@ -88,14 +89,14 @@ export function planCycle(retainer: BillingRetainer, profile: BillingProfile, no
 
   const resolution = resolveTaxRate({
     countryCode,
-    isTaxExempt: Boolean(retainer.client.isExport),
+    isTaxExempt: Boolean(retainer.client.isExport) || !supplierChargesGst(profile, countryCode),
     serviceTaxRates: services.map((s) => s.taxRate),
     workspaceDefaultTaxRate: profile.defaultTaxRate ?? null,
   });
   if (resolution.requiresUserInput) return { ok: false, code: "TAX_RATE_REQUIRED", message: "A tax rate is missing for this retainer. Set a workspace default or edit its lines." };
   const totals = calculateInvoiceTotals({
     services: services.map((s) => ({ amount: s.amount, taxRate: s.taxRate })),
-    isTaxExempt: Boolean(retainer.client.isExport),
+    isTaxExempt: Boolean(retainer.client.isExport) || !supplierChargesGst(profile, countryCode),
     defaultTaxRate: resolution.taxRate,
   });
   return {

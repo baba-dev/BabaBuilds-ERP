@@ -30,4 +30,15 @@ describe("buildInvoiceViewModel", () => {
     const vm = buildInvoiceViewModel(SAMPLE_INVOICES.longStrings);
     expect(vm.services[0].titleClamped.length).toBeLessThanOrEqual(200);
   });
+
+  it("does not call it a tax invoice when the supplier is not registered for GST", () => {
+    const base = SAMPLE_INVOICES.basic;
+    const unregistered = buildInvoiceViewModel({ ...base, profile: { ...base.profile, gstRegistrationType: "UNREGISTERED", workspace: { ...base.profile.workspace, countryCode: "IN" } } });
+    expect(unregistered.headerTitle).toBe("INVOICE");
+    expect(unregistered.subHeader).toMatch(/NOT REGISTERED UNDER GST/);
+    const composition = buildInvoiceViewModel({ ...base, profile: { ...base.profile, gstRegistrationType: "COMPOSITION", workspace: { ...base.profile.workspace, countryCode: "IN" } } });
+    expect(composition.headerTitle).toBe("BILL OF SUPPLY");
+    const regular = buildInvoiceViewModel({ ...base, profile: { ...base.profile, gstRegistrationType: "REGULAR", workspace: { ...base.profile.workspace, countryCode: "IN" } } });
+    expect(regular.headerTitle).toBe("TAX INVOICE");
+  });
 });

@@ -1483,6 +1483,8 @@ model BusinessProfile {
   caTaxAuditApplicable  Boolean  @default(false)
   caTan                 String? // TAN of the deductor, needed for TDS returns
   caSetupAt             DateTime?
+  gstSupplyKind         String   @default("SERVICES") // SERVICES | GOODS | BOTH: picks the GST registration threshold
+  msmeInvestment        Decimal? // plant, machinery and equipment, for MSME classification
   gstLutActive          Boolean  @default(true) // exports of services under a Letter of Undertaking (zero-rated, no IGST)
 
   // Banking
@@ -2172,6 +2174,10 @@ model Expense {
   // Credit control: hold a bill's credit (e.g. supplier has not filed) or claim it in a later month than the bill's.
   itcHeld          Boolean   @default(false)
   itcClaimMonth    String? // "2026-10"
+  // MSME vendors: section 43B(h) disallows payments to micro and small enterprises made after the allowed days.
+  vendorUdyam      String?
+  vendorMsme       String? // MICRO | SMALL | MEDIUM | NONE (trader or unknown)
+  vendorAgreedDays Int? // written credit period, max 45
 
   @@index([date])
   @@index([category])

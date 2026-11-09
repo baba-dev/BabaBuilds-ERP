@@ -9,6 +9,7 @@ import { authOptions } from "@/lib/auth";
 import { withPermission } from '@/lib/rbac';
 import { isModuleEnabled } from '@/lib/modules';
 import { getNextInvoiceNumber, getNextProposalNo, isUniqueConstraintError } from '@/lib/document-numbering';
+import { supplierChargesGst } from "@/lib/msme/threshold";
 
 const checkoutActionSchema = z.enum(['PAY_NOW', 'INVOICE', 'PROPOSAL', 'RETAINER']);
 const checkoutItemTypeSchema = z.enum(['SERVICE', 'PRODUCT', 'CUSTOM']);
@@ -260,6 +261,8 @@ export async function POST(request: Request) {
         const result = await prisma.$transaction(async (tx) => {
           // Default Walk-in Client if none provided for immediate POS payment.
           const walkInCountry = (await tx.workspace.findUnique({ where: { id: workspaceId }, select: { countryCode: true } }))?.countryCode || 'IN';
+          // An unregistered or composition-scheme seller must not collect GST.
+          const posChargesGst = supplierChargesGst(await tx.businessProfile.findUnique({ where: { workspaceId }, select: { gstRegistrationType: true } }), walkInCountry);
           if (!resolvedClientId) {
             let walkIn = await tx.client.findFirst({ where: { workspaceId, name: 'Walk-in Customer' } });
             if (!walkIn) {
@@ -333,6 +336,7 @@ export async function POST(request: Request) {
             }
           }
 
+          if (!posChargesGst) for (const line of resolvedItems) line.taxRate = 0;
           const subtotal = resolvedItems.reduce((acc, item) => acc.add(item.lineSubtotal), decimal(0));
           const discount = decimal(requestedDiscount);
           if (discount.gt(subtotal)) {

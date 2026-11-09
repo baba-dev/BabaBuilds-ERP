@@ -4756,6 +4756,7 @@
         "TAX_MISMATCH": "{count} invoices where the tax does not add up",
         "EVIDENCE_MISSING": "{count} invoices have no PDF on file",
         "ITC_VENDOR_MISSING": "{count} bills claim credit without a vendor GSTIN or invoice number",
+        "MSME_PAYMENT_OVERDUE": "{count} unpaid bills to micro or small suppliers are past the allowed days (section 43B(h))",
         "RECEIPT_MISSING": "{count} bills have no receipt",
         "BANK_UNRECONCILED": "{count} bank transactions are not reconciled",
         "GST_RETURN_OVERDUE": "{count} GST returns are overdue",
@@ -4770,6 +4771,7 @@
         "TAX_MISMATCH": "tax mismatch",
         "EVIDENCE_MISSING": "invoice PDFs",
         "ITC_VENDOR_MISSING": "vendor details on bills",
+        "MSME_PAYMENT_OVERDUE": "late payments to small suppliers",
         "RECEIPT_MISSING": "receipts",
         "BANK_UNRECONCILED": "bank reconciliation",
         "GST_RETURN_OVERDUE": "overdue GST return",
@@ -6000,5 +6002,95 @@
       "presumptive": "Presumptive taxpayers pay the whole advance tax in one instalment by 15 March."
     },
     "act2025": "From 1 April 2026 the Income-tax Act 2025 replaces the 1961 Act. Slabs are unchanged, but section numbers differ (the 87A rebate is now section 202)."
+  },
+  "SmallBusiness": {
+    "title": "Small business status",
+    "subtitle": "Where you stand against the GST registration limit, plus your Udyam and MSME position.",
+    "progress": "Share of the GST registration limit used",
+    "of": "of {limit} this financial year",
+    "special": "special-category state limit",
+    "status": {
+      "WELL_BELOW": "Below the GST limit",
+      "APPROACHING": "Close to the GST limit",
+      "CROSSED": "Over the GST limit",
+      "REGISTERED": "Registered for GST",
+      "NOT_APPLICABLE": "Not applicable"
+    },
+    "kind": {
+      "SERVICES": "Limit for services",
+      "GOODS": "Limit for goods",
+      "BOTH": "Limit for goods and services"
+    },
+    "below": "No GST registration is needed yet. You have about {headroom} of room left.",
+    "approaching": "You have used {percent}% of the limit, about {headroom} left. Plan your registration before you cross it.",
+    "projected": "At this pace you will cross it around {date}.",
+    "crossed": "You passed the limit on {date}. Apply for GST registration by {applyBy} (30 days) and charge GST from the day you crossed.",
+    "udyam": {
+      "label": "Udyam registration",
+      "none": "Not added",
+      "add": "Add it in Settings",
+      "ok": "Format looks right",
+      "bad": "Check the format, it should look like UDYAM-MH-12-0000001"
+    },
+    "class": {
+      "label": "MSME class",
+      "MICRO": "Micro enterprise",
+      "SMALL": "Small enterprise",
+      "MEDIUM": "Medium enterprise",
+      "NONE": "Above medium limits",
+      "turnoverOnly": "From turnover only. Add your investment in GST setup for an exact class.",
+      "both": "From turnover and investment"
+    },
+    "composition": {
+      "label": "Composition scheme",
+      "yes": "Available at {rate}% of turnover",
+      "over": "Turnover is over the {limit} limit",
+      "na": "Not available for mixed supplies",
+      "hint": "Needs GST registration and sales within your own state."
+    },
+    "means": {
+      "title": "What this means for you",
+      "r1": "Invoices go out without GST and are marked as issued by a supplier not registered under GST.",
+      "r2": "There are no GST returns to file. Income tax still applies, and the presumptive scheme may suit you.",
+      "r3": "Udyam registration is free and does not need a GSTIN while you are under the GST limit. It gives you MSME benefits.",
+      "r4": "Selling goods to other states, or through an e-commerce platform, can require GST registration even below the limit. Check with your CA."
+    },
+    "payables": {
+      "title": "Payments to micro and small suppliers",
+      "rule": "Pay within {days} days (15 without a written agreement)",
+      "unpaid": "{count} unpaid past the allowed days ({amount}). The expense is disallowed for the year until it is paid.",
+      "late": "{count} paid after the allowed days",
+      "none": "No late payments to micro or small suppliers.",
+      "open": "Mark suppliers on the expense form"
+    },
+    "editSetup": "Edit GST setup",
+    "setup": {
+      "kind": "What do you sell?",
+      "kinds": {
+        "SERVICES": "Services",
+        "GOODS": "Goods",
+        "BOTH": "Goods and services"
+      },
+      "kindHint": "Decides your GST registration limit. Selling only goods has a higher limit than services.",
+      "investment": "Investment in plant and equipment (₹)",
+      "investmentHint": "Optional. Used with turnover to work out your MSME class."
+    },
+    "expense": {
+      "title": "Supplier is a micro or small enterprise",
+      "class": {
+        "NONE": "No, or not sure",
+        "MICRO": "Micro",
+        "SMALL": "Small",
+        "MEDIUM": "Medium"
+      },
+      "udyam": "Supplier's Udyam number",
+      "udyamBad": "Check the format, e.g. UDYAM-MH-12-0000001",
+      "days": "Agreed credit days (max 45)",
+      "payment": "Payment",
+      "paid": "Paid",
+      "unpaid": "Pay later",
+      "hint": "Tag micro and small suppliers to track the 45-day payment rule.",
+      "ruleHint": "Pay within 45 days, or 15 without a written agreement, or the expense is not deductible until you pay it."
+    }
   }
 }

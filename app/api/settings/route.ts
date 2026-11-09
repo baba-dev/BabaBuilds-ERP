@@ -17,6 +17,7 @@ import { canUsePaymentGateways, loadWorkspaceBillingSnapshot, shouldApplyFreeTie
 import { resolvePrimaryRemittanceFromProfile } from '@/lib/banking/resolve-primary-remittance';
 import { syncPrimaryRemittanceBankAccount } from '@/lib/banking/sync-primary-remittance-account';
 import { isProductionSecurityMode, isTestRazorpayKeyId, isTestRazorpaySecretKey, isTestStripePublishableKey, isTestStripeSecretKey } from '@/lib/payment-key-safety';
+import { validateUdyam } from '@/lib/msme/udyam';
 
 function sanitizeBusinessProfileResponse(profile: Record<string, unknown> | null) {
   if (!profile) return null;
@@ -340,7 +341,14 @@ export async function POST(request: Request) {
     if (hasField('website')) updateData.website = getNullableFromClearableField('website');
     else delete updateData.website;
 
-    if (hasField('udyamNumber')) updateData.udyamNumber = getNullableFromClearableField('udyamNumber');
+    if (hasField('udyamNumber')) {
+      const raw = getNullableFromClearableField('udyamNumber');
+      if (raw) {
+        const check = validateUdyam(String(raw));
+        if (!check.valid) return NextResponse.json({ error: 'Udyam number looks wrong. It has the form UDYAM-MH-12-0000001.', code: 'UDYAM_INVALID' }, { status: 400 });
+        updateData.udyamNumber = check.value;
+      } else updateData.udyamNumber = null;
+    }
     else delete updateData.udyamNumber;
 
     if (hasField('gstin')) updateData.gstin = getNullableFromClearableField('gstin');

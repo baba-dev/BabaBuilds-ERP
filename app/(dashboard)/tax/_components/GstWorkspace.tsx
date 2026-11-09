@@ -1,5 +1,6 @@
 "use client";
 
+import { SmallBusinessPanel } from "./SmallBusinessPanel";
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -98,6 +99,7 @@ export function GstWorkspace({ currentFy }: { currentFy: number }) {
       return <div className="rounded-2xl border border-dashed border-border p-10 text-center"><Landmark className="mx-auto size-8 text-muted-foreground" aria-hidden /><p className="mt-3 text-base font-semibold">{t("notIndia.title")}</p><p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">{t("notIndia.body")}</p><Link href="/tax/income-tax" className="mt-4 inline-block text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-300">{t("notIndia.cta")}</Link></div>;
     }
     if (tab === "setup") return <SetupTab onSaved={refresh} canManage={access.manage} />;
+    if (unregistered && tab === "overview") return <SmallBusinessPanel goto={goto} />;
     if (unregistered && tab !== "overview") {
       return <div className="rounded-2xl border border-dashed border-border p-10 text-center"><p className="text-base font-semibold">{t("unregistered.title")}</p><p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">{t("unregistered.body")}</p><button type="button" onClick={() => goto("setup")} className="mt-4 text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-300">{t("unregistered.cta")}</button></div>;
     }
@@ -110,7 +112,7 @@ export function GstWorkspace({ currentFy }: { currentFy: number }) {
       case "documents": return <DocumentsTab fy={fy} canManage={access.manage} obligations={obligations} />;
       case "tools": return <ToolsTab fy={fy} obligations={obligations} canManage={access.manage} />;
       case "issues": return <IssuesTab issues={issues.data?.issues ?? null} loading={issues.loading} goto={goto} />;
-      default: return <OverviewTab data={data} canFile={access.file} canManage={access.manage} issueCount={issueCount} onOpen={openObligation} onFile={setFiling} onExtend={setExtending} goto={goto} />;
+      default: return <><SmallBusinessPanel goto={goto} /><div className="h-5" /><OverviewTab data={data} canFile={access.file} canManage={access.manage} issueCount={issueCount} onOpen={openObligation} onFile={setFiling} onExtend={setExtending} goto={goto} /></>;
     }
   };
 

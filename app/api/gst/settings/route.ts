@@ -10,9 +10,10 @@ export async function GET() {
   const auth = await requireGstAccess("tax.view");
   if (!auth.ok) return auth.response;
   const p = await loadGstProfile(auth.access.workspaceId);
+  const sb = await prisma.businessProfile.findUnique({ where: { workspaceId: auth.access.workspaceId }, select: { gstSupplyKind: true, msmeInvestment: true } });
   return NextResponse.json({
     gstin: p.gstin, gstinValid: p.gstinValid, stateCode: p.stateCode, registrationType: p.registrationType, filingFrequency: p.filingFrequency,
-    remindersEnabled: p.remindersEnabled, prevTurnover: p.prevTurnover, registeredFrom: p.registeredFrom?.toISOString().slice(0, 10) ?? null, lutActive: p.lutActive, hasProfile: p.hasProfile, companyName: p.companyName, countryCode: p.countryCode,
+    remindersEnabled: p.remindersEnabled, prevTurnover: p.prevTurnover, registeredFrom: p.registeredFrom?.toISOString().slice(0, 10) ?? null, lutActive: p.lutActive, supplyKind: sb?.gstSupplyKind ?? "SERVICES", msmeInvestment: sb?.msmeInvestment === null || sb?.msmeInvestment === undefined ? null : Number(sb.msmeInvestment), hasProfile: p.hasProfile, companyName: p.companyName, countryCode: p.countryCode,
   });
 }
 
@@ -24,6 +25,8 @@ const schema = z.object({
   prevTurnover: z.number().finite().min(0).max(1e13).optional().nullable(),
   registeredFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
   lutActive: z.boolean().optional(),
+  supplyKind: z.enum(["SERVICES", "GOODS", "BOTH"]).optional(),
+  msmeInvestment: z.number().finite().min(0).max(1e13).optional().nullable(),
   remindersEnabled: z.boolean().optional(),
 });
 
@@ -55,6 +58,8 @@ export async function PATCH(request: Request) {
   if (d.filingFrequency) data.gstFilingFrequency = d.filingFrequency;
   if (d.prevTurnover !== undefined) data.gstPrevFyTurnover = d.prevTurnover;
   if (d.registeredFrom !== undefined) data.gstRegisteredFrom = d.registeredFrom ? new Date(d.registeredFrom) : null;
+  if (d.supplyKind) data.gstSupplyKind = d.supplyKind;
+  if (d.msmeInvestment !== undefined) data.msmeInvestment = d.msmeInvestment;
   if (d.lutActive !== undefined) data.gstLutActive = d.lutActive;
   if (d.remindersEnabled !== undefined) data.gstRemindersEnabled = d.remindersEnabled;
   await prisma.businessProfile.update({ where: { workspaceId }, data });

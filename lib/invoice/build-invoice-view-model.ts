@@ -1,3 +1,4 @@
+import { nonGstDocument } from "@/lib/msme/threshold";
 import type { InvoiceTotals } from "@/lib/invoice/totals";
 import { canUsePaymentGateways } from "@/lib/entitlements";
 import { resolvePrimaryRemittanceFromProfile } from "@/lib/banking/resolve-primary-remittance";
@@ -17,6 +18,7 @@ export interface PDFProfile {
   phone?: string | null;
   website?: string | null;
   udyamNumber?: string | null;
+  gstRegistrationType?: string | null;
   panNumber?: string | null;
   bankName: string;
   accountName: string;
@@ -215,8 +217,10 @@ export const buildInvoiceViewModel = ({
 
   const safeTaxIdLabel = profile.taxIdLabel || "VAT/GST Number";
   const safeRoutingLabel = profile.routingLabel || "IFSC Code";
-  const headerTitle = client.isExport ? "EXPORT OF SERVICES" : "TAX INVOICE";
-  const subHeader = client.isExport ? "ZERO RATED SUPPLY" : "DOMESTIC SUPPLY";
+  // Unregistered and composition-scheme suppliers cannot issue a tax invoice.
+  const nonGst = client.isExport ? null : nonGstDocument(profile, profile.workspace?.countryCode);
+  const headerTitle = client.isExport ? "EXPORT OF SERVICES" : (nonGst?.title ?? "TAX INVOICE");
+  const subHeader = client.isExport ? "ZERO RATED SUPPLY" : (nonGst?.note ?? "DOMESTIC SUPPLY");
   const taxLabel = profile.taxLabel || "Tax";
   const taxRatePercent = Math.round(totals.taxRate * 100);
   let taxRowLabel = `${taxLabel} (${taxRatePercent}%)`;

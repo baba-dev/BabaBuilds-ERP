@@ -242,7 +242,7 @@ export default function ExpenseTracker() {
       if (data.description) setDescription(data.description);
       // GST read from the bill: pre-fills the GST section for the owner to confirm (never saved on its own).
       if (isIndia && data.gst) {
-        setGst({ itcStatus: data.gst.itcStatus, vendorGstin: data.gst.vendorGstin ?? '', vendorInvoiceNo: data.gst.vendorInvoiceNo ?? '', hsnCode: data.gst.hsnCode ?? '', gstRate: String(data.gst.gstRate ?? 18), paymentStatus: 'PAID' });
+        setGst({ itcStatus: data.gst.itcStatus, vendorGstin: data.gst.vendorGstin ?? '', vendorInvoiceNo: data.gst.vendorInvoiceNo ?? '', hsnCode: data.gst.hsnCode ?? '', gstRate: String(data.gst.gstRate ?? 18), paymentStatus: 'PAID', vendorMsme: 'NONE', vendorUdyam: '', vendorAgreedDays: '' });
         toast.info(t('gst.scanned'));
       }
     } catch (err: unknown) {
@@ -265,8 +265,13 @@ export default function ExpenseTracker() {
       formData.append('vendor', vendor);
       formData.append('amount', amount);
       formData.append('description', description);
-      if (isIndia && gst.itcStatus !== 'NONE') {
+      if (isIndia && (gst.itcStatus !== 'NONE' || gst.vendorMsme !== 'NONE')) {
         const g = gstPayload(gst);
+        if (g.vendorMsme !== 'NONE') {
+          formData.append('vendorMsme', g.vendorMsme);
+          if (g.vendorUdyam) formData.append('vendorUdyam', g.vendorUdyam);
+          if (g.vendorAgreedDays) formData.append('vendorAgreedDays', String(g.vendorAgreedDays));
+        }
         formData.append('itcStatus', g.itcStatus);
         if (g.vendorGstin) formData.append('vendorGstin', g.vendorGstin);
         if (g.vendorInvoiceNo) formData.append('vendorInvoiceNo', g.vendorInvoiceNo);
