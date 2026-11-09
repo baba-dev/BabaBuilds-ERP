@@ -1458,6 +1458,7 @@ model BusinessProfile {
 
   invoiceTheme  String  @default("DESIGN_1") // "DESIGN_1" or "DESIGN_2"
   invoicePrefix String? @default("INV")
+  invoiceTermsDays Int @default(7) // default payment terms: due date = invoice date + this many days
 
   // --- DYNAMIC TAX LABELS ---
   // In the UI, instead of "Enter GST", we show "Enter {taxLabel}"

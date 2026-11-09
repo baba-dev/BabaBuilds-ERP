@@ -6092,5 +6092,385 @@
       "hint": "Tag micro and small suppliers to track the 45-day payment rule.",
       "ruleHint": "Pay within 45 days, or 15 without a written agreement, or the expense is not deductible until you pay it."
     }
+  },
+  "SettingsHub": {
+    "sections": "Sections",
+    "navLabel": "Settings sections",
+    "search": "Search settings",
+    "noMatch": "No setting matches that search.",
+    "leaveConfirm": "You have unsaved changes. Leave without saving?",
+    "readOnly": "You can view these settings. Ask an owner or admin to change them.",
+    "save": "Save changes",
+    "discard": "Discard",
+    "unsavedChanges": "You have unsaved changes",
+    "allSaved": "All changes saved",
+    "saved": "Settings saved",
+    "saveFailed": "Could not save. Try again.",
+    "networkError": "Network problem. Check your connection and try again.",
+    "fixFields": "Some fields need attention.",
+    "loadFailed": "Settings could not be loaded.",
+    "retry": "Try again",
+    "groups": {
+      "business": "Business",
+      "operations": "Operations",
+      "channels": "Channels",
+      "account": "Account and access"
+    },
+    "nav": {
+      "business": "Business profile",
+      "tax": "Tax and registration",
+      "invoicing": "Invoicing",
+      "banking": "Bank account",
+      "modules": "Modules",
+      "automation": "Reminders and automation",
+      "imports": "Data import",
+      "email": "Email sending",
+      "payments": "Payment gateways",
+      "shop": "Online shop",
+      "ai": "AI assistant",
+      "team": "Team and access",
+      "security": "Security",
+      "billing": "Plan and billing",
+      "profile": "My profile",
+      "app": "App and devices"
+    },
+    "navHint": {
+      "business": "Name, address, contact details, logo and language.",
+      "tax": "PAN, GSTIN, Udyam and the tax defaults used on documents.",
+      "invoicing": "Design, numbering and default payment terms.",
+      "banking": "The account clients pay into, printed on invoices.",
+      "modules": "Switch optional parts of the ERP on or off.",
+      "automation": "Reminders and what runs without you.",
+      "imports": "Bring clients, products and history in from files.",
+      "email": "Send invoices and reminders from your own address.",
+      "payments": "Razorpay and Stripe keys for payment links.",
+      "shop": "Your public storefront address and look.",
+      "ai": "The key that powers scanning and suggestions.",
+      "team": "Invite people and choose what each can do.",
+      "security": "Sign-in methods, passkeys and two-step checks.",
+      "billing": "Your subscription, payment method and invoices.",
+      "profile": "Your personal name and picture.",
+      "app": "Install the app and manage offline use."
+    },
+    "errors": {
+      "REQUIRED": "This field is required.",
+      "EMAIL": "Enter a valid email address.",
+      "URL": "Enter a full web address starting with http:// or https://.",
+      "LOCALE": "Choose one of the listed languages.",
+      "PAN": "A PAN has 10 characters, like ABCDE1234F.",
+      "GSTIN": "That GSTIN is not valid. Check all 15 characters.",
+      "UDYAM": "A Udyam number looks like UDYAM-MH-12-0000001.",
+      "SAC": "Use 4 to 8 digits.",
+      "PREFIX": "Use up to 10 letters, digits, dashes or slashes.",
+      "IFSC": "An IFSC has 11 characters, like HDFC0001234.",
+      "ACCOUNT": "Check the account number.",
+      "COLOR": "Choose a colour.",
+      "SLUG": "Use at least 3 letters or digits.",
+      "SLUG_TAKEN": "That shop address is already taken.",
+      "INVALID": "This value is not valid.",
+      "PAID_PLAN_REQUIRED": "This needs an active Pro or Team plan.",
+      "TEST_KEY_BLOCKED": "Test keys are blocked in production.",
+      "PROFILE_REQUIRED": "Save your business profile first."
+    },
+    "secret": {
+      "configured": "Saved and encrypted",
+      "replace": "Replace",
+      "remove": "Remove",
+      "confirmRemove": "Remove this saved secret?",
+      "placeholder": "Paste the value",
+      "store": "Save",
+      "cancel": "Cancel",
+      "stored": "Saved securely",
+      "removed": "Removed",
+      "failed": "Could not save the secret."
+    },
+    "business": {
+      "identity": "Business identity",
+      "identityHint": "Printed on invoices, proposals and your client portal.",
+      "companyName": "Company or trade name",
+      "proprietorName": "Proprietor or owner name",
+      "address": "Registered address",
+      "addressHint": "Appears on every invoice.",
+      "email": "Contact email",
+      "emailHint": "Where clients reply to.",
+      "phone": "Phone",
+      "website": "Website",
+      "language": "Language",
+      "languageHint": "The language of the app for you. Each person picks their own.",
+      "languageLabel": "Display language",
+      "branding": "Logo and signature",
+      "brandingHint": "Uploads apply immediately.",
+      "logo": "Logo",
+      "signature": "Signature",
+      "logoHint": "PNG, JPG or WEBP, up to 2 MB.",
+      "signatureHint": "PNG or WEBP with a transparent background, up to 1 MB. Used on Design 1 invoices.",
+      "logoAlt": "Current logo",
+      "signatureAlt": "Current signature",
+      "logoUpload": "Upload logo",
+      "signatureUpload": "Upload signature",
+      "upload": "Upload",
+      "replace": "Replace",
+      "remove": "Remove",
+      "imageSaved": "Image updated",
+      "imageFailed": "Could not update the image.",
+      "aiOthers": "Your assistant also suggested values for:",
+      "aiLink": {
+        "tax": "Tax IDs",
+        "banking": "Bank account"
+      }
+    },
+    "tax": {
+      "ids": "Tax identifiers",
+      "idsHintIn": "Used on invoices and returns. A valid GSTIN also sets your state.",
+      "idsHint": "Printed on invoices.",
+      "pan": "PAN",
+      "panHint": "10 characters, for example ABCDE1234F.",
+      "panBad": "A PAN has 10 characters, like ABCDE1234F.",
+      "taxId": "Tax registration number",
+      "gstin": "GSTIN",
+      "gstinHint": "Leave empty if you are not registered for GST.",
+      "gstinBad": "That GSTIN is not valid. Check all 15 characters.",
+      "gstinState": "State from GSTIN: {state}.",
+      "udyam": "Udyam registration number",
+      "udyamHint": "Free MSME registration. It does not need a GSTIN while you are below the GST limit.",
+      "udyamOk": "Format looks right.",
+      "udyamBad": "A Udyam number looks like UDYAM-MH-12-0000001.",
+      "taxLabel": "Name of the tax",
+      "taxLabelHint": "For example VAT or Sales Tax.",
+      "taxIdLabel": "Name of the tax number",
+      "taxIdLabelHint": "For example TRN or EIN.",
+      "defaults": "Document defaults",
+      "defaultsHint": "Used when a service or product has no rate of its own.",
+      "sac": "Default SAC or HSN code",
+      "sacHint": "4 to 8 digits. 998313 is IT consulting.",
+      "rate": "Default tax rate (%)",
+      "rateHint": "Leave empty to be asked each time.",
+      "registration": "GST registration",
+      "registrationHint": "Registration type, state and filing frequency are managed in GST setup.",
+      "registrationLine": "{type}, filing {freq}.",
+      "registrationLoading": "Loading registration details…",
+      "gstSetup": "GST setup",
+      "caSetup": "CA compliance setup",
+      "regType": {
+        "REGULAR": "Regular taxpayer",
+        "COMPOSITION": "Composition scheme",
+        "UNREGISTERED": "Not registered for GST"
+      },
+      "freq": {
+        "MONTHLY": "monthly",
+        "QRMP": "quarterly (QRMP)"
+      }
+    },
+    "invoicing": {
+      "theme": "Invoice design",
+      "themeHint": "The look of every PDF you send.",
+      "design": {
+        "DESIGN_1": "Classic",
+        "DESIGN_2": "Modern agency"
+      },
+      "designHint": {
+        "DESIGN_1": "White header and clean lines. Shows your signature.",
+        "DESIGN_2": "Bold dark header. Does not show a signature."
+      },
+      "numbering": "Invoice numbers",
+      "numberingHint": "Numbers run in order within each financial year.",
+      "prefix": "Prefix",
+      "prefixHint": "Letters, digits, dash or slash. Only affects new invoices.",
+      "preview": "Next invoice looks like",
+      "terms": "Payment terms",
+      "termsHint": "How long clients have to pay.",
+      "termsLabel": "Days until due",
+      "dueOnReceipt": "On receipt",
+      "days": "{count} days",
+      "termsNote": "Applies to new invoices. Retainers and proposals keep their own terms."
+    },
+    "banking": {
+      "title": "Bank details on invoices",
+      "hint": "Clients see these when they pay by bank transfer.",
+      "bankName": "Bank name",
+      "holder": "Account holder name",
+      "holderHint": "As it appears at the bank.",
+      "number": "Account number",
+      "numberHint": "Only the last digits are shown. Replace it to change.",
+      "numberNew": "Stored encrypted. Only the last digits are shown afterwards.",
+      "change": "Change",
+      "ifsc": "IFSC code",
+      "ifscHint": "11 characters, for example HDFC0001234.",
+      "ifscBad": "An IFSC has 11 characters, like HDFC0001234.",
+      "routing": "Routing code",
+      "routingLabel": "Name of the routing code",
+      "routingLabelHint": "For example SWIFT, Sort Code or ABA.",
+      "printed": "These details are printed on invoices and visible to your team.",
+      "moreAccounts": "Track several bank accounts and reconcile statements.",
+      "openReconciliation": "Open reconciliation"
+    },
+    "email": {
+      "server": "Mail server",
+      "serverHint": "Invoices and reminders go out through your own mailbox, so replies reach you.",
+      "presets": "Quick fill",
+      "preset": {
+        "gmail": "Gmail",
+        "outlook": "Outlook",
+        "zoho": "Zoho"
+      },
+      "host": "SMTP host",
+      "port": "Port",
+      "portHint": "587 is usual.",
+      "user": "Username",
+      "from": "Sender address",
+      "fromHint": "Defaults to the username when empty.",
+      "password": "Password or app password",
+      "passwordHint": "Gmail and Outlook need an app password. It is stored encrypted and never shown.",
+      "test": "Test the connection",
+      "testHint": "Sends a message to your own email address.",
+      "sendTest": "Send test email",
+      "saveFirst": "Save your changes first.",
+      "testSent": "Test email sent to {email}.",
+      "testFailed": "The test email could not be sent."
+    },
+    "payments": {
+      "title": "Payment gateways",
+      "hint": "Add a gateway to put pay-now links on invoices.",
+      "paid": "Payment gateways need an active Pro or Team plan.",
+      "upgrade": "See plans",
+      "gateway": {
+        "RAZORPAY": "Razorpay",
+        "STRIPE": "Stripe"
+      },
+      "ready": "Ready",
+      "razorpayKeyId": "Razorpay key ID",
+      "razorpayHint": "Starts with rzp_live_. Find it in the Razorpay dashboard under API keys.",
+      "razorpaySecret": "Razorpay key secret",
+      "stripeKey": "Stripe publishable key",
+      "stripeHint": "Starts with pk_live_.",
+      "stripeSecret": "Stripe secret key",
+      "default": "Default gateway",
+      "defaultHint": "Used for new payment links."
+    },
+    "shop": {
+      "enable": "Public online shop",
+      "enableHint": "Let clients browse your services and order online.",
+      "address": "Address and look",
+      "addressHint": "Where the shop lives and how it feels.",
+      "slug": "Shop address",
+      "slugHint": "At least 3 letters or digits.",
+      "tagline": "Tagline",
+      "taglineHint": "Shown under your company name.",
+      "accent": "Accent colour",
+      "accentHint": "Buttons and highlights.",
+      "content": "About text, FAQ and links are edited in the shop editor.",
+      "editContent": "Edit shop content",
+      "viewShop": "View shop"
+    },
+    "ai": {
+      "title": "AI assistant key",
+      "hint": "Powers invoice and bill scanning, suggestions and the assistant.",
+      "key": "Groq API key",
+      "keyHint": "Stored encrypted and never shown again.",
+      "usedFor": "What it is used for",
+      "u1": "Reading bills and receipts you upload.",
+      "u2": "Filling forms from pasted text.",
+      "u3": "Answering questions in the assistant.",
+      "privacy": "Only the content you send to these features is shared with the AI provider."
+    },
+    "automation": {
+      "gstTitle": "GST reminders",
+      "gstHint": "Due-date alerts and the weekly digest.",
+      "gstReminders": "Send GST due-date reminders",
+      "gstRemindersHint": "Alerts before returns are due, and a weekly summary.",
+      "others": "Other automation",
+      "othersHint": "Where each one is controlled.",
+      "active": "On",
+      "off": "Off",
+      "manage": "Manage",
+      "row": {
+        "mail": {
+          "title": "Email sending",
+          "body": "Invoices and reminders go out from your mailbox."
+        },
+        "collections": {
+          "title": "Payment reminders",
+          "body": "Overdue invoices are chased automatically."
+        },
+        "retainers": {
+          "title": "Retainer billing",
+          "body": "Recurring invoices are created on schedule."
+        },
+        "cashflow": {
+          "title": "Cash-flow alerts",
+          "body": "Warnings before a cash crunch."
+        }
+      }
+    },
+    "modules": {
+      "loading": "Loading modules…",
+      "loadFailed": "Could not load modules.",
+      "summary": "{on} of {total} optional modules are on.",
+      "search": "Search modules",
+      "noMatch": "No module matches that search.",
+      "open": "Open",
+      "failed": "Could not change the module.",
+      "paidRequired": "This module needs an active Pro or Team plan.",
+      "turnedOn": "{name} is on.",
+      "turnedOff": "{name} is off. Its data is kept.",
+      "confirmTitle": "Turn off {name}?",
+      "confirmBody": "It disappears from the menu and its features pause. Nothing is deleted, and turning it back on restores everything.",
+      "cancel": "Cancel",
+      "turnOff": "Turn off",
+      "shopNote": "The online shop is switched on under Online shop.",
+      "groups": {
+        "finance": "Money in and out",
+        "sales": "Selling",
+        "people": "People",
+        "compliance": "Records and reports",
+        "data": "Companies and data"
+      },
+      "items": {
+        "CASH_FLOW": {
+          "name": "Cash flow",
+          "body": "Forecasts, scenarios and warnings before cash runs short."
+        },
+        "AR_COLLECTIONS": {
+          "name": "Collections",
+          "body": "Aging, overdue queues and payment reminders."
+        },
+        "REVENUE_PIPELINE": {
+          "name": "Revenue pipeline",
+          "body": "Proposal stages, stalled deals and next steps."
+        },
+        "POS": {
+          "name": "Point of sale",
+          "body": "A checkout screen for walk-in and counter sales."
+        },
+        "WORKFORCE": {
+          "name": "Workforce",
+          "body": "Employees, attendance, leave and approvals."
+        },
+        "PAYROLL": {
+          "name": "Payroll",
+          "body": "Pay runs, posting and statutory exports."
+        },
+        "DOCUMENTS": {
+          "name": "Document vault",
+          "body": "Secure storage with scanning and links to records."
+        },
+        "REPORTING_CENTER": {
+          "name": "Reporting centre",
+          "body": "Finance and compliance reports with polished exports."
+        },
+        "MULTI_COMPANY": {
+          "name": "Multiple companies",
+          "body": "Run several legal entities from one login."
+        },
+        "IMPORT_MANAGER": {
+          "name": "Import manager",
+          "body": "Map, check and import data from files safely."
+        },
+        "MIAB_BILLING": {
+          "name": "Email billing",
+          "body": "Mailbox inventory linked to clients and retainers."
+        }
+      }
+    }
   }
 }

@@ -6121,5 +6121,385 @@
       "hint": "Marca a los proveedores micro y pequeños para seguir la regla de pago de 45 días.",
       "ruleHint": "Paga en 45 días, o 15 sin acuerdo escrito; de lo contrario el gasto no es deducible hasta que lo pagues."
     }
+  },
+  "SettingsHub": {
+    "sections": "Secciones",
+    "navLabel": "Secciones de ajustes",
+    "search": "Buscar ajustes",
+    "noMatch": "Ningún ajuste coincide con la búsqueda.",
+    "leaveConfirm": "Tienes cambios sin guardar. ¿Salir sin guardar?",
+    "readOnly": "Puedes ver estos ajustes. Pide a un propietario o administrador que los cambie.",
+    "save": "Guardar cambios",
+    "discard": "Descartar",
+    "unsavedChanges": "Tienes cambios sin guardar",
+    "allSaved": "Todos los cambios guardados",
+    "saved": "Ajustes guardados",
+    "saveFailed": "No se pudo guardar. Inténtalo de nuevo.",
+    "networkError": "Problema de red. Revisa tu conexión e inténtalo de nuevo.",
+    "fixFields": "Algunos campos necesitan atención.",
+    "loadFailed": "No se pudieron cargar los ajustes.",
+    "retry": "Reintentar",
+    "groups": {
+      "business": "Negocio",
+      "operations": "Operaciones",
+      "channels": "Canales",
+      "account": "Cuenta y acceso"
+    },
+    "nav": {
+      "business": "Perfil del negocio",
+      "tax": "Impuestos y registro",
+      "invoicing": "Facturación",
+      "banking": "Cuenta bancaria",
+      "modules": "Módulos",
+      "automation": "Recordatorios y automatización",
+      "imports": "Importar datos",
+      "email": "Envío de correo",
+      "payments": "Pasarelas de pago",
+      "shop": "Tienda en línea",
+      "ai": "Asistente de IA",
+      "team": "Equipo y acceso",
+      "security": "Seguridad",
+      "billing": "Plan y facturación",
+      "profile": "Mi perfil",
+      "app": "App y dispositivos"
+    },
+    "navHint": {
+      "business": "Nombre, dirección, contacto, logotipo e idioma.",
+      "tax": "PAN, GSTIN, Udyam y los valores fiscales de tus documentos.",
+      "invoicing": "Diseño, numeración y plazos de pago por defecto.",
+      "banking": "La cuenta donde pagan tus clientes, impresa en las facturas.",
+      "modules": "Activa o desactiva partes opcionales del ERP.",
+      "automation": "Recordatorios y lo que funciona solo.",
+      "imports": "Trae clientes, productos e historial desde archivos.",
+      "email": "Envía facturas y recordatorios desde tu propia dirección.",
+      "payments": "Claves de Razorpay y Stripe para enlaces de pago.",
+      "shop": "La dirección y el aspecto de tu tienda pública.",
+      "ai": "La clave que habilita el escaneo y las sugerencias.",
+      "team": "Invita personas y elige qué puede hacer cada una.",
+      "security": "Métodos de acceso, passkeys y verificación en dos pasos.",
+      "billing": "Tu suscripción, método de pago y facturas.",
+      "profile": "Tu nombre e imagen personales.",
+      "app": "Instala la app y gestiona el uso sin conexión."
+    },
+    "errors": {
+      "REQUIRED": "Este campo es obligatorio.",
+      "EMAIL": "Introduce un correo válido.",
+      "URL": "Introduce una dirección web completa que empiece por http:// o https://.",
+      "LOCALE": "Elige uno de los idiomas de la lista.",
+      "PAN": "Un PAN tiene 10 caracteres, como ABCDE1234F.",
+      "GSTIN": "Ese GSTIN no es válido. Revisa los 15 caracteres.",
+      "UDYAM": "Un número Udyam se parece a UDYAM-MH-12-0000001.",
+      "SAC": "Usa de 4 a 8 dígitos.",
+      "PREFIX": "Usa hasta 10 letras, dígitos, guiones o barras.",
+      "IFSC": "Un IFSC tiene 11 caracteres, como HDFC0001234.",
+      "ACCOUNT": "Revisa el número de cuenta.",
+      "COLOR": "Elige un color.",
+      "SLUG": "Usa al menos 3 letras o dígitos.",
+      "SLUG_TAKEN": "Esa dirección de tienda ya está en uso.",
+      "INVALID": "Este valor no es válido.",
+      "PAID_PLAN_REQUIRED": "Requiere un plan Pro o Team activo.",
+      "TEST_KEY_BLOCKED": "Las claves de prueba están bloqueadas en producción.",
+      "PROFILE_REQUIRED": "Guarda primero el perfil del negocio."
+    },
+    "secret": {
+      "configured": "Guardado y cifrado",
+      "replace": "Reemplazar",
+      "remove": "Quitar",
+      "confirmRemove": "¿Quitar este secreto guardado?",
+      "placeholder": "Pega el valor",
+      "store": "Guardar",
+      "cancel": "Cancelar",
+      "stored": "Guardado de forma segura",
+      "removed": "Quitado",
+      "failed": "No se pudo guardar el secreto."
+    },
+    "business": {
+      "identity": "Identidad del negocio",
+      "identityHint": "Se imprime en facturas, propuestas y el portal de clientes.",
+      "companyName": "Nombre de la empresa o comercial",
+      "proprietorName": "Nombre del propietario",
+      "address": "Dirección registrada",
+      "addressHint": "Aparece en todas las facturas.",
+      "email": "Correo de contacto",
+      "emailHint": "A donde responden los clientes.",
+      "phone": "Teléfono",
+      "website": "Sitio web",
+      "language": "Idioma",
+      "languageHint": "El idioma de la app para ti. Cada persona elige el suyo.",
+      "languageLabel": "Idioma de la interfaz",
+      "branding": "Logotipo y firma",
+      "brandingHint": "Las subidas se aplican al instante.",
+      "logo": "Logotipo",
+      "signature": "Firma",
+      "logoHint": "PNG, JPG o WEBP, hasta 2 MB.",
+      "signatureHint": "PNG o WEBP con fondo transparente, hasta 1 MB. Se usa en facturas del Diseño 1.",
+      "logoAlt": "Logotipo actual",
+      "signatureAlt": "Firma actual",
+      "logoUpload": "Subir logotipo",
+      "signatureUpload": "Subir firma",
+      "upload": "Subir",
+      "replace": "Reemplazar",
+      "remove": "Quitar",
+      "imageSaved": "Imagen actualizada",
+      "imageFailed": "No se pudo actualizar la imagen.",
+      "aiOthers": "Tu asistente también sugirió valores para:",
+      "aiLink": {
+        "tax": "Identificadores fiscales",
+        "banking": "Cuenta bancaria"
+      }
+    },
+    "tax": {
+      "ids": "Identificadores fiscales",
+      "idsHintIn": "Se usan en facturas y declaraciones. Un GSTIN válido también fija tu estado.",
+      "idsHint": "Se imprimen en las facturas.",
+      "pan": "PAN",
+      "panHint": "10 caracteres, por ejemplo ABCDE1234F.",
+      "panBad": "Un PAN tiene 10 caracteres, como ABCDE1234F.",
+      "taxId": "Número de registro fiscal",
+      "gstin": "GSTIN",
+      "gstinHint": "Déjalo vacío si no estás registrado en el GST.",
+      "gstinBad": "Ese GSTIN no es válido. Revisa los 15 caracteres.",
+      "gstinState": "Estado según el GSTIN: {state}.",
+      "udyam": "Número de registro Udyam",
+      "udyamHint": "Registro MSME gratuito. No requiere GSTIN mientras estés por debajo del límite del GST.",
+      "udyamOk": "El formato parece correcto.",
+      "udyamBad": "Un número Udyam se parece a UDYAM-MH-12-0000001.",
+      "taxLabel": "Nombre del impuesto",
+      "taxLabelHint": "Por ejemplo IVA o impuesto sobre ventas.",
+      "taxIdLabel": "Nombre del número fiscal",
+      "taxIdLabelHint": "Por ejemplo TRN o EIN.",
+      "defaults": "Valores por defecto de los documentos",
+      "defaultsHint": "Se usan cuando un servicio o producto no tiene tasa propia.",
+      "sac": "Código SAC o HSN por defecto",
+      "sacHint": "De 4 a 8 dígitos. 998313 es consultoría informática.",
+      "rate": "Tasa de impuesto por defecto (%)",
+      "rateHint": "Déjalo vacío para que se pregunte cada vez.",
+      "registration": "Registro del GST",
+      "registrationHint": "El tipo de registro, el estado y la frecuencia de presentación se gestionan en la configuración del GST.",
+      "registrationLine": "{type}, presentación {freq}.",
+      "registrationLoading": "Cargando datos de registro…",
+      "gstSetup": "Configuración del GST",
+      "caSetup": "Configuración de cumplimiento con el contador",
+      "regType": {
+        "REGULAR": "Contribuyente regular",
+        "COMPOSITION": "Régimen de composición",
+        "UNREGISTERED": "No registrado en el GST"
+      },
+      "freq": {
+        "MONTHLY": "mensual",
+        "QRMP": "trimestral (QRMP)"
+      }
+    },
+    "invoicing": {
+      "theme": "Diseño de factura",
+      "themeHint": "El aspecto de cada PDF que envías.",
+      "design": {
+        "DESIGN_1": "Clásico",
+        "DESIGN_2": "Agencia moderna"
+      },
+      "designHint": {
+        "DESIGN_1": "Encabezado blanco y líneas limpias. Muestra tu firma.",
+        "DESIGN_2": "Encabezado oscuro llamativo. No muestra firma."
+      },
+      "numbering": "Números de factura",
+      "numberingHint": "Los números siguen un orden dentro de cada ejercicio fiscal.",
+      "prefix": "Prefijo",
+      "prefixHint": "Letras, dígitos, guion o barra. Solo afecta a las facturas nuevas.",
+      "preview": "La próxima factura se verá así",
+      "terms": "Plazos de pago",
+      "termsHint": "Cuánto tiempo tienen los clientes para pagar.",
+      "termsLabel": "Días hasta el vencimiento",
+      "dueOnReceipt": "Al recibirla",
+      "days": "{count} días",
+      "termsNote": "Se aplica a las facturas nuevas. Las igualas y propuestas mantienen sus propios plazos."
+    },
+    "banking": {
+      "title": "Datos bancarios en las facturas",
+      "hint": "Los clientes los ven al pagar por transferencia.",
+      "bankName": "Nombre del banco",
+      "holder": "Titular de la cuenta",
+      "holderHint": "Tal como aparece en el banco.",
+      "number": "Número de cuenta",
+      "numberHint": "Solo se muestran los últimos dígitos. Reemplázalo para cambiarlo.",
+      "numberNew": "Se guarda cifrado. Después solo se muestran los últimos dígitos.",
+      "change": "Cambiar",
+      "ifsc": "Código IFSC",
+      "ifscHint": "11 caracteres, por ejemplo HDFC0001234.",
+      "ifscBad": "Un IFSC tiene 11 caracteres, como HDFC0001234.",
+      "routing": "Código de enrutamiento",
+      "routingLabel": "Nombre del código de enrutamiento",
+      "routingLabelHint": "Por ejemplo SWIFT, Sort Code o ABA.",
+      "printed": "Estos datos se imprimen en las facturas y los ve tu equipo.",
+      "moreAccounts": "Gestiona varias cuentas bancarias y concilia extractos.",
+      "openReconciliation": "Abrir conciliación"
+    },
+    "email": {
+      "server": "Servidor de correo",
+      "serverHint": "Las facturas y recordatorios salen desde tu propio buzón, así las respuestas te llegan.",
+      "presets": "Relleno rápido",
+      "preset": {
+        "gmail": "Gmail",
+        "outlook": "Outlook",
+        "zoho": "Zoho"
+      },
+      "host": "Servidor SMTP",
+      "port": "Puerto",
+      "portHint": "Lo habitual es 587.",
+      "user": "Usuario",
+      "from": "Dirección del remitente",
+      "fromHint": "Si está vacío se usa el usuario.",
+      "password": "Contraseña o contraseña de aplicación",
+      "passwordHint": "Gmail y Outlook exigen una contraseña de aplicación. Se guarda cifrada y nunca se muestra.",
+      "test": "Probar la conexión",
+      "testHint": "Envía un mensaje a tu propio correo.",
+      "sendTest": "Enviar correo de prueba",
+      "saveFirst": "Guarda primero tus cambios.",
+      "testSent": "Correo de prueba enviado a {email}.",
+      "testFailed": "No se pudo enviar el correo de prueba."
+    },
+    "payments": {
+      "title": "Pasarelas de pago",
+      "hint": "Añade una pasarela para poner enlaces de pago en las facturas.",
+      "paid": "Las pasarelas de pago requieren un plan Pro o Team activo.",
+      "upgrade": "Ver planes",
+      "gateway": {
+        "RAZORPAY": "Razorpay",
+        "STRIPE": "Stripe"
+      },
+      "ready": "Lista",
+      "razorpayKeyId": "ID de clave de Razorpay",
+      "razorpayHint": "Empieza por rzp_live_. Búscalo en el panel de Razorpay, en claves de API.",
+      "razorpaySecret": "Secreto de clave de Razorpay",
+      "stripeKey": "Clave publicable de Stripe",
+      "stripeHint": "Empieza por pk_live_.",
+      "stripeSecret": "Clave secreta de Stripe",
+      "default": "Pasarela por defecto",
+      "defaultHint": "Se usa en los nuevos enlaces de pago."
+    },
+    "shop": {
+      "enable": "Tienda pública en línea",
+      "enableHint": "Deja que los clientes vean tus servicios y pidan en línea.",
+      "address": "Dirección y aspecto",
+      "addressHint": "Dónde vive la tienda y cómo se ve.",
+      "slug": "Dirección de la tienda",
+      "slugHint": "Al menos 3 letras o dígitos.",
+      "tagline": "Eslogan",
+      "taglineHint": "Se muestra bajo el nombre de tu empresa.",
+      "accent": "Color de acento",
+      "accentHint": "Botones y elementos destacados.",
+      "content": "El texto Acerca de, las preguntas frecuentes y los enlaces se editan en el editor de la tienda.",
+      "editContent": "Editar contenido de la tienda",
+      "viewShop": "Ver tienda"
+    },
+    "ai": {
+      "title": "Clave del asistente de IA",
+      "hint": "Habilita el escaneo de facturas y recibos, las sugerencias y el asistente.",
+      "key": "Clave de API de Groq",
+      "keyHint": "Se guarda cifrada y no se vuelve a mostrar.",
+      "usedFor": "Para qué se usa",
+      "u1": "Leer los recibos y facturas que subes.",
+      "u2": "Rellenar formularios a partir de texto pegado.",
+      "u3": "Responder preguntas en el asistente.",
+      "privacy": "Solo el contenido que envías a estas funciones se comparte con el proveedor de IA."
+    },
+    "automation": {
+      "gstTitle": "Recordatorios del GST",
+      "gstHint": "Alertas de vencimiento y el resumen semanal.",
+      "gstReminders": "Enviar recordatorios de vencimiento del GST",
+      "gstRemindersHint": "Alertas antes de que venzan las declaraciones y un resumen semanal.",
+      "others": "Otras automatizaciones",
+      "othersHint": "Dónde se controla cada una.",
+      "active": "Activo",
+      "off": "Apagado",
+      "manage": "Gestionar",
+      "row": {
+        "mail": {
+          "title": "Envío de correo",
+          "body": "Las facturas y recordatorios salen desde tu buzón."
+        },
+        "collections": {
+          "title": "Recordatorios de pago",
+          "body": "Las facturas vencidas se reclaman automáticamente."
+        },
+        "retainers": {
+          "title": "Facturación de igualas",
+          "body": "Las facturas recurrentes se crean según el calendario."
+        },
+        "cashflow": {
+          "title": "Alertas de flujo de caja",
+          "body": "Avisos antes de una falta de liquidez."
+        }
+      }
+    },
+    "modules": {
+      "loading": "Cargando módulos…",
+      "loadFailed": "No se pudieron cargar los módulos.",
+      "summary": "{on} de {total} módulos opcionales están activos.",
+      "search": "Buscar módulos",
+      "noMatch": "Ningún módulo coincide con la búsqueda.",
+      "open": "Abrir",
+      "failed": "No se pudo cambiar el módulo.",
+      "paidRequired": "Este módulo requiere un plan Pro o Team activo.",
+      "turnedOn": "{name} está activo.",
+      "turnedOff": "{name} está desactivado. Sus datos se conservan.",
+      "confirmTitle": "¿Desactivar {name}?",
+      "confirmBody": "Desaparece del menú y sus funciones se pausan. No se borra nada y al volver a activarlo se recupera todo.",
+      "cancel": "Cancelar",
+      "turnOff": "Desactivar",
+      "shopNote": "La tienda en línea se activa en Tienda en línea.",
+      "groups": {
+        "finance": "Entradas y salidas de dinero",
+        "sales": "Ventas",
+        "people": "Personas",
+        "compliance": "Registros e informes",
+        "data": "Empresas y datos"
+      },
+      "items": {
+        "CASH_FLOW": {
+          "name": "Flujo de caja",
+          "body": "Previsiones, escenarios y avisos antes de quedarte sin efectivo."
+        },
+        "AR_COLLECTIONS": {
+          "name": "Cobranza",
+          "body": "Antigüedad, colas de vencidos y recordatorios de pago."
+        },
+        "REVENUE_PIPELINE": {
+          "name": "Embudo de ingresos",
+          "body": "Etapas de propuestas, negocios estancados y siguientes pasos."
+        },
+        "POS": {
+          "name": "Punto de venta",
+          "body": "Una pantalla de caja para ventas en mostrador."
+        },
+        "WORKFORCE": {
+          "name": "Personal",
+          "body": "Empleados, asistencia, permisos y aprobaciones."
+        },
+        "PAYROLL": {
+          "name": "Nómina",
+          "body": "Ciclos de pago, contabilización y exportaciones legales."
+        },
+        "DOCUMENTS": {
+          "name": "Bóveda de documentos",
+          "body": "Almacenamiento seguro con escaneo y vínculos a registros."
+        },
+        "REPORTING_CENTER": {
+          "name": "Centro de informes",
+          "body": "Informes financieros y de cumplimiento con exportaciones cuidadas."
+        },
+        "MULTI_COMPANY": {
+          "name": "Varias empresas",
+          "body": "Gestiona varias entidades legales con un solo acceso."
+        },
+        "IMPORT_MANAGER": {
+          "name": "Gestor de importación",
+          "body": "Asigna, revisa e importa datos desde archivos con seguridad."
+        },
+        "MIAB_BILLING": {
+          "name": "Facturación por correo",
+          "body": "Inventario de buzones vinculado a clientes e igualas."
+        }
+      }
+    }
   }
 }

@@ -381,8 +381,9 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+    const termsDays = Number.isInteger(profile.invoiceTermsDays) ? profile.invoiceTermsDays : 7;
     const invoiceDueDate = new Date(invoiceDate);
-    invoiceDueDate.setDate(invoiceDueDate.getDate() + 7);
+    invoiceDueDate.setDate(invoiceDueDate.getDate() + termsDays);
 
     const formattedTotal = totals.total.toLocaleString(userLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -612,7 +613,7 @@ export async function POST(request: Request) {
               pdfPath: relativePdfPath,
               status: normalizedStatus,
               dueDate: invoiceDueDate,
-              paymentTermsDays: 7,
+              paymentTermsDays: termsDays,
               currency: baseCurrency,
               exchangeRate,
               baseGrandTotal: toDecimal(totals.total).mul(exchangeRate).toDecimalPlaces(2),
