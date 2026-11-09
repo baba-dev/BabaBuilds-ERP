@@ -1560,6 +1560,23 @@ model Client {
   // "isExport" becomes "isTaxExempt" in global context
   isExport Boolean @default(true)
 
+  // --- CRM ---
+  countryCode      String? // ISO 3166-1 alpha-2, normalised from `country` (decides domestic vs export)
+  website          String?
+  industry         String?
+  currency         String? // preferred invoice currency (ISO 4217); the composer starts with it
+  paymentTermsDays Int? // overrides the workspace default payment terms for this client
+  creditLimit      Decimal? // in the workspace base currency; warns when outstanding plus a new invoice exceeds it
+  tags             String   @default("") // "|vip|agency|": see lib/clients/tags
+  source           String   @default("MANUAL") // MANUAL | IMPORT | AI | POS
+  isWalkIn         Boolean  @default(false) // the POS counter customer: hidden from the CRM and not counted toward plan limits
+  archivedAt       DateTime?
+  ownerUserId      String? // who looks after this account
+  lastContactedAt  DateTime?
+  updatedAt        DateTime? @updatedAt
+  contacts         ClientContact[]
+  clientNotes      ClientNote[]
+
   createdAt       DateTime               @default(now())
   invoices        Invoice[]
   proposals       Proposal[]
@@ -1570,6 +1587,7 @@ model Client {
 
   @@unique([name, workspaceId])
   @@index([workspaceId])
+  @@index([workspaceId, archivedAt])
 }
 
 model ClientPaymentBehavior {
@@ -4993,4 +5011,41 @@ model CaRequestMessage {
   createdAt DateTime @default(now())
 
   @@index([requestId, createdAt])
+}
+
+/// People at a client: who gets invoices, who gets reminders, who to call.
+model ClientContact {
+  id          String   @id @default(cuid())
+  workspaceId String
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  name              String
+  role              String?
+  email             String?
+  phone             String?
+  isPrimary         Boolean  @default(false)
+  receivesInvoices  Boolean  @default(true)
+  receivesReminders Boolean  @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@index([workspaceId, clientId])
+}
+
+/// Internal notes on a client (calls, agreements, context). Never shown to the client.
+model ClientNote {
+  id          String   @id @default(cuid())
+  workspaceId String
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  authorUserId String?
+  authorName   String
+  body         String
+  pinned       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([workspaceId, clientId, createdAt(sort: Desc)])
 }

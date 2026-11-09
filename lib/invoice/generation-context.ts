@@ -249,7 +249,7 @@ export async function buildInvoiceGenerationContext(
 
   const countryCode = profile.workspace?.countryCode || "IN";
   const dueDate = new Date(date);
-  dueDate.setDate(dueDate.getDate() + (Number.isInteger(profile.invoiceTermsDays) ? profile.invoiceTermsDays : 7));
+  dueDate.setDate(dueDate.getDate() + (Number.isInteger(client.paymentTermsDays) ? (client.paymentTermsDays as number) : Number.isInteger(profile.invoiceTermsDays) ? profile.invoiceTermsDays : 7));
   const serviceTaxRates = sanitizedServices
     .map((service: SanitizedService) => (typeof service.sac === "object" && service.sac ? service.sac.igstRate : null) ?? service.taxRate ?? null)
     .filter((rate: number | null): rate is number => rate !== null && rate !== undefined);

@@ -1,213 +1,87 @@
-import type { Session } from "next-auth";
-import { getClientRetainerSummaries } from '@/lib/retainers/client-summary';
-import { parseClientGstInput } from '@/lib/gst/client-state';
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
-import fs from 'fs';
-import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
-import { scanBuffer } from '@/lib/security/clamav';
-import { CLIENT_LOGO_INVALID_TYPE_ERROR, isAllowedClientLogoExtension } from '@/lib/uploads/client-logo';
-import { apiError } from '@/lib/api-error';
-import { dispatchNotification } from '@/lib/notifications/dispatcher';
-import { logActivity } from '@/lib/security/activity-log';
-import { FREE_TIER_CLIENT_LIMIT, shouldApplyFreeTierLimits } from '@/lib/entitlements';
-import { buildPrivatePath, ensureDir, sniffAllowedContent, uniqueStoredName } from '@/lib/uploads/private-storage';
+import { NextResponse } from "next/server";
+import { requireClientAccess, clientError } from "@/lib/clients/access";
+import { readClientBody, serviceError, storeClientLogo, validationError, removeStoredLogo } from "@/lib/clients/http";
+import { clientBookSummary, listClients, listTags, clientMetrics } from "@/lib/clients/queries";
+import { normalizeClientInput } from "@/lib/clients/schema";
+import { createClient } from "@/lib/clients/service";
+import { creditStatus } from "@/lib/clients/metrics";
+import { prisma } from "@/lib/prisma";
 
+const int = (v: string | null): number | null | typeof Number.NaN => {
+  if (v === null || v.trim() === "") return null;
+  const x = Number(v);
+  return Number.isInteger(x) ? x : Number.NaN;
+};
+
+/**
+ * The client book. Searchable, filterable and sortable on the server. `?picker=1` returns a light list for the invoice,
+ * proposal and retainer pickers (name search, no archived or walk-in clients, with what they owe and their credit position).
+ */
 export async function GET(request: Request) {
+  const auth = await requireClientAccess("clients.view");
+  if (!auth.ok) return auth.response;
+  const { workspaceId } = auth.ctx;
+  const sp = new URL(request.url).searchParams;
+  const page = int(sp.get("page"));
+  const limit = int(sp.get("limit"));
+  if (Number.isNaN(page) || Number.isNaN(limit)) return clientError(400, "PAGINATION_INVALID_PARAMS", "Invalid pagination parameters");
+  if ((page !== null && page < 0) || (limit !== null && limit < 0)) return clientError(400, "PAGINATION_NEGATIVE_VALUES", "Pagination parameters cannot be negative");
+
   try {
-    // 1. SECURITY LOCK
-    const session = await getServerSession(authOptions);
-    if (!session || !session.workspaceId) {
-      return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
-    }
-    const workspaceId = session.workspaceId;
-    const whereClause = { workspaceId: workspaceId };
-
-    // 2. PAGINATION PARAMETERS
-    const { searchParams } = new URL(request.url);
-    const pageParam = searchParams.get('page');
-    const limitParam = searchParams.get('limit');
-
-    const parseIntegerParam = (value: string | null): number | null => {
-      if (value === null || value.trim() === '') return null;
-      const numericValue = Number(value);
-      if (!Number.isFinite(numericValue) || !Number.isInteger(numericValue)) {
-        return Number.NaN;
-      }
-      return numericValue;
-    };
-
-    const parsedPage = parseIntegerParam(pageParam);
-    const parsedLimit = parseIntegerParam(limitParam);
-
-    if (Number.isNaN(parsedPage) || Number.isNaN(parsedLimit)) {
-      return apiError(400, "Invalid pagination parameters", "PAGINATION_INVALID_PARAMS");
+    if (sp.get("picker") === "1") {
+      const q = sp.get("q")?.trim();
+      const rows = await prisma.client.findMany({
+        where: { workspaceId, isWalkIn: false, archivedAt: null, ...(q ? { OR: [{ name: { contains: q } }, { email: { contains: q } }, { taxId: { contains: q.toUpperCase() } }] } : {}) },
+        orderBy: { name: "asc" }, take: Math.min(50, limit ?? 20),
+        select: { id: true, name: true, email: true, country: true, countryCode: true, isExport: true, gstStateCode: true, taxId: true, currency: true, paymentTermsDays: true, creditLimit: true, status: true, logoUrl: true },
+      });
+      const metrics = await clientMetrics(workspaceId, rows.map((r) => r.id));
+      return NextResponse.json({ data: rows.map((r) => { const m = metrics.get(r.id); const limitN = r.creditLimit === null ? null : Number(r.creditLimit); return { ...r, creditLimit: limitN, outstanding: m?.outstanding ?? 0, overdue: m?.overdue ?? 0, credit: creditStatus(limitN, m?.outstanding ?? 0) }; }) });
     }
 
-    if ((parsedPage !== null && parsedPage < 0) || (parsedLimit !== null && parsedLimit < 0)) {
-      return apiError(400, "Pagination parameters cannot be negative", "PAGINATION_NEGATIVE_VALUES");
-    }
-
-    const page = Math.max(1, parsedPage ?? 1);
-    const limit = Math.min(100, Math.max(1, parsedLimit ?? 9)); // Safe range: 1..100 (default 9)
-    const skip = (page - 1) * limit;
-
-    // 3. FETCH PAGINATED DATA & TOTAL COUNT CONCURRENTLY
-    const [clients, totalClients] = await Promise.all([
-      prisma.client.findMany({
-        where: whereClause,
-        orderBy: { name: 'asc' },
-        skip: skip,
-        take: limit,
-      }),
-      prisma.client.count({ where: whereClause })
-    ]);
-    
-    // 3b. RECURRING BILLING SUMMARY per client on this page (two grouped queries, no N+1)
-    const retainerSummary = await getClientRetainerSummaries(workspaceId, clients.map((c) => c.id));
-
-    // 4. CONSTRUCT PAGINATED RESPONSE
-    return NextResponse.json({
-      data: clients.map((c) => ({ ...c, retainerSummary: retainerSummary.get(c.id) })),
-      meta: {
-        currentPage: page,
-        totalPages: Math.max(1, Math.ceil(totalClients / limit)),
-        totalRecords: totalClients,
-      }
+    const sort = sp.get("sort");
+    const view = sp.get("view");
+    const result = await listClients(workspaceId, {
+      q: sp.get("q") ?? undefined,
+      view: view === "vip" || view === "inactive" || view === "archived" || view === "all" ? view : "active",
+      tag: sp.get("tag") ?? undefined,
+      country: sp.get("country") ?? undefined,
+      owner: sp.get("owner") ?? undefined,
+      sort: sort === "recent" || sort === "outstanding" || sort === "revenue" || sort === "activity" || sort === "risk" ? sort : "name",
+      page: page ?? 1,
+      limit: limit ?? 25,
     });
+    const extra = sp.get("summary") === "1" ? { summary: await clientBookSummary(workspaceId), tags: await listTags(workspaceId) } : {};
+    return NextResponse.json({ ...result, ...extra }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("API Error fetching clients:", error);
-    return apiError(500, "Failed to fetch clients", "CLIENTS_FETCH_FAILED");
+    return clientError(500, "CLIENTS_FETCH_FAILED", "Failed to fetch clients");
   }
 }
 
 export async function POST(request: Request) {
-  let session: Session | null = null;
+  const auth = await requireClientAccess("clients.manage");
+  if (!auth.ok) return auth.response;
+  const { ctx } = auth;
+
+  const body = await readClientBody(request);
+  if (!body) return clientError(400, "INVALID_BODY", "Send the client details as a form or JSON.");
+  const parsed = normalizeClientInput(body.fields, { workspaceCountry: ctx.workspaceCountry });
+  if (!parsed.ok) return validationError(parsed.fields, parsed.suggestion);
+
+  let logoUrl: string | null = null;
+  if (body.logo) {
+    const stored = await storeClientLogo(ctx.workspaceId, body.logo);
+    if (!stored.ok) return stored.response;
+    logoUrl = stored.url;
+  }
   try {
-    // 1. SECURITY LOCK
-    session = await getServerSession(authOptions);
-    if (!session || !session.workspaceId) {
-      return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
-    }
-    const workspaceId = session.workspaceId;
-
-    // --- 🚨 SAAS MONETIZATION BARRICADE START ---
-    const workspace = await prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      select: {
-        planTier: true,
-        subscriptionStatus: true,
-        subscriptionEndsAt: true,
-        _count: { select: { clients: true } },
-      },
-    });
-
-    if (!workspace) {
-      return apiError(404, "Workspace not found", "WORKSPACE_NOT_FOUND");
-    }
-
-    // Free tier (non-trial): FREE_TIER_CLIENT_LIMIT clients max.
-    if (shouldApplyFreeTierLimits(workspace) && workspace._count.clients >= FREE_TIER_CLIENT_LIMIT) {
-      return apiError(403, "Upgrade Required", "PLAN_LIMIT_REACHED", {
-        message: `You have reached the limit of ${FREE_TIER_CLIENT_LIMIT} clients on the Free plan. Upgrade to Pro for unlimited clients.`,
-        requiresUpgrade: true,
-      });
-    }
-    // --- 🚨 SAAS MONETIZATION BARRICADE END ---
-
-    const formData = await request.formData();    
-    const name = formData.get('name') as string;
-    const address = formData.get('address') as string;
-    const country = formData.get('country') as string;
-    const taxId = formData.get('taxId') as string;
-    const gstInput = parseClientGstInput({ country, taxId, state: formData.get('gstStateCode'), supplyOverride: formData.get('gstSupplyOverride'), reverseCharge: formData.get('gstReverseCharge') });
-    if (!gstInput.ok) return apiError(422, gstInput.message, gstInput.code);
-    const { gstStateCode, gstSupplyOverride, gstReverseCharge } = gstInput.data;
-    const email = formData.get('email') as string;
-    const phone = formData.get('phone') as string;
-    const isExport = formData.get('isExport') === 'true';
-    
-    const file = formData.get('logo') as File | null;
-    let logoUrl = null;
-
-    if (file && file.size > 0) {
-      const ext = path.extname(file.name).toLowerCase();
-      if (!isAllowedClientLogoExtension(ext)) {
-        return NextResponse.json({ error: CLIENT_LOGO_INVALID_TYPE_ERROR }, { status: 400 });
-      }
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-
-      const isSafe = await scanBuffer(buffer);
-      if (!isSafe) {
-        return apiError(400, "Malware detected in uploaded file.", "MALWARE_DETECTED");
-      }
-
-      const sniffed = sniffAllowedContent(buffer);
-      if (!sniffed || (sniffed !== 'png' && sniffed !== 'jpeg' && sniffed !== 'webp' && sniffed !== 'gif')) {
-        return apiError(415, "Unsupported or unsafe logo content.", "INVALID_FILE_TYPE");
-      }
-
-      const dir = buildPrivatePath('logos', [workspaceId]);
-      await ensureDir(dir);
-      const storedName = uniqueStoredName(`client-${Date.now()}-${uuidv4()}`, ext);
-      const filepath = path.join(dir, storedName);
-      fs.writeFileSync(filepath, buffer, { mode: 0o600 });
-      logoUrl = `/logos/${workspaceId}/${storedName}`;
-    }
-
-    // 3. CREATE WITH WORKSPACE ID
-    const newClient = await prisma.client.create({
-      data: {
-        workspaceId: workspaceId, // <-- Multi-tenant lock
-        name, address, country,
-        taxId: taxId || null,
-        gstStateCode,
-        gstSupplyOverride,
-        gstReverseCharge,
-        email: email || null,
-        phone: phone || null,
-        isExport,
-        logoUrl
-      }
-    });
-
-    // Fire notification (fire-and-forget)
-    dispatchNotification({
-      event: 'CLIENT_ADDED',
-      workspaceId,
-      data: { clientName: newClient.name },
-    }).catch(() => null);
-
-    try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
-    } catch {
-      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'client', action: 'create' });
-    }
-
-    logActivity({
-      action: "client_created",
-      status: "SUCCESS",
-      workspaceId,
-      actor: { userId: session.user?.id, email: session.user?.email },
-      entity: { type: "client", id: newClient.id },
-      request,
-    });
-
-    return NextResponse.json({ success: true, client: newClient });
+    const res = await createClient(ctx, parsed.data, { source: "MANUAL", logoUrl, force: body.fields.force === true || body.fields.force === "true" });
+    if (!res.ok) { await removeStoredLogo(logoUrl); return serviceError(res); }
+    return NextResponse.json({ success: true, client: res.client }, { status: 201 });
   } catch (error) {
-    console.error(error);
-    logActivity({
-      action: "client_created",
-      status: "FAILURE",
-      workspaceId: session?.workspaceId ?? "UNKNOWN",
-      request,
-      metadata: { error: String(error) },
-    });
-    return apiError(500, "Failed to create client", "CLIENT_CREATE_FAILED");
+    console.error("Client create failed:", error);
+    await removeStoredLogo(logoUrl);
+    return clientError(500, "CLIENT_CREATE_FAILED", "Failed to create client");
   }
 }

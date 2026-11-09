@@ -98,7 +98,8 @@ type PreviewState = { key: string; data: ProposalPreviewDto | null; error: strin
 
 function buildInitial(detail: ProposalDetailDto | null, clients: ClientOption[]): ComposerInitial {
   if (detail) return fromDetail(detail);
-  const base: ComposerInitial = { clientId: "", title: "", validUntil: defaultValidUntil(), items: [blankItem()], milestones: [], sections: [], media: [] };
+  const presetClient = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("client") ?? "" : "";
+  const base: ComposerInitial = { clientId: presetClient, title: "", validUntil: defaultValidUntil(), items: [blankItem()], milestones: [], sections: [], media: [] };
   const ai = typeof window !== "undefined" ? readAiPayload(clients) : null;
   return ai ? { ...base, ...ai } : base;
 }
