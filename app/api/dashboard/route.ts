@@ -1,3 +1,4 @@
+import { moduleHref } from "@/lib/module-registry";
 import { NextResponse } from "next/server";
 import { monthlyEquivalent } from '@/lib/retainers/schedule';
 import { Prisma } from "@prisma/client";
@@ -1030,26 +1031,11 @@ async function buildDashboardPayload(
       fyRange,
     }),
   };
-  const optionalModuleRouteMap: Record<ModuleKey, string> = {
-    WORKFORCE: "/workforce",
-    PAYROLL: "/payroll",
-    DOCUMENTS: "/documents",
-    REVENUE_PIPELINE: "/proposals",
-    CASH_FLOW: "/cash-flow",
-    AR_COLLECTIONS: "/ar-collections",
-    TAX_ADVANCED: "/tax",
-    REPORTING_CENTER: "/reporting",
-    IMPORT_MANAGER: "/inbox/import",
-    SHOP: "/shop",
-    MIAB_BILLING: "/email-billing",
-    POS: "/pos",
-    MULTI_COMPANY: "/settings",
-  };
   const optionalModules = Array.from(enabledModules).map((moduleKey) => ({
     moduleKey,
     label: MODULE_LABELS[moduleKey],
     description: MODULE_DESCRIPTIONS[moduleKey],
-    href: optionalModuleRouteMap[moduleKey] ?? "/settings",
+    href: moduleHref(moduleKey),
   }));
 
   return {

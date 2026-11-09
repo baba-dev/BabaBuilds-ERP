@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import { History, KeyRound, Mail, Settings2, ImageIcon } from "lucide-react";
+import { Blocks, History, KeyRound, Mail, Settings2, ImageIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Panel, ReadOnlyBanner } from "../form-kit";
 import type { SectionProps } from "./types";
 
-type Row = { id: string; action: string; actor: string; section: string | null; fields: string[]; secret: string | null; kind: string | null; at: string };
+type Row = { id: string; action: string; actor: string; section: string | null; fields: string[]; secret: string | null; kind: string | null; module: string | null; at: string };
 
 const words = (f: string) => f.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
 
@@ -15,6 +15,7 @@ const words = (f: string) => f.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase()
 export function ActivitySection({ canManage }: SectionProps) {
   const t = useTranslations("SettingsHub.activity");
   const nav = useTranslations("SettingsHub.nav");
+  const mods = useTranslations("SettingsHub.modules.items");
   const format = useFormatter();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -31,6 +32,10 @@ export function ActivitySection({ canManage }: SectionProps) {
   const describe = (r: Row): { icon: typeof History; text: string } => {
     if (r.action === "settings_secret_rotated" || r.action === "settings_secret_cleared") return { icon: KeyRound, text: t(r.action === "settings_secret_rotated" ? "secretSet" : "secretCleared", { name: t(`secrets.${r.secret ?? "unknown"}`) }) };
     if (r.action === "settings_branding_updated" || r.action === "settings_branding_removed") return { icon: ImageIcon, text: t(r.action === "settings_branding_updated" ? "brandingSet" : "brandingCleared", { name: t(`branding.${r.kind ?? "logo"}`) }) };
+    if (r.action.startsWith("settings_module_")) {
+      const name = r.module && mods.has(`${r.module}.name`) ? mods(`${r.module}.name`) : (r.module ?? "");
+      return { icon: Blocks, text: t(r.action === "settings_module_enabled" ? "moduleOn" : r.action === "settings_module_disabled" ? "moduleOff" : "moduleOption", { name }) };
+    }
     if (r.action === "settings_email_test") return { icon: Mail, text: t("emailTest") };
     return { icon: Settings2, text: r.section && r.fields.length ? t("changed", { section: nav.has(r.section) ? nav(r.section) : r.section, fields: r.fields.map(words).join(", ") }) : t("saved") };
   };

@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirectToLogin } from '@/lib/auth/login-redirect';
-import { prisma } from '@/lib/prisma';
+import { resolveSessionMembership } from '@/lib/workspace-scope';
 import { getModuleAvailability } from '@/lib/modules';
 import { requirePermission } from '@/lib/rbac';
 import { ModuleUnavailable } from '@/components/modules/ModuleUnavailable';
@@ -12,11 +12,7 @@ export default async function ReportingLayout({ children }: { children: ReactNod
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirectToLogin('/reporting');
 
-  const wu = await prisma.workspaceUser.findFirst({
-    where: { userId: session.user.id, isActive: true },
-    orderBy: { joinedAt: 'asc' },
-    select: { workspaceId: true },
-  });
+  const wu = await resolveSessionMembership(session);
 
   if (!wu?.workspaceId) redirect('/settings');
 
