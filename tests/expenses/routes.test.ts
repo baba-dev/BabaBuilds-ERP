@@ -16,6 +16,10 @@ vi.mock("@/lib/expenses/access", async (importOriginal) => ({ ...(await importOr
 vi.mock("@/lib/expenses/service", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/lib/expenses/service")>()), deleteExpenses: mocks.deleteExpenses, markPaid: mocks.markPaid }));
 vi.mock("@/lib/expenses/queries", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/lib/expenses/queries")>()), findDuplicateExpenses: mocks.findDuplicates }));
 vi.mock("@/lib/expenses/create-expense-with-side-effects", () => ({ createExpenseWithSideEffects: mocks.createExpense }));
+vi.mock("@/lib/expenses/settings", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/lib/expenses/settings")>()), approvalForNewExpense: vi.fn(async () => "APPROVED"), workspaceSettingsStub: undefined }));
+vi.mock("@/lib/expenses/budget-status", () => ({ budgetAlertsFor: vi.fn(async () => []) }));
+vi.mock("@/lib/notifications/dispatcher", () => ({ dispatchNotification: vi.fn(async () => undefined) }));
+vi.mock("@/lib/expenses/inbox", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/lib/expenses/inbox")>()), workspaceForInboxToken: vi.fn(async () => null) }));
 vi.mock("@/lib/gst/data", () => ({ loadGstProfile: vi.fn(async () => ({ stateCode: "27" })) }));
 vi.mock("@/lib/security/activity-log", () => ({ logActivity: vi.fn(async () => undefined) }));
 vi.mock("@/lib/route-rate-limit", () => ({ enforceRouteRateLimit: vi.fn(() => ({ ok: true })) }));
@@ -85,5 +89,29 @@ describe("expense routes", () => {
     const forced = await POST(form({ ...fields, force: "true" }));
     expect(forced.status).toBe(201);
     expect(mocks.createExpense).toHaveBeenCalledWith(expect.objectContaining({ vendor: "AWS", amount: 100, workspaceId: "ws_1" }));
+  });
+
+  it("approving needs the approve permission, not just create", async () => {
+    const { POST } = await import("@/app/api/expenses/bulk/route");
+    await POST(json("http://x/api/expenses/bulk", { ids: ["a"], action: "APPROVE" }));
+    expect(mocks.requireExpenseAccess).toHaveBeenLastCalledWith("expenses.approve");
+    await POST(json("http://x/api/expenses/bulk", { ids: ["a"], action: "REJECT", reason: "no" }));
+    expect(mocks.requireExpenseAccess).toHaveBeenLastCalledWith("expenses.approve");
+  });
+
+  it("rules and budgets can only be changed by approvers", async () => {
+    mocks.requireExpenseAccess.mockResolvedValue(denied);
+    const settings = await import("@/app/api/expenses/settings/route");
+    const budgets = await import("@/app/api/expenses/budgets/route");
+    const patch = new Request("http://x/api/expenses/settings", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ approvalRequired: true }) });
+    expect((await settings.PATCH(patch)).status).toBe(403);
+    const put = new Request("http://x/api/expenses/budgets", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ category: "*", monthlyAmount: 100 }) });
+    expect((await budgets.PUT(put)).status).toBe(403);
+  });
+
+  it("the inbound mail address answers 404 for an unknown or switched-off token", async () => {
+    const { POST } = await import("@/app/api/expenses/inbound/[token]/route");
+    const res = await POST(new Request("http://x/api/expenses/inbound/abc", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }), { params: Promise.resolve({ token: "a-token-that-is-long-enough" }) });
+    expect(res.status).toBe(404);
   });
 });

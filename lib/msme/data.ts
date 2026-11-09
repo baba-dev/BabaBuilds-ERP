@@ -18,7 +18,7 @@ export async function loadSmallBusiness(workspaceId: string, now = new Date()) {
 
   const [invoices, bills] = await Promise.all([
     prisma.invoice.findMany({ where: { workspaceId, voidedAt: null, invoiceDate: { gte: start, lt: end } }, select: { invoiceDate: true, subtotal: true, exchangeRate: true } }),
-    prisma.expense.findMany({ where: { workspaceId, vendorMsme: { in: ["MICRO", "SMALL"] }, date: { lt: end } }, select: { id: true, vendor: true, date: true, amount: true, paymentStatus: true, paidAt: true, vendorMsme: true, vendorUdyam: true, vendorAgreedDays: true }, orderBy: { date: "desc" }, take: 500 }),
+    prisma.expense.findMany({ where: { workspaceId, approvalStatus: "APPROVED", vendorMsme: { in: ["MICRO", "SMALL"] }, date: { lt: end } }, select: { id: true, vendor: true, date: true, amount: true, paymentStatus: true, paidAt: true, vendorMsme: true, vendorUdyam: true, vendorAgreedDays: true }, orderBy: { date: "desc" }, take: 500 }),
   ]);
 
   const points = invoices.map((i) => ({ date: i.invoiceDate, amount: num(i.subtotal) * (num(i.exchangeRate) > 0 ? num(i.exchangeRate) : 1) }));

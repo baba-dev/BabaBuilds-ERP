@@ -1,161 +1,32 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { requireExpenseAccess } from '@/lib/expenses/access';
-import { RECEIPT_MAX_BYTES } from '@/lib/expenses/service';
-import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
-import { sniffAllowedContent } from '@/lib/uploads/private-storage';
-import { parseAmount } from '@/lib/expenses/validate';
-import Groq from 'groq-sdk';
-import { scanBuffer } from '@/lib/security/clamav';
-import { decrypt } from '@/lib/encryption';
-import { normalizeGstin, validateGstin } from '@/lib/gst/gstin';
+import { NextResponse } from "next/server";
+import { expenseError, requireExpenseAccess } from "@/lib/expenses/access";
+import { RECEIPT_MAX_BYTES } from "@/lib/expenses/service";
+import { scanReceipt, workspaceGroqKey } from "@/lib/expenses/scan";
+import { enforceRouteRateLimit } from "@/lib/route-rate-limit";
+import { scanBuffer } from "@/lib/security/clamav";
+import { sniffAllowedContent } from "@/lib/uploads/private-storage";
 
+/** Reads a bill (photo or PDF) and returns suggested fields. Nothing is saved; the person confirms in the form. */
 export async function POST(request: Request) {
-  try {
-    // 1. SECURITY LOCK & BYOK FETCH
-    const limit = enforceRouteRateLimit({ request, route: '/api/expenses/scan', scope: 'expense-scan', max: 20, windowMs: 10 * 60 * 1000 });
-    if (!limit.ok) return limit.response;
-    const auth = await requireExpenseAccess('expenses.create');
-    if (!auth.ok) return auth.response;
-    const workspaceId = auth.ctx.workspaceId;
+  const limit = enforceRouteRateLimit({ request, route: "/api/expenses/scan", scope: "expense-scan", max: 20, windowMs: 10 * 60 * 1000 });
+  if (!limit.ok) return limit.response;
+  const auth = await requireExpenseAccess("expenses.create");
+  if (!auth.ok) return auth.response;
 
-    const profile = await prisma.businessProfile.findUnique({ 
-      where: { workspaceId } 
-    });
+  const apiKey = await workspaceGroqKey(auth.ctx.workspaceId);
+  if (!apiKey) return expenseError(400, "SCANNER_NOT_CONFIGURED", "The receipt scanner needs a Groq API key. Add it in Business Settings.");
 
-    const userApiKeyEncrypted = profile?.groqApiKey;
-    let userApiKey = "";
+  const form = await request.formData().catch(() => null);
+  const file = form?.get("receipt");
+  if (!(file instanceof File) || file.size === 0) return expenseError(400, "NO_FILE", "No receipt file uploaded.");
+  if (file.size > RECEIPT_MAX_BYTES) return expenseError(413, "FILE_TOO_LARGE", "The receipt is too large. The limit is 8 MB.");
 
-    if (userApiKeyEncrypted) {
-      try {
-        userApiKey = decrypt(userApiKeyEncrypted);
-      } catch (e) {
-        console.error("Failed to decrypt Groq API key:", e);
-        userApiKey = userApiKeyEncrypted;
-      }
-    }
+  const buffer = Buffer.from(await file.arrayBuffer());
+  if (!(await scanBuffer(buffer))) return expenseError(400, "MALWARE_DETECTED", "Malware detected in uploaded file.");
+  const kind = sniffAllowedContent(buffer); // trust the bytes, not the browser's label
+  if (kind !== "png" && kind !== "jpeg" && kind !== "webp" && kind !== "pdf") return expenseError(415, "INVALID_FILE_TYPE", "Upload a photo (JPG, PNG, WEBP) or a PDF.");
 
-    if (!userApiKey) {
-      return NextResponse.json({ 
-        error: "AI Scanner requires a Groq API Key. Please configure it in Business Settings." 
-      }, { status: 400 });
-    }
-
-    // 2. EXTRACT & VALIDATE THE FILE
-    const formData = await request.formData();
-    const file = formData.get('receipt');
-
-    if (!(file instanceof File) || file.size === 0) {
-      return NextResponse.json({ error: "No receipt file uploaded." }, { status: 400 });
-    }
-
-    // Next.js Edge/Serverless handles images much better than PDFs for Vision AI.
-    // If you want to support PDFs later, you'd need a library like `pdf-parse` to extract the text first.
-    if (file.size > RECEIPT_MAX_BYTES) {
-      return NextResponse.json({ error: "The receipt is too large. The limit is 8 MB.", code: 'FILE_TOO_LARGE' }, { status: 413 });
-    }
-    const isImage = file.type.startsWith('image/');
-    if (!isImage) {
-      return NextResponse.json({ 
-        error: "Currently, the AI Scanner only supports image formats (JPG, PNG, WEBP). Please take a screenshot of your PDF." 
-      }, { status: 400 });
-    }
-
-    // 3. CONVERT IMAGE TO BASE64 FOR GROQ VISION
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    const isSafe = await scanBuffer(buffer);
-    if (!isSafe) {
-      return NextResponse.json({ error: "Malware detected in uploaded file." }, { status: 400 });
-    }
-
-    // Trust the bytes, not the browser's label.
-    const sniffed = sniffAllowedContent(buffer);
-    if (sniffed !== 'png' && sniffed !== 'jpeg' && sniffed !== 'webp') {
-      return NextResponse.json({ error: "That file is not a readable image.", code: 'INVALID_FILE_TYPE' }, { status: 415 });
-    }
-    const base64Image = buffer.toString('base64');
-    const imageUrl = `data:image/${sniffed};base64,${base64Image}`;
-
-    // 4. CALL GROQ VISION AI
-    const groq = new Groq({ apiKey: userApiKey });
-
-    const systemPrompt = `You are an elite data extraction AI for an Indian accounting firm.
-    Analyze the provided receipt/invoice image and extract the key financial data.
-    
-    Categorize the expense strictly into ONE of these exact categories:
-    "Hosting & Cloud", "Software Subscriptions", "Hardware & Equipment", "Internet & Utilities", "Sub-contractors", "Office & Rent", "Meals & Entertainment", "Other".
-    
-    You MUST respond in strictly valid JSON format matching this schema:
-    {
-      "vendor": "String (Name of the merchant)",
-      "amount": Number (The final total amount in INR, no currency symbols),
-      "date": "String (Format strictly as YYYY-MM-DD)",
-      "category": "String (Must exactly match one of the allowed categories above)",
-      "description": "String (A short 3-6 word summary of what was purchased)",
-      "vendorGstin": "String (The supplier's 15-character GSTIN printed on the bill, else null)",
-      "invoiceNumber": "String (The supplier's invoice or bill number, else null)",
-      "hsnCode": "String (HSN or SAC code if printed, digits only, else null)",
-      "gstRate": Number (The overall GST rate in percent, e.g. 18, or null if no GST is shown)
-    }
-    
-    If you cannot find a piece of data, return null for that field, but never break the JSON structure.`;
-
-    const completion = await groq.chat.completions.create({
-      model: process.env.GROQ_VISION_MODEL || "meta-llama/llama-4-scout-17b-16e-instruct", // override with GROQ_VISION_MODEL
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: systemPrompt },
-            { type: "image_url", image_url: { url: imageUrl } }
-          ]
-        }
-      ],
-      temperature: 0.1, // Keep it highly deterministic
-      response_format: { type: "json_object" } // Force strict JSON output
-    });
-
-    // 5. PARSE & RETURN THE EXTRACTED DATA
-    const responseContent = completion.choices[0]?.message?.content || "{}";
-    
-    try {
-      const extractedData = JSON.parse(responseContent);
-      
-      // Send the clean, mapped data back to the frontend form
-      // GST suggestion: only offered when the GSTIN on the bill is genuinely valid; the owner confirms it in the form.
-      const gstin = normalizeGstin(typeof extractedData.vendorGstin === 'string' ? extractedData.vendorGstin : '');
-      const gstinValid = gstin.length === 15 && validateGstin(gstin).valid;
-      const rateNum = Number(extractedData.gstRate);
-      const rate = Number.isFinite(rateNum) && rateNum > 0 && rateNum <= 40 ? rateNum : null;
-      const category = extractedData.category || "Other";
-      // Food, entertainment and similar bills are blocked credit under section 17(5).
-      const blocked = category === "Meals & Entertainment";
-      return NextResponse.json({
-        vendor: extractedData.vendor || "",
-        amount: parseAmount(extractedData.amount) ?? "",
-        date: typeof extractedData.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(extractedData.date) && !Number.isNaN(new Date(extractedData.date).getTime()) ? extractedData.date : new Date().toISOString().split('T')[0],
-        category,
-        description: extractedData.description || "",
-        gst: rate
-          ? {
-              itcStatus: blocked ? 'INELIGIBLE' : gstinValid ? 'ELIGIBLE' : 'NONE',
-              vendorGstin: gstinValid ? gstin : '',
-              vendorInvoiceNo: typeof extractedData.invoiceNumber === 'string' ? extractedData.invoiceNumber.slice(0, 60) : '',
-              hsnCode: typeof extractedData.hsnCode === 'string' ? extractedData.hsnCode.replace(/\D/g, '').slice(0, 8) : '',
-              gstRate: rate,
-            }
-          : null,
-      });
-
-    } catch (parseError) {
-      console.error("Failed to parse Groq Vision JSON:", parseError);
-      return NextResponse.json({ error: "AI could not cleanly parse the receipt data." }, { status: 500 });
-    }
-
-  } catch (error: unknown) {
-    console.error("AI Scanner Error:", error);
-    return NextResponse.json({ error: "An error occurred while scanning the receipt." }, { status: 500 });
-  }
+  const result = await scanReceipt({ apiKey, buffer, kind });
+  if (!result.ok) return expenseError(result.status, result.code, result.message);
+  return NextResponse.json(result.data);
 }

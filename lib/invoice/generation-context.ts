@@ -54,6 +54,8 @@ export type InvoiceGenerationInput = {
   exchangeRate?: number | string;
   /** GST treatment picked on the composer (place of supply, SEZ, reverse charge). */
   gst?: { placeOfSupply?: string | null; supplyOverride?: string | null; reverseCharge?: boolean | null };
+  /** Billable expenses added to this invoice; they are marked billed with it. */
+  billableExpenseIds?: string[];
 };
 
 export type InvoiceGenerationContext = {

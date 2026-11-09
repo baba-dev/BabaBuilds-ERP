@@ -1,4 +1,5 @@
 import { getGstCashOutflows } from "@/lib/gst/insights";
+import { payablesForForecast } from "@/lib/expenses/payables-data";
 import { Prisma } from "@prisma/client";
 import { toDecimal } from "@/lib/money";
 import type {
@@ -430,9 +431,18 @@ export async function loadForecastSourceData(args: {
     console.error("Forecast: GST outflows unavailable", error);
   }
 
+  // Unpaid supplier bills are known outflows. A failure here must not break the forecast either.
+  let payables: ForecastSourceData["payables"] = [];
+  try {
+    payables = (await payablesForForecast(workspaceId, new Date())).map((p) => ({ id: p.id, vendor: p.vendor, dueDate: p.dueDate, amount: new Prisma.Decimal(p.amount), overdue: p.overdue, invoiceNo: p.invoiceNo, msme: p.msme }));
+  } catch (error) {
+    console.error("Forecast: payables unavailable", error);
+  }
+
   return {
     openingCash,
     gstPayments,
+    payables,
     bankTransactions,
     invoices,
     clientPaymentBehavior: Object.fromEntries(
@@ -572,6 +582,15 @@ export function buildForecastLinesFromSources(args: {
 
   for (const payment of sources.gstPayments ?? []) {
     lines.push(gstPaymentToForecastLine({ payment, scenarioTag }));
+  }
+
+  for (const bill of sources.payables ?? []) {
+    lines.push({
+      direction: "OUTFLOW", sourceType: "EXPENSE", sourceId: bill.id, amount: toDecimal(bill.amount).abs(), expectedDate: bill.dueDate, confidence: bill.overdue ? 0.8 : 0.95, scenarioTag, classification: "COMMITTED",
+      title: `Bill to pay · ${bill.vendor}${bill.invoiceNo ? ` ${bill.invoiceNo}` : ""}`,
+      explanation: bill.overdue ? "Overdue supplier bill, assumed paid soon." : "Supplier bill on credit, due on its due date.",
+      metadataJson: { overdue: bill.overdue, msme: bill.msme },
+    });
   }
 
   // Filter to horizon range.

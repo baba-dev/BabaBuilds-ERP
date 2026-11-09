@@ -6986,7 +6986,10 @@
       "updated2": "{count, plural, one {# expense updated} other {# expenses updated}}",
       "deleted": "{count, plural, one {Expense deleted} other {# expenses deleted}}",
       "failed": "Something went wrong. Please try again.",
-      "fix": "Check the highlighted fields."
+      "fix": "Check the highlighted fields.",
+      "sentForApproval": "Sent for approval",
+      "budgetOver": "{category} is over its monthly budget.",
+      "budgetNear": "{category} has used most of its monthly budget."
     },
     "scan": {
       "done": "Receipt read — please check the details.",
@@ -7004,7 +7007,10 @@
       "removeReceipt": "Remove receipt",
       "keepReceipt": "Keep receipt",
       "duplicate": "This looks like an expense you already logged.",
-      "saveAnyway": "Save anyway"
+      "saveAnyway": "Save anyway",
+      "payment": "Payment",
+      "onCredit": "Unpaid (on credit)",
+      "dueDate": "Due date"
     },
     "errors": {
       "REQUIRED": "This field is required.",
@@ -7013,6 +7019,230 @@
       "DATE": "Enter a valid date.",
       "DATE_FUTURE": "This date is too far in the future.",
       "INVALID": "Check this value."
+    },
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "save": "Save",
+    "tabs": {
+      "label": "Expense views",
+      "ledger": "Ledger",
+      "vendors": "Vendors",
+      "recurring": "Recurring",
+      "review": "Review"
+    },
+    "source": {
+      "MANUAL": "Manual",
+      "SCAN": "Scanned",
+      "EMAIL": "Email",
+      "RECURRING": "Recurring",
+      "PO": "Purchase order",
+      "BANK": "Bank",
+      "IMPORT": "Import",
+      "AI": "Assistant"
+    },
+    "ageing": {
+      "title": "Bills by how late they are",
+      "NOT_DUE": "Not due",
+      "D1_30": "1–30 days late",
+      "D31_60": "31–60 days late",
+      "D61_90": "61–90 days late",
+      "D90_PLUS": "90+ days late"
+    },
+    "approval": {
+      "willWait": "This will wait for an approver before it counts.",
+      "rejected": "Rejected: {reason}",
+      "submit": "Submit for approval",
+      "confirm": "Confirm expense"
+    },
+    "tds": {
+      "suggest": "Usually {kind}: tax deducted at source under {code} at {rate}%.",
+      "kind": {
+        "contractor": "a contractor payment",
+        "rent": "rent",
+        "professional": "professional fees",
+        "technical": "technical fees",
+        "commission": "commission"
+      },
+      "threshold": {
+        "perPayment30k": "Applies above ₹30,000 a payment or ₹1 lakh a year.",
+        "yearly6l": "Applies above ₹6 lakh a year.",
+        "yearly50k": "Applies above ₹50,000 a year.",
+        "yearly20k": "Applies above ₹20,000 a year."
+      },
+      "verify": "A suggestion only — confirm with your CA.",
+      "apply": "Apply",
+      "applied": "Tax withheld at {rate}%: {amount} will be recorded for deposit.",
+      "remove": "Remove"
+    },
+    "billable": {
+      "toggle": "Billable to a client",
+      "hint": "Add it to that client's next invoice.",
+      "client": "Client",
+      "choose": "Choose a client",
+      "markupLabel": "Markup %",
+      "alreadyBilled": "Already on an invoice, so the client and amount are locked.",
+      "chip": "Bill {client}",
+      "billed": "Billed",
+      "unbilled": "{count, plural, one {# billable expense} other {# billable expenses}} not yet invoiced ({amount})",
+      "title": "{count, plural, one {# billable expense for this client} other {# billable expenses for this client}}",
+      "addAll": "Add all ({count})",
+      "add": "Add",
+      "added": "Added",
+      "markup": "{pct}% markup"
+    },
+    "bank": {
+      "reconciled": "Matched to a bank line",
+      "match": "Match to bank",
+      "title": "Match {vendor} to a bank debit",
+      "help": "Looking for a debit of {amount} that is not matched yet.",
+      "loading": "Looking through your bank lines…",
+      "none": "No unmatched bank debit of this amount nearby. Import your statement in Reconciliation first.",
+      "nameMatch": "vendor name in narration",
+      "match2": "Match",
+      "matched": "Matched to the bank line",
+      "matchedPaid": "Matched, and the bill is marked paid on the bank date",
+      "paidNote": "Matching marks this bill as paid on the bank date."
+    },
+    "budgets": {
+      "title": "Monthly budgets",
+      "thisMonth": "Budgets this month",
+      "overall": "Overall",
+      "none": "No cap",
+      "help": "Set a monthly cap ({currency}). You get a warning when spending nears or passes it."
+    },
+    "settings": {
+      "open": "Rules",
+      "title": "Expense rules",
+      "description": "Approvals, the bill inbox and budgets.",
+      "readOnly": "Only approvers can change these.",
+      "approvals": "Approvals",
+      "requireApproval": "Require approval",
+      "requireApprovalHelp": "Expenses from people who cannot approve wait for an approver and do not count until approved.",
+      "threshold": "Needs approval from ({currency})",
+      "thresholdHelp": "0 means every expense. Smaller ones are approved automatically.",
+      "saved": "Saved",
+      "inbox": "Bill inbox",
+      "inboxOn": "Accept forwarded bills",
+      "inboxHelp": "Bills sent to the address below become drafts to review.",
+      "inboxUrl": "Webhook address",
+      "inboxHow": "Point your email provider's inbound webhook (Postmark, Mailgun, SendGrid or similar) at this address, then forward bills to the mailbox it gives you. Keep the address secret; rotate it if it leaks.",
+      "copy": "Copy address",
+      "copied": "Address copied",
+      "rotate": "Generate a new address",
+      "rotated": "New address created. The old one stops working.",
+      "budgetSaved": "Budget saved"
+    },
+    "review": {
+      "mode": {
+        "REVIEW": "Waiting",
+        "REJECTED": "Rejected"
+      },
+      "status": {
+        "DRAFT": "Needs review",
+        "PENDING": "Awaiting approval",
+        "REJECTED": "Rejected",
+        "APPROVED": "Approved"
+      },
+      "help": "Forwarded bills, recurring drafts and entries waiting for an approver. They do not count in reports until approved.",
+      "helpRejected": "Fix these and submit them again.",
+      "empty": "Nothing waiting for review.",
+      "emptyRejected": "No rejected expenses.",
+      "noAmount": "Add amount",
+      "complete": "Open",
+      "approve": "Approve {count}",
+      "approveOne": "Approve",
+      "reject": "Reject",
+      "rejectTitle": "{count, plural, one {Reject this expense?} other {Reject # expenses?}}",
+      "rejectHelp": "The person who entered it can fix it and submit it again.",
+      "reasonLabel": "Reason",
+      "reasonHint": "Why is it rejected? (optional)",
+      "reason": "Reason: {reason}",
+      "approved": "{count, plural, one {# expense approved} other {# expenses approved}}",
+      "rejectedToast": "{count, plural, one {# expense rejected} other {# expenses rejected}}",
+      "skipped": "{count, plural, one {# entry has no amount yet and was skipped} other {# entries have no amount yet and were skipped}}",
+      "incomplete": "Add the amount first."
+    },
+    "vendors": {
+      "search": "Search vendors",
+      "showArchived": "Show archived",
+      "add": "Add vendor",
+      "empty": "No vendors yet. They are created as you log expenses.",
+      "openLedger": "Show expenses for {name}",
+      "unpaidBills": "{count, plural, one {# unpaid bill} other {# unpaid bills}}",
+      "terms": "{days}-day terms",
+      "last": "last {date}",
+      "owed": "{amount} owed",
+      "mergeInto": "Merge into another vendor",
+      "archive": "Archive vendor",
+      "restore": "Restore vendor",
+      "filtering": "Vendor: {name}",
+      "newTitle": "New vendor",
+      "editTitle": "Edit vendor",
+      "formHelp": "Saved details pre-fill every new bill from this vendor.",
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "termsLabel": "Payment terms (days)",
+      "defaultCategory": "Usual category",
+      "msmeClass": "MSME class",
+      "msmeNone": "Not an MSME / unsure",
+      "micro": "Micro",
+      "small": "Small",
+      "medium": "Medium",
+      "tdsSection": "TDS section",
+      "tdsRate": "TDS rate %",
+      "created": "Vendor added",
+      "updated": "Vendor updated",
+      "merged": "Vendors merged",
+      "mergeTitle": "Merge {name}",
+      "mergeHelp": "Its bills and schedules move to the vendor you keep, and this one is removed.",
+      "keep": "Keep this vendor",
+      "choose": "Choose a vendor",
+      "merge": "Merge",
+      "errors": {
+        "REQUIRED": "This field is required.",
+        "TOO_LONG": "Too long.",
+        "EMAIL": "Enter a valid email address.",
+        "GSTIN_INVALID": "This GSTIN is not valid.",
+        "STATE_INVALID": "Choose a valid state.",
+        "UDYAM_INVALID": "Udyam looks wrong. Use UDYAM-MH-12-0000001.",
+        "EXISTS": "A vendor with this name already exists."
+      }
+    },
+    "recurring": {
+      "help": "Rent, subscriptions and other regular bills. Schedules post on their date, or wait as a draft for you to confirm.",
+      "add": "New schedule",
+      "runNow": "Post due now",
+      "ran": "{count, plural, one {# expense posted} other {# expenses posted}}",
+      "empty": "No recurring expenses yet.",
+      "autoPost": "Posts automatically",
+      "draftFirst": "Draft to confirm",
+      "status": {
+        "ACTIVE": "Active",
+        "PAUSED": "Paused",
+        "ENDED": "Ended"
+      },
+      "freq": {
+        "WEEKLY": "Weekly",
+        "MONTHLY": "Monthly",
+        "QUARTERLY": "Quarterly",
+        "YEARLY": "Yearly"
+      },
+      "next": "next {date}",
+      "lastRun": "last posted {date}",
+      "until": "until {date}",
+      "pause": "Pause",
+      "resume": "Resume",
+      "newTitle": "New recurring expense",
+      "editTitle": "Edit schedule",
+      "formHelp": "Posted entries are never changed when you edit the schedule.",
+      "frequency": "Repeats",
+      "firstRun": "Next date",
+      "endDate": "Ends (optional)",
+      "dueInDays": "Due after (days)",
+      "autoPostLabel": "Post automatically",
+      "autoPostHelp": "Off: each run creates a draft that waits for your confirmation.",
+      "saved": "Schedule saved"
     }
   }
 }

@@ -22,7 +22,7 @@ export async function GET() {
         _sum: { totalAmount: true },
       }),
       prisma.expense.aggregate({
-        where: { workspaceId },
+        where: { workspaceId, approvalStatus: "APPROVED" },
         _sum: { amount: true },
       }),
     ]);

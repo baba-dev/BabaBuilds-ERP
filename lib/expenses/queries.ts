@@ -3,6 +3,9 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { PRESET_CATEGORIES } from "./categories";
 import { previousRange, type PeriodRange } from "./period";
+import { reconciledExpenseIds } from "./bank-match";
+import { budgetStatus } from "./budget-status";
+import { ageing, openPayables } from "./payables-data";
 
 const num = (v: unknown) => {
   const n = Number(v ?? 0);
@@ -13,11 +16,17 @@ const DAY = 86_400_000;
 
 export type ExpenseListQuery = {
   q?: string; category?: string; status?: "paid" | "unpaid"; receipt?: "with" | "without"; itc?: "eligible" | "blocked";
+  approval?: "APPROVED" | "PENDING" | "DRAFT" | "REJECTED" | "REVIEW"; vendorId?: string; clientId?: string; source?: string;
   range: PeriodRange; sort?: "date" | "amount" | "vendor"; dir?: "asc" | "desc"; page?: number; limit?: number;
 };
 
 export function expenseWhere(workspaceId: string, q: Omit<ExpenseListQuery, "sort" | "dir" | "page" | "limit">): Prisma.ExpenseWhereInput {
   const and: Prisma.ExpenseWhereInput[] = [];
+  // Only approved entries count; the review queue asks for the others explicitly.
+  and.push(q.approval === "REVIEW" ? { approvalStatus: { in: ["PENDING", "DRAFT"] } } : { approvalStatus: q.approval ?? "APPROVED" });
+  if (q.vendorId) and.push({ vendorId: q.vendorId });
+  if (q.clientId) and.push({ clientId: q.clientId });
+  if (q.source) and.push({ source: q.source });
   const range = q.range;
   if (range.from || range.to) and.push({ date: { ...(range.from ? { gte: range.from } : {}), ...(range.to ? { lt: range.to } : {}) } });
   const text = q.q?.trim();
@@ -32,7 +41,9 @@ export function expenseWhere(workspaceId: string, q: Omit<ExpenseListQuery, "sor
   return { workspaceId, AND: and };
 }
 
-export function shapeExpense(e: Prisma.ExpenseGetPayload<object>) {
+export type ExpenseExtra = { clientName?: string | null; poNumber?: string | null; reconciled?: boolean };
+
+export function shapeExpense(e: Prisma.ExpenseGetPayload<object>, extra: ExpenseExtra = {}) {
   const gst = num(e.igstAmount) + num(e.cgstAmount) + num(e.sgstAmount) + num(e.cessAmount);
   return {
     id: e.id, date: e.date.toISOString(), category: e.category, vendor: e.vendor, amount: num(e.amount), description: e.description, receiptUrl: e.receiptUrl,
@@ -42,6 +53,8 @@ export function shapeExpense(e: Prisma.ExpenseGetPayload<object>) {
     vendorMsme: e.vendorMsme, vendorUdyam: e.vendorUdyam, vendorAgreedDays: e.vendorAgreedDays,
     withholdingAmount: e.withholdingAmount === null ? null : num(e.withholdingAmount), withholdingRatePercent: e.withholdingRatePercent === null ? null : num(e.withholdingRatePercent),
     withholdingDeductedAt: e.withholdingDeductedAt ? e.withholdingDeductedAt.toISOString() : null, withholdingDepositedAt: e.withholdingDepositedAt ? e.withholdingDepositedAt.toISOString() : null,
+    vendorId: e.vendorId, dueDate: e.dueDate ? e.dueDate.toISOString() : null, source: e.source, approvalStatus: e.approvalStatus, rejectionReason: e.rejectionReason, submittedByUserId: e.submittedByUserId,
+    billable: e.billable, clientId: e.clientId, clientName: extra.clientName ?? null, markupPercent: e.markupPercent, billedInvoiceId: e.billedInvoiceId, recurringId: e.recurringId, purchaseOrderId: e.purchaseOrderId, poNumber: extra.poNumber ?? null, reconciled: Boolean(extra.reconciled),
     ageDays: e.paymentStatus === "UNPAID" ? Math.max(0, Math.floor((Date.now() - e.date.getTime()) / DAY)) : null,
   };
 }
@@ -53,21 +66,27 @@ export async function listExpenses(workspaceId: string, q: ExpenseListQuery) {
   const dir = q.dir === "asc" ? "asc" : "desc";
   const orderBy: Prisma.ExpenseOrderByWithRelationInput[] = q.sort === "amount" ? [{ amount: dir }, { date: "desc" }] : q.sort === "vendor" ? [{ vendor: dir }, { date: "desc" }] : [{ date: dir }, { createdAt: "desc" }];
   const [rows, total, agg] = await Promise.all([
-    prisma.expense.findMany({ where, orderBy, skip: (page - 1) * limit, take: limit }),
+    prisma.expense.findMany({ where, orderBy, skip: (page - 1) * limit, take: limit, include: { client: { select: { name: true } } } }),
     prisma.expense.count({ where }),
     prisma.expense.aggregate({ where, _sum: { amount: true } }),
   ]);
-  return { data: rows.map(shapeExpense), meta: { currentPage: page, totalPages: Math.max(1, Math.ceil(total / limit)), totalRecords: total }, filteredTotal: r2(num(agg._sum.amount)) };
+  const poIds = [...new Set(rows.map((r) => r.purchaseOrderId).filter((x): x is string => Boolean(x)))];
+  const [pos, reconciled] = await Promise.all([
+    poIds.length ? prisma.purchaseOrder.findMany({ where: { workspaceId, id: { in: poIds } }, select: { id: true, poNumber: true } }) : Promise.resolve([]),
+    reconciledExpenseIds(workspaceId, rows.map((r) => r.id)),
+  ]);
+  const poNumber = new Map(pos.map((p) => [p.id, p.poNumber]));
+  return { data: rows.map((r) => shapeExpense(r, { clientName: r.client?.name ?? null, poNumber: r.purchaseOrderId ? poNumber.get(r.purchaseOrderId) ?? null : null, reconciled: reconciled.has(r.id) })), meta: { currentPage: page, totalPages: Math.max(1, Math.ceil(total / limit)), totalRecords: total }, filteredTotal: r2(num(agg._sum.amount)) };
 }
 
-/** Distinct categories and recent vendors, so the form can suggest what the workspace already uses. */
+/** Categories in use beyond the presets, and the vendor list the form suggests from. */
 export async function expenseMeta(workspaceId: string) {
   const [cats, vendors] = await Promise.all([
     prisma.expense.groupBy({ by: ["category"], where: { workspaceId }, _count: { _all: true }, orderBy: { _count: { category: "desc" } }, take: 60 }),
-    prisma.expense.groupBy({ by: ["vendor"], where: { workspaceId }, _count: { _all: true }, _max: { date: true }, orderBy: { _count: { vendor: "desc" } }, take: 40 }),
+    prisma.vendor.findMany({ where: { workspaceId, archivedAt: null }, orderBy: { name: "asc" }, take: 500, select: { id: true, name: true, gstin: true, stateCode: true, msmeClass: true, udyam: true, paymentTermsDays: true, defaultCategory: true, tdsSection: true, tdsRatePercent: true } }),
   ]);
   const preset = new Set<string>(PRESET_CATEGORIES.map((c) => c.value));
-  return { categories: cats.map((c) => c.category).filter((c) => !preset.has(c)), vendors: vendors.map((v) => v.vendor) };
+  return { categories: cats.map((c) => c.category).filter((c) => !preset.has(c)), vendors };
 }
 
 export async function expenseSummary(workspaceId: string, range: PeriodRange, now = new Date()) {
@@ -76,18 +95,23 @@ export async function expenseSummary(workspaceId: string, range: PeriodRange, no
   const sixStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1));
   const invDate = range.from || range.to ? { invoiceDate: { ...(range.from ? { gte: range.from } : {}), ...(range.to ? { lt: range.to } : {}) } } : {};
 
-  const [total, byCat, byVendor, itc, unpaid, unpaidItems, missing, whPending, series, revenue, ws] = await Promise.all([
+  const [total, byCat, byVendor, itc, unpaid, unpaidItems, missing, whPending, series, revenue, ws, reviewCount, budgets, payables, unbilled, vendorCount] = await Promise.all([
     prisma.expense.aggregate({ where, _sum: { amount: true }, _count: { _all: true } }),
     prisma.expense.groupBy({ by: ["category"], where, _sum: { amount: true }, _count: { _all: true }, orderBy: { _sum: { amount: "desc" } }, take: 12 }),
     prisma.expense.groupBy({ by: ["vendor"], where, _sum: { amount: true }, _count: { _all: true }, orderBy: { _sum: { amount: "desc" } }, take: 5 }),
     prisma.expense.aggregate({ where: { ...where, itcStatus: "ELIGIBLE", itcHeld: false }, _sum: { igstAmount: true, cgstAmount: true, sgstAmount: true, cessAmount: true } }),
-    prisma.expense.aggregate({ where: { workspaceId, paymentStatus: "UNPAID" }, _sum: { amount: true }, _count: { _all: true } }),
-    prisma.expense.findMany({ where: { workspaceId, paymentStatus: "UNPAID" }, orderBy: { date: "asc" }, take: 6, select: { id: true, vendor: true, amount: true, date: true, vendorInvoiceNo: true, vendorMsme: true, vendorAgreedDays: true } }),
+    prisma.expense.aggregate({ where: { workspaceId, approvalStatus: "APPROVED", paymentStatus: "UNPAID" }, _sum: { amount: true }, _count: { _all: true } }),
+    prisma.expense.findMany({ where: { workspaceId, approvalStatus: "APPROVED", paymentStatus: "UNPAID" }, orderBy: { date: "asc" }, take: 6, select: { id: true, vendor: true, amount: true, date: true, vendorInvoiceNo: true, vendorMsme: true, vendorAgreedDays: true } }),
     prisma.expense.count({ where: { ...where, receiptUrl: null } }),
-    prisma.expense.aggregate({ where: { workspaceId, withholdingDeductedAt: { not: null }, withholdingDepositedAt: null }, _sum: { withholdingAmount: true }, _count: { _all: true } }),
-    prisma.expense.findMany({ where: { workspaceId, date: { gte: sixStart } }, select: { date: true, amount: true }, take: 20000 }),
+    prisma.expense.aggregate({ where: { workspaceId, approvalStatus: "APPROVED", withholdingDeductedAt: { not: null }, withholdingDepositedAt: null }, _sum: { withholdingAmount: true }, _count: { _all: true } }),
+    prisma.expense.findMany({ where: { workspaceId, approvalStatus: "APPROVED", date: { gte: sixStart } }, select: { date: true, amount: true }, take: 20000 }),
     prisma.invoice.aggregate({ where: { workspaceId, status: { not: "VOID" }, voidedAt: null, ...invDate }, _sum: { baseGrandTotal: true, grandTotal: true } }),
     prisma.workspace.findUnique({ where: { id: workspaceId }, select: { baseCurrency: true } }),
+    prisma.expense.count({ where: { workspaceId, approvalStatus: { in: ["PENDING", "DRAFT"] } } }),
+    budgetStatus(workspaceId, now),
+    openPayables(workspaceId, now),
+    prisma.expense.aggregate({ where: { workspaceId, billable: true, billedInvoiceId: null, approvalStatus: "APPROVED" }, _sum: { amount: true }, _count: { _all: true } }),
+    prisma.vendor.count({ where: { workspaceId, archivedAt: null } }),
   ]);
   const prevTotal = prev ? num((await prisma.expense.aggregate({ where: expenseWhere(workspaceId, { range: prev }), _sum: { amount: true } }))._sum.amount) : null;
 
@@ -109,6 +133,7 @@ export async function expenseSummary(workspaceId: string, range: PeriodRange, no
     monthly: [...monthly.entries()].map(([month, amount]) => ({ month, amount: r2(amount) })),
     unpaid: { count: unpaid._count._all, amount: r2(num(unpaid._sum.amount)), items: unpaidItems.map((u) => ({ id: u.id, vendor: u.vendor, amount: num(u.amount), date: u.date.toISOString(), invoiceNo: u.vendorInvoiceNo, ageDays: Math.floor((now.getTime() - u.date.getTime()) / DAY), msme: u.vendorMsme, agreedDays: u.vendorAgreedDays })) },
     missingReceipts: missing,
+    reviewCount, budgets, ageing: ageing(payables), vendorCount, unbilled: { count: unbilled._count._all, amount: r2(num(unbilled._sum.amount)) },
     withholdingPending: { count: whPending._count._all, amount: r2(num(whPending._sum.withholdingAmount)) },
   };
 }

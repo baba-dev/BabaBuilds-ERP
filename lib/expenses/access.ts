@@ -11,7 +11,7 @@ export type ExpenseCtx = { workspaceId: string; userId: string; email: string | 
 export const expenseError = (status: number, code: string, message: string, extra?: Record<string, unknown>) => NextResponse.json({ error: message, code, ...(extra ?? {}) }, { status });
 
 /** Session plus a fresh permission check. Reading needs expenses.view; adding and editing need expenses.create; removing needs expenses.delete. */
-export async function requireExpenseAccess(permission: Extract<Permission, "expenses.view" | "expenses.create" | "expenses.delete">): Promise<{ ok: true; ctx: ExpenseCtx } | { ok: false; response: NextResponse }> {
+export async function requireExpenseAccess(permission: Extract<Permission, "expenses.view" | "expenses.create" | "expenses.delete" | "expenses.approve">): Promise<{ ok: true; ctx: ExpenseCtx } | { ok: false; response: NextResponse }> {
   const session = await getServerSession(authOptions);
   const workspaceId = session?.workspaceId;
   const userId = (session?.user?.id as string | undefined) ?? null;

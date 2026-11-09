@@ -10,12 +10,13 @@ import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from
 import { buildPrivatePath, ensureDir, sniffAllowedContent, uniqueStoredName } from "@/lib/uploads/private-storage";
 import { expenseGstSchema, normalizeExpenseGst } from "@/lib/gst/expense-gst";
 import { loadGstProfile } from "@/lib/gst/data";
-import { computeWithheldAmount } from "@/lib/tax/withholding";
+import { computeWithheldAmount, deriveReturnPeriodKey } from "@/lib/tax/withholding";
 import { determineAndPersistTax } from "@/src/server/tax/service";
 import { createPrismaTaxPersistence } from "@/lib/tax/prisma-tax-persistence";
 import { appendTaxAuditEvent, newTaxCorrelationId } from "@/lib/tax/audit";
 import { expenseError, type ExpenseCtx } from "./access";
 import type { ExpenseCore } from "./validate";
+import { approvalForNewExpense } from "./settings";
 
 export const RECEIPT_MAX_BYTES = 8 * 1024 * 1024;
 const RECEIPT_EXT = [".png", ".jpg", ".jpeg", ".webp", ".pdf"];
@@ -63,6 +64,16 @@ export async function removeReceiptFile(url: string | null | undefined) {
   } catch { /* nothing to remove */ }
 }
 
+
+type WhExpense = { id: string; vendor: string; amount: Prisma.Decimal; withholdingDeductedAt: Date | null; withholdingAmount: Prisma.Decimal | null; withholdingRatePercent: Prisma.Decimal | null; withholdingDepositedAt: Date | null; withholdingDepositDueAt: Date | null };
+/** Tax withheld on a bill is recorded once the bill counts (approved). Safe to call twice. */
+async function ensureWithholdingEvent(tx: Prisma.TransactionClient, ctx: ExpenseCtx, e: WhExpense) {
+  if (!e.withholdingDeductedAt || !e.withholdingAmount || Number(e.withholdingAmount) <= 0) return;
+  const exists = await tx.withholdingEvent.findFirst({ where: { expenseId: e.id }, select: { id: true } });
+  if (exists) return;
+  await tx.withholdingEvent.create({ data: { workspaceId: ctx.workspaceId, sourceType: "EXPENSE_PAYMENT", sourceId: e.id, expenseId: e.id, counterpartyName: e.vendor, grossAmount: e.amount, withheldAmount: e.withholdingAmount, withholdingRatePercent: e.withholdingRatePercent, deductedAt: e.withholdingDeductedAt, depositedAt: e.withholdingDepositedAt, depositDueAt: e.withholdingDepositDueAt, returnPeriodKey: deriveReturnPeriodKey(e.withholdingDeductedAt, null), createdByUserId: ctx.userId } });
+}
+
 type GstInput = Record<string, unknown> | undefined;
 
 /** Merges what was sent over what is stored, validates, and recomputes the tax split for the amount. */
@@ -82,7 +93,9 @@ async function resolveGst(ctx: ExpenseCtx, existing: Prisma.ExpenseGetPayload<ob
   return { ok: true as const, data };
 }
 
-export async function updateExpense(ctx: ExpenseCtx, id: string, core: Partial<ExpenseCore>, opts: { gst?: GstInput; receiptUrl?: string | null; replaceReceipt?: boolean } = {}): Promise<ServiceResult<{ expense: Prisma.ExpenseGetPayload<object>; changed: string[] }>> {
+export type ExpenseExtras = { vendorId?: string | null; dueDate?: Date | null; billable?: boolean; clientId?: string | null; markupPercent?: number | null; submit?: boolean };
+
+export async function updateExpense(ctx: ExpenseCtx, id: string, core: Partial<ExpenseCore>, opts: { gst?: GstInput; receiptUrl?: string | null; replaceReceipt?: boolean; extra?: ExpenseExtras } = {}): Promise<ServiceResult<{ expense: Prisma.ExpenseGetPayload<object>; changed: string[] }>> {
   const existing = await prisma.expense.findFirst({ where: { id, workspaceId: ctx.workspaceId } });
   if (!existing) return fail(404, "EXPENSE_NOT_FOUND", "Expense not found.");
 
@@ -109,10 +122,45 @@ export async function updateExpense(ctx: ExpenseCtx, id: string, core: Partial<E
     newWithheld = computeWithheldAmount({ grossAmount: amount, ratePercent: Number(existing.withholdingRatePercent), explicitWithheldAmount: null, deductedAt: existing.withholdingDeductedAt });
     data.withholdingAmount = newWithheld;
   }
+  const x = opts.extra ?? {};
+  if (existing.billedInvoiceId && (amountChanged || x.clientId !== undefined || x.billable === false)) return fail(409, "ALREADY_BILLED", "This expense is already on an invoice, so its amount and client cannot change.");
+  if (x.vendorId !== undefined) {
+    if (x.vendorId === null) data.vendorRecord = { disconnect: true };
+    else {
+      const v = await prisma.vendor.findFirst({ where: { id: x.vendorId, workspaceId: ctx.workspaceId } });
+      if (!v) return fail(404, "VENDOR_NOT_FOUND", "Vendor not found.");
+      data.vendorRecord = { connect: { id: v.id } };
+      if (core.vendor === undefined && v.name !== existing.vendor) { data.vendor = v.name; changed.push("vendor"); }
+    }
+    changed.push("vendorId");
+  }
+  if (x.dueDate !== undefined) { data.dueDate = x.dueDate; changed.push("dueDate"); }
+  if (x.clientId !== undefined) {
+    if (x.clientId === null) data.client = { disconnect: true };
+    else {
+      const c = await prisma.client.findFirst({ where: { id: x.clientId, workspaceId: ctx.workspaceId }, select: { id: true } });
+      if (!c) return fail(404, "CLIENT_NOT_FOUND", "Client not found.");
+      data.client = { connect: { id: c.id } };
+    }
+    changed.push("clientId");
+  }
+  if (x.billable !== undefined) { data.billable = x.billable && Boolean(x.clientId ?? existing.clientId); if (!x.billable) data.markupPercent = null; changed.push("billable"); }
+  if (x.markupPercent !== undefined && (x.billable ?? existing.billable)) { data.markupPercent = x.markupPercent; changed.push("markupPercent"); }
+  // Sending a draft or rejected entry for approval: goes straight in when approval is off or the sender may approve.
+  if (x.submit && (existing.approvalStatus === "DRAFT" || existing.approvalStatus === "REJECTED")) {
+    if (amount <= 0) return fail(422, "INCOMPLETE", "Add the amount before submitting.");
+    const status = await approvalForNewExpense(ctx.workspaceId, ctx.userId, amount);
+    data.approvalStatus = status;
+    data.submittedByUserId = ctx.userId;
+    data.rejectionReason = null;
+    if (status === "APPROVED") { data.approvedByUserId = ctx.userId; data.approvedAt = new Date(); }
+    changed.push("approvalStatus");
+  }
   if (changed.length === 0) return { ok: true, expense: existing, changed };
 
   const expense = await prisma.$transaction(async (tx) => {
     const updated = await tx.expense.update({ where: { id }, data });
+    if (updated.approvalStatus === "APPROVED" && existing.approvalStatus !== "APPROVED") await ensureWithholdingEvent(tx, ctx, updated);
     if (newWithheld) await tx.withholdingEvent.updateMany({ where: { expenseId: id }, data: { grossAmount: amount, withheldAmount: newWithheld } });
     if (amountChanged || dateChanged) {
       const country = ctx.countryCode.trim().toUpperCase() || "IN";
@@ -155,4 +203,28 @@ export async function recategorize(ctx: ExpenseCtx, ids: string[], category: str
   void logActivity({ action: "expense_recategorized", status: "SUCCESS", workspaceId: ctx.workspaceId, actor: { userId: ctx.userId, email: ctx.email ?? undefined }, entity: { type: "expense", id: ids[0] }, metadata: { count: res.count, category } });
   bust(ctx.workspaceId, "recategorize");
   return { ok: true, updated: res.count };
+}
+
+/** Approver action. Approving makes the entry count everywhere and records the tax withheld, if any; rejecting keeps it out with a reason. */
+export async function reviewExpenses(ctx: ExpenseCtx, ids: string[], decision: "APPROVE" | "REJECT", reason?: string): Promise<ServiceResult<{ updated: number; skipped: number }>> {
+  const waiting = await prisma.expense.findMany({ where: { id: { in: ids }, workspaceId: ctx.workspaceId, approvalStatus: { in: ["PENDING", "DRAFT"] } } });
+  if (waiting.length === 0) return fail(404, "NOTHING_TO_REVIEW", "None of these expenses are waiting for review.");
+  // A forwarded bill the scanner could not read has no amount yet: it has to be completed before it can count.
+  const rows = decision === "APPROVE" ? waiting.filter((e) => Number(e.amount) > 0) : waiting;
+  const skipped = waiting.length - rows.length;
+  if (rows.length === 0) return fail(422, "INCOMPLETE", "Add the amount to these expenses before approving them.");
+  const now = new Date();
+  await prisma.$transaction(async (tx) => {
+    for (const e of rows) {
+      if (decision === "APPROVE") {
+        await tx.expense.update({ where: { id: e.id }, data: { approvalStatus: "APPROVED", approvedByUserId: ctx.userId, approvedAt: now, rejectionReason: null } });
+        await ensureWithholdingEvent(tx, ctx, e);
+      } else {
+        await tx.expense.update({ where: { id: e.id }, data: { approvalStatus: "REJECTED", approvedByUserId: ctx.userId, approvedAt: now, rejectionReason: (reason ?? "").slice(0, 300) || null } });
+      }
+    }
+  });
+  void logActivity({ action: decision === "APPROVE" ? "expense_approved" : "expense_rejected", status: "SUCCESS", workspaceId: ctx.workspaceId, actor: { userId: ctx.userId, email: ctx.email ?? undefined }, entity: { type: "expense", id: rows[0].id }, metadata: { count: rows.length, reason: reason ?? null } });
+  bust(ctx.workspaceId, decision.toLowerCase());
+  return { ok: true, updated: rows.length, skipped };
 }

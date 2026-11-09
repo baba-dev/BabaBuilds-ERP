@@ -1576,6 +1576,7 @@ model Client {
   updatedAt        DateTime? @updatedAt
   contacts         ClientContact[]
   clientNotes      ClientNote[]
+  expenses         Expense[]
 
   createdAt       DateTime               @default(now())
   invoices        Invoice[]
@@ -2198,10 +2199,121 @@ model Expense {
   vendorMsme       String? // MICRO | SMALL | MEDIUM | NONE (trader or unknown)
   vendorAgreedDays Int? // written credit period, max 45
 
+  // Vendor master, bill due date and where the entry came from.
+  vendorId String?
+  vendorRecord Vendor? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  dueDate  DateTime?
+  source   String   @default("MANUAL") // MANUAL | SCAN | EMAIL | RECURRING | PO | BANK | IMPORT | AI
+  purchaseOrderId String?
+  recurringId String?
+  recurring   RecurringExpense? @relation(fields: [recurringId], references: [id], onDelete: SetNull)
+
+  // Approval: only APPROVED entries count in reports, tax and the dashboard.
+  approvalStatus   String    @default("APPROVED") // DRAFT (needs review) | PENDING | APPROVED | REJECTED
+  submittedByUserId String?
+  approvedByUserId  String?
+  approvedAt        DateTime?
+  rejectionReason   String?
+
+  // Billable to a client: can be added to the next invoice, with an optional markup.
+  billable        Boolean  @default(false)
+  clientId        String?
+  client          Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  markupPercent   Float?
+  billedInvoiceId String?
+
   @@index([date])
   @@index([category])
   @@index([workspaceId])
   @@index([workspaceId, date])
+  @@index([workspaceId, approvalStatus])
+  @@index([workspaceId, paymentStatus, dueDate])
+  @@index([vendorId])
+  @@index([clientId, billable])
+  @@index([purchaseOrderId])
+}
+
+/// A supplier. Carries GST, MSME, terms and TDS defaults so each bill does not re-key them.
+model Vendor {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  /// Lower-cased, punctuation-free name used to find the same vendor typed differently.
+  nameKey     String
+  gstin       String?
+  stateCode   String?
+  email       String?
+  phone       String?
+  msmeClass   String?  // MICRO | SMALL | MEDIUM | NONE
+  udyam       String?
+  paymentTermsDays Int?
+  defaultCategory  String?
+  /// Suggested withholding for payments to this vendor.
+  tdsSection        String?
+  tdsRatePercent    Float?
+  notes       String?
+  archivedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  expenses  Expense[]
+  recurring RecurringExpense[]
+
+  @@unique([workspaceId, nameKey])
+  @@index([workspaceId, archivedAt])
+}
+
+/// A repeating expense (rent, subscriptions). Posts on its own or creates a draft to confirm.
+model RecurringExpense {
+  id          String   @id @default(cuid())
+  workspaceId String
+  vendorId    String?
+  vendorRecord Vendor? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  vendor      String
+  category    String
+  amount      Decimal
+  description String?
+  frequency   String   @default("MONTHLY") // WEEKLY | MONTHLY | QUARTERLY | YEARLY
+  nextRunDate DateTime
+  endDate     DateTime?
+  /// true: posts approved on its date; false: creates a draft for someone to confirm.
+  autoPost    Boolean  @default(false)
+  status      String   @default("ACTIVE") // ACTIVE | PAUSED | ENDED
+  paymentStatus String @default("PAID") // PAID | UNPAID
+  dueInDays   Int?
+  itcStatus   String   @default("NONE")
+  gstRate     Float?
+  lastRunAt   DateTime?
+  createdByUserId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  expenses Expense[]
+
+  @@index([workspaceId, status, nextRunDate])
+}
+
+/// Monthly cap per category (category "*" is the overall cap).
+model ExpenseBudget {
+  id          String   @id @default(cuid())
+  workspaceId String
+  category    String
+  monthlyAmount Decimal
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([workspaceId, category])
+}
+
+/// Per-workspace expense rules and the forwarding inbox.
+model ExpenseSettings {
+  workspaceId       String   @id
+  approvalRequired  Boolean  @default(false)
+  /// With approval on, entries at or above this amount wait for an approver (0 = all).
+  approvalThreshold Decimal  @default(0)
+  inboxEnabled      Boolean  @default(false)
+  inboxToken        String?  @unique
+  updatedAt         DateTime @updatedAt
 }
 
 model WithholdingEvent {

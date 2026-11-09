@@ -8,6 +8,9 @@ import { createExpenseWithSideEffects } from "@/lib/expenses/create-expense-with
 import { expenseGstSchema, normalizeExpenseGst } from "@/lib/gst/expense-gst";
 import { loadGstProfile } from "@/lib/gst/data";
 import { withPermission } from "@/lib/rbac";
+import { approvalForNewExpense } from "@/lib/expenses/settings";
+import { budgetAlertsFor } from "@/lib/expenses/budget-status";
+import { dispatchNotification } from "@/lib/notifications/dispatcher";
 import { logActivity } from "@/lib/security/activity-log";
 
 const intParam = (v: string | null): number | undefined | typeof Number.NaN => {
@@ -30,7 +33,10 @@ export async function GET(request: Request) {
     const status = sp.get("status");
     const receipt = sp.get("receipt");
     const itc = sp.get("itc");
+    const approval = sp.get("approval");
     const result = await listExpenses(ctx.workspaceId, {
+      approval: approval === "PENDING" || approval === "DRAFT" || approval === "REJECTED" || approval === "REVIEW" ? approval : "APPROVED",
+      vendorId: sp.get("vendorId") ?? undefined, clientId: sp.get("clientId") ?? undefined,
       q: sp.get("q") ?? undefined,
       category: sp.get("category") ?? undefined,
       status: status === "paid" || status === "unpaid" ? status : undefined,
@@ -94,6 +100,17 @@ export async function POST(request: Request) {
       if (dup.length) return expenseError(409, "EXPENSE_DUPLICATE", `${vendor} already has a similar expense.`, { existing: dup });
     }
 
+    const approvalStatus = await approvalForNewExpense(ctx.workspaceId, ctx.userId, amount);
+    const billable = form.get("billable") === "true";
+    const clientId = text(form, "clientId");
+    if (billable && !clientId) return expenseError(422, "VALIDATION", "Choose the client this expense is billable to.", { fields: [{ field: "clientId", code: "REQUIRED" }] });
+    const markup = text(form, "markupPercent");
+    const markupN = markup === null ? null : Number(markup);
+    if (markupN !== null && (!Number.isFinite(markupN) || markupN < 0 || markupN > 500)) return expenseError(422, "VALIDATION", "Check the markup.", { fields: [{ field: "markupPercent", code: "AMOUNT" }] });
+    const dueRaw = text(form, "dueDate");
+    const dueDate = dueRaw ? new Date(dueRaw) : null;
+    if (dueDate && Number.isNaN(dueDate.getTime())) return expenseError(422, "VALIDATION", "Check the due date.", { fields: [{ field: "dueDate", code: "DATE" }] });
+
     const file = form.get("receipt");
     if (file instanceof File && file.size > 0) {
       const stored = await storeReceipt(ctx.workspaceId, file);
@@ -105,8 +122,15 @@ export async function POST(request: Request) {
       workspaceId: ctx.workspaceId, userId: ctx.userId, request, date, category, vendor, amount, description, receiptUrl: storedReceipt,
       withholdingRatePercent: rateN, explicitWithholdingAmount: whAmountN, withholdingDeductedAt: deducted as Date | null, withholdingDepositedAt: deposited as Date | null, withholdingDepositDueAt: dueAt as Date | null,
       returnPeriodKeyRaw: returnPeriodKey, gst: gst.data,
+      vendorId: text(form, "vendorId"), dueDate, approvalStatus, billable, clientId, markupPercent: markupN,
+      source: text(form, "source") === "SCAN" ? "SCAN" : "MANUAL",
     });
-    return NextResponse.json({ success: true, expense }, { status: 201 });
+    // Tell the person (once, on crossing) when this pushed a monthly cap near or over its limit.
+    const budgetAlerts = approvalStatus === "APPROVED" ? await budgetAlertsFor(ctx.workspaceId, category, amount, date).catch(() => []) : [];
+    for (const a of budgetAlerts) {
+      void dispatchNotification({ event: "GST_REMINDER", workspaceId: ctx.workspaceId, data: { title: a.state === "OVER" ? "Budget exceeded" : "Budget almost used", body: `${a.category === "*" ? "Overall" : a.category}: ${Math.round(a.spent).toLocaleString("en-IN")} of ${Math.round(a.limit).toLocaleString("en-IN")} this month.`, actionUrl: "/expenses" } });
+    }
+    return NextResponse.json({ success: true, expense, approvalStatus, budgetAlerts }, { status: 201 });
   } catch (error) {
     console.error("Expense logging error:", error);
     await removeReceiptFile(storedReceipt);

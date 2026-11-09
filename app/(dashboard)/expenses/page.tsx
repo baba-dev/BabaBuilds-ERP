@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { ArrowDown, ArrowUp, CheckCircle2, ChevronLeft, ChevronRight, Download, FileText, Loader2, Paperclip, Pencil, Plus, Receipt, Search, Trash2, TriangleAlert, X } from "lucide-react";
+import { ArrowDown, ArrowUp, CheckCircle2, ChevronLeft, ChevronRight, Download, FileText, Landmark, Loader2, Mail, Paperclip, Pencil, Plus, Receipt, Repeat, Search, Settings2, Trash2, TriangleAlert, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,13 +13,21 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import { RecordDocumentsDialog } from "@/components/documents/RecordDocumentsDialog";
 import { useFormat } from "@/hooks/use-format";
+import { useSearchParams } from "next/navigation";
 import { PRESET_CATEGORIES } from "@/lib/expenses/categories";
 import { cn } from "@/lib/utils";
 import { ExpenseSheet } from "./_components/ExpenseSheet";
-import { api, monthLabel, money, PERIODS, shortDate, type ExpenseRow, type Period, type Summary } from "./_components/shared";
+import { VendorsPanel } from "./_components/VendorsPanel";
+import { RecurringPanel } from "./_components/RecurringPanel";
+import { ReviewPanel } from "./_components/ReviewPanel";
+import { BankMatchDialog } from "./_components/BankMatchDialog";
+import { SettingsSheet } from "./_components/SettingsSheet";
+import { api, monthLabel, money, PERIODS, shortDate, type ExpenseRow, type ExpenseSettings, type Period, type Summary, type VendorMeta } from "./_components/shared";
 
 type ListResponse = { data: ExpenseRow[]; meta: { currentPage: number; totalPages: number; totalRecords: number }; filteredTotal: number };
 type Sort = "date" | "amount" | "vendor";
+type View = "ledger" | "vendors" | "recurring" | "review";
+const VIEWS: View[] = ["ledger", "vendors", "recurring", "review"];
 
 function Stat({ label, value, sub, tone }: { label: string; value: string; sub?: React.ReactNode; tone?: "good" | "warn" | "bad" }) {
   return (
@@ -57,7 +65,13 @@ export default function ExpensesPage() {
   const [editing, setEditing] = useState<ExpenseRow | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string[] | null>(null);
   const [busy, setBusy] = useState(false);
-  const [metaData, setMetaData] = useState<{ categories: string[]; vendors: string[] }>({ categories: [], vendors: [] });
+  const [metaData, setMetaData] = useState<{ categories: string[]; vendors: VendorMeta[] }>({ categories: [], vendors: [] });
+  const sp = useSearchParams();
+  const [view, setView] = useState<View>(() => (VIEWS.includes(sp.get("view") as View) ? (sp.get("view") as View) : "ledger"));
+  const [vendorFilter, setVendorFilter] = useState<string | null>(null);
+  const [settings, setSettings] = useState<ExpenseSettings | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [bankFor, setBankFor] = useState<ExpenseRow | null>(null);
   const [supplierState, setSupplierState] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const reqId = useRef(0);
@@ -72,8 +86,9 @@ export default function ExpensesPage() {
     if (category) p.set("category", category);
     if (status) p.set("status", status);
     if (receipt) p.set("receipt", receipt);
+    if (vendorFilter) p.set("vendorId", vendorFilter);
     return p;
-  }, [period, debounced, category, status, receipt]);
+  }, [period, debounced, category, status, receipt, vendorFilter]);
 
   const loadSummary = useCallback(async () => {
     const r = await api<{ data: Summary }>(`/api/expenses/summary?period=${period}`);
@@ -92,11 +107,13 @@ export default function ExpensesPage() {
     setError(null); setRows(r.data.data); setMeta(r.data.meta); setFilteredTotal(r.data.filteredTotal); setLoading(false);
   }, [filterParams, sort, dir, page]);
 
-  const loadMeta = useCallback(async () => { const r = await api<{ data: { categories: string[]; vendors: string[] } }>("/api/expenses/meta"); if (r.ok) setMetaData(r.data.data); }, []);
+  const loadMeta = useCallback(async () => { const r = await api<{ data: { categories: string[]; vendors: VendorMeta[] } }>("/api/expenses/meta"); if (r.ok) setMetaData(r.data.data); }, []);
+  const loadSettings = useCallback(async () => { const r = await api<{ data: ExpenseSettings }>("/api/expenses/settings"); if (r.ok) setSettings(r.data.data); }, []);
 
   useEffect(() => { void loadSummary(); }, [loadSummary]);
   useEffect(() => { void loadList(); }, [loadList]);
   useEffect(() => { void loadMeta(); }, [loadMeta]);
+  useEffect(() => { void loadSettings(); }, [loadSettings]);
   useEffect(() => { setSelected(new Set()); }, [filterParams, sort, dir, page]);
   useEffect(() => {
     if (!isIndia) return;
@@ -114,14 +131,14 @@ export default function ExpensesPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const refresh = () => { void loadList(); void loadSummary(); void loadMeta(); };
+  const refresh = () => { void loadList(); void loadSummary(); void loadMeta(); void loadSettings(); };
   const currency = summary?.currency ?? "INR";
   const m = (n: number) => money(n, currency, locale);
   const catLabel = (value: string) => { const p = PRESET_CATEGORIES.find((c) => c.value === value); return p ? tc(`cat_${p.key}` as never) : value; };
   const allCats = useMemo(() => [...PRESET_CATEGORIES.map((c) => c.value as string), ...metaData.categories], [metaData.categories]);
   const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
   const toggle = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const filtersOn = Boolean(debounced || category || status || receipt);
+  const filtersOn = Boolean(debounced || category || status || receipt || vendorFilter);
 
   async function bulk(action: "MARK_PAID" | "SET_CATEGORY" | "DELETE", ids: string[], value?: string) {
     setBusy(true);
@@ -147,8 +164,24 @@ export default function ExpensesPage() {
       icon={<Receipt className="size-6 text-accent-strong" aria-hidden />}
       animated={false}
       primaryAction={<Button onClick={() => { setEditing(null); setSheetOpen(true); }}><Plus className="mr-2 size-4" aria-hidden />{t("add")}<kbd className="ml-2 hidden rounded border bg-background/20 px-1 text-[10px] md:inline">N</kbd></Button>}
-      secondaryActions={<Button variant="outline" asChild><a href={exportHref}><Download className="mr-2 size-4" aria-hidden />{t("export")}</a></Button>}
+      secondaryActions={<div className="flex gap-2"><Button variant="outline" onClick={() => setSettingsOpen(true)}><Settings2 className="mr-2 size-4" aria-hidden />{t("settings.open")}</Button><Button variant="outline" asChild><a href={exportHref}><Download className="mr-2 size-4" aria-hidden />{t("export")}</a></Button></div>}
     >
+      <div role="tablist" aria-label={t("tabs.label")} className="flex gap-1 overflow-x-auto border-b">
+        {VIEWS.map((v) => (
+          <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)}
+            className={cn("relative -mb-px whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium transition-colors", view === v ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground")}>
+            {t(`tabs.${v}` as never)}
+            {v === "review" && (summary?.reviewCount ?? 0) > 0 && <span className="ms-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">{summary?.reviewCount}</span>}
+            {v === "vendors" && (summary?.vendorCount ?? 0) > 0 && <span className="ms-1.5 text-xs text-muted-foreground">{summary?.vendorCount}</span>}
+          </button>
+        ))}
+      </div>
+
+      {view === "vendors" && <VendorsPanel currency={currency} locale={locale} isIndia={isIndia} canManage onOpenLedger={(id) => { setVendorFilter(id); setPeriod("all"); setView("ledger"); setPage(1); }} onChanged={refresh} />}
+      {view === "recurring" && <RecurringPanel currency={currency} locale={locale} canDelete onChanged={refresh} />}
+      {view === "review" && <ReviewPanel currency={currency} locale={locale} canApprove={settings?.canManage ?? false} onEdit={(e) => { setEditing(e); setSheetOpen(true); }} onChanged={refresh} />}
+
+      {view === "ledger" && (<>
       <div role="tablist" aria-label={t("period.label")} className="flex gap-1.5 overflow-x-auto pb-1">
         {PERIODS.map((p) => (
           <button key={p} role="tab" aria-selected={period === p} onClick={() => { setPeriod(p); setPage(1); }}
@@ -184,6 +217,19 @@ export default function ExpensesPage() {
               ))}
             </ul>
           </div>
+          {summary.budgets.length > 0 && (
+            <div className="rounded-2xl border bg-card p-5 lg:order-last lg:col-span-3">
+              <h2 className="mb-3 text-sm font-semibold">{t("budgets.thisMonth")}</h2>
+              <ul className="grid gap-x-8 gap-y-3 md:grid-cols-2">
+                {summary.budgets.map((b) => (
+                  <li key={b.category}>
+                    <div className="mb-1 flex items-center justify-between text-sm"><span className="truncate font-medium">{b.category === "*" ? t("budgets.overall") : catLabel(b.category)}</span><span className={cn("tabular-nums", b.state === "OVER" ? "font-semibold text-rose-600 dark:text-rose-400" : b.state === "NEAR" ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground")}>{m(b.spent)} / {m(b.limit)}</span></div>
+                    <div className="h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={Math.min(100, b.share)} aria-valuemin={0} aria-valuemax={100} aria-label={b.category === "*" ? t("budgets.overall") : catLabel(b.category)}><div className={cn("h-full rounded-full", b.state === "OVER" ? "bg-rose-500" : b.state === "NEAR" ? "bg-amber-500" : "bg-emerald-500")} style={{ width: `${Math.min(100, Math.max(2, b.share))}%` }} /></div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div className="rounded-2xl border bg-card p-5">
             <h2 className="mb-3 text-sm font-semibold">{t("last6")}</h2>
             <div className="flex h-24 items-end gap-2" role="img" aria-label={t("last6")}>
@@ -194,7 +240,7 @@ export default function ExpensesPage() {
         </section>
       )}
 
-      {summary && (summary.unpaid.count > 0 || summary.missingReceipts > 0 || summary.withholdingPending.count > 0) && (
+      {summary && (summary.unpaid.count > 0 || summary.missingReceipts > 0 || summary.withholdingPending.count > 0 || summary.unbilled.count > 0) && (
         <section aria-label={t("attention")} className="grid gap-3 md:grid-cols-3">
           {summary.unpaid.count > 0 && (
             <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 md:col-span-2">
@@ -207,9 +253,15 @@ export default function ExpensesPage() {
                   </li>
                 ))}
               </ul>
+              <div className="mt-3 flex flex-wrap gap-1.5 border-t pt-3 text-xs" aria-label={t("ageing.title")}>
+                {(["NOT_DUE", "D1_30", "D31_60", "D61_90", "D90_PLUS"] as const).filter((k) => summary.ageing[k].count > 0).map((k) => (
+                  <span key={k} className={cn("rounded-full border px-2.5 py-1", k === "NOT_DUE" ? "text-muted-foreground" : k === "D1_30" ? "border-amber-500/40 text-amber-700 dark:text-amber-300" : "border-rose-500/40 text-rose-600 dark:text-rose-400")}>{t(`ageing.${k}` as never)} · {m(summary.ageing[k].amount)}</span>
+                ))}
+              </div>
             </div>
           )}
           <div className="space-y-3">
+            {summary.unbilled.count > 0 && <div className="flex items-center gap-3 rounded-2xl border bg-card p-4 text-sm"><Receipt className="size-5 text-muted-foreground" aria-hidden /><span>{t("billable.unbilled", { count: summary.unbilled.count, amount: m(summary.unbilled.amount) })}</span></div>}
             {summary.missingReceipts > 0 && <button type="button" onClick={() => { setReceipt("without"); setPage(1); }} className="flex w-full items-center gap-3 rounded-2xl border bg-card p-4 text-start hover:bg-muted/50"><Paperclip className="size-5 text-muted-foreground" aria-hidden /><span className="text-sm"><span className="font-semibold tabular-nums">{summary.missingReceipts}</span> {t("missingReceipts")}</span></button>}
             {summary.withholdingPending.count > 0 && <div className="flex items-center gap-3 rounded-2xl border bg-card p-4 text-sm"><FileText className="size-5 text-muted-foreground" aria-hidden /><span>{t("tdsPending", { amount: m(summary.withholdingPending.amount) })}</span></div>}
           </div>
@@ -217,6 +269,7 @@ export default function ExpensesPage() {
       )}
 
       <section aria-label={t("ledger")} className="space-y-3">
+        {vendorFilter && <div className="flex"><button type="button" onClick={() => { setVendorFilter(null); setPage(1); }} className="inline-flex items-center gap-1.5 rounded-full border bg-indigo-500/10 px-3 py-1 text-sm">{t("vendors.filtering", { name: metaData.vendors.find((v) => v.id === vendorFilter)?.name ?? "" })}<X className="size-3.5" aria-hidden /></button></div>}
         <div className="flex flex-col gap-2 md:flex-row md:items-center">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
@@ -229,7 +282,7 @@ export default function ExpensesPage() {
           <select id="f-status" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className="h-11 rounded-md border border-input bg-background px-3 text-sm"><option value="">{t("anyPayment")}</option><option value="paid">{t("paid")}</option><option value="unpaid">{t("unpaid")}</option></select>
           <label className="sr-only" htmlFor="f-receipt">{t("receipt")}</label>
           <select id="f-receipt" value={receipt} onChange={(e) => { setReceipt(e.target.value); setPage(1); }} className="h-11 rounded-md border border-input bg-background px-3 text-sm"><option value="">{t("anyReceipt")}</option><option value="with">{t("withReceipt")}</option><option value="without">{t("withoutReceipt")}</option></select>
-          {filtersOn && <Button variant="ghost" onClick={() => { setQ(""); setCategory(""); setStatus(""); setReceipt(""); setPage(1); }}>{t("clearFilters")}</Button>}
+          {filtersOn && <Button variant="ghost" onClick={() => { setQ(""); setCategory(""); setStatus(""); setReceipt(""); setVendorFilter(null); setPage(1); }}>{t("clearFilters")}</Button>}
         </div>
 
         {selected.size > 0 && (
@@ -264,12 +317,16 @@ export default function ExpensesPage() {
                 <li key={e.id} className={cn("relative grid items-center gap-x-3 gap-y-1.5 border-b px-4 py-3 last:border-0 hover:bg-muted/40 lg:grid-cols-[32px_110px_minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1fr)_120px]", selected.has(e.id) && "bg-indigo-500/5")}>
                   <Checkbox className="absolute end-3 top-3 lg:static" checked={selected.has(e.id)} onCheckedChange={() => toggle(e.id)} aria-label={t("select", { name: e.vendor })} />
                   <span className="text-sm text-muted-foreground">{shortDate(e.date, locale)}</span>
-                  <span className="min-w-0"><span className="flex items-center gap-1.5"><span className="truncate font-medium">{e.vendor}</span>{e.paymentStatus === "UNPAID" && <Badge variant="outline" className="border-amber-500/40 text-[10px] text-amber-700 dark:text-amber-300">{t("unpaid")}</Badge>}{e.itcStatus === "ELIGIBLE" && <Badge variant="outline" className="border-emerald-500/40 text-[10px] text-emerald-700 dark:text-emerald-300">{t("credit")}</Badge>}</span>{(e.description || e.vendorInvoiceNo) && <span className="block truncate text-xs text-muted-foreground">{[e.vendorInvoiceNo, e.description].filter(Boolean).join(" · ")}</span>}</span>
+                  <span className="min-w-0"><span className="flex items-center gap-1.5"><span className="truncate font-medium">{e.vendor}</span>{e.paymentStatus === "UNPAID" && <Badge variant="outline" className="border-amber-500/40 text-[10px] text-amber-700 dark:text-amber-300">{t("unpaid")}</Badge>}{e.itcStatus === "ELIGIBLE" && <Badge variant="outline" className="border-emerald-500/40 text-[10px] text-emerald-700 dark:text-emerald-300">{t("credit")}</Badge>}
+                    {e.source !== "MANUAL" && e.source !== "IMPORT" && <Badge variant="outline" className="gap-1 text-[10px]">{e.source === "EMAIL" ? <Mail className="size-3" aria-hidden /> : e.source === "RECURRING" ? <Repeat className="size-3" aria-hidden /> : null}{e.poNumber && e.source === "PO" ? `PO ${e.poNumber}` : t(`source.${e.source}` as never)}</Badge>}
+                    {e.billable && <Badge variant="outline" className={cn("text-[10px]", e.billedInvoiceId ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-300" : "border-indigo-500/40 text-indigo-700 dark:text-indigo-300")}>{e.billedInvoiceId ? t("billable.billed") : t("billable.chip", { client: e.clientName ?? "" })}</Badge>}
+                    {e.reconciled && <Landmark className="size-3.5 text-emerald-600" aria-label={t("bank.reconciled")} />}</span>{(e.description || e.vendorInvoiceNo) && <span className="block truncate text-xs text-muted-foreground">{[e.vendorInvoiceNo, e.description].filter(Boolean).join(" · ")}</span>}</span>
                   <span><Badge variant="secondary" className="max-w-full truncate font-normal">{catLabel(e.category)}</Badge></span>
                   <span className="font-medium tabular-nums lg:text-end">{m(e.amount)}{e.gstAmount > 0 && <span className="block text-xs font-normal text-muted-foreground">{t("incGst", { amount: m(e.gstAmount) })}</span>}</span>
                   <span className="flex justify-end gap-0.5">
                     {e.receiptUrl && <Button variant="ghost" size="icon" className="size-8" asChild><a href={e.receiptUrl} target="_blank" rel="noopener noreferrer" aria-label={`${tc("actions.view_receipt")}: ${e.vendor}`}><FileText className="size-4" aria-hidden /></a></Button>}
                     <RecordDocumentsDialog targetType="EXPENSE" targetId={e.id} />
+                    {!e.reconciled && <Button variant="ghost" size="icon" className="size-8" aria-label={`${t("bank.match")}: ${e.vendor}`} onClick={() => setBankFor(e)}><Landmark className="size-4" aria-hidden /></Button>}
                     <Button variant="ghost" size="icon" className="size-8" aria-label={`${tc("actions.edit")}: ${e.vendor}`} onClick={() => { setEditing(e); setSheetOpen(true); }}><Pencil className="size-4" aria-hidden /></Button>
                     <Button variant="ghost" size="icon" className="size-8 text-rose-600" aria-label={`${tc("actions.delete")}: ${e.vendor}`} onClick={() => setConfirmDelete([e.id])}><Trash2 className="size-4" aria-hidden /></Button>
                   </span>
@@ -292,7 +349,11 @@ export default function ExpensesPage() {
         )}
       </section>
 
-      <ExpenseSheet open={sheetOpen} onOpenChange={setSheetOpen} expense={editing} isIndia={isIndia} supplierState={supplierState} currency={currency} locale={locale} extraCategories={metaData.categories} vendors={metaData.vendors} onSaved={refresh} />
+      </>)}
+
+      <ExpenseSheet open={sheetOpen} onOpenChange={setSheetOpen} expense={editing} isIndia={isIndia} supplierState={supplierState} currency={currency} locale={locale} extraCategories={metaData.categories} vendors={metaData.vendors} settings={settings} onSaved={refresh} />
+      <BankMatchDialog expense={bankFor} currency={currency} locale={locale} onClose={() => setBankFor(null)} onDone={refresh} />
+      <SettingsSheet open={settingsOpen} onOpenChange={setSettingsOpen} currency={currency} extraCategories={metaData.categories} onSaved={refresh} />
 
       <AlertDialog open={confirmDelete !== null} onOpenChange={(o) => !o && setConfirmDelete(null)}>
         <AlertDialogContent>

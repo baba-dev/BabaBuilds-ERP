@@ -155,6 +155,9 @@ export async function finalizeInvoiceFromDraft(params: {
         });
 
         await commitInvoiceStock(tx, { workspaceId, invoiceId: inv.id, actorUserId: actorId });
+        if (draftInput.billableExpenseIds?.length) {
+          await tx.expense.updateMany({ where: { id: { in: draftInput.billableExpenseIds }, workspaceId, clientId: client.id, billable: true, billedInvoiceId: null }, data: { billedInvoiceId: inv.id } });
+        }
         await addInvoiceEvent(tx, { workspaceId, invoiceId: inv.id, type: "CREATED", message: `Invoice ${invoiceNumber} created`, actorUserId: actorId });
 
         await determineAndPersistTax(createPrismaTaxPersistence(tx), {

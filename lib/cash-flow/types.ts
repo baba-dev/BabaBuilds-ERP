@@ -140,6 +140,8 @@ export type ForecastSourceData = {
   }>;
   /** GST cash due on GSTR-3B (India), from the GST engine; estimated until the period closes. */
   gstPayments?: Array<{ id: string; periodKey: string; dueDate: Date; amount: Decimal; label: string; estimated: boolean }>;
+  /** Approved bills not yet paid, each landing on its due date (overdue ones land today). */
+  payables?: Array<{ id: string; vendor: string; dueDate: Date; amount: Decimal; overdue: boolean; invoiceNo: string | null; msme: boolean }>;
   workspaceDefaults: {
     invoicePaymentTermsDays: number;
     minimumCashThreshold: number;

@@ -109,6 +109,11 @@ export async function commitReconciliationTransactions({
               },
             });
             if (upd.count > 0) bankTransactionsUpdated++;
+            // The debit settles a bill that was on credit: stamp it paid on the bank date (rule 37 and 43B(h) read this date).
+            await tx.expense.updateMany({
+              where: { id: row.linkToExpenseId, workspaceId, paymentStatus: 'UNPAID' },
+              data: { paymentStatus: 'PAID', paidAt: newExpenses[i].date },
+            });
             continue;
           }
 
@@ -120,6 +125,7 @@ export async function commitReconciliationTransactions({
             category: newExpenses[i].category,
             vendor: newExpenses[i].vendor,
             description: newExpenses[i].description,
+            source: 'BANK',
           });
           expensesCreated++;
 

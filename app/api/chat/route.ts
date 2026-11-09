@@ -673,7 +673,7 @@ async function getExpensesSummary(workspaceId: string) {
   try {
     const expenses = await prisma.expense.groupBy({
       by: ['category'],
-      where: { workspaceId },
+      where: { workspaceId, approvalStatus: 'APPROVED' },
       _sum: { amount: true },
       orderBy: { _sum: { amount: 'desc' } },
     });
@@ -1051,7 +1051,7 @@ async function calculateEstimatedTax(workspaceId: string) {
       _sum: { totalAmount: true },
     });
     const expenseAgg = await prisma.expense.aggregate({
-      where: { workspaceId },
+      where: { workspaceId, approvalStatus: 'APPROVED' },
       _sum: { amount: true },
     });
 
@@ -1305,6 +1305,7 @@ async function captureMutationState(
       return prisma.expense.findMany({
         where: {
           workspaceId,
+          approvalStatus: 'APPROVED',
           vendor: asString(args.vendor),
           category: asString(args.category),
         },

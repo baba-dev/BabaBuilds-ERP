@@ -127,8 +127,9 @@ export async function persistAndMatchTransactions(
     },
   });
 
+  // Unpaid bills stay candidates however old they are: the bank debit that settles one is how it gets marked paid.
   const recentExpenses = await prisma.expense.findMany({
-    where: { workspaceId },
+    where: { workspaceId, approvalStatus: { in: ["APPROVED", "PENDING"] }, OR: [{ paymentStatus: "UNPAID" }, { date: { gte: new Date(Date.now() - 120 * 86_400_000) } }] },
     orderBy: { date: "desc" },
     take: 500,
   });

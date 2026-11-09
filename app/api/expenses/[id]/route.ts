@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { expenseError, requireExpenseAccess } from "@/lib/expenses/access";
 import { shapeExpense } from "@/lib/expenses/queries";
-import { deleteExpenses, removeReceiptFile, serviceError, storeReceipt, updateExpense } from "@/lib/expenses/service";
+import { deleteExpenses, removeReceiptFile, serviceError, storeReceipt, updateExpense, type ExpenseExtras } from "@/lib/expenses/service";
 import { normalizeExpenseCore } from "@/lib/expenses/validate";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -51,7 +51,16 @@ export async function PATCH(request: Request, props: Ctx) {
 
   try {
     const gst = fields.gst && typeof fields.gst === "object" ? (fields.gst as Record<string, unknown>) : undefined;
-    const res = await updateExpense(ctx, id, core.data, { gst, receiptUrl: receiptUrl ?? null, replaceReceipt: receiptUrl !== undefined });
+    const has = (k: string) => Object.prototype.hasOwnProperty.call(fields, k);
+    const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+    const extra: ExpenseExtras = {};
+    if (has("vendorId")) extra.vendorId = str(fields.vendorId);
+    if (has("clientId")) extra.clientId = str(fields.clientId);
+    if (has("billable")) extra.billable = fields.billable === true || fields.billable === "true";
+    if (has("markupPercent")) { const m = str(fields.markupPercent) === null ? null : Number(fields.markupPercent); if (m !== null && (!Number.isFinite(m) || m < 0 || m > 500)) return NextResponse.json({ error: "Check the markup.", code: "VALIDATION", fields: [{ field: "markupPercent", code: "AMOUNT" }] }, { status: 422 }); extra.markupPercent = m; }
+    if (has("dueDate")) { const d = str(fields.dueDate) ? new Date(String(fields.dueDate)) : null; if (d && Number.isNaN(d.getTime())) return NextResponse.json({ error: "Check the due date.", code: "VALIDATION", fields: [{ field: "dueDate", code: "DATE" }] }, { status: 422 }); extra.dueDate = d; }
+    if (fields.submit === true || fields.submit === "true") extra.submit = true;
+    const res = await updateExpense(ctx, id, core.data, { gst, receiptUrl: receiptUrl ?? null, replaceReceipt: receiptUrl !== undefined, extra });
     if (!res.ok) { await removeReceiptFile(storedNew); return serviceError(res); }
     return NextResponse.json({ success: true, expense: shapeExpense(res.expense), changed: res.changed });
   } catch (error) {
