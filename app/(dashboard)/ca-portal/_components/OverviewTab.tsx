@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { AlertTriangle, ArrowRight, CheckCircle2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { AttentionList } from "./AttentionList";
+import { CaHeroArt } from "./CaArt";
 import { Section, Stat, StateChip, callApi, formatDay, periodLabel, useKindName, useMoney, type CaItemView, type Overview } from "./ca-utils";
 
 function Ring({ percent, label }: { percent: number; label: string }) {
@@ -68,7 +70,8 @@ export function OverviewTab({ data, onOpen, goto, onChanged }: { data: Overview;
       ) : null}
 
       <section className="relative overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-br from-indigo-50 via-card to-card p-5 shadow-sm dark:from-indigo-500/10 sm:p-6">
-        <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center">
+        <div className="pointer-events-none absolute end-4 top-3 hidden h-44 w-60 opacity-90 xl:block" aria-hidden><CaHeroArt /></div>
+        <div className="relative flex flex-col items-center gap-6 sm:flex-row sm:items-center">
           <Ring percent={p.percent} label={t("progress", { filed: p.filed, total: p.total })} />
           <div className="min-w-0 flex-1 text-center sm:text-start">
             <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">{t("progressTitle", { fy: data.fy })}</p>
@@ -84,7 +87,7 @@ export function OverviewTab({ data, onOpen, goto, onChanged }: { data: Overview;
               </button>
             ) : <p className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-300"><CheckCircle2 className="size-4" aria-hidden />{t("nextNone")}</p>}
           </div>
-          <dl className="grid w-full grid-cols-3 gap-2 sm:w-auto sm:grid-cols-1">
+          <dl className="relative grid w-full grid-cols-3 gap-2 sm:w-auto sm:grid-cols-1 xl:me-56">
             {([["overdue", p.overdue, "text-rose-600 dark:text-rose-300"], ["dueSoon", p.dueSoon, "text-amber-600 dark:text-amber-300"], ["signedOff", p.signedOff, "text-emerald-600 dark:text-emerald-300"]] as const).map(([k, v, tone]) => (
               <div key={k} className="rounded-xl border border-border/60 bg-card/80 px-3 py-2 text-center sm:text-start">
                 <dt className="text-[11px] font-medium text-muted-foreground">{t(k)}</dt>
@@ -94,6 +97,8 @@ export function OverviewTab({ data, onOpen, goto, onChanged }: { data: Overview;
           </dl>
         </div>
       </section>
+
+      <AttentionList data={data} onOpen={onOpen} />
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <Section title={t("figures.title")} hint={t("figures.hint")}>

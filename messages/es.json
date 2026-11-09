@@ -4548,6 +4548,8 @@
     }
   },
   "CaCompliance": {
+    "retry": "Reintentar",
+    "refresh": "Actualizar",
     "title": "Cumplimiento con tu CA",
     "description": "Lleva el año de los libros a las declaraciones presentadas, junto con tu contador.",
     "nav": "Secciones",
@@ -4597,6 +4599,13 @@
       "YEAR_CLOSE": "Cerrar los libros del año"
     },
     "overview": {
+      "attention": {
+        "title": "Requiere tu atención",
+        "hint": "Primero los bloqueos, luego lo vencido o próximo a vencer.",
+        "empty": "Nada urgente. Lo tienes al día.",
+        "fix": "Corregir",
+        "more": "y {count} más"
+      },
       "setupNeeded": {
         "title": "Cuéntanos qué tipo de contribuyente eres",
         "body": "El calendario depende de tu tipo de entidad, tu régimen fiscal y de si retienes impuestos. Lleva un minuto.",
@@ -4686,6 +4695,8 @@
       }
     },
     "calendar": {
+      "today": "Hoy",
+      "jumpNext": "Ir al próximo vencimiento",
       "groupLabel": "Filtrar por área",
       "statusLabel": "Filtrar por estado",
       "filters": {
@@ -4843,6 +4854,7 @@
         "send": "Enviar"
       },
       "thread": {
+        "sendHint": "Pulsa Ctrl+Intro para enviar",
         "reply": "Respuesta",
         "replyPlaceholder": "Escribe una respuesta",
         "attach": "Adjuntar desde el archivo de documentos",
@@ -4857,6 +4869,12 @@
       "noExport": "Tu rol no puede descargar evidencias. Pídelo a un propietario o a tu contador.",
       "downloaded": "Descarga iniciada",
       "pack": {
+        "includes": {
+          "registers": "Registros de ventas, compras y TDS",
+          "calendar": "Calendario de cumplimiento y resumen",
+          "invoices": "Cada PDF de factura y recibo",
+          "index": "Un índice de lo que falta"
+        },
         "title": "Paquete de evidencias (ZIP)",
         "body": "Registros, calendario, resumen y cada PDF de factura y recibo, con un índice de lo que falta.",
         "cta": "Descargar el paquete",

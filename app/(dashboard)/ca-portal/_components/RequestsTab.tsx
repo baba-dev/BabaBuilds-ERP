@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { FileText, HelpCircle, Loader2, Paperclip, Plus } from "lucide-react";
+import { FileText, HelpCircle, Loader2, MessagesSquare, Paperclip, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { EmptyMark } from "./CaArt";
 import { callApi, formatDay, periodLabel, useJson, useKindName, useMoney, type CaItemView, type Overview } from "./ca-utils";
 
 type RequestRow = {
@@ -52,7 +53,7 @@ export function RequestsTab({ data, fy, askAbout, onAskHandled, onChanged }: { d
       <p className="px-1 text-xs text-muted-foreground">{t("hint")}</p>
 
       {list.error && !list.data ? <p role="alert" className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">{list.error}</p> : null}
-      {list.data && rows.length === 0 ? <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">{t("empty")}</div> : null}
+      {list.data && rows.length === 0 ? <div className="rounded-2xl border border-dashed border-border p-10 text-center"><EmptyMark><MessagesSquare className="size-6" aria-hidden /></EmptyMark><p className="mt-3 text-sm text-muted-foreground">{t("empty")}</p></div> : null}
 
       <ul className="space-y-2">
         {rows.map((r) => (
@@ -153,6 +154,9 @@ function ThreadBody({ id, me, canReply, canManage, onChanged }: { id: string; me
   const [doc, setDoc] = useState(NONE);
   const [busy, setBusy] = useState(false);
   const r = thread.data?.request;
+  const endRef = useRef<HTMLDivElement>(null);
+  const count = thread.data?.messages.length ?? 0;
+  useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [count]);
 
   async function send() {
     setBusy(true);
@@ -176,17 +180,22 @@ function ThreadBody({ id, me, canReply, canManage, onChanged }: { id: string; me
       <SheetHeader><SheetTitle>{r.title}</SheetTitle><SheetDescription>{t(`kind.${r.kind}`)} · {t(`status.${r.status}`)}{r.dueDate ? ` · ${t("needed", { date: formatDay(r.dueDate, locale) })}` : ""}</SheetDescription></SheetHeader>
       <ol className="flex-1 space-y-3 px-4 pb-4">
         {thread.data?.messages.map((m) => (
-          <li key={m.id} className={cn("max-w-[92%] rounded-2xl px-3.5 py-2.5 text-sm", m.authorUserId === me ? "ms-auto bg-indigo-50 dark:bg-indigo-500/15" : "bg-muted/60")}>
+          <li key={m.id} className={cn("flex max-w-[94%] gap-2", m.authorUserId === me ? "ms-auto flex-row-reverse" : "")}>
+            <span className="mt-1 flex size-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200" aria-hidden>{m.authorName.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("") || "?"}</span>
+            <div className={cn("min-w-0 rounded-2xl px-3.5 py-2.5 text-sm", m.authorUserId === me ? "bg-indigo-50 dark:bg-indigo-500/15" : "bg-muted/60")}>
             <p className="text-[11px] font-semibold text-muted-foreground">{m.authorName} · {formatDay(m.at, locale)}</p>
             <p className="mt-1 whitespace-pre-wrap break-words">{m.body}</p>
             {m.document ? <Link href="/documents" className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-card px-2 py-1 text-xs font-medium hover:bg-muted/50"><Paperclip className="size-3" aria-hidden />{m.document.title}</Link> : null}
+            </div>
           </li>
         ))}
+        <div ref={endRef} aria-hidden />
       </ol>
-      <div className="space-y-3 border-t border-border/60 px-4 py-4">
+      <div className="sticky bottom-0 space-y-3 border-t bg-background border-border/60 px-4 py-4">
         {r.status === "CLOSED" ? <p className="text-sm text-muted-foreground">{t("thread.closed")}</p> : canReply ? (
           <>
-            <Textarea aria-label={t("thread.reply")} rows={3} maxLength={4000} placeholder={t("thread.replyPlaceholder")} value={text} onChange={(e) => setText(e.target.value)} />
+            <Textarea aria-label={t("thread.reply")} rows={3} maxLength={4000} placeholder={t("thread.replyPlaceholder")} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && text.trim() && !busy) { e.preventDefault(); void send(); } }} />
+            <p className="-mt-1 text-[11px] text-muted-foreground">{t("thread.sendHint")}</p>
             {docs.data && docs.data.documents.length > 0 ? (
               <Select value={doc} onValueChange={setDoc}>
                 <SelectTrigger className="h-9" aria-label={t("thread.attach")}><SelectValue /></SelectTrigger>

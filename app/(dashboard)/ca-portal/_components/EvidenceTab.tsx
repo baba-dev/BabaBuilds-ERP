@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { FileArchive, FileSpreadsheet, FolderOpen, Landmark, Loader2 } from "lucide-react";
+import { Check, FileArchive, FileSpreadsheet, FolderOpen, Landmark, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Section, downloadFile, formatDay, useJson, useMoney, type Overview } from "./ca-utils";
 
@@ -31,15 +31,18 @@ export function EvidenceTab({ data, fy }: { data: Overview; fy: string }) {
     <div className="space-y-5">
       {!canExport ? <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">{t("noExport")}</p> : null}
       <div className="grid gap-5 lg:grid-cols-2">
-        <Section title={t("pack.title")} hint={t("pack.body")}>
+        <Section title={t("pack.title")} hint={t("pack.body")} className="lg:row-span-1">
+          <ul className="mb-4 grid grid-cols-1 gap-1.5 text-sm text-muted-foreground sm:grid-cols-2">
+            {(["registers", "calendar", "invoices", "index"] as const).map((k) => <li key={k} className="flex items-center gap-2"><Check className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-300" aria-hidden />{t(`pack.includes.${k}`)}</li>)}
+          </ul>
           <Button disabled={!canExport || busy !== null} onClick={() => run("pack", `/api/ca/export/pack?fy=${encodeURIComponent(fy)}`, `CA_Evidence_FY${fy}.zip`)}>
             {busy === "pack" ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <FileArchive className="size-4" aria-hidden />}{busy === "pack" ? t("pack.preparing") : t("pack.cta")}
           </Button>
         </Section>
         <Section title={t("registers.title")} hint={t("registers.hint")}>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {REGISTERS.map((r) => (
-              <Button key={r} variant="outline" size="sm" disabled={!canExport || busy !== null} onClick={() => run(r, `/api/ca/export/registers?fy=${encodeURIComponent(fy)}&type=${r}`, `CA_${r}_FY${fy}.csv`)}>
+              <Button key={r} variant="outline" size="sm" className="justify-start" disabled={!canExport || busy !== null} onClick={() => run(r, `/api/ca/export/registers?fy=${encodeURIComponent(fy)}&type=${r}`, `CA_${r}_FY${fy}.csv`)}>
                 {busy === r ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <FileSpreadsheet className="size-4" aria-hidden />}{t(`registers.${r}`)}
               </Button>
             ))}
