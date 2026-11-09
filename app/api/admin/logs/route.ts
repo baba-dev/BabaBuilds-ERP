@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleAdminApiError, verifySuperAdmin } from "../authz";
 import { prisma } from "@/lib/prisma";
-import { validateTaxOverrideAuditChain } from "@/lib/security/activity-log";
+import { logActivity, validateTaxOverrideAuditChain } from "@/lib/security/activity-log";
 
 const PAGE_SIZE = 50;
 
@@ -77,6 +77,14 @@ export async function GET(req: NextRequest) {
     if (statusFilter && statusFilter !== "ALL") {
       where.status = statusFilter;
     }
+    const workspaceFilter = searchParams.get("workspaceId");
+    if (workspaceFilter) where.workspaceId = workspaceFilter;
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
+    const createdAt: Record<string, Date> = {};
+    if (from && !Number.isNaN(Date.parse(from))) createdAt.gte = new Date(from);
+    if (to && !Number.isNaN(Date.parse(to))) createdAt.lte = new Date(`${to}T23:59:59.999Z`);
+    if (Object.keys(createdAt).length) where.createdAt = createdAt;
 
     const [logs, total] = await Promise.all([
       prisma.appActivityLog.findMany({
@@ -118,22 +126,27 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// DELETE: Purge all activity logs (super admin only)
+/**
+ * DELETE: prune activity-log entries older than N days (minimum 30). It no longer wipes the whole log, and it never touches
+ * the tax-override audit log: that one is a hash chain, and deleting from it breaks the chain that proves nothing was altered.
+ */
 export async function DELETE(req: NextRequest) {
   try {
-    await verifySuperAdmin();
+    const admin = await verifySuperAdmin();
 
     const { searchParams } = new URL(req.url);
-    const type = searchParams.get("type") ?? "activity";
-
-    if (type === "tax_audit") {
-      const { count } = await prisma.taxRateOverrideAuditLog.deleteMany({});
-      return NextResponse.json({ success: true, purged: count });
+    if ((searchParams.get("type") ?? "activity") === "tax_audit") {
+      return NextResponse.json({ error: "The tax audit log is tamper-evident and cannot be deleted.", code: "NOT_ALLOWED" }, { status: 405 });
     }
-
-    const { count } = await prisma.appActivityLog.deleteMany({});
-    return NextResponse.json({ success: true, purged: count });
+    const days = Number(searchParams.get("olderThanDays"));
+    if (!Number.isInteger(days) || days < 30) {
+      return NextResponse.json({ error: "Choose entries older than at least 30 days.", code: "INVALID_RETENTION" }, { status: 400 });
+    }
+    const cutoff = new Date(Date.now() - days * 86_400_000);
+    const { count } = await prisma.appActivityLog.deleteMany({ where: { createdAt: { lt: cutoff } } });
+    await logActivity({ action: "admin_logs_pruned", status: "SUCCESS", workspaceId: null, actor: { userId: admin.userId, email: admin.email }, entity: { type: "activity_log", id: null }, metadata: { olderThanDays: days, removed: count } });
+    return NextResponse.json({ success: true, purged: count, olderThanDays: days });
   } catch (error) {
-    return handleAdminApiError(error, "Failed to purge logs");
+    return handleAdminApiError(error, "Failed to prune logs");
   }
 }

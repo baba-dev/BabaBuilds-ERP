@@ -1,22 +1,24 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { redirectToLogin } from "@/lib/auth/login-redirect";
+import { isSetupGap } from "@/lib/admin/access";
+import { getAdminDecision } from "@/lib/admin/session";
+import { AdminShell } from "./_components/AdminShell";
+import { AdminSetupNotice } from "./_components/AdminSetupNotice";
 
-export default async function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const session = await getServerSession(authOptions);
+export const metadata: Metadata = { title: "Platform admin" };
+export const dynamic = "force-dynamic";
 
-  // STRICT LOCKOUT: Case-insensitive check
-  if (session?.user?.email?.toLowerCase() !== "admin@bababuilds.com") {
-    redirect("/dashboard"); // Instantly bounce unauthorized users
+/**
+ * One gate for every admin page, the same rule the /api/admin routes use (role ADMIN in the database AND email on the
+ * SUPERADMIN_EMAILS allowlist). Strangers get a plain 404; a person who is half set up gets told exactly what is missing.
+ */
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const decision = await getAdminDecision();
+  if (!decision.ok) {
+    if (decision.reason === "ANONYMOUS") redirectToLogin("/admin");
+    if (isSetupGap(decision.reason)) return <AdminSetupNotice reason={decision.reason} email={decision.email ?? ""} />;
+    notFound();
   }
-
-  return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 transition-colors duration-300 selection:bg-indigo-500/30">
-      {children}
-    </div>
-  );
+  return <AdminShell email={decision.email} environment={process.env.NODE_ENV === "production" ? "production" : "development"}>{children}</AdminShell>;
 }
