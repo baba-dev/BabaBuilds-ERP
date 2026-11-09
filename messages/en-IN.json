@@ -6900,5 +6900,119 @@
       "deleteBody": "This cannot be undone. Clients with invoices, proposals or retainers can only be archived.",
       "go": "Confirm"
     }
+  },
+  "ExpensesLedger": {
+    "subtitle": "Every rupee out the door — by category, bill and receipt.",
+    "add": "Add expense",
+    "export": "Export CSV",
+    "period": {
+      "label": "Period",
+      "this_month": "This month",
+      "last_month": "Last month",
+      "this_fy": "This year",
+      "last_fy": "Last year",
+      "all": "All time"
+    },
+    "summary": "Expense summary",
+    "summaryFailed": "Could not load the summary.",
+    "loadFailed": "Could not load expenses.",
+    "retry": "Retry",
+    "stats": {
+      "spend": "Total spend",
+      "entries": "{count, plural, one {# entry} other {# entries}}",
+      "vsPrev": "{pct}% vs previous period",
+      "netOfCredit": "Net of tax credit",
+      "creditClaimable": "{amount} credit claimable",
+      "margin": "Margin",
+      "revenue": "on {amount} billed",
+      "unpaid": "Bills to pay",
+      "unpaidCount": "{count, plural, one {# unpaid bill} other {# unpaid bills}}"
+    },
+    "insights": "Insights",
+    "byCategory": "Where the money went",
+    "filterBy": "Show {name} only",
+    "last6": "Last 6 months",
+    "topVendors": "Top vendors",
+    "attention": "Needs attention",
+    "billsDue": "Bills waiting to be paid",
+    "seeAll": "See all",
+    "ageDays": "{count, plural, one {# day old} other {# days old}}",
+    "msme": "MSME supplier",
+    "markPaid": "Mark paid",
+    "missingReceipts": "expenses have no receipt attached",
+    "tdsPending": "{amount} tax withheld not yet deposited",
+    "ledger": "Ledger",
+    "search": "Search expenses",
+    "searchPlaceholder": "Vendor, note, invoice no. or category… (press /)",
+    "clearSearch": "Clear search",
+    "allCategories": "All categories",
+    "payment": "Payment",
+    "anyPayment": "Any payment",
+    "paid": "Paid",
+    "unpaid": "Unpaid",
+    "receipt": "Receipt",
+    "anyReceipt": "Any receipt",
+    "withReceipt": "With receipt",
+    "withoutReceipt": "No receipt",
+    "clearFilters": "Clear filters",
+    "credit": "Credit",
+    "incGst": "incl. {amount} tax",
+    "col": {
+      "amount": "Amount"
+    },
+    "selectAll": "Select all",
+    "select": "Select {name}",
+    "noResults": "No expenses match these filters.",
+    "shown": "{count, plural, one {# expense} other {# expenses}}",
+    "filteredTotal": "Total {amount}",
+    "pagination": "Pagination",
+    "bulk": {
+      "bar": "Bulk actions",
+      "selected": "{count} selected",
+      "setCategory": "Set category…",
+      "clear": "Clear"
+    },
+    "confirm": {
+      "title": "{count, plural, one {Delete this expense?} other {Delete # expenses?}}",
+      "body": "Their receipts are deleted too. This cannot be undone."
+    },
+    "empty": {
+      "title": "Log your first expense",
+      "body": "Snap a receipt and the details fill in for you."
+    },
+    "toast": {
+      "created": "Expense logged",
+      "updated": "Expense updated",
+      "updated2": "{count, plural, one {# expense updated} other {# expenses updated}}",
+      "deleted": "{count, plural, one {Expense deleted} other {# expenses deleted}}",
+      "failed": "Something went wrong. Please try again.",
+      "fix": "Check the highlighted fields."
+    },
+    "scan": {
+      "done": "Receipt read — please check the details.",
+      "failed": "Could not read this receipt."
+    },
+    "form": {
+      "newTitle": "Add expense",
+      "editTitle": "Edit expense",
+      "description": "Upload a receipt to fill this in automatically, or type it.",
+      "amount": "Amount ({currency})",
+      "notes": "Notes",
+      "notesHint": "Project, purpose, who it was for…",
+      "replaceReceipt": "Replace receipt",
+      "viewReceipt": "View receipt",
+      "removeReceipt": "Remove receipt",
+      "keepReceipt": "Keep receipt",
+      "duplicate": "This looks like an expense you already logged.",
+      "saveAnyway": "Save anyway"
+    },
+    "errors": {
+      "REQUIRED": "This field is required.",
+      "TOO_LONG": "Too long.",
+      "AMOUNT": "Enter an amount above zero.",
+      "DATE": "Enter a valid date.",
+      "DATE_FUTURE": "This date is too far in the future.",
+      "INVALID": "Check this value."
+    }
   }
 }

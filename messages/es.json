@@ -6929,5 +6929,119 @@
       "deleteBody": "No se puede deshacer. Los clientes con facturas, propuestas o igualas solo se pueden archivar.",
       "go": "Confirmar"
     }
+  },
+  "ExpensesLedger": {
+    "subtitle": "Cada gasto: por categoría, factura y recibo.",
+    "add": "Añadir gasto",
+    "export": "Exportar CSV",
+    "period": {
+      "label": "Periodo",
+      "this_month": "Este mes",
+      "last_month": "Mes pasado",
+      "this_fy": "Este año fiscal",
+      "last_fy": "Año fiscal anterior",
+      "all": "Todo"
+    },
+    "summary": "Resumen de gastos",
+    "summaryFailed": "No se pudo cargar el resumen.",
+    "loadFailed": "No se pudieron cargar los gastos.",
+    "retry": "Reintentar",
+    "stats": {
+      "spend": "Gasto total",
+      "entries": "{count, plural, one {# registro} other {# registros}}",
+      "vsPrev": "{pct}% vs periodo anterior",
+      "netOfCredit": "Neto de crédito fiscal",
+      "creditClaimable": "{amount} de crédito reclamable",
+      "margin": "Margen",
+      "revenue": "sobre {amount} facturado",
+      "unpaid": "Facturas por pagar",
+      "unpaidCount": "{count, plural, one {# factura sin pagar} other {# facturas sin pagar}}"
+    },
+    "insights": "Análisis",
+    "byCategory": "A dónde fue el dinero",
+    "filterBy": "Mostrar solo {name}",
+    "last6": "Últimos 6 meses",
+    "topVendors": "Principales proveedores",
+    "attention": "Requiere atención",
+    "billsDue": "Facturas pendientes de pago",
+    "seeAll": "Ver todo",
+    "ageDays": "{count, plural, one {# día} other {# días}}",
+    "msme": "Proveedor MSME",
+    "markPaid": "Marcar pagado",
+    "missingReceipts": "gastos sin recibo adjunto",
+    "tdsPending": "{amount} de retención sin depositar",
+    "ledger": "Libro de gastos",
+    "search": "Buscar gastos",
+    "searchPlaceholder": "Proveedor, nota, nº de factura o categoría… (pulse /)",
+    "clearSearch": "Borrar búsqueda",
+    "allCategories": "Todas las categorías",
+    "payment": "Pago",
+    "anyPayment": "Cualquier pago",
+    "paid": "Pagado",
+    "unpaid": "Sin pagar",
+    "receipt": "Recibo",
+    "anyReceipt": "Cualquier recibo",
+    "withReceipt": "Con recibo",
+    "withoutReceipt": "Sin recibo",
+    "clearFilters": "Borrar filtros",
+    "credit": "Crédito",
+    "incGst": "incl. {amount} de impuesto",
+    "col": {
+      "amount": "Importe"
+    },
+    "selectAll": "Seleccionar todo",
+    "select": "Seleccionar {name}",
+    "noResults": "Ningún gasto coincide con los filtros.",
+    "shown": "{count, plural, one {# gasto} other {# gastos}}",
+    "filteredTotal": "Total {amount}",
+    "pagination": "Paginación",
+    "bulk": {
+      "bar": "Acciones masivas",
+      "selected": "{count} seleccionados",
+      "setCategory": "Cambiar categoría…",
+      "clear": "Limpiar"
+    },
+    "confirm": {
+      "title": "{count, plural, one {¿Eliminar este gasto?} other {¿Eliminar # gastos?}}",
+      "body": "También se eliminan sus recibos. No se puede deshacer."
+    },
+    "empty": {
+      "title": "Registre su primer gasto",
+      "body": "Suba un recibo y los datos se completan solos."
+    },
+    "toast": {
+      "created": "Gasto registrado",
+      "updated": "Gasto actualizado",
+      "updated2": "{count, plural, one {# gasto actualizado} other {# gastos actualizados}}",
+      "deleted": "{count, plural, one {Gasto eliminado} other {# gastos eliminados}}",
+      "failed": "Algo salió mal. Inténtelo de nuevo.",
+      "fix": "Revise los campos resaltados."
+    },
+    "scan": {
+      "done": "Recibo leído: revise los datos.",
+      "failed": "No se pudo leer este recibo."
+    },
+    "form": {
+      "newTitle": "Añadir gasto",
+      "editTitle": "Editar gasto",
+      "description": "Suba un recibo para completar automáticamente, o escríbalo.",
+      "amount": "Importe ({currency})",
+      "notes": "Notas",
+      "notesHint": "Proyecto, motivo, para quién…",
+      "replaceReceipt": "Reemplazar recibo",
+      "viewReceipt": "Ver recibo",
+      "removeReceipt": "Quitar recibo",
+      "keepReceipt": "Conservar recibo",
+      "duplicate": "Parece un gasto ya registrado.",
+      "saveAnyway": "Guardar de todos modos"
+    },
+    "errors": {
+      "REQUIRED": "Este campo es obligatorio.",
+      "TOO_LONG": "Demasiado largo.",
+      "AMOUNT": "Introduzca un importe mayor que cero.",
+      "DATE": "Introduzca una fecha válida.",
+      "DATE_FUTURE": "Esta fecha está demasiado lejos en el futuro.",
+      "INVALID": "Revise este valor."
+    }
   }
 }

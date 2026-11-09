@@ -6934,5 +6934,119 @@
       "deleteBody": "لا يمكن التراجع. العملاء الذين لديهم فواتير أو عروض أو اشتراكات يمكن أرشفتهم فقط.",
       "go": "تأكيد"
     }
+  },
+  "ExpensesLedger": {
+    "subtitle": "كل مصروف — حسب الفئة والفاتورة والإيصال.",
+    "add": "إضافة مصروف",
+    "export": "تصدير CSV",
+    "period": {
+      "label": "الفترة",
+      "this_month": "هذا الشهر",
+      "last_month": "الشهر الماضي",
+      "this_fy": "هذه السنة المالية",
+      "last_fy": "السنة المالية السابقة",
+      "all": "كل الأوقات"
+    },
+    "summary": "ملخص المصروفات",
+    "summaryFailed": "تعذر تحميل الملخص.",
+    "loadFailed": "تعذر تحميل المصروفات.",
+    "retry": "إعادة المحاولة",
+    "stats": {
+      "spend": "إجمالي الإنفاق",
+      "entries": "{count, plural, one {إدخال} other {# إدخالات}}",
+      "vsPrev": "{pct}% مقارنة بالفترة السابقة",
+      "netOfCredit": "صافي بعد الائتمان الضريبي",
+      "creditClaimable": "{amount} ائتمان قابل للمطالبة",
+      "margin": "الهامش",
+      "revenue": "من {amount} مفوتر",
+      "unpaid": "فواتير مستحقة الدفع",
+      "unpaidCount": "{count, plural, one {فاتورة غير مدفوعة} other {# فواتير غير مدفوعة}}"
+    },
+    "insights": "تحليلات",
+    "byCategory": "أين ذهبت الأموال",
+    "filterBy": "عرض {name} فقط",
+    "last6": "آخر 6 أشهر",
+    "topVendors": "أبرز الموردين",
+    "attention": "يحتاج انتباهًا",
+    "billsDue": "فواتير بانتظار الدفع",
+    "seeAll": "عرض الكل",
+    "ageDays": "{count, plural, one {عمره يوم} other {عمرها # أيام}}",
+    "msme": "مورد MSME",
+    "markPaid": "تحديد كمدفوع",
+    "missingReceipts": "مصروفات بلا إيصال",
+    "tdsPending": "{amount} ضريبة مقتطعة لم تُودَع بعد",
+    "ledger": "السجل",
+    "search": "بحث في المصروفات",
+    "searchPlaceholder": "المورد أو الملاحظة أو رقم الفاتورة أو الفئة… (اضغط /)",
+    "clearSearch": "مسح البحث",
+    "allCategories": "كل الفئات",
+    "payment": "الدفع",
+    "anyPayment": "أي دفع",
+    "paid": "مدفوع",
+    "unpaid": "غير مدفوع",
+    "receipt": "الإيصال",
+    "anyReceipt": "أي إيصال",
+    "withReceipt": "مع إيصال",
+    "withoutReceipt": "بلا إيصال",
+    "clearFilters": "مسح المرشحات",
+    "credit": "ائتمان",
+    "incGst": "شامل {amount} ضريبة",
+    "col": {
+      "amount": "المبلغ"
+    },
+    "selectAll": "تحديد الكل",
+    "select": "تحديد {name}",
+    "noResults": "لا توجد مصروفات تطابق المرشحات.",
+    "shown": "{count, plural, one {مصروف} other {# مصروفات}}",
+    "filteredTotal": "الإجمالي {amount}",
+    "pagination": "التصفح",
+    "bulk": {
+      "bar": "إجراءات جماعية",
+      "selected": "تم تحديد {count}",
+      "setCategory": "تعيين الفئة…",
+      "clear": "مسح"
+    },
+    "confirm": {
+      "title": "{count, plural, one {حذف هذا المصروف؟} other {حذف # مصروفات؟}}",
+      "body": "سيتم حذف إيصالاتها أيضًا. لا يمكن التراجع."
+    },
+    "empty": {
+      "title": "سجّل أول مصروف",
+      "body": "ارفع إيصالًا وستُملأ التفاصيل تلقائيًا."
+    },
+    "toast": {
+      "created": "تم تسجيل المصروف",
+      "updated": "تم تحديث المصروف",
+      "updated2": "{count, plural, one {تم تحديث مصروف} other {تم تحديث # مصروفات}}",
+      "deleted": "{count, plural, one {تم حذف المصروف} other {تم حذف # مصروفات}}",
+      "failed": "حدث خطأ. حاول مرة أخرى.",
+      "fix": "تحقق من الحقول المحددة."
+    },
+    "scan": {
+      "done": "تمت قراءة الإيصال — تحقق من التفاصيل.",
+      "failed": "تعذرت قراءة هذا الإيصال."
+    },
+    "form": {
+      "newTitle": "إضافة مصروف",
+      "editTitle": "تعديل المصروف",
+      "description": "ارفع إيصالًا للتعبئة التلقائية أو اكتب البيانات.",
+      "amount": "المبلغ ({currency})",
+      "notes": "ملاحظات",
+      "notesHint": "المشروع أو الغرض…",
+      "replaceReceipt": "استبدال الإيصال",
+      "viewReceipt": "عرض الإيصال",
+      "removeReceipt": "إزالة الإيصال",
+      "keepReceipt": "الاحتفاظ بالإيصال",
+      "duplicate": "يبدو هذا كمصروف سجلته مسبقًا.",
+      "saveAnyway": "حفظ على أي حال"
+    },
+    "errors": {
+      "REQUIRED": "هذا الحقل مطلوب.",
+      "TOO_LONG": "طويل جدًا.",
+      "AMOUNT": "أدخل مبلغًا أكبر من صفر.",
+      "DATE": "أدخل تاريخًا صالحًا.",
+      "DATE_FUTURE": "هذا التاريخ بعيد جدًا في المستقبل.",
+      "INVALID": "تحقق من هذه القيمة."
+    }
   }
 }

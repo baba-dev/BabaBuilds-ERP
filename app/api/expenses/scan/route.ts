@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { requireExpenseAccess } from '@/lib/expenses/access';
+import { RECEIPT_MAX_BYTES } from '@/lib/expenses/service';
+import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
+import { sniffAllowedContent } from '@/lib/uploads/private-storage';
+import { parseAmount } from '@/lib/expenses/validate';
 import Groq from 'groq-sdk';
 import { scanBuffer } from '@/lib/security/clamav';
 import { decrypt } from '@/lib/encryption';
@@ -10,11 +13,11 @@ import { normalizeGstin, validateGstin } from '@/lib/gst/gstin';
 export async function POST(request: Request) {
   try {
     // 1. SECURITY LOCK & BYOK FETCH
-    const session = await getServerSession(authOptions);
-    if (!session || !session.workspaceId) {
-      return NextResponse.json({ error: 'Unauthorized access.' }, { status: 401 });
-    }
-    const workspaceId = session.workspaceId;
+    const limit = enforceRouteRateLimit({ request, route: '/api/expenses/scan', scope: 'expense-scan', max: 20, windowMs: 10 * 60 * 1000 });
+    if (!limit.ok) return limit.response;
+    const auth = await requireExpenseAccess('expenses.create');
+    if (!auth.ok) return auth.response;
+    const workspaceId = auth.ctx.workspaceId;
 
     const profile = await prisma.businessProfile.findUnique({ 
       where: { workspaceId } 
@@ -40,14 +43,17 @@ export async function POST(request: Request) {
 
     // 2. EXTRACT & VALIDATE THE FILE
     const formData = await request.formData();
-    const file = formData.get('receipt') as File;
-    
-    if (!file) {
+    const file = formData.get('receipt');
+
+    if (!(file instanceof File) || file.size === 0) {
       return NextResponse.json({ error: "No receipt file uploaded." }, { status: 400 });
     }
 
     // Next.js Edge/Serverless handles images much better than PDFs for Vision AI.
     // If you want to support PDFs later, you'd need a library like `pdf-parse` to extract the text first.
+    if (file.size > RECEIPT_MAX_BYTES) {
+      return NextResponse.json({ error: "The receipt is too large. The limit is 8 MB.", code: 'FILE_TOO_LARGE' }, { status: 413 });
+    }
     const isImage = file.type.startsWith('image/');
     if (!isImage) {
       return NextResponse.json({ 
@@ -64,8 +70,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Malware detected in uploaded file." }, { status: 400 });
     }
 
+    // Trust the bytes, not the browser's label.
+    const sniffed = sniffAllowedContent(buffer);
+    if (sniffed !== 'png' && sniffed !== 'jpeg' && sniffed !== 'webp') {
+      return NextResponse.json({ error: "That file is not a readable image.", code: 'INVALID_FILE_TYPE' }, { status: 415 });
+    }
     const base64Image = buffer.toString('base64');
-    const imageUrl = `data:${file.type};base64,${base64Image}`;
+    const imageUrl = `data:image/${sniffed};base64,${base64Image}`;
 
     // 4. CALL GROQ VISION AI
     const groq = new Groq({ apiKey: userApiKey });
@@ -92,7 +103,7 @@ export async function POST(request: Request) {
     If you cannot find a piece of data, return null for that field, but never break the JSON structure.`;
 
     const completion = await groq.chat.completions.create({
-      model: "llama-3.2-11b-vision-preview", // Groq's insanely fast multimodal vision model
+      model: process.env.GROQ_VISION_MODEL || "meta-llama/llama-4-scout-17b-16e-instruct", // override with GROQ_VISION_MODEL
       messages: [
         {
           role: "user",
@@ -123,8 +134,8 @@ export async function POST(request: Request) {
       const blocked = category === "Meals & Entertainment";
       return NextResponse.json({
         vendor: extractedData.vendor || "",
-        amount: extractedData.amount || "",
-        date: extractedData.date || new Date().toISOString().split('T')[0],
+        amount: parseAmount(extractedData.amount) ?? "",
+        date: typeof extractedData.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(extractedData.date) && !Number.isNaN(new Date(extractedData.date).getTime()) ? extractedData.date : new Date().toISOString().split('T')[0],
         category,
         description: extractedData.description || "",
         gst: rate

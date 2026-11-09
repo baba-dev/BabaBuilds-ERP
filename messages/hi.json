@@ -6912,5 +6912,119 @@
       "deleteBody": "यह वापस नहीं होगा। इनवॉइस, प्रस्ताव या रिटेनर वाले क्लाइंट केवल संग्रहित हो सकते हैं।",
       "go": "पुष्टि करें"
     }
+  },
+  "ExpensesLedger": {
+    "subtitle": "हर खर्च — श्रेणी, बिल और रसीद के साथ।",
+    "add": "खर्च जोड़ें",
+    "export": "CSV एक्सपोर्ट",
+    "period": {
+      "label": "अवधि",
+      "this_month": "इस महीने",
+      "last_month": "पिछला महीना",
+      "this_fy": "इस वित्त वर्ष",
+      "last_fy": "पिछला वित्त वर्ष",
+      "all": "सभी"
+    },
+    "summary": "खर्च सारांश",
+    "summaryFailed": "सारांश लोड नहीं हो सका।",
+    "loadFailed": "खर्च लोड नहीं हो सके।",
+    "retry": "फिर कोशिश करें",
+    "stats": {
+      "spend": "कुल खर्च",
+      "entries": "{count} प्रविष्टियाँ",
+      "vsPrev": "पिछली अवधि से {pct}%",
+      "netOfCredit": "टैक्स क्रेडिट घटाकर",
+      "creditClaimable": "{amount} क्रेडिट क्लेम योग्य",
+      "margin": "मार्जिन",
+      "revenue": "{amount} बिल पर",
+      "unpaid": "चुकाने वाले बिल",
+      "unpaidCount": "{count} अवैतनिक बिल"
+    },
+    "insights": "अंतर्दृष्टि",
+    "byCategory": "पैसा कहाँ गया",
+    "filterBy": "केवल {name} दिखाएँ",
+    "last6": "पिछले 6 महीने",
+    "topVendors": "शीर्ष विक्रेता",
+    "attention": "ध्यान दें",
+    "billsDue": "भुगतान के इंतज़ार में बिल",
+    "seeAll": "सभी देखें",
+    "ageDays": "{count} दिन पुराना",
+    "msme": "MSME आपूर्तिकर्ता",
+    "markPaid": "भुगतान हुआ",
+    "missingReceipts": "खर्चों में रसीद नहीं",
+    "tdsPending": "{amount} कटा कर जमा नहीं हुआ",
+    "ledger": "खाता",
+    "search": "खर्च खोजें",
+    "searchPlaceholder": "विक्रेता, नोट, इनवॉइस नं. या श्रेणी… (/ दबाएँ)",
+    "clearSearch": "खोज हटाएँ",
+    "allCategories": "सभी श्रेणियाँ",
+    "payment": "भुगतान",
+    "anyPayment": "कोई भी भुगतान",
+    "paid": "चुकाया",
+    "unpaid": "बकाया",
+    "receipt": "रसीद",
+    "anyReceipt": "कोई भी रसीद",
+    "withReceipt": "रसीद सहित",
+    "withoutReceipt": "रसीद नहीं",
+    "clearFilters": "फ़िल्टर हटाएँ",
+    "credit": "क्रेडिट",
+    "incGst": "{amount} कर सहित",
+    "col": {
+      "amount": "राशि"
+    },
+    "selectAll": "सभी चुनें",
+    "select": "{name} चुनें",
+    "noResults": "इन फ़िल्टर से कोई खर्च नहीं मिला।",
+    "shown": "{count} खर्च",
+    "filteredTotal": "कुल {amount}",
+    "pagination": "पेज",
+    "bulk": {
+      "bar": "बल्क कार्रवाई",
+      "selected": "{count} चयनित",
+      "setCategory": "श्रेणी बदलें…",
+      "clear": "हटाएँ"
+    },
+    "confirm": {
+      "title": "{count} खर्च हटाएँ?",
+      "body": "इनकी रसीदें भी हट जाएँगी। यह वापस नहीं होगा।"
+    },
+    "empty": {
+      "title": "अपना पहला खर्च दर्ज करें",
+      "body": "रसीद अपलोड करें, विवरण अपने-आप भर जाएगा।"
+    },
+    "toast": {
+      "created": "खर्च दर्ज हुआ",
+      "updated": "खर्च अपडेट हुआ",
+      "updated2": "{count} खर्च अपडेट हुए",
+      "deleted": "{count} खर्च हटाए गए",
+      "failed": "कुछ गलत हुआ। फिर प्रयास करें।",
+      "fix": "हाइलाइट किए फ़ील्ड जाँचें।"
+    },
+    "scan": {
+      "done": "रसीद पढ़ी गई — विवरण जाँचें।",
+      "failed": "यह रसीद पढ़ी नहीं जा सकी।"
+    },
+    "form": {
+      "newTitle": "खर्च जोड़ें",
+      "editTitle": "खर्च संपादित करें",
+      "description": "रसीद अपलोड करें या खुद भरें।",
+      "amount": "राशि ({currency})",
+      "notes": "नोट्स",
+      "notesHint": "प्रोजेक्ट, उद्देश्य…",
+      "replaceReceipt": "रसीद बदलें",
+      "viewReceipt": "रसीद देखें",
+      "removeReceipt": "रसीद हटाएँ",
+      "keepReceipt": "रसीद रखें",
+      "duplicate": "यह पहले दर्ज खर्च जैसा लगता है।",
+      "saveAnyway": "फिर भी सहेजें"
+    },
+    "errors": {
+      "REQUIRED": "यह फ़ील्ड आवश्यक है।",
+      "TOO_LONG": "बहुत लंबा।",
+      "AMOUNT": "शून्य से अधिक राशि दर्ज करें।",
+      "DATE": "मान्य तारीख दर्ज करें।",
+      "DATE_FUTURE": "यह तारीख बहुत आगे की है।",
+      "INVALID": "यह मान जाँचें।"
+    }
   }
 }
