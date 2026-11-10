@@ -2480,6 +2480,9 @@ model BankTransaction {
   /// Dedupe key for imports: workspace + account + stable row fingerprint (hash).
   sourceImportHash String?
 
+  /// Set when someone decides this line needs no match (kept out of the review inbox until restored).
+  ignoredAt DateTime?
+
   createdAt DateTime @default(now())
 
   invoiceSplits BankTransactionInvoiceSplit[]
@@ -2490,6 +2493,7 @@ model BankTransaction {
   @@index([accountId])
   @@index([date])
   @@index([workspaceId, isReconciled, date])
+  @@index([workspaceId, isReconciled, ignoredAt])
   @@index([importBatchId])
 }
 

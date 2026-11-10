@@ -28,7 +28,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Transaction } from "@/app/(dashboard)/reconciliation/page";
+import { Transaction } from "@/app/(dashboard)/reconciliation/import/page";
 import { useTranslations } from "next-intl";
 import { InvoiceSplitEditor, type SplitLine } from "@/components/InvoiceSplitEditor";
 import { cn } from "@/lib/utils";
