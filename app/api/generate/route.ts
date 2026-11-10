@@ -643,6 +643,9 @@ export async function POST(request: Request) {
           // Policy: stock leaves when the invoice is issued (throws -> whole invoice rolls back).
           await commitInvoiceStock(tx, { workspaceId, invoiceId: inv.id, actorUserId: actorId });
           await addInvoiceEvent(tx, { workspaceId, invoiceId: inv.id, type: 'CREATED', message: `Invoice ${invoiceNumber} created`, actorUserId: actorId });
+          if (body.billableExpenseIds?.length) {
+            await tx.expense.updateMany({ where: { id: { in: body.billableExpenseIds }, workspaceId, clientId: client.id, billable: true, billedInvoiceId: null }, data: { billedInvoiceId: inv.id } });
+          }
 
           await determineAndPersistTax(createPrismaTaxPersistence(tx), {
             source: {

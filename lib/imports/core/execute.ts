@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import { normalizeExpenseCore } from '@/lib/expenses/validate';
 import { prisma } from '@/lib/prisma';
 import { importClientRow } from '@/lib/clients/import';
 import { asDecimal } from '@/lib/imports/core/preview';
@@ -111,16 +112,10 @@ async function processRow(args: {
   }
 
   if (preview.entity === 'expenses') {
-    await tx.expense.create({
-      data: {
-        workspaceId,
-        vendor: String(data.vendor || 'Unknown Vendor'),
-        amount: asDecimal(data.amount ?? 0),
-        category: String(data.category || 'Other'),
-        description: String(data.description || '') || null,
-        date: data.date ? new Date(String(data.date)) : new Date(),
-      },
-    });
+    const checked = normalizeExpenseCore({ vendor: data.vendor || 'Unknown Vendor', amount: data.amount, category: data.category || 'Other', description: data.description, date: data.date || new Date().toISOString().slice(0, 10) });
+    if (!checked.ok) return 'skipped' as const;
+    const c = checked.data as { vendor: string; amount: number; category: string; description: string | null; date: Date };
+    await tx.expense.create({ data: { workspaceId, vendor: c.vendor, amount: asDecimal(c.amount), category: c.category, description: c.description, date: c.date } });
     return 'imported' as const;
   }
 

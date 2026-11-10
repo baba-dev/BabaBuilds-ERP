@@ -40,4 +40,6 @@ export const GenerateInvoiceSchema = z.object({
   exchangeRate: z.coerce.number().positive().finite().max(1_000_000).optional(),
   source: z.enum(['MANUAL', 'API']).optional(),
   gst: GstOverridesSchema.optional(),
+  /** Billable expenses added to this invoice as lines; they are marked billed with the invoice. */
+  billableExpenseIds: z.array(z.string().min(1)).max(50).optional(),
 });

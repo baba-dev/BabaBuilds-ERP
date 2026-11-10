@@ -42,6 +42,7 @@ import {
   RbacDeniedError,
 } from '@/lib/rbac';
 import { logActivity } from '@/lib/security/activity-log';
+import { normalizeExpenseCore } from '@/lib/expenses/validate';
 import { normalizeClientInput } from '@/lib/clients/schema';
 import { createClient as createClientRecord } from '@/lib/clients/service';
 import {
@@ -652,15 +653,11 @@ async function logExpense(
   workspaceId: string,
 ) {
   try {
+    const checked = normalizeExpenseCore({ vendor, amount, category: category || 'Other', description, date: dateString || new Date().toISOString().slice(0, 10) });
+    if (!checked.ok) return JSON.stringify({ error: `Could not log that expense: check the ${checked.fields.map((f) => f.field).join(', ')}.` });
+    const c = checked.data as { vendor: string; amount: number; category: string; description: string | null; date: Date };
     await prisma.expense.create({
-      data: {
-        workspaceId,
-        vendor,
-        amount,
-        category: category || 'Uncategorized',
-        description,
-        date: dateString ? new Date(dateString) : new Date(),
-      },
+      data: { workspaceId, vendor: c.vendor, amount: c.amount, category: c.category, description: c.description, date: c.date },
     });
 
     return JSON.stringify({
@@ -676,7 +673,7 @@ async function getExpensesSummary(workspaceId: string) {
   try {
     const expenses = await prisma.expense.groupBy({
       by: ['category'],
-      where: { workspaceId },
+      where: { workspaceId, approvalStatus: 'APPROVED' },
       _sum: { amount: true },
       orderBy: { _sum: { amount: 'desc' } },
     });
@@ -1054,7 +1051,7 @@ async function calculateEstimatedTax(workspaceId: string) {
       _sum: { totalAmount: true },
     });
     const expenseAgg = await prisma.expense.aggregate({
-      where: { workspaceId },
+      where: { workspaceId, approvalStatus: 'APPROVED' },
       _sum: { amount: true },
     });
 
@@ -1308,6 +1305,7 @@ async function captureMutationState(
       return prisma.expense.findMany({
         where: {
           workspaceId,
+          approvalStatus: 'APPROVED',
           vendor: asString(args.vendor),
           category: asString(args.category),
         },
