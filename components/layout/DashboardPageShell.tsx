@@ -78,7 +78,7 @@ export function DashboardPageShell({
     pageActions ??
     actions ??
     (primaryAction || secondaryActions ? (
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {secondaryActions}
         {primaryAction}
       </div>
@@ -111,11 +111,11 @@ export function DashboardPageShell({
 
 
   return (
-    <div className="min-h-full bg-surface-base p-4 pb-[calc(theme(spacing.4)+env(safe-area-inset-bottom))] transition-colors duration-300 md:p-6 md:pb-6">
+    <div className="min-h-full bg-surface-base p-4 pb-4 transition-colors duration-300 md:p-6 md:pb-6">
       <div className={cn("mx-auto space-y-6", maxWidthClassName, animated && animationClassName)}>
         <header
           className={cn(
-            "sticky top-0 z-20 -mx-4 rounded-b-2xl border-b border-border/70 px-4 backdrop-blur-md transition-all duration-200 ease-out md:-mx-8 md:px-8",
+            "z-20 -mx-4 rounded-b-2xl md:sticky md:top-0 border-b border-border/70 px-4 backdrop-blur-md transition-all duration-200 ease-out md:-mx-8 md:px-8",
             headerToneClassName,
             isCompactHeader ? "py-2.5" : "py-3",
             headerClassName,
@@ -129,15 +129,15 @@ export function DashboardPageShell({
             ) : null}
 
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-3">
+              <div className="min-w-0 space-y-1">
+                <div className="flex min-w-0 items-center gap-3">
                   {icon ? (
                     <div className="rounded-xl border border-border/70 bg-[color:var(--color-panel-muted,var(--color-muted))] p-2.5 text-[color:var(--color-accent-info,var(--color-accent-strong))] shadow-xs transition-all duration-200 ease-out">
                       {icon}
                     </div>
                   ) : null}
 
-                  <h1 className={cn(ty.pageTitle, "text-foreground", isCompactHeader ? "text-2xl sm:text-2xl lg:text-2xl" : "text-3xl sm:text-3xl lg:text-3xl")}>
+                  <h1 className={cn(ty.pageTitle, "text-foreground", isCompactHeader ? "text-xl sm:text-2xl lg:text-2xl" : "text-2xl sm:text-3xl lg:text-3xl")}>
                     {title}
                   </h1>
                 </div>
@@ -146,10 +146,10 @@ export function DashboardPageShell({
                 ) : null}
               </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
                 {resolvedKpiCard ? <div className="backdrop-blur-sm">{resolvedKpiCard}</div> : null}
                 {headerVariant === "default" && resolvedActions ? (
-                  <div className="shrink-0">{resolvedActions}</div>
+                  <div className="min-w-0 md:shrink-0">{resolvedActions}</div>
                 ) : null}
               </div>
             </div>

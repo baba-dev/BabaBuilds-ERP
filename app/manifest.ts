@@ -64,13 +64,13 @@ export default async function manifest(): Promise<
     id: '/',
     name: 'BabaBuilds ERP',
     short_name: 'BabaBuilds',
-    description: 'Internal compliance and financial management system.',
+    description: 'Invoices, expenses, bank reconciliation, GST/VAT compliance and payments for agencies, freelancers and small businesses.',
     lang: locale,
     dir,
     start_url: '/dashboard',
     scope: '/',
     display: 'standalone',
-    display_override: ['window-controls-overlay', 'standalone'],
+    display_override: ['standalone', 'minimal-ui'],
     launch_handler: {
       client_mode: 'focus-existing',
     },
@@ -92,16 +92,26 @@ export default async function manifest(): Promise<
         type: 'image/png',
         purpose: 'any',
       },
+      // Maskable icons are full-bleed with the glyph inside the 80% safe zone, so Android launchers
+      // can crop them to circle / squircle / teardrop without clipping the logo.
       {
-        src: '/icons/launchericon-512x512.png',
-        sizes: '512x512',
+        src: '/icons/maskable-192x192.png',
+        sizes: '192x192',
         type: 'image/png',
         purpose: 'maskable',
       },
       {
-        src: '/icons/BabaBuillds_ERP_Logo.png',
-        sizes: '500x500',
+        src: '/icons/maskable-512x512.png',
+        sizes: '512x512',
         type: 'image/png',
+        purpose: 'maskable',
+      },
+      // Android 13+ themed (monochrome) launcher icon.
+      {
+        src: '/icons/monochrome-512x512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'monochrome',
       },
     ],
     screenshots: [
@@ -130,6 +140,7 @@ export default async function manifest(): Promise<
         src: '/icons/Splash-Tablet-Portrait.png',
         sizes: '1024x1536',
         type: 'image/png',
+        form_factor: 'narrow',
         label: 'BabaBuilds ERP mobile portrait splash',
       },
     ],

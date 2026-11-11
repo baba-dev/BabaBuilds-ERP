@@ -152,11 +152,11 @@ export default function LeavePage() {
                         {b.remaining}
                         <span className="text-sm font-normal text-muted-foreground">/{b.entitled}</span>
                       </p>
-                      <p className="text-[10px] text-muted-foreground mt-1">days remaining</p>
+                      <p className="text-[11px] text-muted-foreground mt-1">days remaining</p>
                       <div className="mt-3 h-1 rounded-full bg-zinc-200/60 dark:bg-zinc-800/60 overflow-hidden">
                         <div className={`motion-feedback-fast h-full rounded-full ${dotColor} motion-reduce:transition-none`} style={{ width: `${Math.min(100, pct)}%` }} />
                       </div>
-                      {b.pending > 0 && <p className="text-[10px] text-amber-500 mt-1">{b.pending} pending</p>}
+                      {b.pending > 0 && <p className="text-[11px] text-amber-500 mt-1">{b.pending} pending</p>}
                     </div>
                   );
                 })}
@@ -226,7 +226,7 @@ export default function LeavePage() {
               <div className="flex items-center gap-2 px-5 py-4 border-b border-zinc-200/50 dark:border-zinc-800/50">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pending Approval</h3>
                 {pendingRequests.length > 0 && (
-                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500/20 px-1 text-[9px] font-bold text-amber-400">
+                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500/20 px-1 text-[11px] font-bold text-amber-400">
                     {pendingRequests.length}
                   </span>
                 )}

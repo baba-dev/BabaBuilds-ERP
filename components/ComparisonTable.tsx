@@ -171,7 +171,7 @@ export default function ComparisonTable() {
               <div className="grid grid-cols-3 gap-2.5">
                 {/* BabaBuilds ERP */}
                 <div className="rounded-xl border border-orange-500/10 bg-orange-500/5 p-2.5 text-center dark:border-orange-500/5 dark:bg-orange-950/20">
-                  <p className="text-[9px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400 leading-none">BabaBuilds</p>
+                  <p className="text-[11px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400 leading-none">BabaBuilds</p>
                   <div className="mt-2 flex items-center justify-center text-emerald-500">
                     <Check className="h-4.5 w-4.5 stroke-[2.5px]" />
                   </div>
@@ -179,7 +179,7 @@ export default function ComparisonTable() {
 
                 {/* Tally */}
                 <div className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-2.5 text-center dark:border-zinc-800/60 dark:bg-zinc-900/60 flex flex-col justify-between">
-                  <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 leading-none">{t("table.tally")}</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 leading-none">{t("table.tally")}</p>
                   <div className="mt-2 flex items-center justify-center text-xs font-semibold text-zinc-700 dark:text-zinc-300">
                     {feature.tally === "yes" ? (
                       <Check className="h-4 w-4 text-emerald-500/70" />
@@ -193,7 +193,7 @@ export default function ComparisonTable() {
 
                 {/* QuickBooks */}
                 <div className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-2.5 text-center dark:border-zinc-800/60 dark:bg-zinc-900/60 flex flex-col justify-between">
-                  <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 leading-none">{t("table.quickbooks")}</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 leading-none">{t("table.quickbooks")}</p>
                   <div className="mt-2 flex items-center justify-center text-xs font-semibold text-zinc-700 dark:text-zinc-300">
                     {feature.quickbooks === "yes" ? (
                       <Check className="h-4 w-4 text-emerald-500/70" />

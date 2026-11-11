@@ -69,7 +69,7 @@ function ObligationCard({ o, canFile, canManage, onOpen, onFile, onExtend }: { o
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-semibold">{o.label}</p>
             <span className="text-sm text-muted-foreground">{periodLabel(o.periodKey, locale)}</span>
-            {o.optional ? <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t("optional")}</span> : null}
+            {o.optional ? <span className="rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t("optional")}</span> : null}
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {o.status === "FILED"
@@ -156,7 +156,7 @@ export function OverviewTab({ data, canFile, canManage, issueCount, onOpen, onFi
                         <motion.div initial={{ height: 0 }} animate={{ height: `${(p.outputTax / max) * 100}%` }} transition={{ duration: 0.6, delay: i * 0.03 }} className="w-1/2 min-w-1 rounded-t bg-gradient-to-t from-indigo-500 to-violet-400" />
                         <motion.div initial={{ height: 0 }} animate={{ height: `${(p.itc / max) * 100}%` }} transition={{ duration: 0.6, delay: i * 0.03 + 0.05 }} className="w-1/2 min-w-1 rounded-t bg-gradient-to-t from-emerald-500 to-teal-300" />
                       </div>
-                      <span className="text-[9px] text-muted-foreground">{p.key.slice(-2).replace("Q", "Q")}</span>
+                      <span className="text-[11px] text-muted-foreground">{p.key.slice(-2).replace("Q", "Q")}</span>
                     </div>
                   ))}
                 </div>

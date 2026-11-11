@@ -299,26 +299,26 @@ export function ProUpgradeCard({
           <div className="flex p-1 bg-indigo-100/50 dark:bg-indigo-950/50 rounded-lg border border-indigo-200/50 dark:border-indigo-900/50 w-fit">
             <button 
               onClick={() => setInterval("MONTHLY")}
-              className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all ${interval === "MONTHLY" ? "bg-white dark:bg-indigo-600 text-indigo-900 dark:text-white shadow-sm" : "text-indigo-600/70 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300"}`}
+              className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest rounded-md transition-all ${interval === "MONTHLY" ? "bg-white dark:bg-indigo-600 text-indigo-900 dark:text-white shadow-sm" : "text-indigo-600/70 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300"}`}
             >
               1-Mo
             </button>
             <button 
               onClick={() => setInterval("YEARLY")}
-              className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all ${interval === "YEARLY" ? "bg-white dark:bg-indigo-600 text-indigo-900 dark:text-white shadow-sm" : "text-indigo-600/70 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300"}`}
+              className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest rounded-md transition-all ${interval === "YEARLY" ? "bg-white dark:bg-indigo-600 text-indigo-900 dark:text-white shadow-sm" : "text-indigo-600/70 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300"}`}
             >
               12-Mo <span className="ml-1 text-emerald-600 dark:text-emerald-400 hidden sm:inline">(Save 2 months)</span>
             </button>
             <div className="w-[1px] bg-indigo-200/50 dark:bg-indigo-800/50 mx-1"></div>
             <button 
               onClick={() => setInterval("TEAM_MONTHLY")}
-              className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all ${interval === "TEAM_MONTHLY" ? "bg-white dark:bg-indigo-600 text-indigo-900 dark:text-white shadow-sm" : "text-indigo-600/70 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300"}`}
+              className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest rounded-md transition-all ${interval === "TEAM_MONTHLY" ? "bg-white dark:bg-indigo-600 text-indigo-900 dark:text-white shadow-sm" : "text-indigo-600/70 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300"}`}
             >
               Team 1-Mo
             </button>
             <button 
               onClick={() => setInterval("TEAM_YEARLY")}
-              className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-md transition-all ${interval === "TEAM_YEARLY" ? "bg-white dark:bg-indigo-600 text-indigo-900 dark:text-white shadow-sm" : "text-indigo-600/70 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300"}`}
+              className={`px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest rounded-md transition-all ${interval === "TEAM_YEARLY" ? "bg-white dark:bg-indigo-600 text-indigo-900 dark:text-white shadow-sm" : "text-indigo-600/70 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300"}`}
             >
               Team 12-Mo
             </button>
@@ -342,7 +342,7 @@ export function ProUpgradeCard({
         </ul>
         <div className="w-full md:w-auto flex flex-col items-center md:items-end gap-3">
            <div className="w-full max-w-sm space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
+              <label className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
                 Partner coupon (optional)
               </label>
               <div className="flex gap-2">
@@ -352,7 +352,7 @@ export function ProUpgradeCard({
                   placeholder="e.g. ACME-XK2P9Q"
                   className="font-mono text-xs h-9"
                 />
-                <Button type="button" variant="secondary" size="sm" className="shrink-0 h-9 text-[10px] uppercase font-bold" onClick={() => void applyCoupon()}>
+                <Button type="button" variant="secondary" size="sm" className="shrink-0 h-9 text-[11px] uppercase font-bold" onClick={() => void applyCoupon()}>
                   Apply
                 </Button>
               </div>
@@ -362,14 +362,14 @@ export function ProUpgradeCard({
                 <>
                   <p className="text-sm line-through text-zinc-400">{formatMajorInCurrency(listMajor, displayCurrency, locale)}</p>
                   <p className="text-3xl font-extrabold text-indigo-950 dark:text-zinc-50">{formatMajorInCurrency(estimatedMajor, displayCurrency, locale)}</p>
-                  <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
+                  <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
                     {appliedDiscountPercent}% partner discount · Billed {interval.toLowerCase()}
                   </p>
                 </>
               ) : (
                 <>
                   <p className="text-3xl font-extrabold text-indigo-950 dark:text-zinc-50">{formatMajorInCurrency(listMajor, displayCurrency, locale)}</p>
-                  <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
+                  <p className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
                     Billed {interval.toLowerCase()}
                   </p>
                 </>
@@ -383,7 +383,7 @@ export function ProUpgradeCard({
            >
              {isLoading ? "Processing..." : "Upgrade to Pro"}
            </Button>
-           <p className="text-[10px] uppercase font-bold tracking-widest text-zinc-400 dark:text-zinc-500 mt-1 flex items-center gap-1.5">
+           <p className="text-[11px] uppercase font-bold tracking-widest text-zinc-400 dark:text-zinc-500 mt-1 flex items-center gap-1.5">
              <CreditCard className="w-3 h-3" /> Secured by Razorpay
            </p>
         </div>

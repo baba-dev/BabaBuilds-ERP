@@ -42,15 +42,15 @@ export function ProductCard({ product, onAdjust, onClick }: ProductCardProps) {
         
         <div className="absolute top-3 left-3">
           {isDanger ? (
-            <Badge className="bg-rose-500 hover:bg-rose-600 text-white border-none text-[10px] font-bold uppercase tracking-widest shadow-md px-2.5 py-1">
+            <Badge className="bg-rose-500 hover:bg-rose-600 text-white border-none text-[11px] font-bold uppercase tracking-widest shadow-md px-2.5 py-1">
               <AlertCircle className="w-3 h-3 mr-1" /> Out of Stock
             </Badge>
           ) : isWarning ? (
-            <Badge className="bg-amber-400 hover:bg-amber-500 text-amber-950 border-none text-[10px] font-bold uppercase tracking-widest shadow-md px-2.5 py-1">
+            <Badge className="bg-amber-400 hover:bg-amber-500 text-amber-950 border-none text-[11px] font-bold uppercase tracking-widest shadow-md px-2.5 py-1">
               <AlertTriangle className="w-3 h-3 mr-1" /> Low Stock
             </Badge>
           ) : (
-            <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-none text-[10px] font-bold uppercase tracking-widest shadow-md px-2.5 py-1">
+            <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-none text-[11px] font-bold uppercase tracking-widest shadow-md px-2.5 py-1">
               In Stock
             </Badge>
           )}
@@ -103,7 +103,7 @@ export function ProductCard({ product, onAdjust, onClick }: ProductCardProps) {
           </div>
 
           <div className="flex justify-between items-center gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/80">
-             <div className="text-[10px] uppercase tracking-widest font-bold text-zinc-400">
+             <div className="text-[11px] uppercase tracking-widest font-bold text-zinc-400">
                Value: <span className="text-zinc-600 dark:text-zinc-300">{fCurrency(product.currentStock * (product.costPrice || 0))}</span>
              </div>
              <Button 
@@ -115,7 +115,7 @@ export function ProductCard({ product, onAdjust, onClick }: ProductCardProps) {
                  onAdjust(product);
                }}
              >
-               <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> <span className="text-[10px] uppercase font-bold tracking-widest">Adjust</span>
+               <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> <span className="text-[11px] uppercase font-bold tracking-widest">Adjust</span>
              </Button>
           </div>
         </div>

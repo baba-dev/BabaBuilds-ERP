@@ -589,7 +589,7 @@ export default function ReconciliationWizard() {
   // --- RENDER VIEWS ---
   if (step === 'upload') {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8 flex flex-col items-center justify-center animate-in fade-in duration-500 transition-colors duration-300">
+      <div className="min-h-app bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8 flex flex-col items-center justify-center animate-in fade-in duration-500 transition-colors duration-300">
         <div className="max-w-xl w-full space-y-6">
           <div className="text-center space-y-2">
             <h1 className="text-3xl font-black text-zinc-900 dark:text-zinc-50">{t('upload_title')}</h1>
@@ -672,7 +672,7 @@ export default function ReconciliationWizard() {
       ? Math.max(...mappingPreview.map((r) => r.length))
       : 0;
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8">
+      <div className="min-h-app bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8">
         <div className="max-w-5xl mx-auto space-y-6">
           <div>
             <h1 className="text-2xl font-black text-zinc-900 dark:text-zinc-50">
@@ -800,7 +800,7 @@ export default function ReconciliationWizard() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8 font-sans animate-in slide-in-from-bottom-4 duration-500 transition-colors duration-300">
+    <div className="min-h-app bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8 font-sans animate-in slide-in-from-bottom-4 duration-500 transition-colors duration-300">
       <div className="max-w-7xl mx-auto space-y-6">
         
         {/* HEADER */}

@@ -7380,5 +7380,14 @@
       "category_token_in_narration": "كلمة الفئة في البيان",
       "settles_unpaid_bill": "يسدد فاتورة غير مدفوعة"
     }
+  },
+  "MobileNav": {
+    "primary_nav": "التنقل الرئيسي",
+    "home": "الرئيسية",
+    "invoices": "الفواتير",
+    "clients": "العملاء",
+    "expenses": "المصروفات",
+    "more": "المزيد",
+    "menu": "فتح القائمة"
   }
 }

@@ -156,7 +156,7 @@ export default function AttendancePage() {
           {Object.entries(STATUS_COLORS).map(([key, color]) => (
             <div key={key} className="flex items-center gap-1">
               <div className={`h-2.5 w-2.5 rounded-sm ${color.split(" ")[0]}`} />
-              <span className="text-[10px] text-muted-foreground capitalize">{key.replace("_", " ")}</span>
+              <span className="text-[11px] text-muted-foreground capitalize">{key.replace("_", " ")}</span>
             </div>
           ))}
         </div>
@@ -174,7 +174,7 @@ export default function AttendancePage() {
                   className={`px-1 py-3 text-center font-medium min-w-[36px] ${isToday(day) ? "text-teal-600 dark:text-teal-400" : "text-muted-foreground"}`}
                 >
                   <div>{format(day, "d")}</div>
-                  <div className="text-[9px]">{format(day, "EEE")}</div>
+                  <div className="text-[11px]">{format(day, "EEE")}</div>
                 </th>
               ))}
             </tr>

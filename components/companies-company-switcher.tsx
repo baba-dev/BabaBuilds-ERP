@@ -173,7 +173,7 @@ export function CompanySwitcher() {
                   {company.id === activeCompany.id && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
                   {company.isArchived && <Lock className="h-3.5 w-3.5 text-zinc-400" />}
                 </div>
-                <div className="flex flex-wrap gap-1 text-[10px]">
+                <div className="flex flex-wrap gap-1 text-[11px]">
                   <Badge variant="secondary">{company.countryCode}</Badge>
                   <Badge variant="secondary">{company.baseCurrency}</Badge>
                   <Badge className={cn(company.isSetupComplete ? "bg-emerald-600" : "bg-amber-600")}>
@@ -182,7 +182,7 @@ export function CompanySwitcher() {
                   <Badge variant="outline">{accessLabel(company.accessSources)}</Badge>
                   {company.isArchived && <Badge variant="destructive">Archived</Badge>}
                 </div>
-                <div className="flex items-center gap-1 text-[10px] text-zinc-500">
+                <div className="flex items-center gap-1 text-[11px] text-zinc-500">
                   <Circle className="h-2 w-2 fill-current" />
                   {(company.enabledModules?.length ? company.enabledModules : ["Core"]).slice(0, 4).join(", ")}
                 </div>

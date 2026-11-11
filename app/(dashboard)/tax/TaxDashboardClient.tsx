@@ -530,8 +530,8 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
                       <TableCell className="text-xs">{row.actorEmail || row.actorUserId || "System"}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-[10px]">{row.action}</Badge>
-                          <Badge className={`text-[10px] border-0 ${resolveDecisionBadgeClass(row.decisionSource)}`}>
+                          <Badge variant="outline" className="text-[11px]">{row.action}</Badge>
+                          <Badge className={`text-[11px] border-0 ${resolveDecisionBadgeClass(row.decisionSource)}`}>
                             {row.decisionSource}
                           </Badge>
                         </div>
@@ -560,7 +560,7 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
                     <CardContent className="space-y-2 p-4 text-xs">
                       <div className="flex items-start justify-between gap-2">
                         <p className="font-semibold">{format(new Date(row.createdAt), `${safeDateFormat} HH:mm`)}</p>
-                        <Badge className={`text-[10px] border-0 ${resolveDecisionBadgeClass(row.decisionSource)}`}>{row.decisionSource}</Badge>
+                        <Badge className={`text-[11px] border-0 ${resolveDecisionBadgeClass(row.decisionSource)}`}>{row.decisionSource}</Badge>
                       </div>
                       <p>{row.actorEmail || row.actorUserId || "System"} · {row.action}</p>
                       <p>{row.scopeType}{row.scopeRef ? ` • ${row.scopeRef}` : ""}</p>

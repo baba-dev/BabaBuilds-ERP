@@ -87,7 +87,7 @@ function Workspace() {
           {TABS.map((k) => (
             <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={cn("-mb-px whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium transition-colors", tab === k ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground")}>
               {t(`tabs.${k}` as never)}
-              {summary && k === "inbox" && summary.waiting > 0 && <span className="ms-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">{summary.waiting}</span>}
+              {summary && k === "inbox" && summary.waiting > 0 && <span className="ms-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[11px] font-semibold text-white">{summary.waiting}</span>}
               {summary && k === "matched" && <span className="ms-1.5 text-xs text-muted-foreground">{summary.reconciled}</span>}
               {summary && k === "ignored" && summary.ignored > 0 && <span className="ms-1.5 text-xs text-muted-foreground">{summary.ignored}</span>}
             </button>

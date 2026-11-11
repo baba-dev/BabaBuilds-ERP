@@ -36,7 +36,7 @@ export function AdminShell({ email, environment, children }: { email: string; en
   const ownsHeader = ["/admin/distributors", "/admin/resellers", "/admin/system-health", "/admin/style-gallery"].some((p) => pathname.startsWith(p));
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50">
+    <div className="min-h-app bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50">
       <header className="border-b border-border/60 bg-background/80 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 lg:px-6">
           <div className="flex items-center gap-2.5">

@@ -42,7 +42,7 @@ export function InvoiceGstPanel({ invoiceId, locale }: { invoiceId: string; loca
           <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">{t(`type.${data.supplyType}`)}</span>
           <span className="text-xs text-muted-foreground">{stateName(data.placeOfSupply) || data.placeOfSupply} · {data.interState ? t("inter") : t("intra")}</span>
         </div>
-        <dl className="grid grid-cols-4 gap-2 text-xs">
+        <dl className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
           {(["igst", "cgst", "sgst", "cess"] as const).map((k) => <div key={k}><dt className="uppercase text-muted-foreground">{k}</dt><dd className="font-semibold tabular-nums">{m(data.split[k])}</dd></div>)}
         </dl>
         {data.einvoice.status !== "NOT_REQUIRED" ? <p className="text-xs text-muted-foreground">{t(`einv.${data.einvoice.status}`)}{data.einvoice.irn ? ` · ${data.einvoice.irn.slice(0, 10)}…` : ""}{data.einvoice.status === "PENDING" && data.einvoice.daysLeft !== null ? ` · ${t("daysLeft", { days: data.einvoice.daysLeft })}` : ""} · <Link href="/tax?tab=documents" className="text-indigo-600 hover:underline dark:text-indigo-300">{t("manage")}</Link></p> : null}

@@ -11,7 +11,7 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   
-  --text-xxs: 0.625rem;
+  --text-xxs: 0.6875rem; /* 11px: 10px was below the legible minimum on phones */
   --text-xs-plus: 0.8125rem;
   
   --color-sidebar-ring: var(--sidebar-ring);
@@ -371,10 +371,93 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Native-app feel: no rubber-band / pull-to-refresh on the document itself
+       (the dashboard scrolls inside its own container). */
+    overscroll-behavior-y: none;
   }
   html {
     @apply font-sans;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
   }
+  /* Removes the 300ms tap delay / double-tap-zoom on controls, keeps pinch-zoom for a11y. */
+  a, button, [role="button"], [role="tab"], [role="menuitem"], [role="option"], label, summary,
+  input[type="checkbox"], input[type="radio"], select {
+    touch-action: manipulation;
+  }
+  /* Anchor jumps / focused inputs must clear the sticky mobile chrome. */
+  html {
+    scroll-padding-top: 4.5rem;
+  }
+  /* Touch targets: on coarse pointers, grow the *hit area* of small controls to 44px
+     (WCAG 2.5.5 / Material 48dp) without changing layout or visuals. Zero specificity (:where) and
+     in the base layer so any utility class (e.g. `absolute`) still wins. */
+  @media (pointer: coarse) {
+    :where(main) :where(button, [role="button"], [role="tab"], [role="checkbox"], [role="radio"], [role="switch"], summary):where(:not([data-slot="button"], [data-slot="switch"], [data-slot="mobile-nav"])) {
+      position: relative;
+    }
+    :where(main) :where(button, [role="button"], [role="tab"], [role="checkbox"], [role="radio"], [role="switch"], summary):where(:not([data-slot="button"], [data-slot="switch"]))::after {
+      content: "";
+      position: absolute;
+      inset-inline: min(0px, calc((100% - 2.75rem) / 2));
+      inset-block: min(0px, calc((100% - 2.75rem) / 2));
+    }
+    /* Native checkboxes / radios have no pseudo-elements: just make them bigger. */
+    :where(main) :where(input[type="checkbox"], input[type="radio"]) {
+      min-width: 1.375rem;
+      min-height: 1.375rem;
+    }
+  }
+  /* Android Chrome / TWA: stop long-press text-selection on chrome-like UI (not on content). */
+  nav, [data-slot="button"], [role="tab"] {
+    -webkit-touch-callout: none;
+  }
+}
+
+/* ── Mobile app chrome ─────────────────────────────────────────────────────
+ * --app-chrome-h is the height of the fixed mobile top bar + bottom tab bar,
+ * so full-height screens can use `min-h-app` instead of `min-h-screen`
+ * (100vh ignores the browser chrome and the app's own bars -> phantom scroll).
+ */
+:root {
+  --mobile-topbar-h: 3.5rem;
+  --mobile-bottomnav-h: 3.75rem;
+}
+[data-slot="sidebar-inset"] {
+  --app-chrome-h: 0px;
+}
+@media (max-width: 767px) {
+  [data-slot="sidebar-inset"] {
+    --app-chrome-h: calc(
+      var(--mobile-topbar-h) + var(--mobile-bottomnav-h) +
+      env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px)
+    );
+  }
+  /* Focus routes (composers) hide the bottom tab bar. */
+  [data-slot="sidebar-inset"][data-focus-route="true"] {
+    --mobile-bottomnav-h: 0px;
+  }
+}
+
+@utility min-h-app {
+  min-height: calc(100dvh - var(--app-chrome-h, 0px));
+}
+@utility pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+@utility pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+@utility ps-safe { padding-inline-start: env(safe-area-inset-left, 0px); }
+@utility pe-safe { padding-inline-end: env(safe-area-inset-right, 0px); }
+/* Space reserved above the bottom tab bar for floating UI (FABs, toasts, bulk bars). */
+@utility bottom-above-nav {
+  bottom: calc(var(--mobile-bottomnav-h) + env(safe-area-inset-bottom, 0px) + 1rem);
+  @media (min-width: 768px) {
+    bottom: 1.5rem;
+  }
+}
+/* Horizontal scroller that hides its scrollbar but stays swipeable (tab strips, chip rows). */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
 }
 
 @layer components {

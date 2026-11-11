@@ -122,7 +122,7 @@ function SubscriptionSection({
             </p>
             <Badge
               variant="outline"
-              className="h-5 text-[10px] font-bold uppercase tracking-wider border-zinc-200/70 dark:border-zinc-800/70 bg-zinc-50/40 dark:bg-zinc-900/40 text-zinc-500 dark:text-zinc-400"
+              className="h-5 text-[11px] font-bold uppercase tracking-wider border-zinc-200/70 dark:border-zinc-800/70 bg-zinc-50/40 dark:bg-zinc-900/40 text-zinc-500 dark:text-zinc-400"
             >
               {state}
             </Badge>

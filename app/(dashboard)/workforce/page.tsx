@@ -191,7 +191,7 @@ export default function WorkforceOverviewPage() {
                 <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                 <h2 className="text-sm font-black tracking-tight text-zinc-900 dark:text-zinc-100">Pending Approvals</h2>
                 {pendingLeave.length > 0 && (
-                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500/15 px-1.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">
+                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500/15 px-1.5 text-[11px] font-bold text-amber-700 dark:text-amber-300">
                     {pendingLeave.length}
                   </span>
                 )}

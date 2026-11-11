@@ -508,7 +508,7 @@ export default function CashFlowAssumptionsPage() {
                         </div>
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent align="end" className="w-[420px]">
+                    <PopoverContent align="end" className="w-[min(420px,calc(100vw-2rem))]">
                       <PopoverHeader>
                         <PopoverTitle className="truncate">{r.key}</PopoverTitle>
                       </PopoverHeader>

@@ -7346,5 +7346,14 @@
       "category_token_in_narration": "category word in narration",
       "settles_unpaid_bill": "settles an unpaid bill"
     }
+  },
+  "MobileNav": {
+    "primary_nav": "Primary navigation",
+    "home": "Home",
+    "invoices": "Invoices",
+    "clients": "Clients",
+    "expenses": "Expenses",
+    "more": "More",
+    "menu": "Open menu"
   }
 }

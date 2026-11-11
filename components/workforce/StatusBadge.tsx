@@ -79,7 +79,7 @@ export function EmployeeAvatar({
 }) {
   const initials = `${firstName[0] ?? ""}${lastName[0] ?? ""}`.toUpperCase();
   const sizeClasses: Record<string, string> = {
-    sm:  "h-7 w-7 text-[10px]",
+    sm:  "h-7 w-7 text-[11px]",
     md:  "h-9 w-9 text-xs",
     lg:  "h-12 w-12 text-sm",
     xl:  "h-16 w-16 text-base",

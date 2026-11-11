@@ -59,7 +59,7 @@ export function DashboardSalesAndShopPanel({
   const renderDeltaBadge = (deltaPct: number | null) => {
     if (deltaPct === null) {
       return (
-        <Badge variant="secondary" className="text-[9px] font-semibold text-zinc-600 dark:text-zinc-300">
+        <Badge variant="secondary" className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">
           {tr("no_baseline_yet", "No baseline yet")}
         </Badge>
       );
@@ -74,7 +74,7 @@ export function DashboardSalesAndShopPanel({
       <motion.div
         animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
         transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-        className={cn("flex items-center text-[10px] font-bold px-1 rounded uppercase tracking-wider", tone)}
+        className={cn("flex items-center text-[11px] font-bold px-1 rounded uppercase tracking-wider", tone)}
       >
         <TrendingUp className={cn("w-2.5 h-2.5 mr-0.5", !isPositive && "rotate-180")} />
         {isPositive ? "+" : ""}{deltaPct}%
@@ -164,7 +164,7 @@ export function DashboardSalesAndShopPanel({
                               isDeclined ? "text-zinc-400" : "text-zinc-50"
                             )}>{stage.label}</p>
                             {isInvoiced && (
-                              <span className="text-[9px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-900/50">
+                              <span className="text-[11px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-900/50">
                                 {tr("goal", "Goal")}
                               </span>
                             )}

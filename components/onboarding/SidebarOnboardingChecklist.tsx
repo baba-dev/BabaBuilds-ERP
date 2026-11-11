@@ -53,7 +53,7 @@ export function SidebarOnboardingChecklist() {
               <Flag className="h-4 w-4 text-white" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-indigo-400">
                 {persona ? `${persona.toUpperCase()} Path` : "Start Here"}
               </p>
               <p className="truncate text-xs font-semibold text-zinc-200">
@@ -61,7 +61,7 @@ export function SidebarOnboardingChecklist() {
               </p>
             </div>
           </div>
-          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-800/50 text-[10px] font-bold text-zinc-400 group-hover:bg-indigo-500/20 group-hover:text-indigo-300">
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-800/50 text-[11px] font-bold text-zinc-400 group-hover:bg-indigo-500/20 group-hover:text-indigo-300">
             {progressPercent}%
           </div>
         </button>
@@ -160,19 +160,19 @@ export function SidebarOnboardingChecklist() {
                             asChild
                             variant="secondary"
                             size="sm"
-                            className="h-7 px-3 text-[10px] font-bold uppercase tracking-wider bg-indigo-600 text-white hover:bg-indigo-500 border-none"
+                            className="h-7 px-3 text-[11px] font-bold uppercase tracking-wider bg-indigo-600 text-white hover:bg-indigo-500 border-none"
                           >
                             <Link href={step.href}>Go to step</Link>
                           </Button>
                           <button
                             onClick={() => void completeStep(step.id)}
-                            className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 hover:text-emerald-400 transition-colors"
+                            className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 hover:text-emerald-400 transition-colors"
                           >
                             Mark Done
                           </button>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className="text-[10px] cursor-help rounded-full border border-zinc-700 px-2 py-0.5 text-zinc-400">
+                              <span className="text-[11px] cursor-help rounded-full border border-zinc-700 px-2 py-0.5 text-zinc-400">
                                 Tip
                               </span>
                             </TooltipTrigger>

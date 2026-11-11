@@ -7375,5 +7375,14 @@
       "category_token_in_narration": "palabra de categoría en la glosa",
       "settles_unpaid_bill": "salda una factura pendiente"
     }
+  },
+  "MobileNav": {
+    "primary_nav": "Navegación principal",
+    "home": "Inicio",
+    "invoices": "Facturas",
+    "clients": "Clientes",
+    "expenses": "Gastos",
+    "more": "Más",
+    "menu": "Abrir menú"
   }
 }

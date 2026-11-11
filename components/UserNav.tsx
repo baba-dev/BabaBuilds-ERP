@@ -45,7 +45,7 @@ export function UserNav() {
               <p className="text-sm font-bold truncate text-white group-hover:text-indigo-300 transition-colors">
                 {session.user.name}
               </p>
-              <p className="text-[10px] text-zinc-500 truncate group-hover:text-zinc-400 transition-colors font-medium uppercase tracking-wider">
+              <p className="text-[11px] text-zinc-500 truncate group-hover:text-zinc-400 transition-colors font-medium uppercase tracking-wider">
                 {session.user.email}
               </p>
             </div>

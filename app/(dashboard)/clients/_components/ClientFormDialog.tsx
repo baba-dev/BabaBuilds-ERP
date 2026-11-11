@@ -126,7 +126,7 @@ export function ClientFormDialog({ open, onOpenChange, client, workspaceCountry,
       onOpenChange={onOpenChange}
       title={isEdit ? t("form.editTitle") : t("form.newTitle")}
       description={t("form.description")}
-      desktopClassName="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
+      desktopClassName="sm:max-w-2xl max-h-[90dvh] overflow-y-auto"
       footer={undefined}
     >
       <form onSubmit={(e) => { e.preventDefault(); void submit(false); }} className="space-y-6" noValidate>

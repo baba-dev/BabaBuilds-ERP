@@ -97,7 +97,7 @@ export default function PrivacyPage() {
           Workspace administrators can update many business records from the app. To request access, correction, export,
           workspace deletion, account deletion, or consent withdrawal where applicable, email
           {" "}<a className="font-semibold underline" href="mailto:admin@bababuilds.com">admin@bababuilds.com</a>{" "}
-          with your account email, workspace name, and request details. Some records may be retained where required for tax,
+          with your account email, workspace name, and request details (see{" "}<Link className="font-semibold underline" href="/delete-account">how to delete your account</Link>). Some records may be retained where required for tax,
           accounting, fraud prevention, legal compliance, security, or dispute-resolution purposes.
         </p>
       </section>

@@ -129,7 +129,7 @@ export function GuidedFlowsHub() {
                       <FlowIcon className="h-4 w-4" />
                     </div>
                     {done ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
                         <CheckCircle2 className="h-3 w-3" />
                         Done
                       </span>

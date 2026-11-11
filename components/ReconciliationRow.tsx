@@ -238,7 +238,7 @@ export function ReconciliationRow({
           )}
           {transaction.type === "CREDIT" && candidates.length > 0 && splitLines.length === 0 && (
             <div className="mt-2 space-y-1">
-              <p className="text-[10px] uppercase tracking-wide text-amber-800/80 dark:text-amber-400/90">
+              <p className="text-[11px] uppercase tracking-wide text-amber-800/80 dark:text-amber-400/90">
                 Suggested invoices
               </p>
               <div className="flex flex-wrap gap-1">
@@ -264,7 +264,7 @@ export function ReconciliationRow({
           )}
           {transaction.type === "DEBIT" && expenseDupes.length > 0 && (
             <div className="mt-2 space-y-1">
-              <p className="text-[10px] uppercase tracking-wide text-zinc-500">Possible duplicate expense</p>
+              <p className="text-[11px] uppercase tracking-wide text-zinc-500">Possible duplicate expense</p>
               <div className="flex flex-wrap gap-1">
                 {expenseDupes.slice(0, 2).map((e) => (
                   <Button

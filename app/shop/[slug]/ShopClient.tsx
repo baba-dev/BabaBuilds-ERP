@@ -718,7 +718,7 @@ export function ShopClient({ data }: { data: ShopData }) {
         <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       )}
 
-      <div className="min-h-screen bg-white dark:bg-zinc-950 transition-colors">
+      <div className="min-h-dvh bg-white dark:bg-zinc-950 transition-colors">
         {/* ── ANNOUNCEMENT BAR ─────────────────────────────────────────────── */}
         {content?.announcement ? (
           <div

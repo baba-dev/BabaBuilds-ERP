@@ -42,11 +42,11 @@ function Card({ icon: Icon, label, hint, children, accent }: { icon: typeof Wall
           <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-lg text-white shadow-sm sm:size-8", accent)}>
             <Icon className="size-4" aria-hidden />
           </span>
-          {label}
+          <span className="min-w-0 break-words leading-tight">{label}</span>
         </div>
         <Tooltip>
           <TooltipTrigger asChild>
-            <button type="button" aria-label={hint} className="rounded-full px-2 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <button type="button" aria-label={hint} className="shrink-0 rounded-full px-2 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               ?
             </button>
           </TooltipTrigger>

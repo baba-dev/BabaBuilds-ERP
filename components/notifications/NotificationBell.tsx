@@ -37,7 +37,7 @@ export function NotificationBell({ className }: { className?: string }) {
         <Bell className="h-5 w-5 text-zinc-400 group-hover:text-indigo-400 transition-colors" />
       )}
       {unreadCount > 0 && (
-        <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-[10px] font-bold text-white ring-2 ring-zinc-950">
+        <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-[11px] font-bold text-white ring-2 ring-zinc-950">
           {unreadCount > 99 ? '99+' : unreadCount}
         </span>
       )}

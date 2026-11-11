@@ -1,0 +1,37 @@
+{
+  "packageId": "com.bababuilds.erp.twa",
+  "host": "erp.bababuilds.com",
+  "name": "BabaBuilds ERP",
+  "launcherName": "BabaBuilds",
+  "display": "standalone",
+  "orientation": "default",
+  "themeColor": "#ffffff",
+  "themeColorDark": "#09090b",
+  "navigationColor": "#ffffff",
+  "navigationColorDark": "#09090b",
+  "navigationDividerColor": "#e4e4e7",
+  "navigationDividerColorDark": "#27272a",
+  "backgroundColor": "#ffffff",
+  "enableNotifications": true,
+  "startUrl": "/dashboard",
+  "iconUrl": "https://erp.bababuilds.com/icons/launchericon-512x512.png",
+  "maskableIconUrl": "https://erp.bababuilds.com/icons/maskable-512x512.png",
+  "monochromeIconUrl": "https://erp.bababuilds.com/icons/monochrome-512x512.png",
+  "splashScreenFadeOutDuration": 300,
+  "fallbackType": "customtabs",
+  "webManifestUrl": "https://erp.bababuilds.com/manifest.webmanifest",
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "enableSiteSettingsShortcut": false,
+  "isChromeOSOnly": false,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "bababuilds-upload"
+  },
+  "shortcuts": [
+    { "name": "Dashboard", "shortName": "Dashboard", "url": "/dashboard", "icon": "https://erp.bababuilds.com/icons/launchericon-192x192.png" },
+    { "name": "Invoices", "shortName": "Invoices", "url": "/income", "icon": "https://erp.bababuilds.com/icons/launchericon-192x192.png" },
+    { "name": "Clients", "shortName": "Clients", "url": "/clients", "icon": "https://erp.bababuilds.com/icons/launchericon-192x192.png" },
+    { "name": "Expenses", "shortName": "Expenses", "url": "/expenses", "icon": "https://erp.bababuilds.com/icons/launchericon-192x192.png" }
+  ]
+}

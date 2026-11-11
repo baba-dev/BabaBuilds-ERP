@@ -181,7 +181,7 @@ function ThreadBody({ id, me, canReply, canManage, onChanged }: { id: string; me
       <ol className="flex-1 space-y-3 px-4 pb-4">
         {thread.data?.messages.map((m) => (
           <li key={m.id} className={cn("flex max-w-[94%] gap-2", m.authorUserId === me ? "ms-auto flex-row-reverse" : "")}>
-            <span className="mt-1 flex size-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200" aria-hidden>{m.authorName.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("") || "?"}</span>
+            <span className="mt-1 flex size-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[11px] font-bold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200" aria-hidden>{m.authorName.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("") || "?"}</span>
             <div className={cn("min-w-0 rounded-2xl px-3.5 py-2.5 text-sm", m.authorUserId === me ? "bg-indigo-50 dark:bg-indigo-500/15" : "bg-muted/60")}>
             <p className="text-[11px] font-semibold text-muted-foreground">{m.authorName} · {formatDay(m.at, locale)}</p>
             <p className="mt-1 whitespace-pre-wrap break-words">{m.body}</p>

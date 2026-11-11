@@ -7358,5 +7358,14 @@
       "category_token_in_narration": "विवरण में श्रेणी शब्द",
       "settles_unpaid_bill": "अवैतनिक बिल चुकाता है"
     }
+  },
+  "MobileNav": {
+    "primary_nav": "मुख्य नेविगेशन",
+    "home": "होम",
+    "invoices": "इनवॉइस",
+    "clients": "ग्राहक",
+    "expenses": "खर्च",
+    "more": "और",
+    "menu": "मेनू खोलें"
   }
 }

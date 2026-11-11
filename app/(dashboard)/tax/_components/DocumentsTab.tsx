@@ -75,13 +75,13 @@ function EInvoicePanel({ fy, canManage }: { fy: string; canManage: boolean }) {
                 <tr key={r.id} className="border-t border-border/50">
                   <td className={td}>{r.ewayNeeded ? <input type="checkbox" aria-label={t("selectEway", { number: r.number })} checked={selected.includes(r.id)} onChange={(e) => setSelected((s) => (e.target.checked ? [...s, r.id] : s.filter((x) => x !== r.id)))} className="size-4 accent-indigo-600" /> : null}</td>
                   <td className={cn(td, "font-medium")}>{r.number}<span className="block text-xs font-normal text-muted-foreground">{r.date}{r.ewayNeeded ? ` · ${t("ewayNeeded")}` : ""}</span></td>
-                  <td className={td}>{r.party}<span className="block font-mono text-[10px] text-muted-foreground">{r.gstin ?? ""}</span></td>
+                  <td className={td}>{r.party}<span className="block font-mono text-[11px] text-muted-foreground">{r.gstin ?? ""}</span></td>
                   <td className={tdr}>{n(r.value)}</td>
                   <td className={td}>
                     <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset", r.status === "REPORTED" ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20" : r.status === "OVERDUE" ? "bg-rose-50 text-rose-700 ring-rose-600/20" : r.status === "PENDING" ? "bg-amber-50 text-amber-800 ring-amber-600/20" : "bg-zinc-100 text-zinc-600 ring-zinc-500/20")}>{t(`status.${r.status}`)}</span>
                     {r.dueBy && r.status !== "REPORTED" ? <span className="mt-0.5 block text-[11px] text-muted-foreground">{(r.daysLeft ?? 0) < 0 ? t("lateBy", { date: formatDay(r.dueBy, locale) }) : t("dueBy", { date: formatDay(r.dueBy, locale), days: r.daysLeft ?? 0 })}</span> : null}
                   </td>
-                  <td className={cn(td, "max-w-[160px] truncate font-mono text-[10px]")} title={r.irn ?? ""}>{r.irn ? `${r.irn.slice(0, 12)}…` : "—"}</td>
+                  <td className={cn(td, "max-w-[160px] truncate font-mono text-[11px]")} title={r.irn ?? ""}>{r.irn ? `${r.irn.slice(0, 12)}…` : "—"}</td>
                   <td className={cn(tdr, "whitespace-nowrap")}>
                     {r.status !== "NOT_REQUIRED" ? <Button size="sm" variant="ghost" asChild><a href={`/api/gst/invoices/${r.id}/einvoice`} aria-label={t("downloadJson", { number: r.number })}><FileJson className="size-4" aria-hidden /></a></Button> : null}
                     {canManage && r.status !== "NOT_REQUIRED" ? <Button size="sm" variant="ghost" onClick={() => setIrnFor(r)} aria-label={t("recordIrn", { number: r.number })}><QrCode className="size-4" aria-hidden /></Button> : null}
@@ -224,7 +224,7 @@ function NotesPanel({ kind, canManage, obligations }: { kind: "debit-notes" | "a
         </ul>
       )}
       <Dialog open={adding} onOpenChange={setAdding}>
-        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">{adding ? <DocForm kind={kind} obligations={obligations} onClose={() => setAdding(false)} onDone={reload} /> : null}</DialogContent>
+        <DialogContent className="max-h-[90dvh] max-w-lg overflow-y-auto">{adding ? <DocForm kind={kind} obligations={obligations} onClose={() => setAdding(false)} onDone={reload} /> : null}</DialogContent>
       </Dialog>
       <Dialog open={!!adjusting} onOpenChange={(o) => (!o ? setAdjusting(null) : undefined)}>
         <DialogContent className="max-w-sm">{adjusting ? <AdjustForm item={adjusting} onClose={() => setAdjusting(null)} onDone={reload} /> : null}</DialogContent>
