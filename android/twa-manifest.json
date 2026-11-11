@@ -29,9 +29,34 @@
     "alias": "bababuilds-upload"
   },
   "shortcuts": [
-    { "name": "Dashboard", "shortName": "Dashboard", "url": "/dashboard", "icon": "https://erp.bababuilds.com/icons/launchericon-192x192.png" },
-    { "name": "Invoices", "shortName": "Invoices", "url": "/income", "icon": "https://erp.bababuilds.com/icons/launchericon-192x192.png" },
-    { "name": "Clients", "shortName": "Clients", "url": "/clients", "icon": "https://erp.bababuilds.com/icons/launchericon-192x192.png" },
-    { "name": "Expenses", "shortName": "Expenses", "url": "/expenses", "icon": "https://erp.bababuilds.com/icons/launchericon-192x192.png" }
-  ]
+    {
+      "name": "Dashboard",
+      "shortName": "Dashboard",
+      "url": "/dashboard",
+      "icon": "https://erp.bababuilds.com/icons/launchericon-192x192.png"
+    },
+    {
+      "name": "Invoices",
+      "shortName": "Invoices",
+      "url": "/income",
+      "icon": "https://erp.bababuilds.com/icons/launchericon-192x192.png"
+    },
+    {
+      "name": "Clients",
+      "shortName": "Clients",
+      "url": "/clients",
+      "icon": "https://erp.bababuilds.com/icons/launchericon-192x192.png"
+    },
+    {
+      "name": "Expenses",
+      "shortName": "Expenses",
+      "url": "/expenses",
+      "icon": "https://erp.bababuilds.com/icons/launchericon-192x192.png"
+    }
+  ],
+  "features": {
+    "playBilling": {
+      "enabled": true
+    }
+  }
 }

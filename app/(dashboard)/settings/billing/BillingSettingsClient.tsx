@@ -13,6 +13,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ProUpgradeCard } from "@/components/UpgradeButton";
+import { PlayUpgradeCard } from "@/components/billing/PlayUpgradeCard";
+import { usePlayApp } from "@/hooks/use-play-app";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
@@ -32,6 +34,7 @@ type WorkspaceSummary = {
   subscriptionStatus: string;
   subscriptionEndsAt: Date | string | null;
   billingProviderId: string | null;
+  billingProvider?: string | null;
   subscriptionCancelAtPeriodEnd: boolean;
   subscriptionCancelEffectiveAt: Date | string | null;
   countryCode: string | null;
@@ -105,6 +108,7 @@ export default function BillingSettingsClient({
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [addingPaymentMethod, setAddingPaymentMethod] = useState(false);
 
+  const playApp = usePlayApp();
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [cancellationScheduled, setCancellationScheduled] = useState(
@@ -442,7 +446,16 @@ export default function BillingSettingsClient({
                 </>
               )}
             </CardContent>
-            {isPaidSubscription && !cancellationScheduled && (
+            {isPaidSubscription && workspace.billingProvider === "GOOGLE_PLAY" && (
+              <CardFooter className="bg-zinc-50 dark:bg-zinc-950/50 border-t dark:border-zinc-800 p-4">
+                <Button asChild variant="outline" className="w-full sm:w-auto text-xs font-bold uppercase tracking-widest">
+                  <a href="https://play.google.com/store/account/subscriptions" target="_blank" rel="noopener noreferrer">
+                    Manage in Google Play
+                  </a>
+                </Button>
+              </CardFooter>
+            )}
+            {isPaidSubscription && !cancellationScheduled && workspace.billingProvider !== "GOOGLE_PLAY" && (
               <CardFooter className="bg-zinc-50 dark:bg-zinc-950/50 border-t dark:border-zinc-800 p-4">
                 <Button
                   variant="outline"
@@ -457,7 +470,8 @@ export default function BillingSettingsClient({
             )}
           </Card>
 
-          {!isPaidSubscription && (
+          {!isPaidSubscription && playApp.isAndroidApp && <PlayUpgradeCard />}
+          {!isPaidSubscription && !playApp.isAndroidApp && playApp.ready && (
             <ProUpgradeCard
               locale={locale}
               currency={currency}
@@ -467,6 +481,7 @@ export default function BillingSettingsClient({
             />
           )}
 
+          {!playApp.isAndroidApp && workspace.billingProvider !== "GOOGLE_PLAY" && (
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
             <CardHeader className="bg-zinc-50/50 dark:bg-zinc-950/50 border-b dark:border-zinc-800">
               <CardTitle className="text-lg flex items-center gap-2 dark:text-zinc-50 font-extrabold">
@@ -514,6 +529,7 @@ export default function BillingSettingsClient({
               </Button>
             </CardContent>
           </Card>
+          )}
 
           <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-hidden">
             <CardHeader className="bg-zinc-50/50 dark:bg-zinc-950/50 border-b dark:border-zinc-800">

@@ -627,7 +627,7 @@ model Workspace {
 
   // Canonical provider contract identity and cancellation reconciliation state.
   // PREPAID orders expire locally; RECURRING contracts must be cancelled at the provider first.
-  billingProvider               String? // "RAZORPAY" | "STRIPE"
+  billingProvider               String? // "RAZORPAY" | "STRIPE" | "GOOGLE_PLAY"
   billingContractType           String   @default("PREPAID") // "PREPAID" | "RECURRING"
   billingProviderSubscriptionId String?
   subscriptionCancelAtPeriodEnd Boolean  @default(false)
@@ -650,6 +650,7 @@ model Workspace {
   clients                         Client[]
   invoices                        Invoice[]
   billingTransactions             BillingTransaction[]
+  playPurchases                   PlayPurchase[]
   resellerLeads                  ResellerLead[]
   customerReferralProfiles       CustomerReferralProfile[]
   referralRedemptions            CustomerReferralRedemption[]
@@ -1140,6 +1141,36 @@ model AppActivityLog {
   @@index([workspaceId, createdAt(sort: Desc)])
   @@index([action, createdAt(sort: Desc)])
   @@index([actorUserId, createdAt(sort: Desc)])
+}
+
+/// A Google Play subscription purchase token, bound to exactly one workspace.
+/// Created only by the authenticated verify endpoint; Real-time developer notifications (RTDN)
+/// carry just the token, so this table is how a notification finds its workspace.
+model PlayPurchase {
+  id                  String    @id @default(cuid())
+  workspaceId         String
+  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  purchaseToken       String    @unique
+  /// Play subscription product id (== our SKU, see lib/billing/play-products.ts)
+  productId           String
+  /// SubscriptionIntervalKey the SKU maps to (MONTHLY, YEARLY, TEAM_MONTHLY, ...)
+  interval            String
+  /// Raw Google SubscriptionPurchaseV2.subscriptionState (e.g. SUBSCRIPTION_STATE_ACTIVE)
+  subscriptionState   String
+  autoRenewing        Boolean   @default(false)
+  expiresAt           DateTime?
+  latestOrderId       String?
+  /// Set when this purchase replaces an earlier token (resubscribe / plan change)
+  linkedPurchaseToken String?
+  isTestPurchase      Boolean   @default(false)
+  acknowledgedAt      DateTime?
+  lastSyncedAt        DateTime  @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId])
 }
 
 model BillingTransaction {
