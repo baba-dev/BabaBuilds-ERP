@@ -50,13 +50,35 @@ function walk(dir) {
   return files;
 }
 
+function isApiSegment(segments) {
+  return segments[0] === 'api';
+}
+
+// Source paths declared in next.config.ts redirects()/rewrites() are valid link targets.
+function listConfiguredRedirects() {
+  const configPath = path.join(workspaceRoot, 'next.config.ts');
+  if (!fs.existsSync(configPath)) return new Set();
+  const content = fs.readFileSync(configPath, 'utf8');
+  const sources = new Set();
+  for (const match of content.matchAll(/source:\s*['"`](\/[^'"`:*()]*)['"`]/g)) {
+    sources.add(normalizeRoute(match[1]));
+  }
+  return sources;
+}
+
+// Files whose path literals are not navigation links (crawler rules, framework error shells).
+const NON_LINK_FILES = new Set(['app/robots.ts', 'app/global-error.tsx']);
+
 function listAppRoutes() {
   const routes = new Set();
   const routePatterns = [];
 
   function walkApp(dir, segments = []) {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
-    const hasPage = entries.some((e) => e.isFile() && e.name === 'page.tsx');
+    // A path is navigable when it has a page or a route handler (e.g. /signup is a redirecting route.ts).
+    const hasPage = entries.some(
+      (e) => e.isFile() && (e.name === 'page.tsx' || e.name === 'route.ts') && !isApiSegment(segments),
+    );
     if (hasPage) {
       const routeSegments = segments.filter((seg) => !seg.startsWith('('));
       const route = `/${routeSegments.join('/')}`.replace(/\/+/g, '/');
@@ -94,6 +116,7 @@ function normalizeRoute(route) {
 function shouldIgnoreRoute(route) {
   if (!route.startsWith('/')) return true;
   if (route.startsWith('/api/')) return true;
+  if (route.startsWith('/_')) return true; // framework-internal paths
   if (route.startsWith('/_next/')) return true;
   if (route.includes('[') || route.includes(']')) return true;
   if (route === '/auth/signin' || route === '/signin/email') return true; // NextAuth internal pages
@@ -114,6 +137,7 @@ function shouldIgnoreRoute(route) {
 function collectRouteReferences(files) {
   const usage = new Map();
   for (const file of files) {
+    if (NON_LINK_FILES.has(path.relative(workspaceRoot, file).split(path.sep).join('/'))) continue;
     const content = fs.readFileSync(file, 'utf8');
     for (const match of content.matchAll(ROUTE_LITERAL_REGEX)) {
       const rawRoute = match[2];
@@ -139,6 +163,7 @@ function dedupe(arr) {
 function buildReport() {
   const sourceFiles = sourceRoots.flatMap((root) => walk(root));
   const { routes: knownRoutes, routePatterns } = listAppRoutes();
+  for (const redirectSource of listConfiguredRedirects()) knownRoutes.add(redirectSource);
   const usage = collectRouteReferences(sourceFiles);
 
   const checkedRoutes = [];

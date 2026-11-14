@@ -66,7 +66,7 @@ function ClientsInner() {
   const searchRef = useRef<HTMLInputElement>(null);
   const reqId = useRef(0);
   const tRef = useRef(t);
-  tRef.current = t;
+  useEffect(() => { tRef.current = t; });
 
   useEffect(() => { const h = setTimeout(() => { setDebounced(q); setPage(1); }, 250); return () => clearTimeout(h); }, [q]);
 

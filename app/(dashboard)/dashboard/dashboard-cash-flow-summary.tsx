@@ -147,10 +147,8 @@ export function DashboardCashFlowSummary({
 
   const crunch = useMemo(() => deriveCrunch(snapshot), [snapshot]);
   const qs = useMemo(() => buildQs(defaultHorizonType, defaultScenarioTag), [defaultHorizonType, defaultScenarioTag]);
-  const generatedAtLabel = useMemo(() => {
-    if (!snapshot?.generatedAt) return null;
-    return format(new Date(snapshot.generatedAt), "dd MMM, HH:mm");
-  }, [snapshot?.generatedAt]);
+  const generatedAt = snapshot?.generatedAt ?? null;
+  const generatedAtLabel = useMemo(() => (generatedAt ? format(new Date(generatedAt), "dd MMM, HH:mm") : null), [generatedAt]);
   const confidenceLabel = snapshot?.confidenceScore == null ? "—" : `${Math.round(snapshot.confidenceScore * 100)}%`;
 
   if (moduleEnabled === false) {

@@ -120,9 +120,10 @@ export default function CashFlowOverviewPage() {
   const criticalCount = useMemo(() => alerts.filter((a) => a.severity === "critical").length, [alerts]);
   const warningCount = useMemo(() => alerts.filter((a) => a.severity === "warning").length, [alerts]);
 
+  const snapshotPeriods = snapshot?.periods;
   const trajectory = useMemo(() => {
-    if (!snapshot?.periods?.length) return null;
-    const points = snapshot.periods.map((p) => ({
+    if (!snapshotPeriods?.length) return null;
+    const points = snapshotPeriods.map((p) => ({
       id: p.id,
       bucketLabel: p.bucketLabel,
       closing: Number(p.closingCash ?? 0),
@@ -133,7 +134,7 @@ export default function CashFlowOverviewPage() {
     const minPoint = points.reduce((acc, p) => (p.closing < acc.closing ? p : acc), points[0]!);
     const range = max - min || 1;
     return { points, min, max, range, minPoint };
-  }, [snapshot?.periods]);
+  }, [snapshotPeriods]);
 
   return (
     <CashFlowPageShell

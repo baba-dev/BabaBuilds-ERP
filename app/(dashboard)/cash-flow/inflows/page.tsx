@@ -72,12 +72,10 @@ export default function CashFlowInflowsPage() {
     }
   };
 
-  const generatedAtLabel = useMemo(() => {
-    if (!snapshot?.generatedAt) return null;
-    return format(new Date(snapshot.generatedAt), "dd MMM yyyy, HH:mm");
-  }, [snapshot?.generatedAt]);
+  const generatedAt = snapshot?.generatedAt ?? null;
+  const generatedAtLabel = useMemo(() => (generatedAt ? format(new Date(generatedAt), "dd MMM yyyy, HH:mm") : null), [generatedAt]);
 
-  const stale = useMemo(() => getStaleStatus(snapshot?.generatedAt ?? null, 24), [snapshot?.generatedAt]);
+  const stale = useMemo(() => getStaleStatus(generatedAt, 24), [generatedAt]);
 
   const inflows = useMemo(() => (snapshot?.lineItems ?? []).filter((i) => i.direction === "INFLOW"), [snapshot]);
 

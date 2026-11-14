@@ -94,7 +94,7 @@ export function RetainersWorkspace() {
       case "viewInvoices": router.push(`/income?source=RETAINER&clientId=${row.clientId}`); break;
       case "schedulePrice": setPriceTarget(row); break;
       case "previewInvoice": window.open(`/api/retainers/${row.id}/preview-invoice`, "_blank", "noopener,noreferrer"); break;
-      case "exportInvoices": window.location.assign(`/api/retainers/export?scope=invoices&retainer=${row.id}`); break;
+      case "exportInvoices": window.open(`/api/retainers/export?scope=invoices&retainer=${row.id}`, "_self"); break;
     }
   };
 

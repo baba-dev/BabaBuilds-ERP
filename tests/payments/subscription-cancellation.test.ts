@@ -169,6 +169,83 @@ describe('workspace subscription cancellation', () => {
     expect(result.effectiveAt).toEqual(new Date(1_789_632_000 * 1000));
   });
 
+  it('is idempotent when cancellation is already scheduled locally (retry)', async () => {
+    const effectiveAt = new Date('2026-09-10T00:00:00.000Z');
+    workspaceFindUnique.mockResolvedValue({
+      ...paidWorkspace,
+      subscriptionCancelAtPeriodEnd: true,
+      subscriptionCancelRequestedAt: new Date('2026-08-01T00:00:00.000Z'),
+      subscriptionCancelEffectiveAt: effectiveAt,
+    });
+    const { scheduleWorkspaceSubscriptionCancellation } = await import(
+      '@/lib/billing/subscription-cancellation'
+    );
+
+    const result = await scheduleWorkspaceSubscriptionCancellation({ workspaceId: 'ws_1', actorUserId: 'owner_1' });
+
+    expect(result).toMatchObject({ alreadyScheduled: true, effectiveAt });
+    expect(workspaceUpdate).not.toHaveBeenCalled();
+    expect(razorpaySubscriptionCancel).not.toHaveBeenCalled();
+    expect(stripeSubscriptionUpdate).not.toHaveBeenCalled();
+  });
+
+  it('does not re-cancel at Razorpay when the provider already scheduled the cancellation', async () => {
+    workspaceFindUnique.mockResolvedValue({
+      ...paidWorkspace,
+      billingContractType: 'RECURRING',
+      billingProviderId: 'cust_1',
+      billingProviderSubscriptionId: 'sub_rzp_1',
+    });
+    razorpaySubscriptionFetch.mockResolvedValue({
+      id: 'sub_rzp_1',
+      status: 'active',
+      customer_id: 'cust_1',
+      notes: { workspaceId: 'ws_1' },
+      current_end: 1_789_632_000,
+      has_scheduled_changes: true,
+      change_scheduled_at: 1_789_632_000,
+    });
+    const { scheduleWorkspaceSubscriptionCancellation } = await import(
+      '@/lib/billing/subscription-cancellation'
+    );
+
+    const result = await scheduleWorkspaceSubscriptionCancellation({ workspaceId: 'ws_1', actorUserId: 'owner_1' });
+
+    expect(razorpaySubscriptionCancel).not.toHaveBeenCalled();
+    expect(result.effectiveAt).toEqual(new Date(1_789_632_000 * 1000));
+    expect(workspaceUpdate.mock.calls[0][0].data.subscriptionStatus).toBeUndefined();
+  });
+
+  it('leaves the workspace untouched when the provider call fails so the request can be retried', async () => {
+    workspaceFindUnique.mockResolvedValue({
+      ...paidWorkspace,
+      billingContractType: 'RECURRING',
+      billingProviderId: 'cust_1',
+      billingProviderSubscriptionId: 'sub_rzp_1',
+    });
+    razorpaySubscriptionFetch.mockResolvedValue({
+      id: 'sub_rzp_1',
+      status: 'active',
+      customer_id: 'cust_1',
+      notes: { workspaceId: 'ws_1' },
+      has_scheduled_changes: false,
+      change_scheduled_at: null,
+    });
+    razorpaySubscriptionCancel.mockRejectedValue(new Error('provider timeout'));
+    const { scheduleWorkspaceSubscriptionCancellation } = await import(
+      '@/lib/billing/subscription-cancellation'
+    );
+
+    await expect(
+      scheduleWorkspaceSubscriptionCancellation({ workspaceId: 'ws_1', actorUserId: 'owner_1' }),
+    ).rejects.toBeDefined();
+
+    const downgrades = workspaceUpdate.mock.calls.filter(
+      ([arg]) => arg?.data?.subscriptionStatus !== undefined || arg?.data?.subscriptionCancelAtPeriodEnd === true,
+    );
+    expect(downgrades).toEqual([]);
+  });
+
   it('persists a provider-confirmed Stripe period-end date', async () => {
     workspaceFindUnique.mockResolvedValue({
       ...paidWorkspace,

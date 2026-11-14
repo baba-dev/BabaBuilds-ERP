@@ -225,7 +225,9 @@ export default function LoginExperience({
         await refreshSession();
         router.replace(target);
       } catch {
-        window.location.assign(target);
+        // Soft navigation failed (e.g. stale chunks after a deploy): fall back to a full page load.
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- deliberate full reload when client-side navigation fails
+        window.location.href = target;
       }
     },
     [callbackUrl, refreshSession, router, t]

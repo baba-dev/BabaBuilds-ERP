@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertCircle,
   Bot,
@@ -144,6 +145,7 @@ function toShopContentDraft(raw: unknown): ShopContentDraft {
 }
 
 export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities }) {
+  const router = useRouter();
   const { fCurrency } = useFormat();
   const [orders, setOrders] = useState<ShopOrder[]>([]);
   const [products, setProducts] = useState<ProductCatalogItem[]>([]);
@@ -472,7 +474,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
             </Button>
           ) : null}
           <Button
-            onClick={() => window.location.assign("/inventory")}
+            onClick={() => router.push("/inventory")}
             className="btn-primary w-full md:w-auto shrink-0 text-xs uppercase tracking-wider h-11"
           >
             <ShoppingBag className="w-4 h-4 md:mr-2" /> <span className="md:inline">Manage Products</span>
@@ -938,11 +940,12 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
 
                     const p = row.product;
                     const productAmount = Number(p.baselinePrice || 0);
+                    const catalogDate = p.updatedAt || p.createdAt;
                     return (
                       <tr key={`catalog-${p.id}`} className="hover:bg-zinc-50/80 dark:hover:bg-zinc-900/50 transition-colors">
                         <td className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-sky-600 dark:text-sky-400">Catalog</td>
                         <td className="px-4 py-4 text-xs text-zinc-500 whitespace-nowrap">
-                          {format(new Date(p.updatedAt || p.createdAt || Date.now()), "dd MMM yyyy")}
+                          {catalogDate ? format(new Date(catalogDate), "dd MMM yyyy") : "—"}
                         </td>
                         <td className="px-4 py-4 text-[11px] text-zinc-500">
                           <span className="font-bold uppercase tracking-wider">Product</span>
@@ -959,7 +962,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
                           </span>
                         </td>
                         <td className="px-4 py-4">
-                          <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase tracking-widest" onClick={() => window.location.assign("/inventory")}>
+                          <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase tracking-widest" onClick={() => router.push("/inventory")}>
                             Manage
                           </Button>
                         </td>

@@ -23,8 +23,10 @@ import { chatRequestSchema, type ToolAction } from '@/lib/ai/chat/contracts';
 import {
   getToolPermissionRequirements,
   isMutatingTool,
+  isReadTool,
   isReportingTool,
   parseToolArguments,
+  type ReadToolName,
   reportingToolAllowed,
   summarizeToolMutation,
   ToolPolicyError,
@@ -2494,7 +2496,7 @@ ${
           };
         }
 
-        const toolHandlers: Record<string, ToolHandler> = {
+        const toolHandlers: Record<ReadToolName, ToolHandler> = {
           lookup_invoice_details: (a, wid) => lookupInvoiceDetails(asString(a.invoice_number), wid),
           get_client_summary: (a, wid) => getClientSummary(asString(a.client_name), wid),
           get_tax_summary: (_a, wid) => getTaxSummary(wid),
@@ -2597,7 +2599,7 @@ ${
           dbResult = JSON.stringify({
             error: 'Mutation requires a fresh signed user confirmation.',
           });
-        } else if (toolHandlers[toolCall.function.name]) {
+        } else if (isReadTool(toolCall.function.name)) {
           dbResult = await toolHandlers[toolCall.function.name](args, workspaceId);
         } else if (toolCall.function.name === 'draft_proposal') {
           action = {
@@ -2648,8 +2650,20 @@ ${
             status: `Success. Updated theme to ${args.theme}.`,
           });
         } else {
+          // Defensive: parseToolArguments() already rejects unknown names and the
+          // exhaustive TOOL_EXECUTION_KIND map guards known ones at compile time.
+          // Reaching here means a classified tool has no executor — surface it.
+          await logActivity({
+            action: 'ai_tool_unsupported',
+            status: 'FAILURE',
+            workspaceId,
+            actor: { userId: actorUserId },
+            entity: { type: 'ai_tool', id: toolCall.function.name.slice(0, 128) },
+            metadata: { toolName: toolCall.function.name.slice(0, 128) },
+            request,
+          });
           dbResult = JSON.stringify({
-            error: `Tool ${toolCall.function.name} is not recognized or not implemented.`,
+            error: 'That action is not available in the assistant right now.',
           });
         }
 

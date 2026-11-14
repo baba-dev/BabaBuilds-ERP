@@ -61,6 +61,8 @@ export default function CashFlowOutflowsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [horizonType, scenarioTag]);
 
+  const [plan, setPlan] = useState<Record<string, { status: "open" | "deferred" | "resolved"; note?: string }>>({});
+
   useEffect(() => {
     let cancelled = false;
     setPlannerLoading(true);
@@ -118,7 +120,6 @@ export default function CashFlowOutflowsPage() {
   const committed = useMemo(() => outflows.filter((i) => i.classification === "COMMITTED"), [outflows]);
   const expected = useMemo(() => outflows.filter((i) => i.classification === "EXPECTED" || i.classification === "PREDICTED"), [outflows]);
   const actual = useMemo(() => outflows.filter((i) => i.classification === "ACTUAL"), [outflows]);
-  const [plan, setPlan] = useState<Record<string, { status: "open" | "deferred" | "resolved"; note?: string }>>({});
   const [plannerOpen, setPlannerOpen] = useState(false);
   const [plannerItemId, setPlannerItemId] = useState<string | null>(null);
   const [timingOverlay, setTimingOverlay] = useState<"none" | "deferred-only" | "hide-resolved">("none");
@@ -138,14 +139,16 @@ export default function CashFlowOutflowsPage() {
 
   
 
+  // Captured once per mount: render must stay pure (no Date.now()), and the page reloads data on navigation.
+  const [mountedAt] = useState(() => Date.now());
   const nearTermRisk = useMemo(() => {
-    const now = Date.now();
+    const now = mountedAt;
     const soon = now + 1000 * 60 * 60 * 24 * 21;
     const risk = outflows
       .filter((i) => isConfidenceLow(i, 0.6) && new Date(i.expectedDate).getTime() <= soon)
       .sort((a, b) => Number(b.amount ?? 0) - Number(a.amount ?? 0));
     return risk.slice(0, 5);
-  }, [outflows]);
+  }, [outflows, mountedAt]);
 
   const largestCommitments = useMemo(() => topDrivers(committed, 5), [committed]);
 

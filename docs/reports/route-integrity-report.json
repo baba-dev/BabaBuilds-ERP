@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-04-24T07:16:40.029Z",
+  "generatedAt": "2026-11-14T07:45:12.283Z",
   "summary": {
-    "knownRoutes": 80,
-    "checkedReferencedRoutes": 72,
+    "knownRoutes": 132,
+    "checkedReferencedRoutes": 106,
     "brokenReferencedRoutes": 0
   },
   "gate": {
@@ -15,32 +15,27 @@
       "route": "/",
       "exists": true,
       "references": [
-        "app/(dashboard)/income/page.tsx",
+        "app/(dashboard)/clients/page.tsx",
+        "app/(dashboard)/expenses/page.tsx",
         "app/(dashboard)/launch/page.tsx",
-        "app/(dashboard)/proposals/[id]/actions.ts",
+        "app/(dashboard)/settings/_components/SettingsShell.tsx",
         "app/(dashboard)/settings/billing/page.tsx",
         "app/api/admin/backups/utils.ts",
         "app/api/admin/maintenance/route.ts",
-        "app/api/ca-portal/export/zip/route.ts",
         "app/api/chat/route.ts",
-        "app/api/clients/[id]/route.ts",
-        "app/api/cron/process-retainers/route.ts",
         "app/api/documents/upload/route.ts",
-        "app/api/expenses/[id]/route.ts",
-        "app/api/generate/route.ts",
         "app/api/inventory/products/[id]/route.ts",
-        "app/api/invoices/[id]/pay/route.ts",
-        "app/api/invoices/[id]/resend/route.ts",
         "app/api/settings/route.ts",
+        "app/api/shop/[slug]/assets/[...asset]/route.ts",
         "app/api/user/profile/route.ts",
         "app/documents/[...path]/route.ts",
         "app/help/HelpSidebar.tsx",
         "app/invite/[token]/page.tsx",
         "app/invoices/[...path]/route.ts",
         "app/invoices/public/[token]/[...path]/route.ts",
-        "app/login/page.tsx",
         "app/logos/[...path]/route.ts",
         "app/manifest.ts",
+        "app/not-found.tsx",
         "app/products/[...path]/route.ts",
         "app/receipts/[...path]/route.ts",
         "app/shop/[slug]/ShopClient.tsx",
@@ -50,30 +45,96 @@
         "app/uploads/share-target/[...path]/route.ts",
         "components/LandingNavbar.tsx",
         "components/PWARegistration.tsx",
+        "components/auth/LoginExperience.tsx",
+        "components/auth/LoginShowcase.tsx",
+        "components/documents/UnifiedDocumentList.tsx",
         "components/invoice/InvoiceGeneratorForm.tsx",
-        "components/notifications/CommsHub.tsx"
+        "components/notifications/CommsHub.tsx",
+        "components/payments/CloseWindowButton.tsx"
+      ]
+    },
+    {
+      "route": "/access-denied",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/settings/billing/page.tsx"
       ]
     },
     {
       "route": "/admin",
       "exists": true,
       "references": [
+        "app/(dashboard)/admin/_components/AdminShell.tsx",
+        "app/(dashboard)/admin/layout.tsx",
         "app/(dashboard)/dashboard/dashboard-right-rail.tsx",
         "app/api/dashboard/route.ts"
+      ]
+    },
+    {
+      "route": "/admin/accounts",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/admin/_components/AdminShell.tsx"
       ]
     },
     {
       "route": "/admin/distributors",
       "exists": true,
       "references": [
-        "app/(dashboard)/admin/page.tsx"
+        "app/(dashboard)/admin/_components/AdminShell.tsx"
+      ]
+    },
+    {
+      "route": "/admin/logs",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/admin/_components/AccountsClient.tsx",
+        "app/(dashboard)/admin/_components/AdminShell.tsx"
+      ]
+    },
+    {
+      "route": "/admin/operations",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/admin/_components/AdminShell.tsx"
+      ]
+    },
+    {
+      "route": "/admin/resellers",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/admin/_components/AdminShell.tsx"
+      ]
+    },
+    {
+      "route": "/admin/security",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/admin/_components/AdminShell.tsx"
+      ]
+    },
+    {
+      "route": "/admin/style-gallery",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/admin/_components/AdminShell.tsx"
+      ]
+    },
+    {
+      "route": "/admin/system-health",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/admin/_components/AdminShell.tsx",
+        "app/(dashboard)/admin/system-health/[id]/page.tsx"
       ]
     },
     {
       "route": "/ar-collections",
       "exists": true,
       "references": [
-        "app/api/dashboard/route.ts",
+        "app/(dashboard)/ar-collections/layout.tsx",
+        "app/(dashboard)/settings/_components/sections/Automation.tsx",
+        "components/dashboard/GuidedFlowsHub.tsx",
         "components/navigation/nav-config.ts"
       ]
     },
@@ -81,16 +142,20 @@
       "route": "/ca-portal",
       "exists": true,
       "references": [
+        "app/(dashboard)/settings/_components/sections/Tax.tsx",
+        "app/(dashboard)/tax/advanced/page.tsx",
+        "app/(dashboard)/tax/hub/page.tsx",
         "app/api/open-file/route.ts",
-        "components/navigation/nav-config.ts",
-        "components/navigation/sidebar-items.ts"
+        "components/navigation/nav-config.ts"
       ]
     },
     {
       "route": "/cash-flow",
       "exists": true,
       "references": [
-        "app/api/dashboard/route.ts"
+        "app/(dashboard)/cash-flow/layout.tsx",
+        "app/(dashboard)/retainers/_components/RetainerDrawer.tsx",
+        "app/(dashboard)/settings/_components/sections/Automation.tsx"
       ]
     },
     {
@@ -137,7 +202,7 @@
       "references": [
         "app/(dashboard)/cash-flow/_components/cash-flow-subnav.tsx",
         "app/(dashboard)/cash-flow/page.tsx",
-        "app/(dashboard)/reconciliation/page.tsx",
+        "app/(dashboard)/reconciliation/import/page.tsx",
         "components/navigation/nav-config.ts"
       ]
     },
@@ -159,40 +224,96 @@
       "route": "/clients",
       "exists": true,
       "references": [
+        "app/(dashboard)/clients/[id]/page.tsx",
         "app/(dashboard)/clients/page.tsx",
         "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
         "app/(dashboard)/dashboard/page.tsx",
         "app/(dashboard)/launch/page.tsx",
-        "app/(dashboard)/proposals/page.tsx",
+        "app/(dashboard)/proposals/_composer/ProposalComposer.tsx",
         "app/(dashboard)/settings/profile/page.tsx",
         "app/api/chat/route.ts",
         "app/manifest.ts",
         "app/sw.ts",
+        "components/dashboard/GuidedFlowsHub.tsx",
+        "components/gst/GstPreviewCard.tsx",
         "components/navigation/nav-config.ts",
-        "components/navigation/sidebar-items.ts",
         "components/onboarding/FirstLookWelcome.tsx"
+      ]
+    },
+    {
+      "route": "/companies",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/companies/_components/companies-page-template.tsx",
+        "components/navigation/nav-config.ts"
+      ]
+    },
+    {
+      "route": "/companies/access-team",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/companies/_components/companies-page-template.tsx"
+      ]
+    },
+    {
+      "route": "/companies/billing-usage",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/companies/_components/companies-page-template.tsx"
+      ]
+    },
+    {
+      "route": "/companies/consolidated-dashboard",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/companies/_components/companies-page-template.tsx"
+      ]
+    },
+    {
+      "route": "/companies/consolidated-reports",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/companies/_components/companies-page-template.tsx"
+      ]
+    },
+    {
+      "route": "/companies/create",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/companies/_components/companies-page-template.tsx"
+      ]
+    },
+    {
+      "route": "/companies/settings",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/companies/_components/companies-page-template.tsx"
       ]
     },
     {
       "route": "/dashboard",
       "exists": true,
       "references": [
-        "app/(dashboard)/admin/layout.tsx",
+        "app/(dashboard)/admin/_components/AdminShell.tsx",
         "app/(dashboard)/ar-collections/layout.tsx",
         "app/(dashboard)/cash-flow/layout.tsx",
+        "app/(dashboard)/companies/layout.tsx",
         "app/(dashboard)/documents/compliance/page.tsx",
         "app/(dashboard)/documents/layout.tsx",
         "app/(dashboard)/documents/page.tsx",
         "app/(dashboard)/documents/settings/page.tsx",
-        "app/(dashboard)/documents/vault/page.tsx",
         "app/(dashboard)/inbox/import/page.tsx",
         "app/(dashboard)/layout.tsx",
+        "app/(dashboard)/not-found.tsx",
         "app/(dashboard)/partner/page.tsx",
         "app/(dashboard)/payroll/layout.tsx",
+        "app/(dashboard)/pos/page.tsx",
         "app/(dashboard)/reporting/layout.tsx",
         "app/(dashboard)/settings/billing/page.tsx",
         "app/(dashboard)/settings/profile/page.tsx",
+        "app/(dashboard)/shop/page.tsx",
         "app/(dashboard)/workforce/layout.tsx",
+        "app/access-denied/page.tsx",
         "app/api/chat/route.ts",
         "app/api/user/profile/route.ts",
         "app/login/page.tsx",
@@ -202,9 +323,9 @@
         "components/LandingNavbar.tsx",
         "components/app-sidebar.tsx",
         "components/landing/persona/DemoLaunchButton.tsx",
+        "components/modules/ModuleUnavailable.tsx",
         "components/navigation/nav-config.ts",
         "components/navigation/nav-main.tsx",
-        "components/navigation/sidebar-items.ts",
         "components/onboarding/FirstLookWelcome.tsx",
         "components/setup/SetupWizard.tsx"
       ]
@@ -213,34 +334,74 @@
       "route": "/documents",
       "exists": true,
       "references": [
-        "app/(dashboard)/documents/inbox/page.tsx",
-        "app/api/dashboard/route.ts",
+        "app/(dashboard)/ca-portal/_components/EvidenceTab.tsx",
+        "app/(dashboard)/ca-portal/_components/RequestsTab.tsx",
+        "app/(dashboard)/documents/compliance/page.tsx",
+        "app/(dashboard)/documents/layout.tsx",
+        "app/(dashboard)/documents/page.tsx",
+        "components/documents/LinkedDocumentsPanel.tsx",
         "components/navigation/nav-config.ts"
       ]
     },
     {
-      "route": "/documents/inbox",
+      "route": "/documents/compliance",
       "exists": true,
       "references": [
-        "app/(dashboard)/documents/page.tsx",
-        "app/(dashboard)/documents/vault/page.tsx",
-        "components/documents/LinkedDocumentsPanel.tsx"
+        "app/(dashboard)/documents/compliance/page.tsx"
       ]
     },
     {
       "route": "/documents/settings",
       "exists": true,
       "references": [
-        "app/(dashboard)/documents/inbox/page.tsx"
+        "app/(dashboard)/documents/settings/page.tsx"
       ]
     },
     {
-      "route": "/documents/vault",
+      "route": "/email-billing",
       "exists": true,
       "references": [
-        "app/(dashboard)/documents/compliance/page.tsx",
-        "app/(dashboard)/documents/inbox/page.tsx",
-        "app/(dashboard)/documents/page.tsx"
+        "app/api/chat/route.ts",
+        "components/navigation/nav-config.ts"
+      ]
+    },
+    {
+      "route": "/email-billing/domains",
+      "exists": true,
+      "references": [
+        "app/api/chat/route.ts"
+      ]
+    },
+    {
+      "route": "/email-billing/plans",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/email-billing/page.tsx",
+        "app/api/chat/route.ts"
+      ]
+    },
+    {
+      "route": "/email-billing/review",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/email-billing/page.tsx",
+        "app/api/chat/route.ts"
+      ]
+    },
+    {
+      "route": "/email-billing/servers",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/email-billing/domains/page.tsx",
+        "app/(dashboard)/email-billing/page.tsx",
+        "app/api/chat/route.ts"
+      ]
+    },
+    {
+      "route": "/email-billing/settings",
+      "exists": true,
+      "references": [
+        "app/api/chat/route.ts"
       ]
     },
     {
@@ -248,17 +409,20 @@
       "exists": true,
       "references": [
         "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
+        "app/(dashboard)/tax/_components/ReconTab.tsx",
+        "app/(dashboard)/tax/_components/SmallBusinessPanel.tsx",
+        "app/api/expenses/route.ts",
         "app/api/open-file/route.ts",
         "app/manifest.ts",
         "app/sw.ts",
-        "components/navigation/nav-config.ts",
-        "components/navigation/sidebar-items.ts"
+        "components/navigation/nav-config.ts"
       ]
     },
     {
       "route": "/for-agencies",
       "exists": true,
       "references": [
+        "app/sitemap.ts",
         "components/LandingNavbar.tsx",
         "components/landing/LandingPersonaHub.tsx"
       ]
@@ -267,6 +431,7 @@
       "route": "/for-ca",
       "exists": true,
       "references": [
+        "app/sitemap.ts",
         "components/LandingNavbar.tsx",
         "components/landing/LandingPersonaHub.tsx"
       ]
@@ -275,6 +440,7 @@
       "route": "/for-contractors",
       "exists": true,
       "references": [
+        "app/sitemap.ts",
         "components/LandingNavbar.tsx",
         "components/landing/LandingPersonaHub.tsx"
       ]
@@ -283,6 +449,7 @@
       "route": "/for-freelancers",
       "exists": true,
       "references": [
+        "app/sitemap.ts",
         "components/LandingNavbar.tsx",
         "components/landing/LandingPersonaHub.tsx"
       ]
@@ -291,8 +458,16 @@
       "route": "/for-small-businesses",
       "exists": true,
       "references": [
+        "app/sitemap.ts",
         "components/LandingNavbar.tsx",
         "components/landing/LandingPersonaHub.tsx"
+      ]
+    },
+    {
+      "route": "/free-erp",
+      "exists": true,
+      "references": [
+        "app/sitemap.ts"
       ]
     },
     {
@@ -300,24 +475,35 @@
       "exists": true,
       "references": [
         "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
-        "app/(dashboard)/dashboard/help/page.tsx",
         "app/(dashboard)/referrals/page.tsx",
+        "app/(dashboard)/settings/billing/BillingSettingsClient.tsx",
         "app/help-hub/page.tsx",
         "app/help/[slug]/page.tsx",
         "app/help/category/[categorySlug]/page.tsx",
         "app/sitemap.ts",
+        "app/tax-engine-scope/page.tsx",
         "components/AIChatbot.tsx",
         "components/AuthModal.tsx",
         "components/LandingFooter.tsx",
         "components/SetupGatekeeper.tsx",
-        "components/notifications/CommsHub.tsx"
+        "components/auth/LoginExperience.tsx",
+        "components/notifications/CommsHub.tsx",
+        "components/notifications/ConnectDeviceTab.tsx"
+      ]
+    },
+    {
+      "route": "/help-hub",
+      "exists": true,
+      "references": [
+        "app/sitemap.ts"
       ]
     },
     {
       "route": "/help/category/getting-started",
       "exists": true,
       "references": [
-        "app/help/page.tsx"
+        "app/help/page.tsx",
+        "components/notifications/ConnectDeviceTab.tsx"
       ]
     },
     {
@@ -363,14 +549,6 @@
       ]
     },
     {
-      "route": "/help/privacy",
-      "exists": true,
-      "references": [
-        "components/AuthModal.tsx",
-        "components/LandingFooter.tsx"
-      ]
-    },
-    {
       "route": "/help/settings-guide",
       "exists": true,
       "references": [
@@ -378,42 +556,41 @@
       ]
     },
     {
-      "route": "/help/terms",
-      "exists": true,
-      "references": [
-        "components/AuthModal.tsx",
-        "components/LandingFooter.tsx"
-      ]
-    },
-    {
       "route": "/import-manager",
       "exists": true,
       "references": [
-        "components/navigation/nav-config.ts"
-      ]
-    },
-    {
-      "route": "/inbox/import",
-      "exists": true,
-      "references": [
+        "app/(dashboard)/clients/page.tsx",
+        "app/(dashboard)/dashboard/dashboard-operations-panel.tsx",
         "app/(dashboard)/dashboard/intelligence-suggestion-routes.ts",
-        "app/api/dashboard/route.ts"
+        "app/(dashboard)/import-manager/layout.tsx",
+        "components/navigation/nav-config.ts"
       ]
     },
     {
       "route": "/income",
       "exists": true,
       "references": [
+        "app/(dashboard)/dashboard/dashboard-quick-actions.tsx",
         "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
+        "app/(dashboard)/dashboard/intelligence-suggestion-routes.ts",
         "app/(dashboard)/dashboard/page.tsx",
-        "app/(dashboard)/income/page.tsx",
+        "app/(dashboard)/income/new/page.tsx",
         "app/(dashboard)/launch/page.tsx",
         "app/api/chat/route.ts",
         "app/api/dashboard/route.ts",
         "app/api/open-file/route.ts",
+        "app/manifest.ts",
+        "app/sw.ts",
+        "components/dashboard/GuidedFlowsHub.tsx",
         "components/invoice/InvoiceGeneratorForm.tsx",
-        "components/navigation/nav-config.ts",
-        "components/navigation/sidebar-items.ts"
+        "components/navigation/nav-config.ts"
+      ]
+    },
+    {
+      "route": "/income/new",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/income/_components/IncomeWorkspace.tsx"
       ]
     },
     {
@@ -421,22 +598,18 @@
       "exists": true,
       "references": [
         "app/(dashboard)/inventory/purchase-orders/page.tsx",
-        "components/navigation/nav-config.ts",
-        "components/navigation/sidebar-items.ts"
+        "app/(dashboard)/shop/ShopDashboardClient.tsx",
+        "components/navigation/nav-config.ts"
       ]
     },
     {
       "route": "/invoice",
       "exists": true,
       "references": [
-        "app/(dashboard)/dashboard/dashboard-quick-actions.tsx",
         "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
-        "app/(dashboard)/dashboard/intelligence-suggestion-routes.ts",
-        "app/(dashboard)/income/page.tsx",
         "app/(dashboard)/settings/profile/page.tsx",
         "app/api/chat/route.ts",
-        "app/manifest.ts",
-        "app/sw.ts",
+        "components/dashboard/GuidedFlowsHub.tsx",
         "components/invoice/InvoiceGeneratorForm.tsx"
       ]
     },
@@ -451,15 +624,24 @@
       "route": "/login",
       "exists": true,
       "references": [
+        "app/(dashboard)/ca-portal/page.tsx",
+        "app/(dashboard)/email-billing/_data.ts",
+        "app/(dashboard)/email-billing/layout.tsx",
         "app/(dashboard)/inbox/import/page.tsx",
         "app/(dashboard)/layout.tsx",
-        "app/(dashboard)/proposals/[id]/actions.ts",
-        "app/(dashboard)/proposals/[id]/page.tsx",
+        "app/(dashboard)/pos/page.tsx",
         "app/(dashboard)/proposals/pipeline/page.tsx",
+        "app/(dashboard)/shop/page.tsx",
+        "app/(dashboard)/tax/income-tax/page.tsx",
+        "app/(dashboard)/tax/page.tsx",
+        "app/layout.tsx",
         "app/share-target/route.ts",
+        "app/signup/route.ts",
         "app/sitemap.ts",
         "components/AuthModal.tsx",
-        "components/layout/DashboardShell.tsx"
+        "components/auth/LoginShowcase.tsx",
+        "components/layout/DashboardShell.tsx",
+        "components/setup/SetupWizard.tsx"
       ]
     },
     {
@@ -501,7 +683,7 @@
       "route": "/payroll",
       "exists": true,
       "references": [
-        "app/api/dashboard/route.ts",
+        "app/(dashboard)/payroll/layout.tsx",
         "components/navigation/nav-config.ts"
       ]
     },
@@ -514,22 +696,53 @@
       ]
     },
     {
+      "route": "/pos",
+      "exists": true,
+      "references": [
+        "components/navigation/nav-config.ts"
+      ]
+    },
+    {
+      "route": "/privacy",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/settings/billing/BillingSettingsClient.tsx",
+        "app/refund-cancellation/page.tsx",
+        "app/shop/[slug]/ShopClient.tsx",
+        "app/sitemap.ts",
+        "app/terms/page.tsx",
+        "components/AuthModal.tsx",
+        "components/LandingFooter.tsx",
+        "components/auth/LoginExperience.tsx",
+        "components/notifications/ConnectDeviceTab.tsx"
+      ]
+    },
+    {
       "route": "/proposals",
       "exists": true,
       "references": [
         "app/(dashboard)/dashboard/dashboard-quick-actions.tsx",
         "app/(dashboard)/dashboard/dashboard-sales-shop-panel.tsx",
         "app/(dashboard)/launch/page.tsx",
-        "app/(dashboard)/proposals/[id]/actions.ts",
-        "app/(dashboard)/proposals/[id]/page.tsx",
-        "app/(dashboard)/proposals/page.tsx",
+        "app/(dashboard)/proposals/_components/ProposalsTabs.tsx",
+        "app/(dashboard)/proposals/_components/ProposalsWorkspace.tsx",
+        "app/(dashboard)/proposals/_composer/composer-types.ts",
+        "app/(dashboard)/proposals/new/page.tsx",
         "app/(dashboard)/proposals/pipeline/page.tsx",
-        "app/(dashboard)/shop/page.tsx",
         "app/api/chat/route.ts",
         "app/api/dashboard/route.ts",
         "app/sw.ts",
-        "components/navigation/nav-config.ts",
-        "components/navigation/sidebar-items.ts"
+        "components/dashboard/GuidedFlowsHub.tsx",
+        "components/navigation/nav-config.ts"
+      ]
+    },
+    {
+      "route": "/proposals/new",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/proposals/_components/ProposalsWorkspace.tsx",
+        "app/(dashboard)/proposals/_composer/composer-types.ts",
+        "app/(dashboard)/proposals/pipeline/page.tsx"
       ]
     },
     {
@@ -537,7 +750,9 @@
       "exists": true,
       "references": [
         "app/(dashboard)/dashboard/dashboard-proposal-pipeline-summary.tsx",
+        "app/(dashboard)/proposals/_components/ProposalsTabs.tsx",
         "app/(dashboard)/proposals/pipeline/page.tsx",
+        "components/dashboard/GuidedFlowsHub.tsx",
         "components/navigation/nav-config.ts"
       ]
     },
@@ -550,26 +765,51 @@
         "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
         "app/(dashboard)/dashboard/intelligence-suggestion-routes.ts",
         "app/(dashboard)/reconciliation/settings-page-client.tsx",
+        "app/(dashboard)/settings/_components/sections/Banking.tsx",
         "app/api/dashboard/route.ts",
-        "app/api/open-file/route.ts",
         "app/manifest.ts",
-        "components/navigation/nav-config.ts",
-        "components/navigation/sidebar-items.ts"
+        "components/navigation/nav-config.ts"
+      ]
+    },
+    {
+      "route": "/reconciliation/import",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/reconciliation/page.tsx",
+        "app/api/open-file/route.ts"
+      ]
+    },
+    {
+      "route": "/reconciliation/settings",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/reconciliation/page.tsx"
       ]
     },
     {
       "route": "/referrals",
       "exists": true,
       "references": [
-        "app/reseller/reseller-landing-client.tsx",
-        "components/navigation/sidebar-items.ts"
+        "app/reseller/reseller-landing-client.tsx"
+      ]
+    },
+    {
+      "route": "/refund-cancellation",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/settings/billing/BillingSettingsClient.tsx",
+        "app/privacy/page.tsx",
+        "app/shop/[slug]/ShopClient.tsx",
+        "app/sitemap.ts",
+        "app/terms/page.tsx",
+        "components/LandingFooter.tsx"
       ]
     },
     {
       "route": "/reporting",
       "exists": true,
       "references": [
-        "app/api/dashboard/route.ts",
+        "app/(dashboard)/reporting/layout.tsx",
         "components/navigation/nav-config.ts",
         "components/reporting/reporting-center.tsx"
       ]
@@ -579,8 +819,18 @@
       "exists": true,
       "references": [
         "app/(dashboard)/referrals/page.tsx",
+        "app/reseller/partner-kit/page.tsx",
+        "app/sitemap.ts",
         "components/LandingFooter.tsx",
         "components/LandingNavbar.tsx"
+      ]
+    },
+    {
+      "route": "/reseller/partner-kit",
+      "exists": true,
+      "references": [
+        "app/reseller/reseller-landing-client.tsx",
+        "app/sitemap.ts"
       ]
     },
     {
@@ -588,24 +838,34 @@
       "exists": true,
       "references": [
         "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
-        "app/(dashboard)/proposals/[id]/actions.ts",
-        "app/(dashboard)/proposals/[id]/page.tsx",
-        "app/(dashboard)/retainers/page.tsx",
-        "app/(dashboard)/services/page.tsx",
+        "app/(dashboard)/retainers/_components/RetainersWorkspace.tsx",
+        "app/(dashboard)/retainers/_composer/RetainerComposer.tsx",
+        "app/(dashboard)/retainers/new/page.tsx",
+        "app/(dashboard)/services/_components/ServiceCatalog.tsx",
+        "app/(dashboard)/settings/_components/sections/Automation.tsx",
         "app/api/chat/route.ts",
-        "components/navigation/nav-config.ts",
-        "components/navigation/sidebar-items.ts"
+        "components/dashboard/GuidedFlowsHub.tsx",
+        "components/navigation/nav-config.ts"
+      ]
+    },
+    {
+      "route": "/retainers/new",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/retainers/_components/RetainersWorkspace.tsx"
       ]
     },
     {
       "route": "/services",
       "exists": true,
       "references": [
-        "app/(dashboard)/proposals/page.tsx",
-        "app/(dashboard)/shop/page.tsx",
+        "app/(dashboard)/proposals/_composer/ItemsEditor.tsx",
+        "app/(dashboard)/retainers/_components/RetainerDrawer.tsx",
+        "app/(dashboard)/retainers/_composer/RetainerComposer.tsx",
         "app/api/chat/route.ts",
+        "components/dashboard/GuidedFlowsHub.tsx",
+        "components/invoice/composer/LineItems.tsx",
         "components/navigation/nav-config.ts",
-        "components/navigation/sidebar-items.ts",
         "components/onboarding/FirstLookWelcome.tsx"
       ]
     },
@@ -613,23 +873,23 @@
       "route": "/settings",
       "exists": true,
       "references": [
-        "app/(dashboard)/ar-collections/layout.tsx",
-        "app/(dashboard)/cash-flow/layout.tsx",
         "app/(dashboard)/dashboard/dashboard-right-rail.tsx",
         "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
-        "app/(dashboard)/dashboard/intelligence-suggestion-routes.ts",
         "app/(dashboard)/dashboard/page.tsx",
         "app/(dashboard)/import-manager/layout.tsx",
+        "app/(dashboard)/pos/page.tsx",
         "app/(dashboard)/proposals/pipeline/page.tsx",
-        "app/(dashboard)/reconciliation/page.tsx",
+        "app/(dashboard)/reconciliation/import/page.tsx",
         "app/(dashboard)/reporting/layout.tsx",
-        "app/(dashboard)/settings/page.tsx",
+        "app/(dashboard)/settings/_components/sections/Automation.tsx",
         "app/(dashboard)/settings/team/page.tsx",
+        "app/(dashboard)/shop/page.tsx",
+        "app/(dashboard)/tax/_components/SmallBusinessPanel.tsx",
         "app/api/chat/route.ts",
-        "app/api/dashboard/route.ts",
         "components/AIChatbot.tsx",
+        "components/landing/MobileNativeInstallSection.tsx",
+        "components/modules/ModuleUnavailable.tsx",
         "components/navigation/nav-secondary.tsx",
-        "components/navigation/sidebar-items.ts",
         "components/onboarding/FirstLookWelcome.tsx"
       ]
     },
@@ -638,8 +898,14 @@
       "exists": true,
       "references": [
         "app/(dashboard)/dashboard/dashboard-health-strip.tsx",
+        "app/(dashboard)/proposals/_components/ProposalDialogs.tsx",
         "app/(dashboard)/referrals/page.tsx",
+        "app/(dashboard)/settings/_components/sections/Modules.tsx",
+        "app/(dashboard)/settings/_components/sections/Payments.tsx",
+        "app/api/cron/trial-expiry/route.ts",
         "app/reseller/reseller-landing-client.tsx",
+        "components/dashboard/TrialStatusPill.tsx",
+        "components/modules/ModuleUnavailable.tsx",
         "components/notifications/CommsHub.tsx"
       ]
     },
@@ -652,10 +918,17 @@
       ]
     },
     {
+      "route": "/settings/security",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/settings/security/page.tsx"
+      ]
+    },
+    {
       "route": "/settings/team",
       "exists": true,
       "references": [
-        "app/(dashboard)/settings/page.tsx",
+        "app/(dashboard)/settings/_components/sections/Overview.tsx",
         "components/rbac/access-denied.tsx"
       ]
     },
@@ -663,6 +936,7 @@
       "route": "/setup",
       "exists": true,
       "references": [
+        "app/(dashboard)/dashboard/intelligence-suggestion-routes.ts",
         "app/login/page.tsx"
       ]
     },
@@ -674,10 +948,29 @@
         "app/(dashboard)/dashboard/dashboard-sales-shop-panel.tsx",
         "app/(dashboard)/dashboard/intelligence-suggestion-routes.ts",
         "app/(dashboard)/dashboard/page.tsx",
-        "app/(dashboard)/proposals/[id]/actions.ts",
+        "app/(dashboard)/settings/_components/sections/Shop.tsx",
         "app/(dashboard)/settings/shop/page.tsx",
-        "components/navigation/nav-config.ts",
-        "components/navigation/sidebar-items.ts"
+        "app/api/chat/route.ts",
+        "components/navigation/nav-config.ts"
+      ]
+    },
+    {
+      "route": "/signup",
+      "exists": true,
+      "references": [
+        "app/reseller/reseller-landing-client.tsx",
+        "app/sitemap.ts",
+        "components/ComparisonTable.tsx",
+        "components/LandingContent.tsx",
+        "components/LandingNavbar.tsx",
+        "components/PricingSection.tsx",
+        "components/landing-v2/FinalCTA.tsx",
+        "components/landing-v2/HeroWorkflow.tsx",
+        "components/landing-v3/FinalCTAV3.tsx",
+        "components/landing-v3/HeroV3.tsx",
+        "components/landing-v3/PricingRealtimeV3.tsx",
+        "components/landing/FreeErpArticle.tsx",
+        "components/landing/FreeVsProComparison.tsx"
       ]
     },
     {
@@ -685,19 +978,62 @@
       "exists": true,
       "references": [
         "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
-        "app/(dashboard)/tax/page.tsx",
+        "app/(dashboard)/income/_components/InvoiceGstPanel.tsx",
+        "app/(dashboard)/settings/_components/sections/Tax.tsx",
+        "app/(dashboard)/tax/TaxDashboardClient.tsx",
         "app/api/chat/route.ts",
-        "app/api/dashboard/route.ts",
         "app/sw.ts",
-        "components/navigation/nav-config.ts",
-        "components/navigation/sidebar-items.ts"
+        "components/dashboard/GuidedFlowsHub.tsx",
+        "components/gst/GstPreviewCard.tsx",
+        "components/navigation/nav-config.ts"
+      ]
+    },
+    {
+      "route": "/tax-engine-scope",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/settings/billing/BillingSettingsClient.tsx",
+        "app/help/page.tsx",
+        "app/shop/[slug]/ShopClient.tsx",
+        "app/sitemap.ts",
+        "components/LandingFooter.tsx"
+      ]
+    },
+    {
+      "route": "/tax/hub",
+      "exists": true,
+      "references": [
+        "components/dashboard/GuidedFlowsHub.tsx"
+      ]
+    },
+    {
+      "route": "/tax/income-tax",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/ca-portal/_components/OverviewTab.tsx",
+        "app/(dashboard)/tax/_components/GstWorkspace.tsx"
+      ]
+    },
+    {
+      "route": "/terms",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/settings/billing/BillingSettingsClient.tsx",
+        "app/privacy/page.tsx",
+        "app/refund-cancellation/page.tsx",
+        "app/shop/[slug]/ShopClient.tsx",
+        "app/sitemap.ts",
+        "app/tax-engine-scope/page.tsx",
+        "components/AuthModal.tsx",
+        "components/LandingFooter.tsx",
+        "components/auth/LoginExperience.tsx"
       ]
     },
     {
       "route": "/workforce",
       "exists": true,
       "references": [
-        "app/api/dashboard/route.ts",
+        "app/(dashboard)/workforce/layout.tsx",
         "components/navigation/nav-config.ts",
         "components/workforce/WorkforceLayout.tsx"
       ]

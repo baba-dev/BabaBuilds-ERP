@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { expenseError, requireExpenseAccess } from "@/lib/expenses/access";
+import { requireExpenseAccess } from "@/lib/expenses/access";
 import { recurringSchema } from "@/lib/expenses/recurring-schema";
 import { resolveVendor } from "@/lib/expenses/vendors";
 import { logActivity } from "@/lib/security/activity-log";

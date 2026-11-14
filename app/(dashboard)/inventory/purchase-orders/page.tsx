@@ -35,10 +35,6 @@ export default function PurchaseOrdersHub() {
   
   const { fCurrency } = useFormat();
 
-  useEffect(() => {
-    fetchPOs();
-  }, []);
-
   const fetchPOs = async () => {
     setIsLoading(true);
     try {
@@ -55,6 +51,10 @@ export default function PurchaseOrdersHub() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchPOs();
+  }, []);
 
   const receivePO = async (poId: string) => {
     setReceivingId(poId);

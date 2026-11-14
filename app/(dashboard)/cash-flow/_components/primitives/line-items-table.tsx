@@ -70,14 +70,16 @@ export function CashFlowLineItemsTable({
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [selected, setSelected] = useState<SnapshotLineItem | null>(null);
 
-  // If deep-linked, auto-open the sheet to the requested item id (best-effort).
-  useMemo(() => {
-    if (!defaultSelectedItemId) return;
-    const found = items.find((i) => i.id === defaultSelectedItemId) ?? null;
-    if (!found) return;
-    setSelected(found);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultSelectedItemId]);
+  // If deep-linked, open the sheet for the requested item once it is available.
+  // Adjusting state during render (guarded) avoids an extra effect pass.
+  const [appliedDeepLinkId, setAppliedDeepLinkId] = useState<string | null>(null);
+  if (defaultSelectedItemId && defaultSelectedItemId !== appliedDeepLinkId) {
+    const found = items.find((i) => i.id === defaultSelectedItemId);
+    if (found) {
+      setAppliedDeepLinkId(defaultSelectedItemId);
+      setSelected(found);
+    }
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

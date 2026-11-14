@@ -21,12 +21,6 @@ export function InventoryDetailSheet({ open, onOpenChange, product }: InventoryD
 
   const { fCurrency } = useFormat();
 
-  useEffect(() => {
-    if (open && product) {
-      fetchMovements(product.id);
-    }
-  }, [open, product]);
-
   const fetchMovements = async (productId: string) => {
     setIsLoading(true);
     try {
@@ -39,6 +33,12 @@ export function InventoryDetailSheet({ open, onOpenChange, product }: InventoryD
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (open && product) {
+      fetchMovements(product.id);
+    }
+  }, [open, product]);
 
   if (!product) return null;
 

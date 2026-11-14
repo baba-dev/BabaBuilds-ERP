@@ -132,7 +132,7 @@ export default function AIChatbot() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const messagesRef = useRef(messages);
-  messagesRef.current = messages;
+  useEffect(() => { messagesRef.current = messages; });
   const sendInFlightRef = useRef(false);
   const lastAutoSubmitRequestIdRef = useRef<number | null>(null);
   const aiChatStoreState = useSyncExternalStore(subscribeToAIChatStore, getAIChatStoreSnapshot, getAIChatStoreSnapshot);
