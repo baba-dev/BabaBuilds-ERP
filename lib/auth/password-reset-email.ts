@@ -50,7 +50,7 @@ export async function sendPasswordResetEmail(input: { email: string; token: stri
     `,
   });
 
-  const failed = result.rejected.concat(result.pending).filter(Boolean);
+  const failed = [...result.rejected, ...(result.pending ?? [])].filter(Boolean);
   if (failed.length) {
     throw new Error(`Password reset email could not be sent to: ${failed.join(", ")}`);
   }
