@@ -129,7 +129,7 @@ function ClientsInner() {
       title={t("title")}
       description={t("subtitle")}
       icon={<Users className="size-5" aria-hidden />}
-      primaryAction={<Button onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="mr-2 size-4" aria-hidden />{t("new")}<kbd className="ml-2 hidden rounded border bg-background/20 px-1 text-[10px] md:inline">N</kbd></Button>}
+      primaryAction={<Button onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="mr-2 size-4" aria-hidden />{t("new")}<kbd className="ml-2 hidden rounded border bg-background/20 px-1 text-[11px] md:inline">N</kbd></Button>}
       secondaryActions={
         <div className="flex flex-wrap gap-2">
           {dupCount > 0 && <Button variant="outline" onClick={() => setDupOpen(true)}><GitMerge className="mr-2 size-4" aria-hidden />{t("duplicates", { count: dupCount })}</Button>}
@@ -222,7 +222,7 @@ function ClientsInner() {
                   <Link href={`/clients/${c.id}`} className="flex min-w-0 items-center gap-3 outline-none after:absolute after:inset-0 after:content-[''] focus-visible:ring-2 focus-visible:ring-ring lg:after:hidden">
                     <Avatar className="size-10 rounded-xl"><AvatarImage src={c.logoUrl ? getBustedUrl(c.logoUrl) : undefined} alt="" /><AvatarFallback className="rounded-xl bg-indigo-500/10 text-indigo-700 dark:text-indigo-300">{initials(c.name)}</AvatarFallback></Avatar>
                     <span className="min-w-0">
-                      <span className="flex items-center gap-1.5"><span className="truncate font-medium">{c.name}</span>{c.status === "VIP" && <Star className="size-3.5 shrink-0 fill-amber-400 text-amber-400" aria-label="VIP" />}{c.archivedAt && <Badge variant="outline" className="text-[10px]">{t("archivedBadge")}</Badge>}</span>
+                      <span className="flex items-center gap-1.5"><span className="truncate font-medium">{c.name}</span>{c.status === "VIP" && <Star className="size-3.5 shrink-0 fill-amber-400 text-amber-400" aria-label="VIP" />}{c.archivedAt && <Badge variant="outline" className="text-[11px]">{t("archivedBadge")}</Badge>}</span>
                       <span className="block truncate text-xs text-muted-foreground">{flag(c.countryCode)} {c.email ?? t("noEmail")}{c.tagList.length ? ` · ${c.tagList.slice(0, 2).join(", ")}` : ""}</span>
                     </span>
                   </Link>

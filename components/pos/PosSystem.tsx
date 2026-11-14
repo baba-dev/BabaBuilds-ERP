@@ -243,12 +243,12 @@ export default function PosSystem({
     <div className="grid min-h-[720px] grid-cols-1 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900 lg:grid-cols-[minmax(0,1fr)_24rem]">
       {/* Left Pane - Catalog Grid */}
       <div className="flex min-h-[640px] flex-col bg-zinc-50/50 dark:bg-zinc-950/30 lg:border-r lg:border-zinc-200/70 lg:dark:border-zinc-800/80">
-        <div className="p-6 border-b border-zinc-200/70 bg-white dark:border-zinc-800/80 dark:bg-zinc-900">
+        <div className="p-4 sm:p-6 border-b border-zinc-200/70 bg-white dark:border-zinc-800/80 dark:bg-zinc-900">
           <div className="flex items-center gap-4 mb-4">
             <Tabs
               value={activeTab}
               onValueChange={(v) => setActiveTab(v as "SERVICES" | "PRODUCTS")}
-              className="w-64"
+              className="w-full sm:w-64"
             >
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="SERVICES">{t("tab_services")}</TabsTrigger>
@@ -257,13 +257,13 @@ export default function PosSystem({
             </Tabs>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1">
+          <div className="flex flex-wrap items-center gap-3 sm:flex-nowrap">
+            <div className="relative min-w-[11rem] flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 placeholder={t("search_placeholder", {
                   mode:
-                    activeTab === "SERVICES" ? t("services") : t("products"),
+                    activeTab === "SERVICES" ? t("tab_services") : t("tab_products"),
                 })}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -308,11 +308,11 @@ export default function PosSystem({
                         className={`h-full border border-zinc-200 bg-white transition-all duration-300 dark:border-zinc-800 dark:bg-zinc-900 ${isOutOfStock ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:-translate-y-1 hover:border-accent-primary/50 hover:shadow-lg"}`}
                         onClick={() => addToCart(item)}
                       >
-                        <CardHeader className="p-4">
+                        <CardHeader className="p-3 sm:p-4">
                           <CardTitle className="text-base line-clamp-2">
                             {item.name}
                           </CardTitle>
-                          <div className="text-lg font-bold text-accent-primary mt-2">
+                          <div className="mt-2 break-words text-base font-bold text-accent-primary sm:text-lg">
                             {formatMoney(item.price)}
                           </div>
                           {item.type === "PRODUCT" && (
@@ -336,7 +336,7 @@ export default function PosSystem({
       </div>
 
       {/* Right Pane - Cart Sidebar */}
-      <div className="flex min-h-[640px] flex-col bg-white/90 backdrop-blur dark:bg-zinc-900/90">
+      <div id="pos-cart" className="flex min-h-[640px] scroll-mt-16 flex-col bg-white/90 backdrop-blur dark:bg-zinc-900/90">
         <div className="p-4 border-b border-zinc-200/70 bg-white dark:border-zinc-800/80 dark:bg-zinc-900">
           <h3 className="font-bold text-lg mb-4 flex items-center">
             <ShoppingCart className="mr-2 h-5 w-5" /> {t("current_order")}
@@ -422,7 +422,7 @@ export default function PosSystem({
         </div>
 
         {/* Totals & Actions */}
-        <div className="p-6 border-t border-zinc-200/70 bg-white dark:border-zinc-800/80 dark:bg-zinc-900">
+        <div className="p-4 sm:p-6 border-t border-zinc-200/70 bg-white dark:border-zinc-800/80 dark:bg-zinc-900">
           <div className="space-y-3 mb-6">
             <div className="flex justify-between text-muted-foreground">
               <span>{t("subtotal")}</span>
@@ -575,6 +575,26 @@ export default function PosSystem({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Phones: the order panel sits below the catalog, so keep a one-tap jump to it. */}
+      {cart.length > 0 && (
+        <>
+          <div className="h-20 lg:hidden" aria-hidden />
+          <div className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom,0px))] z-40 lg:hidden">
+            <Button
+              type="button"
+              className="h-14 w-full justify-between rounded-2xl bg-accent-primary px-4 text-base font-bold text-accent-primary-foreground shadow-xl"
+              onClick={() => document.getElementById("pos-cart")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            >
+              <span className="flex items-center gap-2">
+                <ShoppingCart className="size-5" aria-hidden />
+                {t("current_order")} ({cart.reduce((n, i) => n + i.quantity, 0)})
+              </span>
+              <span>{formatMoney(subtotal)}</span>
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

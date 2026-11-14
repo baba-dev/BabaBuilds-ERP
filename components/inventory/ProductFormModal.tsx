@@ -166,7 +166,7 @@ export function ProductFormModal({ open, onOpenChange, productToEdit, onSuccess 
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col max-h-[80vh] overflow-y-auto custom-scrollbar">
+        <form onSubmit={handleSubmit} className="flex flex-col max-h-[80dvh] overflow-y-auto custom-scrollbar">
           <div className="p-6 md:p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
             
             {/* Image Upload Zone */}
@@ -189,7 +189,7 @@ export function ProductFormModal({ open, onOpenChange, productToEdit, onSuccess 
                   <>
                     {/* eslint-disable-next-line @next/next/no-img-element -- dynamic or user-supplied image source; next/image remote config not applicable */}
                     <img src={previewUrl} alt="Preview" className="h-48 object-contain p-2" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 backdrop-blur-sm">
+                    <div className="absolute inset-0 bg-black/40 opacity-0 pointer-coarse:opacity-100 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3 backdrop-blur-sm">
                        <Button type="button" variant="secondary" size="sm" onClick={() => fileInputRef.current?.click()} className="font-bold">
                          Change Image
                        </Button>
@@ -269,7 +269,7 @@ export function ProductFormModal({ open, onOpenChange, productToEdit, onSuccess 
               <div className="space-y-2">
                 <Label htmlFor="hsnCode" className="text-xs font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400">HSN code</Label>
                 <Input id="hsnCode" name="hsnCode" inputMode="numeric" maxLength={8} value={formData.hsnCode} onChange={handleChange} className="h-11 font-mono text-sm bg-white dark:bg-zinc-950" placeholder="e.g. 8471" aria-describedby="hsn-help" />
-                <p id="hsn-help" className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">4, 6 or 8 digits. Used on invoices, GSTR-1 and e-way bills.</p>
+                <p id="hsn-help" className="text-[11px] text-zinc-500 uppercase tracking-widest font-bold">4, 6 or 8 digits. Used on invoices, GSTR-1 and e-way bills.</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="gstRate" className="text-xs font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400">GST rate</Label>
@@ -283,7 +283,7 @@ export function ProductFormModal({ open, onOpenChange, productToEdit, onSuccess 
               <div className="space-y-2">
                 <Label htmlFor="currentStock" className="text-xs font-bold uppercase tracking-widest text-zinc-600 dark:text-zinc-400">Initial Stock</Label>
                 <Input id="currentStock" name="currentStock" type="number" value={formData.currentStock} onChange={handleChange} disabled={!!productToEdit} className="h-11 font-bold text-sm bg-white dark:bg-zinc-950 disabled:opacity-50" placeholder="0" />
-                {!!productToEdit && <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Use the Adjust tool to cycle-count stock after creation.</p>}
+                {!!productToEdit && <p className="text-[11px] text-zinc-500 uppercase tracking-widest font-bold">Use the Adjust tool to cycle-count stock after creation.</p>}
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-1.5">

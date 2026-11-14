@@ -31,7 +31,7 @@ export type FinalizeSubscriptionInput = {
   description: string;
   distributorCouponId: string | null;
   billingProviderCustomerId?: string | null;
-  billingProvider?: "RAZORPAY" | "STRIPE";
+  billingProvider?: "RAZORPAY" | "STRIPE" | "GOOGLE_PLAY";
   billingContractType?: "PREPAID" | "RECURRING";
   billingProviderSubscriptionId?: string | null;
   currency?: string;

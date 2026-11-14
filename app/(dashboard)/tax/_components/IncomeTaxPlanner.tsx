@@ -182,7 +182,7 @@ export function IncomeTaxPlanner({ investmentsTotal }: { investmentsTotal: numbe
               <div className="grid grid-cols-2 gap-3">
                 {([["new", newEst.data], ["old", oldEst.data]] as const).map(([k, e]) => (
                   <div key={k} className={cn("rounded-xl border p-3.5", best.regime === k ? "border-emerald-400/70 bg-emerald-50/60 dark:bg-emerald-500/10" : "border-border/70")}>
-                    <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Scale className="size-3.5" aria-hidden />{t(`regimes.${k}`)}{best.regime === k ? <span className="rounded-full bg-emerald-600 px-1.5 text-[10px] font-semibold text-white">{t("better")}</span> : null}</p>
+                    <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"><Scale className="size-3.5" aria-hidden />{t(`regimes.${k}`)}{best.regime === k ? <span className="rounded-full bg-emerald-600 px-1.5 text-[11px] font-semibold text-white">{t("better")}</span> : null}</p>
                     <p className="mt-1 text-xl font-bold tabular-nums">{money(Number(e.amount))}</p>
                     <p className="text-xs text-muted-foreground">{t("effective", { rate: (e.ratePercent ?? 0).toFixed(2) })}</p>
                   </div>
@@ -192,7 +192,7 @@ export function IncomeTaxPlanner({ investmentsTotal }: { investmentsTotal: numbe
             ) : (
               <div className="rounded-xl border border-border/70 p-4"><p className="text-xs text-muted-foreground">{t("payable")}</p><p className="text-2xl font-bold tabular-nums">{money(Number(result.amount))}</p><p className="text-xs text-muted-foreground">{t("effective", { rate: (result.ratePercent ?? 0).toFixed(2) })}</p></div>
             )}
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full min-w-[28rem] text-sm">
               <tbody>
                 <tr className="border-b border-border/50"><td className="py-1.5 text-muted-foreground">{t("rows.taxable")}</td><td className="py-1.5 text-end tabular-nums">{money2(result.basis.taxableIncome)}</td></tr>
                 {rows.filter((r) => !r[2]).map(([label, value]) => (
@@ -200,7 +200,7 @@ export function IncomeTaxPlanner({ investmentsTotal }: { investmentsTotal: numbe
                 ))}
                 <tr><td className="py-2 font-semibold">{t("rows.total")}</td><td className="py-2 text-end font-bold tabular-nums">{money2(result.amount)}</td></tr>
               </tbody>
-            </table>
+            </table></div>
           </div>
 
           <div className="space-y-4">

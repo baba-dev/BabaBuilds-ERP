@@ -116,7 +116,7 @@ export function UnifiedDocumentList({ documents }: { documents: DocType[] }) {
                             {hasAiMeta(d.aiMeta) && (
                               <div className="flex flex-wrap gap-1">
                                 {Object.entries(d.aiMeta as Record<string, unknown>).slice(0, 3).map(([k, v]) => (
-                                  <Badge key={k} variant="secondary" className="text-[9px] px-1.5 py-0 uppercase bg-primary/10 text-primary hover:bg-primary/20">
+                                  <Badge key={k} variant="secondary" className="text-[11px] px-1.5 py-0 uppercase bg-primary/10 text-primary hover:bg-primary/20">
                                     {k}: {String(v).substring(0, 15)}
                                   </Badge>
                                 ))}
@@ -128,7 +128,7 @@ export function UnifiedDocumentList({ documents }: { documents: DocType[] }) {
                         )}
                       </TableCell>
                       <TableCell className="py-4 align-top">
-                        <Badge variant={d.status === "FAILED" ? "destructive" : d.status === "INBOX" ? "secondary" : "default"} className="capitalize text-[10px] tracking-wide shadow-sm">
+                        <Badge variant={d.status === "FAILED" ? "destructive" : d.status === "INBOX" ? "secondary" : "default"} className="capitalize text-[11px] tracking-wide shadow-sm">
                           {d.status.toLowerCase()}
                         </Badge>
                       </TableCell>
@@ -153,7 +153,7 @@ export function UnifiedDocumentList({ documents }: { documents: DocType[] }) {
                     <h3 className="font-bold text-zinc-900 dark:text-zinc-100 line-clamp-2 leading-snug group-hover:text-primary transition-colors">
                       {d.title}
                     </h3>
-                    <Badge variant={d.status === "FAILED" ? "destructive" : d.status === "INBOX" ? "secondary" : "default"} className="capitalize text-[9px] tracking-wide shrink-0">
+                    <Badge variant={d.status === "FAILED" ? "destructive" : d.status === "INBOX" ? "secondary" : "default"} className="capitalize text-[11px] tracking-wide shrink-0">
                       {d.status.toLowerCase()}
                     </Badge>
                   </div>
@@ -169,7 +169,7 @@ export function UnifiedDocumentList({ documents }: { documents: DocType[] }) {
                   {hasAiMeta(d.aiMeta) && (
                     <div className="flex flex-wrap gap-1.5 mb-4 mt-auto">
                       {Object.entries(d.aiMeta as Record<string, unknown>).slice(0, 4).map(([k, v]) => (
-                        <Badge key={k} variant="secondary" className="text-[9px] px-1.5 py-0 bg-primary/5 text-primary/80 border-primary/10">
+                        <Badge key={k} variant="secondary" className="text-[11px] px-1.5 py-0 bg-primary/5 text-primary/80 border-primary/10">
                           {k}: {String(v).substring(0, 15)}
                         </Badge>
                       ))}

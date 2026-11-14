@@ -87,8 +87,8 @@ export function VendorsPanel({ currency, locale, isIndia, canManage, onOpenLedge
             <li key={v.id} className={`flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-4 py-3 last:border-0 hover:bg-muted/40 ${v.archivedAt ? "opacity-60" : ""}`}>
               <button type="button" className="min-w-0 flex-1 text-start" onClick={() => onOpenLedger(v.id)} aria-label={t("vendors.openLedger", { name: v.name })}>
                 <span className="flex flex-wrap items-center gap-1.5"><span className="truncate font-medium hover:underline">{v.name}</span>
-                  {(v.msmeClass === "MICRO" || v.msmeClass === "SMALL") && <Badge variant="outline" className="border-amber-500/40 text-[10px] text-amber-700 dark:text-amber-300">{t("msme")}</Badge>}
-                  {v.unpaidCount > 0 && <Badge variant="outline" className="border-rose-500/40 text-[10px] text-rose-600">{t("vendors.unpaidBills", { count: v.unpaidCount })}</Badge>}</span>
+                  {(v.msmeClass === "MICRO" || v.msmeClass === "SMALL") && <Badge variant="outline" className="border-amber-500/40 text-[11px] text-amber-700 dark:text-amber-300">{t("msme")}</Badge>}
+                  {v.unpaidCount > 0 && <Badge variant="outline" className="border-rose-500/40 text-[11px] text-rose-600">{t("vendors.unpaidBills", { count: v.unpaidCount })}</Badge>}</span>
                 <span className="block truncate text-xs text-muted-foreground">{[v.gstin, v.defaultCategory, v.paymentTermsDays ? t("vendors.terms", { days: v.paymentTermsDays }) : null, v.lastExpenseAt ? t("vendors.last", { date: shortDate(v.lastExpenseAt, locale) }) : null].filter(Boolean).join(" · ") || "—"}</span>
               </button>
               <div className="text-end text-sm"><span className="font-medium tabular-nums">{money(v.spend, currency, locale)}</span><span className="block text-xs text-muted-foreground">{v.outstanding > 0 ? t("vendors.owed", { amount: money(v.outstanding, currency, locale) }) : t("shown", { count: v.count })}</span></div>
@@ -100,7 +100,7 @@ export function VendorsPanel({ currency, locale, isIndia, canManage, onOpenLedge
             </li>))}</ul>}
       </div>
 
-      <ResponsiveDialog open={open} onOpenChange={setOpen} title={editing ? t("vendors.editTitle") : t("vendors.newTitle")} description={t("vendors.formHelp")} desktopClassName="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+      <ResponsiveDialog open={open} onOpenChange={setOpen} title={editing ? t("vendors.editTitle") : t("vendors.newTitle")} description={t("vendors.formHelp")} desktopClassName="sm:max-w-xl max-h-[90dvh] overflow-y-auto">
         <form onSubmit={(e) => { e.preventDefault(); void save(); }} className="grid gap-4 sm:grid-cols-2" noValidate>
           <div className="sm:col-span-2"><Label htmlFor="v-name" className="mb-1.5 block text-xs text-muted-foreground">{t("vendors.name")} *</Label><Input id="v-name" className="h-10" value={form.name} maxLength={120} onChange={(e) => setForm({ ...form, name: e.target.value })} aria-invalid={Boolean(errors.name)} />{fe("name")}</div>
           {isIndia && <div><Label htmlFor="v-gstin" className="mb-1.5 block text-xs text-muted-foreground">GSTIN</Label><Input id="v-gstin" className="h-10 font-mono uppercase" value={form.gstin} maxLength={15} onChange={(e) => setForm({ ...form, gstin: e.target.value.toUpperCase() })} aria-invalid={Boolean(errors.gstin)} />{fe("gstin")}</div>}

@@ -5,7 +5,7 @@ import type { AdminDeniedReason } from "@/lib/admin/access";
 export function AdminSetupNotice({ reason, email }: { reason: AdminDeniedReason; email: string }) {
   const roleMissing = reason === "NOT_ADMIN_ROLE";
   return (
-    <main className="mx-auto flex min-h-[70vh] max-w-xl flex-col justify-center gap-5 px-4 py-16">
+    <main className="mx-auto flex min-h-[70dvh] max-w-xl flex-col justify-center gap-5 px-4 py-16">
       <span className="flex size-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300"><ShieldAlert className="size-6" aria-hidden /></span>
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Admin access is half set up</h1>

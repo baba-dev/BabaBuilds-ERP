@@ -125,7 +125,7 @@ export function RecordDocumentsDialog({
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 Attach existing document
-                <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                <Badge variant="outline" className="text-[11px] uppercase tracking-wide">
                   Vault
                 </Badge>
               </div>

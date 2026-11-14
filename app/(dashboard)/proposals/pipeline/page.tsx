@@ -64,7 +64,7 @@ export default async function PipelineDashboardPage({
 
   if (!pipelineModuleEnabled) {
     return (
-      <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8">
+      <div className="min-h-app bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8">
         <div className="max-w-3xl mx-auto">
           <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-8 shadow-sm">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-indigo-500">Revenue Pipeline</p>
@@ -184,7 +184,7 @@ export default async function PipelineDashboardPage({
   const formatMoney = (amount: number) => formatCurrency(amount, "INR", "en-IN");
 
   return (
-    <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8 space-y-8">
+    <div className="min-h-app bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8 space-y-8">
       <div className="max-w-7xl mx-auto space-y-6">
         <ProposalsTabs />
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -297,17 +297,17 @@ export default async function PipelineDashboardPage({
                     <td className="p-4 font-medium text-zinc-900 dark:text-zinc-100">{row.clientName}</td>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest \${
+                        <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-widest \${
                           row.isStalled ? 'bg-rose-100 text-rose-700' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
                         }`}>
                           {row.stage}
                         </span>
                         {row.isStalled && <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />}
                       </div>
-                      <p className="text-[10px] text-zinc-400 mt-1 font-mono uppercase tracking-widest">{row.ageInStageDays}d in stage</p>
+                      <p className="text-[11px] text-zinc-400 mt-1 font-mono uppercase tracking-widest">{row.ageInStageDays}d in stage</p>
                     </td>
                     <td className="p-4">
-                       <span className={`text-[10px] uppercase font-bold tracking-widest \${
+                       <span className={`text-[11px] uppercase font-bold tracking-widest \${
                          row.paymentState === 'PAID' ? 'text-emerald-600' :
                          row.paymentState === 'PARTIAL' ? 'text-amber-600' :
                          row.paymentState === 'UNPAID' ? 'text-rose-600' : 'text-zinc-400'
@@ -322,7 +322,7 @@ export default async function PipelineDashboardPage({
                       {row.nextBestAction !== 'NONE' ? (
                         <Link 
                           href={row.nextBestAction === 'CHASE_PAYMENT' ? `/income?search=${row.traceabilityId}` : row.nextBestAction === 'CONVERT_TO_INVOICE' ? `/proposals/${row.proposal.id}` : '#'}
-                          className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 px-2 py-1 rounded inline-flex transition-colors"
+                          className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 px-2 py-1 rounded inline-flex transition-colors"
                         >
                           {row.nextBestAction.replace(/_/g, ' ')} <ChevronRight className="w-3 h-3" />
                         </Link>

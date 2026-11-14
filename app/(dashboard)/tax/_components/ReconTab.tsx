@@ -114,7 +114,7 @@ export function ReconTab({ months, initial, canManage }: { months: string[]; ini
               <tbody>
                 {rows.map((r) => (
                   <tr key={`${r.supplierGstin}-${r.invoiceNumber}-${r.status}`} className="border-t border-border/50">
-                    <td className={td}><span className="block font-medium">{r.supplierName || "—"}</span><span className="block font-mono text-[10px] text-muted-foreground">{r.supplierGstin}</span></td>
+                    <td className={td}><span className="block font-medium">{r.supplierName || "—"}</span><span className="block font-mono text-[11px] text-muted-foreground">{r.supplierGstin}</span></td>
                     <td className={td}>{r.invoiceNumber}<span className="block text-xs text-muted-foreground">{r.date ?? ""}{r.bookInvoiceNumber ? ` · ${t("bookNo", { number: r.bookInvoiceNumber })}` : ""}{r.held ? ` · ${t("held")}` : ""}</span></td>
                     <td className={td}><span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset", CHIP[r.status])}>{t(`status.${r.status}`)}</span></td>
                     <td className={tdr}>{r.twoB ? n(r.twoB.tax) : "—"}</td>

@@ -58,7 +58,7 @@ function ExplainSheet({ k, scope, onClose }: { k: ExplainKey; scope: Scope; onCl
                   <li key={`${i.kind}-${i.id}`} className="py-2.5">
                     <Link href={i.href} className="group flex items-start gap-3 rounded-lg px-1 py-0.5 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                       <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-1.5 text-sm font-medium">{i.number}<span className="rounded bg-muted px-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">{t(`kind.${i.kind}`)}</span>{i.note ? <span className="text-xs text-muted-foreground">· {NOTE_KINDS.has(i.note) ? t(`noteKind.${i.note}`) : i.note}</span> : null}</span>
+                        <span className="flex items-center gap-1.5 text-sm font-medium">{i.number}<span className="rounded bg-muted px-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">{t(`kind.${i.kind}`)}</span>{i.note ? <span className="text-xs text-muted-foreground">· {NOTE_KINDS.has(i.note) ? t(`noteKind.${i.note}`) : i.note}</span> : null}</span>
                         <span className="block truncate text-xs text-muted-foreground">{i.party} · {i.date}</span>
                       </span>
                       <span className="text-end text-xs tabular-nums"><span className="block font-semibold">{n(i.tax)}</span><span className="block text-muted-foreground">{n(i.taxable)}</span></span>

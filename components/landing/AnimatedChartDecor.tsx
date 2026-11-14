@@ -51,7 +51,7 @@ export default function AnimatedChartDecor() {
           
           {/* A floating tag on the chart */}
           <motion.div 
-            className="absolute -top-4 -left-6 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1"
+            className="absolute -top-4 -left-6 bg-emerald-500 text-white text-[11px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1"
             animate={{ y: [0, -5, 0] }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
           >

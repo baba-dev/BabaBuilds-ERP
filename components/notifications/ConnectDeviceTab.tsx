@@ -142,7 +142,7 @@ export function ConnectDeviceTab() {
           <div className="min-w-0 w-full flex-1 space-y-6">
             <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-4 py-1.5">
               <QrCode className="h-4 w-4 text-indigo-500" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400">
+              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-indigo-600 dark:text-indigo-400">
                 Instant Mobile Hand-off
               </span>
             </div>
@@ -204,7 +204,7 @@ export function ConnectDeviceTab() {
                  <MonitorSmartphone className="h-24 w-24 text-indigo-500" />
                </div>
             </div>
-            <p className="mt-4 text-center text-[10px] font-black uppercase tracking-widest text-zinc-400">
+            <p className="mt-4 text-center text-[11px] font-black uppercase tracking-widest text-zinc-400">
                Secure Token: Ready
             </p>
           </motion.div>
@@ -227,9 +227,9 @@ export function ConnectDeviceTab() {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-[300px] text-[10px] font-bold uppercase tracking-widest">Device Info</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Network</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-widest text-right">Action</TableHead>
+                  <TableHead className="w-[300px] text-[11px] font-bold uppercase tracking-widest">Device Info</TableHead>
+                  <TableHead className="text-[11px] font-bold uppercase tracking-widest">Network</TableHead>
+                  <TableHead className="text-[11px] font-bold uppercase tracking-widest text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -266,7 +266,7 @@ export function ConnectDeviceTab() {
                                     </Badge>
                                   )}
                                 </p>
-                                <p className="max-w-[200px] truncate text-[10px] text-zinc-500">{session.userAgent}</p>
+                                <p className="max-w-[200px] truncate text-[11px] text-zinc-500">{session.userAgent}</p>
                               </div>
                             </div>
                           </TableCell>
@@ -276,7 +276,7 @@ export function ConnectDeviceTab() {
                                 <MapPin className="h-3 w-3" />
                                 {session.ip}
                               </div>
-                              <div className="flex items-center gap-1.5 text-[10px] text-zinc-500">
+                              <div className="flex items-center gap-1.5 text-[11px] text-zinc-500">
                                 <Clock className="h-3 w-3" />
                                 {new Date(session.expires).toLocaleDateString()}
                               </div>
@@ -399,24 +399,24 @@ export function ConnectDeviceTab() {
       <div className="flex flex-col items-center justify-between gap-4 border-t border-zinc-200/80 pt-6 @md:flex-row dark:border-zinc-800/50">
         <div className="flex items-center gap-2">
            <Badge className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg">PRO</Badge>
-           <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Enterprise Sync Active</span>
+           <span className="text-[11px] font-black uppercase tracking-widest text-zinc-500">Enterprise Sync Active</span>
         </div>
         <div className="flex flex-wrap justify-center gap-6 @md:justify-end">
           <Link
             href="/help"
-            className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 transition-colors hover:text-indigo-500"
+            className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 transition-colors hover:text-indigo-500"
           >
             Documentation
           </Link>
           <Link
             href="/privacy"
-            className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 transition-colors hover:text-indigo-500"
+            className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 transition-colors hover:text-indigo-500"
           >
             Privacy Policy
           </Link>
           <Link
             href="/help"
-            className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 transition-colors hover:text-indigo-500"
+            className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 transition-colors hover:text-indigo-500"
           >
             Support
           </Link>

@@ -163,15 +163,15 @@ export default function ExpensesPage() {
       description={t("subtitle")}
       icon={<Receipt className="size-6 text-accent-strong" aria-hidden />}
       animated={false}
-      primaryAction={<Button onClick={() => { setEditing(null); setSheetOpen(true); }}><Plus className="mr-2 size-4" aria-hidden />{t("add")}<kbd className="ml-2 hidden rounded border bg-background/20 px-1 text-[10px] md:inline">N</kbd></Button>}
-      secondaryActions={<div className="flex gap-2"><Button variant="outline" onClick={() => setSettingsOpen(true)}><Settings2 className="mr-2 size-4" aria-hidden />{t("settings.open")}</Button><Button variant="outline" asChild><a href={exportHref}><Download className="mr-2 size-4" aria-hidden />{t("export")}</a></Button></div>}
+      primaryAction={<Button onClick={() => { setEditing(null); setSheetOpen(true); }}><Plus className="mr-2 size-4" aria-hidden />{t("add")}<kbd className="ml-2 hidden rounded border bg-background/20 px-1 text-[11px] md:inline">N</kbd></Button>}
+      secondaryActions={<div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setSettingsOpen(true)}><Settings2 className="mr-2 size-4" aria-hidden />{t("settings.open")}</Button><Button variant="outline" asChild><a href={exportHref}><Download className="mr-2 size-4" aria-hidden />{t("export")}</a></Button></div>}
     >
       <div role="tablist" aria-label={t("tabs.label")} className="flex gap-1 overflow-x-auto border-b">
         {VIEWS.map((v) => (
           <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)}
             className={cn("relative -mb-px whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium transition-colors", view === v ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground")}>
             {t(`tabs.${v}` as never)}
-            {v === "review" && (summary?.reviewCount ?? 0) > 0 && <span className="ms-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">{summary?.reviewCount}</span>}
+            {v === "review" && (summary?.reviewCount ?? 0) > 0 && <span className="ms-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[11px] font-semibold text-white">{summary?.reviewCount}</span>}
             {v === "vendors" && (summary?.vendorCount ?? 0) > 0 && <span className="ms-1.5 text-xs text-muted-foreground">{summary?.vendorCount}</span>}
           </button>
         ))}
@@ -233,7 +233,7 @@ export default function ExpensesPage() {
           <div className="rounded-2xl border bg-card p-5">
             <h2 className="mb-3 text-sm font-semibold">{t("last6")}</h2>
             <div className="flex h-24 items-end gap-2" role="img" aria-label={t("last6")}>
-              {summary.monthly.map((x) => (<div key={x.month} className="flex h-full flex-1 flex-col items-center justify-end gap-1"><div className="w-full rounded-t bg-indigo-500/80" style={{ height: `${Math.max(4, (x.amount / maxMonth) * 80)}%` }} title={m(x.amount)} /><span className="text-[10px] text-muted-foreground">{monthLabel(x.month, locale)}</span></div>))}
+              {summary.monthly.map((x) => (<div key={x.month} className="flex h-full flex-1 flex-col items-center justify-end gap-1"><div className="w-full rounded-t bg-indigo-500/80" style={{ height: `${Math.max(4, (x.amount / maxMonth) * 80)}%` }} title={m(x.amount)} /><span className="text-[11px] text-muted-foreground">{monthLabel(x.month, locale)}</span></div>))}
             </div>
             {summary.topVendors.length > 0 && (<><h3 className="mb-1.5 mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("topVendors")}</h3><ul className="space-y-1 text-sm">{summary.topVendors.slice(0, 3).map((v) => <li key={v.vendor} className="flex justify-between gap-2"><span className="truncate">{v.vendor}</span><span className="tabular-nums text-muted-foreground">{m(v.amount)}</span></li>)}</ul></>)}
           </div>
@@ -317,9 +317,9 @@ export default function ExpensesPage() {
                 <li key={e.id} className={cn("relative grid items-center gap-x-3 gap-y-1.5 border-b px-4 py-3 last:border-0 hover:bg-muted/40 lg:grid-cols-[32px_110px_minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1fr)_120px]", selected.has(e.id) && "bg-indigo-500/5")}>
                   <Checkbox className="absolute end-3 top-3 lg:static" checked={selected.has(e.id)} onCheckedChange={() => toggle(e.id)} aria-label={t("select", { name: e.vendor })} />
                   <span className="text-sm text-muted-foreground">{shortDate(e.date, locale)}</span>
-                  <span className="min-w-0"><span className="flex items-center gap-1.5"><span className="truncate font-medium">{e.vendor}</span>{e.paymentStatus === "UNPAID" && <Badge variant="outline" className="border-amber-500/40 text-[10px] text-amber-700 dark:text-amber-300">{t("unpaid")}</Badge>}{e.itcStatus === "ELIGIBLE" && <Badge variant="outline" className="border-emerald-500/40 text-[10px] text-emerald-700 dark:text-emerald-300">{t("credit")}</Badge>}
-                    {e.source !== "MANUAL" && e.source !== "IMPORT" && <Badge variant="outline" className="gap-1 text-[10px]">{e.source === "EMAIL" ? <Mail className="size-3" aria-hidden /> : e.source === "RECURRING" ? <Repeat className="size-3" aria-hidden /> : null}{e.poNumber && e.source === "PO" ? `PO ${e.poNumber}` : t(`source.${e.source}` as never)}</Badge>}
-                    {e.billable && <Badge variant="outline" className={cn("text-[10px]", e.billedInvoiceId ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-300" : "border-indigo-500/40 text-indigo-700 dark:text-indigo-300")}>{e.billedInvoiceId ? t("billable.billed") : t("billable.chip", { client: e.clientName ?? "" })}</Badge>}
+                  <span className="min-w-0"><span className="flex items-center gap-1.5"><span className="truncate font-medium">{e.vendor}</span>{e.paymentStatus === "UNPAID" && <Badge variant="outline" className="border-amber-500/40 text-[11px] text-amber-700 dark:text-amber-300">{t("unpaid")}</Badge>}{e.itcStatus === "ELIGIBLE" && <Badge variant="outline" className="border-emerald-500/40 text-[11px] text-emerald-700 dark:text-emerald-300">{t("credit")}</Badge>}
+                    {e.source !== "MANUAL" && e.source !== "IMPORT" && <Badge variant="outline" className="gap-1 text-[11px]">{e.source === "EMAIL" ? <Mail className="size-3" aria-hidden /> : e.source === "RECURRING" ? <Repeat className="size-3" aria-hidden /> : null}{e.poNumber && e.source === "PO" ? `PO ${e.poNumber}` : t(`source.${e.source}` as never)}</Badge>}
+                    {e.billable && <Badge variant="outline" className={cn("text-[11px]", e.billedInvoiceId ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-300" : "border-indigo-500/40 text-indigo-700 dark:text-indigo-300")}>{e.billedInvoiceId ? t("billable.billed") : t("billable.chip", { client: e.clientName ?? "" })}</Badge>}
                     {e.reconciled && <Landmark className="size-3.5 text-emerald-600" aria-label={t("bank.reconciled")} />}</span>{(e.description || e.vendorInvoiceNo) && <span className="block truncate text-xs text-muted-foreground">{[e.vendorInvoiceNo, e.description].filter(Boolean).join(" · ")}</span>}</span>
                   <span><Badge variant="secondary" className="max-w-full truncate font-normal">{catLabel(e.category)}</Badge></span>
                   <span className="font-medium tabular-nums lg:text-end">{m(e.amount)}{e.gstAmount > 0 && <span className="block text-xs font-normal text-muted-foreground">{t("incGst", { amount: m(e.gstAmount) })}</span>}</span>

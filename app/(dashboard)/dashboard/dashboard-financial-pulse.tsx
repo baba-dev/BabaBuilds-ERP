@@ -244,7 +244,7 @@ export function DashboardFinancialPulse({
                 <h4 className={tx(ty.cardTitle, "text-base")}>
                   {tr("reconciliation_progress", "Reconciliation Progress")}
                 </h4>
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${
                   isHealthy ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
                   : isModerate ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400"
                   : "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400"

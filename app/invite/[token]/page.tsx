@@ -24,7 +24,7 @@ export default async function InviteAcceptancePage({ params }: { params: Promise
 
   if (!invite) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
+      <div className="min-h-dvh flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-rose-500">Invalid or Expired Invite</h1>
           <p className="mt-2">This invitation uses an invalid token or has expired.</p>
@@ -36,7 +36,7 @@ export default async function InviteAcceptancePage({ params }: { params: Promise
   if (invite.expiresAt < new Date()) {
     // Optionally delete expired invite here
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
+      <div className="min-h-dvh flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-rose-500">Invite Expired</h1>
           <p className="mt-2">This invitation has expired. Please ask the sender for a new one.</p>
@@ -56,7 +56,7 @@ export default async function InviteAcceptancePage({ params }: { params: Promise
 
   if (!user || user.email !== invite.email) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
+      <div className="min-h-dvh flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-rose-500">Wrong Account</h1>
           <p className="mt-2">This invite was sent to {invite.email}, but you are signed in as {session.user.email}.</p>
@@ -80,7 +80,7 @@ export default async function InviteAcceptancePage({ params }: { params: Promise
 
   if (currentMemberCount >= maxUsers) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
+      <div className="min-h-dvh flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-rose-500">Workspace is Full</h1>
           <p className="mt-2">The workspace &quot;{invite.workspace.name}&quot; has reached its maximum user limit.</p>

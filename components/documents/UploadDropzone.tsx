@@ -178,7 +178,7 @@ export function UploadDropzone({
 
           <div className="flex flex-col sm:flex-row items-center gap-3 mt-4">
             {meterState?.label && (
-              <Badge variant={meterState.variant} className="uppercase tracking-wide text-[10px] shadow-sm">
+              <Badge variant={meterState.variant} className="uppercase tracking-wide text-[11px] shadow-sm">
                 {meterState.label}
               </Badge>
             )}

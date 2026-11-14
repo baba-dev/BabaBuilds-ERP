@@ -17,6 +17,7 @@ type WorkspaceSummary = {
   subscriptionStatus: string;
   subscriptionEndsAt: Date | null;
   billingProviderId: string | null;
+  billingProvider: string | null;
   subscriptionCancelAtPeriodEnd: boolean;
   subscriptionCancelEffectiveAt: Date | null;
   countryCode: string | null;
@@ -61,6 +62,7 @@ export default async function BillingSettingsPage() {
       subscriptionStatus: true,
       subscriptionEndsAt: true,
       billingProviderId: true,
+      billingProvider: true,
       subscriptionCancelAtPeriodEnd: true,
       subscriptionCancelEffectiveAt: true,
       countryCode: true,
@@ -80,6 +82,7 @@ export default async function BillingSettingsPage() {
     subscriptionStatus: workspace.subscriptionStatus,
     subscriptionEndsAt: workspace.subscriptionEndsAt,
     billingProviderId: workspace.billingProviderId,
+    billingProvider: workspace.billingProvider,
     subscriptionCancelAtPeriodEnd: workspace.subscriptionCancelAtPeriodEnd,
     subscriptionCancelEffectiveAt: workspace.subscriptionCancelEffectiveAt,
     countryCode: workspace.countryCode,

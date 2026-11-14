@@ -39,7 +39,7 @@ function SidebarBrand() {
             <span className="truncate text-lg tracking-tight text-white transition-colors hover:text-amber-300">
               {t("bababuilds_erp")}
             </span>
-            <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">
+            <span className="text-[11px] uppercase font-bold text-zinc-400 tracking-wider">
               FY {fy} • AY {ay}
             </span>
           </div>
@@ -227,7 +227,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <div className="flex h-full w-full max-h-screen flex-col gap-2 bg-gradient-to-b from-white/[0.03] to-transparent">
+      <div className="flex h-full w-full max-h-dvh flex-col gap-2 bg-gradient-to-b from-white/[0.03] to-transparent">
         <SidebarBrand />
       {(open || isMobile) && (
         <div className="px-4 pb-2">

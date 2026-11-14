@@ -25,9 +25,19 @@ const notoNaskhArabic = Noto_Naskh_Arabic({
 });
 
 export const viewport: Viewport = {
-  themeColor: '#0062ff',
+  // Status-bar / browser-chrome colour follows the app surface so the installed (TWA) app
+  // looks edge-to-edge in both themes. Zoom is intentionally NOT locked (accessibility).
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#09090b' },
+  ],
   width: 'device-width',
   initialScale: 1,
+  // Required for env(safe-area-inset-*) to be non-zero (notches, gesture bars, Android 15 edge-to-edge).
+  viewportFit: 'cover',
+  // Keep layout viewport stable while the on-screen keyboard is open; fixed bars stay put.
+  interactiveWidget: 'resizes-content',
+  colorScheme: 'light dark',
 };
 
 const SITE_URL = "https://erp.bababuilds.com";
@@ -122,7 +132,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: "BabaBuilds ERP",
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
   },
   formatDetection: {
     telephone: false,
@@ -275,7 +285,7 @@ export default async function RootLayout({
               <PWARegistration />
               <OfflineSyncBanner />
 
-              <div className="min-h-screen bg-surface-base text-foreground flex flex-col transition-colors duration-300 relative">
+              <div className="min-h-dvh bg-surface-base text-foreground flex flex-col transition-colors duration-300 relative">
                 {/* Background decorative blob elements - wrapped to not break sticky */}
                 <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-accent-strong/10 blur-[120px] rounded-full" />

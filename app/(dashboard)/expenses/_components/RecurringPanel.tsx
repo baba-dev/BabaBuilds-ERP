@@ -90,7 +90,7 @@ export function RecurringPanel({ currency, locale, canDelete, onChanged }: { cur
             </li>))}</ul>}
       </div>
 
-      <ResponsiveDialog open={open} onOpenChange={setOpen} title={editing ? t("recurring.editTitle") : t("recurring.newTitle")} description={t("recurring.formHelp")} desktopClassName="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+      <ResponsiveDialog open={open} onOpenChange={setOpen} title={editing ? t("recurring.editTitle") : t("recurring.newTitle")} description={t("recurring.formHelp")} desktopClassName="sm:max-w-xl max-h-[90dvh] overflow-y-auto">
         <form onSubmit={(e) => { e.preventDefault(); void save(); }} className="grid gap-4 sm:grid-cols-2" noValidate>
           <div><Label htmlFor="r-vendor" className="mb-1.5 block text-xs text-muted-foreground">{tc("vendor")} *</Label><Input id="r-vendor" className="h-10" value={form.vendor} maxLength={120} onChange={(e) => setForm({ ...form, vendor: e.target.value })} aria-invalid={Boolean(errors.vendor)} />{fe("vendor")}</div>
           <div><Label htmlFor="r-amount" className="mb-1.5 block text-xs text-muted-foreground">{t("form.amount", { currency })} *</Label><Input id="r-amount" inputMode="decimal" className="h-10 tabular-nums" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value.replace(/[^\d.,]/g, "") })} aria-invalid={Boolean(errors.amount)} />{fe("amount")}</div>

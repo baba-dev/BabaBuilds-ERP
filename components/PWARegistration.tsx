@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { markAndroidAppSession } from '@/lib/client/play-billing';
 
 type ExtendedServiceWorkerRegistration = ServiceWorkerRegistration & {
   sync?: {
@@ -38,6 +39,11 @@ async function registerOptionalCapabilities(registration: ExtendedServiceWorkerR
 }
 
 export default function PWARegistration() {
+  useEffect(() => {
+    // The Android app (TWA) is only identifiable on the very first navigation (document.referrer).
+    markAndroidAppSession();
+  }, []);
+
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production') {
       return;

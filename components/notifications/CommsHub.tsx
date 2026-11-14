@@ -92,7 +92,7 @@ const iconContainerClass =
   'flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 transition-colors group-hover:bg-indigo-100 group-hover:text-indigo-700 dark:bg-zinc-900 dark:text-zinc-300 dark:group-hover:bg-indigo-600/20 dark:group-hover:text-indigo-300';
 
 const badgeClass =
-  'inline-flex items-center rounded-full border border-zinc-300/80 bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-700 dark:border-zinc-700/70 dark:bg-zinc-800/70 dark:text-zinc-300';
+  'inline-flex items-center rounded-full border border-zinc-300/80 bg-zinc-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-700 dark:border-zinc-700/70 dark:bg-zinc-800/70 dark:text-zinc-300';
 
 function NotificationItem({ notification: n, onRead }: NotificationItemProps) {
   const accent = EVENT_ACCENT[n.eventType] ?? 'border-l-zinc-500';
@@ -245,7 +245,7 @@ function CommsHubInner({
           </TabsList>
         </div>
 
-        <div className="@container min-w-0 max-h-[60vh] overflow-x-hidden overflow-y-auto custom-scrollbar">
+        <div className="@container min-w-0 max-h-[60dvh] overflow-x-hidden overflow-y-auto custom-scrollbar">
           <TabsContent value="inbox" className={cn('mt-0 space-y-6 outline-none', contentPaddingClasses)}>
             <div className="flex items-center justify-between">
               <h3 className={typography.metadata}>Recent Notifications</h3>
@@ -360,8 +360,8 @@ function CommsHubInner({
       </Tabs>
 
       <div className={cn('flex items-center justify-between border-t border-zinc-200/80 bg-zinc-50/80 dark:border-zinc-800/50 dark:bg-white/[0.02]', isMobile ? 'px-4 py-3' : 'px-8 py-4')}>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">BabaBuilds ERP Core</p>
-        <p className="text-[10px] text-zinc-600">v2.4.0-stable</p>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-600">BabaBuilds ERP Core</p>
+        <p className="text-[11px] text-zinc-600">v2.4.0-stable</p>
       </div>
     </div>
   );

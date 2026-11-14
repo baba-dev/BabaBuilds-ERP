@@ -58,7 +58,7 @@ export default function PartnerPortalPage() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center gap-2 text-zinc-500">
+      <div className="flex min-h-[40dvh] items-center justify-center gap-2 text-zinc-500">
         <Loader2 className="h-5 w-5 animate-spin" /> Loading partner portal…
       </div>
     );

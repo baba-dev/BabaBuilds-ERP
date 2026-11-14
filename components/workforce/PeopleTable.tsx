@@ -152,7 +152,7 @@ export function PeopleTable({ employees, total, isLoading, onRefresh, department
                           </p>
                           <div className="flex items-center gap-2 mt-0.5">
                             {emp.employeeCode && (
-                              <span className="text-[10px] text-zinc-600 font-mono">{emp.employeeCode}</span>
+                              <span className="text-[11px] text-zinc-600 font-mono">{emp.employeeCode}</span>
                             )}
                             {emp.email && (
                               <span className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate flex items-center gap-1">
@@ -189,7 +189,7 @@ export function PeopleTable({ employees, total, isLoading, onRefresh, department
                         <DropdownMenuTrigger asChild>
                           <button
                             id={`emp-actions-${emp.id}`}
-                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-zinc-100 dark:hover:bg-white/10 transition-all"
+                            className="opacity-0 pointer-coarse:opacity-100 group-hover:opacity-100 p-1 rounded hover:bg-zinc-100 dark:hover:bg-white/10 transition-all"
                           >
                             <MoreHorizontal className="h-4 w-4 text-zinc-500 dark:text-zinc-400" />
                           </button>

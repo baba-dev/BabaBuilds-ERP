@@ -149,7 +149,7 @@ export function InvoiceDrawer({ invoiceId, locale, baseCurrency, reloadToken, on
 
               <section aria-labelledby="drawer-items">
                 <h3 id="drawer-items" className="mb-2 text-sm font-semibold">{t("items")}</h3>
-                <div className="overflow-hidden rounded-xl border border-border/70">
+                <div className="overflow-x-auto rounded-xl border border-border/70">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/40 text-xs text-muted-foreground">
                       <tr>
