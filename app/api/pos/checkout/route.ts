@@ -264,11 +264,14 @@ export async function POST(request: Request) {
           // An unregistered or composition-scheme seller must not collect GST.
           const posChargesGst = supplierChargesGst(await tx.businessProfile.findUnique({ where: { workspaceId }, select: { gstRegistrationType: true } }), walkInCountry);
           if (!resolvedClientId) {
-            let walkIn = await tx.client.findFirst({ where: { workspaceId, name: 'Walk-in Customer' } });
+            // The counter customer: hidden from the CRM, no invented email, and not counted toward plan limits.
+            let walkIn = await tx.client.findFirst({ where: { workspaceId, OR: [{ isWalkIn: true }, { name: 'Walk-in Customer' }] } });
             if (!walkIn) {
               walkIn = await tx.client.create({
-                data: { workspaceId, name: 'Walk-in Customer', email: 'walkin@example.com', address: '', country: walkInCountry },
+                data: { workspaceId, name: 'Walk-in Customer', address: '', country: walkInCountry, countryCode: walkInCountry, isWalkIn: true, source: 'POS', isExport: false },
               });
+            } else if (!walkIn.isWalkIn) {
+              walkIn = await tx.client.update({ where: { id: walkIn.id }, data: { isWalkIn: true, source: 'POS' } });
             }
             resolvedClientId = walkIn.id;
           }

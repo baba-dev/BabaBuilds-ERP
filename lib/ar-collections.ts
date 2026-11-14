@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/mailer';
 import { buildPaymentReminderEmail } from '@/lib/notifications/transactional-email-templates';
 import { logActivity } from '@/lib/security/activity-log';
+import { getClientRecipients } from '@/lib/clients/service';
 
 /** Closed set stored on Invoice.followUpStatus — keep in sync with UI selects. */
 export const FOLLOW_UP_STATUSES = [
@@ -327,7 +328,9 @@ export async function runReminderAutomation(
     });
     if (!invoice) continue;
 
-    const to = invoice.client?.email?.trim();
+    // Contacts that asked for reminders get them; otherwise the client's own address.
+    const recipients = invoice.clientId ? await getClientRecipients(invoice.clientId, workspaceId, 'reminder') : [];
+    const to = recipients.join(', ');
     if (!to) {
       skippedNoClientEmail += 1;
       continue;
@@ -451,7 +454,8 @@ export async function sendArReminderEmailForInvoice(
   });
   if (!invoice) return { ok: false, code: 'NOT_FOUND' };
 
-  const to = invoice.client?.email?.trim();
+  const recipients = invoice.clientId ? await getClientRecipients(invoice.clientId, workspaceId, 'reminder') : [];
+  const to = recipients.join(', ');
   if (!to) return { ok: false, code: 'NO_CLIENT_EMAIL' };
 
   const outstanding = resolveOutstandingAmount(invoice);

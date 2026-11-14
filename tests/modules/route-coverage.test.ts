@@ -13,7 +13,7 @@ const MODULES: Array<{ key: string; dirs: string[]; guard: RegExp; allow?: Recor
   { key: "WORKFORCE", dirs: ["app/api/workforce"], guard: DIRECT },
   { key: "PAYROLL", dirs: ["app/api/payroll"], guard: /requirePayrollModuleAndAction|requirePayrollSettingsAccess|isModuleEnabled\(|requireModule\(/ },
   { key: "DOCUMENTS", dirs: ["app/api/documents"], guard: /requireDocumentsModule|requireModule\(|isModuleEnabled\(|DOCUMENTS/ },
-  { key: "CASH_FLOW", dirs: ["app/api/cash-flow"], guard: /requireCashFlowModule/ },
+  { key: "CASH_FLOW", dirs: ["app/api/cash-flow"], guard: /requireCashFlowAccess/ },
   { key: "AR_COLLECTIONS", dirs: ["app/api/ar-collections"], guard: DIRECT },
   { key: "REPORTING_CENTER", dirs: ["app/api/reporting"], guard: /resolveReportingContext|requireModule\(/ },
   { key: "IMPORT_MANAGER", dirs: ["app/api/imports"], guard: /requireImportContext/ },
@@ -51,7 +51,7 @@ describe("the shared guards really check the module", () => {
   const HELPERS: Array<[string, RegExp]> = [
     ["app/api/payroll/_context.ts", /isModuleEnabled\(workspaceId, 'PAYROLL'\)/],
     ["app/api/payroll/settings/_shared.ts", /isModuleEnabled\(workspaceId, 'PAYROLL'\)/],
-    ["app/api/cash-flow/_module.ts", /requireModule\(workspaceId, "CASH_FLOW"\)/],
+    ["lib/cash-flow/access.ts", /requireModule\(workspaceId, "CASH_FLOW"\)/],
     ["lib/imports/core/auth.ts", /requireModule\(membership\.workspaceId, 'IMPORT_MANAGER'\)/],
     ["app/api/reporting/_shared.ts", /requireModule\(wu\.workspaceId, 'REPORTING_CENTER'\)/],
     ["app/api/email-billing/_lib/auth.ts", /MIAB_BILLING/],

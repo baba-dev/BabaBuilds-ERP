@@ -147,7 +147,7 @@ export async function loadGstBooks(profile: GstProfile, from: Date, to: Date): P
     }),
     // Bills are loaded from 200 days before the window so rule 37 (180-day payment) can see the ones that lapse inside it.
     prisma.expense.findMany({
-      where: { workspaceId, date: { gte: new Date(from.getTime() - 200 * 86400000), lte: to }, itcStatus: { not: "NONE" } },
+      where: { workspaceId, approvalStatus: "APPROVED", date: { gte: new Date(from.getTime() - 200 * 86400000), lte: to }, itcStatus: { not: "NONE" } },
       orderBy: { date: "asc" },
     }),
     prisma.gstAdjustment.findMany({ where: { workspaceId, periodKey: { gte: monthKeyOf(from), lte: monthKeyOf(to) } } }),

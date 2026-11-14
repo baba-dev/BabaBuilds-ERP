@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireReconAccess } from "@/lib/reconciliation/access";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  const workspaceId = (session as { workspaceId?: string })?.workspaceId;
-  if (!workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requireReconAccess("reconciliation.import");
+  if (!access.ok) return access.response;
+  const workspaceId = access.ctx.workspaceId;
 
   const accounts = await prisma.bankAccount.findMany({
     where: { workspaceId },

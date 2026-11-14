@@ -43,7 +43,7 @@ export async function loadYearFigures(workspaceId: string, startYear: number): P
   const [invoices, notes, expenses, payments, wh, payroll] = await Promise.all([
     prisma.invoice.findMany({ where: { workspaceId, status: { not: "VOID" }, invoiceDate: { gte: start, lte: end } }, select: { subtotal: true, grandTotal: true, totalAmount: true, taxAmount: true, exchangeRate: true } }),
     prisma.creditNote.findMany({ where: { workspaceId, issuedAt: { gte: start, lte: end }, invoice: { invoiceDate: { lt: start } } }, select: { amount: true, taxAmount: true, invoice: { select: { exchangeRate: true } } } }),
-    prisma.expense.findMany({ where: { workspaceId, date: { gte: start, lte: end } }, select: { amount: true, itcStatus: true, igstAmount: true, cgstAmount: true, sgstAmount: true, cessAmount: true } }),
+    prisma.expense.findMany({ where: { workspaceId, approvalStatus: "APPROVED", date: { gte: start, lte: end } }, select: { amount: true, itcStatus: true, igstAmount: true, cgstAmount: true, sgstAmount: true, cessAmount: true } }),
     prisma.invoicePayment.findMany({ where: { workspaceId, receivedAt: { gte: start, lte: end }, invoice: { status: { not: "VOID" } } }, select: { amount: true, invoice: { select: { subtotal: true, grandTotal: true, totalAmount: true, taxAmount: true, exchangeRate: true } } } }),
     prisma.withholdingEvent.findMany({ where: { workspaceId, deductedAt: { gte: start, lte: end } }, select: { sourceType: true, withheldAmount: true, depositedAt: true } }),
     prisma.payrollRun.aggregate({ where: { workspaceId, status: "POSTED", period: { startDate: { gte: start, lte: end } } }, _sum: { totalEarnings: true, totalEmployerCosts: true } }),
@@ -91,11 +91,11 @@ export async function loadReadinessCounts(gstProfile: GstProfile, startYear: num
   const inFy = { gte: start, lte: end };
   const [books, msmeBills, salesEvidence, purchaseTotal, noReceipt, itcMissing, bankTotal, bankOpen, overdue, tds, employees, periods, firstEver] = await Promise.all([
     loadGstBooks(gstProfile, start, end),
-    prisma.expense.findMany({ where: { workspaceId, vendorMsme: { in: ["MICRO", "SMALL"] }, date: { lte: end } }, select: { id: true, vendor: true, date: true, amount: true, paymentStatus: true, paidAt: true, vendorMsme: true, vendorUdyam: true, vendorAgreedDays: true }, take: 1000 }),
+    prisma.expense.findMany({ where: { workspaceId, approvalStatus: "APPROVED", vendorMsme: { in: ["MICRO", "SMALL"] }, date: { lte: end } }, select: { id: true, vendor: true, date: true, amount: true, paymentStatus: true, paidAt: true, vendorMsme: true, vendorUdyam: true, vendorAgreedDays: true }, take: 1000 }),
     prisma.invoice.count({ where: { workspaceId, status: { not: "VOID" }, invoiceDate: inFy, pdfPath: "", NOT: { source: "POS" } } }),
-    prisma.expense.count({ where: { workspaceId, date: inFy } }),
-    prisma.expense.count({ where: { workspaceId, date: inFy, receiptUrl: null } }),
-    prisma.expense.count({ where: { workspaceId, date: inFy, itcStatus: "ELIGIBLE", OR: [{ vendorGstin: null }, { vendorInvoiceNo: null }] } }),
+    prisma.expense.count({ where: { workspaceId, approvalStatus: "APPROVED", date: inFy } }),
+    prisma.expense.count({ where: { workspaceId, approvalStatus: "APPROVED", date: inFy, receiptUrl: null } }),
+    prisma.expense.count({ where: { workspaceId, approvalStatus: "APPROVED", date: inFy, itcStatus: "ELIGIBLE", OR: [{ vendorGstin: null }, { vendorInvoiceNo: null }] } }),
     prisma.bankTransaction.count({ where: { workspaceId, date: inFy, isInternalTransfer: false } }),
     prisma.bankTransaction.count({ where: { workspaceId, date: inFy, isInternalTransfer: false, isReconciled: false } }),
     prisma.invoice.findMany({ where: { workspaceId, status: { in: ["PENDING", "PARTIALLY_PAID"] }, dueDate: { lt: now } }, select: { grandTotal: true, totalAmount: true, amountReceived: true, exchangeRate: true } }),

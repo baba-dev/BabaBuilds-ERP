@@ -66,7 +66,7 @@ export async function GET(request: Request) {
     }
     let expenseCursor: string | undefined;
     for (;;) {
-      const expenses = await prisma.expense.findMany({ where: { workspaceId, date: { gte: from, lte: to } }, orderBy: [{ date: "asc" }, { id: "asc" }], take: BATCH, ...(expenseCursor ? { cursor: { id: expenseCursor }, skip: 1 } : {}), select: { id: true, vendor: true, vendorInvoiceNo: true, date: true, receiptUrl: true } });
+      const expenses = await prisma.expense.findMany({ where: { workspaceId, approvalStatus: "APPROVED", date: { gte: from, lte: to } }, orderBy: [{ date: "asc" }, { id: "asc" }], take: BATCH, ...(expenseCursor ? { cursor: { id: expenseCursor }, skip: 1 } : {}), select: { id: true, vendor: true, vendorInvoiceNo: true, date: true, receiptUrl: true } });
       if (expenses.length === 0) break;
       expenseCursor = expenses.at(-1)?.id;
       for (const e of expenses) {

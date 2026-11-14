@@ -490,7 +490,7 @@ export async function POST(request: Request) {
         success: true,
         flow,
         message: 'CSV file is ready for reconciliation. Continue in Reconciliation.',
-        redirectTo: '/reconciliation',
+        redirectTo: '/reconciliation/import',
       });
     }
 
