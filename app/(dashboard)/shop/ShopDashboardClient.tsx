@@ -528,7 +528,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
           <CardHeader className="pb-3 flex-row items-start justify-between gap-4 space-y-0 cursor-pointer" onClick={() => setIsStorefrontContentOpen((v) => !v)}>
             <CardTitle className="text-sm font-extrabold uppercase tracking-wider text-zinc-700 dark:text-zinc-200">Branding</CardTitle>
             {!abilities.canManageSettings ? (
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2 py-1 rounded-md">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-zinc-500 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2 py-1 rounded-md">
                 <Lock className="w-3 h-3" /> Read-only
               </span>
             ) : null}
@@ -608,7 +608,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
                 <ChevronDown className={`ml-1 h-3.5 w-3.5 transition-transform ${isStorefrontContentExpanded ? "rotate-180" : ""}`} />
               </Button>
               {!abilities.canManageContent ? (
-                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-500 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2 py-1 rounded-md">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-zinc-500 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 px-2 py-1 rounded-md">
                   <Lock className="w-3 h-3" /> Read-only
                 </span>
               ) : null}
@@ -893,7 +893,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead className="border-b border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/50">
-                  <tr>{["Type", "Date", "Buyer / Visibility", "Products", "Amount", "Channel", "Status", "Actions"].map((h) => (<th key={h} className="px-4 py-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{h}</th>))}</tr>
+                  <tr>{["Type", "Date", "Buyer / Visibility", "Products", "Amount", "Channel", "Status", "Actions"].map((h) => (<th key={h} className="px-4 py-3 text-[11px] font-bold text-zinc-400 uppercase tracking-widest">{h}</th>))}</tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
                   {filteredRows.map((row) => {
@@ -903,22 +903,22 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
                       const orderAmount = Number(o.amount || 0);
                       return (
                         <tr key={`order-${o.id}`} className="hover:bg-zinc-50/80 dark:hover:bg-zinc-900/50 transition-colors">
-                          <td className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Order</td>
+                          <td className="px-4 py-4 text-[11px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Order</td>
                           <td className="px-4 py-4 text-xs text-zinc-500 whitespace-nowrap">{format(new Date(o.createdAt), "dd MMM yyyy")}</td>
                           <td className="px-4 py-4"><p className="font-bold text-[13px] text-zinc-900 dark:text-zinc-100">{o.buyerName}</p><p className="text-[11px] text-zinc-500">{o.buyerEmail}</p></td>
                           <td className="px-4 py-4 text-[13px] font-semibold text-zinc-700 dark:text-zinc-300 max-w-[260px] truncate">
                             {o.items.map((item) => `${item.productName} x${item.quantity}`).join(", ")}
                           </td>
                           <td className="px-4 py-4 font-bold text-[13px] text-zinc-800 dark:text-zinc-200">{fCurrency(orderAmount)}</td>
-                          <td className="px-4 py-4"><span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">{o.gateway || "—"}</span></td>
-                          <td className="px-4 py-4"><span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${sc.className}`}>{sc.icon} {sc.label}</span></td>
+                          <td className="px-4 py-4"><span className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">{o.gateway || "—"}</span></td>
+                          <td className="px-4 py-4"><span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide ${sc.className}`}>{sc.icon} {sc.label}</span></td>
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-2">
                               <select
                                 value={o.status}
                                 disabled={!abilities.canManageOrders}
                                 onChange={(e) => updateOrderStatus(o.id, e.target.value)}
-                                className="text-[10px] font-bold uppercase border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                                className="text-[11px] font-bold uppercase border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 {["PENDING", "PAID", "FAILED", "REFUNDED"].map((s) => (<option key={s} value={s}>{s}</option>))}
                               </select>
@@ -940,7 +940,7 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
                     const productAmount = Number(p.baselinePrice || 0);
                     return (
                       <tr key={`catalog-${p.id}`} className="hover:bg-zinc-50/80 dark:hover:bg-zinc-900/50 transition-colors">
-                        <td className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-sky-600 dark:text-sky-400">Catalog</td>
+                        <td className="px-4 py-4 text-[11px] font-bold uppercase tracking-widest text-sky-600 dark:text-sky-400">Catalog</td>
                         <td className="px-4 py-4 text-xs text-zinc-500 whitespace-nowrap">
                           {format(new Date(p.updatedAt || p.createdAt || Date.now()), "dd MMM yyyy")}
                         </td>
@@ -952,14 +952,14 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
                           <p className="text-[11px] text-zinc-500 max-w-[260px] truncate">{p.description || p.category || "No description provided"}</p>
                         </td>
                         <td className="px-4 py-4 font-bold text-[13px] text-zinc-800 dark:text-zinc-200">{fCurrency(productAmount)}</td>
-                        <td className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">Catalog</td>
+                        <td className="px-4 py-4 text-[11px] font-bold uppercase tracking-widest text-zinc-500">Catalog</td>
                         <td className="px-4 py-4">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${Number(p.currentStock ?? 0) > 0 ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-400" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"}`}>
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide ${Number(p.currentStock ?? 0) > 0 ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-400" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"}`}>
                             {Number(p.currentStock ?? 0) > 0 ? <Check className="w-3 h-3" /> : <Clock className="w-3 h-3" />} {Number(p.currentStock ?? 0) > 0 ? "In Stock" : "Out of Stock"}
                           </span>
                         </td>
                         <td className="px-4 py-4">
-                          <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase tracking-widest" onClick={() => window.location.assign("/inventory")}>
+                          <Button variant="outline" size="sm" className="h-7 text-[11px] uppercase tracking-widest" onClick={() => window.location.assign("/inventory")}>
                             Manage
                           </Button>
                         </td>

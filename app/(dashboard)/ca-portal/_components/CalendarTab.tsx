@@ -101,7 +101,7 @@ export function CalendarTab({ data, onOpen, goto }: { data: Overview; onOpen: (i
                         {i.amount ? ` · ${c(i.amount)}` : ""}
                       </p>
                       {heldBy ? <p className="mt-1 text-xs font-medium text-rose-600 dark:text-rose-300">{t("heldBy", { what: Array.from(new Set(heldBy)).map((code) => tShort(code)).slice(0, 2).join(" · ") })}</p> : null}
-                      {i.ownerUserId && owners.get(i.ownerUserId) ? <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="flex size-4 items-center justify-center rounded-full bg-indigo-100 text-[9px] font-bold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200" aria-hidden>{initials(owners.get(i.ownerUserId) ?? "")}</span>{owners.get(i.ownerUserId)}</p> : null}
+                      {i.ownerUserId && owners.get(i.ownerUserId) ? <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground"><span className="flex size-4 items-center justify-center rounded-full bg-indigo-100 text-[11px] font-bold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200" aria-hidden>{initials(owners.get(i.ownerUserId) ?? "")}</span>{owners.get(i.ownerUserId)}</p> : null}
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1.5 text-end text-xs">
                       <StateChip state={i.state} />

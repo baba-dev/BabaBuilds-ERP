@@ -64,19 +64,19 @@ export function RoiCalculator() {
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
+            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-zinc-500">
               {isArabic ? "إجمالي المبيعات الشهرية" : "Monthly GMV"}
             </p>
             <p className="mt-1 text-lg font-black text-zinc-900 dark:text-zinc-100">₹{result.monthlyGross.toLocaleString("en-IN")}</p>
           </div>
           <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
+            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-zinc-500">
               {isArabic ? "العمولة الشهرية" : "Monthly commission"}
             </p>
             <p className="mt-1 text-lg font-black text-emerald-700 dark:text-emerald-300">₹{result.monthlyCommission.toLocaleString("en-IN")}</p>
           </div>
           <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
+            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-zinc-500">
               {isArabic ? "العمولة السنوية" : "Yearly commission"}
             </p>
             <p className="mt-1 text-lg font-black text-indigo-700 dark:text-indigo-300">₹{result.yearlyCommission.toLocaleString("en-IN")}</p>

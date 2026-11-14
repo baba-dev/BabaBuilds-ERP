@@ -22,7 +22,7 @@ export function TaxScopeNotice({ status }: { status: CountryPackVerificationStat
       <div className="flex items-start gap-3">
         <Icon className="mt-0.5 h-4 w-4 shrink-0" />
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.16em]">{statusLabel}</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.16em]">{statusLabel}</p>
           <p className="mt-1 text-xs leading-relaxed">{messages[status]}</p>
         </div>
       </div>

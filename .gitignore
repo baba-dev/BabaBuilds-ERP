@@ -59,3 +59,12 @@ eslint_report*.txt
 
 # Files written by dev-server runs (generated PDFs, uploads)
 /private_uploads/
+
+# Android / Play signing material — never commit
+/android/*.keystore
+/android/*.jks
+/android/signing.properties
+/android/build/
+/android/app-release-*
+/android/*.aab
+/android/*.apk

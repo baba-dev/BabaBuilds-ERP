@@ -186,7 +186,7 @@ export default function LandingFeaturePillars() {
                           <Icon className={cn("h-5 w-5", colors.color)} strokeWidth={2.25} />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-body">
+                          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-body">
                             {tp1(`featurePriorities.${FEATURE_PRIORITY_KEY[key]}`)}
                           </p>
                           <p className="font-bold text-foreground">{t(`${key}.title`)}</p>

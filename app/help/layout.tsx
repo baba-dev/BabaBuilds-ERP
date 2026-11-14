@@ -21,7 +21,7 @@ export default async function HelpLayout({
   const docs = getAllDocs();
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex">
+    <div className="min-h-dvh bg-zinc-50 dark:bg-zinc-950 flex">
       <HelpSidebar docs={docs} />
 
       {/* Main content */}

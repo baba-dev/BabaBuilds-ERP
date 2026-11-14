@@ -179,9 +179,9 @@ export default function InventoryHub() {
       className: "px-2 py-4 whitespace-nowrap text-xs font-bold",
       cell: (p) => {
         if (p.currentStock === 0) return <span className="text-rose-600 text-[11px] font-medium tracking-wide">Out of Stock</span>;
-        if (p.currentStock <= (p.safetyStock / 2)) return <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] tracking-wide">Critical</span>;
-        if (p.currentStock <= p.safetyStock) return <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-400 text-[10px] tracking-wide">Low Stock</span>;
-        return <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-400 text-[10px] tracking-wide">In Stock</span>;
+        if (p.currentStock <= (p.safetyStock / 2)) return <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-rose-600 text-white text-[11px] tracking-wide">Critical</span>;
+        if (p.currentStock <= p.safetyStock) return <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-400 text-[11px] tracking-wide">Low Stock</span>;
+        return <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-400 text-[11px] tracking-wide">In Stock</span>;
       },
     },
     {
@@ -217,7 +217,7 @@ export default function InventoryHub() {
       kpiCard={
         <Card className="border-emerald-200/60 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-50/80 to-white dark:from-emerald-950/30 dark:to-zinc-900/80 shadow-sm">
           <CardContent className="px-5 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700/80 dark:text-emerald-300/80">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-700/80 dark:text-emerald-300/80">
               Total Value
             </p>
             <p className="text-2xl font-black tracking-tight text-emerald-700 dark:text-emerald-300">
@@ -312,7 +312,7 @@ export default function InventoryHub() {
                 <thead className="border-b border-zinc-200/80 dark:border-zinc-800/80">
                   <tr>
                     {productColumns.map(col => (
-                      <th key={col.id as string} className="px-4 py-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest bg-transparent">
+                      <th key={col.id as string} className="px-4 py-3 text-[11px] font-bold text-zinc-400 uppercase tracking-widest bg-transparent">
                         {col.header}
                       </th>
                     ))}

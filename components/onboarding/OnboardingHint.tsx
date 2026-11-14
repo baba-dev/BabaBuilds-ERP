@@ -43,7 +43,7 @@ export function OnboardingHint({
             </Tooltip>
           </TooltipProvider>
         </div>
-        <Button size="sm" variant="outline" className="h-7 text-[10px] font-bold uppercase tracking-wider" onClick={() => void completeStep(stepId)}>
+        <Button size="sm" variant="outline" className="h-7 text-[11px] font-bold uppercase tracking-wider" onClick={() => void completeStep(stepId)}>
           Done
         </Button>
       </div>

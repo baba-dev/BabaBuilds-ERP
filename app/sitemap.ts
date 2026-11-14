@@ -28,6 +28,7 @@ const STATIC_ROUTES: Array<{
   { route: '/reseller', changeFrequency: 'monthly', priority: 0.75 },
   { route: '/reseller/partner-kit', changeFrequency: 'monthly', priority: 0.65 },
   { route: '/tax-engine-scope', changeFrequency: 'monthly', priority: 0.6 },
+  { route: '/delete-account', changeFrequency: 'yearly', priority: 0.3 },
   { route: '/privacy', changeFrequency: 'monthly', priority: 0.35 },
   { route: '/terms', changeFrequency: 'monthly', priority: 0.35 },
   { route: '/refund-cancellation', changeFrequency: 'monthly', priority: 0.35 },

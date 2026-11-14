@@ -24,7 +24,7 @@ export async function ModuleUnavailable({ moduleKey, reason }: Props) {
   const Icon = needsPlan ? Lock : PauseCircle;
 
   return (
-    <div className="min-h-[60vh] p-4 md:p-8">
+    <div className="min-h-[60dvh] p-4 md:p-8">
       <section
         aria-labelledby="module-unavailable-title"
         className="mx-auto max-w-2xl rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"

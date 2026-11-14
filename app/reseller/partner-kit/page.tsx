@@ -51,7 +51,7 @@ const kitAssets = [
 
 export default function ResellerPartnerKitPage() {
   return (
-    <div className="min-h-screen bg-surface-base text-foreground">
+    <div className="min-h-dvh bg-surface-base text-foreground">
       <LandingNavbar />
       <main className="pt-28">
         <section className="mx-auto max-w-7xl px-6 pb-14">

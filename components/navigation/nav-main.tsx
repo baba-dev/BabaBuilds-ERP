@@ -53,7 +53,7 @@ export function NavMain({ preferences, pinError, enabledModules, grantedPermissi
           href={item.path}
           onClick={() => onNavigate(item.key as Exclude<SidebarItemId, "settings">)}
           className={cn(
-            "flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2 text-zinc-200 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500",
+            "flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2 text-zinc-200 md:min-h-0 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500",
             isActive
               ? "bg-gradient-to-br from-orange-600 to-amber-600 text-white shadow-md shadow-orange-950/25"
               : "hover:bg-white/10 hover:text-white",
@@ -68,7 +68,7 @@ export function NavMain({ preferences, pinError, enabledModules, grantedPermissi
         {(open || isMobile) && (
           <button
             type="button"
-            className="rounded-md p-1 text-zinc-400 transition hover:bg-white/10 hover:text-zinc-100"
+            className="flex size-11 items-center justify-center rounded-md text-zinc-400 transition hover:bg-white/10 hover:text-zinc-100 md:size-auto md:p-1"
             onClick={() => onTogglePin(item.key as Exclude<SidebarItemId, "settings">, !isPinned)}
             aria-label={isPinned ? t("unpinItem", { item: t(item.key) }) : t("pinItem", { item: t(item.key) })}
             title={isPinned ? t("unpinItem", { item: t(item.key) }) : t("pinItem", { item: t(item.key) })}
@@ -76,7 +76,7 @@ export function NavMain({ preferences, pinError, enabledModules, grantedPermissi
             {isPinned ? (
               <PinOff className="h-3.5 w-3.5" />
             ) : (
-              <Pin className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100" />
+              <Pin className="h-3.5 w-3.5 opacity-60 pointer-coarse:opacity-100 group-hover:opacity-100" />
             )}
           </button>
         )}

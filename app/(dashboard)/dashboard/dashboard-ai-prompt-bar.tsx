@@ -73,13 +73,13 @@ export function DashboardAIPromptBar() {
              <div className="flex items-center justify-center w-5 h-5 rounded-full bg-orange-500 dark:bg-orange-600 text-white shadow-lg shadow-orange-500/20">
               <Sparkles className="w-3 h-3" />
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500">
               Ask BabaBuilds AI
             </p>
           </div>
           <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-zinc-700/50">
             <Command className="w-2.5 h-2.5 text-zinc-400" />
-            <span className="text-[9px] font-bold text-zinc-500 tracking-tighter">AI READY</span>
+            <span className="text-[11px] font-bold text-zinc-500 tracking-tighter">AI READY</span>
           </div>
         </div>
 
@@ -138,7 +138,7 @@ export function DashboardAIPromptBar() {
               key={chip.label}
               onClick={() => handleChipClick(chip)}
               className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-bold uppercase tracking-wider transition-all duration-200",
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-bold uppercase tracking-wider transition-all duration-200",
                 "bg-white dark:bg-zinc-900/50 border-zinc-200/60 dark:border-zinc-800/60 text-zinc-500",
                 "hover:border-orange-500/30 hover:bg-orange-50/50 dark:hover:bg-orange-500/10 hover:text-orange-600 dark:hover:text-orange-400"
               )}
@@ -151,7 +151,7 @@ export function DashboardAIPromptBar() {
                 : chip.label}
             </button>
           ))}
-          <div className="ml-auto text-[9px] font-bold text-zinc-400/60 uppercase tracking-tighter">
+          <div className="ml-auto text-[11px] font-bold text-zinc-400/60 uppercase tracking-tighter">
             Query runs automatically
           </div>
         </div>

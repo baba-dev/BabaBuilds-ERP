@@ -54,13 +54,13 @@ export function InventoryDetailSheet({ open, onOpenChange, product }: InventoryD
 
         <div className="grid grid-cols-2 gap-4 mb-8">
           <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 mb-1">Current Stock</p>
+            <p className="text-[11px] uppercase tracking-widest font-bold text-zinc-500 mb-1">Current Stock</p>
             <p className={`text-3xl font-black ${product.currentStock === 0 ? 'text-rose-500' : 'text-zinc-900 dark:text-zinc-50'}`}>
               {product.currentStock} <span className="text-sm font-medium text-zinc-400">{product.unit || 'pcs'}</span>
             </p>
           </div>
           <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 mb-1">Unit Cost</p>
+            <p className="text-[11px] uppercase tracking-widest font-bold text-zinc-500 mb-1">Unit Cost</p>
             <p className="text-xl font-black text-indigo-600 dark:text-indigo-400 mt-2">
               {fCurrency(product.costPrice)}
             </p>
@@ -97,7 +97,7 @@ export function InventoryDetailSheet({ open, onOpenChange, product }: InventoryD
                   </div>
                   <div>
                     <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{mov.reason || 'Manual Adjustment'}</p>
-                    <p className="text-[10px] uppercase font-bold tracking-wider text-zinc-500 mt-1">{format(new Date(mov.createdAt), 'dd MMM yyyy, HH:mm')}</p>
+                    <p className="text-[11px] uppercase font-bold tracking-wider text-zinc-500 mt-1">{format(new Date(mov.createdAt), 'dd MMM yyyy, HH:mm')}</p>
                   </div>
                   <div className={`font-black ${mov.quantity > 0 ? 'text-emerald-600' : mov.quantity < 0 ? 'text-rose-600' : 'text-zinc-500'}`}>
                     {mov.quantity > 0 ? '+' : ''}{mov.quantity}

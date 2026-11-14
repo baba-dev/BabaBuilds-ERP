@@ -101,7 +101,7 @@ export default function PricingSection() {
                   label: (
                     <span className="flex items-center gap-2">
                       {tp("billing.annually")}
-                      <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] uppercase tracking-tighter text-emerald-600 dark:text-emerald-400">
+                      <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] uppercase tracking-tighter text-emerald-600 dark:text-emerald-400">
                         {tp("billing.bestValue")}
                       </span>
                     </span>

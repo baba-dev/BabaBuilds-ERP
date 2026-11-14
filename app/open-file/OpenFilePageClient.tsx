@@ -121,7 +121,7 @@ export default function OpenFilePageClient() {
   const isProcessing = state === 'processing';
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8 flex items-center justify-center">
+    <div className="min-h-dvh bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8 flex items-center justify-center">
       <Card className="max-w-xl w-full border-zinc-200 dark:border-zinc-800">
         <CardHeader className="space-y-1.5">
           <CardTitle className="text-2xl">Open file import</CardTitle>

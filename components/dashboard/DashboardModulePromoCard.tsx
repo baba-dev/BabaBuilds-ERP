@@ -82,7 +82,7 @@ export function DashboardModulePromoCard({
                   <Icon className="w-5 h-5" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-black uppercase tracking-[0.18em] text-orange-600 dark:text-orange-400 flex items-center gap-1">
+                  <span className="text-[11px] font-black uppercase tracking-[0.18em] text-orange-600 dark:text-orange-400 flex items-center gap-1">
                     <Sparkles className="w-3 h-3 text-orange-500 animate-pulse" />
                     Optional Suite
                   </span>
@@ -100,7 +100,7 @@ export function DashboardModulePromoCard({
 
             {/* Premium Features List */}
             <div className="space-y-2 pt-1 border-t border-zinc-200/50 dark:border-zinc-800/50">
-              <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+              <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
                 Unlocks Capabilities:
               </p>
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">

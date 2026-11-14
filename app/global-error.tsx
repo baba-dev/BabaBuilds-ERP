@@ -60,7 +60,7 @@ export default function GlobalError({
   return (
     <html>
       <body className="bg-slate-50 dark:bg-slate-950">
-        <main className="flex items-center justify-center min-h-screen w-full p-4">
+        <main className="flex items-center justify-center min-h-dvh w-full p-4">
           <div className="mx-auto w-full max-w-lg rounded-xl border bg-white dark:bg-slate-900 shadow-xl overflow-hidden">
             
             <div className="bg-red-50 dark:bg-red-950/30 px-6 py-4 border-b flex items-center gap-3">

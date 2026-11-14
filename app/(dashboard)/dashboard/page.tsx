@@ -454,11 +454,11 @@ export default function Dashboard() {
   
 
   if (isInitialLoad) {
-    return <PageLoadingState title={tr("loading", "Loading dashboard")} description={tr("loading_desc", "Preparing command center")} className="min-h-screen" />;
+    return <PageLoadingState title={tr("loading", "Loading dashboard")} description={tr("loading_desc", "Preparing command center")} className="min-h-app" />;
   }
 
   if (error && Object.keys(data).length === 0) {
-    return <PageErrorState title={tr("sync_issue_title", "Dashboard unavailable")} description={error} className="min-h-screen" onRetry={() => loadAllData(selectedFy)} />;
+    return <PageErrorState title={tr("sync_issue_title", "Dashboard unavailable")} description={error} className="min-h-app" onRetry={() => loadAllData(selectedFy)} />;
   }
 
   return (
@@ -758,7 +758,7 @@ export default function Dashboard() {
                           </Badge>
                         </div>
                         {toInvoiceStatus(invoice.status) === INVOICE_STATUS.PAID ? (
-                          <Badge className="mt-2 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-[0.16em]">
+                          <Badge className="mt-2 bg-emerald-600 text-white text-[11px] font-black uppercase tracking-[0.16em]">
                             PAID
                           </Badge>
                         ) : null}

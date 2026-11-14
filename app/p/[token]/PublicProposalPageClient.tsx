@@ -435,7 +435,7 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
       )}
 
       <Dialog open={acceptOpen} onOpenChange={(open) => !busy && setAcceptOpen(open)}>
-        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
+        <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{t("accept.title")}</DialogTitle>
             <DialogDescription>{t("accept.description", { total: fmt(totals.total) })}</DialogDescription>

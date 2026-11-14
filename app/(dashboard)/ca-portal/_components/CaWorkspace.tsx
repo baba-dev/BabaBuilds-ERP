@@ -53,8 +53,8 @@ export function CaWorkspace() {
           {tab === k ? <motion.span layoutId="ca-tab" className="absolute inset-0 rounded-xl bg-indigo-50 ring-1 ring-indigo-200/70 dark:bg-indigo-500/15 dark:ring-indigo-400/20" transition={{ type: "spring", stiffness: 420, damping: 34 }} /> : null}
           <span className="relative inline-flex items-center gap-1.5">
             {t(`tabs.${k}`)}
-            {k === "readiness" && blockers > 0 ? <span className="rounded-full bg-rose-500 px-1.5 text-[10px] font-bold leading-4 text-white">{blockers}</span> : null}
-            {k === "requests" && openRequests > 0 ? <span className="rounded-full bg-amber-500 px-1.5 text-[10px] font-bold leading-4 text-white">{openRequests}</span> : null}
+            {k === "readiness" && blockers > 0 ? <span className="rounded-full bg-rose-500 px-1.5 text-[11px] font-bold leading-4 text-white">{blockers}</span> : null}
+            {k === "requests" && openRequests > 0 ? <span className="rounded-full bg-amber-500 px-1.5 text-[11px] font-bold leading-4 text-white">{openRequests}</span> : null}
           </span>
         </button>
       ))}

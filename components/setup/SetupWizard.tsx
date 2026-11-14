@@ -318,7 +318,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
         </div>
       </div>
 
-      <div className={`max-w-xl w-full relative ${isModal ? "flex flex-col flex-1 min-h-0 h-full w-full md:min-h-[70vh]" : ""}`}>
+      <div className={`max-w-xl w-full relative ${isModal ? "flex flex-col flex-1 min-h-0 h-full w-full md:min-h-[70dvh]" : ""}`}>
         {/* DECORATIVE ELEMENTS (Only show in standalone) */}
         {!isModal && (
           <>
@@ -450,7 +450,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
               <CardContent className="pt-8 space-y-4">
                 <p className="sr-only" aria-live="polite">{moduleAnnouncement}</p>
                 <div className="rounded-xl border border-amber-200/70 bg-amber-50/70 p-3 text-left dark:border-amber-900/50 dark:bg-amber-900/20">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
                     Essential setup progress
                   </p>
                   <p className="mt-1 text-xs text-amber-800/90 dark:text-amber-200/90">
@@ -462,7 +462,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                       style={{ width: `${essentialCompletionPercent}%` }}
                     />
                   </div>
-                  <p className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300">
                     {essentialCompletionCount}/4 completed
                   </p>
                 </div>
@@ -625,7 +625,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{t('mod_workforce_title')}</p>
                           {form.enableWorkforce && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-teal-100 dark:bg-teal-900/40 px-2 py-0.5 text-[10px] font-bold text-teal-700 dark:text-teal-300 uppercase tracking-wider">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-teal-100 dark:bg-teal-900/40 px-2 py-0.5 text-[11px] font-bold text-teal-700 dark:text-teal-300 uppercase tracking-wider">
                               <CheckCircle2 className="h-2.5 w-2.5" /> {t('enabled_badge')}
                             </span>
                           )}
@@ -679,7 +679,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{t('mod_documents_title')}</p>
                           {form.enableDocuments && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2 py-0.5 text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2 py-0.5 text-[11px] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
                               <CheckCircle2 className="h-2.5 w-2.5" /> {t('enabled_badge')}
                             </span>
                           )}
@@ -733,7 +733,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{t('mod_cashflow_title')}</p>
                           {form.enableCashFlow && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 dark:bg-cyan-900/40 px-2 py-0.5 text-[10px] font-bold text-cyan-700 dark:text-cyan-300 uppercase tracking-wider">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 dark:bg-cyan-900/40 px-2 py-0.5 text-[11px] font-bold text-cyan-700 dark:text-cyan-300 uppercase tracking-wider">
                               <CheckCircle2 className="h-2.5 w-2.5" /> {t('enabled_badge')}
                             </span>
                           )}
@@ -771,7 +771,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{t('mod_shop_title')}</p>
                           {form.shopEnabled && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-pink-100 dark:bg-pink-900/40 px-2 py-0.5 text-[10px] font-bold text-pink-700 dark:text-pink-300 uppercase tracking-wider">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-pink-100 dark:bg-pink-900/40 px-2 py-0.5 text-[11px] font-bold text-pink-700 dark:text-pink-300 uppercase tracking-wider">
                               <CheckCircle2 className="h-2.5 w-2.5" /> {t('enabled_badge')}
                             </span>
                           )}
@@ -845,7 +845,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="font-black text-zinc-900 dark:text-zinc-100">Point of Sale</h3>
-                          {form.enablePos && <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">Enabled</span>}
+                          {form.enablePos && <span className="text-[11px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">Enabled</span>}
                         </div>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
                           Add a checkout register for walk-in sales, services, products, invoices, proposals, and retainers. You can disable it later without deleting POS-generated data.
@@ -882,7 +882,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{t('mod_arcollections_title')}</p>
                           {form.enableArCollections && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 dark:bg-orange-900/40 px-2 py-0.5 text-[10px] font-bold text-orange-700 dark:text-orange-300 uppercase tracking-wider">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 dark:bg-orange-900/40 px-2 py-0.5 text-[11px] font-bold text-orange-700 dark:text-orange-300 uppercase tracking-wider">
                               <CheckCircle2 className="h-2.5 w-2.5" /> {t('enabled_badge')}
                             </span>
                           )}
@@ -937,7 +937,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{t('optional_reporting_title')}</p>
                           {form.enableReportingCenter && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider">
                               <CheckCircle2 className="h-2.5 w-2.5" /> {t('enabled_badge')}
                             </span>
                           )}
@@ -977,7 +977,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{t('mod_revenue_title')}</p>
                           {form.enableRevenuePipeline && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 dark:bg-violet-900/40 px-2 py-0.5 text-[10px] font-bold text-violet-700 dark:text-violet-300 uppercase tracking-wider">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 dark:bg-violet-900/40 px-2 py-0.5 text-[11px] font-bold text-violet-700 dark:text-violet-300 uppercase tracking-wider">
                               <CheckCircle2 className="h-2.5 w-2.5" /> {t('enabled_badge')}
                             </span>
                           )}
@@ -1031,7 +1031,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                         <div className="flex items-center gap-2 mb-1">
                           <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">{t('mod_payroll_title')}</p>
                           {form.enablePayroll && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
                               <CheckCircle2 className="h-2.5 w-2.5" /> {t('enabled_badge')}
                             </span>
                           )}
@@ -1087,7 +1087,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                                     }`}
                                   >
                                     <p className="text-[11px] font-semibold text-zinc-800 dark:text-zinc-100">{option.title}</p>
-                                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">{option.desc}</p>
+                                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">{option.desc}</p>
                                   </button>
                                 ))}
                               </div>
@@ -1101,12 +1101,12 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                                     <CheckSquare2 className={`h-3.5 w-3.5 shrink-0 mt-0.5 ${item.status === "pass" ? "text-emerald-500" : "text-amber-500"}`} />
                                     <div>
                                       <p className="text-[11px] font-medium text-zinc-700 dark:text-zinc-200">{item.label}</p>
-                                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{item.detail}</p>
+                                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{item.detail}</p>
                                     </div>
                                   </div>
                                 ))}
                                 {payrollReadiness && (
-                                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 pt-1">
+                                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 pt-1">
                                     {t('mod_payroll_score', {
                                       score: payrollReadiness.readiness.score,
                                       status: payrollReadiness.readiness.postingStatusLabel

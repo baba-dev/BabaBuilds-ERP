@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 function ModuleDisabledNotice() {
   return (
-    <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8">
+    <div className="min-h-app bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8">
       <div className="max-w-3xl mx-auto">
         <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-8 shadow-sm">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-indigo-500">Public Shop</p>
@@ -69,7 +69,7 @@ function ModuleDisabledNotice() {
 
 function PermissionDeniedNotice() {
   return (
-    <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8">
+    <div className="min-h-app bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8">
       <div className="max-w-2xl mx-auto rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-8 shadow-sm">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-rose-500 flex items-center gap-2">
           <ShieldAlert className="w-4 h-4" /> Access denied

@@ -213,7 +213,7 @@ export function DataTable<T extends Record<string, any>>({
                               ) : sorted === "desc" ? (
                                 <ArrowDown className="ml-1 h-3 w-3" />
                               ) : (
-                                <ArrowUpDown className="ml-1 h-3 w-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+                                <ArrowUpDown className="ml-1 h-3 w-3 opacity-0 pointer-coarse:opacity-40 group-hover:opacity-50 transition-opacity" />
                               )}
                             </Button>
                           ) : (
@@ -225,7 +225,7 @@ export function DataTable<T extends Record<string, any>>({
                             <Button
                               variant="ghost"
                               size="icon"
-                              className={`h-6 w-6 transition-all duration-200 ${isPinned ? "text-indigo-600 dark:text-indigo-400" : "text-zinc-400 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-zinc-700 dark:hover:text-zinc-200"}`}
+                              className={`h-6 w-6 transition-all duration-200 ${isPinned ? "text-indigo-600 dark:text-indigo-400" : "text-zinc-400 opacity-0 pointer-coarse:opacity-100 group-hover:opacity-100 focus-visible:opacity-100 hover:text-zinc-700 dark:hover:text-zinc-200"}`}
                               onClick={() => header.column.pin(isPinned === "start" ? false : "start")}
                               aria-label="Pin column"
                             >

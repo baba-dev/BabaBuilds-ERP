@@ -329,13 +329,13 @@ export default function FreeVsProComparison() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-3 text-center dark:border-zinc-800/60 dark:bg-zinc-900/60">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">{copy.colFree}</p>
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">{copy.colFree}</p>
                       <p className="mt-1 text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center justify-center gap-1">
                         <item.freeIcon className="h-3 w-3" /> {item.free}
                       </p>
                     </div>
                     <div className="rounded-xl border border-orange-500/10 bg-orange-500/5 p-3 text-center dark:border-orange-500/5 dark:bg-orange-950/20">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400">{copy.colPro}</p>
+                      <p className="text-[11px] font-black uppercase tracking-wider text-orange-600 dark:text-orange-400">{copy.colPro}</p>
                       <p className="mt-1 text-xs font-black text-zinc-950 dark:text-zinc-50 flex items-center justify-center gap-1">
                         <item.proIcon className="h-3 w-3 text-emerald-500 stroke-[2.5px]" /> {item.pro}
                       </p>
@@ -358,7 +358,7 @@ export default function FreeVsProComparison() {
           <div className="pointer-events-none absolute -right-20 top-0 h-48 w-48 rounded-full bg-orange-600/20 blur-3xl" />
 
           <div className="space-y-4 max-w-2xl relative z-10">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-600 px-3 py-1 text-[10px] font-black uppercase tracking-wider text-white">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-600 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-white">
               <Sparkles className="h-3.5 w-3.5" /> {copy.offerBadge}
             </span>
             <h3 className="text-2xl font-black tracking-tight md:text-3xl">

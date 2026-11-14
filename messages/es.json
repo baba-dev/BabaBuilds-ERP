@@ -7376,6 +7376,15 @@
       "settles_unpaid_bill": "salda una factura pendiente"
     }
   },
+  "MobileNav": {
+    "primary_nav": "Navegación principal",
+    "home": "Inicio",
+    "invoices": "Facturas",
+    "clients": "Clientes",
+    "expenses": "Gastos",
+    "more": "Más",
+    "menu": "Abrir menú"
+  },
   "CashFlow": {
     "title": "Flujo de caja",
     "subtitle": "Dónde está tu efectivo, hacia dónde va y qué hacer al respecto.",

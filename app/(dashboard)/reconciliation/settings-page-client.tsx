@@ -197,14 +197,14 @@ export function ReconciliationSettingsPageClient() {
 
   if (loading || !settings) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center">
+      <div className="flex min-h-[40dvh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50/80 via-zinc-50 to-zinc-50 dark:from-amber-950/30 dark:via-zinc-950 dark:to-zinc-950 p-4 md:p-8">
+    <div className="min-h-app bg-gradient-to-b from-amber-50/80 via-zinc-50 to-zinc-50 dark:from-amber-950/30 dark:via-zinc-950 dark:to-zinc-950 p-4 md:p-8">
       <div className="mx-auto max-w-3xl space-y-8">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" asChild className="text-amber-900 dark:text-amber-200">
