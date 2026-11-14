@@ -22,7 +22,7 @@ jobs:
   static:
     name: Static checks
     runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
-    timeout-minutes: 15
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -47,7 +47,7 @@ jobs:
   test:
     name: Unit and integration tests
     runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
-    timeout-minutes: 15
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -63,7 +63,7 @@ jobs:
   prisma:
     name: Prisma migrations
     runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
-    timeout-minutes: 15
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -77,7 +77,7 @@ jobs:
   build:
     name: Production build
     runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
-    timeout-minutes: 25
+    timeout-minutes: 45
     env:
       NODE_OPTIONS: --max-old-space-size=4096
       NEXT_TELEMETRY_DISABLED: "1"
@@ -99,7 +99,7 @@ jobs:
   e2e-smoke:
     name: Browser smoke (demo)
     runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
-    timeout-minutes: 30
+    timeout-minutes: 45
     # Advisory until it has proven stable on this runner. Set repository variable
     # CI_SMOKE_BLOCKING=true to make it required through the gate job.
     continue-on-error: ${{ vars.CI_SMOKE_BLOCKING != 'true' }}
@@ -132,7 +132,7 @@ jobs:
     name: CI gate
     if: ${{ always() }}
     needs: [static, test, prisma, build, e2e-smoke]
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
     timeout-minutes: 5
     steps:
       - name: Evaluate results
