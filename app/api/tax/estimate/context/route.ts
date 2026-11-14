@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     const [invoices, notes, expenses, investments] = await Promise.all([
       prisma.invoice.findMany({ where: { workspaceId, status: { not: 'VOID' }, invoiceDate: { gte: start, lte: end } }, select: { subtotal: true, grandTotal: true, totalAmount: true, taxAmount: true, exchangeRate: true } }),
       prisma.creditNote.findMany({ where: { workspaceId, issuedAt: { gte: start, lte: end }, invoice: { invoiceDate: { lt: start } } }, select: { amount: true, taxAmount: true, invoice: { select: { exchangeRate: true } } } }),
-      prisma.expense.findMany({ where: { workspaceId, date: { gte: start, lte: end } }, select: { amount: true, itcStatus: true, igstAmount: true, cgstAmount: true, sgstAmount: true, cessAmount: true } }),
+      prisma.expense.findMany({ where: { workspaceId, approvalStatus: "APPROVED", date: { gte: start, lte: end } }, select: { amount: true, itcStatus: true, igstAmount: true, cgstAmount: true, sgstAmount: true, cessAmount: true } }),
       prisma.investment.aggregate({ where: { workspaceId, date: { gte: start, lte: end } }, _sum: { amount: true } }),
     ]);
     let receipts = 0;

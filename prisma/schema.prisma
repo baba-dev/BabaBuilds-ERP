@@ -1560,6 +1560,24 @@ model Client {
   // "isExport" becomes "isTaxExempt" in global context
   isExport Boolean @default(true)
 
+  // --- CRM ---
+  countryCode      String? // ISO 3166-1 alpha-2, normalised from `country` (decides domestic vs export)
+  website          String?
+  industry         String?
+  currency         String? // preferred invoice currency (ISO 4217); the composer starts with it
+  paymentTermsDays Int? // overrides the workspace default payment terms for this client
+  creditLimit      Decimal? // in the workspace base currency; warns when outstanding plus a new invoice exceeds it
+  tags             String   @default("") // "|vip|agency|": see lib/clients/tags
+  source           String   @default("MANUAL") // MANUAL | IMPORT | AI | POS
+  isWalkIn         Boolean  @default(false) // the POS counter customer: hidden from the CRM and not counted toward plan limits
+  archivedAt       DateTime?
+  ownerUserId      String? // who looks after this account
+  lastContactedAt  DateTime?
+  updatedAt        DateTime? @updatedAt
+  contacts         ClientContact[]
+  clientNotes      ClientNote[]
+  expenses         Expense[]
+
   createdAt       DateTime               @default(now())
   invoices        Invoice[]
   proposals       Proposal[]
@@ -1570,6 +1588,7 @@ model Client {
 
   @@unique([name, workspaceId])
   @@index([workspaceId])
+  @@index([workspaceId, archivedAt])
 }
 
 model ClientPaymentBehavior {
@@ -2180,10 +2199,121 @@ model Expense {
   vendorMsme       String? // MICRO | SMALL | MEDIUM | NONE (trader or unknown)
   vendorAgreedDays Int? // written credit period, max 45
 
+  // Vendor master, bill due date and where the entry came from.
+  vendorId String?
+  vendorRecord Vendor? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  dueDate  DateTime?
+  source   String   @default("MANUAL") // MANUAL | SCAN | EMAIL | RECURRING | PO | BANK | IMPORT | AI
+  purchaseOrderId String?
+  recurringId String?
+  recurring   RecurringExpense? @relation(fields: [recurringId], references: [id], onDelete: SetNull)
+
+  // Approval: only APPROVED entries count in reports, tax and the dashboard.
+  approvalStatus   String    @default("APPROVED") // DRAFT (needs review) | PENDING | APPROVED | REJECTED
+  submittedByUserId String?
+  approvedByUserId  String?
+  approvedAt        DateTime?
+  rejectionReason   String?
+
+  // Billable to a client: can be added to the next invoice, with an optional markup.
+  billable        Boolean  @default(false)
+  clientId        String?
+  client          Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  markupPercent   Float?
+  billedInvoiceId String?
+
   @@index([date])
   @@index([category])
   @@index([workspaceId])
   @@index([workspaceId, date])
+  @@index([workspaceId, approvalStatus])
+  @@index([workspaceId, paymentStatus, dueDate])
+  @@index([vendorId])
+  @@index([clientId, billable])
+  @@index([purchaseOrderId])
+}
+
+/// A supplier. Carries GST, MSME, terms and TDS defaults so each bill does not re-key them.
+model Vendor {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  /// Lower-cased, punctuation-free name used to find the same vendor typed differently.
+  nameKey     String
+  gstin       String?
+  stateCode   String?
+  email       String?
+  phone       String?
+  msmeClass   String?  // MICRO | SMALL | MEDIUM | NONE
+  udyam       String?
+  paymentTermsDays Int?
+  defaultCategory  String?
+  /// Suggested withholding for payments to this vendor.
+  tdsSection        String?
+  tdsRatePercent    Float?
+  notes       String?
+  archivedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  expenses  Expense[]
+  recurring RecurringExpense[]
+
+  @@unique([workspaceId, nameKey])
+  @@index([workspaceId, archivedAt])
+}
+
+/// A repeating expense (rent, subscriptions). Posts on its own or creates a draft to confirm.
+model RecurringExpense {
+  id          String   @id @default(cuid())
+  workspaceId String
+  vendorId    String?
+  vendorRecord Vendor? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  vendor      String
+  category    String
+  amount      Decimal
+  description String?
+  frequency   String   @default("MONTHLY") // WEEKLY | MONTHLY | QUARTERLY | YEARLY
+  nextRunDate DateTime
+  endDate     DateTime?
+  /// true: posts approved on its date; false: creates a draft for someone to confirm.
+  autoPost    Boolean  @default(false)
+  status      String   @default("ACTIVE") // ACTIVE | PAUSED | ENDED
+  paymentStatus String @default("PAID") // PAID | UNPAID
+  dueInDays   Int?
+  itcStatus   String   @default("NONE")
+  gstRate     Float?
+  lastRunAt   DateTime?
+  createdByUserId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  expenses Expense[]
+
+  @@index([workspaceId, status, nextRunDate])
+}
+
+/// Monthly cap per category (category "*" is the overall cap).
+model ExpenseBudget {
+  id          String   @id @default(cuid())
+  workspaceId String
+  category    String
+  monthlyAmount Decimal
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([workspaceId, category])
+}
+
+/// Per-workspace expense rules and the forwarding inbox.
+model ExpenseSettings {
+  workspaceId       String   @id
+  approvalRequired  Boolean  @default(false)
+  /// With approval on, entries at or above this amount wait for an approver (0 = all).
+  approvalThreshold Decimal  @default(0)
+  inboxEnabled      Boolean  @default(false)
+  inboxToken        String?  @unique
+  updatedAt         DateTime @updatedAt
 }
 
 model WithholdingEvent {
@@ -2350,6 +2480,9 @@ model BankTransaction {
   /// Dedupe key for imports: workspace + account + stable row fingerprint (hash).
   sourceImportHash String?
 
+  /// Set when someone decides this line needs no match (kept out of the review inbox until restored).
+  ignoredAt DateTime?
+
   createdAt DateTime @default(now())
 
   invoiceSplits BankTransactionInvoiceSplit[]
@@ -2360,6 +2493,7 @@ model BankTransaction {
   @@index([accountId])
   @@index([date])
   @@index([workspaceId, isReconciled, date])
+  @@index([workspaceId, isReconciled, ignoredAt])
   @@index([importBatchId])
 }
 
@@ -2650,6 +2784,10 @@ model CashForecastAlertPreference {
   criticalEnabled Boolean @default(true)
   warningEnabled  Boolean @default(true)
   infoEnabled     Boolean @default(true)
+
+  /// Last time the nightly job told the team about a coming shortfall, and which one, so the same warning is not sent every night.
+  lastAlertAt  DateTime?
+  lastAlertKey String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -4993,4 +5131,41 @@ model CaRequestMessage {
   createdAt DateTime @default(now())
 
   @@index([requestId, createdAt])
+}
+
+/// People at a client: who gets invoices, who gets reminders, who to call.
+model ClientContact {
+  id          String   @id @default(cuid())
+  workspaceId String
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  name              String
+  role              String?
+  email             String?
+  phone             String?
+  isPrimary         Boolean  @default(false)
+  receivesInvoices  Boolean  @default(true)
+  receivesReminders Boolean  @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@index([workspaceId, clientId])
+}
+
+/// Internal notes on a client (calls, agreements, context). Never shown to the client.
+model ClientNote {
+  id          String   @id @default(cuid())
+  workspaceId String
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  authorUserId String?
+  authorName   String
+  body         String
+  pinned       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([workspaceId, clientId, createdAt(sort: Desc)])
 }

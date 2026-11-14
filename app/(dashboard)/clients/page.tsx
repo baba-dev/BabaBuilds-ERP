@@ -1,708 +1,259 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { Users, Plus, Globe, Building2, Mail, Phone, Briefcase, FileText, Image as ImageIcon, Trash2, Pencil, AlertCircle, ChevronLeft, ChevronRight, Loader2, List, LayoutGrid } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Archive, ArchiveRestore, ChevronLeft, ChevronRight, Download, FileUp, GitMerge, Loader2, Plus, Search, Star, Tag, Users, X } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { toast } from "sonner";
-import { FileUploadField } from "@/components/forms/file-upload-field";
-import { FormFieldRow, FormSection, FormSubmitBar } from "@/components/forms/form-primitives";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-
-import { ResponsiveDialog } from "@/components/ResponsiveDialog";
-import { useTranslations } from "next-intl";
-import { useFormat } from "@/hooks/use-format";
-import { GST_STATES } from "@/lib/gst/states";
-import { looksLikePan, validateGstin } from "@/lib/gst/gstin";
-import { getBustedUrl } from "@/lib/cache-buster";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
-import { CLIENT_LOGO_ACCEPT_ATTR, CLIENT_LOGO_HELP_TEXT } from "@/lib/uploads/client-logo";
-import { type ClientDto, type ApiEnvelope } from "@/lib/types/business";
-import { useSearchParams } from "next/navigation";
-import { OnboardingHint } from "@/components/onboarding/OnboardingHint";
+import { useFormat } from "@/hooks/use-format";
+import { getBustedUrl } from "@/lib/cache-buster";
+import { cn } from "@/lib/utils";
+import { ClientFormDialog } from "./_components/ClientFormDialog";
+import { DuplicatesDialog } from "./_components/DuplicatesDialog";
 import { ClientRetainerChip } from "./_components/ClientRetainerChip";
+import { api, compactMoney, daysSince, flag, HealthBadge, initials, money, type ClientRowData } from "./_components/shared";
 
-export default function ClientCRM() {
-  const t = useTranslations('Clients');
-  const searchParams = useSearchParams();
-  const [clients, setClients] = useState<ClientDto[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
-  const [clientToDelete, setClientToDelete] = useState<string | null>(null);
-  const [hasHandledProtocolRecord, setHasHandledProtocolRecord] = useState(false);
+type View = "active" | "vip" | "inactive" | "archived" | "all";
+type Sort = "name" | "recent" | "outstanding" | "revenue" | "activity" | "risk";
+type Summary = { total: number; vip: number; archived: number; newThisMonth: number; outstanding: number; overdue: number; withOverdue: number; billed: number; currency: string };
+type ListResponse = { data: ClientRowData[]; meta: { currentPage: number; totalPages: number; totalRecords: number }; currency: string; summary?: Summary; tags?: Array<{ tag: string; count: number }> };
 
-  // --- NEW: PAGINATION STATE ---
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+const VIEWS: View[] = ["active", "vip", "inactive", "archived", "all"];
+const SORTS: Sort[] = ["name", "outstanding", "risk", "revenue", "activity", "recent"];
 
-  // --- GLOBALIZATION ENGINE ---
-  const { 
-    taxLabel = "Tax", 
-    taxIdLabel = "Tax ID",
-    countryCode: workspaceCountry = "IN"
-  } = useFormat();
-
-  const [formData, setFormData] = useState({
-    name: "", address: "", country: "", taxId: "", gstStateCode: "", gstSupplyOverride: "", gstReverseCharge: false, email: "", phone: "", isExport: true
-  });
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [gspConfigured, setGspConfigured] = useState(false);
-  useEffect(() => {
-    fetch('/api/gst/gstin-lookup').then((r) => (r.ok ? r.json() : null)).then((d) => setGspConfigured(!!d?.configured)).catch(() => undefined);
-  }, []);
-
-  useEffect(() => { 
-    fetchClients(currentPage); 
-  }, [currentPage]);
-
-  // --- SMART AI AUTO-FILL HOOK ---
-  useEffect(() => {
-    const aiPayload = sessionStorage.getItem('erp_ai_payload');
-    if (aiPayload) {
-      try {
-        const { path, data, timestamp } = JSON.parse(aiPayload);
-        const isFresh = (Date.now() - timestamp) < 10000;
-        
-        if (isFresh && data && path === '/clients') {
-          setFormData(prev => ({
-            ...prev,
-            name: data.name || data.client || prev.name,
-            address: data.address || prev.address,
-            country: data.country || prev.country,
-            email: data.email || prev.email,
-            phone: data.phone || prev.phone
-          }));
-          setOpen(true); 
-        }
-        sessionStorage.removeItem('erp_ai_payload');
-      } catch {
-        console.error("Failed to parse AI payload");
-      }
-    }
-  }, []);
-
-  const fetchClients = async (page = 1) => {
-    setIsLoading(true);
-    setFetchError(null);
-    try {
-      const res = await fetch(`/api/clients?page=${page}&limit=9`);
-      const { data, meta } = (await res.json()) as ApiEnvelope<ClientDto[]>;
-      setClients(Array.isArray(data) ? data : []);
-      setTotalPages(meta.totalPages);
-      setCurrentPage(meta.currentPage);
-    } catch {
-      toast.error("Failed to load clients.");
-      setFetchError("Failed to load clients.");
-      setClients([]);
-      setTotalPages(1);
-      setCurrentPage(1);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    const mode = isEditing ? t("toast.loading.update_client") : t("toast.loading.register_client");
-    const toastId = toast.loading(mode);
-
-    const body = new FormData();
-    Object.entries(formData).forEach(([key, val]) => body.append(key, String(val)));
-    if (logoFile) body.append('logo', logoFile);
-
-    try {
-      const url = isEditing ? `/api/clients/${selectedClientId}` : '/api/clients';
-      const method = isEditing ? 'PATCH' : 'POST';
-      const res = await fetch(url, { method, body });
-      
-      if (res.ok) {
-        toast.success(isEditing ? t("toast.success.client_updated") : t("toast.success.client_registered"), { id: toastId });
-        setOpen(false);
-        resetForm();
-        fetchClients(currentPage);
-      } else {
-        const data = await res.json();
-        toast.error(data.message || data.error || (isEditing ? t("toast.error.update_client") : t("toast.error.register_client")), { id: toastId });
-      }
-    } catch {
-      toast.error(t("toast.error.network"), { id: toastId });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleEdit = (client: ClientDto) => {
-    setIsEditing(true);
-    setSelectedClientId(client.id);
-    setFormData({
-      name: client.name || "",
-      address: client.address || "",
-      country: client.country || "",
-      taxId: client.taxId || "",
-      gstStateCode: client.gstStateCode || "",
-      gstSupplyOverride: client.gstSupplyOverride || "",
-      gstReverseCharge: !!client.gstReverseCharge,
-      email: client.email || "",
-      phone: client.phone || "",
-      isExport: client.isExport
-    });
-    setOpen(true);
-  };
-
-  const resetForm = () => {
-    setFormData({ name: "", address: "", country: "", taxId: "", gstStateCode: "", gstSupplyOverride: "", gstReverseCharge: false, email: "", phone: "", isExport: true });
-    setLogoFile(null);
-    setIsEditing(false);
-    setSelectedClientId(null);
-  };
-
-  const confirmDelete = async () => {
-    if (!clientToDelete) return;
-    const id = clientToDelete;
-    const toastId = toast.loading(t("toast.loading.delete_client"));
-    
-    try {
-      const res = await fetch(`/api/clients/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      
-      if (!res.ok) {
-        throw new Error(data.error || t("toast.error.delete_client"));
-      }
-      
-      toast.success(t("toast.success.client_deleted"), { id: toastId });
-      // Refresh data. If it was the last item on a page, go to previous page.
-      if (clients.length === 1 && currentPage > 1) {
-        setCurrentPage(currentPage - 1);
-      } else {
-        fetchClients(currentPage);
-      }
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Deletion failed", { id: toastId });
-    } finally {
-      setClientToDelete(null);
-    }
-  };
-
-  useEffect(() => {
-    const protocolRecord = searchParams.get("protocolRecord");
-    const protocolEntity = searchParams.get("protocolEntity");
-
-    if (hasHandledProtocolRecord || !protocolRecord || protocolEntity !== "client") {
-      return;
-    }
-
-    setHasHandledProtocolRecord(true);
-    void (async () => {
-      try {
-        const res = await fetch(`/api/clients/${encodeURIComponent(protocolRecord)}`);
-        const payload = await res.json().catch(() => null);
-        if (!res.ok || !payload?.data) {
-          toast.error("Could not open deep-linked client.");
-          return;
-        }
-        const client = payload.data as ClientDto;
-        setIsEditing(true);
-        setSelectedClientId(client.id);
-        setFormData({
-          name: client.name || "",
-          address: client.address || "",
-          country: client.country || "",
-          taxId: client.taxId || "",
-          gstStateCode: client.gstStateCode || "",
-          gstSupplyOverride: client.gstSupplyOverride || "",
-          gstReverseCharge: !!client.gstReverseCharge,
-          email: client.email || "",
-          phone: client.phone || "",
-          isExport: client.isExport,
-        });
-        setOpen(true);
-        toast.success("Deep-linked client opened.");
-      } catch {
-        toast.error("Could not open deep-linked client.");
-      }
-    })();
-  }, [hasHandledProtocolRecord, searchParams]);
-
-  const sortedClients = useMemo(
-    () =>
-      [...clients].sort((a, b) =>
-        a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
-      ),
-    [clients]
+function Stat({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "warn" | "danger" | "good" }) {
+  return (
+    <div className="rounded-2xl border bg-card/60 p-4 shadow-xs backdrop-blur">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className={cn("mt-1 text-2xl font-semibold tabular-nums", tone === "danger" && "text-rose-600 dark:text-rose-400", tone === "warn" && "text-amber-600 dark:text-amber-400", tone === "good" && "text-emerald-600 dark:text-emerald-400")}>{value}</p>
+      {sub ? <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p> : null}
+    </div>
   );
+}
+
+function ClientsInner() {
+  const t = useTranslations("ClientsCrm");
+  const router = useRouter();
+  const sp = useSearchParams();
+  const { locale, countryCode: workspaceCountry } = useFormat();
+  const [rows, setRows] = useState<ClientRowData[]>([]);
+  const [meta, setMeta] = useState({ currentPage: 1, totalPages: 1, totalRecords: 0 });
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [tags, setTags] = useState<Array<{ tag: string; count: number }>>([]);
+  const [currency, setCurrency] = useState("INR");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [q, setQ] = useState(sp.get("q") ?? "");
+  const [debounced, setDebounced] = useState(q);
+  const [view, setView] = useState<View>("active");
+  const [sort, setSort] = useState<Sort>("name");
+  const [tag, setTag] = useState("");
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<ClientRowData | null>(null);
+  const [dupOpen, setDupOpen] = useState(false);
+  const [dupCount, setDupCount] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const reqId = useRef(0);
+  const tRef = useRef(t);
+  tRef.current = t;
+
+  useEffect(() => { const h = setTimeout(() => { setDebounced(q); setPage(1); }, 250); return () => clearTimeout(h); }, [q]);
+
+  const load = useCallback(async (withSummary: boolean) => {
+    const id = ++reqId.current;
+    setLoading(true);
+    const params = new URLSearchParams({ view, sort, page: String(page), limit: "24" });
+    if (debounced) params.set("q", debounced);
+    if (tag) params.set("tag", tag);
+    if (withSummary) params.set("summary", "1");
+    const r = await api<ListResponse>(`/api/clients?${params}`);
+    if (id !== reqId.current) return;
+    if (!r.ok) { setError(r.data.error ?? tRef.current("loadFailed")); setLoading(false); return; }
+    setError(null);
+    setRows(r.data.data); setMeta(r.data.meta); setCurrency(r.data.currency);
+    if (r.data.summary) setSummary(r.data.summary);
+    if (r.data.tags) setTags(r.data.tags);
+    setLoading(false);
+  }, [view, sort, page, debounced, tag]);
+
+  useEffect(() => { void load(true); }, [load]);
+  useEffect(() => { api<{ groups: unknown[] }>("/api/clients/duplicates").then((r) => setDupCount(Array.isArray(r.data.groups) ? r.data.groups.length : 0)); }, []);
+  useEffect(() => { setSelected(new Set()); }, [view, page, debounced, tag, sort]);
+  useEffect(() => { if (sp.get("new") === "1") { setEditing(null); setFormOpen(true); router.replace("/clients"); } }, [sp, router]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "/") { e.preventDefault(); searchRef.current?.focus(); }
+      if (e.key === "n") { e.preventDefault(); setEditing(null); setFormOpen(true); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
+  const toggle = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+
+  async function bulk(action: string, extra: Record<string, unknown> = {}) {
+    setBusy(true);
+    const r = await api<{ updated?: number }>("/api/clients/bulk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ids: [...selected], ...extra }) });
+    setBusy(false);
+    if (!r.ok) { toast.error(r.data.error ?? t("toast.failed")); return; }
+    toast.success(t("toast.bulkDone", { count: r.data.updated ?? selected.size }));
+    setSelected(new Set());
+    void load(true);
+  }
+
+  const dateLocale = locale || "en-IN";
+  const m = (n: number) => money(n, currency, dateLocale);
+  const healthLabel = (h: ClientRowData["health"]) => t(`health.${h.label}` as never);
+  const emptyBook = !loading && !error && meta.totalRecords === 0 && !debounced && !tag && view === "active";
+
+  const exportHref = useMemo(() => { const p = new URLSearchParams({ view }); if (debounced) p.set("q", debounced); if (tag) p.set("tag", tag); return `/api/clients/export?${p}`; }, [view, debounced, tag]);
 
   return (
     <DashboardPageShell
-      title={t('title')}
-      icon={<Users className="w-6 h-6 text-accent-strong" />}
-      description={t('description')}
-      primaryAction={
-        <Button 
-          onClick={() => { resetForm(); setOpen(true); }}
-          className="btn-primary w-full md:w-auto shrink-0 text-xs uppercase tracking-wider h-11"
-        >
-          <Plus className="w-4 h-4 md:mr-2" /> <span className="md:inline">{t('onboard_new')}</span>
-        </Button>
+      title={t("title")}
+      description={t("subtitle")}
+      icon={<Users className="size-5" aria-hidden />}
+      primaryAction={<Button onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="mr-2 size-4" aria-hidden />{t("new")}<kbd className="ml-2 hidden rounded border bg-background/20 px-1 text-[10px] md:inline">N</kbd></Button>}
+      secondaryActions={
+        <div className="flex flex-wrap gap-2">
+          {dupCount > 0 && <Button variant="outline" onClick={() => setDupOpen(true)}><GitMerge className="mr-2 size-4" aria-hidden />{t("duplicates", { count: dupCount })}</Button>}
+          <Button variant="outline" asChild><Link href="/import-manager"><FileUp className="mr-2 size-4" aria-hidden />{t("import")}</Link></Button>
+          <Button variant="outline" asChild><a href={exportHref}><Download className="mr-2 size-4" aria-hidden />{t("export")}</a></Button>
+        </div>
       }
     >
-      <OnboardingHint
-        stepId="add_first_client"
-        title="Onboarding tip: Client CRM"
-        message="Create your first client profile here. You can mark the step done once saved."
-        className="mb-4"
-      />
 
-
-        {/* ONBOARDING / EDIT MODAL */}
-        <ResponsiveDialog 
-          open={open} 
-          onOpenChange={(v) => { if(!v) resetForm(); setOpen(v); }}
-          desktopClassName="sm:max-w-[688px] p-0 overflow-hidden border-none shadow-2xl bg-surface-elevated dark:backdrop-blur-xl border border-border"
-          title={
-            <div className="flex items-center gap-3.5 px-6 pt-6 pb-2">
-              <div className="p-2.5 bg-accent-soft rounded-xl border border-accent-strong/25">
-                <Building2 className="w-5 h-5 text-accent-strong" />
-              </div>
-              <span className="text-xl font-bold tracking-tight text-foreground">
-                {isEditing ? t('edit_registration_title') : t('registration_title')}
-              </span>
-            </div>
-          }
-          description={
-            <div className="px-6 pb-5 border-b border-border bg-surface-glass">
-              {isEditing ? t('edit_registration_desc') : t('registration_desc')}
-            </div>
-          }
-          footer={
-            <div className="px-6 py-4 bg-surface-glass border-t border-border flex justify-end gap-3 rounded-b-lg block">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)} className="bg-surface-elevated border-border text-muted-body hover:bg-surface-base text-xs font-bold uppercase tracking-widest px-5 mt-2 sm:mt-0">{t('cancel')}</Button>
-              <FormSubmitBar
-                isSubmitting={isSubmitting}
-                formId="client-form"
-                submitText={isEditing ? t('update_client') : t('register_client')}
-                submittingText={t('saving')}
-                helperText={isEditing ? t("helper_edit") : t("helper_create")}
-                className="mt-3 border-none bg-transparent p-0"
-              />
-            </div>
-          }
-        >
-          <form onSubmit={handleSubmit} id="client-form" className="contents">
-              <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto bg-surface-elevated custom-scrollbar">
-                
-                <FormSection
-                  title={t('legal_identity')}
-                  icon={<FileText className="w-3.5 h-3.5" />}
-                  className="bg-surface-base border-border"
-                >
-                  <div className="grid gap-5">
-                    <FormFieldRow htmlFor="client-name" label={t('company_name')} required>
-                      <Input 
-                        id="client-name"
-                        placeholder={t('ph_name')} 
-                        value={formData.name} 
-                        onChange={e => setFormData({...formData, name: e.target.value})} 
-                        required 
-                        className="h-10 bg-surface-elevated border-border text-foreground font-bold transition-all focus-visible:ring-focus-ring/30 focus-visible:border-accent-strong shadow-sm" 
-                      />
-                    </FormFieldRow>
-                    <FormFieldRow htmlFor="client-address" label={t('billing_address')} required>
-                      <Input 
-                        id="client-address"
-                        placeholder={t('ph_address')} 
-                        value={formData.address} 
-                        onChange={e => setFormData({...formData, address: e.target.value})} 
-                        required 
-                        className="h-10 bg-surface-elevated border-border text-foreground transition-all focus-visible:ring-focus-ring/30 focus-visible:border-accent-strong shadow-sm" 
-                      />
-                    </FormFieldRow>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <FormFieldRow htmlFor="client-country" label={t('country')} required>
-                        <Input 
-                          id="client-country"
-                          placeholder={t('ph_country')} 
-                          value={formData.country} 
-                          onChange={e => setFormData({...formData, country: e.target.value})} 
-                          required 
-                          className="h-10 bg-surface-elevated border-border text-foreground transition-all focus-visible:ring-focus-ring/30 focus-visible:border-accent-strong shadow-sm" 
-                        />
-                      </FormFieldRow>
-                      <FormFieldRow htmlFor="client-taxid" label={taxIdLabel} optionalText={t("optional")}>
-                        <Input 
-                          id="client-taxid"
-                          placeholder={`Client's ${taxIdLabel}`} 
-                          value={formData.taxId} 
-                          onChange={e => setFormData({...formData, taxId: e.target.value})} 
-                          className="h-10 bg-surface-elevated border-border text-foreground transition-all focus-visible:ring-focus-ring/30 focus-visible:border-accent-strong shadow-sm font-mono text-sm" 
-                        />
-                      </FormFieldRow>
-                    </div>
-                    {workspaceCountry === "IN" && /^india$|^in$/i.test(formData.country.trim() || "India") ? (() => {
-                      const gstin = validateGstin(formData.taxId);
-                      const derived = gstin.valid ? gstin.stateCode : "";
-                      return (
-                        <FormFieldRow htmlFor="client-gst-state" label={t("gst_state")} optionalText={t("optional")}>
-                          <select
-                            id="client-gst-state"
-                            value={derived || formData.gstStateCode}
-                            disabled={!!derived}
-                            onChange={e => setFormData({...formData, gstStateCode: e.target.value})}
-                            className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring/30 disabled:opacity-70"
-                          >
-                            <option value="">{t("gst_state_none")}</option>
-                            {GST_STATES.map(st => <option key={st.code} value={st.code}>{st.code} · {st.name}</option>)}
-                          </select>
-                          <p className="mt-1 text-xs text-muted-foreground">{derived ? t("gst_state_from_gstin") : t("gst_state_hint")}</p>
-                        </FormFieldRow>
-                      );
-                    })() : null}
-                    {workspaceCountry === "IN" && /^india$|^in$/i.test(formData.country.trim() || "India") ? (() => {
-                      const raw = formData.taxId.trim();
-                      const gstin = validateGstin(raw);
-                      const bad = raw !== "" && !gstin.valid && !looksLikePan(raw);
-                      return (
-                        <div className="space-y-3 rounded-lg border border-border/70 bg-surface-elevated/50 p-3">
-                          {raw ? (
-                            <p className={`text-xs font-medium ${gstin.valid ? "text-emerald-600 dark:text-emerald-400" : bad ? "text-rose-600 dark:text-rose-400" : "text-muted-foreground"}`} role={bad ? "alert" : undefined}>
-                              {gstin.valid ? t("gstin_ok") : bad ? t("gstin_bad") : t("gstin_pan")}
-                            </p>
-                          ) : null}
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <FormFieldRow htmlFor="client-gst-treatment" label={t("gst_treatment")}>
-                              <select
-                                id="client-gst-treatment"
-                                value={formData.gstSupplyOverride}
-                                disabled={!gstin.valid}
-                                onChange={e => setFormData({...formData, gstSupplyOverride: e.target.value})}
-                                className="h-10 w-full rounded-md border border-border bg-surface-elevated px-3 text-sm text-foreground shadow-sm disabled:opacity-60"
-                              >
-                                <option value="">{t("gst_treatment_regular")}</option>
-                                <option value="SEZ_WP">{t("gst_treatment_sez_wp")}</option>
-                                <option value="SEZ_WOP">{t("gst_treatment_sez_wop")}</option>
-                              </select>
-                            </FormFieldRow>
-                            <label className="flex items-center gap-2 pt-6 text-sm text-foreground">
-                              <input type="checkbox" checked={formData.gstReverseCharge} onChange={e => setFormData({...formData, gstReverseCharge: e.target.checked})} className="size-4 rounded border-border" />
-                              {t("gst_reverse_charge")}
-                            </label>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Button type="button" variant="outline" size="sm" disabled={!gspConfigured || !gstin.valid}>{t("gst_verify")}</Button>
-                            <span className="text-xs text-muted-foreground">{gspConfigured ? t("gst_verify_ready") : t("gst_verify_unavailable")}</span>
-                          </div>
-                        </div>
-                      );
-                    })() : null}
-                  </div>
-                </FormSection>
-
-                <FormSection
-                  title={t('contact_branding')}
-                  icon={<Mail className="w-3.5 h-3.5" />}
-                  className="bg-surface-base border-border"
-                >
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="client-email" className="text-foreground/80 text-xs font-bold uppercase tracking-wider">{t('email_address')}</Label>
-                      <Input 
-                        id="client-email"
-                        type="email" 
-                        placeholder={t('ph_email')} 
-                        value={formData.email} 
-                        onChange={e => setFormData({...formData, email: e.target.value})} 
-                        className="h-10 bg-surface-elevated border-border text-foreground transition-all focus-visible:ring-focus-ring/30 focus-visible:border-accent-strong shadow-sm" 
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="client-phone" className="text-foreground/80 text-xs font-bold uppercase tracking-wider">{t('mobile_number')}</Label>
-                      <Input 
-                        id="client-phone"
-                        placeholder={t('ph_phone')} 
-                        value={formData.phone} 
-                        onChange={e => setFormData({...formData, phone: e.target.value})} 
-                        className="h-10 bg-surface-elevated border-border text-foreground transition-all focus-visible:ring-focus-ring/30 focus-visible:border-accent-strong shadow-sm" 
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2 pt-1">
-                    <Label htmlFor="client-logo" className="flex items-center gap-2 text-foreground/80 text-xs font-bold uppercase tracking-wider cursor-pointer">
-                      <ImageIcon className="w-3.5 h-3.5 text-muted-body" /> {t('company_logo')}</Label>
-                    <FileUploadField
-                      id="client-logo"
-                      accept={CLIENT_LOGO_ACCEPT_ATTR}
-                      helpText={CLIENT_LOGO_HELP_TEXT}
-                      onFileSelect={setLogoFile}
-                      inputClassName="bg-surface-elevated border-border text-foreground file:bg-accent-soft file:text-accent-strong hover:file:brightness-95 shadow-sm"
-                    />
-                  </div>
-                </FormSection>
-
-                <div className="flex items-center justify-between p-5 rounded-xl bg-accent-soft/70 border border-accent-strong/20">
-                  <div className="space-y-1 mr-4">
-                    <Label htmlFor="client-export" className="text-xs font-extrabold text-accent-strong uppercase tracking-wider cursor-pointer flex items-center gap-1.5">
-                      <Globe className="w-3.5 h-3.5 text-accent-strong" /> {t('cross_border_export')}</Label>
-                    <p className="text-xs font-medium text-accent-strong/80 mt-0.5 leading-tight">
-                      {t('enable_zero_tax', { taxLabel })}
-                    </p>
-                  </div>
-                  <Switch 
-                    id="client-export"
-                    aria-label={t("a11y.toggle_export")}
-                    checked={formData.isExport} 
-                    onCheckedChange={val => setFormData({...formData, isExport: val})} 
-                    className="data-[state=checked]:bg-accent-strong shadow-inner"
-                  />
-                </div>
-              </div>
-          </form>
-        </ResponsiveDialog>
-        
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-24 text-muted-body bg-surface-base border-2 border-dashed border-border rounded-2xl">
-            <Loader2 className="w-8 h-8 animate-spin mb-4 text-accent-strong/50" />
-            <span className="text-xs font-bold uppercase tracking-widest animate-pulse">{t('loading_roster')}</span>
-          </div>
-        ) : fetchError ? (
-          <div className="col-span-full p-12 text-center border-2 border-dashed border-rose-300/50 rounded-2xl bg-rose-50/20 dark:bg-rose-500/5">
-            <div className="flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-rose-100/70 dark:bg-rose-500/10 border border-rose-300/50 dark:border-rose-500/20 flex items-center justify-center mb-4">
-                <AlertCircle className="w-7 h-7 text-rose-600 dark:text-rose-400" />
-              </div>
-              <h3 className="text-base font-extrabold text-foreground uppercase tracking-widest">Unable to load clients</h3>
-              <p className="text-sm text-muted-body mt-2 max-w-sm mx-auto font-medium leading-relaxed">{fetchError}</p>
-              <Button
-                onClick={() => fetchClients(currentPage)}
-                variant="outline"
-                className="mt-6 text-xs font-bold uppercase tracking-wider h-10 px-6"
-              >
-                Retry
-              </Button>
-            </div>
-          </div>
-        ) : clients.length === 0 ? (
-          <div className="col-span-full p-12 text-center border-2 border-dashed border-border rounded-2xl bg-surface-base relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-br from-accent-soft/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className="relative z-10 flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-surface-elevated border border-border flex items-center justify-center mb-4 shadow-sm">
-                <Users className="w-7 h-7 text-muted-body" />
-              </div>
-              <h3 className="text-base font-extrabold text-foreground uppercase tracking-widest">{t('no_clients_yet')}</h3>
-              <p className="text-sm text-muted-body mt-2 max-w-sm mx-auto font-medium leading-relaxed">{t('no_clients_desc')}</p>
-              <Button 
-                onClick={() => setOpen(true)} 
-                variant="outline" 
-                className="mt-6 border-accent-strong/30 text-accent-strong bg-surface-elevated hover:bg-accent-soft/70 text-xs font-bold uppercase tracking-wider shadow-sm transition-all active:scale-95 h-10 px-6"
-              >{t('onboard_first')}</Button>
-            </div>
-          </div>
-        ) : (
+      <section aria-label={t("summary")} className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        {summary ? (
           <>
-            <div className="flex justify-end">
-              <div className="hidden md:flex bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-1 rounded-xl shadow-sm h-10">
-                <Button variant={viewMode === "list" ? "secondary" : "ghost"} size="sm" onClick={() => setViewMode("list")} className="px-3 h-8 text-xs font-bold uppercase tracking-widest">
-                  <List className="w-4 h-4 mr-1.5" /> List
-                </Button>
-                <Button variant={viewMode === "grid" ? "secondary" : "ghost"} size="sm" onClick={() => setViewMode("grid")} className="px-3 h-8 text-xs font-bold uppercase tracking-widest">
-                  <LayoutGrid className="w-4 h-4 mr-1.5" /> Grid
-                </Button>
-              </div>
-            </div>
-            {viewMode === "grid" ? (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sortedClients.map((client) => (
-                <Card key={client.id} className="group relative hover:shadow-xl hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-all duration-300 border-border bg-surface-elevated overflow-hidden flex flex-col">
-                  <div className="absolute top-4 right-4 flex gap-2 z-10">
-                    <button 
-                      onClick={() => handleEdit(client)} 
-                      aria-label={t("a11y.edit_client", { name: client.name })}
-                      className="p-2 bg-accent-soft text-accent-strong rounded-lg opacity-100 transition-all duration-300 hover:bg-accent-strong hover:text-white shadow-sm hover:shadow-md active:scale-95" 
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={() => setClientToDelete(client.id)} 
-                      aria-label={t("a11y.delete_client", { name: client.name })}
-                      className="p-2 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg opacity-100 transition-all duration-300 hover:bg-rose-600 dark:hover:bg-rose-600 hover:text-white dark:hover:text-white shadow-sm hover:shadow-md active:scale-95" 
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <CardHeader className="flex flex-row items-center gap-4 pb-5 pt-6 px-6 border-b border-border">
-                    <Avatar className="h-12 w-12 border border-border shadow-sm">
-                      <AvatarImage src={getBustedUrl(client.logoUrl, client.updatedAt)} alt={client.name} />
-                      <AvatarFallback className="bg-surface-base text-muted-body text-xs font-bold">
-                        <Building2 className="w-5 h-5" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0 pr-8">
-                      <CardTitle className="text-lg font-extrabold tracking-tight truncate text-foreground">
-                        {client.name}
-                      </CardTitle>
-                      <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                        <div className="flex items-center gap-1.5 text-xs text-muted-body font-bold uppercase tracking-wider">
-                          <Globe className="w-3.5 h-3.5" />
-                          <span className="truncate max-w-[100px]">{client.country}</span>
-                        </div>
-                        {client.isExport ? (
-                          <Badge className="bg-accent-soft text-accent-strong border border-accent-strong/30 text-xs font-bold uppercase tracking-widest px-2 py-0.5 shadow-none">{t('export')}</Badge>
-                        ) : (
-                          <Badge className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 text-xs font-bold uppercase tracking-widest px-2 py-0.5 shadow-none">{t('domestic')}</Badge>
-                        )}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="flex-1 space-y-3.5 p-6 bg-surface-base text-sm text-muted-body">
-                    <div className="flex items-start gap-2.5">
-                      <Briefcase className="w-4 h-4 mt-0.5 text-muted-body shrink-0" />
-                      <span className="line-clamp-2 font-medium leading-relaxed text-xs">
-                        {client.address}
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-2.5 pt-1.5">
-                      {client.email && (
-                        <div className="flex items-center gap-2.5 text-xs font-medium">
-                          <Mail className="w-4 h-4 text-muted-body shrink-0" /> 
-                          <span className="truncate">{client.email}</span>
-                        </div>
-                      )}
-                      {client.phone && (
-                        <div className="flex items-center gap-2.5 text-xs font-medium">
-                          <Phone className="w-4 h-4 text-muted-body shrink-0" /> 
-                          <span className="truncate">{client.phone}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="pt-4 mt-auto border-t border-dashed border-border">
-                      <div className="flex flex-col">
-                        <p className="text-xs uppercase font-bold text-muted-body tracking-widest">
-                          Tax Identification
-                        </p>
-                        <p className={`text-xs font-mono font-bold mt-1 ${client.taxId ? 'text-foreground/90' : 'text-muted-body/70'}`}>
-                          {client.taxId || t('unregistered')}
-                        </p>
-                      </div>
-                      <div className="mt-3"><ClientRetainerChip client={client} /></div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>) : (
-              <div className="bg-white dark:bg-zinc-950/50 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead className="border-b border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/50">
-                      <tr>
-                        {["Client", "Country", "Contact", "Tax", "Type", "Actions"].map((h) => (
-                          <th key={h} className="px-4 py-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
-                      {sortedClients.map((client) => (
-                        <tr key={client.id} className="hover:bg-zinc-50/80 dark:hover:bg-zinc-900/50 transition-colors">
-                          <td className="px-4 py-4">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-9 w-9 border border-border">
-                                <AvatarImage src={getBustedUrl(client.logoUrl, client.updatedAt)} alt={client.name} />
-                                <AvatarFallback className="bg-surface-base text-muted-body text-xs font-bold">
-                                  <Building2 className="w-4 h-4" />
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <p className="font-bold text-[13px] text-zinc-900 dark:text-zinc-100">{client.name}</p>
-                                <p className="text-[11px] text-zinc-500">{client.address}</p>
-                                <div className="mt-1.5"><ClientRetainerChip client={client} /></div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 text-xs text-zinc-600 dark:text-zinc-300">{client.country}</td>
-                          <td className="px-4 py-4 text-xs text-zinc-600 dark:text-zinc-300">
-                            <p>{client.email || "-"}</p>
-                            <p>{client.phone || "-"}</p>
-                          </td>
-                          <td className="px-4 py-4 text-xs font-mono text-zinc-600 dark:text-zinc-300">{client.taxId || t('unregistered')}</td>
-                          <td className="px-4 py-4">
-                            {client.isExport ? (
-                              <Badge className="bg-accent-soft text-accent-strong border border-accent-strong/30 text-xs font-bold uppercase tracking-widest px-2 py-0.5 shadow-none">{t('export')}</Badge>
-                            ) : (
-                              <Badge className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 text-xs font-bold uppercase tracking-widest px-2 py-0.5 shadow-none">{t('domestic')}</Badge>
-                            )}
-                          </td>
-                          <td className="px-4 py-4">
-                            <div className="flex items-center gap-2">
-                              <button onClick={() => handleEdit(client)} className="p-2 bg-accent-soft text-accent-strong rounded-lg hover:bg-accent-strong hover:text-white transition-all">
-                                <Pencil className="w-3.5 h-3.5" />
-                              </button>
-                              <button onClick={() => setClientToDelete(client.id)} className="p-2 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg hover:bg-rose-600 hover:text-white transition-all">
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* --- PAGINATION CONTROLS --- */}
-            {totalPages > 1 && (
-              <div className="mt-10 flex items-center justify-center gap-4 animate-in fade-in duration-500">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setCurrentPage(p => p - 1)} 
-                  disabled={currentPage <= 1}
-                  className="bg-surface-elevated border-border text-foreground/80 hover:bg-surface-base text-xs font-bold uppercase tracking-wider shadow-sm transition-all active:scale-95 px-4"
-                >
-                  <ChevronLeft className="w-4 h-4 mr-1.5" /> {t('prev')}</Button>
-                <div className="text-xs font-bold text-muted-body bg-surface-base px-3 py-1.5 rounded-lg border border-border uppercase tracking-widest">
-                  {currentPage} <span className="text-muted-body/70">/</span> {totalPages}
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setCurrentPage(p => p + 1)} 
-                  disabled={currentPage >= totalPages}
-                  className="bg-surface-elevated border-border text-foreground/80 hover:bg-surface-base text-xs font-bold uppercase tracking-wider shadow-sm transition-all active:scale-95 px-4"
-                >
-                  {t('next')} <ChevronRight className="w-4 h-4 ml-1.5" />
-                </Button>
-              </div>
-            )}
+            <Stat label={t("stats.clients")} value={String(summary.total)} sub={t("stats.vip", { count: summary.vip })} />
+            <Stat label={t("stats.outstanding")} value={compactMoney(summary.outstanding, summary.currency, dateLocale)} />
+            <Stat label={t("stats.overdue")} value={compactMoney(summary.overdue, summary.currency, dateLocale)} tone={summary.overdue > 0 ? "danger" : "good"} sub={t("stats.withOverdue", { count: summary.withOverdue })} />
+            <Stat label={t("stats.billed")} value={compactMoney(summary.billed, summary.currency, dateLocale)} />
+            <Stat label={t("stats.newMonth")} value={String(summary.newThisMonth)} />
           </>
-        )}
+        ) : Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-[88px] rounded-2xl" />)}
+      </section>
 
-        {/* DESTRUCTIVE ACTION ALERT DIALOG */}
-        <AlertDialog open={!!clientToDelete} onOpenChange={() => setClientToDelete(null)}>
-          <AlertDialogContent className="bg-surface-elevated border-border sm:max-w-md p-0 overflow-hidden">
-            <div className="p-6">
-              <AlertDialogHeader>
-                <AlertDialogTitle className="text-foreground font-bold tracking-tight text-lg">{t('delete_title')}</AlertDialogTitle>
-                <AlertDialogDescription className="text-muted-body text-sm font-medium mt-2 leading-relaxed">{t('delete_desc')}</AlertDialogDescription>
-              </AlertDialogHeader>
-            </div>
-            <div className="px-6 py-4 bg-surface-glass border-t border-border flex justify-end gap-3">
-              <AlertDialogCancel className="mt-0 bg-surface-elevated border-border text-muted-body hover:bg-surface-base text-xs font-bold uppercase tracking-widest px-5">{t('cancel')}</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDelete} className="action-destructive text-xs uppercase tracking-widest px-6 border-none">{t('confirm_delete')}</AlertDialogAction>
-            </div>
-          </AlertDialogContent>
-        </AlertDialog>
+      <section aria-label={t("filters")} className="space-y-3">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+            <Input ref={searchRef} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("searchPlaceholder")} aria-label={t("search")} className="h-11 ps-9 pe-9" />
+            {q && <button type="button" aria-label={t("clearSearch")} className="absolute end-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:bg-muted" onClick={() => setQ("")}><X className="size-4" aria-hidden /></button>}
+          </div>
+          <label className="sr-only" htmlFor="client-sort">{t("sortBy")}</label>
+          <select id="client-sort" value={sort} onChange={(e) => { setSort(e.target.value as Sort); setPage(1); }} className="h-11 rounded-md border border-input bg-background px-3 text-sm">
+            {SORTS.map((s) => <option key={s} value={s}>{t(`sort.${s}` as never)}</option>)}
+          </select>
+          {tags.length > 0 && (
+            <>
+              <label className="sr-only" htmlFor="client-tag">{t("tag")}</label>
+              <select id="client-tag" value={tag} onChange={(e) => { setTag(e.target.value); setPage(1); }} className="h-11 rounded-md border border-input bg-background px-3 text-sm">
+                <option value="">{t("allTags")}</option>
+                {tags.map((x) => <option key={x.tag} value={x.tag}>{x.tag} ({x.count})</option>)}
+              </select>
+            </>
+          )}
+        </div>
+        <div role="tablist" aria-label={t("views")} className="flex gap-1.5 overflow-x-auto pb-1">
+          {VIEWS.map((v) => (
+            <button key={v} role="tab" aria-selected={view === v} onClick={() => { setView(v); setPage(1); }}
+              className={cn("whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm transition-colors", view === v ? "border-foreground bg-foreground text-background" : "bg-card hover:bg-muted")}>
+              {t(`view.${v}` as never)}
+            </button>
+          ))}
+        </div>
+      </section>
 
+      {selected.size > 0 && (
+        <div role="region" aria-label={t("bulk.bar")} className="sticky top-2 z-20 flex flex-wrap items-center gap-2 rounded-2xl border bg-background/95 p-2.5 shadow-lg backdrop-blur">
+          <span className="px-2 text-sm font-medium">{t("bulk.selected", { count: selected.size })}</span>
+          {view === "archived"
+            ? <Button size="sm" variant="outline" disabled={busy} onClick={() => void bulk("RESTORE")}><ArchiveRestore className="mr-1.5 size-4" aria-hidden />{t("bulk.restore")}</Button>
+            : <Button size="sm" variant="outline" disabled={busy} onClick={() => void bulk("ARCHIVE")}><Archive className="mr-1.5 size-4" aria-hidden />{t("bulk.archive")}</Button>}
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => void bulk("SET_STATUS", { value: "VIP" })}><Star className="mr-1.5 size-4" aria-hidden />{t("bulk.markVip")}</Button>
+          <Button size="sm" variant="outline" disabled={busy} onClick={() => { const v = window.prompt(t("bulk.tagPrompt")); if (v?.trim()) void bulk("ADD_TAG", { value: v.trim() }); }}><Tag className="mr-1.5 size-4" aria-hidden />{t("bulk.addTag")}</Button>
+          <Button size="sm" variant="ghost" className="ms-auto" onClick={() => setSelected(new Set())}>{t("bulk.clear")}</Button>
+        </div>
+      )}
+
+      {error ? (
+        <div role="alert" className="flex items-center justify-between gap-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm">
+          <span>{error}</span><Button size="sm" variant="outline" onClick={() => void load(true)}>{t("retry")}</Button>
+        </div>
+      ) : emptyBook ? (
+        <div className="grid place-items-center rounded-3xl border border-dashed p-12 text-center">
+          <div className="max-w-sm space-y-3">
+            <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-indigo-500/10 text-indigo-600"><Users className="size-7" aria-hidden /></div>
+            <h2 className="text-lg font-semibold">{t("empty.title")}</h2>
+            <p className="text-sm text-muted-foreground">{t("empty.body")}</p>
+            <div className="flex justify-center gap-2"><Button onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="mr-2 size-4" aria-hidden />{t("new")}</Button><Button variant="outline" asChild><Link href="/import-manager">{t("import")}</Link></Button></div>
+          </div>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-2xl border bg-card">
+          <div className="hidden grid-cols-[32px_minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] items-center gap-3 border-b bg-muted/40 px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground lg:grid">
+            <Checkbox checked={allSelected} onCheckedChange={() => setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.id)))} aria-label={t("selectAll")} />
+            <span>{t("col.client")}</span><span>{t("col.health")}</span><span className="text-end">{t("col.outstanding")}</span><span className="text-end">{t("col.billed")}</span><span>{t("col.lastInvoice")}</span>
+          </div>
+          <ul>
+            {loading && rows.length === 0 ? Array.from({ length: 6 }).map((_, i) => <li key={i} className="border-b p-4 last:border-0"><Skeleton className="h-12 w-full" /></li>) : rows.map((c) => {
+              const last = daysSince(c.metrics.lastInvoiceAt);
+              return (
+                <li key={c.id} className={cn("group relative grid items-center gap-x-3 gap-y-2 border-b px-4 py-3.5 transition-colors last:border-0 hover:bg-muted/40 lg:grid-cols-[32px_minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]", selected.has(c.id) && "bg-indigo-500/5", c.archivedAt && "opacity-70")}>
+                  <Checkbox className="absolute end-3 top-3 lg:static" checked={selected.has(c.id)} onCheckedChange={() => toggle(c.id)} aria-label={t("select", { name: c.name })} />
+                  <Link href={`/clients/${c.id}`} className="flex min-w-0 items-center gap-3 outline-none after:absolute after:inset-0 after:content-[''] focus-visible:ring-2 focus-visible:ring-ring lg:after:hidden">
+                    <Avatar className="size-10 rounded-xl"><AvatarImage src={c.logoUrl ? getBustedUrl(c.logoUrl) : undefined} alt="" /><AvatarFallback className="rounded-xl bg-indigo-500/10 text-indigo-700 dark:text-indigo-300">{initials(c.name)}</AvatarFallback></Avatar>
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-1.5"><span className="truncate font-medium">{c.name}</span>{c.status === "VIP" && <Star className="size-3.5 shrink-0 fill-amber-400 text-amber-400" aria-label="VIP" />}{c.archivedAt && <Badge variant="outline" className="text-[10px]">{t("archivedBadge")}</Badge>}</span>
+                      <span className="block truncate text-xs text-muted-foreground">{flag(c.countryCode)} {c.email ?? t("noEmail")}{c.tagList.length ? ` · ${c.tagList.slice(0, 2).join(", ")}` : ""}</span>
+                    </span>
+                  </Link>
+                  <div className="flex flex-wrap items-center gap-2"><HealthBadge health={c.health} label={healthLabel(c.health)} />{c.credit.state === "OVER" && <Badge variant="outline" className="border-rose-500/40 text-rose-600">{t("credit.over")}</Badge>}{c.credit.state === "NEAR" && <Badge variant="outline" className="border-amber-500/40 text-amber-700">{t("credit.near")}</Badge>}</div>
+                  <div className="lg:text-end"><span className="text-xs text-muted-foreground lg:hidden">{t("col.outstanding")}: </span><span className="font-medium tabular-nums">{m(c.metrics.outstanding)}</span>{c.metrics.overdue > 0 && <span className="block text-xs text-rose-600 dark:text-rose-400">{t("overdueAmount", { amount: m(c.metrics.overdue) })}</span>}</div>
+                  <div className="lg:text-end"><span className="text-xs text-muted-foreground lg:hidden">{t("col.billed")}: </span><span className="tabular-nums">{m(c.metrics.billed)}</span><span className="block text-xs text-muted-foreground">{t("invoiceCount", { count: c.metrics.invoiceCount })}</span></div>
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">{last === null ? t("neverInvoiced") : last === 0 ? t("today") : t("daysAgo", { count: last })}<ClientRetainerChip client={c as never} /></div>
+                </li>
+              );
+            })}
+          </ul>
+          {rows.length === 0 && !loading && <p className="p-10 text-center text-sm text-muted-foreground">{t("noResults")}</p>}
+        </div>
+      )}
+
+      {meta.totalPages > 1 && (
+        <nav aria-label={t("pagination")} className="flex items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">{t("pageOf", { page: meta.currentPage, total: meta.totalPages, count: meta.totalRecords })}</p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="icon" aria-label={t("prev")} disabled={page <= 1 || loading} onClick={() => setPage((p) => p - 1)}><ChevronLeft className="size-4 rtl:rotate-180" aria-hidden /></Button>
+            <Button variant="outline" size="icon" aria-label={t("next")} disabled={page >= meta.totalPages || loading} onClick={() => setPage((p) => p + 1)}>{loading ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <ChevronRight className="size-4 rtl:rotate-180" aria-hidden />}</Button>
+          </div>
+        </nav>
+      )}
+
+      <ClientFormDialog open={formOpen} onOpenChange={setFormOpen} client={editing} workspaceCountry={workspaceCountry} locale={dateLocale} onSaved={(id) => { if (!editing) router.push(`/clients/${id}`); else void load(true); }} />
+      <DuplicatesDialog open={dupOpen} onOpenChange={setDupOpen} onChanged={() => { void load(true); api<{ groups: unknown[] }>("/api/clients/duplicates").then((r) => setDupCount(Array.isArray(r.data.groups) ? r.data.groups.length : 0)); }} />
     </DashboardPageShell>
   );
+}
+
+export default function ClientsPage() {
+  return <Suspense fallback={null}><ClientsInner /></Suspense>;
 }

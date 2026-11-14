@@ -1,716 +1,366 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { format } from "date-fns";
-import { UploadCloud, TrendingDown, Wallet, ShieldCheck, FileText, ArrowRight, Sparkles, Trash2, Edit, Receipt } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
+import { ArrowDown, ArrowUp, CheckCircle2, ChevronLeft, ChevronRight, Download, FileText, Landmark, Loader2, Mail, Paperclip, Pencil, Plus, Receipt, Repeat, Search, Settings2, Trash2, TriangleAlert, X } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { useTranslations } from "next-intl";
-import { useFormat } from "@/hooks/use-format";
-import { getCurrencySymbol } from "@/lib/currency";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
-import { ColumnVisibilityToggle, DataTable, DataTablePagination, DataTableToolbar, RowActionsMenu, useUrlTableState, type DataTableColumnDef } from "@/components/data-table";
-import type { ApiEnvelope, ExpenseDto } from "@/lib/types/business";
-import { getConflictPolicy, queueOfflineMutation } from "@/lib/offline-sync";
 import { RecordDocumentsDialog } from "@/components/documents/RecordDocumentsDialog";
-import { EMPTY_EXPENSE_GST, ExpenseGstFields, gstPayload, gstStateFromExpense, type ExpenseGstState } from "./_components/ExpenseGstFields";
+import { useFormat } from "@/hooks/use-format";
+import { useSearchParams } from "next/navigation";
+import { PRESET_CATEGORIES } from "@/lib/expenses/categories";
+import { cn } from "@/lib/utils";
+import { ExpenseSheet } from "./_components/ExpenseSheet";
+import { VendorsPanel } from "./_components/VendorsPanel";
+import { RecurringPanel } from "./_components/RecurringPanel";
+import { ReviewPanel } from "./_components/ReviewPanel";
+import { BankMatchDialog } from "./_components/BankMatchDialog";
+import { SettingsSheet } from "./_components/SettingsSheet";
+import { api, monthLabel, money, PERIODS, shortDate, type ExpenseRow, type ExpenseSettings, type Period, type Summary, type VendorMeta } from "./_components/shared";
 
-const isLikelyOfflineError = (error: unknown) => {
-  if (typeof navigator !== 'undefined' && !navigator.onLine) return true;
-  return error instanceof TypeError;
-};
+type ListResponse = { data: ExpenseRow[]; meta: { currentPage: number; totalPages: number; totalRecords: number }; filteredTotal: number };
+type Sort = "date" | "amount" | "vendor";
+type View = "ledger" | "vendors" | "recurring" | "review";
+const VIEWS: View[] = ["ledger", "vendors", "recurring", "review"];
 
-export default function ExpenseTracker() {
-  const t = useTranslations('Expenses');
-  const { fCurrency, currency, locale, countryCode } = useFormat();
+function Stat({ label, value, sub, tone }: { label: string; value: string; sub?: React.ReactNode; tone?: "good" | "warn" | "bad" }) {
+  return (
+    <div className="rounded-2xl border bg-card p-4 shadow-xs">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className={cn("mt-1 text-2xl font-semibold tabular-nums", tone === "good" && "text-emerald-600 dark:text-emerald-400", tone === "warn" && "text-amber-600 dark:text-amber-400", tone === "bad" && "text-rose-600 dark:text-rose-400")}>{value}</p>
+      {sub ? <div className="mt-0.5 text-xs text-muted-foreground">{sub}</div> : null}
+    </div>
+  );
+}
+
+export default function ExpensesPage() {
+  const t = useTranslations("ExpensesLedger");
+  const tc = useTranslations("Expenses");
+  const { locale, countryCode } = useFormat();
   const isIndia = countryCode === "IN";
-  const [gst, setGst] = useState<ExpenseGstState>(EMPTY_EXPENSE_GST);
-  const [editGst, setEditGst] = useState<ExpenseGstState>(EMPTY_EXPENSE_GST);
+  const [period, setPeriod] = useState<Period>("this_fy");
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [summaryError, setSummaryError] = useState(false);
+  const [rows, setRows] = useState<ExpenseRow[]>([]);
+  const [meta, setMeta] = useState({ currentPage: 1, totalPages: 1, totalRecords: 0 });
+  const [filteredTotal, setFilteredTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+  const [debounced, setDebounced] = useState("");
+  const [category, setCategory] = useState("");
+  const [status, setStatus] = useState("");
+  const [receipt, setReceipt] = useState("");
+  const [sort, setSort] = useState<Sort>("date");
+  const [dir, setDir] = useState<"asc" | "desc">("desc");
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [editing, setEditing] = useState<ExpenseRow | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [metaData, setMetaData] = useState<{ categories: string[]; vendors: VendorMeta[] }>({ categories: [], vendors: [] });
+  const sp = useSearchParams();
+  const [view, setView] = useState<View>(() => (VIEWS.includes(sp.get("view") as View) ? (sp.get("view") as View) : "ledger"));
+  const [vendorFilter, setVendorFilter] = useState<string | null>(null);
+  const [settings, setSettings] = useState<ExpenseSettings | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [bankFor, setBankFor] = useState<ExpenseRow | null>(null);
   const [supplierState, setSupplierState] = useState<string | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const reqId = useRef(0);
+  const tRef = useRef(t);
+  useEffect(() => { tRef.current = t; });
+
+  useEffect(() => { const h = setTimeout(() => { setDebounced(q); setPage(1); }, 250); return () => clearTimeout(h); }, [q]);
+
+  const filterParams = useMemo(() => {
+    const p = new URLSearchParams({ period });
+    if (debounced) p.set("q", debounced);
+    if (category) p.set("category", category);
+    if (status) p.set("status", status);
+    if (receipt) p.set("receipt", receipt);
+    if (vendorFilter) p.set("vendorId", vendorFilter);
+    return p;
+  }, [period, debounced, category, status, receipt, vendorFilter]);
+
+  const loadSummary = useCallback(async () => {
+    const r = await api<{ data: Summary }>(`/api/expenses/summary?period=${period}`);
+    if (!r.ok) { setSummaryError(true); return; }
+    setSummaryError(false); setSummary(r.data.data);
+  }, [period]);
+
+  const loadList = useCallback(async () => {
+    const id = ++reqId.current;
+    setLoading(true);
+    const p = new URLSearchParams(filterParams);
+    p.set("sort", sort); p.set("dir", dir); p.set("page", String(page)); p.set("limit", "20");
+    const r = await api<ListResponse>(`/api/expenses?${p}`);
+    if (id !== reqId.current) return;
+    if (!r.ok) { setError(r.data.error ?? tRef.current("loadFailed")); setLoading(false); return; }
+    setError(null); setRows(r.data.data); setMeta(r.data.meta); setFilteredTotal(r.data.filteredTotal); setLoading(false);
+  }, [filterParams, sort, dir, page]);
+
+  const loadMeta = useCallback(async () => { const r = await api<{ data: { categories: string[]; vendors: VendorMeta[] } }>("/api/expenses/meta"); if (r.ok) setMetaData(r.data.data); }, []);
+  const loadSettings = useCallback(async () => { const r = await api<{ data: ExpenseSettings }>("/api/expenses/settings"); if (r.ok) setSettings(r.data.data); }, []);
+
+  useEffect(() => { void loadSummary(); }, [loadSummary]);
+  useEffect(() => { void loadList(); }, [loadList]);
+  useEffect(() => { void loadMeta(); }, [loadMeta]);
+  useEffect(() => { void loadSettings(); }, [loadSettings]);
+  useEffect(() => { setSelected(new Set()); }, [filterParams, sort, dir, page]);
   useEffect(() => {
     if (!isIndia) return;
-    let live = true;
-    fetch('/api/gst/settings').then((r) => (r.ok ? r.json() : null)).then((d) => { if (live && d) setSupplierState(d.stateCode ?? null); }).catch(() => undefined);
-    return () => { live = false; };
+    api<{ stateCode?: string | null }>("/api/gst/settings").then((r) => { if (r.ok) setSupplierState(r.data.stateCode ?? null); });
   }, [isIndia]);
-  const currencySymbol = getCurrencySymbol(currency, locale);
-  const [expenses, setExpenses] = useState<ExpenseDto[]>([]);
-  const [, setTotalRevenue] = useState(0); // This stays to power the KPIs
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [fetchError, setFetchError] = useState<string | null>(null);
-
-  // --- NEW: PAGINATION STATE ---
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [summary, setSummary] = useState({
-    totalRevenue: 0,
-    totalExpenses: 0,
-    presumptiveExpenses: 0,
-    actualProfit: 0,
-    taxFreeAlpha: 0,
-    burnPercentage: 0,
-  });
-  const [isSummaryLoading, setIsSummaryLoading] = useState(true);
-  const [summaryError, setSummaryError] = useState<string | null>(null);
-
-  // Form State
-  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [category, setCategory] = useState("");
-  const [vendor, setVendor] = useState("");
-  const [amount, setAmount] = useState("");
-  const [description, setDescription] = useState("");
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
-
-  // Edit & Delete State
-  const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
-  const [expenseToEdit, setExpenseToEdit] = useState<ExpenseDto | null>(null);
-  const [editForm, setEditForm] = useState({ date: "", category: "", vendor: "", amount: "", description: "" });
-  const [isEditing, setIsEditing] = useState(false);
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(["date", "vendor", "category", "amount", "actions"]);
-  const tableState = useUrlTableState("expenses");
-
-  const toSafeNumber = (value: unknown) => {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  };
-
-  
-
   useEffect(() => {
-    fetchExpenses(currentPage);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
-  }, [currentPage]);
-
-  useEffect(() => {
-    fetchSummary();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === "/") { e.preventDefault(); searchRef.current?.focus(); }
+      if (e.key === "n") { e.preventDefault(); setEditing(null); setSheetOpen(true); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const fetchExpenses = async (page = 1) => {
-    setIsLoading(true);
-    setFetchError(null);
-    try {
-      // Fetch paginated expenses
-      const expRes = await fetch(`/api/expenses?page=${page}&limit=15`);
-      const { data, meta } = (await expRes.json()) as ApiEnvelope<ExpenseDto[]>;
-      const normalizedExpenses = Array.isArray(data)
-        ? data.map((exp) => ({ ...exp, amount: toSafeNumber(exp.amount) }))
-        : [];
-      setExpenses(normalizedExpenses);
-      setTotalPages(meta.totalPages);
-      setCurrentPage(meta.currentPage);
+  const refresh = () => { void loadList(); void loadSummary(); void loadMeta(); void loadSettings(); };
+  const currency = summary?.currency ?? "INR";
+  const m = (n: number) => money(n, currency, locale);
+  const catLabel = (value: string) => { const p = PRESET_CATEGORIES.find((c) => c.value === value); return p ? tc(`cat_${p.key}` as never) : value; };
+  const allCats = useMemo(() => [...PRESET_CATEGORIES.map((c) => c.value as string), ...metaData.categories], [metaData.categories]);
+  const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
+  const toggle = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const filtersOn = Boolean(debounced || category || status || receipt || vendorFilter);
 
-      // Avoid loading all invoices to compute revenue (realistic scale).
-      // Use the server-side finance summary aggregates instead.
-      const summaryRes = await fetch("/api/finance/summary");
-      const payload = await summaryRes.json().catch(() => null);
-      if (summaryRes.ok) {
-        setTotalRevenue(toSafeNumber(payload?.data?.totalRevenue));
-      }
-    } catch (err) {
-      console.error("Failed to load expenses", err);
-      setFetchError(t("fetch_error"));
-      setExpenses([]);
-      setTotalPages(1);
-      setCurrentPage(1);
-      toast.error(t("fetch_error"));
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  async function bulk(action: "MARK_PAID" | "SET_CATEGORY" | "DELETE", ids: string[], value?: string) {
+    setBusy(true);
+    const r = await api("/api/expenses/bulk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids, action, value }) });
+    setBusy(false); setConfirmDelete(null);
+    if (!r.ok) { toast.error(r.data.error ?? t("toast.failed")); return; }
+    toast.success(action === "DELETE" ? t("toast.deleted", { count: ids.length }) : t("toast.updated2", { count: ids.length }));
+    setSelected(new Set()); refresh();
+  }
 
-  const fetchSummary = async () => {
-    setIsSummaryLoading(true);
-    setSummaryError(null);
-    try {
-      const summaryRes = await fetch("/api/finance/summary");
-      if (!summaryRes.ok) throw new Error("Failed to load financial summary.");
-      const payload = await summaryRes.json();
-      const nextSummary = payload?.data ?? {};
-      setSummary({
-        totalRevenue: toSafeNumber(nextSummary.totalRevenue),
-        totalExpenses: toSafeNumber(nextSummary.totalExpenses),
-        presumptiveExpenses: toSafeNumber(nextSummary.presumptiveExpenses),
-        actualProfit: toSafeNumber(nextSummary.actualProfit),
-        taxFreeAlpha: toSafeNumber(nextSummary.taxFreeAlpha),
-        burnPercentage: toSafeNumber(nextSummary.burnPercentage),
-      });
-    } catch {
-      console.error("Failed to load financial summary");
-      setSummaryError("Failed to load financial summary cards.");
-      toast.error("Failed to load financial summary cards.");
-    } finally {
-      setIsSummaryLoading(false);
-    }
-  };
+  const sortBy = (s: Sort) => { if (sort === s) setDir((d) => (d === "asc" ? "desc" : "asc")); else { setSort(s); setDir(s === "vendor" ? "asc" : "desc"); } setPage(1); };
+  const sortIcon = (s: Sort) => (sort === s ? (dir === "asc" ? <ArrowUp className="size-3" aria-hidden /> : <ArrowDown className="size-3" aria-hidden />) : null);
 
-  const filteredExpenses = expenses.filter((exp) =>
-    `${exp.vendor} ${exp.category} ${exp.description ?? ""}`.toLowerCase().includes(tableState.search.toLowerCase()),
-  );
-
-  const expenseColumns: DataTableColumnDef<ExpenseDto>[] = [
-    {
-      id: "date",
-      header: t("col_date"),
-      sortable: true,
-      sortAccessor: (row) => new Date(row.date).getTime(),
-      cell: (row) => <span className="text-sm dark:text-zinc-300">{format(new Date(row.date), "dd MMM yyyy")}</span>,
-      hideable: true,
-    },
-    {
-      id: "vendor",
-      header: t("col_vendor"),
-      sortable: true,
-      accessor: (row) => row.vendor,
-      cell: (row) => <span className="font-medium text-zinc-900 dark:text-zinc-100">{row.vendor}</span>,
-      hideable: true,
-    },
-    {
-      id: "category",
-      header: t("col_category"),
-      accessor: (row) => row.category,
-      cell: (row) => (
-        <Badge variant="secondary" className="bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-normal hover:bg-zinc-100 dark:hover:bg-zinc-800 border-none">
-          {row.category}
-        </Badge>
-      ),
-      hideable: true,
-    },
-    {
-      id: "amount",
-      header: t("col_amount", { currency }),
-      headerClassName: "text-right",
-      className: "text-right font-medium text-rose-600 dark:text-rose-400",
-      sortable: true,
-      sortAccessor: (row) => row.amount,
-      cell: (row) => fCurrency(row.amount),
-      hideable: true,
-    },
-    {
-      id: "actions",
-      header: <div className="text-right">{t("col_actions")}</div>,
-      className: "text-right",
-      cell: (row) => (
-        <div className="flex justify-end gap-1">
-          {row.receiptUrl && (
-            <Button variant="ghost" size="sm" className="w-8 px-0 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10" asChild title={t("actions.view_receipt")}>
-              <a href={row.receiptUrl} target="_blank" rel="noopener noreferrer">
-                <FileText className="w-4 h-4" />
-              </a>
-            </Button>
-          )}
-          <RecordDocumentsDialog targetType="EXPENSE" targetId={row.id} />
-          <RowActionsMenu
-            row={row}
-            actions={[
-              { label: t("actions.edit"), onClick: openEditModal, icon: <Edit className="mr-2 h-4 w-4" /> },
-              { label: t("actions.delete"), onClick: (r) => setExpenseToDelete(r.id), variant: "danger", icon: <Trash2 className="mr-2 h-4 w-4" /> },
-            ]}
-          />
-        </div>
-      ),
-    },
-  ];
-
-  const handleScanReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setReceiptFile(file);
-    setIsScanning(true);
-    setError(null);
-    try {
-      const formData = new FormData();
-      formData.append('receipt', file);
-      const res = await fetch('/api/expenses/scan', { method: 'POST', body: formData });
-      if (!res.ok) throw new Error(t("toast.error.ai_read_receipt"));
-      const data = await res.json();
-      if (data.vendor) setVendor(data.vendor);
-      if (data.amount) setAmount(data.amount.toString());
-      if (data.date) setDate(data.date); 
-      if (data.category) setCategory(data.category);
-      if (data.description) setDescription(data.description);
-      // GST read from the bill: pre-fills the GST section for the owner to confirm (never saved on its own).
-      if (isIndia && data.gst) {
-        setGst({ itcStatus: data.gst.itcStatus, vendorGstin: data.gst.vendorGstin ?? '', vendorInvoiceNo: data.gst.vendorInvoiceNo ?? '', hsnCode: data.gst.hsnCode ?? '', gstRate: String(data.gst.gstRate ?? 18), paymentStatus: 'PAID', vendorMsme: 'NONE', vendorUdyam: '', vendorAgreedDays: '' });
-        toast.info(t('gst.scanned'));
-      }
-    } catch (err: unknown) {
-      console.error("Scan error:", err);
-      // 7.2 FIX: surface scan failure to the user instead of silently failing
-      toast.error(t("toast.error.ai_read_receipt"));
-    } finally {
-      setIsScanning(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError(null);
-    try {
-      const formData = new FormData();
-      formData.append('date', date);
-      formData.append('category', category);
-      formData.append('vendor', vendor);
-      formData.append('amount', amount);
-      formData.append('description', description);
-      if (isIndia && (gst.itcStatus !== 'NONE' || gst.vendorMsme !== 'NONE')) {
-        const g = gstPayload(gst);
-        if (g.vendorMsme !== 'NONE') {
-          formData.append('vendorMsme', g.vendorMsme);
-          if (g.vendorUdyam) formData.append('vendorUdyam', g.vendorUdyam);
-          if (g.vendorAgreedDays) formData.append('vendorAgreedDays', String(g.vendorAgreedDays));
-        }
-        formData.append('itcStatus', g.itcStatus);
-        if (g.vendorGstin) formData.append('vendorGstin', g.vendorGstin);
-        if (g.vendorInvoiceNo) formData.append('vendorInvoiceNo', g.vendorInvoiceNo);
-        if (g.hsnCode) formData.append('hsnCode', g.hsnCode);
-        formData.append('paymentStatus', g.paymentStatus);
-        if (g.gstRate !== null) formData.append('gstRate', String(g.gstRate));
-      }
-      if (receiptFile) formData.append('receipt', receiptFile);
-
-      const res = await fetch('/api/expenses', { method: 'POST', body: formData });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error((body && typeof body.error === 'string' && body.error) || t("toast.error.log_expense"));
-      }
-
-      setGst(EMPTY_EXPENSE_GST);
-      setVendor(""); setAmount(""); setDescription(""); setCategory(""); setReceiptFile(null);
-      const fileInput = document.getElementById('receipt') as HTMLInputElement;
-      if (fileInput) fileInput.value = "";
-      fetchExpenses(currentPage);
-      fetchSummary();
-      toast.success("Expense logged successfully!");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to log expense");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const confirmDelete = async () => {
-    if (!expenseToDelete) return;
-    const toastId = toast.loading(t("toast.loading.delete_expense"));
-    try {
-      const res = await fetch(`/api/expenses/${expenseToDelete}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error(t("toast.error.delete_expense"));
-      toast.success(t("toast.success.expense_deleted"), { id: toastId });
-      fetchExpenses(currentPage);
-    } catch {
-      toast.error(t("toast.error.delete_expense"), { id: toastId });
-    } finally {
-      setExpenseToDelete(null);
-    }
-  };
-
-  const openEditModal = (exp: ExpenseDto) => {
-    setExpenseToEdit(exp);
-    setEditForm({
-      date: format(new Date(exp.date), 'yyyy-MM-dd'),
-      category: exp.category,
-      vendor: exp.vendor,
-      amount: exp.amount.toString(),
-      description: exp.description || ""
-    });
-    setEditGst(gstStateFromExpense(exp));
-  };
-
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!expenseToEdit) return;
-    setIsEditing(true);
-    const toastId = toast.loading(t("toast.loading.update_expense"));
-    try {
-      const res = await fetch(`/api/expenses/${expenseToEdit.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Offline-Conflict-Policy': getConflictPolicy('expense', 'update'),
-        },
-        body: JSON.stringify(isIndia ? { ...editForm, gst: gstPayload(editGst) } : editForm)
-      });
-      if (!res.ok) throw new Error(t("toast.error.update_expense"));
-      toast.success(t("toast.success.expense_updated"), { id: toastId });
-      setExpenseToEdit(null);
-      fetchExpenses(currentPage);
-      fetchSummary();
-    } catch (err) {
-      if (isLikelyOfflineError(err)) {
-        void queueOfflineMutation({
-          entity: 'expense',
-          operation: 'update',
-          endpoint: `/api/expenses/${expenseToEdit.id}`,
-          method: 'PATCH',
-          payload: editForm,
-          conflictPolicy: getConflictPolicy('expense', 'update'),
-          lastError: err instanceof Error ? err.message : 'Offline request queued',
-        });
-        toast.warning('You are offline. Expense edits were queued and will retry with client-wins conflict policy.', { id: toastId });
-        return;
-      }
-      toast.error(t("toast.error.update_expense"), { id: toastId });
-    } finally {
-      setIsEditing(false);
-    }
-  };
+  const delta = summary && summary.prevTotal !== null && summary.prevTotal > 0 ? ((summary.total - summary.prevTotal) / summary.prevTotal) * 100 : null;
+  const maxMonth = Math.max(1, ...(summary?.monthly.map((x) => x.amount) ?? [1]));
+  const exportHref = `/api/expenses/export?${filterParams}`;
+  const overdueBills = summary?.unpaid.items.filter((i) => i.ageDays > 45).length ?? 0;
 
   return (
     <DashboardPageShell
-      title={t('title')}
-      description={t('description')}
-      icon={<Receipt className="w-6 h-6 text-accent-strong" />}
+      title={tc("title")}
+      description={t("subtitle")}
+      icon={<Receipt className="size-6 text-accent-strong" aria-hidden />}
       animated={false}
+      primaryAction={<Button onClick={() => { setEditing(null); setSheetOpen(true); }}><Plus className="mr-2 size-4" aria-hidden />{t("add")}<kbd className="ml-2 hidden rounded border bg-background/20 px-1 text-[10px] md:inline">N</kbd></Button>}
+      secondaryActions={<div className="flex gap-2"><Button variant="outline" onClick={() => setSettingsOpen(true)}><Settings2 className="mr-2 size-4" aria-hidden />{t("settings.open")}</Button><Button variant="outline" asChild><a href={exportHref}><Download className="mr-2 size-4" aria-hidden />{t("export")}</a></Button></div>}
     >
+      <div role="tablist" aria-label={t("tabs.label")} className="flex gap-1 overflow-x-auto border-b">
+        {VIEWS.map((v) => (
+          <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)}
+            className={cn("relative -mb-px whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium transition-colors", view === v ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground")}>
+            {t(`tabs.${v}` as never)}
+            {v === "review" && (summary?.reviewCount ?? 0) > 0 && <span className="ms-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">{summary?.reviewCount}</span>}
+            {v === "vendors" && (summary?.vendorCount ?? 0) > 0 && <span className="ms-1.5 text-xs text-muted-foreground">{summary?.vendorCount}</span>}
+          </button>
+        ))}
+      </div>
 
-        {/* 44ADA Intelligence Ribbon */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="shadow-sm border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/30 dark:bg-emerald-950/20">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-semibold text-emerald-800 dark:text-emerald-400">{t('actual_profit')}</CardTitle>
-              <Wallet className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-50">{isSummaryLoading ? "—" : fCurrency(summary.actualProfit)}</div>
-              <p className="text-xs text-emerald-600 dark:text-emerald-400/80 mt-1">{t('actual_profit_desc')}</p>
-            </CardContent>
-          </Card>
+      {view === "vendors" && <VendorsPanel currency={currency} locale={locale} isIndia={isIndia} canManage onOpenLedger={(id) => { setVendorFilter(id); setPeriod("all"); setView("ledger"); setPage(1); }} onChanged={refresh} />}
+      {view === "recurring" && <RecurringPanel currency={currency} locale={locale} canDelete onChanged={refresh} />}
+      {view === "review" && <ReviewPanel currency={currency} locale={locale} canApprove={settings?.canManage ?? false} onEdit={(e) => { setEditing(e); setSheetOpen(true); }} onChanged={refresh} />}
 
-          <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{t('sunk_expenses')}</CardTitle>
-              <TrendingDown className="h-4 w-4 text-rose-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{isSummaryLoading ? "—" : fCurrency(summary.totalExpenses)}</div>
-              <div className="mt-4 space-y-2">
-                <div className="flex justify-between text-xs text-zinc-500 dark:text-zinc-400">
-                  <span>{t('presumptive_label')}</span>
-                  <span>{isSummaryLoading ? "—" : fCurrency(summary.presumptiveExpenses)}</span>
-                </div>
-                <Progress value={Math.min(summary.burnPercentage, 100)} className="h-2 bg-zinc-100 dark:bg-zinc-800 [&>div]:bg-rose-500" />
+      {view === "ledger" && (<>
+      <div role="tablist" aria-label={t("period.label")} className="flex gap-1.5 overflow-x-auto pb-1">
+        {PERIODS.map((p) => (
+          <button key={p} role="tab" aria-selected={period === p} onClick={() => { setPeriod(p); setPage(1); }}
+            className={cn("whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm transition-colors", period === p ? "border-foreground bg-foreground text-background" : "bg-card hover:bg-muted")}>{t(`period.${p}` as never)}</button>
+        ))}
+      </div>
+
+      {summaryError && <div role="alert" className="flex items-center justify-between gap-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm"><span>{t("summaryFailed")}</span><Button size="sm" variant="outline" onClick={() => void loadSummary()}>{t("retry")}</Button></div>}
+
+      <section aria-label={t("summary")} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {summary ? (
+          <>
+            <Stat label={t("stats.spend")} value={m(summary.total)} sub={delta === null ? t("stats.entries", { count: summary.count }) : <span className={delta > 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}>{delta > 0 ? "▲" : "▼"} {t("stats.vsPrev", { pct: Math.abs(Math.round(delta)) })}</span>} />
+            <Stat label={t("stats.netOfCredit")} value={m(summary.netOfCredit)} sub={isIndia ? t("stats.creditClaimable", { amount: m(summary.itcClaimable) }) : t("stats.entries", { count: summary.count })} />
+            <Stat label={t("stats.margin")} value={summary.margin === null ? "—" : `${summary.margin}%`} tone={summary.margin === null ? undefined : summary.margin < 0 ? "bad" : summary.margin < 20 ? "warn" : "good"} sub={t("stats.revenue", { amount: m(summary.revenue) })} />
+            <Stat label={t("stats.unpaid")} value={m(summary.unpaid.amount)} tone={overdueBills > 0 ? "bad" : summary.unpaid.count > 0 ? "warn" : "good"} sub={t("stats.unpaidCount", { count: summary.unpaid.count })} />
+          </>
+        ) : Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[92px] rounded-2xl" />)}
+      </section>
+
+      {summary && summary.count > 0 && (
+        <section className="grid gap-4 lg:grid-cols-3" aria-label={t("insights")}>
+          <div className="rounded-2xl border bg-card p-5 lg:col-span-2">
+            <h2 className="mb-3 text-sm font-semibold">{t("byCategory")}</h2>
+            <ul className="space-y-2.5">
+              {summary.byCategory.slice(0, 6).map((c) => (
+                <li key={c.category}>
+                  <button type="button" className="group block w-full text-start" onClick={() => { setCategory(c.category); setPage(1); }} aria-label={t("filterBy", { name: catLabel(c.category) })}>
+                    <div className="mb-1 flex items-center justify-between text-sm"><span className="truncate font-medium group-hover:underline">{catLabel(c.category)}</span><span className="tabular-nums text-muted-foreground">{m(c.amount)} · {Math.round(c.share)}%</span></div>
+                    <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${Math.max(2, c.share)}%` }} /></div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+          {summary.budgets.length > 0 && (
+            <div className="rounded-2xl border bg-card p-5 lg:order-last lg:col-span-3">
+              <h2 className="mb-3 text-sm font-semibold">{t("budgets.thisMonth")}</h2>
+              <ul className="grid gap-x-8 gap-y-3 md:grid-cols-2">
+                {summary.budgets.map((b) => (
+                  <li key={b.category}>
+                    <div className="mb-1 flex items-center justify-between text-sm"><span className="truncate font-medium">{b.category === "*" ? t("budgets.overall") : catLabel(b.category)}</span><span className={cn("tabular-nums", b.state === "OVER" ? "font-semibold text-rose-600 dark:text-rose-400" : b.state === "NEAR" ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground")}>{m(b.spent)} / {m(b.limit)}</span></div>
+                    <div className="h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={Math.min(100, b.share)} aria-valuemin={0} aria-valuemax={100} aria-label={b.category === "*" ? t("budgets.overall") : catLabel(b.category)}><div className={cn("h-full rounded-full", b.state === "OVER" ? "bg-rose-500" : b.state === "NEAR" ? "bg-amber-500" : "bg-emerald-500")} style={{ width: `${Math.min(100, Math.max(2, b.share))}%` }} /></div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <div className="rounded-2xl border bg-card p-5">
+            <h2 className="mb-3 text-sm font-semibold">{t("last6")}</h2>
+            <div className="flex h-24 items-end gap-2" role="img" aria-label={t("last6")}>
+              {summary.monthly.map((x) => (<div key={x.month} className="flex h-full flex-1 flex-col items-center justify-end gap-1"><div className="w-full rounded-t bg-indigo-500/80" style={{ height: `${Math.max(4, (x.amount / maxMonth) * 80)}%` }} title={m(x.amount)} /><span className="text-[10px] text-muted-foreground">{monthLabel(x.month, locale)}</span></div>))}
+            </div>
+            {summary.topVendors.length > 0 && (<><h3 className="mb-1.5 mt-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("topVendors")}</h3><ul className="space-y-1 text-sm">{summary.topVendors.slice(0, 3).map((v) => <li key={v.vendor} className="flex justify-between gap-2"><span className="truncate">{v.vendor}</span><span className="tabular-nums text-muted-foreground">{m(v.amount)}</span></li>)}</ul></>)}
+          </div>
+        </section>
+      )}
+
+      {summary && (summary.unpaid.count > 0 || summary.missingReceipts > 0 || summary.withholdingPending.count > 0 || summary.unbilled.count > 0) && (
+        <section aria-label={t("attention")} className="grid gap-3 md:grid-cols-3">
+          {summary.unpaid.count > 0 && (
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 md:col-span-2">
+              <div className="mb-2 flex items-center justify-between"><h2 className="flex items-center gap-2 text-sm font-semibold"><TriangleAlert className="size-4 text-amber-600" aria-hidden />{t("billsDue")}</h2><button type="button" className="text-xs text-indigo-600 hover:underline dark:text-indigo-400" onClick={() => { setStatus("unpaid"); setPeriod("all"); setPage(1); }}>{t("seeAll")}</button></div>
+              <ul className="divide-y">
+                {summary.unpaid.items.slice(0, 4).map((b) => (
+                  <li key={b.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                    <span className="min-w-0"><span className="font-medium">{b.vendor}</span><span className="block truncate text-xs text-muted-foreground">{b.invoiceNo ? `${b.invoiceNo} · ` : ""}{t("ageDays", { count: b.ageDays })}{b.msme === "MICRO" || b.msme === "SMALL" ? ` · ${t("msme")}` : ""}</span></span>
+                    <span className="flex items-center gap-2"><span className={cn("tabular-nums", b.ageDays > 45 && "font-semibold text-rose-600 dark:text-rose-400")}>{m(b.amount)}</span><Button size="sm" variant="outline" disabled={busy} onClick={() => void bulk("MARK_PAID", [b.id])}><CheckCircle2 className="mr-1 size-4" aria-hidden />{t("markPaid")}</Button></span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-3 flex flex-wrap gap-1.5 border-t pt-3 text-xs" aria-label={t("ageing.title")}>
+                {(["NOT_DUE", "D1_30", "D31_60", "D61_90", "D90_PLUS"] as const).filter((k) => summary.ageing[k].count > 0).map((k) => (
+                  <span key={k} className={cn("rounded-full border px-2.5 py-1", k === "NOT_DUE" ? "text-muted-foreground" : k === "D1_30" ? "border-amber-500/40 text-amber-700 dark:text-amber-300" : "border-rose-500/40 text-rose-600 dark:text-rose-400")}>{t(`ageing.${k}` as never)} · {m(summary.ageing[k].amount)}</span>
+                ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          )}
+          <div className="space-y-3">
+            {summary.unbilled.count > 0 && <div className="flex items-center gap-3 rounded-2xl border bg-card p-4 text-sm"><Receipt className="size-5 text-muted-foreground" aria-hidden /><span>{t("billable.unbilled", { count: summary.unbilled.count, amount: m(summary.unbilled.amount) })}</span></div>}
+            {summary.missingReceipts > 0 && <button type="button" onClick={() => { setReceipt("without"); setPage(1); }} className="flex w-full items-center gap-3 rounded-2xl border bg-card p-4 text-start hover:bg-muted/50"><Paperclip className="size-5 text-muted-foreground" aria-hidden /><span className="text-sm"><span className="font-semibold tabular-nums">{summary.missingReceipts}</span> {t("missingReceipts")}</span></button>}
+            {summary.withholdingPending.count > 0 && <div className="flex items-center gap-3 rounded-2xl border bg-card p-4 text-sm"><FileText className="size-5 text-muted-foreground" aria-hidden /><span>{t("tdsPending", { amount: m(summary.withholdingPending.amount) })}</span></div>}
+          </div>
+        </section>
+      )}
 
-          <Card className="shadow-sm border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-950/20 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-10 dark:opacity-5 text-indigo-900 dark:text-indigo-300"><ShieldCheck className="w-24 h-24" /></div>
-            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-semibold text-indigo-800 dark:text-indigo-400">{t('tax_free_alpha')}</CardTitle>
-              <ShieldCheck className="h-4 w-4 text-indigo-600 dark:text-indigo-500 relative z-10" />
-            </CardHeader>
-            <CardContent className="relative z-10">
-              <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-50">{isSummaryLoading ? "—" : fCurrency(summary.taxFreeAlpha)}</div>
-              <p className="text-xs font-medium text-indigo-700/80 dark:text-indigo-400/80 mt-1 leading-tight">
-                {t('tax_free_alpha_desc')}
-              </p>
-            </CardContent>
-          </Card>
+      <section aria-label={t("ledger")} className="space-y-3">
+        {vendorFilter && <div className="flex"><button type="button" onClick={() => { setVendorFilter(null); setPage(1); }} className="inline-flex items-center gap-1.5 rounded-full border bg-indigo-500/10 px-3 py-1 text-sm">{t("vendors.filtering", { name: metaData.vendors.find((v) => v.id === vendorFilter)?.name ?? "" })}<X className="size-3.5" aria-hidden /></button></div>}
+        <div className="flex flex-col gap-2 md:flex-row md:items-center">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+            <Input ref={searchRef} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("searchPlaceholder")} aria-label={t("search")} className="h-11 ps-9 pe-9" />
+            {q && <button type="button" aria-label={t("clearSearch")} className="absolute end-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:bg-muted" onClick={() => setQ("")}><X className="size-4" aria-hidden /></button>}
+          </div>
+          <label className="sr-only" htmlFor="f-cat">{tc("category")}</label>
+          <select id="f-cat" value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }} className="h-11 rounded-md border border-input bg-background px-3 text-sm"><option value="">{t("allCategories")}</option>{allCats.map((c) => <option key={c} value={c}>{catLabel(c)}</option>)}</select>
+          <label className="sr-only" htmlFor="f-status">{t("payment")}</label>
+          <select id="f-status" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className="h-11 rounded-md border border-input bg-background px-3 text-sm"><option value="">{t("anyPayment")}</option><option value="paid">{t("paid")}</option><option value="unpaid">{t("unpaid")}</option></select>
+          <label className="sr-only" htmlFor="f-receipt">{t("receipt")}</label>
+          <select id="f-receipt" value={receipt} onChange={(e) => { setReceipt(e.target.value); setPage(1); }} className="h-11 rounded-md border border-input bg-background px-3 text-sm"><option value="">{t("anyReceipt")}</option><option value="with">{t("withReceipt")}</option><option value="without">{t("withoutReceipt")}</option></select>
+          {filtersOn && <Button variant="ghost" onClick={() => { setQ(""); setCategory(""); setStatus(""); setReceipt(""); setVendorFilter(null); setPage(1); }}>{t("clearFilters")}</Button>}
         </div>
-        {summaryError && (
-          <Card className="border-rose-200 bg-rose-50/70 dark:border-rose-900/50 dark:bg-rose-950/20">
-            <CardContent className="py-3 text-sm text-rose-700 dark:text-rose-300 flex items-center justify-between gap-4">
-              <span>{summaryError}</span>
-              <Button size="sm" variant="outline" onClick={fetchSummary}>
-                Retry summary
-              </Button>
-            </CardContent>
-          </Card>
+
+        {selected.size > 0 && (
+          <div role="region" aria-label={t("bulk.bar")} className="sticky top-2 z-20 flex flex-wrap items-center gap-2 rounded-2xl border bg-background/95 p-2.5 shadow-lg backdrop-blur">
+            <span className="px-2 text-sm font-medium">{t("bulk.selected", { count: selected.size })}</span>
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => void bulk("MARK_PAID", [...selected])}><CheckCircle2 className="mr-1.5 size-4" aria-hidden />{t("markPaid")}</Button>
+            <label className="sr-only" htmlFor="bulk-cat">{t("bulk.setCategory")}</label>
+            <select id="bulk-cat" className="h-8 rounded-md border border-input bg-background px-2 text-sm" value="" disabled={busy} onChange={(e) => { if (e.target.value) void bulk("SET_CATEGORY", [...selected], e.target.value); }}><option value="">{t("bulk.setCategory")}</option>{allCats.map((c) => <option key={c} value={c}>{catLabel(c)}</option>)}</select>
+            <Button size="sm" variant="outline" className="text-rose-600" disabled={busy} onClick={() => setConfirmDelete([...selected])}><Trash2 className="mr-1.5 size-4" aria-hidden />{tc("actions.delete")}</Button>
+            <Button size="sm" variant="ghost" className="ms-auto" onClick={() => setSelected(new Set())}>{t("bulk.clear")}</Button>
+          </div>
         )}
 
-        {/* Split Layout: Form & Ledger */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* LEFT: Data Entry Form */}
-          <div className="lg:col-span-4">
-            <Card className="shadow-xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 sticky top-8">
-              <CardHeader className="bg-white dark:bg-zinc-900 border-b dark:border-zinc-800 pb-6 rounded-t-xl">
-                <CardTitle className="text-xl dark:text-zinc-50">{t('log_expense')}</CardTitle>
-                <CardDescription className="dark:text-zinc-400">{t('log_desc')}</CardDescription>
-              </CardHeader>
-              <form onSubmit={handleSubmit} className="bg-zinc-50/50 dark:bg-zinc-950/50">
-                <CardContent className="space-y-4 pt-6">
-                  {error && <div className="p-3 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-sm rounded-md border border-red-200 dark:border-red-900/50">{error}</div>}
-
-                  <div className="space-y-2 pb-2">
-                    <Label className="flex items-center gap-2 dark:text-zinc-300">
-                      {t('upload_receipt')}
-                      <Badge className="bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 border-none px-1.5 py-0 text-xs uppercase tracking-widest">{t('ai_autofill')}</Badge>
-                    </Label>
-                    <div className="relative flex items-center justify-center w-full">
-                      <label 
-                        htmlFor="receipt" 
-                        className={`flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer transition-all ${
-                          isScanning ? 'border-purple-400 dark:border-purple-500/50 bg-purple-50 dark:bg-purple-500/10' : 'border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 hover:bg-zinc-50 dark:hover:bg-zinc-900'
-                        }`}
-                      >
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          {isScanning ? (
-                            <>
-                              <Sparkles className="w-6 h-6 mb-2 text-purple-500 animate-pulse" />
-                              <p className="text-xs text-purple-600 dark:text-purple-400 font-bold">{t('extracting')}</p>
-                            </>
-                          ) : (
-                            <>
-                              <UploadCloud className="w-6 h-6 mb-2 text-zinc-400 dark:text-zinc-500" />
-                              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
-                                {receiptFile ? receiptFile.name : t('click_upload')}
-                              </p>
-                            </>
-                          )}
-                        </div>
-                        <input id="receipt" type="file" className="hidden" accept=".pdf,image/*" onChange={handleScanReceipt} disabled={isScanning} />
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="dark:text-zinc-300">{t('date_purchase')}</Label>
-                    <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100 dark:[color-scheme:dark]" />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="dark:text-zinc-300">{t('vendor')}</Label>
-                    <Input placeholder={t('vendor_ph')} value={vendor} onChange={(e) => setVendor(e.target.value)} required className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="dark:text-zinc-300">{t('category')}</Label>
-                    <Select value={category} onValueChange={setCategory} required>
-                      <SelectTrigger className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100">
-                        <SelectValue placeholder={t('select_category')} />
-                      </SelectTrigger>
-                      <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
-                        <SelectItem value="Hosting & Cloud">{t('cat_hosting')}</SelectItem>
-                        <SelectItem value="Software Subscriptions">{t('cat_software')}</SelectItem>
-                        <SelectItem value="Hardware & Equipment">{t('cat_hardware')}</SelectItem>
-                        <SelectItem value="Internet & Utilities">{t('cat_internet')}</SelectItem>
-                        <SelectItem value="Sub-contractors">{t('cat_contractors')}</SelectItem>
-                        <SelectItem value="Office & Rent">{t('cat_office')}</SelectItem>
-                        <SelectItem value="Meals & Entertainment">{t('cat_meals')}</SelectItem>
-                        <SelectItem value="Other">{t('cat_other')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="dark:text-zinc-300">{t('amount', { currency })}</Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2.5 text-zinc-500 dark:text-zinc-400 font-medium">{currencySymbol}</span>
-                      <Input type="number" step="0.01" min="1" placeholder={t("amount_placeholder")} value={amount} onChange={(e) => setAmount(e.target.value)} required className="pl-7 bg-white dark:bg-zinc-950 dark:border-zinc-800 font-medium dark:text-zinc-100" />
-                    </div>
-                  </div>
-
-                  {/* 7.1 FIX — Description field added to create form (was only in edit form before) */}
-                  <div className="space-y-2">
-                    <Label className="dark:text-zinc-300">{t('edit_description')}</Label>
-                    <Input
-                      placeholder="Optional notes (e.g. invoice #, project name)"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      className="bg-white dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100"
-                    />
-                  </div>
-
-                  {isIndia ? <ExpenseGstFields value={gst} onChange={setGst} amount={Number(amount) || 0} supplierState={supplierState} /> : null}
-
-                </CardContent>
-                <CardFooter className="bg-white dark:bg-zinc-900 border-t dark:border-zinc-800 rounded-b-xl p-6">
-                  <Button type="submit" className="w-full bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200" disabled={isSubmitting || isScanning}>
-                    {isSubmitting ? t('saving') : t('log_btn')} <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </CardFooter>
-              </form>
-            </Card>
+        {error ? (
+          <div role="alert" className="flex items-center justify-between gap-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm"><span>{error}</span><Button size="sm" variant="outline" onClick={() => void loadList()}>{t("retry")}</Button></div>
+        ) : !loading && meta.totalRecords === 0 && !filtersOn && period === "all" ? (
+          <div className="grid place-items-center rounded-3xl border border-dashed p-12 text-center">
+            <div className="max-w-sm space-y-3"><div className="mx-auto grid size-14 place-items-center rounded-2xl bg-indigo-500/10 text-indigo-600"><Receipt className="size-7" aria-hidden /></div><h2 className="text-lg font-semibold">{t("empty.title")}</h2><p className="text-sm text-muted-foreground">{t("empty.body")}</p><Button onClick={() => { setEditing(null); setSheetOpen(true); }}><Plus className="mr-2 size-4" aria-hidden />{t("add")}</Button></div>
           </div>
-
-          {/* RIGHT: The Ledger */}
-          <div className="lg:col-span-8">
-            <Card className="shadow-sm border-zinc-200 dark:border-zinc-800 h-full bg-white dark:bg-zinc-900 flex flex-col">
-              <CardHeader>
-                <CardTitle className="dark:text-zinc-50">{t('ledger_title')}</CardTitle>
-                <CardDescription className="dark:text-zinc-400">{t('ledger_desc')}</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0 sm:p-6 sm:pt-0 flex-1">
-                <DataTableToolbar
-                  searchValue={tableState.search}
-                  onSearchChange={tableState.setSearch}
-                  searchPlaceholder={t("vendor_ph")}
-                  rightSlot={
-                    <div className="hidden md:block">
-                      <ColumnVisibilityToggle
-                        options={expenseColumns
-                          .filter((col) => col.hideable)
-                          .map((col) => ({
-                            id: col.id,
-                            label: typeof col.header === "string" ? col.header : col.id,
-                            visible: visibleColumns.includes(col.id),
-                            onToggle: () =>
-                              setVisibleColumns((prev) =>
-                                prev.includes(col.id) ? prev.filter((existing) => existing !== col.id) : [...prev, col.id],
-                              ),
-                          }))}
-                      />
-                    </div>
-                  }
-                />
-                <div className="hidden md:block">
-                  <DataTable
-                    columns={expenseColumns}
-                    data={filteredExpenses}
-                    rowId={(row) => row.id}
-                    loading={isLoading}
-                    error={fetchError}
-                    onRetry={() => fetchExpenses(currentPage)}
-                    visibleColumnIds={visibleColumns}
-                    emptyTitle={t("no_expenses")}
-                    emptyDescription={t("no_expenses_desc")}
-                  />
-                </div>
-                <div className="space-y-3 p-3 pb-20 md:hidden">
-                  {filteredExpenses.map((expense) => (
-                    <Card key={expense.id} className="border-zinc-200 dark:border-zinc-800">
-                      <CardContent className="space-y-3 p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-xs text-zinc-500">{t("col_vendor")}</p>
-                            <p className="font-semibold text-zinc-900 dark:text-zinc-100">{expense.vendor}</p>
-                          </div>
-                          <p className="font-bold text-rose-600 dark:text-rose-400">{fCurrency(expense.amount)}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary">{expense.category}</Badge>
-                          <span className="text-xs text-zinc-500">{format(new Date(expense.date), "dd MMM yyyy")}</span>
-                        </div>
-                        <details className="rounded-md border border-zinc-200 p-2 text-xs dark:border-zinc-800">
-                          <summary className="cursor-pointer font-semibold">More details</summary>
-                          <div className="space-y-1 pt-2 text-zinc-600 dark:text-zinc-300">
-                            <p>{t("col_category")}: {expense.category}</p>
-                            <p>{t("col_date")}: {format(new Date(expense.date), "dd MMM yyyy")}</p>
-                            {expense.description && <p>{expense.description}</p>}
-                          </div>
-                        </details>
-                        <div className="flex flex-wrap gap-2">
-                          {expense.receiptUrl && (
-                            <Button variant="outline" size="sm" asChild>
-                              <a href={expense.receiptUrl} target="_blank" rel="noopener noreferrer">
-                                <FileText className="mr-1.5 h-3.5 w-3.5" /> {t("actions.view_receipt")}
-                              </a>
-                            </Button>
-                          )}
-                          <Button variant="outline" size="sm" onClick={() => openEditModal(expense)}>
-                            <Edit className="mr-1.5 h-3.5 w-3.5" /> {t("actions.edit")}
-                          </Button>
-                          <Button variant="destructive" size="sm" onClick={() => setExpenseToDelete(expense.id)}>
-                            <Trash2 className="mr-1.5 h-3.5 w-3.5" /> {t("actions.delete")}
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </CardContent>
-              <CardFooter className="p-0">
-                <DataTablePagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPrev={() => setCurrentPage((p) => p - 1)}
-                  onNext={() => setCurrentPage((p) => p + 1)}
-                  disabled={isLoading}
-                  label={t("page_of", { current: currentPage, total: totalPages })}
-                />
-              </CardFooter>
-            </Card>
-          </div>
-
-        </div>
-      {/* EDIT EXPENSE MODAL */}
-      <Dialog open={!!expenseToEdit} onOpenChange={(open) => !open && setExpenseToEdit(null)}>
-        <DialogContent className="dark:bg-zinc-900 dark:border-zinc-800">
-          <DialogHeader>
-            <DialogTitle className="dark:text-zinc-50 font-bold tracking-tight">{t('edit_title')}</DialogTitle>
-            <DialogDescription className="dark:text-zinc-400 text-xs font-medium">{t('edit_desc')}</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleEditSubmit}>
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">{t('edit_date')}</Label>
-                  <Input type="date" value={editForm.date} onChange={(e) => setEditForm({...editForm, date: e.target.value})} required className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-50 dark:[color-scheme:dark]" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">{t('edit_amount', { currency })}</Label>
-                  <Input type="number" step="0.01" min="1" value={editForm.amount} onChange={(e) => setEditForm({...editForm, amount: e.target.value})} required className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-50" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">{t('edit_vendor')}</Label>
-                <Input value={editForm.vendor} onChange={(e) => setEditForm({...editForm, vendor: e.target.value})} required className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-50" />
-              </div>
-              <div className="space-y-2">
-                <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">{t('edit_category')}</Label>
-                <Select value={editForm.category} onValueChange={(val) => setEditForm({...editForm, category: val})} required>
-                  <SelectTrigger className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="dark:bg-zinc-900 dark:border-zinc-800">
-                        <SelectItem value="Hosting & Cloud">{t('cat_hosting')}</SelectItem>
-                        <SelectItem value="Software Subscriptions">{t('cat_software')}</SelectItem>
-                        <SelectItem value="Hardware & Equipment">{t('cat_hardware')}</SelectItem>
-                        <SelectItem value="Internet & Utilities">{t('cat_internet')}</SelectItem>
-                        <SelectItem value="Sub-contractors">{t('cat_contractors')}</SelectItem>
-                        <SelectItem value="Office & Rent">{t('cat_office')}</SelectItem>
-                        <SelectItem value="Meals & Entertainment">{t('cat_meals')}</SelectItem>
-                        <SelectItem value="Other">{t('cat_other')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="dark:text-zinc-300 text-xs font-bold uppercase tracking-wider">{t('edit_description')}</Label>
-                <Input value={editForm.description} onChange={(e) => setEditForm({...editForm, description: e.target.value})} className="dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-50" />
-              </div>
-              {isIndia ? <ExpenseGstFields value={editGst} onChange={setEditGst} amount={Number(editForm.amount) || 0} supplierState={supplierState} /> : null}
+        ) : (
+          <div className="overflow-hidden rounded-2xl border bg-card">
+            <div className="hidden grid-cols-[32px_110px_minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1fr)_120px] items-center gap-3 border-b bg-muted/40 px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground lg:grid">
+              <Checkbox checked={allSelected} onCheckedChange={() => setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.id)))} aria-label={t("selectAll")} />
+              <button type="button" className="flex items-center gap-1 text-start uppercase" onClick={() => sortBy("date")}>{tc("col_date")}{sortIcon("date")}</button>
+              <button type="button" className="flex items-center gap-1 text-start uppercase" onClick={() => sortBy("vendor")}>{tc("col_vendor")}{sortIcon("vendor")}</button>
+              <span>{tc("col_category")}</span>
+              <button type="button" className="flex items-center justify-end gap-1 uppercase" onClick={() => sortBy("amount")}>{t("col.amount")}{sortIcon("amount")}</button>
+              <span className="text-end">{tc("col_actions")}</span>
             </div>
-            <DialogFooter className="dark:border-zinc-800">
-              <Button type="button" variant="outline" onClick={() => setExpenseToEdit(null)} className="dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 text-xs font-bold uppercase tracking-widest">{t('cancel')}</Button>
-              <Button type="submit" disabled={isEditing} className="bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-700 text-xs font-bold uppercase tracking-widest border-none">
-                {isEditing ? t('saving_changes') : t('save_changes')}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+            <ul>
+              {loading && rows.length === 0 ? Array.from({ length: 6 }).map((_, i) => <li key={i} className="border-b p-4 last:border-0"><Skeleton className="h-10 w-full" /></li>) : rows.map((e) => (
+                <li key={e.id} className={cn("relative grid items-center gap-x-3 gap-y-1.5 border-b px-4 py-3 last:border-0 hover:bg-muted/40 lg:grid-cols-[32px_110px_minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1fr)_120px]", selected.has(e.id) && "bg-indigo-500/5")}>
+                  <Checkbox className="absolute end-3 top-3 lg:static" checked={selected.has(e.id)} onCheckedChange={() => toggle(e.id)} aria-label={t("select", { name: e.vendor })} />
+                  <span className="text-sm text-muted-foreground">{shortDate(e.date, locale)}</span>
+                  <span className="min-w-0"><span className="flex items-center gap-1.5"><span className="truncate font-medium">{e.vendor}</span>{e.paymentStatus === "UNPAID" && <Badge variant="outline" className="border-amber-500/40 text-[10px] text-amber-700 dark:text-amber-300">{t("unpaid")}</Badge>}{e.itcStatus === "ELIGIBLE" && <Badge variant="outline" className="border-emerald-500/40 text-[10px] text-emerald-700 dark:text-emerald-300">{t("credit")}</Badge>}
+                    {e.source !== "MANUAL" && e.source !== "IMPORT" && <Badge variant="outline" className="gap-1 text-[10px]">{e.source === "EMAIL" ? <Mail className="size-3" aria-hidden /> : e.source === "RECURRING" ? <Repeat className="size-3" aria-hidden /> : null}{e.poNumber && e.source === "PO" ? `PO ${e.poNumber}` : t(`source.${e.source}` as never)}</Badge>}
+                    {e.billable && <Badge variant="outline" className={cn("text-[10px]", e.billedInvoiceId ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-300" : "border-indigo-500/40 text-indigo-700 dark:text-indigo-300")}>{e.billedInvoiceId ? t("billable.billed") : t("billable.chip", { client: e.clientName ?? "" })}</Badge>}
+                    {e.reconciled && <Landmark className="size-3.5 text-emerald-600" aria-label={t("bank.reconciled")} />}</span>{(e.description || e.vendorInvoiceNo) && <span className="block truncate text-xs text-muted-foreground">{[e.vendorInvoiceNo, e.description].filter(Boolean).join(" · ")}</span>}</span>
+                  <span><Badge variant="secondary" className="max-w-full truncate font-normal">{catLabel(e.category)}</Badge></span>
+                  <span className="font-medium tabular-nums lg:text-end">{m(e.amount)}{e.gstAmount > 0 && <span className="block text-xs font-normal text-muted-foreground">{t("incGst", { amount: m(e.gstAmount) })}</span>}</span>
+                  <span className="flex justify-end gap-0.5">
+                    {e.receiptUrl && <Button variant="ghost" size="icon" className="size-8" asChild><a href={e.receiptUrl} target="_blank" rel="noopener noreferrer" aria-label={`${tc("actions.view_receipt")}: ${e.vendor}`}><FileText className="size-4" aria-hidden /></a></Button>}
+                    <RecordDocumentsDialog targetType="EXPENSE" targetId={e.id} />
+                    {!e.reconciled && <Button variant="ghost" size="icon" className="size-8" aria-label={`${t("bank.match")}: ${e.vendor}`} onClick={() => setBankFor(e)}><Landmark className="size-4" aria-hidden /></Button>}
+                    <Button variant="ghost" size="icon" className="size-8" aria-label={`${tc("actions.edit")}: ${e.vendor}`} onClick={() => { setEditing(e); setSheetOpen(true); }}><Pencil className="size-4" aria-hidden /></Button>
+                    <Button variant="ghost" size="icon" className="size-8 text-rose-600" aria-label={`${tc("actions.delete")}: ${e.vendor}`} onClick={() => setConfirmDelete([e.id])}><Trash2 className="size-4" aria-hidden /></Button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {rows.length === 0 && !loading && <p className="p-10 text-center text-sm text-muted-foreground">{t("noResults")}</p>}
+            {rows.length > 0 && <div className="flex items-center justify-between border-t bg-muted/30 px-4 py-2.5 text-sm"><span className="text-muted-foreground">{t("shown", { count: meta.totalRecords })}</span><span className="font-semibold tabular-nums">{t("filteredTotal", { amount: m(filteredTotal) })}</span></div>}
+          </div>
+        )}
 
-      {/* DELETE EXPENSE CONFIRMATION */}
-      <AlertDialog open={!!expenseToDelete} onOpenChange={() => setExpenseToDelete(null)}>
-        <AlertDialogContent className="dark:bg-zinc-900 dark:border-zinc-800">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="dark:text-zinc-50 font-bold tracking-tight">{t('delete_title')}</AlertDialogTitle>
-            <AlertDialogDescription className="dark:text-zinc-400 text-xs font-medium mt-2">
-              {t('delete_desc')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800 text-xs font-bold uppercase tracking-widest">{t('cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-rose-600 hover:bg-rose-700 text-white dark:bg-rose-600 dark:hover:bg-rose-700 text-xs font-bold uppercase tracking-widest border-none">
-              {t('confirm_delete')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
+        {meta.totalPages > 1 && (
+          <nav aria-label={t("pagination")} className="flex items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">{tc("page_of", { current: meta.currentPage, total: meta.totalPages })}</p>
+            <div className="flex gap-2">
+              <Button variant="outline" size="icon" aria-label={tc("previous")} disabled={page <= 1 || loading} onClick={() => setPage((p) => p - 1)}><ChevronLeft className="size-4 rtl:rotate-180" aria-hidden /></Button>
+              <Button variant="outline" size="icon" aria-label={tc("next")} disabled={page >= meta.totalPages || loading} onClick={() => setPage((p) => p + 1)}>{loading ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <ChevronRight className="size-4 rtl:rotate-180" aria-hidden />}</Button>
+            </div>
+          </nav>
+        )}
+      </section>
+
+      </>)}
+
+      <ExpenseSheet open={sheetOpen} onOpenChange={setSheetOpen} expense={editing} isIndia={isIndia} supplierState={supplierState} currency={currency} locale={locale} extraCategories={metaData.categories} vendors={metaData.vendors} settings={settings} onSaved={refresh} />
+      <BankMatchDialog expense={bankFor} currency={currency} locale={locale} onClose={() => setBankFor(null)} onDone={refresh} />
+      <SettingsSheet open={settingsOpen} onOpenChange={setSettingsOpen} currency={currency} extraCategories={metaData.categories} onSaved={refresh} />
+
+      <AlertDialog open={confirmDelete !== null} onOpenChange={(o) => !o && setConfirmDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader><AlertDialogTitle>{t("confirm.title", { count: confirmDelete?.length ?? 0 })}</AlertDialogTitle><AlertDialogDescription>{t("confirm.body")}</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogFooter><AlertDialogCancel>{tc("cancel")}</AlertDialogCancel><AlertDialogAction disabled={busy} className="bg-rose-600 text-white hover:bg-rose-700" onClick={() => confirmDelete && void bulk("DELETE", confirmDelete)}>{tc("confirm_delete")}</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
     </DashboardPageShell>
   );
 }

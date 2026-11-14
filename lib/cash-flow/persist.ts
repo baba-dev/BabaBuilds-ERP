@@ -1,128 +1,69 @@
 import "server-only";
 
 import { prisma } from "@/lib/prisma";
-import type { CashForecastHorizonType, CashForecastScenarioTag } from "@prisma/client";
-import { computeCashForecastSnapshot } from "@/lib/cash-flow/forecast-engine";
+import type { CashForecastHorizonType, CashForecastScenarioTag, Prisma } from "@prisma/client";
+import { computeAllScenarios, type ForecastSnapshotResult } from "@/lib/cash-flow/forecast-engine";
 import { toDecimal } from "@/lib/money";
-import type { Prisma } from "@prisma/client";
 
-export async function computeAndPersistCashForecastSnapshot(args: {
-  workspaceId: string;
-  horizonType: CashForecastHorizonType;
-  scenarioTag: CashForecastScenarioTag;
-  startDate: Date;
-  generatedBy: "SYSTEM" | "USER" | "RULE_CHANGE" | "DATA_IMPORT";
-  now?: Date;
-}) {
-  const { workspaceId, horizonType, scenarioTag, startDate, generatedBy } = args;
-  const now = args.now ?? new Date();
+/** How many saved forecasts to keep per workspace, horizon and scenario. The nightly job adds one a day, so this is about six weeks of history for the accuracy view. */
+export const SNAPSHOTS_KEPT = 45;
 
-  const computed = await computeCashForecastSnapshot({
-    workspaceId,
-    horizonType,
-    scenarioTag,
-    startDate,
-    now,
-  });
+export type PersistedBy = "SYSTEM" | "USER" | "RULE_CHANGE" | "DATA_IMPORT";
 
-  // Replace existing snapshot for the same horizon/scenario/start/end (idempotent-ish for refresh).
-  await prisma.cashForecastSnapshot.deleteMany({
-    where: { workspaceId, horizonType, scenarioTag, startDate: computed.startDate, endDate: computed.endDate },
-  });
-
+/** Save one computed scenario. Only the base scenario keeps its line items; the others keep the period totals, which is all the comparison needs. */
+export async function persistForecastResult(workspaceId: string, result: ForecastSnapshotResult, generatedBy: PersistedBy, now: Date, withLines: boolean) {
   const snapshot = await prisma.cashForecastSnapshot.create({
     data: {
-      workspaceId,
-      generatedAt: now,
-      horizonType,
-      scenarioTag,
-      startDate: computed.startDate,
-      endDate: computed.endDate,
-      openingCash: computed.openingCash,
-      closingCash: computed.closingCash,
-      totalProjectedInflows: computed.totalProjectedInflows,
-      totalProjectedOutflows: computed.totalProjectedOutflows,
-      confidenceScore: computed.confidenceScore ?? undefined,
-      assumptionsJson: computed.assumptions as Prisma.InputJsonValue,
-      generatedBy,
+      workspaceId, generatedAt: now, horizonType: result.horizonType, scenarioTag: result.scenarioTag, startDate: result.startDate, endDate: result.endDate,
+      openingCash: result.openingCash, closingCash: result.closingCash, totalProjectedInflows: result.totalProjectedInflows, totalProjectedOutflows: result.totalProjectedOutflows,
+      confidenceScore: result.confidenceScore ?? undefined, assumptionsJson: result.assumptions as Prisma.InputJsonValue, generatedBy,
       periods: {
-        create: computed.periods.map((p) => ({
-          periodStart: p.periodStart,
-          periodEnd: p.periodEnd,
-          bucketLabel: p.bucketLabel,
-          openingCash: p.openingCash,
-          actualInflows: p.actualInflows,
-          projectedInflows: p.projectedInflows,
-          actualOutflows: p.actualOutflows,
-          projectedOutflows: p.projectedOutflows,
-          closingCash: p.closingCash,
-          riskLevel: p.riskLevel,
-          lineItems: {
-            create: p.lineItems.map((l) => ({
-              direction: l.direction!,
-              sourceType: l.sourceType,
-              sourceId: l.sourceId ?? undefined,
-              amount: toDecimal(l.amount),
-              expectedDate: l.expectedDate,
-              confidence: l.confidence ?? undefined,
-              scenarioTag,
-              classification: l.classification,
-              title: l.title,
-              metadataJson: l.metadataJson as Prisma.InputJsonValue,
-              explanation: l.explanation ?? undefined,
-            })),
-          },
+        create: result.periods.map((p) => ({
+          periodStart: p.periodStart, periodEnd: p.periodEnd, bucketLabel: p.bucketLabel, openingCash: p.openingCash,
+          actualInflows: p.actualInflows, projectedInflows: p.projectedInflows, actualOutflows: p.actualOutflows, projectedOutflows: p.projectedOutflows,
+          closingCash: p.closingCash, riskLevel: p.riskLevel, notesJson: { lowestCash: p.lowestCash.toFixed(2) },
+          ...(withLines ? {
+            lineItems: {
+              create: p.lineItems.map((l) => ({
+                direction: l.direction!, sourceType: l.sourceType, sourceId: l.sourceId ?? undefined, amount: toDecimal(l.amount), expectedDate: l.expectedDate, confidence: l.confidence ?? undefined,
+                scenarioTag: result.scenarioTag, classification: l.classification, title: l.title, metadataJson: l.metadataJson as Prisma.InputJsonValue, explanation: l.explanation ?? undefined,
+              })),
+            },
+          } : {}),
         })),
       },
     },
-    include: { periods: { include: { lineItems: true } } },
+    select: { id: true },
   });
-
-  return { computed, snapshot };
+  await pruneSnapshots(workspaceId, result.horizonType, result.scenarioTag);
+  return snapshot.id;
 }
 
-export async function refreshCashForecastSnapshotsForWorkspace(args: {
-  workspaceId: string;
-  now?: Date;
-  replaceLatest?: boolean;
-}) {
+async function pruneSnapshots(workspaceId: string, horizonType: CashForecastHorizonType, scenarioTag: CashForecastScenarioTag) {
+  const old = await prisma.cashForecastSnapshot.findMany({
+    where: { workspaceId, horizonType, scenarioTag }, orderBy: { generatedAt: "desc" }, skip: SNAPSHOTS_KEPT, select: { id: true },
+  });
+  if (old.length) await prisma.cashForecastSnapshot.deleteMany({ where: { id: { in: old.map((o) => o.id) } } });
+}
+
+/** Compute and store a horizon for all three scenarios from a single load of the data. */
+export async function saveHorizonSnapshots(args: { workspaceId: string; horizonType: CashForecastHorizonType; generatedBy: PersistedBy; now?: Date }) {
   const now = args.now ?? new Date();
-  const startDate = new Date(now);
-
-  const horizons: CashForecastHorizonType[] = ["DAILY_30", "WEEKLY_13", "MONTHLY_12"];
-  const scenarios: CashForecastScenarioTag[] = ["BASE", "BEST_CASE", "WORST_CASE"];
-
-  const results: Array<{ horizonType: CashForecastHorizonType; scenarioTag: CashForecastScenarioTag; snapshotId: string }> = [];
-
-  for (const horizonType of horizons) {
-    for (const scenarioTag of scenarios) {
-      const { snapshot } = await computeAndPersistCashForecastSnapshot({
-        workspaceId: args.workspaceId,
-        horizonType,
-        scenarioTag,
-        startDate,
-        generatedBy: "SYSTEM",
-        now,
-      });
-      results.push({ horizonType, scenarioTag, snapshotId: snapshot.id });
-    }
+  const { results } = await computeAllScenarios({ workspaceId: args.workspaceId, horizonType: args.horizonType, now });
+  const ids: Record<string, string> = {};
+  for (const tag of ["BASE", "BEST_CASE", "WORST_CASE"] as const) {
+    ids[tag] = await persistForecastResult(args.workspaceId, results[tag], args.generatedBy, now, tag === "BASE");
   }
-
-  return results;
+  return { ids, results };
 }
 
-// Back-compat name used by APIs
-export async function persistCashForecastSnapshot(args: {
-  workspaceId: string;
-  horizonType: CashForecastHorizonType;
-  scenarioTag: CashForecastScenarioTag;
-  startDate: Date;
-  now?: Date;
-}) {
-  const { snapshot } = await computeAndPersistCashForecastSnapshot({
-    ...args,
-    generatedBy: "USER",
-  });
-  return { snapshotId: snapshot.id };
+/** The nightly job: weekly (kept for accuracy), daily and monthly. */
+export async function refreshCashForecastSnapshotsForWorkspace(args: { workspaceId: string; now?: Date }) {
+  const now = args.now ?? new Date();
+  const out: Array<{ horizonType: CashForecastHorizonType; snapshotIds: Record<string, string> }> = [];
+  for (const horizonType of ["WEEKLY_13", "DAILY_30", "MONTHLY_12"] as const) {
+    const { ids } = await saveHorizonSnapshots({ workspaceId: args.workspaceId, horizonType, generatedBy: "SYSTEM", now });
+    out.push({ horizonType, snapshotIds: ids });
+  }
+  return out;
 }
-
