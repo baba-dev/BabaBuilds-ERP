@@ -10,6 +10,7 @@ import { isCronAuthorized, unauthorizedCronResponse } from "@/lib/security/cron-
 import { refreshCashForecastSnapshotsForWorkspace } from "@/lib/cash-flow/persist";
 import { isModuleEnabled } from "@/lib/modules";
 import { recomputeClientPaymentBehavior } from "@/lib/cash-flow/payment-behavior";
+import { alertOnShortfall } from "@/lib/cash-flow/alerting";
 
 export async function GET(request: Request) {
   if (!isCronAuthorized(request)) {
@@ -31,7 +32,8 @@ export async function GET(request: Request) {
           continue;
         }
         await recomputeClientPaymentBehavior({ workspaceId: ws.id, now: new Date() });
-        await refreshCashForecastSnapshotsForWorkspace({ workspaceId: ws.id, now: new Date(), replaceLatest: true });
+        await refreshCashForecastSnapshotsForWorkspace({ workspaceId: ws.id, now: new Date() });
+        await alertOnShortfall(ws.id);
         logs.push({ workspaceId: ws.id, ok: true });
       } catch (err: unknown) {
         logs.push({ workspaceId: ws.id, ok: false, error: err instanceof Error ? err.message : String(err) });

@@ -2816,6 +2816,10 @@ model CashForecastAlertPreference {
   warningEnabled  Boolean @default(true)
   infoEnabled     Boolean @default(true)
 
+  /// Last time the nightly job told the team about a coming shortfall, and which one, so the same warning is not sent every night.
+  lastAlertAt  DateTime?
+  lastAlertKey String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -37,6 +37,8 @@ export type ForecastAssumptions = {
   movePOEarlierLaterDays: number;
   minimumCashThreshold: number;
   defaultInvoicePaymentTermsDays: number;
+  /** Days after today that a receivable already past due is assumed to be collected. */
+  overdueCollectionDays?: number;
   recurringOutflows?: Array<{
     title: string;
     amount: number;
@@ -49,33 +51,8 @@ export async function getForecastAssumptionsForWorkspace(args: {
   workspaceId: string;
   scenarioTag: CashForecastScenarioTag;
 }): Promise<ForecastAssumptions> {
-  // v2: load latest active scenario assumption; fallback to engine defaults.
-  // Kept here as a lightweight helper; callers may override with their own assumption sources later.
-  const { prisma } = await import("@/lib/prisma");
-  const { getScenarioDefaults } = await import("@/lib/cash-flow/scenario");
-
-  const base = getScenarioDefaults(args.scenarioTag);
-  const key = `cashForecast.scenario.${args.scenarioTag}`;
-
-  const row = await prisma.cashForecastAssumption.findFirst({
-    where: { workspaceId: args.workspaceId, key, isActive: true },
-    orderBy: { updatedAt: "desc" },
-    select: { valueJson: true },
-  });
-
-  const value = (row?.valueJson ?? {}) as Partial<ForecastAssumptions>;
-  return {
-    ...base,
-    ...value,
-    // ensure required fields stay present
-    collectionsDelayDays: Number(value.collectionsDelayDays ?? base.collectionsDelayDays),
-    inflowHaircutPercent: Number(value.inflowHaircutPercent ?? base.inflowHaircutPercent),
-    outflowIncreasePercent: Number(value.outflowIncreasePercent ?? base.outflowIncreasePercent),
-    movePOEarlierLaterDays: Number(value.movePOEarlierLaterDays ?? base.movePOEarlierLaterDays),
-    minimumCashThreshold: Number(value.minimumCashThreshold ?? base.minimumCashThreshold),
-    defaultInvoicePaymentTermsDays: Number(value.defaultInvoicePaymentTermsDays ?? base.defaultInvoicePaymentTermsDays),
-    recurringOutflows: Array.isArray(value.recurringOutflows) ? value.recurringOutflows : base.recurringOutflows,
-  };
+  const { loadScenarioAssumptions } = await import("@/lib/cash-flow/assumptions");
+  return (await loadScenarioAssumptions(args.workspaceId))[args.scenarioTag];
 }
 
 export type ForecastSourceData = {
@@ -92,6 +69,8 @@ export type ForecastSourceData = {
     status: "PENDING" | "PARTIALLY_PAID" | "PAID" | "VOID";
     totalAmount: Decimal;
     amountReceived: number | Decimal | null;
+    /** Rate to the workspace currency; amounts above are in the invoice currency. */
+    exchangeRate?: number | Decimal | null;
     clientId: string | null;
   }>;
   clientPaymentBehavior: Record<
@@ -140,6 +119,14 @@ export type ForecastSourceData = {
   }>;
   /** GST cash due on GSTR-3B (India), from the GST engine; estimated until the period closes. */
   gstPayments?: Array<{ id: string; periodKey: string; dueDate: Date; amount: Decimal; label: string; estimated: boolean }>;
+  /** Recurring expense templates that are still running (cash-paid ones leave on their run date, bills on their due date). */
+  recurringExpenses?: Array<{ id: string; vendor: string; category: string; amount: Decimal; frequency: string; nextRunDate: Date; endDate: Date | null; dueInDays: number | null; paid: boolean }>;
+  /** Cash paid out by the last few payroll runs, newest first, to project the next ones. */
+  payrollHistory?: Array<{ runId: string; postedAt: Date; amount: Decimal }>;
+  /** Purchase orders that already have a bill, so the order is not counted a second time. */
+  purchaseOrdersWithBills?: string[];
+  /** Cash and bank balances at the start of the horizon, per account. */
+  accounts?: Array<{ id: string; name: string; balance: Decimal; currency: string }>;
   /** Approved bills not yet paid, each landing on its due date (overdue ones land today). */
   payables?: Array<{ id: string; vendor: string; dueDate: Date; amount: Decimal; overdue: boolean; invoiceNo: string | null; msme: boolean }>;
   workspaceDefaults: {

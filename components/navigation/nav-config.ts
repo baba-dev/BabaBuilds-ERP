@@ -74,7 +74,7 @@ export const canonicalNavItems: CanonicalNavItem[] = assertUniqueAppNavItemKeys(
   { key: "pos", path: "/pos", icon: ShoppingCart, group: "sales", keywords: ["point of sale", "checkout", "register", "cart"], badge: "New", requiresModule: "POS", requiresPermission: "pos.view" },
   { key: "retainers_hub", path: "/retainers", icon: Box, group: "sales", keywords: ["recurring", "contracts", "retainer"] },
   { key: "expenses_margins", path: "/expenses", icon: Receipt, group: "finance", keywords: ["costs", "purchases", "spend"] },
-  { key: "cash_flow", path: "/cash-flow/overview", icon: HandCoins, group: "finance", keywords: ["liquidity", "cash", "forecast"], badge: "New", requiresModule: "CASH_FLOW" },
+  { key: "cash_flow", path: "/cash-flow", icon: HandCoins, group: "finance", keywords: ["liquidity", "cash", "forecast"], badge: "New", requiresModule: "CASH_FLOW" },
   { key: "reporting_center", path: "/reporting", icon: ChartColumnBig, group: "finance", keywords: ["reports", "analytics", "insights"], badge: "New", requiresModule: "REPORTING_CENTER", requiresPermission: "reporting_center.view" },
   { key: "ar_collections", path: "/ar-collections", icon: Siren, group: "finance", keywords: ["collections", "receivables", "follow up"], badge: "New", requiresModule: "AR_COLLECTIONS" },
   { key: "savings_tax", path: "/tax", icon: ShieldCheck, group: "finance", keywords: ["gst", "compliance", "tax"] },
