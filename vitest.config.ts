@@ -10,5 +10,9 @@ export default defineConfig({
   },
   test: {
     include: ["tests/**/*.test.ts"],
+    // Route tests import large module graphs on demand. The 5s default is too tight for a loaded or
+    // self-hosted CI runner (the suite runs ~10x slower there); a genuine hang still fails, just later.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
   },
 });
