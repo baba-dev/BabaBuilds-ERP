@@ -7718,5 +7718,224 @@
     "loadFailed": "Could not load collections.",
     "retry": "Try again",
     "viewOnly": "You can view these rules. Ask an admin or finance manager to change them."
+  },
+  "ReportingCenter": {
+    "title": "Reporting Center",
+    "subtitle": "Reports built from your live invoices, bills, bank, collections and forecast.",
+    "search": "Search reports",
+    "saved": "Saved reports",
+    "noMatch": "No report matches that search.",
+    "asOfToday": "As of today",
+    "forPeriod": "For a period",
+    "allReports": "All reports",
+    "loadFailed": "Could not load the report.",
+    "retry": "Try again",
+    "notFound": "That report does not exist.",
+    "refresh": "Refresh",
+    "export": "Export",
+    "exportFailed": "Could not export. Try again.",
+    "period": "Period",
+    "from": "From",
+    "to": "To",
+    "compare": "Compare with the previous period",
+    "vsPrevious": "vs previous",
+    "newVsPrev": "New",
+    "other": "Other",
+    "rowCount": "{count, plural, one {# row} other {# rows}}",
+    "searchRows": "Filter rows",
+    "emptyRows": "Nothing to show for these filters.",
+    "truncated": "This report was cut off at its size limit. Narrow the period to see everything.",
+    "total": "Total",
+    "open": "Open",
+    "saveView": "Save report",
+    "updateView": "Update saved report",
+    "saveViewHint": "Keep this report with its filters so you can open it again, and optionally have it emailed.",
+    "viewName": "Name",
+    "pinToTop": "Pin to the top",
+    "emailIt": "Email it",
+    "recipients": "Send to",
+    "recipientsHint": "Up to 10 addresses, separated by commas. Weekly goes out Mondays, monthly on the 1st, as a table plus a CSV.",
+    "cancel": "Cancel",
+    "save": "Save",
+    "savedToast": "Saved",
+    "saveFailed": "Could not save. Check the details and try again.",
+    "deleteView": "Delete saved report",
+    "deleted": "Deleted",
+    "scheduleFailed": "last email failed",
+    "freq": {
+      "NONE": "Don't email",
+      "WEEKLY": "Every week",
+      "MONTHLY": "Every month"
+    },
+    "category": {
+      "Finance": "Finance",
+      "Sales": "Sales",
+      "Cash": "Cash",
+      "Tax": "Tax",
+      "Operations": "Operations"
+    },
+    "period_this_month": "This month",
+    "period_last_month": "Last month",
+    "period_this_fy": "This year",
+    "period_last_fy": "Last year",
+    "period_all": "All time",
+    "period_custom": "Custom",
+    "label": {
+      "period": "Period",
+      "revenue": "Revenue",
+      "expenses": "Expenses",
+      "net": "Net",
+      "margin": "Margin",
+      "client": "Customer",
+      "invoices": "Invoices",
+      "share": "Share",
+      "outstanding": "Outstanding",
+      "daysToPay": "Days to pay",
+      "item": "Item",
+      "quantity": "Quantity",
+      "costs": "Costs",
+      "profit": "Profit",
+      "category": "Category",
+      "bills": "Bills",
+      "amount": "Amount",
+      "vendor": "Vendor",
+      "unpaid": "Unpaid",
+      "current": "Not due",
+      "d1_30": "1–30 days",
+      "d31_60": "31–60 days",
+      "d61_90": "61–90 days",
+      "d90_plus": "90+ days",
+      "total": "Total",
+      "NOT_DUE": "Not due",
+      "D1_30": "1–30 days",
+      "D31_60": "31–60 days",
+      "D61_90": "61–90 days",
+      "D90_PLUS": "90+ days",
+      "week": "Week of",
+      "opening": "Opening",
+      "inflows": "Money in",
+      "outflows": "Money out",
+      "closing": "Closing",
+      "worst": "Worst case",
+      "best": "Best case",
+      "month": "Month",
+      "new": "New",
+      "expansion": "Expansion",
+      "contraction": "Contraction",
+      "churn": "Churn",
+      "endingMrr": "Ending MRR",
+      "output": "Tax collected",
+      "input": "Tax claimable",
+      "status": "Status",
+      "count": "Count",
+      "number": "Number",
+      "date": "Date",
+      "tax": "Tax",
+      "balance": "Balance",
+      "description": "Description",
+      "paymentStatus": "Payment",
+      "claimable": "Claimable tax",
+      "customers": "Customers",
+      "topShare": "Top customer share",
+      "lines": "Lines",
+      "vendors": "Vendors",
+      "overdue": "Overdue",
+      "dso": "Days to get paid",
+      "atRisk": "At risk",
+      "owed": "Owed",
+      "cashNow": "Cash today",
+      "lowest": "Lowest point",
+      "safeToSpend": "Safe to spend",
+      "mrr": "MRR",
+      "arr": "ARR",
+      "netNew": "Net new MRR",
+      "netTax": "Net tax payable",
+      "reconciledPercent": "Reconciled",
+      "waiting": "Waiting",
+      "oldestDays": "Oldest waiting (days)",
+      "billed": "Billed"
+    },
+    "reports": {
+      "pnl": {
+        "title": "Profit and loss",
+        "desc": "Monthly revenue next to expenses, with margin. Revenue excludes tax; expenses exclude GST you can claim back."
+      },
+      "revenue_by_client": {
+        "title": "Revenue by customer",
+        "desc": "Who the revenue comes from, how concentrated it is, what each customer still owes and how fast they pay."
+      },
+      "revenue_by_service": {
+        "title": "Revenue by service or product",
+        "desc": "Which lines of work earn the most, from invoice line items."
+      },
+      "client_profitability": {
+        "title": "Customer profitability",
+        "desc": "Revenue less the expenses booked against each customer, to see who is actually worth the work."
+      },
+      "expense_by_category": {
+        "title": "Expenses by category",
+        "desc": "Where the money goes, with each category's share."
+      },
+      "expense_by_vendor": {
+        "title": "Expenses by vendor",
+        "desc": "What you spend with each supplier and what is still unpaid to them."
+      },
+      "ar_aging": {
+        "title": "Receivables aging",
+        "desc": "What customers owe you, by how late it is, with days to get paid and the amount most likely to slip."
+      },
+      "ap_aging": {
+        "title": "Payables aging",
+        "desc": "What you owe suppliers, by how late each bill is. Due dates follow the bill, MSME limits and vendor terms."
+      },
+      "cash_forecast": {
+        "title": "Cash forecast",
+        "desc": "13-week outlook from your bank balance, invoices, bills, payroll and tax, with best and worst cases."
+      },
+      "mrr": {
+        "title": "Recurring revenue (MRR)",
+        "desc": "Monthly recurring revenue from retainers: new, expansion, contraction and churn."
+      },
+      "tax_position": {
+        "title": "Tax collected and claimable",
+        "desc": "Tax on your invoices against input credit on approved bills, by month: a quick read of net tax payable."
+      },
+      "bank_reconciliation": {
+        "title": "Bank reconciliation status",
+        "desc": "How much of the bank activity is matched to your books, and what is still waiting."
+      },
+      "invoice_register": {
+        "title": "Invoice register",
+        "desc": "Every invoice in the period with its status and balance."
+      },
+      "expense_register": {
+        "title": "Expense register",
+        "desc": "Every approved expense in the period with category, vendor and payment status."
+      }
+    },
+    "note": {
+      "revenueExTax": "Revenue is the invoice amount before tax, in your base currency. Voided invoices are left out.",
+      "expensesApprovedNetItc": "Only approved expenses count, and GST you can claim back is not treated as a cost.",
+      "costsClientTagged": "Costs shown are expenses tagged to a customer; untagged overhead is not shared out.",
+      "balancesBaseCurrency": "All balances are in your base currency.",
+      "approvedBillsOnly": "Only approved bills count.",
+      "forecastDefinition": "Built from your bank balance, open invoices and bills, payroll and tax. See Cash Flow for the assumptions.",
+      "taxEstimate": "An estimate from invoices and approved bills. Your filed returns are the record.",
+      "voidExcluded": "Voided invoices are not listed."
+    },
+    "value": {
+      "reconciled": "Reconciled",
+      "waitingDebit": "Waiting (money out)",
+      "waitingCredit": "Waiting (money in)",
+      "ignored": "Ignored",
+      "transfers": "Internal transfers",
+      "PENDING": "Pending",
+      "PARTIALLY_PAID": "Partly paid",
+      "PAID": "Paid",
+      "UNPAID": "Unpaid",
+      "DRAFT": "Draft",
+      "SENT": "Sent",
+      "OVERDUE": "Overdue"
+    }
   }
 }

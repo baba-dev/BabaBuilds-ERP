@@ -774,6 +774,7 @@ model Workspace {
   @@index([isDemo])
   @@index([demoExpiresAt])
   @@index([demoTemplateKey])
+  reportViews ReportView[]
 }
 
 model CompanyGroup {
@@ -5204,4 +5205,33 @@ model ClientNote {
   createdAt    DateTime @default(now())
 
   @@index([workspaceId, clientId, createdAt(sort: Desc)])
+}
+
+
+/// A saved report: the report plus its filters, optionally pinned, optionally emailed on a schedule.
+model ReportView {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  createdByUserId String?
+  name            String
+  /// Report key from the catalog, for example "pnl" or "ar_aging".
+  reportId        String
+  paramsJson      Json?
+  pinned          Boolean @default(false)
+
+  /// WEEKLY (Mondays) or MONTHLY (the 1st). Null means not scheduled.
+  scheduleFrequency  String?
+  scheduleRecipients String?
+  scheduleFormat     String    @default("CSV")
+  scheduleNextAt     DateTime?
+  scheduleLastAt     DateTime?
+  scheduleLastError  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, createdByUserId])
+  @@index([scheduleNextAt])
 }

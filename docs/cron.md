@@ -20,6 +20,10 @@ Add these lines with `crontab -e` (times are the server's timezone; adjust to ta
 30 6  * * * /var/www/bababuilds-erp/scripts/run-cron.sh ar-reminders       >> /var/log/bababuilds/cron.log 2>&1
 45 6  * * * /var/www/bababuilds-erp/scripts/run-cron.sh gst-reminders      >> /var/log/bababuilds/cron.log 2>&1
 0  6  * * * /var/www/bababuilds-erp/scripts/run-cron.sh trial-expiry       >> /var/log/bababuilds/cron.log 2>&1
+# Emails saved reports on their weekly (Monday) and monthly (1st) schedules; needs SMTP in Business Settings
+30 7  * * * /var/www/bababuilds-erp/scripts/run-cron.sh report-schedules   >> /var/log/bababuilds/cron.log 2>&1
+# Saves the nightly cash forecast (feeds the accuracy view) and warns about a coming shortfall
+0  5  * * * /var/www/bababuilds-erp/scripts/run-cron.sh cash-forecast      >> /var/log/bababuilds/cron.log 2>&1
 ```
 
-Other routes exist (`process-retainers`, `sync-payments`, `cash-forecast`, `tax-obligations`, `tax-rules-sync`, `documents-ocr`, `accounting-integrity`, `alerts`, `cleanup`); check what each does in its `route.ts` before scheduling it, and ask which ones you already run.
+Other routes exist (`process-retainers`, `sync-payments`, `tax-obligations`, `tax-rules-sync`, `documents-ocr`, `accounting-integrity`, `alerts`, `cleanup`); check what each does in its `route.ts` before scheduling it, and ask which ones you already run.

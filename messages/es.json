@@ -7747,5 +7747,224 @@
     "loadFailed": "No se pudo cargar la cobranza.",
     "retry": "Reintentar",
     "viewOnly": "Puedes ver estas reglas. Pide a un administrador o gerente de finanzas que las cambie."
+  },
+  "ReportingCenter": {
+    "title": "Centro de informes",
+    "subtitle": "Informes creados con tus facturas, gastos, banco, cobranza y proyección en vivo.",
+    "search": "Buscar informes",
+    "saved": "Informes guardados",
+    "noMatch": "Ningún informe coincide con esa búsqueda.",
+    "asOfToday": "A la fecha de hoy",
+    "forPeriod": "Para un periodo",
+    "allReports": "Todos los informes",
+    "loadFailed": "No se pudo cargar el informe.",
+    "retry": "Reintentar",
+    "notFound": "Ese informe no existe.",
+    "refresh": "Actualizar",
+    "export": "Exportar",
+    "exportFailed": "No se pudo exportar. Inténtalo de nuevo.",
+    "period": "Periodo",
+    "from": "Desde",
+    "to": "Hasta",
+    "compare": "Comparar con el periodo anterior",
+    "vsPrevious": "vs anterior",
+    "newVsPrev": "Nuevo",
+    "other": "Otros",
+    "rowCount": "{count, plural, one {# fila} other {# filas}}",
+    "searchRows": "Filtrar filas",
+    "emptyRows": "No hay nada que mostrar con estos filtros.",
+    "truncated": "Este informe se cortó en su límite de tamaño. Acota el periodo para verlo completo.",
+    "total": "Total",
+    "open": "Abrir",
+    "saveView": "Guardar informe",
+    "updateView": "Actualizar informe guardado",
+    "saveViewHint": "Guarda este informe con sus filtros para abrirlo de nuevo y, si quieres, recibirlo por correo.",
+    "viewName": "Nombre",
+    "pinToTop": "Fijar arriba",
+    "emailIt": "Enviar por correo",
+    "recipients": "Enviar a",
+    "recipientsHint": "Hasta 10 direcciones, separadas por comas. El semanal sale los lunes y el mensual el día 1, como tabla más un CSV.",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "savedToast": "Guardado",
+    "saveFailed": "No se pudo guardar. Revisa los datos e inténtalo de nuevo.",
+    "deleteView": "Eliminar informe guardado",
+    "deleted": "Eliminado",
+    "scheduleFailed": "el último correo falló",
+    "freq": {
+      "NONE": "No enviar por correo",
+      "WEEKLY": "Cada semana",
+      "MONTHLY": "Cada mes"
+    },
+    "category": {
+      "Finance": "Finanzas",
+      "Sales": "Ventas",
+      "Cash": "Efectivo",
+      "Tax": "Impuestos",
+      "Operations": "Operaciones"
+    },
+    "period_this_month": "Este mes",
+    "period_last_month": "Mes pasado",
+    "period_this_fy": "Este año",
+    "period_last_fy": "Año pasado",
+    "period_all": "Todo",
+    "period_custom": "Personalizado",
+    "label": {
+      "period": "Periodo",
+      "revenue": "Ingresos",
+      "expenses": "Gastos",
+      "net": "Neto",
+      "margin": "Margen",
+      "client": "Cliente",
+      "invoices": "Facturas",
+      "share": "Participación",
+      "outstanding": "Pendiente",
+      "daysToPay": "Días de cobro",
+      "item": "Concepto",
+      "quantity": "Cantidad",
+      "costs": "Costos",
+      "profit": "Beneficio",
+      "category": "Categoría",
+      "bills": "Facturas de proveedor",
+      "amount": "Importe",
+      "vendor": "Proveedor",
+      "unpaid": "Sin pagar",
+      "current": "No vencido",
+      "d1_30": "1–30 días",
+      "d31_60": "31–60 días",
+      "d61_90": "61–90 días",
+      "d90_plus": "Más de 90 días",
+      "total": "Total",
+      "NOT_DUE": "No vencido",
+      "D1_30": "1–30 días",
+      "D31_60": "31–60 días",
+      "D61_90": "61–90 días",
+      "D90_PLUS": "Más de 90 días",
+      "week": "Semana del",
+      "opening": "Inicial",
+      "inflows": "Entradas",
+      "outflows": "Salidas",
+      "closing": "Final",
+      "worst": "Peor caso",
+      "best": "Mejor caso",
+      "month": "Mes",
+      "new": "Nuevo",
+      "expansion": "Expansión",
+      "contraction": "Contracción",
+      "churn": "Cancelaciones",
+      "endingMrr": "MRR final",
+      "output": "Impuesto cobrado",
+      "input": "Impuesto acreditable",
+      "status": "Estado",
+      "count": "Cantidad",
+      "number": "Número",
+      "date": "Fecha",
+      "tax": "Impuesto",
+      "balance": "Saldo",
+      "description": "Descripción",
+      "paymentStatus": "Pago",
+      "claimable": "Impuesto acreditable",
+      "customers": "Clientes",
+      "topShare": "Peso del mayor cliente",
+      "lines": "Líneas",
+      "vendors": "Proveedores",
+      "overdue": "Vencido",
+      "dso": "Días para cobrar",
+      "atRisk": "En riesgo",
+      "owed": "Debido",
+      "cashNow": "Efectivo hoy",
+      "lowest": "Punto más bajo",
+      "safeToSpend": "Disponible para gastar",
+      "mrr": "MRR",
+      "arr": "ARR",
+      "netNew": "MRR neto nuevo",
+      "netTax": "Impuesto neto a pagar",
+      "reconciledPercent": "Conciliado",
+      "waiting": "En espera",
+      "oldestDays": "Más antiguo en espera (días)",
+      "billed": "Facturado"
+    },
+    "reports": {
+      "pnl": {
+        "title": "Pérdidas y ganancias",
+        "desc": "Ingresos mensuales junto a gastos, con margen. Los ingresos no incluyen impuestos; los gastos excluyen el IVA que puedes recuperar."
+      },
+      "revenue_by_client": {
+        "title": "Ingresos por cliente",
+        "desc": "De dónde vienen los ingresos, qué tan concentrados están, cuánto debe aún cada cliente y qué tan rápido paga."
+      },
+      "revenue_by_service": {
+        "title": "Ingresos por servicio o producto",
+        "desc": "Qué líneas de trabajo generan más, según las líneas de factura."
+      },
+      "client_profitability": {
+        "title": "Rentabilidad por cliente",
+        "desc": "Ingresos menos los gastos asignados a cada cliente, para ver quién vale de verdad el trabajo."
+      },
+      "expense_by_category": {
+        "title": "Gastos por categoría",
+        "desc": "A dónde va el dinero, con la participación de cada categoría."
+      },
+      "expense_by_vendor": {
+        "title": "Gastos por proveedor",
+        "desc": "Cuánto gastas con cada proveedor y cuánto sigue sin pagarse."
+      },
+      "ar_aging": {
+        "title": "Antigüedad de cuentas por cobrar",
+        "desc": "Lo que te deben los clientes, según el retraso, con días de cobro y el importe con más riesgo de retrasarse."
+      },
+      "ap_aging": {
+        "title": "Antigüedad de cuentas por pagar",
+        "desc": "Lo que debes a proveedores, según el retraso de cada factura. Los vencimientos siguen la factura, los límites MSME y las condiciones del proveedor."
+      },
+      "cash_forecast": {
+        "title": "Proyección de caja",
+        "desc": "Perspectiva de 13 semanas desde tu saldo bancario, facturas, pagos, nómina e impuestos, con mejor y peor caso."
+      },
+      "mrr": {
+        "title": "Ingresos recurrentes (MRR)",
+        "desc": "Ingresos mensuales recurrentes de las igualas: nuevos, expansión, contracción y cancelaciones."
+      },
+      "tax_position": {
+        "title": "Impuesto cobrado y acreditable",
+        "desc": "Impuesto de tus facturas frente al crédito de facturas de proveedor aprobadas, por mes: una lectura rápida del impuesto neto a pagar."
+      },
+      "bank_reconciliation": {
+        "title": "Estado de conciliación bancaria",
+        "desc": "Qué parte del movimiento bancario está vinculada a tus libros y qué sigue pendiente."
+      },
+      "invoice_register": {
+        "title": "Registro de facturas",
+        "desc": "Todas las facturas del periodo con su estado y saldo."
+      },
+      "expense_register": {
+        "title": "Registro de gastos",
+        "desc": "Todos los gastos aprobados del periodo con categoría, proveedor y estado de pago."
+      }
+    },
+    "note": {
+      "revenueExTax": "Los ingresos son el importe de la factura antes de impuestos, en tu moneda base. Se excluyen las facturas anuladas.",
+      "expensesApprovedNetItc": "Solo cuentan los gastos aprobados, y el IVA recuperable no se trata como costo.",
+      "costsClientTagged": "Los costos mostrados son gastos asignados a un cliente; los gastos generales sin asignar no se reparten.",
+      "balancesBaseCurrency": "Todos los saldos están en tu moneda base.",
+      "approvedBillsOnly": "Solo cuentan las facturas de proveedor aprobadas.",
+      "forecastDefinition": "Se calcula con tu saldo bancario, facturas y pagos abiertos, nómina e impuestos. Mira Flujo de caja para los supuestos.",
+      "taxEstimate": "Una estimación a partir de facturas y gastos aprobados. Tus declaraciones presentadas son el registro oficial.",
+      "voidExcluded": "No se listan las facturas anuladas."
+    },
+    "value": {
+      "reconciled": "Conciliado",
+      "waitingDebit": "En espera (salida)",
+      "waitingCredit": "En espera (entrada)",
+      "ignored": "Ignorado",
+      "transfers": "Transferencias internas",
+      "PENDING": "Pendiente",
+      "PARTIALLY_PAID": "Pagada en parte",
+      "PAID": "Pagada",
+      "UNPAID": "Sin pagar",
+      "DRAFT": "Borrador",
+      "SENT": "Enviada",
+      "OVERDUE": "Vencida"
+    }
   }
 }
