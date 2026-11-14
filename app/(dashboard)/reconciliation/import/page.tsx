@@ -623,7 +623,7 @@ export default function ReconciliationWizard() {
                   Settings
                 </Link>{" "}
                 or{" "}
-                <Link href="/cash-flow/overview" className="underline underline-offset-2">
+                <Link href="/cash-flow" className="underline underline-offset-2">
                   open Cash Flow
                 </Link>{" "}
                 to add a bank account so imports are stored and matched.

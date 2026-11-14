@@ -1,74 +1,29 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
+import { cashFlowError, requireCashFlowAccess } from "@/lib/cash-flow/access";
 import { prisma } from "@/lib/prisma";
-import { requireCashFlowModule } from "@/app/api/cash-flow/_module";
 
-const prefsSchema = z
-  .object({
-    criticalEnabled: z.boolean().optional(),
-    warningEnabled: z.boolean().optional(),
-    infoEnabled: z.boolean().optional(),
-  })
-  .strict();
+const prefsSchema = z.object({ criticalEnabled: z.boolean().optional(), warningEnabled: z.boolean().optional(), infoEnabled: z.boolean().optional() }).strict();
 
+const shape = (row: { criticalEnabled: boolean; warningEnabled: boolean; infoEnabled: boolean; updatedAt: Date; lastAlertAt: Date | null } | null) => ({
+  criticalEnabled: row?.criticalEnabled ?? true, warningEnabled: row?.warningEnabled ?? true, infoEnabled: row?.infoEnabled ?? true,
+  updatedAt: row?.updatedAt.toISOString() ?? null, lastAlertAt: row?.lastAlertAt?.toISOString() ?? null,
+});
+
+/** Which shortfall warnings the nightly job may send. */
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  const workspaceId = session?.workspaceId as string | undefined;
-  if (!session || !workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const moduleGate = await requireCashFlowModule(workspaceId);
-  if (moduleGate) return moduleGate;
-
-  const row = await prisma.cashForecastAlertPreference.findFirst({
-    where: { workspaceId },
-    orderBy: { updatedAt: "desc" },
-  });
-
-  return NextResponse.json(
-    {
-      data: {
-        criticalEnabled: row?.criticalEnabled ?? true,
-        warningEnabled: row?.warningEnabled ?? true,
-        infoEnabled: row?.infoEnabled ?? true,
-        updatedAt: row?.updatedAt?.toISOString?.() ?? null,
-      },
-    },
-    { headers: { "Cache-Control": "no-store" } },
-  );
+  const auth = await requireCashFlowAccess("cash_flow.view");
+  if (!auth.ok) return auth.response;
+  const row = await prisma.cashForecastAlertPreference.findUnique({ where: { workspaceId: auth.ctx.workspaceId } });
+  return NextResponse.json({ data: shape(row) }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  const workspaceId = session?.workspaceId as string | undefined;
-  if (!session || !workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const moduleGate = await requireCashFlowModule(workspaceId);
-  if (moduleGate) return moduleGate;
-
-  const body = await request.json().catch(() => null);
-  const parsed = prefsSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
-
-  const current = await prisma.cashForecastAlertPreference.findFirst({
-    where: { workspaceId },
-    orderBy: { updatedAt: "desc" },
-  });
-
-  const next = {
-    criticalEnabled: parsed.data.criticalEnabled ?? current?.criticalEnabled ?? true,
-    warningEnabled: parsed.data.warningEnabled ?? current?.warningEnabled ?? true,
-    infoEnabled: parsed.data.infoEnabled ?? current?.infoEnabled ?? true,
-  };
-
-  const row = await prisma.cashForecastAlertPreference.create({
-    data: {
-      workspaceId,
-      ...next,
-    },
-  });
-
-  return NextResponse.json({ data: { ...next, updatedAt: row.updatedAt.toISOString() } });
+  const auth = await requireCashFlowAccess("cash_flow.manage_assumptions");
+  if (!auth.ok) return auth.response;
+  const parsed = prefsSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return cashFlowError(400, "INVALID_BODY", "Invalid payload");
+  const { workspaceId } = auth.ctx;
+  const row = await prisma.cashForecastAlertPreference.upsert({ where: { workspaceId }, update: parsed.data, create: { workspaceId, ...parsed.data } });
+  return NextResponse.json({ data: shape(row) });
 }
-
