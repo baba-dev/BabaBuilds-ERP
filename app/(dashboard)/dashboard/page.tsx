@@ -32,6 +32,7 @@ import { DashboardHealthStrip } from "./dashboard-health-strip";
 import { DashboardAttentionCenter } from "./dashboard-attention-center";
 import { DashboardFinancialPulse } from "./dashboard-financial-pulse";
 import { DashboardCashFlowSummary } from "./dashboard-cash-flow-summary";
+import { DashboardReportCards } from "./dashboard-report-cards";
 import { DashboardSalesAndShopPanel } from "./dashboard-sales-shop-panel";
 import { DashboardOperationsPanel } from "./dashboard-operations-panel";
 import { DashboardTrustPanel } from "./dashboard-trust-panel";
@@ -613,6 +614,8 @@ export default function Dashboard() {
         <GuidedFlowsHub />
 
         <DashboardCashFlowSummary onModuleEnabled={handleModuleEnabled} />
+
+        <DashboardReportCards />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
           <div className="lg:col-span-1 2xl:col-span-2 space-y-6">

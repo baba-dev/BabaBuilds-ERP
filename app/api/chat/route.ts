@@ -35,7 +35,7 @@ import {
   verifyToolConfirmationToken,
 } from '@/lib/ai/chat/tool-confirmation';
 import { isModuleEnabled } from '@/lib/modules';
-import { listPublicPresets } from '@/lib/reporting/presets';
+import { getReport, listReports } from '@/lib/reporting/engine';
 import {
   checkPermissionSilent,
   requirePermission,
@@ -2238,7 +2238,7 @@ ${
               function: {
                 name: 'list_reporting_presets',
                 description:
-                  'List curated Reporting Center presets (titles and descriptions only; no SQL). Requires Reporting Center module and reporting_center.view.',
+                  'List Reporting Center reports (id, title, description, category). Requires Reporting Center module and reporting_center.view.',
                 parameters: { type: 'object', properties: {} },
               },
             },
@@ -2574,7 +2574,7 @@ ${
           dbResult = JSON.stringify({ status: 'Opening Email Billing dashboard.' });
         } else if (toolCall.function.name === 'list_reporting_presets') {
           dbResult = JSON.stringify({
-            presets: listPublicPresets().map((p) => ({
+            presets: listReports().map((p) => ({
               id: p.id,
               title: p.title,
               description: p.description,
@@ -2582,9 +2582,15 @@ ${
             })),
           });
         } else if (toolCall.function.name === 'open_reporting_center') {
+          // Only a real report id, and only a known period, ever reaches the address.
+          const reportId = getReport(asString(args.presetId))?.id;
+          const f = (typeof args.filters === 'object' && args.filters !== null ? args.filters : {}) as Record<string, unknown>;
+          const qs = new URLSearchParams();
+          if (typeof f.period === 'string' && /^[a-z_]{3,12}$/.test(f.period)) qs.set('period', f.period);
+          if (typeof f.compare === 'boolean' && f.compare) qs.set('compare', '1');
           action = {
             type: 'NAVIGATE',
-            path: `/reporting/${asString(args.presetId)}`,
+            path: reportId ? `/reporting/${reportId}${qs.size ? `?${qs}` : ''}` : '/reporting',
             payload:
               typeof args.filters === 'object' && args.filters !== null
                 ? (args.filters as Record<string, unknown>)
