@@ -134,9 +134,10 @@ export default function LandingNavbar() {
               asChild
               className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold gap-2"
             >
-              <Link href="/dashboard">
+              {/* Plain anchor: a full document load can never get stuck on a stale client-router/service-worker state after a deploy. */}
+              <a href="/dashboard">
                 {t("actions.dashboard")} <ArrowRight className="h-4 w-4 rtl:rotate-180" />
-              </Link>
+              </a>
             </Button>
           ) : (
             <>
@@ -235,7 +236,7 @@ export default function LandingNavbar() {
                 asChild
                 className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold py-6"
               >
-                <Link href="/dashboard">{t("actions.goToDashboard")}</Link>
+                <a href="/dashboard">{t("actions.goToDashboard")}</a>
               </Button>
             ) : (
               <div className="flex flex-col gap-3">

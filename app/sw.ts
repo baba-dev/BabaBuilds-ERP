@@ -23,17 +23,22 @@ type PeriodicSyncEventLike = ExtendableEvent & {
 };
 
 const OFFLINE_FALLBACK_PAGE = '/offline';
+const DYNAMIC_CACHE_NAMES = new Set(['apis', 'pages-rsc-prefetch', 'pages-rsc', 'pages', 'others', 'cross-origin']);
 
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
-  // Do not runtime-cache dashboard HTML documents. StaleWhileRevalidate on navigations can
-  // serve an old shell that references hashed JS/CSS from a prior deploy, which then 404 and
-  // produce a blank client render. precache + defaultCache cover static assets; offline
-  // navigations still fall back via the manual fetch handler below.
-  runtimeCaching: [...defaultCache],
+  // Only static assets are runtime-cached. defaultCache also wraps same-origin /api/* GETs and
+  // page/RSC navigations in NetworkFirst (10s timeout on APIs). That made every slow request look
+  // like a hung click, served stale (and other users') authenticated JSON from the "apis" cache,
+  // and could serve an old shell referencing hashed chunks from a prior deploy. Those requests go
+  // straight to the network; offline navigations still fall back via the fetch handler below.
+  runtimeCaching: defaultCache.filter((entry) => {
+    const cacheName = (entry.handler as { cacheName?: string }).cacheName;
+    return !cacheName || !DYNAMIC_CACHE_NAMES.has(cacheName);
+  }),
 });
 
 async function notifyClients(message: Record<string, string>) {
