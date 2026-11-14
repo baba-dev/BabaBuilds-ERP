@@ -38,6 +38,9 @@ jobs:
 
       - name: Typecheck
         if: ${{ !cancelled() }}
+        # tsc on this project needs more than the ~0.5 GB default heap Node picks on the self-hosted runner.
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
         run: npm run typecheck
 
       - name: Demo template coverage
