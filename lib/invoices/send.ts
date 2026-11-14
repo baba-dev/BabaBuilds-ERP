@@ -8,6 +8,7 @@ import { buildInvoiceDeliveryEmail } from "@/lib/notifications/transactional-ema
 import { getErrorMessage } from "@/lib/error-utils";
 import { resolveInvoicePdfStoragePath, getInvoicePublicFallbackPath } from "@/lib/invoice/pdf-storage";
 import { effectiveTotal } from "@/lib/invoices/serialize";
+import { getClientRecipients } from "@/lib/clients/service";
 import type { PaymentFailure } from "@/lib/invoices/payments";
 
 const RESEND_COOLDOWN_MS = 30_000;
@@ -26,7 +27,8 @@ export async function sendInvoiceEmail(input: {
   if (invoice.status === "VOID") {
     return { ok: false, status: 409, code: "INVOICE_VOID", message: "A voided invoice cannot be sent." };
   }
-  if (!invoice.client?.email) {
+  const recipients = invoice.client ? await getClientRecipients(invoice.client.id, input.workspaceId, "invoice") : [];
+  if (!invoice.client || recipients.length === 0) {
     return { ok: false, status: 400, code: "NO_CLIENT_EMAIL", message: "This client has no email address on file." };
   }
   if (invoice.sentAt && Date.now() - invoice.sentAt.getTime() < RESEND_COOLDOWN_MS) {
@@ -60,7 +62,7 @@ export async function sendInvoiceEmail(input: {
     await sendEmail({
       route: "user",
       profile,
-      to: invoice.client.email,
+      to: recipients.join(", "),
       subject: email.subject,
       html: email.html,
       text: email.text,
@@ -78,7 +80,7 @@ export async function sendInvoiceEmail(input: {
         workspaceId: input.workspaceId,
         invoiceId: invoice.id,
         type: "SENT",
-        message: `Emailed to ${invoice.client.email}`,
+        message: `Emailed to ${recipients.join(", ")}`,
         actorUserId: input.userId,
       },
     }),

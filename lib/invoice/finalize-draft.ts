@@ -16,6 +16,7 @@ import { sendEmail } from "@/lib/mailer";
 import { snapshotGstFields } from "@/lib/gst/source";
 import { getFinancialYear, getNextInvoiceNumber } from "@/lib/document-numbering";
 import { supplierChargesGst } from "@/lib/msme/threshold";
+import { getClientRecipients } from "@/lib/clients/service";
 
 type DraftPaymentLink = {
   url: string | null;
@@ -133,7 +134,7 @@ export async function finalizeInvoiceFromDraft(params: {
             currency: baseCurrency,
             exchangeRate,
             baseGrandTotal: toDecimal(totals.total).mul(exchangeRate).toDecimalPlaces(2),
-            paymentTermsDays: Number.isInteger(profile.invoiceTermsDays) ? profile.invoiceTermsDays : 7,
+            paymentTermsDays: Number.isInteger(client.paymentTermsDays) ? client.paymentTermsDays : Number.isInteger(profile.invoiceTermsDays) ? profile.invoiceTermsDays : 7,
             source: "MANUAL",
             ...snapshotGstFields(client, draftInput.gst),
             providerGateway: draftPaymentLink.gateway,
@@ -154,6 +155,9 @@ export async function finalizeInvoiceFromDraft(params: {
         });
 
         await commitInvoiceStock(tx, { workspaceId, invoiceId: inv.id, actorUserId: actorId });
+        if (draftInput.billableExpenseIds?.length) {
+          await tx.expense.updateMany({ where: { id: { in: draftInput.billableExpenseIds }, workspaceId, clientId: client.id, billable: true, billedInvoiceId: null }, data: { billedInvoiceId: inv.id } });
+        }
         await addInvoiceEvent(tx, { workspaceId, invoiceId: inv.id, type: "CREATED", message: `Invoice ${invoiceNumber} created`, actorUserId: actorId });
 
         await determineAndPersistTax(createPrismaTaxPersistence(tx), {
@@ -218,6 +222,7 @@ export async function finalizeInvoiceFromDraft(params: {
     baseCurrency,
     shouldSendEmail: context.shouldSendEmail,
     clientEmail: client.email,
+    clientId: client.id,
     clientName: client.name,
     profile,
     billingMonthValue,
@@ -296,7 +301,8 @@ export async function finalizeInvoiceGenerationDraft(params: {
   let emailStatus = "Not requested";
   const deliverySecret = Reflect.get(created.profile, "smtp" + "Password");
   if (shouldSendEmail) {
-    if (!created.clientEmail) {
+    const recipients = await getClientRecipients(created.clientId, workspaceId, "invoice");
+    if (recipients.length === 0) {
       emailStatus = "Failed: Client has no email address on file.";
     } else if (!created.profile.smtpHost || !created.profile.smtpUser || !deliverySecret) {
       emailStatus = "Failed: SMTP Server not configured in Settings.";
@@ -312,7 +318,7 @@ export async function finalizeInvoiceGenerationDraft(params: {
         await sendEmail({
           route: "user",
           profile: created.profile,
-          to: created.clientEmail,
+          to: recipients.join(", "),
           subject: invoiceEmail.subject,
           html: invoiceEmail.html,
           text: invoiceEmail.text,

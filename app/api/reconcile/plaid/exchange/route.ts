@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireReconAccess } from "@/lib/reconciliation/access";
 import { encrypt } from "@/lib/encryption";
 import { getPlaidClient } from "@/lib/reconciliation/plaid-client";
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  const workspaceId = (session as { workspaceId?: string })?.workspaceId;
-  if (!workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requireReconAccess("reconciliation.commit");
+  if (!access.ok) return access.response;
+  const workspaceId = access.ctx.workspaceId;
 
   const body = await request.json().catch(() => null);
   const publicToken = typeof body?.publicToken === "string" ? body.publicToken : "";

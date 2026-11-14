@@ -1,163 +1,84 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import fs from 'fs';
-import path from 'path';
-import { parseExpenseUpdatePayload } from '@/lib/types/business';
-import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
-import { withPermission } from '@/lib/rbac';
-import { expenseGstSchema, normalizeExpenseGst } from '@/lib/gst/expense-gst';
-import { loadGstProfile } from '@/lib/gst/data';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { expenseError, requireExpenseAccess } from "@/lib/expenses/access";
+import { shapeExpense } from "@/lib/expenses/queries";
+import { deleteExpenses, removeReceiptFile, serviceError, storeReceipt, updateExpense, type ExpenseExtras } from "@/lib/expenses/service";
+import { normalizeExpenseCore } from "@/lib/expenses/validate";
 
-const getWorkspaceId = (session: unknown) => {
-  if (!session || typeof session !== "object") return null;
-  const workspaceId = (session as { workspaceId?: unknown }).workspaceId;
-  return typeof workspaceId === "string" ? workspaceId : null;
-};
+type Ctx = { params: Promise<{ id: string }> };
 
-const apiError = (status: number, error: string, code: string) =>
-  NextResponse.json({ success: false, error: { error, code } }, { status });
+export async function GET(_request: Request, props: Ctx) {
+  const auth = await requireExpenseAccess("expenses.view");
+  if (!auth.ok) return auth.response;
+  const { id } = await props.params;
+  const row = await prisma.expense.findFirst({ where: { id, workspaceId: auth.ctx.workspaceId } });
+  return row ? NextResponse.json({ data: shapeExpense(row) }) : expenseError(404, "EXPENSE_NOT_FOUND", "Expense not found.");
+}
 
-// UPDATE EXPENSE
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+/** Partial update (JSON, or multipart when a receipt is attached). Only the fields sent change. */
+export async function PATCH(request: Request, props: Ctx) {
+  const auth = await requireExpenseAccess("expenses.create");
+  if (!auth.ok) return auth.response;
+  const { ctx } = auth;
+  const { id } = await props.params;
+
+  let fields: Record<string, unknown> = {};
+  let file: File | null = null;
   try {
-    const session = await getServerSession(authOptions);
-    const workspaceId = getWorkspaceId(session);
-    const userId = session?.user?.id as string | undefined;
-    if (!workspaceId || !userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if ((request.headers.get("content-type") ?? "").includes("multipart/form-data")) {
+      const form = await request.formData();
+      for (const [k, v] of form.entries()) { if (v instanceof File) { if (k === "receipt" && v.size > 0) file = v; } else fields[k] = v; }
+      if (typeof fields.gst === "string") { try { fields.gst = JSON.parse(fields.gst); } catch { return expenseError(400, "INVALID_GST", "Invalid GST details."); } }
+    } else {
+      const body = await request.json();
+      if (!body || typeof body !== "object") return expenseError(400, "INVALID_BODY", "Send the changes as JSON.");
+      fields = body as Record<string, unknown>;
     }
-    // RBAC: editing an expense requires expenses.create permission
-    const perm = await withPermission(userId, workspaceId, 'expenses.create');
-    if (!perm.granted) return perm.response;
-    const resolvedParams = await params;
-    const expenseId = resolvedParams.id;
+  } catch {
+    return expenseError(400, "INVALID_BODY", "Send the changes as JSON or a form.");
+  }
 
-    const rawBody = await request.json();
-    const parsedPayload = parseExpenseUpdatePayload(rawBody);
-    if (!parsedPayload) {
-      return NextResponse.json({ error: "Invalid request payload." }, { status: 400 });
-    }
-    const { date, category, vendor, amount, description } = parsedPayload;
+  const core = normalizeExpenseCore(fields, { partial: true });
+  if (!core.ok) return NextResponse.json({ error: "Check the highlighted fields.", code: "VALIDATION", fields: core.fields }, { status: 422 });
 
-    // --- 🚨 SECURITY PATCH: Prevent NaN Poisoning & Invalid Dates ---
-    if (!Number.isFinite(amount) || amount < 0) {
-      return NextResponse.json({ error: "Invalid amount. Must be a positive number." }, { status: 400 });
-    }
+  let receiptUrl: string | null | undefined;
+  let storedNew: string | null = null;
+  if (file) {
+    const stored = await storeReceipt(ctx.workspaceId, file);
+    if (!stored.ok) return stored.response;
+    receiptUrl = storedNew = stored.url;
+  } else if (fields.removeReceipt === true || fields.removeReceipt === "true") receiptUrl = null;
 
-    const parsedDate = new Date(date);
-    if (isNaN(parsedDate.getTime())) {
-      return apiError(400, "Invalid date format.", "INVALID_DATE");
-    }
-
-    // GST block is optional; when present it is validated and the tax split is recomputed for the (possibly new) amount.
-    let gstData: Record<string, unknown> = {};
-    const rawGst = (rawBody as { gst?: unknown } | null)?.gst;
-    if (rawGst !== undefined) {
-      const parsedGst = expenseGstSchema.safeParse(rawGst);
-      if (!parsedGst.success) return apiError(400, "Invalid GST details.", "INVALID_GST");
-      const profile = await loadGstProfile(workspaceId);
-      const normalized = normalizeExpenseGst(parsedGst.data, amount, profile.stateCode);
-      if (!normalized.ok) return apiError(400, normalized.message, normalized.code);
-      gstData = { ...normalized.data };
-      // Paying a bill that was on credit stamps the payment date, which decides whether rule 37 reversed its credit.
-      const previous = await prisma.expense.findFirst({ where: { id: expenseId, workspaceId }, select: { paymentStatus: true } });
-      if (normalized.data.paymentStatus === 'UNPAID') gstData.paidAt = null;
-      else if (previous?.paymentStatus === 'UNPAID') gstData.paidAt = new Date();
-    }
-
-    const updatedExpense = await prisma.expense.updateMany({
-      where: { 
-        id: expenseId,
-        workspaceId: workspaceId // Secure tenant lock
-      },
-      data: {
-        date: parsedDate,
-        category,
-        vendor,
-        amount,
-        description: description || null,
-        ...gstData,
-      }
-    });
-
-    if (updatedExpense.count === 0) {
-      return apiError(404, "Expense not found or unauthorized.", "EXPENSE_NOT_FOUND");
-    }
-
-    try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
-    } catch (error) {
-      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'expense', action: 'update', error: String(error) });
-    }
-
-    return NextResponse.json({ success: true });
+  try {
+    const gst = fields.gst && typeof fields.gst === "object" ? (fields.gst as Record<string, unknown>) : undefined;
+    const has = (k: string) => Object.prototype.hasOwnProperty.call(fields, k);
+    const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+    const extra: ExpenseExtras = {};
+    if (has("vendorId")) extra.vendorId = str(fields.vendorId);
+    if (has("clientId")) extra.clientId = str(fields.clientId);
+    if (has("billable")) extra.billable = fields.billable === true || fields.billable === "true";
+    if (has("markupPercent")) { const m = str(fields.markupPercent) === null ? null : Number(fields.markupPercent); if (m !== null && (!Number.isFinite(m) || m < 0 || m > 500)) return NextResponse.json({ error: "Check the markup.", code: "VALIDATION", fields: [{ field: "markupPercent", code: "AMOUNT" }] }, { status: 422 }); extra.markupPercent = m; }
+    if (has("dueDate")) { const d = str(fields.dueDate) ? new Date(String(fields.dueDate)) : null; if (d && Number.isNaN(d.getTime())) return NextResponse.json({ error: "Check the due date.", code: "VALIDATION", fields: [{ field: "dueDate", code: "DATE" }] }, { status: 422 }); extra.dueDate = d; }
+    if (fields.submit === true || fields.submit === "true") extra.submit = true;
+    const res = await updateExpense(ctx, id, core.data, { gst, receiptUrl: receiptUrl ?? null, replaceReceipt: receiptUrl !== undefined, extra });
+    if (!res.ok) { await removeReceiptFile(storedNew); return serviceError(res); }
+    return NextResponse.json({ success: true, expense: shapeExpense(res.expense), changed: res.changed });
   } catch (error) {
     console.error("Expense Update Error:", error);
-    return apiError(500, "Failed to update expense.", "EXPENSE_UPDATE_FAILED");
+    await removeReceiptFile(storedNew);
+    return expenseError(500, "EXPENSE_UPDATE_FAILED", "Failed to update expense.");
   }
 }
 
-// DELETE EXPENSE
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_request: Request, props: Ctx) {
+  const auth = await requireExpenseAccess("expenses.delete");
+  if (!auth.ok) return auth.response;
+  const { id } = await props.params;
   try {
-    const session = await getServerSession(authOptions);
-    const workspaceId = getWorkspaceId(session);
-    const userId = session?.user?.id as string | undefined;
-    if (!workspaceId || !userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    // RBAC: deleting an expense requires expenses.delete permission
-    const perm = await withPermission(userId, workspaceId, 'expenses.delete');
-    if (!perm.granted) return perm.response;
-    const resolvedParams = await params;
-    const expenseId = resolvedParams.id;
-
-    // 1. Fetch to get the receipt URL for cleanup
-    const expense = await prisma.expense.findFirst({
-      where: { id: expenseId, workspaceId: workspaceId }
-    });
-
-    if (!expense) {
-      return apiError(404, "Expense not found or unauthorized.", "EXPENSE_NOT_FOUND");
-    }
-
-    // 2. Delete from Database
-    await prisma.expense.delete({
-      where: { id: expenseId }
-    });
-
-    // 3. Cleanup Orphaned Receipt File
-    if (expense.receiptUrl) {
-      const relativeReceiptPath = expense.receiptUrl.startsWith('/') 
-        ? expense.receiptUrl.substring(1) 
-        : expense.receiptUrl;
-      const filePath = path.join(/*turbopackIgnore: true*/ process.cwd(), 'public', relativeReceiptPath);
-      if (fs.existsSync(filePath)) {
-        try {
-          fs.unlinkSync(filePath);
-        } catch (e) {
-          console.error("Failed to delete receipt file:", e);
-        }
-      }
-    }
-
-    try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
-    } catch (error) {
-      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'expense', action: 'delete', error: String(error) });
-    }
-
-    return NextResponse.json({ success: true });
+    const res = await deleteExpenses(auth.ctx, [id]);
+    return res.ok ? NextResponse.json({ success: true }) : serviceError(res);
   } catch (error) {
     console.error("Expense Deletion Error:", error);
-    return apiError(500, "Failed to delete expense.", "EXPENSE_DELETE_FAILED");
+    return expenseError(500, "EXPENSE_DELETE_FAILED", "Failed to delete expense.");
   }
 }

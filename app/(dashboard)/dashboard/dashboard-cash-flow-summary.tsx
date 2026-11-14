@@ -69,22 +69,17 @@ export function DashboardCashFlowSummary({
     setLoading(true);
     setError(null);
     try {
-      const listRes = await fetch(
-        `/api/cash-flow/snapshots?horizonType=${defaultHorizonType}&scenarioTag=${defaultScenarioTag}&limit=1`,
-        { cache: "no-store" },
-      );
-      const listJson = (await listRes.json().catch(() => null)) as unknown;
-      if (!listRes.ok) throw new Error((listJson as { error?: string } | null)?.error ?? "Failed to load cash flow snapshot");
-      const head = (((listJson as { data?: unknown } | null)?.data ?? []) as Array<{ id?: string }>)[0];
-      if (!head?.id) {
-        setSnapshot(null);
-        return;
-      }
-
-      const snapRes = await fetch(`/api/cash-flow/snapshot/${head.id}`, { cache: "no-store" });
-      const snapJson = (await snapRes.json().catch(() => null)) as unknown;
-      if (!snapRes.ok) throw new Error((snapJson as { error?: string } | null)?.error ?? "Failed to load cash flow details");
-      setSnapshot(((snapJson as { data?: unknown } | null)?.data ?? null) as SnapshotDetail | null);
+      // The live forecast is always current, so there is no stored snapshot to wait for.
+      const res = await fetch(`/api/cash-flow/forecast?horizonType=${defaultHorizonType}&scenarioTag=${defaultScenarioTag}`, { cache: "no-store" });
+      const json = (await res.json().catch(() => null)) as { data?: { generatedAt: string; kpis: { cashNow: number; closingCash: number; confidence: number | null }; scenarios: Array<{ tag: string; periods: Array<{ label: string; closing: number; risk: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" }> }> }; error?: string } | null;
+      if (!res.ok || !json?.data) throw new Error(json?.error ?? "Failed to load cash flow");
+      const d = json.data;
+      const sel = d.scenarios.find((x) => x.tag === defaultScenarioTag) ?? d.scenarios[0];
+      setSnapshot({
+        id: "live", generatedAt: d.generatedAt, horizonType: defaultHorizonType, scenarioTag: defaultScenarioTag, openingCash: d.kpis.cashNow, closingCash: d.kpis.closingCash,
+        confidenceScore: d.kpis.confidence == null ? null : d.kpis.confidence / 100,
+        periods: (sel?.periods ?? []).map((p) => ({ id: p.label, bucketLabel: p.label, closingCash: p.closing, riskLevel: p.risk })),
+      });
     } catch (e) {
       console.warn(e);
       setSnapshot(null);
@@ -130,13 +125,6 @@ export function DashboardCashFlowSummary({
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      const res = await fetch("/api/cash-flow/refresh", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ horizonType: defaultHorizonType, scenarioTag: defaultScenarioTag }),
-      });
-      const json = (await res.json().catch(() => null)) as unknown;
-      if (!res.ok) throw new Error((json as { error?: string } | null)?.error ?? "Failed to refresh forecast");
       await load();
     } catch (e) {
       console.warn(e);
@@ -150,7 +138,7 @@ export function DashboardCashFlowSummary({
   const generatedAtLabel = useMemo(() => {
     if (!snapshot?.generatedAt) return null;
     return format(new Date(snapshot.generatedAt), "dd MMM, HH:mm");
-  }, [snapshot?.generatedAt]);
+  }, [snapshot]);
   const confidenceLabel = snapshot?.confidenceScore == null ? "—" : `${Math.round(snapshot.confidenceScore * 100)}%`;
 
   if (moduleEnabled === false) {
@@ -212,7 +200,7 @@ export function DashboardCashFlowSummary({
               <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
             </Button>
             <Button size="sm" variant="outline" asChild className="h-9 gap-2">
-              <Link href={`/cash-flow/overview?${qs}`}>
+              <Link href={`/cash-flow?${qs}`}>
                 Open <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
@@ -280,7 +268,7 @@ export function DashboardCashFlowSummary({
                   Close {fCurrency(Number(snapshot.closingCash ?? 0))}
                 </Badge>
                 <Button size="sm" variant="outline" asChild className="h-9 gap-2">
-                  <Link href={`/cash-flow/alerts?${qs}`}>Alerts</Link>
+                  <Link href={`/cash-flow?${qs}`}>Alerts</Link>
                 </Button>
               </div>
             </div>

@@ -9,6 +9,7 @@ import { loadGstProfile } from "@/lib/gst/data";
 import { normalizeExpenseGst } from "@/lib/gst/expense-gst";
 import { normalizeGstin, validateGstin } from "@/lib/gst/gstin";
 import { isStateCode } from "@/lib/gst/states";
+import { resolveVendor } from "@/lib/expenses/vendors";
 
 const receiveSchema = z.object({
   syncExpense: z.boolean().optional(),
@@ -99,6 +100,15 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     // input tax credit is not re-keyed. PO prices exclude GST, so tax is added per line from the line (or product) rate.
     if (syncExpense) {
       const gstProfile = await loadGstProfile(workspaceId);
+      // The bill is linked to the supplier record and to this PO. A PO with payment terms is a bill on credit: it shows up under
+      // bills to pay, lands in the cash forecast on its due date, and is paid when the bank debit is matched.
+      const supplierRow = await resolveVendor(prisma, workspaceId, po.supplier, { gstin: supplierGstin, stateCode: vendorState, category: "Inventory Restock" });
+      const onCredit = (po.paymentTermsDays ?? 0) > 0 || Boolean(po.expectedPaymentDate);
+      const billDate = new Date();
+      const poDueDate = onCredit ? po.expectedPaymentDate ?? new Date(billDate.getTime() + (po.paymentTermsDays ?? 0) * 86_400_000) : null;
+      const poLink = { vendorId: supplierRow?.id ?? null, purchaseOrderId: po.id, source: "PO", dueDate: poDueDate };
+      const paymentStatus = onCredit ? "UNPAID" : "PAID";
+      const alreadyBilled = (await prisma.expense.count({ where: { workspaceId, purchaseOrderId: po.id } })) > 0;
       const groups = new Map<string, { rate: number | null; net: number; hsn: string | null }>();
       for (const item of po.items) {
         const product = productById.get(item.productId);
@@ -115,21 +125,21 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
       const anyRate = ordered.some((g) => g.rate !== null && g.rate > 0);
       if (!anyRate) {
         // Nothing to split: one bill for the PO total, exactly as before (the vendor details still ride along).
-        const gst = normalizeExpenseGst({ itcStatus: "NONE", paymentStatus: "PAID", vendorGstin: supplierGstin, vendorInvoiceNo: supplierInvoiceNo, vendorStateCode: vendorState, hsnCode: ordered[0]?.hsn ?? null }, Number(po.totalAmount), gstProfile.stateCode);
-        transactionTasks.push(
+        const gst = normalizeExpenseGst({ itcStatus: "NONE", paymentStatus, vendorGstin: supplierGstin, vendorInvoiceNo: supplierInvoiceNo, vendorStateCode: vendorState, hsnCode: ordered[0]?.hsn ?? null }, Number(po.totalAmount), gstProfile.stateCode);
+        if (!alreadyBilled) transactionTasks.push(
           prisma.expense.create({
-            data: { workspaceId, vendor: po.supplier, amount: po.totalAmount, category: "Inventory Restock", description: `Auto-generated expense for PO #${po.poNumber}`, date: new Date(), ...(gst.ok ? gst.data : {}) },
+            data: { workspaceId, vendor: po.supplier, amount: po.totalAmount, category: "Inventory Restock", description: `Auto-generated expense for PO #${po.poNumber}`, date: billDate, ...poLink, ...(gst.ok ? gst.data : {}) },
           }),
         );
       } else {
         for (const g of ordered) {
           const rate = g.rate ?? 0;
           const gross = Math.round(g.net * (1 + rate / 100) * 100) / 100;
-          const gst = normalizeExpenseGst({ itcStatus: registered && rate > 0 ? "ELIGIBLE" : "NONE", paymentStatus: "PAID", vendorGstin: supplierGstin, vendorInvoiceNo: supplierInvoiceNo, vendorStateCode: vendorState, hsnCode: g.hsn, gstRate: rate > 0 ? rate : null }, gross, gstProfile.stateCode);
+          const gst = normalizeExpenseGst({ itcStatus: registered && rate > 0 ? "ELIGIBLE" : "NONE", paymentStatus, vendorGstin: supplierGstin, vendorInvoiceNo: supplierInvoiceNo, vendorStateCode: vendorState, hsnCode: g.hsn, gstRate: rate > 0 ? rate : null }, gross, gstProfile.stateCode);
           if (!gst.ok) return NextResponse.json({ error: gst.message, code: gst.code }, { status: 422 });
-          transactionTasks.push(
+          if (!alreadyBilled) transactionTasks.push(
             prisma.expense.create({
-              data: { workspaceId, vendor: po.supplier, amount: gross, category: "Inventory Restock", description: `Auto-generated expense for PO #${po.poNumber}${rate > 0 ? ` (GST ${rate}%)` : ""}`, date: new Date(), ...gst.data },
+              data: { workspaceId, vendor: po.supplier, amount: gross, category: "Inventory Restock", description: `Auto-generated expense for PO #${po.poNumber}${rate > 0 ? ` (GST ${rate}%)` : ""}`, date: billDate, ...poLink, ...gst.data },
             }),
           );
         }

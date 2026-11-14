@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireReconAccess } from "@/lib/reconciliation/access";
 import { z } from "zod";
 
 const STANDARD = [
@@ -25,9 +26,9 @@ const STANDARD = [
 ];
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  const workspaceId = (session as { workspaceId?: string })?.workspaceId;
-  if (!workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requireReconAccess("reconciliation.import");
+  if (!access.ok) return access.response;
+  const workspaceId = access.ctx.workspaceId;
 
   const custom = await prisma.expenseReconciliationCategory.findMany({
     where: { workspaceId },
@@ -41,9 +42,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  const workspaceId = (session as { workspaceId?: string })?.workspaceId;
-  if (!workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requireReconAccess("reconciliation.commit");
+  if (!access.ok) return access.response;
+  const workspaceId = access.ctx.workspaceId;
 
   const Schema = z.object({ name: z.string().min(1).max(120) });
   const json = await request.json().catch(() => null);

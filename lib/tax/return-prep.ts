@@ -147,6 +147,7 @@ async function derivePrefillFacts(workspaceId: string, startDate: Date, endDate:
     prisma.expense.count({
       where: {
         workspaceId,
+        approvalStatus: "APPROVED",
         date: { gte: startDate, lte: endDate },
       },
     }),

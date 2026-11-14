@@ -1,5 +1,7 @@
 import type { Prisma } from '@prisma/client';
+import { normalizeExpenseCore } from '@/lib/expenses/validate';
 import { prisma } from '@/lib/prisma';
+import { importClientRow } from '@/lib/clients/import';
 import { asDecimal } from '@/lib/imports/core/preview';
 import type { ImportExecutionMode, ImportPreview } from '@/lib/imports/core/types';
 
@@ -16,27 +18,8 @@ async function processRow(args: {
   const data = row.normalized;
 
   if (preview.entity === 'clients') {
-    const name = String(data.name || '').trim();
-    const email = String(data.email || '').trim() || null;
-    const phone = String(data.phone || '').trim() || null;
-    const existing = await tx.client.findFirst({
-      where: {
-        workspaceId,
-        OR: [
-          ...(email ? [{ email }] : []),
-          ...(name ? [{ name, phone: phone || undefined }] : []),
-        ],
-      },
-    });
-
-    if (existing && mode === 'create_only') return 'skipped' as const;
-    if (existing) {
-      await tx.client.update({ where: { id: existing.id }, data: { name, email, phone, address: String(data.address || ''), country: String(data.country || ''), taxId: String(data.taxId || '') || null } });
-      return 'updated' as const;
-    }
-
-    await tx.client.create({ data: { workspaceId, name, email, phone, address: String(data.address || ''), country: String(data.country || ''), taxId: String(data.taxId || '') || null } });
-    return 'imported' as const;
+    const ws = await tx.workspace.findUnique({ where: { id: workspaceId }, select: { countryCode: true } });
+    return importClientRow(tx, workspaceId, ws?.countryCode ?? 'IN', data, mode);
   }
 
   if (preview.entity === 'services') {
@@ -129,16 +112,10 @@ async function processRow(args: {
   }
 
   if (preview.entity === 'expenses') {
-    await tx.expense.create({
-      data: {
-        workspaceId,
-        vendor: String(data.vendor || 'Unknown Vendor'),
-        amount: asDecimal(data.amount ?? 0),
-        category: String(data.category || 'Other'),
-        description: String(data.description || '') || null,
-        date: data.date ? new Date(String(data.date)) : new Date(),
-      },
-    });
+    const checked = normalizeExpenseCore({ vendor: data.vendor || 'Unknown Vendor', amount: data.amount, category: data.category || 'Other', description: data.description, date: data.date || new Date().toISOString().slice(0, 10) });
+    if (!checked.ok) return 'skipped' as const;
+    const c = checked.data as { vendor: string; amount: number; category: string; description: string | null; date: Date };
+    await tx.expense.create({ data: { workspaceId, vendor: c.vendor, amount: asDecimal(c.amount), category: c.category, description: c.description, date: c.date } });
     return 'imported' as const;
   }
 

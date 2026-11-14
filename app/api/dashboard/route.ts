@@ -330,6 +330,7 @@ async function buildDashboardPayload(
       prisma.expense.findMany({
         where: {
           workspaceId,
+          approvalStatus: "APPROVED",
           ...(fyRange
             ? { date: { gte: fyRange.start, lt: fyRange.endExclusive } }
             : {}),

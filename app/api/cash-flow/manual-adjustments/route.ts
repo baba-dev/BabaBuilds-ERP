@@ -1,60 +1,24 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { cashFlowError, requireCashFlowAccess } from "@/lib/cash-flow/access";
 import { prisma } from "@/lib/prisma";
-import { requireCashFlowModule } from "@/app/api/cash-flow/_module";
-import { z } from "zod";
-import { CashForecastDirection } from "@prisma/client";
+import { logActivity } from "@/lib/security/activity-log";
+import { normalizeAdjustment } from "@/lib/cash-flow/adjustments";
 
-const createSchema = z.object({
-  date: z.string().datetime().or(z.string().min(1)),
-  amount: z.number().finite().nonnegative(),
-  direction: z.nativeEnum(CashForecastDirection),
-  reason: z.string().min(2),
-  category: z.string().min(1).optional().nullable(),
-});
-
+/** One-off amounts the forecast should include: a loan received, an owner top-up, a planned purchase. */
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  const workspaceId = session?.workspaceId as string | undefined;
-  if (!workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const moduleGate = await requireCashFlowModule(workspaceId);
-  if (moduleGate) return moduleGate;
-
-  const rows = await prisma.cashForecastManualAdjustment.findMany({
-    where: { workspaceId },
-    orderBy: { date: "asc" },
-  });
-
-  return NextResponse.json({ data: rows });
+  const auth = await requireCashFlowAccess("cash_flow.view");
+  if (!auth.ok) return auth.response;
+  const rows = await prisma.cashForecastManualAdjustment.findMany({ where: { workspaceId: auth.ctx.workspaceId }, orderBy: { date: "asc" }, take: 500 });
+  return NextResponse.json({ data: rows }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  const workspaceId = session?.workspaceId as string | undefined;
-  if (!workspaceId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const moduleGate = await requireCashFlowModule(workspaceId);
-  if (moduleGate) return moduleGate;
-
-  const parsed = createSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payload", details: parsed.error.flatten() }, { status: 400 });
-  }
-
-  const created = await prisma.cashForecastManualAdjustment.create({
-    data: {
-      workspaceId,
-      date: new Date(parsed.data.date),
-      amount: parsed.data.amount,
-      direction: parsed.data.direction,
-      reason: parsed.data.reason,
-      category: parsed.data.category ?? null,
-      createdBy: session?.user?.email ?? null,
-    },
-  });
-
+  const auth = await requireCashFlowAccess("cash_flow.manage_assumptions");
+  if (!auth.ok) return auth.response;
+  const parsed = normalizeAdjustment(await request.json().catch(() => null), { partial: false });
+  if (!parsed.ok) return cashFlowError(422, "VALIDATION", "Check the highlighted fields.", { fields: parsed.fields });
+  const { workspaceId, userId, email } = auth.ctx;
+  const created = await prisma.cashForecastManualAdjustment.create({ data: { workspaceId, ...(parsed.data as Required<typeof parsed.data>), createdBy: email ?? userId } });
+  void logActivity({ action: "cash_adjustment_created", status: "SUCCESS", workspaceId, actor: { userId, email }, request, entity: { type: "cash_forecast_adjustment", id: created.id }, metadata: { amount: Number(created.amount), direction: created.direction, date: created.date.toISOString() } });
   return NextResponse.json({ data: created }, { status: 201 });
 }
-
