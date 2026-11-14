@@ -10,6 +10,7 @@ describe('report catalog', () => {
       expect(['Finance', 'Sales', 'Cash', 'Tax', 'Operations']).toContain(r.category);
       expect(r).not.toHaveProperty('build');
       expect(r).not.toHaveProperty('sql');
+      expect(r.lineage.rules.length + r.lineage.sources.length).toBeGreaterThan(0);
     }
     expect(getReport('nope')).toBeNull();
   });
@@ -27,6 +28,8 @@ describe('saved report helpers', () => {
   });
   it('cleans filter parameters', () => {
     expect(sanitizeParams({ period: 'bogus', from: '2026-01-02', to: 'x', compare: 'yes' })).toEqual({ period: 'this_fy', from: '2026-01-02', to: null, compare: false });
+    expect(sanitizeParams({ compare: 'yoy' }).compare).toBe('yoy');
+    expect(sanitizeParams({ compare: true }).compare).toBe('previous');
     expect(sanitizeParams(null).period).toBe('this_fy');
   });
   it('schedules weekly reports for the next Monday and monthly for the 1st', () => {
@@ -37,7 +40,7 @@ describe('saved report helpers', () => {
     expect(w.toISOString().slice(0, 10)).toBe('2026-03-09');
     expect(nextRunAfter('MONTHLY', wed).toISOString().slice(0, 10)).toBe('2026-04-01');
     // Run on a Monday itself: the next one is a week later, never the same day.
-    expect(nextRunAfter('WEEKLY', new Date('2026-03-09T06:30:00Z')).toISOString().slice(0, 10)).toBe('2026-03-16');
+    expect(nextRunAfter('WEEKLY', new Date('2026-03-09T07:30:00Z')).toISOString().slice(0, 10)).toBe('2026-03-16');
   });
 });
 

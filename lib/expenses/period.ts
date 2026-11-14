@@ -1,5 +1,5 @@
-export type PeriodKey = "this_month" | "last_month" | "this_fy" | "last_fy" | "all" | "custom";
-export const PERIOD_KEYS: PeriodKey[] = ["this_month", "last_month", "this_fy", "last_fy", "all", "custom"];
+export type PeriodKey = "this_month" | "last_month" | "this_quarter" | "last_quarter" | "this_fy" | "last_fy" | "all" | "custom";
+export const PERIOD_KEYS: PeriodKey[] = ["this_month", "last_month", "this_quarter", "last_quarter", "this_fy", "last_fy", "all", "custom"];
 
 export type PeriodRange = { key: PeriodKey; from: Date | null; to: Date | null };
 
@@ -14,6 +14,14 @@ export function resolvePeriod(key: PeriodKey, countryCode: string, now = new Dat
   switch (key) {
     case "this_month": return { key, from: utc(y, m), to: utc(y, m + 1) };
     case "last_month": return { key, from: utc(y, m - 1), to: utc(y, m) };
+    case "this_quarter":
+    case "last_quarter": {
+      // Quarters follow the financial year: April to June for India, January to March elsewhere.
+      const q = Math.floor((((m - fyStartMonth) % 12) + 12) % 12 / 3);
+      const start = new Date(Date.UTC(m >= fyStartMonth ? y : y - 1, fyStartMonth + q * 3, 1));
+      const from = key === "this_quarter" ? start : new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() - 3, 1));
+      return { key, from, to: new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + 3, 1)) };
+    }
     case "this_fy": return { key, from: utc(fyYear, fyStartMonth), to: utc(fyYear + 1, fyStartMonth) };
     case "last_fy": return { key, from: utc(fyYear - 1, fyStartMonth), to: utc(fyYear, fyStartMonth) };
     case "custom": {
@@ -25,6 +33,13 @@ export function resolvePeriod(key: PeriodKey, countryCode: string, now = new Dat
     }
     default: return { key: "all", from: null, to: null };
   }
+}
+
+/** The same span one year earlier, for "vs last year". */
+export function yearAgoRange(range: PeriodRange): PeriodRange | null {
+  if (!range.from || !range.to) return null;
+  const shift = (d: Date) => new Date(Date.UTC(d.getUTCFullYear() - 1, d.getUTCMonth(), d.getUTCDate()));
+  return { key: range.key, from: shift(range.from), to: shift(range.to) };
 }
 
 /** The span just before a range, of the same length, for "vs last period". */

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { Download, Loader2, Plus, Search, Siren, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
@@ -39,8 +40,9 @@ export default function CollectionsPage() {
   const [tab, setTab] = useState<Tab>("worklist");
   const [view, setView] = useState<View>("all");
   const [bucket, setBucket] = useState<Bucket | null>(null);
-  const [q, setQ] = useState("");
-  const [qDebounced, setQDebounced] = useState("");
+  const initialQ = useSearchParams().get("q")?.slice(0, 80) ?? "";
+  const [q, setQ] = useState(initialQ);
+  const [qDebounced, setQDebounced] = useState(initialQ);
   const [data, setData] = useState<Snapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);

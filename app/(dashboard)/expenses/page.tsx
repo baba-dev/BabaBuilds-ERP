@@ -52,10 +52,12 @@ export default function ExpensesPage() {
   const [filteredTotal, setFilteredTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [q, setQ] = useState("");
-  const [debounced, setDebounced] = useState("");
-  const [category, setCategory] = useState("");
-  const [status, setStatus] = useState("");
+  // Reports and other pages link here with ?q=, ?category= or ?status= to open a ready-filtered ledger.
+  const initial = useSearchParams();
+  const [q, setQ] = useState(initial.get("q")?.slice(0, 80) ?? "");
+  const [debounced, setDebounced] = useState(initial.get("q")?.slice(0, 80) ?? "");
+  const [category, setCategory] = useState(initial.get("category")?.slice(0, 80) ?? "");
+  const [status, setStatus] = useState(["paid", "unpaid"].includes(initial.get("status") ?? "") ? (initial.get("status") as string) : "");
   const [receipt, setReceipt] = useState("");
   const [sort, setSort] = useState<Sort>("date");
   const [dir, setDir] = useState<"asc" | "desc">("desc");

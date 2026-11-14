@@ -5220,11 +5220,19 @@ model ReportView {
   reportId        String
   paramsJson      Json?
   pinned          Boolean @default(false)
+  /// PRIVATE (only the creator) or WORKSPACE (everyone with reporting access).
+  visibility      String  @default("WORKSPACE")
+  /// Show this report's key figures on the dashboard.
+  pinnedToDashboard Boolean @default(false)
 
   /// WEEKLY (Mondays) or MONTHLY (the 1st). Null means not scheduled.
   scheduleFrequency  String?
   scheduleRecipients String?
   scheduleFormat     String    @default("CSV")
+  scheduleEnabled    Boolean   @default(true)
+  /// Hour of day (0 to 23) in scheduleTz at which the email goes out.
+  scheduleHour       Int       @default(7)
+  scheduleTz         String    @default("UTC")
   scheduleNextAt     DateTime?
   scheduleLastAt     DateTime?
   scheduleLastError  String?
