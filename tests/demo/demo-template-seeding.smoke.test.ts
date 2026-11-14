@@ -44,6 +44,7 @@ vi.mock('@/lib/prisma', () => {
       attendanceRecord: { create: vi.fn(), createMany: vi.fn() },
       payrollPeriod: { create: vi.fn() },
       payrollRun: { create: vi.fn() },
+      employeeCompensation: { create: vi.fn() },
       document: { create: vi.fn() },
       documentFile: { create: vi.fn() },
       documentOcrJob: { create: vi.fn() },

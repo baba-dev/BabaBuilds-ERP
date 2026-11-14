@@ -775,6 +775,10 @@ model Workspace {
   @@index([demoExpiresAt])
   @@index([demoTemplateKey])
   reportViews ReportView[]
+  employeeCompensations EmployeeCompensation[]
+  payrollAdjustments    PayrollAdjustment[]
+  employeeLoans         EmployeeLoan[]
+  payrollRemittances    PayrollRemittance[]
 }
 
 model CompanyGroup {
@@ -4447,6 +4451,9 @@ model Employee {
   attendanceRecords AttendanceRecord[]
   leaveRequests     LeaveRequest[]
   leaveBalances     LeaveBalance[]
+  compensations     EmployeeCompensation[]
+  payrollAdjustments PayrollAdjustment[]
+  loans             EmployeeLoan[]
 
   @@unique([workspaceId, employeeCode])
   @@index([workspaceId, status])
@@ -4585,6 +4592,8 @@ model PayrollPeriod {
   updatedAt DateTime @updatedAt
 
   runs PayrollRun[]
+  adjustments PayrollAdjustment[]
+  remittances PayrollRemittance[]
 
   @@unique([workspaceId, startDate, endDate])
   @@index([workspaceId, status, startDate, endDate])
@@ -4612,10 +4621,20 @@ model PayrollRun {
   generatedByUserId String?
   generatedAt       DateTime  @default(now())
   approvedAt        DateTime?
+  approvedByUserId  String?
+  submittedAt       DateTime?
+  disbursedAt       DateTime?
+  disbursedByUserId String?
+  disbursementTxId  String?
+  notes             String?
+  /// Pre-flight findings and variance flags captured when the run was generated.
+  preflightJson     Json?
+  summaryJson       Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  remittances PayrollRemittance[]
   employeeSnapshots PayrollEmployeeSnapshot[]
   lineItems         PayrollLineItem[]
   posting           PayrollPosting?
@@ -4680,6 +4699,11 @@ model PayrollLineItem {
   currency       String @default("INR")
   breakdownJson  Json?
   calculationLog Json?
+  statutoryJson  Json?
+  payoutStatus   String    @default("PENDING") // PENDING | PAID | FAILED | HELD
+  paidAt         DateTime?
+  payoutRef      String?
+  payslipSentAt  DateTime?
 
   createdAt DateTime @default(now())
 
@@ -4808,6 +4832,129 @@ model PayrollPayComponent {
 
   @@unique([workspaceId, code])
   @@index([workspaceId, category])
+}
+
+/**
+ * EmployeeCompensation: effective-dated pay structure, statutory identifiers and bank details.
+ * The row with the latest effectiveFrom on or before the period end applies. Account numbers and PAN are
+ * encrypted; only the last four characters are kept in clear for display.
+ */
+model EmployeeCompensation {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  effectiveFrom DateTime
+  annualCtc     Decimal  @default(0)
+  /// [{ code, label, monthly, taxable, prorate, kind: "earning" }]
+  componentsJson Json
+
+  taxRegime           String  @default("new") // new | old
+  oldRegimeDeductions Decimal @default(0) // declared yearly deductions (80C, 80D, home loan interest, ...)
+  pfEnabled           Boolean @default(true)
+  pfOnActualBasic     Boolean @default(false) // false: wage ceiling of 15,000 applies
+  esiEnabled          Boolean @default(false)
+  ptState             String? // two-letter state code, e.g. MH
+
+  panEnc       String?
+  panLast4     String?
+  uan          String?
+  esiNumber    String?
+  accountHolder String?
+  bankName      String?
+  ifsc          String?
+  accountEnc    String?
+  accountLast4  String?
+  paymentMode   String  @default("BANK_TRANSFER") // BANK_TRANSFER | CASH | CHEQUE | UPI
+
+  note            String?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([workspaceId, employeeId, effectiveFrom(sort: Desc)])
+}
+
+/** One-off pay items for a period: bonus, arrears, reimbursement, deduction, or loss-of-pay days. */
+model PayrollAdjustment {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  periodId String
+  period   PayrollPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  kind    String // EARNING | BONUS | ARREARS | REIMBURSEMENT | DEDUCTION | LOP_DAYS
+  code    String
+  label   String
+  amount  Decimal // rupees, or days when kind = LOP_DAYS
+  taxable Boolean @default(true)
+  note    String?
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@index([workspaceId, periodId])
+  @@index([periodId, employeeId])
+}
+
+/** Salary advance or loan recovered through payroll in fixed instalments. */
+model EmployeeLoan {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  label       String
+  principal   Decimal
+  emi         Decimal
+  outstanding Decimal
+  status      String   @default("ACTIVE") // ACTIVE | CLOSED
+  startPeriod DateTime
+  note        String?
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([workspaceId, employeeId, status])
+}
+
+/** A statutory amount owed to a government body for one payroll period: PF, ESI, professional tax or TDS. */
+model PayrollRemittance {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  periodId String
+  period   PayrollPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  runId String?
+  run   PayrollRun? @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  kind    String // PF | ESI | PT | TDS
+  amount  Decimal
+  dueDate DateTime
+  status  String   @default("DUE") // DUE | PAID
+
+  paidAt          DateTime?
+  paidByUserId    String?
+  reference       String? // challan / TRRN number
+  accountingTxId  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, periodId, kind])
+  @@index([workspaceId, status, dueDate])
 }
 
 /**

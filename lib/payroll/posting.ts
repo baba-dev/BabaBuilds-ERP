@@ -1,440 +1,263 @@
 import { Prisma, type AccountingLineSide } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import { getPostingTemplate } from '@/lib/accounting/events';
+import { logActivity } from '@/lib/security/activity-log';
+import { remittanceDueDate } from '@/lib/payroll/service/period';
+
+/**
+ * Payroll ledger postings.
+ *
+ * Posting a run books the cost and every amount owed: PF, ESI, professional tax and TDS go to their own
+ * liability accounts, recoveries of employee loans go against the loans receivable account, and net pay goes
+ * to wages payable. Paying people (disbursement) and paying the government (remittance) are separate entries
+ * that clear those liabilities against the bank, so the ledger always shows what is still owed.
+ */
 
 export const PAYROLL_POSTING_OPERATION = 'PAYROLL_RUN_POST';
 
 export const PAYROLL_ACCOUNT_CODES = {
   payrollExpense: '6000_PAYROLL_EXPENSE',
-  taxLiability: '2105_PAYROLL_TAX_PAYABLE',
-  benefitsLiability: '2115_PAYROLL_BENEFITS_PAYABLE',
+  employerContributions: '6010_PAYROLL_EMPLOYER_CONTRIBUTIONS',
+  pfPayable: '2110_PF_PAYABLE',
+  esiPayable: '2111_ESI_PAYABLE',
+  ptPayable: '2112_PROFESSIONAL_TAX_PAYABLE',
+  tdsPayable: '2113_TDS_SALARY_PAYABLE',
+  otherDeductionsPayable: '2130_PAYROLL_OTHER_DEDUCTIONS_PAYABLE',
   wagesPayable: '2125_PAYROLL_WAGES_PAYABLE',
-  wagesPayableClearing: '2126_PAYROLL_WAGES_PAYABLE_CLEARING',
+  employeeLoans: '1210_EMPLOYEE_LOANS_RECEIVABLE',
   cashClearing: '1005_CASH_BANK_CLEARING',
 } as const;
 
-const ACCOUNT_CODES = PAYROLL_ACCOUNT_CODES;
-const MANUAL_ADJUSTMENT_TEMPLATE = getPostingTemplate('MANUAL_ADJUSTMENT');
-
-export type PayrollRunPostingInput = {
-  runId: string;
-  workspaceId: string;
-  approvedAt: Date;
-  postingCurrency: string;
-  payrollExpense: Prisma.Decimal;
-  taxLiability: Prisma.Decimal;
-  benefitsLiability: Prisma.Decimal;
-  wagesPayable: Prisma.Decimal;
-  idempotencyKey: string;
-  sourceRef?: string | null;
-  actorUserId?: string | null;
-  actorEmail?: string | null;
-  requestId?: string | null;
-};
-
-export type PayrollJournalLine = {
-  lineNumber: number;
-  accountCode: string;
-  side: AccountingLineSide;
-  amount: Prisma.Decimal;
-  description: string;
-};
-
-const toAmount = (value: Prisma.Decimal | number | string): Prisma.Decimal =>
-  value instanceof Prisma.Decimal ? value : new Prisma.Decimal(value);
-
+const A = PAYROLL_ACCOUNT_CODES;
 const ZERO = new Prisma.Decimal(0);
+const D = (n: Prisma.Decimal.Value) => new Prisma.Decimal(n);
 
-/**
- * Maps persisted payroll run totals to the four journal buckets used by buildPayrollJournalPayload.
- * payrollExpense = totalEarnings + totalEmployerCosts (P&L recognition).
- * wagesPayable = totalNetPay. Remaining credits split 50/50 between tax and benefits liability
- * so debits equal credits when headers are internally consistent.
- */
-export function mapPayrollRunTotalsToJournalAmounts(input: {
-  totalEarnings: Prisma.Decimal;
-  totalDeductions: Prisma.Decimal;
-  totalEmployerCosts: Prisma.Decimal;
-  totalNetPay: Prisma.Decimal;
-}): {
-  payrollExpense: Prisma.Decimal;
-  taxLiability: Prisma.Decimal;
-  benefitsLiability: Prisma.Decimal;
-  wagesPayable: Prisma.Decimal;
-} {
-  const earnings = Prisma.Decimal.max(toAmount(input.totalEarnings), ZERO);
-  const er = Prisma.Decimal.max(toAmount(input.totalEmployerCosts), ZERO);
-  const net = Prisma.Decimal.max(toAmount(input.totalNetPay), ZERO);
-  const payrollExpense = earnings.plus(er);
-  const remainder = Prisma.Decimal.max(payrollExpense.minus(net), ZERO);
-  const half = remainder.div(new Prisma.Decimal(2));
-  const taxLiability = half;
-  const benefitsLiability = remainder.minus(half);
-  const wagesPayable = net;
-  return { payrollExpense, taxLiability, benefitsLiability, wagesPayable };
-}
+export type PayrollJournalLine = { lineNumber: number; accountCode: string; side: AccountingLineSide; amount: Prisma.Decimal; description: string };
 
-export function buildPayrollJournalPayload(input: {
-  payrollExpense: Prisma.Decimal | number | string;
-  taxLiability: Prisma.Decimal | number | string;
-  benefitsLiability: Prisma.Decimal | number | string;
-  wagesPayable: Prisma.Decimal | number | string;
-}): {
-  lines: PayrollJournalLine[];
-  totals: {
-    debit: Prisma.Decimal;
-    credit: Prisma.Decimal;
-    cashClearing: Prisma.Decimal;
-  };
-} {
-  const payrollExpense = toAmount(input.payrollExpense);
-  const taxLiability = toAmount(input.taxLiability);
-  const benefitsLiability = toAmount(input.benefitsLiability);
-  const wagesPayable = toAmount(input.wagesPayable);
-  const cashClearing = wagesPayable;
-
-  if (!MANUAL_ADJUSTMENT_TEMPLATE) {
-    throw new Error('ACCOUNTING_TEMPLATE_MISSING: MANUAL_ADJUSTMENT');
-  }
-
-  const lines: PayrollJournalLine[] = [
-    {
-      lineNumber: 1,
-      accountCode: ACCOUNT_CODES.payrollExpense,
-      side: 'DEBIT',
-      amount: payrollExpense,
-      description: 'Recognize payroll expense for approved run',
-    },
-    {
-      lineNumber: 2,
-      accountCode: ACCOUNT_CODES.taxLiability,
-      side: 'CREDIT',
-      amount: taxLiability,
-      description: 'Accrue payroll tax liability',
-    },
-    {
-      lineNumber: 3,
-      accountCode: ACCOUNT_CODES.benefitsLiability,
-      side: 'CREDIT',
-      amount: benefitsLiability,
-      description: 'Accrue payroll benefits liability',
-    },
-    {
-      lineNumber: 4,
-      accountCode: ACCOUNT_CODES.wagesPayable,
-      side: 'CREDIT',
-      amount: wagesPayable,
-      description: 'Accrue net wages payable',
-    },
-    {
-      lineNumber: 5,
-      accountCode: ACCOUNT_CODES.wagesPayableClearing,
-      side: 'DEBIT',
-      amount: wagesPayable,
-      description: 'Clear wages payable into payroll disbursement leg',
-    },
-    {
-      lineNumber: 6,
-      accountCode: ACCOUNT_CODES.cashClearing,
-      side: 'CREDIT',
-      amount: cashClearing,
-      description: 'Record payroll cash/bank clearing outflow',
-    },
-  ];
-
-  const debit = lines.reduce(
-    (sum, line) => (line.side === 'DEBIT' ? sum.plus(line.amount) : sum),
-    new Prisma.Decimal(0),
-  );
-  const credit = lines.reduce(
-    (sum, line) => (line.side === 'CREDIT' ? sum.plus(line.amount) : sum),
-    new Prisma.Decimal(0),
-  );
-
-  if (!debit.equals(credit)) {
-    throw new Error(`PAYROLL_POSTING_UNBALANCED: debit ${debit.toFixed(2)} != credit ${credit.toFixed(2)}`);
-  }
-
-  return {
-    lines,
-    totals: {
-      debit,
-      credit,
-      cashClearing,
-    },
-  };
-}
-
-export type CreatePayrollPostingResult = {
-  created: boolean;
-  accountingTransactionId: string;
-  accountingEntryIds: string[];
-  cashForecastSourceType: 'PAYROLL';
-  cashOutflowAmount: Prisma.Decimal;
-  journalReference: string | null;
+export type RunLedgerTotals = {
+  gross: Prisma.Decimal;
+  employerCost: Prisma.Decimal;
+  pf: Prisma.Decimal;
+  esi: Prisma.Decimal;
+  pt: Prisma.Decimal;
+  tds: Prisma.Decimal;
+  loanRecovery: Prisma.Decimal;
+  otherDeductions: Prisma.Decimal;
+  netPay: Prisma.Decimal;
 };
 
-export function buildPayrollPostResponseBody(input: CreatePayrollPostingResult & { payrollRunId: string }) {
-  return {
-    success: true as const,
-    payrollRunId: input.payrollRunId,
-    accountingTransactionId: input.accountingTransactionId,
-    accountingEntryIds: input.accountingEntryIds,
-    cashForecast: {
-      sourceType: input.cashForecastSourceType,
-      outflowAmount: input.cashOutflowAmount.toFixed(2),
-    },
-    references: {
-      sourceTable: 'PAYROLL_RUN' as const,
-      sourceId: input.payrollRunId,
-    },
-    created: input.created,
-    journalReference: input.journalReference,
-  };
+type LineForTotals = {
+  earnings: Prisma.Decimal.Value;
+  employerCosts: Prisma.Decimal.Value;
+  netPay: Prisma.Decimal.Value;
+  breakdownJson: unknown;
+  statutoryJson: unknown;
+};
+
+/** Adds up what a run owes, from its stored line items. */
+export function ledgerTotalsFromLines(lines: LineForTotals[]): RunLedgerTotals {
+  const t = { gross: ZERO, employerCost: ZERO, pf: ZERO, esi: ZERO, pt: ZERO, tds: ZERO, loanRecovery: ZERO, netPay: ZERO, employeeStatutory: ZERO };
+  for (const l of lines) {
+    const s = (l.statutoryJson ?? {}) as Record<string, number>;
+    const n = (k: string) => D(Number(s[k] ?? 0));
+    t.gross = t.gross.plus(D(l.earnings));
+    t.employerCost = t.employerCost.plus(D(l.employerCosts));
+    t.netPay = t.netPay.plus(D(l.netPay));
+    t.pf = t.pf.plus(n('pfEmployee')).plus(n('pfEpf')).plus(n('pfEps')).plus(n('pfAdmin')).plus(n('pfEdli'));
+    t.esi = t.esi.plus(n('esiEmployee')).plus(n('esiEmployer'));
+    t.pt = t.pt.plus(n('pt'));
+    t.tds = t.tds.plus(n('tds'));
+    t.employeeStatutory = t.employeeStatutory.plus(n('pfEmployee')).plus(n('esiEmployee')).plus(n('pt')).plus(n('tds'));
+    const deductions = ((l.breakdownJson ?? {}) as { deductions?: { code: string; amount: number }[] }).deductions ?? [];
+    for (const d of deductions) if (d.code === 'LOAN_EMI') t.loanRecovery = t.loanRecovery.plus(D(d.amount));
+  }
+  // Whatever else was taken from pay and not paid out is owed on to a third party; this also keeps the entry balanced.
+  const otherDeductions = Prisma.Decimal.max(ZERO, t.gross.minus(t.netPay).minus(t.employeeStatutory).minus(t.loanRecovery));
+  return { gross: t.gross, employerCost: t.employerCost, pf: t.pf, esi: t.esi, pt: t.pt, tds: t.tds, loanRecovery: t.loanRecovery, otherDeductions, netPay: t.netPay };
 }
 
-/**
- * Creates accounting entries and updates PayrollPosting + PayrollRun in one transaction.
- * Idempotent by PayrollPosting.runId (POSTED + same accountingTransactionId returns without duplicating).
- */
-export async function createPayrollPosting(input: PayrollRunPostingInput): Promise<CreatePayrollPostingResult> {
-  const { lines, totals } = buildPayrollJournalPayload({
-    payrollExpense: input.payrollExpense,
-    taxLiability: input.taxLiability,
-    benefitsLiability: input.benefitsLiability,
-    wagesPayable: input.wagesPayable,
+export function buildAccrualJournal(t: RunLedgerTotals): { lines: PayrollJournalLine[]; debit: Prisma.Decimal; credit: Prisma.Decimal } {
+  const spec: [string, AccountingLineSide, Prisma.Decimal, string][] = [
+    [A.payrollExpense, 'DEBIT', t.gross, 'Salaries and allowances for the month'],
+    [A.employerContributions, 'DEBIT', t.employerCost, 'Employer PF, pension, EDLI and ESI'],
+    [A.pfPayable, 'CREDIT', t.pf, 'Provident fund payable (employee and employer share)'],
+    [A.esiPayable, 'CREDIT', t.esi, 'ESI payable (employee and employer share)'],
+    [A.ptPayable, 'CREDIT', t.pt, 'Professional tax payable'],
+    [A.tdsPayable, 'CREDIT', t.tds, 'Tax deducted from salaries, payable to government'],
+    [A.employeeLoans, 'CREDIT', t.loanRecovery, 'Employee loan instalments recovered'],
+    [A.otherDeductionsPayable, 'CREDIT', t.otherDeductions, 'Other deductions from pay'],
+    [A.wagesPayable, 'CREDIT', t.netPay, 'Net salaries payable to employees'],
+  ];
+  const lines = spec
+    .filter(([, , amount]) => amount.gt(0))
+    .map(([accountCode, side, amount, description], i) => ({ lineNumber: i + 1, accountCode, side, amount, description }));
+  const sum = (side: AccountingLineSide) => lines.filter((l) => l.side === side).reduce((s, l) => s.plus(l.amount), ZERO);
+  const debit = sum('DEBIT');
+  const credit = sum('CREDIT');
+  if (!debit.equals(credit)) throw new Error(`PAYROLL_POSTING_UNBALANCED: debit ${debit.toFixed(2)} != credit ${credit.toFixed(2)}`);
+  return { lines, debit, credit };
+}
+
+const REMITTANCE_ACCOUNT = { PF: A.pfPayable, ESI: A.esiPayable, PT: A.ptPayable, TDS: A.tdsPayable } as const;
+
+export function remittanceAmounts(t: RunLedgerTotals): { kind: 'PF' | 'ESI' | 'PT' | 'TDS'; amount: Prisma.Decimal }[] {
+  return ([
+    { kind: 'PF', amount: t.pf },
+    { kind: 'ESI', amount: t.esi },
+    { kind: 'PT', amount: t.pt },
+    { kind: 'TDS', amount: t.tds },
+  ] as const).filter((r) => r.amount.gt(0)).map((r) => ({ ...r }));
+}
+
+type Tx = Prisma.TransactionClient;
+
+async function writeJournal(tx: Tx, args: { workspaceId: string; sourceTable: string; sourceId: string; sourceRef: string; description: string; occurredAt: Date; lines: PayrollJournalLine[] }) {
+  const posted = new Date();
+  const transaction = await tx.accountingTransaction.create({
+    data: {
+      workspaceId: args.workspaceId, eventType: 'MANUAL_ADJUSTMENT', eventOccurredAt: args.occurredAt, postedAt: posted, postingCurrency: 'INR',
+      description: args.description, sourceTable: args.sourceTable, sourceId: args.sourceId, sourceRef: args.sourceRef,
+    },
   });
+  await tx.accountingEntry.createMany({
+    data: args.lines.map((l) => ({ transactionId: transaction.id, workspaceId: args.workspaceId, lineNumber: l.lineNumber, accountCode: l.accountCode, side: l.side, amount: l.amount, currency: 'INR', postedAt: posted, isPosted: true })),
+  });
+  return transaction;
+}
 
-  return prisma.$transaction(async (tx) => {
-    const existingPosting = await tx.payrollPosting.findUnique({
-      where: { runId: input.runId },
-    });
+export class PayrollPostingError extends Error {
+  constructor(readonly code: 'NOT_APPROVED' | 'NOT_POSTED' | 'NOTHING_TO_PAY' | 'NOT_FOUND' | 'ALREADY_PAID', message: string) {
+    super(message);
+  }
+}
 
-    if (
-      existingPosting?.postingStatus === 'POSTED' &&
-      existingPosting.accountingTransactionId
-    ) {
-      const existingTx = await tx.accountingTransaction.findUnique({
-        where: { id: existingPosting.accountingTransactionId },
-        include: {
-          entries: {
-            orderBy: { lineNumber: 'asc' },
-            select: { id: true, lineNumber: true, accountCode: true, side: true, amount: true },
-          },
-        },
-      });
-      if (existingTx) {
-        const cashOutflowAmount = existingTx.entries
-          .filter((entry) => entry.accountCode === ACCOUNT_CODES.cashClearing && entry.side === 'CREDIT')
-          .reduce((sum, entry) => sum.plus(entry.amount), new Prisma.Decimal(0));
-        return {
-          created: false,
-          accountingTransactionId: existingTx.id,
-          accountingEntryIds: existingTx.entries.map((e) => e.id),
-          cashForecastSourceType: 'PAYROLL' as const,
-          cashOutflowAmount,
-          journalReference: existingPosting.journalReference ?? null,
-        };
+/** Books an approved run to the ledger, creates what is owed to government, recovers loan instalments and closes the month. */
+export async function postPayrollRun(args: { workspaceId: string; runId: string; userId: string; userEmail?: string | null }) {
+  const { workspaceId, runId } = args;
+  const result = await prisma.$transaction(
+    async (tx) => {
+      const run = await tx.payrollRun.findFirst({ where: { id: runId, workspaceId }, include: { period: true, lineItems: { include: { employeeSnapshot: { select: { employeeId: true } } } } } });
+      if (!run) throw new PayrollPostingError('NOT_FOUND', 'Payroll run not found.');
+      if (run.status === 'POSTED') {
+        const existing = await tx.payrollPosting.findUnique({ where: { runId } });
+        return { replayed: true as const, transactionId: existing?.accountingTransactionId ?? null, journalReference: existing?.journalReference ?? null };
       }
-    }
+      const claimed = await tx.payrollRun.updateMany({ where: { id: runId, workspaceId, status: 'APPROVED' }, data: { status: 'POSTED' } });
+      if (claimed.count === 0) throw new PayrollPostingError('NOT_APPROVED', 'Only an approved run can be posted.');
 
-    const existingAcct = await tx.accountingTransaction.findFirst({
-      where: {
-        workspaceId: input.workspaceId,
-        sourceTable: 'PAYROLL_RUN',
-        sourceId: input.runId,
-        eventType: 'MANUAL_ADJUSTMENT',
-      },
-      include: {
-        entries: {
-          orderBy: { lineNumber: 'asc' },
-          select: { id: true, lineNumber: true, accountCode: true, side: true, amount: true },
-        },
-      },
-    });
+      const totals = ledgerTotalsFromLines(run.lineItems);
+      const { lines, debit, credit } = buildAccrualJournal(totals);
+      const journalReference = `PR-${runId.slice(-8).toUpperCase()}`;
+      const transaction = await writeJournal(tx, {
+        workspaceId, sourceTable: 'PAYROLL_RUN', sourceId: runId, sourceRef: journalReference,
+        description: `Payroll ${run.period.startDate.toISOString().slice(0, 7)} posted`, occurredAt: run.period.endDate, lines,
+      });
 
-    // Legacy: accounting row exists but PayrollPosting was never completed
-    if (
-      existingAcct &&
-      (!existingPosting || existingPosting.postingStatus !== 'POSTED' || !existingPosting.accountingTransactionId)
-    ) {
-      const journalRef =
-        existingPosting?.journalReference ?? `PR-${input.runId.slice(-8).toUpperCase()}`;
-      const postedAt = new Date();
       await tx.payrollPosting.upsert({
-        where: { runId: input.runId },
-        create: {
-          workspaceId: input.workspaceId,
-          runId: input.runId,
-          postingStatus: 'POSTED',
-          idempotencyKey: input.idempotencyKey,
-          journalReference: journalRef,
-          accountingTransactionId: existingAcct.id,
-          accountingTransactionRef: existingAcct.id,
-          postedAt,
-          errorMessage: null,
-        },
-        update: {
-          postingStatus: 'POSTED',
-          idempotencyKey: input.idempotencyKey,
-          journalReference: journalRef,
-          accountingTransactionId: existingAcct.id,
-          accountingTransactionRef: existingAcct.id,
-          postedAt,
-          errorMessage: null,
-        },
+        where: { runId },
+        create: { workspaceId, runId, postingStatus: 'POSTED', idempotencyKey: `${PAYROLL_POSTING_OPERATION}:${runId}`, journalReference, accountingTransactionId: transaction.id, accountingTransactionRef: transaction.id, postedAt: new Date() },
+        update: { postingStatus: 'POSTED', journalReference, accountingTransactionId: transaction.id, accountingTransactionRef: transaction.id, postedAt: new Date(), errorMessage: null },
       });
-      await tx.payrollRun.update({
-        where: { id: input.runId, workspaceId: input.workspaceId },
-        data: { status: 'POSTED' },
-      });
-      const cashOutflowAmount = existingAcct.entries
-        .filter((entry) => entry.accountCode === ACCOUNT_CODES.cashClearing && entry.side === 'CREDIT')
-        .reduce((sum, entry) => sum.plus(entry.amount), new Prisma.Decimal(0));
-      return {
-        created: false,
-        accountingTransactionId: existingAcct.id,
-        accountingEntryIds: existingAcct.entries.map((e) => e.id),
-        cashForecastSourceType: 'PAYROLL' as const,
-        cashOutflowAmount,
-        journalReference: journalRef,
-      };
-    }
 
-    if (existingPosting?.postingStatus === 'PENDING' && existingPosting.idempotencyKey !== input.idempotencyKey) {
-      throw new Error('PAYROLL_POSTING_CONFLICT: run already has a pending posting with a different idempotency key');
-    }
-
-    const journalRef = `PR-${input.runId.slice(-8).toUpperCase()}`;
-
-    await tx.payrollPosting.upsert({
-      where: { runId: input.runId },
-      create: {
-        workspaceId: input.workspaceId,
-        runId: input.runId,
-        postingStatus: 'PENDING',
-        idempotencyKey: input.idempotencyKey,
-        journalReference: journalRef,
-      },
-      update: {
-        postingStatus: 'PENDING',
-        idempotencyKey: input.idempotencyKey,
-        journalReference: journalRef,
-        errorMessage: null,
-        ...(existingPosting?.postingStatus === 'FAILED'
-          ? {
-              accountingTransactionId: null,
-              accountingTransactionRef: null,
-              postedAt: null,
-            }
-          : {}),
-      },
-    });
-
-    try {
-      let transactionId: string;
-      let entryIds: string[];
-
-      if (existingAcct) {
-        transactionId = existingAcct.id;
-        entryIds = existingAcct.entries.map((e) => e.id);
-      } else {
-        const transaction = await tx.accountingTransaction.create({
-          data: {
-            workspaceId: input.workspaceId,
-            eventType: 'MANUAL_ADJUSTMENT',
-            eventOccurredAt: input.approvedAt,
-            postedAt: new Date(),
-            postingCurrency: input.postingCurrency,
-            description: `Payroll run ${input.runId} posted`,
-            sourceTable: 'PAYROLL_RUN',
-            sourceId: input.runId,
-            sourceRef: input.sourceRef ?? null,
-            requestId: input.requestId ?? null,
-          },
-        });
-        transactionId = transaction.id;
-
-        const entries = await Promise.all(
-          lines.map((line) =>
-            tx.accountingEntry.create({
-              data: {
-                transactionId: transaction.id,
-                workspaceId: input.workspaceId,
-                lineNumber: line.lineNumber,
-                accountCode: line.accountCode,
-                side: line.side,
-                amount: line.amount,
-                currency: input.postingCurrency,
-                postedAt: transaction.postedAt,
-                isPosted: true,
-              },
-            }),
-          ),
-        );
-        entryIds = entries.map((e) => e.id);
-
-        await tx.appActivityLog.create({
-          data: {
-            workspaceId: input.workspaceId,
-            actorUserId: input.actorUserId ?? null,
-            actorEmail: input.actorEmail ?? null,
-            action: 'PAYROLL_RUN_POSTED',
-            entityType: 'PayrollRun',
-            entityId: input.runId,
-            status: 'SUCCESS',
-            metadata: {
-              accountingTransactionId: transaction.id,
-              accountingEntryIds: entryIds,
-              sourceType: 'PAYROLL',
-              sourceTable: 'PAYROLL_RUN',
-              sourceId: input.runId,
-              debitTotal: totals.debit.toFixed(2),
-              creditTotal: totals.credit.toFixed(2),
-              cashOutflowAmount: totals.cashClearing.toFixed(2),
-            },
-          },
+      for (const r of remittanceAmounts(totals)) {
+        await tx.payrollRemittance.upsert({
+          where: { workspaceId_periodId_kind: { workspaceId, periodId: run.periodId, kind: r.kind } },
+          create: { workspaceId, periodId: run.periodId, runId, kind: r.kind, amount: r.amount, dueDate: remittanceDueDate(r.kind, run.period.endDate) },
+          update: { runId, amount: r.amount, dueDate: remittanceDueDate(r.kind, run.period.endDate) },
         });
       }
 
-      const postedAt = new Date();
+      // Recover loan instalments, oldest loan first.
+      const emiByEmployee = new Map<string, number>();
+      for (const l of run.lineItems) {
+        const taken = (((l.breakdownJson ?? {}) as { deductions?: { code: string; amount: number }[] }).deductions ?? []).filter((d) => d.code === 'LOAN_EMI').reduce((s, d) => s + d.amount, 0);
+        if (taken > 0) emiByEmployee.set(l.employeeSnapshot.employeeId, taken);
+      }
+      for (const [employeeId, taken] of emiByEmployee) {
+        let left = taken;
+        const loans = await tx.employeeLoan.findMany({ where: { workspaceId, employeeId, status: 'ACTIVE' }, orderBy: { startPeriod: 'asc' } });
+        for (const loan of loans) {
+          if (left <= 0) break;
+          const take = Math.min(left, Number(loan.outstanding));
+          const outstanding = D(loan.outstanding).minus(take);
+          await tx.employeeLoan.update({ where: { id: loan.id }, data: { outstanding, status: outstanding.lte(0) ? 'CLOSED' : 'ACTIVE' } });
+          left -= take;
+        }
+      }
 
-      await tx.payrollPosting.update({
-        where: { runId: input.runId },
-        data: {
-          postingStatus: 'POSTED',
-          accountingTransactionId: transactionId,
-          accountingTransactionRef: transactionId,
-          postedAt,
-          errorMessage: null,
-          idempotencyKey: input.idempotencyKey,
-          journalReference: journalRef,
-        },
-      });
+      await tx.payrollPeriod.update({ where: { id: run.periodId }, data: { status: 'CLOSED', lockedAt: new Date(), lockedByUserId: args.userId } });
+      return { replayed: false as const, transactionId: transaction.id, journalReference, debit: debit.toFixed(2), credit: credit.toFixed(2), totals };
+    },
+    { timeout: 60_000 },
+  );
 
-      await tx.payrollRun.update({
-        where: { id: input.runId, workspaceId: input.workspaceId },
-        data: { status: 'POSTED' },
-      });
+  if (!result.replayed) {
+    void logActivity({
+      workspaceId, action: 'payroll.run_posted', status: 'SUCCESS', actor: { userId: args.userId, email: args.userEmail ?? null },
+      entity: { type: 'payroll_run', id: runId },
+      metadata: { accountingTransactionId: result.transactionId, debit: result.debit, credit: result.credit },
+    });
+  }
+  return result;
+}
 
-      return {
-        created: !existingAcct,
-        accountingTransactionId: transactionId,
-        accountingEntryIds: entryIds,
-        cashForecastSourceType: 'PAYROLL' as const,
-        cashOutflowAmount: totals.cashClearing,
-        journalReference: journalRef,
-      };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown posting error';
-      await tx.payrollPosting.update({
-        where: { runId: input.runId },
-        data: {
-          postingStatus: 'FAILED',
-          errorMessage: message.slice(0, 4000),
-        },
-      });
-      throw err;
-    }
+/** Records salaries as paid: clears wages payable against the bank and marks each employee's line paid. */
+export async function disbursePayrollRun(args: { workspaceId: string; runId: string; userId: string; userEmail?: string | null; lineIds?: string[]; reference?: string | null; paidOn?: Date }) {
+  const { workspaceId, runId } = args;
+  const paidOn = args.paidOn ?? new Date();
+  const out = await prisma.$transaction(
+    async (tx) => {
+      const run = await tx.payrollRun.findFirst({ where: { id: runId, workspaceId }, include: { period: { select: { endDate: true } } } });
+      if (!run) throw new PayrollPostingError('NOT_FOUND', 'Payroll run not found.');
+      if (run.status !== 'POSTED') throw new PayrollPostingError('NOT_POSTED', 'Post the run to the ledger before recording payment.');
+      const lines = await tx.payrollLineItem.findMany({ where: { runId, payoutStatus: { in: ['PENDING', 'FAILED', 'HELD'] }, ...(args.lineIds?.length ? { id: { in: args.lineIds } } : {}) } });
+      if (lines.length === 0) throw new PayrollPostingError('NOTHING_TO_PAY', 'Every selected salary is already paid.');
+      const amount = lines.reduce((s, l) => s.plus(l.netPay), ZERO);
+      const batch = `${runId}:${Date.now().toString(36)}`;
+      let transactionId: string | null = null;
+      if (amount.gt(0)) {
+        const t = await writeJournal(tx, {
+          workspaceId, sourceTable: 'PAYROLL_PAYOUT', sourceId: batch, sourceRef: args.reference ?? `PAY-${runId.slice(-8).toUpperCase()}`,
+          description: `Salaries paid (${lines.length})`, occurredAt: paidOn,
+          lines: [
+            { lineNumber: 1, accountCode: A.wagesPayable, side: 'DEBIT', amount, description: 'Net salaries paid' },
+            { lineNumber: 2, accountCode: A.cashClearing, side: 'CREDIT', amount, description: 'Paid from bank or cash' },
+          ],
+        });
+        transactionId = t.id;
+      }
+      await tx.payrollLineItem.updateMany({ where: { id: { in: lines.map((l) => l.id) } }, data: { payoutStatus: 'PAID', paidAt: paidOn, payoutRef: args.reference ?? null } });
+      const remaining = await tx.payrollLineItem.count({ where: { runId, payoutStatus: { not: 'PAID' } } });
+      await tx.payrollRun.update({ where: { id: runId }, data: remaining === 0 ? { disbursedAt: paidOn, disbursedByUserId: args.userId, disbursementTxId: transactionId ?? run.disbursementTxId } : { disbursementTxId: transactionId ?? run.disbursementTxId } });
+      return { paid: lines.length, amount: amount.toFixed(2), complete: remaining === 0, transactionId };
+    },
+    { timeout: 60_000 },
+  );
+  void logActivity({ workspaceId, action: 'payroll.salaries_paid', status: 'SUCCESS', actor: { userId: args.userId, email: args.userEmail ?? null }, entity: { type: 'payroll_run', id: runId }, metadata: { paid: out.paid, amount: out.amount, complete: out.complete } });
+  return out;
+}
+
+/** Records a payment to PF, ESI, professional tax or TDS, clearing the matching liability. */
+export async function payRemittance(args: { workspaceId: string; remittanceId: string; userId: string; userEmail?: string | null; reference?: string | null; paidOn?: Date }) {
+  const { workspaceId } = args;
+  const paidOn = args.paidOn ?? new Date();
+  const out = await prisma.$transaction(async (tx) => {
+    const r = await tx.payrollRemittance.findFirst({ where: { id: args.remittanceId, workspaceId } });
+    if (!r) throw new PayrollPostingError('NOT_FOUND', 'Remittance not found.');
+    if (r.status === 'PAID') throw new PayrollPostingError('ALREADY_PAID', 'This payment is already recorded.');
+    const claimed = await tx.payrollRemittance.updateMany({ where: { id: r.id, status: 'DUE' }, data: { status: 'PAID', paidAt: paidOn, paidByUserId: args.userId, reference: args.reference ?? null } });
+    if (claimed.count === 0) throw new PayrollPostingError('ALREADY_PAID', 'This payment is already recorded.');
+    const account = REMITTANCE_ACCOUNT[r.kind as keyof typeof REMITTANCE_ACCOUNT];
+    const t = await writeJournal(tx, {
+      workspaceId, sourceTable: 'PAYROLL_REMITTANCE', sourceId: r.id, sourceRef: args.reference ?? `REM-${r.kind}`,
+      description: `${r.kind} remitted`, occurredAt: paidOn,
+      lines: [
+        { lineNumber: 1, accountCode: account, side: 'DEBIT', amount: r.amount, description: `${r.kind} paid to government` },
+        { lineNumber: 2, accountCode: A.cashClearing, side: 'CREDIT', amount: r.amount, description: 'Paid from bank' },
+      ],
+    });
+    await tx.payrollRemittance.update({ where: { id: r.id }, data: { accountingTxId: t.id } });
+    return { kind: r.kind, amount: r.amount.toFixed(2) };
   });
+  void logActivity({ workspaceId, action: 'payroll.remittance_paid', status: 'SUCCESS', actor: { userId: args.userId, email: args.userEmail ?? null }, entity: { type: 'payroll_remittance', id: args.remittanceId }, metadata: out });
+  return out;
 }

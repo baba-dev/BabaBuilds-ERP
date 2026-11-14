@@ -1,4 +1,5 @@
 import type { DemoTemplateDefinition } from '@/lib/demo/templates/types';
+import { seedDemoCompensation } from "@/lib/demo/payroll-demo";
 
 export const taxAgencyTemplate: DemoTemplateDefinition = {
   key: 'tax_agency',
@@ -316,29 +317,7 @@ export const taxAgencyTemplate: DemoTemplateDefinition = {
       ],
     });
 
-    // Payroll: create an open period + draft run to make payroll UI non-empty.
-    const period = await tx.payrollPeriod.create({
-      data: {
-        workspaceId,
-        startDate: new Date(now.getFullYear(), now.getMonth(), 1),
-        endDate: new Date(now.getFullYear(), now.getMonth() + 1, 0),
-        status: 'OPEN',
-      },
-      select: { id: true },
-    });
-    await tx.payrollRun.create({
-      data: {
-        workspaceId,
-        periodId: period.id,
-        version: 1,
-        status: 'DRAFT',
-        generatedByUserId: userId,
-        totalEarnings: 120000,
-        totalDeductions: 12000,
-        totalEmployerCosts: 8000,
-        totalNetPay: 108000,
-      },
-    });
+    await seedDemoCompensation(tx, workspaceId, userId, [{ employeeId: e1.id, name: 'Ananya Kapoor', annualCtc: 1800000 }, { employeeId: e2.id, name: 'Vikram Singh', annualCtc: 600000, esi: false }]);
 
     // AR Collections signal.
     if (surya?.id) {

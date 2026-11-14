@@ -1,167 +1,78 @@
 import { NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { isModuleEnabled } from '@/lib/modules';
-import { getWorkspaceIdForUser } from '@/lib/payroll/settings';
-import { RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
-import { requirePayrollPermission } from '@/lib/security/payroll-policy';
+import { requirePayrollModuleAndAction } from '@/app/api/payroll/_context';
+import { payrollErrorResponse } from '@/app/api/payroll/_http';
 import { getPayrollAdapterStatus } from '@/lib/payroll/integrations/workforce-adapter';
-import type {
-  PayrollOverviewResponseDto,
-  PayrollPeriodSummaryDto,
-  PayrollRunListItemDto,
-  PayrollRunStatusDto,
-} from '@/lib/payroll/types';
+import { listPeople } from '@/lib/payroll/service/people';
+import { fyOf, PAYROLL_KIND_LABEL } from '@/lib/payroll/service/period';
+import { checkPermissionsSilent } from '@/lib/rbac';
+import type { PayrollIssue } from '@/lib/payroll/service/checks';
 
-function mapRunStatus(s: string): PayrollRunStatusDto {
-  if (s === 'DRAFT' || s === 'REVIEW' || s === 'APPROVED' || s === 'POSTED') return s;
-  return 'DRAFT';
-}
-
-function serializeRun(run: {
-  id: string;
-  version: number;
-  status: string;
-  totalEarnings: Prisma.Decimal;
-  totalDeductions: Prisma.Decimal;
-  totalEmployerCosts: Prisma.Decimal;
-  totalNetPay: Prisma.Decimal;
-  generatedAt: Date;
-  approvedAt: Date | null;
-}): PayrollRunListItemDto {
-  return {
-    id: run.id,
-    version: run.version,
-    status: mapRunStatus(run.status),
-    totalEarnings: run.totalEarnings.toFixed(2),
-    totalDeductions: run.totalDeductions.toFixed(2),
-    totalEmployerCosts: run.totalEmployerCosts.toFixed(2),
-    totalNetPay: run.totalNetPay.toFixed(2),
-    generatedAt: run.generatedAt.toISOString(),
-    approvedAt: run.approvedAt?.toISOString() ?? null,
-  };
-}
+const n = (v: unknown) => Number(v ?? 0);
+const r2 = (v: number) => Math.round(v * 100) / 100;
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    const typedSession = session as { workspaceId?: string } | null;
-    const userId = session?.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const gate = await requirePayrollModuleAndAction('view');
+    if ('response' in gate) return gate.response;
+    const { workspaceId } = gate.access;
+    const now = new Date();
+    const fy = fyOf(now);
 
-    const workspaceId = typedSession?.workspaceId ?? (await getWorkspaceIdForUser(userId));
-    if (!workspaceId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const payrollEnabled = await isModuleEnabled(workspaceId, 'PAYROLL');
-    if (!payrollEnabled) {
-      return NextResponse.json(
-        { error: 'Payroll module is not enabled for this workspace.', code: 'MODULE_DISABLED' },
-        { status: 403 },
-      );
-    }
-
-    try {
-      await requirePayrollPermission(userId, workspaceId, 'view');
-    } catch (err) {
-      if (err instanceof RbacDeniedError) return rbacDeniedResponse(err);
-      throw err;
-    }
-
-    const [adapterStatus, periods] = await Promise.all([
+    const [adapter, perms, periods, remittances, people] = await Promise.all([
       getPayrollAdapterStatus(workspaceId),
+      checkPermissionsSilent(gate.access.userId, workspaceId, ['payroll.prepare', 'payroll.approve', 'payroll.post', 'payroll.settings.manage']),
       prisma.payrollPeriod.findMany({
-      where: { workspaceId },
-      orderBy: { startDate: 'desc' },
-      take: 12,
-      include: {
-        runs: {
-          orderBy: [{ version: 'desc' }, { generatedAt: 'desc' }],
-          take: 1,
-        },
-      },
-    }),
+        where: { workspaceId }, orderBy: { startDate: 'desc' }, take: 18,
+        include: { runs: { orderBy: { version: 'desc' }, take: 1, include: { _count: { select: { lineItems: true } } } } },
+      }),
+      prisma.payrollRemittance.findMany({ where: { workspaceId, status: 'DUE' }, orderBy: { dueDate: 'asc' }, take: 8 }),
+      listPeople(workspaceId, now),
     ]);
 
-    const periodIds = periods.map((p) => p.id);
+    const periodItems = periods.map((p) => {
+      const run = p.runs[0] ?? null;
+      const issues = ((run?.preflightJson ?? {}) as { issues?: PayrollIssue[] }).issues ?? [];
+      return {
+        id: p.id, startDate: p.startDate.toISOString(), endDate: p.endDate.toISOString(), status: p.status,
+        run: run ? { id: run.id, version: run.version, status: run.status, gross: n(run.totalEarnings), deductions: n(run.totalDeductions), employerCost: n(run.totalEmployerCosts), netPay: n(run.totalNetPay), headcount: run._count.lineItems, generatedAt: run.generatedAt.toISOString(), disbursed: Boolean(run.disbursedAt), errors: issues.filter((i) => i.severity === 'error').length, warnings: issues.filter((i) => i.severity === 'warning').length } : null,
+      };
+    });
 
-    const runsInWindow =
-      periodIds.length > 0
-        ? await prisma.payrollRun.findMany({
-            where: { workspaceId, periodId: { in: periodIds } },
-            select: {
-              id: true,
-              version: true,
-              status: true,
-              totalEarnings: true,
-              totalDeductions: true,
-              totalEmployerCosts: true,
-              totalNetPay: true,
-              generatedAt: true,
-              approvedAt: true,
-            },
-          })
-        : [];
+    // Which month to run next: the month after the latest posted one, or this month when nothing has been posted.
+    const lastPosted = periods.find((p) => p.runs[0]?.status === 'POSTED');
+    const open = periods.filter((p) => p.runs[0] && p.runs[0].status !== 'POSTED').sort((a, b) => a.startDate.getTime() - b.startDate.getTime())[0];
+    const base = lastPosted ? new Date(Date.UTC(lastPosted.startDate.getUTCFullYear(), lastPosted.startDate.getUTCMonth() + 1, 1)) : new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const next = open ? { year: open.startDate.getUTCFullYear(), month: open.startDate.getUTCMonth() + 1, inProgress: true, runId: open.runs[0]!.id, status: open.runs[0]!.status } : { year: base.getUTCFullYear(), month: base.getUTCMonth() + 1, inProgress: false, runId: null, status: null };
 
-    const statusGroups =
-      periodIds.length > 0
-        ? await prisma.payrollRun.groupBy({
-            by: ['status'],
-            where: { workspaceId, periodId: { in: periodIds } },
-            _count: { _all: true },
-          })
-        : [];
+    const fyRuns = periodItems.filter((p) => p.run && ['APPROVED', 'POSTED'].includes(p.run.status) && new Date(p.startDate) >= fy.start);
+    const sum = (f: (r: NonNullable<(typeof periodItems)[number]['run']>) => number) => r2(fyRuns.reduce((s, p) => s + f(p.run!), 0));
 
-    const zero = new Prisma.Decimal(0);
-    const kpisAgg = runsInWindow.reduce(
-      (acc, r) => ({
-        totalEarnings: acc.totalEarnings.plus(r.totalEarnings),
-        totalDeductions: acc.totalDeductions.plus(r.totalDeductions),
-        totalEmployerCosts: acc.totalEmployerCosts.plus(r.totalEmployerCosts),
-        totalNetPay: acc.totalNetPay.plus(r.totalNetPay),
-      }),
-      {
-        totalEarnings: zero,
-        totalDeductions: zero,
-        totalEmployerCosts: zero,
-        totalNetPay: zero,
-      },
-    );
+    const latest = periodItems.find((p) => p.run && p.run.headcount > 0) ?? null;
+    const dept = latest?.run
+      ? await prisma.payrollCostAllocation.groupBy({ by: ['departmentCode'], where: { lineItem: { runId: latest.run.id } }, _sum: { allocatedAmount: true } })
+      : [];
 
-    const periodSummaries: PayrollPeriodSummaryDto[] = periods.map((p) => ({
-      id: p.id,
-      startDate: p.startDate.toISOString(),
-      endDate: p.endDate.toISOString(),
-      status: p.status,
-      latestRun: p.runs[0] ? serializeRun(p.runs[0]) : null,
-    }));
+    const statutoryDue = remittances.map((r) => ({ id: r.id, kind: r.kind, label: PAYROLL_KIND_LABEL[r.kind as keyof typeof PAYROLL_KIND_LABEL] ?? r.kind, amount: n(r.amount), dueDate: r.dueDate.toISOString(), overdue: r.dueDate.getTime() < now.getTime() }));
 
-    const statusCounts = statusGroups.map((g) => ({
-      status: mapRunStatus(g.status),
-      count: g._count._all,
-    }));
+    const readiness = { ready: 0, attention: 0, none: 0, inactive: 0 };
+    for (const p of people.people) {
+      if (p.status === 'INACTIVE' && !p.exitDate) { readiness.inactive += 1; continue; }
+      if (p.readiness === 'READY') readiness.ready += 1;
+      else if (p.readiness === 'ATTENTION') readiness.attention += 1;
+      else readiness.none += 1;
+    }
 
-    const payload: PayrollOverviewResponseDto = {
-      periods: periodSummaries,
-      kpis: {
-        grossPayroll: kpisAgg.totalEarnings.toFixed(2),
-        deductions: kpisAgg.totalDeductions.toFixed(2),
-        netPayout: kpisAgg.totalNetPay.toFixed(2),
-        employerCost: kpisAgg.totalEmployerCosts.toFixed(2),
-        runCount: runsInWindow.length,
-      },
-      statusCounts,
-      adapterStatus,
-    };
-
-    return NextResponse.json(payload);
+    return NextResponse.json({
+      adapterStatus: adapter, fy: fy.label, next,
+      perms: { prepare: perms['payroll.prepare'], approve: perms['payroll.approve'], post: perms['payroll.post'], settings: perms['payroll.settings.manage'] },
+      kpis: { gross: sum((r) => r.gross), netPay: sum((r) => r.netPay), employerCost: sum((r) => r.employerCost), deductions: sum((r) => r.deductions), runCount: fyRuns.length, headcount: readiness.ready + readiness.attention, avgCostPerHead: latest?.run && latest.run.headcount > 0 ? r2((latest.run.gross + latest.run.employerCost) / latest.run.headcount) : 0 },
+      trend: [...periodItems].filter((p) => p.run).reverse().slice(-12).map((p) => ({ month: p.startDate, gross: p.run!.gross, netPay: p.run!.netPay, employerCost: p.run!.employerCost, headcount: p.run!.headcount })),
+      periods: periodItems.slice(0, 12), readiness, statutoryDue,
+      statutorySummary: { dueAmount: r2(statutoryDue.reduce((s, r) => s + r.amount, 0)), overdue: statutoryDue.filter((r) => r.overdue).length },
+      departments: dept.map((d) => ({ name: d.departmentCode ?? 'GENERAL', amount: r2(n(d._sum.allocatedAmount)) })).sort((a, b) => b.amount - a.amount).slice(0, 8),
+    }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (e) {
-    console.error('[payroll/overview]', e);
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+    return payrollErrorResponse(e, 'overview');
   }
 }

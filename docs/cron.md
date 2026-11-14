@@ -22,6 +22,8 @@ Add these lines with `crontab -e` (times are the server's timezone; adjust to ta
 0  6  * * * /var/www/bababuilds-erp/scripts/run-cron.sh trial-expiry       >> /var/log/bababuilds/cron.log 2>&1
 # Emails saved reports on their weekly (Monday) and monthly (1st) schedules; needs SMTP in Business Settings
 30 7  * * * /var/www/bababuilds-erp/scripts/run-cron.sh report-schedules   >> /var/log/bababuilds/cron.log 2>&1
+# Nudges to run payroll in time, approve it, and pay PF / ESI / professional tax / TDS before they are due
+0  7  * * * /var/www/bababuilds-erp/scripts/run-cron.sh payroll-reminders   >> /var/log/bababuilds/cron.log 2>&1
 # Saves the nightly cash forecast (feeds the accuracy view) and warns about a coming shortfall
 0  5  * * * /var/www/bababuilds-erp/scripts/run-cron.sh cash-forecast      >> /var/log/bababuilds/cron.log 2>&1
 ```

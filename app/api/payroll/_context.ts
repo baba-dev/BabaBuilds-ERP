@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 
 import { authOptions } from '@/lib/auth';
 import { isModuleEnabled } from '@/lib/modules';
-import { getWorkspaceIdForUser } from '@/lib/payroll/settings';
+import { resolveSessionMembership } from '@/lib/workspace-scope';
 import { RbacDeniedError, rbacDeniedResponse, checkPermissionsSilent } from '@/lib/rbac';
 import type { PayrollAction } from '@/lib/security/payroll-policy';
 import { requirePayrollPermission } from '@/lib/security/payroll-policy';
@@ -21,13 +21,12 @@ export async function requirePayrollModuleAndAction(
   action: PayrollAction,
 ): Promise<{ access: PayrollApiAccess } | { response: NextResponse }> {
   const session = await getServerSession(authOptions);
-  const typedSession = session as { workspaceId?: string } | null;
   const userId = session?.user?.id;
   if (!userId) {
     return { response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
   }
 
-  const workspaceId = typedSession?.workspaceId ?? (await getWorkspaceIdForUser(userId));
+  const workspaceId = (await resolveSessionMembership(session))?.workspaceId;
   if (!workspaceId) {
     return { response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
   }

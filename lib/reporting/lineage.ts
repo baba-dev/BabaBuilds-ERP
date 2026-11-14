@@ -24,6 +24,7 @@ export const LINEAGE: Record<string, Lineage> = {
   gst_summary: { sources: ['Invoice', 'Expense'], rules: ['voidExcluded', 'approvedOnly', 'eligibleItc'] },
   msme_payables: { sources: ['Expense', 'Vendor'], rules: ['approvedOnly', 'msmeLimit'] },
   payroll_cost: { sources: ['PayrollRun', 'PayrollPeriod'], rules: ['payrollPosted'] },
+  payroll_statutory: { sources: ['PayrollRemittance', 'PayrollPeriod'], rules: ['payrollPosted'] },
   inventory_valuation: { sources: ['Product'], rules: ['costValuation'] },
   shop_sales: { sources: ['ShopOrder'], rules: ['paidOrders'] },
   proposal_pipeline: { sources: ['Proposal'], rules: ['baseCurrency', 'winRateRule'] },
