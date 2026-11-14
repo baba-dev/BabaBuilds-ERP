@@ -19,8 +19,8 @@
         "net-cash-position"
       ],
       "writeEndpoints": [
-        "app/api/expenses/route.ts",
-        "app/api/expenses/[id]/route.ts"
+        "lib/expenses/create-expense-with-side-effects.ts",
+        "lib/expenses/service.ts"
       ]
     },
     {

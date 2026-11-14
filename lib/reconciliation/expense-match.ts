@@ -23,12 +23,17 @@ export function rankExpenseMatchesForDebit(args: {
   const out: ExpenseMatchCandidate[] = [];
   for (const exp of args.expenses) {
     const expDate = new Date(exp.date).getTime();
-    if (expDate < cutoff) continue;
+    const isUnpaidBill = exp.paymentStatus === "UNPAID";
+    if (expDate < cutoff && !isUnpaidBill) continue;
     const expAmt = Math.round(Number(exp.amount) * 100) / 100;
     if (Math.abs(expAmt - amount) > 0.02) continue;
 
     let score = 50;
     const reasons: string[] = ["amount_match_recent_window"];
+    if (isUnpaidBill) {
+      score += 15;
+      reasons.push("settles_unpaid_bill");
+    }
 
     const vendor = exp.vendor.trim().toLowerCase();
     if (vendor.length >= 3 && hay.includes(vendor.slice(0, 12))) {

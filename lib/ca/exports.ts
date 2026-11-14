@@ -25,7 +25,7 @@ export async function salesRegister(workspaceId: string, startYear: number): Pro
 
 export async function purchaseRegister(workspaceId: string, startYear: number): Promise<Row[]> {
   const { start, end } = fyBounds(startYear);
-  const rows = await prisma.expense.findMany({ where: { workspaceId, date: { gte: start, lte: end } }, orderBy: { date: "asc" } });
+  const rows = await prisma.expense.findMany({ where: { workspaceId, approvalStatus: "APPROVED", date: { gte: start, lte: end } }, orderBy: { date: "asc" } });
   const out: Row[] = [["Date", "Vendor", "Vendor GSTIN", "Vendor invoice no.", "Category", "HSN", "GST rate %", "Amount", "CGST", "SGST", "IGST", "Cess", "ITC status", "Payment status", "Receipt on file"]];
   for (const e of rows) out.push([ymd(e.date), e.vendor, e.vendorGstin ?? "", e.vendorInvoiceNo ?? "", e.category, e.hsnCode ?? "", e.gstRate ?? "", num(e.amount), num(e.cgstAmount), num(e.sgstAmount), num(e.igstAmount), num(e.cessAmount), e.itcStatus, e.paymentStatus ?? "", e.receiptUrl ? "Yes" : "No"]);
   return out;
