@@ -25,6 +25,7 @@ import { retainerMrr } from "@/lib/retainers/mrr";
 import { advanceBillingDate, applyPercentChanges, extendLimits, isFinished } from "@/lib/retainers/schedule";
 import { startOfUtcDay } from "@/lib/retainers/status";
 import { supplierChargesGst } from "@/lib/msme/threshold";
+import { getClientRecipients } from "@/lib/clients/service";
 
 export type BillResult =
   | { ok: true; invoice: { id: string; invoiceNumber: string }; emailed: boolean; completed: boolean }
@@ -291,13 +292,14 @@ export async function billRetainer(args: { retainerId: string; workspaceId?: str
         });
 
         let emailed = false;
-        if (retainer.emailInvoice && retainer.client.email) {
+        const recipients = retainer.emailInvoice ? await getClientRecipients(retainer.clientId, workspaceId, "invoice") : [];
+        if (retainer.emailInvoice && recipients.length > 0) {
           try {
             const mail = buildInvoiceDeliveryEmail({
               companyName: profile.companyName, clientName: retainer.client.name, invoiceNumber, billingMonth: plan.billingMonth,
               amountFormatted: `${currency} ${total.toNumber().toLocaleString(plan.userLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
             });
-            await sendEmail({ route: "user", profile, to: retainer.client.email, subject: mail.subject, html: mail.html, text: mail.text, attachments: [{ filename: pdfFilename, path: pdfPath }] });
+            await sendEmail({ route: "user", profile, to: recipients.join(", "), subject: mail.subject, html: mail.html, text: mail.text, attachments: [{ filename: pdfFilename, path: pdfPath }] });
             await prisma.invoice.update({ where: { id: invoice.id }, data: { sentAt: new Date() } });
             emailed = true;
           } catch (error) {

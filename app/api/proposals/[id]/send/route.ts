@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getClientRecipients } from "@/lib/clients/service";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/mailer";
@@ -33,8 +34,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (isExpired(proposal.status, proposal.validUntil) || (proposal.status === "DRAFT" && proposal.validUntil < new Date(Date.now() - 86_400_000))) {
     return proposalError(409, "PROPOSAL_EXPIRED", "The validity date has passed. Edit the proposal and choose a new date first.");
   }
-  const to = proposal.client.email?.trim();
-  if (!to) return proposalError(422, "CLIENT_EMAIL_REQUIRED", `Add an email address to ${proposal.client.name} before sending.`);
+  const recipients = await getClientRecipients(proposal.clientId, workspaceId, "proposal");
+  const to = recipients.join(", ");
+  if (recipients.length === 0) return proposalError(422, "CLIENT_EMAIL_REQUIRED", `Add an email address to ${proposal.client.name} before sending.`);
 
   const profile = await prisma.businessProfile.findUnique({ where: { workspaceId } });
   if (!profile) return proposalError(422, "PROFILE_REQUIRED", "Complete your business profile before sending proposals.");

@@ -6,6 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { format } from "date-fns";
 import { AlertCircle, CheckCircle2, ChevronDown, Mail, Building2, Landmark } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { BillableExpensesPanel, type BillableExpense } from "@/components/invoice/BillableExpensesPanel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GstPreviewCard, useGstPreview, type GstOverrides, type GstPreviewLine } from "@/components/gst/GstPreviewCard";
@@ -292,6 +293,14 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
     : [companyConfirmation?.bankName, companyConfirmation?.accountName].filter(Boolean).join(" · ") || "Not configured";
   const paymentIdentity = [companyConfirmation?.defaultGateway || "Offline bank transfer", companyConfirmation?.razorpayKeyId || companyConfirmation?.stripePublishableKey].filter(Boolean).join(" · ");
   const activeServices = services.filter((s) => s.selected);
+  // Billable expenses added to this invoice travel as lines; their ids let the server mark them billed.
+  const billablePayload = (() => { const ids = activeServices.filter((s) => s.id.startsWith("exp:")).map((s) => s.id.slice(4)); return ids.length ? { billableExpenseIds: ids } : {}; })();
+  const resetServices = () => setServices((prev) => prev.filter((s) => !s.id.startsWith("exp:")).map((s) => ({ ...s, selected: false, amount: "" })));
+  const addBillableExpenses = (items: BillableExpense[]) => setServices((prev) => {
+    const have = new Set(prev.map((s) => s.id));
+    const added: CatalogEntry[] = items.filter((i) => !have.has(`exp:${i.id}`)).map((i) => ({ id: `exp:${i.id}`, selected: true, title: i.title, nicDetails: "", sac: null, amount: String(i.amount), quantity: 1, unitPrice: i.amount, defaultPrice: i.amount, isProduct: false, productId: null, currentStock: 0 }));
+    return [...prev, ...added];
+  });
   const totalAmount = activeServices.reduce((sum, s) => sum + Number(s.amount || 0), 0);
 
   const smartSacCode = useMemo(() => {
@@ -420,6 +429,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
         },
         body: JSON.stringify({
           clientId: selectedClientId,
+          ...billablePayload,
           billingMonth,
           sacCode: smartSacCode,
           ...gstPayload,
@@ -455,6 +465,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
             },
             body: JSON.stringify({
               clientId: selectedClientId,
+          ...billablePayload,
               billingMonth,
               sacCode: smartSacCode,
             ...gstPayload,
@@ -477,7 +488,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
             paymentLinkStatus: fallbackData.paymentLinkStatus,
           };
           setSuccessData(result);
-          setServices(services.map((s) => ({ ...s, selected: false, amount: "" })));
+          resetServices();
           onSuccess?.(result);
           return;
         }
@@ -505,7 +516,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
           paymentLinkStatus: finalizeData.paymentLinkStatus,
         };
         setSuccessData(result);
-        setServices(services.map((s) => ({ ...s, selected: false, amount: "" })));
+        resetServices();
         onSuccess?.(result);
       } else {
         setDraftPreview({
@@ -524,6 +535,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
           method: "POST",
           payload: {
             clientId: selectedClientId,
+          ...billablePayload,
             billingMonth,
             sacCode: smartSacCode,
             ...gstPayload,
@@ -558,6 +570,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
         },
         body: JSON.stringify({
           clientId: selectedClientId,
+          ...billablePayload,
           billingMonth,
           sacCode: smartSacCode,
           ...gstPayload,
@@ -584,6 +597,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
             },
             body: JSON.stringify({
               clientId: selectedClientId,
+          ...billablePayload,
               billingMonth,
               sacCode: smartSacCode,
             ...gstPayload,
@@ -607,7 +621,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
             paymentLinkStatus: fallbackData.paymentLinkStatus,
           };
           setSuccessData(result);
-          setServices(services.map((s) => ({ ...s, selected: false, amount: "" })));
+          resetServices();
           setTaxRateInput("");
           setTaxRateModalOpen(false);
           onSuccess?.(result);
@@ -637,7 +651,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
           paymentLinkStatus: finalizeData.paymentLinkStatus,
         };
         setSuccessData(result);
-        setServices(services.map((s) => ({ ...s, selected: false, amount: "" })));
+        resetServices();
         setTaxRateInput("");
         setTaxRateModalOpen(false);
         onSuccess?.(result);
@@ -661,6 +675,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
           method: "POST",
           payload: {
             clientId: selectedClientId,
+          ...billablePayload,
             billingMonth,
             sacCode: smartSacCode,
             ...gstPayload,
@@ -707,7 +722,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
         paymentLinkStatus: data.paymentLinkStatus,
       };
       setSuccessData(result);
-      setServices(services.map((s) => ({ ...s, selected: false, amount: "" })));
+      resetServices();
       setDraftPreview(null);
       onSuccess?.(result);
     } catch (err: unknown) {
@@ -793,6 +808,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
                     </motion.p>
                   )}
                 </AnimatePresence>
+                {selectedClientId ? <BillableExpensesPanel clientId={selectedClientId} addedIds={activeServices.filter((s) => s.id.startsWith("exp:")).map((s) => s.id.slice(4))} currency={activeCurrency} onAdd={addBillableExpenses} /> : null}
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">

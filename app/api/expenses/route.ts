@@ -1,252 +1,140 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import fs from 'fs';
-import path from 'path';
-import { scanBuffer } from '@/lib/security/clamav';
-import { apiError } from "@/lib/api-error";
-import { logActivity } from '@/lib/security/activity-log';
-import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
-import {
-  ensureDir,
-  sniffAllowedContent,
-  uniqueStoredName,
-  buildPrivatePath,
-} from '@/lib/uploads/private-storage';
-import { withPermission } from '@/lib/rbac';
-import { expenseGstSchema, normalizeExpenseGst } from '@/lib/gst/expense-gst';
-import { loadGstProfile } from '@/lib/gst/data';
-import { createExpenseWithSideEffects } from '@/lib/expenses/create-expense-with-side-effects';
+import { NextResponse } from "next/server";
+import { expenseError, requireExpenseAccess } from "@/lib/expenses/access";
+import { asPeriodKey, resolvePeriod } from "@/lib/expenses/period";
+import { findDuplicateExpenses, listExpenses } from "@/lib/expenses/queries";
+import { removeReceiptFile, storeReceipt } from "@/lib/expenses/service";
+import { normalizeExpenseCore } from "@/lib/expenses/validate";
+import { createExpenseWithSideEffects } from "@/lib/expenses/create-expense-with-side-effects";
+import { expenseGstSchema, normalizeExpenseGst } from "@/lib/gst/expense-gst";
+import { loadGstProfile } from "@/lib/gst/data";
+import { withPermission } from "@/lib/rbac";
+import { approvalForNewExpense } from "@/lib/expenses/settings";
+import { budgetAlertsFor } from "@/lib/expenses/budget-status";
+import { dispatchNotification } from "@/lib/notifications/dispatcher";
+import { logActivity } from "@/lib/security/activity-log";
 
-// Fetch all expenses for the ledger (NOW PAGINATED)
+const intParam = (v: string | null): number | undefined | typeof Number.NaN => {
+  if (v === null || v.trim() === "") return undefined;
+  const n = Number(v);
+  return Number.isInteger(n) ? n : Number.NaN;
+};
+
+/** The ledger: filtered, searched and sorted on the server. `period` is this_month, last_month, this_fy, last_fy, all or custom (with from and to). */
 export async function GET(request: Request) {
+  const auth = await requireExpenseAccess("expenses.view");
+  if (!auth.ok) return auth.response;
+  const { ctx } = auth;
+  const sp = new URL(request.url).searchParams;
+  const page = intParam(sp.get("page"));
+  const limit = intParam(sp.get("limit"));
+  if (Number.isNaN(page) || Number.isNaN(limit) || (page !== undefined && page < 1) || (limit !== undefined && limit < 1)) return expenseError(400, "PAGINATION_INVALID_PARAMS", "Invalid pagination parameters");
   try {
-    // 1. SECURITY LOCK
-    const session = await getServerSession(authOptions);
-    if (!session || !session.workspaceId) {
-      return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
-    }
-    const workspaceId = session.workspaceId;
-    const whereClause = { workspaceId: workspaceId };
-
-    // 2. GET PAGINATION PARAMS
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '15'); // Show 15 expenses per page
-    const skip = (page - 1) * limit;
-
-    // 3. FETCH PAGINATED DATA & TOTAL COUNT CONCURRENTLY
-    const [expenses, totalExpenses] = await Promise.all([
-      prisma.expense.findMany({
-        where: whereClause,
-        orderBy: { date: 'desc' },
-        skip: skip,
-        take: limit,
-      }),
-      prisma.expense.count({ where: whereClause })
-    ]);
-    
-    // 4. RETURN STRUCTURED RESPONSE
-    return NextResponse.json({
-      data: expenses,
-      meta: {
-        currentPage: page,
-        totalPages: Math.ceil(totalExpenses / limit),
-        totalRecords: totalExpenses,
-      }
+    const sort = sp.get("sort");
+    const status = sp.get("status");
+    const receipt = sp.get("receipt");
+    const itc = sp.get("itc");
+    const approval = sp.get("approval");
+    const result = await listExpenses(ctx.workspaceId, {
+      approval: approval === "PENDING" || approval === "DRAFT" || approval === "REJECTED" || approval === "REVIEW" ? approval : "APPROVED",
+      vendorId: sp.get("vendorId") ?? undefined, clientId: sp.get("clientId") ?? undefined,
+      q: sp.get("q") ?? undefined,
+      category: sp.get("category") ?? undefined,
+      status: status === "paid" || status === "unpaid" ? status : undefined,
+      receipt: receipt === "with" || receipt === "without" ? receipt : undefined,
+      itc: itc === "eligible" || itc === "blocked" ? itc : undefined,
+      range: resolvePeriod(asPeriodKey(sp.get("period") ?? "all"), ctx.countryCode, new Date(), { from: sp.get("from"), to: sp.get("to") }),
+      sort: sort === "amount" || sort === "vendor" ? sort : "date",
+      dir: sp.get("dir") === "asc" ? "asc" : "desc",
+      page, limit,
     });
-
+    return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("API Error fetching expenses:", error);
-    return apiError(500, "Failed to fetch expenses", "EXPENSES_FETCH_FAILED");
+    return expenseError(500, "EXPENSES_FETCH_FAILED", "Failed to fetch expenses");
   }
 }
 
-// Log a new expense and securely save the uploaded receipt
+const text = (form: FormData, k: string) => { const v = form.get(k); return typeof v === "string" && v.trim() !== "" ? v.trim() : null; };
+const dateOrNull = (v: string | null) => { if (!v) return null; const d = new Date(v); return Number.isNaN(d.getTime()) ? Number.NaN : d; };
+
 export async function POST(request: Request) {
+  const auth = await requireExpenseAccess("expenses.create");
+  if (!auth.ok) return auth.response;
+  const { ctx } = auth;
+  let storedReceipt: string | null = null;
   try {
-    // 1. SECURITY LOCK
-    const session = await getServerSession(authOptions);
-    if (!session || !session.workspaceId) {
-      return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
-    }
-    const workspaceId = session.workspaceId;
-    const userId = session.user?.id as string | undefined;
-    if (!userId) return apiError(401, "Unauthorized", "AUTH_UNAUTHORIZED");
+    const form = await request.formData();
+    const core = normalizeExpenseCore({ date: form.get("date"), category: form.get("category"), vendor: form.get("vendor"), amount: form.get("amount"), description: form.get("description") });
+    if (!core.ok) return NextResponse.json({ error: "Check the highlighted fields.", code: "VALIDATION", fields: core.fields }, { status: 422 });
+    const { date, category, vendor, amount, description } = core.data as { date: Date; category: string; vendor: string; amount: number; description: string | null };
 
-    // RBAC: creating an expense requires expenses.create permission
-    const perm = await withPermission(userId, workspaceId, 'expenses.create');
-    if (!perm.granted) return perm.response;
-
-    const formData = await request.formData();
-    
-    // Extract text fields
-    const date = formData.get('date') as string;
-    const category = formData.get('category') as string;
-    const vendor = formData.get('vendor') as string;
-    const amount = formData.get('amount') as string;
-    const description = formData.get('description') as string;
-    const withholdingRatePercentRaw = formData.get('withholdingRatePercent') as string | null;
-    const withholdingAmountRaw = formData.get('withholdingAmount') as string | null;
-    const withholdingDeductedAtRaw = formData.get('withholdingDeductedAt') as string | null;
-    const withholdingDepositedAtRaw = formData.get('withholdingDepositedAt') as string | null;
-    const withholdingDepositDueAtRaw = formData.get('withholdingDepositDueAt') as string | null;
-    const returnPeriodKeyRaw = formData.get('returnPeriodKey') as string | null;
-    
-    // --- 🚨 SECURITY PATCH: Prevent NaN Poisoning & Invalid Dates ---
-    const parsedAmount = Number(amount);
-    if (isNaN(parsedAmount) || parsedAmount < 0) {
-      return apiError(400, "Invalid amount. Must be a positive number.", "INVALID_AMOUNT");
+    const rate = text(form, "withholdingRatePercent");
+    const whAmount = text(form, "withholdingAmount");
+    const deducted = dateOrNull(text(form, "withholdingDeductedAt"));
+    const deposited = dateOrNull(text(form, "withholdingDepositedAt"));
+    const dueAt = dateOrNull(text(form, "withholdingDepositDueAt"));
+    const returnPeriodKey = text(form, "returnPeriodKey");
+    const rateN = rate === null ? null : Number(rate);
+    const whAmountN = whAmount === null ? null : Number(whAmount);
+    if (rateN !== null && (!Number.isFinite(rateN) || rateN < 0 || rateN > 100)) return expenseError(400, "INVALID_WITHHOLDING_RATE", "Invalid withholding rate percent.");
+    if (whAmountN !== null && (!Number.isFinite(whAmountN) || whAmountN < 0)) return expenseError(400, "INVALID_WITHHOLDING_AMOUNT", "Invalid withholding amount.");
+    if ([deducted, deposited, dueAt].some((d) => d !== null && Number.isNaN((d as Date).getTime()))) return expenseError(400, "INVALID_WITHHOLDING_DATE", "Invalid withholding date.");
+    if (rate || whAmount || deducted || deposited || dueAt || returnPeriodKey) {
+      const wh = await withPermission(ctx.userId, ctx.workspaceId, "tax.withholding.record");
+      if (!wh.granted) return wh.response;
     }
 
-    const parsedDate = new Date(date);
-    if (isNaN(parsedDate.getTime())) {
-      return apiError(400, "Invalid date format.", "INVALID_DATE");
-    }
-    // ----------------------------------------------------------------
-
-
-    const parsedWithholdingRate = withholdingRatePercentRaw && withholdingRatePercentRaw.trim() !== ''
-      ? Number(withholdingRatePercentRaw)
-      : null;
-    if (parsedWithholdingRate !== null && (!Number.isFinite(parsedWithholdingRate) || parsedWithholdingRate < 0 || parsedWithholdingRate > 100)) {
-      return apiError(400, "Invalid withholding rate percent.", "INVALID_WITHHOLDING_RATE");
-    }
-
-    const parsedWithholdingAmount = withholdingAmountRaw && withholdingAmountRaw.trim() !== ''
-      ? Number(withholdingAmountRaw)
-      : null;
-    if (parsedWithholdingAmount !== null && (!Number.isFinite(parsedWithholdingAmount) || parsedWithholdingAmount < 0)) {
-      return apiError(400, "Invalid withholding amount.", "INVALID_WITHHOLDING_AMOUNT");
-    }
-
-    const parsedWithholdingDeductedAt = withholdingDeductedAtRaw && withholdingDeductedAtRaw.trim() !== ''
-      ? new Date(withholdingDeductedAtRaw)
-      : null;
-    if (parsedWithholdingDeductedAt && Number.isNaN(parsedWithholdingDeductedAt.getTime())) {
-      return apiError(400, "Invalid withholding deduction date.", "INVALID_WITHHOLDING_DATE");
-    }
-
-    const parsedWithholdingDepositedAt = withholdingDepositedAtRaw && withholdingDepositedAtRaw.trim() !== ''
-      ? new Date(withholdingDepositedAtRaw)
-      : null;
-    if (parsedWithholdingDepositedAt && Number.isNaN(parsedWithholdingDepositedAt.getTime())) {
-      return apiError(400, "Invalid withholding deposited date.", "INVALID_WITHHOLDING_DATE");
-    }
-
-    const parsedWithholdingDepositDueAt = withholdingDepositDueAtRaw && withholdingDepositDueAtRaw.trim() !== ''
-      ? new Date(withholdingDepositDueAtRaw)
-      : null;
-    if (parsedWithholdingDepositDueAt && Number.isNaN(parsedWithholdingDepositDueAt.getTime())) {
-      return apiError(400, "Invalid withholding due date.", "INVALID_WITHHOLDING_DATE");
-    }
-
-    const hasWithholdingPayload =
-      (withholdingRatePercentRaw && withholdingRatePercentRaw.trim() !== '') ||
-      (withholdingAmountRaw && withholdingAmountRaw.trim() !== '') ||
-      (withholdingDeductedAtRaw && withholdingDeductedAtRaw.trim() !== '') ||
-      (withholdingDepositedAtRaw && withholdingDepositedAtRaw.trim() !== '') ||
-      (withholdingDepositDueAtRaw && withholdingDepositDueAtRaw.trim() !== '') ||
-      (returnPeriodKeyRaw && returnPeriodKeyRaw.trim() !== '');
-    if (hasWithholdingPayload) {
-      const whPerm = await withPermission(userId, workspaceId, 'tax.withholding.record');
-      if (!whPerm.granted) return whPerm.response;
-    }
-
-    // GST on the bill (optional). Tax amounts are always computed here from the rate, never trusted from the client.
-    const gstField = (k: string) => { const v = formData.get(k); return typeof v === 'string' && v.trim() !== '' ? v.trim() : null; };
-    const gstRateRaw = gstField('gstRate');
+    const gstRate = text(form, "gstRate");
+    const agreed = text(form, "vendorAgreedDays");
     const gstParsed = expenseGstSchema.safeParse({
-      itcStatus: gstField('itcStatus') ?? 'NONE',
-      vendorGstin: gstField('vendorGstin'),
-      vendorInvoiceNo: gstField('vendorInvoiceNo'),
-      vendorStateCode: gstField('vendorStateCode'),
-      hsnCode: gstField('hsnCode'),
-      gstRate: gstRateRaw === null ? null : Number(gstRateRaw),
-      paymentStatus: gstField('paymentStatus') ?? 'PAID',
-      vendorMsme: gstField('vendorMsme'),
-      vendorUdyam: gstField('vendorUdyam'),
-      vendorAgreedDays: gstField('vendorAgreedDays') === null ? null : Number(gstField('vendorAgreedDays')),
+      itcStatus: text(form, "itcStatus") ?? "NONE", vendorGstin: text(form, "vendorGstin"), vendorInvoiceNo: text(form, "vendorInvoiceNo"), vendorStateCode: text(form, "vendorStateCode"), hsnCode: text(form, "hsnCode"),
+      gstRate: gstRate === null ? null : Number(gstRate), paymentStatus: text(form, "paymentStatus") ?? "PAID", vendorMsme: text(form, "vendorMsme"), vendorUdyam: text(form, "vendorUdyam"), vendorAgreedDays: agreed === null ? null : Number(agreed),
     });
-    if (!gstParsed.success) return apiError(400, "Invalid GST details.", "INVALID_GST");
-    const gstProfile = gstParsed.data.itcStatus !== 'NONE' || gstParsed.data.vendorGstin ? await loadGstProfile(workspaceId) : null;
-    const gstNormalized = normalizeExpenseGst(gstParsed.data, parsedAmount, gstProfile?.stateCode ?? null);
-    if (!gstNormalized.ok) return apiError(400, gstNormalized.message, gstNormalized.code);
+    if (!gstParsed.success) return expenseError(400, "INVALID_GST", "Invalid GST details.");
+    const gstProfile = gstParsed.data.itcStatus !== "NONE" || gstParsed.data.vendorGstin ? await loadGstProfile(ctx.workspaceId) : null;
+    const gst = normalizeExpenseGst(gstParsed.data, amount, gstProfile?.stateCode ?? null);
+    if (!gst.ok) return expenseError(400, gst.code, gst.message);
 
-    // Extract the file
-    const file = formData.get('receipt') as File | null;
-    let receiptUrl = null;
-
-    // Prevent processing of empty/ghost files
-    if (file && file.size > 0) {
-      const ext = path.extname(file.name).toLowerCase();
-      const allowedExtensions = ['.png', '.jpg', '.jpeg', '.webp', '.pdf']; // PDFs are okay for receipts
-      if (!allowedExtensions.includes(ext)) {
-        return apiError(400, "Invalid file type. Only images/PDFs are allowed.", "INVALID_FILE_TYPE");
-      }
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-
-      const isSafe = await scanBuffer(buffer);
-      if (!isSafe) {
-        return apiError(400, "Malware detected in uploaded file.", "MALWARE_DETECTED");
-      }
-
-      const sniffed = sniffAllowedContent(buffer);
-      if (!sniffed || (sniffed !== 'pdf' && sniffed !== 'png' && sniffed !== 'jpeg' && sniffed !== 'webp' && sniffed !== 'gif')) {
-        return apiError(415, "Unsupported or unsafe receipt content.", "INVALID_FILE_TYPE");
-      }
-      if (sniffed === 'pdf' && ext !== '.pdf') {
-        return apiError(415, "Receipt content did not match expected PDF type.", "INVALID_FILE_TYPE");
-      }
-
-      const receiptsDir = buildPrivatePath('receipts', [workspaceId]);
-      await ensureDir(receiptsDir);
-      const storedName = uniqueStoredName('receipt', ext);
-      const filepath = path.join(receiptsDir, storedName);
-
-      await fs.promises.writeFile(filepath, buffer, { mode: 0o600 });
-      receiptUrl = `/receipts/${workspaceId}/${storedName}`;
+    if (form.get("force") !== "true") {
+      const dup = await findDuplicateExpenses(ctx.workspaceId, { vendor, amount, date, invoiceNo: gst.data.vendorInvoiceNo });
+      if (dup.length) return expenseError(409, "EXPENSE_DUPLICATE", `${vendor} already has a similar expense.`, { existing: dup });
     }
 
-    const newExpense = await createExpenseWithSideEffects({
-      workspaceId,
-      userId,
-      request,
-      date: parsedDate,
-      category,
-      vendor,
-      amount: parsedAmount,
-      description: description || null,
-      receiptUrl,
-      withholdingRatePercent: parsedWithholdingRate,
-      explicitWithholdingAmount: parsedWithholdingAmount,
-      withholdingDeductedAt: parsedWithholdingDeductedAt,
-      withholdingDepositedAt: parsedWithholdingDepositedAt,
-      withholdingDepositDueAt: parsedWithholdingDepositDueAt,
-      returnPeriodKeyRaw,
-      gst: gstNormalized.data,
-    });
+    const approvalStatus = await approvalForNewExpense(ctx.workspaceId, ctx.userId, amount);
+    const billable = form.get("billable") === "true";
+    const clientId = text(form, "clientId");
+    if (billable && !clientId) return expenseError(422, "VALIDATION", "Choose the client this expense is billable to.", { fields: [{ field: "clientId", code: "REQUIRED" }] });
+    const markup = text(form, "markupPercent");
+    const markupN = markup === null ? null : Number(markup);
+    if (markupN !== null && (!Number.isFinite(markupN) || markupN < 0 || markupN > 500)) return expenseError(422, "VALIDATION", "Check the markup.", { fields: [{ field: "markupPercent", code: "AMOUNT" }] });
+    const dueRaw = text(form, "dueDate");
+    const dueDate = dueRaw ? new Date(dueRaw) : null;
+    if (dueDate && Number.isNaN(dueDate.getTime())) return expenseError(422, "VALIDATION", "Check the due date.", { fields: [{ field: "dueDate", code: "DATE" }] });
 
-    // Intentional duplicate safety invalidation so this endpoint remains KPI-cover compliant.
-    try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
-    } catch {
-      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'expense', action: 'create' });
+    const file = form.get("receipt");
+    if (file instanceof File && file.size > 0) {
+      const stored = await storeReceipt(ctx.workspaceId, file);
+      if (!stored.ok) return stored.response;
+      storedReceipt = stored.url;
     }
 
-    return NextResponse.json({ success: true, expense: newExpense });
-
+    const expense = await createExpenseWithSideEffects({
+      workspaceId: ctx.workspaceId, userId: ctx.userId, request, date, category, vendor, amount, description, receiptUrl: storedReceipt,
+      withholdingRatePercent: rateN, explicitWithholdingAmount: whAmountN, withholdingDeductedAt: deducted as Date | null, withholdingDepositedAt: deposited as Date | null, withholdingDepositDueAt: dueAt as Date | null,
+      returnPeriodKeyRaw: returnPeriodKey, gst: gst.data,
+      vendorId: text(form, "vendorId"), dueDate, approvalStatus, billable, clientId, markupPercent: markupN,
+      source: text(form, "source") === "SCAN" ? "SCAN" : "MANUAL",
+    });
+    // Tell the person (once, on crossing) when this pushed a monthly cap near or over its limit.
+    const budgetAlerts = approvalStatus === "APPROVED" ? await budgetAlertsFor(ctx.workspaceId, category, amount, date).catch(() => []) : [];
+    for (const a of budgetAlerts) {
+      void dispatchNotification({ event: "GST_REMINDER", workspaceId: ctx.workspaceId, data: { title: a.state === "OVER" ? "Budget exceeded" : "Budget almost used", body: `${a.category === "*" ? "Overall" : a.category}: ${Math.round(a.spent).toLocaleString("en-IN")} of ${Math.round(a.limit).toLocaleString("en-IN")} this month.`, actionUrl: "/expenses" } });
+    }
+    return NextResponse.json({ success: true, expense, approvalStatus, budgetAlerts }, { status: 201 });
   } catch (error) {
-    console.error('Expense logging error:', error);
-    logActivity({
-      action: "expense_created",
-      status: "FAILURE",
-      workspaceId: null,
-      request,
-      metadata: { error: String(error) },
-    });
-    return apiError(500, "Failed to log expense and save receipt", "EXPENSE_CREATE_FAILED");
+    console.error("Expense logging error:", error);
+    await removeReceiptFile(storedReceipt);
+    void logActivity({ action: "expense_created", status: "FAILURE", workspaceId: ctx.workspaceId, request, metadata: { error: String(error) } });
+    return expenseError(500, "EXPENSE_CREATE_FAILED", "Failed to log expense and save receipt");
   }
 }
