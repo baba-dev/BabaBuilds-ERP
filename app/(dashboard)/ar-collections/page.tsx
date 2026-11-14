@@ -1,524 +1,234 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  AlertCircle,
-  BellRing,
-  Clock3,
-  Filter,
-  Hourglass,
-  ListOrdered,
-  RefreshCw,
-} from 'lucide-react';
-import { useLocale, useTranslations } from 'next-intl';
-import { DashboardPageShell } from '@/components/layout/DashboardPageShell';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Download, Loader2, Plus, Search, Siren, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { useFormat } from "@/hooks/use-format";
+import { cn } from "@/lib/utils";
+import { InvoiceDrawer } from "./_components/InvoiceDrawer";
+import { api, BUCKETS, shortDay, VIEWS, type Bucket, type Row, type Settings, type Snapshot, type Tone, type View } from "./_components/shared";
 
-type Snapshot = {
-  rows: Array<{
-    id: string;
-    invoiceNumber: string;
-    clientName: string;
-    dueDate: string | null;
-    daysOverdue: number;
-    bucket: 'current' | 'd1_30' | 'd31_60' | 'd61_90' | 'd90_plus';
-    outstandingAmount: number;
-    followUpStatus: string | null;
-    priorityScore: number;
-    lastReminderSentAt: string | null;
-    collectionRiskScore: number | null;
-  }>;
-  totals: {
-    totalOutstanding: number;
-    overdueInvoices: number;
-    overdueAmount: number;
-    remindersSentLast7Days: number;
-  };
-  buckets: Array<{ key: string; label: string; count: number; amount: number }>;
-  workspace: { baseCurrency: string; countryCode: string };
-  smtpReminderReady: boolean;
-};
+type Tab = "worklist" | "clients" | "settings";
+const BUCKET_TONE: Record<Bucket, string> = { current: "bg-emerald-500", d1_30: "bg-amber-400", d31_60: "bg-orange-500", d61_90: "bg-rose-500", d90_plus: "bg-rose-700" };
 
-const statusOptions = [
-  'UNTOUCHED',
-  'REMINDER_SENT',
-  'FOLLOWUP_SCHEDULED',
-  'PROMISE_TO_PAY',
-  'PROMISE_BROKEN',
-  'DISPUTED',
-  'ESCALATED',
-] as const;
-
-function useMoneyFormatter(currencyCode: string, localeTag: string) {
-  return useMemo(() => {
-    const safeCurrency = currencyCode.trim() || 'INR';
-    try {
-      return new Intl.NumberFormat(localeTag, {
-        style: 'currency',
-        currency: safeCurrency,
-        maximumFractionDigits: 2,
-      });
-    } catch {
-      return new Intl.NumberFormat('en-IN', {
-        style: 'currency',
-        currency: 'INR',
-        maximumFractionDigits: 2,
-      });
-    }
-  }, [currencyCode, localeTag]);
-}
-
-export default function ArCollectionsPage() {
-  const t = useTranslations('ArCollections');
-  const locale = useLocale();
-  const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [bucketFilter, setBucketFilter] = useState('all');
-  const [savingRowId, setSavingRowId] = useState<string | null>(null);
-
-  const currency = snapshot?.workspace.baseCurrency ?? 'INR';
-  const money = useMoneyFormatter(currency, locale);
-
-  const loadSnapshot = useCallback(async () => {
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const res = await fetch('/api/ar-collections', { cache: 'no-store' });
-      if (res.status === 403) {
-        setLoadError(t('errors.forbidden'));
-        setSnapshot(null);
-        return;
-      }
-      if (!res.ok) throw new Error('Failed to load');
-      const data = (await res.json()) as Snapshot;
-      setSnapshot(data);
-    } catch {
-      setLoadError(t('errors.load_failed'));
-      setSnapshot(null);
-      toast.error(t('toast.load_failed'));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
-  useEffect(() => {
-    void loadSnapshot();
-  }, [loadSnapshot]);
-
-  const runAutomation = async () => {
-    const toastId = toast.loading(t('toast.automation_running'));
-    try {
-      const res = await fetch('/api/ar-collections', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'RUN_REMINDERS' }),
-      });
-      const payload = (await res.json().catch(() => ({}))) as {
-        processed?: number;
-        emailsSent?: number;
-        emailsFailed?: number;
-        skippedNoClientEmail?: number;
-        smtpConfigured?: boolean;
-        blocked?: string;
-        code?: string;
-        error?: string;
-      };
-
-      if (res.status === 429) {
-        toast.error(payload.error ?? t('toast.automation_rate_limited'), { id: toastId });
-        return;
-      }
-      if (!res.ok) throw new Error('Failed');
-
-      if (payload.blocked === 'SMTP_NOT_CONFIGURED') {
-        toast.error(t('toast.automation_no_smtp'), { id: toastId });
-        await loadSnapshot();
-        return;
-      }
-
-      const sent = payload.emailsSent ?? payload.processed ?? 0;
-      const failed = payload.emailsFailed ?? 0;
-      const skipped = payload.skippedNoClientEmail ?? 0;
-      if (failed > 0 || skipped > 0) {
-        toast.warning(
-          `${t('toast.automation_done', { count: sent })} (${failed} failed, ${skipped} skipped)`,
-          { id: toastId },
-        );
-      } else {
-        toast.success(t('toast.automation_done', { count: sent }), { id: toastId });
-      }
-      await loadSnapshot();
-    } catch {
-      toast.error(t('toast.automation_failed'), { id: toastId });
-    }
-  };
-
-  const filteredRows = useMemo(() => {
-    if (!snapshot) return [];
-    return snapshot.rows.filter((row) => {
-      const bySearch = `${row.invoiceNumber} ${row.clientName}`.toLowerCase().includes(search.toLowerCase());
-      const byBucket = bucketFilter === 'all' || row.bucket === bucketFilter;
-      return bySearch && byBucket;
-    });
-  }, [snapshot, search, bucketFilter]);
-
-  const priorityQueue = filteredRows.filter((r) => r.daysOverdue > 0).slice(0, 8);
-
-  const updateFollowUpStatus = async (invoiceId: string, nextStatus: string) => {
-    setSavingRowId(invoiceId);
-    try {
-      const res = await fetch(`/api/ar-collections/invoices/${invoiceId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ followUpStatus: nextStatus }),
-      });
-      if (!res.ok) throw new Error('Failed');
-      setSnapshot((current) =>
-        current
-          ? {
-              ...current,
-              rows: current.rows.map((row) =>
-                row.id === invoiceId ? { ...row, followUpStatus: nextStatus } : row,
-              ),
-            }
-          : current,
-      );
-      toast.success(t('toast.followup_updated'));
-    } catch {
-      toast.error(t('toast.followup_failed'));
-    } finally {
-      setSavingRowId(null);
-    }
-  };
-
-  const updateRiskScore = async (invoiceId: string, raw: string) => {
-    const n = Number(raw);
-    if (raw.trim() === '' || Number.isNaN(n)) return;
-    const clamped = Math.max(0, Math.min(100, Math.round(n)));
-    setSavingRowId(invoiceId);
-    try {
-      const res = await fetch(`/api/ar-collections/invoices/${invoiceId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ collectionRiskScore: clamped }),
-      });
-      if (!res.ok) throw new Error('Failed');
-      setSnapshot((current) =>
-        current
-          ? {
-              ...current,
-              rows: current.rows.map((row) =>
-                row.id === invoiceId ? { ...row, collectionRiskScore: clamped } : row,
-              ),
-            }
-          : current,
-      );
-      toast.success(t('toast.risk_updated'));
-    } catch {
-      toast.error(t('toast.risk_failed'));
-    } finally {
-      setSavingRowId(null);
-    }
-  };
-
-  const sendReminderNow = async (invoiceId: string) => {
-    setSavingRowId(invoiceId);
-    try {
-      const res = await fetch(`/api/ar-collections/invoices/${invoiceId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sendReminderNow: true, followUpStatus: 'REMINDER_SENT' }),
-      });
-      const errBody = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
-      if (!res.ok) {
-        toast.error(errBody.error ?? t('toast.reminder_failed'));
-        return;
-      }
-      toast.success(t('toast.reminder_sent'));
-      await loadSnapshot();
-    } catch {
-      toast.error(t('toast.reminder_failed'));
-    } finally {
-      setSavingRowId(null);
-    }
-  };
-
-  const showKpiSkeleton = loading && !snapshot;
-
+function Stat({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "good" | "warn" | "bad" }) {
   return (
-    <DashboardPageShell title={t('title')} description={t('description')}>
-      <div className="space-y-6">
-        {snapshot && !snapshot.smtpReminderReady ? (
-          <div
-            role="status"
-            className="rounded-xl border border-amber-500/40 bg-amber-500/5 px-4 py-3 text-sm flex gap-3 items-start"
-          >
-            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
-            <div>
-              <p className="font-semibold text-zinc-900 dark:text-zinc-100">{t('smtp_banner.title')}</p>
-              <p className="text-zinc-600 dark:text-zinc-400 mt-1">{t('smtp_banner.body')}</p>
-            </div>
-          </div>
-        ) : null}
-
-        {loadError ? (
-          <div
-            role="alert"
-            className="rounded-xl border border-red-500/40 bg-red-500/5 px-4 py-3 text-sm flex flex-wrap items-center gap-3 justify-between"
-          >
-            <span className="text-red-800 dark:text-red-200">{loadError}</span>
-            <Button type="button" size="sm" variant="outline" onClick={() => void loadSnapshot()}>
-              {t('error_panel.retry')}
-            </Button>
-          </div>
-        ) : null}
-
-        <div className="grid gap-4 md:grid-cols-4">
-          <KpiCard
-            icon={Hourglass}
-            label={t('kpi.total_outstanding')}
-            value={showKpiSkeleton ? '—' : money.format(snapshot?.totals.totalOutstanding ?? 0)}
-          />
-          <KpiCard
-            icon={AlertCircle}
-            label={t('kpi.overdue_invoices')}
-            value={showKpiSkeleton ? '—' : String(snapshot?.totals.overdueInvoices ?? 0)}
-          />
-          <KpiCard
-            icon={Clock3}
-            label={t('kpi.overdue_amount')}
-            value={showKpiSkeleton ? '—' : money.format(snapshot?.totals.overdueAmount ?? 0)}
-          />
-          <KpiCard
-            icon={BellRing}
-            label={t('kpi.reminders_7d')}
-            value={showKpiSkeleton ? '—' : String(snapshot?.totals.remindersSentLast7Days ?? 0)}
-          />
-        </div>
-
-        <Card className="border-zinc-200 dark:border-zinc-800">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">{t('buckets.title')}</CardTitle>
-            <CardDescription>{t('buckets.subtitle')}</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-5">
-            {(snapshot?.buckets ?? []).map((bucket) => (
-              <div
-                key={bucket.key}
-                className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/40 p-3"
-              >
-                <p className="text-xs text-zinc-500">{bucket.label}</p>
-                <p className="mt-1 text-lg font-bold">{money.format(bucket.amount)}</p>
-                <p className="text-xs text-zinc-500">
-                  {t('buckets.invoice_count', { count: bucket.count })}
-                </p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-          <Card className="border-zinc-200 dark:border-zinc-800">
-            <CardHeader className="pb-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <CardTitle className="text-base">{t('table.title')}</CardTitle>
-                  <CardDescription>{t('table.subtitle')}</CardDescription>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder={t('table.search_placeholder')}
-                    className="h-9 w-52 min-w-[8rem]"
-                  />
-                  <Select value={bucketFilter} onValueChange={setBucketFilter}>
-                    <SelectTrigger className="h-9 w-44">
-                      <Filter className="mr-2 h-3.5 w-3.5" />
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t('filters.all')}</SelectItem>
-                      <SelectItem value="current">{t('filters.current')}</SelectItem>
-                      <SelectItem value="d1_30">{t('filters.d1_30')}</SelectItem>
-                      <SelectItem value="d31_60">{t('filters.d31_60')}</SelectItem>
-                      <SelectItem value="d61_90">{t('filters.d61_90')}</SelectItem>
-                      <SelectItem value="d90_plus">{t('filters.d90_plus')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    type="button"
-                    onClick={() => void loadSnapshot()}
-                    disabled={loading}
-                    aria-label={t('actions.refresh_aria')}
-                  >
-                    <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('columns.invoice')}</TableHead>
-                    <TableHead>{t('columns.client')}</TableHead>
-                    <TableHead>{t('columns.status')}</TableHead>
-                    <TableHead>{t('columns.outstanding')}</TableHead>
-                    <TableHead>{t('columns.priority')}</TableHead>
-                    <TableHead>{t('columns.risk')}</TableHead>
-                    <TableHead>{t('columns.followup')}</TableHead>
-                    <TableHead className="text-right">{t('columns.action')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {!loading && snapshot && !loadError && filteredRows.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="h-24 text-center text-sm text-zinc-500">
-                        {t('table.empty')}
-                      </TableCell>
-                    </TableRow>
-                  ) : null}
-                  {filteredRows.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell className="font-medium">{row.invoiceNumber}</TableCell>
-                      <TableCell>{row.clientName}</TableCell>
-                      <TableCell>
-                        {row.daysOverdue > 0
-                          ? t('aging.days_overdue', { days: row.daysOverdue })
-                          : t('aging.current')}
-                      </TableCell>
-                      <TableCell>{money.format(row.outstandingAmount)}</TableCell>
-                      <TableCell>
-                        <Badge variant={row.priorityScore >= 70 ? 'destructive' : 'secondary'}>
-                          {row.priorityScore}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="w-[5.5rem]">
-                        <Input
-                          key={`${row.id}-${row.collectionRiskScore ?? 'null'}`}
-                          className="h-8"
-                          type="number"
-                          min={0}
-                          max={100}
-                          defaultValue={row.collectionRiskScore ?? ''}
-                          disabled={savingRowId === row.id}
-                          onBlur={(e) => {
-                            const next = e.target.value;
-                            const prev =
-                              row.collectionRiskScore === null || row.collectionRiskScore === undefined
-                                ? ''
-                                : String(row.collectionRiskScore);
-                            if (next === prev) return;
-                            void updateRiskScore(row.id, next);
-                          }}
-                          aria-label={t('columns.risk_aria')}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={row.followUpStatus ?? 'UNTOUCHED'}
-                          onValueChange={(value) => void updateFollowUpStatus(row.id, value)}
-                          disabled={savingRowId === row.id}
-                        >
-                          <SelectTrigger className="h-8 w-44">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {statusOptions.map((opt) => (
-                              <SelectItem key={opt} value={opt}>
-                                {opt.replaceAll('_', ' ')}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          type="button"
-                          onClick={() => void sendReminderNow(row.id)}
-                          disabled={savingRowId === row.id || !snapshot?.smtpReminderReady}
-                        >
-                          {t('actions.send_reminder')}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          <Card className="border-zinc-200 dark:border-zinc-800">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <ListOrdered className="h-4 w-4" />
-                {t('queue.title')}
-              </CardTitle>
-              <CardDescription>{t('queue.subtitle')}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {priorityQueue.map((row, index) => (
-                <div key={row.id} className="rounded-lg border border-zinc-200 dark:border-zinc-800 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold">
-                      #{index + 1} {row.clientName}
-                    </p>
-                    <Badge variant="outline">{row.priorityScore}</Badge>
-                  </div>
-                  <p className="text-xs text-zinc-500 mt-1">
-                    {row.invoiceNumber} • {t('queue.days', { days: row.daysOverdue })}
-                  </p>
-                  <p className="text-sm font-bold mt-1">{money.format(row.outstandingAmount)}</p>
-                </div>
-              ))}
-              <Button className="w-full mt-2" type="button" onClick={() => void runAutomation()}>
-                {t('actions.run_automation')}
-              </Button>
-              <p className="text-[11px] text-zinc-500 text-center">{t('automation.disclaimer')}</p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </DashboardPageShell>
+    <div className="rounded-2xl border bg-card p-4 shadow-xs">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className={cn("mt-1 text-xl font-semibold tabular-nums sm:text-2xl", tone === "good" && "text-emerald-600 dark:text-emerald-400", tone === "warn" && "text-amber-600 dark:text-amber-400", tone === "bad" && "text-rose-600 dark:text-rose-400")}>{value}</p>
+      {sub ? <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p> : null}
+    </div>
   );
 }
 
-function KpiCard({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof AlertCircle;
-  label: string;
-  value: string;
-}) {
+export default function CollectionsPage() {
+  const t = useTranslations("Collections");
+  const { fCurrency, locale } = useFormat();
+  const money = useMemo(() => (n: number) => fCurrency(n), [fCurrency]);
+  const [tab, setTab] = useState<Tab>("worklist");
+  const [view, setView] = useState<View>("all");
+  const [bucket, setBucket] = useState<Bucket | null>(null);
+  const [q, setQ] = useState("");
+  const [qDebounced, setQDebounced] = useState("");
+  const [data, setData] = useState<Snapshot | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [tick, setTick] = useState(0);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [draft, setDraft] = useState<Settings | null>(null);
+
+  useEffect(() => { const h = setTimeout(() => setQDebounced(q), 250); return () => clearTimeout(h); }, [q]);
+  useEffect(() => {
+    let cancelled = false;
+    const qs = new URLSearchParams();
+    if (view !== "all") qs.set("view", view);
+    if (bucket) qs.set("bucket", bucket);
+    if (qDebounced) qs.set("q", qDebounced);
+    api<Snapshot>(`/api/ar-collections?${qs}`)
+      .then((d) => { if (!cancelled) { setData(d); setError(null); setDraft((cur) => cur ?? d.settings); } })
+      .catch((e) => { if (!cancelled) setError(e instanceof Error ? e.message : "error"); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [view, bucket, qDebounced, tick]);
+
+  const reload = useCallback(() => setTick((n) => n + 1), []);
+  const row = data?.rows.find((r) => r.id === openId) ?? null;
+  const canEdit = data?.canEdit ?? false;
+  const canSend = data?.canSend ?? false;
+  const toggle = (id: string) => setSelected((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+
+  const bulk = async (action: "remind" | "snooze" | "escalate") => {
+    setBusy(action);
+    try {
+      const res = await api<{ ok: number; skipped: Array<{ id: string; reason: string }> }>("/api/ar-collections/bulk", { method: "POST", body: JSON.stringify({ ids: [...selected], action, days: 7 }) });
+      toast.success(t("bulkDone", { ok: res.ok, skipped: res.skipped.length }));
+      setSelected(new Set()); reload();
+    } catch (e) { toast.error(e instanceof Error ? e.message : t("saveFailed")); } finally { setBusy(null); }
+  };
+  const runAuto = async () => {
+    setBusy("auto");
+    try {
+      const r = await api<{ emailsSent: number; emailsFailed: number; skippedNoClientEmail: number; blocked?: string; brokenPromises: number }>("/api/ar-collections", { method: "POST", body: JSON.stringify({ action: "RUN_REMINDERS" }) });
+      if (r.blocked === "SMTP_NOT_CONFIGURED") toast.error(t("smtpMissing")); else toast.success(t("autoDone", { sent: r.emailsSent, skipped: r.skippedNoClientEmail, failed: r.emailsFailed }));
+      reload();
+    } catch (e) { toast.error(e instanceof Error ? e.message : t("saveFailed")); } finally { setBusy(null); }
+  };
+  const saveSettings = async () => {
+    if (!draft) return;
+    setBusy("settings");
+    try { const next = await api<Settings>("/api/ar-collections/settings", { method: "PUT", body: JSON.stringify(draft) }); setDraft(next); toast.success(t("saved")); reload(); }
+    catch (e) { toast.error(e instanceof Error ? e.message : t("saveFailed")); } finally { setBusy(null); }
+  };
+
+  const actionLabel = (r: Row) => {
+    const a = r.action;
+    switch (a.kind) {
+      case "REMIND": return t("action.REMIND", { tone: t(`tone_${a.tone ?? "friendly"}`) });
+      case "WAIT_PROMISE": return t("action.WAIT_PROMISE", { date: shortDay(a.date ?? null, locale) });
+      case "SNOOZED": return t("action.SNOOZED", { date: shortDay(a.date ?? null, locale) });
+      default: return t(`action.${a.kind}`);
+    }
+  };
+  const actionTone = (k: string) => (k === "REMIND" || k === "CALL" || k === "ESCALATE" ? "border-amber-500/40 text-amber-700 dark:text-amber-300" : k === "RESOLVE_DISPUTE" ? "border-rose-500/40 text-rose-700 dark:text-rose-300" : "text-muted-foreground");
+  const totalBucket = Math.max(1, data?.buckets.reduce((s, b) => s + b.amount, 0) ?? 1);
+
   return (
-    <Card className="border-zinc-200 dark:border-zinc-800">
-      <CardContent className="pt-6">
-        <div className="flex items-center gap-3">
-          <div className="rounded-lg bg-orange-500/10 p-2 text-orange-600 dark:text-orange-400">
-            <Icon className="h-4 w-4" />
-          </div>
-          <div>
-            <p className="text-xs text-zinc-500">{label}</p>
-            <p className="text-xl font-bold leading-none mt-1">{value}</p>
-          </div>
+    <DashboardPageShell
+      title={t("title")} description={t("subtitle")} icon={<Siren className="h-6 w-6 text-primary" />}
+      pageActions={
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" asChild><a href="/api/ar-collections/export"><Download className="mr-1.5 h-4 w-4" />{t("export")}</a></Button>
+          {canSend ? <Button size="sm" onClick={() => void runAuto()} disabled={busy === "auto"}>{busy === "auto" ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}{t("runReminders")}</Button> : null}
         </div>
-      </CardContent>
-    </Card>
+      }
+    >
+      <div className="space-y-5">
+        <nav className="-mx-1 flex gap-1 overflow-x-auto px-1" aria-label={t("title")}>
+          {(["worklist", "clients", "settings"] as const).map((k) => <button key={k} type="button" onClick={() => setTab(k)} aria-current={tab === k ? "page" : undefined} className={cn("shrink-0 rounded-full px-4 py-1.5 text-sm transition-colors", tab === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>{t(`tab.${k}`)}</button>)}
+        </nav>
+
+        {error && !data ? <div className="rounded-2xl border border-rose-500/30 p-8 text-center"><p className="font-medium">{t("loadFailed")}</p><Button className="mt-3" variant="outline" onClick={reload}>{t("retry")}</Button></div>
+        : !data ? <div className="space-y-4"><div className="grid grid-cols-2 gap-3 lg:grid-cols-6">{[0, 1, 2, 3, 4, 5].map((i) => <Skeleton key={i} className="h-24 rounded-2xl" />)}</div><Skeleton className="h-72 rounded-2xl" /></div>
+        : (
+          <>
+            {!data.smtpReminderReady ? <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm">{t("smtpBanner")} <Link href="/settings" className="underline">{t("openSettings")}</Link></div> : null}
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-6">
+              <Stat label={t("kpi.outstanding")} value={money(data.totals.totalOutstanding)} sub={t("kpi.current", { amount: money(data.totals.current) })} />
+              <Stat label={t("kpi.overdue")} value={money(data.totals.overdueAmount)} tone={data.totals.overdueAmount > 0 ? "warn" : undefined} sub={t("kpi.invoices", { count: data.totals.overdueInvoices })} />
+              <Stat label={t("kpi.collected")} value={money(data.totals.collectedLast30Days)} tone="good" sub={t("kpi.last30")} />
+              <Stat label={t("kpi.dso")} value={data.totals.dso == null ? "—" : t("kpi.days", { count: data.totals.dso })} sub={t("kpi.dsoHint")} />
+              <Stat label={t("kpi.promises")} value={money(data.totals.promisesDue.amount)} sub={t("kpi.promisesHint", { count: data.totals.promisesDue.count })} />
+              <Stat label={t("kpi.atRisk")} value={money(data.totals.atRiskAmount)} tone={data.totals.atRiskAmount > 0 ? "bad" : undefined} sub={t("kpi.atRiskHint")} />
+            </div>
+
+            <section className="rounded-2xl border bg-card p-4">
+              <div className="mb-2 flex items-center justify-between"><h2 className="text-sm font-semibold">{t("aging")}</h2>{bucket ? <Button variant="ghost" size="sm" onClick={() => setBucket(null)}>{t("clearFilter")}</Button> : null}</div>
+              <div className="flex h-3 overflow-hidden rounded-full bg-muted" role="img" aria-label={t("aging")}>
+                {data.buckets.map((b) => <div key={b.key} className={BUCKET_TONE[b.key]} style={{ width: `${(b.amount / totalBucket) * 100}%` }} />)}
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
+                {BUCKETS.map((k) => { const b = data.buckets.find((x) => x.key === k)!; return (
+                  <button key={k} type="button" onClick={() => { setBucket(bucket === k ? null : k); setTab("worklist"); }} className={cn("rounded-xl border p-3 text-left transition-colors hover:bg-muted/50", bucket === k && "border-primary bg-primary/5")}>
+                    <span className="flex items-center gap-2 text-xs text-muted-foreground"><span className={cn("h-2 w-2 rounded-full", BUCKET_TONE[k])} />{t(`bucket.${k}`)}</span>
+                    <span className="mt-1 block font-semibold tabular-nums">{money(b.amount)}</span><span className="text-xs text-muted-foreground">{t("kpi.invoices", { count: b.count })}</span>
+                  </button>); })}
+              </div>
+            </section>
+
+            {tab === "worklist" ? (
+              <section className="space-y-3">
+                <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+                  <div className="relative flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("search")} className="pl-9" aria-label={t("search")} /></div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {VIEWS.map((v) => <button key={v} type="button" onClick={() => setView(v)} aria-pressed={view === v} className={cn("rounded-full border px-3 py-1 text-sm transition-colors", view === v ? "border-primary bg-primary/10 font-medium text-primary" : "text-muted-foreground hover:text-foreground")}>{t(`view.${v}`)}{v === "broken" && data.totals.brokenPromises.count ? <span className="ml-1 text-rose-600">{data.totals.brokenPromises.count}</span> : null}{v === "actionable" ? <span className="ml-1 text-muted-foreground">{data.totals.actionable}</span> : null}</button>)}
+                  </div>
+                </div>
+
+                {selected.size > 0 && canEdit ? (
+                  <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-muted/40 p-3 text-sm">
+                    <span className="font-medium">{t("selected", { count: selected.size })}</span>
+                    {canSend ? <Button size="sm" disabled={!!busy} onClick={() => void bulk("remind")}>{t("bulkRemind")}</Button> : null}
+                    <Button size="sm" variant="outline" disabled={!!busy} onClick={() => void bulk("snooze")}>{t("bulkSnooze")}</Button>
+                    <Button size="sm" variant="outline" disabled={!!busy} onClick={() => void bulk("escalate")}>{t("escalate")}</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>{t("clear")}</Button>
+                  </div>
+                ) : null}
+
+                {data.rows.length === 0 ? <div className="rounded-2xl border border-dashed p-12 text-center text-sm text-muted-foreground">{loading ? "…" : t("empty")}</div> : (
+                  <ul className={cn("divide-y overflow-hidden rounded-2xl border bg-card", loading && "opacity-70")}>
+                    {data.rows.map((r) => (
+                      <li key={r.id} className="grid gap-2 px-4 py-3 sm:grid-cols-[auto_1fr_auto_auto] sm:items-center sm:gap-4">
+                        {canEdit ? <Checkbox checked={selected.has(r.id)} onCheckedChange={() => toggle(r.id)} aria-label={t("select", { number: r.invoiceNumber })} /> : <span />}
+                        <button type="button" onClick={() => setOpenId(r.id)} className="min-w-0 text-left">
+                          <p className="truncate text-sm font-medium">{r.clientName} <span className="font-normal text-muted-foreground">· {r.invoiceNumber}</span></p>
+                          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                            <span>{r.daysOverdue > 0 ? t("overdueDays", { count: r.daysOverdue }) : t("dueOn", { date: shortDay(r.dueDate, locale) })}</span>
+                            <Badge variant="outline" className={cn("px-1.5 py-0 text-[10px] font-normal", actionTone(r.action.kind))}>{actionLabel(r)}</Badge>
+                            {r.followUpStatus !== "UNTOUCHED" ? <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-normal">{t(`status.${r.followUpStatus}`)}</Badge> : null}
+                            <span className={cn(r.risk >= 70 ? "text-rose-600" : r.risk >= 45 ? "text-amber-600" : "")}>{t("risk", { score: r.risk })}</span>
+                          </p>
+                        </button>
+                        <p className="text-right text-sm font-semibold tabular-nums">{money(r.outstanding)}</p>
+                        <div className="flex justify-end">{canEdit ? <Button size="sm" variant="outline" onClick={() => setOpenId(r.id)}>{t("manage")}</Button> : null}</div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {data.truncated ? <p className="text-xs text-muted-foreground">{t("truncated")}</p> : null}
+              </section>
+            ) : null}
+
+            {tab === "clients" ? (
+              <ul className="divide-y overflow-hidden rounded-2xl border bg-card">
+                {data.clients.length === 0 ? <li className="p-10 text-center text-sm text-muted-foreground">{t("empty")}</li> : data.clients.map((c) => (
+                  <li key={c.clientId ?? c.name} className="grid gap-1 px-4 py-3 sm:grid-cols-[1fr_auto_auto] sm:items-center sm:gap-6">
+                    <div className="min-w-0">
+                      {c.clientId ? <Link href={`/clients/${c.clientId}`} className="truncate text-sm font-medium hover:underline">{c.name}</Link> : <p className="truncate text-sm font-medium">{c.name}</p>}
+                      <p className="text-xs text-muted-foreground">{t("clientLine", { invoices: c.invoices, days: c.oldestDays })}{c.creditLimit != null && c.outstanding > c.creditLimit ? <span className="ml-2 text-rose-600">{t("overLimit", { limit: money(c.creditLimit) })}</span> : null}</p>
+                    </div>
+                    <p className="text-sm tabular-nums"><span className="text-muted-foreground">{t("kpi.overdue")} </span>{money(c.overdue)}</p>
+                    <p className="text-right text-sm font-semibold tabular-nums">{money(c.outstanding)}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            {tab === "settings" && draft ? (
+              <section className="space-y-5 rounded-3xl border bg-card p-5">
+                <div><h2 className="text-base font-semibold">{t("ladderTitle")}</h2><p className="mt-1 text-sm text-muted-foreground">{t("ladderHint")}</p></div>
+                <label className="flex items-center justify-between gap-4 rounded-xl border px-4 py-3 text-sm"><span>{t("autoReminders")}<span className="block text-xs text-muted-foreground">{t("autoRemindersHint")}</span></span><Switch disabled={!canEdit} checked={draft.autoReminders} onCheckedChange={(v) => setDraft({ ...draft, autoReminders: v })} /></label>
+                <div className="space-y-2">
+                  {draft.steps.map((s, i) => (
+                    <div key={i} className="grid grid-cols-[1fr_9rem_auto] items-end gap-2 sm:grid-cols-[12rem_12rem_auto]">
+                      <div><Label className="text-xs" htmlFor={`st-${i}`}>{t("stepAfter", { n: i + 1 })}</Label><Input id={`st-${i}`} type="number" min="1" max="365" disabled={!canEdit} value={s.afterDays} onChange={(e) => setDraft({ ...draft, steps: draft.steps.map((x, j) => (j === i ? { ...x, afterDays: Number(e.target.value) } : x)) })} /></div>
+                      <Select disabled={!canEdit} value={s.tone} onValueChange={(v) => setDraft({ ...draft, steps: draft.steps.map((x, j) => (j === i ? { ...x, tone: v as Tone } : x)) })}><SelectTrigger aria-label={t("tone")}><SelectValue /></SelectTrigger><SelectContent>{(["friendly", "firm", "final"] as const).map((x) => <SelectItem key={x} value={x}>{t(`tone_${x}`)}</SelectItem>)}</SelectContent></Select>
+                      <Button variant="ghost" size="icon" disabled={!canEdit || draft.steps.length <= 1} onClick={() => setDraft({ ...draft, steps: draft.steps.filter((_, j) => j !== i) })} aria-label={t("remove")}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  ))}
+                  {canEdit && draft.steps.length < 6 ? <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setDraft({ ...draft, steps: [...draft.steps, { afterDays: (draft.steps.at(-1)?.afterDays ?? 0) + 14, tone: "final" }] })}><Plus className="h-4 w-4" />{t("addStep")}</Button> : null}
+                </div>
+                <div className="max-w-xs"><Label className="text-xs" htmlFor="gap">{t("minGap")}</Label><Input id="gap" type="number" min="1" max="60" disabled={!canEdit} value={draft.minGapDays} onChange={(e) => setDraft({ ...draft, minGapDays: Number(e.target.value) })} /><p className="mt-1 text-[11px] text-muted-foreground">{t("minGapHint")}</p></div>
+                <label className="flex items-center justify-between gap-4 rounded-xl border px-4 py-3 text-sm"><span>{t("pauseOnPromise")}<span className="block text-xs text-muted-foreground">{t("pauseOnPromiseHint")}</span></span><Switch disabled={!canEdit} checked={draft.pauseOnPromise} onCheckedChange={(v) => setDraft({ ...draft, pauseOnPromise: v })} /></label>
+                {canEdit ? <Button onClick={() => void saveSettings()} disabled={busy === "settings"}>{busy === "settings" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}{t("save")}</Button> : <p className="text-xs text-muted-foreground">{t("viewOnly")}</p>}
+              </section>
+            ) : null}
+          </>
+        )}
+      </div>
+      <InvoiceDrawer row={row} locale={locale} money={money} canEdit={canEdit} canSend={canSend} onClose={() => setOpenId(null)} onChanged={reload} />
+    </DashboardPageShell>
   );
 }

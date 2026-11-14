@@ -16,6 +16,7 @@ vi.mock('@/lib/workspace-scope', () => ({
 
 vi.mock('@/lib/rbac', () => ({
   withPermission: vi.fn(),
+  checkPermissionSilent: vi.fn().mockResolvedValue(true),
 }));
 
 vi.mock('@/lib/modules', () => ({
@@ -30,6 +31,7 @@ vi.mock('@/lib/ar-collections', async (importOriginal) => {
   return {
     ...actual,
     getArCollectionsSnapshot: vi.fn(),
+    markBrokenPromises: vi.fn().mockResolvedValue(0),
     runReminderAutomation: vi.fn(),
   };
 });
@@ -59,7 +61,7 @@ describe('GET /api/ar-collections', () => {
 
   it('returns 401 without user', async () => {
     (getServerSession as Mock).mockResolvedValue(null);
-    const res = await GET();
+    const res = await GET(new NextRequest('http://localhost/api/ar-collections'));
     expect(res.status).toBe(401);
   });
 
@@ -71,7 +73,7 @@ describe('GET /api/ar-collections', () => {
       response: NextResponse.json({ error: 'denied' }, { status: 403 }),
     });
 
-    const res = await GET();
+    const res = await GET(new NextRequest('http://localhost/api/ar-collections'));
     expect(res.status).toBe(403);
     expect(requireModule).not.toHaveBeenCalled();
   });
@@ -94,10 +96,10 @@ describe('GET /api/ar-collections', () => {
       smtpReminderReady: false,
     });
 
-    const res = await GET();
+    const res = await GET(new NextRequest('http://localhost/api/ar-collections'));
     expect(res.status).toBe(200);
     expect(requireModule).toHaveBeenCalledWith('ws1', 'AR_COLLECTIONS');
-    expect(getArCollectionsSnapshot).toHaveBeenCalledWith('ws1');
+    expect(getArCollectionsSnapshot).toHaveBeenCalledWith('ws1', expect.any(Object));
   });
 });
 
@@ -106,7 +108,7 @@ describe('POST /api/ar-collections', () => {
     vi.clearAllMocks();
   });
 
-  it('returns 403 when invoices.edit denied', async () => {
+  it('returns 403 when sending is denied', async () => {
     (getServerSession as Mock).mockResolvedValue({ user: { id: 'u1' } });
     (getActiveWorkspaceIdForUser as Mock).mockResolvedValue('ws1');
     (withPermission as Mock).mockResolvedValue({

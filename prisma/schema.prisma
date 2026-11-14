@@ -1659,6 +1659,11 @@ model Invoice {
   collectionRiskScore Float?
   lastReminderSentAt  DateTime?
   followUpStatus      String?
+  /// Collections: what the customer promised, when we next look at this invoice, why it is disputed, how many dunning reminders went out.
+  promiseDate         DateTime?
+  nextFollowUpAt      DateTime?
+  disputeReason       String?
+  collectionReminders Int       @default(0)
   clientName          String
   sacCode             String? // Removed the hardcoded @default("998313")
   serviceDescription  String
