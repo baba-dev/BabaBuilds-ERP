@@ -1,0 +1,44 @@
+name: Phase B PostgreSQL baseline generation
+on:
+  push:
+    branches:
+      - feature/phase-b-postgresql-readiness
+    paths:
+      - prisma/schema.prisma
+      - scripts/generate-pg-baseline.sh
+      - .github/workflows/phase-b-baseline.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: phase-b-postgresql-baseline
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    if: github.ref == 'refs/heads/feature/phase-b-postgresql-readiness'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/bababuilds_erp_ci
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install locked dependencies and Prisma 6
+        run: npm ci --no-audit --no-fund
+      - name: Generate PostgreSQL baseline from current checked-in schema
+        run: bash scripts/generate-pg-baseline.sh
+      - name: Commit exact generated SQL to isolated development branch
+        run: |
+          git add prisma/migrations/20261116000000_postgresql_baseline/migration.sql
+          if ! git diff --cached --quiet; then
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'build(db): commit Prisma-generated PostgreSQL baseline DDL'
+            git push origin HEAD:feature/phase-b-postgresql-readiness
+          fi
