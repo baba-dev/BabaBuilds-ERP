@@ -8778,5 +8778,182 @@
         "body": "No professional tax is deducted."
       }
     }
+  },
+  "InventoryHub": {
+    "title": "Inventory",
+    "subtitle": "Stock, reorders and purchasing in one place",
+    "refresh": "Refresh",
+    "retry": "Try again",
+    "cancel": "Cancel",
+    "loadMore": "Load more",
+    "loadFailed": "Inventory could not be loaded",
+    "tab": {
+      "overview": "Overview",
+      "products": "Products",
+      "reorder": "Reorder",
+      "orders": "Purchase orders",
+      "movements": "Stock ledger"
+    },
+    "status": {
+      "IN_STOCK": "In stock",
+      "LOW_STOCK": "Low stock",
+      "OUT_OF_STOCK": "Out of stock"
+    },
+    "overview": {
+      "emptyTitle": "Start by adding your first product",
+      "emptyBody": "Add products with their cost and selling price. Stock, value and reorder alerts appear here automatically.",
+      "heroTitle": "{value} of stock on hand",
+      "heroBody": "{units} units at cost. Selling it all would earn about {margin} ({pct}% margin).",
+      "viewProducts": "View products",
+      "reorderNow": "{count} to reorder now",
+      "reorderTitle": "Needs reordering",
+      "seeAll": "See all",
+      "reorderNone": "Nothing needs reordering right now.",
+      "deadTitle": "Slow-moving stock",
+      "deadSub": "No sales in {days} days",
+      "deadNone": "No slow-moving stock. Everything is selling.",
+      "deadTied": "{value} of cash is tied up in items that have not sold."
+    },
+    "kpi": {
+      "stockValue": "Stock value",
+      "atCost": "At cost",
+      "retailValue": "Retail value",
+      "margin": "{pct}% margin",
+      "low": "Low stock",
+      "belowSafety": "At or below safety level",
+      "out": "Out of stock",
+      "cantSell": "Cannot be sold",
+      "negative": "{count} with negative stock"
+    },
+    "products": {
+      "search": "Search name, SKU or barcode",
+      "status": "Status",
+      "allStatus": "All statuses",
+      "category": "Category",
+      "allCategories": "All categories",
+      "archivedToggle": "Archived",
+      "scan": "Scan",
+      "add": "Add product",
+      "noMatch": "No products match these filters",
+      "noneArchived": "No archived products",
+      "empty": "No products yet",
+      "adjust": "Adjust stock",
+      "edit": "Edit product",
+      "restore": "Restore product",
+      "archive": "Archive or delete product",
+      "archived": "Archived. It has history, so it was kept.",
+      "deleted": "Product deleted",
+      "restored": "Product restored",
+      "failed": "The product could not be updated"
+    },
+    "stock": {
+      "saved": "Stock updated",
+      "failed": "Stock could not be updated",
+      "onHand": "{stock} {unit} on hand",
+      "mode": {
+        "ADD": "Add",
+        "REMOVE": "Remove",
+        "COUNT": "Count"
+      },
+      "counted": "Counted quantity",
+      "quantity": "Quantity",
+      "reason": "Reason (optional)",
+      "reasonHint": {
+        "ADD": "e.g. Found in back store",
+        "REMOVE": "e.g. Damaged",
+        "COUNT": "e.g. Monthly stock take"
+      },
+      "tooMany": "You cannot remove more than is on hand.",
+      "after": "Stock will be {stock} {unit}",
+      "save": "Save"
+    },
+    "movements": {
+      "type": "Type",
+      "all": "All movements",
+      "kind": {
+        "IN": "Stock in",
+        "OUT": "Stock out",
+        "ADJ": "Adjustment"
+      },
+      "from": "From",
+      "to": "To",
+      "empty": "No stock movements match these filters.",
+      "balance": "Balance {n}"
+    },
+    "reorder": {
+      "intro": "Based on what you sell, how long suppliers take and what is already on order.",
+      "noneTitle": "Stock levels look healthy",
+      "noneBody": "Nothing needs reordering right now.",
+      "stockLine": "{stock} {unit} in stock",
+      "onOrder": "{n} on order",
+      "cover": "about {days} days left",
+      "reason": {
+        "OUT_OF_STOCK": "Out of stock",
+        "BELOW_SAFETY": "Below safety level",
+        "LOW_COVER": "Selling faster than stock lasts"
+      },
+      "urgency": {
+        "NOW": "Order now",
+        "SOON": "Soon"
+      },
+      "select": "Select {name}",
+      "selected": "{count} selected, about {total}",
+      "pick": "Select items to order",
+      "selectAll": "Select all",
+      "createPo": "Create purchase order"
+    },
+    "po": {
+      "new": "New purchase order",
+      "newTitle": "New purchase order",
+      "status": "Status",
+      "allStatus": "All statuses",
+      "statusName": {
+        "DRAFT": "Draft",
+        "SENT": "Sent",
+        "PARTIAL": "Partly received",
+        "DELIVERED": "Received",
+        "CANCELLED": "Cancelled"
+      },
+      "empty": "No purchase orders yet",
+      "expectedOn": "expected {date}",
+      "send": "Mark as sent",
+      "receive": "Receive goods",
+      "cancel": "Cancel order",
+      "reopen": "Reopen as draft",
+      "action": {
+        "send": "Order marked as sent",
+        "cancel": "Order cancelled",
+        "reopen": "Order reopened as a draft"
+      },
+      "failed": "The purchase order could not be saved",
+      "supplier": "Supplier",
+      "expected": "Expected on",
+      "terms": "Payment terms (days)",
+      "notes": "Notes",
+      "addItem": "Add item",
+      "searchItem": "Search products",
+      "noLines": "Search above to add the items you want to order.",
+      "removeLine": "Remove line",
+      "qty": "Quantity",
+      "unitPrice": "Unit price",
+      "total": "Order total",
+      "saveDraft": "Save draft",
+      "saveSend": "Save and send",
+      "sentToast": "Purchase order created and sent",
+      "draftToast": "Purchase order saved as a draft"
+    },
+    "receive": {
+      "title": "Receive goods on {po}",
+      "outstanding": "{n} {unit} still to arrive",
+      "qtyFor": "Quantity received for {name}",
+      "invoiceNo": "Supplier invoice number",
+      "gstin": "Supplier GSTIN",
+      "sync": "Record the purchase bill",
+      "syncHint": "Adds the bill to Expenses with GST, due on the payment terms.",
+      "confirm": "Receive",
+      "doneFull": "Order fully received",
+      "donePartial": "{units} units received. The rest is still outstanding.",
+      "failed": "The goods could not be received"
+    }
   }
 }
