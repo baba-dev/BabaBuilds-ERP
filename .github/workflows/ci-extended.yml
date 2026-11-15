@@ -1,0 +1,30 @@
+name: CI extended (production build)
+
+# The heavy checks that do not need to run on every pull request: a full production build.
+# Nightly, and on demand from the Actions tab. (The browser tests run in regression.yml.)
+
+on:
+  schedule:
+    - cron: '30 20 * * *' # 20:30 UTC, outside working hours so it does not hold up deploys
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Production build
+    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
+    timeout-minutes: 90
+    env:
+      NODE_OPTIONS: --max-old-space-size=4096
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Build
+        run: npm run build

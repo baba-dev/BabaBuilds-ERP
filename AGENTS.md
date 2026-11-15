@@ -73,7 +73,7 @@ The Android app is a Trusted Web Activity over the PWA; see `docs/android-play-s
 
 ### CI (GitHub Actions)
 
-- `CI` workflow (`.github/workflows/ci.yml`) runs in parallel: static checks, full Vitest, migration history vs schema (`check:migrations`), production build, and a browser smoke job (advisory until `CI_SMOKE_BLOCKING=true`). The single required check is **`CI gate`**.
+- `CI` workflow (`.github/workflows/ci.yml`) is deliberately simple so it runs on a small self-hosted runner: one job (**`CI gate`**, the single required check) with one dependency install and sequential steps: locale parity, lint, typecheck, demo coverage, migration history vs schema (`check:migrations`), then the full Vitest suite. The production build is in `ci-extended.yml` (nightly + manual) and the browser tests in `regression.yml` (nightly); neither runs on every PR.
 - Runners default to GitHub-hosted. Set repository variable `CI_RUNS_ON` to `["self-hosted","linux","x64","erp-ci"]` to use the self-hosted pool.
 - Deploy runs only after `CI` succeeds on a push to `main`, and deploys the exact validated commit.
 - Node is pinned in `.nvmrc` (22). Shared setup lives in `.github/actions/`.

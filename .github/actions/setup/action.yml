@@ -1,15 +1,17 @@
 name: Setup Node and install dependencies
-description: Node version pinned from .nvmrc (matches package.json engines), npm cache, reproducible install.
+description: Node version pinned from .nvmrc (matches package.json engines), reproducible install.
 
 runs:
   using: composite
   steps:
+    # No remote npm cache here on purpose: restoring and saving it through GitHub took 10 to 20 minutes
+    # per job on a self-hosted runner. `--prefer-offline` uses the runner's own ~/.npm cache, which
+    # persists between runs; on GitHub-hosted runners it simply downloads as normal.
     - uses: actions/setup-node@v4
       with:
         node-version-file: .nvmrc
-        cache: npm
 
     - name: Install dependencies
       shell: bash
       # postinstall runs `prisma generate`, so the client is ready after this step.
-      run: npm ci --no-audit --no-fund
+      run: npm ci --prefer-offline --no-audit --no-fund

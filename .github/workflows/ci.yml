@@ -1,9 +1,11 @@
 name: CI
 
-# One workflow, parallel jobs, one required check (`gate`).
-# Runner: GitHub-hosted by default. To use the self-hosted pool instead, set the repository
-# variable CI_RUNS_ON to: ["self-hosted","linux","x64","erp-ci"]
-# Mirror locally with: npm run ci:fast
+# Deliberately simple so it runs on a small self-hosted runner: ONE job, ONE dependency install,
+# checks run one after another (not in parallel) so they do not fight for memory.
+# Runner: GitHub-hosted by default. To use the self-hosted pool, set the repository variable
+# CI_RUNS_ON to: ["self-hosted","linux","x64","erp-ci"]
+# The production build and the browser tests are not part of every PR: see ci-extended.yml
+# (nightly + manual) and regression.yml (nightly). Mirror this locally with: npm run ci:fast
 
 on:
   pull_request:
@@ -19,16 +21,20 @@ permissions:
   contents: read
 
 jobs:
-  static:
-    name: Static checks
+  # The only check branch protection needs to require. The deploy workflow also waits for this
+  # workflow to succeed on main.
+  gate:
+    name: CI gate
     runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
-    timeout-minutes: 40
+    timeout-minutes: 90
+    env:
+      # tsc and eslint need more than the small default heap Node picks on a low-memory runner.
+      NODE_OPTIONS: --max-old-space-size=4096
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
 
-      # `!cancelled()` runs every check even if an earlier one failed, so one run
-      # reports all problems instead of one per push.
+      # `!cancelled()` keeps going after a failure, so one run reports every problem instead of one per push.
       - name: Locale key parity
         run: npm run check:locales
 
@@ -38,112 +44,24 @@ jobs:
 
       - name: Typecheck
         if: ${{ !cancelled() }}
-        # tsc on this project needs more than the ~0.5 GB default heap Node picks on the self-hosted runner.
-        env:
-          NODE_OPTIONS: --max-old-space-size=4096
         run: npm run typecheck
 
       - name: Demo template coverage
         if: ${{ !cancelled() }}
         run: npm run validate:demos
 
-  test:
-    name: Unit and integration tests
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
-    timeout-minutes: 40
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-      # Some tests (company-groups, tax summary) use the real Prisma client against SQLite.
-      # The schema hardcodes file:./dev.db, so create prisma/dev.db before running them.
-      - name: Create test database
-        run: npx prisma db push --skip-generate
-
-      # Full Vitest suite (previously only 2 of ~90 test files ran in CI).
-      - name: Vitest
-        run: npm test
-
-  prisma:
-    name: Prisma migrations
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
-    timeout-minutes: 40
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-
-      # Runs in an isolated temp copy of the schema (prisma/schema.prisma hardcodes file:./dev.db).
-      # Path 1: baseline -> migrate deploy -> no drift vs schema.prisma (fails if the schema changed
-      # without a migration). Path 2: a `db push` database adopts the history via `migrate resolve`.
-      - name: Migration history applies cleanly and matches the schema
+      # Runs in an isolated temp copy of the schema. Fails if the schema changed without a migration,
+      # or if the migration history does not apply cleanly.
+      - name: Prisma migration history
+        if: ${{ !cancelled() }}
         run: npm run check:migrations
 
-  build:
-    name: Production build
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
-    timeout-minutes: 45
-    env:
-      NODE_OPTIONS: --max-old-space-size=4096
-      NEXT_TELEMETRY_DISABLED: "1"
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
+      # Some tests use the real Prisma client against SQLite; the schema hardcodes file:./dev.db.
+      - name: Create test database
+        if: ${{ !cancelled() }}
+        run: npx prisma db push --skip-generate
 
-      - name: Restore Next.js build cache
-        uses: actions/cache@v6
-        with:
-          path: .next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**/*.ts', '**/*.tsx', '!node_modules/**', '!.next/**') }}
-          restore-keys: |
-            nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
-
-      - name: Build
-        run: npm run build
-
-  e2e-smoke:
-    name: Browser smoke (demo)
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
-    timeout-minutes: 45
-    # Advisory until it has proven stable on this runner. Set repository variable
-    # CI_SMOKE_BLOCKING=true to make it required through the gate job.
-    continue-on-error: ${{ vars.CI_SMOKE_BLOCKING != 'true' }}
-    env:
-      NEXT_TELEMETRY_DISABLED: "1"
-      DEMO_CIRCUIT_BREAKER_THRESHOLD: "1000"
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-
-      - uses: ./.github/actions/test-env
-
-      # Runs against `next dev` (see playwright.config.ts): demo sign-in needs the
-      # development-only CAPTCHA bypass. Catches demo provisioning and route regressions.
-      - name: Smoke tests
-        run: npm run test:browser:smoke -- --trace off
-
-      - name: Upload report
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 14
-          if-no-files-found: ignore
-
-  # The only check branch protection needs to require: stable name, and it fails if any
-  # job failed or was cancelled (skipped is fine).
-  gate:
-    name: CI gate
-    if: ${{ always() }}
-    needs: [static, test, prisma, build, e2e-smoke]
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
-    timeout-minutes: 5
-    steps:
-      - name: Evaluate results
-        env:
-          RESULTS: ${{ toJSON(needs) }}
-        run: |
-          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
-          if echo "$RESULTS" | jq -e 'to_entries | any(.value.result == "failure" or .value.result == "cancelled")' >/dev/null; then
-            echo "::error::One or more CI jobs failed or were cancelled."
-            exit 1
-          fi
+      # Two workers: the full suite on every core would exhaust memory on a small runner.
+      - name: Unit and integration tests
+        if: ${{ !cancelled() }}
+        run: npm test -- --maxWorkers=2
