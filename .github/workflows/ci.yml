@@ -20,6 +20,9 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/bababuilds_erp_ci
+
 jobs:
   static:
     name: Static checks
@@ -49,33 +52,74 @@ jobs:
   test:
     name: Unit and integration tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bababuilds_erp_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bababuilds_erp_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      # Some tests (company-groups, tax summary) use the real Prisma client against SQLite.
-      # The schema hardcodes file:./dev.db, so create prisma/dev.db before running them.
-      - name: Create test database
-        run: npx prisma db push --skip-generate
-      - name: Vitest
+      # PostgreSQL 17 only: apply committed baseline before all integration tests.
+      - name: Prepare isolated PostgreSQL test database
+        run: npx prisma migrate deploy
+      - name: Vitest (complete suite, including financial concurrency)
+        env:
+          CI_POSTGRES_FINANCE_TESTS: "1"
         run: npm test
 
   prisma:
     name: Prisma migrations
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bababuilds_erp_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bababuilds_erp_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      # Runs in an isolated temp copy of the schema (prisma/schema.prisma hardcodes file:./dev.db).
-      # Path 1: baseline -> migrate deploy -> no drift vs schema.prisma (fails if the schema changed
-      # without a migration). Path 2: a `db push` database adopts the history via `migrate resolve`.
+      # PostgreSQL 17: committed baseline must match live schema with zero drift.
       - name: Migration history applies cleanly and matches the schema
         run: npm run check:migrations
 
   build:
     name: Production build
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bababuilds_erp_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bababuilds_erp_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
     timeout-minutes: 25
     env:
       NODE_OPTIONS: --max-old-space-size=4096
@@ -92,12 +136,29 @@ jobs:
           restore-keys: |
             nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
 
+      - name: Prepare PostgreSQL for build-time data dependencies
+        run: npx prisma migrate deploy
+
       - name: Build
         run: npm run build
 
   e2e-smoke:
     name: Browser smoke (demo)
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bababuilds_erp_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bababuilds_erp_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
     timeout-minutes: 25
     # Required by default. If it ever becomes flaky, set repository variable CI_SMOKE_ADVISORY=true
     # to keep it running but stop it blocking merges.

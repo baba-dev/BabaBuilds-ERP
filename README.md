@@ -161,7 +161,7 @@ npm install
 Required baseline variables:
 
 ```bash
-DATABASE_URL="file:./prisma/dev.db"
+DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/bababuilds_erp_ci"
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="replace-with-a-random-secret"
 AI_TOOL_CONFIRMATION_SECRET="replace-with-an-independent-32-byte-random-secret"
@@ -200,7 +200,7 @@ Open: [http://localhost:3000](http://localhost:3000)
 - `AI_TOOL_CONFIRMATION_SECRET` (independent random value, at least 32 characters; signs two-minute AI mutation confirmations)
 
 ### Database
-- `DATABASE_URL` (SQLite path in local dev)
+- `DATABASE_URL` (PostgreSQL 17 URL for an isolated local database)
 
 ### Provider toggles
 - `AUTH_EMAIL_ENABLED`
@@ -296,3 +296,7 @@ If you want, next PR can add:
 - clickable architecture diagram,
 - persona-specific quick-starts,
 - a “module-to-route map” table for faster onboarding of new engineers and coding agents.
+
+
+### Phase B PostgreSQL preparation
+The canonical Prisma datasource is PostgreSQL 17. Historical SQLite SQL resides under prisma/sqlite-history and is NEVER replayed on PostgreSQL. Generate disposable databases with prisma migrate deploy, not db push. The protected SQLite-to-PostgreSQL importer and backup runbook are under docs/postgres-migration-importer.md and docs/postgres-backup-runbook.md. This readiness branch must not be deployed to ERP production prior to a signed-off Phase C cutover.
