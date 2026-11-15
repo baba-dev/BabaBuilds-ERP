@@ -73,8 +73,8 @@ The Android app is a Trusted Web Activity over the PWA; see `docs/android-play-s
 
 ### CI (GitHub Actions)
 
-- `CI` workflow (`.github/workflows/ci.yml`) is built for the small self-hosted runner: one job (**`CI gate`**, the single required check) with sequential steps: locale parity, lint, typecheck, demo coverage, migration history vs schema (`check:migrations`, only when `prisma/` changed), then the full Vitest suite. The runner keeps `node_modules` (per lockfile) and the ESLint/TypeScript caches under `~/.cache/erp-ci`, so most runs skip `npm ci`. The production build is `ci-extended.yml` and the browser tests `regression.yml` (both nightly, plus manual).
-- Every workflow uses the self-hosted runner (`[self-hosted, linux, x64, erp-ci]`, hardcoded); there is no `CI_RUNS_ON` variable any more.
+- `CI` workflow (`.github/workflows/ci.yml`) runs on GitHub-hosted runners as parallel jobs: static checks (locale parity, lint, typecheck, demo coverage), full Vitest, migration history vs schema (`check:migrations`), production build, and the Playwright browser smoke test. The single required check is **`CI gate`**. Pull requests also get an advisory dependency review, and `codeql.yml` runs CodeQL (advisory).
+- **Never run pull-request workflows on the self-hosted runner**: the repo is public, so that would run strangers' code on our server. Self-hosted (`[self-hosted, linux, x64, erp-ci]`) is only for `deploy.yml`, `backup.yml` and `security-audit.yml`, which run on a schedule, by hand, or after CI succeeds on `main`.
 - Deploy runs only after `CI` succeeds on a push to `main`, and deploys the exact validated commit.
 - Node is pinned in `.nvmrc` (22). Shared setup lives in `.github/actions/`.
 - Agent workflow: make the change, run `npm run ci:fast`, fix everything it reports, then push. Add or update tests for behavior you change; mocks of shared modules should spread `importOriginal()` so new exports do not break them.

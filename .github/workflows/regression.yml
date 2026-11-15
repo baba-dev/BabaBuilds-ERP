@@ -15,7 +15,7 @@ permissions:
 jobs:
   test:
     name: Run Playwright Tests
-    runs-on: [self-hosted, linux, x64, erp-ci]
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
