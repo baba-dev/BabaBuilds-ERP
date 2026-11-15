@@ -1,170 +1,86 @@
-import { NextResponse } from "next/server";
-import { parseProductGst } from "@/lib/gst/source";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { parseProductGst } from '@/lib/gst/source';
+import { productFieldsSchema } from '@/lib/inventory/schemas';
+import { parseProductForm } from '@/lib/inventory/product-form';
+import { applyStockChange, InventoryError } from '@/lib/inventory/service';
+import { removeProductImage, storeProductImage } from '@/lib/inventory/product-image';
+import { stockStatus } from '@/lib/inventory/stock';
+import { invalidateDashboardCacheForWorkspace } from '@/lib/dashboard-cache';
+import { prisma } from '@/lib/prisma';
+import { logActivity } from '@/lib/security/activity-log';
+import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
+import { inventoryErrorResponse, requireInventory } from '../_guard';
+
+const listQuery = z.object({
+  q: z.string().trim().max(80).optional(),
+  status: z.enum(['IN_STOCK', 'LOW_STOCK', 'OUT_OF_STOCK']).optional(),
+  category: z.string().max(80).optional(),
+  archived: z.enum(['true', 'false']).default('false'),
+  sort: z.enum(['stock', 'name', 'value', 'updated']).default('stock'),
+  limit: z.coerce.number().int().min(1).max(200).default(100),
+  cursor: z.string().max(40).optional(),
+});
 
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    const workspaceId = session?.workspaceId;
-    if (!session || !workspaceId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(req.url);
-    const limit = parseInt(searchParams.get('limit') || '100', 10);
-    const cursor = searchParams.get('cursor');
-    const q = (searchParams.get('q') || '').trim();
-
-    const products = await prisma.product.findMany({
-      where: q
-        ? {
-            workspaceId,
-            OR: [
-              { name: { contains: q } },
-              { sku: { contains: q } },
-              { barcode: { contains: q } },
-            ],
-          }
-        : { workspaceId },
-      take: limit,
-      skip: cursor ? 1 : 0,
-      ...(cursor ? { cursor: { id: cursor } } : {}),
-      orderBy: { currentStock: 'asc' } // Show low stock first
-    });
-
-    return NextResponse.json(products, {
-      headers: {
-        "X-Next-Cursor": products.length > 0 ? String(products[products.length - 1].id) : "",
+    const gate = await requireInventory('view');
+    if ('response' in gate) return gate.response;
+    const { workspaceId } = gate.access;
+    const q = listQuery.parse(Object.fromEntries(new URL(req.url).searchParams));
+    const rows = await prisma.product.findMany({
+      where: {
+        workspaceId,
+        archivedAt: q.archived === 'true' ? { not: null } : null,
+        ...(q.status ? { status: q.status } : {}),
+        ...(q.category ? { category: q.category } : {}),
+        ...(q.q ? { OR: [{ name: { contains: q.q } }, { sku: { contains: q.q } }, { barcode: { contains: q.q } }] } : {}),
       },
+      orderBy: q.sort === 'name' ? [{ name: 'asc' }, { id: 'asc' }] : q.sort === 'updated' ? [{ updatedAt: 'desc' }, { id: 'asc' }] : [{ currentStock: 'asc' }, { id: 'asc' }],
+      take: q.limit + 1,
+      ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
     });
-  } catch (error: unknown) {
-    console.error("[INVENTORY_PRODUCTS_GET]", error);
-    return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
+    const hasMore = rows.length > q.limit;
+    const items = hasMore ? rows.slice(0, q.limit) : rows;
+    const categories = (await prisma.product.findMany({ where: { workspaceId, archivedAt: null, category: { not: null } }, select: { category: true }, distinct: ['category'], take: 200 })).map((c) => c.category as string).sort();
+    return NextResponse.json({ items, nextCursor: hasMore ? items[items.length - 1].id : null, categories });
+  } catch (e) {
+    return inventoryErrorResponse(e, 'products.list');
   }
 }
 
-import fs from 'fs';
-import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
-import { scanBuffer } from '@/lib/security/clamav';
-import { buildPrivatePath, ensureDir, sniffAllowedContent, uniqueStoredName } from '@/lib/uploads/private-storage';
-import { getErrorCode } from "@/lib/error-utils";
-
-function isAllowedProductImageExtension(ext: string) {
-  return ['.jpg', '.jpeg', '.png', '.webp'].includes(ext.toLowerCase());
-}
-
 export async function POST(req: Request) {
+  let imageUrl: string | null = null;
+  let workspaceForCleanup = '';
   try {
-    const session = await getServerSession(authOptions);
-    const workspaceId = session?.workspaceId;
-    if (!session || !workspaceId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const gate = await requireInventory('edit');
+    if ('response' in gate) return gate.response;
+    const { workspaceId, userId, email } = gate.access;
+    workspaceForCleanup = workspaceId;
+    const limit = enforceRouteRateLimit({ request: req, route: '/api/inventory/products', scope: workspaceId, max: 120, windowMs: 60_000 });
+    if (!limit.ok) return limit.response;
 
-    const formData = await req.formData();
-    const sku = formData.get('sku') as string;
-    const name = formData.get('name') as string;
-    const description = formData.get('description') as string;
-    const category = formData.get('category') as string;
-    const unit = formData.get('unit') as string || 'pcs';
-    const baselinePrice = Number(formData.get('baselinePrice')) || 0;
-    const costPrice = Number(formData.get('costPrice')) || 0;
-    const currentStock = Number(formData.get('currentStock')) || 0;
-    const safetyStock = Number(formData.get('safetyStock')) || 5;
-    const barcode = formData.get('barcode') as string;
-    const location = formData.get('location') as string;
-
-    if (!sku || !name) {
-      return NextResponse.json({ error: "SKU and Name are required" }, { status: 400 });
-    }
-    const gst = parseProductGst(formData.get('hsnCode'), formData.get('gstRate'));
+    const fd = await req.formData();
+    const d = productFieldsSchema.parse(parseProductForm(fd));
+    const openingStock = Math.max(0, Math.floor(Number(fd.get('currentStock')) || 0));
+    const gst = parseProductGst(fd.get('hsnCode'), fd.get('gstRate'));
     if (!gst.ok) return NextResponse.json({ error: gst.message, code: gst.code }, { status: 422 });
+    const file = fd.get('image') as File | null;
+    if (file && file.size > 0) imageUrl = await storeProductImage(workspaceId, file);
 
-    const file = formData.get('image') as File | null;
-    let imageUrl = null;
-
-    if (file && file.size > 0) {
-      const ext = path.extname(file.name).toLowerCase();
-      if (!isAllowedProductImageExtension(ext)) {
-        return NextResponse.json({ error: "Invalid image format. Allowed: JPG, PNG, WEBP" }, { status: 400 });
-      }
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-
-      const isSafe = await scanBuffer(buffer);
-      if (!isSafe) {
-        return NextResponse.json({ error: "Malware detected in uploaded file." }, { status: 400 });
-      }
-
-      const sniffed = sniffAllowedContent(buffer);
-      if (!sniffed || (sniffed !== 'png' && sniffed !== 'jpeg' && sniffed !== 'webp')) {
-        return NextResponse.json({ error: "Unsupported or unsafe image content." }, { status: 415 });
-      }
-      if (sniffed === 'jpeg' && ext !== '.jpg' && ext !== '.jpeg') {
-        return NextResponse.json({ error: "Image content did not match expected JPEG type." }, { status: 415 });
-      }
-
-      const dir = buildPrivatePath('products', [workspaceId]);
-      await ensureDir(dir);
-      const storedName = uniqueStoredName(`product-${uuidv4()}`, ext);
-      const filepath = path.join(dir, storedName);
-      fs.writeFileSync(filepath, buffer, { mode: 0o600 });
-      imageUrl = `/products/${workspaceId}/${storedName}`;
-    }
-
-    const status = currentStock === 0 ? "OUT_OF_STOCK" : (currentStock <= safetyStock ? "LOW_STOCK" : "IN_STOCK");
-
-    const newProduct = await prisma.product.create({
-      data: {
-        workspaceId,
-        sku,
-        name,
-        description: description || null,
-        category: category || null,
-        unit,
-        baselinePrice,
-        costPrice,
-        hsnCode: gst.hsnCode,
-        gstRate: gst.gstRate,
-        currentStock,
-        safetyStock,
-        status,
-        barcode: barcode || null,
-        location: location || null,
-        imageUrl,
-      }
-    });
-
-    // Record the initial stock entry as an inventory movement for full audit trail.
-    if (currentStock > 0) {
-      await prisma.inventoryMovement.create({
-        data: {
-          workspaceId,
-          productId: newProduct.id,
-          type: "IN",
-          quantity: currentStock,
-          reason: "Initial Stock Entry",
-        },
+    const product = await prisma.$transaction(async (tx) => {
+      const created = await tx.product.create({
+        data: { workspaceId, ...d, hsnCode: gst.hsnCode, gstRate: gst.gstRate, currentStock: 0, status: stockStatus(0, d.safetyStock), imageUrl },
       });
-    }
-
-    // New products affect operations.lowStockCount on the dashboard.
-    try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
-    } catch (err) {
-      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'product', action: 'create', error: String(err) });
-    }
-
-    return NextResponse.json({ success: true, product: newProduct });
-  } catch (error: unknown) {
-    if (getErrorCode(error) === 'P2002') {
-      return NextResponse.json({ error: "A product with this SKU already exists" }, { status: 409 });
-    }
-    console.error("[INVENTORY_PRODUCTS_POST]", error);
-    return NextResponse.json({ error: "Failed to create product" }, { status: 500 });
+      if (openingStock > 0) await applyStockChange(tx, { workspaceId, productId: created.id, delta: openingStock, type: 'IN', reason: 'Opening stock', unitCost: d.costPrice, userId });
+      return tx.product.findFirstOrThrow({ where: { id: created.id } });
+    });
+    invalidateDashboardCacheForWorkspace(workspaceId);
+    void logActivity({ workspaceId, action: 'inventory.product_created', status: 'SUCCESS', actor: { userId, email }, entity: { type: 'product', id: product.id }, metadata: { sku: product.sku, openingStock } });
+    return NextResponse.json({ success: true, product }, { status: 201 });
+  } catch (e) {
+    if (imageUrl && workspaceForCleanup) await removeProductImage(workspaceForCleanup, imageUrl);
+    if (e && typeof e === 'object' && (e as { code?: string }).code === 'P2002') return inventoryErrorResponse(new InventoryError('DUPLICATE_SKU', 'A product with this SKU already exists.'), 'products.create');
+    return inventoryErrorResponse(e, 'products.create');
   }
 }

@@ -32,7 +32,7 @@ export function InventoryDetailSheet({ open, onOpenChange, product }: InventoryD
     try {
       const res = await fetch(`/api/inventory/movements?productId=${productId}`);
       const data = await res.json();
-      setMovements(Array.isArray(data) ? data : []);
+      setMovements(Array.isArray(data?.items) ? data.items : []);
     } catch (err) {
       console.error(err);
     } finally {

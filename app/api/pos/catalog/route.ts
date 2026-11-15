@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       })));
     } else {
       const products = await prisma.product.findMany({
-        where: { workspaceId },
+        where: { workspaceId, archivedAt: null },
         select: { id: true, name: true, baselinePrice: true, description: true, currentStock: true }
       });
       return NextResponse.json(products.map(p => ({

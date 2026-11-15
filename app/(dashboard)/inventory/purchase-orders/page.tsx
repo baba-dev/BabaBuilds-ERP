@@ -47,7 +47,7 @@ export default function PurchaseOrdersHub() {
       if (!res.ok) {
         throw new Error(getApiErrorMessage(data, "Failed to load Purchase Orders"));
       }
-      setPos(Array.isArray(data) ? data : []);
+      setPos(Array.isArray(data?.items) ? data.items : []);
     } catch (err) {
       console.error(err);
       toast.error("Failed to load Purchase Orders");

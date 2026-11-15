@@ -78,6 +78,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
         workspaceId: profile.workspaceId,
         id: { in: requestedProductIds },
         showInShop: true,
+        archivedAt: null,
         currentStock: { gt: 0 },
         status: { in: ['IN_STOCK', 'LOW_STOCK'] },
       },

@@ -66,9 +66,9 @@ export default function InventoryHub() {
 
       const res = await fetch(url.toString());
       const data = await res.json();
-      const cursorHeader = res.headers.get('X-Next-Cursor');
+      const cursorHeader: string | null = data?.nextCursor ?? null;
 
-      const rows = Array.isArray(data) ? data : [];
+      const rows = Array.isArray(data?.items) ? data.items : [];
       setProducts((prev) => (mode === 'more' ? [...prev, ...rows] : rows));
       const next = cursorHeader && cursorHeader.length > 0 ? cursorHeader : null;
       nextCursorRef.current = next;
