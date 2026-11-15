@@ -22,7 +22,7 @@ export function rupeesInWords(amount: number): string {
   return `${words} Rupees${paise ? ` and ${below100(paise)} Paise` : ''} Only`;
 }
 
-const safe = (s: string) => s.replace(/[^\x20-\x7E -ÿ]/g, '?');
+const safe = (s: string) => s.replace(/[^\x20-\x7E\xA0-\xFF]/g, '?');
 const money = (v: number) => v.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export type PayslipPdfInput = {
