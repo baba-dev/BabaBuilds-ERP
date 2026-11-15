@@ -1,4 +1,5 @@
 import type { DemoTemplateDefinition } from "@/lib/demo/templates/types";
+import { seedDemoCompensation } from "@/lib/demo/payroll-demo";
 
 export const softwareCompanyTemplate: DemoTemplateDefinition = {
   key: "software_company",
@@ -135,48 +136,7 @@ export const softwareCompanyTemplate: DemoTemplateDefinition = {
       select: { id: true, firstName: true, lastName: true, email: true },
     });
 
-    const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    const period = await tx.payrollPeriod.create({
-      data: {
-        workspaceId,
-        startDate: periodStart,
-        endDate: periodEnd,
-        status: "OPEN",
-      },
-      select: { id: true },
-    });
-
-    const run = await tx.payrollRun.create({
-      data: {
-        workspaceId,
-        periodId: period.id,
-        version: 1,
-        status: "APPROVED",
-        totalEarnings: 8000,
-        totalDeductions: 1200,
-        totalEmployerCosts: 900,
-        totalNetPay: 6800,
-        generatedByUserId: userId,
-        approvedAt: now,
-        employeeSnapshots: {
-          create: [
-            {
-              employeeId: employee.id,
-              employeeCode: "EMP-001",
-              firstName: employee.firstName,
-              lastName: employee.lastName,
-              email: employee.email,
-              departmentName: "Engineering",
-              designation: "Senior Engineer",
-              location: "San Francisco",
-              baseSalary: 8000,
-            },
-          ],
-        },
-      },
-      select: { id: true },
-    });
+    await seedDemoCompensation(tx, workspaceId, userId, [{ employeeId: employee.id, name: "Ava Nguyen", annualCtc: 2400000, esi: false }]);
 
     // Minimal documents + OCR history
     const doc = await tx.document.create({
@@ -235,7 +195,7 @@ export const softwareCompanyTemplate: DemoTemplateDefinition = {
         closingCash: 31200,
         totalProjectedInflows: 68000,
         totalProjectedOutflows: 61800,
-        assumptionsJson: { note: "Seeded demo snapshot", runId: run.id },
+        assumptionsJson: { note: "Seeded demo snapshot", payroll: "demo" },
       },
     });
 

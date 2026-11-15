@@ -1,4 +1,5 @@
 import type { DemoTemplateDefinition } from "@/lib/demo/templates/types";
+import { seedDemoCompensation } from "@/lib/demo/payroll-demo";
 
 export const contractorBuilderTemplate: DemoTemplateDefinition = {
   key: "contractor_builder",
@@ -231,29 +232,7 @@ export const contractorBuilderTemplate: DemoTemplateDefinition = {
       ],
     });
 
-    const payrollPeriod = await tx.payrollPeriod.create({
-      data: {
-        workspaceId,
-        startDate: new Date(now.getFullYear(), now.getMonth(), 1),
-        endDate: new Date(now.getFullYear(), now.getMonth() + 1, 0),
-        status: "OPEN",
-      },
-      select: { id: true },
-    });
-
-    await tx.payrollRun.create({
-      data: {
-        workspaceId,
-        periodId: payrollPeriod.id,
-        version: 1,
-        status: "DRAFT",
-        totalEarnings: 58000,
-        totalDeductions: 4500,
-        totalEmployerCosts: 2900,
-        totalNetPay: 53500,
-        generatedByUserId: userId,
-      },
-    });
+    await seedDemoCompensation(tx, workspaceId, userId, [{ employeeId: employee.id, name: `${employee.firstName} ${employee.lastName}`, annualCtc: 720000, ptState: "MH", esi: false }]);
 
     const document = await tx.document.create({
       data: {

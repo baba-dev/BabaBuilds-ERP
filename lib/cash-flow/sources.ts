@@ -393,7 +393,7 @@ export async function loadForecastSourceData(args: {
     }),
     // Recent payroll runs, including ones before the horizon: the next ones are projected from them.
     prisma.accountingTransaction.findMany({
-      where: { workspaceId, sourceTable: "PAYROLL_RUN", postedAt: { gte: new Date(startDate.getTime() - 120 * 86_400_000), lte: endDate } },
+      where: { workspaceId, sourceTable: "PAYROLL_PAYOUT", postedAt: { gte: new Date(startDate.getTime() - 120 * 86_400_000), lte: endDate } },
       orderBy: [{ postedAt: "desc" }, { id: "asc" }],
       take: 12,
       select: { id: true, sourceId: true, sourceRef: true, postedAt: true, postingCurrency: true, entries: { where: { accountCode: "1005_CASH_BANK_CLEARING", side: "CREDIT" }, select: { amount: true } } },
@@ -441,9 +441,24 @@ export async function loadForecastSourceData(args: {
     console.error("Forecast: purchase order bills unavailable", error);
   }
 
+  // Money payroll already owes: statutory payments not yet made, and salaries on posted runs not yet paid.
+  let payrollCommitments: NonNullable<ForecastSourceData["payrollCommitments"]> = [];
+  try {
+    const [dues, unpaidRuns] = await Promise.all([
+      prisma.payrollRemittance.findMany({ where: { workspaceId, status: "DUE", dueDate: { lte: endDate } }, select: { id: true, kind: true, amount: true, dueDate: true, period: { select: { startDate: true } } } }),
+      prisma.payrollRun.findMany({ where: { workspaceId, status: "POSTED", disbursedAt: null }, select: { id: true, period: { select: { startDate: true } }, lineItems: { where: { payoutStatus: { not: "PAID" } }, select: { netPay: true } } } }),
+    ]);
+    payrollCommitments = [
+      ...dues.map((d) => ({ key: `remit:${d.id}`, kind: d.kind, title: `${d.kind} · ${d.period.startDate.toISOString().slice(0, 7)}`, amount: toDecimal(d.amount), date: d.dueDate < startDate ? startDate : d.dueDate, overdue: d.dueDate < startDate })),
+      ...unpaidRuns.map((r) => ({ key: `salary:${r.id}`, kind: "SALARY", title: `Salaries · ${r.period.startDate.toISOString().slice(0, 7)}`, amount: r.lineItems.reduce((sum, l) => sum.plus(toDecimal(l.netPay)), new Prisma.Decimal(0)), date: startDate, overdue: false })).filter((r) => r.amount.gt(0)),
+    ];
+  } catch (error) {
+    console.error("Forecast: payroll commitments unavailable", error);
+  }
+
   const payrollRows = payrollTransactions.map((row) => ({
     accountingTransactionId: row.id,
-    payrollRunId: row.sourceId,
+    payrollRunId: row.sourceId.split(":")[0] ?? row.sourceId,
     postedAt: row.postedAt,
     amount: row.entries.reduce((sum, entry) => sum.plus(toDecimal(entry.amount)), new Prisma.Decimal(0)),
     currency: row.postingCurrency,
@@ -481,6 +496,7 @@ export async function loadForecastSourceData(args: {
     manualAdjustments,
     payrollOutflows: payrollRows.filter((r) => r.postedAt >= startDate),
     payrollHistory: payrollRows.map((r) => ({ runId: r.payrollRunId, postedAt: r.postedAt, amount: r.amount })),
+    payrollCommitments,
     recurringExpenses: recurring.map((r) => ({ id: r.id, vendor: r.vendor, category: r.category, amount: toDecimal(r.amount), frequency: r.frequency, nextRunDate: r.nextRunDate, endDate: r.endDate, dueInDays: r.dueInDays, paid: r.paymentStatus !== "UNPAID" })),
     workspaceDefaults: { invoicePaymentTermsDays: 15, minimumCashThreshold: 0 },
     debug: {
@@ -573,13 +589,20 @@ export function buildForecastLinesFromSources(args: {
     const onBank = bankOutflows.some((t) => withinDays(t.date, posting.postedAt, 5) && toDecimal(t.amount).abs().minus(amount).abs().lte(amount.mul(0.03)));
     if (!onBank) lines.push(payrollOutflowToForecastLine({ posting, scenarioTag }));
   }
-  for (const p of projectPayroll(sources.payrollHistory ?? [], start, end, sources.payrollOutflows ?? [])) {
+  for (const p of projectPayroll(sources.payrollHistory ?? [], start, end, [...(sources.payrollOutflows ?? []), ...(sources.payrollCommitments ?? []).filter((c) => c.kind === "SALARY").map((c) => ({ postedAt: c.date }))])) {
     lines.push({
       direction: "OUTFLOW", sourceType: "PAYROLL", sourceId: `payroll-forecast:${p.date.toISOString().slice(0, 7)}`, amount: p.amount, expectedDate: p.date, confidence: 0.85, scenarioTag, classification: "PREDICTED",
       title: "Payroll (projected)", explanation: `Projected from your last ${p.basedOn} payroll run${p.basedOn > 1 ? "s" : ""}.`, metadataJson: { projected: true, basedOn: p.basedOn },
     });
   }
 
+  for (const c of sources.payrollCommitments ?? []) {
+    lines.push({
+      direction: "OUTFLOW", sourceType: "PAYROLL", sourceId: c.key, amount: toDecimal(c.amount).abs(), expectedDate: c.date, confidence: 1, scenarioTag, classification: "COMMITTED",
+      title: c.title, explanation: c.kind === "SALARY" ? "Salaries on a posted payroll run that are not recorded as paid yet." : "Deducted from salaries and owed to government. Due on the statutory date.",
+      metadataJson: { kind: c.kind, overdue: c.overdue },
+    });
+  }
   for (const payment of sources.gstPayments ?? []) lines.push(gstPaymentToForecastLine({ payment, scenarioTag }));
 
   for (const bill of sources.payables ?? []) {

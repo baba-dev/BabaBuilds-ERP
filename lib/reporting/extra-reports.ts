@@ -59,6 +59,23 @@ export const EXTRA_REPORTS: Array<Omit<ReportDef, 'lineage'>> = [
     },
   },
   {
+    id: 'payroll_statutory', category: 'Operations', title: 'Payroll statutory dues', description: 'PF, ESI, professional tax and TDS deducted from salaries, with what has been paid to government and what is still owed.', period: 'range', comparable: false, requires: 'payroll.view',
+    async build(ctx: Ctx) {
+      const now = ctx.now.getTime();
+      const items = await prisma.payrollRemittance.findMany({ where: { workspaceId: ctx.workspaceId, period: dateWhere('startDate', ctx.range) }, select: { kind: true, amount: true, dueDate: true, status: true, paidAt: true, reference: true, period: { select: { startDate: true } } }, orderBy: [{ period: { startDate: 'asc' } }, { kind: 'asc' }], take: 500 });
+      const rows: Row[] = items.map((i) => ({ month: month(i.period.startDate), obligation: i.kind, amount: r2(num(i.amount)), dueDate: iso(i.dueDate), status: i.status === 'PAID' ? 'PAID' : i.dueDate.getTime() < now ? 'OVERDUE' : 'DUE', paidOn: i.paidAt ? iso(i.paidAt) : null, _href: '/payroll?tab=statutory' }));
+      const owed = rows.filter((r) => r.status !== 'PAID');
+      const total = rows.reduce((s, r) => s + num(r.amount), 0);
+      const outstanding = owed.reduce((s, r) => s + num(r.amount), 0);
+      return {
+        columns: [{ key: 'month', format: 'text' }, { key: 'obligation', format: 'text' }, { key: 'amount', format: 'currency' }, { key: 'dueDate', format: 'date' }, { key: 'status', format: 'text' }, { key: 'paidOn', format: 'date' }],
+        rows, totals: { month: null, obligation: null, amount: r2(total), dueDate: null, status: null, paidOn: null },
+        kpis: [{ key: 'deducted', value: r2(total), format: 'currency', upGood: false }, { key: 'outstanding', value: r2(outstanding), format: 'currency', upGood: false }, { key: 'overdue', value: rows.filter((r) => r.status === 'OVERDUE').length, format: 'number', upGood: false }],
+        chart: null, notes: ['payrollPostedOnly'], truncated: items.length >= 500,
+      };
+    },
+  },
+  {
     id: 'inventory_valuation', category: 'Operations', title: 'Inventory valuation', description: 'Stock on hand at cost, with items at or below their safety level.', period: 'asof', comparable: false, requires: 'inventory.view',
     async build(ctx: Ctx) {
       const items = await prisma.product.findMany({ where: { workspaceId: ctx.workspaceId }, select: { name: true, sku: true, currentStock: true, safetyStock: true, costPrice: true }, take: 5000 });

@@ -7936,7 +7936,10 @@
       "year": "Year",
       "taxRate": "Tax rate (%)",
       "itcStatus": "Input credit status",
-      "all": "Total"
+      "all": "Total",
+      "obligation": "Obligation",
+      "paidOn": "Paid on",
+      "deducted": "Deducted from salaries"
     },
     "reports": {
       "pnl": {
@@ -8062,6 +8065,10 @@
       "custom": {
         "title": "Custom report",
         "desc": "Choose what to measure, how to group it and which records to include."
+      },
+      "payroll_statutory": {
+        "title": "Payroll statutory dues",
+        "desc": "PF, ESI, professional tax and TDS deducted from salaries, with what has been paid to government and what is still owed."
       }
     },
     "note": {
@@ -8136,7 +8143,12 @@
       "inputBlocked": "Input credit, blocked",
       "OUT_OF_STOCK": "Out of stock",
       "LOW_STOCK": "Low stock",
-      "IN_STOCK": "In stock"
+      "IN_STOCK": "In stock",
+      "PF": "Provident fund",
+      "ESI": "ESI",
+      "PT": "Professional tax",
+      "TDS": "Income tax (TDS)",
+      "DUE": "Due"
     },
     "paused": "paused",
     "onlyMe": "Only me",
@@ -8265,7 +8277,506 @@
       "Proposal": "Proposals",
       "InvoiceEvent": "Collections activity",
       "CashForecastSnapshot": "Saved forecasts",
-      "CompanyGroup": "Company group"
+      "CompanyGroup": "Company group",
+      "PayrollRemittance": "Payroll statutory payments"
+    }
+  },
+  "PayrollHub": {
+    "title": "Payroll",
+    "subtitle": "Pay your people on time, with the right PF, ESI, professional tax and TDS, and everything booked to your accounts.",
+    "settings": "Settings",
+    "refresh": "Refresh",
+    "retry": "Try again",
+    "loadFailed": "Payroll could not be loaded.",
+    "common": {
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "tab": {
+      "overview": "Overview",
+      "people": "People",
+      "statutory": "Statutory",
+      "mine": "My payslips"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "REVIEW": "In review",
+      "APPROVED": "Approved",
+      "POSTED": "Posted",
+      "PAID": "Paid"
+    },
+    "kind": {
+      "PF": "Provident fund",
+      "ESI": "ESI",
+      "PT": "Professional tax",
+      "TDS": "Income tax (TDS)"
+    },
+    "overview": {
+      "fy": "Financial year {fy}",
+      "heroTitle": "{month} payroll",
+      "heroEmptyTitle": "Set up your team to run payroll",
+      "heroEmptyBody": "Add your people with their salary structure, PAN and bank details. Then one click works out everyone's pay, deductions and tax.",
+      "heroReady": "{count, plural, one {# person is} other {# people are}} ready. Add bonuses or unpaid days, check everything, then calculate.",
+      "heroInProgress": "This month's run is {status}. Pick up where you left off.",
+      "addPeople": "Add your people",
+      "continueRun": "Continue this run",
+      "runPayroll": "Run payroll for {month}",
+      "peopleGaps": "{count, plural, one {# person needs} other {# people need}} attention",
+      "workforceOn": "Loss of pay is picked up automatically from Workforce attendance and approved leave.",
+      "workforceOff": "Workforce is off, so you enter unpaid days by hand when you run payroll.",
+      "trend": "Payroll cost by month",
+      "trendHint": "What employees take home, what is deducted, and what you pay on top.",
+      "trendEmpty": "The chart appears after your first payroll run.",
+      "series": {
+        "net": "Take-home",
+        "deductions": "Deductions",
+        "employer": "Employer cost"
+      },
+      "dues": "Owed to government",
+      "seeAll": "See all",
+      "duesNone": "Nothing is due right now.",
+      "dueOn": "Due {date}",
+      "overdue": "Overdue since {date}",
+      "runs": "Pay runs",
+      "runsEmpty": "No payroll has been run yet.",
+      "runMeta": "{count, plural, one {# person} other {# people}} · {net} paid",
+      "noRun": "No run yet",
+      "errors": "{count, plural, one {# problem} other {# problems}}",
+      "open": "Open",
+      "departments": "Cost by department",
+      "departmentsHint": "Latest run, pay plus employer cost.",
+      "departmentsEmpty": "Departments appear once you assign them to people.",
+      "general": "General"
+    },
+    "kpi": {
+      "gross": "Gross pay",
+      "net": "Paid to employees",
+      "employer": "Employer cost",
+      "headcount": "People",
+      "perHead": "Cost per person",
+      "fyToDate": "This financial year",
+      "runs": "{count, plural, one {# run} other {# runs}}",
+      "employerHint": "PF, pension, EDLI and ESI",
+      "paid": "Paid in the latest run",
+      "perHeadHint": "Pay plus employer cost"
+    },
+    "people": {
+      "add": "Add employee",
+      "search": "Search by name, code or department",
+      "emptyTitle": "Your team starts here",
+      "emptyBody": "Add each person with their salary, tax regime, PAN, UAN and bank account. You can build the salary breakup from a yearly CTC in one click.",
+      "noMatch": "Nobody matches that filter.",
+      "noRole": "No role set",
+      "filter": {
+        "all": "Everyone",
+        "READY": "Ready",
+        "ATTENTION": "Needs attention",
+        "NO_PAY_STRUCTURE": "No pay structure",
+        "exited": "Exited"
+      },
+      "readiness": {
+        "READY": "Ready",
+        "ATTENTION": "Needs attention",
+        "NO_PAY_STRUCTURE": "No pay structure"
+      },
+      "col": {
+        "person": "Person",
+        "department": "Department",
+        "ctc": "Yearly CTC",
+        "monthly": "Monthly gross",
+        "status": "Status"
+      },
+      "gap": {
+        "NO_BANK": "No bank details yet",
+        "NO_PAN": "No PAN: tax is deducted at the higher rate"
+      }
+    },
+    "person": {
+      "addTitle": "Add employee",
+      "addHint": "Start with the basics. You can add the pay structure now or later.",
+      "editTitle": "Employee",
+      "editHint": "A change to pay applies from the date you choose and keeps the old structure in history.",
+      "tab": {
+        "details": "Details",
+        "pay": "Pay",
+        "tax": "Tax and statutory",
+        "bank": "Bank",
+        "history": "History"
+      },
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "emailHint": "Used to email payslips.",
+      "phone": "Phone",
+      "employeeCode": "Employee code",
+      "location": "Location",
+      "joinDate": "Joining date",
+      "exitDate": "Last working day",
+      "exitHint": "Pay is prorated and remaining tax is settled in that month.",
+      "department": "Department",
+      "designation": "Designation",
+      "status": "Status",
+      "none": "None",
+      "statusValue": {
+        "ACTIVE": "Active",
+        "ON_LEAVE": "On leave",
+        "INACTIVE": "Exited"
+      },
+      "saved": "Saved",
+      "saveFailed": "Could not save. Please try again.",
+      "loadFailed": "Could not load this employee.",
+      "previewFailed": "Could not build the preview.",
+      "duplicateCode": "Another employee already uses that code.",
+      "readOnly": "You can view this, but not change it.",
+      "noPayYet": "No pay structure yet: this person will be left out of payroll."
+    },
+    "pay": {
+      "builderTitle": "Build from yearly CTC",
+      "builderHint": "Splits CTC into basic, HRA and a balancing special allowance. The employer's PF sits inside CTC.",
+      "annualCtc": "Yearly CTC",
+      "basicPct": "Basic % of CTC",
+      "hraPct": "HRA % of basic",
+      "build": "Build",
+      "components": "Monthly components",
+      "componentsEmpty": "No components yet. Build from CTC above, or add them one by one.",
+      "monthlyGross": "Monthly gross {amount}",
+      "name": "Name",
+      "monthly": "Per month",
+      "taxable": "Taxable",
+      "prorate": "Prorated",
+      "pfWage": "PF wage",
+      "remove": "Remove component",
+      "addComponent": "Add component",
+      "effectiveFrom": "Effective from",
+      "effectiveHint": "Earlier months keep the old pay.",
+      "takeHome": "Estimated take-home for a full month",
+      "gross": "Gross",
+      "deductions": "Deductions",
+      "net": "Take-home",
+      "employerCostNote": "Employer contributions on top: {amount} a month."
+    },
+    "tax": {
+      "regime": "Tax regime",
+      "regimeHint": "TDS is worked out for the year under this regime.",
+      "regimeNew": "New regime",
+      "regimeOld": "Old regime",
+      "oldDeductions": "Yearly deductions declared",
+      "oldDeductionsHint": "80C, 80D, home-loan interest and HRA exemption. Employee PF is added automatically.",
+      "pan": "PAN",
+      "panHint": "Without a PAN, tax is deducted at 20% or more.",
+      "panKept": "Saved: XXXXXX{last4}. Leave blank to keep it.",
+      "ptState": "Professional tax state",
+      "ptHint": "Built-in slabs for states that collect it monthly.",
+      "ptNone": "Not set",
+      "ptNoTax": "No professional tax in my state",
+      "pf": "Provident fund",
+      "pfHint": "12% of PF wages from the employee, and 12% from you.",
+      "pfActual": "PF on actual basic",
+      "pfActualHint": "Off: capped at the 15,000 wage ceiling.",
+      "esi": "ESI",
+      "esiHint": "Applies when monthly gross is 21,000 or less.",
+      "uan": "UAN",
+      "esiNumber": "ESI number"
+    },
+    "bank": {
+      "privacy": "Account numbers are encrypted. Only the last four digits are shown, and the full number is used only when you download a bank file.",
+      "mode": "Pay by",
+      "modeValue": {
+        "BANK_TRANSFER": "Bank transfer",
+        "UPI": "UPI",
+        "CHEQUE": "Cheque",
+        "CASH": "Cash"
+      },
+      "holder": "Account holder",
+      "bankName": "Bank",
+      "accountNumber": "Account number",
+      "accountKept": "Saved: ending {last4}. Leave blank to keep it.",
+      "ifsc": "IFSC"
+    },
+    "history": {
+      "revisions": "Pay history",
+      "noRevisions": "No pay structure has been saved yet.",
+      "ctc": "CTC {amount}",
+      "current": "Current",
+      "from": "From {date}",
+      "loans": "Loans and advances",
+      "noLoans": "No loans or advances.",
+      "emi": "{amount} a month",
+      "loanStatus": {
+        "ACTIVE": "Recovering",
+        "CLOSED": "Closed"
+      }
+    },
+    "statutory": {
+      "title": "Statutory payments",
+      "body": "What you have deducted from salaries and owe to government. Each run creates these when you post it; mark them paid once you have deposited them.",
+      "owed": "Owed now",
+      "overdue": "Overdue",
+      "hint": {
+        "PF": "Due by the 15th of next month",
+        "ESI": "Due by the 15th of next month",
+        "PT": "Due by month end, state rules vary",
+        "TDS": "Due by the 7th of next month"
+      },
+      "list": "Payments",
+      "empty": "Nothing to pay yet. Dues appear when you post a payroll run.",
+      "markPaid": "Mark paid",
+      "statusPaid": "Paid",
+      "statusDue": "Due",
+      "paidOn": "Paid {date}",
+      "paid": "Payment recorded",
+      "payFailed": "Could not record the payment.",
+      "payTitle": "Record {kind} payment",
+      "payHint": "This books {amount} as paid from your bank and clears the amount owed in your ledger.",
+      "reference": "Challan or reference number",
+      "referencePlaceholder": "Optional",
+      "confirm": "Record payment"
+    },
+    "mine": {
+      "body": "Your approved payslips. Only you can see these.",
+      "emptyTitle": "No payslips yet",
+      "emptyBody": "Your payslips appear here once a payroll run is approved.",
+      "net": "Net pay",
+      "notPaid": "Not paid yet",
+      "paidOn": "Paid {date}",
+      "download": "Download"
+    },
+    "wizard": {
+      "title": "Run payroll for {month}",
+      "subtitle": "Add anything one-off, check for problems, then calculate. Nothing is booked until you approve and post.",
+      "back": "Back to payroll",
+      "step": {
+        "inputs": "Inputs",
+        "check": "Check",
+        "calculate": "Calculate"
+      },
+      "month": "Pay month",
+      "year": "Year",
+      "autoHint": "Salary, PF, ESI, professional tax and TDS are worked out from each person's pay structure. Unpaid days come from attendance and approved leave when Workforce is on.",
+      "adjustments": "One-off items this month",
+      "adjustmentsHint": "Bonuses, arrears, reimbursements, extra deductions, or unpaid days to add to the automatic ones.",
+      "employee": "Employee",
+      "kind": "Type",
+      "kindValue": {
+        "BONUS": "Bonus",
+        "ARREARS": "Arrears",
+        "EARNING": "Other earning",
+        "REIMBURSEMENT": "Reimbursement (not taxed)",
+        "DEDUCTION": "Deduction",
+        "LOP_DAYS": "Unpaid days"
+      },
+      "label": "Description",
+      "amount": "Amount",
+      "days": "Days",
+      "daysValue": "{count, plural, one {# day} other {# days}}",
+      "add": "Add",
+      "remove": "Remove",
+      "adjEmpty": "No one-off items. Everything comes from pay structures.",
+      "adjIncomplete": "Choose a person, describe it and enter an amount.",
+      "adjFailed": "Could not add that item.",
+      "continue": "Check everything",
+      "previewFailed": "Could not check payroll.",
+      "people": "People",
+      "gross": "Gross pay",
+      "net": "Take-home",
+      "employer": "Employer cost",
+      "checks": "Before you calculate",
+      "allClear": "Everything looks good.",
+      "variance": "Changes since last month",
+      "varianceHint": "Take-home that moved by a quarter or more, and people who joined or left.",
+      "varianceKind": {
+        "NEW": "new",
+        "GONE": "not in this run",
+        "CHANGED": "changed"
+      },
+      "preview": "Everyone's pay",
+      "lop": "{days} unpaid",
+      "edit": "Back to inputs",
+      "blocked": "{count, plural, one {# problem blocks} other {# problems block}} calculation",
+      "generate": "Calculate payroll",
+      "generated": "Payroll calculated",
+      "generateFailed": "Could not calculate payroll."
+    },
+    "run": {
+      "title": "{month} payroll",
+      "subtitle": "Version {version} · {count, plural, one {# person} other {# people}}",
+      "loadFailed": "This payroll run could not be loaded.",
+      "downloads": "Downloads",
+      "dl": {
+        "register": "Payroll register (Excel)",
+        "bank": "Bank payment file",
+        "ecr": "PF return file (ECR)",
+        "esi": "ESI contribution sheet"
+      },
+      "recalculate": "Recalculate",
+      "submit": "Submit for review",
+      "submitted": "Submitted for review",
+      "sendBack": "Send back",
+      "returned": "Sent back",
+      "approve": "Approve",
+      "approved": "Approved",
+      "post": "Post to ledger",
+      "posted": "Posted to your ledger",
+      "markPaid": "Record salaries paid",
+      "actionFailed": "That did not work. Please try again.",
+      "waitingApproval": "Waiting for someone with approval rights. You cannot approve a run you prepared yourself.",
+      "staleTitle": "Inputs changed after this run was calculated",
+      "staleBody": "Someone added an adjustment or changed a pay structure. Recalculate so the figures include it.",
+      "gross": "Gross pay",
+      "deductions": "Deductions",
+      "net": "Take-home",
+      "employer": "Employer cost",
+      "totalCost": "Total cost {amount}",
+      "sameAsLast": "Same as last month",
+      "vsLast": "vs last month",
+      "checks": "Checks ({count})",
+      "tab": {
+        "employees": "Employees",
+        "statutory": "Statutory",
+        "payout": "Payment",
+        "activity": "Activity"
+      },
+      "payment": "Payment",
+      "grossShort": "Gross {amount}",
+      "payout": {
+        "PENDING": "Pending",
+        "PAID": "Paid",
+        "FAILED": "Failed",
+        "HELD": "On hold"
+      },
+      "employeeEmployer": "Employee {employee} · employer {employer}",
+      "remittances": "Owed to government from this run",
+      "remittancesEmpty": "These appear when the run is posted to the ledger.",
+      "goStatutory": "Manage statutory payments",
+      "allPaidTitle": "Everyone has been paid",
+      "allPaidBody": "Salaries were recorded as paid on {date}.",
+      "payoutTitle": "Pay your people",
+      "payoutReady": "{count, plural, one {# salary} other {# salaries}} totalling {amount} still to pay. Download the bank file, pay it from your bank, then record it here.",
+      "payoutLocked": "Salaries can be paid once the run is approved and posted to the ledger.",
+      "payDialogTitle": "Record salaries as paid",
+      "payDialogBody": "{count, plural, one {# salary} other {# salaries}} totalling {amount} will be recorded as paid from your bank.",
+      "payReference": "Bank reference or batch number",
+      "payReferencePlaceholder": "Optional",
+      "confirmPaid": "Record as paid",
+      "paidDone": "Salaries recorded as paid",
+      "slipsTitle": "Payslips",
+      "slipsBody": "{sent} of {total} emailed.",
+      "sendSlips": "Email payslips",
+      "slipsSent": "{sent} sent, {skipped} skipped",
+      "event": {
+        "generated": "Calculated",
+        "submitted": "Submitted for review",
+        "approved": "Approved",
+        "posted": "Posted to the ledger",
+        "paid": "Salaries paid"
+      },
+      "employee": "Employee",
+      "earnings": "Earnings",
+      "deductionsTitle": "Deductions",
+      "employerTitle": "Employer contributions (not deducted from pay)",
+      "lopNote": "{days} unpaid days were taken off this month's pay.",
+      "ytdNote": "Earlier months this year were assumed at the current pay, so tax catches up over the months left.",
+      "paidTo": "Paid to {bank} XXXX{last4}",
+      "payslip": "Payslip PDF"
+    },
+    "issue": {
+      "more": "and {count} more",
+      "NO_EMPLOYEES": {
+        "title": "No one to pay",
+        "body": "No employee is active in this month. Add people and their pay structure first."
+      },
+      "NO_COMPENSATION": {
+        "title": "{count, plural, one {# person has} other {# people have}} no pay structure",
+        "body": "They are left out of this run. Add their pay under People."
+      },
+      "NO_BANK": {
+        "title": "{count, plural, one {# person has} other {# people have}} no bank details",
+        "body": "They will be missing from the bank payment file."
+      },
+      "NO_PAN": {
+        "title": "{count, plural, one {# person has} other {# people have}} no PAN",
+        "body": "Tax is deducted at the higher rate of 20% until a PAN is added."
+      },
+      "NO_UAN": {
+        "title": "{count, plural, one {# person has} other {# people have}} no UAN",
+        "body": "They will be left out of the PF return file."
+      },
+      "NO_ESI_NUMBER": {
+        "title": "{count, plural, one {# insured person has} other {# insured people have}} no ESI number",
+        "body": "They will be left out of the ESI sheet."
+      },
+      "NO_PT_STATE": {
+        "title": "{count, plural, one {# person has} other {# people have}} no professional tax state",
+        "body": "No professional tax is deducted for them."
+      },
+      "JOINER": {
+        "title": "{count, plural, one {# person joined} other {# people joined}} this month",
+        "body": "Their pay is prorated from the joining date."
+      },
+      "LEAVER": {
+        "title": "{count, plural, one {# person leaves} other {# people leave}} this month",
+        "body": "Pay is prorated to the last working day and remaining tax is settled now."
+      },
+      "ON_LEAVE_STATUS": {
+        "title": "{count, plural, one {# person is} other {# people are}} marked on leave",
+        "body": "They are still paid. Add unpaid days if some of the leave was without pay."
+      },
+      "YTD_ASSUMED": {
+        "title": "Earlier months of this year were assumed for {count, plural, one {# person} other {# people}}",
+        "body": "No earlier payroll is on record here, so tax is projected as if they were paid the same every month."
+      },
+      "PENDING_LEAVE": {
+        "title": "{count, plural, one {# person has} other {# people have}} leave waiting for a decision",
+        "body": "Approving or rejecting it may change their unpaid days."
+      },
+      "MISSING_ATTENDANCE": {
+        "title": "Attendance is missing for {count, plural, one {# person} other {# people}}",
+        "body": "Days with no record count as worked. Check Workforce if that is not right."
+      },
+      "DUPLICATE_BANK": {
+        "title": "{count, plural, one {# person shares} other {# people share}} a bank account with someone else",
+        "body": "Two employees on one account is a common sign of a typing mistake or fraud. Check before paying."
+      },
+      "ZERO_NET": {
+        "title": "{count, plural, one {# person has} other {# people have}} nothing left to take home",
+        "body": "Deductions take all of their pay. Review before continuing."
+      },
+      "NEGATIVE_NET": {
+        "title": "{count, plural, one {# person's} other {# people's}} deductions are higher than their pay",
+        "body": "Their take-home is set to zero. Fix the deductions."
+      },
+      "DEDUCTIONS_CAPPED": {
+        "title": "Some deductions were only partly taken for {count, plural, one {# person} other {# people}}",
+        "body": "Loan instalments and extra deductions never take pay below zero. The rest carries to the next month."
+      },
+      "LOP_EXCEEDS_DAYS": {
+        "title": "Unpaid days exceed the working days for {count, plural, one {# person} other {# people}}",
+        "body": "The excess is ignored. Check the days entered."
+      },
+      "ESI_ABOVE_LIMIT": {
+        "title": "{count, plural, one {# person is} other {# people are}} above the ESI wage limit",
+        "body": "No ESI is taken this month because pay is over 21,000."
+      },
+      "PT_STATE_NOT_MODELLED": {
+        "title": "Professional tax slabs are not built in for {count, plural, one {# person's state} other {# people's states}}",
+        "body": "Add their professional tax as a one-off deduction, or leave it out."
+      },
+      "NO_PAN_HIGHER_TDS": {
+        "title": "No PAN, so tax is at the higher rate",
+        "body": "Add a PAN to bring TDS down to the normal rate."
+      },
+      "NO_EARNINGS": {
+        "title": "No earnings this month",
+        "body": "Nothing is paid for this person this month."
+      },
+      "PF_NO_WAGES": {
+        "title": "PF is on but no component counts as PF wage",
+        "body": "Mark basic pay as PF wage in the pay structure."
+      },
+      "PT_NO_STATE": {
+        "title": "No professional tax state set",
+        "body": "No professional tax is deducted."
+      }
     }
   }
 }

@@ -2,6 +2,7 @@ import 'server-only';
 
 import { isModuleEnabled } from '@/lib/modules';
 import { prisma } from '@/lib/prisma';
+import { deriveLossOfPay, type LopResult } from './loss-of-pay';
 
 export type PayrollAdapterSource = 'WORKFORCE' | 'STANDALONE';
 
@@ -10,73 +11,6 @@ export type PayrollAdapterStatus = {
   source: PayrollAdapterSource;
   badgeLabel: string;
 };
-
-export type PayrollEmployeeInput = {
-  employeeId: string;
-  employeeCode: string | null;
-  firstName: string;
-  lastName: string;
-  email: string | null;
-  status: string;
-  joinDate: Date | null;
-  exitDate: Date | null;
-  departmentId: string | null;
-  designationId: string | null;
-};
-
-export type PayrollAttendanceInput = {
-  employeeId: string;
-  date: Date;
-  status: string;
-  checkInAt: Date | null;
-  checkOutAt: Date | null;
-  workedMinutes: number | null;
-};
-
-export type PayrollApprovedLeaveInput = {
-  employeeId: string;
-  leaveRequestId: string;
-  leaveTypeCode: string;
-  leaveTypeName: string;
-  startDate: Date;
-  endDate: Date;
-  days: number;
-  isPaid: boolean;
-};
-
-export type PayrollDepartmentInput = {
-  id: string;
-  name: string;
-};
-
-export type PayrollDesignationInput = {
-  id: string;
-  title: string;
-  level: number | null;
-};
-
-export type PayrollNormalizedInputBundle = {
-  status: PayrollAdapterStatus;
-  employees: PayrollEmployeeInput[];
-  attendance: PayrollAttendanceInput[];
-  approvedLeave: PayrollApprovedLeaveInput[];
-  orgMapping: {
-    departments: PayrollDepartmentInput[];
-    designations: PayrollDesignationInput[];
-  };
-};
-
-export type PayrollInputRange = {
-  periodStart: Date;
-  periodEnd: Date;
-};
-
-function normalizeWorkedMinutes(checkInAt: Date | null, checkOutAt: Date | null): number | null {
-  if (!checkInAt || !checkOutAt) return null;
-  const delta = checkOutAt.getTime() - checkInAt.getTime();
-  if (delta <= 0) return null;
-  return Math.floor(delta / 60000);
-}
 
 export async function getPayrollAdapterStatus(workspaceId: string): Promise<PayrollAdapterStatus> {
   const workforceModuleEnabled = await isModuleEnabled(workspaceId, 'WORKFORCE');
@@ -87,172 +21,73 @@ export async function getPayrollAdapterStatus(workspaceId: string): Promise<Payr
   };
 }
 
-async function loadFromWorkforce(
-  workspaceId: string,
-  range: PayrollInputRange,
-  status: PayrollAdapterStatus,
-): Promise<PayrollNormalizedInputBundle> {
-  const [employees, attendance, approvedLeave, departments, designations] = await Promise.all([
-    prisma.employee.findMany({
-      where: { workspaceId },
-      select: {
-        id: true,
-        employeeCode: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        status: true,
-        joinDate: true,
-        exitDate: true,
-        departmentId: true,
-        designationId: true,
-      },
-      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
-    }),
-    prisma.attendanceRecord.findMany({
-      where: {
-        workspaceId,
-        date: { gte: range.periodStart, lte: range.periodEnd },
-      },
-      select: {
-        employeeId: true,
-        date: true,
-        status: true,
-        checkInAt: true,
-        checkOutAt: true,
-      },
-      orderBy: [{ date: 'asc' }, { employeeId: 'asc' }],
-    }),
+export type WorkforceSignals = {
+  /** Loss of pay worked out from attendance and approved leave, by employee. */
+  lop: Map<string, LopResult>;
+  /** Leave requests still waiting for a decision that overlap the period, by employee. */
+  pendingLeave: Map<string, number>;
+};
+
+/** Attendance and leave for a pay month. Empty when the Workforce module is off: loss of pay is then entered by hand. */
+export async function loadWorkforceSignals(args: {
+  workspaceId: string;
+  employees: { id: string; joinDate: Date | null; exitDate: Date | null }[];
+  periodStart: Date;
+  periodEnd: Date;
+}): Promise<WorkforceSignals> {
+  const lop = new Map<string, LopResult>();
+  const pendingLeave = new Map<string, number>();
+  const { workspaceId, employees, periodStart, periodEnd } = args;
+  if (employees.length === 0 || !(await isModuleEnabled(workspaceId, 'WORKFORCE'))) return { lop, pendingLeave };
+
+  const ids = employees.map((e) => e.id);
+  const [schedule, holidays, attendance, leaves, pending] = await Promise.all([
+    prisma.workSchedule.findUnique({ where: { workspaceId }, select: { workingDays: true } }),
+    prisma.workforceHoliday.findMany({ where: { workspaceId }, select: { date: true, isRecurring: true, year: true } }),
+    prisma.attendanceRecord.findMany({ where: { workspaceId, employeeId: { in: ids }, date: { gte: periodStart, lte: periodEnd } }, select: { employeeId: true, date: true, status: true } }),
     prisma.leaveRequest.findMany({
-      where: {
-        workspaceId,
-        status: 'APPROVED',
-        startDate: { lte: range.periodEnd },
-        endDate: { gte: range.periodStart },
-      },
-      select: {
-        id: true,
-        employeeId: true,
-        startDate: true,
-        endDate: true,
-        days: true,
-        leaveType: {
-          select: {
-            code: true,
-            name: true,
-            isPaid: true,
-          },
-        },
-      },
-      orderBy: [{ startDate: 'asc' }, { employeeId: 'asc' }],
+      where: { workspaceId, employeeId: { in: ids }, status: 'APPROVED', startDate: { lte: periodEnd }, endDate: { gte: periodStart } },
+      select: { employeeId: true, startDate: true, endDate: true, days: true, leaveType: { select: { isPaid: true } } },
     }),
-    prisma.department.findMany({
-      where: { workspaceId },
-      select: { id: true, name: true },
-      orderBy: { name: 'asc' },
-    }),
-    prisma.designation.findMany({
-      where: { workspaceId },
-      select: { id: true, title: true, level: true },
-      orderBy: [{ level: 'asc' }, { title: 'asc' }],
+    prisma.leaveRequest.groupBy({
+      by: ['employeeId'],
+      where: { workspaceId, employeeId: { in: ids }, status: 'PENDING', startDate: { lte: periodEnd }, endDate: { gte: periodStart } },
+      _count: { _all: true },
     }),
   ]);
 
-  return {
-    status,
-    employees: employees.map((employee) => ({
-      employeeId: employee.id,
-      employeeCode: employee.employeeCode,
-      firstName: employee.firstName,
-      lastName: employee.lastName,
-      email: employee.email,
-      status: employee.status,
-      joinDate: employee.joinDate,
-      exitDate: employee.exitDate,
-      departmentId: employee.departmentId,
-      designationId: employee.designationId,
-    })),
-    attendance: attendance.map((row) => ({
-      employeeId: row.employeeId,
-      date: row.date,
-      status: row.status,
-      checkInAt: row.checkInAt,
-      checkOutAt: row.checkOutAt,
-      workedMinutes: normalizeWorkedMinutes(row.checkInAt, row.checkOutAt),
-    })),
-    approvedLeave: approvedLeave.map((leave) => ({
-      employeeId: leave.employeeId,
-      leaveRequestId: leave.id,
-      leaveTypeCode: leave.leaveType.code,
-      leaveTypeName: leave.leaveType.name,
-      startDate: leave.startDate,
-      endDate: leave.endDate,
-      days: leave.days,
-      isPaid: leave.leaveType.isPaid,
-    })),
-    orgMapping: {
-      departments,
-      designations,
-    },
-  };
-}
-
-async function loadStandalonePayrollEmployees(
-  workspaceId: string,
-  status: PayrollAdapterStatus,
-): Promise<PayrollNormalizedInputBundle> {
-  const workspaceUsers = await prisma.workspaceUser.findMany({
-    where: { workspaceId, isActive: true },
-    select: {
-      userId: true,
-      joinedAt: true,
-      user: {
-        select: {
-          name: true,
-          email: true,
-        },
-      },
-    },
-    orderBy: { joinedAt: 'asc' },
-  });
-
-  const employees = workspaceUsers.map((member) => {
-    const [firstName = 'Team', ...rest] = (member.user.name?.trim() || '').split(/\s+/).filter(Boolean);
-    return {
-      employeeId: member.userId,
-      employeeCode: null,
-      firstName,
-      lastName: rest.join(' ') || 'Member',
-      email: member.user.email,
-      status: 'ACTIVE',
-      joinDate: member.joinedAt,
-      exitDate: null,
-      departmentId: null,
-      designationId: null,
-    } satisfies PayrollEmployeeInput;
-  });
-
-  return {
-    status,
-    employees,
-    attendance: [],
-    approvedLeave: [],
-    orgMapping: {
-      departments: [],
-      designations: [],
-    },
-  };
-}
-
-export async function getNormalizedPayrollInputs(
-  workspaceId: string,
-  range: PayrollInputRange,
-): Promise<PayrollNormalizedInputBundle> {
-  const status = await getPayrollAdapterStatus(workspaceId);
-
-  if (status.workforceModuleEnabled) {
-    return loadFromWorkforce(workspaceId, range, status);
+  let workingDays = ['MON', 'TUE', 'WED', 'THU', 'FRI'];
+  try {
+    const parsed = JSON.parse(schedule?.workingDays ?? '[]');
+    if (Array.isArray(parsed) && parsed.length) workingDays = parsed.map(String);
+  } catch {
+    /* keep the default week */
   }
 
-  return loadStandalonePayrollEmployees(workspaceId, status);
+  const holidaySet = new Set<string>();
+  for (const h of holidays) {
+    if (h.isRecurring) {
+      for (const y of new Set([periodStart.getUTCFullYear(), periodEnd.getUTCFullYear()])) {
+        holidaySet.add(new Date(Date.UTC(y, h.date.getUTCMonth(), h.date.getUTCDate())).toISOString().slice(0, 10));
+      }
+    } else holidaySet.add(h.date.toISOString().slice(0, 10));
+  }
+
+  for (const e of employees) {
+    lop.set(
+      e.id,
+      deriveLossOfPay({
+        periodStart,
+        periodEnd,
+        workingDays,
+        holidays: holidaySet,
+        joinDate: e.joinDate,
+        exitDate: e.exitDate,
+        attendance: attendance.filter((a) => a.employeeId === e.id).map((a) => ({ date: a.date, status: a.status })),
+        leaves: leaves.filter((l) => l.employeeId === e.id).map((l) => ({ start: l.startDate, end: l.endDate, days: l.days, isPaid: l.leaveType.isPaid })),
+      }),
+    );
+  }
+  for (const p of pending) pendingLeave.set(p.employeeId, p._count._all);
+  return { lop, pendingLeave };
 }

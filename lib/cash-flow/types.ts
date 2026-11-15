@@ -121,6 +121,8 @@ export type ForecastSourceData = {
   gstPayments?: Array<{ id: string; periodKey: string; dueDate: Date; amount: Decimal; label: string; estimated: boolean }>;
   /** Recurring expense templates that are still running (cash-paid ones leave on their run date, bills on their due date). */
   recurringExpenses?: Array<{ id: string; vendor: string; category: string; amount: Decimal; frequency: string; nextRunDate: Date; endDate: Date | null; dueInDays: number | null; paid: boolean }>;
+  /** Statutory payments still due and salaries still to pay on posted payroll runs. */
+  payrollCommitments?: Array<{ key: string; kind: string; title: string; amount: Decimal; date: Date; overdue: boolean }>;
   /** Cash paid out by the last few payroll runs, newest first, to project the next ones. */
   payrollHistory?: Array<{ runId: string; postedAt: Date; amount: Decimal }>;
   /** Purchase orders that already have a bill, so the order is not counted a second time. */

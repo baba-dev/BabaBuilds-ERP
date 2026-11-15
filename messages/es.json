@@ -7965,7 +7965,10 @@
       "year": "Año",
       "taxRate": "Tipo de impuesto (%)",
       "itcStatus": "Estado del crédito fiscal",
-      "all": "Total"
+      "all": "Total",
+      "obligation": "Obligación",
+      "paidOn": "Pagado el",
+      "deducted": "Retenido de los sueldos"
     },
     "reports": {
       "pnl": {
@@ -8091,6 +8094,10 @@
       "custom": {
         "title": "Informe personalizado",
         "desc": "Elige qué medir, cómo agruparlo y qué registros incluir."
+      },
+      "payroll_statutory": {
+        "title": "Obligaciones legales de nómina",
+        "desc": "PF, ESI, impuesto profesional y TDS retenidos de los sueldos, con lo pagado al gobierno y lo que aún se debe."
       }
     },
     "note": {
@@ -8165,7 +8172,12 @@
       "inputBlocked": "Crédito fiscal bloqueado",
       "OUT_OF_STOCK": "Agotado",
       "LOW_STOCK": "Stock bajo",
-      "IN_STOCK": "En stock"
+      "IN_STOCK": "En stock",
+      "PF": "Fondo de previsión (PF)",
+      "ESI": "Seguro estatal (ESI)",
+      "PT": "Impuesto profesional",
+      "TDS": "Impuesto sobre la renta (TDS)",
+      "DUE": "Pendiente"
     },
     "paused": "en pausa",
     "onlyMe": "Solo yo",
@@ -8294,7 +8306,506 @@
       "Proposal": "Propuestas",
       "InvoiceEvent": "Actividad de cobranza",
       "CashForecastSnapshot": "Proyecciones guardadas",
-      "CompanyGroup": "Grupo de empresas"
+      "CompanyGroup": "Grupo de empresas",
+      "PayrollRemittance": "Pagos legales de nómina"
+    }
+  },
+  "PayrollHub": {
+    "title": "Nómina",
+    "subtitle": "Paga a tu equipo a tiempo, con el PF, ESI, impuesto profesional y TDS correctos, y todo registrado en tu contabilidad.",
+    "settings": "Ajustes",
+    "refresh": "Actualizar",
+    "retry": "Reintentar",
+    "loadFailed": "No se pudo cargar la nómina.",
+    "common": {
+      "cancel": "Cancelar",
+      "save": "Guardar"
+    },
+    "tab": {
+      "overview": "Resumen",
+      "people": "Personas",
+      "statutory": "Obligaciones legales",
+      "mine": "Mis nóminas"
+    },
+    "status": {
+      "DRAFT": "Borrador",
+      "REVIEW": "En revisión",
+      "APPROVED": "Aprobada",
+      "POSTED": "Contabilizada",
+      "PAID": "Pagada"
+    },
+    "kind": {
+      "PF": "Fondo de previsión (PF)",
+      "ESI": "Seguro estatal (ESI)",
+      "PT": "Impuesto profesional",
+      "TDS": "Impuesto sobre la renta (TDS)"
+    },
+    "overview": {
+      "fy": "Ejercicio {fy}",
+      "heroTitle": "Nómina de {month}",
+      "heroEmptyTitle": "Configura a tu equipo para ejecutar la nómina",
+      "heroEmptyBody": "Añade a tus empleados con su estructura salarial, PAN y datos bancarios. Luego, con un clic se calculan pagos, deducciones e impuestos.",
+      "heroReady": "{count, plural, one {# persona está lista} other {# personas están listas}}. Añade bonos o días sin sueldo, revisa todo y calcula.",
+      "heroInProgress": "La nómina de este mes está: {status}. Continúa donde lo dejaste.",
+      "addPeople": "Añadir personas",
+      "continueRun": "Continuar esta nómina",
+      "runPayroll": "Ejecutar nómina de {month}",
+      "peopleGaps": "{count, plural, one {# persona necesita} other {# personas necesitan}} atención",
+      "workforceOn": "Los días sin sueldo se toman automáticamente de la asistencia y las licencias aprobadas de Workforce.",
+      "workforceOff": "Workforce está desactivado: introduces los días sin sueldo a mano al ejecutar la nómina.",
+      "trend": "Costo de nómina por mes",
+      "trendHint": "Lo que cobran, lo que se deduce y lo que pagas además.",
+      "trendEmpty": "El gráfico aparece tras tu primera nómina.",
+      "series": {
+        "net": "Pago neto",
+        "deductions": "Deducciones",
+        "employer": "Costo del empleador"
+      },
+      "dues": "Pendiente con el gobierno",
+      "seeAll": "Ver todo",
+      "duesNone": "No hay nada pendiente ahora.",
+      "dueOn": "Vence el {date}",
+      "overdue": "Vencido desde el {date}",
+      "runs": "Nóminas",
+      "runsEmpty": "Todavía no se ha ejecutado ninguna nómina.",
+      "runMeta": "{count, plural, one {# persona} other {# personas}} · {net} pagado",
+      "noRun": "Sin nómina aún",
+      "errors": "{count, plural, one {# problema} other {# problemas}}",
+      "open": "Abrir",
+      "departments": "Costo por departamento",
+      "departmentsHint": "Última nómina, pago más costo del empleador.",
+      "departmentsEmpty": "Los departamentos aparecen al asignarlos a las personas.",
+      "general": "General"
+    },
+    "kpi": {
+      "gross": "Pago bruto",
+      "net": "Pagado a empleados",
+      "employer": "Costo del empleador",
+      "headcount": "Personas",
+      "perHead": "Costo por persona",
+      "fyToDate": "Este ejercicio",
+      "runs": "{count, plural, one {# nómina} other {# nóminas}}",
+      "employerHint": "PF, pensión, EDLI y ESI",
+      "paid": "Pagadas en la última nómina",
+      "perHeadHint": "Pago más costo del empleador"
+    },
+    "people": {
+      "add": "Añadir empleado",
+      "search": "Buscar por nombre, código o departamento",
+      "emptyTitle": "Tu equipo empieza aquí",
+      "emptyBody": "Añade a cada persona con su salario, régimen fiscal, PAN, UAN y cuenta bancaria. Puedes generar el desglose desde el CTC anual con un clic.",
+      "noMatch": "Nadie coincide con ese filtro.",
+      "noRole": "Sin cargo",
+      "filter": {
+        "all": "Todos",
+        "READY": "Listos",
+        "ATTENTION": "Requieren atención",
+        "NO_PAY_STRUCTURE": "Sin estructura salarial",
+        "exited": "Dados de baja"
+      },
+      "readiness": {
+        "READY": "Listo",
+        "ATTENTION": "Requiere atención",
+        "NO_PAY_STRUCTURE": "Sin estructura salarial"
+      },
+      "col": {
+        "person": "Persona",
+        "department": "Departamento",
+        "ctc": "CTC anual",
+        "monthly": "Bruto mensual",
+        "status": "Estado"
+      },
+      "gap": {
+        "NO_BANK": "Sin datos bancarios",
+        "NO_PAN": "Sin PAN: el impuesto se retiene a la tasa más alta"
+      }
+    },
+    "person": {
+      "addTitle": "Añadir empleado",
+      "addHint": "Empieza por lo básico. Puedes añadir la estructura salarial ahora o después.",
+      "editTitle": "Empleado",
+      "editHint": "Un cambio de pago rige desde la fecha elegida y conserva la estructura anterior en el historial.",
+      "tab": {
+        "details": "Datos",
+        "pay": "Pago",
+        "tax": "Impuestos y obligaciones",
+        "bank": "Banco",
+        "history": "Historial"
+      },
+      "firstName": "Nombre",
+      "lastName": "Apellido",
+      "email": "Correo electrónico",
+      "emailHint": "Se usa para enviar las nóminas por correo.",
+      "phone": "Teléfono",
+      "employeeCode": "Código de empleado",
+      "location": "Ubicación",
+      "joinDate": "Fecha de ingreso",
+      "exitDate": "Último día de trabajo",
+      "exitHint": "El pago se prorratea y el impuesto restante se liquida ese mes.",
+      "department": "Departamento",
+      "designation": "Cargo",
+      "status": "Estado",
+      "none": "Ninguno",
+      "statusValue": {
+        "ACTIVE": "Activo",
+        "ON_LEAVE": "De licencia",
+        "INACTIVE": "Dado de baja"
+      },
+      "saved": "Guardado",
+      "saveFailed": "No se pudo guardar. Inténtalo de nuevo.",
+      "loadFailed": "No se pudo cargar al empleado.",
+      "previewFailed": "No se pudo generar la vista previa.",
+      "duplicateCode": "Otro empleado ya usa ese código.",
+      "readOnly": "Puedes verlo, pero no modificarlo.",
+      "noPayYet": "Aún sin estructura salarial: esta persona quedará fuera de la nómina."
+    },
+    "pay": {
+      "builderTitle": "Generar desde el CTC anual",
+      "builderHint": "Divide el CTC en básico, HRA y un complemento que equilibra. El PF del empleador está dentro del CTC.",
+      "annualCtc": "CTC anual",
+      "basicPct": "Básico % del CTC",
+      "hraPct": "HRA % del básico",
+      "build": "Generar",
+      "components": "Componentes mensuales",
+      "componentsEmpty": "Aún no hay componentes. Genera desde el CTC o añádelos uno a uno.",
+      "monthlyGross": "Bruto mensual {amount}",
+      "name": "Nombre",
+      "monthly": "Por mes",
+      "taxable": "Gravable",
+      "prorate": "Prorrateado",
+      "pfWage": "Salario para PF",
+      "remove": "Quitar componente",
+      "addComponent": "Añadir componente",
+      "effectiveFrom": "Vigente desde",
+      "effectiveHint": "Los meses anteriores conservan el pago anterior.",
+      "takeHome": "Pago neto estimado de un mes completo",
+      "gross": "Bruto",
+      "deductions": "Deducciones",
+      "net": "Neto",
+      "employerCostNote": "Aportes del empleador adicionales: {amount} al mes."
+    },
+    "tax": {
+      "regime": "Régimen fiscal",
+      "regimeHint": "El TDS se calcula para el año bajo este régimen.",
+      "regimeNew": "Régimen nuevo",
+      "regimeOld": "Régimen antiguo",
+      "oldDeductions": "Deducciones anuales declaradas",
+      "oldDeductionsHint": "80C, 80D, interés de vivienda y exención de HRA. El PF del empleado se suma automáticamente.",
+      "pan": "PAN",
+      "panHint": "Sin PAN, el impuesto se retiene al 20% o más.",
+      "panKept": "Guardado: XXXXXX{last4}. Déjalo en blanco para conservarlo.",
+      "ptState": "Estado del impuesto profesional",
+      "ptHint": "Tramos incorporados para los estados que lo cobran mensualmente.",
+      "ptNone": "Sin definir",
+      "ptNoTax": "Mi estado no cobra impuesto profesional",
+      "pf": "Fondo de previsión",
+      "pfHint": "12% del salario PF del empleado y 12% tuyo.",
+      "pfActual": "PF sobre el básico real",
+      "pfActualHint": "Desactivado: limitado al tope de 15.000.",
+      "esi": "ESI",
+      "esiHint": "Se aplica si el bruto mensual es 21.000 o menos.",
+      "uan": "UAN",
+      "esiNumber": "Número ESI"
+    },
+    "bank": {
+      "privacy": "Los números de cuenta están cifrados. Solo se muestran los últimos cuatro dígitos y el número completo se usa solo al descargar el archivo bancario.",
+      "mode": "Pagar por",
+      "modeValue": {
+        "BANK_TRANSFER": "Transferencia bancaria",
+        "UPI": "UPI",
+        "CHEQUE": "Cheque",
+        "CASH": "Efectivo"
+      },
+      "holder": "Titular de la cuenta",
+      "bankName": "Banco",
+      "accountNumber": "Número de cuenta",
+      "accountKept": "Guardada: termina en {last4}. Déjala en blanco para conservarla.",
+      "ifsc": "IFSC"
+    },
+    "history": {
+      "revisions": "Historial de pagos",
+      "noRevisions": "Aún no se ha guardado ninguna estructura salarial.",
+      "ctc": "CTC {amount}",
+      "current": "Actual",
+      "from": "Desde el {date}",
+      "loans": "Préstamos y anticipos",
+      "noLoans": "Sin préstamos ni anticipos.",
+      "emi": "{amount} al mes",
+      "loanStatus": {
+        "ACTIVE": "En recuperación",
+        "CLOSED": "Cerrado"
+      }
+    },
+    "statutory": {
+      "title": "Pagos legales",
+      "body": "Lo que has retenido de los sueldos y debes al gobierno. Cada nómina los crea al contabilizarla; márcalos como pagados al depositarlos.",
+      "owed": "Pendiente ahora",
+      "overdue": "Vencidos",
+      "hint": {
+        "PF": "Vence el 15 del mes siguiente",
+        "ESI": "Vence el 15 del mes siguiente",
+        "PT": "Vence a fin de mes; varía por estado",
+        "TDS": "Vence el 7 del mes siguiente"
+      },
+      "list": "Pagos",
+      "empty": "Aún no hay nada que pagar. Los pagos aparecen al contabilizar una nómina.",
+      "markPaid": "Marcar pagado",
+      "statusPaid": "Pagado",
+      "statusDue": "Pendiente",
+      "paidOn": "Pagado el {date}",
+      "paid": "Pago registrado",
+      "payFailed": "No se pudo registrar el pago.",
+      "payTitle": "Registrar pago de {kind}",
+      "payHint": "Registra {amount} como pagado desde tu banco y cancela lo adeudado en tu libro mayor.",
+      "reference": "Número de challan o referencia",
+      "referencePlaceholder": "Opcional",
+      "confirm": "Registrar pago"
+    },
+    "mine": {
+      "body": "Tus nóminas aprobadas. Solo tú puedes verlas.",
+      "emptyTitle": "Aún no hay nóminas",
+      "emptyBody": "Tus nóminas aparecen aquí cuando se aprueba una ejecución de nómina.",
+      "net": "Pago neto",
+      "notPaid": "Aún no pagado",
+      "paidOn": "Pagado el {date}",
+      "download": "Descargar"
+    },
+    "wizard": {
+      "title": "Ejecutar nómina de {month}",
+      "subtitle": "Añade lo puntual, revisa problemas y calcula. Nada se contabiliza hasta que apruebes y registres.",
+      "back": "Volver a nómina",
+      "step": {
+        "inputs": "Datos",
+        "check": "Revisión",
+        "calculate": "Cálculo"
+      },
+      "month": "Mes de pago",
+      "year": "Año",
+      "autoHint": "El sueldo, PF, ESI, impuesto profesional y TDS se calculan según la estructura de cada persona. Los días sin sueldo salen de la asistencia y licencias aprobadas si Workforce está activo.",
+      "adjustments": "Conceptos puntuales de este mes",
+      "adjustmentsHint": "Bonos, atrasos, reembolsos, deducciones extra o días sin sueldo que se suman a los automáticos.",
+      "employee": "Empleado",
+      "kind": "Tipo",
+      "kindValue": {
+        "BONUS": "Bono",
+        "ARREARS": "Atrasos",
+        "EARNING": "Otro ingreso",
+        "REIMBURSEMENT": "Reembolso (sin impuesto)",
+        "DEDUCTION": "Deducción",
+        "LOP_DAYS": "Días sin sueldo"
+      },
+      "label": "Descripción",
+      "amount": "Importe",
+      "days": "Días",
+      "daysValue": "{count, plural, one {# día} other {# días}}",
+      "add": "Añadir",
+      "remove": "Quitar",
+      "adjEmpty": "Sin conceptos puntuales. Todo sale de las estructuras salariales.",
+      "adjIncomplete": "Elige una persona, descríbelo e introduce un importe.",
+      "adjFailed": "No se pudo añadir el concepto.",
+      "continue": "Revisar todo",
+      "previewFailed": "No se pudo revisar la nómina.",
+      "people": "Personas",
+      "gross": "Pago bruto",
+      "net": "Pago neto",
+      "employer": "Costo del empleador",
+      "checks": "Antes de calcular",
+      "allClear": "Todo se ve bien.",
+      "variance": "Cambios desde el mes pasado",
+      "varianceHint": "Pagos netos que cambiaron un cuarto o más, y personas que entraron o salieron.",
+      "varianceKind": {
+        "NEW": "nuevo",
+        "GONE": "fuera de esta nómina",
+        "CHANGED": "cambió"
+      },
+      "preview": "Pago de cada persona",
+      "lop": "{days} sin sueldo",
+      "edit": "Volver a los datos",
+      "blocked": "{count, plural, one {# problema impide} other {# problemas impiden}} el cálculo",
+      "generate": "Calcular nómina",
+      "generated": "Nómina calculada",
+      "generateFailed": "No se pudo calcular la nómina."
+    },
+    "run": {
+      "title": "Nómina de {month}",
+      "subtitle": "Versión {version} · {count, plural, one {# persona} other {# personas}}",
+      "loadFailed": "No se pudo cargar esta nómina.",
+      "downloads": "Descargas",
+      "dl": {
+        "register": "Registro de nómina (Excel)",
+        "bank": "Archivo de pago bancario",
+        "ecr": "Archivo de PF (ECR)",
+        "esi": "Hoja de aportes ESI"
+      },
+      "recalculate": "Recalcular",
+      "submit": "Enviar a revisión",
+      "submitted": "Enviada a revisión",
+      "sendBack": "Devolver",
+      "returned": "Devuelta",
+      "approve": "Aprobar",
+      "approved": "Aprobada",
+      "post": "Contabilizar",
+      "posted": "Contabilizada en tu libro mayor",
+      "markPaid": "Registrar sueldos pagados",
+      "actionFailed": "No funcionó. Inténtalo de nuevo.",
+      "waitingApproval": "Esperando a alguien con permiso de aprobación. No puedes aprobar una nómina que preparaste tú.",
+      "staleTitle": "Los datos cambiaron tras calcular esta nómina",
+      "staleBody": "Alguien añadió un ajuste o cambió una estructura salarial. Recalcula para incluirlo.",
+      "gross": "Pago bruto",
+      "deductions": "Deducciones",
+      "net": "Pago neto",
+      "employer": "Costo del empleador",
+      "totalCost": "Costo total {amount}",
+      "sameAsLast": "Igual que el mes pasado",
+      "vsLast": "frente al mes pasado",
+      "checks": "Revisiones ({count})",
+      "tab": {
+        "employees": "Empleados",
+        "statutory": "Obligaciones",
+        "payout": "Pago",
+        "activity": "Actividad"
+      },
+      "payment": "Pago",
+      "grossShort": "Bruto {amount}",
+      "payout": {
+        "PENDING": "Pendiente",
+        "PAID": "Pagado",
+        "FAILED": "Fallido",
+        "HELD": "En espera"
+      },
+      "employeeEmployer": "Empleado {employee} · empleador {employer}",
+      "remittances": "Pendiente con el gobierno de esta nómina",
+      "remittancesEmpty": "Aparecen cuando la nómina se contabiliza.",
+      "goStatutory": "Gestionar pagos legales",
+      "allPaidTitle": "Todos han cobrado",
+      "allPaidBody": "Los sueldos se registraron como pagados el {date}.",
+      "payoutTitle": "Paga a tu equipo",
+      "payoutReady": "{count, plural, one {# sueldo} other {# sueldos}} por {amount} por pagar. Descarga el archivo bancario, págalo desde tu banco y regístralo aquí.",
+      "payoutLocked": "Los sueldos se pueden pagar cuando la nómina se aprueba y contabiliza.",
+      "payDialogTitle": "Registrar sueldos como pagados",
+      "payDialogBody": "{count, plural, one {# sueldo} other {# sueldos}} por {amount} se registrarán como pagados desde tu banco.",
+      "payReference": "Referencia bancaria o número de lote",
+      "payReferencePlaceholder": "Opcional",
+      "confirmPaid": "Registrar como pagado",
+      "paidDone": "Sueldos registrados como pagados",
+      "slipsTitle": "Nóminas",
+      "slipsBody": "{sent} de {total} enviadas.",
+      "sendSlips": "Enviar nóminas por correo",
+      "slipsSent": "{sent} enviadas, {skipped} omitidas",
+      "event": {
+        "generated": "Calculada",
+        "submitted": "Enviada a revisión",
+        "approved": "Aprobada",
+        "posted": "Contabilizada",
+        "paid": "Sueldos pagados"
+      },
+      "employee": "Empleado",
+      "earnings": "Ingresos",
+      "deductionsTitle": "Deducciones",
+      "employerTitle": "Aportes del empleador (no se descuentan del sueldo)",
+      "lopNote": "Se descontaron {days} días sin sueldo del pago de este mes.",
+      "ytdNote": "Los meses anteriores del año se asumieron con el pago actual, por lo que el impuesto se compensa en los meses restantes.",
+      "paidTo": "Pagado a {bank} XXXX{last4}",
+      "payslip": "PDF de la nómina"
+    },
+    "issue": {
+      "more": "y {count} más",
+      "NO_EMPLOYEES": {
+        "title": "Nadie a quien pagar",
+        "body": "Ningún empleado está activo este mes. Añade personas y su estructura salarial primero."
+      },
+      "NO_COMPENSATION": {
+        "title": "{count, plural, one {# persona no tiene} other {# personas no tienen}} estructura salarial",
+        "body": "Quedan fuera de esta nómina. Añade su pago en Personas."
+      },
+      "NO_BANK": {
+        "title": "{count, plural, one {# persona no tiene} other {# personas no tienen}} datos bancarios",
+        "body": "Faltarán en el archivo de pago bancario."
+      },
+      "NO_PAN": {
+        "title": "{count, plural, one {# persona no tiene} other {# personas no tienen}} PAN",
+        "body": "El impuesto se retiene al 20%, la tasa más alta, hasta añadir un PAN."
+      },
+      "NO_UAN": {
+        "title": "{count, plural, one {# persona no tiene} other {# personas no tienen}} UAN",
+        "body": "Quedarán fuera del archivo de PF."
+      },
+      "NO_ESI_NUMBER": {
+        "title": "{count, plural, one {# asegurado no tiene} other {# asegurados no tienen}} número ESI",
+        "body": "Quedarán fuera de la hoja ESI."
+      },
+      "NO_PT_STATE": {
+        "title": "{count, plural, one {# persona no tiene} other {# personas no tienen}} estado de impuesto profesional",
+        "body": "No se les descuenta impuesto profesional."
+      },
+      "JOINER": {
+        "title": "{count, plural, one {# persona ingresó} other {# personas ingresaron}} este mes",
+        "body": "Su pago se prorratea desde la fecha de ingreso."
+      },
+      "LEAVER": {
+        "title": "{count, plural, one {# persona se va} other {# personas se van}} este mes",
+        "body": "El pago se prorratea hasta el último día y el impuesto restante se liquida ahora."
+      },
+      "ON_LEAVE_STATUS": {
+        "title": "{count, plural, one {# persona está} other {# personas están}} de licencia",
+        "body": "Siguen cobrando. Añade días sin sueldo si parte de la licencia no fue pagada."
+      },
+      "YTD_ASSUMED": {
+        "title": "Se asumieron los meses anteriores del año para {count, plural, one {# persona} other {# personas}}",
+        "body": "No hay nóminas anteriores registradas aquí, así que el impuesto se proyecta como si cobraran igual cada mes."
+      },
+      "PENDING_LEAVE": {
+        "title": "{count, plural, one {# persona tiene} other {# personas tienen}} licencias pendientes de decisión",
+        "body": "Aprobarla o rechazarla puede cambiar sus días sin sueldo."
+      },
+      "MISSING_ATTENDANCE": {
+        "title": "Falta la asistencia de {count, plural, one {# persona} other {# personas}}",
+        "body": "Los días sin registro cuentan como trabajados. Revisa Workforce si no es correcto."
+      },
+      "DUPLICATE_BANK": {
+        "title": "{count, plural, one {# persona comparte} other {# personas comparten}} cuenta bancaria con otra",
+        "body": "Dos empleados en una cuenta suele indicar un error de captura o un fraude. Revisa antes de pagar."
+      },
+      "ZERO_NET": {
+        "title": "{count, plural, one {# persona no tiene} other {# personas no tienen}} nada que cobrar",
+        "body": "Las deducciones consumen todo su pago. Revisa antes de continuar."
+      },
+      "NEGATIVE_NET": {
+        "title": "{count, plural, one {Las deducciones de # persona superan} other {Las deducciones de # personas superan}} su pago",
+        "body": "Su pago neto queda en cero. Corrige las deducciones."
+      },
+      "DEDUCTIONS_CAPPED": {
+        "title": "Algunas deducciones se aplicaron solo en parte a {count, plural, one {# persona} other {# personas}}",
+        "body": "Las cuotas de préstamos y deducciones extra nunca dejan el pago bajo cero. El resto pasa al mes siguiente."
+      },
+      "LOP_EXCEEDS_DAYS": {
+        "title": "Los días sin sueldo superan los días laborables de {count, plural, one {# persona} other {# personas}}",
+        "body": "El exceso se ignora. Revisa los días introducidos."
+      },
+      "ESI_ABOVE_LIMIT": {
+        "title": "{count, plural, one {# persona supera} other {# personas superan}} el límite salarial de ESI",
+        "body": "No se cobra ESI este mes porque el pago supera 21.000."
+      },
+      "PT_STATE_NOT_MODELLED": {
+        "title": "Los tramos del impuesto profesional no están incorporados para {count, plural, one {el estado de # persona} other {los estados de # personas}}",
+        "body": "Añade su impuesto profesional como deducción puntual, o déjalo fuera."
+      },
+      "NO_PAN_HIGHER_TDS": {
+        "title": "Sin PAN, el impuesto va a la tasa más alta",
+        "body": "Añade un PAN para bajar el TDS a la tasa normal."
+      },
+      "NO_EARNINGS": {
+        "title": "Sin ingresos este mes",
+        "body": "No se paga nada a esta persona este mes."
+      },
+      "PF_NO_WAGES": {
+        "title": "PF está activo pero ningún componente cuenta como salario PF",
+        "body": "Marca el básico como salario PF en la estructura salarial."
+      },
+      "PT_NO_STATE": {
+        "title": "Sin estado de impuesto profesional",
+        "body": "No se descuenta impuesto profesional."
+      }
     }
   }
 }

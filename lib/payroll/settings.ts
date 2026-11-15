@@ -50,6 +50,7 @@ const DEFAULT_PAYMENT_SCHEDULE = {
   payDay: 1,
   processingOffsetDays: 2,
   payoutMethod: 'BANK_TRANSFER',
+  lopBasis: 'CALENDAR_DAYS',
 };
 
 const DEFAULT_COST_ALLOCATION = {
