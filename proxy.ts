@@ -50,8 +50,9 @@ function nextResponseFor(request: NextRequest): NextResponse {
   requestHeaders.set('x-pathname', request.nextUrl.pathname);
   requestHeaders.set('x-pathname-with-search', `${request.nextUrl.pathname}${request.nextUrl.search}`);
   const response = NextResponse.next({ request: { headers: requestHeaders } });
-  const pathWithSearch = `${request.nextUrl.pathname}${request.nextUrl.search}`;
-  response.headers.set('next-url', pathWithSearch);
+  // Never set a `next-url` header here: it is reserved by the Next.js router. The client hashes
+  // its own `Next-Url` into the `_rsc` param and the server re-hashes what it sees, so
+  // overwriting it makes every prefetch/RSC navigation fail validation and 307-loop.
 
   if (request.nextUrl.pathname === SERVICE_WORKER_PATH) {
     return withServiceWorkerHeaders(response);
