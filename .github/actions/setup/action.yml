@@ -1,5 +1,5 @@
 name: Setup Node and install dependencies
-description: Node pinned from .nvmrc. Reuses node_modules kept on the runner when package-lock.json has not changed.
+description: Node version pinned from .nvmrc (matches package.json engines), npm cache, reproducible install.
 
 runs:
   using: composite
@@ -7,27 +7,9 @@ runs:
     - uses: actions/setup-node@v4
       with:
         node-version-file: .nvmrc
+        cache: npm
 
-    # `npm ci` took 10 to 20 minutes on the self-hosted runner. The runner keeps a copy of node_modules per
-    # lockfile (and Node version), so most runs just copy it back and regenerate the Prisma client. A miss
-    # does a normal `npm ci` (using the runner's own npm cache) and stores the result. Only the newest two are kept.
     - name: Install dependencies
       shell: bash
-      run: |
-        set -euo pipefail
-        store="$HOME/.cache/erp-ci/node_modules"
-        key="$(node -v)-$(uname -m)-$(sha256sum package-lock.json | cut -c1-16)"
-        mkdir -p "$store"
-        if [ -d "$store/$key" ]; then
-          echo "Reusing cached node_modules ($key)"
-          rm -rf node_modules
-          cp -a --reflink=auto "$store/$key" node_modules
-          npx prisma generate
-        else
-          echo "No cached node_modules for $key: running npm ci"
-          npm ci --prefer-offline --no-audit --no-fund   # postinstall runs `prisma generate`
-          rm -rf "$store/$key.tmp"
-          cp -a --reflink=auto node_modules "$store/$key.tmp" && mv "$store/$key.tmp" "$store/$key"
-        fi
-        # Keep the two most recent caches, drop the rest and any half-written ones.
-        ls -1dt "$store"/*/ 2>/dev/null | tail -n +3 | xargs -r rm -rf
+      # postinstall runs `prisma generate`, so the client is ready after this step.
+      run: npm ci --no-audit --no-fund
