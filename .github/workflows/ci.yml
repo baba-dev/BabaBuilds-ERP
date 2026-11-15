@@ -187,6 +187,57 @@ jobs:
 
   # Pull requests only: flags newly added dependencies with known vulnerabilities or disallowed licences.
   # Advisory (not in the gate): it needs the repository's dependency graph, which is on for public repos.
+  importer:
+    name: SQLite to PostgreSQL importer rehearsal
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bababuilds_erp_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bababuilds_erp_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Build PostgreSQL baseline
+        run: npx prisma migrate deploy
+      - name: Create isolated SQLite fixture and import into empty PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          cp prisma/sqlite-history/schema.prisma "$tmp/schema.prisma"
+          npx prisma db push --schema "$tmp/schema.prisma" --skip-generate
+          python3 - "$tmp/dev.db" <<'PY'
+          import sqlite3,sys
+          db=sqlite3.connect(sys.argv[1])
+          ms=1794760000000
+          db.execute('INSERT INTO "Workspace" ("id","name","createdAt","updatedAt") VALUES (?,?,?,?)',
+             ("workspace_fixture","Test Workspace",ms,ms))
+          db.execute('INSERT INTO "Invoice" ("id","workspaceId","invoiceNumber","financialYear","invoiceDate","clientName","serviceDescription","totalAmount","grandTotal","amountReceived","pdfPath") VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+             ("invoice_fixture","workspace_fixture","TEST-1","2026-27",ms,"Fixture","PG import test",100,100,20,"/test.pdf"))
+          db.execute('INSERT INTO "InvoicePayment" ("id","workspaceId","invoiceId","amount","receivedAt") VALUES (?,?,?,?,?)',
+             ("payment_fixture","workspace_fixture","invoice_fixture",20,ms))
+          db.commit()
+          db.close()
+          PY
+          python3 scripts/sqlite-to-postgres.py --sqlite "$tmp/dev.db" --target-db bababuilds_erp_ci --acknowledge-empty-target
+          # Existing target must be rejected; verify no reset or truncate occurs.
+          if python3 scripts/sqlite-to-postgres.py --sqlite "$tmp/dev.db" --target-db bababuilds_erp_ci --acknowledge-empty-target 2>/dev/null; then
+            echo 'Importer improperly accepted a populated target' >&2; exit 1
+          fi
+          test "$(PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d bababuilds_erp_ci -Atqc 'SELECT count(*) FROM "InvoicePayment"')" = "1"
+
   dependency-review:
     name: Dependency review
     if: ${{ github.event_name == 'pull_request' }}
@@ -206,7 +257,7 @@ jobs:
   gate:
     name: CI gate
     if: ${{ always() }}
-    needs: [static, test, prisma, build, e2e-smoke]
+    needs: [static, test, prisma, importer, build, e2e-smoke]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

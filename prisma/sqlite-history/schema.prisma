@@ -1,0 +1,5411 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db" // Or "file:../dev.db" depending on your folder structure
+}
+
+enum InvoiceStatus {
+  PENDING
+  PARTIALLY_PAID
+  PAID
+  VOID
+}
+
+/// Where an invoice came from (shown/filterable on /income).
+enum InvoiceSource {
+  MANUAL
+  PROPOSAL
+  RETAINER
+  POS
+  SHOP
+  API
+}
+
+/**
+ * BusinessRoleEnum — authoritative ERP role type at the schema level.
+ * Validated by Prisma ORM; stored as TEXT in SQLite.
+ * The old `role` String field is kept for JWT/session compatibility.
+ * Server-side enforcement uses `businessRole` via a fresh DB lookup.
+ */
+enum BusinessRoleEnum {
+  OWNER
+  ADMIN
+  FINANCE_MANAGER
+  ACCOUNTANT
+  SALES_MANAGER
+  OPERATIONS_MANAGER
+  INVENTORY_MANAGER
+  STAFF
+  VIEWER
+}
+
+enum CashForecastHorizonType {
+  DAILY_30
+  WEEKLY_13
+  MONTHLY_12
+}
+
+enum CashForecastScenarioTag {
+  BASE
+  BEST_CASE
+  WORST_CASE
+}
+
+enum CashForecastDirection {
+  INFLOW
+  OUTFLOW
+}
+
+enum CashForecastSourceType {
+  INVOICE
+  RETAINER
+  EXPENSE
+  PURCHASE_ORDER
+  BANK_TRANSACTION
+  MANUAL
+  SERVICE_ORDER
+  TAX
+  PAYROLL
+}
+
+enum CashForecastClassification {
+  ACTUAL
+  COMMITTED
+  EXPECTED
+  PREDICTED
+  MANUAL
+}
+
+enum CashForecastGeneratedBy {
+  SYSTEM
+  USER
+  RULE_CHANGE
+  DATA_IMPORT
+}
+
+enum CashForecastRiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum WorkspaceTaxMode {
+  AUTO
+  AUTO_WITH_OVERRIDE
+  MANUAL
+}
+
+enum TaxOverrideScopeType {
+  GLOBAL
+  COUNTRY
+  REGION
+  SERVICE
+  CUSTOMER
+}
+
+enum TaxResolutionSource {
+  MANUAL_OVERRIDE
+  WORKSPACE_RULE
+  PROVIDER
+  FALLBACK
+}
+
+enum TaxReturnFamily {
+  INDIA_TDS_QTR
+}
+
+enum TaxReadinessSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum TaxReturnStatus {
+  DRAFT
+  BLOCKED
+  NEEDS_REVIEW
+  READY
+  FILED
+}
+
+enum TaxReadinessBlockerStatus {
+  OPEN
+  RESOLVED
+}
+
+enum FilingFrequency {
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+}
+
+enum TaxObligationStatus {
+  OPEN
+  READY
+  OVERDUE
+  FILED
+}
+
+enum ComplianceTaskStatus {
+  PENDING
+  COMPLETED
+  DISMISSED
+}
+
+enum AccountingEventType {
+  INVOICE_CREATED
+  PAYMENT_CAPTURED
+  REFUND_ISSUED
+  CREDIT_NOTE_ISSUED
+  CHARGEBACK_RECORDED
+  FX_CONVERSION_RECORDED
+  WRITE_OFF_RECORDED
+  MANUAL_ADJUSTMENT
+}
+
+enum AccountingLineSide {
+  DEBIT
+  CREDIT
+}
+
+enum ProposalConversionType {
+  ONE_TIME_INVOICE
+  RETAINER
+  SHOP_ORDER
+  MILESTONE_BILLING
+}
+
+enum DistributorCommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+  VOID
+  CLAWED_BACK
+}
+
+enum ResellerStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum CouponAudience {
+  RESELLER
+  CUSTOMER_REFERRAL
+}
+
+enum CouponDiscountType {
+  PERCENT
+  FIXED
+}
+
+enum LeadStage {
+  LEAD
+  QUALIFIED
+  WON
+  LOST
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+  VOID
+}
+
+/// LIST = margin % × catalog list price; PAID = margin % × amount customer paid
+enum DistributorMarginBasis {
+  LIST
+  PAID
+}
+
+enum DistributorPayoutStatus {
+  DRAFT
+  PAID
+}
+
+// ==========================================
+// DISTRIBUTOR / CHANNEL PARTNERS (subscription coupons & margins)
+// ==========================================
+
+model Distributor {
+  id     String @id @default(cuid())
+  name   String
+  email  String @unique
+  status String @default("ACTIVE") // ACTIVE | INACTIVE
+
+  /// Default partner margin % of list price (catalog). Per-coupon can override.
+  defaultMarginPercent Decimal @default(0)
+
+  /// Default: commission = margin% × list; PAID = margin% × net paid
+  defaultMarginBasis DistributorMarginBasis @default(LIST)
+
+  /// Optional JSON map of interval -> margin percent, e.g. {"MONTHLY":12,"YEARLY":10}
+  marginByPlanJson Json?
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  coupons      DistributorCoupon[]
+  attributions DistributorAttribution[]
+  commissions  DistributorCommission[]
+  payouts      DistributorPayout[]
+  auditLogs    DistributorAuditLog[]
+  partnerUsers User[]
+}
+
+model DistributorCoupon {
+  id String @id @default(cuid())
+
+  distributorId String
+  distributor     Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+
+  /// Uppercase normalized code (e.g. PARTNER-ABC123)
+  code String @unique
+
+  /// Customer-facing discount % off list subscription price at checkout
+  customerDiscountPercent Decimal @default(0)
+
+  /// Partner margin % of list price for commission reporting (independent of discount)
+  marginPercent Decimal @default(0)
+
+  /// Overrides distributor default when set
+  marginBasis DistributorMarginBasis?
+
+  /// Comma-separated: PRO, TEAM or ALL
+  allowedTiers String @default("PRO,TEAM")
+
+  firstPurchaseOnly Boolean @default(false)
+
+  startsAt DateTime?
+  endsAt   DateTime?
+
+  isActive Boolean @default(true)
+  maxUses  Int?
+  usedCount Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attributions DistributorAttribution[]
+  commissions  DistributorCommission[]
+  billingTransactions BillingTransaction[]
+
+  @@index([distributorId, isActive])
+}
+
+model DistributorPayout {
+  id String @id @default(cuid())
+
+  distributorId String
+  distributor     Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+
+  status      DistributorPayoutStatus @default(DRAFT)
+  periodLabel String?
+  totalAmount Decimal               @default(0)
+  method      String?
+  reference   String?
+  paidAt      DateTime?
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  commissions DistributorCommission[]
+
+  @@index([distributorId, status, createdAt])
+}
+
+model DistributorAuditLog {
+  id String @id @default(cuid())
+
+  distributorId String?
+  distributor   Distributor? @relation(fields: [distributorId], references: [id], onDelete: SetNull)
+
+  actorEmail String?
+  action     String
+  metadata   Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([distributorId, createdAt])
+  @@index([createdAt])
+}
+
+/// One workspace is attributed to at most one distributor (latest applied coupon wins).
+model DistributorAttribution {
+  id String @id @default(cuid())
+
+  couponId String
+  coupon     DistributorCoupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  distributorId String
+  distributor     Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+
+  workspaceId String    @unique
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  appliedAt DateTime @default(now())
+
+  @@index([distributorId, appliedAt])
+}
+
+/// One commission row per successful subscription payment (billing transaction).
+model DistributorCommission {
+  id String @id @default(cuid())
+
+  distributorId String
+  distributor     Distributor @relation(fields: [distributorId], references: [id], onDelete: Cascade)
+
+  couponId String?
+  coupon     DistributorCoupon? @relation(fields: [couponId], references: [id], onDelete: SetNull)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  billingTransactionId String @unique
+  billingTransaction   BillingTransaction @relation(fields: [billingTransactionId], references: [id], onDelete: Cascade)
+
+  /// Catalog list amount (INR) before distributor coupon discount
+  listAmount Decimal @default(0)
+  /// Amount the customer actually paid (INR)
+  paidAmount Decimal @default(0)
+  /// Snapshot of margin % used for this sale
+  marginPercent Decimal @default(0)
+  /// Commission = listAmount * marginPercent / 100
+  commissionAmount Decimal @default(0)
+
+  status DistributorCommissionStatus @default(PENDING)
+
+  /// Snapshot: LIST or PAID basis used for this row
+  marginBasisUsed DistributorMarginBasis @default(LIST)
+
+  payoutId String?
+  payout   DistributorPayout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+
+  clawbackReason String?
+  reversedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([distributorId, createdAt])
+  @@index([workspaceId, createdAt])
+  @@index([status, distributorId])
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+}
+
+enum ReferralRewardType {
+  FREE_MONTH
+  WALLET_CREDIT
+}
+
+enum ReportShareScope {
+  WORKSPACE
+  GROUP
+}
+
+enum ReportShareAudience {
+  INTERNAL
+  EXTERNAL
+}
+
+enum ReportShareStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum ReferralRewardStatus {
+  PENDING
+  APPROVED
+  APPLIED
+  CANCELLED
+}
+
+// ==========================================
+// 1. AUTHENTICATION (NextAuth Standard)
+// ==========================================
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String? // This acts as the Avatar URL
+  role          String    @default("USER") // "USER", "ADMIN"
+
+  // --- PASSWORD AUTHENTICATION ---
+  passwordHash             String?
+  passwordUpdatedAt        DateTime?
+  passwordFailedAttempts   Int       @default(0)
+  passwordLockedUntil      DateTime?
+  passwordLastFailureAt    DateTime?
+
+  // --- DEMO LIFECYCLE ---
+  isDemo          Boolean   @default(false)
+  demoTemplateKey String?
+  demoExpiresAt   DateTime?
+
+  // --- NEW: PERSONAL PREFERENCES ---
+  theme              String @default("system") // "light", "dark", "system"
+  dateFormat         String @default("DD/MM/YYYY")
+  timeZone           String @default("Asia/Kolkata")
+  locale             String @default("en-IN") // Formatting rules (e.g., en-IN, en-US)
+  currencyFormat     String @default("INR") // Currency symbol/math (e.g., INR, USD)
+  defaultLandingPage String @default("/dashboard") // e.g., "/dashboard", "/invoice", "/clients"
+
+  // --- NOTIFICATION SETTINGS ---
+  transactionalAlerts Boolean @default(true) // E.g., "Invoice Paid" alerts
+  marketingEmails     Boolean @default(false) // Product updates/news
+  weeklyReport        Boolean @default(true) // AI Financial Summary emails
+  // Granular channel toggles (user-configurable per channel)
+  notifyEmail         Boolean @default(true)
+  notifyPush          Boolean @default(true)
+  notifyInApp         Boolean @default(true)
+
+  // --- RELATIONS ---
+  accounts           Account[]
+  sessions           Session[]
+  workspaces         WorkspaceUser[]
+  appActivities      AppActivityLog[]    @relation("AppActivityActor")
+  pushSubscriptions  PushSubscription[]
+  inAppNotifications InAppNotification[]
+  onboarding         UserOnboarding?
+  userPreference     UserPreference?
+  passwordResetTokens PasswordResetToken[]
+  webAuthnCredentials WebAuthnCredential[]
+  webAuthnChallenges WebAuthnChallenge[]
+  companyGroupMemberships CompanyGroupMember[]
+  createdReportShares     ReportShare[] @relation("ReportShareCreator")
+
+  /// When set, this user can access the distributor partner portal for this partner record
+  distributorPartnerId String?
+  distributorPartner   Distributor? @relation(fields: [distributorPartnerId], references: [id], onDelete: SetNull)
+
+  referralProfile    CustomerReferralProfile?
+
+  @@index([distributorPartnerId])
+}
+
+model WebAuthnCredential {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialID String   @unique
+  publicKey    String
+  counter      Int      @default(0)
+  transports   String?
+  deviceType   String?
+  backedUp     Boolean  @default(false)
+  name         String?
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime?
+
+  @@index([userId])
+}
+
+model WebAuthnChallenge {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  challenge String   @unique
+  tokenHash String?  @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  usedAt    DateTime?
+
+  @@index([userId, type])
+  @@index([expiresAt])
+}
+
+model UserOnboarding {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  persona        String?
+  isFirstLogin   Boolean   @default(true)
+  completedSteps String    @default("[]")
+  dismissedAt    DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([isFirstLogin])
+}
+
+model PasswordResetToken {
+  id          String    @id @default(cuid())
+  userId      String
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+  requestedIp String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ==========================================
+// 2. MULTI-TENANCY & BILLING (The "Workspace")
+// ==========================================
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  // --- DEMO LIFECYCLE ---
+  isDemo          Boolean   @default(false)
+  demoTemplateKey String?
+  demoExpiresAt   DateTime?
+
+  // --- NEW: GLOBALIZATION STATE ---
+  isSetupComplete Boolean @default(false) // Triggers the Popup Wizard
+  countryCode     String  @default("IN") // ISO 2-letter code (US, AE, GB, IN)
+  baseCurrency    String  @default("INR") // Functional currency for reports
+
+  // --- EXISTING BILLING ---
+  subscriptionStatus   String    @default("FREE") // "TRIALING", "PRO", "FREE", "SUSPENDED"
+  subscriptionEndsAt   DateTime?
+  planTier             String    @default("FREE") // "FREE", "PRO", "TEAM"
+  currentMonthInvoices Int       @default(0)
+  seatAddonCount       Int       @default(0) // future: purchased additional seats
+
+  planInterval      String? // "MONTHLY", "QUARTERLY", "YEARLY"
+  paymentMethodMask String? // e.g., "•••• 4242" or "user@upi"
+  billingProviderId String? // Stripe/Razorpay Customer ID
+
+  // Canonical provider contract identity and cancellation reconciliation state.
+  // PREPAID orders expire locally; RECURRING contracts must be cancelled at the provider first.
+  billingProvider               String? // "RAZORPAY" | "STRIPE" | "GOOGLE_PLAY"
+  billingContractType           String   @default("PREPAID") // "PREPAID" | "RECURRING"
+  billingProviderSubscriptionId String?
+  subscriptionCancelAtPeriodEnd Boolean  @default(false)
+  subscriptionCancelRequestedAt DateTime?
+  subscriptionCancelEffectiveAt DateTime?
+  subscriptionCancellationLastError String?
+
+  /// True after at least one successful paid subscription charge (for partner first-purchase coupons)
+  hasEverSubscribed Boolean @default(false)
+  signupIntentJson  String?
+
+  updatedAt DateTime @default(now()) @updatedAt
+
+  // RELATIONS
+  users                           WorkspaceUser[]
+  companyGroupLinks               CompanyGroupWorkspace[]
+  billingForGroups                CompanyGroup[] @relation("CompanyGroupBillingWorkspace")
+  companyGroupMemberAccesses      CompanyGroupMemberWorkspaceAccess[]
+  businessProfile                 BusinessProfile?
+  clients                         Client[]
+  invoices                        Invoice[]
+  billingTransactions             BillingTransaction[]
+  playPurchases                   PlayPurchase[]
+  resellerLeads                  ResellerLead[]
+  customerReferralProfiles       CustomerReferralProfile[]
+  referralRedemptions            CustomerReferralRedemption[]
+  referralRewards                CustomerReferralReward[]       @relation("ReferrerWorkspace")
+  expenses                        Expense[]
+  withholdingEvents               WithholdingEvent[]
+  taxCreditEvents                 TaxCreditEvent[]
+  taxCreditLedgerEntries          TaxCreditLedgerEntry[]
+  taxReturnPeriods                TaxReturnPeriod[]
+  bankTransactions                BankTransaction[]
+  bankAccounts                    BankAccount[]
+  bankImportBatches               BankImportBatch[]
+  workspaceReconciliationSettings WorkspaceReconciliationSettings?
+  expenseReconciliationCategories ExpenseReconciliationCategory[]
+  bankReconciliationRules         BankReconciliationRule[]
+  investments                     Investment[]
+  serviceTemplates                ServiceTemplate[]
+  proposals                       Proposal[]
+  proposalConversions             ProposalConversion[]
+  billingMilestones               BillingMilestone[]
+  retainers                       Retainer[]
+  tasks                           Task[]
+  invoiceIdempotencies            InvoiceIdempotency[]
+  invoiceGenerationDrafts         InvoiceGenerationDraft[]
+  financialOperationLocks         FinancialOperationIdempotency[]
+  taxPreference                   WorkspaceTaxPreference?
+  workspaceTaxOverrides           WorkspaceTaxOverride[]
+  taxRateOverrides                TaxRateOverride[]
+  taxRateOverrideAuditLogs        TaxRateOverrideAuditLog[]
+  taxDecisionAuditLogs            TaxDecisionAuditLog[]
+  taxableEvents                   TaxableEvent[]
+  taxDeterminations               TaxDetermination[]
+  taxComponentLines               TaxComponentLine[]
+  taxAuditEvents                  TaxAuditEvent[]
+  taxOperationIdempotencies       TaxOperationIdempotency[]
+  taxReferenceEntries             TaxReferenceEntry[]
+  taxPeriods                      TaxPeriod[]
+  taxForms                        TaxForm[]
+  taxReturns                      TaxReturn[]
+  taxReturnFieldValues            TaxReturnFieldValue[]
+  taxReadinessChecks              TaxReadinessCheck[]
+  taxReadinessBlockers            TaxReadinessBlocker[]
+  fileImportAuditLogs             FileImportAuditLog[]
+  appActivityLogs                 AppActivityLog[]
+  workspaceInvites                WorkspaceInvite[]
+  distributorAttribution         DistributorAttribution?
+  distributorCommissions         DistributorCommission[]
+  accountingTransactions          AccountingTransaction[]
+  accountingIntegrityRuns         AccountingIntegrityRun[]
+  accountingViolationReports      AccountingViolationReport[]
+  cashForecastSnapshots           CashForecastSnapshot[]
+  cashForecastAssumptions         CashForecastAssumption[]
+  cashForecastAdjustments         CashForecastManualAdjustment[]
+  cashForecastLineItemPlans       CashForecastLineItemPlan[]
+  cashForecastAlertPreferences    CashForecastAlertPreference[]
+  clientPaymentBehaviors          ClientPaymentBehavior[]
+  rbacAuditLogs                   RbacAuditLog[]
+  mailBillingServers              MailBillingServer[]
+  mailBillingDomains              MailBillingDomain[]
+  mailBillingMailboxes            MailBillingMailbox[]
+  mailBillingSyncRuns             MailBillingSyncRun[]
+  mailBillingPlans                MailBillingPlan[]
+  mailBillingSubscriptions        MailBillingSubscription[]
+  mailBillingReviewItems          MailBillingReviewItem[]
+  mailBillingSettings             MailBillingSettings?
+
+  // IMS Relations
+  products           Product[]
+  inventoryMovements InventoryMovement[]
+  purchaseOrders     PurchaseOrder[]
+  accountingEntries  AccountingEntry[]
+  shopOrders         ShopOrder[]
+
+  // Workforce Module
+  workspaceModules  WorkspaceModule[]
+  importRuns        ImportRun[]
+  employees         Employee[]
+  departments       Department[]
+  designations      Designation[]
+  attendanceRecords AttendanceRecord[]
+  leaveTypes        LeaveType[]
+  leaveRequests     LeaveRequest[]
+  leaveBalances     LeaveBalance[]
+  workforceHolidays WorkforceHoliday[]
+  workSchedules     WorkSchedule[]
+  payrollSettings   PayrollSettings?
+  payComponents     PayrollPayComponent[]
+  payrollPeriods    PayrollPeriod[]
+  payrollRuns       PayrollRun[]
+  payrollPostings   PayrollPosting[]
+
+  // Document Vault (optional module)
+  documents               Document[]
+  documentFiles           DocumentFile[]
+  documentOcrJobs         DocumentOcrJob[]
+  documentExtractedFields DocumentExtractedField[]
+  documentLinks           DocumentLink[]
+  taxDocumentLinks        TaxDocumentLink[]
+  taxImportBatches        TaxImportBatch[]
+  taxImportRows           TaxImportRow[]
+  documentAuditEvents     DocumentAuditEvent[]
+  documentStorage         WorkspaceDocumentStorage?
+  taxRegistrations        WorkspaceTaxRegistration[]
+  filingCalendarRules     FilingCalendarRule[]
+  taxObligations          TaxObligation[]
+  taxObligationPeriods    TaxObligationPeriod[]
+  gstReturns              GstReturn[]
+  caComplianceItems       CaComplianceItem[]
+  caRequests              CaRequest[]
+  gstAdjustments          GstAdjustment[]
+  gstDebitNotes           GstDebitNote[]
+  gstAmendments           GstAmendment[]
+  gstAdvances             GstAdvance[]
+  gstReturnComments       GstReturnComment[]
+  gstReminderLogs         GstReminderLog[]
+  gstr2bEntries           Gstr2bEntry[]
+  complianceTasks         ComplianceTask[]
+  reportShares            ReportShare[]
+  reportShareSnapshots    ReportShareSnapshot[]
+
+  @@index([isDemo])
+  @@index([demoExpiresAt])
+  @@index([demoTemplateKey])
+  reportViews ReportView[]
+  employeeCompensations EmployeeCompensation[]
+  payrollAdjustments    PayrollAdjustment[]
+  employeeLoans         EmployeeLoan[]
+  payrollRemittances    PayrollRemittance[]
+}
+
+model CompanyGroup {
+  id   String @id @default(cuid())
+  name String
+
+  // --- GROUP BILLING ---
+  subscriptionStatus String    @default("FREE") // "TRIALING", "PRO", "FREE", "SUSPENDED"
+  subscriptionEndsAt DateTime?
+  planTier           String    @default("FREE") // "FREE", "PRO", "TEAM"
+
+  /// Optional workspace that owns billing for the company group.
+  billingWorkspaceId String?
+  billingWorkspace   Workspace? @relation("CompanyGroupBillingWorkspace", fields: [billingWorkspaceId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaces CompanyGroupWorkspace[]
+  members    CompanyGroupMember[]
+  modules    CompanyGroupModule[]
+  reportShares ReportShare[]
+  reportShareSnapshots ReportShareSnapshot[]
+
+  @@index([billingWorkspaceId])
+}
+
+model CompanyGroupWorkspace {
+  id String @id @default(cuid())
+
+  companyGroupId String
+  companyGroup   CompanyGroup @relation(fields: [companyGroupId], references: [id], onDelete: Cascade)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  relationType String  @default("MEMBER")
+  isPrimary    Boolean @default(false)
+  isActive     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyGroupId, workspaceId])
+  @@index([workspaceId, isActive])
+  @@index([companyGroupId, isPrimary])
+}
+
+model CompanyGroupMember {
+  id String @id @default(cuid())
+
+  companyGroupId String
+  companyGroup   CompanyGroup @relation(fields: [companyGroupId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role       String  @default("MEMBER")
+  groupRole  String  @default("MEMBER")
+  accessMode String  @default("SPECIFIC_COMPANIES")
+  isActive   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceAccess CompanyGroupMemberWorkspaceAccess[]
+
+  @@unique([companyGroupId, userId])
+  @@index([userId])
+  @@index([companyGroupId, isActive])
+}
+
+model CompanyGroupMemberWorkspaceAccess {
+  id String @id @default(cuid())
+
+  companyGroupMemberId String
+  companyGroupMember   CompanyGroupMember @relation(fields: [companyGroupMemberId], references: [id], onDelete: Cascade)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  accessRole String  @default("MEMBER")
+  isActive   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyGroupMemberId, workspaceId])
+  @@index([workspaceId, isActive])
+}
+
+model CompanyGroupModule {
+  id String @id @default(cuid())
+
+  companyGroupId String
+  companyGroup   CompanyGroup @relation(fields: [companyGroupId], references: [id], onDelete: Cascade)
+
+  moduleKey String
+  isEnabled Boolean @default(true)
+  configJson Json?
+
+  enabledAt  DateTime  @default(now())
+  disabledAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyGroupId, moduleKey])
+  @@index([companyGroupId, isEnabled])
+}
+
+model ResellerAccount {
+  id String @id @default(cuid())
+
+  name  String
+  email String @unique
+
+  status                   ResellerStatus @default(ACTIVE)
+  defaultCustomerDiscount  Decimal        @default(25)
+  defaultCommissionPercent Decimal        @default(12.5)
+  payoutTerms              String         @default("Net 30")
+  notes                    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  coupons     ResellerCoupon[]
+  leads       ResellerLead[]
+  commissions ResellerCommission[]
+  payouts     ResellerPayout[]
+}
+
+model ResellerCoupon {
+  id String @id @default(cuid())
+
+  resellerId String
+  reseller   ResellerAccount @relation(fields: [resellerId], references: [id], onDelete: Cascade)
+
+  code             String             @unique
+  audience         CouponAudience     @default(RESELLER)
+  discountType     CouponDiscountType @default(PERCENT)
+  discountValue    Decimal            @default(25)
+  commissionPercent Decimal           @default(12.5)
+  firstPurchaseOnly Boolean           @default(true)
+  firstYearOnly     Boolean           @default(true)
+  isActive          Boolean           @default(true)
+  maxUses           Int?
+  usedCount         Int               @default(0)
+  startsAt          DateTime?
+  endsAt            DateTime?
+  metadata          Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leads ResellerLead[]
+
+  @@index([resellerId, isActive])
+}
+
+model ResellerLead {
+  id String @id @default(cuid())
+
+  resellerId String
+  reseller   ResellerAccount @relation(fields: [resellerId], references: [id], onDelete: Cascade)
+
+  couponId String?
+  coupon   ResellerCoupon? @relation(fields: [couponId], references: [id], onDelete: SetNull)
+
+  workspaceId String @unique
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  stage         LeadStage @default(LEAD)
+  conversionAt  DateTime?
+  closedDealValue Decimal?
+  notes         String?
+  metadata      Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  commissions ResellerCommission[]
+
+  @@index([resellerId, stage, createdAt])
+}
+
+model ResellerPublicQuery {
+  id String @id @default(cuid())
+
+  fullName String
+  email    String
+  company  String?
+  phone    String?
+  website  String?
+
+  monthlyClientLeads Int?
+  message            String
+  budgetBand         String?
+  status             LeadStage @default(LEAD)
+  source             String    @default("public_reseller_page")
+  metadata           Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([email, createdAt])
+}
+
+model ResellerCommission {
+  id String @id @default(cuid())
+
+  resellerId String
+  reseller   ResellerAccount @relation(fields: [resellerId], references: [id], onDelete: Cascade)
+
+  leadId String?
+  lead   ResellerLead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  billingTransactionId String?
+  billingTransaction   BillingTransaction? @relation(fields: [billingTransactionId], references: [id], onDelete: SetNull)
+
+  dealAmount         Decimal @default(0)
+  commissionPercent  Decimal @default(0)
+  commissionAmount   Decimal @default(0)
+  status             CommissionStatus @default(PENDING)
+  notes              String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  payoutId String?
+  payout   ResellerPayout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+
+  @@index([resellerId, status, createdAt])
+}
+
+model ResellerPayout {
+  id String @id @default(cuid())
+
+  resellerId String
+  reseller   ResellerAccount @relation(fields: [resellerId], references: [id], onDelete: Cascade)
+
+  payoutDate DateTime?
+  method     String?
+  reference  String?
+  totalAmount Decimal @default(0)
+  status      PayoutStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  commissions ResellerCommission[]
+
+  @@index([resellerId, status, createdAt])
+}
+
+model CustomerReferralProfile {
+  id String @id @default(cuid())
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  code           String  @unique
+  isActive       Boolean @default(true)
+  shareLink      String?
+  totalReferrals Int     @default(0)
+  successfulReferrals Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  redemptions CustomerReferralRedemption[]
+
+  @@index([workspaceId, isActive])
+}
+
+model CustomerReferralRedemption {
+  id String @id @default(cuid())
+
+  profileId String
+  profile   CustomerReferralProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  referredWorkspaceId String @unique
+  referredWorkspace   Workspace @relation(fields: [referredWorkspaceId], references: [id], onDelete: Cascade)
+
+  friendDiscountPercent Decimal @default(20)
+  convertedAt           DateTime?
+  metadata              Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rewards CustomerReferralReward[]
+
+  @@index([profileId, createdAt])
+}
+
+model CustomerReferralReward {
+  id String @id @default(cuid())
+
+  redemptionId String
+  redemption   CustomerReferralRedemption @relation(fields: [redemptionId], references: [id], onDelete: Cascade)
+
+  referrerWorkspaceId String
+  referrerWorkspace   Workspace @relation("ReferrerWorkspace", fields: [referrerWorkspaceId], references: [id], onDelete: Cascade)
+
+  rewardType ReferralRewardType   @default(WALLET_CREDIT)
+  rewardStatus ReferralRewardStatus @default(PENDING)
+  walletCreditAmount Decimal?
+  freeMonthsCount     Int?
+  notes               String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([referrerWorkspaceId, rewardStatus, createdAt])
+}
+
+model DemoProvisionAttempt {
+  id String @id @default(cuid())
+
+  createdAt DateTime @default(now())
+
+  ip          String?
+  fingerprint String?
+  templateKey String?
+
+  isAllowed         Boolean @default(false)
+  blockReason       String?
+  retryAfterSeconds Int?
+
+  @@index([createdAt])
+  @@index([ip, createdAt])
+  @@index([fingerprint, createdAt])
+  @@index([templateKey, createdAt])
+}
+
+model AppActivityLog {
+  id String @id @default(cuid())
+
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+
+  actorUserId String?
+  actorUser   User?   @relation("AppActivityActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorEmail  String?
+
+  action     String
+  entityType String?
+  entityId   String?
+
+  status   String // "SUCCESS" | "FAILURE" | "WARNING" | "INFO"
+  metadata Json?
+
+  ipAddress     String?
+  userAgent     String?
+  correlationId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([action, createdAt(sort: Desc)])
+  @@index([actorUserId, createdAt(sort: Desc)])
+}
+
+/// A Google Play subscription purchase token, bound to exactly one workspace.
+/// Created only by the authenticated verify endpoint; Real-time developer notifications (RTDN)
+/// carry just the token, so this table is how a notification finds its workspace.
+model PlayPurchase {
+  id                  String    @id @default(cuid())
+  workspaceId         String
+  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  purchaseToken       String    @unique
+  /// Play subscription product id (== our SKU, see lib/billing/play-products.ts)
+  productId           String
+  /// SubscriptionIntervalKey the SKU maps to (MONTHLY, YEARLY, TEAM_MONTHLY, ...)
+  interval            String
+  /// Raw Google SubscriptionPurchaseV2.subscriptionState (e.g. SUBSCRIPTION_STATE_ACTIVE)
+  subscriptionState   String
+  autoRenewing        Boolean   @default(false)
+  expiresAt           DateTime?
+  latestOrderId       String?
+  /// Set when this purchase replaces an earlier token (resubscribe / plan change)
+  linkedPurchaseToken String?
+  isTestPurchase      Boolean   @default(false)
+  acknowledgedAt      DateTime?
+  lastSyncedAt        DateTime  @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId])
+}
+
+model BillingTransaction {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  transactionDate   DateTime @default(now())
+  amount            Decimal  @default(0)
+  status            String   @default("PAID") // "PAID", "PENDING", "FAILED", etc.
+  description       String
+  providerReference String?
+  receiptUrl        String?
+
+  /// Catalog subscription list price (INR) for this charge before distributor coupon discount.
+  subscriptionListAmount Decimal?
+  distributorCouponId     String?
+  distributorCoupon       DistributorCoupon? @relation(fields: [distributorCouponId], references: [id], onDelete: SetNull)
+
+  distributorCommission DistributorCommission?
+
+  /// ISO 4217 for subscription charges (checkout currency)
+  subscriptionCurrency String? @default("INR")
+  /// e.g. MONTHLY, YEARLY — snapshot at payment time
+  subscriptionInterval String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  resellerCommissions ResellerCommission[]
+
+  @@unique([workspaceId, providerReference])
+  @@index([workspaceId, transactionDate])
+  @@index([distributorCouponId])
+}
+
+model FinancialOperationIdempotency {
+  id             String    @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  operation      String
+  idempotencyKey String
+  requestHash    String
+  responseBody   Json?
+  status         String    @default("PENDING") // "PENDING" | "CONSUMED"
+  expiresAt      DateTime
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([workspaceId, operation, idempotencyKey])
+  @@index([workspaceId, operation, expiresAt])
+}
+
+model ProcessedWebhookEvent {
+  id        String   @id @default(cuid())
+  provider  String
+  eventId   String
+  eventType String
+  status    String   @default("RECEIVED") // "RECEIVED" | "PROCESSED" | "FAILED"
+  payload   Json?
+  errorMessage String?
+  processedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, eventId])
+  @@index([provider, createdAt])
+  @@index([provider, status, createdAt])
+}
+
+model AccountingTransaction {
+  id String @id @default(cuid())
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  eventType       AccountingEventType
+  eventOccurredAt DateTime
+  postedAt        DateTime            @default(now())
+  postingCurrency String
+  exchangeRate    Decimal?
+  description     String?
+
+  sourceTable      String
+  sourceId         String
+  sourceRef        String?
+  requestId        String?
+  jobId            String?
+  statementBatchId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entries AccountingEntry[]
+
+  @@unique([workspaceId, sourceTable, sourceId, eventType])
+  @@index([workspaceId, eventType, postedAt])
+  @@index([workspaceId, sourceTable, sourceId])
+  @@index([requestId])
+  @@index([jobId])
+}
+
+model AccountingEntry {
+  id String @id @default(cuid())
+
+  transactionId String
+  transaction   AccountingTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  lineNumber  Int
+  accountCode String
+  side        AccountingLineSide
+  amount      Decimal
+  currency    String
+  postedAt    DateTime
+  isPosted    Boolean            @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@unique([transactionId, lineNumber])
+  @@index([workspaceId, accountCode, postedAt])
+  @@index([workspaceId, transactionId])
+}
+
+model AccountingIntegrityRun {
+  id String @id @default(cuid())
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  runType     String    @default("NIGHTLY")
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  status      String    @default("RUNNING")
+  summary     Json?
+
+  violations AccountingViolationReport[]
+
+  @@index([workspaceId, startedAt(sort: Desc)])
+}
+
+model AccountingViolationReport {
+  id String @id @default(cuid())
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  runId String
+  run   AccountingIntegrityRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  invariantCode String
+  severity      String   @default("ERROR")
+  details       Json
+  detectedAt    DateTime @default(now())
+
+  @@index([workspaceId, detectedAt(sort: Desc)])
+  @@index([runId, invariantCode])
+}
+
+model WorkspaceUser {
+  id          String @id @default(cuid())
+  userId      String
+  workspaceId String
+
+  /// Legacy role field — kept for JWT/session compatibility.
+  /// Server-side enforcement uses `businessRole` via fresh DB lookup in lib/rbac.ts.
+  role String @default("OWNER") // "OWNER", "MEMBER"
+
+  /// ERP business role — Prisma-enum-validated, authoritative for permissions.
+  /// Null means the role has not been migrated yet; lib/rbac.ts falls back to `role`.
+  businessRole BusinessRoleEnum? @default(OWNER)
+
+  /// Whether this member currently has active workspace access.
+  /// Deactivated members retain their record for audit trail but cannot access the workspace.
+  /// Deactivated members do NOT count toward the seat limit.
+  isActive Boolean @default(true)
+
+  /// When this member joined (accepted invite or was auto-provisioned).
+  joinedAt DateTime @default(now())
+
+  /// Last time this member was seen active (updated by auth callbacks).
+  lastActiveAt DateTime?
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId, isActive])
+  @@index([workspaceId, businessRole])
+}
+
+/// Shareable report link for either a single workspace or a company group.
+/// External GROUP shares must use snapshots by default so future companies added to the group are not exposed through old links.
+model ReportShare {
+  id String @id @default(cuid())
+
+  scope    ReportShareScope
+  audience ReportShareAudience @default(INTERNAL)
+  status   ReportShareStatus   @default(ACTIVE)
+
+  /// Stable report identifier such as "profit-loss", "cash-flow", or "group-consolidated".
+  reportKey String
+  name      String?
+
+  /// Secret-bearing public token; keep unique and rotate by creating a new share.
+  token     String  @unique
+  tokenHash String? @unique
+
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  companyGroupId String?
+  companyGroup   CompanyGroup? @relation(fields: [companyGroupId], references: [id], onDelete: Cascade)
+
+  createdByUserId String?
+  createdBy       User?   @relation("ReportShareCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  /// Defaults to false so external group shares are snapshots unless explicitly promoted to a live internal workflow.
+  liveDataEnabled Boolean @default(false)
+
+  expiresAt    DateTime?
+  lastViewedAt DateTime?
+  viewCount    Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  snapshots ReportShareSnapshot[]
+
+  @@index([scope, audience, status])
+  @@index([workspaceId, status])
+  @@index([companyGroupId, status])
+  @@index([createdByUserId])
+  @@index([expiresAt])
+}
+
+/// Point-in-time data contract for external group report shares.
+/// Stores the exact companies, query shape, permissions, and generated artifact from creation time.
+model ReportShareSnapshot {
+  id String @id @default(cuid())
+
+  reportShareId String
+  reportShare   ReportShare @relation(fields: [reportShareId], references: [id], onDelete: Cascade)
+
+  /// Denormalized owning workspace when the snapshot is generated from a workspace-scoped share.
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+
+  /// Denormalized owning group when the snapshot is generated from a group-scoped share.
+  companyGroupId String?
+  companyGroup   CompanyGroup? @relation(fields: [companyGroupId], references: [id], onDelete: SetNull)
+
+  /// Workspace IDs included when the snapshot was created; do not recompute for external group links.
+  includedWorkspaceIds Json
+
+  filtersJson Json?
+  columnsJson Json?
+
+  dateRangeStart DateTime?
+  dateRangeEnd   DateTime?
+
+  allowPii              Boolean @default(false)
+  allowDownload         Boolean @default(false)
+  allowCompanyBreakdown Boolean @default(false)
+
+  /// Inline generated report payload for small reports.
+  generatedPayloadJson Json?
+
+  /// File/object-storage path for large generated exports.
+  exportPath String?
+
+  snapshotVersion Int      @default(1)
+  createdAt       DateTime @default(now())
+
+  @@index([reportShareId, createdAt])
+  @@index([workspaceId])
+  @@index([companyGroupId])
+}
+
+model WorkspaceInvite {
+  id          String @id @default(cuid())
+  workspaceId String
+  email       String
+
+  /// The ERP business role this invite will grant upon acceptance.
+  role         String           @default("STAFF") // legacy — kept for email template compatibility
+  businessRole BusinessRoleEnum @default(STAFF)
+
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, email])
+  @@index([workspaceId, expiresAt])
+}
+
+// ==========================================
+// 3. SECURED BUSINESS DATA
+// ==========================================
+
+model BusinessProfile {
+  id          String    @id @default(cuid())
+  workspaceId String    @unique
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  companyName    String
+  proprietorName String
+  address        String
+  email          String
+  phone          String?
+  website        String?
+
+  invoiceTheme  String  @default("DESIGN_1") // "DESIGN_1" or "DESIGN_2"
+  invoicePrefix String? @default("INV")
+  invoiceTermsDays Int @default(7) // default payment terms: due date = invoice date + this many days
+
+  // --- DYNAMIC TAX LABELS ---
+  // In the UI, instead of "Enter GST", we show "Enter {taxLabel}"
+  taxLabel     String @default("GST") // "VAT", "Sales Tax", "GST"
+  taxIdLabel   String @default("GSTIN") // "TRN", "EIN", "GSTIN"
+  routingLabel String @default("IFSC Code") // "SWIFT", "Sort Code", "ABA"
+
+  // Compliance (Keeping legacy names for no-break compatibility)
+  panNumber   String // Acts as Primary Tax ID
+  udyamNumber String? // Acts as Secondary Business ID
+  gstin       String? // Acts as the Regional Tax ID
+  // GST (India): supplier state (2-digit GST state code), registration scheme and filing cadence.
+  gstStateCode          String? // "27" = Maharashtra
+  gstRegistrationType   String   @default("REGULAR") // REGULAR | COMPOSITION | UNREGISTERED
+  gstFilingFrequency    String   @default("MONTHLY") // MONTHLY | QRMP (quarterly GSTR-1/3B)
+  gstPrevFyTurnover     Decimal? // aggregate turnover of the previous FY (drives HSN digits, late-fee caps)
+  gstRegisteredFrom     DateTime?
+  gstRemindersEnabled   Boolean  @default(true) // due-date alerts and the weekly digest
+  // CA compliance: what kind of taxpayer this is, which drives the compliance calendar.
+  caEntityType          String? // PROPRIETOR | PARTNERSHIP | LLP | COMPANY | OTHER
+  caTaxRegime           String? // NEW | OLD (individuals and proprietors)
+  caPresumptive         String? // NONE | SEC_44ADA | SEC_44AD
+  caTaxAuditApplicable  Boolean  @default(false)
+  caTan                 String? // TAN of the deductor, needed for TDS returns
+  caSetupAt             DateTime?
+  gstSupplyKind         String   @default("SERVICES") // SERVICES | GOODS | BOTH: picks the GST registration threshold
+  msmeInvestment        Decimal? // plant, machinery and equipment, for MSME classification
+  gstLutActive          Boolean  @default(true) // exports of services under a Letter of Undertaking (zero-rated, no IGST)
+
+  // Banking
+  bankName      String
+  accountName   String
+  accountNumber String
+  ifscCode      String // General routing code
+  primaryBankAccountId String?
+  primaryBankAccount   BankAccount? @relation("PrimaryRemittanceBankAccount", fields: [primaryBankAccountId], references: [id], onDelete: SetNull)
+
+  logoUrl        String?
+  signatureUrl   String?
+  groqApiKey     String?
+  defaultSacCode String? @default("998313") // Default IT Consulting if not specified
+  defaultTaxRate Float?
+
+  // PAYMENT GATEWAY (Per-Tenant Razorpay Keys — PRO users only)
+  razorpayKeyId     String? // Plain text (publishable key, e.g. rzp_live_xxx)
+  razorpayKeySecret String? // AES-256-GCM encrypted blob (NEVER stored plain)
+
+  // PAYMENT GATEWAY — Stripe (PRO users only, global)
+  stripePublishableKey String? // Plain text (pk_live_xxx)
+  stripeSecretKey      String? // AES-256-GCM encrypted blob (NEVER stored plain)
+  defaultGateway       String? @default("RAZORPAY") // "RAZORPAY" | "STRIPE"
+
+  // PUBLIC SHOP (E-Store)
+  shopSlug        String? @unique // URL slug e.g. "bababuilds" → /shop/bababuilds
+  shopTagline     String? // Hero subtitle shown on shop page
+  shopEnabled     Boolean @default(false) // Master on/off for the public shop
+  shopAccentColor String? @default("#6366f1") // HSL accent color for shop branding
+
+  // PUBLIC SHOP — content blocks (admin-editable, rendered on /shop/<slug>)
+  shopAnnouncement String? // Optional thin banner shown above the hero (e.g. promo / shipping notice)
+  shopAboutMd      String? // Markdown body for the "About Us" section (sanitized at render time)
+  shopFooterNote   String? // Optional fine-print / shop-specific footer note (plain text)
+  shopSocialJson   String? // JSON: array of { platform, url } pairs (instagram, facebook, x, linkedin, youtube, whatsapp, custom)
+  shopFaqJson      String? // JSON: array of { q, a } FAQ entries (capped server-side)
+  shopShowAiAssist Boolean @default(true) // Show in-shop "AI Assist" lead-capture drawer for buyers
+
+  // EMAIL SERVER (SMTP)
+  smtpHost      String?
+  smtpPort      Int?
+  smtpUser      String?
+  smtpPassword  String?
+  smtpFromEmail String?
+
+  updatedAt DateTime @updatedAt
+
+  @@index([primaryBankAccountId])
+}
+
+model Client {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name    String
+  address String
+  country String
+  taxId   String?
+  // GST: recipient state (2-digit GST state code). Needed for place of supply (CGST+SGST vs IGST).
+  gstStateCode String?
+  // GST: standing treatment copied onto every new invoice for this client (SEZ_WP | SEZ_WOP, or reverse charge).
+  gstSupplyOverride String?
+  gstReverseCharge  Boolean @default(false)
+  email   String?
+  phone   String?
+  logoUrl String?
+
+  status String @default("ACTIVE") // "ACTIVE", "INACTIVE", "VIP"
+
+  // "isExport" becomes "isTaxExempt" in global context
+  isExport Boolean @default(true)
+
+  // --- CRM ---
+  countryCode      String? // ISO 3166-1 alpha-2, normalised from `country` (decides domestic vs export)
+  website          String?
+  industry         String?
+  currency         String? // preferred invoice currency (ISO 4217); the composer starts with it
+  paymentTermsDays Int? // overrides the workspace default payment terms for this client
+  creditLimit      Decimal? // in the workspace base currency; warns when outstanding plus a new invoice exceeds it
+  tags             String   @default("") // "|vip|agency|": see lib/clients/tags
+  source           String   @default("MANUAL") // MANUAL | IMPORT | AI | POS
+  isWalkIn         Boolean  @default(false) // the POS counter customer: hidden from the CRM and not counted toward plan limits
+  archivedAt       DateTime?
+  ownerUserId      String? // who looks after this account
+  lastContactedAt  DateTime?
+  updatedAt        DateTime? @updatedAt
+  contacts         ClientContact[]
+  clientNotes      ClientNote[]
+  expenses         Expense[]
+
+  createdAt       DateTime               @default(now())
+  invoices        Invoice[]
+  proposals       Proposal[]
+  retainers       Retainer[]
+  paymentBehavior ClientPaymentBehavior?
+  mailBillingDomains MailBillingDomain[]
+  mailBillingSubscriptions MailBillingSubscription[]
+
+  @@unique([name, workspaceId])
+  @@index([workspaceId])
+  @@index([workspaceId, archivedAt])
+}
+
+model ClientPaymentBehavior {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  clientId String @unique
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  avgDaysToPay        Float?
+  medianDaysToPay     Float?
+  onTimeRate          Float?
+  lateRate            Float?
+  partialPaymentRate  Float?
+  sampleInvoicesCount Int       @default(0)
+  lastComputedAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, lastComputedAt(sort: Desc)])
+}
+
+model Invoice {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  invoiceNumber       String
+  financialYear       String
+  billingMonth        String    @default("Unknown")
+  invoiceDate         DateTime
+  dueDate             DateTime?
+  paymentTermsDays    Int?
+  expectedPaymentDate DateTime?
+  collectionRiskScore Float?
+  lastReminderSentAt  DateTime?
+  followUpStatus      String?
+  /// Collections: what the customer promised, when we next look at this invoice, why it is disputed, how many dunning reminders went out.
+  promiseDate         DateTime?
+  nextFollowUpAt      DateTime?
+  disputeReason       String?
+  collectionReminders Int       @default(0)
+  clientName          String
+  sacCode             String? // Removed the hardcoded @default("998313")
+  serviceDescription  String
+
+  subtotal    Decimal  @default(0)
+  taxRate     Float    @default(0)
+  taxAmount   Decimal  @default(0)
+  grandTotal  Decimal  @default(0)
+  taxMode     String   @default("exempt") // "taxable" | "exempt"
+  totalAmount Decimal
+  pdfPath     String
+  createdAt   DateTime @default(now())
+
+  status         InvoiceStatus @default(PENDING)
+  amountReceived Decimal?
+  dateReceived   DateTime?
+
+  // Multi-currency: amounts above are in `currency`; `baseGrandTotal` is grandTotal * exchangeRate
+  // in the workspace base currency (what reports and the /income KPIs add up).
+  currency       String        @default("INR")
+  exchangeRate   Decimal       @default(1)
+  baseGrandTotal Decimal?
+  source         InvoiceSource @default(MANUAL)
+  sentAt         DateTime?
+  voidedAt       DateTime?
+  voidReason     String?
+  // Set once stock for product lines has been deducted (at issue, or legacy: at payment). Guards double-deduction.
+  stockCommittedAt DateTime?
+  payments       InvoicePayment[]
+  events         InvoiceEvent[]
+  creditNotes    CreditNote[]
+
+  withholdingRatePercent    Decimal?
+  withholdingAmount         Decimal?
+  withholdingDeductedAt     DateTime?
+  withholdingDepositedAt    DateTime?
+  withholdingDepositDueAt   DateTime?
+  withholdingReminderSentAt DateTime?
+
+  providerGateway       String? // "RAZORPAY" or "STRIPE"
+  providerPaymentLinkId String? // The ID of the generated payment link
+
+  clientId             String?
+  client               Client?               @relation(fields: [clientId], references: [id])
+  idempotencyRecords   InvoiceIdempotency[]
+  taxDecisionAuditLogs TaxDecisionAuditLog[]
+  taxableEvents        TaxableEvent[]
+  items                InvoiceItem[]
+  linkedShopOrders     ShopOrder[]           @relation("ShopOrderLinkedInvoice")
+  generationDrafts     InvoiceGenerationDraft[] @relation("InvoiceGenerationDraftFinalizedInvoice")
+
+  sourceProposalId      String?
+  sourceProposal        Proposal?                     @relation("ProposalToInvoice", fields: [sourceProposalId], references: [id])
+  proposalConversions   ProposalConversion[]
+  billingMilestones     BillingMilestone[]
+  withholdingEvents     WithholdingEvent[]
+  bankTransactionSplits BankTransactionInvoiceSplit[]
+  meteredUsages         MeteredUsage[]
+
+  // The retainer cycle that produced this invoice (null for everything else).
+  retainerId String?
+  retainer   Retainer? @relation("RetainerInvoices", fields: [retainerId], references: [id], onDelete: SetNull)
+  // Automatic reminders already sent for this invoice (retainer collections).
+  reminderCount Int @default(0)
+
+  // GST: optional explicit overrides; when null the return engine derives them from the client + business state.
+  gstPlaceOfSupply String? // 2-digit state code, or "96" for exports
+  gstReverseCharge Boolean @default(false)
+  gstSupplyOverride String? // SEZ_WP | SEZ_WOP (supply to a SEZ unit/developer, with or without payment of tax)
+  gstEcoGstin       String? // GSTIN of the e-commerce operator when the supply was made through one (GSTR-1 table 14)
+  // e-invoicing: IRN and acknowledgement as returned by the Invoice Registration Portal.
+  irn        String?
+  irnAckNo   String?
+  irnAckDate DateTime?
+  ewayBillNo String?
+
+  // Security: Two different workspaces can use invoice number "001"
+  @@unique([invoiceNumber, workspaceId])
+  @@index([financialYear])
+  @@index([workspaceId])
+  @@index([workspaceId, status, dueDate])
+  @@index([workspaceId, financialYear, status])
+  @@index([workspaceId, clientId])
+  @@index([workspaceId, invoiceDate])
+  @@index([workspaceId, retainerId])
+}
+
+/// One received payment against an invoice. Invoice.amountReceived/status are derived from the
+/// non-reversed rows. Reversal keeps the row (audit trail) instead of deleting it.
+model InvoicePayment {
+  id          String   @id @default(cuid())
+  workspaceId String
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  amount      Decimal
+  receivedAt  DateTime
+  method      String   @default("OTHER") // BANK_TRANSFER | UPI | CARD | CASH | CHEQUE | PAYMENT_LINK | OTHER
+  reference   String?
+  notes       String?
+  bankTransactionId String?
+
+  idempotencyKey  String?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  reversedAt       DateTime?
+  reversedByUserId String?
+  reversalReason   String?
+
+  @@unique([workspaceId, idempotencyKey])
+  @@index([invoiceId])
+  @@index([workspaceId, receivedAt])
+}
+
+/// Append-only timeline for an invoice (created, sent, payment, reversal, void, reminder...).
+model InvoiceEvent {
+  id          String   @id @default(cuid())
+  workspaceId String
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  type        String
+  message     String?
+  metadata    String?
+  actorUserId String?
+  createdAt   DateTime @default(now())
+
+  @@index([invoiceId, createdAt])
+}
+
+/// Issued when an invoice is voided/cancelled or reduced (GST: cancellation is a credit note, not a delete).
+model CreditNote {
+  id               String   @id @default(cuid())
+  workspaceId      String
+  invoiceId        String
+  invoice          Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  creditNoteNumber String
+  amount           Decimal
+  taxAmount        Decimal  @default(0)
+  reason           String
+  issuedAt         DateTime @default(now())
+  createdByUserId  String?
+
+  @@unique([workspaceId, creditNoteNumber])
+  @@index([invoiceId])
+}
+
+model WorkspaceTaxPreference {
+  id                 String           @id @default(cuid())
+  workspaceId        String           @unique
+  workspace          Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  mode               WorkspaceTaxMode @default(AUTO)
+  defaultCountryCode String?
+  provider           String?
+  // Optional "tax estimate" card on /income (India professionals; presumptive-income rule).
+  taxEstimateEnabled     Boolean @default(false)
+  taxEstimateRatePercent Float   @default(50)
+  updatedBy          String
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+}
+
+model WorkspaceTaxOverride {
+  id            String               @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  scopeType     TaxOverrideScopeType
+  scopeKey      String
+  ratePercent   Float
+  reason        String?
+  effectiveFrom DateTime?
+  effectiveTo   DateTime?
+  priority      Int                  @default(0)
+  isActive      Boolean              @default(true)
+  createdBy     String
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@index([workspaceId, isActive, effectiveFrom, effectiveTo])
+  @@index([workspaceId, scopeType, scopeKey, priority])
+}
+
+model TaxDecisionAuditLog {
+  id                  String              @id @default(cuid())
+  workspaceId         String
+  workspace           Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invoiceId           String?
+  invoice             Invoice?            @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  resolvedRatePercent Float
+  resolutionSource    TaxResolutionSource
+  basisJson           Json
+  inputHash           String
+  createdBy           String
+  createdAt           DateTime            @default(now())
+
+  @@index([workspaceId])
+  @@index([invoiceId])
+}
+
+/**
+ * TaxableEvent — persisted source row for a tax determination (invoice or expense).
+ */
+model TaxableEvent {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  sourceEntityKind       String // invoice | expense
+  sourceEntityId         String
+  taxableAmount          Decimal
+  originCountryCode      String   @default("")
+  destinationCountryCode String   @default("")
+  occurredAt             DateTime
+
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  expenseId String?
+  expense   Expense? @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+
+  determination TaxDetermination?
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, sourceEntityKind, sourceEntityId])
+  @@index([workspaceId, occurredAt])
+}
+
+model TaxDetermination {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  taxableEventId String       @unique
+  taxableEvent   TaxableEvent @relation(fields: [taxableEventId], references: [id], onDelete: Cascade)
+
+  ratePercent      Float
+  taxAmount        Decimal
+  totalAmount      Decimal
+  resolutionSource String // MANUAL_OVERRIDE | WORKSPACE_RULE | FALLBACK
+  resolutionReason String
+  overrideId       String?
+
+  componentLines TaxComponentLine[]
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId])
+}
+
+model TaxComponentLine {
+  id                 String           @id @default(cuid())
+  workspaceId        String
+  workspace          Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  taxDeterminationId String
+  taxDetermination   TaxDetermination @relation(fields: [taxDeterminationId], references: [id], onDelete: Cascade)
+
+  componentKey  String
+  ratePercent   Float
+  taxableAmount Decimal
+  taxAmount     Decimal
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, taxDeterminationId])
+}
+
+/**
+ * TaxAuditEvent — append-only audit trail for tax operations (correlation-friendly).
+ */
+model TaxAuditEvent {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  eventType     String // DETERMINATION | READINESS_RUN | IMPORT_BATCH | DOCUMENT_LINK | RETURN_PERIOD_FILED
+  correlationId String?
+  actorUserId   String?
+  entityType    String?
+  entityId      String?
+  payloadJson   Json
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([workspaceId, correlationId])
+  @@index([workspaceId, eventType, createdAt(sort: Desc)])
+}
+
+/**
+ * TaxOperationIdempotency — dedupe readiness runs and import batches per workspace + key.
+ */
+model TaxOperationIdempotency {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  operation      String // TAX_READINESS_RUN | TAX_IMPORT_BATCH
+  idempotencyKey String
+  requestHash    String
+  responseBody   Json?
+  status         String   @default("CONSUMED") // PENDING | CONSUMED
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([workspaceId, operation, idempotencyKey])
+  @@index([workspaceId, expiresAt])
+}
+
+/**
+ * TaxReferenceEntry — global India compliance catalog (seeded reference data).
+ */
+model TaxReferenceEntry {
+  id          String     @id @default(cuid())
+  workspaceId String?
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  entryType     String // TAX_TYPE | FILING_FREQUENCY | CORE_FORM | BASELINE_RATE | CALENDAR_RULE
+  countryCode   String    @default("IN")
+  code          String
+  label         String?
+  payloadJson   Json
+  effectiveFrom DateTime?
+  effectiveTo   DateTime?
+
+  sourceDocumentRef      Json?
+  verificationLevel      String?
+  reviewStatus           String?
+  legalCertaintyRequired Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([entryType, countryCode, code])
+  @@index([workspaceId, entryType])
+  @@index([countryCode, entryType])
+}
+
+model TaxPeriod {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  countryCode String    @default("IN")
+  periodCode  String
+  periodType  String    @default("QUARTER")
+  fiscalYear  String
+  startDate   DateTime
+  endDate     DateTime
+  dueDate     DateTime?
+  isClosed    Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  taxReturns TaxReturn[]
+
+  @@unique([workspaceId, periodCode])
+  @@index([workspaceId, startDate, endDate])
+}
+
+model TaxForm {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  countryCode  String          @default("IN")
+  returnFamily TaxReturnFamily
+  formCode     String
+  version      String          @default("1.0")
+  title        String?
+  schemaJson   Json?
+  isActive     Boolean         @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  taxReturns TaxReturn[]
+
+  @@unique([workspaceId, formCode, version])
+  @@index([workspaceId, countryCode, returnFamily, isActive])
+}
+
+model TaxReturn {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  taxPeriodId String
+  taxPeriod   TaxPeriod @relation(fields: [taxPeriodId], references: [id], onDelete: Cascade)
+
+  taxFormId String
+  taxForm   TaxForm @relation(fields: [taxFormId], references: [id], onDelete: Cascade)
+
+  status                 TaxReturnStatus @default(DRAFT)
+  readinessScore         Int             @default(0)
+  lastReadinessCheckedAt DateTime?
+  prefillCompletedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fieldValues TaxReturnFieldValue[]
+  blockers    TaxReadinessBlocker[]
+
+  @@unique([workspaceId, taxPeriodId, taxFormId])
+  @@index([workspaceId, status])
+  @@index([workspaceId, lastReadinessCheckedAt])
+  @@index([workspaceId, updatedAt(sort: Desc)])
+}
+
+model TaxReturnFieldValue {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  taxReturnId String
+  taxReturn   TaxReturn @relation(fields: [taxReturnId], references: [id], onDelete: Cascade)
+
+  fieldKey        String
+  fieldLabel      String?
+  valueJson       Json
+  sourceType      String
+  sourceRef       String?
+  confidenceScore Float?
+  isManual        Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  @@unique([taxReturnId, fieldKey])
+  @@index([workspaceId, taxReturnId])
+}
+
+model TaxReadinessCheck {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  countryCode    String               @default("IN")
+  returnFamily   TaxReturnFamily
+  checkCode      String
+  title          String
+  description    String?
+  severity       TaxReadinessSeverity @default(WARNING)
+  ruleConfigJson Json?
+  isActive       Boolean              @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  blockers TaxReadinessBlocker[]
+
+  @@unique([workspaceId, returnFamily, checkCode])
+  @@index([workspaceId, returnFamily, isActive])
+}
+
+model TaxReadinessBlocker {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  taxReturnId String
+  taxReturn   TaxReturn @relation(fields: [taxReturnId], references: [id], onDelete: Cascade)
+
+  checkId String?
+  check   TaxReadinessCheck? @relation(fields: [checkId], references: [id], onDelete: SetNull)
+
+  blockerCode String
+  title       String
+  details     String?
+  severity    TaxReadinessSeverity      @default(WARNING)
+  status      TaxReadinessBlockerStatus @default(OPEN)
+  factsJson   Json?
+
+  detectedAt DateTime  @default(now())
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([taxReturnId, blockerCode])
+  @@index([workspaceId, status, severity])
+  @@index([workspaceId, taxReturnId])
+  @@index([workspaceId, status, severity, updatedAt(sort: Desc)])
+}
+
+model InvoiceIdempotency {
+  id             String    @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  idempotencyKey String
+  requestHash    String
+  invoiceId      String?
+  invoice        Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  responseBody   Json?
+  status         String    @default("PENDING") // "PENDING" | "CONSUMED"
+  expiresAt      DateTime
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([workspaceId, idempotencyKey])
+  @@index([workspaceId, expiresAt])
+}
+
+model InvoiceGenerationDraft {
+  id                String    @id @default(cuid())
+  workspaceId       String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdByUserId   String
+  payloadJson       Json
+  totalsJson        Json
+  currency          String
+  status            String    @default("PENDING") // "PENDING" | "CONFIRMED" | "EXPIRED" | "CANCELLED"
+  razorpayLinkId    String?
+  razorpayLinkUrl   String?
+  expiresAt         DateTime
+  consumedAt        DateTime?
+  finalizedInvoiceId String?
+  finalizedInvoice   Invoice?  @relation("InvoiceGenerationDraftFinalizedInvoice", fields: [finalizedInvoiceId], references: [id], onDelete: SetNull)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([workspaceId, createdByUserId, status])
+  @@index([workspaceId, expiresAt])
+}
+
+model Expense {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  date        DateTime
+  category    String
+  vendor      String
+  amount      Decimal
+  description String?
+  receiptUrl  String?
+  createdAt   DateTime @default(now())
+
+  withholdingRatePercent    Decimal?
+  withholdingAmount         Decimal?
+  withholdingDeductedAt     DateTime?
+  withholdingDepositedAt    DateTime?
+  withholdingDepositDueAt   DateTime?
+  withholdingReminderSentAt DateTime?
+
+  withholdingEvents WithholdingEvent[]
+  taxableEvents     TaxableEvent[]
+
+  // GST on purchases (input tax credit). `amount` is the total paid including GST.
+  vendorGstin      String?
+  vendorInvoiceNo  String?
+  vendorStateCode  String?
+  hsnCode          String?
+  gstRate          Float?
+  cgstAmount       Decimal @default(0)
+  sgstAmount       Decimal @default(0)
+  igstAmount       Decimal @default(0)
+  cessAmount       Decimal @default(0)
+  // NONE (no GST on the bill) | ELIGIBLE | INELIGIBLE (blocked u/s 17(5)) | REVERSE_CHARGE
+  itcStatus        String  @default("NONE")
+  // Rule 37: credit is reversed if the supplier is not paid within 180 days of the invoice (re-claimed once paid).
+  paymentStatus    String    @default("PAID") // PAID | UNPAID
+  paidAt           DateTime?
+  // Credit control: hold a bill's credit (e.g. supplier has not filed) or claim it in a later month than the bill's.
+  itcHeld          Boolean   @default(false)
+  itcClaimMonth    String? // "2026-10"
+  // MSME vendors: section 43B(h) disallows payments to micro and small enterprises made after the allowed days.
+  vendorUdyam      String?
+  vendorMsme       String? // MICRO | SMALL | MEDIUM | NONE (trader or unknown)
+  vendorAgreedDays Int? // written credit period, max 45
+
+  // Vendor master, bill due date and where the entry came from.
+  vendorId String?
+  vendorRecord Vendor? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  dueDate  DateTime?
+  source   String   @default("MANUAL") // MANUAL | SCAN | EMAIL | RECURRING | PO | BANK | IMPORT | AI
+  purchaseOrderId String?
+  recurringId String?
+  recurring   RecurringExpense? @relation(fields: [recurringId], references: [id], onDelete: SetNull)
+
+  // Approval: only APPROVED entries count in reports, tax and the dashboard.
+  approvalStatus   String    @default("APPROVED") // DRAFT (needs review) | PENDING | APPROVED | REJECTED
+  submittedByUserId String?
+  approvedByUserId  String?
+  approvedAt        DateTime?
+  rejectionReason   String?
+
+  // Billable to a client: can be added to the next invoice, with an optional markup.
+  billable        Boolean  @default(false)
+  clientId        String?
+  client          Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  markupPercent   Float?
+  billedInvoiceId String?
+
+  @@index([date])
+  @@index([category])
+  @@index([workspaceId])
+  @@index([workspaceId, date])
+  @@index([workspaceId, approvalStatus])
+  @@index([workspaceId, paymentStatus, dueDate])
+  @@index([vendorId])
+  @@index([clientId, billable])
+  @@index([purchaseOrderId])
+}
+
+/// A supplier. Carries GST, MSME, terms and TDS defaults so each bill does not re-key them.
+model Vendor {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  /// Lower-cased, punctuation-free name used to find the same vendor typed differently.
+  nameKey     String
+  gstin       String?
+  stateCode   String?
+  email       String?
+  phone       String?
+  msmeClass   String?  // MICRO | SMALL | MEDIUM | NONE
+  udyam       String?
+  paymentTermsDays Int?
+  defaultCategory  String?
+  /// Suggested withholding for payments to this vendor.
+  tdsSection        String?
+  tdsRatePercent    Float?
+  notes       String?
+  archivedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  expenses  Expense[]
+  recurring RecurringExpense[]
+
+  @@unique([workspaceId, nameKey])
+  @@index([workspaceId, archivedAt])
+}
+
+/// A repeating expense (rent, subscriptions). Posts on its own or creates a draft to confirm.
+model RecurringExpense {
+  id          String   @id @default(cuid())
+  workspaceId String
+  vendorId    String?
+  vendorRecord Vendor? @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  vendor      String
+  category    String
+  amount      Decimal
+  description String?
+  frequency   String   @default("MONTHLY") // WEEKLY | MONTHLY | QUARTERLY | YEARLY
+  nextRunDate DateTime
+  endDate     DateTime?
+  /// true: posts approved on its date; false: creates a draft for someone to confirm.
+  autoPost    Boolean  @default(false)
+  status      String   @default("ACTIVE") // ACTIVE | PAUSED | ENDED
+  paymentStatus String @default("PAID") // PAID | UNPAID
+  dueInDays   Int?
+  itcStatus   String   @default("NONE")
+  gstRate     Float?
+  lastRunAt   DateTime?
+  createdByUserId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  expenses Expense[]
+
+  @@index([workspaceId, status, nextRunDate])
+}
+
+/// Monthly cap per category (category "*" is the overall cap).
+model ExpenseBudget {
+  id          String   @id @default(cuid())
+  workspaceId String
+  category    String
+  monthlyAmount Decimal
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([workspaceId, category])
+}
+
+/// Per-workspace expense rules and the forwarding inbox.
+model ExpenseSettings {
+  workspaceId       String   @id
+  approvalRequired  Boolean  @default(false)
+  /// With approval on, entries at or above this amount wait for an approver (0 = all).
+  approvalThreshold Decimal  @default(0)
+  inboxEnabled      Boolean  @default(false)
+  inboxToken        String?  @unique
+  updatedAt         DateTime @updatedAt
+}
+
+model WithholdingEvent {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  sourceType String // INVOICE_PAYMENT|EXPENSE_PAYMENT|MANUAL
+  sourceId   String?
+  invoiceId  String?
+  invoice    Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  expenseId  String?
+  expense    Expense? @relation(fields: [expenseId], references: [id], onDelete: SetNull)
+
+  counterpartyName String?
+  sectionCode      String?
+
+  grossAmount            Decimal
+  withheldAmount         Decimal
+  withholdingRatePercent Decimal?
+
+  deductedAt     DateTime
+  depositedAt    DateTime?
+  depositDueAt   DateTime?
+  reminderSentAt DateTime?
+
+  returnPeriodKey String?
+  notes           String?
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([workspaceId, deductedAt])
+  @@index([workspaceId, returnPeriodKey])
+  @@index([workspaceId, sourceType, sourceId])
+}
+
+model TaxCreditEvent {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  sourceType String // WITHHOLDING_CERTIFICATE|MANUAL|IMPORT
+  sourceId   String?
+
+  documentId String?
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  creditType        String  @default("WITHHOLDING") // WITHHOLDING|ADVANCE_TAX|OTHER
+  counterpartyName  String?
+  certificateNumber String?
+
+  grossAmount    Decimal?
+  creditedAmount Decimal
+  withheldAmount Decimal?
+
+  certificateIssuedAt DateTime?
+  periodStart         DateTime?
+  periodEnd           DateTime?
+  returnPeriodKey     String?
+
+  status String  @default("POSTED") // POSTED|REVERSED|PENDING_REVIEW
+  notes  String?
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  ledgerEntries TaxCreditLedgerEntry[]
+
+  @@index([workspaceId, returnPeriodKey])
+  @@index([workspaceId, periodStart, periodEnd])
+  @@index([workspaceId, documentId])
+}
+
+model TaxCreditLedgerEntry {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  taxCreditEventId String
+  taxCreditEvent   TaxCreditEvent @relation(fields: [taxCreditEventId], references: [id], onDelete: Cascade)
+
+  entryType       String // CREDIT|REVERSAL|ADJUSTMENT
+  amount          Decimal
+  entryDate       DateTime
+  returnPeriodKey String?
+  notes           String?
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@index([workspaceId, entryDate])
+  @@index([workspaceId, returnPeriodKey])
+  @@index([workspaceId, taxCreditEventId])
+}
+
+model TaxReturnPeriod {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  periodKey   String
+  periodStart DateTime
+  periodEnd   DateTime
+
+  dueDate DateTime
+  filedAt DateTime?
+
+  expectedWithheldAmount   Decimal @default(0)
+  reconciledWithheldAmount Decimal @default(0)
+
+  status String  @default("OPEN") // OPEN|FILED|OVERDUE
+  notes  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, periodKey])
+  @@index([workspaceId, dueDate])
+  @@index([workspaceId, periodStart, periodEnd])
+}
+
+model BankTransaction {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  accountId String?
+  account   BankAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  importBatchId String?
+  importBatch   BankImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+
+  /// Stable id from aggregator (Plaid) or ISO20022 — dedupe independent of narration.
+  providerTransactionId String?
+
+  date                     DateTime
+  description              String
+  amount                   Decimal // Account currency: positive deposits, negative withdrawals
+  referenceId              String?
+  transactionType          String?
+  isInternalTransfer       Boolean  @default(false)
+  reconciliationConfidence Float?
+  category                 String?
+
+  /// Statement running balance after row (when source file had a balance column).
+  balanceAfter Decimal?
+
+  /// Original statement currency when different from account (optional).
+  originalCurrency       String?
+  /// Amount in originalCurrency when FX column mapped (optional).
+  amountOriginalCurrency Decimal?
+
+  /// JSON: balance continuity flags, parse warnings, suggested invoice ids, etc.
+  parseFlagsJson Json?
+
+  // Reconciliation state
+  isReconciled     Boolean @default(false)
+  matchedInvoiceId String?
+  matchedExpenseId String?
+
+  /// Dedupe key for imports: workspace + account + stable row fingerprint (hash).
+  sourceImportHash String?
+
+  /// Set when someone decides this line needs no match (kept out of the review inbox until restored).
+  ignoredAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  invoiceSplits BankTransactionInvoiceSplit[]
+
+  @@unique([workspaceId, accountId, sourceImportHash])
+  @@unique([workspaceId, accountId, providerTransactionId])
+  @@index([workspaceId])
+  @@index([accountId])
+  @@index([date])
+  @@index([workspaceId, isReconciled, date])
+  @@index([workspaceId, isReconciled, ignoredAt])
+  @@index([importBatchId])
+}
+
+model BankAccount {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name                String
+  bankName            String?
+  accountHolderName   String?
+  maskedAccountNumber String?
+  routingCode         String?
+  sourceType          String? @default("MANUAL")
+  isPrimaryRemittance Boolean @default(false)
+  currency            String  @default("INR")
+
+  openingBalance     Decimal  @default(0)
+  openingBalanceDate DateTime @default(now())
+
+  // Optional cached value; source of truth is openingBalance + transactions.
+  currentBalance Decimal?
+
+  transactions  BankTransaction[]
+  importBatches BankImportBatch[]
+  primaryForBusinessProfiles BusinessProfile[] @relation("PrimaryRemittanceBankAccount")
+
+  /// Plaid Item + account (encrypted token at rest)
+  plaidItemId               String?
+  plaidAccountId            String?
+  plaidAccessTokenEncrypted String?
+  plaidTransactionsCursor   String?
+  lastPlaidSyncAt           DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, isPrimaryRemittance])
+  @@index([workspaceId])
+}
+
+/// One uploaded bank file (CSV/XLSX/OFX/PDF) — audit trail for imports.
+model BankImportBatch {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  accountId String
+  account   BankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  fileName     String
+  mimeType     String?
+  rowCount     Int     @default(0)
+  parseVersion String  @default("1")
+  parseMeta    Json?
+  status       String  @default("COMPLETED") // PENDING|COMPLETED|FAILED
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  /// Optional raw file blob when workspace enables retention (governance).
+  rawFileData Bytes?
+
+  transactions BankTransaction[]
+
+  @@index([workspaceId, accountId, createdAt(sort: Desc)])
+  @@index([workspaceId, createdAt(sort: Desc)])
+}
+
+/// Workspace-scoped expense categories for reconciliation (replaces ad-hoc localStorage lists).
+model ExpenseReconciliationCategory {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name      String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, sortOrder])
+}
+
+/// User-defined rules evaluated before AI (narration substring → category/vendor/internal transfer).
+model BankReconciliationRule {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  priority            Int     @default(0)
+  pattern             String
+  matchTxnType        String  @default("ANY") // ANY|DEBIT|CREDIT
+  setCategory         String?
+  setVendor           String?
+  setInternalTransfer Boolean @default(false)
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, isActive, priority])
+}
+
+/// Tunable reconciliation thresholds and retention (PII governance).
+model WorkspaceReconciliationSettings {
+  id          String    @id @default(cuid())
+  workspaceId String    @unique
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  /// Auto-apply invoice match when score >= this (default 95).
+  autoMatchMinScore      Float   @default(95)
+  /// Surface top suggestions when score >= this but below autoMatchMinScore.
+  autoMatchSuggestionMin Float   @default(70)
+  /// Days to retain raw import payload in staging (0 = do not retain beyond parse).
+  importRawRetentionDays Int     @default(0)
+  /// When true, store raw file bytes in BankImportBatch.rawFileData (encrypted at app level optional future).
+  storeRawImportBytes    Boolean @default(false)
+  /// PLAID|NONE|GROQ — PLAID is stub until keys wired.
+  bankFeedProvider       String  @default("NONE")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Split one bank credit across multiple invoices (partial applications).
+model BankTransactionInvoiceSplit {
+  id                String          @id @default(cuid())
+  bankTransactionId String
+  bankTransaction   BankTransaction @relation(fields: [bankTransactionId], references: [id], onDelete: Cascade)
+
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  amount Decimal
+
+  createdAt DateTime @default(now())
+
+  @@index([bankTransactionId])
+  @@index([invoiceId])
+}
+
+model CashForecastSnapshot {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  generatedAt DateTime                @default(now())
+  horizonType CashForecastHorizonType
+  scenarioTag CashForecastScenarioTag @default(BASE)
+
+  startDate DateTime
+  endDate   DateTime
+
+  openingCash            Decimal @default(0)
+  closingCash            Decimal @default(0)
+  totalProjectedInflows  Decimal @default(0)
+  totalProjectedOutflows Decimal @default(0)
+
+  confidenceScore Float?
+  assumptionsJson Json?
+  generatedBy     CashForecastGeneratedBy @default(SYSTEM)
+
+  createdAt DateTime @default(now())
+
+  periods CashForecastPeriod[]
+
+  @@index([workspaceId, horizonType, scenarioTag, generatedAt(sort: Desc)])
+  @@index([workspaceId, startDate, endDate])
+}
+
+model CashForecastPeriod {
+  id         String               @id @default(cuid())
+  snapshotId String
+  snapshot   CashForecastSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  periodStart DateTime
+  periodEnd   DateTime
+  bucketLabel String
+
+  openingCash Decimal @default(0)
+
+  actualInflows     Decimal @default(0)
+  projectedInflows  Decimal @default(0)
+  actualOutflows    Decimal @default(0)
+  projectedOutflows Decimal @default(0)
+
+  closingCash Decimal @default(0)
+
+  riskLevel                 CashForecastRiskLevel @default(LOW)
+  varianceFromPriorForecast Decimal?
+  notesJson                 Json?
+
+  lineItems CashForecastLineItem[]
+
+  @@index([snapshotId, periodStart])
+  @@index([snapshotId, riskLevel])
+}
+
+model CashForecastLineItem {
+  id       String             @id @default(cuid())
+  periodId String
+  period   CashForecastPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  direction      CashForecastDirection
+  sourceType     CashForecastSourceType
+  sourceId       String?
+  amount         Decimal
+  expectedDate   DateTime
+  confidence     Float?
+  scenarioTag    CashForecastScenarioTag    @default(BASE)
+  classification CashForecastClassification
+  title          String
+  metadataJson   Json?
+  explanation    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([periodId, expectedDate])
+  @@index([sourceType, sourceId])
+  @@index([classification])
+}
+
+model CashForecastAssumption {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  key           String
+  valueJson     Json
+  effectiveFrom DateTime?
+  isActive      Boolean   @default(true)
+  updatedBy     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, key, isActive])
+  @@index([workspaceId, isActive, key])
+}
+
+model CashForecastManualAdjustment {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  date      DateTime
+  amount    Decimal
+  direction CashForecastDirection
+  reason    String
+  category  String?
+  createdBy String?
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, date])
+  @@index([workspaceId, direction])
+}
+
+model CashForecastLineItemPlan {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  horizonType CashForecastHorizonType
+  scenarioTag CashForecastScenarioTag @default(BASE)
+
+  // Stable identifier for a forecast driver across snapshots.
+  // Typically derived from {sourceType, sourceId} (fallback to title hash).
+  planKey String
+
+  status String  @default("open") // "open" | "deferred" | "resolved"
+  note   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, horizonType, scenarioTag, planKey])
+  @@index([workspaceId, horizonType, scenarioTag])
+}
+
+model CashForecastAlertPreference {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  // Keep this scoped and minimal in v1. Later: quiet hours, channels, per-alert thresholds.
+  criticalEnabled Boolean @default(true)
+  warningEnabled  Boolean @default(true)
+  infoEnabled     Boolean @default(true)
+
+  /// Last time the nightly job told the team about a coming shortfall, and which one, so the same warning is not sent every night.
+  lastAlertAt  DateTime?
+  lastAlertKey String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId])
+}
+
+model Investment {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  date      DateTime
+  category  String
+  assetName String
+  amount    Decimal
+  createdAt DateTime @default(now())
+
+  @@index([date])
+  @@index([category])
+  @@index([workspaceId])
+}
+
+// ==========================================
+// 4. GLOBAL COMPLIANCE DICTIONARIES (Read-Only)
+// ==========================================
+
+model NICCode {
+  id          String  @id @default(cuid())
+  code        String  @unique // e.g., "62012"
+  description String // e.g., "Web-page designing"
+  countryCode String  @default("IN") // "IN" for India, "US", "GB", etc.
+  isCustom    Boolean @default(false)
+
+  services ServiceTemplate[]
+}
+
+model SACCode {
+  id          String  @id @default(cuid())
+  code        String  @unique // e.g., "998313"
+  description String // e.g., "IT Consulting Services"
+  igstRate    Float   @default(18.0) // Default GST rate
+  countryCode String  @default("IN")
+  isCustom    Boolean @default(false)
+
+  services ServiceTemplate[]
+}
+
+// ==========================================
+// 5. PROPOSALS & SERVICE CATALOG (Workspace-Scoped)
+// ==========================================
+
+// The user's saved list of services (e.g., "Monthly SEO Retainer")
+model ServiceTemplate {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name         String
+  description  String? // Short description (for invoices/proposals)
+  defaultPrice Decimal @default(0)
+
+  // E-STORE FIELDS
+  longDescription String? // Rich HTML/markdown from Tiptap — shown on shop page
+  imageUrl        String? // Hero image path e.g. /uploads/service-hero/xxx.webp
+
+  // Relational Links to the Global Dictionaries
+  nicCodeId String?
+  nicCode   NICCode? @relation(fields: [nicCodeId], references: [id])
+
+  sacCodeId String?
+  sacCode   SACCode? @relation(fields: [sacCodeId], references: [id])
+
+  proposalItems ProposalItem[]
+  retainerItems RetainerItem[]
+
+  @@index([workspaceId])
+}
+
+model Proposal {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+
+  proposalNo String // e.g., "EST-2024-001"
+  title      String // e.g., "Q3 Marketing Campaign"
+  status     String @default("DRAFT") // DRAFT, SENT, VIEWED, ACCEPTED, DECLINED, INVOICED
+
+  dateCreated DateTime @default(now())
+  validUntil  DateTime
+
+  // The Public Link token (e.g., bababuilds.com/p/abc123xyz)
+  publicToken String @unique @default(cuid())
+
+  // E-Signature & Lifecycle Data
+  acceptedAt     DateTime?
+  clientIp       String?
+  acceptedByName String?
+
+  sentAt           DateTime?
+  sentByUserId     String?
+  firstViewedAt    DateTime?
+  lastViewedAt     DateTime?
+  viewCount        Int       @default(0)
+  declinedAt       DateTime?
+  declineReason    String?
+  firstConvertedAt DateTime?
+  expiredAt        DateTime?
+
+  richSections           Json?
+  clientSignatureBase64  String?
+
+  items                  ProposalItem[]
+  conversions            ProposalConversion[]
+  billingMilestones      BillingMilestone[]
+  generatedInvoices      Invoice[]            @relation("ProposalToInvoice")
+  generatedRetainers     Retainer[]           @relation("ProposalToRetainer")
+  generatedShopOrders    ShopOrder[]          @relation("ProposalToShopOrder")
+
+  subtotal     Decimal
+  estimatedTax Decimal @default(0)
+  totalAmount  Decimal
+
+  // Pricing context frozen at save time, so the converted invoice matches what the client signed.
+  currency       String  @default("INR")
+  exchangeRate   Decimal @default(1)
+  taxRatePercent Float   @default(0)
+  // Bumped on every edit after the proposal was sent.
+  revision       Int     @default(1)
+  archivedAt     DateTime?
+  // [{type:"image"|"video", url, title}] (previously smuggled into `declineReason`).
+  richMedia      Json?
+  events         ProposalEvent[]
+
+  @@unique([proposalNo, workspaceId])
+  @@index([workspaceId])
+  @@index([publicToken])
+  @@index([workspaceId, status])
+  @@index([workspaceId, clientId])
+  @@index([workspaceId, dateCreated])
+}
+
+/// Append-only client/owner timeline for a proposal (sent, viewed, revision requested, accepted, ...).
+model ProposalEvent {
+  id          String   @id @default(cuid())
+  workspaceId String
+  proposalId  String
+  proposal    Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  type        String
+  message     String?
+  metadata    String?
+  actorUserId String?
+  createdAt   DateTime @default(now())
+
+  @@index([proposalId, createdAt])
+}
+
+model ProposalItem {
+  id         String   @id @default(cuid())
+  proposalId String
+  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  serviceTemplateId String?
+  serviceTemplate   ServiceTemplate? @relation(fields: [serviceTemplateId], references: [id], onDelete: SetNull)
+
+  title       String // Copied from template so it can be edited per-proposal
+  description String?
+  quantity    Int     @default(1)
+  unitPrice   Decimal
+  total       Decimal
+
+  isOptional  Boolean  @default(false)
+  isSelected  Boolean  @default(true)
+  // Explicit "bills every month" flag; replaces guessing from words in the title.
+  isRecurring Boolean  @default(false)
+}
+
+model Retainer {
+  id          String    @id @default(uuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+
+  // The Billing Details
+  currency  String  @default("INR")
+  frequency String  @default("MONTHLY") // "MONTHLY", "QUARTERLY", "ANNUALLY"
+  status    String  @default("ACTIVE") // "ACTIVE", "PAUSED", "CANCELLED"
+
+  // The Automation Engine
+  nextBillingDate DateTime
+  autoAppendMonth Boolean  @default(true) // The "Zero-Effort" Toggle
+
+  sourceProposalId    String?
+  sourceProposal      Proposal?            @relation("ProposalToRetainer", fields: [sourceProposalId], references: [id])
+  proposalConversions ProposalConversion[]
+
+  // Legacy fields (restored as optional to prevent deployment data loss)
+  amount      Decimal?
+  sacCode     String?
+  serviceName String?
+
+  items               RetainerItem[]
+  meteredUsages       MeteredUsage[]
+  mailBillingDomains  MailBillingDomain[]
+  mailBillingSubscriptions MailBillingSubscription[]
+
+  // Rework: lifecycle, schedule limits and billing state.
+  name             String?
+  notes            String?
+  exchangeRate     Decimal   @default(1)
+  paymentTermsDays Int       @default(7)
+  emailInvoice     Boolean   @default(true)
+  endDate          DateTime?
+  maxCycles        Int?
+  cyclesBilled     Int       @default(0)
+  lastBilledAt     DateTime?
+  lastError        String?
+  lastErrorAt      DateTime?
+  cancelledAt      DateTime?
+  invoices         Invoice[]        @relation("RetainerInvoices")
+  events           RetainerEvent[]
+  priceChanges     RetainerPriceChange[]
+  // Collections: automatic payment reminders for this retainer's overdue invoices.
+  remindersEnabled Boolean @default(true)
+  // Renewal: when the cycle limit / end date is reached, extend by `renewCycles` instead of completing.
+  autoRenew        Boolean @default(false)
+  renewCycles      Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, nextBillingDate])
+  @@index([workspaceId, clientId])
+}
+
+/// A scheduled price change: from the first cycle on/after `effectiveDate`, every line is multiplied by (1 + percent/100).
+model RetainerPriceChange {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  retainerId    String
+  retainer      Retainer  @relation(fields: [retainerId], references: [id], onDelete: Cascade)
+  effectiveDate DateTime
+  percent       Float
+  note          String?
+  appliedAt     DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([retainerId, effectiveDate])
+}
+
+/// Append-only history of a retainer (created, edited, paused, billed, failed, ...).
+model RetainerEvent {
+  id          String   @id @default(cuid())
+  workspaceId String
+  retainerId  String
+  retainer    Retainer @relation(fields: [retainerId], references: [id], onDelete: Cascade)
+  type        String
+  message     String?
+  metadata    String?
+  actorUserId String?
+  createdAt   DateTime @default(now())
+
+  @@index([retainerId, createdAt])
+}
+
+model RetainerItem {
+  id                String           @id @default(cuid())
+  retainerId        String
+  retainer          Retainer         @relation(fields: [retainerId], references: [id], onDelete: Cascade)
+  
+  serviceTemplateId String?
+  serviceTemplate   ServiceTemplate? @relation(fields: [serviceTemplateId], references: [id], onDelete: SetNull)
+  
+  productId         String?
+  product           Product?         @relation(fields: [productId], references: [id], onDelete: SetNull)
+  
+  title             String
+  quantity          Int              @default(1)
+  unitPrice         Decimal
+  taxRate           Float?           @default(0)
+  sacCode           String?
+}
+
+model MeteredUsage {
+  id                String     @id @default(cuid())
+  retainerId        String
+  retainer          Retainer   @relation(fields: [retainerId], references: [id], onDelete: Cascade)
+  
+  description       String
+  quantity          Decimal
+  unitPrice         Decimal
+  status            String     @default("PENDING") // PENDING, BILLED
+  // Fraction (0.18). Null = use the retainer's own tax rate when billed.
+  taxRate           Float?
+  
+  billedInInvoiceId String?
+  billedInInvoice   Invoice?   @relation(fields: [billedInInvoiceId], references: [id], onDelete: SetNull)
+  
+  createdAt         DateTime   @default(now())
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  dueDate     DateTime?
+  status      String    @default("PENDING")
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@index([workspaceId])
+}
+
+model WorkspaceTaxRegistration {
+  id                 String          @id @default(cuid())
+  workspaceId        String
+  workspace          Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  taxType            String
+  jurisdictionCode   String
+  registrationNumber String
+  frequency          FilingFrequency
+  effectiveFrom      DateTime
+  effectiveTo        DateTime?
+  isActive           Boolean         @default(true)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  filingCalendarRules FilingCalendarRule[]
+  taxObligations      TaxObligation[]
+
+  @@index([workspaceId, isActive])
+  @@index([workspaceId, taxType, jurisdictionCode])
+}
+
+model FilingCalendarRule {
+  id                String                   @id @default(cuid())
+  workspaceId       String
+  workspace         Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  taxRegistrationId String
+  taxRegistration   WorkspaceTaxRegistration @relation(fields: [taxRegistrationId], references: [id], onDelete: Cascade)
+  dueDayOfMonth     Int
+  dueMonthOfYear    Int?
+  lookaheadPeriods  Int                      @default(12)
+  isActive          Boolean                  @default(true)
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  taxObligations TaxObligation[]
+
+  @@index([workspaceId, taxRegistrationId, isActive])
+}
+
+model TaxObligationPeriod {
+  id           String              @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  obligationId String              @unique
+  obligation   TaxObligation       @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  periodStart  DateTime
+  periodEnd    DateTime
+  status       TaxObligationStatus @default(OPEN)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@index([workspaceId, periodStart, periodEnd])
+}
+
+model TaxObligation {
+  id                String                   @id @default(cuid())
+  workspaceId       String
+  workspace         Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  taxRegistrationId String
+  taxRegistration   WorkspaceTaxRegistration @relation(fields: [taxRegistrationId], references: [id], onDelete: Cascade)
+  filingRuleId      String
+  filingRule        FilingCalendarRule       @relation(fields: [filingRuleId], references: [id], onDelete: Cascade)
+  dueDate           DateTime
+  status            TaxObligationStatus      @default(OPEN)
+  readyAt           DateTime?
+  filedAt           DateTime?
+  periodKey         String
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+
+  period          TaxObligationPeriod?
+  complianceTasks ComplianceTask[]
+
+  @@unique([workspaceId, taxRegistrationId, periodKey])
+  @@index([workspaceId, status, dueDate])
+}
+
+model ComplianceTask {
+  id           String               @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  obligationId String
+  obligation   TaxObligation        @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  title        String
+  dueDate      DateTime
+  status       ComplianceTaskStatus @default(PENDING)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  @@unique([workspaceId, obligationId, dueDate])
+  @@index([workspaceId, status, dueDate])
+}
+
+model TaxRateOverride {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  scopeType String  @default("WORKSPACE") // "WORKSPACE" | "CLIENT" | "SERVICE"
+  scopeRef  String?
+
+  rate          Float
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  reason        String?
+
+  isActive      Boolean   @default(true)
+  deactivatedAt DateTime?
+
+  createdByUserId String?
+  createdByEmail  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  auditLogs TaxRateOverrideAuditLog[]
+
+  @@index([workspaceId, scopeType, isActive])
+  @@index([workspaceId, effectiveFrom])
+}
+
+model TaxRateOverrideAuditLog {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  taxRateOverrideId String?
+  taxRateOverride   TaxRateOverride? @relation(fields: [taxRateOverrideId], references: [id], onDelete: SetNull)
+
+  action         String // "CREATE" | "UPDATE" | "DEACTIVATE"
+  decisionSource String @default("OVERRIDE") // "AUTO" | "OVERRIDE" | "FALLBACK"
+
+  scopeType String
+  scopeRef  String?
+  rate      Float?
+
+  effectiveFrom DateTime?
+  effectiveTo   DateTime?
+  reason        String?
+
+  previousValues Json?
+  newValues      Json?
+
+  actorUserId String?
+  actorEmail  String?
+
+  prevHash         String?
+  entryHash        String?
+  canonicalPayload Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, action])
+  @@index([workspaceId, scopeType])
+}
+
+model FileImportAuditLog {
+  id          String    @id
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  fileName      String?
+  mimeType      String?
+  fileSizeBytes Int?
+  flow          String?
+  status        String
+  reason        String?
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, status])
+}
+
+// ==========================================
+// 7. NOTIFICATION SYSTEM
+// ==========================================
+
+/// Stores Web Push API subscriptions (one per browser/device per user)
+model PushSubscription {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  endpoint  String  @unique
+  p256dh    String // Browser-generated public key
+  auth      String // Browser-generated auth secret
+  userAgent String? // Optional: identify device
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+/// Persisted in-app notifications for the Bell UI / Sonner polling
+model InAppNotification {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Event type: INVOICE_GENERATED | CLIENT_ADDED | RENEWAL_ALERT | PAYMENT_REMINDER | TAX_ALERT | DEADLINE_ALERT | PROPOSAL_CREATED | SERVICE_CREATED
+  eventType String
+  title     String
+  body      String
+  /// Deep-link URL to navigate to on click
+  actionUrl String?
+  isRead    Boolean   @default(false)
+  readAt    DateTime?
+
+  /// Optional workspace context
+  workspaceId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead, createdAt])
+  @@index([userId, createdAt])
+  @@index([workspaceId])
+}
+
+// ==========================================
+// 8. INVENTORY MANAGEMENT SYSTEM
+// ==========================================
+
+model Product {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  sku         String
+  name        String
+  description String?
+  category    String?
+  unit        String  @default("pcs")
+
+  // GST: HSN of the goods and the rate (percent) charged on them. Null rate = not set yet.
+  hsnCode String?
+  gstRate Float?
+
+  // Cost & Valuation
+  baselinePrice Decimal @default(0)
+  costPrice     Decimal @default(0)
+
+  // Stock Levels
+  currentStock Int    @default(0)
+  safetyStock  Int    @default(5)
+  status       String @default("IN_STOCK") // "IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK"
+
+  barcode  String? // For zero-latency search
+  imageUrl String? // Product image
+  location String? // e.g., "Warehouse A", "Van 1"
+  showInShop      Boolean @default(false)
+  shopSortOrder   Int?
+  shopDescription String?
+  shopImageUrl    String?
+
+  /// Soft delete: a product that appears on invoices or orders is archived, never removed.
+  archivedAt       DateTime?
+  /// How many to order when restocking, and from whom (a Vendor id), for reorder suggestions.
+  reorderQuantity  Int?
+  preferredVendorId String?
+  leadTimeDays     Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  movements     InventoryMovement[]
+  invoiceItems  InvoiceItem[]
+  purchaseItems PurchaseOrderItem[]
+  shopOrderItems ShopOrderItem[]
+  retainerItems RetainerItem[]
+
+  @@unique([sku, workspaceId])
+  @@index([workspaceId])
+  @@index([workspaceId, showInShop, currentStock])
+}
+
+model InvoiceItem {
+  id        String  @id @default(cuid())
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  description String
+  quantity    Int     @default(1)
+  unitPrice   Decimal
+  taxRate     Float   @default(0)
+  sacCode     String?
+  totalAmount Decimal
+
+  @@index([invoiceId])
+  @@index([productId])
+}
+
+model InventoryMovement {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  type     String // "IN" (Purchase, Return), "OUT" (Sale, Damage, Loss), "ADJ" (Manual Adjustment)
+  quantity Int // Positive for IN, Negative for OUT/ADJ if reducing
+  reason   String? // e.g., "Invoice #101 Payment", "Manual Sync", "Found behind shelf"
+
+  referenceId String? // ID of Invoice or PO
+
+  /// Cost per unit of what moved (set on receipts), and the stock level after the movement.
+  unitCost        Decimal?
+  balanceAfter    Int?
+  createdByUserId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId])
+  @@index([productId])
+  @@index([createdAt])
+}
+
+model PurchaseOrder {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  poNumber String
+  supplier String
+  status   String @default("DRAFT") // "DRAFT", "SENT", "DELIVERED", "CANCELLED"
+
+  // GST: supplier registration, carried onto the purchase bill when the PO is received.
+  supplierGstin     String?
+  supplierStateCode String?
+  supplierInvoiceNo String?
+
+  vendorId        String?
+  notes           String?
+  sentAt          DateTime?
+  createdByUserId String?
+
+  expectedDate        DateTime?
+  paymentTermsDays    Int?
+  expectedPaymentDate DateTime?
+  receivedAt          DateTime?
+  committedCashImpact Decimal?
+  totalAmount         Decimal   @default(0)
+
+  items PurchaseOrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([poNumber, workspaceId])
+  @@index([workspaceId])
+}
+
+model PurchaseOrderItem {
+  id            String        @id @default(cuid())
+  poId          String
+  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  quantity      Int
+  unitPrice     Decimal
+  expectedTotal Decimal
+  /// How many have arrived so far; a purchase order can be received in parts.
+  receivedQuantity Int @default(0)
+
+  // GST: HSN and rate (percent) on this line; defaults come from the product master.
+  hsnCode String?
+  gstRate Float?
+}
+
+// ==========================================
+// 9. E-STORE / SHOP
+// ==========================================
+
+model ShopOrder {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  // Buyer info (unauthenticated customer)
+  buyerName  String
+  buyerEmail String
+  buyerPhone String?
+  buyerNote  String? // Optional message / requirements from buyer
+  // GST: where the goods go (state code) and the buyer's GSTIN, if they gave one.
+  buyerStateCode String?
+  buyerGstin     String?
+
+  // Pricing snapshot (frozen at time of order)
+  subtotal Decimal @default(0)
+  taxTotal Decimal @default(0)
+  amount   Decimal
+  currency String  @default("INR")
+
+  // Payment gateway references
+  gateway               String? // "RAZORPAY" | "STRIPE"
+  razorpayOrderId       String? @unique
+  razorpayPaymentId     String?
+  razorpaySignature     String?
+  stripePaymentIntentId String? @unique
+  stripeSessionId       String?
+
+  // Status lifecycle
+  status String @default("PENDING") // PENDING | PAID | FAILED | REFUNDED
+
+  // Linked ERP invoice (auto-generated on payment success, nulled if invoice deleted)
+  linkedInvoiceId String?
+  linkedInvoice   Invoice? @relation("ShopOrderLinkedInvoice", fields: [linkedInvoiceId], references: [id], onDelete: SetNull)
+
+  sourceProposalId    String?
+  sourceProposal      Proposal?            @relation("ProposalToShopOrder", fields: [sourceProposalId], references: [id])
+  proposalConversions ProposalConversion[]
+  items               ShopOrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([razorpayOrderId])
+  @@index([stripePaymentIntentId])
+}
+
+model ShopOrderItem {
+  id          String    @id @default(cuid())
+  shopOrderId String
+  shopOrder   ShopOrder @relation(fields: [shopOrderId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  productName String
+  sku         String
+  quantity    Int
+  unitPrice   Decimal
+  taxRate     Float   @default(0)
+  lineTotal   Decimal
+  lineTax     Decimal @default(0)
+}
+
+model UserPreference {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProposalConversion {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  proposalId String
+  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  conversionType ProposalConversionType
+
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  retainerId String?
+  retainer   Retainer? @relation(fields: [retainerId], references: [id], onDelete: SetNull)
+
+  shopOrderId String?
+  shopOrder   ShopOrder? @relation(fields: [shopOrderId], references: [id], onDelete: SetNull)
+
+  convertedAt       DateTime @default(now())
+  convertedByUserId String?
+
+  @@index([workspaceId, proposalId])
+  @@index([conversionType])
+}
+
+model BillingMilestone {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  proposalId String
+  proposal   Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  amount      Decimal
+  dueDate     DateTime?
+  status      String    @default("PENDING") // PENDING, INVOICED, PARTIALLY_PAID, PAID
+
+  // When invoiced, it links to the actual standard invoice
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, proposalId])
+}
+
+model HelpFeedback {
+  id String @id @default(cuid())
+
+  /// Public Help Center article slug (/help/[slug])
+  docSlug String
+
+  /// Whether the article solved the user's need
+  helpful Boolean
+
+  /// Optional free-form feedback
+  comment String?
+
+  /// Optional context for routing/diagnostics
+  currentRoute String?
+  userAgent    String?
+
+  /// Workspace / user context (if provided)
+  workspaceId String?
+  userId      String?
+
+  createdAt DateTime @default(now())
+
+  @@index([docSlug, createdAt(sort: Desc)])
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+// ==========================================
+// RBAC AUDIT LOG
+// ==========================================
+
+/**
+ * RbacAuditLog — structured RBAC-specific event table.
+ * Dual-write strategy: every RBAC event writes to BOTH this table AND AppActivityLog.
+ * - RbacAuditLog → powers the "Access Activity" UI tab with structured, filterable data
+ * - AppActivityLog → unified compliance/audit trail for all app events
+ * Both writes happen through logRbacEvent() in lib/rbac.ts (single write path).
+ * This table is NEVER written to directly — always via logRbacEvent().
+ * Event types:
+ * invite_sent, invite_accepted, invite_cancelled,
+ * role_changed, member_removed, member_deactivated, member_reactivated,
+ * seat_limit_hit, rbac_access_denied, owner_safeguard_blocked
+ */
+model RbacAuditLog {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  /// The type of RBAC event. Stored as String for forward compatibility.
+  eventType String
+
+  actorUserId  String?
+  actorEmail   String?
+  targetUserId String?
+  targetEmail  String?
+
+  /// For role_changed events: the role before the change.
+  previousRole String?
+
+  /// For role_changed / invite_sent events: the new or invited role.
+  newRole String?
+
+  /// Additional structured metadata (e.g., denial reason, seat count at time of event).
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([workspaceId, eventType, createdAt(sort: Desc)])
+  @@index([workspaceId, actorUserId])
+  @@index([workspaceId, targetUserId])
+}
+
+
+model MailBillingServer {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name        String
+  provider    String    @default("MIAB")
+  accessMode  String    @default("READ_ONLY_ADAPTER")
+  baseUrl        String
+  encryptedToken String?
+  status         String    @default("ACTIVE")
+  lastSyncAt     DateTime?
+  lastSyncStatus String?
+  lastSyncError  String?
+
+  domains   MailBillingDomain[]
+  mailboxes MailBillingMailbox[]
+  syncRuns  MailBillingSyncRun[]
+  reviewItems MailBillingReviewItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, status])
+}
+
+model MailBillingDomain {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  serverId String
+  server   MailBillingServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  domain String
+
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  retainerId String?
+  retainer   Retainer? @relation(fields: [retainerId], references: [id], onDelete: SetNull)
+
+  status       String @default("ACTIVE")
+  mailboxCount Int    @default(0)
+  aliasCount   Int    @default(0)
+  billingMode  String @default("DOMAIN_PLAN")
+  billingNotes String?
+
+  discoveredAt DateTime @default(now())
+  lastSeenAt   DateTime @default(now())
+  archivedAt   DateTime?
+  mailboxes MailBillingMailbox[]
+  subscriptions MailBillingSubscription[]
+  reviewItems MailBillingReviewItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, serverId, domain])
+  @@index([workspaceId, clientId])
+  @@index([workspaceId, retainerId])
+  @@index([workspaceId, status])
+}
+
+model MailBillingMailbox {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  serverId String
+  server   MailBillingServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  domainId String
+  domain   MailBillingDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+
+  email     String
+  localPart String
+  quotaMb   Int?
+  isAdmin   Boolean @default(false)
+  status     String @default("ACTIVE")
+  lastSeenAt DateTime @default(now())
+  archivedAt DateTime?
+  rawJson Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, serverId, email])
+  @@index([workspaceId, domainId])
+  @@index([workspaceId, status])
+}
+
+model MailBillingSyncRun {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  serverId String
+  server   MailBillingServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  status String @default("RUNNING")
+  startedAt  DateTime @default(now())
+  finishedAt DateTime?
+  domainsSeen      Int @default(0)
+  mailboxesSeen    Int @default(0)
+  domainsAdded     Int @default(0)
+  domainsRemoved   Int @default(0)
+  mailboxesAdded   Int @default(0)
+  mailboxesRemoved Int @default(0)
+  errorMessage String?
+  reviewItemsCreated Int @default(0)
+  summaryJson  Json?
+
+  @@index([workspaceId, startedAt])
+  @@index([workspaceId, serverId, startedAt])
+}
+
+
+model MailBillingPlan {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name              String
+  description       String?
+  billingMode       String @default("FIXED")
+  currency          String @default("INR")
+  basePrice         Decimal @default(0)
+  includedMailboxes Int @default(0)
+  extraMailboxPrice Decimal @default(0)
+  frequency         String @default("MONTHLY")
+  isActive          Boolean @default(true)
+  sortOrder         Int @default(0)
+
+  subscriptions MailBillingSubscription[]
+  settingsAsDefault MailBillingSettings[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, isActive])
+  @@index([workspaceId, sortOrder])
+}
+
+model MailBillingSubscription {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  domainId String
+  domain   MailBillingDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  planId String?
+  plan   MailBillingPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+  retainerId String?
+  retainer   Retainer? @relation(fields: [retainerId], references: [id], onDelete: SetNull)
+
+  billingStatus String @default("REVIEW_REQUIRED")
+  billingModeSnapshot String @default("FIXED")
+  currencySnapshot String @default("INR")
+  basePriceSnapshot Decimal @default(0)
+  includedMailboxesSnapshot Int @default(0)
+  extraMailboxPriceSnapshot Decimal @default(0)
+  billableMailboxCount Int @default(0)
+  lastSyncedMailboxCount Int @default(0)
+  pendingMailboxCount Int?
+  autoUpdateQuantity Boolean @default(false)
+  nextReviewAt DateTime?
+  notes String?
+
+  reviewItems MailBillingReviewItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, domainId])
+  @@index([workspaceId, clientId])
+  @@index([workspaceId, planId])
+  @@index([workspaceId, retainerId])
+  @@index([workspaceId, billingStatus])
+}
+
+model MailBillingReviewItem {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  domainId String?
+  domain   MailBillingDomain? @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  subscriptionId String?
+  subscription   MailBillingSubscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  serverId String?
+  server   MailBillingServer? @relation(fields: [serverId], references: [id], onDelete: SetNull)
+
+  type String
+  severity String @default("INFO")
+  status String @default("OPEN")
+  title String
+  description String
+  suggestedAction String?
+  oldValueJson Json?
+  newValueJson Json?
+  metadataJson Json?
+  createdAt DateTime @default(now())
+  resolvedAt DateTime?
+  resolvedByUserId String?
+
+  @@index([workspaceId, status, severity])
+  @@index([workspaceId, domainId, status])
+  @@index([workspaceId, subscriptionId])
+  @@index([workspaceId, serverId])
+  @@index([workspaceId, type, status])
+}
+
+model MailBillingSettings {
+  id          String    @id @default(cuid())
+  workspaceId String @unique
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  defaultBillingMode String @default("FIXED")
+  defaultCurrency String @default("INR")
+  defaultPlanId String?
+  defaultPlan MailBillingPlan? @relation(fields: [defaultPlanId], references: [id], onDelete: SetNull)
+  autoCreateReviewItems Boolean @default(true)
+  autoUpdateRetainerQuantities Boolean @default(false)
+  syncFrequencyPreference String @default("MANUAL")
+  alertRecipientsJson Json?
+  treatRemovedDomainsAsReviewRequired Boolean @default(true)
+  ignoreAdminMailboxesFromBilling Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, defaultPlanId])
+}
+
+// ==========================================
+// 10. OPTIONAL WORKSPACE MODULES
+// ==========================================
+
+/**
+ * WorkspaceModule — Registry for optional ERP modules.
+ * Each workspace can independently enable/disable optional modules.
+ * Disabling a module hides it from navigation, dashboard, and routes
+ * but preserves all underlying data (non-destructive).
+ * Current modules: WORKFORCE
+ * Future modules: PAYROLL, TIME_TRACKING, ASSETS
+ */
+model WorkspaceModule {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  /// Module identifier: "WORKFORCE" | "PAYROLL" | etc.
+  moduleKey String
+
+  isEnabled Boolean @default(true)
+
+  /// Module-specific configuration (JSON)
+  configJson Json?
+
+  enabledAt        DateTime  @default(now())
+  disabledAt       DateTime?
+  enabledByUserId  String?
+  disabledByUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, moduleKey])
+  @@index([workspaceId, isEnabled])
+  @@index([workspaceId, moduleKey])
+}
+
+model ImportRun {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  entityKey String
+  fileName  String
+  sourceMode String
+  executionMode String?
+  aiUsed    Boolean @default(false)
+  status    String  @default("PREVIEW_READY")
+
+  parsedCount   Int @default(0)
+  importedCount Int @default(0)
+  updatedCount  Int @default(0)
+  skippedCount  Int @default(0)
+  failedCount   Int @default(0)
+  lastProcessedRow Int @default(0)
+
+  inputJson   Json?
+  previewJson Json?
+  resultJson  Json?
+  errorReportJson Json?
+  sourceDigest String?
+  idempotencyKey String?
+  executionStartedAt DateTime?
+  executionFinishedAt DateTime?
+
+  initiatedByUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([workspaceId, entityKey, status])
+  @@unique([workspaceId, idempotencyKey])
+}
+
+// ==========================================
+// 11. DOCUMENT VAULT (OPTIONAL MODULE)
+// ==========================================
+
+/**
+ * Document — ERP-native document record.
+ * Notes:
+ * - Workspace-scoped
+ * - Archive is organizational (non-destructive) and does not remove bytes
+ * - Sensitivity/scope is enforced at the query/API layer (RBAC + personal rules)
+ */
+model Document {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  title    String
+  category String // Stored as String for forward compatibility
+  scope    String // WORKSPACE_BUSINESS | ACCOUNTING | COMPLIANCE | PERSONAL_USER | GENERAL_ATTACHMENT (code enum)
+  status   String @default("INBOX") // INBOX|PROCESSING|READY|LINKED|FAILED|ARCHIVED (code enum)
+
+  isArchived       Boolean   @default(false)
+  archivedAt       DateTime?
+  archivedByUserId String?
+
+  source           String? // upload_center|share_target|email (future)
+  uploadedByUserId String?
+
+  aiSummary        String?
+  aiMeta           Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  files           DocumentFile[]
+  links           DocumentLink[]
+  taxLinks        TaxDocumentLink[]
+  ocrJobs         DocumentOcrJob[]
+  fields          DocumentExtractedField[]
+  events          DocumentAuditEvent[]
+  taxCreditEvents TaxCreditEvent[]
+
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([workspaceId, status, createdAt(sort: Desc)])
+  @@index([workspaceId, category, createdAt(sort: Desc)])
+  @@index([workspaceId, scope, createdAt(sort: Desc)])
+  @@index([workspaceId, isArchived, createdAt(sort: Desc)])
+}
+
+/**
+ * DocumentFile — concrete stored bytes (supports versioning).
+ * storedPath is a private serving route path like /documents/<workspaceId>/...
+ */
+model DocumentFile {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  isCurrent Boolean @default(true)
+
+  mimeType     String
+  originalName String
+  storedPath   String
+  sha256       String?
+  byteSize     Int
+
+  pageCount   Int?
+  imageWidth  Int?
+  imageHeight Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ocrJobs DocumentOcrJob[]
+  fields  DocumentExtractedField[]
+  events  DocumentAuditEvent[]
+
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([workspaceId, documentId])
+  @@index([workspaceId, storedPath])
+  @@index([documentId, isCurrent])
+}
+
+/**
+ * DocumentOcrJob — async OCR/parsing job.
+ */
+model DocumentOcrJob {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  documentFileId String
+  documentFile   DocumentFile @relation(fields: [documentFileId], references: [id], onDelete: Cascade)
+
+  kind     String @default("GENERIC") // RECEIPT|INVOICE|STATEMENT|TAX|GENERIC
+  status   String @default("QUEUED") // QUEUED|RUNNING|SUCCEEDED|FAILED
+  provider String // Explicit registered provider key; no placeholder/default is permitted.
+
+  attemptCount Int     @default(0)
+  errorCode    String?
+  errorMessage String?
+
+  queuedAt   DateTime  @default(now())
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, status, queuedAt(sort: Desc)])
+  @@index([workspaceId, documentId])
+  @@index([workspaceId, documentFileId])
+}
+
+/**
+ * DocumentExtractedField — OCR-suggested or user-corrected fields.
+ * Multiple revisions are represented as separate rows; the UI picks the latest/approved row per fieldKey.
+ */
+model DocumentExtractedField {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  documentFileId String
+  documentFile   DocumentFile @relation(fields: [documentFileId], references: [id], onDelete: Cascade)
+
+  fieldKey    String // vendorName|totalAmount|taxAmount|invoiceNumber|dueDate|statementPeriodStart|...
+  valueText   String?
+  valueNumber Float?
+  valueDate   DateTime?
+  confidence  Float?
+
+  source           String  @default("OCR") // OCR|USER
+  isApproved       Boolean @default(false)
+  approvedByUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, documentId, fieldKey, createdAt(sort: Desc)])
+  @@index([workspaceId, documentFileId])
+}
+
+/**
+ * DocumentLink — polymorphic link from Document to ERP records.
+ */
+model DocumentLink {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  targetType String // EXPENSE|INVOICE|BANK_TRANSACTION|CLIENT|PROPOSAL|RETAINER|SERVICE_ORDER|PURCHASE_ORDER|...
+  targetId   String
+  relation   String @default("ATTACHMENT") // ATTACHMENT|EVIDENCE|SOURCE_DOC
+
+  createdByUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([documentId, targetType, targetId])
+  @@index([workspaceId, targetType, targetId])
+  @@index([workspaceId, documentId])
+}
+
+/**
+ * TaxDocumentLink — scoped link from Document vault records to tax compliance entities.
+ */
+model TaxDocumentLink {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  entityType String // RETURN_ACKNOWLEDGMENT | WITHHOLDING_CERTIFICATE | TAX_PAYMENT_PROOF
+  entityKey  String // return period, certificate number, challan/proof id, etc.
+  relation   String @default("EVIDENCE") // ACKNOWLEDGMENT | CERTIFICATE | PROOF | EVIDENCE
+
+  notes           String?
+  createdByUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, documentId, entityType, entityKey])
+  @@index([workspaceId, entityType, entityKey, createdAt(sort: Desc)])
+  @@index([workspaceId, documentId, createdAt(sort: Desc)])
+}
+
+model TaxImportBatch {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  templateType String // WITHHOLDING_CERTIFICATES | FOREIGN_TAX_PAID | PRIOR_PERIOD_BALANCES
+  sourceName   String?
+  status       String  @default("COMPLETED") // COMPLETED | COMPLETED_WITH_ERRORS | FAILED
+
+  submittedByUserId String?
+  rowCount          Int     @default(0)
+  successCount      Int     @default(0)
+  warningCount      Int     @default(0)
+  errorCount        Int     @default(0)
+
+  metadata Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rows TaxImportRow[]
+
+  @@index([workspaceId, templateType, createdAt(sort: Desc)])
+  @@index([workspaceId, status, createdAt(sort: Desc)])
+}
+
+model TaxImportRow {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  batchId String
+  batch   TaxImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  rowNumber Int
+  status    String // SUCCESS | WARNING | ERROR
+  code      String? // VALIDATION_* | PARSE_* | BUSINESS_*
+  message   String?
+  fieldName String?
+
+  rawData        Json?
+  normalizedData Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, batchId, rowNumber])
+  @@index([workspaceId, status, createdAt(sort: Desc)])
+}
+
+/**
+ * WorkspaceDocumentStorage — cached totals for quota checks.
+ * bytesUsedTotal includes archived. bytesUsedActive excludes archived (optional UX metric).
+ */
+model WorkspaceDocumentStorage {
+  id          String    @id @default(cuid())
+  workspaceId String    @unique
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  bytesUsedTotal  BigInt @default(0)
+  bytesUsedActive BigInt @default(0)
+
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * DocumentAuditEvent — document-specific trust and audit trail.
+ */
+model DocumentAuditEvent {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  documentId String?
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  documentFileId String?
+  documentFile   DocumentFile? @relation(fields: [documentFileId], references: [id], onDelete: SetNull)
+
+  eventType   String
+  actorUserId String?
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([workspaceId, eventType, createdAt(sort: Desc)])
+  @@index([workspaceId, documentId])
+}
+
+// ==========================================
+// 12. WORKFORCE MODULE
+// ==========================================
+
+enum EmploymentStatus {
+  ACTIVE
+  ON_LEAVE
+  INACTIVE
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  HALF_DAY
+  HOLIDAY
+  REMOTE
+}
+
+enum LeaveRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum PayrollInputMode {
+  STANDALONE
+  WORKFORCE_LINKED
+}
+
+enum PayComponentCategory {
+  BASE_SALARY
+  ALLOWANCE
+  VARIABLE_PAY
+  DEDUCTION
+  EMPLOYER_CONTRIBUTION
+}
+
+enum PayrollPeriodStatus {
+  OPEN
+  PROCESSING
+  CLOSED
+}
+
+enum PayrollRunStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  POSTED
+}
+
+enum PayrollPostingStatus {
+  PENDING
+  POSTED
+  FAILED
+}
+
+model Department {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  headId      String? // Optional: Employee ID of department head
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employees Employee[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+}
+
+model Designation {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  title String
+  level Int? // Seniority level for hierarchy (1 = entry, 5 = senior)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employees Employee[]
+
+  @@unique([workspaceId, title])
+  @@index([workspaceId])
+}
+
+/**
+ * Employee — Core workforce entity.
+ * userId is optional: if set, this employee has a workspace user account
+ * and can self-service their own attendance/leave.
+ * If null, the employee is HR-managed only (contractors, external staff).
+ */
+model Employee {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  /// Optional link to workspace user for self-service
+  userId String? // links to User.id
+
+  // Core identity
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+  avatarUrl String?
+
+  // Employment details
+  employeeCode String? // e.g., "EMP-001"
+  status       EmploymentStatus @default(ACTIVE)
+  joinDate     DateTime?
+  exitDate     DateTime?
+  location     String?
+
+  // Organizational structure
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  designationId String?
+  designation   Designation? @relation(fields: [designationId], references: [id], onDelete: SetNull)
+
+  managerId     String? // Self-referential: another Employee.id
+  manager       Employee?  @relation("EmployeeReports", fields: [managerId], references: [id], onDelete: SetNull)
+  directReports Employee[] @relation("EmployeeReports")
+
+  // Emergency contact
+  emergencyName     String?
+  emergencyPhone    String?
+  emergencyRelation String?
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attendanceRecords AttendanceRecord[]
+  leaveRequests     LeaveRequest[]
+  leaveBalances     LeaveBalance[]
+  compensations     EmployeeCompensation[]
+  payrollAdjustments PayrollAdjustment[]
+  loans             EmployeeLoan[]
+
+  @@unique([workspaceId, employeeCode])
+  @@index([workspaceId, status])
+  @@index([workspaceId, departmentId])
+  @@index([workspaceId, managerId])
+  @@index([userId])
+}
+
+model AttendanceRecord {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  date   DateTime // Date of attendance (day-level)
+  status AttendanceStatus @default(PRESENT)
+
+  checkInAt  DateTime?
+  checkOutAt DateTime?
+  notes      String?
+
+  /// Whether this record was entered by the employee (self) or by HR/manager
+  isManagerEntered Boolean @default(false)
+  managedByUserId  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([employeeId, date])
+  @@index([workspaceId, date])
+  @@index([workspaceId, employeeId, date])
+  @@index([workspaceId, status])
+}
+
+model LeaveType {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name        String // "Annual Leave", "Sick Leave", "Casual Leave"
+  code        String // "AL", "SL", "CL"
+  description String?
+  color       String  @default("indigo") // Tailwind color name for calendar dots
+  defaultDays Int     @default(0) // Default annual entitlement
+  isActive    Boolean @default(true)
+  isPaid      Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leaveRequests LeaveRequest[]
+  leaveBalances LeaveBalance[]
+
+  @@unique([workspaceId, code])
+  @@index([workspaceId, isActive])
+}
+
+model LeaveRequest {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  leaveTypeId String
+  leaveType   LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Restrict)
+
+  startDate DateTime
+  endDate   DateTime
+  days      Float    @default(1) // Supports 0.5 for half-day
+  reason    String?
+
+  status LeaveRequestStatus @default(PENDING)
+
+  approvedByUserId String?
+  approvedAt       DateTime?
+  rejectionReason  String?
+
+  /// Task record ID for approval queue integration
+  taskId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, employeeId, status])
+  @@index([workspaceId, startDate, endDate])
+  @@index([workspaceId, status])
+  @@index([workspaceId, leaveTypeId])
+}
+
+model LeaveBalance {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  leaveTypeId String
+  leaveType   LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+
+  year      Int // e.g., 2026
+  entitled  Float @default(0)
+  used      Float @default(0)
+  pending   Float @default(0) // Submitted but not yet approved
+  remaining Float @default(0) // Computed: entitled - used - pending
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([employeeId, leaveTypeId, year])
+  @@index([workspaceId, year])
+  @@index([workspaceId, employeeId])
+}
+
+/**
+ * PayrollPeriod — payroll window scoped per workspace.
+ * Locked metadata allows preventing further mutations after close.
+ */
+model PayrollPeriod {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  startDate DateTime
+  endDate   DateTime
+  status    PayrollPeriodStatus @default(OPEN)
+
+  lockedAt       DateTime?
+  lockedByUserId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  runs PayrollRun[]
+  adjustments PayrollAdjustment[]
+  remittances PayrollRemittance[]
+
+  @@unique([workspaceId, startDate, endDate])
+  @@index([workspaceId, status, startDate, endDate])
+}
+
+/**
+ * PayrollRun — immutable run/version generated for a period.
+ */
+model PayrollRun {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  periodId String
+  period   PayrollPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  version Int
+  status  PayrollRunStatus @default(DRAFT)
+
+  totalEarnings      Decimal @default(0)
+  totalDeductions    Decimal @default(0)
+  totalEmployerCosts Decimal @default(0)
+  totalNetPay        Decimal @default(0)
+
+  generatedByUserId String?
+  generatedAt       DateTime  @default(now())
+  approvedAt        DateTime?
+  approvedByUserId  String?
+  submittedAt       DateTime?
+  disbursedAt       DateTime?
+  disbursedByUserId String?
+  disbursementTxId  String?
+  notes             String?
+  /// Pre-flight findings and variance flags captured when the run was generated.
+  preflightJson     Json?
+  summaryJson       Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  remittances PayrollRemittance[]
+  employeeSnapshots PayrollEmployeeSnapshot[]
+  lineItems         PayrollLineItem[]
+  posting           PayrollPosting?
+
+  @@unique([periodId, version])
+  @@index([workspaceId, periodId, status])
+  @@index([workspaceId, status, generatedAt(sort: Desc)])
+}
+
+/**
+ * PayrollEmployeeSnapshot — immutable employee + compensation truth at run time.
+ * This decouples payroll history from later edits to Employee profile records.
+ */
+model PayrollEmployeeSnapshot {
+  id String @id @default(cuid())
+
+  runId String
+  run   PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  // Source employee identifier kept as value (not relation) for immutability
+  employeeId   String
+  employeeCode String?
+  firstName    String
+  lastName     String
+  email        String?
+
+  departmentName String?
+  designation    String?
+  location       String?
+  joinDate       DateTime?
+
+  baseSalary       Decimal  @default(0)
+  hourlyRate       Decimal?
+  paymentFrequency String? // MONTHLY | BIWEEKLY | WEEKLY | CONTRACT
+  compensationMeta Json?
+
+  createdAt DateTime @default(now())
+
+  lineItems PayrollLineItem[]
+
+  @@unique([runId, employeeId])
+  @@index([runId, employeeCode])
+}
+
+/**
+ * PayrollLineItem — employee-level amounts for a run.
+ */
+model PayrollLineItem {
+  id String @id @default(cuid())
+
+  runId String
+  run   PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  employeeSnapshotId String
+  employeeSnapshot   PayrollEmployeeSnapshot @relation(fields: [employeeSnapshotId], references: [id], onDelete: Cascade)
+
+  earnings      Decimal @default(0)
+  deductions    Decimal @default(0)
+  employerCosts Decimal @default(0)
+  netPay        Decimal @default(0)
+
+  currency       String @default("INR")
+  breakdownJson  Json?
+  calculationLog Json?
+  statutoryJson  Json?
+  payoutStatus   String    @default("PENDING") // PENDING | PAID | FAILED | HELD
+  paidAt         DateTime?
+  payoutRef      String?
+  payslipSentAt  DateTime?
+
+  createdAt DateTime @default(now())
+
+  allocations PayrollCostAllocation[]
+
+  @@unique([runId, employeeSnapshotId])
+  @@index([runId, netPay])
+}
+
+/**
+ * PayrollCostAllocation — split payroll cost by org dimensions.
+ */
+model PayrollCostAllocation {
+  id String @id @default(cuid())
+
+  lineItemId String
+  lineItem   PayrollLineItem @relation(fields: [lineItemId], references: [id], onDelete: Cascade)
+
+  departmentCode String?
+  projectCode    String?
+  costCenterCode String?
+
+  allocationPercent Decimal @default(100)
+  allocatedAmount   Decimal @default(0)
+  metadata          Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([lineItemId])
+  @@index([departmentCode, projectCode, costCenterCode])
+}
+
+/**
+ * PayrollPosting — accounting posting artifact for a payroll run.
+ */
+model PayrollPosting {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  runId String     @unique
+  run   PayrollRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  postingStatus  PayrollPostingStatus @default(PENDING)
+  idempotencyKey String
+
+  journalReference         String?
+  accountingTransactionId  String?
+  accountingTransactionRef String?
+
+  postedAt     DateTime?
+  errorMessage String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, idempotencyKey])
+  @@index([workspaceId, postingStatus, createdAt(sort: Desc)])
+}
+
+model WorkforceHoliday {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name        String
+  date        DateTime
+  isRecurring Boolean  @default(true) // true = repeats every year on same date
+  year        Int? // null if isRecurring, else specific year
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, date])
+  @@index([workspaceId, year])
+}
+
+model WorkSchedule {
+  id          String    @id @default(cuid())
+  workspaceId String    @unique
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  /// JSON array of working days: ["MON","TUE","WED","THU","FRI"]
+  workingDays   String @default("[\"MON\",\"TUE\",\"WED\",\"THU\",\"FRI\"]")
+  workStartTime String @default("09:00")
+  workEndTime   String @default("18:00")
+  timeZone      String @default("Asia/Kolkata")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PayrollSettings {
+  id          String    @id @default(cuid())
+  workspaceId String    @unique
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  inputMode PayrollInputMode @default(STANDALONE)
+
+  statutoryRulesJson        Json?
+  paymentScheduleJson       Json?
+  defaultCostAllocationJson Json?
+  standaloneConfigJson      Json?
+  workforceLinkedConfigJson Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PayrollPayComponent {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name     String
+  code     String
+  category PayComponentCategory
+
+  isTaxable Boolean @default(true)
+  isActive  Boolean @default(true)
+
+  metadataJson Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, code])
+  @@index([workspaceId, category])
+}
+
+/**
+ * EmployeeCompensation: effective-dated pay structure, statutory identifiers and bank details.
+ * The row with the latest effectiveFrom on or before the period end applies. Account numbers and PAN are
+ * encrypted; only the last four characters are kept in clear for display.
+ */
+model EmployeeCompensation {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  effectiveFrom DateTime
+  annualCtc     Decimal  @default(0)
+  /// [{ code, label, monthly, taxable, prorate, kind: "earning" }]
+  componentsJson Json
+
+  taxRegime           String  @default("new") // new | old
+  oldRegimeDeductions Decimal @default(0) // declared yearly deductions (80C, 80D, home loan interest, ...)
+  pfEnabled           Boolean @default(true)
+  pfOnActualBasic     Boolean @default(false) // false: wage ceiling of 15,000 applies
+  esiEnabled          Boolean @default(false)
+  ptState             String? // two-letter state code, e.g. MH
+
+  panEnc       String?
+  panLast4     String?
+  uan          String?
+  esiNumber    String?
+  accountHolder String?
+  bankName      String?
+  ifsc          String?
+  accountEnc    String?
+  accountLast4  String?
+  paymentMode   String  @default("BANK_TRANSFER") // BANK_TRANSFER | CASH | CHEQUE | UPI
+
+  note            String?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([workspaceId, employeeId, effectiveFrom(sort: Desc)])
+}
+
+/** One-off pay items for a period: bonus, arrears, reimbursement, deduction, or loss-of-pay days. */
+model PayrollAdjustment {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  periodId String
+  period   PayrollPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  kind    String // EARNING | BONUS | ARREARS | REIMBURSEMENT | DEDUCTION | LOP_DAYS
+  code    String
+  label   String
+  amount  Decimal // rupees, or days when kind = LOP_DAYS
+  taxable Boolean @default(true)
+  note    String?
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@index([workspaceId, periodId])
+  @@index([periodId, employeeId])
+}
+
+/** Salary advance or loan recovered through payroll in fixed instalments. */
+model EmployeeLoan {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  label       String
+  principal   Decimal
+  emi         Decimal
+  outstanding Decimal
+  status      String   @default("ACTIVE") // ACTIVE | CLOSED
+  startPeriod DateTime
+  note        String?
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([workspaceId, employeeId, status])
+}
+
+/** A statutory amount owed to a government body for one payroll period: PF, ESI, professional tax or TDS. */
+model PayrollRemittance {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  periodId String
+  period   PayrollPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  runId String?
+  run   PayrollRun? @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  kind    String // PF | ESI | PT | TDS
+  amount  Decimal
+  dueDate DateTime
+  status  String   @default("DUE") // DUE | PAID
+
+  paidAt          DateTime?
+  paidByUserId    String?
+  reference       String? // challan / TRRN number
+  accountingTxId  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, periodId, kind])
+  @@index([workspaceId, status, dueDate])
+}
+
+/**
+ * One-time server-side claim for signed AI mutation confirmations.
+ * The signed token is never stored; only its random nonce and binding are kept.
+ */
+model AiToolConfirmationNonce {
+  nonce       String   @id
+  userId      String
+  workspaceId String
+  toolName    String
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([workspaceId, userId, expiresAt])
+  @@index([expiresAt])
+}
+
+model SystemErrorLog {
+  id          String   @id @default(cuid())
+  errorType   String   // e.g. "TypeError", "PrismaClientKnownRequestError"
+  message     String
+  stackTrace  String?
+  sourceFile  String?
+  route       String?
+  method      String?
+  userId      String?
+  workspaceId String?
+  status      ErrorStatus @default(UNRESOLVED)
+  environment String      @default("development")
+  metadata    Json?
+
+  // AI Diagnostics
+  aiDiagnosis    String? // The explanation
+  aiSuggestedFix String? // Proposed fix
+  aiConfidence   Int?    // 0-100
+  aiUserFriendlyMessage String? // What we told the user
+  analyzedAt     DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  remediation SystemRemediation?
+}
+
+enum ErrorStatus {
+  UNRESOLVED
+  ANALYZING
+  RESOLVED
+  IGNORED
+}
+
+model SystemRemediation {
+  id            String   @id @default(cuid())
+  errorLogId    String   @unique
+  errorLog      SystemErrorLog @relation(fields: [errorLogId], references: [id], onDelete: Cascade)
+  
+  actionType    RemediationType
+  content       String          
+  description   String          
+  
+  status        RemediationStatus @default(PENDING_APPROVAL)
+  executedAt    DateTime?
+  executedBy    String?         
+  executionLog  String?         
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+enum RemediationType {
+  CODE_PATCH
+  DATA_SCRIPT
+  SYSTEM_RESTART
+  SECURITY_BAN
+}
+
+enum RemediationStatus {
+  PENDING_APPROVAL
+  APPROVED
+  EXECUTING
+  SUCCESS
+  FAILED
+}
+
+
+/// A GST return the workspace has recorded (filed, or with a notified due-date extension / manual inputs).
+/// Return periods themselves are derived from the registration settings; a row exists only once there is state to keep.
+model GstReturn {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  returnType String // GSTR1 | IFF | GSTR3B | CMP08 | GSTR4 | GSTR9 | GSTR9C
+  periodKey  String // "2026-04" (month), "2026-Q1" (quarter of the FY, Apr-Jun = Q1) or "2025-26" (annual)
+  status     String @default("OPEN") // OPEN | FILED
+
+  extendedDueDate DateTime? // a notified extension, overrides the statutory date
+  filedAt         DateTime?
+  arn             String?
+  filedByUserId   String?
+  isNil           Boolean   @default(false)
+  lateFeePaid     Decimal   @default(0)
+  interestPaid    Decimal   @default(0)
+  notes           String?
+
+  // Frozen figures at the time of filing + manual inputs (GSTR-9 tables 10-16 etc.)
+  inputsJson   Json?
+  snapshotJson Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, returnType, periodKey])
+  @@index([workspaceId, status])
+}
+
+/// Manual ledger movements that do not come from an invoice or a bill: opening ITC balance, rule 42/43 reversals, etc.
+model GstAdjustment {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  periodKey String // month "2026-04"
+  kind      String // ITC_OPENING | ITC_REVERSAL_RULE_38 | ITC_REVERSAL_RULE_42_43 | ITC_REVERSAL_OTHER | ITC_REVERSED_CLAIMED_AGAIN | LIABILITY_ADJUSTMENT | CASH_PAID
+  igst      Decimal @default(0)
+  cgst      Decimal @default(0)
+  sgst      Decimal @default(0)
+  cess      Decimal @default(0)
+  notes     String?
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@index([workspaceId, periodKey])
+}
+
+/// A supplier invoice as reported in the portal's GSTR-2B, kept to reconcile against recorded purchases.
+model Gstr2bEntry {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  periodKey     String // return period of the 2B ("2026-04")
+  supplierGstin String
+  supplierName  String?
+  invoiceNumber String
+  invoiceDate   DateTime?
+  taxableValue  Decimal  @default(0)
+  igst          Decimal  @default(0)
+  cgst          Decimal  @default(0)
+  sgst          Decimal  @default(0)
+  cess          Decimal  @default(0)
+  itcAvailable  Boolean  @default(true)
+  reverseCharge Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([workspaceId, periodKey, supplierGstin, invoiceNumber])
+  @@index([workspaceId, periodKey])
+}
+
+
+/// A debit note raised to increase the value or tax of an earlier invoice (GSTR-1 table 9B).
+model GstDebitNote {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  noteNumber    String
+  issuedAt      DateTime
+  invoiceNumber String? // invoice it relates to
+  invoiceDate   DateTime?
+  recipientName String
+  recipientGstin String?
+  pos           String // place of supply: state code, or "96" for exports
+  rate          Float
+  taxable       Decimal @default(0)
+  igst          Decimal @default(0)
+  cgst          Decimal @default(0)
+  sgst          Decimal @default(0)
+  cess          Decimal @default(0)
+  reason        String
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@unique([workspaceId, noteNumber])
+  @@index([workspaceId, issuedAt])
+}
+
+/// A correction to an invoice or note already reported in an earlier return (GSTR-1 tables 9A / 10); stored as original vs revised.
+model GstAmendment {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  periodKey         String // return period the amendment is reported in
+  originalPeriodKey String
+  originalNumber    String
+  originalDate      DateTime
+  recipientName     String?
+  recipientGstin    String? // set => B2B amendment (9A), empty => B2C small amendment (10)
+  pos               String
+  rate              Float
+
+  originalTaxable Decimal @default(0)
+  originalIgst    Decimal @default(0)
+  originalCgst    Decimal @default(0)
+  originalSgst    Decimal @default(0)
+  revisedTaxable  Decimal @default(0)
+  revisedIgst     Decimal @default(0)
+  revisedCgst     Decimal @default(0)
+  revisedSgst     Decimal @default(0)
+  reason          String
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@index([workspaceId, periodKey])
+}
+
+/// Money received before the invoice is raised; GST is payable in the month of receipt (GSTR-1 table 11).
+model GstAdvance {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  receivedAt     DateTime
+  party          String
+  recipientGstin String?
+  pos            String
+  rate           Float
+  amount         Decimal // received, GST included
+  taxable        Decimal @default(0)
+  igst           Decimal @default(0)
+  cgst           Decimal @default(0)
+  sgst           Decimal @default(0)
+  adjustedAt     DateTime? // when an invoice was raised against it
+  adjustedInvoice String?
+  notes          String?
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@index([workspaceId, receivedAt])
+}
+
+/// Review thread on a return (accountant <-> owner).
+model GstReturnComment {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  returnType   String
+  periodKey    String
+  authorUserId String
+  authorName   String?
+  body         String
+  createdAt    DateTime @default(now())
+
+  @@index([workspaceId, returnType, periodKey])
+}
+
+/// De-duplicates GST reminder sends per workspace.
+model GstReminderLog {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  key     String // e.g. "GSTR3B:2026-09:T-3" or "DIGEST:2026-W45"
+  channel String // EMAIL | INAPP
+  sentAt  DateTime @default(now())
+
+  @@unique([workspaceId, key, channel])
+}
+
+
+// ==========================================
+// CA COMPLIANCE
+// ==========================================
+
+/// A person's record against one obligation (status, filing reference, extension, sign-off). Which obligations exist and
+/// when they fall due is derived from the rules in lib/ca, so only what someone set is stored here.
+model CaComplianceItem {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  kind      String // ADVANCE_TAX | TDS_DEPOSIT | TDS_RETURN | ITR | TAX_AUDIT | PF | ESI | ROC_* | YEAR_CLOSE ...
+  periodKey String // 2026-06 | 26-27-Q1 | 26-27
+  fy        String // 26-27
+
+  status String @default("NOT_STARTED") // NOT_STARTED | IN_PROGRESS | READY | FILED | NOT_APPLICABLE
+
+  ownerUserId String?
+  filedAt     DateTime?
+  reference   String? // ARN / acknowledgement number / challan
+  notes       String?
+  /// Extended due date notified by the government, when different from the standard one.
+  dueOverride DateTime?
+
+  signedOffByUserId String?
+  signedOffByName   String?
+  signedOffAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, kind, periodKey])
+  @@index([workspaceId, fy])
+}
+
+/// A document request or a query between the owner and their CA.
+model CaRequest {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  fy     String
+  kind   String // DOCUMENT | QUERY
+  title  String
+  status String @default("OPEN") // OPEN | ANSWERED | CLOSED
+
+  /// What it is about: an obligation (itemKind + periodKey) or a record (linkType + linkId).
+  itemKind  String?
+  periodKey String?
+  linkType  String? // INVOICE | EXPENSE | OTHER
+  linkId    String?
+  dueDate   DateTime?
+
+  createdByUserId String
+  createdByName   String
+  closedAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages CaRequestMessage[]
+
+  @@index([workspaceId, fy, status])
+}
+
+model CaRequestMessage {
+  id          String    @id @default(cuid())
+  requestId   String
+  request     CaRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  workspaceId String
+
+  authorUserId String
+  authorName   String
+  authorRole   String?
+  body         String
+  /// A document from the vault attached to the message.
+  documentId   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([requestId, createdAt])
+}
+
+/// People at a client: who gets invoices, who gets reminders, who to call.
+model ClientContact {
+  id          String   @id @default(cuid())
+  workspaceId String
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  name              String
+  role              String?
+  email             String?
+  phone             String?
+  isPrimary         Boolean  @default(false)
+  receivesInvoices  Boolean  @default(true)
+  receivesReminders Boolean  @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  @@index([workspaceId, clientId])
+}
+
+/// Internal notes on a client (calls, agreements, context). Never shown to the client.
+model ClientNote {
+  id          String   @id @default(cuid())
+  workspaceId String
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  authorUserId String?
+  authorName   String
+  body         String
+  pinned       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([workspaceId, clientId, createdAt(sort: Desc)])
+}
+
+
+/// A saved report: the report plus its filters, optionally pinned, optionally emailed on a schedule.
+model ReportView {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  createdByUserId String?
+  name            String
+  /// Report key from the catalog, for example "pnl" or "ar_aging".
+  reportId        String
+  paramsJson      Json?
+  pinned          Boolean @default(false)
+  /// PRIVATE (only the creator) or WORKSPACE (everyone with reporting access).
+  visibility      String  @default("WORKSPACE")
+  /// Show this report's key figures on the dashboard.
+  pinnedToDashboard Boolean @default(false)
+
+  /// WEEKLY (Mondays) or MONTHLY (the 1st). Null means not scheduled.
+  scheduleFrequency  String?
+  scheduleRecipients String?
+  scheduleFormat     String    @default("CSV")
+  scheduleEnabled    Boolean   @default(true)
+  /// Hour of day (0 to 23) in scheduleTz at which the email goes out.
+  scheduleHour       Int       @default(7)
+  scheduleTz         String    @default("UTC")
+  scheduleNextAt     DateTime?
+  scheduleLastAt     DateTime?
+  scheduleLastError  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, createdByUserId])
+  @@index([scheduleNextAt])
+}
