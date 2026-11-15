@@ -8,34 +8,41 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useDebounced } from "./hooks";
 import { api, type Product, type ProductList } from "./shared";
 
 export type PoDraftLine = { productId: string; name: string; unit: string; quantity: number; unitPrice: number };
 
 /** Create a purchase order, optionally prefilled from reorder suggestions. */
 export function PoComposer({ open, initialLines, onClose, onDone, money }: { open: boolean; initialLines: PoDraftLine[]; onClose: () => void; onDone: () => void; money: (n: number) => string }) {
+  return open ? <ComposerBody initialLines={initialLines} onClose={onClose} onDone={onDone} money={money} /> : null;
+}
+
+function ComposerBody({ initialLines, onClose, onDone, money }: { initialLines: PoDraftLine[]; onClose: () => void; onDone: () => void; money: (n: number) => string }) {
   const t = useTranslations("InventoryHub");
   const [supplier, setSupplier] = useState("");
   const [expected, setExpected] = useState("");
   const [terms, setTerms] = useState("");
   const [notes, setNotes] = useState("");
-  const [lines, setLines] = useState<PoDraftLine[]>([]);
+  const [lines, setLines] = useState<PoDraftLine[]>(initialLines);
   const [search, setSearch] = useState("");
-  const [results, setResults] = useState<Product[]>([]);
+  const [found, setFound] = useState<Product[]>([]);
+  const dsearch = useDebounced(search.trim());
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  useEffect(() => { if (open) { setLines(initialLines); setSupplier(""); setExpected(""); setTerms(""); setNotes(""); setSearch(""); setErr(null); } }, [open, initialLines]);
   useEffect(() => {
-    if (!search.trim()) { setResults([]); return; }
-    const h = setTimeout(() => { api<ProductList>(`/api/inventory/products?limit=8&q=${encodeURIComponent(search.trim())}`).then((d) => setResults(d.items)).catch(() => setResults([])); }, 250);
-    return () => clearTimeout(h);
-  }, [search]);
+    if (!dsearch) return;
+    let cancelled = false;
+    api<ProductList>(`/api/inventory/products?limit=8&q=${encodeURIComponent(dsearch)}`).then((d) => { if (!cancelled) setFound(d.items); }).catch(() => { if (!cancelled) setFound([]); });
+    return () => { cancelled = true; };
+  }, [dsearch]);
+  const results = dsearch && search.trim() ? found : [];
 
   const total = useMemo(() => lines.reduce((s, l) => s + l.quantity * l.unitPrice, 0), [lines]);
   const valid = supplier.trim().length > 0 && lines.length > 0 && lines.every((l) => l.quantity >= 1 && l.unitPrice >= 0);
   const patch = (i: number, p: Partial<PoDraftLine>) => setLines((ls) => ls.map((l, j) => (j === i ? { ...l, ...p } : l)));
-  const add = (p: Product) => { if (!lines.some((l) => l.productId === p.id)) setLines((ls) => [...ls, { productId: p.id, name: p.name, unit: p.unit, quantity: p.reorderQuantity ?? 1, unitPrice: Number(p.costPrice) }]); setSearch(""); setResults([]); };
+  const add = (p: Product) => { if (!lines.some((l) => l.productId === p.id)) setLines((ls) => [...ls, { productId: p.id, name: p.name, unit: p.unit, quantity: p.reorderQuantity ?? 1, unitPrice: Number(p.costPrice) }]); setSearch(""); };
 
   const save = async (send: boolean) => {
     setBusy(true); setErr(null);
@@ -51,7 +58,7 @@ export function PoComposer({ open, initialLines, onClose, onDone, money }: { ope
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader><DialogTitle>{t("po.newTitle")}</DialogTitle></DialogHeader>
         <div className="grid gap-3 sm:grid-cols-3">

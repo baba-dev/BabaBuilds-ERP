@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { receiveSchema } from '@/lib/inventory/schemas';
 import { receivePurchaseOrder } from '@/lib/inventory/service';
-import { invalidateDashboardCacheForWorkspace } from '@/lib/dashboard-cache';
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import { logActivity } from '@/lib/security/activity-log';
 import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
 import { inventoryErrorResponse, readJson, requireInventory } from '../../../_guard';
@@ -17,7 +17,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const { id } = await ctx.params;
     const input = receiveSchema.parse((await readJson(req)) ?? {});
     const out = await receivePurchaseOrder({ workspaceId, userId, poId: id, input });
-    invalidateDashboardCacheForWorkspace(workspaceId);
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'inventory_receipt', action: 'write', error: String(error) });
+    }
     void logActivity({ workspaceId, action: 'inventory.po_received', status: 'SUCCESS', actor: { userId, email }, entity: { type: 'purchase_order', id }, metadata: { ...out } });
     return NextResponse.json({ success: true, ...out });
   } catch (e) {

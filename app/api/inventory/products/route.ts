@@ -6,7 +6,7 @@ import { parseProductForm } from '@/lib/inventory/product-form';
 import { applyStockChange, InventoryError } from '@/lib/inventory/service';
 import { removeProductImage, storeProductImage } from '@/lib/inventory/product-image';
 import { stockStatus } from '@/lib/inventory/stock';
-import { invalidateDashboardCacheForWorkspace } from '@/lib/dashboard-cache';
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import { prisma } from '@/lib/prisma';
 import { logActivity } from '@/lib/security/activity-log';
 import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
@@ -75,7 +75,11 @@ export async function POST(req: Request) {
       if (openingStock > 0) await applyStockChange(tx, { workspaceId, productId: created.id, delta: openingStock, type: 'IN', reason: 'Opening stock', unitCost: d.costPrice, userId });
       return tx.product.findFirstOrThrow({ where: { id: created.id } });
     });
-    invalidateDashboardCacheForWorkspace(workspaceId);
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'inventory_product', action: 'write', error: String(error) });
+    }
     void logActivity({ workspaceId, action: 'inventory.product_created', status: 'SUCCESS', actor: { userId, email }, entity: { type: 'product', id: product.id }, metadata: { sku: product.sku, openingStock } });
     return NextResponse.json({ success: true, product }, { status: 201 });
   } catch (e) {

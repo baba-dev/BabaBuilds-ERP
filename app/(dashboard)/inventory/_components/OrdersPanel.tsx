@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { Ban, ChevronDown, Loader2, PackageCheck, Plus, Send, Undo2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -13,23 +13,27 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { InventoryArt } from "./art/InventoryArt";
 import { PoComposer } from "./PoComposer";
+import { usePaged } from "./hooks";
 import { api, type PurchaseOrder } from "./shared";
 
+const EMPTY: import("./PoComposer").PoDraftLine[] = [];
 const TONE: Record<PurchaseOrder["status"], string> = {
   DRAFT: "bg-muted text-muted-foreground", SENT: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300", PARTIAL: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
   DELIVERED: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300", CANCELLED: "bg-rose-500/10 text-rose-700 dark:text-rose-300",
 };
 
 function ReceiveDialog({ po, onClose, onDone }: { po: PurchaseOrder | null; onClose: () => void; onDone: () => void }) {
+  return po ? <ReceiveBody key={po.id} po={po} onClose={onClose} onDone={onDone} /> : null;
+}
+
+function ReceiveBody({ po, onClose, onDone }: { po: PurchaseOrder; onClose: () => void; onDone: () => void }) {
   const t = useTranslations("InventoryHub");
-  const [qty, setQty] = useState<Record<string, string>>({});
+  const [qty, setQty] = useState<Record<string, string>>(() => Object.fromEntries(po.items.map((i) => [i.id, String(i.quantity - i.receivedQuantity)])));
   const [sync, setSync] = useState(true);
   const [invoice, setInvoice] = useState("");
-  const [gstin, setGstin] = useState("");
+  const [gstin, setGstin] = useState(po.supplierGstin ?? "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  useEffect(() => { if (po) { setQty(Object.fromEntries(po.items.map((i) => [i.id, String(i.quantity - i.receivedQuantity)]))); setSync(true); setInvoice(""); setGstin(po.supplierGstin ?? ""); setErr(null); } }, [po]);
-  if (!po) return null;
   const lines = po.items.map((i) => ({ item: i, outstanding: i.quantity - i.receivedQuantity, n: Math.floor(Number(qty[i.id] ?? 0)) }));
   const bad = lines.some((l) => l.n < 0 || l.n > l.outstanding || Number.isNaN(l.n));
   const any = lines.some((l) => l.n > 0);
@@ -72,31 +76,12 @@ function ReceiveDialog({ po, onClose, onDone }: { po: PurchaseOrder | null; onCl
 export function OrdersPanel({ canEdit, money, locale, reloadKey, onChanged, composeOpen, onComposeClose, prefill }: { canEdit: boolean; money: (n: number) => string; locale: string; reloadKey: number; onChanged: () => void; composeOpen: boolean; onComposeClose: () => void; prefill: import("./PoComposer").PoDraftLine[] }) {
   const t = useTranslations("InventoryHub");
   const [status, setStatus] = useState<"" | PurchaseOrder["status"]>("");
-  const [items, setItems] = useState<PurchaseOrder[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [receiving, setReceiving] = useState<PurchaseOrder | null>(null);
   const [composeLocal, setComposeLocal] = useState(false);
-
-  const load = useCallback(async (more: string | null) => {
-    setLoading(true);
-    try {
-      const p = new URLSearchParams({ limit: "30" });
-      if (status) p.set("status", status);
-      if (more) p.set("cursor", more);
-      const d = await api<{ items: PurchaseOrder[]; nextCursor: string | null }>(`/api/inventory/purchase-orders?${p}`);
-      setItems((prev) => (more ? [...prev, ...d.items] : d.items));
-      setCursor(d.nextCursor);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "error");
-    } finally {
-      setLoading(false);
-    }
-  }, [status]);
-  useEffect(() => { void load(null); }, [load, reloadKey]);
+  const list = usePaged<PurchaseOrder>("/api/inventory/purchase-orders", { limit: "30", status: status || undefined }, reloadKey);
+  const { items, error, loading } = list;
+  const cursor = list.hasMore;
 
   const act = async (po: PurchaseOrder, action: "send" | "cancel" | "reopen") => {
     try {
@@ -152,11 +137,11 @@ export function OrdersPanel({ canEdit, money, locale, reloadKey, onChanged, comp
                 </li>
               );
             })}
-            {cursor ? <li className="pt-1 text-center"><Button variant="outline" size="sm" onClick={() => void load(cursor)} disabled={loading}>{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t("loadMore")}</Button></li> : null}
+            {cursor ? <li className="pt-1 text-center"><Button variant="outline" size="sm" onClick={() => void list.loadMore()} disabled={list.moreBusy}>{list.moreBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("loadMore")}</Button></li> : null}
           </ul>
         )}
       <ReceiveDialog po={receiving} onClose={() => setReceiving(null)} onDone={onChanged} />
-      <PoComposer open={composeOpen || composeLocal} initialLines={composeOpen ? prefill : []} money={money} onClose={() => { setComposeLocal(false); onComposeClose(); }} onDone={onChanged} />
+      <PoComposer open={composeOpen || composeLocal} initialLines={composeOpen ? prefill : EMPTY} money={money} onClose={() => { setComposeLocal(false); onComposeClose(); }} onDone={onChanged} />
     </div>
   );
 }

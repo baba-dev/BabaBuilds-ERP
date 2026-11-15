@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { adjustSchema, bulkCountSchema } from '@/lib/inventory/schemas';
 import { applyStockChange, applyStockCount } from '@/lib/inventory/service';
-import { invalidateDashboardCacheForWorkspace } from '@/lib/dashboard-cache';
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import { logActivity } from '@/lib/security/activity-log';
 import { prisma } from '@/lib/prisma';
 import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
@@ -26,7 +26,11 @@ export async function POST(req: Request) {
       const delta = d.mode === 'ADD' ? d.quantity : -d.quantity;
       return applyStockChange(tx, { workspaceId, productId: d.productId, delta, type: 'ADJ', reason: d.reason ?? (delta > 0 ? 'Manual stock in' : 'Manual stock out'), userId });
     });
-    invalidateDashboardCacheForWorkspace(workspaceId);
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'inventory_stock', action: 'write', error: String(error) });
+    }
     void logActivity({ workspaceId, action: 'inventory.stock_adjusted', status: 'SUCCESS', actor: { userId, email }, entity: { type: 'product', id: d.productId }, metadata: { mode: d.mode, quantity: d.quantity, balance: result.balance } });
     return NextResponse.json({ success: true, balance: result.balance });
   } catch (e) {
@@ -49,7 +53,11 @@ export async function PUT(req: Request) {
       }
       return { changed, total: d.counts.length };
     }, { timeout: 60_000 });
-    invalidateDashboardCacheForWorkspace(workspaceId);
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'inventory_stock', action: 'write', error: String(error) });
+    }
     void logActivity({ workspaceId, action: 'inventory.stock_counted', status: 'SUCCESS', actor: { userId, email }, entity: { type: 'inventory', id: workspaceId }, metadata: out });
     return NextResponse.json({ success: true, ...out });
   } catch (e) {

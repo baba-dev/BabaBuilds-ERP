@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Archive, Loader2, PackagePlus, Pencil, ScanLine, Search, SlidersHorizontal, Undo2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -11,7 +11,8 @@ import { ProductFormModal } from "@/components/inventory/ProductFormModal";
 import { MobileScanner } from "@/components/inventory/MobileScanner";
 import type { InventoryProduct } from "@/lib/types/inventory";
 import { InventoryArt } from "./art/InventoryArt";
-import { api, type Product, type ProductList, type StockStatus } from "./shared";
+import { useDebounced, usePaged } from "./hooks";
+import { api, type Product, type StockStatus } from "./shared";
 import { StatusBadge } from "./StatusBadge";
 import { StockDialog } from "./StockDialog";
 
@@ -21,40 +22,15 @@ export function ProductsPanel({ canEdit, money, num, reloadKey, onChanged, initi
   const [status, setStatus] = useState<StockStatus | "">(initialStatus ?? "");
   const [category, setCategory] = useState("");
   const [archived, setArchived] = useState(false);
-  const [items, setItems] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [adjust, setAdjust] = useState<Product | null>(null);
   const [edit, setEdit] = useState<Product | null>(null);
   const [creating, setCreating] = useState(false);
   const [scanning, setScanning] = useState(false);
-  const seq = useRef(0);
-
-  const load = useCallback(async (more: string | null) => {
-    const my = ++seq.current;
-    setLoading(true);
-    try {
-      const p = new URLSearchParams({ limit: "50", archived: String(archived) });
-      if (q.trim()) p.set("q", q.trim());
-      if (status) p.set("status", status);
-      if (category) p.set("category", category);
-      if (more) p.set("cursor", more);
-      const d = await api<ProductList>(`/api/inventory/products?${p}`);
-      if (my !== seq.current) return;
-      setItems((prev) => (more ? [...prev, ...d.items] : d.items));
-      setCursor(d.nextCursor);
-      setCategories(d.categories);
-      setError(null);
-    } catch (e) {
-      if (my === seq.current) setError(e instanceof Error ? e.message : "error");
-    } finally {
-      if (my === seq.current) setLoading(false);
-    }
-  }, [q, status, category, archived]);
-
-  useEffect(() => { const h = setTimeout(() => void load(null), q ? 250 : 0); return () => clearTimeout(h); }, [load, reloadKey, q]);
+  const dq = useDebounced(q.trim());
+  const list = usePaged<Product>("/api/inventory/products", { limit: "50", archived: String(archived), q: dq || undefined, status: status || undefined, category: category || undefined }, reloadKey);
+  const { items, error, loading } = list;
+  const categories = (list.extra.categories as string[] | undefined) ?? [];
+  const cursor = list.hasMore;
 
   const archive = async (p: Product, restore = false) => {
     try {
@@ -78,7 +54,7 @@ export function ProductsPanel({ canEdit, money, num, reloadKey, onChanged, initi
         {canEdit ? <Button size="sm" className="gap-1.5" onClick={() => setCreating(true)}><PackagePlus className="h-4 w-4" />{t("products.add")}</Button> : null}
       </div>
 
-      {error && items.length === 0 ? <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-6 text-center text-sm">{error}<div className="mt-3"><Button size="sm" variant="outline" onClick={() => void load(null)}>{t("retry")}</Button></div></div>
+      {error && items.length === 0 ? <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-6 text-center text-sm">{error}<div className="mt-3"><Button size="sm" variant="outline" onClick={onChanged}>{t("retry")}</Button></div></div>
         : loading && items.length === 0 ? <div className="space-y-2">{[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}</div>
         : items.length === 0 ? (
           <div className="rounded-3xl border border-dashed p-8 text-center"><InventoryArt variant="empty" className="mx-auto max-w-[220px]" /><p className="mt-3 font-medium">{q || status || category ? t("products.noMatch") : archived ? t("products.noneArchived") : t("products.empty")}</p>{canEdit && !q && !status && !archived ? <Button className="mt-3" onClick={() => setCreating(true)}>{t("products.add")}</Button> : null}</div>
@@ -103,7 +79,7 @@ export function ProductsPanel({ canEdit, money, num, reloadKey, onChanged, initi
                 </li>
               ))}
             </ul>
-            {cursor ? <div className="border-t p-3 text-center"><Button variant="outline" size="sm" onClick={() => void load(cursor)} disabled={loading}>{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t("loadMore")}</Button></div> : null}
+            {cursor ? <div className="border-t p-3 text-center"><Button variant="outline" size="sm" onClick={() => void list.loadMore()} disabled={list.moreBusy}>{list.moreBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("loadMore")}</Button></div> : null}
           </div>
         )}
 

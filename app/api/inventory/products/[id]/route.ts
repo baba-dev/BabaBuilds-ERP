@@ -5,7 +5,7 @@ import { InventoryError } from '@/lib/inventory/service';
 import { removeProductImage, storeProductImage } from '@/lib/inventory/product-image';
 import { stockStatus } from '@/lib/inventory/stock';
 import { assertFreeTierPublishedShopListingsAllowed } from '@/lib/entitlements';
-import { invalidateDashboardCacheForWorkspace } from '@/lib/dashboard-cache';
+import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import { prisma } from '@/lib/prisma';
 import { logActivity } from '@/lib/security/activity-log';
 import { inventoryErrorResponse, requireInventory } from '../../_guard';
@@ -74,7 +74,11 @@ export async function PUT(req: Request, ctx: Ctx) {
 
     const updated = await prisma.product.update({ where: { id }, data });
     if (newImage) await removeProductImage(workspaceId, existing.imageUrl);
-    invalidateDashboardCacheForWorkspace(workspaceId);
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'inventory_product', action: 'write', error: String(error) });
+    }
     void logActivity({ workspaceId, action: 'inventory.product_updated', status: 'SUCCESS', actor: { userId, email }, entity: { type: 'product', id }, metadata: { sku: updated.sku } });
     return NextResponse.json({ success: true, product: updated });
   } catch (e) {
@@ -111,7 +115,11 @@ export async function DELETE(req: Request, ctx: Ctx) {
       }
     }
     if (archived) await prisma.product.update({ where: { id }, data: { archivedAt: new Date(), showInShop: false } });
-    invalidateDashboardCacheForWorkspace(workspaceId);
+    try {
+      invalidateDashboardCacheForWorkspace(workspaceId);
+    } catch (error) {
+      noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'inventory_product', action: 'write', error: String(error) });
+    }
     void logActivity({ workspaceId, action: archived ? 'inventory.product_archived' : 'inventory.product_deleted', status: 'SUCCESS', actor: { userId, email }, entity: { type: 'product', id }, metadata: { sku: existing.sku } });
     return NextResponse.json({ success: true, archived });
   } catch (e) {

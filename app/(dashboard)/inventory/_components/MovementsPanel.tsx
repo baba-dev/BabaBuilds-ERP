@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { ArrowDownLeft, ArrowUpRight, Loader2, Scale } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { api, type Movement } from "./shared";
+import { usePaged } from "./hooks";
+import type { Movement } from "./shared";
 
 const ICON = { IN: ArrowDownLeft, OUT: ArrowUpRight, ADJ: Scale } as const;
 
@@ -14,30 +15,9 @@ export function MovementsPanel({ reloadKey, locale }: { reloadKey: number; local
   const [type, setType] = useState<"" | "IN" | "OUT" | "ADJ">("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [items, setItems] = useState<Movement[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async (more: string | null) => {
-    setLoading(true);
-    try {
-      const p = new URLSearchParams({ limit: "50" });
-      if (type) p.set("type", type);
-      if (from) p.set("from", from);
-      if (to) p.set("to", to);
-      if (more) p.set("cursor", more);
-      const d = await api<{ items: Movement[]; nextCursor: string | null }>(`/api/inventory/movements?${p}`);
-      setItems((prev) => (more ? [...prev, ...d.items] : d.items));
-      setCursor(d.nextCursor);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "error");
-    } finally {
-      setLoading(false);
-    }
-  }, [type, from, to]);
-  useEffect(() => { void load(null); }, [load, reloadKey]);
+  const list = usePaged<Movement>("/api/inventory/movements", { limit: "50", type: type || undefined, from: from || undefined, to: to || undefined }, reloadKey);
+  const { items, error, loading } = list;
+  const cursor = list.hasMore;
 
   const fmt = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
   const sel = "h-9 rounded-lg border bg-background px-2 text-sm";
@@ -66,7 +46,7 @@ export function MovementsPanel({ reloadKey, locale }: { reloadKey: number; local
                 );
               })}
             </ul>
-            {cursor ? <div className="border-t p-3 text-center"><Button variant="outline" size="sm" onClick={() => void load(cursor)} disabled={loading}>{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t("loadMore")}</Button></div> : null}
+            {cursor ? <div className="border-t p-3 text-center"><Button variant="outline" size="sm" onClick={() => void list.loadMore()} disabled={list.moreBusy}>{list.moreBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("loadMore")}</Button></div> : null}
           </div>
         )}
     </div>

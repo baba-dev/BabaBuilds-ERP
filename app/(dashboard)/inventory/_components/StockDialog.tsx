@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -15,13 +15,15 @@ type Mode = "ADD" | "REMOVE" | "COUNT";
 
 /** Add, remove or count stock for one product. */
 export function StockDialog({ product, onClose, onDone }: { product: Product | null; onClose: () => void; onDone: () => void }) {
+  return product ? <StockBody key={product.id} product={product} onClose={onClose} onDone={onDone} /> : null;
+}
+
+function StockBody({ product, onClose, onDone }: { product: Product; onClose: () => void; onDone: () => void }) {
   const t = useTranslations("InventoryHub");
   const [mode, setMode] = useState<Mode>("ADD");
   const [qty, setQty] = useState("");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
-  useEffect(() => { if (product) { setMode("ADD"); setQty(""); setReason(""); } }, [product]);
-  if (!product) return null;
 
   const n = Number(qty);
   const valid = qty !== "" && Number.isInteger(n) && n >= 0 && (mode === "COUNT" || n > 0) && (mode !== "REMOVE" || n <= product.currentStock);
