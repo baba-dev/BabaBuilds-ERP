@@ -21,6 +21,13 @@ export type Product = {
 
 export type ProductList = { items: Product[]; nextCursor: string | null; categories: string[] };
 
+export type ProductDetail = Product & {
+  movements: Movement[];
+  onOrder: { poId: string; poNumber: string; expectedDate: string | null; outstanding: number }[];
+  stats: { sold30: number; sold90: number; dailyDemand: number; daysOfCover: number | null; marginPct: number | null; stockValue: number; lastSold: string | null };
+};
+export type VendorHit = { id: string; name: string; gstin: string | null; stateCode: string | null; paymentTermsDays: number | null };
+
 export type Movement = {
   id: string; type: "IN" | "OUT" | "ADJ"; quantity: number; reason: string | null; createdAt: string; balanceAfter: number | null; unitCost: number | string | null;
   product?: { name: string; sku: string; unit: string };

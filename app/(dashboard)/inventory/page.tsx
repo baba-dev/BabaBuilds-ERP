@@ -74,7 +74,7 @@ function InventoryWorkspace() {
         ) : (
           <div className={cn(loading && "opacity-70 transition-opacity")}>
             {tab === "overview" ? <OverviewPanel data={data} money={money} num={num} onTab={setTab} />
-              : tab === "products" ? <ProductsPanel canEdit={canEdit} money={money} num={num} reloadKey={tick} onChanged={reload} />
+              : tab === "products" ? <ProductsPanel canEdit={canEdit} money={money} num={num} locale={locale} reloadKey={tick} onChanged={reload} onOrder={(line) => { setCompose([line]); setTab("orders"); }} />
               : tab === "reorder" ? <ReorderPanel data={data} money={money} num={num} canEdit={canEdit} onCreate={(lines) => { setCompose(lines); setTab("orders"); }} />
               : tab === "orders" ? <OrdersPanel canEdit={canEdit} money={money} locale={locale} reloadKey={tick} onChanged={reload} composeOpen={compose !== null} onComposeClose={() => setCompose(null)} prefill={compose ?? []} />
               : <MovementsPanel reloadKey={tick} locale={locale} />}

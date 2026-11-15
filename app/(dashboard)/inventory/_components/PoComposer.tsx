@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useDebounced } from "./hooks";
-import { api, type Product, type ProductList } from "./shared";
+import { api, type Product, type ProductList, type VendorHit } from "./shared";
 
 export type PoDraftLine = { productId: string; name: string; unit: string; quantity: number; unitPrice: number };
 
@@ -21,6 +21,10 @@ export function PoComposer({ open, initialLines, onClose, onDone, money }: { ope
 function ComposerBody({ initialLines, onClose, onDone, money }: { initialLines: PoDraftLine[]; onClose: () => void; onDone: () => void; money: (n: number) => string }) {
   const t = useTranslations("InventoryHub");
   const [supplier, setSupplier] = useState("");
+  const [vendorId, setVendorId] = useState<string | null>(null);
+  const [gstin, setGstin] = useState("");
+  const [vendors, setVendors] = useState<VendorHit[]>([]);
+  const dsupplier = useDebounced(supplier.trim());
   const [expected, setExpected] = useState("");
   const [terms, setTerms] = useState("");
   const [notes, setNotes] = useState("");
@@ -37,6 +41,14 @@ function ComposerBody({ initialLines, onClose, onDone, money }: { initialLines: 
     api<ProductList>(`/api/inventory/products?limit=8&q=${encodeURIComponent(dsearch)}`).then((d) => { if (!cancelled) setFound(d.items); }).catch(() => { if (!cancelled) setFound([]); });
     return () => { cancelled = true; };
   }, [dsearch]);
+  useEffect(() => {
+    if (!dsupplier) return;
+    let cancelled = false;
+    api<{ items: VendorHit[] }>(`/api/inventory/vendors?q=${encodeURIComponent(dsupplier)}`).then((d) => { if (!cancelled) setVendors(d.items); }).catch(() => { if (!cancelled) setVendors([]); });
+    return () => { cancelled = true; };
+  }, [dsupplier]);
+  const vendorHits = dsupplier && supplier.trim() && !vendorId ? vendors.filter((v) => v.name.toLowerCase() !== supplier.trim().toLowerCase()) : [];
+  const pickVendor = (v: VendorHit) => { setSupplier(v.name); setVendorId(v.id); if (v.gstin) setGstin(v.gstin); if (v.paymentTermsDays) setTerms(String(v.paymentTermsDays)); setVendors([]); };
   const results = dsearch && search.trim() ? found : [];
 
   const total = useMemo(() => lines.reduce((s, l) => s + l.quantity * l.unitPrice, 0), [lines]);
@@ -47,7 +59,7 @@ function ComposerBody({ initialLines, onClose, onDone, money }: { initialLines: 
   const save = async (send: boolean) => {
     setBusy(true); setErr(null);
     try {
-      await api("/api/inventory/purchase-orders", { method: "POST", body: JSON.stringify({ supplier: supplier.trim(), expectedDate: expected || null, paymentTermsDays: terms ? Number(terms) : null, notes: notes || null, send, lines: lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: l.unitPrice })) }) });
+      await api("/api/inventory/purchase-orders", { method: "POST", body: JSON.stringify({ supplier: supplier.trim(), vendorId, supplierGstin: gstin || null, expectedDate: expected || null, paymentTermsDays: terms ? Number(terms) : null, notes: notes || null, send, lines: lines.map((l) => ({ productId: l.productId, quantity: l.quantity, unitPrice: l.unitPrice })) }) });
       toast.success(send ? t("po.sentToast") : t("po.draftToast"));
       onDone(); onClose();
     } catch (e) {
@@ -62,7 +74,10 @@ function ComposerBody({ initialLines, onClose, onDone, money }: { initialLines: 
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader><DialogTitle>{t("po.newTitle")}</DialogTitle></DialogHeader>
         <div className="grid gap-3 sm:grid-cols-3">
-          <div className="sm:col-span-3"><Label htmlFor="po-sup">{t("po.supplier")}</Label><Input id="po-sup" value={supplier} maxLength={120} onChange={(e) => setSupplier(e.target.value)} /></div>
+          <div className="relative sm:col-span-2"><Label htmlFor="po-sup">{t("po.supplier")}</Label><Input id="po-sup" value={supplier} maxLength={120} autoComplete="off" onChange={(e) => { setSupplier(e.target.value); setVendorId(null); }} />
+            {vendorHits.length > 0 ? <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border bg-popover shadow-lg">{vendorHits.map((v) => <li key={v.id}><button type="button" className="flex w-full items-center justify-between gap-2 px-3 py-2 text-start text-sm hover:bg-muted" onClick={() => pickVendor(v)}><span className="truncate">{v.name}</span>{v.gstin ? <span className="text-xs text-muted-foreground">{v.gstin}</span> : null}</button></li>)}</ul> : null}
+          </div>
+          <div><Label htmlFor="po-gstin">{t("po.gstin")}</Label><Input id="po-gstin" value={gstin} maxLength={15} onChange={(e) => setGstin(e.target.value.toUpperCase())} /></div>
           <div><Label htmlFor="po-exp">{t("po.expected")}</Label><Input id="po-exp" type="date" value={expected} onChange={(e) => setExpected(e.target.value)} /></div>
           <div><Label htmlFor="po-terms">{t("po.terms")}</Label><Input id="po-terms" inputMode="numeric" value={terms} onChange={(e) => setTerms(e.target.value.replace(/\D/g, "").slice(0, 3))} placeholder="0" /></div>
           <div className="sm:col-span-3"><Label htmlFor="po-notes">{t("po.notes")}</Label><Input id="po-notes" value={notes} maxLength={500} onChange={(e) => setNotes(e.target.value)} /></div>

@@ -21,7 +21,21 @@ export async function GET(_req: Request, ctx: Ctx) {
     const product = await prisma.product.findFirst({ where: { id, workspaceId: gate.access.workspaceId }, include: { movements: { orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 30 } } });
     if (!product) throw new InventoryError('NOT_FOUND', 'Product not found.');
     const onOrder = await prisma.purchaseOrderItem.findMany({ where: { productId: id, purchaseOrder: { workspaceId: gate.access.workspaceId, status: { in: ['SENT', 'PARTIAL'] } } }, select: { quantity: true, receivedQuantity: true, purchaseOrder: { select: { id: true, poNumber: true, expectedDate: true } } } });
-    return NextResponse.json({ ...product, onOrder: onOrder.map((o) => ({ poId: o.purchaseOrder.id, poNumber: o.purchaseOrder.poNumber, expectedDate: o.purchaseOrder.expectedDate, outstanding: o.quantity - o.receivedQuantity })).filter((o) => o.outstanding > 0) });
+    const since90 = new Date(Date.now() - 90 * 86_400_000);
+    const since30 = new Date(Date.now() - 30 * 86_400_000);
+    const sales = await prisma.inventoryMovement.findMany({ where: { productId: id, workspaceId: gate.access.workspaceId, type: 'OUT', createdAt: { gte: since90 } }, select: { quantity: true, createdAt: true } });
+    const sold90 = sales.reduce((s, m) => s + Math.abs(m.quantity), 0);
+    const sold30 = sales.filter((m) => m.createdAt >= since30).reduce((s, m) => s + Math.abs(m.quantity), 0);
+    const daily = sold30 > 0 ? sold30 / 30 : sold90 / 90;
+    const cost = Number(product.costPrice), price = Number(product.baselinePrice);
+    const stats = {
+      sold30, sold90, dailyDemand: Math.round(daily * 100) / 100,
+      daysOfCover: daily > 0 ? Math.round(product.currentStock / daily) : null,
+      marginPct: price > 0 ? Math.round(((price - cost) / price) * 1000) / 10 : null,
+      stockValue: Math.round(cost * Math.max(product.currentStock, 0) * 100) / 100,
+      lastSold: sales.length ? sales.reduce((m, s) => (s.createdAt > m ? s.createdAt : m), sales[0].createdAt) : null,
+    };
+    return NextResponse.json({ ...product, stats, onOrder: onOrder.map((o) => ({ poId: o.purchaseOrder.id, poNumber: o.purchaseOrder.poNumber, expectedDate: o.purchaseOrder.expectedDate, outstanding: o.quantity - o.receivedQuantity })).filter((o) => o.outstanding > 0) });
   } catch (e) {
     return inventoryErrorResponse(e, 'product.get');
   }

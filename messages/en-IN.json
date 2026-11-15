@@ -8844,7 +8844,10 @@
       "archived": "Archived. It has history, so it was kept.",
       "deleted": "Product deleted",
       "restored": "Product restored",
-      "failed": "The product could not be updated"
+      "failed": "The product could not be updated",
+      "export": "Export",
+      "import": "Import",
+      "open": "Open {name}"
     },
     "stock": {
       "saved": "Stock updated",
@@ -8878,7 +8881,8 @@
       "from": "From",
       "to": "To",
       "empty": "No stock movements match these filters.",
-      "balance": "Balance {n}"
+      "balance": "Balance {n}",
+      "export": "Export CSV"
     },
     "reorder": {
       "intro": "Based on what you sell, how long suppliers take and what is already on order.",
@@ -8940,7 +8944,9 @@
       "saveDraft": "Save draft",
       "saveSend": "Save and send",
       "sentToast": "Purchase order created and sent",
-      "draftToast": "Purchase order saved as a draft"
+      "draftToast": "Purchase order saved as a draft",
+      "gstin": "Supplier GSTIN",
+      "pdf": "Download PDF"
     },
     "receive": {
       "title": "Receive goods on {po}",
@@ -8954,6 +8960,36 @@
       "doneFull": "Order fully received",
       "donePartial": "{units} units received. The rest is still outstanding.",
       "failed": "The goods could not be received"
+    },
+    "drawer": {
+      "loading": "Loading product",
+      "onHand": "On hand",
+      "safety": "Safety level {n}",
+      "value": "Stock value",
+      "unitCost": "{cost} each at cost",
+      "margin": "Margin",
+      "sellsAt": "Sells at {price}",
+      "cover": "Stock cover",
+      "days": "{n} days",
+      "sold30": "{n} sold in 30 days",
+      "order": "Order more",
+      "onOrder": "On order",
+      "arriving": "{n} arriving",
+      "history": "Recent movements"
+    },
+    "import": {
+      "title": "Import products",
+      "intro": "Upload a CSV to add or update products in bulk. Existing SKUs are updated; stock on existing products is not changed (use a stock count for that).",
+      "template": "Download template",
+      "choose": "Choose a CSV file",
+      "empty": "That file has no rows.",
+      "tooBig": "The file is larger than 2 MB.",
+      "failed": "The import could not be checked.",
+      "summary": "{created} to add, {updated} to update",
+      "problems": "{count} rows have problems and will be skipped",
+      "row": "Row {row}",
+      "confirm": "Import {count} products",
+      "done": "Imported: {created} added, {updated} updated"
     }
   }
 }

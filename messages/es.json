@@ -8873,7 +8873,10 @@
       "archived": "Archivado. Tiene historial, por eso se conservó.",
       "deleted": "Producto eliminado",
       "restored": "Producto restaurado",
-      "failed": "No se pudo actualizar el producto"
+      "failed": "No se pudo actualizar el producto",
+      "export": "Exportar",
+      "import": "Importar",
+      "open": "Abrir {name}"
     },
     "stock": {
       "saved": "Stock actualizado",
@@ -8907,7 +8910,8 @@
       "from": "Desde",
       "to": "Hasta",
       "empty": "Ningún movimiento coincide con estos filtros.",
-      "balance": "Saldo {n}"
+      "balance": "Saldo {n}",
+      "export": "Exportar CSV"
     },
     "reorder": {
       "intro": "Según lo que vendes, lo que tardan los proveedores y lo que ya está pedido.",
@@ -8969,7 +8973,9 @@
       "saveDraft": "Guardar borrador",
       "saveSend": "Guardar y enviar",
       "sentToast": "Orden de compra creada y enviada",
-      "draftToast": "Orden de compra guardada como borrador"
+      "draftToast": "Orden de compra guardada como borrador",
+      "gstin": "GSTIN del proveedor",
+      "pdf": "Descargar PDF"
     },
     "receive": {
       "title": "Recibir mercancía de {po}",
@@ -8983,6 +8989,36 @@
       "doneFull": "Orden recibida por completo",
       "donePartial": "{units} unidades recibidas. El resto sigue pendiente.",
       "failed": "No se pudo recibir la mercancía"
+    },
+    "drawer": {
+      "loading": "Cargando producto",
+      "onHand": "Disponible",
+      "safety": "Nivel de seguridad {n}",
+      "value": "Valor del stock",
+      "unitCost": "{cost} c/u a costo",
+      "margin": "Margen",
+      "sellsAt": "Se vende a {price}",
+      "cover": "Cobertura de stock",
+      "days": "{n} días",
+      "sold30": "{n} vendidos en 30 días",
+      "order": "Pedir más",
+      "onOrder": "Pedido",
+      "arriving": "{n} por llegar",
+      "history": "Movimientos recientes"
+    },
+    "import": {
+      "title": "Importar productos",
+      "intro": "Sube un CSV para añadir o actualizar productos en bloque. Los SKU existentes se actualizan; el stock de los productos existentes no cambia (usa un conteo de stock).",
+      "template": "Descargar plantilla",
+      "choose": "Elige un archivo CSV",
+      "empty": "Ese archivo no tiene filas.",
+      "tooBig": "El archivo supera los 2 MB.",
+      "failed": "No se pudo revisar la importación.",
+      "summary": "{created} por añadir, {updated} por actualizar",
+      "problems": "{count} filas tienen problemas y se omitirán",
+      "row": "Fila {row}",
+      "confirm": "Importar {count} productos",
+      "done": "Importado: {created} añadidos, {updated} actualizados"
     }
   }
 }

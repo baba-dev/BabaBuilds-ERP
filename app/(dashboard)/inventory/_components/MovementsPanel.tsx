@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDownLeft, ArrowUpRight, Loader2, Scale } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Download, Loader2, Scale } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,6 +27,7 @@ export function MovementsPanel({ reloadKey, locale }: { reloadKey: number; local
         <select className={sel} value={type} onChange={(e) => setType(e.target.value as typeof type)} aria-label={t("movements.type")}><option value="">{t("movements.all")}</option>{(["IN", "OUT", "ADJ"] as const).map((k) => <option key={k} value={k}>{t(`movements.kind.${k}`)}</option>)}</select>
         <label className="flex items-center gap-1.5 text-sm text-muted-foreground">{t("movements.from")}<input type="date" className={sel} value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} /></label>
         <label className="flex items-center gap-1.5 text-sm text-muted-foreground">{t("movements.to")}<input type="date" className={sel} value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} /></label>
+        <Button asChild variant="outline" size="sm" className="ms-auto gap-1.5"><a href="/api/inventory/export?type=movements"><Download className="h-4 w-4" />{t("movements.export")}</a></Button>
       </div>
       {error && items.length === 0 ? <div className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-6 text-center text-sm">{error}</div>
         : loading && items.length === 0 ? <div className="space-y-2">{[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-14 rounded-xl" />)}</div>

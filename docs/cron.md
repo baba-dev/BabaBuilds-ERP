@@ -26,6 +26,8 @@ Add these lines with `crontab -e` (times are the server's timezone; adjust to ta
 0  7  * * * /var/www/bababuilds-erp/scripts/run-cron.sh payroll-reminders   >> /var/log/bababuilds/cron.log 2>&1
 # Saves the nightly cash forecast (feeds the accuracy view) and warns about a coming shortfall
 0  5  * * * /var/www/bababuilds-erp/scripts/run-cron.sh cash-forecast      >> /var/log/bababuilds/cron.log 2>&1
+# Out-of-stock and low-stock digests, and a nudge when a supplier is late with a purchase order
+40 7  * * * /var/www/bababuilds-erp/scripts/run-cron.sh inventory-alerts    >> /var/log/bababuilds/cron.log 2>&1
 ```
 
 Other routes exist (`process-retainers`, `sync-payments`, `tax-obligations`, `tax-rules-sync`, `documents-ocr`, `accounting-integrity`, `alerts`, `cleanup`); check what each does in its `route.ts` before scheduling it, and ask which ones you already run.

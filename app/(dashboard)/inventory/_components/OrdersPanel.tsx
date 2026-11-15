@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Ban, ChevronDown, Loader2, PackageCheck, Plus, Send, Undo2 } from "lucide-react";
+import { Ban, ChevronDown, FileDown, Loader2, PackageCheck, Plus, Send, Undo2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -124,6 +124,9 @@ export function OrdersPanel({ canEdit, money, locale, reloadKey, onChanged, comp
                     <div className="space-y-3 border-t p-3">
                       <ul className="divide-y text-sm">{po.items.map((i) => <li key={i.id} className="flex items-center justify-between gap-3 py-1.5"><span className="min-w-0 truncate">{i.product.name}</span><span className="shrink-0 tabular-nums text-muted-foreground">{i.receivedQuantity}/{i.quantity} {i.product.unit} · {money(Number(i.unitPrice))}</span></li>)}</ul>
                       {po.notes ? <p className="text-sm text-muted-foreground">{po.notes}</p> : null}
+                      <div className="flex flex-wrap gap-2">
+                        <Button asChild size="sm" variant="outline" className="gap-1.5"><a href={`/api/inventory/purchase-orders/${po.id}/pdf`}><FileDown className="h-4 w-4" />{t("po.pdf")}</a></Button>
+                      </div>
                       {canEdit ? (
                         <div className="flex flex-wrap gap-2">
                           {po.status === "DRAFT" ? <Button size="sm" variant="outline" className="gap-1.5" onClick={() => void act(po, "send")}><Send className="h-4 w-4" />{t("po.send")}</Button> : null}
