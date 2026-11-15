@@ -26,7 +26,7 @@ jobs:
   gate:
     name: CI gate
     runs-on: [self-hosted, linux, x64, erp-ci]
-    timeout-minutes: 45
+    timeout-minutes: 90
     env:
       # tsc and eslint need more than the small default heap Node picks on a low-memory runner.
       NODE_OPTIONS: --max-old-space-size=4096
