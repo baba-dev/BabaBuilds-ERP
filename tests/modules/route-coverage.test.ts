@@ -19,7 +19,7 @@ const MODULES: Array<{ key: string; dirs: string[]; guard: RegExp; allow?: Recor
   { key: "IMPORT_MANAGER", dirs: ["app/api/imports"], guard: /requireImportContext/ },
   { key: "SHOP", dirs: ["app/api/shop"], guard: /isModuleEnabled\(|requireModule\(|getModuleAvailability\(|requireShopModule/, allow: { "app/api/shop/check-slug/route.ts": "answers whether a slug is free, needed before the shop exists" } },
   { key: "MIAB_BILLING", dirs: ["app/api/email-billing"], guard: /requireEmailBilling/ },
-  { key: "POS", dirs: ["app/api/pos"], guard: DIRECT },
+  { key: "POS", dirs: ["app/api/pos"], guard: /requirePos\(|isModuleEnabled\(|requireModule\(/ },
   { key: "MULTI_COMPANY", dirs: ["app/api/companies"], guard: /requireCompanyGroupContext|isModuleEnabled\(|requireModule\(/ },
 ];
 
