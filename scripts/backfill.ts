@@ -1,37 +1,29 @@
-/**
- * Applies every prisma/backfills/*.sql file (in name order) to the current database. All files are idempotent.
- * Needed for databases created with `prisma db push` (production), where migration SQL is never run.
- *
- *   npm run backfill
- */
-import fs from "fs";
-import path from "path";
-import { PrismaClient } from "@prisma/client";
-
-async function main() {
-  const dir = path.join(process.cwd(), "prisma", "backfills");
-  const files = fs.readdirSync(dir).filter((f) => f.endsWith(".sql")).sort();
-  const sql = files.map((f) => fs.readFileSync(path.join(dir, f), "utf8")).join("\n");
-  const statements = sql
-    .split("\n")
-    .filter((line) => !line.trim().startsWith("--"))
-    .join("\n")
-    .split(/;\s*(?:\n|$)/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  const prisma = new PrismaClient();
-  try {
-    for (const statement of statements) {
-      const changed = await prisma.$executeRawUnsafe(statement);
-      console.log(`[backfill] ${changed} row(s): ${statement.split("\n")[0].slice(0, 90)}`);
-    }
-  } finally {
-    await prisma.$disconnect();
-  }
+/** Operator-only PostgreSQL legacy backfills. Do not run during regular deploy. */
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
+import { execFileSync } from "node:child_process";
+const raw = process.env.DATABASE_URL;
+if (!raw) throw new Error("DATABASE_URL required");
+const target = new URL(raw);
+if (!["postgres:", "postgresql:"].includes(target.protocol))
+  throw new Error("PostgreSQL required");
+if (!["127.0.0.1", "localhost", "[::1]"].includes(target.hostname))
+  throw new Error("Only loopback PostgreSQL is supported");
+const name = decodeURIComponent(target.pathname.slice(1));
+if (!/^bababuilds_erp(?:_[a-z0-9_]+)?$/.test(name))
+  throw new Error("Refusing non-ERP database");
+const environment = {
+  ...process.env, PGHOST: target.hostname,
+  PGPORT: target.port || "5432",
+  PGUSER: decodeURIComponent(target.username),
+  PGPASSWORD: decodeURIComponent(target.password), PGDATABASE: name
+};
+const directory = join(process.cwd(), "prisma", "backfills");
+const scripts = readdirSync(directory).filter((s) => s.endsWith(".sql")).sort();
+if (scripts.length !== 4) throw new Error("Unexpected backfill file count");
+for (const script of scripts) {
+  execFileSync("psql", ["-X", "-q", "-1", "-v", "ON_ERROR_STOP=1", "-f", join(directory, script)], {
+    env: environment, stdio: ["ignore", "ignore", "inherit"]
+  });
+  console.log("Applied PostgreSQL backfill:", script);
 }
-
-main().catch((error) => {
-  console.error("[backfill] failed", error);
-  process.exit(1);
-});
