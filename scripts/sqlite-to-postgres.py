@@ -174,13 +174,18 @@ COMMIT;
         raise
     finally:
         src.close()
-    expressions = ",".join("'" + t + "',(SELECT count(*) FROM public." + q(t) + ")"
-                           for t in counts)
-    actual = json.loads(query_pg(env, "SELECT json_build_object(" + expressions + ");"))
+    # json_build_object has a PostgreSQL function argument limit; use UNION ALL.
+    rows = " UNION ALL ".join(
+        "SELECT '" + t + "' AS name, count(*) AS n FROM public." + q(t)
+        for t in counts
+    )
+    actual = json.loads(query_pg(env,
+        "SELECT COALESCE(json_object_agg(name, n), '{}'::json) FROM (" + rows + ") count_rows;"))
     bad = [t for t in counts if actual[t] != counts[t]]
     if bad:
         raise RuntimeError("Post-import row parity failure: " + ", ".join(bad))
-    digest = hashlib.file_digest(open(args.sqlite, "rb"), "sha256").hexdigest()
+    with open(args.sqlite, "rb") as stream:
+        digest = hashlib.file_digest(stream, "sha256").hexdigest()
     print(json.dumps({"result": "PASS", "database": args.target_db,
                       "source_sha256": digest, "tables": len(counts),
                       "rows": sum(counts.values()), "row_parity": "PASS"}))
