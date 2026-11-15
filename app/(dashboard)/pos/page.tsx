@@ -1,102 +1,53 @@
-import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import PosSystem from "@/components/pos/PosSystem";
 import { redirect } from "next/navigation";
-import { ShoppingCart } from "lucide-react";
-import { checkPermissionsSilent, requirePermission } from "@/lib/rbac";
-import { isModuleEnabled } from "@/lib/modules";
 import Link from "next/link";
+import { getServerSession } from "next-auth";
 import { getTranslations } from "next-intl/server";
+import { ShoppingCart } from "lucide-react";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { isModuleEnabled } from "@/lib/modules";
+import { checkPermissionsSilent } from "@/lib/rbac";
+import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
+import PosRegister from "@/components/pos/PosRegister";
 
-export const metadata = {
-  title: "Point of Sale | BabaERP",
-};
+export const metadata = { title: "Point of Sale | BabaERP" };
 
 export default async function PosPage() {
   const session = await getServerSession(authOptions);
-
-  if (!session?.user?.id || !session.workspaceId) {
-    redirect("/login");
-  }
-
+  if (!session?.user?.id || !session.workspaceId) redirect("/login");
   const workspaceId = session.workspaceId;
+  const t = await getTranslations("POS");
 
-  const moduleEnabled = await isModuleEnabled(workspaceId, "POS");
-  if (!moduleEnabled) {
+  if (!(await isModuleEnabled(workspaceId, "POS"))) {
     return (
-      <div className="min-h-app bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8">
-        <div className="mx-auto max-w-2xl rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-500">Point of Sale</p>
-          <h1 className="mt-2 flex items-center gap-3 text-3xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
-            <ShoppingCart className="h-8 w-8 text-amber-500" />
-            The POS module is currently disabled
-          </h1>
-          <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-300">
-            Register access, catalog lookup, and checkout actions are paused. Existing invoices, proposals, retainers, clients, inventory movements, and product data are preserved and return when POS is re-enabled.
-          </p>
+      <div className="min-h-app p-4 md:p-8">
+        <div className="mx-auto max-w-2xl rounded-2xl border bg-card p-8 shadow-sm">
+          <h1 className="flex items-center gap-3 text-2xl font-semibold tracking-tight"><ShoppingCart className="h-7 w-7 text-amber-500" />{t("disabledTitle")}</h1>
+          <p className="mt-3 text-sm text-muted-foreground">{t("disabledBody")}</p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/settings#workspace-modules" className="rounded-lg bg-amber-600 px-4 py-2 text-xs font-bold uppercase tracking-widest text-white hover:bg-amber-700">Enable in Settings</Link>
-            <Link href="/dashboard" className="rounded-lg border border-zinc-200 px-4 py-2 text-xs font-bold uppercase tracking-widest text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">Back to dashboard</Link>
+            <Link href="/settings#workspace-modules" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">{t("enable")}</Link>
+            <Link href="/dashboard" className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted">{t("backToDashboard")}</Link>
           </div>
         </div>
       </div>
     );
   }
 
-  try {
-    await requirePermission(session.user.id, workspaceId, "pos.view");
-  } catch {
-    redirect("/dashboard");
-  }
+  const grants = await checkPermissionsSilent(session.user.id, workspaceId, ["pos.view", "pos.checkout", "pos.custom_item", "pos.discount"]);
+  if (!grants["pos.view"]) redirect("/dashboard");
 
-  const t = await getTranslations("POS");
-
-  const posCapabilities = await checkPermissionsSilent(
-    session.user.id,
-    workspaceId,
-    ["pos.custom_item", "pos.discount"],
-  );
-
-  const clients = await prisma.client.findMany({
-    where: { workspaceId },
-    select: { id: true, name: true, email: true },
-    orderBy: { name: "asc" },
-  });
+  const clients = await prisma.client.findMany({ where: { workspaceId, isWalkIn: false, archivedAt: null }, select: { id: true, name: true }, orderBy: { name: "asc" }, take: 2000 });
 
   return (
-    <div className="min-h-app bg-zinc-50/50 dark:bg-zinc-950 p-4 md:p-8 pb-20 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
-        <div className="sticky top-0 z-20 -mx-4 px-4 py-3 md:-mx-8 md:px-8 bg-zinc-50/50 dark:bg-zinc-950/50 backdrop-blur-md border-b border-zinc-200/50 dark:border-zinc-800/50 transition-all duration-300">
-          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 max-w-7xl mx-auto w-full">
-            <div className="space-y-1">
-              <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 flex items-center gap-3">
-                <div className="p-2.5 bg-accent-primary/10 dark:bg-accent-primary/20 rounded-xl border border-accent-primary/20 dark:border-accent-primary/25">
-                  <ShoppingCart className="w-6 h-6 text-accent-primary" />
-                </div>
-                {t("title")}
-              </h1>
-              <p className="text-zinc-500 dark:text-zinc-400 font-medium text-sm max-w-xl">
-                {t("subtitle")}
-              </p>
-            </div>
-            <div className="hidden md:flex items-center gap-2 rounded-xl border border-accent-primary/20 bg-accent-primary/10 px-4 py-3 text-accent-primary shadow-sm">
-              <span className="text-xs font-extrabold uppercase tracking-widest">
-                {t("checkout_workspace")}
-              </span>
-            </div>
-          </div>
-        </div>
-        <PosSystem
-          clients={clients}
-          canCreateCustomItems={posCapabilities["pos.custom_item"]}
-          canApplyDiscounts={posCapabilities["pos.discount"]}
-          currencyCode={
-            session.user.currencyFormat || session.baseCurrency || "INR"
-          }
-          locale={session.locale || "en-IN"}
-        />
-      </div>
-    </div>
+    <DashboardPageShell title={t("title")} description={t("subtitle")} icon={<ShoppingCart className="h-6 w-6 text-primary" />}>
+      <PosRegister
+        clients={clients}
+        canCheckout={grants["pos.checkout"]}
+        canCreateCustomItems={grants["pos.custom_item"]}
+        canApplyDiscounts={grants["pos.discount"]}
+        currencyCode={session.user.currencyFormat || session.baseCurrency || "INR"}
+        locale={session.locale || "en-IN"}
+      />
+    </DashboardPageShell>
   );
 }

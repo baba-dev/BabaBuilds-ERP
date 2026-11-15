@@ -2855,7 +2855,11 @@
     "btn_add_to_cart": "Add to Cart",
     "toast_catalog_fail": "Failed to load catalog",
     "toast_order_parked": "Order placed on hold",
-    "toast_checkout_fail": "Checkout failed"
+    "toast_checkout_fail": "Checkout failed",
+    "disabledTitle": "El módulo POS está desactivado",
+    "disabledBody": "La caja está en pausa. Tus facturas, propuestas, retainers, clientes y stock se conservan y vuelven al reactivar el POS.",
+    "enable": "Activar en Ajustes",
+    "backToDashboard": "Volver al panel"
   },
   "EmailBilling": {
     "actions": {
@@ -9019,6 +9023,106 @@
       "row": "Fila {row}",
       "confirm": "Importar {count} productos",
       "done": "Importado: {created} añadidos, {updated} actualizados"
+    }
+  },
+  "PosRegister": {
+    "view": {
+      "register": "Caja",
+      "today": "Hoy"
+    },
+    "tab": {
+      "PRODUCTS": "Productos",
+      "SERVICES": "Servicios"
+    },
+    "search": "Buscar nombre, SKU o escanear código",
+    "scan": "Escanear código de barras",
+    "customItem": "Artículo libre",
+    "allCategories": "Todas",
+    "loadMore": "Cargar más",
+    "catalogFailed": "No se pudo cargar el catálogo",
+    "noBarcode": "Ningún producto tiene el código {code}",
+    "noMatch": "Nada coincide con tu búsqueda",
+    "noProducts": "Aún no hay productos para vender. Añádelos en Inventario.",
+    "noServices": "Aún no hay servicios. Añádelos en el Catálogo de servicios.",
+    "outOfStock": "Agotado",
+    "inStock": "{count} en stock",
+    "outOfStockToast": "{name} está agotado",
+    "stockLimit": "Solo hay {count} de {name} en stock",
+    "order": "Pedido",
+    "held": "En espera",
+    "walkIn": "Cliente de mostrador",
+    "findCustomer": "Buscar un cliente",
+    "emptyCart": "Aún no hay nada en este pedido",
+    "emptyHint": "Toca un artículo o escanea un código",
+    "remove": "Quitar {name}",
+    "less": "Uno menos",
+    "more": "Uno más",
+    "qtyFor": "Cantidad de {name}",
+    "discountType": "Tipo de descuento",
+    "amountShort": "Imp.",
+    "discount": "Descuento",
+    "subtotal": "Subtotal",
+    "gst": "GST",
+    "total": "Total",
+    "hold": "Retener",
+    "clear": "Vaciar",
+    "charge": "Cobrar {total}",
+    "viewOnly": "Solo lectura",
+    "viewOrder": "Ver pedido ({count})",
+    "heldTitle": "Ventas en espera",
+    "heldEmpty": "No hay ventas en espera.",
+    "heldDefault": "Venta de {n} artículos",
+    "heldMeta": "{items} artículos · {time}",
+    "resume": "Retomar esta venta",
+    "discard": "Descartar esta venta",
+    "heldToast": "Venta puesta en espera",
+    "holdFailed": "No se pudo retener la venta",
+    "payment": "Cobrar",
+    "amountDue": "Importe a cobrar",
+    "methodLabel": "Método de pago",
+    "method": {
+      "CASH": "Efectivo",
+      "UPI": "UPI",
+      "CARD": "Tarjeta",
+      "BANK_TRANSFER": "Banco",
+      "OTHER": "Otro"
+    },
+    "cashReceived": "Efectivo recibido",
+    "changeDue": "Cambio a devolver: {amount}",
+    "cashShort": "El efectivo recibido no cubre el total.",
+    "reference": "Referencia (opcional)",
+    "referenceHint": "Número de transacción o aprobación",
+    "collect": "Cobrar {amount}",
+    "otherWays": "O guarda este pedido en su lugar:",
+    "otherWaysNeedCustomer": "Elige un cliente para facturar, presupuestar o crear un pedido recurrente.",
+    "action": {
+      "INVOICE": "Factura (pagar después)",
+      "PROPOSAL": "Propuesta",
+      "RETAINER": "Recurrente"
+    },
+    "paid": "Pago recibido",
+    "saved": "Guardado",
+    "giveChange": "Devuelve {amount} de cambio",
+    "receipt": "Recibo",
+    "newSale": "Nueva venta",
+    "checkoutFailed": "No se pudo completar la venta",
+    "cancel": "Cancelar",
+    "custom": {
+      "title": "Añadir un artículo libre",
+      "name": "Nombre del artículo",
+      "price": "Precio",
+      "gst": "GST %",
+      "add": "Añadir al pedido"
+    },
+    "today": {
+      "sales": "Ventas de hoy",
+      "takings": "Recaudación",
+      "average": "Venta media",
+      "gst": "GST cobrado",
+      "byMethod": "Cómo pagaron los clientes",
+      "top": "Más vendidos",
+      "recent": "Últimas ventas",
+      "none": "Aún no hay ventas hoy."
     }
   }
 }

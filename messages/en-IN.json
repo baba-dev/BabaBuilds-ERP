@@ -2826,7 +2826,11 @@
     "btn_add_to_cart": "Add to Cart",
     "toast_catalog_fail": "Failed to load catalog",
     "toast_order_parked": "Order placed on hold",
-    "toast_checkout_fail": "Checkout failed"
+    "toast_checkout_fail": "Checkout failed",
+    "disabledTitle": "The POS module is turned off",
+    "disabledBody": "The register is paused. Your invoices, proposals, retainers, clients and stock are all kept and return when POS is turned back on.",
+    "enable": "Turn on in Settings",
+    "backToDashboard": "Back to dashboard"
   },
   "EmailBilling": {
     "actions": {
@@ -8990,6 +8994,106 @@
       "row": "Row {row}",
       "confirm": "Import {count} products",
       "done": "Imported: {created} added, {updated} updated"
+    }
+  },
+  "PosRegister": {
+    "view": {
+      "register": "Register",
+      "today": "Today"
+    },
+    "tab": {
+      "PRODUCTS": "Products",
+      "SERVICES": "Services"
+    },
+    "search": "Search name, SKU or scan a barcode",
+    "scan": "Scan barcode",
+    "customItem": "Custom item",
+    "allCategories": "All",
+    "loadMore": "Load more",
+    "catalogFailed": "The catalogue could not be loaded",
+    "noBarcode": "No product has the barcode {code}",
+    "noMatch": "Nothing matches your search",
+    "noProducts": "No products to sell yet. Add some in Inventory.",
+    "noServices": "No services yet. Add some in the Service Catalog.",
+    "outOfStock": "Out of stock",
+    "inStock": "{count} in stock",
+    "outOfStockToast": "{name} is out of stock",
+    "stockLimit": "Only {count} of {name} in stock",
+    "order": "Order",
+    "held": "On hold",
+    "walkIn": "Walk-in customer",
+    "findCustomer": "Find a customer",
+    "emptyCart": "Nothing in this order yet",
+    "emptyHint": "Tap an item or scan a barcode",
+    "remove": "Remove {name}",
+    "less": "One less",
+    "more": "One more",
+    "qtyFor": "Quantity of {name}",
+    "discountType": "Discount type",
+    "amountShort": "Amt",
+    "discount": "Discount",
+    "subtotal": "Subtotal",
+    "gst": "GST",
+    "total": "Total",
+    "hold": "Hold",
+    "clear": "Clear",
+    "charge": "Charge {total}",
+    "viewOnly": "View only",
+    "viewOrder": "View order ({count})",
+    "heldTitle": "Sales on hold",
+    "heldEmpty": "No sales are on hold.",
+    "heldDefault": "Sale of {n} items",
+    "heldMeta": "{items} items · {time}",
+    "resume": "Resume this sale",
+    "discard": "Discard this sale",
+    "heldToast": "Sale put on hold",
+    "holdFailed": "The sale could not be held",
+    "payment": "Take payment",
+    "amountDue": "Amount due",
+    "methodLabel": "Payment method",
+    "method": {
+      "CASH": "Cash",
+      "UPI": "UPI",
+      "CARD": "Card",
+      "BANK_TRANSFER": "Bank",
+      "OTHER": "Other"
+    },
+    "cashReceived": "Cash received",
+    "changeDue": "Change to return: {amount}",
+    "cashShort": "The cash received does not cover the total.",
+    "reference": "Reference (optional)",
+    "referenceHint": "Transaction or approval number",
+    "collect": "Collect {amount}",
+    "otherWays": "Or save this order instead:",
+    "otherWaysNeedCustomer": "Choose a customer to invoice, quote or set up a recurring order.",
+    "action": {
+      "INVOICE": "Invoice (pay later)",
+      "PROPOSAL": "Proposal",
+      "RETAINER": "Recurring"
+    },
+    "paid": "Payment received",
+    "saved": "Saved",
+    "giveChange": "Give {amount} change",
+    "receipt": "Receipt",
+    "newSale": "New sale",
+    "checkoutFailed": "The sale could not be completed",
+    "cancel": "Cancel",
+    "custom": {
+      "title": "Add a custom item",
+      "name": "Item name",
+      "price": "Price",
+      "gst": "GST %",
+      "add": "Add to order"
+    },
+    "today": {
+      "sales": "Sales today",
+      "takings": "Takings",
+      "average": "Average sale",
+      "gst": "GST collected",
+      "byMethod": "How customers paid",
+      "top": "Best sellers",
+      "recent": "Latest sales",
+      "none": "No sales yet today."
     }
   }
 }
