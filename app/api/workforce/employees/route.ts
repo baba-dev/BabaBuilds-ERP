@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
 import { requirePermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
 import { requireModule, ModuleDisabledError } from '@/lib/modules';
 import { generateEmployeeCode } from '@/lib/workforce/index';
@@ -40,7 +41,7 @@ export async function GET(req: NextRequest) {
     const page = Math.max(1, parseInt(searchParams.get('page') ?? '1'));
     const limit = Math.min(100, parseInt(searchParams.get('limit') ?? '25'));
 
-    const where = {
+    const where: Prisma.EmployeeWhereInput = {
       workspaceId: wid,
       ...(search ? {
         OR: [
