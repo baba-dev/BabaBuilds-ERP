@@ -8807,5 +8807,218 @@
         "body": "No se descuenta impuesto profesional."
       }
     }
+  },
+  "InventoryHub": {
+    "title": "Inventario",
+    "subtitle": "Existencias, reposición y compras en un solo lugar",
+    "refresh": "Actualizar",
+    "retry": "Reintentar",
+    "cancel": "Cancelar",
+    "loadMore": "Cargar más",
+    "loadFailed": "No se pudo cargar el inventario",
+    "tab": {
+      "overview": "Resumen",
+      "products": "Productos",
+      "reorder": "Reposición",
+      "orders": "Órdenes de compra",
+      "movements": "Libro de existencias"
+    },
+    "status": {
+      "IN_STOCK": "En stock",
+      "LOW_STOCK": "Stock bajo",
+      "OUT_OF_STOCK": "Agotado"
+    },
+    "overview": {
+      "emptyTitle": "Empieza añadiendo tu primer producto",
+      "emptyBody": "Añade productos con su costo y precio de venta. Las existencias, el valor y las alertas de reposición aparecen aquí automáticamente.",
+      "heroTitle": "{value} en existencias",
+      "heroBody": "{units} unidades a costo. Venderlo todo dejaría unos {margin} ({pct}% de margen).",
+      "viewProducts": "Ver productos",
+      "reorderNow": "{count} por reponer ya",
+      "reorderTitle": "Necesita reposición",
+      "seeAll": "Ver todo",
+      "reorderNone": "Nada necesita reposición por ahora.",
+      "deadTitle": "Existencias de baja rotación",
+      "deadSub": "Sin ventas en {days} días",
+      "deadNone": "Sin existencias de baja rotación. Todo se está vendiendo.",
+      "deadTied": "{value} en efectivo está inmovilizado en artículos que no se han vendido."
+    },
+    "kpi": {
+      "stockValue": "Valor del stock",
+      "atCost": "A costo",
+      "retailValue": "Valor de venta",
+      "margin": "{pct}% de margen",
+      "low": "Stock bajo",
+      "belowSafety": "En o bajo el nivel de seguridad",
+      "out": "Agotados",
+      "cantSell": "No se pueden vender",
+      "negative": "{count} con stock negativo"
+    },
+    "products": {
+      "search": "Buscar nombre, SKU o código de barras",
+      "status": "Estado",
+      "allStatus": "Todos los estados",
+      "category": "Categoría",
+      "allCategories": "Todas las categorías",
+      "archivedToggle": "Archivados",
+      "scan": "Escanear",
+      "add": "Añadir producto",
+      "noMatch": "Ningún producto coincide con estos filtros",
+      "noneArchived": "No hay productos archivados",
+      "empty": "Aún no hay productos",
+      "adjust": "Ajustar stock",
+      "edit": "Editar producto",
+      "restore": "Restaurar producto",
+      "archive": "Archivar o eliminar producto",
+      "archived": "Archivado. Tiene historial, por eso se conservó.",
+      "deleted": "Producto eliminado",
+      "restored": "Producto restaurado",
+      "failed": "No se pudo actualizar el producto",
+      "export": "Exportar",
+      "import": "Importar",
+      "open": "Abrir {name}"
+    },
+    "stock": {
+      "saved": "Stock actualizado",
+      "failed": "No se pudo actualizar el stock",
+      "onHand": "{stock} {unit} disponibles",
+      "mode": {
+        "ADD": "Añadir",
+        "REMOVE": "Quitar",
+        "COUNT": "Contar"
+      },
+      "counted": "Cantidad contada",
+      "quantity": "Cantidad",
+      "reason": "Motivo (opcional)",
+      "reasonHint": {
+        "ADD": "p. ej. Encontrado en bodega",
+        "REMOVE": "p. ej. Dañado",
+        "COUNT": "p. ej. Inventario mensual"
+      },
+      "tooMany": "No puedes quitar más de lo que hay.",
+      "after": "El stock será {stock} {unit}",
+      "save": "Guardar"
+    },
+    "movements": {
+      "type": "Tipo",
+      "all": "Todos los movimientos",
+      "kind": {
+        "IN": "Entrada",
+        "OUT": "Salida",
+        "ADJ": "Ajuste"
+      },
+      "from": "Desde",
+      "to": "Hasta",
+      "empty": "Ningún movimiento coincide con estos filtros.",
+      "balance": "Saldo {n}",
+      "export": "Exportar CSV"
+    },
+    "reorder": {
+      "intro": "Según lo que vendes, lo que tardan los proveedores y lo que ya está pedido.",
+      "noneTitle": "Los niveles de stock se ven bien",
+      "noneBody": "Nada necesita reposición por ahora.",
+      "stockLine": "{stock} {unit} en stock",
+      "onOrder": "{n} pedidos",
+      "cover": "quedan unos {days} días",
+      "reason": {
+        "OUT_OF_STOCK": "Agotado",
+        "BELOW_SAFETY": "Bajo el nivel de seguridad",
+        "LOW_COVER": "Se vende más rápido de lo que dura el stock"
+      },
+      "urgency": {
+        "NOW": "Pedir ya",
+        "SOON": "Pronto"
+      },
+      "select": "Seleccionar {name}",
+      "selected": "{count} seleccionados, unos {total}",
+      "pick": "Selecciona artículos para pedir",
+      "selectAll": "Seleccionar todo",
+      "createPo": "Crear orden de compra"
+    },
+    "po": {
+      "new": "Nueva orden de compra",
+      "newTitle": "Nueva orden de compra",
+      "status": "Estado",
+      "allStatus": "Todos los estados",
+      "statusName": {
+        "DRAFT": "Borrador",
+        "SENT": "Enviada",
+        "PARTIAL": "Recibida en parte",
+        "DELIVERED": "Recibida",
+        "CANCELLED": "Cancelada"
+      },
+      "empty": "Aún no hay órdenes de compra",
+      "expectedOn": "se espera el {date}",
+      "send": "Marcar como enviada",
+      "receive": "Recibir mercancía",
+      "cancel": "Cancelar orden",
+      "reopen": "Reabrir como borrador",
+      "action": {
+        "send": "Orden marcada como enviada",
+        "cancel": "Orden cancelada",
+        "reopen": "Orden reabierta como borrador"
+      },
+      "failed": "No se pudo guardar la orden de compra",
+      "supplier": "Proveedor",
+      "expected": "Fecha prevista",
+      "terms": "Plazo de pago (días)",
+      "notes": "Notas",
+      "addItem": "Añadir artículo",
+      "searchItem": "Buscar productos",
+      "noLines": "Busca arriba para añadir los artículos que quieres pedir.",
+      "removeLine": "Quitar línea",
+      "qty": "Cantidad",
+      "unitPrice": "Precio unitario",
+      "total": "Total del pedido",
+      "saveDraft": "Guardar borrador",
+      "saveSend": "Guardar y enviar",
+      "sentToast": "Orden de compra creada y enviada",
+      "draftToast": "Orden de compra guardada como borrador",
+      "gstin": "GSTIN del proveedor",
+      "pdf": "Descargar PDF"
+    },
+    "receive": {
+      "title": "Recibir mercancía de {po}",
+      "outstanding": "Faltan {n} {unit} por llegar",
+      "qtyFor": "Cantidad recibida de {name}",
+      "invoiceNo": "Número de factura del proveedor",
+      "gstin": "GSTIN del proveedor",
+      "sync": "Registrar la factura de compra",
+      "syncHint": "Añade la factura a Gastos con GST, con vencimiento según el plazo de pago.",
+      "confirm": "Recibir",
+      "doneFull": "Orden recibida por completo",
+      "donePartial": "{units} unidades recibidas. El resto sigue pendiente.",
+      "failed": "No se pudo recibir la mercancía"
+    },
+    "drawer": {
+      "loading": "Cargando producto",
+      "onHand": "Disponible",
+      "safety": "Nivel de seguridad {n}",
+      "value": "Valor del stock",
+      "unitCost": "{cost} c/u a costo",
+      "margin": "Margen",
+      "sellsAt": "Se vende a {price}",
+      "cover": "Cobertura de stock",
+      "days": "{n} días",
+      "sold30": "{n} vendidos en 30 días",
+      "order": "Pedir más",
+      "onOrder": "Pedido",
+      "arriving": "{n} por llegar",
+      "history": "Movimientos recientes"
+    },
+    "import": {
+      "title": "Importar productos",
+      "intro": "Sube un CSV para añadir o actualizar productos en bloque. Los SKU existentes se actualizan; el stock de los productos existentes no cambia (usa un conteo de stock).",
+      "template": "Descargar plantilla",
+      "choose": "Elige un archivo CSV",
+      "empty": "Ese archivo no tiene filas.",
+      "tooBig": "El archivo supera los 2 MB.",
+      "failed": "No se pudo revisar la importación.",
+      "summary": "{created} por añadir, {updated} por actualizar",
+      "problems": "{count} filas tienen problemas y se omitirán",
+      "row": "Fila {row}",
+      "confirm": "Importar {count} productos",
+      "done": "Importado: {created} añadidos, {updated} actualizados"
+    }
   }
 }

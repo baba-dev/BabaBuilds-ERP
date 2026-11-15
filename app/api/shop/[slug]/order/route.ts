@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
 import { decrypt } from '@/lib/encryption';
 import Razorpay from 'razorpay';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
@@ -21,6 +22,8 @@ type BusinessProfileWithSecrets = {
 export async function POST(request: Request, context: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await context.params;
+    const limit = enforceRouteRateLimit({ request, route: '/api/shop/order', scope: slug.toLowerCase(), max: 20, windowMs: 10 * 60_000 });
+    if (!limit.ok) return limit.response;
     const body = await request.json();
     const { items, buyerName, buyerEmail, buyerPhone, buyerNote, buyerStateCode, buyerGstin } = body as {
       items?: unknown[];
@@ -78,6 +81,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
         workspaceId: profile.workspaceId,
         id: { in: requestedProductIds },
         showInShop: true,
+        archivedAt: null,
         currentStock: { gt: 0 },
         status: { in: ['IN_STOCK', 'LOW_STOCK'] },
       },

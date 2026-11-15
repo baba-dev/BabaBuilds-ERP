@@ -215,8 +215,8 @@ export function ShopDashboardClient({ abilities }: { abilities: ShopAbilities })
           paidRevenue: 0,
         });
       }
-      const parsedProducts = Array.isArray(productsData)
-        ? productsData.filter((product: ProductCatalogItem) => Boolean(product.showInShop))
+      const parsedProducts = Array.isArray(productsData?.items)
+        ? productsData.items.filter((product: ProductCatalogItem) => Boolean(product.showInShop))
         : [];
       setProducts(parsedProducts);
       setShopSlug(shopSettingsData?.shopSlug || null);

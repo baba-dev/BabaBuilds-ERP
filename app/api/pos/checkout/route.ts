@@ -7,6 +7,8 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { withPermission } from '@/lib/rbac';
+import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
+import { logActivity } from '@/lib/security/activity-log';
 import { isModuleEnabled } from '@/lib/modules';
 import { getNextInvoiceNumber, getNextProposalNo, isUniqueConstraintError } from '@/lib/document-numbering';
 import { supplierChargesGst } from "@/lib/msme/threshold";
@@ -208,6 +210,7 @@ async function commitProductSales(
         quantity: -sale.quantity,
         reason: 'POS sale',
         referenceId,
+        balanceAfter: refreshed.currentStock,
       },
     });
   }
@@ -228,6 +231,9 @@ export async function POST(request: Request) {
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const limit = enforceRouteRateLimit({ request, route: '/api/pos/checkout', scope: workspaceId, max: 120, windowMs: 60_000 });
+    if (!limit.ok) return limit.response;
 
     const rawBody = await request.json();
     const parsed = checkoutRequestSchema.safeParse(rawBody);
@@ -461,6 +467,14 @@ export async function POST(request: Request) {
           throw new PosCheckoutError('INVALID_ACTION');
         });
 
+        void logActivity({
+          workspaceId,
+          action: 'pos.checkout',
+          status: 'SUCCESS',
+          actor: { userId, email: (session.user as { email?: string | null } | undefined)?.email ?? null },
+          entity: { type: 'pos_checkout', id: workspaceId },
+          metadata: { action, lines: items.length, units: items.reduce((s, i) => s + (i.quantity ?? 0), 0) },
+        });
         return NextResponse.json({ success: true, ...result });
       } catch (error) {
         if (attempt < MAX_NUMBERING_ATTEMPTS && isUniqueConstraintError(error)) continue;

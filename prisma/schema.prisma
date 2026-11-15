@@ -3406,6 +3406,13 @@ model Product {
   shopDescription String?
   shopImageUrl    String?
 
+  /// Soft delete: a product that appears on invoices or orders is archived, never removed.
+  archivedAt       DateTime?
+  /// How many to order when restocking, and from whom (a Vendor id), for reorder suggestions.
+  reorderQuantity  Int?
+  preferredVendorId String?
+  leadTimeDays     Int?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -3453,6 +3460,11 @@ model InventoryMovement {
 
   referenceId String? // ID of Invoice or PO
 
+  /// Cost per unit of what moved (set on receipts), and the stock level after the movement.
+  unitCost        Decimal?
+  balanceAfter    Int?
+  createdByUserId String?
+
   createdAt DateTime @default(now())
 
   @@index([workspaceId])
@@ -3473,6 +3485,11 @@ model PurchaseOrder {
   supplierGstin     String?
   supplierStateCode String?
   supplierInvoiceNo String?
+
+  vendorId        String?
+  notes           String?
+  sentAt          DateTime?
+  createdByUserId String?
 
   expectedDate        DateTime?
   paymentTermsDays    Int?
@@ -3501,6 +3518,8 @@ model PurchaseOrderItem {
   quantity      Int
   unitPrice     Decimal
   expectedTotal Decimal
+  /// How many have arrived so far; a purchase order can be received in parts.
+  receivedQuantity Int @default(0)
 
   // GST: HSN and rate (percent) on this line; defaults come from the product master.
   hsnCode String?

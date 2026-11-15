@@ -229,7 +229,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
         });
       }
 
-      const parsedProducts: ProductRow[] = Array.isArray(productsResult) ? productsResult : [];
+      const parsedProducts: ProductRow[] = Array.isArray(productsResult?.items) ? productsResult.items : [];
       if (Array.isArray(parsedProducts)) {
         parsedProducts.forEach((p) => {
           mappedCatalog.push({
