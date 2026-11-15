@@ -1,11 +1,10 @@
 name: CI
 
-# Deliberately simple so it runs on a small self-hosted runner: ONE job, ONE dependency install,
-# checks run one after another (not in parallel) so they do not fight for memory.
-# Runner: GitHub-hosted by default. To use the self-hosted pool, set the repository variable
-# CI_RUNS_ON to: ["self-hosted","linux","x64","erp-ci"]
-# The production build and the browser tests are not part of every PR: see ci-extended.yml
-# (nightly + manual) and regression.yml (nightly). Mirror this locally with: npm run ci:fast
+# Built to be cheap on the small self-hosted runner: ONE job, ONE install (reused between runs), checks run
+# one after another so they do not fight for memory, ESLint and TypeScript results are cached on the runner
+# between runs, and the slow migration check only runs when the database schema or its history changed.
+# The production build is in ci-extended.yml and the browser tests in regression.yml (both nightly).
+# Mirror this locally with: npm run ci:fast
 
 on:
   pull_request:
@@ -13,6 +12,7 @@ on:
     branches: [main]
   merge_group:
 
+# A newer push to a pull request cancels the older run, so the single runner never works on stale code.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -25,35 +25,55 @@ jobs:
   # workflow to succeed on main.
   gate:
     name: CI gate
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
-    timeout-minutes: 90
+    runs-on: [self-hosted, linux, x64, erp-ci]
+    timeout-minutes: 45
     env:
       # tsc and eslint need more than the small default heap Node picks on a low-memory runner.
       NODE_OPTIONS: --max-old-space-size=4096
     steps:
+      # Two commits deep, so we can tell which files this change touched.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
       - uses: ./.github/actions/setup
 
       # `!cancelled()` keeps going after a failure, so one run reports every problem instead of one per push.
       - name: Locale key parity
         run: npm run check:locales
 
+      # Same checks as `npm run lint`, with a content-keyed cache on the runner: unchanged files are skipped.
       - name: Lint (ESLint + KPI coverage)
         if: ${{ !cancelled() }}
-        run: npm run lint
+        run: |
+          mkdir -p "$HOME/.cache/erp-ci"
+          npx eslint . --cache --cache-strategy content --cache-location "$HOME/.cache/erp-ci/eslintcache"
+          npm run check:kpi-impact
 
+      # Same as `npm run typecheck`, incremental: only files that changed since the last run are re-checked.
       - name: Typecheck
         if: ${{ !cancelled() }}
-        run: npm run typecheck
+        run: |
+          mkdir -p "$HOME/.cache/erp-ci"
+          npx tsc --noEmit --incremental --tsBuildInfoFile "$HOME/.cache/erp-ci/tsc.tsbuildinfo"
 
       - name: Demo template coverage
         if: ${{ !cancelled() }}
         run: npm run validate:demos
 
-      # Runs in an isolated temp copy of the schema. Fails if the schema changed without a migration,
-      # or if the migration history does not apply cleanly.
-      - name: Prisma migration history
+      # Slow (builds throwaway databases), so skip it unless the schema, migrations or the check itself changed.
+      - name: Did the database schema change?
+        id: db
         if: ${{ !cancelled() }}
+        run: |
+          if ! git rev-parse --verify -q HEAD^1 >/dev/null || git diff --name-only HEAD^1 HEAD | grep -qE '^(prisma/|scripts/check-migrations\.sh)'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No schema or migration changes: skipping the migration history check."
+          fi
+
+      - name: Prisma migration history
+        if: ${{ !cancelled() && steps.db.outputs.changed == 'true' }}
         run: npm run check:migrations
 
       # Some tests use the real Prisma client against SQLite; the schema hardcodes file:./dev.db.

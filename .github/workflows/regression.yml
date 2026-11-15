@@ -15,7 +15,7 @@ permissions:
 jobs:
   test:
     name: Run Playwright Tests
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
+    runs-on: [self-hosted, linux, x64, erp-ci]
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
