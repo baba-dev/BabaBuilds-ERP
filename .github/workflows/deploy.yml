@@ -23,10 +23,11 @@ jobs:
     # `event == 'push'` blocks workflow_run triggers from pull_request runs whose head branch
     # happens to be named "main" (e.g. a fork).
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      vars.ERP_POSTGRES_CUTOVER_APPROVED == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.event == 'push' &&
-       github.event.workflow_run.head_repository.full_name == github.repository)
+       github.event.workflow_run.head_repository.full_name == github.repository))
     runs-on: [self-hosted, linux, x64, erp-ci]
     timeout-minutes: 30
     env:
@@ -44,6 +45,12 @@ jobs:
             export PATH=$PATH:/usr/bin:/usr/local/bin
             set -euo pipefail
 
+            # Fail before any checkout or build until the independently reviewed
+            # Phase C production cutover has been explicitly authorized on-host.
+            test -f /etc/bababuilds-erp/postgres-cutover-approved || {
+              echo 'ERP PostgreSQL cutover not approved; refusing deployment.' >&2
+              exit 1
+            }
             cd /var/www/bababuilds-erp
 
             git fetch origin main
@@ -58,21 +65,15 @@ jobs:
 
             npx prisma generate
 
-            # Snapshot the SQLite database before any schema push (keeps the 10 newest copies).
-            backup_dir="/var/www/bababuilds-erp-db-backups"
-            mkdir -p "$backup_dir"
-            backup_file="$backup_dir/dev-$(date +%Y%m%d-%H%M%S)-${DEPLOY_SHA:0:7}.db"
-            if [ -f prisma/dev.db ]; then
-              if command -v sqlite3 >/dev/null 2>&1; then
-                sqlite3 prisma/dev.db ".backup '$backup_file'" || cp prisma/dev.db "$backup_file"
-              else
-                cp prisma/dev.db "$backup_file"
-              fi
-              ls -1t "$backup_dir"/dev-*.db 2>/dev/null | tail -n +11 | xargs -r rm -f
-            fi
-
-            npx prisma db push
-            npm run backfill
+            # PostgreSQL migrations only. No db push, SQLite snapshots or
+            # automatic replay of historical SQLite backfills.
+            node -e '
+              const u=new URL(process.env.DATABASE_URL||"");
+              if(!["postgres:","postgresql:"].includes(u.protocol) ||
+                 decodeURIComponent(u.pathname.slice(1))!=="bababuilds_erp")
+                process.exit(1);
+            ' || { echo 'ERP PostgreSQL DATABASE_URL preflight failed' >&2; exit 1; }
+            npx prisma migrate deploy
             rm -f public/sw.js
             npm run build
 
@@ -94,8 +95,7 @@ jobs:
             chmod 600 .env* 2>/dev/null || true
             chmod 700 deploy.sh 2>/dev/null || true
 
-            chmod 775 prisma
-            chmod 664 prisma/*.db 2>/dev/null || true
+            chmod 755 prisma
 
             mkdir -p public/logos public/receipts public/invoices
             chmod -R 775 public/logos

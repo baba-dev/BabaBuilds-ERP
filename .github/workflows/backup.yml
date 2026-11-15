@@ -1,30 +1,15 @@
-name: Nightly Backup
-
+name: ERP PostgreSQL protected backup
 on:
-  schedule:
-    - cron: '0 1 * * *' # Daily at 1 AM
   workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
+  schedule:
+    - cron: '0 1 * * *'
+permissions:
+  contents: read
 jobs:
   backup:
-    name: Perform Backup
+    if: vars.ERP_POSTGRES_CUTOVER_APPROVED == 'true'
     runs-on: [self-hosted, linux, x64, erp-ci]
-    env:
-      BACKUP_DIR: ${{ github.workspace }}/backups
+    timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v7
-      
-      - name: Ensure Scripts are Executable
-        run: chmod +x scripts/backup.sh
-        
-      - name: Run Backup Script
-        run: ./scripts/backup.sh
-        
-      - name: Verify Backup Result
-        run: |
-          echo "Current backups in $BACKUP_DIR:"
-          ls -lh "$BACKUP_DIR"
+      - name: Execute installed root-reviewed backup helper
+        run: sudo -n /usr/local/sbin/bababuilds-erp-backup
