@@ -51,6 +51,19 @@ def private_marker(path, expected):
         raise RuntimeError("Required root-owned mode-0600 operator checkpoint absent")
 
 
+def require_frozen_offhost_restore(record, snapshot_sha):
+    """Require independently recovered FINAL source and media, not just a marker."""
+    if (record.get("status") != "PASS"
+        or record.get("source_sqlite_sha256") != snapshot_sha
+        or record.get("remote_restore_verified") is not True
+        or record.get("production_changed") is not False
+        or not isinstance(record.get("media_files"), int)
+        or record["media_files"] < 1
+        or not re.fullmatch(r"[a-f0-9]{12}",
+                            str(record.get("remote_snapshot_id_prefix", "")))):
+        raise RuntimeError("Final frozen SQLite + media off-host recovery evidence invalid")
+
+
 def assert_root_erp_cron_paused():
     """Require all root cron entries targeting ERP cron/webhook routes to be disabled.
 
@@ -94,6 +107,9 @@ def main():
     source_sha = digest(snapshot)
     if manifest.get("snapshot_sha256") != source_sha:
         raise RuntimeError("Snapshot hash mismatch")
+    require_frozen_offhost_restore(
+        evidence(state / "backups" / "finalrestore1" / "restic-restore-evidence.json"),
+        source_sha)
     if any(Path(str(LIVE) + ext).exists() for ext in ("-wal", "-shm", "-journal")):
         raise RuntimeError("Live SQLite journal/sidecar present; source not quiescent")
     if not LIVE.is_file() or LIVE.is_symlink() or digest(LIVE) != source_sha:

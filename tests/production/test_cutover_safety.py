@@ -65,6 +65,28 @@ class CutoverSafetyTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 promote.private_marker(file, "WRITE_FREEZE_CONFIRMED")
 
+    def test_promotion_requires_final_offhost_restore_same_sqlite_sha(self):
+        valid = {
+            "status": "PASS",
+            "source_sqlite_sha256": "a" * 64,
+            "remote_restore_verified": True,
+            "production_changed": False,
+            "media_files": 27,
+            "remote_snapshot_id_prefix": "b" * 12,
+        }
+        promote.require_frozen_offhost_restore(valid, "a" * 64)
+        with self.assertRaisesRegex(RuntimeError, "recovery evidence invalid"):
+            promote.require_frozen_offhost_restore(valid, "c" * 64)
+        for mutation in (
+            {"remote_restore_verified": False},
+            {"status": "FAIL"},
+            {"media_files": 0},
+            {"production_changed": True},
+            {"remote_snapshot_id_prefix": "bad"},
+        ):
+            with self.assertRaisesRegex(RuntimeError, "recovery evidence invalid"):
+                promote.require_frozen_offhost_restore({**valid, **mutation}, "a" * 64)
+
     def test_root_erp_cron_freeze_rejects_scheduled_writers(self):
         from unittest.mock import Mock
         with patch.object(promote.subprocess, "run", return_value=Mock(

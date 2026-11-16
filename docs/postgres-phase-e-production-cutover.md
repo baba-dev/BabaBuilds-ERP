@@ -215,6 +215,15 @@ It grants least-privilege runtime DML, protects the Prisma migration ledger,
 renames only the candidate to bababuilds_erp, and writes protected
 /etc/bababuilds-erp/production-database.env.
 
+The promoter also requires `$STATE/backups/finalrestore1/restic-restore-evidence.json`
+to prove an encrypted **off-host restore of the exact final frozen SQLite
+snapshot and ERP media**, matching the final SHA256 in the snapshot manifest.
+The earlier `preflight1` online backup is not accepted as final recovery
+evidence. During maintenance, create a separate private directory
+`$STATE/backups/finalrestore1` and run the E3 restore tool against
+`$STATE/final-sqlite.db` with `--run-id finalrestore1` before
+creating the `offhost-restore-verified` operator marker.
+
 The result DATABASE_PROMOTED is **not** proof that the public ERP uses PG.
 
 ## 6. Switch application runtime — site-specific mandatory checkpoint
