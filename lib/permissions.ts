@@ -224,6 +224,7 @@ export const PERMISSION_KEYS = [
   'pos.checkout',            // Complete POS checkout actions
   'pos.discount',            // Apply discounts during POS checkout
   'pos.custom_item',         // Add ad-hoc line items during POS checkout
+  'pos.refund',              // Void a counter sale and refund it (credit note, stock back, payment reversed)
 
   // Shop / Public Storefront (only surfaced when Shop module is enabled)
   'shop.view',                // Access the Shop dashboard / Command Center
@@ -275,7 +276,7 @@ export const PERMISSION_MODULE_GROUPS: { module: string; label: string; keys: Pe
     keys: ['reporting_center.view', 'reporting_center.query.run', 'reporting_center.export'],
   },
   { module: 'clients',         label: 'Clients',          keys: ['clients.view', 'clients.manage'] },
-  { module: 'pos',             label: 'Point of Sale',    keys: ['pos.view', 'pos.checkout', 'pos.discount', 'pos.custom_item'] },
+  { module: 'pos',             label: 'Point of Sale',    keys: ['pos.view', 'pos.checkout', 'pos.discount', 'pos.custom_item', 'pos.refund'] },
   { module: 'workspace',       label: 'Workspace Admin',  keys: ['workspace.manage_members', 'workspace.manage_roles', 'workspace.manage_settings'] },
   { module: 'billing',         label: 'Billing',          keys: ['billing.manage'] },
   {
@@ -380,7 +381,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'reporting_center.query.run',
     'reporting_center.export',
     'clients.view', 'clients.manage',
-    'pos.view', 'pos.checkout', 'pos.discount', 'pos.custom_item',
+    'pos.view', 'pos.checkout', 'pos.discount', 'pos.custom_item', 'pos.refund',
     'workspace.manage_members', 'workspace.manage_roles', 'workspace.manage_settings',
     'billing.manage',
     // Workforce — full access
@@ -441,7 +442,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'reporting_center.query.run',
     'reporting_center.export',
     'clients.view', 'clients.manage',
-    'pos.view', 'pos.checkout', 'pos.discount', 'pos.custom_item',
+    'pos.view', 'pos.checkout', 'pos.discount', 'pos.custom_item', 'pos.refund',
     'workspace.manage_members', 'workspace.manage_roles', 'workspace.manage_settings',
     // NOT: billing.manage
     // Workforce — full access

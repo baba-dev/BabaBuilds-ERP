@@ -5425,3 +5425,22 @@ model PosHeldSale {
 
   @@index([workspaceId, createdAt])
 }
+
+/// An end-of-shift cash count at the counter: what the till should hold against what was counted.
+model PosCloseout {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  userId       String
+  /// The shift covers sales from the previous close (or the start of the day) up to this moment.
+  periodStart  DateTime
+  closedAt     DateTime @default(now())
+  salesCount   Int      @default(0)
+  totalSales   Decimal  @default(0)
+  expectedCash Decimal  @default(0)
+  countedCash  Decimal  @default(0)
+  variance     Decimal  @default(0)
+  byMethodJson Json?
+  notes        String?
+
+  @@index([workspaceId, closedAt])
+}

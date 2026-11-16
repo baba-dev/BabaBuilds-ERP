@@ -10,14 +10,14 @@ import { resolveSessionMembership } from '@/lib/workspace-scope';
 export type PosAccess = { userId: string; workspaceId: string; email: string | null };
 
 /** Resolves the signed-in member's workspace, checks the POS module is on, and checks pos.view or pos.checkout. */
-export async function requirePos(level: 'view' | 'checkout'): Promise<{ access: PosAccess } | { response: NextResponse }> {
+export async function requirePos(level: 'view' | 'checkout' | 'refund'): Promise<{ access: PosAccess } | { response: NextResponse }> {
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
   const workspaceId = (await resolveSessionMembership(session))?.workspaceId;
   if (!userId || !workspaceId) return { response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
   if (!(await isModuleEnabled(workspaceId, 'POS'))) return { response: NextResponse.json({ error: 'POS module is disabled', code: 'MODULE_DISABLED' }, { status: 403 }) };
   try {
-    await requirePermission(userId, workspaceId, level === 'checkout' ? 'pos.checkout' : 'pos.view');
+    await requirePermission(userId, workspaceId, level === 'refund' ? 'pos.refund' : level === 'checkout' ? 'pos.checkout' : 'pos.view');
   } catch (e) {
     if (e instanceof RbacDeniedError) return { response: rbacDeniedResponse(e) as NextResponse };
     throw e;
