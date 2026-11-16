@@ -38,7 +38,7 @@ export const DATASETS: Record<'invoices' | 'expenses', Dataset> = {
       spendNet: { sql: `SUM("amount" - (${EXP_ITC}))`, format: 'currency', additive: true },
       spendGross: { sql: 'SUM("amount")', format: 'currency', additive: true },
       itcClaimable: { sql: `SUM(${EXP_ITC})`, format: 'currency', additive: true },
-      unpaid: { sql: "SUM(CASE WHEN "paymentStatus" = 'UNPAID' THEN "amount" ELSE 0 END)", format: 'currency', additive: true },
+      unpaid: { sql: `SUM(CASE WHEN "paymentStatus" = 'UNPAID' THEN "amount" ELSE 0 END)`, format: 'currency', additive: true },
       count: { sql: 'COUNT(*)', format: 'number', additive: true },
     },
   },
