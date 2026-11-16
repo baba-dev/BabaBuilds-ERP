@@ -119,6 +119,25 @@ def main():
         JOIN pg_namespace n ON r.relnamespace=n.oid
         WHERE n.nspname='public' AND c.contype='f' AND NOT c.convalidated;""", candidate) != "0":
         raise RuntimeError("Unvalidated foreign keys")
+    # Explicitly constrain runtime DML after the baseline/import and before
+    # any role can access the renamed production database.
+    runtime_role = f"erp_cut_{suffix}_r"
+    if postgres(f"""SELECT count(*) FROM pg_roles WHERE rolname='{runtime_role}';""") != "1":
+        raise RuntimeError("Expected runtime login role missing")
+    postgres(f"""
+BEGIN;
+GRANT USAGE ON SCHEMA public TO "{runtime_role}";
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "{runtime_role}";
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO "{runtime_role}";
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON TABLE public."_prisma_migrations" FROM "{runtime_role}";
+GRANT SELECT ON TABLE public."_prisma_migrations" TO "{runtime_role}";
+REVOKE CREATE ON SCHEMA public FROM "{runtime_role}";
+COMMIT;
+""", candidate)
+    if postgres(f"""SELECT datname FROM pg_database
+        WHERE datname IN ('menuminute','clubkeep')
+          AND has_database_privilege('{runtime_role}',datname,'CONNECT');"""):
+        raise RuntimeError("ERP runtime has cross-application database CONNECT")
     runtime = state / "credentials/runtime.env"
     if not runtime.is_file() or runtime.is_symlink():
         raise RuntimeError("Missing protected runtime credentials")
