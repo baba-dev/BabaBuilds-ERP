@@ -68,6 +68,20 @@ async function main() {
       await prisma.$queryRawUnsafe("SELECT 1");
       timings.push(performance.now() - start);
     }
+    // Representative read-only workload on the migrated dataset, without
+    // returning customer rows or merging unlike-currency financial amounts.
+    const workload: number[] = [];
+    for (let i = 0; i < 60; i++) {
+      const start = performance.now();
+      if (i % 3 === 0) {
+        await prisma.invoice.aggregate({ _sum: { grandTotal: true }, where: { voidedAt: null } });
+      } else if (i % 3 === 1) {
+        await prisma.expense.aggregate({ _sum: { amount: true } });
+      } else {
+        await prisma.workspaceUser.count();
+      }
+      workload.push(performance.now() - start);
+    }
     const invoiceA = await makeInvoice();
     const same = await Promise.allSettled(Array.from({ length: 16 },
       () => capture(invoiceA.id, "same-" + invoiceA.id)));
@@ -91,10 +105,13 @@ async function main() {
       maxConnections: number | bigint; activeConnections: number | bigint;
     }>>("SELECT (SELECT setting::integer FROM pg_settings WHERE name='max_connections') AS \"maxConnections\", COUNT(*) AS \"activeConnections\" FROM pg_stat_activity WHERE datname = current_database()");
     const p95 = percentile(timings, 0.95);
-    if (p95 > 1500) throw new Error("D4 read query latency p95 exceeds 1500ms");
+    const workloadP95 = percentile(workload, 0.95);
+    if (p95 > 1500 || workloadP95 > 2500)
+      throw new Error("D4 PostgreSQL baseline or representative query p95 exceeds threshold");
     console.log(JSON.stringify({
       status: "PASS", database, reads: timings.length,
-      read_p95_ms: Math.round(p95), duplicate_key_attempts: 16,
+      read_p95_ms: Math.round(p95), representative_queries: workload.length,
+      workload_p95_ms: Math.round(workloadP95), duplicate_key_attempts: 16,
       successful_capture_per_invoice: 1,
       postgres_connections: Number(stats[0]?.activeConnections || 0),
       postgres_max_connections: Number(stats[0]?.maxConnections || 0),
