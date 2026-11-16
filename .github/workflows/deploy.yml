@@ -23,6 +23,7 @@ jobs:
     # `event == 'push'` blocks workflow_run triggers from pull_request runs whose head branch
     # happens to be named "main" (e.g. a fork).
     if: >-
+      vars.ERP_POSTGRES_PRODUCTION_VERIFIED == 'true' &&
       vars.ERP_POSTGRES_CUTOVER_APPROVED == 'true' &&
       (github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' &&
@@ -51,6 +52,15 @@ jobs:
               echo 'ERP PostgreSQL cutover not approved; refusing deployment.' >&2
               exit 1
             }
+            test -f /etc/bababuilds-erp/postgres-production-verified || {
+              echo 'ERP PostgreSQL production verification missing; refusing deployment.' >&2
+              exit 1
+            }
+            # Never build/redeploy the Prisma PostgreSQL branch against SQLite.
+            # Use the isolated Node 22 runtime and a protected production DB URL.
+            export PATH=/opt/bababuilds-erp/node22/bin:$PATH
+            test "$(node -p 'process.versions.node.split(".")[0]')" = 22 || exit 1
+            test -f /etc/bababuilds-erp/production-database.env || exit 1
             cd /var/www/bababuilds-erp
 
             git fetch origin main
@@ -67,7 +77,7 @@ jobs:
 
             # PostgreSQL migrations only. No db push, SQLite snapshots or
             # automatic replay of historical SQLite backfills.
-            node -e '
+            node --env-file=/etc/bababuilds-erp/production-database.env -e '
               const u=new URL(process.env.DATABASE_URL||"");
               if(!["postgres:","postgresql:"].includes(u.protocol) ||
                  decodeURIComponent(u.pathname.slice(1))!=="bababuilds_erp")
