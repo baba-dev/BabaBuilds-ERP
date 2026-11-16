@@ -9317,5 +9317,117 @@
       "deniedTitle": "No tienes acceso a la Tienda",
       "deniedBody": "Pide a un propietario o administrador del espacio que te dé el permiso shop.view."
     }
+  },
+  "WorkforceHub": {
+    "title": "Equipo",
+    "description": "Personas, asistencia y permisos en un solo lugar.",
+    "nav": {
+      "overview": "Resumen",
+      "people": "Personas",
+      "attendance": "Asistencia",
+      "leave": "Permisos",
+      "reports": "Informes",
+      "settings": "Ajustes"
+    },
+    "kpi": {
+      "total": "Personas",
+      "present": "Presentes hoy",
+      "late": "Tarde hoy",
+      "onLeave": "De permiso hoy",
+      "notMarked": "Sin marcar",
+      "pending": "Permisos por aprobar"
+    },
+    "overview": {
+      "offDay": "Hoy es día libre o festivo.",
+      "holidays": "Próximos festivos",
+      "noHolidays": "Sin festivos en los próximos 45 días.",
+      "approvals": "Esperando aprobación",
+      "approvalsEmpty": "Nada pendiente.",
+      "joined": "{count} se unieron este mes",
+      "left": "{count} se fueron este mes",
+      "viewAll": "Ver todo",
+      "people": "Abrir personas"
+    },
+    "checkin": {
+      "title": "Tu día",
+      "notLinked": "Tu cuenta aún no está vinculada a un perfil de empleado. Pide a un administrador que la vincule.",
+      "checkIn": "Entrar",
+      "checkOut": "Salir",
+      "remote": "Trabajo remoto",
+      "inAt": "Entrada a las {time}",
+      "outAt": "Salida a las {time}",
+      "hours": "Horario {start} – {end}",
+      "off": "Hoy es día libre.",
+      "done": "Todo listo por hoy.",
+      "inactive": "Los empleados inactivos no pueden registrar entrada."
+    },
+    "status": {
+      "PRESENT": "Presente",
+      "LATE": "Tarde",
+      "ABSENT": "Ausente",
+      "HALF_DAY": "Medio día",
+      "HOLIDAY": "Festivo",
+      "REMOTE": "Remoto"
+    },
+    "sheet": {
+      "title": "Hoja de asistencia",
+      "prev": "Mes anterior",
+      "next": "Mes siguiente",
+      "empty": "Sin empleados este mes.",
+      "hint": "Haz clic en un día para corregirlo.",
+      "clear": "Borrar registro",
+      "saved": "Guardado",
+      "totalPresent": "Presente",
+      "totalLeave": "Permiso",
+      "totalAbsent": "Ausente",
+      "totalMissing": "Sin marcar"
+    },
+    "legend": {
+      "P": "Presente",
+      "L": "Tarde",
+      "R": "Remoto",
+      "A": "Ausente",
+      "H": "Medio día",
+      "LV": "Permiso pagado",
+      "UL": "Permiso sin sueldo",
+      "HOL": "Festivo",
+      "OFF": "Descanso"
+    },
+    "leave": {
+      "balances": "Tus saldos",
+      "left": "{count} restantes",
+      "used": "{used} usados · {pending} pendientes",
+      "noBalances": "Aún no hay tipos de permiso.",
+      "requestTitle": "Solicitar permiso",
+      "type": "Tipo de permiso",
+      "from": "Desde",
+      "to": "Hasta",
+      "half": "Medio día",
+      "halfNone": "Día completo",
+      "halfFirst": "Primera mitad",
+      "halfSecond": "Segunda mitad",
+      "reason": "Motivo (opcional)",
+      "submit": "Enviar solicitud",
+      "days": "{count, plural, one {# día laborable} other {# días laborables}} se descontarán",
+      "skipped": "{count} días de descanso o festivos no se cuentan.",
+      "after": "Quedarán {count}.",
+      "requested": "Permiso solicitado",
+      "requests": "Solicitudes",
+      "tab": {
+        "all": "Todas",
+        "PENDING": "Pendientes",
+        "APPROVED": "Aprobadas",
+        "REJECTED": "Rechazadas",
+        "CANCELLED": "Canceladas"
+      },
+      "approve": "Aprobar",
+      "reject": "Rechazar",
+      "cancel": "Cancelar",
+      "rejectReason": "Motivo del rechazo (opcional)",
+      "empty": "Sin solicitudes.",
+      "dayCount": "{count, plural, one {# día} other {# días}}",
+      "done": "Hecho"
+    },
+    "error": "Algo salió mal. Inténtalo de nuevo."
   }
 }

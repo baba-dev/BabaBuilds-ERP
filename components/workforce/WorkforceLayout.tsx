@@ -3,6 +3,7 @@
 import * as React from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Users2, Clock, CalendarDays, BarChart3, Settings2, LayoutDashboard } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { DashboardPageShell } from "@/components/layout/DashboardPageShell";
 import type { SegmentedControlOption } from "@/components/ui/segmented-control";
@@ -36,6 +37,7 @@ export function WorkforceSubNav() {
   const search = useSearchParams();
   const qs = search.toString();
   const active = activeKeyForPath(pathname);
+  const t = useTranslations("WorkforceHub");
 
   const linkFor = (href: string) => `${href}${qs ? `?${qs}` : ""}`;
 
@@ -44,7 +46,7 @@ export function WorkforceSubNav() {
     label: (
       <span className="inline-flex items-center gap-2">
         <n.icon className="h-4 w-4" />
-        <span>{n.label}</span>
+        <span>{t(`nav.${n.key}`)}</span>
       </span>
     ),
   }));
@@ -52,7 +54,7 @@ export function WorkforceSubNav() {
   const groupedLabel = (item: WorkforceNavItem) => (
     <span className="inline-flex items-center gap-2">
       <item.icon className="h-4 w-4" />
-      <span>{item.label}</span>
+      <span>{t(`nav.${item.key}`)}</span>
     </span>
   );
 

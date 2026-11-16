@@ -31,8 +31,14 @@ export async function loadCalendar(workspaceId: string, from: Date, to: Date, db
 
 /** Makes sure the person has a balance row for each active leave type in the year (joiners get a part-year entitlement). */
 export async function ensureBalances(workspaceId: string, employeeId: string, year: number, db: Tx | typeof prisma = prisma) {
-  const [types, existing, emp] = await Promise.all([
-    db.leaveType.findMany({ where: { workspaceId, isActive: true }, select: { id: true, defaultDays: true } }),
+  let types = await db.leaveType.findMany({ where: { workspaceId, isActive: true }, select: { id: true, defaultDays: true } });
+  if (types.length === 0 && !(await db.leaveType.count({ where: { workspaceId } }))) {
+    // A workspace that predates the module's setup: create the standard leave types once.
+    const { initializeWorkforceDefaults } = await import('./index');
+    await initializeWorkforceDefaults(workspaceId);
+    types = await db.leaveType.findMany({ where: { workspaceId, isActive: true }, select: { id: true, defaultDays: true } });
+  }
+  const [existing, emp] = await Promise.all([
     db.leaveBalance.findMany({ where: { workspaceId, employeeId, year }, select: { leaveTypeId: true } }),
     db.employee.findFirst({ where: { id: employeeId, workspaceId }, select: { joinDate: true } }),
   ]);

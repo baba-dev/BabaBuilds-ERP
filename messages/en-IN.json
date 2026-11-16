@@ -9288,5 +9288,117 @@
       "deniedTitle": "You do not have access to the Shop",
       "deniedBody": "Ask a workspace owner or admin to give you the shop.view permission."
     }
+  },
+  "WorkforceHub": {
+    "title": "Workforce",
+    "description": "People, attendance and leave in one place.",
+    "nav": {
+      "overview": "Overview",
+      "people": "People",
+      "attendance": "Attendance",
+      "leave": "Leave",
+      "reports": "Reports",
+      "settings": "Settings"
+    },
+    "kpi": {
+      "total": "People",
+      "present": "Present today",
+      "late": "Late today",
+      "onLeave": "On leave today",
+      "notMarked": "Not marked yet",
+      "pending": "Leave to approve"
+    },
+    "overview": {
+      "offDay": "Today is a weekly off or a holiday.",
+      "holidays": "Upcoming holidays",
+      "noHolidays": "No holidays in the next 45 days.",
+      "approvals": "Waiting for approval",
+      "approvalsEmpty": "Nothing is waiting for you.",
+      "joined": "{count} joined this month",
+      "left": "{count} left this month",
+      "viewAll": "View all",
+      "people": "Open people"
+    },
+    "checkin": {
+      "title": "Your day",
+      "notLinked": "Your account is not linked to an employee profile yet. Ask an admin to link it.",
+      "checkIn": "Check in",
+      "checkOut": "Check out",
+      "remote": "Working remotely",
+      "inAt": "Checked in at {time}",
+      "outAt": "Checked out at {time}",
+      "hours": "Work hours {start} – {end}",
+      "off": "Today is a day off. Enjoy!",
+      "done": "All done for today.",
+      "inactive": "Inactive employees cannot check in."
+    },
+    "status": {
+      "PRESENT": "Present",
+      "LATE": "Late",
+      "ABSENT": "Absent",
+      "HALF_DAY": "Half day",
+      "HOLIDAY": "Holiday",
+      "REMOTE": "Remote"
+    },
+    "sheet": {
+      "title": "Attendance sheet",
+      "prev": "Previous month",
+      "next": "Next month",
+      "empty": "No employees for this month.",
+      "hint": "Click a day to correct it.",
+      "clear": "Clear record",
+      "saved": "Saved",
+      "totalPresent": "Present",
+      "totalLeave": "Leave",
+      "totalAbsent": "Absent",
+      "totalMissing": "Not marked"
+    },
+    "legend": {
+      "P": "Present",
+      "L": "Late",
+      "R": "Remote",
+      "A": "Absent",
+      "H": "Half day",
+      "LV": "Paid leave",
+      "UL": "Unpaid leave",
+      "HOL": "Holiday",
+      "OFF": "Weekly off"
+    },
+    "leave": {
+      "balances": "Your balances",
+      "left": "{count} left",
+      "used": "{used} used · {pending} pending",
+      "noBalances": "No leave types are set up yet.",
+      "requestTitle": "Request leave",
+      "type": "Leave type",
+      "from": "From",
+      "to": "To",
+      "half": "Half day",
+      "halfNone": "Full day",
+      "halfFirst": "First half",
+      "halfSecond": "Second half",
+      "reason": "Reason (optional)",
+      "submit": "Send request",
+      "days": "{count, plural, one {# working day} other {# working days}} will be taken",
+      "skipped": "{count} weekly off or holiday days are not counted.",
+      "after": "{count} will be left after this.",
+      "requested": "Leave requested",
+      "requests": "Requests",
+      "tab": {
+        "all": "All",
+        "PENDING": "Pending",
+        "APPROVED": "Approved",
+        "REJECTED": "Rejected",
+        "CANCELLED": "Cancelled"
+      },
+      "approve": "Approve",
+      "reject": "Reject",
+      "cancel": "Cancel",
+      "rejectReason": "Reason for rejecting (optional)",
+      "empty": "No leave requests here.",
+      "dayCount": "{count, plural, one {# day} other {# days}}",
+      "done": "Done"
+    },
+    "error": "Something went wrong. Try again."
   }
 }
