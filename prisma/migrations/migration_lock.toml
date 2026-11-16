@@ -1,2 +1,2 @@
-# New PostgreSQL history only. SQLite files archived in prisma/sqlite-history.
+# Canonical PostgreSQL 17 migration history. Do not regenerate applied baseline.
 provider = "postgresql"

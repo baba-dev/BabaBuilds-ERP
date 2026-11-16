@@ -52,9 +52,9 @@ Optionally seed compliance dictionaries: `npx ts-node prisma/seed.ts`
 ### Caveats
 
 - ESLint reports 0 errors. The only remaining warnings are `react-hooks/set-state-in-effect` (React Compiler debt, issue #590); the `lint` script caps them with `--max-warnings` so the count can only go down — lower that number whenever you fix some. New code must add none: avoid `any` (use `unknown` and narrow; it is an error), prefix intentionally unused names with `_`, don't call `setState` synchronously in an effect body, and don't define components inside components (it is an error).
-- The new PostgreSQL baseline is entirely independent. Old SQLite migrations are archived under prisma/sqlite-history; do not replay them against PostgreSQL.
+- The PostgreSQL 17 baseline is the only supported schema. Migration-era SQLite artifacts have been retired from the active source tree.
 - External services (Google OAuth, SMTP, Razorpay, Stripe, ClamAV, Cloudflare Turnstile) are all optional in development.
-- PostgreSQL development databases must be disposable and isolated; the pre-cutover SQLite production file remains at `/var/www/bababuilds-erp/prisma/dev.db` until live verification.
+- PostgreSQL development databases must be disposable and isolated; the previous SQLite production file is retired by the guarded VPS operator procedure.
 
 ### Scheduled jobs (production VPS cron)
 
@@ -75,7 +75,7 @@ The Android app is a Trusted Web Activity over the PWA; see `docs/android-play-s
 
 - `CI` workflow (`.github/workflows/ci.yml`) runs on GitHub-hosted runners as parallel jobs: static checks (locale parity, lint, typecheck, demo coverage), full Vitest, migration history vs schema (`check:migrations`), production build, and the Playwright browser smoke test. The single required check is **`CI gate`**. Pull requests also get an advisory dependency review, and `codeql.yml` runs CodeQL (advisory).
 - **Never run pull-request workflows on the self-hosted runner**: the repo is public, so that would run strangers' code on our server. Self-hosted (`[self-hosted, linux, x64, erp-ci]`) is only for `deploy.yml`, `backup.yml` and `security-audit.yml`, which run on a schedule, by hand, or after CI succeeds on `main`.
-- Deploy runs only after `CI` succeeds on a push to `main`, and deploys the exact validated commit.
+- Legacy automatic deployment is disabled after cutover; an immutable standalone release workflow is tracked in #640.
 - Node is pinned in `.nvmrc` (22). Shared setup lives in `.github/actions/`.
 - Agent workflow: make the change, run `npm run ci:fast`, fix everything it reports, then push. Add or update tests for behavior you change; mocks of shared modules should spread `importOriginal()` so new exports do not break them.
 
@@ -90,9 +90,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 <!-- END:nextjs-agent-rules -->
 
 
-## Phase B PostgreSQL readiness (NOT production cutover)
-- PostgreSQL 17 / Prisma 6 is the new target. Do not run the old SQLite migrations or use db push.
-- Migrations require an isolated database, with CI target bababuilds_erp_ci.
-- Importer: scripts/sqlite-to-postgres.py; use only against empty, independently provisioned databases.
-- Production auto-deploy is gated by ERP_POSTGRES_CUTOVER_APPROVED and on-host marker. Do not merge before Phase C approval.
-- Protected backup runner and verified restore are prerequisites. See docs/postgres-backup-runbook.md.
+## Production PostgreSQL contract
+
+- SQLite-to-PostgreSQL cutover completed 2026-11-16. Production runs on PostgreSQL 17 under the independently prepared Node 22 standalone release. Do not access or recreate `prisma/dev.db`.
+- Use only isolated PostgreSQL 17 instances for local development and CI. Apply committed baseline with `npx prisma migrate deploy`; never regenerate or rewrite the applied baseline.
+- Production deploys are temporarily a no-op pending safe standalone release automation (#640). Do not use the previous in-place PM2 restart or mutate the active standalone tree.
+- Encrypt off-host PostgreSQL and media backups, test independent recovery, and never include customer records or credentials in CI logs. The migration history remains available in Git history and encrypted off-host snapshots.
