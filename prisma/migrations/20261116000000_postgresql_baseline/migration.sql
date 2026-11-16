@@ -2382,6 +2382,14 @@ CREATE TABLE "ShopOrder" (
     "stripePaymentIntentId" TEXT,
     "stripeSessionId" TEXT,
     "status" TEXT NOT NULL DEFAULT 'PENDING',
+    "shippingAddress" TEXT,
+    "courier" TEXT,
+    "trackingRef" TEXT,
+    "internalNote" TEXT,
+    "paidAt" TIMESTAMP(3),
+    "shippedAt" TIMESTAMP(3),
+    "fulfilledAt" TIMESTAMP(3),
+    "refundedAt" TIMESTAMP(3),
     "linkedInvoiceId" TEXT,
     "sourceProposalId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -3597,6 +3605,39 @@ CREATE TABLE "ReportView" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "ReportView_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PosHeldSale" (
+    "id" TEXT NOT NULL,
+    "workspaceId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "label" TEXT,
+    "clientId" TEXT,
+    "cartJson" JSONB NOT NULL,
+    "itemCount" INTEGER NOT NULL DEFAULT 0,
+    "total" DECIMAL(65,30) NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "PosHeldSale_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PosCloseout" (
+    "id" TEXT NOT NULL,
+    "workspaceId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "periodStart" TIMESTAMP(3) NOT NULL,
+    "closedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "salesCount" INTEGER NOT NULL DEFAULT 0,
+    "totalSales" DECIMAL(65,30) NOT NULL DEFAULT 0,
+    "expectedCash" DECIMAL(65,30) NOT NULL DEFAULT 0,
+    "countedCash" DECIMAL(65,30) NOT NULL DEFAULT 0,
+    "variance" DECIMAL(65,30) NOT NULL DEFAULT 0,
+    "byMethodJson" JSONB,
+    "notes" TEXT,
+
+    CONSTRAINT "PosCloseout_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -4855,6 +4896,12 @@ CREATE INDEX "ReportView_workspaceId_createdByUserId_idx" ON "ReportView"("works
 
 -- CreateIndex
 CREATE INDEX "ReportView_scheduleNextAt_idx" ON "ReportView"("scheduleNextAt");
+
+-- CreateIndex
+CREATE INDEX "PosHeldSale_workspaceId_createdAt_idx" ON "PosHeldSale"("workspaceId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "PosCloseout_workspaceId_closedAt_idx" ON "PosCloseout"("workspaceId", "closedAt");
 
 -- AddForeignKey
 ALTER TABLE "DistributorCoupon" ADD CONSTRAINT "DistributorCoupon_distributorId_fkey" FOREIGN KEY ("distributorId") REFERENCES "Distributor"("id") ON DELETE CASCADE ON UPDATE CASCADE;
