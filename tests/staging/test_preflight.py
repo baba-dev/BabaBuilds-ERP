@@ -42,6 +42,20 @@ class StageSecurityTest(unittest.TestCase):
             sock.connect.side_effect = None
             self.assertFalse(preflight.network_egress_blocked())
 
+    def test_config_only_does_not_require_kernel_guard_but_full_preflight_does(self):
+        env = {
+            "ERP_STAGING_MODE": "1",
+            "DATABASE_URL": "postgresql://stage:secret@127.0.0.1:5432/bababuilds_erp_staging_20261116a",
+            "NEXTAUTH_URL": "http://127.0.0.1:3101",
+            "NEXTAUTH_SECRET": "test-only-32-chars-long-enough-value",
+            "PORT": "3101", "HOSTNAME": "127.0.0.1",
+            "AUTH_GOOGLE_ENABLED": "false", "AUTH_EMAIL_ENABLED": "false",
+        }
+        with patch.dict("os.environ", env, clear=True):
+            with patch.object(preflight, "network_egress_blocked", return_value=False):
+                self.assertTrue(preflight.preflight(config_only=True))
+                self.assertFalse(preflight.preflight(config_only=False))
+
     def test_reject_production_database_and_external_host(self):
         standard = {
             "ERP_STAGING_MODE": "1",

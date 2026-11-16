@@ -47,8 +47,21 @@ def network_egress_blocked():
     return False
 
 
+def preflight(config_only=False):
+    """Config can be validated before the service starts; egress only inside unit."""
+    return valid() and (config_only or network_egress_blocked())
+
+
 if __name__ == "__main__":
-    if not valid() or not network_egress_blocked():
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--config-only", action="store_true",
+        help="Operator build-time check only. Never used by the systemd service."
+    )
+    args = parser.parse_args()
+    if not preflight(config_only=args.config_only):
         print("Staging configuration/egress isolation invalid; refusing to start", file=sys.stderr)
         sys.exit(1)
-    print("ERP PostgreSQL staging runtime preflight PASS")
+    print("ERP staging configuration PASS" if args.config_only
+          else "ERP staging configuration and kernel egress isolation PASS")

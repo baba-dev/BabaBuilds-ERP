@@ -73,7 +73,7 @@ unset DATABASE_URL
 set -a
 source "$state/credentials/runtime.env"
 set +a
-python3 scripts/staging/runtime_preflight.py
+python3 scripts/staging/runtime_preflight.py --config-only
 runuser -u erpstaging -- npm run build
 
 # D4 only creates/cleans up a synthetic workspace.
