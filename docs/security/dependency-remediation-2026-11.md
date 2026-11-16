@@ -22,3 +22,22 @@ Eight logical commits in one reviewed PR. Apply compatible npm dependency patche
 ## Deployment
 
 Deployment and runtime activation are explicitly out of scope.
+
+## Patched versions in lockfile
+
+- axios: 1.21.1 [node_modules/axios]
+- follow-redirects: 1.16.3 [node_modules/follow-redirects]
+- js-yaml: 4.3.2 [node_modules/js-yaml]
+- @humanfs/node: 0.16.8 [node_modules/@humanfs/node]
+- postcss: 8.5.33 [node_modules/postcss]
+- nanoid: 3.3.20 [node_modules/nanoid]
+- source-map-js: 1.2.2 [node_modules/source-map-js]
+- postcss-selector-parser: 6.1.5 [node_modules/@tailwindcss/typography/node_modules/postcss-selector-parser], 7.1.7 [node_modules/postcss-selector-parser]
+- zod: 4.6.7 [node_modules/zod]
+
+## Audit snapshots
+
+- Before: {"info":0,"low":2,"moderate":14,"high":14,"critical":0,"total":30}
+- After: {"info":0,"low":2,"moderate":14,"high":3,"critical":0,"total":19}
+
+One-shot generator has been removed. No production deployment workflow was changed.
