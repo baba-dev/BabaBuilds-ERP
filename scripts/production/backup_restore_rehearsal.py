@@ -55,7 +55,7 @@ def checked(args, timeout=900):
     result = subprocess.run(
         args, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL, text=True, timeout=timeout,
-        env={**os.environ, "RESTIC_CACHE_DIR": "/var/cache"},
+        env=os.environ.copy(),
         check=False)
     if result.returncode:
         raise RuntimeError("Protected Restic backup/restore command failed (output suppressed)")
