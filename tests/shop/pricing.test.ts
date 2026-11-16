@@ -56,3 +56,25 @@ describe('order status rules', () => {
     expect(needsAction('SHIPPED')).toBe(false);
   });
 });
+
+import { planShopMaintenance } from '@/lib/shop/maintenance';
+
+describe('planShopMaintenance', () => {
+  const now = new Date('2026-11-18T07:00:00Z'); // a Wednesday
+  const o = (id: string, status: string, hoursAgo: number, paid = false) => ({ id, status, createdAt: new Date(now.getTime() - hoursAgo * 3_600_000), paidAt: paid ? new Date(now.getTime() - hoursAgo * 3_600_000) : null, shippedAt: null });
+
+  it('closes checkouts older than a day and leaves fresh ones', () => {
+    expect(planShopMaintenance([o('a', 'PENDING', 30), o('b', 'PENDING', 3)], now).expire).toEqual(['a']);
+  });
+
+  it('nudges for paid orders unshipped after two days, and for refunds due', () => {
+    const p = planShopMaintenance([o('a', 'PAID', 60, true), o('b', 'PAID', 5, true), o('c', 'REFUND_DUE', 1, true)], now);
+    expect(p.nudges.map((n) => n.key.split(':')[0])).toEqual(['refund', 'ship']);
+    expect(p.nudges[1]!.title).toContain('1 paid order is');
+  });
+
+  it('does not nag about shipping at the weekend', () => {
+    const sat = new Date('2026-11-21T07:00:00Z');
+    expect(planShopMaintenance([{ id: 'a', status: 'PAID', createdAt: sat, paidAt: new Date('2026-11-15T00:00:00Z'), shippedAt: null }], sat).nudges).toEqual([]);
+  });
+});
