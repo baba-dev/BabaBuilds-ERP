@@ -6,6 +6,32 @@ D4 transaction concurrency, and successful HTTP login/auth plus blocked cron/web
 Those results are for a November 16 staging snapshot, not the final live dataset.
 Do not merge the stacked PRs #623–#625 or Phase E as a routine live deployment.
 
+### Root PM2 and cron write-freeze evidence (2026-11-16)
+
+Read-only host inspection confirmed that root-owned `pm2-root.service` uses
+`/root/.nvm/versions/node/v24.14.1/lib/node_modules/pm2/bin/pm2`,
+and the **ERP** entry is currently `/usr/bin/npm` with interpreter
+`/usr/bin/node` (Node 20), working directory
+`/var/www/bababuilds-erp`. A future production activation must explicitly
+set the ERP runtime to the isolated Node 22 binary; merely restarting the old
+PM2 process does not guarantee that.
+
+Root crontab contains **14 ERP schedules** (including OCR every 10 minutes,
+payment sync every 30 minutes, retainers and other financial jobs). Save
+the entire original root crontab to a private 0600 rollback file, then
+pause ONLY ERP jobs for the freeze. Preserve unrelated cron entries. Verify
+no ERP cron child process remains. The promotion helper explicitly rejects
+enabled root ERP cron entries; it must not be bypassed by manually deleting
+the application's schedule without preserving its restore instructions.
+After successful PG verification, restore the root crontab from the
+unaltered backup so jobs resume exactly once.
+
+Existing `/etc/menuminute/backup/r2.json` and `restic-password` are
+**MenuMinute credentials**, not yet a verified ERP backup destination.
+Do not print, overwrite, alter, or casually reuse those secrets. The ERP
+requires a separate tagged off-host backup and a real independent restore
+of both the SQLite snapshot and media before freeze.
+
 ## Hard gates — operator must verify
 
 1. Obtain an independent **encrypted off-host SQLite and media backup** and

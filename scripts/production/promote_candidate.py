@@ -51,6 +51,23 @@ def private_marker(path, expected):
         raise RuntimeError("Required root-owned mode-0600 operator checkpoint absent")
 
 
+def assert_root_erp_cron_paused():
+    """Require all root cron entries targeting ERP cron/webhook routes to be disabled.
+
+    Never print the crontab; a route line may contain private authorization.
+    """
+    result = subprocess.run(["crontab", "-l"], capture_output=True, text=True, timeout=10)
+    if result.returncode:
+        raise RuntimeError("Cannot verify root cron is disabled for ERP")
+    enabled = [line.strip() for line in result.stdout.splitlines()
+               if line.strip() and not line.lstrip().startswith("#")]
+    if any("/var/www/bababuilds-erp/scripts/run-cron.sh" in line
+           or "erp.bababuilds.com/api/cron/" in line
+           or "127.0.0.1:3000/api/cron/" in line
+           for line in enabled):
+        raise RuntimeError("Root ERP cron jobs still enabled; write-freeze is not complete")
+
+
 def main():
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument("--suffix", required=True)
@@ -69,6 +86,7 @@ def main():
         raise RuntimeError("Invalid protected cutover state")
     private_marker(state / "write-freeze-confirmed", "WRITE_FREEZE_CONFIRMED")
     private_marker(state / "offhost-restore-verified", "OFFHOST_DATABASE_AND_MEDIA_RESTORE_VERIFIED")
+    assert_root_erp_cron_paused()
     snapshot = state / "final-sqlite.db"
     manifest = evidence(Path(str(snapshot) + ".manifest.json"))
     if not snapshot.is_file() or snapshot.is_symlink() or manifest.get("status") != "PASS":

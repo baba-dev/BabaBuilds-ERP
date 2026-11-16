@@ -64,6 +64,20 @@ class CutoverSafetyTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 promote.private_marker(file, "WRITE_FREEZE_CONFIRMED")
 
+    def test_root_erp_cron_freeze_rejects_scheduled_writers(self):
+        from unittest.mock import Mock
+        with patch.object(promote.subprocess, "run", return_value=Mock(
+            returncode=0,
+            stdout="*/10 * * * * /var/www/bababuilds-erp/scripts/run-cron.sh documents-ocr\n"
+        )):
+            with self.assertRaisesRegex(RuntimeError, "cron jobs still enabled"):
+                promote.assert_root_erp_cron_paused()
+        with patch.object(promote.subprocess, "run", return_value=Mock(
+            returncode=0,
+            stdout="# */10 * * * * /var/www/bababuilds-erp/scripts/run-cron.sh documents-ocr\n0 1 * * * /usr/bin/true\n"
+        )):
+            promote.assert_root_erp_cron_paused()
+
     def test_deploy_requires_postcutover_verification(self):
         workflow = (ROOT / ".github/workflows/deploy.yml").read_text()
         self.assertIn("ERP_POSTGRES_PRODUCTION_VERIFIED", workflow)
