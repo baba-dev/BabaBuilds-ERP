@@ -45,6 +45,14 @@ with open(path, "rb") as stream:
 meta = json.loads(manifest.read_text())
 if sha != expected or meta.get("snapshot_sha256") != expected or meta.get("status") != "PASS":
     raise SystemExit("Saved SQLite backup hash/manifest mismatch")
+remote = path.parent / "restic-restore-evidence.json"
+if not remote.is_file() or remote.is_symlink():
+    raise SystemExit("Previously verified off-host backup/restore evidence missing")
+restored = json.loads(remote.read_text())
+if (restored.get("status") != "PASS"
+    or restored.get("source_sqlite_sha256") != expected
+    or restored.get("remote_restore_verified") is not True):
+    raise SystemExit("Existing remote restore evidence does not match SQLite source")
 with sqlite3.connect(path.as_uri() + "?mode=ro", uri=True) as db:
     if db.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
         raise SystemExit("Source SQLite integrity check failed")
