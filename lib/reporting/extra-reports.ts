@@ -86,7 +86,7 @@ export const EXTRA_REPORTS: Array<Omit<ReportDef, 'lineage'>> = [
   {
     id: 'shop_sales', category: 'Sales', title: 'Shop sales', description: 'Paid online shop orders by month, with tax and refunds.', period: 'range', comparable: true,
     async build(ctx: Ctx) {
-      const orders = await prisma.shopOrder.findMany({ where: { workspaceId: ctx.workspaceId, status: { in: ['PAID', 'REFUNDED'] }, ...dateWhere('createdAt', ctx.range) }, select: { createdAt: true, subtotal: true, taxTotal: true, amount: true, status: true }, take: 30_000 });
+      const orders = await prisma.shopOrder.findMany({ where: { workspaceId: ctx.workspaceId, status: { in: ['PAID', 'SHIPPED', 'FULFILLED', 'REFUNDED'] }, ...dateWhere('createdAt', ctx.range) }, select: { createdAt: true, subtotal: true, taxTotal: true, amount: true, status: true }, take: 30_000 });
       const by = new Map<string, Row>();
       for (const o of orders) { const k = month(o.createdAt); const r = by.get(k) ?? { month: k, orders: 0, sales: 0, tax: 0, refunds: 0 }; if (o.status === 'REFUNDED') r.refunds = num(r.refunds) + num(o.amount); else { r.orders = num(r.orders) + 1; r.sales = num(r.sales) + num(o.subtotal); r.tax = num(r.tax) + num(o.taxTotal); } by.set(k, r); }
       const rows: Row[] = [...by.values()].sort((a, b) => String(a.month).localeCompare(String(b.month))).map((r) => ({ ...r, sales: r2(num(r.sales)), tax: r2(num(r.tax)), refunds: r2(num(r.refunds)), _href: '/shop' }));

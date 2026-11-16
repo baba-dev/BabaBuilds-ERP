@@ -81,7 +81,7 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
         commitResult.code === "ORDER_NOT_PAYABLE" ? 409 :
         commitResult.code === "STOCK_COMMIT_FAILED" ? 409 :
         400;
-      return NextResponse.json({ error: commitResult.message, code: commitResult.code }, { status });
+      return NextResponse.json({ error: commitResult.message, code: commitResult.code, refundDue: commitResult.refundDue ?? false }, { status });
     }
 
     return NextResponse.json({

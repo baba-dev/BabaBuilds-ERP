@@ -3559,7 +3559,17 @@ model ShopOrder {
   stripeSessionId       String?
 
   // Status lifecycle
-  status String @default("PENDING") // PENDING | PAID | FAILED | REFUNDED
+  status String @default("PENDING") // PENDING | PAID | SHIPPED | FULFILLED | FAILED | REFUND_DUE | REFUNDED
+
+  // Delivery
+  shippingAddress String?
+  courier         String?
+  trackingRef     String?
+  internalNote    String?
+  paidAt          DateTime?
+  shippedAt       DateTime?
+  fulfilledAt     DateTime?
+  refundedAt      DateTime?
 
   // Linked ERP invoice (auto-generated on payment success, nulled if invoice deleted)
   linkedInvoiceId String?
