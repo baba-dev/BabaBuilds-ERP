@@ -138,6 +138,18 @@ class CutoverSafetyTests(unittest.TestCase):
         with patch.object(backup, "checked", return_value='[{"id":"not-valid"},{"id":"' + "a"*64 + '"}]'):
             self.assertEqual(list(backup.snapshots("tag")), ["a"*64])
 
+    def test_realdata_rehearsal_is_new_database_only(self):
+        script = (ROOT / "scripts/production/rehearse_integration.sh").read_text()
+        self.assertIn('! -e "$state"', script)
+        self.assertIn("feature/postgresql-production-main-integration", script)
+        self.assertIn("sha256", script)
+        self.assertIn('scripts/production/provision_candidate.py', script)
+        self.assertIn('scripts/phase-c-verify.py', script)
+        self.assertIn('scripts/phase-c-restore-drill.py', script)
+        self.assertNotIn('systemctl stop', script)
+        self.assertNotIn('pm2 stop', script)
+        self.assertNotIn('ALTER DATABASE', script)
+
     def test_deploy_requires_postcutover_verification(self):
         workflow = (ROOT / ".github/workflows/deploy.yml").read_text()
         self.assertIn("ERP_POSTGRES_PRODUCTION_VERIFIED", workflow)

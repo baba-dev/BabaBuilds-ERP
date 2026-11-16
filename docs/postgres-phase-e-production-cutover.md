@@ -130,6 +130,45 @@ migration/runtime roles. Mode-0600 credential files are written under
 /var/lib/bababuilds-erp/cutover/SUFFIX/credentials/.
 The importer and parity verifier remain *incapable of targeting production*.
 
+## Integrated current-main rehearsal — no downtime (2026-11-16)
+
+**Important:** The Phase B–E source branch became stale after 15 additional
+`main` commits added Shop, POS and Workforce behavior. Use the integrated,
+CI-reviewed `feature/postgresql-production-main-integration` branch (PR #637)
+for the final production release. It retains the current-main SQLite history,
+archives the three newer SQLite-only POS/Shop migrations and contains a
+compatible PostgreSQL baseline with 185 application tables.
+
+Before touching the existing `cut1611a` production candidate, perform an
+independent *dry* real-data import using the encrypted R2 snapshot that has
+already passed independent SQLite/media restore:
+
+    DRY=dry1611a
+    sudo install -d -m 0755 "/opt/bababuilds-erp-cutover/$DRY"
+    sudo git clone --depth 1 --branch feature/postgresql-production-main-integration \
+      https://github.com/baba-dev/BabaBuilds-ERP.git \
+      "/opt/bababuilds-erp-cutover/$DRY/app"
+    sudo env \
+      ERP_DRY_SUFFIX="$DRY" \
+      ERP_SOURCE_SNAPSHOT=/var/lib/bababuilds-erp/cutover/cut1611a/backups/preflight1/source.sqlite \
+      ERP_SOURCE_SHA256=cf0de47c5d9d350751ca6a029801b73f8b15b80f9b76369923062992a639acc8 \
+      ERP_INTEGRATION_SHA=REPLACE_WITH_APPROVED_40_CHAR_INTEGRATION_HEAD \
+      bash "/opt/bababuilds-erp-cutover/$DRY/app/scripts/production/rehearse_integration.sh"
+
+The one-shot runner refuses an existing `dry1611a` cutover state and
+checks the exact reviewed commit, original backup manifest, SQLite SHA256
+and integrity before creating its **isolated** PostgreSQL dry-run candidate
+and drill. It then imports the saved SQLite backup, validates every table
+and financial row, checks existing media/financial invariants, independently
+restores the candidate PostgreSQL database and re-verifies parity.
+This may fail if the live media root changes after the previous snapshot,
+in which case capture a new uniquely labeled backup and do not overwrite
+the old rehearsal. Neither `cut1611a` nor public ERP are modified.
+
+**Do not use the older Phase E checkout as the production release** until
+these integrations have been accounted for. Keep all migration PRs draft
+until the actual write freeze and cutover.
+
 ## 2. Freeze ERP writes
 
 Announce maintenance and stop the existing ERP PM2 process as the correct

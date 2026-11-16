@@ -214,6 +214,9 @@ jobs:
       - name: D1–D2 Python safety and financial invariants unit tests
         run: python3 -m unittest discover -s tests/staging -p 'test_*.py' -v
 
+      - name: Production real-data integration rehearsal script syntax
+        run: bash -n scripts/production/rehearse_integration.sh
+
       - name: Phase E protected production cutover tool tests
         run: |
           python3 -m py_compile scripts/production/provision_candidate.py scripts/production/promote_candidate.py scripts/production/backup_restore_rehearsal.py
