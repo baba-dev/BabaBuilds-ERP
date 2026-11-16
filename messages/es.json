@@ -9946,5 +9946,324 @@
     "unavailable": "No disponible",
     "loadFailed": "No se pudo cargar el portal de socios.",
     "back": "Volver al panel"
+  },
+  "DashboardHome": {
+    "title": "Panel",
+    "loading": "Cargando tu panel",
+    "fy": "Ejercicio {fy}",
+    "fySelect": "Ejercicio fiscal",
+    "refresh": "Actualizar cifras",
+    "greeting": {
+      "morning": "Buenos días",
+      "afternoon": "Buenas tardes",
+      "evening": "Buenas noches",
+      "morningName": "Buenos días, {name}",
+      "afternoonName": "Buenas tardes, {name}",
+      "eveningName": "Buenas noches, {name}"
+    },
+    "common": {
+      "open": "Abrir",
+      "viewAll": "Ver todo",
+      "cancel": "Cancelar"
+    },
+    "error": {
+      "title": "No se pudo cargar el panel",
+      "description": "Tus datos están a salvo. Revisa tu conexión e inténtalo de nuevo.",
+      "retry": "Reintentar",
+      "stale": "No se pudo actualizar. Estas son las cifras de la última carga correcta."
+    },
+    "actions": {
+      "label": "Acciones rápidas",
+      "newInvoice": "Nueva factura",
+      "recordExpense": "Registrar gasto",
+      "newProposal": "Nueva propuesta",
+      "addClient": "Añadir cliente",
+      "newRetainer": "Nuevo abono recurrente",
+      "importBank": "Importar extracto bancario"
+    },
+    "ask": {
+      "label": "Pregunta sobre tu negocio",
+      "placeholder": "Pregunta sobre tu negocio…",
+      "send": "Preguntar",
+      "notConnected": "El asistente necesita una clave de IA para poder responder.",
+      "connect": "Añádela en Ajustes",
+      "suggestion": {
+        "owed": "¿Qué clientes me deben más?",
+        "overdue": "Muestra facturas vencidas hace más de 30 días",
+        "spend": "¿En qué gasté más este trimestre?",
+        "cash": "Resume mi flujo de caja",
+        "tax": "¿Qué plazos fiscales se acercan?"
+      }
+    },
+    "demo": {
+      "title": "Estás explorando un espacio de demostración",
+      "progress": "{done} de {total} exploradas",
+      "hint": "Abre tres áreas para ver cómo encajan las piezas y luego empieza con tu propio negocio.",
+      "step": {
+        "proposal": "Abrir propuestas",
+        "tax": "Abrir impuestos",
+        "invoice": "Abrir facturas"
+      }
+    },
+    "setup": {
+      "title": "Termina la configuración",
+      "progress": "{done} de {total} completados",
+      "next": "Siguiente: {step}",
+      "continue": "Continuar",
+      "seeAll": "Ver todos los pasos",
+      "done": "Hecho",
+      "dialogTitle": "Configuración del espacio",
+      "dialogDescription": "Completa estos pasos para enviar facturas y cobrar sin salir de la aplicación.",
+      "step": {
+        "profile": {
+          "title": "Añade los datos de tu empresa",
+          "hint": "El nombre, la dirección y el NIF aparecen en cada factura."
+        },
+        "client": {
+          "title": "Añade tu primer cliente",
+          "hint": "A quién vas a facturar."
+        },
+        "invoice": {
+          "title": "Envía tu primera factura",
+          "hint": "Créala, envíala y sigue cuándo se paga."
+        },
+        "payments": {
+          "title": "Conecta los pagos en línea",
+          "hint": "Permite que los clientes paguen con tarjeta desde la factura."
+        },
+        "email": {
+          "title": "Conecta tu correo",
+          "hint": "Envía facturas y recordatorios desde tu propia dirección."
+        }
+      }
+    },
+    "locked": {
+      "title": "No incluido en tu rol",
+      "financeTitle": "Finanzas",
+      "accounting": "Los ingresos, cobros pendientes y cifras contables son visibles para miembros con acceso contable. Pídeselo a un administrador si lo necesitas."
+    },
+    "kpi": {
+      "revenue": "Ingresos facturados",
+      "outstanding": "Pendiente de cobro",
+      "expenses": "Gastos",
+      "net": "Neto",
+      "vsLastMonth": "este mes frente al anterior",
+      "collected": "{amount} cobrado",
+      "approvedSpend": "Gasto aprobado este año",
+      "overdue": "{amount} vencido · {count, plural, one {# factura} other {# facturas}}",
+      "noneOverdue": "{count, plural, one {# factura abierta} other {# facturas abiertas}}, ninguna vencida",
+      "nothingOwed": "No te deben nada",
+      "margin": "{percent}% de margen",
+      "netHint": "Ingresos menos gastos"
+    },
+    "stat": {
+      "mrr": "Recurrente mensual",
+      "arr": "{amount} al año",
+      "estimatedTax": "Impuesto estimado",
+      "estimatedTaxHint": "Sobre lo facturado este año",
+      "liquidAssets": "Activos líquidos",
+      "liquidAssetsHint": "Inversiones registradas",
+      "reconciled": "Libros conciliados",
+      "noBankFeed": "Importa un extracto bancario"
+    },
+    "trend": {
+      "title": "Entradas y salidas",
+      "description": "Ingresos frente a gastos, {fy}",
+      "viewCash": "Entradas y salidas",
+      "viewRecurring": "Recurrente",
+      "revenue": "Ingresos",
+      "expenses": "Gastos",
+      "recurring": "Ingresos recurrentes",
+      "recurringNow": "Ingresos recurrentes este mes",
+      "emptyTitle": "Sin facturación en {fy}",
+      "emptyHint": "Las facturas con fecha en este ejercicio aparecerán aquí.",
+      "emptyRecurringTitle": "Aún no hay ingresos recurrentes",
+      "emptyRecurringHint": "Los abonos recurrentes facturan a los clientes automáticamente según un calendario."
+    },
+    "attention": {
+      "title": "Requiere atención",
+      "description": "Lo más urgente primero",
+      "clearTitle": "Todo al día",
+      "clearHint": "No hay nada vencido, sin conciliar ni pendiente de ti.",
+      "violations": {
+        "title": "{count, plural, one {# incidencia contable crítica} other {# incidencias contables críticas}}",
+        "detail": "Revísalas antes de cerrar los libros"
+      },
+      "overdue": {
+        "title": "{count, plural, one {# factura vencida} other {# facturas vencidas}}",
+        "detail": "{amount} por cobrar"
+      },
+      "imports": {
+        "title": "{count, plural, one {# importación fallida} other {# importaciones fallidas}}",
+        "detail": "Corrígelas y repítelas para que las cifras estén completas"
+      },
+      "proposals": {
+        "title": "{count, plural, one {# propuesta aceptada por facturar} other {# propuestas aceptadas por facturar}}",
+        "detail": "Trabajo ganado que aún no se ha facturado"
+      },
+      "bank": {
+        "title": "{count, plural, one {# movimiento bancario por conciliar} other {# movimientos bancarios por conciliar}}",
+        "detail": "Concilia para mantener los libros exactos"
+      },
+      "stock": {
+        "title": "{count, plural, one {# producto con poco stock} other {# productos con poco stock}}",
+        "detail": "En el stock de seguridad o por debajo"
+      },
+      "tasks": {
+        "title": "{count, plural, one {# seguimiento vence esta semana} other {# seguimientos vencen esta semana}}",
+        "detail": "Abre el embudo para gestionarlos"
+      }
+    },
+    "receivables": {
+      "title": "Cuentas por cobrar",
+      "description": "Lo que deben los clientes, según el retraso",
+      "openCollections": "Cobros",
+      "openInvoices": "Facturas",
+      "emptyTitle": "No hay importes pendientes",
+      "emptyHint": "Todas las facturas enviadas están pagadas.",
+      "chaseFirst": "Reclamar primero",
+      "daysOverdue": "{count, plural, one {# día de retraso} other {# días de retraso}}",
+      "dueToday": "Vence hoy",
+      "dueIn": "{count, plural, one {Vence en # día} other {Vence en # días}}",
+      "bucket": {
+        "not_due": "Aún no vencido",
+        "1_30": "1–30 días de retraso",
+        "31_60": "31–60 días de retraso",
+        "61_plus": "Más de 60 días de retraso"
+      }
+    },
+    "agenda": {
+      "title": "Próximamente",
+      "description": "Próximos 14 días",
+      "retainers": "Abonos recurrentes",
+      "today": "Hoy",
+      "tomorrow": "Mañana",
+      "inDays": "En {count} días",
+      "emptyTitle": "Nada programado",
+      "emptyHint": "Aquí aparecerán las facturas que vencen, la facturación recurrente y las declaraciones fiscales.",
+      "emptyAction": "Crear un abono recurrente",
+      "kind": {
+        "invoice_due": "Vence la factura",
+        "retainer_billing": "Facturación recurrente",
+        "tax_return": "Vence la declaración"
+      }
+    },
+    "cash": {
+      "title": "Previsión de caja",
+      "description": "Próximas 13 semanas",
+      "projected": "Saldo previsto",
+      "now": "{amount} hoy",
+      "lowest": "Punto más bajo",
+      "confidence": "Confianza",
+      "confidenceHint": "Según el historial de pagos",
+      "errorTitle": "Previsión no disponible",
+      "errorHint": "Abre Flujo de caja para generarla de nuevo."
+    },
+    "sales": {
+      "title": "Propuestas",
+      "description": "Este ejercicio",
+      "winRate": "{percent}% de éxito este año",
+      "stage": {
+        "draft": "Borrador",
+        "sent": "Enviada",
+        "viewed": "Vista",
+        "accepted": "Aceptada",
+        "invoiced": "Facturada"
+      },
+      "declined": "{count} rechazadas",
+      "readyToInvoice": "{count} listas para facturar",
+      "emptyTitle": "Sin propuestas este año",
+      "emptyHint": "Envía un presupuesto y conviértelo en factura cuando lo acepten."
+    },
+    "shop": {
+      "title": "Tienda en línea",
+      "description": "Vende servicios y productos desde una página pública",
+      "published": "{count, plural, one {# artículo publicado} other {# artículos publicados}}",
+      "revenueThisMonth": "Ingresos este mes",
+      "orders30d": "Pedidos, 30 días",
+      "vsPrior30d": "frente a los 30 días anteriores",
+      "orderSplit": "{paid} pagados · {pending} pendientes · {failed} fallidos · {percent}% pagados",
+      "noOrders": "Aún no hay pedidos. Comparte el enlace de tu tienda para conseguir el primero.",
+      "topProduct": "Más vendido",
+      "offTitle": "El módulo de tienda está desactivado",
+      "offHint": "Actívalo para recibir pedidos y pagos en línea.",
+      "enable": "Activar tienda",
+      "enabled": "Tienda activada",
+      "enableFailed": "No se pudo activar la tienda. Puede que no tengas permiso.",
+      "notLiveTitle": "Tu tienda no está publicada",
+      "notLiveHint": "Publícala para empezar a recibir pedidos.",
+      "setUp": "Configurar tienda"
+    },
+    "ops": {
+      "title": "Inventario",
+      "description": "Stock y compras",
+      "lowStock": "Poco stock",
+      "openOrders": "Pedidos abiertos",
+      "openTasks": "Tareas abiertas",
+      "blocked": "{count, plural, one {# tarea bloqueada} other {# tareas bloqueadas}}",
+      "emptyTitle": "Aún no se controla el stock",
+      "emptyHint": "Añade productos para ver existencias, alertas de reposición y pedidos de compra.",
+      "emptyAction": "Abrir inventario"
+    },
+    "books": {
+      "title": "Libros y cumplimiento",
+      "description": "Comprobaciones contables y preparación fiscal",
+      "openTax": "Impuestos",
+      "passed": "Comprobaciones contables superadas",
+      "needsReview": "La contabilidad necesita revisión",
+      "notRun": "Contabilidad aún sin comprobar",
+      "lastChecked": "Comprobado {when}",
+      "neverChecked": "Se ejecuta tras tus primeros asientos",
+      "violations": "Incidencias",
+      "taxBlockers": "Bloqueos",
+      "taxOverrides": "Ajustes",
+      "criticalBlockers": "{count, plural, one {# bloqueo crítico antes de presentar} other {# bloqueos críticos antes de presentar}}"
+    },
+    "invoices": {
+      "title": "Facturas recientes",
+      "description": "Última facturación, con seguimiento en un toque",
+      "col": {
+        "invoice": "Factura",
+        "client": "Cliente",
+        "date": "Fecha",
+        "status": "Estado",
+        "amount": "Importe",
+        "actions": "Acciones"
+      },
+      "status": {
+        "paid": "Pagada",
+        "partial": "Pago parcial",
+        "overdue": "Vencida",
+        "pending": "Pendiente de pago",
+        "void": "Anulada"
+      },
+      "recordPayment": "Registrar pago",
+      "resend": "Reenviar la factura {invoice} por correo",
+      "resent": "Factura {invoice} enviada por correo",
+      "resendFailed": "No se pudo enviar el correo. Revisa la configuración de correo.",
+      "download": "Descargar la factura {invoice} en PDF",
+      "emptyTitle": "Aún no hay facturas",
+      "emptyHint": "Crea tu primera factura para empezar a seguir tus ingresos."
+    },
+    "activity": {
+      "title": "Actividad",
+      "description": "Últimas acciones en este espacio",
+      "failed": "Falló",
+      "emptyTitle": "Aún no hay actividad",
+      "emptyHint": "La facturación, los pagos y las importaciones se registran aquí a medida que ocurren."
+    },
+    "payment": {
+      "title": "Registrar pago",
+      "description": "Factura {invoice} · {client}",
+      "billed": "Facturado",
+      "received": "Recibido",
+      "remaining": "Restante",
+      "amount": "Importe recibido ({currency})",
+      "amountError": "Introduce un importe entre 0 y {amount}.",
+      "date": "Fecha de cobro",
+      "submit": "Registrar pago",
+      "recorded": "Pago registrado en {invoice}",
+      "failed": "No se pudo registrar el pago. Inténtalo de nuevo."
+    }
   }
 }

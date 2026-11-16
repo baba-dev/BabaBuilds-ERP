@@ -7,10 +7,10 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { INVOICE_STATUS } from "@/lib/invoice-status";
 import { serializeMoney, toDecimal } from "@/lib/money";
-import {
-  getInvoiceBilledAmount,
-  sumInvoiceBilledAmount,
-} from "@/lib/invoice/totals";
+import { billedInBase } from "@/lib/invoices/summary";
+import { effectiveTotal } from "@/lib/invoices/serialize";
+import { buildReceivablesSnapshot } from "@/lib/dashboard/attention-receivables";
+import { countUrgentItems, redactDashboardPayload } from "@/lib/dashboard/permissions";
 import { estimateTax } from "@/lib/tax/engine";
 import { getCurrentFinancialYear } from "@/lib/financial-year";
 import { getTaxReadinessSummary } from "@/lib/tax/return-prep";
@@ -68,7 +68,7 @@ async function buildDashboardPayload(
   workspaceId: string,
   userId: string | null,
   fy: string,
-  options: { canViewFinance?: boolean; segment?: string | null } = {},
+  _options: { segment?: string | null } = {},
 ) {
   const queryTimingsMs: Record<string, number> = {};
 
@@ -104,13 +104,13 @@ async function buildDashboardPayload(
   };
 
   const now = new Date();
-  const attentionStart = new Date(now);
-  attentionStart.setDate(now.getDate() - 365); // Bound attention work to last year for scale.
   const thirtyDaysBack = new Date(now);
   thirtyDaysBack.setDate(now.getDate() - 30);
 
   const sevenDaysOut = new Date(now);
   sevenDaysOut.setDate(now.getDate() + 7);
+  const fourteenDaysOut = new Date(now);
+  fourteenDaysOut.setDate(now.getDate() + 14);
 
   const sixtyDaysBack = new Date(now);
   sixtyDaysBack.setDate(now.getDate() - 60);
@@ -119,8 +119,6 @@ async function buildDashboardPayload(
   const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const fyRange = getFyDateRange(fy);
-
-  const { canViewFinance = true } = options;
 
   const canViewTaxReadiness =
     Boolean(userId) &&
@@ -152,6 +150,7 @@ async function buildDashboardPayload(
     investmentAggregate,
     expenses,
     bankTransactionGroups,
+    clientCount,
   ] = await Promise.all([
     timed("workspace.core", () =>
       prisma.workspace.findUnique({
@@ -180,6 +179,7 @@ async function buildDashboardPayload(
         prisma.businessProfile.findUnique({
           where: { workspaceId },
           select: {
+            companyName: true,
             razorpayKeyId: true,
             stripePublishableKey: true,
             smtpHost: true,
@@ -231,6 +231,8 @@ async function buildDashboardPayload(
           invoiceDate: true,
           totalAmount: true,
           grandTotal: true,
+          baseGrandTotal: true,
+          exchangeRate: true,
           amountReceived: true,
         },
         orderBy: { invoiceDate: "asc" },
@@ -238,75 +240,25 @@ async function buildDashboardPayload(
     ),
 
     timed("invoices.attention_buckets", async () => {
-      // Avoid pulling all invoices into memory at realistic scale.
-      // We only need aging buckets and counts for OPEN invoices.
-      // Approximate "outstanding invoice count" as open invoice count (matches previous semantics for dashboard).
+      // Every open invoice, whatever its financial year: money owed does not expire with the FY.
       const openInvoices = await prisma.invoice.findMany({
-        where: {
-          workspaceId,
-          status: { notIn: ["PAID", "VOID"] },
-          invoiceDate: { gte: attentionStart },
-        },
+        where: { workspaceId, status: { notIn: ["PAID", "VOID"] } },
         select: {
+          id: true,
+          invoiceNumber: true,
+          clientName: true,
           invoiceDate: true,
+          dueDate: true,
           totalAmount: true,
           grandTotal: true,
           amountReceived: true,
+          exchangeRate: true,
         },
+        orderBy: { invoiceDate: "desc" },
+        take: 5000,
       });
 
-      const buckets = {
-        current: new Prisma.Decimal(0),
-        mid: new Prisma.Decimal(0),
-        late: new Prisma.Decimal(0),
-      };
-
-      for (const invoice of openInvoices) {
-        const outstanding = Prisma.Decimal.max(
-          new Prisma.Decimal(0),
-          getInvoiceBilledAmount(invoice).minus(
-            new Prisma.Decimal(Number(invoice.amountReceived ?? 0)),
-          ),
-        );
-        if (outstanding.equals(0)) continue;
-        const ageDays = Math.max(
-          0,
-          Math.floor(
-            (now.getTime() - new Date(invoice.invoiceDate).getTime()) /
-              (1000 * 60 * 60 * 24),
-          ),
-        );
-        if (ageDays <= 30) buckets.current = buckets.current.plus(outstanding);
-        else if (ageDays <= 60) buckets.mid = buckets.mid.plus(outstanding);
-        else buckets.late = buckets.late.plus(outstanding);
-      }
-
-      // Counts for attention cards: overdue = >30 days old, outstanding = any open with balance.
-      // Keep the same function signature expectations by returning a minimal "rows" array.
-      // We do NOT return invoices; we return computed buckets + counts.
-      const outstandingReceivables = openInvoices.reduce((count, inv) => {
-        const outstanding = Prisma.Decimal.max(
-          new Prisma.Decimal(0),
-          getInvoiceBilledAmount(inv).minus(
-            new Prisma.Decimal(Number(inv.amountReceived ?? 0)),
-          ),
-        );
-        return outstanding.equals(0) ? count : count + 1;
-      }, 0);
-      const overdueReceivables = openInvoices.reduce((count, inv) => {
-        const outstanding = Prisma.Decimal.max(
-          new Prisma.Decimal(0),
-          getInvoiceBilledAmount(inv).minus(
-            new Prisma.Decimal(Number(inv.amountReceived ?? 0)),
-          ),
-        );
-        if (outstanding.equals(0)) return count;
-        const dueDate = new Date(inv.invoiceDate);
-        dueDate.setDate(dueDate.getDate() + 30);
-        return dueDate < now ? count + 1 : count;
-      }, 0);
-
-      return { buckets, overdueReceivables, outstandingReceivables };
+      return buildReceivablesSnapshot(openInvoices, now);
     }),
 
     safeTimed("invoices.recent", [], () =>
@@ -314,7 +266,20 @@ async function buildDashboardPayload(
         where: { workspaceId },
         orderBy: { invoiceDate: "desc" },
         take: 6,
-        include: { client: true },
+        select: {
+          id: true,
+          invoiceNumber: true,
+          invoiceDate: true,
+          dueDate: true,
+          clientName: true,
+          clientId: true,
+          status: true,
+          currency: true,
+          totalAmount: true,
+          grandTotal: true,
+          amountReceived: true,
+          pdfPath: true,
+        },
       }),
     ),
 
@@ -345,6 +310,12 @@ async function buildDashboardPayload(
         _count: { _all: true },
       }),
     ),
+
+    timed("clients.count", () =>
+      prisma.client.count({
+        where: { workspaceId, isWalkIn: false, archivedAt: null },
+      }),
+    ),
   ]);
 
   const [
@@ -363,6 +334,10 @@ async function buildDashboardPayload(
       prisma.retainer.findMany({
         where: { workspaceId, status: "ACTIVE" },
         select: {
+          id: true,
+          name: true,
+          serviceName: true,
+          client: { select: { name: true } },
           items: { select: { quantity: true, unitPrice: true } },
           frequency: true,
           exchangeRate: true,
@@ -424,9 +399,11 @@ async function buildDashboardPayload(
 
     timed("products.low_stock", () =>
       prisma.product.count({
+        // Same rule as the Inventory Hub: at or below the product's own safety stock.
         where: {
           workspaceId,
-          OR: [{ status: "LOW_STOCK" }, { currentStock: { lte: 5 } }],
+          archivedAt: null,
+          currentStock: { lte: prisma.product.fields.safetyStock },
         },
       }),
     ),
@@ -561,7 +538,6 @@ async function buildDashboardPayload(
     fileImportFailures,
     activities,
     notifications,
-    pendingOrderAgingBuckets,
     taxReadinessSummary,
   ] = await Promise.all([
     timed("tax.overrides", () =>
@@ -607,40 +583,6 @@ async function buildDashboardPayload(
         )
       : Promise.resolve(0),
 
-    timed("orders.pending_buckets", async () => {
-      // Avoid pulling all orders into memory; we only need pending/failed aging buckets.
-      const pendingOrders = await prisma.shopOrder.findMany({
-        where: {
-          workspaceId,
-          status: { in: ["PENDING", "FAILED"] },
-          createdAt: { gte: attentionStart },
-        },
-        select: { amount: true, createdAt: true },
-      });
-
-      const buckets = {
-        current: new Prisma.Decimal(0),
-        mid: new Prisma.Decimal(0),
-        late: new Prisma.Decimal(0),
-      };
-
-      for (const order of pendingOrders) {
-        const ageDays = Math.max(
-          0,
-          Math.floor(
-            (now.getTime() - new Date(order.createdAt).getTime()) /
-              (1000 * 60 * 60 * 24),
-          ),
-        );
-        const outstanding = toDecimal(order.amount);
-        if (ageDays <= 30) buckets.current = buckets.current.plus(outstanding);
-        else if (ageDays <= 60) buckets.mid = buckets.mid.plus(outstanding);
-        else buckets.late = buckets.late.plus(outstanding);
-      }
-
-      return buckets;
-    }),
-
     safeTimed(
       "tax.readiness_summary",
       {
@@ -657,18 +599,18 @@ async function buildDashboardPayload(
     ),
   ]);
 
-  const billedRevenue = canViewFinance
-    ? sumInvoiceBilledAmount(invoices)
-    : new Prisma.Decimal(0);
+  // Invoices can be raised in any currency; every figure below is in the workspace base currency.
+  const billedRevenue = invoices.reduce(
+    (sum, inv) => sum.plus(billedInBase(inv)),
+    new Prisma.Decimal(0),
+  );
 
   const expensesTotal = expenses.reduce(
     (sum, row) => sum.plus(toDecimal(row.amount)),
     new Prisma.Decimal(0),
   );
 
-  const liquidAssets = canViewFinance
-    ? toDecimal(investmentAggregate._sum.amount ?? 0)
-    : new Prisma.Decimal(0);
+  const liquidAssets = toDecimal(investmentAggregate._sum.amount ?? 0);
 
   const shopOrderByStatus = shopOrderStatusGroups.reduce<
     Record<string, number>
@@ -681,31 +623,36 @@ async function buildDashboardPayload(
   const paidOrders = (shopOrderByStatus.PAID ?? 0) + (shopOrderByStatus.SHIPPED ?? 0) + (shopOrderByStatus.FULFILLED ?? 0);
   const pendingOrders = shopOrderByStatus.PENDING ?? 0;
   const failedOrders = shopOrderByStatus.FAILED ?? 0;
-  const pendingOrdersCount = pendingOrders + failedOrders;
 
-  const receivables = (
-    canViewFinance
-      ? invoices.reduce((sum, inv) => {
-          const billed = getInvoiceBilledAmount(inv);
-          const received = new Prisma.Decimal(Number(inv.amountReceived ?? 0));
-          return sum.plus(
-            Prisma.Decimal.max(new Prisma.Decimal(0), billed.minus(received)),
-          );
-        }, new Prisma.Decimal(0))
-      : new Prisma.Decimal(0)
-  ).plus(pendingOrdersCount > 0 ? toDecimal(0) : new Prisma.Decimal(0));
+  const collected = invoices.reduce(
+    (sum, inv) =>
+      sum.plus(
+        Prisma.Decimal.min(effectiveTotal(inv), toDecimal(inv.amountReceived ?? 0)).mul(
+          toDecimal(inv.exchangeRate),
+        ),
+      ),
+    new Prisma.Decimal(0),
+  );
+  const receivables = invoices.reduce(
+    (sum, inv) =>
+      sum.plus(
+        Prisma.Decimal.max(
+          new Prisma.Decimal(0),
+          effectiveTotal(inv).minus(toDecimal(inv.amountReceived ?? 0)),
+        ).mul(toDecimal(inv.exchangeRate)),
+      ),
+    new Prisma.Decimal(0),
+  );
 
   const presumptiveIncome = billedRevenue.mul(0.5);
-  const taxEstimate = canViewFinance
-    ? estimateTax({
-        countryCode: workspace?.countryCode ?? "IN",
-        revenue: presumptiveIncome,
-        deductions: new Prisma.Decimal(0),
-        serviceScope: "dashboard_summary",
-        customerScope: "workspace",
-        asOfDate: now,
-      })
-    : { amount: serializeMoney(0) };
+  const taxEstimate = estimateTax({
+    countryCode: workspace?.countryCode ?? "IN",
+    revenue: presumptiveIncome,
+    deductions: new Prisma.Decimal(0),
+    serviceScope: "dashboard_summary",
+    customerScope: "workspace",
+    asOfDate: now,
+  });
 
   // Monthly recurring revenue: per-cycle amount normalised to a month and converted to the base currency.
   const retainerMonthly = (ret: (typeof retainers)[number]) =>
@@ -731,8 +678,8 @@ async function buildDashboardPayload(
     totalBankTransactions,
   );
 
-  const { overdueReceivables, outstandingReceivables } =
-    openInvoiceAgingBuckets;
+  const receivablesSnapshot = openInvoiceAgingBuckets;
+  const { overdueReceivables, outstandingReceivables } = receivablesSnapshot;
 
   const retainersDueSoon = retainers.filter(
     (ret) => ret.nextBillingDate >= now && ret.nextBillingDate <= sevenDaysOut,
@@ -751,7 +698,6 @@ async function buildDashboardPayload(
   const blockedTasks = blockedTaskCount;
 
   const criticalViolations = criticalViolationCount;
-  const complianceIssues = violationCount + (criticalViolations > 0 ? 1 : 0);
 
   const funnel = {
     draft: proposalCounts.DRAFT ?? 0,
@@ -848,7 +794,7 @@ async function buildDashboardPayload(
   const monthlySeries = buildMonthlyChartBuckets({
     revenueRows: invoices.map((inv) => ({
       date: new Date(inv.invoiceDate),
-      value: getInvoiceBilledAmount(inv),
+      value: billedInBase(inv),
     })),
     expenseRows: expenses.map((expense) => ({
       date: new Date(expense.date),
@@ -896,66 +842,73 @@ async function buildDashboardPayload(
     { healthy: 0, partial: 0, missing: 0 },
   );
 
-  const setupSignals = [
-    workspace?.isSetupComplete,
-    integrationSummary.healthy >= 2,
-    invoices.length > 0,
-    profile?.shopEnabled,
-    taxOverrides > 0 || taxAudits.length > 0,
-  ].filter(Boolean).length;
-
-  const setupCompletion = asPct(setupSignals, 5);
-
-  const attentionCards = [
-    {
-      id: "overdue",
-      title: "Overdue receivables",
-      value: overdueReceivables,
-      tone: "critical",
-      href: "/income",
-      helper: "Follow up on overdue balances to protect cash flow.",
-    },
-    {
-      id: "bank",
-      title: "Unreconciled transactions",
-      value: unreconciledTransactions,
-      tone: "warning",
-      href: "/reconciliation",
-      helper: "Match transactions to keep books accurate.",
-    },
-    {
-      id: "proposals",
-      title: "Accepted, awaiting invoice",
-      value: acceptedUninvoicedProposals,
-      tone: "warning",
-      href: "/proposals",
-      helper: "Convert accepted proposals into billable invoices.",
-    },
-    {
-      id: "tasks",
-      title: "Urgent tasks",
-      value: urgentTasks,
-      tone: "info",
-      href: "/admin",
-      helper: "Handle due tasks to avoid operational blockers.",
-    },
-  ] as const;
-
-  const receivablesAgingBuckets = {
-    current: openInvoiceAgingBuckets.buckets.current.plus(
-      pendingOrderAgingBuckets.current,
-    ),
-    mid: openInvoiceAgingBuckets.buckets.mid.plus(pendingOrderAgingBuckets.mid),
-    late: openInvoiceAgingBuckets.buckets.late.plus(
-      pendingOrderAgingBuckets.late,
-    ),
-  };
+  // One checklist drives both the progress figure and the "what is left" list, so they can never disagree.
+  const setupSteps = [
+    { id: "profile", done: Boolean(workspace?.isSetupComplete && profile?.companyName) },
+    { id: "client", done: clientCount > 0 },
+    { id: "invoice", done: recentInvoices.length > 0 },
+    { id: "payments", done: integrationReadiness.payment.status === "healthy" },
+    { id: "email", done: integrationReadiness.smtp.status === "healthy" },
+  ];
+  const setupCompletion = asPct(
+    setupSteps.filter((step) => step.done).length,
+    setupSteps.length,
+  );
 
   const receivablesAging = [
-    { bucket: "0-30d", value: serializeMoney(receivablesAgingBuckets.current) },
-    { bucket: "31-60d", value: serializeMoney(receivablesAgingBuckets.mid) },
-    { bucket: "61+d", value: serializeMoney(receivablesAgingBuckets.late) },
+    { bucket: "not_due", value: serializeMoney(receivablesSnapshot.aging.notDue) },
+    { bucket: "1_30", value: serializeMoney(receivablesSnapshot.aging.days1to30) },
+    { bucket: "31_60", value: serializeMoney(receivablesSnapshot.aging.days31to60) },
+    { bucket: "61_plus", value: serializeMoney(receivablesSnapshot.aging.days61plus) },
   ];
+
+  const retainerCycleAmount = (ret: (typeof retainers)[number]) =>
+    (ret.items?.reduce((acc: number, i) => acc + i.quantity * Number(i.unitPrice), 0) || 0) *
+    Number(ret.exchangeRate);
+
+  const nextTaxReturn = taxReadinessSummary.nextReturn as
+    | { id: string; formCode: string; periodCode: string; dueDate: Date | string | null; status: string }
+    | null;
+  const nextTaxDue = nextTaxReturn?.dueDate ? new Date(nextTaxReturn.dueDate) : null;
+
+  // What is coming in the next two weeks, across modules, soonest first.
+  const upcoming = [
+    ...receivablesSnapshot.dueSoon.map((item) => ({
+      kind: "invoice_due" as const,
+      id: item.id,
+      title: item.clientName,
+      reference: item.invoiceNumber,
+      date: item.dueDate.toISOString(),
+      amount: serializeMoney(item.outstanding),
+      href: `/income?invoice=${item.id}`,
+    })),
+    ...retainers
+      .filter((ret) => ret.nextBillingDate >= now && ret.nextBillingDate <= fourteenDaysOut)
+      .map((ret) => ({
+        kind: "retainer_billing" as const,
+        id: ret.id,
+        title: ret.client?.name ?? "",
+        reference: ret.name ?? ret.serviceName ?? "",
+        date: ret.nextBillingDate.toISOString(),
+        amount: serializeMoney(retainerCycleAmount(ret)),
+        href: `/retainers?retainer=${ret.id}`,
+      })),
+    ...(nextTaxReturn && nextTaxDue && nextTaxDue >= now && nextTaxReturn.status !== "FILED"
+      ? [
+          {
+            kind: "tax_return" as const,
+            id: nextTaxReturn.id,
+            title: nextTaxReturn.formCode,
+            reference: nextTaxReturn.periodCode,
+            date: nextTaxDue.toISOString(),
+            amount: null,
+            href: "/tax",
+          },
+        ]
+      : []),
+  ]
+    .sort((x, y) => x.date.localeCompare(y.date))
+    .slice(0, 6);
 
   const healthWarnings = [
     ...(integrationSummary.missing > 0
@@ -1038,12 +991,29 @@ async function buildDashboardPayload(
     href: moduleHref(moduleKey),
   }));
 
-  return {
+  const attentionCounts = {
+    overdueReceivables,
+    unreconciledTransactions,
+    acceptedUninvoicedProposals,
+    urgentTasks,
+    criticalNotifications: notifications,
+    criticalViolations,
+    failedImports: fileImportFailures,
+    lowStock: lowStockProducts,
+  };
+
+  const currentMonthId = new Intl.DateTimeFormat("en-CA", {
+    timeZone: bucketTimeZone,
+    year: "numeric",
+    month: "2-digit",
+  }).format(now);
+
+  const payload = {
     health: {
       setupCompletion,
-      onboardingProgress: setupCompletion,
-      setupComplete: Boolean(workspace?.isSetupComplete),
-      subscriptionStatus: workspace?.subscriptionStatus ?? "FREE",
+      setupComplete: setupSteps.every((step) => step.done),
+      setupSteps,
+      subscriptionState: workspace?.subscriptionStatus ?? "FREE",
       trialEndsAt: workspace?.subscriptionEndsAt?.toISOString() ?? null,
       planTier: workspace?.planTier ?? "FREE",
       integrationReadiness: {
@@ -1054,33 +1024,40 @@ async function buildDashboardPayload(
     },
 
     attention: {
-      totalUrgent:
-        attentionCards.reduce((sum, card) => sum + card.value, 0) +
-        criticalViolations +
-        notifications,
-      overdueInvoices: overdueReceivables,
-      pendingInvoices: outstandingReceivables,
-      overdueReceivables,
+      totalUrgent: countUrgentItems(attentionCounts),
+      ...attentionCounts,
       outstandingReceivables,
-      unreconciledTransactions,
+      dueSoonReceivables: receivablesSnapshot.dueSoonReceivables,
       retainersDueSoon,
-      acceptedUninvoicedProposals,
-      urgentTasks,
-      criticalNotifications: notifications,
-      complianceIssues,
-      failedImports: fileImportFailures,
-      cards: attentionCards,
+      complianceIssues: violationCount,
+    },
+
+    receivables: {
+      outstandingAmount: serializeMoney(receivablesSnapshot.outstandingAmount),
+      overdueAmount: serializeMoney(receivablesSnapshot.overdueAmount),
+      aging: receivablesAging,
+      watchlist: receivablesSnapshot.watchlist.map((item) => ({
+        id: item.id,
+        invoiceNumber: item.invoiceNumber,
+        clientName: item.clientName,
+        outstanding: serializeMoney(item.outstanding),
+        dueDate: item.dueDate.toISOString(),
+        daysOverdue: item.daysOverdue,
+      })),
     },
 
     financialPulse: {
       billedRevenue: serializeMoney(billedRevenue),
+      collected: serializeMoney(collected),
       receivables: serializeMoney(receivables),
       expenses: serializeMoney(expensesTotal),
+      netIncome: serializeMoney(billedRevenue.minus(expensesTotal)),
       estimatedTax: taxEstimate.amount,
       liquidAssets: serializeMoney(liquidAssets),
       recurringRevenue: serializeMoney(recurringRevenue),
       arr: serializeMoney(arr),
       reconciliationProgress,
+      bankTransactions: totalBankTransactions,
     },
 
     salesAndShop: {
@@ -1108,7 +1085,7 @@ async function buildDashboardPayload(
       kpiPeriods: salesAndShopKpiPeriods,
       recentShopOrders: recentShopOrders.map((order) => ({
         id: order.id,
-        productName: order.items[0]?.productName ?? "Unknown product",
+        itemSummary: order.items[0]?.productName ?? "",
         buyerName: order.buyerName,
         amount: serializeMoney(order.amount),
         status: order.status,
@@ -1130,7 +1107,6 @@ async function buildDashboardPayload(
       })),
       openTasks: openTaskCount,
       blockedTasks,
-      taxReadiness: taxReadinessSummary,
     },
 
     trust: {
@@ -1144,12 +1120,16 @@ async function buildDashboardPayload(
         source: audit.resolutionSource,
         createdAt: audit.createdAt,
       })),
-      taxReadiness: taxReadinessSummary,
+      taxOpenBlockers: taxReadinessSummary.totalOpenBlockers,
+      taxCriticalBlockers: taxReadinessSummary.openBlockersBySeverity.CRITICAL ?? 0,
     },
+
+    upcoming,
 
     activity: activities.map((item) => ({
       id: item.id,
       action: item.action,
+      entityType: item.entityType ?? null,
       status: item.status,
       createdAt: item.createdAt,
       actor: item.actorEmail ?? null,
@@ -1157,16 +1137,18 @@ async function buildDashboardPayload(
 
     charts: {
       bucketTimeZone,
+      currentMonthId,
       revenueVsExpense: monthlySeries.map((row) => ({
+        monthId: row.monthId,
         name: row.label,
-        revenue: canViewFinance ? serializeMoney(row.revenue) : 0,
+        revenue: serializeMoney(row.revenue),
         expenses: serializeMoney(row.expenses),
       })),
       recurringRevenue: monthlySeries.map((row) => ({
+        monthId: row.monthId,
         name: row.label,
-        mrr: canViewFinance ? serializeMoney(row.mrr) : 0,
+        mrr: serializeMoney(row.mrr),
       })),
-      receivablesAging,
       reconciliation: [
         {
           name: "Bank feed",
@@ -1182,7 +1164,7 @@ async function buildDashboardPayload(
         { stage: "Invoiced", value: funnel.invoiced },
         { stage: "Declined", value: funnel.declined },
       ],
-      orderHealth: [
+      shopOrderHealth: [
         { status: "Paid", value: paidOrders },
         { status: "Pending", value: pendingOrders },
         { status: "Failed", value: failedOrders },
@@ -1190,18 +1172,31 @@ async function buildDashboardPayload(
     },
 
     recentInvoices: recentInvoices.map((invoice) => ({
-      ...invoice,
+      id: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      invoiceDate: invoice.invoiceDate.toISOString(),
+      dueDate: invoice.dueDate ? invoice.dueDate.toISOString() : null,
+      clientName: invoice.clientName,
+      clientId: invoice.clientId,
       status: invoice.status || INVOICE_STATUS.PENDING,
+      currency: invoice.currency,
+      totalAmount: serializeMoney(effectiveTotal(invoice)),
+      amountReceived: serializeMoney(invoice.amountReceived ?? 0),
+      pdfPath: invoice.pdfPath,
     })),
     permissions: {
-      canViewFinance: canViewAccounting,
+      canViewAccounting,
       canViewOperations,
-      canViewSalesShop: canViewSales,
+      canViewSales,
       canViewCharts: canViewAccounting,
       canViewRecentLedger: canViewAccounting,
       canViewTrust: canViewAccounting,
       canRunIntegrityScan: canRunTaxReadiness,
       canManageBilling,
+    },
+    workspace: {
+      name: profile?.companyName || workspace?.name || "",
+      baseCurrency: workspace?.baseCurrency ?? "INR",
     },
     optionalModules,
 
@@ -1211,6 +1206,12 @@ async function buildDashboardPayload(
 
     countryCode: workspace?.countryCode ?? "IN",
   };
+
+  return redactDashboardPayload(payload, {
+    canViewAccounting,
+    canViewSales,
+    canViewOperations,
+  });
 }
 
 export async function GET(request: Request) {
@@ -1266,7 +1267,6 @@ export async function GET(request: Request) {
         }
 
         const payload = await buildDashboardPayload(workspaceId, userId, fy, {
-          canViewFinance: true,
           segment,
         });
 
@@ -1293,7 +1293,6 @@ export async function GET(request: Request) {
     }
 
     const payload = await buildDashboardPayload(workspaceId, userId, fy, {
-      canViewFinance: true,
       segment,
     });
 

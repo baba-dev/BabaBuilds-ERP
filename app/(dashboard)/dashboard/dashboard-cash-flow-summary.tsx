@@ -1,281 +1,105 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
-import { AreaChart, ArrowRight, RefreshCw, ShieldAlert, HandCoins } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useFormat } from "@/hooks/use-format";
-import { dt, dashboardTypography } from "./dashboard-typography";
+import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
+import { Waves } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DashboardModulePromoCard } from "@/components/dashboard/DashboardModulePromoCard";
+import { DASHBOARD_ROUTES } from "./dashboard-routes";
+import { EmptyNote, Panel, PanelLink, Sparkline } from "./dashboard-ui";
 
-type CashFlowHorizonType = "DAILY_30" | "WEEKLY_13" | "MONTHLY_12";
-type CashFlowScenarioTag = "BASE" | "BEST_CASE" | "WORST_CASE";
-
-type SnapshotDetail = {
-  id: string;
-  generatedAt: string;
-  horizonType: CashFlowHorizonType;
-  scenarioTag: CashFlowScenarioTag;
-  openingCash: number | string;
-  closingCash: number | string;
-  confidenceScore: number | null;
-  periods: Array<{ id: string; bucketLabel: string; closingCash: number | string; riskLevel: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" }>;
+type Risk = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+type Forecast = {
+  cashNow: number;
+  closingCash: number;
+  confidence: number | null;
+  periods: Array<{ label: string; closing: number; risk: Risk }>;
+};
+type ForecastResponse = {
+  data?: {
+    kpis: { cashNow: number; closingCash: number; confidence: number | null };
+    scenarios: Array<{ tag: string; periods: Array<{ label: string; closing: number; risk: Risk }> }>;
+  };
 };
 
-function buildQs(horizonType: CashFlowHorizonType, scenarioTag: CashFlowScenarioTag) {
-  const qs = new URLSearchParams();
-  qs.set("horizonType", horizonType);
-  qs.set("scenarioTag", scenarioTag);
-  return qs.toString();
-}
+const HORIZON = "WEEKLY_13";
+const SCENARIO = "BASE";
 
-function deriveCrunch(snapshot: SnapshotDetail | null) {
-  if (!snapshot?.periods?.length) return null;
-  let worst = snapshot.periods[0]!;
-  let min = Number(worst.closingCash ?? 0);
-  for (const p of snapshot.periods) {
-    const c = Number(p.closingCash ?? 0);
-    if (c < min) {
-      min = c;
-      worst = p;
-    }
-  }
-  return { period: worst, minClosing: min };
-}
-
-export function DashboardCashFlowSummary({
-  defaultHorizonType = "WEEKLY_13",
-  defaultScenarioTag = "BASE",
-  className,
-  onModuleEnabled,
-}: {
-  defaultHorizonType?: CashFlowHorizonType;
-  defaultScenarioTag?: CashFlowScenarioTag;
-  className?: string;
-  onModuleEnabled?: () => void;
-}) {
-  const { fCurrency } = useFormat();
-  const [moduleEnabled, setModuleEnabled] = useState<boolean | null>(null);
-  const [snapshot, setSnapshot] = useState<SnapshotDetail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // The live forecast is always current, so there is no stored snapshot to wait for.
-      const res = await fetch(`/api/cash-flow/forecast?horizonType=${defaultHorizonType}&scenarioTag=${defaultScenarioTag}`, { cache: "no-store" });
-      const json = (await res.json().catch(() => null)) as { data?: { generatedAt: string; kpis: { cashNow: number; closingCash: number; confidence: number | null }; scenarios: Array<{ tag: string; periods: Array<{ label: string; closing: number; risk: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" }> }> }; error?: string } | null;
-      if (!res.ok || !json?.data) throw new Error(json?.error ?? "Failed to load cash flow");
-      const d = json.data;
-      const sel = d.scenarios.find((x) => x.tag === defaultScenarioTag) ?? d.scenarios[0];
-      setSnapshot({
-        id: "live", generatedAt: d.generatedAt, horizonType: defaultHorizonType, scenarioTag: defaultScenarioTag, openingCash: d.kpis.cashNow, closingCash: d.kpis.closingCash,
-        confidenceScore: d.kpis.confidence == null ? null : d.kpis.confidence / 100,
-        periods: (sel?.periods ?? []).map((p) => ({ id: p.label, bucketLabel: p.label, closingCash: p.closing, riskLevel: p.risk })),
-      });
-    } catch (e) {
-      console.warn(e);
-      setSnapshot(null);
-      setError(e instanceof Error ? e.message : "Failed to load cash flow");
-    } finally {
-      setLoading(false);
-    }
-  };
+/** Thirteen-week cash outlook from the Cash Flow module: where the balance is heading and its lowest point. */
+export function DashboardCashFlowSummary({ money, reloadKey }: { money: (value: number) => string; reloadKey: number }) {
+  const t = useTranslations("DashboardHome");
+  const [forecast, setForecast] = useState<Forecast | null>(null);
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
-    let active = true;
+    const controller = new AbortController();
+    fetch(`/api/cash-flow/forecast?horizonType=${HORIZON}&scenarioTag=${SCENARIO}`, { cache: "no-store", signal: controller.signal })
+      .then(async (res) => {
+        const json = (await res.json().catch(() => null)) as ForecastResponse | null;
+        if (!res.ok || !json?.data) throw new Error("forecast unavailable");
+        const scenario = json.data.scenarios.find((s) => s.tag === SCENARIO) ?? json.data.scenarios[0];
+        setForecast({
+          cashNow: Number(json.data.kpis.cashNow ?? 0),
+          closingCash: Number(json.data.kpis.closingCash ?? 0),
+          confidence: json.data.kpis.confidence,
+          periods: (scenario?.periods ?? []).map((p) => ({ label: p.label, closing: Number(p.closing ?? 0), risk: p.risk })),
+        });
+        setState("ready");
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setState("error");
+      });
+    return () => controller.abort();
+  }, [reloadKey]);
 
-    const bootstrap = async () => {
-      try {
-        const modulesRes = await fetch("/api/workspace/modules", { cache: "no-store" });
-        const modulesJson = (await modulesRes.json().catch(() => null)) as { modules?: string[] } | null;
-        const enabled = modulesRes.ok && Array.isArray(modulesJson?.modules) && modulesJson.modules.includes("CASH_FLOW");
-        if (!active) return;
-
-        setModuleEnabled(enabled);
-        if (!enabled) {
-          setLoading(false);
-          return;
-        }
-
-        await load();
-      } catch {
-        if (active) {
-          setModuleEnabled(false);
-          setLoading(false);
-        }
-      }
-    };
-
-    void bootstrap();
-
-    return () => {
-      active = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await load();
-    } catch (e) {
-      console.warn(e);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const crunch = useMemo(() => deriveCrunch(snapshot), [snapshot]);
-  const qs = useMemo(() => buildQs(defaultHorizonType, defaultScenarioTag), [defaultHorizonType, defaultScenarioTag]);
-  const generatedAtLabel = useMemo(() => {
-    if (!snapshot?.generatedAt) return null;
-    return format(new Date(snapshot.generatedAt), "dd MMM, HH:mm");
-  }, [snapshot]);
-  const confidenceLabel = snapshot?.confidenceScore == null ? "—" : `${Math.round(snapshot.confidenceScore * 100)}%`;
-
-  if (moduleEnabled === false) {
-    return (
-      <DashboardModulePromoCard
-        moduleKey="CASH_FLOW"
-        label="Cash Flow Forecasting"
-        description="Unlock scenario planning, runway predictions, liquidity alerts, and cash drivers using unified ERP ledger data."
-        icon={HandCoins}
-        features={[
-          "13-week or 12-month visual runway projections",
-          "Risk variance analysis vs actual performance",
-          "Worst-period indicators & scenario tags (best/worst)",
-          "Direct linkage to income & expense commitments"
-        ]}
-        onEnabled={() => {
-          setModuleEnabled(true);
-          void load();
-          if (onModuleEnabled) onModuleEnabled();
-        }}
-        className={className}
-      />
-    );
-  }
+  const lowest = forecast?.periods.length ? forecast.periods.reduce((min, p) => (p.closing < min.closing ? p : min)) : null;
+  const change = forecast ? forecast.closingCash - forecast.cashNow : 0;
+  const lowRisk = lowest ? lowest.risk === "HIGH" || lowest.risk === "CRITICAL" || lowest.closing < 0 : false;
 
   return (
-    <Card
-      className={cn(
-        "group relative overflow-hidden border-zinc-200 dark:border-zinc-800/60 bg-white dark:bg-zinc-950/50 shadow-sm hover:shadow-md transition-all duration-500",
-        className,
-      )}
+    <Panel
+      labelledBy="dash-cash"
+      title={t("cash.title")}
+      description={t("cash.description")}
+      action={<PanelLink href={`${DASHBOARD_ROUTES.cashFlow}?horizonType=${HORIZON}&scenarioTag=${SCENARIO}`}>{t("common.open")}</PanelLink>}
     >
-      <div className="absolute -top-12 -right-12 w-36 h-36 bg-orange-500/5 dark:bg-orange-500/12 rounded-full blur-3xl group-hover:bg-orange-500/10 dark:group-hover:bg-orange-500/20 transition-all duration-700" />
-
-      <div className="relative z-10 p-6 space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center border border-orange-100 dark:border-orange-500/20 shadow-sm">
-              <AreaChart className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-            </div>
-            <div>
-              <p className={dt(dashboardTypography.cardTitle, "leading-tight")}>Cash flow</p>
-              <p className={dt(dashboardTypography.labelUpperStrong)}>
-                {defaultHorizonType.replace("_", " ")} · {defaultScenarioTag.replace("_", " ")}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={onRefresh}
-              disabled={refreshing}
-              className="h-9 w-9 rounded-xl text-zinc-400 hover:text-orange-600 hover:bg-orange-50/60 dark:hover:bg-orange-500/10"
-              aria-label="Refresh cash flow"
-            >
-              <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
-            </Button>
-            <Button size="sm" variant="outline" asChild className="h-9 gap-2">
-              <Link href={`/cash-flow?${qs}`}>
-                Open <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
+      {state === "loading" ? (
+        <div className="space-y-3" aria-hidden>
+          <div className="h-7 w-2/3 animate-pulse rounded-lg bg-muted/70" />
+          <div className="h-9 animate-pulse rounded-lg bg-muted/70" />
+          <div className="h-12 animate-pulse rounded-xl bg-muted/70" />
         </div>
-
-        {loading ? (
-          <div className="space-y-2">
-            <div className="h-4 w-2/3 rounded bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
-            <div className="h-9 w-full rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
+      ) : state === "error" || !forecast ? (
+        <EmptyNote icon={Waves} title={t("cash.errorTitle")} hint={t("cash.errorHint")} />
+      ) : (
+        <div className="space-y-3">
+          <div>
+            <p className="text-[11px] text-muted-foreground">{t("cash.projected")}</p>
+            <p className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
+              <span className="text-[22px] font-semibold leading-tight tracking-tight tabular-nums text-foreground">{money(forecast.closingCash)}</span>
+              <span className={cn("text-xs font-medium tabular-nums", change < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400")}>
+                {change >= 0 ? "+" : "−"}
+                {money(Math.abs(change))}
+              </span>
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{t("cash.now", { amount: money(forecast.cashNow) })}</p>
           </div>
-        ) : error ? (
-          <div className="rounded-2xl border border-rose-200/60 dark:border-rose-900/40 bg-rose-50/40 dark:bg-rose-950/15 p-4">
-            <p className="text-sm font-semibold text-rose-700 dark:text-rose-300">Cash flow unavailable</p>
-            <p className={dt(dashboardTypography.helperXs, "mt-1 text-rose-700/80 dark:text-rose-300/80")}>{error}</p>
-          </div>
-        ) : !snapshot ? (
-          <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-zinc-50/40 dark:bg-zinc-900/20 p-4 flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className={dt(dashboardTypography.cardTitle)}>Generate your first forecast</p>
-              <p className={dt(dashboardTypography.helperXs, "mt-1")}>
-                Unlock runway, crunch windows, alerts, and drivers.
-              </p>
-            </div>
-            <Button size="sm" onClick={onRefresh} disabled={refreshing} className="h-9 gap-2">
-              <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
-              Generate
-            </Button>
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/60 dark:bg-zinc-900/40 p-4">
-                <p className={dt(dashboardTypography.labelUpperStrong)}>Worst window</p>
-                <p className={dt(dashboardTypography.value2xlLight, "mt-2 truncate text-base")}>
-                  {crunch ? crunch.period.bucketLabel : "—"}
-                </p>
-                <p className={dt(dashboardTypography.helperXs, "mt-1 tabular-nums")}>
-                  {crunch ? fCurrency(crunch.minClosing) : "No periods"}
-                </p>
+          <Sparkline values={[forecast.cashNow, ...forecast.periods.map((p) => p.closing)]} className={change < 0 ? "text-rose-500" : "text-emerald-500"} />
+          {lowest ? (
+            <dl className="grid grid-cols-2 gap-2">
+              <div className="min-w-0 rounded-xl bg-muted/50 px-3 py-2.5">
+                <dt className="truncate text-[11px] text-muted-foreground">{t("cash.lowest")}</dt>
+                <dd className={cn("mt-0.5 truncate text-sm font-semibold tabular-nums", lowRisk ? "text-rose-600 dark:text-rose-400" : "text-foreground")}>{money(lowest.closing)}</dd>
+                <dd className="truncate text-[11px] text-muted-foreground">{lowest.label}</dd>
               </div>
-              <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/60 dark:bg-zinc-900/40 p-4">
-                <p className={dt(dashboardTypography.labelUpperStrong)}>Confidence</p>
-                <p className={dt(dashboardTypography.value2xlLight, "mt-2 text-base tabular-nums")}>{confidenceLabel}</p>
-                <p className={dt(dashboardTypography.helperXs, "mt-1")}>
-                  {generatedAtLabel ? `Updated ${generatedAtLabel}` : "—"}
-                </p>
+              <div className="min-w-0 rounded-xl bg-muted/50 px-3 py-2.5">
+                <dt className="truncate text-[11px] text-muted-foreground">{t("cash.confidence")}</dt>
+                <dd className="mt-0.5 truncate text-sm font-semibold tabular-nums text-foreground">{forecast.confidence == null ? "—" : `${Math.round(forecast.confidence)}%`}</dd>
+                <dd className="truncate text-[11px] text-muted-foreground">{t("cash.confidenceHint")}</dd>
               </div>
-            </div>
-
-            <div className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-zinc-50/40 dark:bg-zinc-900/20 p-4">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="h-9 w-9 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-300 flex items-center justify-center border border-amber-500/20">
-                  <ShieldAlert className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className={dt(dashboardTypography.cardTitle, "truncate")}>Go from insight → action</p>
-                  <p className={dt(dashboardTypography.helperXs, "mt-0.5 truncate")}>
-                    Review drivers, commitments, and scenario assumptions in one place.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <Badge variant="outline" className="tabular-nums">
-                  Close {fCurrency(Number(snapshot.closingCash ?? 0))}
-                </Badge>
-                <Button size="sm" variant="outline" asChild className="h-9 gap-2">
-                  <Link href={`/cash-flow?${qs}`}>Alerts</Link>
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </Card>
+            </dl>
+          ) : null}
+        </div>
+      )}
+    </Panel>
   );
 }
-

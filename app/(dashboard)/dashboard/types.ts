@@ -1,17 +1,27 @@
 export type RecentInvoiceRow = {
   id: string;
-  invoiceDate: string | Date;
+  invoiceDate: string;
+  dueDate: string | null;
   invoiceNumber: string;
   clientName: string;
-  billingMonth?: string | null;
+  clientId: string | null;
   status: string;
+  /** Invoice currency; amounts on a row are in this currency, not the workspace base currency. */
+  currency: string;
   totalAmount: number;
-  amountReceived?: number | null;
+  amountReceived: number;
   pdfPath: string;
-  updatedAt?: string | Date | null;
 };
 
 export type IntegrationStatus = "healthy" | "partial" | "missing";
+
+export type SetupStepId = "profile" | "client" | "invoice" | "payments" | "email";
+
+export type AgingBucket = "not_due" | "1_30" | "31_60" | "61_plus";
+
+export type UpcomingKind = "invoice_due" | "retainer_billing" | "tax_return";
+
+export type MonthPoint = { monthId: string; name: string; revenue: number; expenses: number };
 
 export type DashboardData = {
   permissions: {
@@ -24,16 +34,12 @@ export type DashboardData = {
     canRunIntegrityScan: boolean;
     canManageBilling: boolean;
   };
-  optionalModules: Array<{
-    moduleKey: string;
-    label: string;
-    description: string;
-    href: string;
-  }>;
+  workspace: { name: string; baseCurrency: string };
+  optionalModules: Array<{ moduleKey: string; label: string; description: string; href: string }>;
   health: {
     setupCompletion: number;
-    onboardingProgress: number;
     setupComplete: boolean;
+    setupSteps: Array<{ id: SetupStepId; done: boolean }>;
     subscriptionState: string;
     trialEndsAt: string | null;
     planTier: string;
@@ -41,32 +47,48 @@ export type DashboardData = {
       summary: Record<IntegrationStatus, number>;
       integrations: Record<"groq" | "payment" | "smtp" | "shop", { configured: boolean; status: IntegrationStatus }>;
     };
-    complianceWarnings: Array<{ label: string; severity: "info" | "warning" | "critical" }>;
   };
   attention: {
     totalUrgent: number;
-    overdueInvoices: number;
-    pendingInvoices: number;
-    overdueReceivables?: number;
-    outstandingReceivables?: number;
+    overdueReceivables: number;
+    outstandingReceivables: number;
+    dueSoonReceivables: number;
     unreconciledTransactions: number;
     retainersDueSoon: number;
     acceptedUninvoicedProposals: number;
     urgentTasks: number;
     criticalNotifications: number;
+    criticalViolations: number;
     complianceIssues: number;
     failedImports: number;
-    cards: Array<{ id: string; title: string; value: number; tone: "critical" | "warning" | "info"; href?: string; helper: string }>;
+    lowStock: number;
+  };
+  receivables: {
+    outstandingAmount: number;
+    overdueAmount: number;
+    aging: Array<{ bucket: AgingBucket; value: number }>;
+    watchlist: Array<{
+      id: string;
+      invoiceNumber: string;
+      clientName: string;
+      outstanding: number;
+      dueDate: string;
+      daysOverdue: number;
+    }>;
   };
   financialPulse: {
     billedRevenue: number;
+    collected: number;
     receivables: number;
     expenses: number;
+    netIncome: number;
     estimatedTax: number;
     liquidAssets: number;
     recurringRevenue: number;
     arr: number;
     reconciliationProgress: number;
+    /** Bank lines imported so far; 0 means there is nothing to reconcile yet. */
+    bankTransactions: number;
   };
   salesAndShop: {
     proposalFunnel: { draft: number; sent: number; viewed: number; accepted: number; invoiced: number; declined: number };
@@ -82,35 +104,42 @@ export type DashboardData = {
     orderChangeVsPrior30DaysPct: number | null;
     publishedProducts: number;
     topProducts: Array<{ productName: string; orderCount: number; revenue: number }>;
-    kpiPeriods: Record<
-      "proposalFunnel" | "acceptedAwaitingInvoicing" | "publicShopOrders" | "shopOrderConversion" | "topProducts" | "shopRevenueThisMonth" | "ordersLast30Days",
-      { type: "FY" | "ROLLING_30D" | "ALL_TIME"; period: string; start: string | null; endExclusive: string | null }
-    >;
-    recentShopOrders: Array<{ id: string; itemSummary: string; buyerName: string; amount: number; status: string; createdAt: string | Date }>;
+    recentShopOrders: Array<{ id: string; itemSummary: string; buyerName: string; amount: number; status: string; createdAt: string }>;
   };
   operations: {
     hasOperationalData: boolean;
     lowStockCount: number;
     openPurchaseOrders: number;
-    recentInventoryMovements: Array<{ id: string; productName: string; quantity: number; type: string; createdAt: string | Date }>;
+    recentInventoryMovements: Array<{ id: string; productName: string; quantity: number; type: string; createdAt: string }>;
     openTasks: number;
     blockedTasks: number;
   };
   trust: {
+    /** `RESTRICTED` when the member may not see accounting data. */
     integrityStatus: string;
-    lastIntegrityRunAt: string | Date | null;
+    lastIntegrityRunAt: string | null;
     violationCount: number;
     criticalViolations: number;
     taxOverrideCount: number;
-    recentTaxAudits: Array<{ id: string; source: string; createdAt: string | Date }>;
+    taxOpenBlockers: number;
+    taxCriticalBlockers: number;
   };
-  activity: Array<{ id: string; action: string; status: string; createdAt: string | Date; actor: string | null }>;
+  upcoming: Array<{
+    kind: UpcomingKind;
+    id: string;
+    title: string;
+    reference: string;
+    date: string;
+    amount: number | null;
+    href: string;
+  }>;
+  activity: Array<{ id: string; action: string; entityType: string | null; status: string; createdAt: string; actor: string | null }>;
   charts: {
     bucketTimeZone: string;
-    revenueVsExpense: Array<{ name: string; revenue: number; expenses: number }>;
-    recurringRevenue: Array<{ name: string; mrr: number }>;
-    receivablesAging: Array<{ bucket: string; value: number }>;
-    reconciliation: Array<{ name: string; reconciled: number; unreconciled: number }>;
+    /** `YYYY-MM` of the month "now" falls in, in the bucket time zone. */
+    currentMonthId: string;
+    revenueVsExpense: MonthPoint[];
+    recurringRevenue: Array<{ monthId: string; name: string; mrr: number }>;
     proposalFunnel: Array<{ stage: string; value: number }>;
     shopOrderHealth: Array<{ status: string; value: number }>;
   };

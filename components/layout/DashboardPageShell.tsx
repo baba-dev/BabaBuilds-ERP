@@ -115,7 +115,7 @@ export function DashboardPageShell({
       <div className={cn("mx-auto space-y-6", maxWidthClassName, animated && animationClassName)}>
         <header
           className={cn(
-            "z-20 -mx-4 rounded-b-2xl md:sticky md:top-0 border-b border-border/70 px-4 backdrop-blur-md transition-all duration-200 ease-out md:-mx-8 md:px-8",
+            "z-20 -mx-4 rounded-b-2xl md:sticky md:top-0 border-b border-border/70 px-4 backdrop-blur-md transition-all duration-200 ease-out md:-mx-6 md:px-6",
             headerToneClassName,
             isCompactHeader ? "py-2.5" : "py-3",
             headerClassName,
