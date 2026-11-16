@@ -9917,5 +9917,324 @@
     "unavailable": "Unavailable",
     "loadFailed": "Could not load the partner portal.",
     "back": "Back to dashboard"
+  },
+  "DashboardHome": {
+    "title": "Dashboard",
+    "loading": "Loading your dashboard",
+    "fy": "FY {fy}",
+    "fySelect": "Financial year",
+    "refresh": "Refresh figures",
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening",
+      "morningName": "Good morning, {name}",
+      "afternoonName": "Good afternoon, {name}",
+      "eveningName": "Good evening, {name}"
+    },
+    "common": {
+      "open": "Open",
+      "viewAll": "View all",
+      "cancel": "Cancel"
+    },
+    "error": {
+      "title": "The dashboard didn’t load",
+      "description": "Your data is safe. Check your connection and try again.",
+      "retry": "Try again",
+      "stale": "Couldn’t refresh. These are the figures from the last successful load."
+    },
+    "actions": {
+      "label": "Quick actions",
+      "newInvoice": "New invoice",
+      "recordExpense": "Record expense",
+      "newProposal": "New proposal",
+      "addClient": "Add client",
+      "newRetainer": "New retainer",
+      "importBank": "Import bank statement"
+    },
+    "ask": {
+      "label": "Ask about your business",
+      "placeholder": "Ask about your business…",
+      "send": "Ask",
+      "notConnected": "The assistant needs an AI key before it can answer.",
+      "connect": "Add it in Settings",
+      "suggestion": {
+        "owed": "Which clients owe me the most?",
+        "overdue": "Show invoices overdue by 30+ days",
+        "spend": "Where did I spend the most this quarter?",
+        "cash": "Summarise my cash flow",
+        "tax": "What tax deadlines are coming up?"
+      }
+    },
+    "demo": {
+      "title": "You’re exploring a demo workspace",
+      "progress": "{done} of {total} explored",
+      "hint": "Open three areas to see how the pieces connect, then start with your own business.",
+      "step": {
+        "proposal": "Open proposals",
+        "tax": "Open tax",
+        "invoice": "Open invoices"
+      }
+    },
+    "setup": {
+      "title": "Finish setting up",
+      "progress": "{done} of {total} done",
+      "next": "Next: {step}",
+      "continue": "Continue",
+      "seeAll": "See all steps",
+      "done": "Done",
+      "dialogTitle": "Workspace setup",
+      "dialogDescription": "Complete these to send invoices and get paid without leaving the app.",
+      "step": {
+        "profile": {
+          "title": "Add your business details",
+          "hint": "Name, address and tax ID appear on every invoice."
+        },
+        "client": {
+          "title": "Add your first client",
+          "hint": "Who you’ll be billing."
+        },
+        "invoice": {
+          "title": "Send your first invoice",
+          "hint": "Create it, send it and track when it’s paid."
+        },
+        "payments": {
+          "title": "Connect online payments",
+          "hint": "Let clients pay by card or UPI from the invoice."
+        },
+        "email": {
+          "title": "Connect your email",
+          "hint": "Send invoices and reminders from your own address."
+        }
+      }
+    },
+    "locked": {
+      "title": "Not included in your role",
+      "financeTitle": "Finances",
+      "accounting": "Revenue, receivables and ledger figures are visible to members with accounting access. Ask a workspace admin if you need it."
+    },
+    "kpi": {
+      "revenue": "Revenue billed",
+      "outstanding": "Outstanding",
+      "expenses": "Expenses",
+      "net": "Net",
+      "vsLastMonth": "this month vs last",
+      "collected": "{amount} collected",
+      "approvedSpend": "Approved spend this year",
+      "overdue": "{amount} overdue · {count, plural, one {# invoice} other {# invoices}}",
+      "noneOverdue": "{count, plural, one {# open invoice} other {# open invoices}}, none overdue",
+      "nothingOwed": "Nothing owed to you",
+      "margin": "{percent}% margin",
+      "netHint": "Revenue minus expenses"
+    },
+    "stat": {
+      "mrr": "Monthly recurring",
+      "arr": "{amount} a year",
+      "estimatedTax": "Estimated tax",
+      "estimatedTaxHint": "On this year’s billing",
+      "liquidAssets": "Liquid assets",
+      "liquidAssetsHint": "Tracked investments",
+      "reconciled": "Books reconciled",
+      "noBankFeed": "Import a bank statement"
+    },
+    "trend": {
+      "title": "Money in and out",
+      "description": "Revenue against expenses, {fy}",
+      "viewCash": "In & out",
+      "viewRecurring": "Recurring",
+      "revenue": "Revenue",
+      "expenses": "Expenses",
+      "recurring": "Recurring revenue",
+      "recurringNow": "Recurring revenue this month",
+      "emptyTitle": "No billing in {fy}",
+      "emptyHint": "Invoices dated in this year will appear here.",
+      "emptyRecurringTitle": "No recurring revenue yet",
+      "emptyRecurringHint": "Retainers bill clients automatically on a schedule."
+    },
+    "attention": {
+      "title": "Needs attention",
+      "description": "Most urgent first",
+      "clearTitle": "You’re all caught up",
+      "clearHint": "Nothing is overdue, unmatched or waiting on you.",
+      "violations": {
+        "title": "{count, plural, one {# critical ledger issue} other {# critical ledger issues}}",
+        "detail": "Review before closing the books"
+      },
+      "overdue": {
+        "title": "{count, plural, one {# invoice is overdue} other {# invoices are overdue}}",
+        "detail": "{amount} to collect"
+      },
+      "imports": {
+        "title": "{count, plural, one {# import failed} other {# imports failed}}",
+        "detail": "Fix and re-run so figures stay complete"
+      },
+      "proposals": {
+        "title": "{count, plural, one {# accepted proposal to invoice} other {# accepted proposals to invoice}}",
+        "detail": "Won work that hasn’t been billed"
+      },
+      "bank": {
+        "title": "{count, plural, one {# bank line to match} other {# bank lines to match}}",
+        "detail": "Reconcile to keep the books accurate"
+      },
+      "stock": {
+        "title": "{count, plural, one {# product is low on stock} other {# products are low on stock}}",
+        "detail": "At or below safety stock"
+      },
+      "tasks": {
+        "title": "{count, plural, one {# follow-up due this week} other {# follow-ups due this week}}",
+        "detail": "Open the pipeline to work through them"
+      }
+    },
+    "receivables": {
+      "title": "Receivables",
+      "description": "What clients owe, by how late it is",
+      "openCollections": "Collections",
+      "openInvoices": "Invoices",
+      "emptyTitle": "No money outstanding",
+      "emptyHint": "Every invoice you’ve sent has been paid.",
+      "chaseFirst": "Chase first",
+      "daysOverdue": "{count, plural, one {# day overdue} other {# days overdue}}",
+      "dueToday": "Due today",
+      "dueIn": "{count, plural, one {Due in # day} other {Due in # days}}",
+      "bucket": {
+        "not_due": "Not yet due",
+        "1_30": "1–30 days late",
+        "31_60": "31–60 days late",
+        "61_plus": "Over 60 days late"
+      }
+    },
+    "agenda": {
+      "title": "Coming up",
+      "description": "Next 14 days",
+      "retainers": "Retainers",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "inDays": "In {count} days",
+      "emptyTitle": "Nothing scheduled",
+      "emptyHint": "Invoices falling due, retainer billing and tax filings will show up here.",
+      "emptyAction": "Set up a retainer",
+      "kind": {
+        "invoice_due": "Invoice due",
+        "retainer_billing": "Retainer bills",
+        "tax_return": "Tax return due"
+      }
+    },
+    "cash": {
+      "title": "Cash outlook",
+      "description": "Next 13 weeks",
+      "projected": "Projected balance",
+      "now": "{amount} today",
+      "lowest": "Lowest point",
+      "confidence": "Confidence",
+      "confidenceHint": "Based on payment history",
+      "errorTitle": "Forecast unavailable",
+      "errorHint": "Open Cash Flow to rebuild it."
+    },
+    "sales": {
+      "title": "Proposals",
+      "description": "This financial year",
+      "winRate": "{percent}% win rate this year",
+      "stage": {
+        "draft": "Draft",
+        "sent": "Sent",
+        "viewed": "Viewed",
+        "accepted": "Accepted",
+        "invoiced": "Invoiced"
+      },
+      "declined": "{count} declined",
+      "readyToInvoice": "{count} ready to invoice",
+      "emptyTitle": "No proposals this year",
+      "emptyHint": "Send a quote and convert it to an invoice once it’s accepted."
+    },
+    "shop": {
+      "title": "Online shop",
+      "description": "Sell services and products from a public page",
+      "published": "{count, plural, one {# item published} other {# items published}}",
+      "revenueThisMonth": "Revenue this month",
+      "orders30d": "Orders, 30 days",
+      "vsPrior30d": "vs the 30 days before",
+      "orderSplit": "{paid} paid · {pending} pending · {failed} failed · {percent}% paid rate",
+      "noOrders": "No orders yet. Share your shop link to get the first one.",
+      "topProduct": "Top seller",
+      "offTitle": "The shop module is off",
+      "offHint": "Turn it on to take orders and payments online.",
+      "enable": "Turn on shop",
+      "enabled": "Shop turned on",
+      "enableFailed": "Couldn’t turn on the shop. You may not have permission.",
+      "notLiveTitle": "Your shop isn’t live",
+      "notLiveHint": "Publish it to start taking orders.",
+      "setUp": "Set up shop"
+    },
+    "ops": {
+      "title": "Inventory",
+      "description": "Stock and purchasing",
+      "lowStock": "Low stock",
+      "openOrders": "Open POs",
+      "openTasks": "Open tasks",
+      "blocked": "{count, plural, one {# task is blocked} other {# tasks are blocked}}",
+      "emptyTitle": "No stock tracked yet",
+      "emptyHint": "Add products to see stock levels, reorder alerts and purchase orders.",
+      "emptyAction": "Open inventory"
+    },
+    "books": {
+      "title": "Books & compliance",
+      "description": "Ledger checks and tax readiness",
+      "openTax": "Tax",
+      "passed": "Ledger checks passed",
+      "needsReview": "Ledger needs review",
+      "notRun": "Ledger not checked yet",
+      "lastChecked": "Checked {when}",
+      "neverChecked": "Runs after your first entries",
+      "violations": "Issues",
+      "taxBlockers": "Blockers",
+      "taxOverrides": "Overrides",
+      "criticalBlockers": "{count, plural, one {# critical blocker before filing} other {# critical blockers before filing}}"
+    },
+    "invoices": {
+      "title": "Recent invoices",
+      "description": "Latest billing, with one-tap follow-up",
+      "col": {
+        "invoice": "Invoice",
+        "client": "Client",
+        "date": "Date",
+        "status": "Status",
+        "amount": "Amount",
+        "actions": "Actions"
+      },
+      "status": {
+        "paid": "Paid",
+        "partial": "Part paid",
+        "overdue": "Overdue",
+        "pending": "Awaiting payment",
+        "void": "Void"
+      },
+      "recordPayment": "Record payment",
+      "resend": "Email invoice {invoice} again",
+      "resent": "Invoice {invoice} emailed",
+      "resendFailed": "Couldn’t send the email. Check your email settings.",
+      "download": "Download invoice {invoice} as PDF",
+      "emptyTitle": "No invoices yet",
+      "emptyHint": "Create your first invoice to start tracking revenue."
+    },
+    "activity": {
+      "title": "Activity",
+      "description": "Latest actions in this workspace",
+      "failed": "Failed",
+      "emptyTitle": "No activity yet",
+      "emptyHint": "Billing, payments and imports are logged here as they happen."
+    },
+    "payment": {
+      "title": "Record payment",
+      "description": "Invoice {invoice} · {client}",
+      "billed": "Billed",
+      "received": "Received",
+      "remaining": "Remaining",
+      "amount": "Amount received ({currency})",
+      "amountError": "Enter an amount between 0 and {amount}.",
+      "date": "Date received",
+      "submit": "Record payment",
+      "recorded": "Payment recorded on {invoice}",
+      "failed": "Couldn’t record the payment. Try again."
+    }
   }
 }
