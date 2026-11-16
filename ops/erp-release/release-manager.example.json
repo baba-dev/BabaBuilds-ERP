@@ -18,6 +18,7 @@
     "public/products": "/var/www/bababuilds-erp/public/products",
     "public/uploads": "/var/www/bababuilds-erp/public/uploads",
     "public/partner-kit": "/var/www/bababuilds-erp/public/partner-kit",
-    "tmp/share-target": "/var/www/bababuilds-erp/tmp/share-target"
+    "tmp/share-target": "/var/www/bababuilds-erp/tmp/share-target",
+    "backups": "/var/www/bababuilds-erp/backups"
   }
 }
