@@ -106,9 +106,10 @@ jobs:
       - name: Enforce PostgreSQL-only repository
         run: node scripts/verify-postgresql-only.mjs
 
-      - name: Validate SQLite retirement operator safety
+      - name: Validate SQLite retirement and standalone deployment operators
         run: |
           python3 -m py_compile scripts/operations/retire_erp_sqlite.py
+          bash -n scripts/operations/deploy-erp-standalone.sh
           python3 -m unittest discover -s tests/ops -p 'test_*.py' -v
 
   build:
