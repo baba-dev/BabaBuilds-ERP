@@ -17,7 +17,10 @@ STATE="/var/lib/bababuilds-erp/cutover/$CUT"
 [[ -x "$NODEBIN/node" && -x "$NODEBIN/npm" ]] || { echo "Isolated Node22 missing" >&2; exit 1; }
 [[ "$("$NODEBIN/node" -p 'process.versions.node.split(".")[0]')" == 22 ]] || exit 1
 [[ "$(git -C "$SRC" branch --show-current)" == "feature/postgresql-production-main-integration" ]] || { echo "Use integration checkout" >&2; exit 1; }
-[[ -z "$(git -C "$SRC" status --porcelain)" ]] || { echo "Source checkout dirty" >&2; exit 1; }
+# The candidate is cloned from committed Git HEAD, never from untracked
+# operator artifacts in the source worktree (e.g. Python __pycache__).
+# Reject edits to tracked files, which could affect the script being executed.
+git -C "$SRC" diff --quiet HEAD -- || { echo "Tracked source files modified; refuse unreviewed cutover code" >&2; exit 1; }
 [[ ! -e "$WORK" && ! -e "$STATE" ]] || { echo "Fresh cut1611b required; never reuse cutover state" >&2; exit 1; }
 [[ "$(systemctl is-active postgresql@17-main)" == active ]] || { echo "Postgres17 inactive" >&2; exit 1; }
 mkdir -p "$WORK"
