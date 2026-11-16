@@ -17,7 +17,8 @@ import subprocess
 import sys
 from urllib.parse import unquote, urlsplit
 
-DENIED = {"postgres", "template0", "template1", "menuminute", "clubkeep"}
+# Phase B only: deny the production ERP name and every other app database.
+ERP_NONPROD = re.compile(r"^bababuilds_erp_(?:ci|staging(?:_[a-z0-9]+)?|drill(?:_[a-z0-9]+)?)$")
 
 
 def q(value):
@@ -28,8 +29,7 @@ def env_for(name):
     parsed = urlsplit(os.environ.get("DATABASE_URL", ""))
     db = unquote(parsed.path.lstrip("/"))
     if (parsed.scheme not in ("postgres", "postgresql") or db != name
-            or name.lower() in DENIED
-            or not re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", name)
+            or not ERP_NONPROD.fullmatch(name)
             or parsed.hostname not in ("localhost", "127.0.0.1", "::1")):
         raise RuntimeError("DATABASE_URL must target the explicit isolated ERP database on loopback")
     env = dict(os.environ)
