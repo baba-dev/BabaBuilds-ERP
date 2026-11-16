@@ -85,6 +85,18 @@ function maybeLogMetrics() {
 
 // Note: The user hasn't generated the CrowdSec keys yet. We will fail open if no key is present.
 export async function proxy(request: NextRequest) {
+  if (process.env.ERP_STAGING_MODE === '1') {
+    // Defense in depth alongside the systemd loopback/network egress cage.
+    const host = (request.headers.get('host') || '').toLowerCase();
+    if (!['127.0.0.1:3101', 'localhost:3101', '[::1]:3101'].includes(host)) {
+      return new NextResponse('Staging is loopback-only', { status: 403 });
+    }
+    const pathname = request.nextUrl.pathname;
+    if (/^\/api\/(?:cron|webhooks|billing|payments)\//.test(pathname) ||
+        pathname === '/sw.js') {
+      return new NextResponse('External integration disabled in staging', { status: 403 });
+    }
+  }
   const bouncerUrl = process.env.CROWDSEC_LAPI_URL || 'http://localhost:8080';
   const apiKey = process.env.CROWDSEC_BOUNCER_KEY;
 
@@ -172,5 +184,8 @@ export const config = {
     '/api/webhooks/:path*',
     '/api/invoices/:path*/pay/:path*',
     '/api/documents/upload/:path*',
+    '/api/cron/:path*',
+    '/api/billing/:path*',
+    '/api/payments/:path*',
   ],
 };

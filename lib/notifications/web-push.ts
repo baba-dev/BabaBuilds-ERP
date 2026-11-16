@@ -55,6 +55,9 @@ export async function sendPushNotification(
   subscription: StoredPushSubscription,
   payload: PushPayload,
 ): Promise<{ success: boolean; gone: boolean }> {
+  if (process.env.ERP_STAGING_MODE === '1') {
+    return { success: false, gone: false };
+  }
   try {
     ensureVapidConfigured();
 
