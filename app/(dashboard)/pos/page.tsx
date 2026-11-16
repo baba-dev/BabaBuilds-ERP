@@ -33,16 +33,17 @@ export default async function PosPage() {
     );
   }
 
-  const grants = await checkPermissionsSilent(session.user.id, workspaceId, ["pos.view", "pos.checkout", "pos.custom_item", "pos.discount"]);
+  const grants = await checkPermissionsSilent(session.user.id, workspaceId, ["pos.view", "pos.checkout", "pos.custom_item", "pos.discount", "pos.refund"]);
   if (!grants["pos.view"]) redirect("/dashboard");
 
-  const clients = await prisma.client.findMany({ where: { workspaceId, isWalkIn: false, archivedAt: null }, select: { id: true, name: true }, orderBy: { name: "asc" }, take: 2000 });
+  const clients = await prisma.client.findMany({ where: { workspaceId, isWalkIn: false, archivedAt: null }, select: { id: true, name: true, email: true }, orderBy: { name: "asc" }, take: 2000 });
 
   return (
     <DashboardPageShell title={t("title")} description={t("subtitle")} icon={<ShoppingCart className="h-6 w-6 text-primary" />}>
       <PosRegister
         clients={clients}
         canCheckout={grants["pos.checkout"]}
+        canRefund={grants["pos.refund"]}
         canCreateCustomItems={grants["pos.custom_item"]}
         canApplyDiscounts={grants["pos.discount"]}
         currencyCode={session.user.currencyFormat || session.baseCurrency || "INR"}

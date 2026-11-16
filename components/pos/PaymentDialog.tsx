@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Banknote, Building2, CheckCircle2, CreditCard, FileText, Loader2, Printer, QrCode, Repeat, Wallet } from "lucide-react";
+import { Banknote, Building2, CheckCircle2, CreditCard, FileText, Loader2, Mail, Printer, QrCode, Repeat, Wallet } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -9,23 +9,38 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { cashSuggestions, changeDue, type PaymentMethod } from "@/lib/pos/totals";
+import { toast } from "sonner";
+import { api } from "./shared";
 
 const ICON: Record<PaymentMethod, typeof Banknote> = { CASH: Banknote, UPI: QrCode, CARD: CreditCard, BANK_TRANSFER: Building2, OTHER: Wallet };
 export type Charge = { action: "PAY_NOW" | "INVOICE" | "PROPOSAL" | "RETAINER"; payment?: { method: PaymentMethod; tendered?: number; reference?: string } };
 export type Outcome = { invoiceId: string | null; invoiceNumber: string | null; change: number | null; message: string; total: number; action: Charge["action"] };
 
-export function PaymentDialog({ open, total, money, hasClient, busy, error, outcome, onClose, onConfirm, onNewSale }: {
-  open: boolean; total: number; money: (n: number) => string; hasClient: boolean; busy: boolean; error: string | null; outcome: Outcome | null;
+export function PaymentDialog({ open, total, money, hasClient, customerEmail, busy, error, outcome, onClose, onConfirm, onNewSale }: {
+  open: boolean; total: number; money: (n: number) => string; hasClient: boolean; customerEmail: string; busy: boolean; error: string | null; outcome: Outcome | null;
   onClose: () => void; onConfirm: (c: Charge) => void; onNewSale: () => void;
 }) {
-  return open ? <Body total={total} money={money} hasClient={hasClient} busy={busy} error={error} outcome={outcome} onClose={onClose} onConfirm={onConfirm} onNewSale={onNewSale} /> : null;
+  return open ? <Body total={total} money={money} hasClient={hasClient} customerEmail={customerEmail} busy={busy} error={error} outcome={outcome} onClose={onClose} onConfirm={onConfirm} onNewSale={onNewSale} /> : null;
 }
 
-function Body({ total, money, hasClient, busy, error, outcome, onClose, onConfirm, onNewSale }: Omit<Parameters<typeof PaymentDialog>[0], "open">) {
+function Body({ total, money, hasClient, customerEmail, busy, error, outcome, onClose, onConfirm, onNewSale }: Omit<Parameters<typeof PaymentDialog>[0], "open">) {
   const t = useTranslations("PosRegister");
   const [method, setMethod] = useState<PaymentMethod>("CASH");
   const [tendered, setTendered] = useState("");
   const [reference, setReference] = useState("");
+  const [email, setEmail] = useState(customerEmail);
+  const [mailing, setMailing] = useState<"idle" | "sending" | "sent">("idle");
+  const sendReceipt = async (id: string) => {
+    setMailing("sending");
+    try {
+      await api(`/api/pos/receipts/${id}/email`, { method: "POST", body: JSON.stringify({ to: email.trim() }) });
+      setMailing("sent");
+      toast.success(t("emailSent"));
+    } catch (e) {
+      setMailing("idle");
+      toast.error(e instanceof Error ? e.message : t("emailFailed"));
+    }
+  };
   const given = Number(tendered);
   const change = method === "CASH" && tendered !== "" ? changeDue(total, given) : null;
   const cashShort = method === "CASH" && tendered !== "" && change === null;
@@ -42,6 +57,9 @@ function Body({ total, money, hasClient, busy, error, outcome, onClose, onConfir
             {outcome.change !== null && outcome.change > 0 ? <p className="rounded-xl bg-emerald-500/10 px-4 py-2 text-lg font-medium text-emerald-700 dark:text-emerald-300">{t("giveChange", { amount: money(outcome.change) })}</p> : null}
             <div className="flex w-full flex-col gap-2 pt-2">
               {outcome.action === "PAY_NOW" && outcome.invoiceId ? <Button asChild variant="outline" className="gap-1.5"><a href={`/api/pos/receipts/${outcome.invoiceId}`} target="_blank" rel="noreferrer"><Printer className="h-4 w-4" />{t("receipt")}</a></Button> : null}
+              {outcome.action === "PAY_NOW" && outcome.invoiceId ? (
+                <div className="flex gap-2"><Input type="email" inputMode="email" aria-label={t("emailTo")} placeholder={t("emailTo")} value={email} onChange={(e) => { setEmail(e.target.value); setMailing("idle"); }} /><Button variant="outline" className="shrink-0 gap-1.5" disabled={!/^\S+@\S+\.\S+$/.test(email.trim()) || mailing !== "idle"} onClick={() => void sendReceipt(outcome.invoiceId!)}>{mailing === "sending" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}{mailing === "sent" ? t("emailDone") : t("emailReceipt")}</Button></div>
+              ) : null}
               <Button onClick={onNewSale} autoFocus>{t("newSale")}</Button>
             </div>
           </div>

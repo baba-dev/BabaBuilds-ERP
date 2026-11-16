@@ -27,4 +27,10 @@ export type Summary = {
   recent: { id: string; number: string; at: string; customer: string | null; total: number; method: string | null; status: string }[];
 };
 
-export type ClientOption = { id: string; name: string };
+export type ClientOption = { id: string; name: string; email?: string | null };
+
+export type CustomerContext = { owed: number; overdue: number; open: number; email: string | null };
+
+export type Shift = { periodStart: string; salesCount: number; expectedCash: number; total: number; byMethod: { method: string; count: number; amount: number }[] };
+export type Closeout = { id: string; closedAt: string; salesCount: number; totalSales: number; expectedCash: number; countedCash: number; variance: number; notes: string | null };
+export type CloseoutState = { shift: Shift; recent: Closeout[] };

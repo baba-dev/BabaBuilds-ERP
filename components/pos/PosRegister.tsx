@@ -13,15 +13,15 @@ import { CatalogPane } from "./CatalogPane";
 import { CustomItemDialog } from "./CustomItemDialog";
 import { HeldDialog } from "./HeldDialog";
 import { PaymentDialog, type Charge, type Outcome } from "./PaymentDialog";
-import { api, type CartLine, type CatalogItem, type ClientOption, type Hold } from "./shared";
+import { api, type CartLine, type CatalogItem, type ClientOption, type CustomerContext, type Hold } from "./shared";
 import { TodayPanel } from "./TodayPanel";
 
-type Props = { clients: ClientOption[]; canCheckout: boolean; canCreateCustomItems: boolean; canApplyDiscounts: boolean; currencyCode: string; locale: string };
+type Props = { clients: ClientOption[]; canCheckout: boolean; canRefund: boolean; canCreateCustomItems: boolean; canApplyDiscounts: boolean; currencyCode: string; locale: string };
 
 let seq = 0;
 const lineKey = () => `l${Date.now().toString(36)}${(seq++).toString(36)}`;
 
-export default function PosRegister({ clients, canCheckout, canCreateCustomItems, canApplyDiscounts, currencyCode, locale }: Props) {
+export default function PosRegister({ clients, canCheckout, canRefund, canCreateCustomItems, canApplyDiscounts, currencyCode, locale }: Props) {
   const t = useTranslations("PosRegister");
   const [view, setView] = useState<"register" | "today">("register");
   const [lines, setLines] = useState<CartLine[]>([]);
@@ -37,6 +37,7 @@ export default function PosRegister({ clients, canCheckout, canCreateCustomItems
   const [custom, setCustom] = useState(false);
   const [holds, setHolds] = useState<Hold[]>([]);
   const [showHolds, setShowHolds] = useState(false);
+  const [customer, setCustomer] = useState<{ id: string; data: CustomerContext | null } | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const attempt = useRef<string | null>(null);
 
@@ -46,6 +47,15 @@ export default function PosRegister({ clients, canCheckout, canCreateCustomItems
   const discountValue = Number(discountInput) || 0;
   const discount = discountMode === "PERCENT" ? percentDiscount(subtotalForDiscount, discountValue) : Math.min(discountValue, subtotalForDiscount);
   const totals = useMemo(() => computePosTotals(lines.map((l) => ({ unitPrice: l.price, quantity: l.quantity, taxRate: l.taxRate })), canApplyDiscounts ? discount : 0, chargesGst), [lines, discount, chargesGst, canApplyDiscounts]);
+
+  // What the selected customer already owes, shown beside the picker.
+  useEffect(() => {
+    if (!clientId) return;
+    let cancelled = false;
+    api<CustomerContext>(`/api/pos/customers/${clientId}`).then((d) => { if (!cancelled) setCustomer({ id: clientId, data: d }); }).catch(() => { if (!cancelled) setCustomer({ id: clientId, data: null }); });
+    return () => { cancelled = true; };
+  }, [clientId, tick]);
+  const customerCtx = clientId && customer?.id === clientId ? customer.data : null;
 
   const loadHolds = useCallback(() => { if (!canCheckout) return; api<{ items: Hold[] }>("/api/pos/holds").then((d) => setHolds(d.items)).catch(() => undefined); }, [canCheckout]);
   useEffect(() => { loadHolds(); }, [loadHolds]);
@@ -146,10 +156,10 @@ export default function PosRegister({ clients, canCheckout, canCreateCustomItems
         {(["register", "today"] as const).map((k) => <button key={k} type="button" role="tab" aria-selected={view === k} onClick={() => setView(k)} className={cn("rounded-full px-4 py-1.5 text-sm transition-colors", view === k ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>{t(`view.${k}`)}</button>)}
       </div>
 
-      {view === "today" ? <div className="overflow-hidden rounded-2xl border bg-background"><TodayPanel money={money} locale={locale} reloadKey={tick} /></div> : (
+      {view === "today" ? <div className="overflow-hidden rounded-2xl border bg-background"><TodayPanel money={money} locale={locale} reloadKey={tick} canCheckout={canCheckout} canRefund={canRefund} onChanged={() => setTick((n) => n + 1)} /></div> : (
         <div className="grid overflow-hidden rounded-2xl border bg-background lg:h-[calc(100dvh-14rem)] lg:min-h-[34rem] lg:grid-cols-[minmax(0,1fr)_24rem]">
           <div className="flex min-h-[28rem] flex-col bg-muted/20 lg:min-h-0 lg:border-e"><CatalogPane onAdd={add} onMeta={(m) => setChargesGst(m.chargesGst)} reloadKey={tick} money={money} canCustom={canCreateCustomItems && canCheckout} onCustom={() => setCustom(true)} searchRef={searchRef} /></div>
-          <CartPane lines={lines} totals={totals} chargesGst={chargesGst} money={money} clients={clients} clientId={clientId} onClient={(id) => { setClientId(id); attempt.current = null; }}
+          <CartPane customerCtx={customerCtx} lines={lines} totals={totals} chargesGst={chargesGst} money={money} clients={clients} clientId={clientId} onClient={(id) => { setClientId(id); attempt.current = null; }}
             canDiscount={canApplyDiscounts && canCheckout} discountMode={discountMode} discountInput={discountInput} onDiscount={(m, v) => { setDiscountMode(m); setDiscountInput(v); attempt.current = null; }}
             canCheckout={canCheckout} holdCount={holds.length} onQty={setQty} onRemove={remove} onHold={() => void hold().catch(() => undefined)} onShowHolds={() => { loadHolds(); setShowHolds(true); }} onClear={reset} onCharge={() => { setPayError(null); setPaying(true); }} />
         </div>
@@ -168,7 +178,7 @@ export default function PosRegister({ clients, canCheckout, canCreateCustomItems
 
       <CustomItemDialog open={custom} onClose={() => setCustom(false)} onAdd={(i) => { setLines((p) => [...p, { key: lineKey(), id: `custom-${lineKey()}`, type: "CUSTOM", name: i.name, price: i.price, quantity: 1, taxRate: i.taxRate }]); setCustom(false); attempt.current = null; }} />
       <HeldDialog open={showHolds} holds={holds} money={money} locale={locale} onClose={() => setShowHolds(false)} onResume={(h) => void resume(h)} onDiscard={(h) => void discard(h)} />
-      <PaymentDialog open={paying} total={totals.total} money={money} hasClient={Boolean(clientId)} busy={busy} error={payError} outcome={outcome} onClose={() => setPaying(false)} onConfirm={(c) => void charge(c)} onNewSale={newSale} />
+      <PaymentDialog open={paying} total={totals.total} money={money} hasClient={Boolean(clientId)} customerEmail={customerCtx?.email ?? clients.find((c) => c.id === clientId)?.email ?? ""} busy={busy} error={payError} outcome={outcome} onClose={() => setPaying(false)} onConfirm={(c) => void charge(c)} onNewSale={newSale} />
     </div>
   );
 }

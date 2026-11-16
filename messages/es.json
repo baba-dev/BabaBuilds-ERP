@@ -9123,6 +9123,43 @@
       "top": "Más vendidos",
       "recent": "Últimas ventas",
       "none": "Aún no hay ventas hoy."
+    },
+    "customerOwes": "Este cliente debe {owed} en {count} facturas sin pagar.",
+    "customerOwesOverdue": "Este cliente debe {owed}, de los cuales {overdue} están vencidos.",
+    "emailTo": "Correo del cliente",
+    "emailReceipt": "Enviar recibo",
+    "emailDone": "Enviado",
+    "emailSent": "Recibo enviado por correo",
+    "emailFailed": "No se pudo enviar el recibo",
+    "closeout": {
+      "drawer": "Caja de efectivo",
+      "expectedNow": "La caja debería tener {amount} de {count} ventas desde el último arqueo.",
+      "start": "Cerrar turno",
+      "title": "Cerrar turno",
+      "intro": "Cuenta el efectivo de la caja. Cubre {count} ventas desde el último arqueo.",
+      "expected": "Efectivo esperado",
+      "counted": "Efectivo contado",
+      "balanced": "La caja cuadra.",
+      "short": "Faltan {amount} en la caja.",
+      "over": "Sobran {amount} en la caja.",
+      "note": "¿Qué pasó?",
+      "noteHint": "p. ej. Se pagó un reparto desde la caja",
+      "confirm": "Guardar arqueo",
+      "saved": "Turno cerrado",
+      "failed": "No se pudo cerrar el turno",
+      "balancedShort": "Cuadra"
+    },
+    "refund": {
+      "action": "Reembolsar {number}",
+      "title": "Reembolsar {number}",
+      "intro": "Se devuelve toda la venta: se reembolsa el pago, se emite una nota de crédito y los artículos vuelven al stock.",
+      "amount": "Importe a reembolsar",
+      "giveBack": "Devolver con {method}",
+      "reason": "Motivo",
+      "reasonHint": "p. ej. Talla equivocada, el cliente lo devolvió",
+      "confirm": "Reembolsar venta",
+      "done": "{number} reembolsada con la nota de crédito {note}",
+      "failed": "No se pudo reembolsar la venta"
     }
   }
 }

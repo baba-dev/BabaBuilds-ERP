@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronsUpDown, Minus, PauseCircle, Percent, Plus, ShoppingBag, Trash2, User } from "lucide-react";
+import { AlertTriangle, Check, ChevronsUpDown, Minus, PauseCircle, Percent, Plus, ShoppingBag, Trash2, User } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { PosTotals } from "@/lib/pos/totals";
-import type { CartLine, ClientOption } from "./shared";
+import type { CartLine, ClientOption, CustomerContext } from "./shared";
 
 type Props = {
+  customerCtx: CustomerContext | null;
   lines: CartLine[];
   totals: PosTotals;
   chargesGst: boolean;
@@ -60,6 +61,9 @@ export function CartPane(p: Props) {
             </div>
           ) : null}
         </div>
+        {p.customerCtx && p.customerCtx.owed > 0 ? (
+          <p className="flex items-start gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-800 dark:text-amber-200"><AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />{p.customerCtx.overdue > 0 ? t("customerOwesOverdue", { owed: p.money(p.customerCtx.owed), overdue: p.money(p.customerCtx.overdue) }) : t("customerOwes", { owed: p.money(p.customerCtx.owed), count: p.customerCtx.open })}</p>
+        ) : null}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">

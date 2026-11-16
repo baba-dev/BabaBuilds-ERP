@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Printer, Receipt } from "lucide-react";
+import { Landmark, Printer, Receipt, Undo2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { api, type Summary } from "./shared";
+import { CloseoutDialog } from "./CloseoutDialog";
+import { RefundDialog, type RefundTarget } from "./RefundDialog";
+import { api, type CloseoutState, type Summary } from "./shared";
 
 function startOfLocalDay() { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }
 
-export function TodayPanel({ money, locale, reloadKey }: { money: (n: number) => string; locale: string; reloadKey: number }) {
+export function TodayPanel({ money, locale, reloadKey, canCheckout, canRefund, onChanged }: { money: (n: number) => string; locale: string; reloadKey: number; canCheckout: boolean; canRefund: boolean; onChanged: () => void }) {
   const t = useTranslations("PosRegister");
   const [state, setState] = useState<{ key: number | null; data: Summary | null; error: string | null }>({ key: null, data: null, error: null });
   useEffect(() => {
@@ -22,6 +24,15 @@ export function TodayPanel({ money, locale, reloadKey }: { money: (n: number) =>
     return () => { cancelled = true; };
   }, [reloadKey]);
 
+  const [drawer, setDrawer] = useState<{ key: number | null; data: CloseoutState | null }>({ key: null, data: null });
+  useEffect(() => {
+    let cancelled = false;
+    api<CloseoutState>("/api/pos/closeout").then((d) => { if (!cancelled) setDrawer({ key: reloadKey, data: d }); }).catch(() => { if (!cancelled) setDrawer({ key: reloadKey, data: null }); });
+    return () => { cancelled = true; };
+  }, [reloadKey]);
+  const [closing, setClosing] = useState(false);
+  const [refund, setRefund] = useState<RefundTarget | null>(null);
+  const cash = drawer.key === reloadKey ? drawer.data : null;
   const d = state.key === reloadKey ? state.data : null;
   const fmt = new Intl.DateTimeFormat(locale, { timeStyle: "short" });
   if (state.error && !d) return <p className="rounded-2xl border border-rose-500/30 bg-rose-500/5 p-6 text-center text-sm">{state.error}</p>;
@@ -41,11 +52,24 @@ export function TodayPanel({ money, locale, reloadKey }: { money: (n: number) =>
           {d.top.length === 0 ? <p className="text-sm text-muted-foreground">{t("today.none")}</p> : <ul className="divide-y text-sm">{d.top.map((i) => <li key={i.name} className="flex justify-between gap-3 py-2"><span className="truncate">{i.name} <span className="text-muted-foreground">× {i.qty}</span></span><span className="tabular-nums">{money(i.amount)}</span></li>)}</ul>}
         </section>
       </div>
+      {cash ? (
+        <section className="rounded-2xl border bg-card p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div><h3 className="flex items-center gap-2 font-medium"><Landmark className="h-4 w-4" />{t("closeout.drawer")}</h3><p className="mt-1 text-sm text-muted-foreground">{t("closeout.expectedNow", { amount: money(cash.shift.expectedCash), count: cash.shift.salesCount })}</p></div>
+            {canCheckout ? <Button variant="outline" size="sm" onClick={() => setClosing(true)}>{t("closeout.start")}</Button> : null}
+          </div>
+          {cash.recent.length > 0 ? (
+            <ul className="mt-3 divide-y border-t text-sm">{cash.recent.slice(0, 4).map((c) => <li key={c.id} className="flex items-center justify-between gap-3 py-2"><span className="text-muted-foreground">{new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(c.closedAt))}</span><span className="tabular-nums">{money(c.countedCash)}</span><span className={c.variance === 0 ? "text-emerald-600" : "text-amber-600"}>{c.variance === 0 ? t("closeout.balancedShort") : `${c.variance > 0 ? "+" : "−"}${money(Math.abs(c.variance))}`}</span></li>)}</ul>
+          ) : null}
+        </section>
+      ) : null}
       <section className="rounded-2xl border bg-card"><h3 className="flex items-center gap-2 border-b p-4 font-medium"><Receipt className="h-4 w-4" />{t("today.recent")}</h3>
         {d.recent.length === 0 ? <p className="p-6 text-center text-sm text-muted-foreground">{t("today.none")}</p> : (
-          <ul className="divide-y">{d.recent.map((s) => <li key={s.id} className="flex items-center gap-3 p-3 text-sm"><div className="min-w-0 flex-1"><p className="font-medium">{s.number}</p><p className="truncate text-xs text-muted-foreground">{fmt.format(new Date(s.at))}{s.customer ? ` · ${s.customer}` : ""}{s.method ? ` · ${t(`method.${s.method}`)}` : ""}</p></div><span className="font-semibold tabular-nums">{money(s.total)}</span><Button asChild size="icon" variant="ghost" aria-label={t("receipt")}><a href={`/api/pos/receipts/${s.id}`} target="_blank" rel="noreferrer"><Printer className="h-4 w-4" /></a></Button></li>)}</ul>
+          <ul className="divide-y">{d.recent.map((s) => <li key={s.id} className="flex items-center gap-3 p-3 text-sm"><div className="min-w-0 flex-1"><p className="font-medium">{s.number}</p><p className="truncate text-xs text-muted-foreground">{fmt.format(new Date(s.at))}{s.customer ? ` · ${s.customer}` : ""}{s.method ? ` · ${t(`method.${s.method}`)}` : ""}</p></div><span className="font-semibold tabular-nums">{money(s.total)}</span><Button asChild size="icon" variant="ghost" aria-label={t("receipt")}><a href={`/api/pos/receipts/${s.id}`} target="_blank" rel="noreferrer"><Printer className="h-4 w-4" /></a></Button>{canRefund ? <Button size="icon" variant="ghost" className="text-rose-600" aria-label={t("refund.action", { number: s.number })} onClick={() => setRefund({ id: s.id, number: s.number, total: s.total, method: s.method })}><Undo2 className="h-4 w-4" /></Button> : null}</li>)}</ul>
         )}
       </section>
+      <CloseoutDialog open={closing} shift={cash?.shift ?? null} money={money} onClose={() => setClosing(false)} onDone={onChanged} />
+      <RefundDialog target={refund} money={money} onClose={() => setRefund(null)} onDone={onChanged} />
     </div>
   );
 }

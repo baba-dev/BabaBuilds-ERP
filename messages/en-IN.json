@@ -9094,6 +9094,43 @@
       "top": "Best sellers",
       "recent": "Latest sales",
       "none": "No sales yet today."
+    },
+    "customerOwes": "This customer owes {owed} across {count} unpaid invoices.",
+    "customerOwesOverdue": "This customer owes {owed}, of which {overdue} is overdue.",
+    "emailTo": "Customer email",
+    "emailReceipt": "Email receipt",
+    "emailDone": "Sent",
+    "emailSent": "Receipt emailed",
+    "emailFailed": "The receipt could not be emailed",
+    "closeout": {
+      "drawer": "Cash drawer",
+      "expectedNow": "The till should hold {amount} from {count} sales since the last count.",
+      "start": "Close the shift",
+      "title": "Close the shift",
+      "intro": "Count the cash in the till. This covers {count} sales since the last count.",
+      "expected": "Cash expected",
+      "counted": "Cash counted",
+      "balanced": "The till balances.",
+      "short": "The till is short by {amount}.",
+      "over": "The till is over by {amount}.",
+      "note": "What happened?",
+      "noteHint": "e.g. Paid a delivery from the till",
+      "confirm": "Save the count",
+      "saved": "Shift closed",
+      "failed": "The shift could not be closed",
+      "balancedShort": "Balanced"
+    },
+    "refund": {
+      "action": "Refund {number}",
+      "title": "Refund {number}",
+      "intro": "The whole sale is taken back: the payment is refunded, a credit note is issued and the items go back into stock.",
+      "amount": "Refund amount",
+      "giveBack": "Give it back by {method}",
+      "reason": "Reason",
+      "reasonHint": "e.g. Wrong size, customer returned it",
+      "confirm": "Refund sale",
+      "done": "{number} refunded with credit note {note}",
+      "failed": "The sale could not be refunded"
     }
   }
 }
