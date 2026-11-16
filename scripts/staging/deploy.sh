@@ -62,12 +62,12 @@ chown -R erpstaging:erpstaging "$app"
 export HOME="$app"
 cd "$app"
 # No DB/provider creds loaded for postinstall.
-runuser -u erpstaging -- npm ci --no-audit --no-fund
+runuser -u erpstaging -- env HOME="$app" PATH="$NODE22_BIN:/usr/bin:/bin" npm_config_cache="$app/.npm-cache" npm ci --no-audit --no-fund
 set -a
 source "$state/credentials/migration.env"
 set +a
-runuser -u erpstaging -- npx --no-install prisma generate
-runuser -u erpstaging -- npx --no-install prisma migrate deploy
+runuser -u erpstaging -- env HOME="$app" PATH="$NODE22_BIN:/usr/bin:/bin" npm_config_cache="$app/.npm-cache" npx --no-install prisma generate
+runuser -u erpstaging -- env HOME="$app" PATH="$NODE22_BIN:/usr/bin:/bin" npm_config_cache="$app/.npm-cache" npx --no-install prisma migrate deploy
 python3 scripts/sqlite-to-postgres.py \
   --sqlite "$state/erp-live-snapshot.db" \
   --target-db "bababuilds_erp_staging_$suffix" \
@@ -84,11 +84,11 @@ set -a
 source "$state/credentials/runtime.env"
 set +a
 python3 scripts/staging/runtime_preflight.py --config-only
-runuser -u erpstaging -- npm run build
+runuser -u erpstaging -- env HOME="$app" PATH="$NODE22_BIN:/usr/bin:/bin" npm_config_cache="$app/.npm-cache" npm run build
 
 # D4 only creates/cleans up a synthetic workspace.
 export ERP_STAGING_TESTS=1
-runuser -u erpstaging -- npx --no-install tsx scripts/staging/d4-probe.ts
+runuser -u erpstaging -- env HOME="$app" PATH="$NODE22_BIN:/usr/bin:/bin" npm_config_cache="$app/.npm-cache" npx --no-install tsx scripts/staging/d4-probe.ts
 unset ERP_STAGING_TESTS
 python3 scripts/phase-c-verify.py \
   --sqlite "$state/erp-live-snapshot.db" \
