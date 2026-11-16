@@ -103,6 +103,14 @@ jobs:
       - name: Migration history applies cleanly and matches the schema
         run: npm run check:migrations
 
+      - name: Enforce PostgreSQL-only repository
+        run: node scripts/verify-postgresql-only.mjs
+
+      - name: Validate SQLite retirement operator safety
+        run: |
+          python3 -m py_compile scripts/operations/retire_erp_sqlite.py
+          python3 -m unittest discover -s tests/ops -p 'test_*.py' -v
+
   build:
     name: Production build
     runs-on: ubuntu-latest
@@ -187,96 +195,6 @@ jobs:
 
   # Pull requests only: flags newly added dependencies with known vulnerabilities or disallowed licences.
   # Advisory (not in the gate): it needs the repository's dependency graph, which is on for public repos.
-  importer:
-    name: SQLite to PostgreSQL importer rehearsal
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: bababuilds_erp_ci
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d bababuilds_erp_ci"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 15
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
-      - name: Bash syntax gate — staging runner
-        run: bash -n scripts/staging/deploy.sh
-
-      - name: D1–D2 Python safety and financial invariants unit tests
-        run: python3 -m unittest discover -s tests/staging -p 'test_*.py' -v
-
-      - name: Production real-data integration rehearsal script syntax
-        run: bash -n scripts/production/rehearse_integration.sh
-
-      - name: Phase E protected production cutover tool tests
-        run: |
-          python3 -m py_compile scripts/production/provision_candidate.py scripts/production/promote_candidate.py scripts/production/backup_restore_rehearsal.py scripts/production/audit_runtime.py
-          python3 -m unittest discover -s tests/production -p 'test_*.py' -v
-
-      - name: Build PostgreSQL baseline
-        run: npx prisma migrate deploy
-      - name: Create isolated SQLite fixture and import into empty PostgreSQL
-        shell: bash
-        run: |
-          set -euo pipefail
-          tmp="$(mktemp -d)"
-          trap 'rm -rf "$tmp"' EXIT
-          cp prisma/sqlite-history/schema.prisma "$tmp/schema.prisma"
-          npx prisma db push --schema "$tmp/schema.prisma" --skip-generate
-          python3 - "$tmp/dev.db" <<'PY'
-          import sqlite3,sys
-          db=sqlite3.connect(sys.argv[1])
-          ms=1794760000000
-          db.execute('INSERT INTO "Workspace" ("id","name","createdAt","updatedAt","isDemo","isSetupComplete") VALUES (?,?,?,?,?,?)',
-             ("workspace_fixture","Test Workspace",ms,ms,1,1))
-          db.execute('INSERT INTO "Invoice" ("id","workspaceId","invoiceNumber","financialYear","invoiceDate","clientName","serviceDescription","totalAmount","grandTotal","amountReceived","pdfPath") VALUES (?,?,?,?,?,?,?,?,?,?,?)',
-             ("invoice_fixture","workspace_fixture","TEST-1","2026-27",ms,"Fixture","PG import test",100,100,20,"/test.pdf"))
-          db.execute('INSERT INTO "InvoicePayment" ("id","workspaceId","invoiceId","amount","receivedAt") VALUES (?,?,?,?,?)',
-             ("payment_fixture","workspace_fixture","invoice_fixture",20,ms))
-          db.execute('INSERT INTO "Expense" ("id","workspaceId","date","category","vendor","amount","itcHeld") VALUES (?,?,?,?,?,?,?)',
-             ("expense_fixture","workspace_fixture",ms,"Operations","Vendor",51.25,1))
-          db.execute('INSERT INTO "FinancialOperationIdempotency" ("id","workspaceId","operation","idempotencyKey","requestHash","responseBody","expiresAt","createdAt","updatedAt") VALUES (?,?,?,?,?,?,?,?,?)',
-             ("idempotency_fixture","workspace_fixture","INVOICE_PAYMENT_CAPTURE","k1","hash1",'{"nested":{"ok":true},"amount":1.05}',ms+60000,ms,ms))
-          db.commit()
-          db.close()
-          PY
-          python3 scripts/sqlite-to-postgres.py --sqlite "$tmp/dev.db" --target-db bababuilds_erp_ci --acknowledge-empty-target
-          # Phase C: check every table, every scalar field, and exact per-workspace currency totals.
-          python3 scripts/phase-c-verify.py --sqlite "$tmp/dev.db" --target-db bababuilds_erp_ci --evidence "$tmp/pg-parity.json"
-          # D2: additional business-level financial and membership checks.
-          python3 scripts/staging/reconcile.py --output "$tmp/business-invariants.json"
-          # D4: run concurrent synthetic captures; assert cleanup and source parity.
-          ERP_STAGING_TESTS=1 npx --no-install tsx scripts/staging/d4-probe.ts
-          python3 scripts/phase-c-verify.py --sqlite "$tmp/dev.db" --target-db bababuilds_erp_ci --evidence "$tmp/d4-parity.json"
-          # The restore target is a second, newly created disposable PostgreSQL 17 CI database.
-          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 \
-            -c 'CREATE DATABASE bababuilds_erp_drill'
-          RESTORE_DATABASE_URL='postgresql://postgres:postgres@127.0.0.1:5432/bababuilds_erp_drill' \
-            python3 scripts/phase-c-restore-drill.py \
-              --source-db bababuilds_erp_ci --drill-db bababuilds_erp_drill \
-              --sqlite "$tmp/dev.db" --evidence "$tmp/drill-parity.json" \
-              --acknowledge-empty-drill
-          # The verifier must detect tampering, not merely count records.
-          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d bababuilds_erp_ci \
-            -v ON_ERROR_STOP=1 -c 'UPDATE "Invoice" SET "amountReceived"=21 WHERE "id"='\''invoice_fixture'\''' >/dev/null
-          if python3 scripts/phase-c-verify.py --sqlite "$tmp/dev.db" --target-db bababuilds_erp_ci 2>/dev/null; then
-            echo 'Phase C parity checker failed to detect changed financial data' >&2; exit 1
-          fi
-          # Existing target must be rejected; verify no reset or truncate occurs.
-          if python3 scripts/sqlite-to-postgres.py --sqlite "$tmp/dev.db" --target-db bababuilds_erp_ci --acknowledge-empty-target 2>/dev/null; then
-            echo 'Importer improperly accepted a populated target' >&2; exit 1
-          fi
-          test "$(PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d bababuilds_erp_ci -Atqc 'SELECT count(*) FROM "InvoicePayment"')" = "1"
-
   dependency-review:
     name: Dependency review
     if: ${{ github.event_name == 'pull_request' }}
@@ -296,7 +214,7 @@ jobs:
   gate:
     name: CI gate
     if: ${{ always() }}
-    needs: [static, test, prisma, importer, build, e2e-smoke]
+    needs: [static, test, prisma, build, e2e-smoke]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

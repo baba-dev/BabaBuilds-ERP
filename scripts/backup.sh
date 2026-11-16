@@ -33,7 +33,9 @@ for p in /var/www/bababuilds-erp/private_uploads \
  /var/www/bababuilds-erp/public/receipts \
  /var/www/bababuilds-erp/public/signatures \
  /var/www/bababuilds-erp/public/products \
- /var/www/bababuilds-erp/public/uploads; do
+ /var/www/bababuilds-erp/public/uploads \
+ /var/www/bababuilds-erp/public/partner-kit \
+ /var/www/bababuilds-erp/tmp/share-target; do
  [[ ! -d "$p" ]] || set -- "$@" "$p"
 done
 tag="erp-$stamp"

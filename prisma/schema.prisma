@@ -26,7 +26,7 @@ enum InvoiceSource {
 
 /**
  * BusinessRoleEnum — authoritative ERP role type at the schema level.
- * Validated by Prisma ORM; stored as TEXT in SQLite.
+ * Validated by Prisma ORM; persisted in PostgreSQL.
  * The old `role` String field is kept for JWT/session compatibility.
  * Server-side enforcement uses `businessRole` via a fresh DB lookup.
  */

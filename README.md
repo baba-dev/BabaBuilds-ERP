@@ -4,14 +4,14 @@
 ![React](https://img.shields.io/badge/React-19.2.4-149eca?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript)
 ![Prisma](https://img.shields.io/badge/Prisma-ORM-2d3748?logo=prisma)
-![SQLite](https://img.shields.io/badge/SQLite-Database-003b57?logo=sqlite)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169e1?logo=postgresql)
 ![NextAuth](https://img.shields.io/badge/Auth-NextAuth-7c3aed)
 ![License](https://img.shields.io/badge/License-Private-informational)
 
 BabaBuilds ERP is a full-stack ERP and operations suite for service-first businesses.  
 It combines quoting, service catalog management, shop + inventory workflows, invoicing, retainers, expenses, tax/compliance, AI-assisted reconciliation, and optional advanced modules (workforce, payroll, cash flow, reporting, and more) in one workspace-aware platform.
 
-Built with **Next.js App Router + React Server Components + Prisma + SQLite + NextAuth**.
+Built with **Next.js App Router + React Server Components + Prisma + PostgreSQL 17 + NextAuth**.
 
 ---
 
@@ -139,7 +139,7 @@ Based on static inspection of app modules, Prisma enums/models, scripts, and hel
 
 - **Frontend:** Next.js 16 App Router + React 19 + TypeScript
 - **Backend:** Next.js server routes / server components
-- **Database:** Prisma ORM with SQLite (`prisma/dev.db` in local dev)
+- **Database:** Prisma ORM with PostgreSQL 17 (separate development database)
 - **Auth:** NextAuth with provider toggles
 - **Styling/UI:** Tailwind + Radix/UI utilities
 - **Tests:** Vitest + Playwright smoke coverage
@@ -241,7 +241,7 @@ Google OAuth callback URI:
 
 ## Database & Prisma Notes
 
-- Local DB file: `prisma/dev.db` (gitignored).
+- Development database: a disposable PostgreSQL 17 database; never connect local tooling to production.
 - Production/staging schema changes should always flow through migration files and `npx prisma migrate deploy`.
 - For clean database bootstrap, use the baseline + `migrate resolve` workflow documented in `prisma/migrations/README.md`.
 - Use `npx prisma db push` only for disposable local prototyping databases, never as a production migration pathway.
@@ -298,5 +298,6 @@ If you want, next PR can add:
 - a “module-to-route map” table for faster onboarding of new engineers and coding agents.
 
 
-### Phase B PostgreSQL preparation
-The canonical Prisma datasource is PostgreSQL 17. Historical SQLite SQL resides under prisma/sqlite-history and is NEVER replayed on PostgreSQL. Generate disposable databases with prisma migrate deploy, not db push. The protected SQLite-to-PostgreSQL importer and backup runbook are under docs/postgres-migration-importer.md and docs/postgres-backup-runbook.md. This readiness branch must not be deployed to ERP production prior to a signed-off Phase C cutover.
+### PostgreSQL 17 production
+
+The production ERP uses PostgreSQL 17 exclusively. Prisma migrations live in `prisma/migrations/` and are applied with `npx prisma migrate deploy`. Use a disposable local PostgreSQL database for development; see `docs/postgres-backup-runbook.md` for encrypted backup and recovery expectations. The original data migration and rollback evidence is retained in Git history and encrypted off-host recovery snapshots, not in the live application tree.
