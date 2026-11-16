@@ -20,6 +20,7 @@ provision = load("erp_prod_candidate", "scripts/production/provision_candidate.p
 promote = load("erp_prod_promote", "scripts/production/promote_candidate.py")
 importer = load("erp_stage_importer", "scripts/sqlite-to-postgres.py")
 verify = load("erp_stage_verifier", "scripts/phase-c-verify.py")
+runtime = load('erp_runtime_audit', 'scripts/production/audit_runtime.py')
 backup = load("erp_backup_restore", "scripts/production/backup_restore_rehearsal.py")
 
 
@@ -149,6 +150,39 @@ class CutoverSafetyTests(unittest.TestCase):
         self.assertNotIn('systemctl stop', script)
         self.assertNotIn('pm2 stop', script)
         self.assertNotIn('ALTER DATABASE', script)
+
+    def test_runtime_audit_only_returns_environment_key_names(self):
+        from unittest.mock import patch as local_patch
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / ".env"
+            path.write_text(
+                "DATABASE_URL=postgresql://admin:secret@127.0.0.1:5432/private\\n"
+                "NEXTAUTH_SECRET=supersecret\\n"
+                "CRON_SECRET=abc123\\n"
+                "# PRIVATE_UPLOADS_DIR=/ignored\\n"
+                "export NEXTAUTH_URL=https://erp.example.test\\n"
+            )
+            keys = runtime.env_keys(path)
+            self.assertEqual(keys, {"DATABASE_URL", "NEXTAUTH_SECRET", "CRON_SECRET", "NEXTAUTH_URL"})
+            self.assertNotIn("supersecret", repr(keys))
+            self.assertNotIn("abc123", repr(keys))
+
+    def test_runtime_audit_counts_active_erp_jobs(self):
+        raw = (
+            "*/10 * * * * /var/www/bababuilds-erp/scripts/run-cron.sh documents-ocr\\n"
+            "# 0 1 * * * /var/www/bababuilds-erp/scripts/run-cron.sh disabled\\n"
+            "0 4 * * * /usr/bin/true\\n"
+        )
+        self.assertEqual(runtime.cron_counts(raw), (1, 2))
+
+    def test_runtime_audit_pm2_extracts_only_safe_fields(self):
+        raw = '{"name":"erp","pid":12,"pm2_env":{"status":"online","pm_cwd":"/var/www/bababuilds-erp","pm_exec_path":"/usr/bin/npm","exec_interpreter":"/usr/bin/node","SECRET":"private-value"}}'
+        data = runtime.entries_from_pm2("[" + raw + "]")
+        self.assertTrue(data["erp_online"])
+        self.assertTrue(data["erp_entrypoint_is_existing_npm"])
+        self.assertNotIn("private-value", repr(data))
+        with self.assertRaisesRegex(RuntimeError, "exactly one ERP"):
+            runtime.entries_from_pm2("[]")
 
     def test_deploy_requires_postcutover_verification(self):
         workflow = (ROOT / ".github/workflows/deploy.yml").read_text()

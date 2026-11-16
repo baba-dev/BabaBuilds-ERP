@@ -169,6 +169,36 @@ the old rehearsal. Neither `cut1611a` nor public ERP are modified.
 these integrations have been accounted for. Keep all migration PRs draft
 until the actual write freeze and cutover.
 
+## Runtime and persistent-storage inspection — READ-ONLY
+
+After current-main real-data import passed with 185 tables and 692 rows,
+identify how the existing root PM2 application and persistent uploads should
+be preserved when launching a Node 22 Next standalone server.
+
+The ERP's private file helper defaults to `process.cwd()/private_uploads`
+unless `PRIVATE_UPLOADS_DIR` is configured. Legacy invoices and backups
+also use `process.cwd()/public` and `process.cwd()/backups`; share-target
+metadata uses `process.cwd()/tmp/share-target`. A standalone Next server
+uses its own release directory as CWD. Replacing the PM2 interpreter **alone**
+could silently hide existing documents or create a second uploads directory.
+
+Run ONLY the read-only, root-reviewed audit from the independent integration
+checkout. It checks root PM2 metadata, live .env **key presence only** (never
+secret values), cron counts, Node 22 and the state of known persistent media
+paths:
+
+    sudo python3 /opt/bababuilds-erp-cutover/dry1611a/app/scripts/production/audit_runtime.py
+
+Before any release activation, produce an explicit writable-media mapping
+that keeps existing `private_uploads`, legacy `public/invoices`, `logos`,
+`receipts`, `signatures`, `products`, `uploads`, and the share-target
+metadata under the original authoritative storage location. Do not copy
+customer files into a disposable build and accidentally fork future uploads.
+Review PM2 startup persistence (`pm2-root.service`) and generate the
+separate production-mode Node 22 release with the *public* Serwist bundle
+enabled, not the staging build. `scripts/production/audit_runtime.py` is
+an inspection-only tool: it cannot activate the release or approve cutover.
+
 ## 2. Freeze ERP writes
 
 Announce maintenance and stop the existing ERP PM2 process as the correct
