@@ -150,6 +150,14 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Exercise the actual packaged standalone entrypoint, never next dev.
+      # PostgreSQL is an isolated, disposable CI service; all external effects disabled.
+      - name: Node 26 standalone runtime smoke
+        env:
+          AUTH_GOOGLE_ENABLED: "false"
+          AUTH_EMAIL_ENABLED: "false"
+        run: node scripts/ci/standalone-smoke.mjs
+
   e2e-smoke:
     name: Browser smoke (demo)
     runs-on: ubuntu-latest
