@@ -79,8 +79,8 @@ if count != 15:
 pathlib.Path(sys.argv[2]).write_text("".join(out))
 print("Verified 15 ERP jobs to pause; unrelated cron unchanged")
 PY
-crontab "$STATE/root-crontab.paused"
 FROZEN=1
+crontab "$STATE/root-crontab.paused"
 "$PM2" stop erp
 sleep 2
 if [[ -n "$(ss -H -lnt 'sport = :3000')" ]]; then
