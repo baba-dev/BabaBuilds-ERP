@@ -140,9 +140,9 @@ jobs:
         uses: actions/cache@v6
         with:
           path: .next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**/*.ts', '**/*.tsx', '!node_modules/**', '!.next/**') }}
+          key: nextjs-${{ runner.os }}-${{ runner.arch }}-node-${{ hashFiles('.nvmrc') }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**/*.ts', '**/*.tsx', '!node_modules/**', '!.next/**') }}
           restore-keys: |
-            nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+            nextjs-${{ runner.os }}-${{ runner.arch }}-node-${{ hashFiles('.nvmrc') }}-${{ hashFiles('package-lock.json') }}-
 
       - name: Prepare PostgreSQL for build-time data dependencies
         run: npx prisma migrate deploy
